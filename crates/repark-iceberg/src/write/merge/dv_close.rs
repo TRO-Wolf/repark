@@ -32,6 +32,7 @@ pub(super) async fn prepare_row_delta_deletes(
     concurrency: WriteConcurrency,
     known_partitions: KnownPartitions,
     snapshot_id: Option<i64>,
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<PreparedDeletes> {
     match table.metadata().format_version() {
         FormatVersion::V2 => {
@@ -41,9 +42,13 @@ pub(super) async fn prepare_row_delta_deletes(
                     referenced.insert(path.as_ref().to_string());
                 }
             }
-            let delete_files =
-                crate::write::position_delete::write_position_deletes(table, pairs, concurrency)
-                    .await?;
+            let delete_files = crate::write::position_delete::write_position_deletes(
+                table,
+                pairs,
+                concurrency,
+                staging,
+            )
+            .await?;
             let abort_paths = abort::written_file_paths(&delete_files);
             Ok(PreparedDeletes {
                 referenced,

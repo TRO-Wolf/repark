@@ -302,7 +302,11 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   instead of replacing the engine value. pins: ice-session-write-conf-1/C-041
 - `dv_close.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   `delete_file_changes()` exposes the added and superseded delete files the
-  row-delta summary needs.
+  row-delta summary needs, and `prepare_row_delta_deletes` takes the resolved
+  `WriterStagingOverrides` so a v2 position-delete file is written with the
+  commit's codec (a v3 DV is puffin and takes none). `mod.rs`'s MERGE executor
+  and the row-delta commit arms thread that staging from the session resolve.
+  pins: ice-session-write-conf-1/C-040
 - `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the lineage
   fanout writer site honours the session write conf
   (`write_partitioned_lineage_files_with`).

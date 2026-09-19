@@ -11,7 +11,6 @@ impl std::fmt::Display for IllegalArgumentMarker {
 
 impl std::error::Error for IllegalArgumentMarker {}
 
-/// A refusal that reaches Python as `IllegalArgumentException` carrying `message` verbatim.
 #[must_use]
 pub fn illegal_argument_error(message: String) -> DataFusionError {
     DataFusionError::External(Box::new(IllegalArgumentMarker(message)))

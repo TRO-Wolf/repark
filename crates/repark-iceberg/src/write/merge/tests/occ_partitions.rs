@@ -227,6 +227,7 @@ async fn the_production_partition_carrying_commit_honors_the_snapshot_pin() {
         &policy,
         known.clone(),
         &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
     .expect("the production partition-carrying commit lands on a partitioned v3 table");
@@ -243,6 +244,7 @@ async fn the_production_partition_carrying_commit_honors_the_snapshot_pin() {
         &policy,
         known,
         &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await;
     assert!(

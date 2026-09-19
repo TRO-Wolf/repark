@@ -400,6 +400,7 @@ async fn closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_number
         WriteConcurrency::new(1).expect("K=1"),
         KnownPartitions::new(),
         None,
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await;
     assert!(
@@ -413,6 +414,7 @@ async fn closing_a_covered_v3_delete_reads_the_data_manifest_for_sequence_number
         WriteConcurrency::new(1).expect("K=1"),
         KnownPartitions::new(),
         None,
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
     .expect("close with the data manifests present");
@@ -567,6 +569,7 @@ async fn a_supplied_partition_map_closes_a_fresh_partitioned_delete_with_no_data
         WriteConcurrency::new(1).expect("K=1"),
         known,
         None,
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
     .expect("a complete partition map skips the data-manifest walk");
@@ -635,6 +638,7 @@ async fn a_legacy_delete_fills_data_sequence_numbers_even_with_a_complete_partit
         WriteConcurrency::new(1).expect("K=1"),
         known.clone(),
         None,
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await;
     assert!(
@@ -648,6 +652,7 @@ async fn a_legacy_delete_fills_data_sequence_numbers_even_with_a_complete_partit
         WriteConcurrency::new(1).expect("K=1"),
         known,
         None,
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
     .expect("close with the data manifests present");
@@ -820,6 +825,7 @@ async fn a_plain_identity_delete_closes_with_no_data_manifest() {
         WriteConcurrency::new(1).expect("K=1"),
         known,
         snapshot_id,
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
     .expect("plain identity close skips the data-manifest walk");

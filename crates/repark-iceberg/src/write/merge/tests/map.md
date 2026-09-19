@@ -9,6 +9,9 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `streaming_scan.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** its
+  position-delete case names the resolved staging the writer now takes; the file's
+  size baseline ratchets 3020 → 3018.
 - `dv_close.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the DV-container close
   battery, moved here from `merge/dv_close.rs` when the round's
   `delete_file_changes()` accessor pushed that file over the size ceiling; the

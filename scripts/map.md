@@ -1,5 +1,7 @@
 # map — scripts/
 
+ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19): `check_rust_file_size.py` ratchets `write/predicate_dml.rs` 1034 → 1017 (the MoR arms split to `predicate_dml/mor_commit.rs`) and `write/merge/tests/streaming_scan.rs` 3020 → 3018, both shrink-only, with the CAP-1 mirror.
+
 ICE-SESSION-WRITE-CONF-1 (2026-09-19): `check_rust_file_size.py` ratchets `write/merge/mod.rs` 1761 → 1701 (MERGE staging splits to `session_staging.rs`) and `write/predicate_dml.rs` 1139 → 1034 (identity COW commits split to `cow_commit.rs`), both shrink-only, with the CAP-1 mirror.
 
 ICE-OVERWRITE-MODE-1 (2026-09-19): `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1095 → 1093 → 1091 (the verification fix drops the `_dynamic_partition_sql` import) (`overwritePartitions` hands its SQL to `writer_layout.run_overwrite_partitions`), shrink-only. pins: ice-overwrite-mode-1/C-007

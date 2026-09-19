@@ -21,16 +21,13 @@ use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use std::str::FromStr;
 use uuid::Uuid;
 
-use crate::write::concurrency::concurrency_from_ctx;
 use crate::write::conflict_filter::for_identity_dml;
 use crate::write::file_scoped_rewrite::allowlist_from_paths;
 use crate::write::merge::row_lineage::{scratch_schema_for_table, table_carries_merge_lineage};
 use crate::write::merge::{
-    CommitScope, FILE_PATH_COL, IsolationLevel, POS_COL, RowDeltaKind, TargetScanStream,
-    commit_row_delta_kind_with_partitions, dedup_key, deregister_merge_scratch,
-    drain_partition_sink, iceberg_err, new_partition_sink, quote_ident, register_streaming_target,
-    reserved_name_guard, resolve_write_column, scratch_schema,
-    session_staging::write_new_data_files_from_stream_with,
+    CommitScope, FILE_PATH_COL, IsolationLevel, POS_COL, TargetScanStream, dedup_key,
+    deregister_merge_scratch, drain_partition_sink, iceberg_err, new_partition_sink, quote_ident,
+    register_streaming_target, reserved_name_guard, resolve_write_column, scratch_schema,
 };
 use crate::write::position_delete::PositionDeletePair;
 use crate::write::predicate_dml::lineage::{
@@ -38,7 +35,6 @@ use crate::write::predicate_dml::lineage::{
 };
 use crate::write::predicate_dml::residual::identity_scan_residual;
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
-use crate::write::session_write_conf::resolve_empty_session_write;
 use cow_commit::{commit_identity_cow, commit_identity_update_cow};
 
 /// Iceberg standard table property selecting the DELETE write strategy.
@@ -301,17 +297,14 @@ pub async fn execute_predicate_dml(
                 .await
             }
             DeleteWriteMode::MergeOnRead => {
-                let (snapshot_extra, _) = resolve_empty_session_write(ctx)?;
-                commit_row_delta_kind_with_partitions(
+                mor_commit::commit_identity_delete_mor(
+                    ctx,
                     catalog,
                     &table,
                     snapshot_id,
                     pairs,
-                    Vec::new(),
-                    concurrency_from_ctx(ctx),
-                    &scope.row_delta(RowDeltaKind::Delete),
+                    &scope,
                     drain_partition_sink(&partitions),
-                    &snapshot_extra,
                 )
                 .await
             }
@@ -383,26 +376,15 @@ async fn execute_identity_update(
                 .await
             }
             DeleteWriteMode::MergeOnRead => {
-                let stream = futures::stream::iter(data_batches.into_iter().map(Ok));
-                let (snapshot_extra, staging) = resolve_empty_session_write(ctx)?;
-                let data_files = write_new_data_files_from_stream_with(
-                    &table,
-                    &write_schema,
-                    stream,
-                    concurrency_from_ctx(ctx),
-                    &staging,
-                )
-                .await?;
-                commit_row_delta_kind_with_partitions(
+                mor_commit::commit_identity_update_mor(
+                    ctx,
                     catalog,
                     &table,
+                    &write_schema,
                     snapshot_id,
-                    pairs,
-                    data_files,
-                    concurrency_from_ctx(ctx),
-                    &scope.row_delta(RowDeltaKind::Merge),
+                    (pairs, data_batches),
+                    &scope,
                     drain_partition_sink(&partitions),
-                    &snapshot_extra,
                 )
                 .await
             }
@@ -1027,6 +1009,7 @@ fn object_name_parts(name: &ObjectName) -> Vec<String> {
 }
 mod cow_commit;
 mod lineage;
+mod mor_commit;
 pub mod plain;
 mod residual;
 

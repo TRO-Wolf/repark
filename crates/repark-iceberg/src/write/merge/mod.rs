@@ -61,6 +61,7 @@ pub(crate) use crate::write::name_resolution::{
 };
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::file_scoped_rewrite_from_ctx;
+use crate::write::session_write_conf::resolve_empty_session_write;
 
 /// The reserved `_file` metadata column the core scan projects.
 pub(super) const FILE_PATH_COL: &str = "_file";
@@ -604,8 +605,7 @@ async fn plan_and_commit_cow(
             ));
         }
         let concurrency = concurrency_from_ctx(ctx);
-        let (snapshot_extra, staging) =
-            crate::write::session_write_conf::resolve_empty_session_write(ctx)?;
+        let (snapshot_extra, staging) = resolve_empty_session_write(ctx)?;
         let chained = futures::stream::iter(streams).flatten();
         let write_result = session_staging::write_new_data_files_from_stream_with(
             table,
@@ -657,7 +657,7 @@ async fn plan_and_commit_mor(
     } = target;
     let (table, write_schema, snapshot_id) = (*table, *write_schema, *snapshot_id);
     // R-MERGE-ONEPASS Stage B (MoR): one INNER JOIN yields cardinality, deletes, and UPDATE values.
-    let (pairs, data_files, snapshot_extra) = async {
+    let (pairs, data_files, snapshot_extra, staging) = async {
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
         let mut pairs = if spec.matched.is_empty() {
@@ -701,8 +701,7 @@ async fn plan_and_commit_mor(
             ));
         }
         let concurrency = concurrency_from_ctx(ctx);
-        let (snapshot_extra, staging) =
-            crate::write::session_write_conf::resolve_empty_session_write(ctx)?;
+        let (snapshot_extra, staging) = resolve_empty_session_write(ctx)?;
         let chained = futures::stream::iter(streams).flatten();
         let data_files = session_staging::write_new_data_files_from_stream_with(
             table,
@@ -712,7 +711,7 @@ async fn plan_and_commit_mor(
             &staging,
         )
         .await?;
-        Ok::<_, DataFusionError>((pairs, data_files, snapshot_extra))
+        Ok::<_, DataFusionError>((pairs, data_files, snapshot_extra, staging))
     }
     .instrument(tracing::info_span!("merge.join"))
     .await?;
@@ -731,6 +730,7 @@ async fn plan_and_commit_mor(
         spec.commit_branch.as_deref(),
         drain_partition_sink(partitions),
         &snapshot_extra,
+        &staging,
     )
     .await
 }

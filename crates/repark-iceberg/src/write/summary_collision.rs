@@ -49,8 +49,6 @@ impl EngineSummary {
         Self::for_changes(table, added, &[], branch)
     }
 
-    /// The summary the fork's snapshot producer builds for a commit whose added and removed
-    /// files are both known: the collector's own keys plus the totals it derives from them.
     #[must_use]
     pub fn for_changes(
         table: &Table,
@@ -73,8 +71,6 @@ impl EngineSummary {
         Self { keys }
     }
 
-    /// The summary of a commit whose removal set the fork resolves at commit time (an overwrite
-    /// by row filter, a replace-partitions swap): every key the removals feed is unknown here.
     #[must_use]
     pub fn for_overwrite(table: &Table, added: &[DataFile], branch: Option<&str>) -> Self {
         let mut keys: HashMap<String, Option<String>> = collected(table, added, &[])
@@ -107,8 +103,6 @@ impl EngineSummary {
     }
 }
 
-/// True when one of `extra`'s keys can only be answered once the removal set is known — the
-/// signal a commit site uses to resolve its removed files before building the summary.
 #[must_use]
 pub fn extras_need_removed_files(extra: &[(String, String)]) -> bool {
     extra.iter().any(|(key, _)| {
@@ -121,8 +115,6 @@ pub fn extras_need_removed_files(extra: &[(String, String)]) -> bool {
     })
 }
 
-/// Every live DATA file of the ref a whole-table overwrite replaces (Java's removal set for
-/// `overwriteByRowFilter(alwaysTrue)`).
 #[allow(clippy::missing_errors_doc)]
 pub async fn live_data_files(table: &Table, branch: Option<&str>) -> Result<Vec<DataFile>> {
     let metadata = table.metadata();

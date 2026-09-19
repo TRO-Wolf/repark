@@ -316,6 +316,7 @@ async fn a_newest_file_identity_delete_commits_with_one_data_manifest() {
         &delete_policy(),
         known,
         &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
     .expect("F-25 stops once the newest added DV key is found");
@@ -351,6 +352,7 @@ async fn hiding_the_newest_data_manifest_too_refuses_the_commit() {
         &delete_policy(),
         known,
         &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await;
     assert!(

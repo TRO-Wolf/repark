@@ -262,6 +262,7 @@ pub(crate) async fn commit_row_delta_on_ref(
         branch,
         KnownPartitions::new(),
         &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
 }
@@ -278,6 +279,7 @@ pub(crate) async fn commit_row_delta_on_ref_with_partitions(
     branch: Option<&str>,
     known_partitions: KnownPartitions,
     summary_extra: &[(String, String)],
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<()> {
     let isolation = resolve_merge_isolation(table)?;
     let scope = CommitScope::scoped(isolation, conflict_filter.clone());
@@ -292,6 +294,7 @@ pub(crate) async fn commit_row_delta_on_ref_with_partitions(
         branch,
         known_partitions,
         summary_extra,
+        staging,
     )
     .await
 }
@@ -317,6 +320,7 @@ pub(crate) async fn commit_row_delta_kind(
         None,
         KnownPartitions::new(),
         &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
 }
@@ -332,6 +336,7 @@ pub(crate) async fn commit_row_delta_kind_with_partitions(
     policy: &RowDeltaPolicy,
     known_partitions: KnownPartitions,
     summary_extra: &[(String, String)],
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<()> {
     commit_row_delta_kind_on_ref(
         catalog,
@@ -344,6 +349,7 @@ pub(crate) async fn commit_row_delta_kind_with_partitions(
         None,
         known_partitions,
         summary_extra,
+        staging,
     )
     .await
 }
@@ -360,6 +366,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     branch: Option<&str>,
     known_partitions: KnownPartitions,
     summary_extra: &[(String, String)],
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<()> {
     if pairs.is_empty() && data_files.is_empty() {
         return Ok(());
@@ -373,6 +380,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         concurrency,
         known_partitions,
         snapshot_id,
+        staging,
     )
     .instrument(tracing::info_span!(
         "merge.write_deletes",

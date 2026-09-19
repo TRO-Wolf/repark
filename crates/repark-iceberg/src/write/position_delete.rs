@@ -84,6 +84,7 @@ pub(crate) async fn write_position_deletes(
     table: &Table,
     pairs: &[PositionDeletePair],
     concurrency: WriteConcurrency,
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<Vec<DataFile>> {
     if pairs.is_empty() {
         return Ok(Vec::new());
@@ -102,6 +103,7 @@ pub(crate) async fn write_position_deletes(
                     &group,
                     partition_key,
                     builder_spec,
+                    staging,
                 )
                 .await?,
             );
@@ -120,6 +122,7 @@ pub(crate) async fn write_position_deletes(
                     &group,
                     partition_key,
                     builder_spec,
+                    staging,
                 )
                 .await
             }
@@ -256,6 +259,7 @@ async fn write_position_deletes_for_partition(
     pairs: &[PositionDeletePair],
     partition_key: Option<PartitionKey>,
     builder_spec: Option<PartitionSpec>,
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<Vec<DataFile>> {
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
@@ -265,7 +269,7 @@ async fn write_position_deletes_for_partition(
         DataFileFormat::Parquet,
     );
     let parquet_builder = ParquetWriterBuilder::new(
-        position_delete_writer_properties_for(table)?,
+        position_delete_writer_properties_for(table, staging)?,
         config.schema().clone(),
     )
     .with_metrics_config(MetricsConfig::for_position_delete());
@@ -489,6 +493,7 @@ mod tests {
             &table,
             &[(Arc::clone(&data_path), 1)],
             WriteConcurrency::new(1).expect("K=1"),
+            &crate::write::write_options::WriterStagingOverrides::none(),
         )
         .await
         .expect("write position deletes for the spec-1 file");
@@ -545,6 +550,7 @@ mod tests {
             &table,
             &[(data_path, 0)],
             WriteConcurrency::new(1).expect("K=1"),
+            &crate::write::write_options::WriterStagingOverrides::none(),
         )
         .await
         .expect("write spec-0 position deletes");
@@ -607,9 +613,14 @@ mod tests {
             .map(|file| (Arc::from(file.file_path()), 0))
             .collect();
         let table = catalog.load_table(&ident).await.expect("reload");
-        write_position_deletes(&table, &pairs, WriteConcurrency::new(1).expect("K=1"))
-            .await
-            .expect("write grouped deletes")
+        write_position_deletes(
+            &table,
+            &pairs,
+            WriteConcurrency::new(1).expect("K=1"),
+            &crate::write::write_options::WriterStagingOverrides::none(),
+        )
+        .await
+        .expect("write grouped deletes")
     }
 
     async fn sales_memory_catalog(warehouse: &tempfile::TempDir) -> Arc<dyn Catalog> {

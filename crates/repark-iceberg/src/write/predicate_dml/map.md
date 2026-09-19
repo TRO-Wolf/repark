@@ -56,6 +56,12 @@ works, so the attribute is gone rather than documented.
   selections stay on the identity path with no behaviour or performance change.
   pins: ice-list-null-2/C-001, C-003
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
+- `mor_commit.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the merge-on-read
+  arms of the identity DELETE and UPDATE (`commit_identity_delete_mor` /
+  `commit_identity_update_mor`), split out of `predicate_dml.rs` along its declared seam
+  (operation-specific execution) when the round threaded the resolved staging to the
+  row-delta commit; the file-size baseline ratchets down with the split.
+  pins: ice-session-write-conf-1/C-040
 - `cow_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):**
   `commit_identity_cow` / `commit_identity_update_cow`, split out of
   `predicate_dml.rs` so the parent stays under its exact size baseline; the COW

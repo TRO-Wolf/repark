@@ -102,7 +102,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split retryable conflicts from terminal conflict cases.",
     ),
     "crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs": (
-        3020,
+        3018,
         "Streaming MERGE scan and rewrite scenarios share one test battery.",
         "Split position-delete, rewrite, and scan-shape scenario families.",
     ),
@@ -112,7 +112,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract predicate and file-selection logic from commit assembly.",
     ),
     "crates/repark-iceberg/src/write/predicate_dml.rs": (
-        1034,
+        1017,
         "Predicate DELETE and UPDATE planning share one adapter.",
         "Split predicate validation from operation-specific plan construction.",
     ),

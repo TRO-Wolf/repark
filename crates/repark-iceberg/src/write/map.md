@@ -690,6 +690,17 @@ repark-core's error map.
   `ambiguous_write_message` are its pieces. Twin targets only exist on non-fork schemas: the
   fork refuses to load a twin Iceberg schema (round 21b step 5 applies the requested spelling and
   42704 in `ambiguous_write_message`). pins: ice-mixed-case-1/C-004, C-016
+- `position_delete.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `write_position_deletes` takes the resolved `WriterStagingOverrides`, so a
+  position-delete file takes the writer option / session codec its commit resolved.
+  pins: ice-session-write-conf-1/C-040
+- `writer_props.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `position_delete_writer_properties_for(table, staging)` resolves the delete-file codec
+  in Iceberg's `SparkWriteConf` order: writer option (already merged over the session conf)
+  > `write.delete.parquet.compression-codec` > `write.parquet.compression-codec` > default.
+  Before the round it read the data-file property only, so the delete-codec property was
+  silently ignored too; the resolver is comment-free per the owner ban, and this row is where
+  its order is written down. pins: ice-session-write-conf-1/C-040
 - `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
   WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending

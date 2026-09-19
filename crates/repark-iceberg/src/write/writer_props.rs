@@ -15,6 +15,10 @@ pub const COMPRESSION_LEVEL_PROP: &str = "write.parquet.compression-level";
 /// Accepted codec spellings (case-insensitive), shown in loud-error messages.
 pub const ACCEPTED_CODECS: &str = "zstd, snappy, gzip, lz4, uncompressed";
 
+pub const DELETE_COMPRESSION_CODEC_PROP: &str = "write.delete.parquet.compression-codec";
+
+pub const DELETE_COMPRESSION_LEVEL_PROP: &str = "write.delete.parquet.compression-level";
+
 /// Build [`WriterProperties`] for `table` from `write.parquet.compression-codec` (+ level).
 /// # Errors
 /// Unknown codec, unparsable level, or level out of range for gzip/zstd.
@@ -71,17 +75,42 @@ pub fn parse_target_file_size(raw: &str) -> Result<u64> {
     })
 }
 
-pub(crate) fn position_delete_writer_properties_for(table: &Table) -> Result<WriterProperties> {
+pub(crate) fn position_delete_writer_properties_for(
+    table: &Table,
+    staging: &crate::write::write_options::WriterStagingOverrides,
+) -> Result<WriterProperties> {
     Ok(WriterProperties::builder()
-        .set_compression(compression_for(table)?)
+        .set_compression(delete_compression_with(table, staging)?)
         .set_statistics_truncate_length(
             position_delete_writer_properties().statistics_truncate_length(),
         )
         .build())
 }
 
-fn compression_for(table: &Table) -> Result<Compression> {
-    compression_with(table, None, None)
+fn delete_compression_with(
+    table: &Table,
+    staging: &crate::write::write_options::WriterStagingOverrides,
+) -> Result<Compression> {
+    let properties = table.metadata().properties();
+    let codec = staging
+        .codec
+        .as_deref()
+        .or_else(|| {
+            properties
+                .get(DELETE_COMPRESSION_CODEC_PROP)
+                .map(String::as_str)
+        })
+        .or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str));
+    let level = staging
+        .level
+        .as_deref()
+        .or_else(|| {
+            properties
+                .get(DELETE_COMPRESSION_LEVEL_PROP)
+                .map(String::as_str)
+        })
+        .or_else(|| properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str));
+    parse_compression(codec, level)
 }
 
 fn compression_with(
@@ -556,6 +585,7 @@ mod tests {
             &table,
             &pairs,
             WriteConcurrency::new(1).expect("K=1"),
+            &crate::write::write_options::WriterStagingOverrides::none(),
         )
         .await
         .expect("pos deletes");
