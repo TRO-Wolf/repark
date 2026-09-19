@@ -146,7 +146,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   quotes. A small scanner tracks single quotes, double quotes, `$(…)` and `$((…))` to check it,
   and it is self-pinned on a mixed sample. Unquoting `${PURPOSE:-unstated}`, the `mkdir`
   target, `--mode "${mode}"` or the `--table-bucket-arn` inside the `$(aws …)` reds
-  `test_every_variable_expansion_in_the_bench_scripts_is_double_quoted`. The critic's claim
+  `test_every_variable_expansion_in_the_bench_scripts_is_double_quoted`. Two more pins hold
+  every expansion braced (`test_every_variable_expansion_in_the_bench_scripts_is_braced`) and
+  errexit never turned off (`test_errexit_is_never_turned_off_in_the_bench_scripts`). The critic's claim
   that `purpose` can run command substitution was measured false (bash 5.2.21, 2026-09-19).
   `PURPOSE='$(touch /tmp/pa-pwn)'; echo "x ${PURPOSE:-unstated}"` prints the text literally and
   creates no file; backticks and the unquoted form behave the same, because bash does not

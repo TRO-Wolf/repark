@@ -259,6 +259,22 @@ def test_no_bench_or_s3tables_failure_can_be_swallowed() -> None:
         assert not re.search(r"&&|;", line), line
 
 
+def test_errexit_is_never_turned_off_in_the_bench_scripts() -> None:
+    """A ``set +e`` (or ``set +o errexit``) would let the R-3 exit 3 pass unseen."""
+    scripts = _run_scripts(_job_block(_text(), "ice-read-perf-bench"))
+    for script in scripts:
+        assert not re.search(r"\bset\s+\+[A-Za-z]*e", script), script
+        assert not re.search(r"\bset\s+\+o\s+(errexit|pipefail)", script), script
+    for doctored in ("set +e", "set +xe", "set +o errexit", "set +o pipefail"):
+        assert re.search(r"\bset\s+\+[A-Za-z]*e|\bset\s+\+o\s+(errexit|pipefail)", doctored)
+
+
+def test_every_variable_expansion_in_the_bench_scripts_is_braced() -> None:
+    """An unbraced ``$NAME`` would dodge the double-quoting pin, so every expansion is braced."""
+    for script in _run_scripts(_job_block(_text(), "ice-read-perf-bench")):
+        assert re.findall(r"\$[A-Za-z_][A-Za-z0-9_]*", script) == [], script
+
+
 def test_every_variable_expansion_in_the_bench_scripts_is_double_quoted() -> None:
     """No ``${…}`` in a bench ``run:`` script is left to word splitting or globbing."""
     quoted: list[str] = []
