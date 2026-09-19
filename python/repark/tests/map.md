@@ -412,9 +412,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   RePark equals Spark on every predicate, lineage, and unfiltered cell on the
   SQL door (double bounds on the DataFrame door, ids only — lineage is
   SQL-door-only), except the three bare-decimal `d`-range cells (loud under
-  ICE-NAN-DECIMAL-LITERAL-1) and `del_v2` (rewritten position deletes refuse
-  loud on a manifest-size mismatch Spark tolerates), both pinned as
-  divergences with the recorded answers as fix target. Step 3 (same file):
+  ICE-NAN-DECIMAL-LITERAL-1), pinned as a divergence with the recorded answers as fix
+  target. `del_v2` (rewritten position deletes whose manifest sizes are stale) refused loud
+  until RP-36 (fork #310's footer retry) and now answers every recorded cell on both doors. Step 3 (same file):
   RePark-written 300,000-row v2/v3 tables (measured page counts per column
   chunk: four on the narrow columns, six on the wide 86-char string column of
   full 65,536-row files; one to two on remnant and position-delete files)
