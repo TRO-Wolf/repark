@@ -661,6 +661,29 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   render since ICE-V3-WRITE-DEFAULT-1 lands with the property. Imports the row helpers of
   `test_ice_dyn_overwrite_1.py` and the summary helpers of `test_ice_write_options_1.py`.
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
+- [ice_session_write_conf_1_spark_oracle.json](ice_session_write_conf_1_spark_oracle.json) +
+  [_record_ice_session_write_conf_1_oracle.py](_record_ice_session_write_conf_1_oracle.py) —
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the recorded Spark 4.1.2 + Iceberg
+  1.11.0 oracle (16 SP snapshot-property cells + 9 CZ compression-codec cells,
+  `local[1]`, InMemoryCatalog `sc`, HadoopCatalog `hc` for the footer cells,
+  copied from the orchestrator recording `spark-pc1.json` (source SHA-256
+  `f1e732caf0f71ec61b5cd3d38f8a1c5bfe7f559a54db449f8a1c5bfe7f559a54db449f8b5d792f8a613112`,
+  fixture SHA-256 `bf96b4b94687a528ef123e99340888b94a2dbb079559fa661b058ab7fdc65ff8`).
+  The recorder re-derives the cells on live Spark (`record` prints JSON,
+  `check` compares with stable needles for the two error cells); format-version
+  3 twins carry v3 expectations equal to the v2 Spark answers.
+  pins: ice-session-write-conf-1/C-001, C-002
+- [test_ice_session_write_conf_1.py](test_ice_session_write_conf_1.py) —
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** one pin per oracle cell on the
+  facade `spark.sql` / DataFrame doors, format v2 and v3 (INSERT, DataFrame and
+  DELETE twins): snapshot summaries per snapshot plus the operation list, and
+  parquet footer codecs per file; the bogus codec refuses naming the codec with
+  no snapshot committed; the live tier re-derives the fixture under
+  `REPARK_PARITY_LIVE=1`. Red on main where the session confs are ignored.
+  pins: ice-session-write-conf-1/C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  pins: ice-session-write-conf-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
+  pins: ice-session-write-conf-1/C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026
+  pins: ice-session-write-conf-1/C-027, C-028, C-029, C-030, C-031, C-032
 - [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
   UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
   `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).

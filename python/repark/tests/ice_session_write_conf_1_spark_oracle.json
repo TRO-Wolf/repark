@@ -1,0 +1,626 @@
+{
+ "provenance": {
+  "spark": "4.1.2 + Iceberg 1.11.0 (local[1], InMemoryCatalog sc, HadoopCatalog hc)",
+  "source": "orchestrator recording spark-pc1.json",
+  "source_sha256": "f1e732caf0f71ec61b5cd3d38f8a1c5bfe7f559a54db449f8a1c5bfe7f559a54db449f8b5d792f8a613112",
+  "cells": "SP-* snapshot-property and CZ-* compression-codec cells",
+  "recorded": "2026-09-19",
+  "v3_note": "format-version 3 twins of the INSERT, DataFrame and DELETE cells carry v3 expectations equal to the v2 Spark answers in this fixture"
+ },
+ "cells": {
+  "SP-INSERT": {
+   "id": "SP-INSERT",
+   "group": "PROPS",
+   "title": "snapshot-property conf INSERT",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-TWO-KEYS": {
+   "id": "SP-TWO-KEYS",
+   "group": "PROPS",
+   "title": "snapshot-property conf TWO-KEYS",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a",
+    "spark.sql.iceberg.snapshot-property.run": "r1"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a",
+      "r1"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-DF-APPEND": {
+   "id": "SP-DF-APPEND",
+   "group": "PROPS",
+   "title": "snapshot-property conf DF-APPEND",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ]
+    ]
+   }
+  },
+  "SP-DF-SAVEASTABLE": {
+   "id": "SP-DF-SAVEASTABLE",
+   "group": "PROPS",
+   "title": "snapshot-property conf DF-SAVEASTABLE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ]
+    ]
+   }
+  },
+  "SP-DF-OPTION-WINS": {
+   "id": "SP-DF-OPTION-WINS",
+   "group": "PROPS",
+   "title": "snapshot-property conf DF-OPTION-WINS",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "opt"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ]
+    ]
+   }
+  },
+  "SP-DELETE-COW": {
+   "id": "SP-DELETE-COW",
+   "group": "PROPS",
+   "title": "snapshot-property conf DELETE-COW",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ],
+     [
+      "overwrite",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-DELETE-MOR": {
+   "id": "SP-DELETE-MOR",
+   "group": "PROPS",
+   "title": "snapshot-property conf DELETE-MOR",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ],
+     [
+      "delete",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-UPDATE": {
+   "id": "SP-UPDATE",
+   "group": "PROPS",
+   "title": "snapshot-property conf UPDATE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ],
+     [
+      "overwrite",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "z",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-MERGE": {
+   "id": "SP-MERGE",
+   "group": "PROPS",
+   "title": "snapshot-property conf MERGE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ],
+     [
+      "overwrite",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "m",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-OVERWRITE": {
+   "id": "SP-OVERWRITE",
+   "group": "PROPS",
+   "title": "snapshot-property conf OVERWRITE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ],
+     [
+      "overwrite",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      9,
+      "z",
+      "x"
+     ]
+    ]
+   }
+  },
+  "SP-CTAS": {
+   "id": "SP-CTAS",
+   "group": "PROPS",
+   "title": "snapshot-property conf CTAS",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ctas": [
+     "a"
+    ],
+    "ops+keys": [],
+    "data": []
+   }
+  },
+  "SP-CALL-RDF": {
+   "id": "SP-CALL-RDF",
+   "group": "PROPS",
+   "title": "snapshot-property conf CALL-RDF",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ],
+     [
+      "append",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      3,
+      "c",
+      "x"
+     ],
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-CALL-EXPIRE-NOSNAP": {
+   "id": "SP-CALL-EXPIRE-NOSNAP",
+   "group": "PROPS",
+   "title": "snapshot-property conf CALL-EXPIRE-NOSNAP",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "a"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-RESERVED-OPERATION": {
+   "id": "SP-RESERVED-OPERATION",
+   "group": "PROPS",
+   "title": "snapshot-property conf RESERVED-OPERATION",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.operation": "fake"
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      "append"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "SP-SET-SQL": {
+   "id": "SP-SET-SQL",
+   "group": "PROPS",
+   "title": "snapshot-property conf SET-SQL",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {},
+   "obs": {},
+   "error": {
+    "type": "ParseException",
+    "getCondition": "INVALID_SET_SYNTAX",
+    "getErrorClass": "INVALID_SET_SYNTAX",
+    "getSqlState": "42000",
+    "msg": "[INVALID_SET_SYNTAX] Expected format is 'SET', 'SET key', or 'SET key=value'. If you want to include special characters in key, or include semicolon in value, please use backquotes, e.g., SET `key`=`value`. SQLSTATE: 42000\n== SQL (line 1, position 1) ==\nSET spark.sql.iceberg.snapshot-property.team = s\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+   }
+  },
+  "SP-EMPTY-VALUE": {
+   "id": "SP-EMPTY-VALUE",
+   "group": "PROPS",
+   "title": "snapshot-property conf EMPTY-VALUE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": ""
+   },
+   "obs": {
+    "ops+keys": [
+     [
+      "append",
+      ""
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "CZ-CONF-GZIP-DF": {
+   "id": "CZ-CONF-GZIP-DF",
+   "group": "PROPS",
+   "title": "codec conf CONF-GZIP-DF",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "codec": [
+     [
+      "GZIP"
+     ]
+    ]
+   }
+  },
+  "CZ-CONF-GZIP-SQL": {
+   "id": "CZ-CONF-GZIP-SQL",
+   "group": "PROPS",
+   "title": "codec conf CONF-GZIP-SQL",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "codec": [
+     [
+      "GZIP"
+     ]
+    ]
+   }
+  },
+  "CZ-CONF-SNAPPY-SQL": {
+   "id": "CZ-CONF-SNAPPY-SQL",
+   "group": "PROPS",
+   "title": "codec conf CONF-SNAPPY-SQL",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "snappy"
+   },
+   "obs": {
+    "codec": [
+     [
+      "SNAPPY"
+     ]
+    ]
+   }
+  },
+  "CZ-CONF-UPPER": {
+   "id": "CZ-CONF-UPPER",
+   "group": "PROPS",
+   "title": "codec conf CONF-UPPER",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "GZIP"
+   },
+   "obs": {
+    "codec": [
+     [
+      "GZIP"
+     ]
+    ]
+   }
+  },
+  "CZ-CONF-OVER-PROP": {
+   "id": "CZ-CONF-OVER-PROP",
+   "group": "PROPS",
+   "title": "codec conf CONF-OVER-PROP",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "snappy"
+   },
+   "obs": {
+    "codec": [
+     [
+      "SNAPPY"
+     ]
+    ]
+   }
+  },
+  "CZ-OPT-OVER-CONF": {
+   "id": "CZ-OPT-OVER-CONF",
+   "group": "PROPS",
+   "title": "codec conf OPT-OVER-CONF",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "codec": [
+     [
+      "SNAPPY"
+     ]
+    ]
+   }
+  },
+  "CZ-CONF-BOGUS": {
+   "id": "CZ-CONF-BOGUS",
+   "group": "PROPS",
+   "title": "codec conf CONF-BOGUS",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "bogus"
+   },
+   "obs": {},
+   "error": {
+    "type": "Py4JJavaError",
+    "msg": "An error occurred while calling o55.sql.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 149.0 failed 1 times, most recent failure: Lost task 0.0 in stage 149.0 (TID 135) (localhost executor driver): java.lang.IllegalArgumentException: Unsupported compression codec: bogus"
+   }
+  },
+  "CZ-CONF-DELETE-COW": {
+   "id": "CZ-CONF-DELETE-COW",
+   "group": "PROPS",
+   "title": "codec conf CONF-DELETE-COW",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "codec": [
+     [
+      "GZIP"
+     ],
+     [
+      "GZIP"
+     ]
+    ]
+   }
+  },
+  "CZ-CONF-RDF": {
+   "id": "CZ-CONF-RDF",
+   "group": "PROPS",
+   "title": "codec conf CONF-RDF",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "codec": [
+     [
+      "GZIP"
+     ],
+     [
+      "GZIP"
+     ],
+     [
+      "GZIP"
+     ]
+    ]
+   }
+  }
+ }
+}
