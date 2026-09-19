@@ -515,7 +515,7 @@ def test_rpd_invalid_values_report_illegal_argument_first(
 
 
 def test_remove_dangling_null_map_key_wins_over_flag(spark: ReparkSession) -> None:
-    """A present NULL map key means Java's default (false), even with the legacy flag true."""
+    """NULL key is Java default false over the flag; deletes end at zero (residue_rpd_then_rdf)."""
     _build_shape(
         spark,
         "mem.ns.dnull",
@@ -533,12 +533,12 @@ def test_remove_dangling_null_map_key_wins_over_flag(spark: ReparkSession) -> No
     )
     assert got["removed_delete_files_count"] == 0
     _files, deletes, _specs = _file_state(spark, "mem.ns.dnull")
-    assert deletes == 2
+    assert deletes == 0
     assert _live_rows(spark, "mem.ns.dnull") == 400
 
 
 def test_residue_repark_sequence_pins_current_shape(spark: ReparkSession) -> None:
-    """RePark's own rpd-then-rdf sequence keeps rows and leaves two delete files behind."""
+    """Rpd-then-rdf keeps 400 rows and ends with zero delete files (residue_rpd_then_rdf)."""
     _build_shape(
         spark,
         "mem.ns.res",
@@ -553,7 +553,7 @@ def test_residue_repark_sequence_pins_current_shape(spark: ReparkSession) -> Non
     assert rdf["rewritten_data_files_count"] >= 0
     assert _live_rows(spark, "mem.ns.res") == 400
     _files, deletes, _specs = _file_state(spark, "mem.ns.res")
-    assert deletes == 2
+    assert deletes == 0
 
 
 def test_residue_matches_spark_zero_delete_files(spark: ReparkSession) -> None:
