@@ -10,6 +10,33 @@ on RePark, and ranks what is left as a unit slate. No product code changed; ever
 **Measured on** RePark main `6a140eb3` (fork pin `18ab9761`), release native. Main has since taken RP-31 (`3e6a172c`,
 fork #299 and #300); the two units RP-31 touches are marked *held* below and should be re-measured, not assumed closed.
 
+## 0. Owner ruling (2026-09-19) — this slate gates v1.5.0
+
+The owner, 2026-09-19 evening: "I want it to gate 1.5, I need to really start using RePark for production pipelines at
+work and for that we need full Iceberg support and I mean full." This amends ruling R-1 of
+[ice-read-perf-slate-2026-09-18.md](ice-read-perf-slate-2026-09-18.md): v1.5.0 now waits for the read-performance
+wave **and** for this slate.
+
+**The gate, as a measurement.** The inventory harness (§6) is re-run on the release candidate's head beside Spark
+4.1.2 + Iceberg 1.11.0, and the matrix of §1 must read:
+
+| verdict | at the inventory (main `6a140eb3`) | at the v1.5.0 gate |
+|---|---|---|
+| DIFFERENT | 57 | **0** |
+| REFUSED-UNREGISTERED | 126 | **0** |
+| NOT-PARSED | 28 | **0** |
+| REFUSED-REGISTERED | 87 | **0**, except a cell the owner has ruled out by a dated ruling recorded here |
+| EQUAL + SPARK-CANNOT | 544 | everything else |
+
+A registry row marked DECLARED is not an exemption: a refusal is an end state only where Spark refuses too
+(SPARK-CANNOT) or where a dated owner ruling below names the cell. The 2026-09-16 rating's probes and the run-23
+still-true list are part of the same gate, and so is a green `aws-acceptance` run at the release head.
+
+**Rulings that carve a cell out** (none yet). Candidates the orchestrating session has put to the owner, each with
+its default until ruled: IPI-17 (Spark's `merge-schema` + `INSERT … VALUES` adds `col1..colN` — default: do not copy,
+DECLARED), IPI-18 (RePark accepts three reader options Spark 4.1 refuses — default: keep accepting, DECLARED). Every
+other unit, IPI-47 (streaming) and IPI-40 (views) included, is in the gate until the owner says otherwise.
+
 ## 1. The matrix in numbers
 
 842 cells. One verdict each:
