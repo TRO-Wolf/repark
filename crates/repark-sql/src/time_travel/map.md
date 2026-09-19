@@ -11,6 +11,10 @@ name parts. The end-to-end (session) rows live in `../tests.rs`.
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../time_travel.rs`.
+- `exec_tests.rs` — native-door execution pins (`#[cfg(test)] mod exec_tests;` in
+  `../time_travel.rs`): string, integer-seconds, and CAST `FOR TIMESTAMP AS OF`
+  expressions plus a `FOR VERSION AS OF` control, each pinning the first of two
+  snapshots. pins: ice-tt-resolve-1/C-002
 
 ## Pointers
 

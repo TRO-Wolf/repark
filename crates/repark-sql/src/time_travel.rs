@@ -334,4 +334,6 @@ fn tokens_to_sql(tokens: &[Token]) -> String {
 }
 
 #[cfg(test)]
+mod exec_tests;
+#[cfg(test)]
 mod tests;
