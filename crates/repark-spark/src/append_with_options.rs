@@ -54,7 +54,7 @@ pub(crate) async fn execute_append_with_options(
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
-    if column_names.is_empty() {
+    if column_names.is_empty() && !options.is_empty() {
         repark_iceberg::write::append_with_statement_options(
             &catalog,
             &table,

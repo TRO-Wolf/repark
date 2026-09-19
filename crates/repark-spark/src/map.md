@@ -154,7 +154,11 @@ pins: rp-4-fork-repin/C-005, C-006
   targets, `REPLACE INTO` and non-3-part names still refuse.
   pins: ice-write-options-1/C-014, C-018
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the option-carrying append resolves
-  the merged session write at its commit.
+  the merged session write at its commit. **Round 1 fix (Q-24c-5):** an
+  option-less list-free INSERT stages positionally (`stage_overwrite_files_with`
+  with an empty column list) instead of the by-name append, so positional
+  `VALUES` resolve over all columns as Spark's do; the by-name arm stays for
+  the option-carrying form.
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →

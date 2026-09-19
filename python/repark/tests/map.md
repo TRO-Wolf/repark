@@ -680,6 +680,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   parquet footer codecs per file; the bogus codec refuses naming the codec with
   no snapshot committed; the live tier re-derives the fixture under
   `REPARK_PARITY_LIVE=1`. Red on main where the session confs are ignored.
+  **Round 1 fix (2026-09-19, Q-24c-6):** `SP-CALL-RDF` and `CZ-CONF-RDF` are
+  strict xfails (`F-RDF-SESSION-CONF-1`: the fork's `rewrite_data_files` takes
+  no session writer/snapshot properties — declared residue, registry row names it).
   pins: ice-session-write-conf-1/C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   pins: ice-session-write-conf-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
   pins: ice-session-write-conf-1/C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026

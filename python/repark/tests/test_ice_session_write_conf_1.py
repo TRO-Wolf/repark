@@ -320,6 +320,13 @@ def test_sp_ctas_stamps_session_team(spark: Any) -> None:
         _end(spark, cell["spark_conf"], [table, table_two])
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "F-RDF-SESSION-CONF-1 2026-09-19: the fork's rewrite_data_files takes "
+        "no session writer/snapshot properties"
+    ),
+)
 def test_sp_call_rdf_keeps_stamps(spark: Any) -> None:
     """rewrite_data_files leaves stamped appends intact. pins: ice-session-write-conf-1/C-014"""
     cell = _cell("SP-CALL-RDF")
@@ -593,6 +600,13 @@ def test_cz_conf_delete_cow_rewrites_gzip(spark: Any) -> None:
         _end(spark, cell["spark_conf"], [table])
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "F-RDF-SESSION-CONF-1 2026-09-19: the fork's rewrite_data_files takes "
+        "no session writer/snapshot properties"
+    ),
+)
 def test_cz_conf_rdf_writes_gzip(spark: Any) -> None:
     """Conf gzip sets the rewrite_data_files output codec. pins: ice-session-write-conf-1/C-031"""
     cell = _cell("CZ-CONF-RDF")
