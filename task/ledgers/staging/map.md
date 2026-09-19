@@ -66,6 +66,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   ICE-ARRAY-INSERT-1 FIXED. Test-only, no product change. `risk_tier: standard`.
   Branch `chore/rp-29-fork-pin`.
   pins: ice-array-insert-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [ice-write-options-rp-1-ledger.md](ice-write-options-rp-1-ledger.md) —
+  **ICE-WRITE-OPTIONS-RP-1 (2026-09-18), in flight:** a caller-supplied
+  `snapshot-property.replace-partitions` value wins on a replace-partitions commit at
+  fork #298 (F-RP-SUMMARY-USER-1) — the five-cell Spark 4.1.2 oracle, the recorder, one
+  pin per cell for the commit flag and the newest summary values, the live
+  re-derivation of one cell, registry row ICE-WRITE-OPTIONS-1-R-RP FIXED. Test-only,
+  no product change. `risk_tier: standard`. Branch `chore/rp-30-fork-pin`.
+  pins: ice-write-options-rp-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [ice-evo-dml-1-ledger.md](ice-evo-dml-1-ledger.md) —
   **ICE-EVO-DML-1 (2026-09-17), in flight:** MERGE / UPDATE / DELETE after `ADD COLUMN` or
   `RENAME COLUMN` with no write since answer Spark 4.1.2 instead of refusing `Column … not

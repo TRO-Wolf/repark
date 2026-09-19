@@ -1,0 +1,63 @@
+{
+ "cells": {
+  "insertInto_dynamic_false": {
+   "committed": true,
+   "door": "insertInto",
+   "last_summary_k": null,
+   "last_summary_replace_partitions": "false",
+   "option_key": "snapshot-property.replace-partitions",
+   "option_value": "false",
+   "outcome": "ok",
+   "statement": "src.write.format(\"iceberg\").option(\"snapshot-property.replace-partitions\", \"false\").mode(\"overwrite\").insertInto(\"<t>\") under spark.sql.sources.partitionOverwriteMode=dynamic"
+  },
+  "insertInto_dynamic_true": {
+   "committed": true,
+   "door": "insertInto",
+   "last_summary_k": null,
+   "last_summary_replace_partitions": "true",
+   "option_key": "snapshot-property.replace-partitions",
+   "option_value": "true",
+   "outcome": "ok",
+   "statement": "src.write.format(\"iceberg\").option(\"snapshot-property.replace-partitions\", \"true\").mode(\"overwrite\").insertInto(\"<t>\") under spark.sql.sources.partitionOverwriteMode=dynamic"
+  },
+  "overwritePartitions_control_other": {
+   "committed": true,
+   "door": "overwritePartitions",
+   "last_summary_k": "v",
+   "last_summary_replace_partitions": "true",
+   "option_key": "snapshot-property.k",
+   "option_value": "v",
+   "outcome": "ok",
+   "statement": "src.writeTo(\"<t>\").option(\"snapshot-property.k\", \"v\").overwritePartitions()"
+  },
+  "overwritePartitions_false": {
+   "committed": true,
+   "door": "overwritePartitions",
+   "last_summary_k": null,
+   "last_summary_replace_partitions": "false",
+   "option_key": "snapshot-property.replace-partitions",
+   "option_value": "false",
+   "outcome": "ok",
+   "statement": "src.writeTo(\"<t>\").option(\"snapshot-property.replace-partitions\", \"false\").overwritePartitions()"
+  },
+  "overwritePartitions_true": {
+   "committed": true,
+   "door": "overwritePartitions",
+   "last_summary_k": null,
+   "last_summary_replace_partitions": "true",
+   "option_key": "snapshot-property.replace-partitions",
+   "option_value": "true",
+   "outcome": "ok",
+   "statement": "src.writeTo(\"<t>\").option(\"snapshot-property.replace-partitions\", \"true\").overwritePartitions()"
+  }
+ },
+ "oracle": "PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "seed": "INSERT INTO <t> VALUES (1, 'a'), (2, 'b')",
+ "source": [
+  [
+   3,
+   "a"
+  ]
+ ],
+ "table_ddl": "CREATE TABLE <t> (id INT, p STRING) USING iceberg PARTITIONED BY (p)"
+}

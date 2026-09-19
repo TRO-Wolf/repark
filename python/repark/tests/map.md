@@ -6602,3 +6602,27 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `sql_values` table via `register_table` and reads the recorded rows. Truth in
   [../../repark-parity/fixtures/torture/data/ice_array_insert_1/](../../repark-parity/fixtures/torture/data/ice_array_insert_1/map.md).
   pins: ice-array-insert-1/C-003, C-004, C-005, C-006, C-007, C-008
+- [_record_ice_write_options_rp_1.py](_record_ice_write_options_rp_1.py) — the **record
+  driver** for ICE-WRITE-OPTIONS-RP-1 (NOT a `test_` module; never collected). `CELLS`
+  is the five-cell catalog (dynamic `insertInto` overwrite / `overwritePartitions()`
+  with `snapshot-property.replace-partitions` `false` / `true`, plus the
+  `snapshot-property.k=v` control); `record_all()` seeds one fresh table per cell on
+  one short-lived local Spark JVM with a Hadoop catalog at scratch and writes
+  `spark_rp_oracle.json`. Runtime GAV from `_oracle_pins`, Ivy cache from
+  `REPARK_ORACLE_IVY`, warehouse from `tempfile`. Re-record:
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2
+  on the path.
+  pins: ice-write-options-rp-1/C-002
+- [test_ice_write_options_rp_1.py](test_ice_write_options_rp_1.py) —
+  **ICE-WRITE-OPTIONS-RP-1 (2026-09-18, RP-30):** a caller-supplied
+  `snapshot-property.replace-partitions` value wins on a replace-partitions commit —
+  one pin per recorded cell (5) asserting the write commits and the newest snapshot's
+  summary `replace-partitions` (and `k` for the control) equals Spark's, each on a
+  fresh RePark memory catalog with the cell's table, seed, source and door. Green at
+  fork #298 (F-RP-SUMMARY-USER-1); the two `false` cells are red at the old pin by the
+  registry row's sentence (RePark wrote `true` either way). Live
+  (`REPARK_PARITY_LIVE=1`): Spark replays the `overwritePartitions_false` cell and
+  answers the recorded summary. Truth in
+  [../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/](../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/map.md).
+  pins: ice-write-options-rp-1/C-003, C-004, C-005, C-006, C-007, C-008
+
