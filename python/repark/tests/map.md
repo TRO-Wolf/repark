@@ -387,6 +387,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   doors, including RePark DML on adopted live tables. The bare-decimal-literal
   BACKLOG pins hold today's loud needles against the recorded Spark answers.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [_record_ice_page_prune_1.py](_record_ice_page_prune_1.py) +
+  [fixtures/ice_page_prune_1/](fixtures/ice_page_prune_1/map.md) —
+  **ICE-PAGE-PRUNE-1 (2026-09-19, round 1, step 1):** the Spark 4.1.2 oracle
+  behind the page-pruning pins — the five Spark-written warehouses (600,773
+  bytes, canonical `/tmp/repark-ice-page-prune-1` paths, rewritten with
+  `CALL …rewrite_table_path` and materialized under a directory lock) plus the
+  compacted `truth.json` (id runs, row-id and sequence segments on v3, decoded
+  by `expand_cell`). The recorder re-derives every cell from live Spark,
+  matches the fork lane's truth cell for cell, and verifies on re-run
+  (`--rewrite` re-records).
+  pins: ice-page-prune-1/C-001, C-002
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — **ICE-HADOOP-VN-1
   (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The
   committed `fixtures/torture/data/ice_hadoop_vn_1` Spark-written v2 table (one seed

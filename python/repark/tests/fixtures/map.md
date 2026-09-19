@@ -11,3 +11,6 @@ oracle (`.crc` sidecars skipped).
 - [`ice_sorted_insert_1/`](ice_sorted_insert_1/map.md) — **ICE-SORTED-INSERT-1
   (2026-09-17):** the Spark-written `days(ts), id` ordered warehouse behind
   `ice_sorted_insert_1_spark_oracle.json`. pins: ice-sorted-insert-1/C-003, C-004
+- [`ice_page_prune_1/`](ice_page_prune_1/map.md) — **ICE-PAGE-PRUNE-1
+  (2026-09-19, round 1):** the five Spark-written page-prune warehouses plus
+  the compacted `truth.json`. pins: ice-page-prune-1/C-001, C-002
