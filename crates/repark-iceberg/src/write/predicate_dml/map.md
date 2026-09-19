@@ -47,6 +47,14 @@ works, so the attribute is gone rather than documented.
   registry (Spark rewrites a branch DELETE onto `datafusion.public.<temp>`) stay on
   the fork `TableProvider`.
   pins: rp-9-repin-f23/C-005 (`plain.rs::try_allowed_plain_identity` refuses with a plan error on an invalid target namespace; its `# Errors` doc is the one line the clippy `missing_errors_doc` gate forces on a `pub fn` returning `Result`)
+  **ICE-LIST-NULL-2 (2026-09-19):** `selection_refs_non_primitive` parses the claimed
+  selection and resolves every bare or target-qualified column against the table's
+  Iceberg schema through the shared `conflict_filter::top_level_field` rule; any
+  list, map or struct hit declines the identity claim. `plain_identity_needs_fork`
+  is the shared async seat both doors call after loading the target (a failed load
+  answers false, so the statement keeps the old loud path). Primitive-only
+  selections stay on the identity path with no behaviour or performance change.
+  pins: ice-list-null-2/C-001, C-003
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
 
 ## Pointers

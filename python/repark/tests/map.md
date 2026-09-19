@@ -6697,9 +6697,14 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   equals Spark's, each on a fresh RePark memory catalog with the recorder's DDL
   and seed. The `map_int` empty-map seed row runs through a `map_from_arrays`
   spelling RePark parses that reads back equal to Spark's seed (CAST-MAP-SPELL-1,
-  BACKLOG). The sixteen copy-on-write DELETE compound-predicate cells run verbatim
-  under strict xfail (fork #299 residue: the conjunction/disjunction path still
-  refuses `Accessor for Field xs not found`); the sixteen merge-on-read
+  BACKLOG). **ICE-LIST-NULL-2 (2026-09-19):** all 128 cells answer — the sixteen
+  copy-on-write DELETE compound-predicate cells run as plain pins since the
+  identity path declines non-primitive selections to the fork DELETE path (the
+  fork #299 residue sentence is corrected: the conjunction/disjunction failure
+  was RePark-side, not fork-side). The rows left behind equal Spark's on all
+  sixteen; the eight `xs IS NULL OR id = 1` cells pin RePark's measured
+  `overwrite` snapshot operation against Spark's recorded `delete`
+  (`OPERATION_DIVERGENCES`); the sixteen merge-on-read
   `xs IS NOT NULL` cells pin RePark's measured 1 delete file (1 DV on v3) against
   Spark's 2 (2 DVs). A second parametrization pins the delete-file / DV counts on
   every cell. Live (`REPARK_PARITY_LIVE=1`): Spark re-derives one cell per shape
@@ -6707,6 +6712,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   operation. Truth in
   [../../repark-parity/fixtures/torture/data/ice_list_null_1/](../../repark-parity/fixtures/torture/data/ice_list_null_1/map.md).
   pins: ice-list-null-1/C-003, C-004, C-005, C-006, C-008
+  pins: ice-list-null-2/C-004, C-006
 - [_record_ice_rowid_order_1.py](_record_ice_rowid_order_1.py) — the **record
   driver** for ICE-ROWID-ORDER-1 (NOT a `test_` module; never collected).
   `record_abc()` records the eight a/b/c cells (twelve runs each of INSERT INTO

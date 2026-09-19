@@ -187,7 +187,15 @@ async fn execute_identity_or_delegate(
         repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity(statement)?
         && cx.catalogs.get(&allowed.catalog_name).is_some()
     {
-        return commit_identity_dml(cx, statement, allowed).await;
+        let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
+        if !repark_iceberg::write::predicate_dml::plain::plain_identity_needs_fork(
+            handle,
+            &allowed.spec,
+        )
+        .await
+        {
+            return commit_identity_dml(cx, statement, allowed).await;
+        }
     }
     guards::refuse_dml_subquery_predicate(statement)?;
     guards::refuse_mor_multi_spec_dml(cx, statement).await?;
