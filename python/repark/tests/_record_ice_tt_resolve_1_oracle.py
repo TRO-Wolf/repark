@@ -28,6 +28,7 @@ import json
 import re
 import sys
 import time
+import zoneinfo
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +39,7 @@ from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 FIXTURE = Path(__file__).with_name("ice_tt_resolve_1_spark_oracle.json")
 ICEBERG_SPARK_EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
 UTC = datetime.UTC
-NY = datetime.timezone(datetime.timedelta(hours=-4))
+NY = zoneinfo.ZoneInfo("America/New_York")
 CELL_SLEEP = 2.2
 VOLATILE_KEYS = ("secs", "error_step", "notes")
 LONG_ID = re.compile(r"\b\d{10,}\b")

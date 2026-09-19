@@ -70,6 +70,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 3 item 4: a built-in beside a branch/tag selector refuses with Spark's text —
   `versionAsOf`/`TIMESTAMP AS OF` on a tag selector, `timestampAsOf`/`VERSION AS OF`
   on a branch selector. pins: ice-tt-resolve-1/C-002
+  Round 3 item 6: the New York wall clocks use `zoneinfo.ZoneInfo("America/New_York")`
+  instead of a fixed -4h offset, so the pins hold in winter. pins: ice-tt-resolve-1/C-002
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —

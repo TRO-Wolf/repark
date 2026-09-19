@@ -25,6 +25,7 @@ import json
 import os
 import re
 import time
+import zoneinfo
 from pathlib import Path
 from typing import Any
 
@@ -114,7 +115,7 @@ def _seed_table(spark: Any, table: str, version: int) -> dict[str, Any]:
     assert sec * 1000 > stamps[0]
     assert sec * 1000 + 500 < stamps[1]
     mid = datetime.datetime.fromtimestamp(mid_ms / 1000, tz=UTC)
-    ny_zone = datetime.timezone(datetime.timedelta(hours=-4))
+    ny_zone = zoneinfo.ZoneInfo("America/New_York")
     return {
         "s0": ids[0],
         "s1": ids[1],
@@ -609,7 +610,7 @@ def _live_seed(session: Any, table: str, version: int) -> dict[str, Any]:
     session.sql(f"ALTER TABLE {table} CREATE TAG t0 AS OF VERSION {ids[0]}")
     session.sql(f"ALTER TABLE {table} CREATE BRANCH b0 AS OF VERSION {ids[1]}")
     mid = stamps[0] + (stamps[1] - stamps[0]) / 2
-    ny_zone = datetime.timezone(datetime.timedelta(hours=-4))
+    ny_zone = zoneinfo.ZoneInfo("America/New_York")
     return {
         "s0": ids[0],
         "s1": ids[1],
