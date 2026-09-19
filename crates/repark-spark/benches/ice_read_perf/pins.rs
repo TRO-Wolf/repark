@@ -373,11 +373,12 @@ fn setup_writes_exactly_n_files_and_every_mode_runs_on_them() {
                 assert_eq!(entry["io_identical_across_samples"], true, "mode {mode}");
                 assert!(entry["samples"][1]["rss_at_reset_kib"].is_number());
             }
+            let footers = if mode == "warm" { 0 } else { 3 };
             let count = &query(&document, "Q1")["io"]["data_file_ranged"];
-            assert_eq!(requests(&count["footer"]), 3, "mode {mode}");
+            assert_eq!(requests(&count["footer"]), footers, "mode {mode}");
             assert_eq!(requests(&count["page"]), 0, "mode {mode}");
             let full = &query(&document, "Q2")["io"]["data_file_ranged"];
-            assert_eq!(requests(&full["footer"]), 3, "mode {mode}");
+            assert_eq!(requests(&full["footer"]), footers, "mode {mode}");
             assert!(requests(&full["page"]) > 0, "mode {mode}");
         }
     }
