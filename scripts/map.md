@@ -1,6 +1,6 @@
 # map — scripts/
 
-ICE-TT-RESOLVE-1 (2026-09-19): `check_rust_file_size.py` sets `repark-python/src/session.rs` 1127 → 1135 (the mandated `version_as_of`/`timestamp_as_of` PyO3 params), `repark-sql/src/guards/tests.rs` 1207 → 1213 and `repark-sql/src/tests.rs` 1520 → 1530 (the 4-arg `EngineContext::new` zone plumbing); `check_lib_py.py` sets `session_core.py` 2290 → 2297 (the raw-string pass-through); `check_lib_rs.py` adds the `repark-core` 154 row (the shared-resolver re-export block); round 2 ratchets `guards/tests.rs` 1213 → 1207 and `tests.rs` 1530 → 1520 (the call-site revert), then the `repark-core` row 154 → 152 (the re-export block narrows behind the module). pins: ice-tt-resolve-1/C-011, C-012
+ICE-TT-RESOLVE-1 round 2 (2026-09-19): ceilings down — `session.rs` 1135 → 1123, `session_core.py` 2297 → 2287, `guards/tests.rs` 1213 → 1207, `tests.rs` 1530 → 1520, the `repark-core` lib row removed (lib.rs ≤ 150). pins: ice-tt-resolve-1/C-011, C-012
 
 ICE-WRITE-OPTIONS-1 (2026-09-17): `check_lib_py.py` sets `dataframe/core.py` 4015 → 3991 (the WriterV2 option warning machinery leaves) and `dataframe/writer_readwriter.py` 1101 → 1114 (options slots, storage, clause rendering). pins: ice-write-options-1/C-001, C-005
 

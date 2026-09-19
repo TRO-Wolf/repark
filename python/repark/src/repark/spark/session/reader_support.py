@@ -151,6 +151,15 @@ _I64_MIN = -(2**63)
 _I64_MAX = 2**63 - 1
 
 
+def check_i64_pin(name: str, value: int | None) -> None:
+    """Gate a time-travel pin against the signed 64-bit domain before PyO3."""
+
+    from repark.errors import AnalysisException
+
+    if value is not None and (value < _I64_MIN or value > _I64_MAX):
+        raise AnalysisException(f"{name} must fit a signed 64-bit integer, got {value!r}")
+
+
 def _parse_snapshot_id_option(raw: Any) -> int:
     """Parse a reader ``snapshot-id`` pin to a signed 64-bit snapshot id."""
 

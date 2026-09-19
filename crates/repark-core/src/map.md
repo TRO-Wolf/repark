@@ -795,6 +795,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: ice-tt-resolve-1/C-010
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the moved names resolve only behind the
   `time_travel` module; the stale root re-exports are gone. pins: ice-tt-resolve-1/C-010
+  **ICE-TT-RESOLVE-1 round 2 close (2026-09-19):** the root block narrows to the six
+  externally used names; `lib.rs` sits at the 150 default ceiling. pins: ice-tt-resolve-1/C-012
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** `EngineContext::new` is 3-arg again (zone
   defaults); `new_with_time_zone` carries an explicit zone. pins: ice-tt-resolve-1/C-003
   **Documented residual (H-1b, 2026-08-11):** `read_table_at` registers a `__repark_tt_<n>` temp

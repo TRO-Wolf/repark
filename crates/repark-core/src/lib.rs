@@ -92,10 +92,8 @@ pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_sessio
 
 // === Time travel ===
 pub use time_travel::{
-    ReaderTimeTravel, branch_time_travel_refusal, format_snapshot_bound_ms,
-    invalid_timestamp_input, invalid_version_pin, nondeterministic_timestamp_expr,
-    parse_timestamp_asof_to_ms, parse_timestamp_string_to_ms, parse_version_value,
-    resolve_reader_spec, resolve_snapshot_id, snapshot_id_as_of_time, timestamp_column_refusal,
+    ReaderTimeTravel, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
+    resolve_reader_spec, resolve_snapshot_id,
 };
 
 pub use lineage_columns::{LineagePins, prepare_lineage_sql, sql_mentions_lineage_columns};

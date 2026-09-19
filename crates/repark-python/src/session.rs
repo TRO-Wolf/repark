@@ -512,14 +512,10 @@ impl PyReparkSession {
     /// # Errors
     /// Classified engine errors (analysis for unknown snapshot/ref/mutex; execution otherwise).
     #[pyo3(signature = (
-        table_name,
-        snapshot_id=None,
-        as_of_timestamp_ms=None,
-        branch=None,
-        tag=None,
-        version_as_of=None,
-        timestamp_as_of=None,
+        table_name, snapshot_id=None, as_of_timestamp_ms=None, branch=None, tag=None,
+        version_as_of=None, timestamp_as_of=None,
     ))]
+    #[allow(clippy::too_many_arguments)]
     pub fn read_iceberg_table(
         &self,
         py: Python<'_>,
@@ -531,25 +527,17 @@ impl PyReparkSession {
         version_as_of: Option<String>,
         timestamp_as_of: Option<String>,
     ) -> PyResult<PyDataFrame> {
-        fenced_span!("py.read", "PyReparkSession.read_iceberg_table", {
-            let opts = repark_core::time_travel::TimeTravelOpts {
-                snapshot_id,
-                as_of_timestamp_ms,
-                branch,
-                tag,
-            };
-            let df = py
-                .detach(|| {
-                    self.runtime.block_on(self.session.read_iceberg_table(
-                        table_name,
-                        opts,
-                        version_as_of,
-                        timestamp_as_of,
-                    ))
-                })
-                .map_err(to_py_err)?;
-            Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
-        })
+        crate::session_sources::read_iceberg_table_pinned(
+            py,
+            self,
+            table_name,
+            snapshot_id,
+            as_of_timestamp_ms,
+            branch,
+            tag,
+            version_as_of,
+            timestamp_as_of,
+        )
     }
 
     /// Live Iceberg table names in `namespace` (list-on-access; no DF provider snapshot).
