@@ -69,6 +69,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the recorded `MIX_*` rows on `(id, cat, payload)` — RePark cannot create the probe's
   `c` write-default, so `c` stays out of the compare.
   pins: ice-overwrite-mode-1/C-002, C-003, C-004
+  Round 2 (2026-09-19): the empty-dynamic pins in `test_dml_b_partition_overwrite.py`,
+  `test_writer_v2.py` and `test_examples_window_catalog.py` now assert that the empty
+  dynamic overwrite commits nothing (snapshot count and rows unchanged), Spark's answer;
+  `test_ice_overwrite_mode_1.py` adds the empty-frame `overwritePartitions` pin and the
+  invalid `DATE` cast pin. pins: ice-overwrite-mode-1/C-011, C-013
 
 - [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) +
   [ice_tt_resolve_1_spark_oracle.json](ice_tt_resolve_1_spark_oracle.json) +

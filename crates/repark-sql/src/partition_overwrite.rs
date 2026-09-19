@@ -241,19 +241,28 @@ async fn dynamic_partition_overwrite_keeps_absent_partitions() {
 
 /// pins: dml-b-insert-overwrite/C-002, C-004
 #[tokio::test]
-async fn empty_dynamic_partition_overwrite_refuses() {
+async fn empty_dynamic_partition_overwrite_commits_nothing() {
     let door = door_with_mode(repark_core::PartitionOverwriteMode::Dynamic).await;
     door.ok(
         "CREATE TABLE ice.sales.t WITH (partitioning = ARRAY['id']) AS \
          SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name",
     )
     .await;
-    let error = door
-        .err("INSERT OVERWRITE ice.sales.t PARTITION (id) SELECT * FROM ice.sales.t WHERE false")
+    let before = door
+        .table("sales", "t")
+        .await
+        .metadata()
+        .snapshots()
+        .count();
+    door.ok("INSERT OVERWRITE ice.sales.t PARTITION (id) SELECT * FROM ice.sales.t WHERE false")
         .await;
-    assert!(
-        error.contains(repark_iceberg::write::EMPTY_DYNAMIC_OVERWRITE_NEEDLE),
-        "{error}"
+    assert_eq!(
+        door.table("sales", "t")
+            .await
+            .metadata()
+            .snapshots()
+            .count(),
+        before
     );
     let batches = door
         .ok("SELECT id, name FROM ice.sales.t ORDER BY id")

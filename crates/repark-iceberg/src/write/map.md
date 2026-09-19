@@ -463,6 +463,20 @@ repark-core's error map.
   moved to `overwrite_scope.rs`. A clause key that binds no partition field refuses Spark's
   `[NON_PARTITION_COLUMN] … SQLSTATE: 42000` (`non_partition_column`).
   pins: ice-overwrite-mode-1/C-004, C-005
+  **Round 2 (2026-09-19):** the empty-dynamic refusal (`refuse_empty_dynamic_overwrite`,
+  `EMPTY_DYNAMIC_OVERWRITE_NEEDLE`) is gone: `commit_replace_partitions_to` returns the table
+  unchanged when `overwrite_scope::replace_partitions_is_noop` says the stage holds no rows,
+  as Spark skips the commit. A static value whose literal kind does not match its partition
+  source is cast (`static_value.rs`) for both the row-filter datum and the injected column.
+  A value that is not a plain literal (`TIMESTAMP '…'`) is kept as `refused_values` so the
+  key is checked first. pins: ice-overwrite-mode-1/C-011, C-013, C-014
+- `static_value.rs` — **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):** casts a static
+  `PARTITION` value to its partition source type with Arrow's cast (`safe: false`), the
+  cast the engine's `CAST` runs, so `PARTITION (d = '2024-01-01')` on a `DATE` column
+  replaces that partition and an invalid value refuses with the same `Cast error` text as
+  `SELECT CAST(…)`. `cast_datum` turns the cast value into an Iceberg `Datum` (boolean, int,
+  long, float, double, date, string, timestamp and timestamptz micros); other targets refuse.
+  pins: ice-overwrite-mode-1/C-013
 - `overwrite_scope.rs` — **ICE-OVERWRITE-MODE-1 (2026-09-19):** the one overwrite decision
   for every door. `OverwriteMode` (session `partitionOverwriteMode`, the typed
   `OverwriteIntent` — `Static` for `saveAsTable`, `Dynamic` for `writeTo.overwritePartitions`
@@ -471,9 +485,12 @@ repark-core's error map.
   (Spark's `OverwriteByExpression`); static without values → the whole table, unless the
   writer option says `dynamic` (Iceberg's `SparkWriteBuilder.overwrite` turns an
   `alwaysTrue` filter dynamic; the static intent ignores it). `plan_overwrite` validates the
-  clause first: an unpartitioned table refuses the first key `NON_PARTITION_COLUMN`, a static
-  key on a transform source keeps the O5 `NotImplemented` (registry residue), a non-identity
-  static field refuses as before. `validated_static_equalities` serves the `BY NAME` path.
+  clause first: an unpartitioned table refuses the first key `NON_PARTITION_COLUMN`, and
+  (round 2) any key that is not an identity partition column — a transform source or a
+  transform field name, static or dynamic — refuses `NON_PARTITION_COLUMN` too, as Spark's
+  identity-only `partitionColumnNames` does (PIN O5's `NotImplemented` retired); a deferred
+  literal refusal surfaces only after every key binds. `replace_partitions_is_noop` is the
+  empty-dynamic rule. `validated_static_equalities` serves the `BY NAME` path.
   Tests: [../tests/overwrite_scope.rs](../tests/overwrite_scope.rs).
   pins: ice-overwrite-mode-1/C-002, C-004, C-005, C-006, C-007
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over

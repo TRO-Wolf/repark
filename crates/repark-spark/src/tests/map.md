@@ -386,7 +386,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   key or value case turns a whole-table overwrite dynamic; `static`, `bogus` and
   `partitionOverwriteMode` do not; static values and the static `saveAsTable` intent win),
   and the typed dynamic intent of `writeTo.overwritePartitions` in static session mode;
-  pins: ice-overwrite-mode-1/C-002, C-003, C-004, C-005, C-006, C-007),
+  pins: ice-overwrite-mode-1/C-002, C-003, C-004, C-005, C-006, C-007; round 2: the mixed
+  list also runs `BY NAME`, an empty mixed source commits nothing in dynamic mode and deletes
+  `k='v'` in static mode, and `PARTITION (d = '2024-01-01')` casts to a `DATE` partition
+  while `'2024-13-45'` refuses with the cast text; `partition_overwrite`'s empty dynamic
+  `PARTITION (id)` now commits nothing; `transform_overwrite`'s PIN O5 now asserts
+  `NON_PARTITION_COLUMN`; pins: ice-overwrite-mode-1/C-011, C-012, C-013, C-014),
   `dyn_by_name_overwrite` (ICE-DYN-OVERWRITE-1 round 3: `BY NAME` and column-list
   overwrites under dynamic keep siblings with `replace-partitions=true`, `BY NAME` with an
   empty source commits no snapshot under dynamic (partitioned and unpartitioned) and

@@ -177,6 +177,10 @@ pins: rp-4-fork-repin/C-005, C-006
   refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`
   (matching plus projection live in `plan_name_projection`).
   pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
+  **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):** the mixed-list refusal in
+  `static_partition_columns` is gone — `PARTITION (k='v', k2) BY NAME` projects the
+  non-static columns by name and delegates to `execute_partition_overwrite`, so it follows
+  the same plan as the positional form in both modes. pins: ice-overwrite-mode-1/C-012
   **ICE-DYN-OVERWRITE-1 round 3 (2026-09-17):** `execute_insert_by_name` takes the
   router's `force_static_overwrite` and asks `insert_overwrite::overwrite_is_dynamic`
   once. A non-empty PARTITION-less `BY NAME` overwrite passes that answer into

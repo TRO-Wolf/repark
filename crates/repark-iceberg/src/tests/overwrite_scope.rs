@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use datafusion::sql::sqlparser::ast::{BinaryOperator, Expr, Ident, Value, ValueWithSpan};
-use iceberg::spec::{NestedField, PrimitiveType, Schema, Transform, Type, UnboundPartitionSpec};
+use iceberg::spec::{
+    NestedField, NestedFieldRef, PrimitiveType, Schema, Transform, Type, UnboundPartitionSpec,
+};
 use iceberg::table::Table;
 use iceberg::{NamespaceIdent, TableCreation};
 use tempfile::TempDir;
@@ -9,6 +11,7 @@ use tempfile::TempDir;
 use crate::write::{
     OverwriteIntent, OverwriteMode, OverwritePlan, OverwriteScope,
     overwrite_mode_option_is_dynamic, partition_overwrite_request_from_exprs, plan_overwrite,
+    replace_partitions_is_noop,
 };
 
 fn mode(session_dynamic: bool, intent: OverwriteIntent, option_dynamic: bool) -> OverwriteMode {
@@ -34,6 +37,20 @@ fn assign(column: &str, text: &str) -> Expr {
 }
 
 async fn table_with(warehouse: &TempDir, spec: Option<UnboundPartitionSpec>) -> Table {
+    let fields = vec![
+        NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
+        NestedField::optional(2, "data", Type::Primitive(PrimitiveType::String)).into(),
+        NestedField::optional(3, "cat", Type::Primitive(PrimitiveType::String)).into(),
+        NestedField::optional(4, "sub", Type::Primitive(PrimitiveType::String)).into(),
+    ];
+    table_of(warehouse, fields, spec).await
+}
+
+async fn table_of(
+    warehouse: &TempDir,
+    fields: Vec<NestedFieldRef>,
+    spec: Option<UnboundPartitionSpec>,
+) -> Table {
     let catalog = crate::catalog::memory_catalog(warehouse.path().to_str().expect("utf8"))
         .await
         .expect("catalog");
@@ -44,12 +61,7 @@ async fn table_with(warehouse: &TempDir, spec: Option<UnboundPartitionSpec>) -> 
         .expect("namespace");
     let schema = Schema::builder()
         .with_schema_id(0)
-        .with_fields(vec![
-            NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
-            NestedField::optional(2, "data", Type::Primitive(PrimitiveType::String)).into(),
-            NestedField::optional(3, "cat", Type::Primitive(PrimitiveType::String)).into(),
-            NestedField::optional(4, "sub", Type::Primitive(PrimitiveType::String)).into(),
-        ])
+        .with_fields(fields)
         .build()
         .expect("schema");
     let creation = TableCreation::builder()
@@ -179,4 +191,111 @@ async fn plan_refuses_a_non_partition_column_like_spark() {
         "Error during planning: [NON_PARTITION_COLUMN] PARTITION clause cannot contain the \
          non-partition column: `data`. SQLSTATE: 42000"
     );
+}
+
+fn assign_expr(column: &str, value: Expr) -> Expr {
+    Expr::BinaryOp {
+        left: Box::new(name(column)),
+        op: BinaryOperator::Eq,
+        right: Box::new(value),
+    }
+}
+
+fn timestamp_literal(text: &str) -> Expr {
+    Expr::TypedString(datafusion::sql::sqlparser::ast::TypedString {
+        data_type: datafusion::sql::sqlparser::ast::DataType::Timestamp(
+            None,
+            datafusion::sql::sqlparser::ast::TimezoneInfo::None,
+        ),
+        value: ValueWithSpan::from(Value::SingleQuotedString(text.to_string())),
+        uses_odbc_syntax: false,
+    })
+}
+
+fn non_partition_column(column: &str) -> String {
+    format!(
+        "Error during planning: [NON_PARTITION_COLUMN] PARTITION clause cannot contain the \
+         non-partition column: `{column}`. SQLSTATE: 42000"
+    )
+}
+
+#[tokio::test]
+async fn plan_refuses_a_transform_source_key_before_reading_its_value() {
+    let warehouse = TempDir::new().expect("warehouse");
+    let bucket = UnboundPartitionSpec::builder()
+        .add_partition_field(3, "cat", Transform::Identity)
+        .expect("cat")
+        .add_partition_field(1, "id_bucket", Transform::Bucket(4))
+        .expect("bucket")
+        .build();
+    let table = table_with(&warehouse, Some(bucket)).await;
+    let one = Expr::Value(ValueWithSpan::from(Value::Number("1".to_string(), false)));
+    let cases = [
+        (vec![assign_expr("id", one)], "id"),
+        (vec![name("id")], "id"),
+        (vec![name("id_bucket")], "id_bucket"),
+        (
+            vec![assign_expr("id", timestamp_literal("2024-01-01"))],
+            "id",
+        ),
+    ];
+    for (exprs, column) in cases {
+        let request = partition_overwrite_request_from_exprs(&exprs).expect("request");
+        for session_dynamic in [false, true] {
+            let error = plan_overwrite(
+                &table,
+                &request,
+                mode(session_dynamic, OverwriteIntent::Session, false),
+            )
+            .expect_err("a transform source is not a partition column");
+            assert_eq!(error.strip_backtrace(), non_partition_column(column));
+        }
+    }
+    let typed = partition_overwrite_request_from_exprs(&[assign_expr(
+        "cat",
+        timestamp_literal("2024-01-01"),
+    )])
+    .expect("request");
+    let error = plan_overwrite(&table, &typed, OverwriteMode::default())
+        .expect_err("a typed literal on an identity key keeps its refusal");
+    assert!(
+        error
+            .to_string()
+            .contains("INSERT OVERWRITE PARTITION assignment value must be a literal"),
+        "{error}"
+    );
+}
+
+#[tokio::test]
+async fn plan_casts_a_static_value_to_the_partition_source_type() {
+    let warehouse = TempDir::new().expect("warehouse");
+    let fields = vec![
+        NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
+        NestedField::optional(2, "d", Type::Primitive(PrimitiveType::Date)).into(),
+    ];
+    let spec = UnboundPartitionSpec::builder()
+        .add_partition_field(2, "d", Transform::Identity)
+        .expect("d")
+        .build();
+    let table = table_of(&warehouse, fields, Some(spec)).await;
+    let valid = partition_overwrite_request_from_exprs(&[assign("d", "2024-01-01")]).expect("ok");
+    match plan_overwrite(&table, &valid, OverwriteMode::default()).expect("cast plan") {
+        OverwritePlan::RowFilter(spec) => {
+            assert_eq!(spec.predicate.to_string(), "d = 2024-01-01");
+        }
+        other => panic!("a static DATE value must filter its partition, got {other:?}"),
+    }
+    let invalid =
+        partition_overwrite_request_from_exprs(&[assign("d", "2024-13-45")]).expect("request");
+    let error = plan_overwrite(&table, &invalid, OverwriteMode::default())
+        .expect_err("the cast rejects the value");
+    assert_eq!(
+        error.strip_backtrace(),
+        "Arrow error: Cast error: Cannot cast string '2024-13-45' to value of Date32 type"
+    );
+}
+
+#[test]
+fn an_empty_dynamic_stage_skips_the_commit() {
+    assert!(replace_partitions_is_noop(&[]));
 }

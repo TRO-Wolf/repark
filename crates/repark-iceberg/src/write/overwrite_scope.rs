@@ -1,6 +1,6 @@
 use datafusion::error::{DataFusionError, Result};
 use iceberg::expr::Predicate;
-use iceberg::spec::Transform;
+use iceberg::spec::{DataFile, Transform};
 use iceberg::table::Table;
 
 use crate::write::partition_overwrite::{
@@ -71,6 +71,11 @@ impl OverwritePlan {
 }
 
 #[must_use]
+pub fn replace_partitions_is_noop(staged_files: &[DataFile]) -> bool {
+    staged_files.iter().map(DataFile::record_count).sum::<u64>() == 0
+}
+
+#[must_use]
 pub fn overwrite_mode_option_is_dynamic(raw: &str) -> bool {
     raw.eq_ignore_ascii_case("dynamic")
 }
@@ -136,33 +141,14 @@ fn validated_bindings(
         .iter()
         .map(|field| bind_partition_field(schema.as_ref(), field))
         .collect::<Result<Vec<_>>>()?;
-    for equality in &request.equalities {
-        let transform_source = bindings.iter().any(|binding| {
-            binding.transform != Transform::Identity
-                && binding
-                    .source_column_name
-                    .eq_ignore_ascii_case(&equality.name)
-        });
-        if transform_source && resolve_binding(&bindings, &equality.name).is_err() {
-            return Err(DataFusionError::NotImplemented(format!(
-                "INSERT OVERWRITE … PARTITION (…) static assignment `{}` is not an identity \
-                 partition field of the target table",
-                equality.name
-            )));
-        }
-    }
     for name in &request.names {
-        resolve_binding(&bindings, name)?;
-    }
-    for equality in &request.equalities {
-        let binding = resolve_binding(&bindings, &equality.name)?;
+        let binding = resolve_binding(&bindings, name)?;
         if binding.transform != Transform::Identity {
-            return Err(DataFusionError::NotImplemented(format!(
-                "static INSERT OVERWRITE PARTITION only supports identity partition fields; `{}` \
-                 uses {}",
-                binding.spec_field_name, binding.transform
-            )));
+            return Err(non_partition_column(name));
         }
+    }
+    if let Some(refusal) = request.refused_values.first() {
+        return Err(DataFusionError::Plan(refusal.clone()));
     }
     Ok(bindings)
 }

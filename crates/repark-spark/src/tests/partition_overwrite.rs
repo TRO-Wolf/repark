@@ -6,7 +6,7 @@ use super::common::*;
 
 /// pins: dml-b-insert-overwrite/C-002, C-004
 #[tokio::test]
-async fn empty_dynamic_partition_overwrite_refuses() {
+async fn empty_dynamic_partition_overwrite_commits_nothing() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = super::dyn_partition_overwrite::setup_dynamic(&warehouse).await;
     run(
@@ -15,23 +15,28 @@ async fn empty_dynamic_partition_overwrite_refuses() {
         "CREATE TABLE ice.sales.t USING iceberg PARTITIONED BY (id) AS SELECT * FROM src",
     )
     .await;
-    let error = execute(
+    let before = load_sales_table(&catalogs, "t")
+        .await
+        .metadata()
+        .snapshots()
+        .count();
+    run(
         &ctx,
         &catalogs,
         "INSERT OVERWRITE ice.sales.t PARTITION (id) SELECT * FROM src WHERE false",
     )
-    .await
-    .expect_err("empty dynamic overwrite must refuse");
-    assert!(
-        error
-            .to_string()
-            .contains(repark_iceberg::write::EMPTY_DYNAMIC_OVERWRITE_NEEDLE),
-        "got {error}"
+    .await;
+    assert_eq!(
+        load_sales_table(&catalogs, "t")
+            .await
+            .metadata()
+            .snapshots()
+            .count(),
+        before
     );
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.t").await,
         vec![(1, "a".into()), (2, "b".into()), (3, "c".into())],
-        "empty dynamic overwrite must leave every row"
     );
 }
 

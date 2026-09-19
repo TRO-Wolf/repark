@@ -134,8 +134,8 @@ def test_writerv2_overwrite_condition_refuses(spark_v2: ReparkSession) -> None:
         ).overwrite(F.col("id") == 1)
 
 
-def test_writerv2_overwrite_partitions_empty_refuses(spark_v2: ReparkSession) -> None:
-    """Empty-source overwritePartitions raises AnalysisException; Spark no-ops (EX-W2-2)."""
+def test_writerv2_overwrite_partitions_empty_commits_nothing(spark_v2: ReparkSession) -> None:
+    """Empty-source overwritePartitions commits nothing, as Spark does (EX-W2-2)."""
     session = spark_v2
     session.sql("SELECT * FROM (VALUES (1,'a'),(2,'b')) AS t(id, cat)").writeTo(
         "local.ns.t_pin_owp"
@@ -143,10 +143,11 @@ def test_writerv2_overwrite_partitions_empty_refuses(spark_v2: ReparkSession) ->
     session.sql("SELECT * FROM (VALUES (9,'a')) AS t(id, cat)").writeTo(
         "local.ns.t_pin_owp"
     ).overwritePartitions()
-    with pytest.raises(AnalysisException, match="Cannot dynamically overwrite partitions"):
-        session.sql("SELECT id, cat FROM local.ns.t_pin_owp WHERE false").writeTo(
-            "local.ns.t_pin_owp"
-        ).overwritePartitions()
+    before = session.sql("SELECT snapshot_id FROM local.ns.t_pin_owp.snapshots").count()
+    session.sql("SELECT id, cat FROM local.ns.t_pin_owp WHERE false").writeTo(
+        "local.ns.t_pin_owp"
+    ).overwritePartitions()
+    assert session.sql("SELECT snapshot_id FROM local.ns.t_pin_owp.snapshots").count() == before
     still = session.sql("SELECT id, cat FROM local.ns.t_pin_owp ORDER BY id").to_arrow().to_pylist()
     assert still == [{"id": 2, "cat": "b"}, {"id": 9, "cat": "a"}]
 

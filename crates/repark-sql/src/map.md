@@ -53,6 +53,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   and empty-dynamic pins run in dynamic mode, and three native cells pin static-mode
   whole-table replace plus wipe, the mixed list in both modes, and `NON_PARTITION_COLUMN`.
   pins: ice-overwrite-mode-1/C-009
+  Round 2 (2026-09-19): the empty dynamic `PARTITION (id)` pin now asserts no commit (the
+  snapshot list and every row unchanged). pins: ice-overwrite-mode-1/C-011
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`;
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** short `INSERT INTO t (cols)` fills omitted

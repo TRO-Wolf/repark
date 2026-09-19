@@ -19,7 +19,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import PySparkException
 
 CATALOG = "dmlb_cat"
 NS = "dmlb_ns"
@@ -157,18 +157,16 @@ def test_sql_dynamic_partition_overwrite_keeps_absent_partitions(dynamic: Repark
     assert _last_summary(dynamic, table).get("replace-partitions") == "true"
 
 
-def test_sql_empty_dynamic_partition_overwrite_refuses(dynamic: ReparkSession) -> None:
-    """Empty dynamic PARTITION refuses; every prior row remains.
+def test_sql_empty_dynamic_partition_overwrite_commits_nothing(dynamic: ReparkSession) -> None:
+    """Empty dynamic PARTITION commits nothing, as Spark does; every prior row remains.
 
-    pins: dml-b-insert-overwrite/C-002, C-004
+    pins: dml-b-insert-overwrite/C-002, C-004, ice-overwrite-mode-1/C-011
     """
     table = f"{CATALOG}.{NS}.dynamic_empty"
     _seed(dynamic, table)
-    with pytest.raises(
-        (AnalysisException, PySparkException),
-        match="Cannot dynamically overwrite partitions",
-    ):
-        dynamic.sql(f"INSERT OVERWRITE {table} PARTITION (id) SELECT * FROM {table} WHERE false")
+    before = dynamic.sql(f"SELECT snapshot_id FROM {table}.snapshots").count()
+    dynamic.sql(f"INSERT OVERWRITE {table} PARTITION (id) SELECT * FROM {table} WHERE false")
+    assert dynamic.sql(f"SELECT snapshot_id FROM {table}.snapshots").count() == before
     got = _rows(dynamic, table)
     assert got.to_pylist() == [
         {"id": 1, "name": "a"},

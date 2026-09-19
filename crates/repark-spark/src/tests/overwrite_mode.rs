@@ -9,16 +9,25 @@ use super::dyn_partition_overwrite::{seed, setup_dynamic};
 type OptionCase = (&'static [(&'static str, &'static str)], Vec<(i32, String)>);
 
 async fn joined_rows(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) -> Vec<String> {
-    let batches = execute(
+    joined_rows_of(
         ctx,
         catalogs,
         &format!("SELECT concat_ws('|', CAST(id AS STRING), name, sub) AS row FROM {table}"),
     )
     .await
-    .unwrap()
-    .collect()
-    .await
-    .unwrap();
+}
+
+async fn joined_rows_of(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Vec<String> {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
     let mut rows = Vec::new();
     for batch in &batches {
         let column = datafusion::arrow::compute::cast(
@@ -134,40 +143,129 @@ async fn static_mode_empty_partition_clause_without_values_wipes_the_table() {
 
 #[tokio::test]
 async fn mixed_static_and_dynamic_keys_follow_the_session_mode() {
-    let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
-    seed_two_level(&ctx, &catalogs).await;
-    run(
-        &ctx,
-        &catalogs,
+    for sql in [
         "INSERT OVERWRITE ice.sales.two PARTITION (name = 'x', sub) SELECT 9, 'p'",
-    )
-    .await;
-    assert_eq!(
-        joined_rows(&ctx, &catalogs, "ice.sales.two").await,
-        vec!["2|y|p", "4|y|q", "9|x|p"]
-    );
-    assert_eq!(
-        last_operation(&catalogs, "two").await,
-        (Operation::Overwrite, false)
-    );
+        "INSERT OVERWRITE ice.sales.two PARTITION (name = 'x', sub) BY NAME \
+         SELECT 'p' AS sub, 9 AS id",
+    ] {
+        let warehouse = TempDir::new().unwrap();
+        let (ctx, catalogs) = setup(&warehouse).await;
+        seed_two_level(&ctx, &catalogs).await;
+        run(&ctx, &catalogs, sql).await;
+        assert_eq!(
+            joined_rows(&ctx, &catalogs, "ice.sales.two").await,
+            vec!["2|y|p", "4|y|q", "9|x|p"],
+            "{sql}"
+        );
+        assert_eq!(
+            last_operation(&catalogs, "two").await,
+            (Operation::Overwrite, false)
+        );
 
+        let warehouse = TempDir::new().unwrap();
+        let (ctx, catalogs) = setup_dynamic(&warehouse).await;
+        seed_two_level(&ctx, &catalogs).await;
+        run(&ctx, &catalogs, sql).await;
+        assert_eq!(
+            joined_rows(&ctx, &catalogs, "ice.sales.two").await,
+            vec!["2|y|p", "3|x|q", "4|y|q", "9|x|p"],
+            "{sql}"
+        );
+        assert_eq!(
+            last_operation(&catalogs, "two").await,
+            (Operation::Overwrite, true)
+        );
+    }
+}
+
+#[tokio::test]
+async fn empty_mixed_source_commits_nothing_in_dynamic_mode_and_deletes_in_static_mode() {
+    let sql =
+        "INSERT OVERWRITE ice.sales.two PARTITION (name = 'x', sub) SELECT 9, 'p' WHERE false";
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_dynamic(&warehouse).await;
     seed_two_level(&ctx, &catalogs).await;
-    run(
-        &ctx,
-        &catalogs,
-        "INSERT OVERWRITE ice.sales.two PARTITION (name = 'x', sub) SELECT 9, 'p'",
-    )
-    .await;
+    let before = load_sales_table(&catalogs, "two")
+        .await
+        .metadata()
+        .snapshots()
+        .count();
+    run(&ctx, &catalogs, sql).await;
+    assert_eq!(
+        load_sales_table(&catalogs, "two")
+            .await
+            .metadata()
+            .snapshots()
+            .count(),
+        before
+    );
     assert_eq!(
         joined_rows(&ctx, &catalogs, "ice.sales.two").await,
-        vec!["2|y|p", "3|x|q", "4|y|q", "9|x|p"]
+        vec!["1|x|p", "2|y|p", "3|x|q", "4|y|q"]
+    );
+
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_two_level(&ctx, &catalogs).await;
+    run(&ctx, &catalogs, sql).await;
+    assert_eq!(
+        joined_rows(&ctx, &catalogs, "ice.sales.two").await,
+        vec!["2|y|p", "4|y|q"]
     );
     assert_eq!(
         last_operation(&catalogs, "two").await,
-        (Operation::Overwrite, true)
+        (Operation::Delete, false)
+    );
+}
+
+#[tokio::test]
+async fn static_value_is_cast_to_a_date_partition_and_an_invalid_value_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.d (id INT, name STRING, d DATE) USING iceberg PARTITIONED BY (d)",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.d VALUES (1, 'a', DATE'2024-01-01'), (2, 'b', DATE'2024-01-02')",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.d PARTITION (d = '2024-13-45') SELECT 9, 'z'",
+    )
+    .await
+    .expect_err("the DATE cast rejects the value");
+    assert!(
+        error
+            .to_string()
+            .contains("Cast error: Cannot cast string '2024-13-45' to value of Date32 type"),
+        "{error}"
+    );
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.d PARTITION (d = '2024-01-01') SELECT 9, 'z'",
+    )
+    .await;
+    assert_eq!(
+        joined_rows_of(
+            &ctx,
+            &catalogs,
+            "SELECT concat_ws('|', CAST(id AS STRING), name, CAST(d AS STRING)) AS row \
+             FROM ice.sales.d",
+        )
+        .await,
+        vec!["2|b|2024-01-02", "9|z|2024-01-01"]
+    );
+    assert_eq!(
+        last_operation(&catalogs, "d").await,
+        (Operation::Overwrite, false)
     );
 }
 

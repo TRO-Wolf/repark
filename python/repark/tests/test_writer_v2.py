@@ -254,9 +254,9 @@ def test_write_to_append_vs_v1_insert_into_discriminator(spark: ReparkSession) -
 def test_write_to_overwrite_partitions_replaces_source_partitions_only(
     spark: ReparkSession,
 ) -> None:
-    """overwritePartitions replaces only source partitions; empty input refuses.
+    """overwritePartitions replaces only source partitions; empty input commits nothing.
 
-    pins: dml-b-insert-overwrite/C-002, C-003, C-004
+    pins: dml-b-insert-overwrite/C-002, C-003, C-004, ice-overwrite-mode-1/C-011
     """
     table = f"{CATALOG}.{NS}.ow_gate"
     (
@@ -274,8 +274,9 @@ def test_write_to_overwrite_partitions_replaces_source_partitions_only(
     ops = spark.sql(f"SELECT operation FROM {table}.snapshots ORDER BY committed_at").to_arrow()
     assert ops.column("operation").to_pylist()[-1] == "overwrite"
     empty = spark.sql("SELECT * FROM (VALUES (1,'a')) AS t(id, cat) WHERE false")
-    with pytest.raises(AnalysisException, match="Cannot dynamically overwrite partitions"):
-        empty.writeTo(table).overwrite_partitions()
+    before = spark.sql(f"SELECT snapshot_id FROM {table}.snapshots").count()
+    empty.writeTo(table).overwrite_partitions()
+    assert spark.sql(f"SELECT snapshot_id FROM {table}.snapshots").count() == before
     still = spark.sql(f"SELECT id, cat FROM {table} ORDER BY id").to_arrow().to_pylist()
     assert still == [{"id": 2, "cat": "b"}, {"id": 9, "cat": "a"}]
 

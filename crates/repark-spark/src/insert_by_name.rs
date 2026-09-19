@@ -351,12 +351,6 @@ fn static_partition_columns(
         ));
     }
     let request = repark_iceberg::write::partition_overwrite_request_from_exprs(partitioned)?;
-    if !request.equalities.is_empty() && !request.dynamic_names.is_empty() {
-        return Err(DataFusionError::Plan(
-            "INSERT … BY NAME PARTITION cannot mix static assignments (k=v) and dynamic names (k)"
-                .to_string(),
-        ));
-    }
     let equalities = repark_iceberg::write::validated_static_equalities(table, &request)?;
     let fields = table
         .metadata()

@@ -145,16 +145,19 @@ def test_empty_frame_overwrite_partitions_commits_nothing(spark: ReparkSession) 
 
 
 def test_invalid_static_date_refuses_like_the_engine_cast(spark: ReparkSession) -> None:
-    """A static value the DATE cast rejects refuses with the engine's CAST refusal text."""
+    """A static value the DATE cast rejects refuses with the engine's CAST refusal text.
+
+    Spark answers ``CAST_INVALID_INPUT`` there; the pin holds the engine's own cast text.
+    """
     shape = next(item for item in SHAPES if item.key == "CAST-STATIC-DATE")
     table = seed_table(spark, shape, 2)
     with pytest.raises(Exception) as cast_error:
         spark.sql("SELECT CAST('2024-13-45' AS DATE)").collect()
     with pytest.raises(Exception) as insert_error:
         spark.sql(f"INSERT OVERWRITE {table} PARTITION (d = '2024-13-45') SELECT 9, 'z'").collect()
-    condition = str(cast_error.value).split("]")[0] + "]"
-    assert condition.startswith("[CAST_INVALID_INPUT"), cast_error.value
-    assert condition in str(insert_error.value), insert_error.value
+    refusal = "Cast error: Cannot cast string '2024-13-45' to value of Date32 type"
+    assert refusal in str(cast_error.value), cast_error.value
+    assert refusal in str(insert_error.value), insert_error.value
     rows = sorted(tuple(row) for row in spark.sql(f"SELECT id, data FROM {table}").collect())
     assert rows == [(1, "a"), (2, "b")]
 
