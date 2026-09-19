@@ -346,7 +346,13 @@ in `bed::spark_session(baseline)`, the one builder every run session takes (warm
 concurrent, concurrent-cold, local and remote): the memory catalog (`memory_catalog_cached`),
 and Glue / S3 Tables (`register_catalog_spec` via `register_late_configured_catalogs`), all
 build their `CatalogCaches` from the session's settings, so the builder config reaches every
-path with no product-code change.
+path with no product-code change. Measured on the pin beds (`pins_report.rs`): warm Q1 on the
+3-file bed reads 3 data-file footers on its second sample with `--baseline` against 0 by
+default (footer cache `null` vs 3 hits), every sample of every query shows zero metadata-cache
+hits / misses / fetches / evictions, and Q7 on a 3-file × 50,000-row bed (3 pages per column)
+reads 92,890 page bytes by default against 161,729 with page selection off, same 1,500 rows.
+The 3-file × 400-row bed carries one page per column, so no query on it can differ by pages —
+the page pin grows `rows_per_file` instead.
 
 ## Pointers
 
