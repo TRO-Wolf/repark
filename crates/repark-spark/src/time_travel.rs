@@ -8,7 +8,10 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
-use repark_core::time_travel::{TimeTravelSpec, evaluate_sql_timestamp_asof, next_temp_view_name};
+use repark_core::time_travel::{
+    RefSelector, TimeTravelSpec, evaluate_sql_timestamp_asof, next_temp_view_name,
+    selector_time_travel_refusal,
+};
 use repark_core::{
     CatalogRegistry, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
     resolve_snapshot_id,
@@ -108,13 +111,12 @@ pub async fn prepare_time_travel_sql(
     // Resolve + register right-to-left so token indices stay valid for splicing.
     let mut tokens = tokens;
     for span in spans.into_iter().rev() {
-        if span.table_parts.len() >= 4
-            && span
-                .table_parts
-                .last()
-                .is_some_and(|segment| segment.to_ascii_lowercase().starts_with("branch_"))
-        {
-            return Err(branch_time_travel_refusal());
+        if span.table_parts.len() >= 4 {
+            match RefSelector::from_table_parts(&span.table_parts) {
+                RefSelector::Branch => return Err(branch_time_travel_refusal()),
+                RefSelector::Tag => return Err(selector_time_travel_refusal()),
+                RefSelector::None => {}
+            }
         }
         let spec = match span.pin {
             TimeTravelPin::Version(spec) => spec,

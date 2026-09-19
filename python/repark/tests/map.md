@@ -67,6 +67,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   alias (`AS ident` or a bare ident after a quoted/`)/number` value), so the alias
   survives on the rewritten relation — pinned by the TT2 join, `AS t2`, and version-alias
   cells. pins: ice-tt-resolve-1/C-002
+  Round 3 item 4: a built-in beside a branch/tag selector refuses with Spark's text —
+  `versionAsOf`/`TIMESTAMP AS OF` on a tag selector, `timestampAsOf`/`VERSION AS OF`
+  on a branch selector. pins: ice-tt-resolve-1/C-002
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —

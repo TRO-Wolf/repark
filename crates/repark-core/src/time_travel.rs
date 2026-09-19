@@ -95,11 +95,39 @@ pub struct ReaderTimeTravel {
     pub timestamp_as_of: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RefSelector {
+    #[default]
+    None,
+    Branch,
+    Tag,
+}
+
+impl RefSelector {
+    #[must_use]
+    pub fn from_table_parts(parts: &[String]) -> Self {
+        let Some(last) = parts.last() else {
+            return Self::None;
+        };
+        if parts.len() < 4 {
+            return Self::None;
+        }
+        let lowered = last.to_ascii_lowercase();
+        if lowered.starts_with("branch_") {
+            Self::Branch
+        } else if lowered.starts_with("tag_") {
+            Self::Tag
+        } else {
+            Self::None
+        }
+    }
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub async fn resolve_reader_spec(
     ctx: &SessionContext,
     opts: &ReaderTimeTravel,
-    in_branch: bool,
+    selector: RefSelector,
 ) -> Result<Option<TimeTravelSpec>> {
     let version = opts.version_as_of.as_deref().map(str::trim);
     let timestamp = opts.timestamp_as_of.as_deref().map(str::trim);
@@ -120,12 +148,13 @@ pub async fn resolve_reader_spec(
                 .to_string(),
         ));
     }
-    if (opts.branch.is_some() || opts.tag.is_some() || in_branch)
+    if (opts.branch.is_some() || opts.tag.is_some() || selector == RefSelector::Branch)
         && (version.is_some() || timestamp.is_some())
     {
-        return Err(illegal_argument_error(
-            "Can't time travel in branch".to_string(),
-        ));
+        return Err(branch_time_travel_refusal());
+    }
+    if selector == RefSelector::Tag && (version.is_some() || timestamp.is_some()) {
+        return Err(selector_time_travel_refusal());
     }
     if let Some(raw) = version {
         if raw.is_empty() {
@@ -235,6 +264,13 @@ pub fn invalid_version_pin() -> DataFusionError {
 #[must_use]
 pub fn branch_time_travel_refusal() -> DataFusionError {
     illegal_argument_error("Can't time travel in branch".to_string())
+}
+
+#[must_use]
+pub fn selector_time_travel_refusal() -> DataFusionError {
+    illegal_argument_error(
+        "Can't time travel using selector and Spark time travel spec at the same time".to_string(),
+    )
 }
 
 #[must_use]

@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import AnalysisException, IllegalArgumentException, PySparkException
 from repark.spark.session import _reset_active_session_for_tests
 
 FIXTURE: dict[str, Any] = json.loads(
@@ -304,3 +304,61 @@ def test_facade_sql_tt2_version_alias(spark: Any, version: int) -> None:
     frame = spark.sql(f"SELECT t2.id FROM {table} VERSION AS OF {seed['s0']} t2 ORDER BY t2.id")
     ids = [(value,) for value in frame.to_arrow().column(0).to_pylist()]
     assert ids == _tt2_rows("TT2-SQL-VERSION-ALIAS")
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_reader_tt2_version_as_of_on_tag_selector(spark: Any, version: int) -> None:
+    """TT2 versionAsOf on a tag selector refuses. pins: ice-tt-resolve-1/C-002"""
+    table = f"mem.ns.tt2seltag_v{version}"
+    seed = _seed_tt2_table(spark, table, version)
+    with pytest.raises(
+        IllegalArgumentException,
+        match=re.escape(_cell_error("TT2-TAS-TAG-SELECTOR-ERR")["msg"]),
+    ):
+        (
+            spark.read.format("iceberg")
+            .option("versionAsOf", seed["s0"])
+            .load(table + ".tag_t0")
+            .collect()
+        )
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_reader_tt2_timestamp_as_of_on_branch_selector(spark: Any, version: int) -> None:
+    """TT2 timestampAsOf on a branch selector refuses. pins: ice-tt-resolve-1/C-002"""
+    table = f"mem.ns.tt2selbranch_v{version}"
+    seed = _seed_tt2_table(spark, table, version)
+    with pytest.raises(
+        IllegalArgumentException,
+        match=re.escape(_cell_error("TT2-TAS-TS-TAG-SELECTOR-ERR")["msg"]),
+    ):
+        (
+            spark.read.format("iceberg")
+            .option("timestampAsOf", seed["mid_str"])
+            .load(table + ".branch_b0")
+            .collect()
+        )
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_facade_sql_tt2_ts_tag_selector(spark: Any, version: int) -> None:
+    """TT2 SQL time travel on a tag selector refuses. pins: ice-tt-resolve-1/C-002"""
+    table = f"mem.ns.tt2sqltag_v{version}"
+    _seed_tt2_table(spark, table, version)
+    with pytest.raises(
+        IllegalArgumentException,
+        match=re.escape(_cell_error("TT2-SQL-TS-TAG-SELECTOR")["msg"]),
+    ):
+        spark.sql(f"SELECT * FROM {table}.tag_t0 TIMESTAMP AS OF '2999-01-01'").collect()
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_facade_sql_tt2_vas_branch_selector(spark: Any, version: int) -> None:
+    """TT2 SQL version travel on a branch selector refuses. pins: ice-tt-resolve-1/C-002"""
+    table = f"mem.ns.tt2sqlbranch_v{version}"
+    seed = _seed_tt2_table(spark, table, version)
+    with pytest.raises(
+        IllegalArgumentException,
+        match=re.escape(_cell_error("TT2-SQL-VAS-BRANCH-SELECTOR")["msg"]),
+    ):
+        spark.sql(f"SELECT * FROM {table}.branch_b0 VERSION AS OF {seed['s0']}").collect()

@@ -7,7 +7,8 @@ use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use repark_core::time_travel::{
-    TimeTravelSpec, evaluate_sql_timestamp_asof, extract_timestamp_expr, read_table_at,
+    RefSelector, TimeTravelSpec, evaluate_sql_timestamp_asof, extract_timestamp_expr,
+    read_table_at, selector_time_travel_refusal,
 };
 use repark_core::{
     EngineContext, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
@@ -114,13 +115,12 @@ async fn register_pinned_view(
     span: &TimeTravelSpan,
     pinned: &mut PinnedViews,
 ) -> Result<String> {
-    if span.table_parts.len() >= 4
-        && span
-            .table_parts
-            .last()
-            .is_some_and(|segment| segment.to_ascii_lowercase().starts_with("branch_"))
-    {
-        return Err(branch_time_travel_refusal());
+    if span.table_parts.len() >= 4 {
+        match RefSelector::from_table_parts(&span.table_parts) {
+            RefSelector::Branch => return Err(branch_time_travel_refusal()),
+            RefSelector::Tag => return Err(selector_time_travel_refusal()),
+            RefSelector::None => {}
+        }
     }
     if span.table_parts.len() != 3 {
         return Err(DataFusionError::Plan(format!(

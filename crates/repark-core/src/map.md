@@ -797,6 +797,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   engine `CAST(... AS TIMESTAMP)` in the session zone; the hand parser and the AST leaf
   rewrite are gone and `resolve_reader_spec` is async over the session context.
   pins: ice-tt-resolve-1/C-002
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `RefSelector` names the fourth-segment
+  ref (`Branch` / `Tag` / `None`); a built-in beside a selector refuses with Spark's
+  text before resolving. pins: ice-tt-resolve-1/C-002
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the moved names resolve only behind the
   `time_travel` module; the stale root re-exports are gone. pins: ice-tt-resolve-1/C-010
   **ICE-TT-RESOLVE-1 round 2 close (2026-09-19):** the root block narrows to the six

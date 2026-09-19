@@ -456,7 +456,7 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
 
 #[tokio::test]
 async fn reader_spec_builtin_pins_refuse_loud() {
-    use repark_core::time_travel::TimeTravelSpec;
+    use repark_core::time_travel::{RefSelector, TimeTravelSpec};
     use repark_core::{ReaderTimeTravel, resolve_reader_spec};
 
     let ctx = SessionContext::new();
@@ -469,7 +469,7 @@ async fn reader_spec_builtin_pins_refuse_loud() {
         timestamp_as_of: Some("2020-01-01".to_string()),
         ..Default::default()
     };
-    let err = resolve_reader_spec(&ctx, &both, false)
+    let err = resolve_reader_spec(&ctx, &both, RefSelector::None)
         .await
         .expect_err("version plus timestamp must refuse");
     assert!(
@@ -481,7 +481,7 @@ async fn reader_spec_builtin_pins_refuse_loud() {
         version_as_of: Some("8".to_string()),
         ..Default::default()
     };
-    let err = resolve_reader_spec(&ctx, &legacy_version, false)
+    let err = resolve_reader_spec(&ctx, &legacy_version, RefSelector::None)
         .await
         .expect_err("snapshot-id plus versionAsOf must refuse");
     assert!(err.to_string().contains("versionAsOf"), "got: {err}");
@@ -490,7 +490,7 @@ async fn reader_spec_builtin_pins_refuse_loud() {
         timestamp_as_of: Some("2020-01-01".to_string()),
         ..Default::default()
     };
-    let err = resolve_reader_spec(&ctx, &legacy_timestamp, false)
+    let err = resolve_reader_spec(&ctx, &legacy_timestamp, RefSelector::None)
         .await
         .expect_err("as-of-timestamp plus timestampAsOf must refuse");
     assert!(err.to_string().contains("timestampAsOf"), "got: {err}");
@@ -499,14 +499,14 @@ async fn reader_spec_builtin_pins_refuse_loud() {
         version_as_of: Some("1".to_string()),
         ..Default::default()
     };
-    let err = resolve_reader_spec(&ctx, &branch_version, false)
+    let err = resolve_reader_spec(&ctx, &branch_version, RefSelector::None)
         .await
         .expect_err("branch plus versionAsOf must refuse");
     assert!(
         err.to_string().contains("Can't time travel in branch"),
         "got: {err}"
     );
-    let err = resolve_reader_spec(&ctx, &versioned("1"), true)
+    let err = resolve_reader_spec(&ctx, &versioned("1"), RefSelector::Branch)
         .await
         .expect_err("versionAsOf inside a branch must refuse");
     assert!(
@@ -514,18 +514,18 @@ async fn reader_spec_builtin_pins_refuse_loud() {
         "got: {err}"
     );
     assert_eq!(
-        resolve_reader_spec(&ctx, &versioned("42"), false)
+        resolve_reader_spec(&ctx, &versioned("42"), RefSelector::None)
             .await
             .unwrap(),
         Some(TimeTravelSpec::SnapshotId(42))
     );
     assert_eq!(
-        resolve_reader_spec(&ctx, &versioned("audit"), false)
+        resolve_reader_spec(&ctx, &versioned("audit"), RefSelector::None)
             .await
             .unwrap(),
         Some(TimeTravelSpec::VersionRef("audit".to_string()))
     );
-    let err = resolve_reader_spec(&ctx, &versioned(""), false)
+    let err = resolve_reader_spec(&ctx, &versioned(""), RefSelector::None)
         .await
         .expect_err("empty versionAsOf must refuse");
     assert!(
@@ -536,7 +536,7 @@ async fn reader_spec_builtin_pins_refuse_loud() {
 
 #[tokio::test]
 async fn reader_spec_legacy_pins_still_resolve() {
-    use repark_core::time_travel::TimeTravelSpec;
+    use repark_core::time_travel::{RefSelector, TimeTravelSpec};
     use repark_core::{ReaderTimeTravel, resolve_reader_spec};
 
     let ctx = SessionContext::new();
@@ -545,14 +545,16 @@ async fn reader_spec_legacy_pins_still_resolve() {
         ..Default::default()
     };
     assert_eq!(
-        resolve_reader_spec(&ctx, &stamped, false).await.unwrap(),
+        resolve_reader_spec(&ctx, &stamped, RefSelector::None)
+            .await
+            .unwrap(),
         Some(TimeTravelSpec::TimestampMs(1_750_000_000_000))
     );
     let bad_stamp = ReaderTimeTravel {
         timestamp_as_of: Some("not a ts".to_string()),
         ..Default::default()
     };
-    let err = resolve_reader_spec(&ctx, &bad_stamp, false)
+    let err = resolve_reader_spec(&ctx, &bad_stamp, RefSelector::None)
         .await
         .expect_err("unparsable timestampAsOf must refuse");
     assert!(
@@ -565,7 +567,7 @@ async fn reader_spec_legacy_pins_still_resolve() {
         ..Default::default()
     };
     assert_eq!(
-        resolve_reader_spec(&ctx, &legacy_only, false)
+        resolve_reader_spec(&ctx, &legacy_only, RefSelector::None)
             .await
             .unwrap(),
         Some(TimeTravelSpec::SnapshotId(7))
@@ -576,7 +578,7 @@ async fn reader_spec_legacy_pins_still_resolve() {
         ..Default::default()
     };
     assert!(
-        resolve_reader_spec(&ctx, &legacy_clash, false)
+        resolve_reader_spec(&ctx, &legacy_clash, RefSelector::None)
             .await
             .is_err()
     );
@@ -585,11 +587,13 @@ async fn reader_spec_legacy_pins_still_resolve() {
         ..Default::default()
     };
     assert_eq!(
-        resolve_reader_spec(&ctx, &tagged, false).await.unwrap(),
+        resolve_reader_spec(&ctx, &tagged, RefSelector::None)
+            .await
+            .unwrap(),
         Some(TimeTravelSpec::VersionRef("t0".to_string()))
     );
     assert_eq!(
-        resolve_reader_spec(&ctx, &ReaderTimeTravel::default(), false)
+        resolve_reader_spec(&ctx, &ReaderTimeTravel::default(), RefSelector::None)
             .await
             .unwrap(),
         None

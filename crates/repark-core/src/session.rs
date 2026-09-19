@@ -821,10 +821,7 @@ impl ReparkSession {
                 "read_iceberg_table: invalid table identifier: {message}"
             ))
         })?;
-        let in_branch = parts.len() >= 4
-            && parts
-                .last()
-                .is_some_and(|segment| segment.to_ascii_lowercase().starts_with("branch_"));
+        let selector = time_travel::RefSelector::from_table_parts(&parts);
         let travel = time_travel::ReaderTimeTravel {
             snapshot_id: opts.snapshot_id,
             as_of_timestamp_ms: opts.as_of_timestamp_ms,
@@ -834,7 +831,7 @@ impl ReparkSession {
             timestamp_as_of,
         };
         let zone = self.session_time_zone();
-        let spec = time_travel::resolve_reader_spec(self.context(), &travel, in_branch)
+        let spec = time_travel::resolve_reader_spec(self.context(), &travel, selector)
             .await
             .map_err(engine_err)?;
         match spec {
