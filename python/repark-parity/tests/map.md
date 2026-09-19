@@ -143,6 +143,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror rows ratchet `functions.py` 1984 → 1983 and `functions_expr.py`
   2198 → 2178 with `scripts/check_lib_py.py`.
   pins: fnp-gen-1/C-002, C-003
+- `test_cap_1_source_file_line_cap.py` — **ICE-DROP-NS-1 (2026-09-19, run 24c):**
+  mirror row ratchets `repark-sql/src/tests.rs` 1520 → 1514 with `scripts/check_rust_file_size.py`.
+  pins: ice-drop-ns-1/C-011
 - `test_cap_1_source_file_line_cap.py` — **ICE-MIXED-CASE-1 (2026-09-18, run 22b):**
   mirror row ratchets `write/merge/mod.rs` to 1761 with `scripts/check_rust_file_size.py`.
   pins: ice-mixed-case-1/C-012

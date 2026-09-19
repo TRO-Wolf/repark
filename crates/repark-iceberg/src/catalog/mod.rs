@@ -75,6 +75,17 @@ pub async fn list_table_names(catalog: &dyn Catalog, namespace: &str) -> Result<
         .collect())
 }
 
+#[must_use]
+pub fn schema_not_found_on_drop(catalog: &str, namespace: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[SCHEMA_NOT_FOUND] The schema `{catalog}`.`{namespace}` cannot be found. Verify the \
+         spelling and correctness of the schema and catalog.\nIf you did not qualify the name \
+         with a catalog, verify the current_schema() output, or qualify the name with the \
+         correct catalog.\nTo tolerate the error on drop use DROP SCHEMA IF EXISTS. \
+         SQLSTATE: 42704"
+    ))
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub async fn refuse_non_empty_namespace_drop(
     catalog: &dyn Catalog,

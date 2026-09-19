@@ -25,6 +25,8 @@ Source comments retain only API and safety contracts; implementation narration i
   (**ICE-DROP-NS-1**, 2026-09-19).
   Module decls + the public re-export list (names unchanged from v1).
   pins: ice-drop-ns-1/C-007
+  `schema_not_found_on_drop` is Spark's three-sentence `[SCHEMA_NOT_FOUND]` for a drop, shared
+  by both doors (verification critic 2026-09-19). pins: ice-drop-ns-1/C-011
 - `catalog_ops.rs` — `reregister_catalog_provider(ctx, catalog, name)`: the session
   `refresh_catalog_provider` escape hatch's engine-side adapter (full O(databases) rebuild via
   `rebuild_catalog_provider`). Hoisted MOVE-ONLY from v1 `repark-sql/src/catalog_ops.rs`; the

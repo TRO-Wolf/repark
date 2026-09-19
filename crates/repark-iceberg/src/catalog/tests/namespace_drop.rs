@@ -125,3 +125,33 @@ async fn refuse_non_empty_namespace_drop_fails_on_a_missing_namespace() {
     .await
     .expect_err("a missing namespace must fail loud, never pass as empty");
 }
+
+#[tokio::test]
+async fn refuse_non_empty_namespace_drop_refuses_a_namespace_holding_a_child_namespace() {
+    let warehouse = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let catalog = memory_catalog(warehouse.path().to_str().unwrap_or_else(|| {
+        panic!("warehouse path must be utf8");
+    }))
+    .await
+    .unwrap_or_else(|error| panic!("memory catalog must build: {error}"));
+    let parent = NamespaceIdent::new("parent".to_string());
+    catalog
+        .create_namespace(&parent, HashMap::new())
+        .await
+        .unwrap_or_else(|error| panic!("parent must create: {error}"));
+    let child = NamespaceIdent::from_strs(["parent", "child"])
+        .unwrap_or_else(|error| panic!("child ident: {error}"));
+    catalog
+        .create_namespace(&child, HashMap::new())
+        .await
+        .unwrap_or_else(|error| panic!("child must create: {error}"));
+    let error = refuse_non_empty_namespace_drop(catalog.as_ref(), &parent, "parent")
+        .await
+        .expect_err("a namespace holding a child namespace must refuse");
+    assert!(
+        error
+            .to_string()
+            .contains("Namespace parent is not empty. Contains 1 child namespace(s)."),
+        "got: {error}"
+    );
+}

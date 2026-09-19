@@ -244,6 +244,51 @@ async fn drop_schema_nonempty_refuses_and_keeps_everything() {
 }
 
 #[tokio::test]
+async fn drop_schema_if_exists_and_cascade_still_refuse_a_nonempty_schema() {
+    let door = door().await;
+    door.ok("CREATE SCHEMA ice.bronze").await;
+    door.ok("CREATE TABLE ice.bronze.orders AS SELECT 1 AS id")
+        .await;
+    for statement in [
+        "DROP SCHEMA IF EXISTS ice.bronze",
+        "DROP SCHEMA ice.bronze CASCADE",
+        "DROP SCHEMA IF EXISTS ice.bronze CASCADE",
+        "DROP DATABASE ice.bronze",
+    ] {
+        let error = door.err(statement).await;
+        assert!(
+            error.contains("Namespace bronze is not empty. Contains 1 table(s)."),
+            "{statement} must refuse like Spark: {error}"
+        );
+    }
+    assert!(
+        door.table_exists("bronze", "orders").await,
+        "a refused drop must leave the table readable"
+    );
+}
+
+#[tokio::test]
+async fn drop_schema_missing_and_empty_cascade_answer_like_spark() {
+    let door = door().await;
+    let missing = door.err("DROP SCHEMA ice.bronze").await;
+    assert!(
+        missing.contains("[SCHEMA_NOT_FOUND] The schema `ice`.`bronze` cannot be found.")
+            && missing.contains("To tolerate the error on drop use DROP SCHEMA IF EXISTS."),
+        "a missing schema must refuse like Spark: {missing}"
+    );
+    door.ok("CREATE SCHEMA ice.silver").await;
+    door.ok("DROP SCHEMA ice.silver CASCADE").await;
+    assert!(
+        !door
+            .catalog
+            .namespace_exists(&NamespaceIdent::new("silver".to_string()))
+            .await
+            .expect("namespace_exists"),
+        "CASCADE drops an empty namespace as Spark does"
+    );
+}
+
+#[tokio::test]
 async fn drop_schema_after_table_drop_drops() {
     let door = door().await;
     door.ok("CREATE SCHEMA ice.bronze").await;

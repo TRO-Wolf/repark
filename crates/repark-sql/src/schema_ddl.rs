@@ -57,22 +57,19 @@ pub(crate) async fn execute_drop_schema(
     cx: &EngineContext<'_>,
     names: &[ObjectName],
     if_exists: bool,
-    cascade: bool,
 ) -> Result<DataFrame> {
-    if cascade {
-        return Err(DataFusionError::NotImplemented(
-            "DROP SCHEMA … CASCADE is not supported — dropping tables as a side effect of a \
-             schema drop is destructive and implicit. Drop the tables explicitly, then drop the \
-             schema."
-                .to_string(),
-        ));
-    }
     for name in names {
         let (catalog_name, namespace) = resolve_namespace(cx.catalogs, name, "DROP SCHEMA")?;
         let handle = catalog_handle(cx.catalogs, &catalog_name)?;
         let ident = NamespaceIdent::from_strs(&namespace).map_err(iceberg_err)?;
-        if if_exists && !handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
-            continue;
+        if !handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
+            if if_exists {
+                continue;
+            }
+            return Err(repark_iceberg::catalog::schema_not_found_on_drop(
+                &catalog_name,
+                &namespace.join("."),
+            ));
         }
         repark_iceberg::catalog::refuse_non_empty_namespace_drop(
             handle.as_ref(),

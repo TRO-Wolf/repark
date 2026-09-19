@@ -58,10 +58,9 @@ pub(crate) async fn execute_drop_namespace(
             if if_exists {
                 continue;
             }
-            return Err(DataFusionError::Plan(format!(
-                "[SCHEMA_NOT_FOUND] The schema `{catalog}`.`{namespace}` cannot be found. Verify \
-                 the spelling and correctness of the schema and catalog."
-            )));
+            return Err(repark_iceberg::catalog::schema_not_found_on_drop(
+                &catalog, &namespace,
+            ));
         }
         repark_iceberg::catalog::refuse_non_empty_namespace_drop(
             handle.as_ref(),

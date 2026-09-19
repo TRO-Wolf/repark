@@ -197,7 +197,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split guards by statement or expression family.",
     ),
     "crates/repark-sql/src/tests.rs": (
-        1520,
+        1514,
         "Native ANSI-door end-to-end cases remain consolidated.",
         "Split statement families into production-aligned test modules.",
     ),
