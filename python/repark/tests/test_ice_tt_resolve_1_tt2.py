@@ -275,7 +275,7 @@ def test_facade_sql_tt2_alias_join(spark: Any, version: int) -> None:
     mid = seed["mid_str"]
     frame = spark.sql(
         f"SELECT a.id, b.id FROM {table} TIMESTAMP AS OF CAST('{mid}' AS TIMESTAMP) a "
-        f"FULL OUTER JOIN {table} TIMESTAMP AS OF '2999-01-01' b ON a.id = b.id "
+        f"FULL OUTER JOIN {table} TIMESTAMP AS OF '2261-01-01' b ON a.id = b.id "
         "ORDER BY b.id"
     )
     arrow = frame.to_arrow()
