@@ -1,11 +1,48 @@
+use std::path::Path;
 use std::time::Duration;
 
 use repark_iceberg::catalog::{IcebergIoStats, ParquetFooterCacheStats};
 use tempfile::TempDir;
 
 use crate::report::{IoDelta, QueryRecord, markdown};
-use crate::run::{QuerySpec, Timing};
-use crate::{query, run_mode, tiny_bed};
+use crate::run::{Mode, QuerySpec, Timing};
+use crate::{cli, local_run, query, run_mode, strings, tiny_bed};
+
+#[test]
+fn the_parser_accepts_a_bare_baseline_flag_and_defaults_it_off() {
+    assert!(cli::USAGE.contains("--baseline"));
+    assert_eq!(
+        cli::parse(&strings(&["run", "--mode", "warm", "--warehouse", "/w"])).unwrap(),
+        crate::cli::Command::Run(local_run(Mode::Warm, Path::new("/w")))
+    );
+    let flagged = cli::parse(&strings(&[
+        "run",
+        "--mode",
+        "warm",
+        "--warehouse",
+        "/w",
+        "--baseline",
+    ]))
+    .unwrap();
+    let crate::cli::Command::Run(options) = flagged else {
+        panic!("--baseline must stay a run flag");
+    };
+    assert!(options.baseline);
+    assert_eq!(options.mode, Mode::Warm);
+    assert!(
+        cli::parse(&strings(&[
+            "run",
+            "--mode",
+            "warm",
+            "--warehouse",
+            "/w",
+            "--baseline",
+            "false"
+        ]))
+        .is_err()
+    );
+    assert!(cli::parse(&strings(&["setup", "--warehouse", "/w", "--baseline"])).is_err());
+}
 
 #[test]
 fn the_report_carries_metadata_cache_evictions() {

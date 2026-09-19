@@ -15,10 +15,8 @@ use tempfile::TempDir;
 
 use crate::bed::{BedShape, SetupOptions};
 use crate::cli::{Command, EXIT_FAILURE, EXIT_USAGE, Outcome};
-use crate::r3::{
-    R3_EXIT_CODE, R3_TABLE_SIZE_LIMIT_BYTES, R3Verdict, StepSummary, r3_check, r3_verdict,
-    table_footprint,
-};
+use crate::r3::{R3_EXIT_CODE, R3_TABLE_SIZE_LIMIT_BYTES, R3Verdict, StepSummary};
+use crate::r3::{r3_check, r3_verdict, table_footprint};
 use crate::remote::{
     CreateOutcome, NamespaceRule, Phase, PhaseRequest, RemoteSetupOptions, WriteOutcome,
     remote_catalog_config,
@@ -199,6 +197,7 @@ fn the_parser_ignores_cargo_bench_and_reads_every_flag() {
             table: Some("perf.events".to_string()),
             manifest: Some(PathBuf::from("/m.json")),
             query: Some("Q3".to_string()),
+            baseline: false,
             repeat: 1,
             files: None,
             rows_per_file: None,

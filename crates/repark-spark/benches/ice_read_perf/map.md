@@ -332,6 +332,17 @@ would change what "four at once" measures for the other four (their timings and 
   footer reads halved on the large bed.
   pins: ice-footer-cache-1/C-010
 
+## Baseline (`--baseline`, round 1)
+
+A `run` with the bare `--baseline` flag records the "before" half of a pair on one head:
+every session it opens disables the shared caches (`repark.iceberg.metadataCache=false`,
+`manifestCacheBytes=0`, `footerCacheBytes=0`) and the fork's page-index row selection
+(`iceberg.row_selection_enabled=false`, inserted into the session state's config extensions
+from the bench — RePark registers no such extension). The JSON carries `baseline` and, when
+true, `baseline_switches`; the markdown names it in its header line. What the baseline
+cannot switch off: the timestamp predicate pushdown (fork #312) and the `count(*)` fold
+(ICE-COUNT-FOLD-1) stay on, so a baseline number is not "pre-campaign main".
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
