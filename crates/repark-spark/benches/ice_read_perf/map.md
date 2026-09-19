@@ -227,8 +227,8 @@ would change what "four at once" measures for the other four (their timings and 
   **3**. At exactly the limit it passes.
 - Exit codes: 0 done, 1 runtime failure, 2 usage error, 3 the R-3 flag.
 - On the AWS leg every `setup` phase and every `run` makes this check (the workflow runs them
-  without `continue-on-error`, so exit 3 fails the job at once). The Slack note to the owner is
-  not wired yet. It is keyed on exit 3.
+  without `continue-on-error`, so exit 3 fails the job at once). The one Slack note to the owner
+  is sent by whoever dispatched the run, on reading the failed job's summary (exit 3).
 - The size query spells the metadata table with backticks (`` `bench`.`perf`.`events`.`files` ``).
   On the bare Rust Spark door an unquoted `cat.ns.tbl.files` is rewritten to an unquoted
   `tbl$files` that the Databricks tokenizer splits (`Expected: end of statement, found:

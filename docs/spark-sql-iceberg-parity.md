@@ -9494,8 +9494,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
   4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
   `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
-  build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
-  pin, so they are unchanged. Staleness pinned per cell on default sessions (MERGE after
+  build per-table caches; their builders had no `with_shared_object_cache_bytes` at this
+  pin, so they were unchanged (since RP-37, fork `27e0d5fa`, ICE-CATALOG-CACHE-1, 2026-09-19,
+  Glue and S3 Tables receive the session's shared manifest and metadata caches — wired,
+  unmeasured on AWS). Staleness pinned per cell on default sessions (MERGE after
   a commit, DROP + re-CREATE, `register_table`, rewrite + expire, time-travel and branch
   reads), the two-door Rust battery green with the cache on (the default), the funnel pin
   on the default session, the four upgrade-lineage tests green on default sessions, and a
