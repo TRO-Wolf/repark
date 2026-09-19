@@ -695,6 +695,18 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   extension `register`, so the facade door and the native door share the one
   registration; `generate_series` keeps its `value` column.
   pins: range-tvf-id-1/C-001, C-002, C-003
+  **RANGE-TVF-ID-2 (2026-09-19, round 1):** NULL bounds refuse as a planning
+  error carrying `UNEXPECTED_INPUT_TYPE`; every Spark-accepted width coerces
+  to `i64` (narrow and unsigned ints, decimal and float truncated toward
+  zero, strings parsed with Spark's `CAST_INVALID_INPUT` text on malformed
+  input); row generation is RePark's own `RangeTable` provider with a
+  `RangePartition` stream over `StreamingTableExec` — the element count is
+  Spark's `ceil((end - start) / step)` in `i128` arithmetic so overflow bounds
+  emit exactly their rows, batches follow the session batch size, projection
+  and the scan limit thread through, and the step-direction ordering stays;
+  the 4th argument coerces to `i32` and a non-empty range with a non-positive
+  partition count refuses with `IllegalArgumentException`.
+  pins: range-tvf-id-2/C-001, C-002, C-003, C-004
 - `runtime.rs` (+ `runtime/tests.rs`) — **`EngineRuntime`** (phase-3 PR-3, EC-5 / design §4 Q7):
   the name the engine gives the **embedding's** Tokio runtime — a cloneable `Arc<Runtime>` handle
   with `runtime()` and `block_on`. ADDITIVE and tier-legal: core constructs no runtime, has no

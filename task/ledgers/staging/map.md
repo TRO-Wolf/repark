@@ -11,6 +11,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   coercion, loud zero-step refusal; recorded oracle plus red-first pins.
   `risk_tier: standard`. Branch `fix/range-id-1`.
   pins: range-tvf-id-1/C-001, C-002, C-003, C-004, C-005
+- [range-tvf-id-2-ledger.md](range-tvf-id-2-ledger.md) —
+  **RANGE-TVF-ID-2 (2026-09-19), in flight:** the `range(...)` argument edge
+  cases answer Spark 4.1.2 — NULL bounds refuse with `UNEXPECTED_INPUT_TYPE`,
+  every Spark-accepted width coerces with `CAST_INVALID_INPUT` on malformed
+  strings, the owned `RangeTable` provider streams exactly the `i128` element
+  count so overflow bounds emit one row, and `numPartitions` validates with
+  `IllegalArgumentException` on non-positive counts; recorded 19-cell oracle
+  plus red-first pins on both SQL doors. `risk_tier: standard`. Branch
+  `fix/range-id-2`.
+  pins: range-tvf-id-2/C-001, C-002, C-003, C-004, C-005, C-006
 - [v3-multiarg-1-ledger.md](v3-multiarg-1-ledger.md) —
   **V3-MULTIARG-1 (2026-09-18), in flight:** multi-argument partition transforms
   (`source-ids`) DECLARED out of 1.x under owner ruling 2026-09-18 (rating row V3-05)
