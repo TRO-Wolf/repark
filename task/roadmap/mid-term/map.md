@@ -6,6 +6,17 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [night-report-2026-09-19-23a.md](night-report-2026-09-19-23a.md) — **run 23a (2026-09-18 → 19 night, the fork
+  residue lane):** nine fork PRs merged (#297 relocated comments shed, #298, #299, #300 row-id order, #301 + sequence
+  GC, #302, #304, #305, #306 parquet footer); #303 Glue fault seam held for the owner (Cargo.toml feature line).
+- [night-report-2026-09-19-23b.md](night-report-2026-09-19-23b.md) — **run 23b (the RePark side and every pin bump):**
+  ten PRs merged, RP-29 → RP-33, ARRAY inserts, list-null DML, `range()`, CAST to MAP; the 16-INSERT storm row
+  corrected by measurement; RP-34 #717 a draft; owner questions incl. scalar CAST parity.
+- [night-report-2026-09-19-23c.md](night-report-2026-09-19-23c.md) — **run 23c (the Spark–Iceberg parity inventory):**
+  842 cells, 424 EQUAL, 57 DIFFERENT, 56-unit slate (see `ice-parity-inventory-2026-09-19.md`).
+- [night-report-2026-09-19-23d.md](night-report-2026-09-19-23d.md) — **run 23d (the silent top of the slate):**
+  ICE-TT-RESOLVE-1 (IPI-01 + IPI-02) a draft at r3; Spark truths re-recorded for namespaces (26 cells) and overwrite
+  modes (60 cells); briefs ready for ICE-DROP-NS-1 and ICE-OVERWRITE-MODE-1.
 - [ice-parity-inventory-2026-09-19.md](ice-parity-inventory-2026-09-19.md) — **Spark–Iceberg parity inventory
   (2026-09-19, night run 23c, owner direction "1 to 1 parity … NO STONES LEFT"):** 842 cells enumerated from the
   iceberg-spark-runtime 1.11.0 jar and the 1.11 docs, measured on Spark 4.1.2 and RePark main `6a140eb3` — 424 EQUAL,
