@@ -38,10 +38,10 @@ facade door, `unknown cast type 'map<string,long>'` on the DataFrame door).
 | C-008 | The old refusal pins flip: the `test_nullability_2.py` map-spelling pin, the 8 strict xfails in `test_ice_array_insert_1.py` (verbatim statements become plain pins), and any FNP8-PARSING typed-map-cast pins. | Flipped pins green in step 3. | PROVEN | `test_cast_to_map_type_spelling_answers_per_cast_map_spell_1`; 30 plain `test_cell_matches_spark` ids (substitute twins dropped, ruling Q-23b-CM-3); 24 FNP8 dispositions re-derived, each equal to Spark's rows and Arrow schema; ICE-LIST-NULL-1's `map_int` seed runs verbatim (225 passed, 32 xfailed as before). |
 | C-009 | `CAST-MAP-SPELL-1` reads FIXED 2026-09-19 with before/after and pins; `FNP8-PARSING`'s typed-map-cast sentence is true or names exactly what remains; ICE-ARRAY-INSERT-1's map_list sentence is true. | Registry diff plus this ledger. | PROVEN | `docs/spark-sql-iceberg-parity.md`: the row reads FIXED with before/after and residues; FNP8-PARSING keeps only the struct-field lambda and bare `map()`; ICE-ARRAY-INSERT-1 and ICE-LIST-NULL-1 read verbatim. |
 | C-010 | The targeted gates are green: the new test file plus `test_nullability_2.py` plus `test_ice_array_insert_1.py` offline and live, every MAP-cast test file, per-crate Rust tests, `cargo fmt --check`, per-crate clippy, whole-tree `ruff check`, `ruff format --check` on changed Python. | Pasted summary lines in step 5. | PROVEN | See §Gates. |
-| C-011 | Map key legality follows Spark 4.1.2: under ANSI the key pair needs ANSI castability; in legacy mode and under `try_cast` (either mode) it needs legacy castability and a key cast that cannot produce NULL (`forceNullable` false); an illegal pair refuses with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`. | Round-3 cells `dup_keys_legacy`, `try_null_key_*`, `try_widen_key_*` on both doors; the Spark matrix measured 2026-09-19 (8 source types x 9 key targets x 3 modes). | OPEN | Red on the round-2 tree. |
-| C-012 | Colliding keys after a legal key cast are stored as Spark stores them — no dedup, entry order kept (`map_keys` `[2, 1, 2]`) — so a `collect()` shows the later value, as Spark's does. | Round-3 cells `dup_keys_ansi`, `dup_keys_order_ansi`. | OPEN | The orchestrator's `{1: 'b'}` reading is Spark's Python dict view; `map_keys` is the storage. |
-| C-013 | Leaf element casts follow Spark: integral and fractional narrowing raise `[CAST_OVERFLOW]` under ANSI and wrap in legacy mode; string leaves trim whitespace, and legacy string-to-integral accepts a fractional part. | Round-3 cells `overflow_leaf_*`, `bigint_overflow_leaf_*`, `whitespace_leaf_*`, `fraction_text_leaf_*`. | OPEN | Red on the round-2 tree. |
-| C-014 | A `/*! … */` comment hint is an ordinary comment to the map-cast rewrite. | Round-3 cells `comment_hint_*`; Rust `comment_hint_is_an_ordinary_comment`. | OPEN | Red on the round-2 tree. |
+| C-011 | Map key legality follows Spark 4.1.2: under ANSI the key pair needs ANSI castability; in legacy mode and under `try_cast` (either mode) it needs legacy castability and a key cast that cannot produce NULL (`forceNullable` false); an illegal pair refuses with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`. | Round-3 cells `dup_keys_legacy`, `try_null_key_*`, `try_widen_key_*` on both doors; the Spark matrix measured 2026-09-19 (8 source types x 9 key targets x 3 modes). | PROVEN | Red on the round-2 tree (`try_null_key_*` Arrow `unmasked nulls`, `dup_keys_legacy` answered); green on `4374243d` on both doors. Measured matrix encoded in `cast_map/leaf.rs::key_castable`. |
+| C-012 | Colliding keys after a legal key cast are stored as Spark stores them — no dedup, entry order kept (`map_keys` `[2, 1, 2]`) — so a `collect()` shows the later value, as Spark's does. | Round-3 cells `dup_keys_ansi`, `dup_keys_order_ansi`. | PROVEN | `map_keys` answers `[2, 1, 2]` and `collect()` `{1: 'b'}` on RePark and Spark alike; the dedup the orchestrator's reading suggested would have diverged from the storage (ruling Q-23b-CM-9). |
+| C-013 | Leaf element casts follow Spark: integral and fractional narrowing raise `[CAST_OVERFLOW]` under ANSI and wrap in legacy mode; string leaves trim whitespace, and legacy string-to-integral accepts a fractional part. | Round-3 cells `overflow_leaf_*`, `bigint_overflow_leaf_*`, `whitespace_leaf_*`, `fraction_text_leaf_*`. | PROVEN | Red on the round-2 tree (Arrow message / silent NULL / CAST_INVALID_INPUT); green on `4374243d` on both doors. |
+| C-014 | A `/*! … */` comment hint is an ordinary comment to the map-cast rewrite. | Round-3 cells `comment_hint_*`; Rust `comment_hint_is_an_ordinary_comment`. | PROVEN | Facade door green. The native door's own Generic parser expands `/*!` hints in every statement, so its pin is a dated strict xfail outside this unit's rewrite. |
 
 ## Gates
 
@@ -56,6 +56,13 @@ Measured on the release native built from the step-3 tree:
   -p repark-python --all-targets -- -D warnings -A clippy::disallowed_methods` clean.
 - `ruff check .` clean; `ruff format --check` on the changed Python clean.
 - Comment ban: 0 hits.
+
+## Round 3 gates
+
+On the round-3 release native (`4374243d`): the unit files plus every MAP-cast file offline
+722 passed, 110 skipped, 1 xfailed; `cargo test -p repark-functions --lib cast_map` 13 passed;
+fmt and per-crate clippy clean; comment ban 0. Live: the three unit files 120 passed, 1 xfailed;
+the re-deriver's `--check` matches both fixtures (rc 0).
 
 ## Coverage attestation
 
@@ -124,7 +131,8 @@ COVERAGE_ATTESTATION:
       artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/map.md, crates/repark-functions/src/cast_map/map.md]
     - id: AT-10
       status: ATTACKED
-      evidence: Every other file that casts to MAP ran green. FNP8 re-derived; the
+      evidence: Round 3 adds C-011..C-014 from 17 recorded cells red on the round-2
+        tree, green on 4374243d. Every other file that casts to MAP ran green. FNP8 re-derived; the
         ICE-LIST-NULL-1 seed runs verbatim with 225 passed and the same 32 strict
         xfails. The repark-sql lib suite passes (356).
       artifacts: [python/repark/tests/test_fnp8_oracle_matrix.py, python/repark/tests/test_ice_list_null_1.py]

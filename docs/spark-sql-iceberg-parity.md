@@ -4993,20 +4993,34 @@ the pin rather than obeying it.
   `[CAST_INVALID_INPUT]` naming the malformed value, legacy mode and `try_cast` yield NULL
   elements; a non-map source refuses with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`.
   Mechanism: `repark_functions::cast_map` rewrites the call to a cast UDF before either door
-  parses (stock DataFusion plans no SQL map type). Residue, not in the 21 cells: a non-string
-  leaf that fails under ANSI (numeric overflow) keeps Arrow's message rather than Spark's
-  `CAST_OVERFLOW`; string leaves follow Arrow's parser, so Spark's whitespace trimming in
-  `CAST(' 1' AS INT)` is not reproduced inside a map; the refusal names the operand by its
-  DataFusion display (`Int64(1)`), where Spark prints `"1"`.
+  parses (stock DataFusion plans no SQL map type).
+  **Round 3 (2026-09-19):** before, on the round-2 tree, `try_cast(map('x', 1) AS MAP<INT,
+  INT>)` failed with Arrow's `Found unmasked nulls … "key"`. The ANSI-off
+  `CAST(map('1','a','01','b') AS MAP<INT, STRING>)` answered where Spark refuses.
+  `map('a', 128)` to `TINYINT` gave Arrow's error under ANSI and a silent NULL in legacy
+  mode, `map('a', ' 1')` to `INT` gave `CAST_INVALID_INPUT` / NULL, and a `/*! … */` hint
+  naming a map cast was spliced into. After: key legality is Spark's rule — ANSI
+  castability under ANSI; legacy castability plus a key cast that cannot produce NULL in
+  legacy mode and under `try_cast` — refusing with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`.
+  Leaf casts raise `[CAST_OVERFLOW]` under ANSI and wrap in legacy mode, trim whitespace,
+  and accept legacy fractional text. Colliding keys after a key cast are kept as Spark
+  stores them (`map_keys` `[2, 1, 2]` on both engines; `collect()` shows `{1: 'b'}` on
+  both, the later value winning the Python dict). The rewrite treats `/*! … */` as a
+  comment. Residues (ruling Q-23b-7, P3): L-004, the `EXPLAIN` / plan text names the
+  internal `__repark_cast_map__` call; L-007, the refusal names the operand by its
+  DataFusion display (`Int64(1)`), where Spark prints `"1"`. Separate from this row: the
+  native `repark.sql` door's stock Generic parser expands `/*! … */` hints in every
+  statement (`SELECT 1 /*! 3 */, 2` refuses there), pinned as a dated strict xfail.
 - **Apache Spark** — the recorded 21 cells in
-  `python/repark/tests/cast_map_spell_1/cast_map_spell_1_spark_oracle.json`.
-  *(oracle: live PySpark 4.1.2, UTC, ANSI on plus one legacy cell, 2026-09-19.)*
+  `python/repark/tests/cast_map_spell_1/cast_map_spell_1_spark_oracle.json` and the 17
+  round-3 cells in `…/cast_map_spell_1_round3_spark_oracle.json`.
+  *(oracle: live PySpark 4.1.2, UTC, ANSI on plus legacy cells, 2026-09-19.)*
 - **Pin** — `python/repark/tests/test_cast_map_spell_1.py` (every cell on the facade door,
   the native door where it can spell the cell, the three DataFrame cells, and a live drift
   check); `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_answers_per_cast_map_spell_1`;
   `crates/repark-functions/src/cast_map/tests.rs`.
 - **Rationale** — FIXED 2026-09-19. Filed 2026-09-06 (NULLABILITY-2 round 2).
-  pins: cast-map-spell-1/C-009
+  pins: cast-map-spell-1/C-009, C-011, C-012, C-013, C-014
 
 ### LOGICAL-WIDTH-1 — narrow top-level widths report wide via `dtypes`/`schema`
 

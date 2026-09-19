@@ -65,6 +65,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Green on the round-3 kernel except `native_door[comment_hint_ansi]`, a dated strict
   xfail: the native door's stock Generic parser expands `/*! */` hints for every
   statement, maps or not.
+  The re-deriver's `--check` compares both fixtures after a JSON round trip, so int map
+  keys read as the committed string keys.
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —

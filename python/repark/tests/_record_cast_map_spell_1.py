@@ -238,6 +238,7 @@ def record_round3_oracle() -> dict[str, Any]:
 
 def _drift(name: str, oracle: dict[str, Any], expected: dict[str, Any]) -> int:
     """Print every drifting cell of one fixture and return 1, or 0 when it matches."""
+    oracle = json.loads(json.dumps(oracle, default=str))
     if oracle["cells"] == expected["cells"]:
         print(f"{name} oracle matches the committed fixture")
         return 0
