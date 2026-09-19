@@ -1,6 +1,3 @@
-//! Session `spark.sql.iceberg.*` write confs on the Spark SQL doors.
-//! pins: ice-session-write-conf-1/C-034
-
 use super::super::*;
 use super::common::*;
 

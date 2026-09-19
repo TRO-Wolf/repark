@@ -11,7 +11,8 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
 - `mod.rs` — thin index (rustfmt module order).
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   resolver precedence pins (writer option over session conf over table property, bogus
-  codec refuses naming the codec) plus the `SessionWriteView` carrier shape.
+  codec refuses naming the codec) plus the `SessionWriteView` carrier shape
+  (comment-free per the owner ban).
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.

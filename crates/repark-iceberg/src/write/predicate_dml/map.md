@@ -59,7 +59,8 @@ works, so the attribute is gone rather than documented.
 - `cow_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):**
   `commit_identity_cow` / `commit_identity_update_cow`, split out of
   `predicate_dml.rs` so the parent stays under its exact size baseline; the COW
-  identity commits resolve the session write conf at the commit site.
+  identity commits resolve the session write conf at the commit site
+  (comment-free per the owner ban).
 - `predicate_dml.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** identity
   DELETE / UPDATE resolve the empty-overrides session write (`resolve_empty_session_write`)
   and commit through `cow_commit`, so session snapshot properties and the session

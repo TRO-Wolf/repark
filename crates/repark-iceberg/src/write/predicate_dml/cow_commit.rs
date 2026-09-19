@@ -20,7 +20,6 @@ use crate::write::merge::{
 use crate::write::position_delete::PositionDeletePair;
 use crate::write::session_write_conf::resolve_empty_session_write;
 
-/// Rewrite affected files as survivors UNION ALL updated rows, then overwrite-commit.
 pub(super) async fn commit_identity_update_cow(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -92,7 +91,6 @@ fn register_update_values_table(ctx: &SessionContext, batches: Vec<RecordBatch>)
     Ok(name)
 }
 
-/// Rewrite affected files, dropping the identity pairs, then overwrite-commit.
 pub(super) async fn commit_identity_cow(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,

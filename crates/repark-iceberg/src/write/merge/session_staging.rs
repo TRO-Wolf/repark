@@ -23,8 +23,6 @@ use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::{conform_batch, write_default_column_names};
 use crate::write::write_options::WriterStagingOverrides;
 
-/// R-MERGE-STREAM-OUT: cast each batch to the write schema, pipe into the streaming writers,
-/// and apply `staging` (statement writer options layered over the session write conf) to files.
 pub(crate) async fn write_new_data_files_from_stream_with<S>(
     table: &Table,
     write_schema: &SchemaRef,
@@ -77,14 +75,12 @@ where
     }
 }
 
-/// Open one unpartitioned Parquet `DataFileWriter` for `table` (unique file-name UUID per call).
 pub(crate) async fn build_unpartitioned_data_file_writer(
     table: &Table,
 ) -> Result<impl IcebergWriter + use<>> {
     build_unpartitioned_data_file_writer_with(table, &WriterStagingOverrides::none()).await
 }
 
-/// Open one unpartitioned Parquet `DataFileWriter` with session staging overrides applied.
 async fn build_unpartitioned_data_file_writer_with(
     table: &Table,
     staging: &WriterStagingOverrides,

@@ -43,7 +43,7 @@ repark-core's error map.
   session write-conf carrier (`SessionWriteView`: session codec/level plus the
   `spark.sql.iceberg.snapshot-property.*` map) and `resolve_write_for_session`,
   which folds writer option over session conf over table property at every owned
-  commit; a bogus codec refuses naming the codec.
+  commit; a bogus codec refuses naming the codec (comment-free per the owner ban).
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).

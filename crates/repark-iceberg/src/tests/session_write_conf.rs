@@ -1,6 +1,3 @@
-//! Session `spark.sql.iceberg.*` write confs: carrier parse, merge, and resolve rules.
-//! pins: ice-session-write-conf-1/C-033
-
 use std::collections::HashMap;
 
 use datafusion::common::config::ConfigOptions;

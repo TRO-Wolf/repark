@@ -37,7 +37,6 @@ pub(crate) mod position_delete;
 pub mod predicate_dml;
 pub mod scan_concurrency;
 pub mod scan_prune;
-/// Session `spark.sql.iceberg.*` write confs (codec, level, snapshot properties).
 pub mod session_write_conf;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;

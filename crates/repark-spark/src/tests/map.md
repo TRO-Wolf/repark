@@ -19,7 +19,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   Spark-door session-conf pins (snapshot properties and codec on append,
   overwrite, CTAS, by-name and plain INSERT, plus the writer-option precedence
-  cells).
+  cells; comment-free per the owner ban).
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
   pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`

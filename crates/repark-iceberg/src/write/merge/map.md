@@ -288,7 +288,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `session_staging.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   session-conf-aware staged-write entry (`write_new_data_files_from_stream_with`
   over `WriterStagingOverrides`), split out of `mod.rs` so the parent stays under
-  its exact size baseline; every MERGE writer site stages through it.
+  its exact size baseline; every MERGE writer site stages through it
+  (comment-free per the owner ban).
 - `mod.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** MERGE staging and
   insert-stream sites take the session write conf through `session_staging`.
 - `snapshot_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
