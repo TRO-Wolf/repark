@@ -137,8 +137,12 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   scripts is `|| stop "…"` on the two `aws s3tables` calls, and every `cargo bench` command
   line (backslash continuations joined, `>` scripts folded) carries no `||`, `&&`, `;` or
   pipe, so `|| true`, `&& true` or `; true` after any of the seven bench commands or the two
-  compaction calls reds `test_no_bench_or_s3tables_failure_can_be_swallowed`. YAML read by
-  regex, no PyYAML.
+  compaction calls reds `test_no_bench_or_s3tables_failure_can_be_swallowed`. Round 3
+  (F-SEC-REF-ORDER): the bench job's ref guard (`if: github.ref != 'refs/heads/main'`, `exit
+  1`) is the first ordered marker. It must be the job's first step, ahead of
+  `actions/checkout@` and `aws-actions/configure-aws-credentials@`, so moving it after the
+  credentials or after checkout, or dropping its `exit 1`, reds the step-order pin. YAML read
+  by regex, no PyYAML.
   pins: ice-read-perf-0/C-018, C-019
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names

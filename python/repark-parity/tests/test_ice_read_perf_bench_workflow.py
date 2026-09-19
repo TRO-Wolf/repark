@@ -15,7 +15,9 @@ LIVE_AWS_CONDITION = "github.event_name == 'schedule' || inputs.leg == 'acceptan
 BENCH_CONDITION = "github.event_name == 'workflow_dispatch' && inputs.leg == 'ice-read-perf-bench'"
 UPLOAD_ARTIFACT = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
 MODES = ("cold", "warm", "concurrent", "concurrent-cold")
+REF_GUARD = "if: github.ref != 'refs/heads/main'"
 ORDERED_MARKERS = (
+    REF_GUARD,
     "actions/checkout@",
     "dtolnay/rust-toolchain@",
     "Swatinem/rust-cache@",
@@ -139,10 +141,15 @@ def test_the_bench_job_uses_the_same_pinned_actions_as_the_acceptance_job() -> N
 
 
 def test_the_bench_builds_before_credentials_and_disables_compaction_before_any_write() -> None:
-    """The step order: build, credentials, create, compaction off and read back, write, runs."""
+    """Step order: ref guard, build, credentials, create, compaction off, write, runs."""
     block = _job_block(_text(), "ice-read-perf-bench")
     positions = [block.index(marker) for marker in ORDERED_MARKERS]
     assert positions == sorted(positions), list(zip(ORDERED_MARKERS, positions, strict=True))
+    assert block.count(REF_GUARD) == 1
+    first_step = _steps(block)[0]
+    assert REF_GUARD in first_step, first_step
+    assert _run_script(first_step) is not None
+    assert "exit 1" in (_run_script(first_step) or ""), first_step
     assert "--type icebergCompaction" in block
     assert '--value \'{"status":"disabled"}\'' in block
     assert "--query 'configuration.icebergCompaction.status'" in block
