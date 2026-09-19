@@ -49,6 +49,7 @@ ded = "ded"
 daa = "daa"
 dbe = "dbe"
 adedd = "adedd"
+VAS = "VAS"
 
 [type.ledger]
 extend-glob = ["dfcore-4b-ledger.md", "*-dfcore-4b-ledger.md"]
@@ -80,3 +81,9 @@ ba = "ba"
 
 [type.fnpwin1oracle]
 extend-glob = ["fnp_win_1_spark_oracle.json"]
+
+[type.ttoracle]
+extend-glob = ["ice_tt_resolve_1_spark_oracle.json"]
+
+[type.ttoracle.extend-words]
+vas = "vas"
