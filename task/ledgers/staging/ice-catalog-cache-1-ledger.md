@@ -113,7 +113,7 @@ catalog a per-instance scope (`instance:<uuid>`).
 | C-010 | No secret enters a scope string, a span or a `Debug` output. | `only_credential_selectors_name_a_context_and_never_a_secret`; `glue_and_s3tables_catalogs_hold_the_session_metadata_cache` (the catalogs' `Debug`). | **PROVEN** | The context is built from selectors only; the builder spans still record prop key names only; the fork redacts secret props in its catalog `Debug`. |
 | C-012 | Retained-entry counts are settled before they are read: the statement door's `trim`, the Python census and the bench probes run the moka cache's pending tasks first, so the retained-entry bound and the census hold under fork PR #311's cache. | `repark-iceberg/src/catalog/tests/cache_wiring.rs::the_door_trim_settles_before_it_reads_the_high_water_mark` (the door's own settle); `repark-spark/src/tests/catalog_cache_staleness.rs` (16 pins); `python/repark/tests/test_perf_ice_catalog_io_1.py`. | **PROVEN** | Round 2 (verifier Q-001): the staleness pins settle before they call `trim`, so they stayed green with `trim` reading the unsettled `metadata_len()`. The new pin loads four small tables under a one-entry bound and calls `trim()` with nothing settled first, then settles and requires zero entries; with `trim` switched to `metadata_len()` it is red 3 runs of 3 (`left: 4, right: 0`), green with the settle. At the pin commit `ab4e57d6` (before this unit) three staleness pins failed (`a_table_is_never_served_a_sibling_tables_cached_metadata`, `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door`, `the_retained_location_bound_holds_across_many_commits`) and the Python twin `test_the_metadata_cache_bound_is_a_statement_door_clear_not_a_per_load_bound` read `entries == 1` for 8: moka's `entry_count` lags until its pending tasks run. With `settle` all 16 staleness pins pass and the Python file passes (see the hand-back gate lines). |
 | C-013 | The docs state the shipped shape (round 2, verifier CL-001 / CL-002): registry `PERF-CATALOG-CACHE-BOUND-1` is FIXED as fork `#311`'s moka byte budget `with_max_entries(metadataCacheEntries)` (entries × 64 KiB; default 512 → 33,554,432 bytes; entries weighed by document bytes, a one-column table measured at ~538 bytes) that can evict inside one statement, plus the statement door's settled high-water clear; `PERF-CATALOG-AWS-CACHE-1` is wired, unmeasured (the AWS bench is blocked on an IAM grant); `PERF-CATALOG-CALLS-1` clause (3), `docs/guide/session-and-conf.md`, `docs/guide/map.md`, `docs/perf/iceberg-catalog-io-baseline.md`, `docs/perf/map.md`, `docs/cutover/production-iceberg-status-2026-09-14.md`, `crates/repark-iceberg/src/catalog/map.md`, `python/repark/tests/map.md` and the two AWS legs' skip reasons no longer say the caches are memory-catalog-only or that Glue / S3 Tables are not wired. | `grep -rn "not wired\|memory-catalog-only" docs/guide docs/perf docs/spark-sql-iceberg-parity.md crates/repark-iceberg` finds no cache claim; `make check-docs-links`. | **PROVEN** | The 538-byte weight was measured at this head (four one-column tables: `weighted_size() == 2152` after settling, a temporary probe not committed); the 64 KiB and 64 MiB constants are the fork's `ASSUMED_DOC_BYTES` / `DEFAULT_MAX_BYTES` at `27e0d5fa` (`crates/iceberg/src/catalog/table_metadata_cache.rs:64-65`). Dated snapshots (the cutover note, the IO-1 baseline) keep their text and gain a dated update line; completed ledgers and `docs/fork-sync.md` are records and are not edited. |
-| C-011 | The before/after pair on the AWS bed and the local bed. | unit 0's bench at this head against its base. | **OPEN** | `TBD-orchestrator` — AWS bed (S3 Tables, Glue) and local bed, cold / warm / concurrent. |
+| C-011 | The before/after pair on the local bed (the AWS bed is blocked on the owner's IAM grant for `s3tables:Put/GetTableMaintenanceConfiguration`). | unit 0's bench, main `2c232c59` (RP-36) against this unit's head, built and run back to back, `--repeat 5`, default release profile, the 200-file and the 20 × 500,000-row beds; table in `docs/perf/ice-read-perf-baseline-2026-09-19.md` §"RP-37 + ICE-CATALOG-CACHE-1 pair". | **PROVEN** (local) | No regression: every query reads the same requests and bytes, and timings move within noise (load 14–20). The memory catalog already had both caches, so the local bed cannot show the Glue / S3 Tables gain; the AWS pair is owed when the IAM grant lands. |
 
 ## Red runs
 
@@ -133,3 +133,62 @@ catalog a per-instance scope (`instance:<uuid>`).
   `right: 0` (C-012).
 - The bench's `"evictions"` JSON field removed: `the_report_carries_metadata_cache_evictions` and
   `every_measured_sample_reports_its_evictions` failed (C-009).
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ice-catalog-cache-1
+  categories:
+    - id: AT-1
+      status: N/A
+      justification: No Spark-visible answer changes; the caches serve metadata the pointer check already names.
+    - id: AT-2
+      status: ATTACKED
+      evidence: 7 of 11 wiring pins were red with the wiring stubbed; the Grok verifier's
+        constant-context, default-cache, skip-S3-Tables and secret-in-context mutations each
+        turned pins red, and round 2 bound the unsettled door trim.
+      artifacts: [crates/repark-iceberg/src/catalog/tests/cache_wiring.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Both AWS builders, the memory catalog, every production registration path,
+        disabled caches, each switch alone, two sessions, two credential contexts.
+      artifacts: [crates/repark-iceberg/src/catalog/tests/cache_wiring.rs, crates/repark-core/src/session/tests/metadata_cache_report.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The settle before every retained-entry read is async (no block_on); fork #311's
+        single-flight loads are shared per scope; staleness pins hold under concurrent doors.
+      artifacts: [crates/repark-spark/src/tests/catalog_cache_staleness.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: The credential context is built from selectors only, through the fork's own
+        derivation; no secret reaches a scope string, a span or a Debug output (pinned).
+      artifacts: [crates/repark-iceberg/src/catalog/builders.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Every load still fetches the service pointer first (fork #311); an eviction
+        re-reads, never serves a sibling; the registry rows state the shipped bound.
+      artifacts: [docs/spark-sql-iceberg-parity.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The local pair is a back-to-back before/after on the default release profile;
+        the AWS pair is recorded as owed, not claimed.
+      artifacts: [docs/perf/ice-read-perf-baseline-2026-09-19.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No new dependency or feature; the fork pin moves in the same PR as RP-37 by
+        ruling Q-24a-4 because the bump alone is red.
+      artifacts: [Cargo.toml, Cargo.lock]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The guide, the registry rows and every touched map describe the session-scoped
+        caches reaching Glue and S3 Tables.
+      artifacts: [docs/guide/session-and-conf.md, crates/repark-iceberg/src/catalog/map.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The catalog, session, staleness and bench suites and the catalog-IO facade file
+        pass; CI runs the workspace and the facade suite.
+      artifacts: [python/repark/tests/test_perf_ice_catalog_io_1.py]
+  complete: true
+```
+

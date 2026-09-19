@@ -304,6 +304,9 @@ would change what "four at once" measures for the other four (their timings and 
   [docs/perf/ice-read-perf-baseline-2026-09-19.md](../../../../docs/perf/ice-read-perf-baseline-2026-09-19.md)
   §"RP-36 pair", including the Q6 regression on the 200-file bed.
   pins: rp-36-fork-pin/C-002, C-003, C-004
+- **RP-37 + ICE-CATALOG-CACHE-1 (fork `27e0d5fa`):** no regression on either local bed; the
+  Glue / S3 Tables gain needs the AWS bed (blocked on the IAM grant).
+  pins: ice-catalog-cache-1/C-011
 
 ## Pointers
 
