@@ -137,8 +137,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `timestamp[us, tz=UTC]` Arrow type. Time-only strings (`T10:00`, `10:00:00`) resolve
   against today's date in their zone, so they check the local date and time of day. The
   native door has no LTZ `TIMESTAMP` (its `TIMESTAMP` is the ANSI zoneless type) and carries
-  no cell. The live leg re-derives the fixture. Red on main: 30 failed, 1 live-skip.
-  pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  no cell. The live leg re-derives the fixture. Red on main: 30 failed, 1 live-skip; green
+  on the kernel fix. The registry row `CAST-TS-STRING-1` reads FIXED 2026-09-19 with its
+  residues. pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-011
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —

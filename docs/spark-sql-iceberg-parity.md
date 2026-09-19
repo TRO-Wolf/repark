@@ -199,6 +199,9 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   far-future reader shapes answered Spark's rows by accident and now refuse loud. They are
   strict xfails citing the cast; the cast unit `CAST-TS-STRING-1` flips them.
   pins: ice-tt-resolve-1/C-013
+  **Closed 2026-09-19 (CAST-TS-STRING-1):** the engine CAST now runs Spark's
+  `stringToTimestamp`, so these strings answer Spark's rows on both entries and the strict
+  xfails are plain pins. pins: cast-ts-string-1/C-009
 
 ### 2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)
 
@@ -2011,6 +2014,50 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `Timestamp(Nanosecond, _)` arm dividing by nanoseconds per hour, matching its
   `transform_literal` and the `Day` / `Month` / `Year` array transforms. RePark takes it
   at this fork repin.
+
+### CAST-TS-STRING-1 — `CAST(<string> AS TIMESTAMP)` follows Spark's `stringToTimestamp` — **FIXED 2026-09-19**
+
+- **repark** — Before (main `e36db95e`): the string → `TIMESTAMP` cast ran Arrow's
+  `Timestamp(ns)` parser, a strict grammar with a 1677–2262 range. 78 of 184 measured cells
+  differed from Spark. With ANSI off it answered NULL for strings Spark converts (`'2020'`,
+  `'2020-06'`, `'2020-6-1'`, `'2020-06-01 10:00'`, `'2020-06-01 1:2:3'`, `'2999-01-01'`,
+  `'9999-12-31 23:59:59.999999'`, `'1582-10-10'`, `' 2020-06-01 '`, `'+2020-06-01'`,
+  `'T10:00'`, `'10:00:00'`, `'2020-06-01 10'`, `'2020-06-01T10'`). In a New York session it read
+  `'… 10:00:00 UTC'` and `'… America/New_York'` in the session zone, a silent wrong instant.
+  With ANSI on it refused the same strings. `TRY_CAST(<string> AS TIMESTAMP)` answered
+  `timestamp[ns]`. Time travel refused `TIMESTAMP AS OF '2999-01-01'` and `timestampAsOf='2020'`.
+  After: one Rust kernel, `repark_functions::spark_string_timestamp`, ports
+  `parseTimestampString`, `getZoneId` and `stringToTimestamp`. It covers the trim set (bytes
+  <= 0x20 and DEL), 4–6 digit signed years, 1–2 digit fields, a fraction truncated to
+  microseconds, and a zone only after the seconds or the fraction. Zones are Java offsets,
+  `UTC` / `GMT` / `UT` prefixes, the 28 short ids and case-sensitive regions. A time-only
+  string takes today's date in its zone. A DST gap shifts forward and an overlap takes the
+  earlier offset. Far-future walls follow the final DST rule (chrono-tz tabulates only to
+  2099), and i64 microsecond overflow is a failure. `CAST` (literal and column), `TRY_CAST`
+  (`timestamp[us, UTC]`, NULL on failure), `Column.cast` / `try_cast`, one-argument
+  `to_timestamp` / `to_timestamp_ltz` / `try_to_timestamp`, typed `TIMESTAMP '…'` literals
+  and time travel (which evaluates `CAST`) all run it. ANSI on raises `[CAST_INVALID_INPUT]`
+  with Spark's message and `'…'` quoting. All 604 recorded cells answer on every leg.
+  Residues (open, not parity): `to_timestamp_ntz` keeps DataFusion's parse (`'2020'`
+  refuses; Spark answers). A string leaf inside `CAST(… AS MAP<…, TIMESTAMP>)` keeps Arrow's
+  parse. Rendering an LTZ instant after 2099 in a DST region zone uses standard time:
+  `CAST(CAST('2999-07-01 12:00:00' AS TIMESTAMP) AS STRING)` in New York answers
+  `2999-07-01 11:00:00`, and Java's final rule gives `12:00:00` (inferred from the recorded
+  instant, not recorded as text). The native `repark.sql` door has no LTZ `TIMESTAMP` (its
+  `TIMESTAMP` is the ANSI zoneless type), so no cell runs there.
+- **Apache Spark** — the 604 cells in `python/repark/tests/cast_ts_string_1_spark_oracle.json`:
+  151 strings x `UTC` / `America/New_York` x ANSI off / on, each with the `unix_micros` of
+  `CAST`, `TRY_CAST` and `to_timestamp`, or the error condition and message.
+  *(oracle: live PySpark 4.1.2, 2026-09-19, recorder `python/repark/tests/_record_cast_ts_string_1.py`.)*
+- **Pin** — `python/repark/tests/test_cast_ts_string_1.py` (literal and view-column `CAST` /
+  `TRY_CAST`, `Column.cast` / `try_cast`, `to_timestamp`, the Arrow type, and a live drift
+  check); `crates/repark-functions/src/tests/spark_string_timestamp.rs` and
+  `…/spark_string_timestamp_sql.rs`; the time-travel pins that were strict xfails
+  (`test_ice_tt_resolve_1.py::test_reader_tas_date_past_2262`,
+  `test_ice_tt_resolve_1_tt2.py::test_facade_sql_tt2_short_and_year_only_casts`,
+  `…::test_reader_tt2_timestamp_as_of_nosec`).
+- **Rationale** — FIXED 2026-09-19 (owner direction 2026-09-18: 1:1 parity with Spark). A
+  silent wrong result in a core scalar cast. pins: cast-ts-string-1/C-011
 
 ## 5. Facade drop-in semantics (DECLARED)
 

@@ -979,7 +979,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `timestamp_ltz_ntz::tests::*`.
   **CAST-TS-STRING-1 (2026-09-19):** one-argument string `try_to_timestamp` calls the Spark
   kernel with NULL on failure; the `to_timestamp_ntz` arms keep DataFusion's parse through
-  `arrow_grammar_to_timestamp_udf`. pins: cast-ts-string-1/C-004
+  `arrow_grammar_to_timestamp_udf`. pins: cast-ts-string-1/C-004, C-010
 - `time_family.rs` — **FNP-11B step 4 (2026-09-15):** the TIME family behind one
   refusal kernel (`TimeRefusal`, unconditional `[UNSUPPORTED_TIME_TYPE]`) serving
   `make_time` / `to_time` / `time_diff` / `time_trunc` on both doors;
