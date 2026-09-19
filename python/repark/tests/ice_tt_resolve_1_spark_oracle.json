@@ -4,10 +4,11 @@
   "iceberg": "1.11.0",
   "catalog": "InMemoryCatalog",
   "recorded": "2026-09-19",
-  "cells": 94,
-  "shapes": "47 shapes x format v2 and v3",
+  "cells": 115,
+  "shapes": "47 shapes x format v2 and v3, plus 21 TT2 logic-critic cells",
   "table": "3 snapshots S0 insert (1,a,x),(2,b,y); S1 insert (3,c,x); S2 delete id=1; commits 2.2s apart; tag t0 -> S0, branch b0 -> S1; mid = halfway between S0 and S1 commits",
-  "session_time_zone": "UTC unless the cell needs America/New_York"
+  "session_time_zone": "UTC unless the cell needs America/New_York",
+  "tt2": "21 cells recorded 2026-09-19 by the critic harness (cells_tt2.py) on a 2-snapshot seed (two inserts; tag t0 and branch b0 on the first snapshot); CAST-* cells are bare SELECT statements with no table"
  },
  "cells": [
   {
@@ -2191,6 +2192,388 @@
    "obs": {},
    "notes": [],
    "secs": 4.85
+  },
+  {
+   "id": "TT2-RANDOM-ERR",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF ... + make_interval(random())",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC] The time travel timestamp expression \"CAST(2026-09-19 06:57:07.200000 AS TIMESTAMP) + make_interval(0, 0, 0, 0, 0, 0, rand())\" is invalid. Must be deterministic. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_random_err CREATE BRANCH b0 AS OF VERSION 7577546614445480563",
+   "obs": {},
+   "notes": [],
+   "secs": 5.52
+  },
+  {
+   "id": "TT2-UUID-ERR",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF with uuid() inside",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC] The time travel timestamp expression \"CAST(concat(2026-09-19 06:57:10.985500, substr(uuid(), 1, 0)) AS TIMESTAMP)\" is invalid. Must be deterministic. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_uuid_err CREATE BRANCH b0 AS OF VERSION 8961334253168270618",
+   "obs": {},
+   "notes": [],
+   "secs": 2.97
+  },
+  {
+   "id": "TT2-WITH-RAND-SUBQ",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF (WITH x AS (SELECT rand() r) SELECT ts + make_interval(...r))",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "Py4JJavaError",
+    "msg": "An error occurred while calling o55.sql.\n: org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase analysis failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full stack trace. SQLSTATE: XX000"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_with_rand_subq CREATE BRANCH b0 AS OF VERSION 8462032649384742551",
+   "obs": {},
+   "notes": [],
+   "secs": 3.01
+  },
+  {
+   "id": "TT2-DATE-Z-FUTURE",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF '2999-01-01Z'",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"2999-01-01Z\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_date_z_future CREATE BRANCH b0 AS OF VERSION 3023599607611008787",
+   "obs": {},
+   "notes": [],
+   "secs": 2.74
+  },
+  {
+   "id": "TT2-CAST-DATE-Z",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-06-01Z' AS TIMESTAMP) in NY",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "DateTimeException",
+    "getCondition": "CAST_INVALID_INPUT",
+    "getErrorClass": "CAST_INVALID_INPUT",
+    "getSqlState": "22018",
+    "msg": "[CAST_INVALID_INPUT] The value '2020-06-01Z' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 13) ==\nSELECT CAST(CAST('2020-06-01Z' AS TIMESTAMP) AS STRING), unix_timestamp(CAST...\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+   },
+   "error_step": "SELECT CAST(CAST('2020-06-01Z' AS TIMESTAMP) AS STRING), unix_timestamp(CAST('2020-06-01Z' AS TIMESTAMP))",
+   "obs": {},
+   "notes": [],
+   "secs": 2.92
+  },
+  {
+   "id": "TT2-CAST-NOSEC-Z",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-06-01T00:00Z' AS TIMESTAMP) in NY",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "DateTimeException",
+    "getCondition": "CAST_INVALID_INPUT",
+    "getErrorClass": "CAST_INVALID_INPUT",
+    "getSqlState": "22018",
+    "msg": "[CAST_INVALID_INPUT] The value '2020-06-01T00:00Z' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 23) ==\nSELECT unix_timestamp(CAST('2020-06-01T00:00Z' AS TIMESTAMP))\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+   },
+   "error_step": "SELECT unix_timestamp(CAST('2020-06-01T00:00Z' AS TIMESTAMP))",
+   "obs": {},
+   "notes": [],
+   "secs": 2.75
+  },
+  {
+   "id": "TT2-CAST-PLUS0000",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-06-01 00:00:00+0000' AS TIMESTAMP) in NY",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1590969600
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.7
+  },
+  {
+   "id": "TT2-CAST-DST-GAP",
+   "group": "TT2",
+   "title": "SELECT CAST('2026-03-08 02:30:00' AS TIMESTAMP) in NY (gap)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1772955000
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.66
+  },
+  {
+   "id": "TT2-CAST-DST-OVERLAP",
+   "group": "TT2",
+   "title": "SELECT CAST('2026-11-01 01:30:00' AS TIMESTAMP) in NY (overlap)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1793511000
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.62
+  },
+  {
+   "id": "TT2-CAST-SHORT",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-6-1 1:2:3' AS TIMESTAMP) UTC",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1590973323
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.62
+  },
+  {
+   "id": "TT2-CAST-NANOS",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-06-01 00:00:00.123456789' AS TIMESTAMP) UTC",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      "2020-06-01 00:00:00.123456"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.64
+  },
+  {
+   "id": "TT2-CAST-YEAR-ONLY",
+   "group": "TT2",
+   "title": "SELECT CAST('2020' AS TIMESTAMP)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1577836800
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.62
+  },
+  {
+   "id": "TT2-TAS-DATE-Z",
+   "group": "TT2",
+   "title": "reader timestampAsOf='2999-01-01Z'",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"2999-01-01Z\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_tas_date_z CREATE BRANCH b0 AS OF VERSION 2438116508064632655",
+   "obs": {},
+   "notes": [],
+   "secs": 2.69
+  },
+  {
+   "id": "TT2-TAS-NOSEC",
+   "group": "TT2",
+   "title": "reader timestampAsOf 'yyyy-MM-dd HH:mm' mid",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.9
+  },
+  {
+   "id": "TT2-TAS-TAG-SELECTOR-ERR",
+   "group": "TT2",
+   "title": "versionAsOf on t.tag_t0",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel using selector and Spark time travel spec at the same time"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_tas_tag_selector_err CREATE BRANCH b0 AS OF VERSION 7083995748277542146",
+   "obs": {},
+   "notes": [],
+   "secs": 2.6
+  },
+  {
+   "id": "TT2-TAS-TS-TAG-SELECTOR-ERR",
+   "group": "TT2",
+   "title": "timestampAsOf on t.branch_b0",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel in branch"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_tas_ts_tag_selector_err CREATE BRANCH b0 AS OF VERSION 9191521717936700654",
+   "obs": {},
+   "notes": [],
+   "secs": 2.63
+  },
+  {
+   "id": "TT2-SQL-ALIAS-JOIN",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF ... a JOIN ... b ON a.id=b.id",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      null,
+      3
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.88
+  },
+  {
+   "id": "TT2-SQL-ALIAS-AS",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF '<mid>' AS t2 WHERE t2.id > 0",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.7
+  },
+  {
+   "id": "TT2-SQL-VERSION-ALIAS",
+   "group": "TT2",
+   "title": "VERSION AS OF <id> t2",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.62
+  },
+  {
+   "id": "TT2-SQL-TS-TAG-SELECTOR",
+   "group": "TT2",
+   "title": "SELECT FROM t.tag_t0 TIMESTAMP AS OF",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel using selector and Spark time travel spec at the same time"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_sql_ts_tag_selector CREATE BRANCH b0 AS OF VERSION 451507618713412928",
+   "obs": {},
+   "notes": [],
+   "secs": 2.64
+  },
+  {
+   "id": "TT2-SQL-VAS-BRANCH-SELECTOR",
+   "group": "TT2",
+   "title": "SELECT FROM t.branch_b0 VERSION AS OF id",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel in branch"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_sql_vas_branch_selector CREATE BRANCH b0 AS OF VERSION 7607250883985981819",
+   "obs": {},
+   "notes": [],
+   "secs": 2.6
   }
  ]
 }

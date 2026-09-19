@@ -45,14 +45,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [_record_ice_tt_resolve_1_oracle.py](_record_ice_tt_resolve_1_oracle.py) —
   **ICE-TT-RESOLVE-1 (2026-09-19, round 1):** the 94 recorded Spark time-travel
   cells (47 shapes on format versions 2 and 3, live PySpark 4.1.2 + Iceberg
-  1.11.0, InMemory catalog, SHA-256
-  `c5fb74f8d16d2a6441c2894c83eecbe864599ac9a024c8fb0d6d5f6d4067055f`)
-  replayed against RePark — reader `versionAsOf` / `timestampAsOf` on `load`
-  and `table`, facade `TIMESTAMP AS OF` / `FOR SYSTEM_TIME AS OF` SQL, each
-  answering expression as a bare native `repark.sql` select, and the live tier
-  re-deriving the fixture under `REPARK_PARITY_LIVE=1`. One table per version
-  serves every cell; per-test sessions adopt the seeded tables by metadata
-  file (memory-catalog metadata is session-local).
+  1.11.0, InMemory catalog) replayed against RePark — reader `versionAsOf` /
+  `timestampAsOf` on `load` and `table`, facade `TIMESTAMP AS OF` /
+  `FOR SYSTEM_TIME AS OF` SQL, each answering expression as a bare native
+  `repark.sql` select, and the live tier re-deriving the fixture under
+  `REPARK_PARITY_LIVE=1`. One table per version serves every cell; per-test
+  sessions adopt the seeded tables by metadata file (memory-catalog metadata
+  is session-local).
+  **ICE-TT-RESOLVE-1 (2026-09-19, round 3):** 21 TT2 logic-critic cells join
+  the fixture (115 cells, SHA-256
+  `4fe461f9370860d9decb1b03beab337063e46845ad30b7123e346bef85b54bc2`) —
+  non-determinism, Spark string→timestamp casts, trailing aliases, and
+  selector clashes on a two-snapshot seed; the recorder replays them once on
+  version 2.
   pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +

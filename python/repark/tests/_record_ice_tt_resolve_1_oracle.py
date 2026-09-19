@@ -7,14 +7,14 @@ Usage (a PySpark 4.1.2 interpreter with a JVM on PATH)::
     ... check
 
 ``record`` replays the 47 time-travel shapes on format versions 2 and 3 (94
-cells) against live Spark 4.1.2 + Iceberg 1.11.0 over an InMemory catalog and
-prints the fixture JSON to stdout. ``check`` replays the same cells and exits
-non-zero naming the first mismatch against the committed
-``ice_tt_resolve_1_spark_oracle.json``, comparing status, rows, and the error
-shape while ignoring run-stamped keys (``secs``, ``error_step``) and
-normalizing run-varying snapshot ids and instants in messages. The Iceberg
-runtime GAV comes from :mod:`_oracle_pins` (CP-8: never restate a version
-literal).
+cells) plus the 21 TT2 logic-critic shapes on version 2 against live Spark
+4.1.2 + Iceberg 1.11.0 over an InMemory catalog and prints the fixture JSON
+to stdout. ``check`` replays the same cells and exits non-zero naming the
+first mismatch against the committed ``ice_tt_resolve_1_spark_oracle.json``,
+comparing status, rows, and the error shape while ignoring run-stamped keys
+(``secs``, ``error_step``) and normalizing run-varying snapshot ids and
+instants in messages. The Iceberg runtime GAV comes from :mod:`_oracle_pins`
+(CP-8: never restate a version literal).
 
 pins: ice-tt-resolve-1/C-001
 """
@@ -317,7 +317,192 @@ def _run_reader(session: Any, table: str, seed: dict[str, Any], action: str) -> 
         }
     if action == "err_version_on_branch":
         return {"rows": base.option("versionAsOf", ids[0]).load(table + ".branch_b0")}
+    if action == "ts_date_z":
+        return {"rows": base.option("timestampAsOf", "2999-01-01Z").load(table)}
+    if action == "ts_nosec":
+        return {"rows": base.option("timestampAsOf", "2999-01-01 00:00").load(table)}
+    if action == "err_version_on_tag":
+        return {"rows": base.option("versionAsOf", ids[0]).load(table + ".tag_t0")}
+    if action == "err_ts_on_branch":
+        return {"rows": base.option("timestampAsOf", _fmt(mids[0])).load(table + ".branch_b0")}
     raise AssertionError(f"unknown reader action {action!r}")
+
+
+def _seed_tt2(session: Any, table: str, version: int) -> dict[str, Any]:
+    """Create the two-snapshot critic shape with tag t0 and branch b0 on S0."""
+    session.sql(f"DROP TABLE IF EXISTS {table}")
+    session.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        f"TBLPROPERTIES ('format-version'='{version}')"
+    )
+    session.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
+    time.sleep(CELL_SLEEP)
+    session.sql(f"INSERT INTO {table} VALUES (3, 'c', 'x')")
+    ids, stamps = _snapshots(session, table)
+    stamps = [_to_utc(stamp) for stamp in stamps]
+    session.sql(f"ALTER TABLE {table} CREATE TAG t0 AS OF VERSION {ids[0]}")
+    session.sql(f"ALTER TABLE {table} CREATE BRANCH b0 AS OF VERSION {ids[0]}")
+    mids = [a + (b - a) / 2 for a, b in itertools.pairwise(stamps)]
+    return {"ids": ids, "stamps": stamps, "mids": mids}
+
+
+def _tt2_shapes() -> list[dict[str, Any]]:
+    """Describe the 21 logic-critic shapes; each records once on version 2."""
+    shapes: list[dict[str, Any]] = []
+
+    def reader(key: str, cell: str, title: str, action: str) -> None:
+        shapes.append({"key": key, "id": cell, "title": title, "kind": "reader", "action": action})
+
+    def query(key: str, cell: str, title: str, template: str, zone: str = "UTC") -> None:
+        shapes.append(
+            {
+                "key": key,
+                "id": cell,
+                "title": title,
+                "kind": "query",
+                "template": template,
+                "zone": zone,
+            }
+        )
+
+    def scalar(key: str, cell: str, title: str, template: str, zone: str = "UTC") -> None:
+        shapes.append(
+            {
+                "key": key,
+                "id": cell,
+                "title": title,
+                "kind": "scalar",
+                "template": template,
+                "zone": zone,
+            }
+        )
+
+    query(
+        "random_err",
+        "TT2-RANDOM-ERR",
+        "TIMESTAMP AS OF ... + make_interval(random())",
+        "SELECT * FROM {T} TIMESTAMP AS OF CAST('{M1}' AS TIMESTAMP)"
+        " + make_interval(0,0,0,0,0,0,random())",
+    )
+    query(
+        "uuid_err",
+        "TT2-UUID-ERR",
+        "TIMESTAMP AS OF with uuid() inside",
+        "SELECT * FROM {T} TIMESTAMP AS OF CAST(concat('{M1}', substr(uuid(), 1, 0)) AS TIMESTAMP)",
+    )
+    query(
+        "with_rand_subq",
+        "TT2-WITH-RAND-SUBQ",
+        "TIMESTAMP AS OF (WITH x AS (SELECT rand() r) SELECT ts + make_interval(...r))",
+        "SELECT * FROM {T} TIMESTAMP AS OF (WITH z AS (SELECT rand() AS r)"
+        " SELECT CAST('{M1}' AS TIMESTAMP) + make_interval(0,0,0,0,0,0,r) FROM z)",
+    )
+    query(
+        "date_z_future",
+        "TT2-DATE-Z-FUTURE",
+        "TIMESTAMP AS OF '2999-01-01Z'",
+        "SELECT * FROM {T} TIMESTAMP AS OF '2999-01-01Z'",
+    )
+    scalar(
+        "cast_date_z",
+        "TT2-CAST-DATE-Z",
+        "SELECT CAST('2020-06-01Z' AS TIMESTAMP) in NY",
+        "SELECT CAST(CAST('2020-06-01Z' AS TIMESTAMP) AS STRING),"
+        " unix_timestamp(CAST('2020-06-01Z' AS TIMESTAMP))",
+        zone="NY",
+    )
+    scalar(
+        "cast_nosec_z",
+        "TT2-CAST-NOSEC-Z",
+        "SELECT CAST('2020-06-01T00:00Z' AS TIMESTAMP) in NY",
+        "SELECT unix_timestamp(CAST('2020-06-01T00:00Z' AS TIMESTAMP))",
+        zone="NY",
+    )
+    scalar(
+        "cast_plus0000",
+        "TT2-CAST-PLUS0000",
+        "SELECT CAST('2020-06-01 00:00:00+0000' AS TIMESTAMP) in NY",
+        "SELECT unix_timestamp(CAST('2020-06-01 00:00:00+0000' AS TIMESTAMP))",
+        zone="NY",
+    )
+    scalar(
+        "cast_dst_gap",
+        "TT2-CAST-DST-GAP",
+        "SELECT CAST('2026-03-08 02:30:00' AS TIMESTAMP) in NY (gap)",
+        "SELECT unix_timestamp(CAST('2026-03-08 02:30:00' AS TIMESTAMP))",
+        zone="NY",
+    )
+    scalar(
+        "cast_dst_overlap",
+        "TT2-CAST-DST-OVERLAP",
+        "SELECT CAST('2026-11-01 01:30:00' AS TIMESTAMP) in NY (overlap)",
+        "SELECT unix_timestamp(CAST('2026-11-01 01:30:00' AS TIMESTAMP))",
+        zone="NY",
+    )
+    scalar(
+        "cast_short",
+        "TT2-CAST-SHORT",
+        "SELECT CAST('2020-6-1 1:2:3' AS TIMESTAMP) UTC",
+        "SELECT unix_timestamp(CAST('2020-6-1 1:2:3' AS TIMESTAMP))",
+    )
+    scalar(
+        "cast_nanos",
+        "TT2-CAST-NANOS",
+        "SELECT CAST('2020-06-01 00:00:00.123456789' AS TIMESTAMP) UTC",
+        "SELECT CAST(CAST('2020-06-01 00:00:00.123456789' AS TIMESTAMP) AS STRING)",
+    )
+    scalar(
+        "cast_year_only",
+        "TT2-CAST-YEAR-ONLY",
+        "SELECT CAST('2020' AS TIMESTAMP)",
+        "SELECT unix_timestamp(CAST('2020' AS TIMESTAMP))",
+    )
+    reader("tas_date_z", "TT2-TAS-DATE-Z", "reader timestampAsOf='2999-01-01Z'", "ts_date_z")
+    reader("tas_nosec", "TT2-TAS-NOSEC", "reader timestampAsOf 'yyyy-MM-dd HH:mm' mid", "ts_nosec")
+    reader(
+        "tas_tag_selector",
+        "TT2-TAS-TAG-SELECTOR-ERR",
+        "versionAsOf on t.tag_t0",
+        "err_version_on_tag",
+    )
+    reader(
+        "tas_ts_tag_selector",
+        "TT2-TAS-TS-TAG-SELECTOR-ERR",
+        "timestampAsOf on t.branch_b0",
+        "err_ts_on_branch",
+    )
+    query(
+        "sql_alias_join",
+        "TT2-SQL-ALIAS-JOIN",
+        "TIMESTAMP AS OF ... a JOIN ... b ON a.id=b.id",
+        "SELECT a.id, b.id FROM {T} TIMESTAMP AS OF CAST('{M1}' AS TIMESTAMP) a"
+        " FULL OUTER JOIN {T} TIMESTAMP AS OF '2999-01-01' b ON a.id = b.id",
+    )
+    query(
+        "sql_alias_as",
+        "TT2-SQL-ALIAS-AS",
+        "TIMESTAMP AS OF '<mid>' AS t2 WHERE t2.id > 0",
+        "SELECT t2.id FROM {T} TIMESTAMP AS OF '{M1}' AS t2 WHERE t2.id > 0",
+    )
+    query(
+        "sql_version_alias",
+        "TT2-SQL-VERSION-ALIAS",
+        "VERSION AS OF <id> t2",
+        "SELECT t2.id FROM {T} VERSION AS OF {S0} t2",
+    )
+    query(
+        "sql_ts_tag_selector",
+        "TT2-SQL-TS-TAG-SELECTOR",
+        "SELECT FROM t.tag_t0 TIMESTAMP AS OF",
+        "SELECT * FROM {T}.tag_t0 TIMESTAMP AS OF '2999-01-01'",
+    )
+    query(
+        "sql_vas_branch_selector",
+        "TT2-SQL-VAS-BRANCH-SELECTOR",
+        "SELECT FROM t.branch_b0 VERSION AS OF id",
+        "SELECT * FROM {T}.branch_b0 VERSION AS OF {S1}",
+    )
+    return shapes
 
 
 def _format_query(template: str, table: str, seed: dict[str, Any]) -> str:
@@ -427,6 +612,55 @@ def _record(warehouse: Path) -> list[dict[str, Any]]:
                             "secs": round(time.time() - started, 2),
                         }
                     )
+        for shape in _tt2_shapes():
+            zone = shape.get("zone", "UTC")
+            key = zone
+            if key not in sessions:
+                sessions[key] = _spark_session(
+                    warehouse, "America/New_York" if zone == "NY" else "UTC"
+                )
+            session = sessions[key]
+            table = f"sc.ns.t_tt2_{shape['key']}_v2"
+            started = time.time()
+            seed = _seed_tt2(session, table, 2)
+            asked = (
+                shape["action"]
+                if shape["kind"] == "reader"
+                else _format_query(shape["template"], table, seed)
+            )
+            try:
+                if shape["kind"] == "reader":
+                    outcome = _run_reader(session, table, seed, shape["action"])
+                    payload = _df_payload(outcome["rows"])
+                else:
+                    payload = _df_payload(session.sql(asked))
+                cells.append(
+                    {
+                        "id": shape["id"],
+                        "group": "TT2",
+                        "title": shape["title"],
+                        "engine": "spark",
+                        "status": "ok",
+                        "obs": payload,
+                        "notes": [],
+                        "secs": round(time.time() - started, 2),
+                    }
+                )
+            except Exception as error:
+                cells.append(
+                    {
+                        "id": shape["id"],
+                        "group": "TT2",
+                        "title": shape["title"],
+                        "engine": "spark",
+                        "status": "error",
+                        "error": _error_payload(error),
+                        "error_step": asked,
+                        "obs": {},
+                        "notes": [],
+                        "secs": round(time.time() - started, 2),
+                    }
+                )
     finally:
         for session in sessions.values():
             session.stop()
@@ -486,7 +720,7 @@ def main(argv: list[str]) -> int:
                 "catalog": "InMemoryCatalog",
                 "recorded": datetime.date.today().isoformat(),
                 "cells": len(cells),
-                "shapes": "47 shapes x format v2 and v3",
+                "shapes": "47 shapes x format v2 and v3, plus 21 TT2 logic-critic cells",
                 "table": (
                     "3 snapshots S0 insert (1,a,x),(2,b,y); S1 insert (3,c,x); "
                     "S2 delete id=1; commits 2.2s apart; tag t0 -> S0, branch b0 -> S1; "
