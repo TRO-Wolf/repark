@@ -121,6 +121,10 @@ fn parse_bytes(raw: &str, key: &str, canonical: &str) -> Result<u64> {
     })
 }
 
+fn metadata_cache_for(entries: usize) -> TableMetadataCache {
+    TableMetadataCache::with_max_entries(u64::try_from(entries).unwrap_or(u64::MAX))
+}
+
 #[derive(Debug, Clone)]
 pub struct CatalogCaches {
     metadata: Option<Arc<TableMetadataCache>>,
@@ -141,7 +145,7 @@ impl CatalogCaches {
         Self {
             metadata: settings
                 .metadata_cache
-                .then(|| Arc::new(TableMetadataCache::new())),
+                .then(|| Arc::new(metadata_cache_for(settings.metadata_cache_entries))),
             metadata_entries: settings.metadata_cache_entries,
             manifest_bytes: settings.manifest_cache_bytes,
             io_counters: Arc::new(IcebergIoCounters::new()),
@@ -191,11 +195,23 @@ impl CatalogCaches {
         self.io_counters.reset();
     }
 
-    pub fn trim(&self) {
-        if let Some(cache) = self.metadata.as_ref()
-            && cache.len() > self.metadata_entries
+    pub async fn settle(&self) {
+        if let Some(cache) = self.metadata.as_ref() {
+            cache.run_pending_tasks().await;
+        }
+    }
+
+    pub async fn settled_metadata_len(&self) -> usize {
+        self.settle().await;
+        self.metadata_len()
+    }
+
+    pub async fn trim(&self) {
+        if self.settled_metadata_len().await > self.metadata_entries
+            && let Some(cache) = self.metadata.as_ref()
         {
             cache.clear();
+            cache.run_pending_tasks().await;
         }
     }
 }

@@ -490,7 +490,7 @@ impl ReparkSession {
             CatalogKind::Glue => {
                 let catalog = repark_iceberg::catalog::glue_catalog_counted(
                     &spec.props,
-                    self.iceberg_io_counters(),
+                    &iceberg_caches::caches_of(&self.catalogs),
                 )
                 .await
                 .map_err(engine_err)?;
@@ -499,7 +499,7 @@ impl ReparkSession {
             CatalogKind::S3Tables => {
                 let catalog = repark_iceberg::catalog::s3tables_catalog_counted(
                     &spec.props,
-                    self.iceberg_io_counters(),
+                    &iceberg_caches::caches_of(&self.catalogs),
                 )
                 .await
                 .map_err(engine_err)?;

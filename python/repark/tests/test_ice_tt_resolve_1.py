@@ -509,15 +509,13 @@ def test_facade_sql_refusals(spark: Any, seeded: dict[str, Any], cell: str, vers
 
 @pytest.mark.parametrize("version", [2, 3])
 @pytest.mark.parametrize("entry", ["load", "table"])
-@pytest.mark.xfail(
-    strict=True,
-    reason="engine Spark CAST refuses date-only walls past 2262 as malformed "
-    "where the oracle answers; cast finding, do not special-case time travel",
-)
-def test_reader_tas_date_engine_gap(
+def test_reader_tas_date_past_2262(
     spark: Any, seeded: dict[str, Any], version: int, entry: str
 ) -> None:
-    """TT-DF-TAS-DATE pins the Spark rows. pins: ice-tt-resolve-1/C-002"""
+    """TT-DF-TAS-DATE answers the Spark rows for a date-only wall past 2262.
+
+    pins: ice-tt-resolve-1/C-002, cast-ts-string-1/C-009
+    """
     seed = seeded["seeds"][version]
     frame = _reader_option_frames(
         spark, _facade_table(version), _reader_options("TT-DF-TAS-DATE", seed), entry

@@ -235,6 +235,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
   L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
+- [ice-catalog-cache-1-ledger.md](ice-catalog-cache-1-ledger.md) —
+  **ICE-CATALOG-CACHE-1 (2026-09-19), in flight:** the session's Iceberg metadata and manifest
+  caches reach the Glue and S3 Tables builders (fork PR #311's handles); the credential-context
+  scope ruling (the fork's public selector derivation, else per instance); evictions surfaced
+  through `iceberg_metadata_cache_report` and the bench. The before/after pair is
+  `TBD-orchestrator`. `risk_tier: standard`. Branch `perf/ice-catalog-cache-1`.
+  pins: ice-catalog-cache-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012
 - [ice-read-perf-0-ledger.md](ice-read-perf-0-ledger.md) —
   **ICE-READ-PERF-0 (2026-09-19), in flight:** the Iceberg I/O counting layer (a counting
   `StorageFactory` whose counters the session owns; Glue and S3 Tables wrap exactly the fork
@@ -243,6 +251,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   complete. `risk_tier: standard`. Branch `perf/ice-read-perf-0`.
   pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010
+- [cast-ts-string-1-ledger.md](cast-ts-string-1-ledger.md) —
+  **CAST-TS-STRING-1 (2026-09-19), in flight:** `CAST(<string> AS TIMESTAMP)` follows Spark
+  4.1.2's `stringToTimestamp` on every door — one Rust kernel
+  (`repark_functions::spark_string_timestamp`) behind `CAST`, `TRY_CAST`, `Column.cast`,
+  one-argument `to_timestamp` and time travel; a 604-cell recorded oracle plus red-first pins;
+  ICE-TT-RESOLVE-1's cast-gap strict xfails flipped. `risk_tier: standard`. Branch
+  `fix/cast-ts-string-1`.
+  pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
@@ -525,6 +542,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-37-fork-pin-ledger.md](rp-37-fork-pin-ledger.md) —
+  **RP-37-FORK-PIN (2026-09-19):** the fork pin moves to `27e0d5fa` (#309 metadata-only DELETE
+  decision API, #311 catalog cache handles for Glue and S3 Tables, default off); no RePark answer
+  changes. `risk_tier: standard`. Branch `chore/rp-37`.
 - [rp-36-fork-pin-ledger.md](rp-36-fork-pin-ledger.md) —
   **RP-36-FORK-PIN (2026-09-19):** the fork pin moves to `fa77fb2b` (#312 timezone-bearing
   timestamp filters reach the scan, #310 page-index row selection on); the ICE-READ-PERF-0 Q3
