@@ -87,6 +87,20 @@ change. The sixteen strict xfails flip to plain pins against the recorded Spark 
   `unknown_column_never_needs_fork` answer false, so primitive identity DELETE statements keep the
   fast path (the existing `dml.rs` / `v3_mor_dml.rs` identity pins stay green unmodified).
 
+## Verification critic (Grok 4.6, 2026-09-19, orchestrator-run)
+
+Verdict **PASS** on head `6e819b66`. Mutation first: making `selection_refs_non_primitive` and
+`plain_identity_needs_fork` return false turns ten tests red (four `predicate_dml::tests::plain`
+decline tests and six `list_null_compound` door tests, all with the original accessor error);
+`tests::dml` stays 30/30 green. One P3, recorded here as residue:
+
+- **F-001 (P3).** A dotted nested field path (`xs.a`, `t.xs.a`) is not seen as a non-primitive
+  selection, so it stays on the identity path. The critic measured it answering Spark's ids
+  (`DELETE … WHERE id > 1 AND xs.a IS NULL` on a `STRUCT<a:INT>` copy-on-write table leaves
+  1, 3, 4). `for_identity_dml` drops the dotted conjunct from the conflict filter, so this is
+  neither silent nor the old loud error. Follow-up: resolve the first non-alias part of a
+  compound identifier against the schema.
+
 ## Facade evidence
 
 - `test_ice_list_null_1.py` offline (`-n 4`): 257 passed, 4 skipped (live tier), 0 xfailed.
