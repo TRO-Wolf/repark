@@ -150,12 +150,34 @@ def _assert_value_cell_facade(session: Any, key: str) -> None:
         key,
         "nullable",
     )
-    table = frame.to_arrow()
-    assert table.num_rows == len(cell["rows"]), (key, "row count")
-    for index, expected_row in enumerate(cell["rows"]):
-        for position, expected in enumerate(expected_row):
-            actual = _normalize_value(table.column(position).to_pylist()[index])
-            assert _values_equal(expected, actual), (key, "rows", index, position)
+    _assert_rows_any_order(key, cell["rows"], frame.to_arrow())
+
+
+def _assert_rows_any_order(key: str, expected_rows: list[Any], table: Any) -> None:
+    """Assert the table holds the oracle rows as a multiset.
+
+    ``UNION ALL`` promises no row order, so each oracle row claims the first unmatched
+    output row equal to it; a single-row cell reads exactly like a positional check.
+    """
+    assert table.num_rows == len(expected_rows), (key, "row count")
+    remaining = [
+        [
+            _normalize_value(table.column(position).to_pylist()[index])
+            for position in range(table.num_columns)
+        ]
+        for index in range(table.num_rows)
+    ]
+    for expected_row in expected_rows:
+        match = next(
+            (
+                index
+                for index, actual_row in enumerate(remaining)
+                if _values_equal(expected_row, actual_row)
+            ),
+            None,
+        )
+        assert match is not None, (key, "rows", expected_row, table.to_pylist())
+        del remaining[match]
 
 
 @pytest.mark.parametrize("key", _SQL_VALUE_KEYS)

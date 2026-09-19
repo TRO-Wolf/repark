@@ -1573,7 +1573,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   4.1.2 on the shared `spark_engine`.
   Round 2 (2026-09-06): complex casts propagate the child flag with non-null
   `STRUCT()`/`MAP()`/`ARRAY()` constructors (both ANSI modes, both doors, live leg);
-  the `MAP<…>` CAST spelling stays a pinned refusal and the constructor element
+  the `MAP<…>` CAST spelling (answering on both doors since CAST-MAP-SPELL-1, FIXED
+  2026-09-19, pins: cast-map-spell-1/C-008) and the constructor element
   flags kept their pins (all three arms stay the backlog of COMPLEX-ELEM-NULL-1 —
   the 2026-09-16 array-arm flip was reverted 2026-09-15 under DOOR-CONVERGE-1
   ruling R-10 and handed to DOOR-CONVERGE-2);
@@ -6070,6 +6071,9 @@ alike — a disclosed round-8 residual, deliberately unpinned.
   in UTC with both ANSI settings. `fnp8_repark_dispositions.json` records each door
   schema or explicit refusal; residual reasons live in the parity registry.
   The live test remeasures the same goldens. pins: fnp-8/C-003, C-004, C-005, C-006
+  **CAST-MAP-SPELL-1 (2026-09-19):** the 24 typed-map `transform_keys` / `transform_values`
+  / `map_filter` cells (`CAST(map() AS MAP<…>)`, `CAST(NULL AS MAP<…>)`) now record a schema
+  equal to Spark's instead of the `<` refusal. pins: cast-map-spell-1/C-008
   `fnp8_error_oracle.json` retains the live arity, accumulator, and overflow measurements
   consumed by the same module; the SQL error pins remain in `lambda_door.rs`.
 
@@ -6625,9 +6629,8 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   rows and the first data file's footer field ids, walked with the recorder's `field_ids`
   (Spark's file count is recorded but never pinned — it follows Spark's task count). The
   eight non-VALUES `map_list` cells run the recorded `CAST(NULL AS MAP<...>)` statement
-  verbatim under strict xfail (CAST-MAP-SPELL-1, BACKLOG) with substitute-source twins
-  through the same door from a `CASE WHEN false` NULL-map row Spark answers identically
-  (measured 2026-09-18). Live (`REPARK_PARITY_LIVE=1`): Spark adopts each RePark-written
+  verbatim as plain pins since CAST-MAP-SPELL-1 (2026-09-19; the `CASE WHEN false`
+  substitute twins were dropped, pins: cast-map-spell-1/C-008). Live (`REPARK_PARITY_LIVE=1`): Spark adopts each RePark-written
   `sql_values` table via `register_table` and reads the recorded rows. Truth in
   [../../repark-parity/fixtures/torture/data/ice_array_insert_1/](../../repark-parity/fixtures/torture/data/ice_array_insert_1/map.md).
   pins: ice-array-insert-1/C-003, C-004, C-005, C-006, C-007, C-008
@@ -6671,9 +6674,9 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   predicates by delete/update by copy-on-write / merge-on-read by v2/v3) asserting
   the run answers, the ids left equal Spark's and the newest snapshot's operation
   equals Spark's, each on a fresh RePark memory catalog with the recorder's DDL
-  and seed. The `map_int` empty-map seed row runs through a `map_from_arrays`
-  spelling RePark parses that reads back equal to Spark's seed (CAST-MAP-SPELL-1,
-  BACKLOG). The sixteen copy-on-write DELETE compound-predicate cells run verbatim
+  and seed. The `map_int` seed runs verbatim, its `CAST(map() AS MAP<STRING, INT>)`
+  row included (CAST-MAP-SPELL-1, FIXED 2026-09-19, pins: cast-map-spell-1/C-008).
+  The sixteen copy-on-write DELETE compound-predicate cells run verbatim
   under strict xfail (fork #299 residue: the conjunction/disjunction path still
   refuses `Accessor for Field xs not found`); the sixteen merge-on-read
   `xs IS NOT NULL` cells pin RePark's measured 1 delete file (1 DV on v3) against

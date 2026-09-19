@@ -1,13 +1,13 @@
 use datafusion::arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::ScalarFunction;
-use datafusion::logical_expr::{Case, Cast, Expr, TryCast, lit};
+use datafusion::logical_expr::{Case, Cast, Expr, lit};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::pybacked::PyBackedStr;
 use pyo3::types::PyList;
 
 use super::PyColumn;
-use super::expr_build::parse_data_type;
+use super::expr_build::cast_to;
 use super::function_dispatch::call_scalar_expr;
 use crate::AnalysisException;
 use crate::fence::fenced;
@@ -258,16 +258,16 @@ fn call_two(name: &str, left: &PyColumn, right: &PyColumn) -> PyResult<PyColumn>
 }
 
 fn engine_cast(inner: &PyColumn, engine_type: &str, keyword: &str) -> PyResult<PyColumn> {
-    let data_type = parse_data_type(engine_type).map_err(AnalysisException::new_err)?;
-    let expr = match keyword {
-        "CAST" => Expr::Cast(Cast::new(Box::new(inner.expr()), data_type)),
-        "TRY_CAST" => Expr::TryCast(TryCast::new(Box::new(inner.expr()), data_type)),
+    let try_cast = match keyword {
+        "CAST" => false,
+        "TRY_CAST" => true,
         other => {
             return Err(PyValueError::new_err(format!(
                 "unknown cast keyword {other}"
             )));
         }
     };
+    let expr = cast_to(inner.expr(), engine_type, try_cast).map_err(AnalysisException::new_err)?;
     Ok(PyColumn::from_expr(expr))
 }
 
@@ -818,6 +818,15 @@ impl PyColumnParts {
     #[staticmethod]
     fn uuid() -> PyResult<(PyColumn, String)> {
         fenced!("ColumnParts.uuid", { Ok(construct::uuid()) })
+    }
+
+    #[staticmethod]
+    fn cast_type_token(engine_type: &str) -> PyResult<String> {
+        fenced!("ColumnParts.cast_type_token", {
+            repark_functions::cast_map::map_cast_token(engine_type).ok_or_else(|| {
+                crate::ParseException::new_err(format!("unknown cast type '{engine_type}'"))
+            })
+        })
     }
 
     #[staticmethod]

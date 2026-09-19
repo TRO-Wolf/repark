@@ -478,22 +478,20 @@ def test_complex_constructor_elements_stay_nullable_per_complex_elem_null_1() ->
         session.stop()
 
 
-def test_cast_to_map_type_spelling_refuses_per_cast_map_spell_1() -> None:
+def test_cast_to_map_type_spelling_answers_per_cast_map_spell_1() -> None:
+    """The MAP<...> CAST spelling answers on both SQL doors. pins: cast-map-spell-1/C-008"""
     import repark
-    from repark import functions as repark_functions
-    from repark.spark.types import LongType, MapType, StringType
 
+    sql = "SELECT CAST(MAP('a',1) AS MAP<STRING,BIGINT>) AS v"
     session = _spark_session("true")
     try:
-        with pytest.raises(Exception, match="Expected"):
-            session.sql("SELECT CAST(MAP('a',1) AS MAP<STRING,BIGINT>) AS v").to_arrow()
-        frame = session.sql("SELECT MAP('a',1) AS m")
-        with pytest.raises(Exception, match="unknown cast type"):
-            frame.select(repark_functions.col("m").cast(MapType(StringType(), LongType())))
+        tables = [session.sql(sql).to_arrow(), repark.sql(sql).to_arrow()]
     finally:
         session.stop()
-    with pytest.raises(Exception, match="Expected"):
-        repark.sql("SELECT CAST(MAP('a',1) AS MAP<STRING,BIGINT>) AS v").to_arrow()
+    for table in tables:
+        assert str(table.schema[0].type) == "map<string, int64>"
+        assert table.column(0).to_pylist() == [[("a", 1)]]
+    assert tables[0].schema[0].nullable is False
 
 
 def test_cast_nullability_native_door_keeps_datafusion() -> None:

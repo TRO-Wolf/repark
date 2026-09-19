@@ -10,14 +10,13 @@ catalog, writes through the cell's door, and asserts the rows read back (`ORDER 
 field ids — walked with the recorder's own `field_ids` — equal the cell's ids. Spark's
 file count is recorded but never pinned: it follows Spark's task count.
 
-The eight non-VALUES `map_list` cells run their recorded statement verbatim under a
-strict xfail: the NULL-map row spells `CAST(NULL AS MAP<STRING, ARRAY<INT>>)`, which
-RePark's parser refuses (registry row CAST-MAP-SPELL-1, BACKLOG). Each of those cells has
-a twin that writes the same rows through the same door from a source RePark parses, with
-only the NULL-map row re-spelled, and asserts Spark's recorded rows and field ids. The
-live tier re-derives the `sql_values` shape on Spark and cross-reads RePark's table.
+Every cell runs its recorded statement verbatim, including the eight non-VALUES
+`map_list` cells whose NULL-map row spells `CAST(NULL AS MAP<STRING, ARRAY<INT>>)`
+(CAST-MAP-SPELL-1, FIXED 2026-09-19). The live tier re-derives the `sql_values` shape on
+Spark and cross-reads RePark's table.
 
 pins: ice-array-insert-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: cast-map-spell-1/C-008
 """
 
 from __future__ import annotations
@@ -39,17 +38,6 @@ _CATALOG = "ice_array_insert_1"
 _NAMESPACE = "ns"
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live Spark cell skipped (routine CI is JVM-free)"
-_MAP_LIST_NULL_MAP_RECORDED = "CAST(NULL AS MAP<STRING, ARRAY<INT>>)"
-_MAP_LIST_NULL_MAP_SUBSTITUTE = "CASE WHEN false THEN map('k1', array(1, 2)) END"
-_MAP_LIST_VERBATIM_REASON = (
-    "CAST-MAP-SPELL-1 (BACKLOG 2026-09-06): CAST(NULL AS MAP<STRING, ARRAY<INT>>) "
-    "refuses ParserError, so the recorded statement cannot run"
-)
-_MAP_LIST_VERBATIM_KEYS = frozenset(
-    f"map_list_{door}_v{version}"
-    for door in ("sql_select", "writeto_append", "insert_into", "save_as_table_append")
-    for version in ("2", "3")
-)
 _LIVE_SHAPES = ("list_int", "list_struct", "map_list")
 _LIVE_VERSIONS = ("2", "3")
 
@@ -137,56 +125,13 @@ def _assert_cell(session: ReparkSession, table: str, cell: dict[str, Any], key: 
     assert _footer_ids(session, table) == cell["parquet_field_ids"], (key, "field ids")
 
 
-def _cell_param(key: str) -> Any:
-    """Return one cell key, strict-xfail where the verbatim statement needs the MAP cast."""
-    if key in _MAP_LIST_VERBATIM_KEYS:
-        return pytest.param(
-            key,
-            id=key,
-            marks=pytest.mark.xfail(strict=True, reason=_MAP_LIST_VERBATIM_REASON),
-        )
-    return pytest.param(key, id=key)
-
-
-@pytest.mark.parametrize("key", [_cell_param(key) for key in _CELL_KEYS])
+@pytest.mark.parametrize("key", _CELL_KEYS)
 def test_cell_matches_spark(key: str, tmp_path: Path) -> None:
-    """One cell's DDL plus its recorded write answers Spark's rows and footer ids.
-
-    Notes:
-        The eight non-VALUES `map_list` ids run the recorded statement verbatim and
-        strict-xfail on CAST-MAP-SPELL-1; their substitute twins below carry the same
-        rows through a source RePark parses.
-    """
+    """One cell's DDL plus its recorded write answers Spark's rows and footer ids."""
     cell = _CELLS[key]
     session = _session(tmp_path / "wh")
     try:
         table = _create_and_write(session, key, cell, cell["statement"])
-        _assert_cell(session, table, cell, key)
-    finally:
-        session.stop()
-
-
-@pytest.mark.parametrize(
-    "key",
-    [pytest.param(key, id=f"{key}-substitute") for key in sorted(_MAP_LIST_VERBATIM_KEYS)],
-)
-def test_cell_substitute_source_matches_spark(key: str, tmp_path: Path) -> None:
-    """One CAST-MAP cell's rows reach the table through a source RePark parses.
-
-    Notes:
-        The only change from the recorded statement is the NULL-map row: the
-        `MAP<...>` cast becomes a `CASE WHEN false` over a typed `map(...)`, which
-        RePark types as `map<string, array<int>>` and Spark 4.1.2 answers identically
-        (measured 2026-09-18: all 8 substitute cells match the recorded rows and ids).
-    """
-    cell = _CELLS[key]
-    statement = cell["statement"].replace(
-        _MAP_LIST_NULL_MAP_RECORDED, _MAP_LIST_NULL_MAP_SUBSTITUTE
-    )
-    assert _MAP_LIST_NULL_MAP_RECORDED not in statement, key
-    session = _session(tmp_path / "wh")
-    try:
-        table = _create_and_write(session, f"{key}_substitute", cell, statement)
         _assert_cell(session, table, cell, key)
     finally:
         session.stop()
