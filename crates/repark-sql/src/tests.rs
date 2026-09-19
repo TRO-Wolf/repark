@@ -430,7 +430,6 @@ async fn create_schema_unknown_property_refuses() {
     assert!(err.contains("`location`"), "must list support: {err}");
 }
 
-/// `DROP SCHEMA` removes the namespace; `IF EXISTS` is idempotent; `CASCADE` refuses.
 #[tokio::test]
 async fn drop_schema_drops_the_namespace() {
     let door = door().await;
@@ -452,13 +451,7 @@ async fn drop_schema_drops_the_namespace() {
 
     door.ok("DROP SCHEMA IF EXISTS ice.bronze").await;
     door.err("DROP SCHEMA ice.bronze").await;
-
-    let cascade = door.err("DROP SCHEMA IF EXISTS ice.bronze CASCADE").await;
-    assert!(
-        cascade.contains("CASCADE"),
-        "CASCADE must refuse by name: {cascade}"
-    );
-    assert!(cascade.contains("destructive"), "…and say why: {cascade}");
+    door.ok("DROP SCHEMA IF EXISTS ice.bronze CASCADE").await;
 }
 
 /// A registered Iceberg catalog enumerates through `information_schema` via delegation.

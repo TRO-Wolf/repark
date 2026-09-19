@@ -26,6 +26,11 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   quotes verbatim in its `datafusion.*` paragraph.
   pins: conf-unread-1/C-007
 - `df_guard.rs` — seven DataFusion 54.1 guard pins.
+- `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** a session-level read through a registered
+  memory catalog counts data-file ranged reads into `iceberg_io_stats()`, and
+  `reset_iceberg_io_stats()` zeroes the set. pins: ice-read-perf-0/C-003
+  It builds its table through the registered handle (`catalogs_snapshot().get`) and
+  `refresh_catalog_provider`, because repark-core has no SQL door of its own.
 - `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
 - `nlj_tight_pool.rs` — **NEVER-OOM-PANIC-1 (2026-09-16):** the tight-pool nested-loop-join
   loop pin. The plan shape is guarded (`NestedLoopJoinExec` in `EXPLAIN`), every iteration

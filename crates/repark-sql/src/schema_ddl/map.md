@@ -8,7 +8,12 @@ in `../tests.rs` against a real catalog.
 
 ## Contents
 
-- `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../schema_ddl.rs`.
+- `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../schema_ddl.rs`: helper unit
+  battery plus, since **ICE-DROP-NS-1 (2026-09-19)**, the ANSI-door drop pins — a non-empty
+  `DROP SCHEMA` refuses with the count and keeps everything, a table-dropped-first schema
+  drops — over a local door harness against a memory catalog.
+  pins: ice-drop-ns-1/C-006, C-008
+  `IF EXISTS`, `CASCADE` and `DROP DATABASE` still refuse a non-empty schema. pins: ice-drop-ns-1/C-011
 - `location_guard_tests.rs` — ANSI `CREATE SCHEMA IF NOT EXISTS` four-shape twins (create-new / same /
   conflicting / no-location) against a memory catalog.
 

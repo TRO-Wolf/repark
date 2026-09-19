@@ -56,7 +56,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: review-fix-7/C-002
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
-  `Self::list_iceberg_table_names` for the live list path). **ICE-WRITE-OPTIONS-1
+  `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
+  `register_catalog_spec` builds Glue and S3 Tables catalogs through
+  `glue_catalog_counted` / `s3tables_catalog_counted` with the session's I/O counters
+  (see `session/map.md`). pins: ice-read-perf-0/C-003 **ICE-WRITE-OPTIONS-1
   round 3 (2026-09-17):** `sql_with_write_options` runs the session dialect's
   `execute_with_write_options` (see `dialect.rs`). **Run 22b rebase (2026-09-18,
   Q-22b-WO-1):** ICE-DYN-OVERWRITE-1's `static_overwrite.rs` (`sql_with_overwrite_flag`,

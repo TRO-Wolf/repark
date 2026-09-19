@@ -149,9 +149,8 @@ async fn execute_time_travelled(
             object_type: ObjectType::Schema | ObjectType::Database,
             names,
             if_exists,
-            cascade,
             ..
-        } => schema_ddl::execute_drop_schema(cx, names, *if_exists, *cascade).await,
+        } => schema_ddl::execute_drop_schema(cx, names, *if_exists).await,
         Statement::AlterTable(alter) => alter::execute_alter_table(cx, alter).await,
         Statement::Merge(merge) => merge::execute_merge(cx, merge).await,
         // --- INSERT OVERWRITE: PARTITION forms execute; whole-table stays Q9.

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use datafusion::catalog::CatalogProvider;
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use iceberg::{Catalog, NamespaceIdent};
 
@@ -11,6 +11,8 @@ use iceberg::{Catalog, NamespaceIdent};
 mod builders;
 mod caches;
 mod catalog_ops;
+mod counting_storage;
+mod io_stats;
 mod lineage_columns;
 mod location;
 mod provider;
@@ -22,7 +24,8 @@ pub use provider::{
 };
 // Engine-side adapter for session `refresh_catalog_provider`, hoisted from v1 catalog_ops.
 pub use builders::{
-    glue_catalog, iceberg_to_datafusion, memory_catalog, memory_catalog_cached, s3tables_catalog,
+    glue_catalog, glue_catalog_counted, iceberg_to_datafusion, memory_catalog,
+    memory_catalog_cached, s3tables_catalog, s3tables_catalog_counted,
 };
 pub use caches::{
     CatalogCaches, DEFAULT_MANIFEST_CACHE_BYTES, DEFAULT_METADATA_CACHE_ENTRIES,
@@ -31,6 +34,15 @@ pub use caches::{
     METADATA_CACHE_KEY_ALT,
 };
 pub use catalog_ops::reregister_catalog_provider;
+pub use counting_storage::{
+    CountingStorage, CountingStorageFactory, GLUE_DEFAULT_CONFIGURED_SCHEME,
+    S3TABLES_DEFAULT_CONFIGURED_SCHEME, glue_default_storage_factory,
+    s3tables_default_storage_factory,
+};
+pub use io_stats::{
+    IcebergFileClass, IcebergIoCount, IcebergIoCounters, IcebergIoOp, IcebergIoStats,
+    PARQUET_TAIL_MAGIC, PUFFIN_TAIL_MAGIC, classify_iceberg_path, ranged_read_op,
+};
 pub use lineage_columns::{
     LineageColumnsTableProvider, table_serves_row_lineage, user_field_names,
 };
@@ -73,6 +85,46 @@ pub async fn list_table_names(catalog: &dyn Catalog, namespace: &str) -> Result<
         .into_iter()
         .map(|ident| ident.name().to_string())
         .collect())
+}
+
+#[must_use]
+pub fn schema_not_found_on_drop(catalog: &str, namespace: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[SCHEMA_NOT_FOUND] The schema `{catalog}`.`{namespace}` cannot be found. Verify the \
+         spelling and correctness of the schema and catalog.\nIf you did not qualify the name \
+         with a catalog, verify the current_schema() output, or qualify the name with the \
+         correct catalog.\nTo tolerate the error on drop use DROP SCHEMA IF EXISTS. \
+         SQLSTATE: 42704"
+    ))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn refuse_non_empty_namespace_drop(
+    catalog: &dyn Catalog,
+    namespace: &NamespaceIdent,
+    display: &str,
+) -> Result<()> {
+    let tables = catalog
+        .list_tables(namespace)
+        .await
+        .map_err(builders::iceberg_to_datafusion)?;
+    if !tables.is_empty() {
+        return Err(DataFusionError::Plan(format!(
+            "Namespace {display} is not empty. Contains {} table(s).",
+            tables.len()
+        )));
+    }
+    let children = catalog
+        .list_namespaces(Some(namespace))
+        .await
+        .map_err(builders::iceberg_to_datafusion)?;
+    if !children.is_empty() {
+        return Err(DataFusionError::Plan(format!(
+            "Namespace {display} is not empty. Contains {} child namespace(s).",
+            children.len()
+        )));
+    }
+    Ok(())
 }
 
 /// Live namespace names from the Iceberg [`Catalog`] (top-level only) — no DataFusion snapshot.

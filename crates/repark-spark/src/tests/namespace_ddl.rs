@@ -556,3 +556,131 @@ async fn sql_create_namespace_bad_property_value_fails_loud() {
         "a fail-loud CREATE NAMESPACE must not create the namespace"
     );
 }
+
+#[tokio::test]
+async fn drop_namespace_nonempty_refuses_on_every_spelling() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(&ctx, &catalogs, "CREATE NAMESPACE ice.guarded")
+        .await
+        .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.guarded.t (id INT) USING iceberg",
+    )
+    .await
+    .unwrap();
+    for statement in [
+        "DROP NAMESPACE ice.guarded",
+        "DROP NAMESPACE ice.guarded CASCADE",
+        "DROP NAMESPACE ice.guarded RESTRICT",
+        "DROP NAMESPACE IF EXISTS ice.guarded",
+        "DROP NAMESPACE IF EXISTS ice.guarded CASCADE",
+        "DROP DATABASE ice.guarded",
+        "DROP SCHEMA ice.guarded CASCADE",
+    ] {
+        let error = execute(&ctx, &catalogs, statement)
+            .await
+            .expect_err("a non-empty namespace drop must refuse");
+        let message = error.to_string();
+        assert!(
+            message.contains("Namespace guarded is not empty."),
+            "the refusal must name the namespace like Spark, got: {message}"
+        );
+        assert!(
+            message.contains("Contains 1 table(s)."),
+            "the refusal must name the table count like Spark, got: {message}"
+        );
+    }
+    assert!(
+        catalogs["ice"]
+            .namespace_exists(&NamespaceIdent::new("guarded".to_string()))
+            .await
+            .unwrap(),
+        "a refused drop must leave the namespace behind"
+    );
+    assert!(
+        catalogs["ice"]
+            .table_exists(&TableIdent::new(
+                NamespaceIdent::new("guarded".to_string()),
+                "t".to_string(),
+            ))
+            .await
+            .unwrap(),
+        "a refused drop must leave the table readable"
+    );
+}
+
+#[tokio::test]
+async fn drop_namespace_empty_drops_with_and_without_cascade() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for (namespace, statement) in [
+        ("bare", "DROP NAMESPACE ice.bare"),
+        ("cascaded", "DROP NAMESPACE ice.cascaded CASCADE"),
+    ] {
+        execute(
+            &ctx,
+            &catalogs,
+            &format!("CREATE NAMESPACE ice.{namespace}"),
+        )
+        .await
+        .unwrap();
+        execute(&ctx, &catalogs, statement).await.unwrap();
+        assert!(
+            !catalogs["ice"]
+                .namespace_exists(&NamespaceIdent::new(namespace.to_string()))
+                .await
+                .unwrap(),
+            "an empty namespace drop must remove the namespace"
+        );
+    }
+}
+
+#[tokio::test]
+async fn drop_namespace_after_table_drop_drops() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(&ctx, &catalogs, "CREATE NAMESPACE ice.emptied")
+        .await
+        .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.emptied.t (id INT) USING iceberg",
+    )
+    .await
+    .unwrap();
+    execute(&ctx, &catalogs, "DROP TABLE ice.emptied.t")
+        .await
+        .unwrap();
+    execute(&ctx, &catalogs, "DROP NAMESPACE ice.emptied")
+        .await
+        .unwrap();
+    assert!(
+        !catalogs["ice"]
+            .namespace_exists(&NamespaceIdent::new("emptied".to_string()))
+            .await
+            .unwrap(),
+        "a namespace emptied by an explicit table drop must drop"
+    );
+}
+
+#[tokio::test]
+async fn drop_namespace_missing_is_schema_not_found() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let error = execute(&ctx, &catalogs, "DROP NAMESPACE ice.no_such_ns")
+        .await
+        .expect_err("a missing namespace drop must fail loud");
+    let message = error.to_string();
+    assert!(
+        message.contains("[SCHEMA_NOT_FOUND]"),
+        "a missing namespace must answer Spark's error class, got: {message}"
+    );
+    assert!(
+        message.contains("`ice`.`no_such_ns`"),
+        "the error must name the catalog and the namespace, got: {message}"
+    );
+}

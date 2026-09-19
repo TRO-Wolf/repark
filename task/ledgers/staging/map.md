@@ -214,6 +214,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
   L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
+- [ice-read-perf-0-ledger.md](ice-read-perf-0-ledger.md) —
+  **ICE-READ-PERF-0 (2026-09-19), in flight:** the Iceberg I/O counting layer (a counting
+  `StorageFactory` whose counters the session owns; Glue and S3 Tables wrap exactly the fork
+  default) and the `ice_read_perf` bench bed (setup, cold / warm / concurrent runs, the R-3
+  3 GiB size flag with exit 3). No product behaviour change. Every clause PROVEN, attestation
+  complete. `risk_tier: standard`. Branch `perf/ice-read-perf-0`.
+  pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
@@ -1129,3 +1137,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (ORC/Avro table-property refusal, ENC-1 cleartext bytes, north-star C-2 FIXED
   citation); V3-05 recorded in the ledger only (PR #700 owns the row).
   `risk_tier: standard`. Branch `docs/ice-registry-sweep-1b`.
+- [ice-drop-ns-1-ledger.md](ice-drop-ns-1-ledger.md) —
+  **ICE-DROP-NS-1 (2026-09-19), in flight:** `DROP NAMESPACE` on a non-empty
+  namespace refuses like Spark 4.1.2 — the 26-cell oracle plus red-first pins
+  on the facade door, one shared pre-drop emptiness helper in `repark-iceberg`
+  called by both doors, Rust pins at the helper and on both doors, registry
+  row FIXED with the nested-namespace boundary and the exception-class
+  residual. `risk_tier: standard`. Branch `fix/ice-drop-ns-1`.
+  pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

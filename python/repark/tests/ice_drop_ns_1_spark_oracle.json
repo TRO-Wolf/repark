@@ -1,0 +1,670 @@
+[
+ {
+  "id": "NS-NONEMPTY-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE non-empty",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_nonempty_sc is not empty. Contains 1 table(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_nonempty_sc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 2.75
+ },
+ {
+  "id": "NS-CASCADE-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE non-empty CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_cascade_sc is not empty. Contains 1 table(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_cascade_sc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.42
+ },
+ {
+  "id": "NS-RESTRICT-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE non-empty RESTRICT",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_restrict_sc is not empty. Contains 1 table(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_restrict_sc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.44
+ },
+ {
+  "id": "NS-IFEXISTS-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE IF EXISTS non-empty",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_ifexists_sc is not empty. Contains 1 table(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_ifexists_sc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.4
+ },
+ {
+  "id": "NS-IFEXISTS-CASCADE-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE IF EXISTS non-empty CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_ifexists_cascade_sc is not empty. Contains 1 table(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_ifexists_cascade_sc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.39
+ },
+ {
+  "id": "NS-DATABASE-SC",
+  "group": "NS",
+  "title": "DROP DATABASE non-empty",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_database_sc is not empty. Contains 1 table(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_database_sc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.4
+ },
+ {
+  "id": "NS-SCHEMA-CASCADE-SC",
+  "group": "NS",
+  "title": "DROP SCHEMA non-empty CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_schema_cascade_sc is not empty. Contains 1 table(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_schema_cascade_sc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.42
+ },
+ {
+  "id": "NS-EMPTY-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE empty",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": null,
+   "ns_after": []
+  },
+  "notes": [],
+  "secs": 0.07
+ },
+ {
+  "id": "NS-EMPTY-CASCADE-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE empty CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": null,
+   "ns_after": []
+  },
+  "notes": [],
+  "secs": 0.07
+ },
+ {
+  "id": "NS-AFTER-DROP-TABLE-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE after its only table dropped",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": null,
+   "ns_after": []
+  },
+  "notes": [],
+  "secs": 0.21
+ },
+ {
+  "id": "NS-CHILD-NS-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE with a child namespace only",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_child_ns_sc is not empty. Contains 1 child namespace(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_child_ns_sc"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.18
+ },
+ {
+  "id": "NS-CHILD-NS-CASCADE-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE with a child namespace CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_child_ns_cascade_sc is not empty. Contains 1 child namespace(s)."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_child_ns_cascade_sc"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.19
+ },
+ {
+  "id": "NS-MISSING-SC",
+  "group": "NS",
+  "title": "DROP NAMESPACE missing",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "[SCHEMA_NOT_FOUND] The schema `sc`.`n_t_ns_missing_sc_missing` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a catalog, verify the current_schema() output, or qualify the name with the correct catalog.\nTo tolerate the error on dr"
+    ],
+    [
+     "type",
+     "AnalysisException"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_missing_sc"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.14
+ },
+ {
+  "id": "NS-NONEMPTY-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE non-empty",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_nonempty_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_nonempty_hc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.53
+ },
+ {
+  "id": "NS-CASCADE-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE non-empty CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_cascade_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_cascade_hc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.45
+ },
+ {
+  "id": "NS-RESTRICT-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE non-empty RESTRICT",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_restrict_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_restrict_hc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.43
+ },
+ {
+  "id": "NS-IFEXISTS-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE IF EXISTS non-empty",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_ifexists_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_ifexists_hc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.48
+ },
+ {
+  "id": "NS-IFEXISTS-CASCADE-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE IF EXISTS non-empty CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_ifexists_cascade_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_ifexists_cascade_hc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.4
+ },
+ {
+  "id": "NS-DATABASE-HC",
+  "group": "NS",
+  "title": "DROP DATABASE non-empty",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_database_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_database_hc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.38
+ },
+ {
+  "id": "NS-SCHEMA-CASCADE-HC",
+  "group": "NS",
+  "title": "DROP SCHEMA non-empty CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_schema_cascade_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_schema_cascade_hc"
+    ]
+   ],
+   "table_after": [
+    [
+     1
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.38
+ },
+ {
+  "id": "NS-EMPTY-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE empty",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": null,
+   "ns_after": []
+  },
+  "notes": [],
+  "secs": 0.07
+ },
+ {
+  "id": "NS-EMPTY-CASCADE-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE empty CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": null,
+   "ns_after": []
+  },
+  "notes": [],
+  "secs": 0.06
+ },
+ {
+  "id": "NS-AFTER-DROP-TABLE-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE after its only table dropped",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": null,
+   "ns_after": []
+  },
+  "notes": [],
+  "secs": 0.23
+ },
+ {
+  "id": "NS-CHILD-NS-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE with a child namespace only",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_child_ns_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_child_ns_hc"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.17
+ },
+ {
+  "id": "NS-CHILD-NS-CASCADE-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE with a child namespace CASCADE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.NamespaceNotEmptyException: Namespace n_t_ns_child_ns_cascade_hc is not empty."
+    ],
+    [
+     "type",
+     "Py4JJavaError"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_child_ns_cascade_hc"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.19
+ },
+ {
+  "id": "NS-MISSING-HC",
+  "group": "NS",
+  "title": "DROP NAMESPACE missing",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "err": [
+    [
+     "msg",
+     "[SCHEMA_NOT_FOUND] The schema `hc`.`n_t_ns_missing_hc_missing` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a catalog, verify the current_schema() output, or qualify the name with the correct catalog.\nTo tolerate the error on dr"
+    ],
+    [
+     "type",
+     "AnalysisException"
+    ]
+   ],
+   "ns_after": [
+    [
+     "n_t_ns_missing_hc"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.12
+ }
+]
