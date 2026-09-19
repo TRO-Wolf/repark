@@ -470,7 +470,9 @@ perfectly good read.
 #### DML-1 — `INSERT OVERWRITE … PARTITION (…)`
 
 - **repark** — **FIXED 2026-08-30 (DML-B)** for identity static and dynamic forms;
-  **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1)** for the session-mode reading of the clause.
+  **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1)** for the session-mode reading of the clause,
+  and in its round 2 (same day) for the empty dynamic source, `BY NAME` mixed lists, static
+  values that need a cast, and transform-source keys.
   The clause follows `spark.sql.sources.partitionOverwriteMode` on both SQL doors. Static
   mode: static values `PARTITION (k=v, …)` commit through `overwrite_by_row_filter` over
   those values only (siblings stay; nonempty stamps `overwrite`, empty stamps `delete`), and
@@ -481,14 +483,23 @@ perfectly good read.
   run in both modes: static filters by `k1='v'` (every `k2` under it), dynamic replaces only
   the source's `(k1, k2)`. A clause key that is not an identity partition column of the table
   refuses Spark's `[NON_PARTITION_COLUMN] … SQLSTATE: 42000` (an unpartitioned table refuses
-  every key). `writeTo().overwritePartitions()` stays dynamic in every mode (typed intent).
-  ANSI whole-table `INSERT OVERWRITE` (no clause) stays Q9-omitted.
+  every key; a `bucket`/`days` source or a transform field name refuses the same way, static
+  or dynamic, before its value is read). An empty source in dynamic mode — `PARTITION (k)`,
+  mixed lists, `writeTo().overwritePartitions()` of an empty frame — commits nothing (table
+  and snapshot list unchanged). `INSERT … PARTITION (k1='v', k2) BY NAME` follows the same
+  plan as the positional form. A static value is cast to the partition source type with the
+  engine's cast (`PARTITION (d = '2024-01-01')` on a `DATE` column); a value that cast
+  rejects refuses with its `Cast error` text. `writeTo().overwritePartitions()` stays dynamic
+  in every mode (typed intent). ANSI whole-table `INSERT OVERWRITE` (no clause) stays
+  Q9-omitted.
 - **Apache Spark** — static mode with a PARTITION clause is `OverwriteByExpression` whose
   filter holds the static values only (no static value → `true` → the whole table; empty
   stamps `delete`; Hive injects the static columns). Dynamic mode and
   `writeTo().overwritePartitions()` are `OverwritePartitionsDynamic`
   (`replace-partitions=true`). A non-identity or non-partition key refuses
-  `NON_PARTITION_COLUMN`. Empty `writeTo().overwritePartitions()` is a no-op.
+  `NON_PARTITION_COLUMN`. An empty dynamic `PARTITION (k)` or mixed list commits nothing;
+  a static value is cast to the column type (ANSI: an invalid value raises
+  `CAST_INVALID_INPUT`). Empty `writeTo().overwritePartitions()` is a no-op.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-30 and 2026-09-19.)*
 - **Pin** — `crates/repark-spark/src/tests/insert_overwrite.rs::empty_insert_overwrite_partition_drops_only_named_partition`
   and `crates/repark-spark/src/tests/insert_overwrite.rs::insert_overwrite_partition_nonempty_replaces_only_named_partition`;
@@ -500,16 +511,18 @@ perfectly good read.
   `python/repark/tests/test_dml_b_partition_overwrite.py`;
   `python/repark/tests/test_ice_overwrite_mode_1.py` (row **ICE-OVERWRITE-MODE-1**);
   `python/repark/tests/test_writer_v2.py::test_write_to_overwrite_partitions_replaces_source_partitions_only`;
-  PIN O5 remains the transform-static refuse.
+  PIN O5 (`transform_overwrite.rs::overwrite_partition_clause_on_transform_source_refuses_non_partition_column`)
+  now pins `NON_PARTITION_COLUMN`.
 - **Rationale** — the static-mode `PARTITION (k)` wipe, mixed lists, the empty static
-  source and `NON_PARTITION_COLUMN` closed 2026-09-19 (ICE-OVERWRITE-MODE-1). Remaining
-  residue: (1) transform-field static `PARTITION (id = 1)` on a bucket table keeps its typed
-  `NotImplemented` refuse (PIN O5) where Spark refuses `NON_PARTITION_COLUMN` (read from
-  Spark's `partitionColumnNames`, not measured here); (2) empty input under dynamic mode
-  — `PARTITION (k)` and `writeTo().overwritePartitions()` — refuses loud where Spark skips
-  the commit (a no-op), stricter than Spark and never data-changing; (3) a mixed static and
-  dynamic list on `INSERT … BY NAME` still refuses. `partitionOverwriteMode=dynamic` on a
-  PARTITION-less `INSERT OVERWRITE` is rows DML-1B/DML-1C.
+  source and `NON_PARTITION_COLUMN` closed 2026-09-19 (ICE-OVERWRITE-MODE-1); its round 2
+  (same day, 28 more measured cells) closed the three residues it had named: transform-source
+  keys now refuse `NON_PARTITION_COLUMN` as Spark does (measured on `bucket(4, id)` and
+  `days(ts)`), an empty dynamic source commits nothing, and `BY NAME` mixed lists run. The
+  static-value cast was a fourth refusal the round-2 cells found. Remaining residue on this
+  row: an invalid static value refuses with the engine's Arrow `Cast error` text where Spark
+  raises `CAST_INVALID_INPUT` (both refuse; the text is the engine-wide `CAST` text), and a
+  typed literal (`TIMESTAMP '…'`) on an identity key still refuses. `partitionOverwriteMode=dynamic`
+  on a PARTITION-less `INSERT OVERWRITE` is rows DML-1B/DML-1C.
 
 #### ICE-OVERWRITE-MODE-1 — Spark's overwrite partition set on every overwrite door — **FIXED 2026-09-19**
 
@@ -522,6 +535,14 @@ perfectly good read.
   Spark keeps the untouched partitions (data loss); an empty static `PARTITION (cat)` source
   and both mixed `PARTITION (cat='x', sub)` modes refused where Spark answers.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18, re-recorded 2026-09-19.)*
+  Round 2 (28 more cells, 14 shapes on v2 and v3, measured 2026-09-19): 14 differed on the
+  round-1 tree — the empty source in dynamic mode (`PARTITION (cat)` and the mixed list)
+  refused `Cannot dynamically overwrite partitions with no data` where Spark commits nothing;
+  `PARTITION (cat = 'x', sub) BY NAME` refused in both modes where Spark answers; and
+  `PARTITION (d = '2024-01-01')` on a `DATE` partition refused where Spark casts and replaces
+  that partition. `PARTITION (id = 1)` on `bucket(4, id)` answered `NotImplemented` and
+  `PARTITION (ts = TIMESTAMP'…')` on `days(ts)` a literal refusal, where Spark refuses
+  `NON_PARTITION_COLUMN` (the class differed; the harness counted them equal).
 - **After** — one Rust decision, `repark_iceberg::write::overwrite_scope`, serves the Spark
   door (SQL, `insertInto`, `saveAsTable`, `writeTo`) and the native door: session
   `partitionOverwriteMode` × the typed intent (`Static` for `saveAsTable`, `Dynamic` for
@@ -532,16 +553,21 @@ perfectly good read.
   rows but not history — Spark's history there is an RTAS table replace (fresh `overwrite`
   snapshot, no deleted files), not this row's subject; and the `NON_PARTITION_COLUMN`
   refusal matches class and message while `getCondition()` answers `None`, as for every
-  engine error.
+  engine error. Round 2: all 28 new cells answer Spark (rows, snapshot history, or the
+  `NON_PARTITION_COLUMN` class and condition token); the empty dynamic source commits no
+  snapshot on every door, `BY NAME` mixed lists plan through the same function, static
+  values are cast to the partition source type, and transform-source keys refuse before
+  their value is read.
 - **Pin** — `python/repark/tests/test_ice_overwrite_mode_1.py` +
-  `ice_overwrite_mode_1_spark_oracle.json` + `_record_ice_overwrite_mode_1_oracle.py` (60
+  `ice_overwrite_mode_1_spark_oracle.json` + `_record_ice_overwrite_mode_1_oracle.py` (88
   cells offline, the live re-derivation under `REPARK_PARITY_LIVE=1`, the RTAS history as a
   strict xfail); `crates/repark-iceberg/src/tests/overwrite_scope.rs` (decision table);
   `crates/repark-spark/src/tests/overwrite_mode.rs`; `crates/repark-sql/src/partition_overwrite.rs`.
-  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-011, C-012, C-013, C-014
 - **Rationale** — FIXED 2026-09-19. TRIGGER: none, planner/DML only; no table-format
-  semantics change. Residue is stated on DML-1 (O5, dynamic-empty refuse, `BY NAME` mixed)
-  and here (RTAS history of `saveAsTable(overwrite)`, engine-wide `getCondition()`).
+  semantics change. Residue is stated on DML-1 (the cast refusal's text, typed literals) and
+  here (RTAS history of `saveAsTable(overwrite)`, engine-wide `getCondition()`).
 
 #### DML-1B — `partitionOverwriteMode=dynamic` on PARTITION-less `INSERT OVERWRITE`
 
@@ -10160,19 +10186,20 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   so the name stays on the example backlog; `createOrReplace` teaches the deliberate full
   rebuild where the engines agree.
 
-### EX-W2-2 — `overwritePartitions` on an empty source refuses where Spark no-ops
+### EX-W2-2 — `overwritePartitions` on an empty source refuses where Spark no-ops — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1 round 2)**
 
-- **repark** — `overwritePartitions()` with a zero-row source raises `AnalysisException`
-  ("Cannot dynamically overwrite partitions with no data...") and leaves the table untouched.
+- **repark** — `overwritePartitions()` with a zero-row source commits nothing and leaves the
+  table and its snapshot list untouched, as Spark does. Before 2026-09-19 it raised
+  `AnalysisException` ("Cannot dynamically overwrite partitions with no data...").
 - **Apache Spark** — dynamic overwrite with an empty source is a no-op: the same table
   seeded `(1,'a'),(2,'b')`, overwritten from partition `a`, then overwritten again from an
   empty source, still answers `[(2,'b'), (9,'a')]`.
   *(oracle: live PySpark 4.1.2 + Iceberg runtime, same engine and fixture as EX-W2-1,
   2026-09-04, EX-22 WriterV2 batch.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-22 measurement. The populated-source
-  arm agrees (the source's partitions are replaced, the others survive) and is the arm the
-  example teaches; the empty-source arm is pinned, not taught.
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_commits_nothing`
+- **Rationale** — FIXED 2026-09-19 (row ICE-OVERWRITE-MODE-1, round 2): an empty dynamic
+  stage skips the commit. Filed 2026-09-04 from the EX-22 measurement; the example still
+  teaches the populated-source arm.
 
 ### EX-W2-3 — `option`/`options` with a branch or tag key refuse where Spark silently writes the default branch
 
@@ -11994,7 +12021,7 @@ field NAME.
   "unreachable by SQL" described RePark's parser; Spark reaches it.
   pins: ice-v3-write-default-1/C-015, C-020
 
-### ICE-V3-WRITE-DEFAULT-1-MIX-PARTITION — mixed static + dynamic `PARTITION (k1 = v, k2)` refuses where Spark overwrites — **OPEN 2026-09-18**
+### ICE-V3-WRITE-DEFAULT-1-MIX-PARTITION — mixed static + dynamic `PARTITION (k1 = v, k2)` refuses where Spark overwrites — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1)**
 
 - **repark** — `INSERT OVERWRITE t PARTITION (id = 1, cat) …` on a table partitioned
   by `(id, cat)` refuses loud on the Spark door with `cannot mix static assignments
@@ -12010,13 +12037,11 @@ field NAME.
   2026-09-17, orchestrator probe `probe_wd2.py`; cells
   `MIX_static_dynamic_positional` and `MIX_static_dynamic_named_list_omits_default`
   copied into `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`.)*
-- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_refuses`
-  asserts RePark's loud refusal and unchanged rows beside both recorded Spark
-  cells; it flips red when the mixed arm lands.
-- **Rationale** — OPEN, filed 2026-09-18 (ruling Q-21b-10): a loud refusal, never a
-  silent wrong answer, and out of the write-default unit's scope — implementing a
-  mixed static/dynamic arm (static-mode replacement of every matching partition plus
-  by-name fill) belongs to its own unit.
+- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_matches_spark`
+  answers both recorded Spark cells on `(id, cat, payload)` (RePark cannot create the
+  probe's `c` write-default, so `c` stays out of the compare).
+- **Rationale** — FIXED 2026-09-19 by ICE-OVERWRITE-MODE-1 (mixed lists run in both modes;
+  `BY NAME` in its round 2). Filed OPEN 2026-09-18 (ruling Q-21b-10) as a loud refusal.
   pins: ice-v3-write-default-1/C-022
 
 ### ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE — `saveAsTable(mode="overwrite")` is `INSERT OVERWRITE` by name, Spark replaces the table — **DECLARED 2026-09-17**

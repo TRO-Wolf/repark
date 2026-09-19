@@ -60,7 +60,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   door has no Iceberg `PARTITION` overwrite shape, so the native-door cells are Rust pins in
   `crates/repark-sql`. Registry rows DML-1, ICE-OVERWRITE-MODE-1 and ICE-WRITE-OPTIONS-1
   cite this file as their pin.
-  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
+  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010,
+  C-011, C-012, C-013, C-014, C-015
   Flipped with the fix: `test_dml_b_partition_overwrite.py`'s dynamic `PARTITION (id)` and
   empty-dynamic pins run under a `dynamic` fixture (restored after), and a static-mode twin
   pins the whole-table replace and the empty wipe; `test_ice_v3_write_default_1.py`'s

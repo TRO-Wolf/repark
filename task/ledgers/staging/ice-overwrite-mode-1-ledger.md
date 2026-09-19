@@ -1,7 +1,7 @@
 # Unit ledger — ICE-OVERWRITE-MODE-1 · Spark's overwrite partition set on every overwrite door (IPI-03)
 
 **Date:** 2026-09-19 · **Branch:** `fix/ice-overwrite-mode-1` · **Base:** `5ceeb2cc` (`main`)
-**Model:** claude-opus-5 (round 1, steps 1–5) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Model:** claude-opus-5 (round 1, steps 1–5; round 2, steps 1–5) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard** (planner/DML scope decision on the write path; no
 table-format semantics change).
 
@@ -39,7 +39,7 @@ that is not an identity partition column refuses `NON_PARTITION_COLUMN`.
 | `Dynamic` (`writeTo.overwritePartitions`) | any | any | any | replace partitions |
 
 An empty source wipes its scope (row filter or whole table stamps `delete`); an empty dynamic
-source keeps its loud refusal (residue R-2).
+source commits nothing (round 2, `replace_partitions_is_noop`; residue R-2 closed).
 
 **Not in this unit:** `STATUS.md`, `Cargo.toml`, `Cargo.lock`, `saveAsTable(overwrite)`
 snapshot history (Spark's RTAS table replace), the engine-wide `getCondition()` of native
@@ -59,10 +59,11 @@ errors.
 | C-008 | Every cell already equal on `main` stays equal (rows and summaries): dynamic-mode `PARTITION (cat)`, static values in both modes, the new-partition static value, no-clause static/dynamic, empty dynamic no-clause, the bucket table in both modes, `insertInto` in both modes. | The 40 control cells of `test_ice_overwrite_mode_1.py`. | PROVEN | Green before and after. |
 | C-009 | The native SQL door plans through the same decision with the session mode: static-mode `PARTITION (k)` replaces the whole table (empty wipes), mixed lists run in both modes, `NON_PARTITION_COLUMN` refuses; whole-table no-clause stays Q9. | `crates/repark-sql/src/partition_overwrite.rs` (three new cells, two pins moved to dynamic mode), `crates/repark-sql/tests/ansi_write_defaults.rs`. | PROVEN | Python's native `repark.sql` door has no Iceberg `PARTITION` shape ("Partitioned inserts not yet supported"), so the native cells are Rust pins. |
 | C-010 | Registry DML-1 reads true (FIXED 2026-09-19 for the static-mode wipe, mixed lists, empty static and `NON_PARTITION_COLUMN`; residue O5, dynamic-empty refuse and `BY NAME` mixed named), row ICE-OVERWRITE-MODE-1 reads FIXED 2026-09-19 with before/after, and ICE-WRITE-OPTIONS-1 no longer implies `overwrite-mode` is ignored. | `docs/spark-sql-iceberg-parity.md` diff; `check_docs_links`. | PROVEN | See the three rows. |
-| C-011 | An empty source in dynamic mode commits nothing — `PARTITION (cat)` and the mixed `PARTITION (cat='x', sub)` under session mode `dynamic`, and `writeTo.overwritePartitions` of an empty frame: rows and snapshot list unchanged. The mixed empty source in static mode still deletes `cat='x'` (`delete`). | Cells `OW2-R2-PDYN-EMPTY-DYN`, `OW2-R2-MIXED-EMPTY-DYN`, `OW2-R2-MIXED-EMPTY-STA`; `test_empty_frame_overwrite_partitions_commits_nothing`. | OPEN | Round 2; refused on round 1 (`Cannot dynamically overwrite partitions with no data`). |
-| C-012 | `INSERT OVERWRITE … PARTITION (cat='x', sub) BY NAME` runs through the same decision: static mode replaces all of `cat='x'`, dynamic mode only `(x, p)`. | Cells `OW2-R3-BYNAME-MIXED-STA`, `OW2-R3-BYNAME-MIXED-DYN`, `OW2-R3-BYNAME-STATIC`. | OPEN | Round 2; refused on round 1 (`cannot mix`). |
-| C-013 | A static value is cast to its partition source type with the engine's cast: `PARTITION (d = '2024-01-01')` on a `DATE` partition replaces that partition; a value the cast rejects refuses with the engine's `CAST_INVALID_INPUT` text and the table is untouched. | Cell `OW2-CAST-STATIC-DATE`; `test_invalid_static_date_refuses_like_the_engine_cast`. | OPEN | Round 2; refused on round 1 (`literal is not as…`). |
-| C-014 | A PARTITION key naming the source of a non-identity partition field (`bucket`, `days`) refuses `[NON_PARTITION_COLUMN]` as `AnalysisException`, static or dynamic, before the value is read; `NULL`, upper-case keys and upper-case session mode values keep Spark's answer. | Cells `OW2-R1-BUCKET-STATIC`, `OW2-R1-BUCKET-DYN`, `OW2-R1-DAYS-STATIC`, `OW2-R1-IDENT-AND-BUCKET`, `OW2-NULL-STATIC`, `OW2-CASE-STATIC`, `OW2-OPT-BOTH-SQL`. | OPEN | Round 2; round 1 answered the bucket static key with `NotImplemented` (PIN O5) and the `days` key with a literal refusal. |
+| C-011 | An empty source in dynamic mode commits nothing — `PARTITION (cat)` and the mixed `PARTITION (cat='x', sub)` under session mode `dynamic`, and `writeTo.overwritePartitions` of an empty frame: rows and snapshot list unchanged. The mixed empty source in static mode still deletes `cat='x'` (`delete`). | Cells `OW2-R2-PDYN-EMPTY-DYN`, `OW2-R2-MIXED-EMPTY-DYN`, `OW2-R2-MIXED-EMPTY-STA`; `test_empty_frame_overwrite_partitions_commits_nothing`. | PROVEN | Green after round-2 step 2: the three `OW2-R2-*` cells (v2, v3) and the empty-frame pin; Rust `empty_mixed_source_commits_nothing_in_dynamic_mode_and_deletes_in_static_mode`, `empty_dynamic_partition_overwrite_commits_nothing` (both doors), `an_empty_dynamic_stage_skips_the_commit`. The empty-frame `writeTo.overwritePartitions` cell is not in the fixture (no Spark JVM run in this round); its no-op is the Spark-consistent reading of registry row EX-W2-2 (measured 2026-09-04) and is named for the orchestrator to record. |
+| C-012 | `INSERT OVERWRITE … PARTITION (cat='x', sub) BY NAME` runs through the same decision: static mode replaces all of `cat='x'`, dynamic mode only `(x, p)`. | Cells `OW2-R3-BYNAME-MIXED-STA`, `OW2-R3-BYNAME-MIXED-DYN`, `OW2-R3-BYNAME-STATIC`. | PROVEN | Green after round-2 step 2: `OW2-R3-*` cells; Rust `mixed_static_and_dynamic_keys_follow_the_session_mode` runs the `BY NAME` form in both modes. |
+| C-013 | A static value is cast to its partition source type with the engine's cast: `PARTITION (d = '2024-01-01')` on a `DATE` partition replaces that partition; a value the cast rejects refuses with the engine's own `CAST` refusal text and the table is untouched. | Cell `OW2-CAST-STATIC-DATE`; `test_invalid_static_date_refuses_like_the_engine_cast`. | PROVEN | Green after round-2 step 2: `OW2-CAST-STATIC-DATE` cells; Rust `plan_casts_a_static_value_to_the_partition_source_type`, `static_value_is_cast_to_a_date_partition_and_an_invalid_value_refuses`. The refusal text is the engine's Arrow cast text (`Cast error: Cannot cast string '2024-13-45' to value of Date32 type`), not Spark's `CAST_INVALID_INPUT`; both refuse. |
+| C-014 | A PARTITION key naming the source of a non-identity partition field (`bucket`, `days`) refuses `[NON_PARTITION_COLUMN]` as `AnalysisException`, static or dynamic, before the value is read; `NULL`, upper-case keys and upper-case session mode values keep Spark's answer. | Cells `OW2-R1-BUCKET-STATIC`, `OW2-R1-BUCKET-DYN`, `OW2-R1-DAYS-STATIC`, `OW2-R1-IDENT-AND-BUCKET`, `OW2-NULL-STATIC`, `OW2-CASE-STATIC`, `OW2-OPT-BOTH-SQL`. | PROVEN | Green after round-2 step 2: `OW2-R1-*`, `OW2-NULL-STATIC`, `OW2-CASE-STATIC`, `OW2-OPT-BOTH-SQL` cells; Rust `plan_refuses_a_transform_source_key_before_reading_its_value`; PIN O5 flipped. |
+| C-015 | Registry rows read true after round 2: DML-1 and ICE-OVERWRITE-MODE-1 carry the round-2 before/after and a residue list without R-1..R-3; EX-W2-2 and ICE-V3-WRITE-DEFAULT-1-MIX-PARTITION read FIXED with their renamed pins. | `docs/spark-sql-iceberg-parity.md` diff; `check_docs_links`. | PROVEN | Round-2 step 3. |
 
 ## Pins flipped (each with its reason)
 
@@ -91,7 +92,38 @@ errors.
 pin asserting the old refusal or the old dynamic reading; the PIN O5 transform refusal
 (`transform_overwrite.rs`) is kept on purpose (R-1).
 
+## Round 2 (2026-09-19) — pins flipped, each with its reason
+
+- `crates/repark-iceberg/src/write/partition_overwrite.rs::empty_dynamic_guard_refuses` —
+  deleted with `refuse_empty_dynamic_overwrite` and `EMPTY_DYNAMIC_OVERWRITE_NEEDLE`; the
+  empty-dynamic rule is now `overwrite_scope::replace_partitions_is_noop`, pinned by
+  `tests/overwrite_scope.rs::an_empty_dynamic_stage_skips_the_commit` (C-011).
+- `crates/repark-spark/src/tests/partition_overwrite.rs::empty_dynamic_partition_overwrite_refuses`
+  and `crates/repark-sql/src/partition_overwrite.rs::empty_dynamic_partition_overwrite_refuses`
+  → `…_commits_nothing`: Spark commits nothing (cell `OW2-R2-PDYN-EMPTY-DYN`); both now
+  assert the snapshot count and every row unchanged (C-011).
+- `python/repark/tests/test_dml_b_partition_overwrite.py::test_sql_empty_dynamic_partition_overwrite_refuses`
+  → `…_commits_nothing`; `test_writer_v2.py::test_write_to_overwrite_partitions_replaces_source_partitions_only`'s
+  empty arm; `test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_refuses`
+  → `…_empty_commits_nothing` (registry EX-W2-2, Spark measured the no-op 2026-09-04) (C-011).
+- `crates/repark-spark/src/tests/transform_overwrite.rs::overwrite_partition_clause_on_transform_table_still_rejected`
+  (PIN O5) → `…_on_transform_source_refuses_non_partition_column`: Spark refuses
+  `NON_PARTITION_COLUMN` for `PARTITION (id = 1)` on `bucket(4, id)` (cell `OW2-R1-BUCKET-STATIC`);
+  the untouched-files and row-count assertions are kept (C-014).
+- `crates/repark-spark/src/insert_by_name.rs`'s mixed-list refusal had no pin of its own; the
+  `OW2-R3-*` cells were red on it (C-012).
+
+`rg -n "dynamically overwrite|EMPTY_DYNAMIC|cannot mix static|NotImplemented.*PARTITION"`
+over `crates/` and `python/` finds nothing left after the flips.
+
 ## Residue (named, not fixed here)
+
+Round 2 (2026-09-19) closed R-1, R-2 and R-3 (C-011, C-012, C-014) and the cast refusal
+it found (C-013). Still open: R-4, R-5, and two named by round 2 — **R-6** an invalid static
+value refuses with the engine's Arrow `Cast error` text where Spark raises
+`CAST_INVALID_INPUT` (both refuse, table untouched); **R-7** a typed literal
+(`PARTITION (d = DATE'2024-01-01')`) on an identity key still refuses (after the key check),
+unmeasured on Spark.
 
 - **R-1** — transform-field static `PARTITION (id = 1)` on a bucket table keeps its typed
   `NotImplemented` refusal (PIN O5). Spark's `partitionColumnNames` lists identity columns only,
