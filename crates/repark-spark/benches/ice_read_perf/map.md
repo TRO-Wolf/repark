@@ -23,7 +23,12 @@ table is the "before" of every later unit of the slate. No product behaviour liv
 - `bed.rs` — `setup`, the Spark-door session builder, the bed DDL and the one-INSERT-per-file
   writer, the bed manifest, `BedShape::from_counts`, and the local re-registration a `run` uses.
 - `remote.rs` — the AWS `setup --phase create|write` (namespace rules, the table-state checks,
-  the closing R-3 check) and the Glue / S3 Tables catalog registration `run` shares.
+  the closing R-3 check) and the Glue / S3 Tables catalog registration `run` shares. The
+  registration goes through `register_late_configured_catalogs` with a
+  `repark.sql.catalog.bench.type = glue|s3tables` block, the path a user's configuration takes,
+  so S3 Tables gets its service-managed create location and both catalogs get the counted
+  factories; the first AWS dispatch (run 35446174539) failed its S3 Tables create because the
+  bench had registered the handle without that policy.
 - `run.rs` — the queries, the four modes, repeats, the per-query measurement, the scan-predicate
   probe. Every session a run uses comes from one `SessionSource` (`ConfiguredSource` opens the
   local bed or the Glue / S3 Tables catalog). `run` resolves the target and calls `run_gated`,

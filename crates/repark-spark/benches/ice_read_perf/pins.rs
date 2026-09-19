@@ -22,6 +22,7 @@ use crate::r3::{
 };
 use crate::remote::{
     CreateOutcome, NamespaceRule, Phase, PhaseRequest, RemoteSetupOptions, WriteOutcome,
+    remote_catalog_config,
 };
 use crate::run::{CatalogChoice, Mode, RunOptions, SessionSource};
 
@@ -954,4 +955,27 @@ async fn both_setup_phases_end_with_the_r3_check() {
     let lines = std::fs::read_to_string(summary.path.unwrap()).unwrap();
     assert_eq!(lines.lines().count(), 2);
     assert!(lines.starts_with("R3-SIZE-FLAG table=bench.scratch.t "));
+}
+
+#[test]
+fn aws_catalogs_register_through_the_session_catalog_config() {
+    let props = vec![
+        ("table_bucket_arn".to_string(), "arn:aws:s3tables:us-east-2:1:bucket/b".to_string()),
+        ("region".to_string(), "us-east-2".to_string()),
+    ];
+    let config = remote_catalog_config("s3tables", &props);
+    assert_eq!(config.len(), 3);
+    assert_eq!(config["repark.sql.catalog.bench.type"], "s3tables");
+    assert_eq!(
+        config["repark.sql.catalog.bench.table_bucket_arn"],
+        "arn:aws:s3tables:us-east-2:1:bucket/b"
+    );
+    assert_eq!(config["repark.sql.catalog.bench.region"], "us-east-2");
+    let specs = repark_core::parse_catalog_specs(&config).unwrap();
+    assert_eq!(specs.len(), 1);
+    assert_eq!(specs[0].name, "bench");
+    assert_eq!(specs[0].kind, repark_core::CatalogKind::S3Tables);
+    let glue = remote_catalog_config("glue", &[("warehouse".to_string(), "s3://w/".to_string())]);
+    let specs = repark_core::parse_catalog_specs(&glue).unwrap();
+    assert_eq!(specs[0].kind, repark_core::CatalogKind::Glue);
 }
