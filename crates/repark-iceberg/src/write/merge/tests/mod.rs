@@ -1,4 +1,5 @@
 mod commit_unknown;
+mod dv_close;
 mod dv_commit_opens;
 mod evolved_scan;
 mod helpers;

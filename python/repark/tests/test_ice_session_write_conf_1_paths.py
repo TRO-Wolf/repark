@@ -9,7 +9,10 @@ over ``write.delete.parquet.compression-codec`` and over
 ``write.parquet.compression-codec``), and the summary-key family — a session
 snapshot property naming a key the engine also produced for that commit fails
 the write with Spark's ``Multiple entries with same key`` text, while a key the
-engine did not produce is stamped and feeds the totals.
+engine did not produce is stamped and feeds the totals. RePark's summaries
+carry no JVM ``engine-name`` / ``engine-version``, so those two keys refuse with
+Spark's shape around RePark's own ``<engine-reserved>`` value (the same reading
+ICE-WRITE-OPTIONS-1's ``COLL-01`` / ``COLL-02`` pins take).
 
 Each test drives the cell's own statements through the RePark facade and
 compares every observation with the Spark cell. The native `repark.sql` door
@@ -49,6 +52,8 @@ FIXTURE: dict[str, Any] = json.loads(
     .with_name("ice_session_write_conf_1_spark_oracle.json")
     .read_text(encoding="utf-8")
 )
+
+_ENGINE_RESERVED_KEYS = {"engine-name", "engine-version"}
 
 IPI_08 = (
     "IPI-08 (2026-09-19): RePark's whole-partition DELETE rewrites data files where Spark "
@@ -238,6 +243,17 @@ def test_session_codec_path_matches_spark(spark: Any, case: tuple[Any, ...]) -> 
         _release(spark, conf, table)
 
 
+def _assert_collision_message(spark_message: str, repark_message: str) -> None:
+    """Spark's refusal text, allowing RePark's own value for a JVM-only engine key."""
+    key = spark_message.split(": ", 1)[1].split("=", 1)[0]
+    if key in _ENGINE_RESERVED_KEYS:
+        head, _, tail = spark_message.partition(" and ")
+        assert head.rsplit("=", 1)[0] + "=" in repark_message
+        assert f" and {tail}" in repark_message
+        return
+    assert spark_message in repark_message
+
+
 @pytest.mark.parametrize("case", RESERVED_CELLS, ids=_RESERVED_IDS)
 def test_summary_key_collision_matches_spark(spark: Any, case: tuple[Any, ...]) -> None:
     """A colliding key refuses, a free key stamps. pins: ice-session-write-conf-1/C-041"""
@@ -253,7 +269,7 @@ def test_summary_key_collision_matches_spark(spark: Any, case: tuple[Any, ...]) 
             with pytest.raises(IllegalArgumentException) as caught:
                 for statement in statements:
                     spark.sql(statement.format(table=table)).collect()
-            assert cell["error"]["msg"] in str(caught.value)
+            _assert_collision_message(cell["error"]["msg"], str(caught.value))
             assert _snapshot_rows(spark, table) == before
             return
         for statement in statements:

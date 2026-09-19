@@ -18,6 +18,7 @@ pub mod format_version;
 mod hadoop_stale_commit;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
+pub mod illegal_argument;
 pub mod insert_defaults;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
 pub mod insert_gate;
@@ -54,6 +55,7 @@ pub mod write_options;
 pub mod writer_props;
 
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
+pub use illegal_argument::{IllegalArgumentMarker, illegal_argument_error};
 pub use snapshot_refs::{
     SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref, create_snapshot_ref,
     create_snapshot_ref_with_retention, drop_snapshot_ref, list_snapshot_refs,

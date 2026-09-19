@@ -296,7 +296,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`
   stamp (→ `Error::CommitStateUnknown` with the minted `engine.operation-id`, ICE-COMMIT-UNKNOWN-1),
-  then to the local `IllegalArgumentMarker` (the `IllegalArgumentMarked` arm → `Error::IllegalArgument`, so the CALL options
+  then to `IllegalArgumentMarker` (defined in repark-iceberg's `write/illegal_argument.rs` since ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19) and re-exported here unchanged; the `IllegalArgumentMarked` arm → `Error::IllegalArgument`, so the CALL options
   validation raises `IllegalArgumentException` — **ICE-RDF-OPTIONS-1 round 1, 2026-09-17**),
   then to a live `iceberg::Error` → classified by its
   structured `ErrorKind` (`classify_iceberg_error`, the ONE iceberg kind→class mapping — also

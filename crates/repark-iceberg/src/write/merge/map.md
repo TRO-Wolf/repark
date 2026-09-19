@@ -294,7 +294,15 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   insert-stream sites take the session write conf through `session_staging`.
 - `snapshot_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   commit arms take the resolved session write (snapshot properties plus codec)
-  and stamp it on the commit they build.
+  and stamp it on the commit they build. **Round 1 (2026-09-19):** both arms
+  build `EngineSummary::for_changes` from the files they hold — the CoW arm from
+  the new and affected data files, the row-delta arm from the data files plus
+  `PreparedDeletes::delete_file_changes()` — and go through `summary_with_extras`,
+  so an extra that collides with an engine-computed key refuses like Spark
+  instead of replacing the engine value. pins: ice-session-write-conf-1/C-041
+- `dv_close.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `delete_file_changes()` exposes the added and superseded delete files the
+  row-delta summary needs.
 - `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the lineage
   fanout writer site honours the session write conf
   (`write_partitioned_lineage_files_with`).

@@ -695,6 +695,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   drivers and checks the fixture.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-006, C-009
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
+  **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect
+  `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and
+  the one this file's own fixture records — after the shared refusal moved onto
+  `illegal_argument_error`. pins: ice-session-write-conf-1/C-041
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** the DataFrame write-option pins over the
   fixture above (snapshot properties on append / dynamic overwrite / CTAS / V1
   paths with Spark's strip-and-lowercase rule, write-format parquet honour plus

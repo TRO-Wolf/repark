@@ -764,6 +764,26 @@ repark-core's error map.
   (which only exposes `static_injected_stream`), takes main's column list and an
   `Option` of the overrides, and hands `None` to the canonical untouched.
   pins: ice-write-options-1/C-014, C-016, C-017
+- `summary_collision.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `for_changes(table, added, removed, branch)` is the general shape — the fork's
+  collector over BOTH sides plus the fork's own total arithmetic
+  (`previous + added - removed`, dropped when it cannot resolve or goes negative) —
+  and `for_append` is its add-only case. The MERGE / DML commit sites build it from
+  the files they already hold, so the ONE rule (refuse an actual collision, stamp
+  otherwise) is now shared by the writer option and the session conf on every
+  owned commit site. `extras_need_removed_files` + `live_data_files` let a
+  whole-table overwrite resolve its removal set when an extra names a
+  removal-fed key, so the refusal names Spark's value instead of
+  `<resolved at commit>`. The refusal is raised through
+  `illegal_argument.rs`, so it reaches Python as `IllegalArgumentException`
+  carrying Spark's message verbatim — the class Spark 4.1.2 raises
+  (`QR-*`, and ICE-WRITE-OPTIONS-1's `COLL-*` cells record the same).
+  pins: ice-session-write-conf-1/C-041
+- `illegal_argument.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `IllegalArgumentMarker` and `illegal_argument_error`, moved here from
+  repark-core's `error_map.rs` (which re-exports them unchanged) so a
+  repark-iceberg refusal can carry the `IllegalArgumentException` class with an
+  untouched message.
 - `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
   `EngineSummary`, the snapshot-summary keys the engine computes for the commit
   in hand, which a user `snapshot-property.<k>` may not collide with (Spark's

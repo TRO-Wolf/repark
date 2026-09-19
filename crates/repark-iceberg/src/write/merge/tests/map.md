@@ -9,6 +9,12 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `dv_close.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the DV-container close
+  battery, moved here from `merge/dv_close.rs` when the round's
+  `delete_file_changes()` accessor pushed that file over the size ceiling; the
+  crate's own convention is that a `merge` test module lives under
+  `merge/tests/`. Same cases, comment-free per the owner ban; `PreparedDeletes.kind`
+  and `PreparedKind` widen to `pub(super)` so the sibling module can read them.
 - `dv_commit_opens.rs` — **RP-10 (2026-09-04):** the 192-manifest pure-DV identity DELETE
   of the newest row commits after every data manifest except the one that holds the
   touched file is hidden (F-25 `validate_fresh_dvs_only` stops once every `added_dvs`
