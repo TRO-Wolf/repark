@@ -180,6 +180,9 @@ async fn execute_identity_or_delegate(
     sql: &str,
     statement: &Statement,
 ) -> Result<DataFrame> {
+    if try_metadata_delete_door(cx, statement).await? {
+        return cx.ctx.read_empty();
+    }
     if let Some(allowed) = repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement)? {
         return commit_identity_dml(cx, statement, allowed).await;
     }
@@ -203,6 +206,19 @@ async fn execute_identity_or_delegate(
     guards::refuse_dml_subquery_predicate(statement)?;
     guards::refuse_mor_multi_spec_dml(cx, statement).await?;
     delegate(cx, sql, None, None).await
+}
+
+async fn try_metadata_delete_door(cx: &EngineContext<'_>, statement: &Statement) -> Result<bool> {
+    let Some(target) = repark_iceberg::write::meta_delete::try_meta_delete_target(statement)?
+    else {
+        return Ok(false);
+    };
+    if cx.catalogs.get(&target.catalog_name).is_none() {
+        return Ok(false);
+    }
+    guards::refuse_mor_multi_spec_dml(cx, statement).await?;
+    let handle = schema_ddl::catalog_handle(cx.catalogs, &target.catalog_name)?;
+    repark_iceberg::write::meta_delete::try_metadata_delete(handle, &target, false).await
 }
 
 async fn commit_identity_dml(

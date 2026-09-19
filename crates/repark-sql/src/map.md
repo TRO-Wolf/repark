@@ -55,6 +55,13 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   pins: ice-overwrite-mode-1/C-009
   Round 2 (2026-09-19): the empty dynamic `PARTITION (id)` pin now asserts no commit (the
   snapshot list and every row unchanged). pins: ice-overwrite-mode-1/C-011
+- `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_identity_or_delegate` runs the
+  shared metadata-delete decision (`repark_iceberg::write::meta_delete`) before the identity
+  allow-list, after the MoR multi-spec guard, so the ANSI door answers a whole-file DELETE with
+  the same one `delete` snapshot the Spark door does. The door stays EXACT: it passes
+  `case_insensitive = false`, so the fork binds the predicate case-sensitively, as
+  `commit_identity_dml` already does for the identity path.
+  pins: ice-meta-delete-1/C-006
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`;
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** short `INSERT INTO t (cols)` fills omitted

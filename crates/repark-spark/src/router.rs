@@ -339,7 +339,28 @@ async fn execute_delete(
         }
     }
     refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, MorDmlKind::Delete).await?;
+    if try_metadata_delete_door(ctx, catalogs, delete).await? {
+        return ctx.read_empty();
+    }
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
+}
+
+async fn try_metadata_delete_door(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    delete: &datafusion::sql::sqlparser::ast::Delete,
+) -> Result<bool> {
+    let statement = datafusion::sql::sqlparser::ast::Statement::Delete(delete.clone());
+    let Some(target) = repark_iceberg::write::meta_delete::try_meta_delete_target(&statement)?
+    else {
+        return Ok(false);
+    };
+    if catalogs.get(&target.catalog_name).is_none() {
+        return Ok(false);
+    }
+    let handle = crate::catalog_handle(catalogs, &target.catalog_name)?;
+    let case_insensitive = crate::spark_door_case_insensitive(ctx.state().config().options());
+    repark_iceberg::write::meta_delete::try_metadata_delete(handle, &target, case_insensitive).await
 }
 
 /// `UPDATE … SET …`.

@@ -1035,7 +1035,7 @@ fn compound_refers_to_target(
 }
 
 /// Rewrite `catalog.ns.tgt.col` to `alias.col` so identity SELECT correlates against scratch.
-fn rewrite_target_refs_in_expr(expr: &mut Expr, target_parts: &[String], alias: &str) {
+pub(crate) fn rewrite_target_refs_in_expr(expr: &mut Expr, target_parts: &[String], alias: &str) {
     struct Rewrite<'a> {
         target_parts: &'a [String],
         alias: &'a str,
@@ -1109,7 +1109,7 @@ fn compound_refers_to_source(
     false
 }
 
-fn delete_target_and_alias(
+pub(crate) fn delete_target_and_alias(
     delete: &datafusion::sql::sqlparser::ast::Delete,
 ) -> Option<(&ObjectName, Option<String>)> {
     let tables = match &delete.from {
@@ -1125,7 +1125,7 @@ fn delete_target_and_alias(
     }
 }
 
-fn object_name_parts(name: &ObjectName) -> Vec<String> {
+pub(crate) fn object_name_parts(name: &ObjectName) -> Vec<String> {
     name.0
         .iter()
         .filter_map(|part| part.as_ident().map(|ident| ident.value.clone()))

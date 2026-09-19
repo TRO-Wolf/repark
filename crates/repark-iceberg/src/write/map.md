@@ -41,6 +41,22 @@ repark-core's error map.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
+- `meta_delete.rs` — **ICE-META-DELETE-1 (2026-09-19):** Spark's decision, above
+  `write.delete.mode`, whether a DELETE can be answered by REMOVING whole data files.
+  `try_meta_delete_target` reads a three-part `Statement::Delete` (a four-part branch selector
+  and every non-identity clause decline); `delete_predicate` translates its `WHERE` EXACTLY —
+  `AND`/`OR`, `=`/`<`/`<=`/`>`/`>=`, `IS [NOT] NULL`, a positive `IN` list, `LIKE 'prefix%'`
+  (Spark's `STARTS_WITH`), literal `TRUE`, and a missing `WHERE`; anything else declines and the
+  statement keeps the row-level route. Negations (`NOT`, `<>`, `NOT IN`, `NOT LIKE`) decline on
+  purpose: Iceberg's negated predicates MATCH a null where SQL's three-valued logic does not,
+  and the recorded `not_in_whole_*_mor` cells show Spark taking the row-level route for them.
+  `try_metadata_delete` then asks the fork's `Table::can_delete_using_metadata` (partition
+  selection, else strict metrics on every planned file) and, only when it answers true, commits
+  the fork's `DeleteFilesAction::delete_from_row_filter`. The decision precedes the commit, as
+  Java's does, because the action fails a PARTIAL match non-retryably. A predicate that plans no
+  file is vacuously true, which is where Spark's empty `delete` snapshot on a no-match comes
+  from. Both doors call this one seat.
+  pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `predicate_dml.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the identity DELETE / UPDATE builds a
   `CommitScope` from its isolation property and `conflict_filter::for_identity_dml` over its own
   `WHERE`, and hands it to the COW overwrite or the MoR row delta, so a concurrent commit that
