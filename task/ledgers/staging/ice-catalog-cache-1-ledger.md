@@ -91,7 +91,7 @@ catalog a per-instance scope (`instance:<uuid>`).
   `installed − entry_count − removed − cleared`, so an unsettled read counts every not-yet-applied
   insert as an eviction and the per-query delta is wrong on both ends. The `probe_before` settle
   is not redundant with the previous query's `probe_after`: registration, warm-up and the cold
-  mode's new session run between them. Settling an already settled cache has no pending work. No
+  mode's new session run between them. Both bench settles sit outside the timed window (`run.rs` starts the clock after `probe_before` and stops it before `probe_after`). Settling an already settled cache has no pending work. No
   `block_on` is added on the Rust door (the census's is the Python binding's existing one, under
   `py.detach`); per-door latency was not measured in this unit.
 - **The unsuffixed `glue_catalog` / `s3tables_catalog`** pass `CatalogCaches::disabled()`, keeping
