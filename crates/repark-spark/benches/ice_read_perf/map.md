@@ -23,7 +23,12 @@ table is the "before" of every later unit of the slate. No product behaviour liv
 - `bed.rs` — `setup`, the Spark-door session builder, the bed DDL and the one-INSERT-per-file
   writer, the bed manifest, `BedShape::from_counts`, and the local re-registration a `run` uses.
 - `remote.rs` — the AWS `setup --phase create|write` (namespace rules, the table-state checks,
-  the closing R-3 check) and the Glue / S3 Tables catalog registration `run` shares.
+  the closing R-3 check) and the Glue / S3 Tables catalog registration `run` shares. The
+  registration goes through `register_late_configured_catalogs` with a
+  `repark.sql.catalog.bench.type = glue|s3tables` block, the path a user's configuration takes,
+  so S3 Tables gets its service-managed create location and both catalogs get the counted
+  factories; the first AWS dispatch (run 35446174539) failed its S3 Tables create because the
+  bench had registered the handle without that policy.
 - `run.rs` — the queries, the four modes, repeats, the per-query measurement, the scan-predicate
   probe. Every session a run uses comes from one `SessionSource` (`ConfiguredSource` opens the
   local bed or the Glue / S3 Tables catalog). `run` resolves the target and calls `run_gated`,
@@ -251,7 +256,10 @@ would change what "four at once" measures for the other four (their timings and 
 - `setup` writes exactly N files; every mode runs on them and writes its JSON (Q3 returns the
   1% window, Q4 one row, Q2 reads data-file ranges); the parser reads every flag and drops
   `--bench`; the Glue and S3 Tables legs fail loud on a missing `warehouse` /
-  `table_bucket_arn` / `--table` before any AWS call.
+  `table_bucket_arn` / `--table` before any AWS call, and both register through a
+  `repark.sql.catalog.bench` config block that parses back to the right catalog kind; a
+  source-binding pin holds `register_remote_catalog` to `register_late_configured_catalogs` and
+  keeps the bare-handle builders out of `remote.rs` (Grok verification, PR #724).
   pins: ice-read-perf-0/C-006
 - Q3's scan predicate is `""` today and Q7's is `(id >= 540) AND (id < 552)` on the three-file
   bed, with the same twelve ids; the plan-line parser. pins: ice-read-perf-0/C-013

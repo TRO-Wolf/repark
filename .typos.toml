@@ -14,6 +14,7 @@ extend-exclude = [
   # Spark-written Iceberg fixture (Avro/Parquet/Puffin). Binary; not prose.
   "crates/repark-spark/src/tests/fixtures/",
   "python/repark-parity/fixtures/torture/data/",
+  "python/repark/tests/fixtures/ice_page_prune_1/",
   # Recorded MW-6 Critic evidence (oracle logs + disassembly): verbatim, never hand-edited,
   # same rationale as task/census/ (PROC-1, 2026-08-25).
   "task/mw-6-critic-evidence/",

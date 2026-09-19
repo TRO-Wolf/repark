@@ -4,9 +4,7 @@ use std::sync::Arc;
 use iceberg::spec::{PrimitiveType, Type};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_core::ReparkSession;
-use repark_iceberg::catalog::{
-    glue_catalog_counted, resolve_namespace_location, s3tables_catalog_counted,
-};
+use repark_iceberg::catalog::resolve_namespace_location;
 
 use crate::BoxError;
 use crate::bed::{self, CATALOG};
@@ -104,18 +102,41 @@ pub async fn register_remote_catalog(
     catalog: CatalogChoice,
     props: &[(String, String)],
 ) -> Result<(), BoxError> {
-    let props: HashMap<String, String> = props.iter().cloned().collect();
-    let handle = match catalog {
-        CatalogChoice::Glue => glue_catalog_counted(&props, session.iceberg_io_counters()).await?,
-        CatalogChoice::S3Tables => {
-            s3tables_catalog_counted(&props, session.iceberg_io_counters()).await?
-        }
+    let (kind, required) = match catalog {
+        CatalogChoice::Glue => ("glue", GLUE_CATALOG_PROP_WAREHOUSE),
+        CatalogChoice::S3Tables => ("s3tables", "table_bucket_arn"),
         CatalogChoice::Local => {
             return Err(boxed("a local catalog is registered from its warehouse"));
         }
     };
-    session.register_iceberg_catalog(CATALOG, handle).await?;
+    if !props
+        .iter()
+        .any(|(key, value)| key == required && !value.trim().is_empty())
+    {
+        return Err(boxed(format!(
+            "--catalog {kind} needs a non-empty `{required}` property (--prop {required}=…)"
+        )));
+    }
+    let config = remote_catalog_config(kind, props);
+    let (added, skipped) = session.register_late_configured_catalogs(&config).await?;
+    if added != [CATALOG.to_string()] || !skipped.is_empty() {
+        return Err(boxed(format!(
+            "registering the bench catalog added {added:?} and skipped {skipped:?}"
+        )));
+    }
     Ok(())
+}
+
+#[must_use]
+pub fn remote_catalog_config(kind: &str, props: &[(String, String)]) -> HashMap<String, String> {
+    let mut config = HashMap::from([(
+        format!("repark.sql.catalog.{CATALOG}.type"),
+        kind.to_string(),
+    )]);
+    for (key, value) in props {
+        config.insert(format!("repark.sql.catalog.{CATALOG}.{key}"), value.clone());
+    }
+    config
 }
 
 fn catalog_handle(session: &ReparkSession) -> Result<Arc<dyn Catalog>, BoxError> {
