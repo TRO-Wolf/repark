@@ -130,6 +130,26 @@ Round 1, on `344ade2a`, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6` through the bui
   `setup --files 20 --rows-per-file 50000` (11.6 s, 142,896,230 B, R-3 pass) and one `run` per
   mode — exit 0 each; numbers in the hand-back only.
 
+Round 2, on `de0c03ac` (rebased onto `0e3a899f`), `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6`
+through the build slot:
+
+- `comment_ban.py /tmp/pa-build origin/main` — `comment-ban hits=0`.
+- `cargo test -p repark-iceberg --lib catalog` — 76 passed (14 `catalog::tests::io_stats`).
+- `cargo test -p repark-core --lib session` — 163 passed.
+- `cargo test -p repark-spark --test ice_read_perf_pins` — 15 passed.
+- `cargo clippy -p repark-iceberg -p repark-core -p repark-spark --all-targets -- -D warnings
+  -A clippy::disallowed_methods` — clean; the `make rust-panic-ban` form (`--lib --bins`) — clean.
+- `cargo fmt --all -- --check` — clean.
+- `make check-map-sync check-rust-file-size check-ledgers check-ledger-grammar
+  check-docs-links` — all clean.
+- `uvx zizmor@1.26.1 .github/workflows/aws-acceptance.yml` — `No findings to report` (3
+  suppressed); over `.github/workflows` — `No findings to report` (21 suppressed);
+  `scripts/check_workflows_parse.py` — 13 workflows parse.
+- `uvx ruff@0.15.22 check .` / `format --check .` — clean; `pytest
+  python/repark-parity/tests/test_ice_read_perf_bench_workflow.py` — 7 passed.
+- Release smoke on 20 files: `setup`, then one `run` per mode and warm `--repeat 2`, all exit 0
+  (observations above; tables in the hand-back).
+
 ## Coverage attestation
 
 ```yaml
@@ -161,13 +181,20 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: The counting storage never logs paths or props. The Glue and S3 Tables
         spans still record property key names only. The bench reads no secret and
-        passes --prop pairs to the catalog builder unchanged. No unsafe code.
-      artifacts: [crates/repark-iceberg/src/catalog/builders.rs, crates/repark-iceberg/src/catalog/counting_storage.rs]
+        passes --prop pairs to the catalog builder unchanged. No unsafe code. The
+        bench job reaches AWS only behind the aws-acceptance environment gate and
+        the ref guard. It builds before credentials and passes every input, var and
+        secret through env. zizmor is clean. The two new s3tables actions are
+        documented for the owner, not assumed.
+      artifacts: [crates/repark-iceberg/src/catalog/builders.rs, crates/repark-iceberg/src/catalog/counting_storage.rs, .github/workflows/aws-acceptance.yml, docs/tier2-aws.md]
     - id: AT-6
       status: ATTACKED
       evidence: A failed request still counts one request with zero bytes. The
         classifier falls back to other rather than guessing. The bench fails loud
         on a missing manifest, table, prop, or a bed that is not exactly N data files.
+        The AWS write phase refuses every table state but empty or exact, with zero
+        write requests. The job fails before any write unless compaction reads back
+        disabled. A sample whose I/O differs is printed, never averaged.
       artifacts: [crates/repark-iceberg/src/catalog/counting_storage.rs, crates/repark-spark/benches/ice_read_perf/bed.rs]
     - id: AT-7
       status: ATTACKED
