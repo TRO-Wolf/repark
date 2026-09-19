@@ -1766,6 +1766,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   has a Spark twin.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009, C-010
   pins: ice-rdf-fork-asks-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: rp-32-rdf-cow-bytes/C-002, C-003, C-004, C-005, C-009
 - [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical
   from the committed generator; the 7 `rpd_*` cells and 2 `residue_*` sequences are this
@@ -1790,6 +1791,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **RP-32 (2026-09-19):** the record driver behind the fixture above (required `--warehouse`
   and `--ivy`, output beside the script; basenames only, so the fixture carries no local
   paths); critics replay it to reproduce the fixture.
+  pins: rp-32-rdf-cow-bytes/C-001
 - [test_ice_tsns_sql_1.py](test_ice_tsns_sql_1.py) — **ICE-TSNS-SQL-1 (2026-09-17):**
   `timestamp_ns` / `timestamptz_ns` on the SQL door against the Iceberg spec plus a PyIceberg
   0.12.0 read-back (Spark 4.1.2 cannot read or write these types — ruling Q-21c-6). One pin per
@@ -1876,6 +1878,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   removed 0, one data plus one delete file, seed gone, 2,000 rows. Its predecessor asserted
   the removal (removed 1, zero deletes) because the fork dropped live parquet deletes by
   reference.
+  pins: rp-32-rdf-cow-bytes/C-008
   **RP-23 (2026-09-17):** 2,500 → 2,000 rows — 2,000 rows seed one 54,445 B in-band file
   under the fork's mid-stream rolling; 2,500 rolled into 2,000 + 500.
   pins: rp-23-pin-bump/C-002

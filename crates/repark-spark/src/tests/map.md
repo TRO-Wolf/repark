@@ -314,6 +314,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   one delete file after) with its shadowed rows still shadowed — F-16 residue 2, unchanged.
   Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-003
+  pins: rp-32-rdf-cow-bytes/C-006, C-007
 - `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** 35
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
   bad-job-order / bad-spec / band-crossing / negative-size texts, silent-false booleans,

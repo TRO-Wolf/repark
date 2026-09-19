@@ -458,6 +458,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   ICE-NAN-PUSHDOWN-1 FIXED. `risk_tier: standard`. Branch
   `fix/ice-nan-pushdown-1`.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+- [rp-32-rdf-cow-bytes-ledger.md](rp-32-rdf-cow-bytes-ledger.md) —
+  **RP-32-RDF-COW-BYTES (2026-09-19):** the flips fork #301 (F-RDF-COW-BYTES-1) causes —
+  the COW-BYTES and DANGLE-2 strict xfails run plain, the changed-meaning pins (NULL
+  precedence, residue sequence, C-011, two Rust dangling tests) move to new Spark 4.1.2
+  cells, five registry rows close or come true. Test-only, no product change. Round 1
+  CONCLUDED with all nine clauses PROVEN and the gates green.
+  `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
+  pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ice-rdf-options-1-ledger.md](ice-rdf-options-1-ledger.md) —
   **ICE-RDF-OPTIONS-1 round 1 (2026-09-17), in flight:** the RePark side of the options-map
   remediation (rating V2-08/C-4) — `rewrite_data_files` (16 keys) and
