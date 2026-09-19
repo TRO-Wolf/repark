@@ -1822,7 +1822,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   At fork `43fcd243` (RP-34, #306) `max_group_size` and `partial_progress_groups` run plainly
   at Spark's 8→4, and the four `rpd_target_small` / `rpd_target_small_forced` value and
   snapshot cells are strict xfails under `F-RPD-TARGET-SMALL-1` (RePark rewrites 8 delete
-  files where Spark rewrites 0); their keep-set twins pin the live rows.
+  files where Spark rewrites 0); their keep-set twins pin the 200 live rows only.
   pins: rp-34-fork-pin/C-001, C-002
 - [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical

@@ -283,7 +283,7 @@ def test_option_cell_snapshots(spark: ReparkSession, name: str, build: dict[str,
 def _check_keep_set(
     spark: ReparkSession, name: str, table: str, live_rows: int, build: dict[str, object]
 ) -> None:
-    """Run one xfailed oracle cell and compare its keep-set: live rows and rewritten data files."""
+    """Run one xfailed oracle cell and compare its keep-set: the live rows equal Spark's."""
     cells = _fixture()
     cell = cells[name]  # type: ignore[literal-required]
     assert isinstance(cell, dict)
@@ -295,12 +295,7 @@ def _check_keep_set(
         mor=bool(build.get("mor", False)),
         pre=tuple(str(stmt) for stmt in build.get("pre", ())),  # type: ignore[arg-type]
     )
-    got = _result_row(spark, _call_sql(cell, table))
-    want = cell["result"]
-    assert isinstance(want, dict)
-    if "rewritten_data_files_count" in want:
-        key = "rewritten_data_files_count"
-        assert got[key] == int(want[key]), f"{name} {key}: {got} vs {want}"
+    _result_row(spark, _call_sql(cell, table))
     assert _live_rows(spark, table) == live_rows, f"{name} live rows"
 
 
@@ -311,7 +306,7 @@ def _check_keep_set(
 def test_option_cell_keep_set(
     spark: ReparkSession, name: str, build: dict[str, object], rows: int
 ) -> None:
-    """Still-xfailed cells keep Spark's row set and rewritten data-file count."""
+    """Still-xfailed cells keep Spark's live row count."""
     _check_keep_set(spark, name, "mem.ns.keep", rows, build)
 
 

@@ -6499,7 +6499,8 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 
 ### ICE-RDF-GRANULARITY-1 — `rewrite_data_files` output splitting and file-group granularity stay fork-side — **FIXED 2026-09-19 (`target_small` at RP-32, fork #302; `max_group_size` and `partial_progress_groups` at RP-34, fork #306)**
 
-- **repark** — on the 8-file shapes the fork writes one file per group and compacts 8→8
+- **repark** — since RP-34 every cell answers Spark's 8→4 (10 snapshots on the groups cell).
+  Before it, on the 8-file shapes the fork wrote one file per group and compacted 8→8
   added where Spark splits outputs to the target size (reason strings 2026-09-17:
   `target_small` RePark 8→2 vs Spark 8→4; `max_group_size` and `partial_progress_groups`
   RePark 8→8 added vs Spark 8→4). Under `partial-progress.max-commits 3` 8 groups need
@@ -6516,16 +6517,17 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[target_small]`,
   `[max_group_size]`, `[partial_progress_groups]` and
   `::test_option_cell_snapshots[partial_progress_groups]`, all plain since RP-34.
-- **Rationale** — OPEN, fork ask: output splitting at the target file size and file-group
-  granularity live in the fork's rewrite path.
+- **Rationale** — **FIXED 2026-09-19 (RP-34, fork #306).** It was a fork ask: output
+  splitting at the target file size and file-group granularity live in the fork's rewrite
+  path.
   Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
   target-size split did not close it.
   **Re-measured 2026-09-19 at RP-32 (fork `e3eef24f`, #302 F-RDF-GRANULARITY-1):** the fork's
   planner now follows Java's read-split planning (split size from the expected output count
   plus 5120 B, clamped to the target and write maximum; tasks packed by length plus delete
-  bytes, lookback 10). `target_small` answers Spark's 8→4 and runs plainly. `max_group_size`
-  and `partial_progress_groups` stay strict xfails: the planner is Java's, and the residual
-  is parquet file size. Run 23a measured the fork writer's files at 1,694 B against Spark's
+  bytes, lookback 10). `target_small` answered Spark's 8→4 and ran plainly. `max_group_size`
+  and `partial_progress_groups` stayed strict xfails until RP-34: the planner was Java's, and
+  the residual was parquet file size. Run 23a measured the fork writer's files at 1,694 B against Spark's
   ~1,153 B on this shape, and Java's own rules applied to 1,694 B files answer 8/8/8+3.
   **RP-34 (2026-09-19, fork `43fcd243`, #306 F-PARQUET-SIZE-1):** fork-written files now carry
   Java's footer (`iceberg.schema`, no `ARROW:schema`), and the two remaining cells answer
@@ -6548,7 +6550,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Pin** — `test_ice_rdf_options_1.py::test_option_cell_values[rpd_target_small]`,
   `[rpd_target_small_forced]` and `::test_option_cell_snapshots[rpd_target_small]`,
   `[rpd_target_small_forced]`, `xfail(strict)` with the dated `F-RPD-TARGET-SMALL-1` reason;
-  their keep-set twins run plainly and pin the 200 live rows.
+  their keep-set twins run plainly and pin the 200 live rows only.
 - **Rationale** — OPEN, fork ask: the delete-file selection rule lives in the fork's
   `rewrite_position_delete_files`. The cells answered Spark at RP-33; the smaller files
   #306 writes moved them under the fork's selection threshold. Run 24d owns the fork half.
