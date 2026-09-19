@@ -262,6 +262,7 @@ would change what "four at once" measures for the other four (their timings and 
 - Q3's scan predicate is the `ts` window since RP-36 (fork #312 F-TS-PUSHDOWN-1; it was `""`
   before) and Q7's is `(id >= 540) AND (id < 552)` on the three-file bed, with the same twelve
   ids; the plan-line parser. pins: ice-read-perf-0/C-013
+  pins: rp-36-fork-pin/C-001
 - Q1 reads only footers (3 footer reads, 0 page reads) and Q2 reads 3 footers plus pages, in
   cold and warm. pins: ice-read-perf-0/C-014
 - Every mode (four) with `--repeat 2`: two samples per query, medians, identical I/O across
@@ -280,6 +281,13 @@ would change what "four at once" measures for the other four (their timings and 
   creates without a location; both phases end with the R-3 flag under an injected size. The AWS
   failure paths (missing props, `--table`, `--manifest`) fail before any call.
   pins: ice-read-perf-0/C-017
+
+## Pairs recorded with this bench
+
+- **RP-36 (fork `fa77fb2b`):** timestamp pushdown and page selection, both beds, in
+  [docs/perf/ice-read-perf-baseline-2026-09-19.md](../../../../docs/perf/ice-read-perf-baseline-2026-09-19.md)
+  §"RP-36 pair", including the Q6 regression on the 200-file bed.
+  pins: rp-36-fork-pin/C-002, C-003, C-004
 
 ## Pointers
 
