@@ -496,6 +496,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-34-fork-pin-ledger.md](rp-34-fork-pin-ledger.md) —
+  **RP-34-FORK-PIN (2026-09-19):** the fork pin moves to `43fcd243` (#306 parquet footer,
+  #305 dangling DVs); three `clippy::large_futures` calls are boxed; the three
+  `ICE-RDF-GRANULARITY-1` cells run plainly at Spark's 8→4, and the four `rpd_target_small`
+  cells are strict xfails under the new fork-ask row `ICE-RDF-RPD-TARGET-SMALL-1`. Round 1
+  CONCLUDED with three clauses PROVEN. `risk_tier: standard`. Branch `chore/rp-34-fork-pin`.
+  pins: rp-34-fork-pin/C-003
 - [ice-rdf-options-1-ledger.md](ice-rdf-options-1-ledger.md) —
   **ICE-RDF-OPTIONS-1 round 1 (2026-09-17), in flight:** the RePark side of the options-map
   remediation (rating V2-08/C-4) — `rewrite_data_files` (16 keys) and
