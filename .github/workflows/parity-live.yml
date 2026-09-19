@@ -23,7 +23,7 @@ jobs:
         with:
           persist-credentials: false
       # Java 17 (Temurin) — Spark 4.1.2 requires it. SHA-pinned like every third-party action.
-      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c  # v6.0.0
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6  # v6.0.1
         with:
           distribution: temurin
           java-version: "17"
@@ -37,7 +37,7 @@ jobs:
         with:
           toolchain: "1.96.0"
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1 (node24)
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.0.1 (node24)
         with:
           version: "0.9.5"  # Makefile UV_VERSION
           python-version: "3.12"
