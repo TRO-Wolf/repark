@@ -9,6 +9,10 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index.
+- `namespace_drop.rs` — **ICE-DROP-NS-1 (2026-09-19):** `refuse_non_empty_namespace_drop`
+  refuses a table-holding namespace with the count, passes an empty one, passes after the
+  table is dropped, and fails loud on a missing namespace — all against a memory catalog.
+  pins: ice-drop-ns-1/C-007, C-008
 - `catalog.rs` — AWS-free unit battery: CTAS reality, builder validation, live-list staleness,
   O(1) invalidation, scheme selection, span secret-hygiene, fork-patch proof, T6 residual pins.
   pins: listing-cost-flake-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use datafusion::catalog::CatalogProvider;
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use iceberg::{Catalog, NamespaceIdent};
 
@@ -73,6 +73,35 @@ pub async fn list_table_names(catalog: &dyn Catalog, namespace: &str) -> Result<
         .into_iter()
         .map(|ident| ident.name().to_string())
         .collect())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn refuse_non_empty_namespace_drop(
+    catalog: &dyn Catalog,
+    namespace: &NamespaceIdent,
+    display: &str,
+) -> Result<()> {
+    let tables = catalog
+        .list_tables(namespace)
+        .await
+        .map_err(builders::iceberg_to_datafusion)?;
+    if !tables.is_empty() {
+        return Err(DataFusionError::Plan(format!(
+            "Namespace {display} is not empty. Contains {} table(s).",
+            tables.len()
+        )));
+    }
+    let children = catalog
+        .list_namespaces(Some(namespace))
+        .await
+        .map_err(builders::iceberg_to_datafusion)?;
+    if !children.is_empty() {
+        return Err(DataFusionError::Plan(format!(
+            "Namespace {display} is not empty. Contains {} child namespace(s).",
+            children.len()
+        )));
+    }
+    Ok(())
 }
 
 /// Live namespace names from the Iceberg [`Catalog`] (top-level only) — no DataFusion snapshot.

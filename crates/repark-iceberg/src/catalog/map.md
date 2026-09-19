@@ -19,7 +19,12 @@ Source comments retain only API and safety contracts; implementation narration i
   SQL needs invalidation after mutations; product DDL invalidates the touched namespace only at
   O(1) via `invalidate_catalog_namespaces`). Live list-on-access helpers `list_table_names` /
   `list_namespace_names` (no DF snapshot; `CATALOG_LISTING_STRATEGY = "list-on-access"`) power
-  the Spark Catalog facade. Module decls + the public re-export list (names unchanged from v1).
+  the Spark Catalog facade. `refuse_non_empty_namespace_drop` lists tables (then child
+  namespaces) and refuses a non-empty drop with Spark's `Namespace <ns> is not empty` text
+  before any catalog call — the one helper both SQL doors share
+  (**ICE-DROP-NS-1**, 2026-09-19).
+  Module decls + the public re-export list (names unchanged from v1).
+  pins: ice-drop-ns-1/C-007
 - `catalog_ops.rs` — `reregister_catalog_provider(ctx, catalog, name)`: the session
   `refresh_catalog_provider` escape hatch's engine-side adapter (full O(databases) rebuild via
   `rebuild_catalog_provider`). Hoisted MOVE-ONLY from v1 `repark-sql/src/catalog_ops.rs`; the

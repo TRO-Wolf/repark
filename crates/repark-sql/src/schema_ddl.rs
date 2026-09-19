@@ -74,6 +74,12 @@ pub(crate) async fn execute_drop_schema(
         if if_exists && !handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
             continue;
         }
+        repark_iceberg::catalog::refuse_non_empty_namespace_drop(
+            handle.as_ref(),
+            &ident,
+            &namespace.join("."),
+        )
+        .await?;
         handle.drop_namespace(&ident).await.map_err(iceberg_err)?;
         let leaf = namespace.last().cloned().unwrap_or_default();
         repark_iceberg::catalog::drop_catalog_namespace_from_provider(
