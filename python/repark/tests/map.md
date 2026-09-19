@@ -403,8 +403,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SQL-door-only), except the three bare-decimal `d`-range cells (loud under
   ICE-NAN-DECIMAL-LITERAL-1) and `del_v2` (rewritten position deletes refuse
   loud on a manifest-size mismatch Spark tolerates), both pinned as
-  divergences with the recorded answers as fix target.
-  pins: ice-page-prune-1/C-001, C-002, C-003, C-004
+  divergences with the recorded answers as fix target. Step 3 (same file):
+  RePark-written 300,000-row v2/v3 tables (measured page counts per column
+  chunk: four on the narrow columns, six on the wide 86-char string column of
+  full 65,536-row files; one to two on remnant and position-delete files)
+  assert filtered reads equal the unfiltered read filtered in Python on both
+  doors past a merge-on-read DELETE and an UPDATE, v3 lineage stable, and
+  every written file carries column and offset indexes.
+  pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — **ICE-HADOOP-VN-1
   (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The
   committed `fixtures/torture/data/ice_hadoop_vn_1` Spark-written v2 table (one seed

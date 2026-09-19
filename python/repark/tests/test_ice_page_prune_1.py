@@ -26,7 +26,13 @@ today — so lineage rides the SQL door). The live tier re-derives the answers
 from live Spark under ``REPARK_PARITY_LIVE=1`` and asserts
 repark == pinned truth == live Spark.
 
-pins: ice-page-prune-1/C-003, C-004
+RePark-written tables (300,000 rows; full files carry four pages per narrow
+column and six on the wide string column) prove self-consistency past a
+merge-on-read DELETE and an UPDATE: every selective predicate equals the
+unfiltered read filtered in Python on both doors, and on v3 every surviving
+row keeps its unfiltered ``_row_id`` and ``_last_updated_sequence_number``.
+
+pins: ice-page-prune-1/C-003, C-004, C-005, C-006, C-007
 """
 
 from __future__ import annotations
@@ -35,7 +41,7 @@ import json
 import os
 import shutil
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import Any
@@ -335,5 +341,209 @@ def test_dataframe_door_answers_every_recorded_cell() -> None:
                 assert _table_rows(arrow, False) == [
                     [row[0]] for row in expand_cell(_TRUTH[table]["_unfiltered"])
                 ], (table, "_unfiltered")
+    finally:
+        session.stop()
+
+
+_BIG_ROWS = 300000
+_BIG_PREFIX = "p" * 80
+_BIG_COLUMNS = ("id", "i", "s", "n", "d")
+_BIG_QUERIES: dict[str, str] = {
+    "id_range": "id BETWEEN 40000 AND 40100",
+    "id_eq": "id = 123456",
+    "i_gt": "i > 290000",
+    "n_is_null": "n IS NULL",
+    "s_starts": f"s LIKE '{_BIG_PREFIX}1500%'",
+    "d_lt": "d >= CAST(20000.0 AS DOUBLE) AND d < CAST(20100.0 AS DOUBLE)",
+    "d_not_nan": "NOT isnan(d)",
+    "n_eq": "n = 150001",
+}
+
+
+def _match_id_range(row: dict[str, Any]) -> bool:
+    """Whether a row falls in the narrow id band."""
+    return 40000 <= row["id"] <= 40100
+
+
+def _match_id_eq(row: dict[str, Any]) -> bool:
+    """Whether a row carries the equality needle."""
+    return row["id"] == 123456
+
+
+def _match_i_gt(row: dict[str, Any]) -> bool:
+    """Whether a row passes the tail range, updated rows included."""
+    return row["i"] > 290000
+
+
+def _match_n_is_null(row: dict[str, Any]) -> bool:
+    """Whether a row sits in the all-null band or the scattered nulls."""
+    return row["n"] is None
+
+
+def _match_s_starts(row: dict[str, Any]) -> bool:
+    """Whether a row carries the recorded string prefix."""
+    return row["s"].startswith(_BIG_PREFIX + "1500")
+
+
+def _match_d_lt(row: dict[str, Any]) -> bool:
+    """Whether a row passes the double range, NaN never passing."""
+    value = row["d"]
+    return value is not None and value == value and 20000.0 <= value < 20100.0
+
+
+def _match_d_not_nan(row: dict[str, Any]) -> bool:
+    """Whether a row holds a real double, NaN and NULL failing."""
+    value = row["d"]
+    return value is not None and value == value
+
+
+def _match_n_eq(row: dict[str, Any]) -> bool:
+    """Whether a row carries the nullable-column needle."""
+    return row["n"] == 150001
+
+
+_BIG_MATCHERS: dict[str, Callable[[dict[str, Any]], bool]] = {
+    "id_range": _match_id_range,
+    "id_eq": _match_id_eq,
+    "i_gt": _match_i_gt,
+    "n_is_null": _match_n_is_null,
+    "s_starts": _match_s_starts,
+    "d_lt": _match_d_lt,
+    "d_not_nan": _match_d_not_nan,
+    "n_eq": _match_n_eq,
+}
+
+
+def _normalize(value: Any) -> Any:
+    """Plain values with NaN folded to a comparable token."""
+    if isinstance(value, float) and value != value:
+        return "NaN"
+    return value
+
+
+def _normalize_row(row: dict[str, Any], names: list[str]) -> list[Any]:
+    """One row as normalized values in column order."""
+    return [_normalize(row[name]) for name in names]
+
+
+def _filter_expected(rows: list[dict[str, Any]], names: list[str], cell: str) -> list[list[Any]]:
+    """The unfiltered rows one predicate keeps, matched raw then normalized."""
+    matcher = _BIG_MATCHERS[cell]
+    ordered = sorted(rows, key=lambda row: row["id"])
+    return [_normalize_row(row, names) for row in ordered if matcher(row)]
+
+
+def _seed_big_table(session: Any, table: str, version: str) -> None:
+    """Create and seed one 300,000-row table, then DELETE and UPDATE it."""
+    session.sql(
+        f"CREATE TABLE {table} (id BIGINT, i INT, s STRING, n INT, d DOUBLE) USING iceberg "
+        f"TBLPROPERTIES ('format-version'='{version}')"
+    )
+    session.sql(
+        f"INSERT INTO {table} SELECT id AS id, CAST(id AS INT) AS i, "
+        f"concat('{_BIG_PREFIX}', lpad(CAST(id AS STRING), 6, '0')) AS s, "
+        "CASE WHEN id >= 100000 AND id < 120000 THEN NULL "
+        "WHEN id % 10 = 0 THEN NULL ELSE CAST(id AS INT) END AS n, "
+        "CASE WHEN id >= 200000 AND id < 210000 THEN CAST('NaN' AS DOUBLE) "
+        f"ELSE CAST(id AS DOUBLE) END AS d FROM range({_BIG_ROWS})"
+    )
+    session.sql(f"DELETE FROM {table} WHERE id < 16384 OR (id % 13 = 0 AND id < 60000)")
+    session.sql(f"UPDATE {table} SET i = i + 1000000 WHERE id BETWEEN 150000 AND 150020")
+
+
+def _big_unfiltered(session: Any, table: str, lineage: bool) -> list[dict[str, Any]]:
+    """Every surviving row after the DELETE and UPDATE legs."""
+    columns = ", ".join(_BIG_COLUMNS)
+    if lineage:
+        columns += ", _row_id, _last_updated_sequence_number"
+    return session.sql(f"SELECT {columns} FROM {table} ORDER BY id").to_arrow().to_pylist()
+
+
+def _big_frame_filter(frame: Any, cell: str) -> Any:
+    """One self-consistency cell as a DataFrame filter."""
+    from repark import functions as F  # noqa: N812 — PySpark idiom
+
+    if cell == "id_range":
+        return frame.filter(F.col("id").between(40000, 40100))
+    if cell == "id_eq":
+        return frame.filter(F.col("id") == 123456)
+    if cell == "i_gt":
+        return frame.filter(F.col("i") > 290000)
+    if cell == "n_is_null":
+        return frame.filter(F.col("n").isNull())
+    if cell == "s_starts":
+        return frame.filter(F.col("s").like(f"{_BIG_PREFIX}1500%"))
+    if cell == "d_lt":
+        return frame.filter((F.col("d") >= 20000.0) & (F.col("d") < 20100.0))
+    if cell == "d_not_nan":
+        return frame.filter(~F.isnan(F.col("d")))
+    if cell == "n_eq":
+        return frame.filter(F.col("n") == 150001)
+    raise AssertionError(f"unknown cell {cell}")
+
+
+def _assert_big_cells(session: Any, table: str, lineage: bool) -> None:
+    """Fail unless every predicate equals the unfiltered read filtered in Python."""
+    names = list(_BIG_COLUMNS) + (["_row_id", "_last_updated_sequence_number"] if lineage else [])
+    rows = _big_unfiltered(session, table, lineage)
+    assert len(rows) < _BIG_ROWS, "the DELETE leg removed rows"
+    columns = ", ".join(names)
+    for cell, predicate in _BIG_QUERIES.items():
+        arrow = session.sql(f"SELECT {columns} FROM {table} WHERE {predicate} ORDER BY id")
+        got = [[_normalize(row[name]) for name in names] for row in arrow.to_arrow().to_pylist()]
+        assert got == _filter_expected(rows, names, cell), (table, cell, "sql")
+    frame = session.table(table)
+    frame_names = list(_BIG_COLUMNS)
+    for cell in _BIG_QUERIES:
+        arrow = _big_frame_filter(frame, cell).select(*frame_names).orderBy("id").to_arrow()
+        got = [[_normalize(row[name]) for name in frame_names] for row in arrow.to_pylist()]
+        assert got == _filter_expected(rows, frame_names, cell), (table, cell, "frame")
+
+
+def test_repark_written_v2_answers_its_own_reads(tmp_path: Path) -> None:
+    """Filtered v2 reads equal the unfiltered read filtered in Python, both doors."""
+    session = _new_session("ice-page-prune-1-big-v2")
+    try:
+        session.register_memory_catalog(_CATALOG, tmp_path / "warehouse")
+        session.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
+        table = f"{_CATALOG}.{_NAMESPACE}.big_v2"
+        _seed_big_table(session, table, "2")
+        _assert_big_cells(session, table, False)
+    finally:
+        session.stop()
+
+
+def test_repark_written_v3_answers_its_own_reads_with_stable_lineage(tmp_path: Path) -> None:
+    """Filtered v3 reads keep each surviving row's unfiltered lineage, both doors."""
+    session = _new_session("ice-page-prune-1-big-v3")
+    try:
+        session.register_memory_catalog(_CATALOG, tmp_path / "warehouse")
+        session.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
+        table = f"{_CATALOG}.{_NAMESPACE}.big_v3"
+        _seed_big_table(session, table, "3")
+        _assert_big_cells(session, table, True)
+    finally:
+        session.stop()
+
+
+def test_repark_written_files_carry_page_indexes(tmp_path: Path) -> None:
+    """Every column chunk of every written file carries a column and offset index."""
+    session = _new_session("ice-page-prune-1-indexes")
+    try:
+        session.register_memory_catalog(_CATALOG, tmp_path / "warehouse")
+        session.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
+        table = f"{_CATALOG}.{_NAMESPACE}.big_idx"
+        _seed_big_table(session, table, "2")
+        files = session.sql(f"SELECT file_path FROM {table}.files").to_arrow()
+        paths = [row["file_path"] for row in files.to_pylist()]
+        assert len(paths) > 4, "data plus position-delete files"
+        import pyarrow.parquet as pq
+
+        for path in paths:
+            meta = pq.ParquetFile(path).metadata
+            for group in range(meta.num_row_groups):
+                for column in range(meta.num_columns):
+                    chunk = meta.row_group(group).column(column)
+                    assert chunk.has_column_index and chunk.has_offset_index, (path, group, column)
     finally:
         session.stop()
