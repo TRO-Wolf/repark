@@ -60,8 +60,26 @@ From the step-3 smoke (20 files, release, a loaded box: load average about 21):
 
 ## Gates
 
-Round 1, on the unit head, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6` through the build slot:
-recorded in step 5 below.
+Round 1, on `344ade2a`, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6` through the build slot:
+
+- `comment_ban.py /tmp/pa-build origin/main` — `comment-ban hits=0`.
+- `cargo test -p repark-iceberg --lib catalog` — 73 passed (the 11 `catalog::tests::io_stats`
+  pins among them).
+- `cargo test -p repark-core --lib session` — 163 passed (`session::tests::io_stats` among them).
+- `cargo test -p repark-spark --test ice_read_perf_pins` — 9 passed.
+- `cargo clippy -p repark-iceberg -p repark-core -p repark-spark --all-targets -- -D warnings
+  -A clippy::disallowed_methods` (the `make rust-clippy` form) — clean. Without the `-A`, the
+  command reds only on `disallowed_methods` in test code (unwrap / expect), pre-existing across
+  the three crates and followed by the new test files; `make rust-clippy` allows it on purpose.
+- `cargo clippy … --lib --bins -- -D clippy::disallowed_methods -D clippy::unwrap_used
+  -D clippy::expect_used -D clippy::panic -D clippy::todo -D clippy::unimplemented
+  -D clippy::unreachable` (the `make rust-panic-ban` form, three crates) — clean.
+- `cargo fmt --all -- --check` — clean.
+- `make check-map-sync check-rust-file-size check-ledgers check-ledger-grammar
+  check-docs-links` — all clean.
+- Release smoke (`cargo bench -p repark-spark --bench ice_read_perf`, default release profile):
+  `setup --files 20 --rows-per-file 50000` (11.6 s, 142,896,230 B, R-3 pass) and one `run` per
+  mode — exit 0 each; numbers in the hand-back only.
 
 ## Coverage attestation
 
