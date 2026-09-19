@@ -458,3 +458,44 @@ async fn the_counter_sees_every_request_with_the_caches_on() {
         "on {warm_on:?} off {warm_off:?}"
     );
 }
+
+#[tokio::test]
+async fn the_door_trim_settles_before_it_reads_the_high_water_mark() {
+    let dir = TempDir::new().unwrap();
+    let warehouse = dir.path().to_str().unwrap();
+    let caches = CatalogCaches::new(IcebergCacheSettings {
+        metadata_cache_entries: 1,
+        ..IcebergCacheSettings::default()
+    });
+    let catalog = memory_catalog_cached(warehouse, &caches).await.unwrap();
+    catalog
+        .create_namespace(&sales(), HashMap::new())
+        .await
+        .unwrap();
+    let names = ["a", "b", "c", "d"];
+    for name in names {
+        let creation = TableCreation::builder()
+            .name(name.to_string())
+            .location(format!("{warehouse}/sales/{name}"))
+            .schema(schema())
+            .properties(HashMap::new())
+            .build();
+        catalog.create_table(&sales(), creation).await.unwrap();
+    }
+    for name in names {
+        catalog
+            .load_table(&TableIdent::from_strs(["sales", name]).unwrap())
+            .await
+            .unwrap();
+    }
+
+    caches.trim().await;
+
+    assert_eq!(
+        caches.settled_metadata_len().await,
+        0,
+        "four small tables over a one-entry bound: the door's trim must see the settled count and clear"
+    );
+    let stats = caches.metadata_stats().unwrap();
+    assert_eq!(stats.evictions, 0, "{stats:?}");
+}

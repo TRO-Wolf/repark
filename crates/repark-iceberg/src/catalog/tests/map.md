@@ -62,8 +62,12 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   documents under a one-entry budget evict and never serve a sibling; a cold scan counts the same
   manifest-list / manifest / data-file requests with the caches on as off (requests, not bytes:
   the beds' temp paths differ in length). The two AWS build futures are boxed (clippy
-  `large_futures`). pins: ice-catalog-cache-1/C-001, C-003, C-005, C-006,
-  C-008, C-010
+  `large_futures`). `the_door_trim_settles_before_it_reads_the_high_water_mark` (round 2, Q-001)
+  loads four small tables under a one-entry bound, calls `trim()` with nothing settled first,
+  then settles and requires zero retained entries: moka's `entry_count` still reads 0 before its
+  pending tasks run, so a `trim` that reads the unsettled `metadata_len()` never clears (red 3/3
+  as `left: 4, right: 0`). pins: ice-catalog-cache-1/C-001, C-003, C-005, C-006,
+  C-008, C-010, C-012
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002
