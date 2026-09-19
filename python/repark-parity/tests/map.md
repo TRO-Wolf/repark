@@ -185,6 +185,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **ICE-MIXED-CASE-1 (2026-09-18, run 22b):**
   mirror row ratchets `write/merge/mod.rs` to 1761 with `scripts/check_rust_file_size.py`.
   pins: ice-mixed-case-1/C-012
+- `test_cap_1_source_file_line_cap.py` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):**
+  mirror rows ratchet `write/merge/mod.rs` 1761 → 1701 and
+  `write/predicate_dml.rs` 1139 → 1034 with `scripts/check_rust_file_size.py`.
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 3 (2026-09-16, run 18a):**
   mirror row ratchets `functions_expr.py` 2178 → 2175 with
   `scripts/check_lib_py.py`.

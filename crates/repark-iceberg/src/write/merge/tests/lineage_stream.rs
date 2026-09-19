@@ -23,7 +23,8 @@ use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use tempfile::TempDir;
 
-use super::super::row_lineage::write_partitioned_lineage_files;
+use super::super::row_lineage::write_partitioned_lineage_files_with;
+use crate::write::write_options::WriterStagingOverrides;
 
 async fn v3_partitioned_table(warehouse: &TempDir, order: Option<SortOrder>) -> Table {
     let path = warehouse
@@ -157,7 +158,8 @@ async fn write_probed(table: &Table, root: PathBuf) -> (Vec<DataFile>, usize) {
         }
         Ok::<_, datafusion::error::DataFusionError>(batch)
     });
-    let files: Result<Vec<DataFile>> = write_partitioned_lineage_files(table, stream).await;
+    let files: Result<Vec<DataFile>> =
+        write_partitioned_lineage_files_with(table, stream, &WriterStagingOverrides::none()).await;
     (
         files.expect("lineage write"),
         seen_before_last.load(Ordering::SeqCst),

@@ -30,6 +30,9 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
   `identity_pairs_share_one_arc_per_data_file_path` counts `Arc` identities over 600,003 pairs
   on two paths and requires exactly two allocations.
   pins: v3-9-mor-predicate-dml-dv/C-009
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the isolation batteries call
+  `merge::commit_overwrite` directly, keeping their spellings across the
+  `cow_commit` split.
 
 ## Pointers
 

@@ -149,12 +149,13 @@ async fn wipe_empty_overwrite_target(
     options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     let (catalog_name, catalog, table, branch) = target;
+    let (snapshot_extra, _) = options.resolve_with_session(ctx)?;
     repark_iceberg::write::commit_overwrite_replace_all_with_summary(
         &catalog,
         &table,
         Vec::new(),
         branch.as_deref(),
-        &options.snapshot_extra,
+        &snapshot_extra,
         options.isolation.as_deref(),
     )
     .await?;
@@ -214,10 +215,13 @@ pub(crate) async fn execute_partition_overwrite(
     let column_names = filled.columns;
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &filled.sql).await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+    let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
+    let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
+    let has_write_conf = !options.is_empty() || !session.is_empty();
     match plan {
         PartitionOverwritePlan::Static(spec) => {
             let batches = source_df.collect().await?;
-            let staging = (!options.is_empty()).then(|| options.staging_overrides());
+            let staging = has_write_conf.then(|| staging.clone());
             let staged_files = repark_iceberg::write::stage_static_partition_overwrite_files_with(
                 &table,
                 batches,
@@ -233,28 +237,28 @@ pub(crate) async fn execute_partition_overwrite(
                 staged_files,
                 spec.predicate,
                 branch.as_deref(),
-                &options.snapshot_extra,
+                &snapshot_extra,
                 options.isolation.as_deref(),
             )
             .await?;
         }
         PartitionOverwritePlan::Dynamic => {
             let stream = source_df.execute_stream().await?;
-            let staged_files = if options.is_empty() {
-                repark_iceberg::write::write_overwrite_staged_files_from_stream(
-                    &table,
-                    stream,
-                    column_names,
-                    concurrency,
-                )
-                .await?
-            } else {
+            let staged_files = if has_write_conf {
                 repark_iceberg::write::stage_overwrite_files_with(
                     &table,
                     stream,
                     column_names,
                     concurrency,
-                    &options.staging_overrides(),
+                    &staging,
+                )
+                .await?
+            } else {
+                repark_iceberg::write::write_overwrite_staged_files_from_stream(
+                    &table,
+                    stream,
+                    column_names,
+                    concurrency,
                 )
                 .await?
             };
@@ -264,7 +268,7 @@ pub(crate) async fn execute_partition_overwrite(
                 &table,
                 staged_files,
                 branch.as_deref(),
-                &options.snapshot_extra,
+                &snapshot_extra,
                 options.isolation.as_deref(),
             )
             .await?;
@@ -386,8 +390,10 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+    let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
+    let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
     // OV1 exclusive staging surface (Q9): positional D9 map + write; no catalog mutation yet.
-    let staged_files = if options.is_empty() {
+    let staged_files = if options.is_empty() && session.is_empty() {
         repark_iceberg::write::write_overwrite_staged_files_from_stream(
             table,
             stream,
@@ -401,7 +407,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
             stream,
             column_names,
             concurrency,
-            &options.staging_overrides(),
+            &staging,
         )
         .await?
     };
@@ -421,7 +427,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
             table,
             staged_files,
             branch,
-            &options.snapshot_extra,
+            &snapshot_extra,
             options.isolation.as_deref(),
         )
         .await?;
@@ -431,7 +437,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
             table,
             staged_files,
             branch,
-            &options.snapshot_extra,
+            &snapshot_extra,
             options.isolation.as_deref(),
         )
         .await?;

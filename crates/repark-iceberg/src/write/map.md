@@ -37,7 +37,13 @@ repark-core's error map.
   `write_partitioned_data_files*` families (bounded-memory stream variants; K concurrent file
   writers, default 4, K=1 serial), `append`, the overwrite stage-then-swap surface, and the
   snapshot-ref helpers. `store_assign` is declared `pub(crate)` — an internal predicate, never
-  a public surface.
+  a public surface. **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** declares
+  `session_write_conf` and re-exports its resolver surface.
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
+  session write-conf carrier (`SessionWriteView`: session codec/level plus the
+  `spark.sql.iceberg.snapshot-property.*` map) and `resolve_write_for_session`,
+  which folds writer option over session conf over table property at every owned
+  commit; a bogus codec refuses naming the codec.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).

@@ -1,5 +1,7 @@
 # map — scripts/
 
+ICE-SESSION-WRITE-CONF-1 (2026-09-19): `check_rust_file_size.py` ratchets `write/merge/mod.rs` 1761 → 1701 (MERGE staging splits to `session_staging.rs`) and `write/predicate_dml.rs` 1139 → 1034 (identity COW commits split to `cow_commit.rs`), both shrink-only, with the CAP-1 mirror.
+
 ICE-DROP-NS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-sql/src/tests.rs` 1520 → 1513 (the native `CASCADE` refusal pin and its doc line left the file; its replacement pins live in `schema_ddl/tests.rs`). pins: ice-drop-ns-1/C-011
 
 CAST-MAP-SPELL-1 (2026-09-19): `check_lib_py.py` ratchets `spark/column.py` 1532 → 1529 (unknown cast names forward to the native map-type token) and `check_rust_file_size.py` ratchets `repark-python/src/session.rs` 1127 → 1126 (SQL prep moves to `session_runtime.rs`), both shrink-only. pins: cast-map-spell-1/C-004, C-005

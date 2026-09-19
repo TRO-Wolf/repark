@@ -69,6 +69,7 @@ async fn commit_on_branch_rejects_concurrent_branch_append() {
         vec![data_file("test/branch-insert.parquet")],
         &Predicate::AlwaysTrue,
         Some("audit"),
+        &[],
     )
     .await
     .expect_err("concurrent branch append must fail OCC");
@@ -121,6 +122,7 @@ async fn commit_on_branch_ignores_concurrent_main_append() {
         vec![data_file("test/branch-insert.parquet")],
         &Predicate::AlwaysTrue,
         Some("audit"),
+        &[],
     )
     .await
     .expect("a concurrent main append must not fail a branch MERGE commit");

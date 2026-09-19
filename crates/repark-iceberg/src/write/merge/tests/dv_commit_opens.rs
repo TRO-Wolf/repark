@@ -315,6 +315,7 @@ async fn a_newest_file_identity_delete_commits_with_one_data_manifest() {
         WriteConcurrency::new(1).expect("K=1"),
         &delete_policy(),
         known,
+        &[],
     )
     .await
     .expect("F-25 stops once the newest added DV key is found");
@@ -349,6 +350,7 @@ async fn hiding_the_newest_data_manifest_too_refuses_the_commit() {
         WriteConcurrency::new(1).expect("K=1"),
         &delete_policy(),
         known,
+        &[],
     )
     .await;
     assert!(

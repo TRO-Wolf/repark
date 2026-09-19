@@ -226,6 +226,7 @@ async fn the_production_partition_carrying_commit_honors_the_snapshot_pin() {
         WriteConcurrency::new(1).expect("K=1"),
         &policy,
         known.clone(),
+        &[],
     )
     .await
     .expect("the production partition-carrying commit lands on a partitioned v3 table");
@@ -241,6 +242,7 @@ async fn the_production_partition_carrying_commit_honors_the_snapshot_pin() {
         WriteConcurrency::new(1).expect("K=1"),
         &policy,
         known,
+        &[],
     )
     .await;
     assert!(

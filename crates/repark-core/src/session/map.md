@@ -24,6 +24,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `EngineContext::force_static_overwrite`, replacing ICE-DYN-OVERWRITE-1's
   `static_overwrite.rs` body; `ReparkSession::sql_with` passes an empty map and `false`.
   pins: ice-write-options-1/C-014
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
+  write conf (`session_write_conf_from_ctx`) into the statement options, so the
+  session codec and snapshot properties ride `EngineContext` to every door.
 - `temp_views.rs` — **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
   the choke-point fix pushed that file past its ceiling. The old exception then retired under the
   prior default; CAP-1 records the file again at its exact source-size baseline. Holds

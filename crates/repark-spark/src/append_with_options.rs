@@ -53,13 +53,13 @@ pub(crate) async fn execute_append_with_options(
     let source_df = spark_ast::execute_passthrough(ctx, catalogs, &materialize_sql).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    let staging = options.staging_overrides();
+    let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
     if column_names.is_empty() {
         repark_iceberg::write::append_with_statement_options(
             &catalog,
             &table,
             stream,
-            &options.snapshot_extra,
+            &snapshot_extra,
             &staging,
             concurrency,
             branch.as_deref(),
@@ -78,7 +78,7 @@ pub(crate) async fn execute_append_with_options(
             &catalog,
             &table,
             files,
-            &options.snapshot_extra,
+            &snapshot_extra,
             branch.as_deref(),
         )
         .await?;

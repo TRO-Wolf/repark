@@ -139,6 +139,12 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `insert_sql` (R-03). pins: ice-v3-write-default-1/C-019
   ICE-MIXED-CASE-1 rebase (2026-09-18, run 22b): the local `insert_projection` helper
   takes the case-insensitive flag and `spec` comes from `helpers.rs`.
+- `dv_commit_opens.rs`, `occ_branch.rs`, `occ_partitions.rs` —
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the commit call sites pass the new
+  empty snapshot-properties argument, keeping their open counts and verdicts.
+- `lineage_stream.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the probe
+  stages through `write_partitioned_lineage_files_with` with empty
+  `WriterStagingOverrides`, keeping the stream-vs-drain file pins.
 - `occ_partitions.rs` — **RP-7 (2026-09-02):** one battery through the PRODUCTION
   `commit_row_delta_kind_with_partitions` variant on a partitioned v3 table with a real partition
   map: the commit lands, and a stale `validate_from_snapshot` pin is still rejected with the

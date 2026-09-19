@@ -285,6 +285,18 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `ColumnDefaults` build (`schema_has_primitive_fill` pre-scan).
   pins: ice-v3-write-default-1/C-019
 - [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
+- `session_staging.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
+  session-conf-aware staged-write entry (`write_new_data_files_from_stream_with`
+  over `WriterStagingOverrides`), split out of `mod.rs` so the parent stays under
+  its exact size baseline; every MERGE writer site stages through it.
+- `mod.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** MERGE staging and
+  insert-stream sites take the session write conf through `session_staging`.
+- `snapshot_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
+  commit arms take the resolved session write (snapshot properties plus codec)
+  and stamp it on the commit they build.
+- `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the lineage
+  fanout writer site honours the session write conf
+  (`write_partitioned_lineage_files_with`).
 
 ## I want to…
 

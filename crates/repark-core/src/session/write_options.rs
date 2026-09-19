@@ -9,6 +9,20 @@ use crate::error_map::engine_err_for_sql;
 use crate::session::ReparkSession;
 
 impl ReparkSession {
+    #[must_use]
+    pub fn set_iceberg_session_write_conf(&self, key: &str, value: &str) -> bool {
+        let state_lock = self.context().state_ref();
+        let mut state = state_lock.write();
+        repark_iceberg::write::apply_session_write_key(state.config_mut().options_mut(), key, value)
+    }
+
+    #[must_use]
+    pub fn unset_iceberg_session_write_conf(&self, key: &str) -> bool {
+        let state_lock = self.context().state_ref();
+        let mut state = state_lock.write();
+        repark_iceberg::write::unset_session_write_key(state.config_mut().options_mut(), key)
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub async fn sql_with_write_options(
         &self,

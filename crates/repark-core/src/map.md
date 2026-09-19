@@ -66,7 +66,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `sql_static_overwrite`) is retired; `session/write_options.rs` is the one statement
   funnel, `sql_with_write_options(query, options, force_static_overwrite)` fills
   `EngineContext::force_static_overwrite`, and `sql_with` calls it with an empty map and
-  `false`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014 Builder collects
+  `false`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the builder folds the
+  `spark.sql.iceberg.*` write confs from its config map into the session
+  (`with_session_write_conf`), so the funnel's `from_ctx` read answers them. Builder collects
   the Spark-style `.config(...)` map (`config(key, value)` / `configs(map)`); sync `build()`
   validates knobs, parses the config's `spark.sql.catalog.<name>.*` /
   `repark.sql.catalog.<name>.*` blocks into `CatalogSpec`s (fail-loud, synchronous), threads every

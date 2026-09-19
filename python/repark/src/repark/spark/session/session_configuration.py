@@ -87,6 +87,21 @@ _TARGET_PARTITIONS_KEYS: tuple[str, ...] = (
 
 _DATAFUSION_CONF_PREFIX = "datafusion."
 
+ICEBERG_SESSION_CODEC_KEY = "spark.sql.iceberg.compression-codec"
+
+ICEBERG_SESSION_LEVEL_KEY = "spark.sql.iceberg.compression-level"
+
+ICEBERG_SESSION_SNAPSHOT_PREFIX = "spark.sql.iceberg.snapshot-property."
+
+
+def is_iceberg_session_write_key(key: str) -> bool:
+    """Return whether ``key`` is an Iceberg session write conf forwarded to Rust."""
+    return (
+        key == ICEBERG_SESSION_CODEC_KEY
+        or key == ICEBERG_SESSION_LEVEL_KEY
+        or key.startswith(ICEBERG_SESSION_SNAPSHOT_PREFIX)
+    )
+
 
 _DATAFUSION_CONF_KEY_RE = re.compile(r"^datafusion\.[A-Za-z_][A-Za-z0-9_.]*\Z")
 

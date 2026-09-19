@@ -155,8 +155,23 @@ async fn wipe_by_name_target(
     table: &iceberg::table::Table,
     branch: Option<&str>,
 ) -> Result<()> {
-    repark_iceberg::write::commit_overwrite_replace_all_to(&catalog, table, Vec::new(), branch)
+    let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
+    if session.is_empty() {
+        repark_iceberg::write::commit_overwrite_replace_all_to(&catalog, table, Vec::new(), branch)
+            .await?;
+    } else {
+        let (snapshot_extra, _) =
+            crate::write_options::StatementWriteOptions::empty().resolve_with_session(ctx)?;
+        repark_iceberg::write::commit_overwrite_replace_all_with_summary(
+            &catalog,
+            table,
+            Vec::new(),
+            branch,
+            &snapshot_extra,
+            None,
+        )
         .await?;
+    }
     let namespace = namespace_schema_name(table.identifier().namespace());
     reregister(ctx, catalog, catalog_name, &namespace).await
 }
@@ -173,22 +188,53 @@ async fn append_by_name_projection(
     let source_df = crate::spark_ast::execute_passthrough(ctx, catalogs, projection_sql).await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    let staged = if table.metadata().default_partition_spec().is_unpartitioned() {
-        repark_iceberg::write::write_data_files_from_stream_with_concurrency(
-            table,
-            stream,
-            concurrency,
-        )
-        .await?
+    let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
+    if session.is_empty() {
+        let staged = if table.metadata().default_partition_spec().is_unpartitioned() {
+            repark_iceberg::write::write_data_files_from_stream_with_concurrency(
+                table,
+                stream,
+                concurrency,
+            )
+            .await?
+        } else {
+            repark_iceberg::write::write_partitioned_data_files_from_stream_with_concurrency(
+                table,
+                stream,
+                concurrency,
+            )
+            .await?
+        };
+        repark_iceberg::write::commit_append_to(catalog, table, staged, branch).await?;
     } else {
-        repark_iceberg::write::write_partitioned_data_files_from_stream_with_concurrency(
+        let (snapshot_extra, staging) =
+            crate::write_options::StatementWriteOptions::empty().resolve_with_session(ctx)?;
+        let staged = if table.metadata().default_partition_spec().is_unpartitioned() {
+            repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
+                table,
+                stream,
+                concurrency,
+                &staging,
+            )
+            .await?
+        } else {
+            repark_iceberg::write::stage_partitioned_stream_with_overrides(
+                table,
+                stream,
+                &staging,
+                concurrency,
+            )
+            .await?
+        };
+        repark_iceberg::write::commit_append_with_summary(
+            catalog,
             table,
-            stream,
-            concurrency,
+            staged,
+            &snapshot_extra,
+            branch,
         )
-        .await?
-    };
-    repark_iceberg::write::commit_append_to(catalog, table, staged, branch).await?;
+        .await?;
+    }
     let namespace = namespace_schema_name(table.identifier().namespace());
     reregister(ctx, Arc::clone(catalog), catalog_name, &namespace).await?;
     ctx.read_empty()

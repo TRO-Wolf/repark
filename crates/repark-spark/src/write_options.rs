@@ -49,6 +49,22 @@ impl StatementWriteOptions {
     }
 
     #[allow(clippy::missing_errors_doc)]
+    pub(crate) fn resolve_with_session(
+        &self,
+        ctx: &datafusion::prelude::SessionContext,
+    ) -> Result<(
+        Vec<(String, String)>,
+        repark_iceberg::write::WriterStagingOverrides,
+    )> {
+        let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
+        repark_iceberg::write::resolve_write_for_session(
+            &self.snapshot_extra,
+            &self.staging_overrides(),
+            &session,
+        )
+    }
+
+    #[allow(clippy::missing_errors_doc)]
     pub(crate) fn validate(pairs: Vec<(String, String)>) -> Result<Self> {
         let mut merged: Vec<(String, String)> = Vec::with_capacity(pairs.len());
         for (key, value) in pairs {

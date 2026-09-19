@@ -23,20 +23,12 @@ use datafusion::physical_plan::streaming::PartitionStream;
 use datafusion::prelude::SessionContext;
 use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
-use iceberg::arrow::{FieldMatchMode, schema_to_arrow_schema};
+use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::expr::Predicate;
-use iceberg::spec::{
-    DataFile, DataFileFormat, FormatVersion, ManifestContentType, PartitionKey, Struct,
-};
+use iceberg::spec::{DataFile, DataFileFormat, FormatVersion, ManifestContentType};
 use iceberg::table::Table;
 
-use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
-use iceberg::writer::file_writer::ParquetWriterBuilder;
-use iceberg::writer::file_writer::location_generator::{
-    DefaultFileNameGenerator, DefaultLocationGenerator,
-};
-use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
-use iceberg::writer::{IcebergWriter, IcebergWriterBuilder};
+use iceberg::writer::IcebergWriter;
 use iceberg::{Catalog, TableIdent};
 
 use tracing::Instrument;
@@ -48,6 +40,7 @@ mod dv_close;
 mod insert;
 mod not_matched_by_source;
 pub(crate) mod row_lineage;
+pub(super) mod session_staging;
 mod snapshot_commit;
 pub(crate) mod target_scan;
 
@@ -568,7 +561,7 @@ async fn plan_and_commit_cow(
         partitions: _,
         conflict_filter: _,
     } = *target;
-    let (affected, new_files) = async {
+    let (affected, new_files, snapshot_extra) = async {
         let affected = if not_matched_by_source::is_present(spec) {
             if !spec.matched.is_empty() {
                 let _ = affected_files(ctx, sql, skip_cardinality(spec)).await?;
@@ -611,12 +604,20 @@ async fn plan_and_commit_cow(
             ));
         }
         let concurrency = concurrency_from_ctx(ctx);
+        let (snapshot_extra, staging) =
+            crate::write::session_write_conf::resolve_empty_session_write(ctx)?;
         let chained = futures::stream::iter(streams).flatten();
-        let write_result =
-            write_new_data_files_from_stream(table, write_schema, chained, concurrency).await;
+        let write_result = session_staging::write_new_data_files_from_stream_with(
+            table,
+            write_schema,
+            chained,
+            concurrency,
+            &staging,
+        )
+        .await;
         // Explicit drop before Ok so cleanup is ordered before the join span ends.
         drop(rewrite_scratches);
-        Ok::<_, DataFusionError>((affected, write_result?))
+        Ok::<_, DataFusionError>((affected, write_result?, snapshot_extra))
     }
     .instrument(tracing::info_span!("merge.join"))
     .await?;
@@ -633,6 +634,7 @@ async fn plan_and_commit_cow(
         new_files,
         &target.conflict_filter,
         spec.commit_branch.as_deref(),
+        &snapshot_extra,
     )
     .instrument(tracing::info_span!("merge.commit", files = file_count))
     .await
@@ -655,7 +657,7 @@ async fn plan_and_commit_mor(
     } = target;
     let (table, write_schema, snapshot_id) = (*table, *write_schema, *snapshot_id);
     // R-MERGE-ONEPASS Stage B (MoR): one INNER JOIN yields cardinality, deletes, and UPDATE values.
-    let (pairs, data_files) = async {
+    let (pairs, data_files, snapshot_extra) = async {
         let mut streams: Vec<std::pin::Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>> =
             Vec::new();
         let mut pairs = if spec.matched.is_empty() {
@@ -699,10 +701,18 @@ async fn plan_and_commit_mor(
             ));
         }
         let concurrency = concurrency_from_ctx(ctx);
+        let (snapshot_extra, staging) =
+            crate::write::session_write_conf::resolve_empty_session_write(ctx)?;
         let chained = futures::stream::iter(streams).flatten();
-        let data_files =
-            write_new_data_files_from_stream(table, write_schema, chained, concurrency).await?;
-        Ok::<_, DataFusionError>((pairs, data_files))
+        let data_files = session_staging::write_new_data_files_from_stream_with(
+            table,
+            write_schema,
+            chained,
+            concurrency,
+            &staging,
+        )
+        .await?;
+        Ok::<_, DataFusionError>((pairs, data_files, snapshot_extra))
     }
     .instrument(tracing::info_span!("merge.join"))
     .await?;
@@ -720,47 +730,9 @@ async fn plan_and_commit_mor(
         conflict_filter,
         spec.commit_branch.as_deref(),
         drain_partition_sink(partitions),
+        &snapshot_extra,
     )
     .await
-}
-
-/// R-MERGE-STREAM-OUT: cast each batch to the write schema and pipe into the streaming writers.
-pub(super) async fn write_new_data_files_from_stream<S>(
-    table: &Table,
-    write_schema: &SchemaRef,
-    stream: S,
-    concurrency: WriteConcurrency,
-) -> Result<Vec<DataFile>>
-where
-    S: Stream<Item = Result<RecordBatch>> + Unpin,
-{
-    let write_schema = Arc::clone(write_schema);
-    let cast_stream = stream.try_filter_map(move |batch| {
-        let write_schema = Arc::clone(&write_schema);
-        async move {
-            if batch.num_rows() == 0 {
-                return Ok(None);
-            }
-            Ok(Some(row_lineage::attach_present_lineage(
-                cast_one_batch_to_write_schema(&write_schema, &batch)?,
-                &batch,
-            )?))
-        }
-    });
-    // Pin the stream so partitioned/unpartitioned helpers get Unpin.
-    let cast_stream = std::pin::pin!(cast_stream);
-    if table.metadata().default_partition_spec().is_unpartitioned() {
-        write_data_files_from_stream_with_concurrency(table, cast_stream, concurrency).await
-    } else if row_lineage::table_carries_merge_lineage(table) {
-        row_lineage::write_partitioned_lineage_files(table, cast_stream).await
-    } else {
-        crate::write::append::write_partitioned_data_files_from_stream_with_concurrency(
-            table,
-            cast_stream,
-            concurrency,
-        )
-        .await
-    }
 }
 
 /// Stream a SQL query as `RecordBatch` results (no full collect).
@@ -1451,7 +1423,7 @@ impl MergeSql<'_> {
 const NOT_MATCHED_POS_SENTINEL: &str = "__repark_not_matched_pos";
 
 /// Cast one batch onto the Iceberg write schema (strict casts, field order by name).
-fn cast_one_batch_to_write_schema(
+pub(super) fn cast_one_batch_to_write_schema(
     write_schema: &SchemaRef,
     batch: &RecordBatch,
 ) -> Result<RecordBatch> {
@@ -1534,42 +1506,10 @@ where
             "MERGE INTO writes only Parquet data files yet (table default is {file_format})"
         )));
     }
-    let build_writer = || async { build_unpartitioned_data_file_writer(table).await };
+    let build_writer =
+        || async { session_staging::build_unpartitioned_data_file_writer(table).await };
     crate::write::distribution::drive_unpartitioned(table, conformed, max_concurrent, build_writer)
         .await
-}
-
-/// Open one unpartitioned Parquet `DataFileWriter` for `table` (unique file-name UUID per call).
-async fn build_unpartitioned_data_file_writer(table: &Table) -> Result<impl IcebergWriter + use<>> {
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        crate::write::writer_props::writer_properties_for(table)?,
-        row_lineage::iceberg_parquet_schema(table)?,
-        FieldMatchMode::Name,
-    );
-    let location_generator =
-        DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
-    let file_name_generator =
-        DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
-    let rolling_builder = RollingFileWriterBuilder::new(
-        parquet_builder,
-        table_props.write_target_file_size_bytes,
-        table.file_io().clone(),
-        location_generator,
-        file_name_generator,
-    );
-    let unpartitioned_key = PartitionKey::new(
-        table.metadata().default_partition_spec().as_ref().clone(),
-        table.metadata().current_schema().clone(),
-        Struct::empty(),
-    )
-    .map_err(iceberg_err)?;
-    crate::write::distribution::stamp(DataFileWriterBuilder::new(rolling_builder), table)
-        .build(Some(unpartitioned_key))
-        .await
-        .map_err(iceberg_err)
 }
 
 /// A minimal batch sink: write batches, then close into the produced data files.

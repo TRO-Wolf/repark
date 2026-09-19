@@ -64,6 +64,10 @@ pins: rp-4-fork-repin/C-005, C-006
   runs heap-pinned (`Box::pin`) so the thread-through keeps test-task futures
   under the 16 KiB clippy ceiling.
   pins: ice-write-options-1/C-001, C-004
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** `execute_inner` merges the live
+  session write conf into every Iceberg write arm's statement options, so
+  `spark.sql.iceberg.snapshot-property.*` and the session codec reach the owned
+  commits with writer-option precedence.
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18, Q-22b-WO-1):** main's
   `execute_routed` folds into `execute_with_statement_options`; ICE-DYN-OVERWRITE-1's
   typed static flag rides as the typed field
@@ -120,6 +124,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `stage_static_partition_overwrite_files_with` with the column list and `None` or the
   staging overrides.
   pins: ice-write-options-1/C-014, C-015
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the stage-then-swap overwrite arms
+  resolve the merged session write at their commits.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
   pins: ice-dyn-overwrite-1/C-014, C-020
@@ -147,6 +153,8 @@ pins: rp-4-fork-repin/C-005, C-006
   summary. A list-free append keeps `append_with_statement_options`. Table-function
   targets, `REPLACE INTO` and non-3-part names still refuse.
   pins: ice-write-options-1/C-014, C-018
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the option-carrying append resolves
+  the merged session write at its commit.
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
@@ -188,6 +196,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `insert_overwrite_from_staged_source`.
   pins: ice-write-options-1/C-015
   pins: ice-write-options-1/C-001, C-003
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the by-name append commit resolves
+  the merged session write.
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property
@@ -201,6 +211,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `force_static_overwrite`, the `saveAsTable` static pin, set by the dialect from
   `EngineContext`; it is not an option and never counts toward `is_empty`.
   pins: ice-write-options-1/C-014
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** `StatementWriteOptions` also merges
+  the live session write conf (session codec plus snapshot properties), which the
+  router folds into every Iceberg write arm.
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -271,6 +284,8 @@ pins: rp-4-fork-repin/C-005, C-006
   in `finish_ctas_staged_commit` so `execute_ctas` keeps the function
   length ceiling. Round 3 withdrew the empty-publish-then-append double commit.
   pins: ice-write-options-1/C-001, C-003
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
+  merged session write, so CTAS stamps session snapshot properties.
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the service-managed abort arm skips `drop_table`
   and returns the original error unwrapped when `is_commit_state_unknown` fires — a
   possibly-landed create is never abort-dropped, and the class + `operation_id` reach the

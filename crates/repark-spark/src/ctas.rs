@@ -282,7 +282,8 @@ async fn finish_ctas_staged_commit(
     options: &crate::write_options::StatementWriteOptions,
     replace_write: bool,
 ) -> Result<()> {
-    if options.is_empty() {
+    let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
+    if options.is_empty() && session.is_empty() {
         let data_files = write_ctas_query(ctx, staged.table(), query).await?;
         staged
             .add_data_files(data_files)
@@ -291,7 +292,7 @@ async fn finish_ctas_staged_commit(
             .map_err(iceberg_err)?;
         return Ok(());
     }
-    let staging = options.staging_overrides();
+    let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let stream = query.execute_stream().await?;
     let staged_table = staged.table().clone();
@@ -321,8 +322,7 @@ async fn finish_ctas_staged_commit(
     let tx = if replace_write {
         let engine =
             repark_iceberg::write::EngineSummary::for_overwrite(&staged_table, &data_files, None);
-        let (_, summary) =
-            repark_iceberg::write::summary_with_extras(&options.snapshot_extra, &engine)?;
+        let (_, summary) = repark_iceberg::write::summary_with_extras(&snapshot_extra, &engine)?;
         tx.overwrite_files()
             .overwrite_by_row_filter(iceberg::expr::Predicate::AlwaysTrue)
             .add_files(data_files)
@@ -332,8 +332,7 @@ async fn finish_ctas_staged_commit(
     } else {
         let engine =
             repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
-        let (_, summary) =
-            repark_iceberg::write::summary_with_extras(&options.snapshot_extra, &engine)?;
+        let (_, summary) = repark_iceberg::write::summary_with_extras(&snapshot_extra, &engine)?;
         tx.fast_append()
             .add_data_files(data_files)
             .set_snapshot_properties(summary)
@@ -540,7 +539,8 @@ pub(crate) async fn execute_ctas_service_managed(
 
     // From here the table EXISTS in the catalog: any failure below aborts by dropping it.
     let write_result: Result<()> = async {
-        if options.is_empty() {
+        let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
+        if options.is_empty() && session.is_empty() {
             let data_files = write_ctas_query(ctx, &table, query).await?;
             if ctas.or_replace {
                 repark_iceberg::write::commit_replace_write(catalog, &table, data_files).await?;
@@ -549,7 +549,7 @@ pub(crate) async fn execute_ctas_service_managed(
             }
             return Ok(());
         }
-        let staging = options.staging_overrides();
+        let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
         let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
         let stream = query.execute_stream().await?;
         let data_files = if table.metadata().default_partition_spec().is_unpartitioned() {
@@ -574,7 +574,7 @@ pub(crate) async fn execute_ctas_service_managed(
                 catalog,
                 &table,
                 data_files,
-                &options.snapshot_extra,
+                &snapshot_extra,
             )
             .await?;
         } else {
@@ -582,7 +582,7 @@ pub(crate) async fn execute_ctas_service_managed(
                 catalog,
                 &table,
                 data_files,
-                &options.snapshot_extra,
+                &snapshot_extra,
                 None,
             )
             .await?;
