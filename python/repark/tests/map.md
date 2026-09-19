@@ -50,6 +50,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `AnalysisException`, and the `spark.range` DataFrame door is pinned as the
   already-green regression.
   pins: range-tvf-id-1/C-001, C-002, C-003, C-004, C-005
+- [test_range_tvf_id_2.py](test_range_tvf_id_2.py) +
+  [range_tvf_id_1/range_tvf_id_2_spark_oracle.json](range_tvf_id_1/range_tvf_id_2_spark_oracle.json) —
+  **RANGE-TVF-ID-2 (2026-09-19, round 1):** the `range(...)` argument edge
+  cases answer Spark 4.1.2 on the facade door and the native door — NULL
+  bounds refuse with `AnalysisException` carrying `UNEXPECTED_INPUT_TYPE`,
+  every Spark-accepted width (narrow ints, decimal, float, strings, folded
+  expressions) answers Spark's rows, malformed strings refuse with RePark's
+  `CAST_INVALID_INPUT` surfacing, overflow bounds emit exactly Spark's single
+  row under a LIMIT bound, the near-max `count(*)` answers 7 under the
+  systemic `count(*)` display name, and `numPartitions` refuses
+  non-positive values on a non-empty range with `IllegalArgumentException`
+  while an empty range with 0 partitions answers empty. The ID-1 recorder
+  ([_record_range_tvf_id_1.py](_record_range_tvf_id_1.py)) gains the ID-2 cell
+  table and checks both fixtures. Red on main: 30 failed, 8 passed.
+  pins: range-tvf-id-2/C-001, C-002, C-003, C-004, C-005, C-006
 - [test_v3_multiarg_1.py](test_v3_multiarg_1.py) +
   [v3_multiarg_1_spark_oracle.json](v3_multiarg_1_spark_oracle.json) +
   [_record_v3_multiarg_1.py](_record_v3_multiarg_1.py) —
