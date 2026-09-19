@@ -341,7 +341,12 @@ every session it opens disables the shared caches (`repark.iceberg.metadataCache
 from the bench — RePark registers no such extension). The JSON carries `baseline` and, when
 true, `baseline_switches`; the markdown names it in its header line. What the baseline
 cannot switch off: the timestamp predicate pushdown (fork #312) and the `count(*)` fold
-(ICE-COUNT-FOLD-1) stay on, so a baseline number is not "pre-campaign main".
+(ICE-COUNT-FOLD-1) stay on, so a baseline number is not "pre-campaign main". The switches live
+in `bed::spark_session(baseline)`, the one builder every run session takes (warm, cold,
+concurrent, concurrent-cold, local and remote): the memory catalog (`memory_catalog_cached`),
+and Glue / S3 Tables (`register_catalog_spec` via `register_late_configured_catalogs`), all
+build their `CatalogCaches` from the session's settings, so the builder config reaches every
+path with no product-code change.
 
 ## Pointers
 

@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use datafusion::physical_plan::{displayable, execute_stream};
 use futures::StreamExt;
 use repark_core::ReparkSession;
-use serde_json::json;
+use serde_json::{Value, json};
 
 use crate::BoxError;
 use crate::bed::{self, BedShape, TS_BASE_SECONDS, TS_STEP_SECONDS};
@@ -252,7 +252,7 @@ pub fn resolve_target(options: &RunOptions) -> Result<Target, BoxError> {
 }
 
 async fn open_session(options: &RunOptions, target: &Target) -> Result<ReparkSession, BoxError> {
-    let session = bed::spark_session()?;
+    let session = bed::spark_session(options.baseline)?;
     match options.catalog {
         CatalogChoice::Local => {
             let warehouse = target
@@ -313,6 +313,20 @@ impl SessionSource for ConfiguredSource<'_> {
 pub struct Measurements {
     pub records: Vec<QueryRecord>,
     pub groups: Vec<QueryRecord>,
+}
+
+#[must_use]
+pub fn baseline_switches(baseline: bool) -> Value {
+    if baseline {
+        json!({
+            "row_selection_enabled": false,
+            "metadata_cache": false,
+            "manifest_cache_bytes": 0,
+            "footer_cache_bytes": 0,
+        })
+    } else {
+        Value::Null
+    }
 }
 
 pub async fn run(
@@ -381,6 +395,8 @@ pub async fn run_gated<S: SessionSource>(
     let document = json!({
         "environment": report::environment(options.mode),
         "mode": options.mode.name(),
+        "baseline": options.baseline,
+        "baseline_switches": baseline_switches(options.baseline),
         "catalog": options.catalog.name(),
         "table": target.table,
         "repeat": repeat,
@@ -414,6 +430,7 @@ pub async fn run_gated<S: SessionSource>(
         "{}",
         report::markdown(
             options.mode.name(),
+            options.baseline,
             &specs,
             &measurements.records,
             &measurements.groups

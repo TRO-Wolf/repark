@@ -393,7 +393,7 @@ async fn q3_and_q7_reach_the_scan_with_the_same_rows() {
     bed::setup(&options, &StepSummary::default()).await.unwrap();
     let warehouse = std::fs::canonicalize(&options.warehouse).unwrap();
     let shape = bed::read_shape(&bed::manifest_path(&warehouse)).unwrap();
-    let session = bed::spark_session().unwrap();
+    let session = bed::spark_session(false).unwrap();
     bed::register_local_table(
         &session,
         &warehouse,
@@ -488,7 +488,7 @@ impl StandIn {
 
 impl SessionSource for StandIn {
     async fn open(&self) -> Result<ReparkSession, BoxError> {
-        let session = bed::spark_session()?;
+        let session = bed::spark_session(false)?;
         bed::register_local_table(&session, &self.warehouse, &self.metadata).await?;
         self.opened.borrow_mut().push(session.clone());
         Ok(session)
@@ -662,7 +662,7 @@ async fn fake_size_stops_every_mode_and_catalog(dir: &TempDir, warehouse: &Path)
 async fn the_files_table_counts_delete_files_in_the_footprint() {
     let dir = TempDir::new().unwrap();
     let root = text(dir.path());
-    let session = bed::spark_session().unwrap();
+    let session = bed::spark_session(false).unwrap();
     session
         .register_memory_catalog("bench", root)
         .await
@@ -789,7 +789,7 @@ async fn aws_catalogs_fail_loud_on_missing_props_without_a_call() {
 }
 
 async fn stand_in_session(root: &str) -> repark_core::ReparkSession {
-    let session = bed::spark_session().unwrap();
+    let session = bed::spark_session(false).unwrap();
     session
         .register_memory_catalog(bed::CATALOG, root)
         .await

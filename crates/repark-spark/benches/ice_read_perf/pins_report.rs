@@ -72,7 +72,7 @@ fn the_report_carries_metadata_cache_evictions() {
     let json = record.to_json();
     assert_eq!(json["metadata_cache"]["evictions"], 2);
     assert_eq!(json["metadata_cache"]["hits"], 5);
-    let table = markdown("warm", std::slice::from_ref(&spec), &[record], &[]);
+    let table = markdown("warm", false, std::slice::from_ref(&spec), &[record], &[]);
     assert!(table.contains("| cache hit/miss/evict |"), "{table}");
     assert!(table.contains("| 5/3/2 |"), "{table}");
 }
@@ -129,7 +129,7 @@ fn the_report_carries_footer_cache_hits_and_misses_beside_the_metadata_cache() {
     assert_eq!(json["footer_cache"]["upgrades"], 1);
     assert_eq!(json["footer_cache"]["evictions"], 0);
     assert_eq!(json["metadata_cache"]["hits"], 5);
-    let table = markdown("warm", std::slice::from_ref(&spec), &[record], &[]);
+    let table = markdown("warm", false, std::slice::from_ref(&spec), &[record], &[]);
     assert!(
         table.contains("| cache hit/miss/evict | footer cache hit/miss |"),
         "{table}"
@@ -141,7 +141,7 @@ fn the_report_carries_footer_cache_hits_and_misses_beside_the_metadata_cache() {
     };
     let record = QueryRecord::new(&spec, timing, Some(&off));
     assert!(record.to_json()["footer_cache"].is_null());
-    let table = markdown("warm", std::slice::from_ref(&spec), &[record], &[]);
+    let table = markdown("warm", false, std::slice::from_ref(&spec), &[record], &[]);
     assert!(table.contains("| 5/3/2 | off |"), "{table}");
 }
 
