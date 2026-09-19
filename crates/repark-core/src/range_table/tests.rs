@@ -98,8 +98,198 @@ async fn range_string_argument_coerces_to_integer() {
 }
 
 #[tokio::test]
-async fn range_null_argument_yields_no_rows() {
-    assert!(range_values("SELECT * FROM range(null)").await.is_empty());
+async fn range_null_start_refuses_unexpected_input_type() {
+    assert!(
+        range_error("SELECT * FROM range(null)")
+            .await
+            .contains("UNEXPECTED_INPUT_TYPE")
+    );
+}
+
+#[tokio::test]
+async fn range_null_end_refuses_unexpected_input_type() {
+    assert!(
+        range_error("SELECT * FROM range(0, null)")
+            .await
+            .contains("UNEXPECTED_INPUT_TYPE")
+    );
+}
+
+#[tokio::test]
+async fn range_null_step_refuses_unexpected_input_type() {
+    assert!(
+        range_error("SELECT * FROM range(0, 10, null)")
+            .await
+            .contains("UNEXPECTED_INPUT_TYPE")
+    );
+}
+
+#[tokio::test]
+async fn range_cast_null_bigint_refuses_unexpected_input_type() {
+    assert!(
+        range_error("SELECT * FROM range(CAST(null AS BIGINT))")
+            .await
+            .contains("UNEXPECTED_INPUT_TYPE")
+    );
+}
+
+#[tokio::test]
+async fn range_cast_null_int_refuses_unexpected_input_type() {
+    assert!(
+        range_error("SELECT * FROM range(CAST(null AS INT))")
+            .await
+            .contains("UNEXPECTED_INPUT_TYPE")
+    );
+}
+
+#[tokio::test]
+async fn range_narrow_int_widths_answer_like_bigint() {
+    assert_eq!(
+        range_values("SELECT * FROM range(CAST(3 AS INT))").await,
+        vec![0, 1, 2]
+    );
+    assert_eq!(
+        range_values("SELECT * FROM range(CAST(3 AS SMALLINT))").await,
+        vec![0, 1, 2]
+    );
+    assert_eq!(
+        range_values("SELECT * FROM range(CAST(3 AS TINYINT))").await,
+        vec![0, 1, 2]
+    );
+}
+
+#[tokio::test]
+async fn range_decimal_bound_truncates_toward_zero() {
+    assert_eq!(
+        range_values("SELECT * FROM range(3.0)").await,
+        vec![0, 1, 2]
+    );
+    assert_eq!(
+        range_values("SELECT * FROM range(-4, -1.5)").await,
+        vec![-4, -3, -2]
+    );
+}
+
+#[tokio::test]
+async fn range_float_bound_truncates_toward_zero() {
+    assert_eq!(
+        range_values("SELECT * FROM range(CAST(3.9 AS DOUBLE))").await,
+        vec![0, 1, 2]
+    );
+    assert_eq!(
+        range_values("SELECT * FROM range(-4, CAST(-1.9 AS DOUBLE))").await,
+        vec![-4, -3, -2]
+    );
+}
+
+#[tokio::test]
+async fn range_malformed_string_refuses_cast_invalid_input() {
+    assert!(
+        range_error("SELECT * FROM range('abc')")
+            .await
+            .contains("CAST_INVALID_INPUT")
+    );
+}
+
+#[tokio::test]
+async fn range_overflow_up_emits_exactly_one_row() {
+    assert_eq!(
+        range_values("SELECT * FROM range(9223372036854775802, 9223372036854775807, 10)").await,
+        vec![9_223_372_036_854_775_802]
+    );
+}
+
+#[tokio::test]
+async fn range_overflow_down_emits_exactly_one_row() {
+    assert_eq!(
+        range_values("SELECT * FROM range(-9223372036854775807, -9223372036854775808, -2)").await,
+        vec![-9_223_372_036_854_775_807]
+    );
+}
+
+#[tokio::test]
+async fn range_near_max_end_counts_every_row() {
+    let values =
+        range_values("SELECT * FROM range(9223372036854775800, 9223372036854775807)").await;
+    assert_eq!(values.len(), 7);
+    assert_eq!(values[0], 9_223_372_036_854_775_800);
+    assert_eq!(values[6], 9_223_372_036_854_775_806);
+}
+
+#[tokio::test]
+async fn range_near_min_start_counts_every_row() {
+    let values =
+        range_values("SELECT * FROM range(-9223372036854775808, -9223372036854775801)").await;
+    assert_eq!(values.len(), 7);
+    assert_eq!(values[0], -9_223_372_036_854_775_808);
+    assert_eq!(values[6], -9_223_372_036_854_775_802);
+}
+
+#[tokio::test]
+async fn range_limit_caps_emitted_rows() {
+    assert_eq!(
+        range_values("SELECT * FROM range(10) LIMIT 3").await,
+        vec![0, 1, 2]
+    );
+}
+
+#[tokio::test]
+async fn range_projected_id_answers_values() {
+    assert_eq!(range_values("SELECT id FROM range(3)").await, vec![0, 1, 2]);
+}
+
+#[tokio::test]
+async fn range_zero_partitions_refuses_on_non_empty_range() {
+    assert!(
+        range_error("SELECT * FROM range(0, 3, 1, 0)")
+            .await
+            .contains("Positive number of partitions required")
+    );
+}
+
+#[tokio::test]
+async fn range_negative_partitions_refuses_on_non_empty_range() {
+    assert!(
+        range_error("SELECT * FROM range(0, 3, 1, -1)")
+            .await
+            .contains("Positive number of partitions required")
+    );
+}
+
+#[tokio::test]
+async fn range_zero_partitions_answers_empty_on_empty_range() {
+    assert!(
+        range_values("SELECT * FROM range(0, 0, 1, 0)")
+            .await
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+async fn range_malformed_partitions_refuses_cast_invalid_input() {
+    assert!(
+        range_error("SELECT * FROM range(0, 3, 1, 'bogus')")
+            .await
+            .contains("CAST_INVALID_INPUT")
+    );
+}
+
+#[tokio::test]
+async fn range_null_partitions_refuses_unexpected_input_type() {
+    assert!(
+        range_error("SELECT * FROM range(0, 3, 1, null)")
+            .await
+            .contains("UNEXPECTED_INPUT_TYPE")
+    );
+}
+
+#[tokio::test]
+async fn range_volatile_partitions_refuses_non_literal() {
+    assert!(
+        range_error("SELECT * FROM range(0, 3, 1, rand())")
+            .await
+            .contains("Arguments must be literals")
+    );
 }
 
 #[tokio::test]

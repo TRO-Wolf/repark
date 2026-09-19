@@ -56,7 +56,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cases answer Spark 4.1.2 on the facade door and the native door — NULL
   bounds refuse with `AnalysisException` carrying `UNEXPECTED_INPUT_TYPE`,
   every Spark-accepted width (narrow ints, decimal, float, strings, folded
-  expressions) answers Spark's rows, malformed strings refuse with RePark's
+  expressions) answers Spark's rows (the `Y`/`S`/`D` suffix literals parse on
+  the facade door only; the native door takes the same widths via `CAST`),
+  malformed strings refuse with RePark's
   `CAST_INVALID_INPUT` surfacing, overflow bounds emit exactly Spark's single
   row under a LIMIT bound, the near-max `count(*)` answers 7 under the
   systemic `count(*)` display name, and `numPartitions` refuses

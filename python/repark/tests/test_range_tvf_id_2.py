@@ -35,6 +35,7 @@ _SQL_ANSWER_CELLS = [
 ]
 _OVERFLOW_CELLS = {"range_overflow_up", "range_overflow_down"}
 _OVERFLOW_BOUND = 8
+_SUFFIX_LITERAL_CELLS = {"range_tinyint", "range_smallint", "range_double"}
 _REFUSAL_CONTRACT: dict[str, tuple[str, Any, str]] = {
     "range_null": ("AnalysisException", AnalysisException, "UNEXPECTED_INPUT_TYPE"),
     "range_null_end": ("AnalysisException", AnalysisException, "UNEXPECTED_INPUT_TYPE"),
@@ -89,12 +90,23 @@ def bounded_query(cell_id: str, query: str) -> str:
     return query
 
 
-@pytest.mark.parametrize("cell_id", _SQL_ANSWER_CELLS)
-@pytest.mark.parametrize("door", _DOORS)
+def doors_for_cell(cell_id: str) -> list[str]:
+    """Both doors run every cell except Spark-suffix literals, which parse facade-only."""
+    if cell_id in _SUFFIX_LITERAL_CELLS:
+        return ["facade"]
+    return _DOORS
+
+
+_ANSWER_CASES = [
+    (cell_id, door) for cell_id in _SQL_ANSWER_CELLS for door in doors_for_cell(cell_id)
+]
+
+
+@pytest.mark.parametrize(("cell_id", "door"), _ANSWER_CASES)
 def test_sql_range_id2_answer_cell_matches_recorded_schema_and_rows(
     spark: ReparkSession, cell_id: str, door: str
 ) -> None:
-    """One recorded edge-case cell answers Spark's schema and rows on both doors."""
+    """One recorded edge-case cell answers Spark's schema and rows."""
     expected = _CELLS[cell_id]
     assert "rows" in expected
     table = run_on_door(spark, door, bounded_query(cell_id, expected["sql"]))
