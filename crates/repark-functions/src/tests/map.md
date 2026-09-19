@@ -18,6 +18,8 @@ Only tests; `mod.rs` is the module manifest.
 - `spark_string_timestamp_sql.rs` — the same kernel through the analyzer: literal and column
   `CAST`, ANSI on and off, `TRY_CAST`, one-argument `to_timestamp` and `try_to_timestamp`, each
   as `Timestamp(µs, "UTC")`. pins: cast-ts-string-1/C-004, C-005, C-006
+  A dictionary-encoded string column runs the kernel on every door, and the kernel battery
+  pins the doubled-blank refusal (verification critic). pins: cast-ts-string-1/C-013
 
 ## Pointers
 

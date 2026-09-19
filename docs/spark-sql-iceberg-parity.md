@@ -2039,7 +2039,9 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   and time travel (which evaluates `CAST`) all run it. ANSI on raises `[CAST_INVALID_INPUT]`
   with Spark's message and `'…'` quoting. All 604 recorded cells answer on every leg.
   Residues (open, not parity): `to_timestamp_ntz` keeps DataFusion's parse (`'2020'`
-  refuses; Spark answers). A string leaf inside `CAST(… AS MAP<…, TIMESTAMP>)` keeps Arrow's
+  refuses; Spark answers). The date and time extractors (`year('2020')`, `hour(<string>)`, …)
+  still Arrow-cast a string argument, so a Spark-legal short string refuses there (loud;
+  verification critic 2026-09-19, P2). A string leaf inside `CAST(… AS MAP<…, TIMESTAMP>)` keeps Arrow's
   parse. Rendering an LTZ instant after 2099 in a DST region zone uses standard time:
   `CAST(CAST('2999-07-01 12:00:00' AS TIMESTAMP) AS STRING)` in New York answers
   `2999-07-01 11:00:00`, and Java's final rule gives `12:00:00` (inferred from the recorded
@@ -2058,6 +2060,11 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `…::test_reader_tt2_timestamp_as_of_nosec`).
 - **Rationale** — FIXED 2026-09-19 (owner direction 2026-09-18: 1:1 parity with Spark). A
   silent wrong result in a core scalar cast. pins: cast-ts-string-1/C-011
+  **Verification critic (2026-09-19):** a DICTIONARY-encoded string column bypassed the kernel
+  and took Arrow's parse (wrong instant and type, silently); every string predicate now
+  unwraps one dictionary layer, pinned on `CAST`, `TRY_CAST` and `try_to_timestamp`, and a
+  doubled blank between date and time is pinned as Spark's refusal in the kernel.
+  pins: cast-ts-string-1/C-013
 
 ## 5. Facade drop-in semantics (DECLARED)
 

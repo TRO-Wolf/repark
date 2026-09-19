@@ -378,3 +378,15 @@ fn the_raise_failure_mode_names_the_first_bad_value_in_spark_quoting() {
          input and return NULL instead. SQLSTATE: 22018"
     );
 }
+
+#[test]
+fn a_doubled_blank_between_date_and_time_refuses() {
+    for text in [
+        "2020-06-01  10:00",
+        "2020-06-01  10:00:00",
+        "2020-06-01T 10:00:00",
+    ] {
+        assert_eq!(parse_timestamp_string(text), None, "{text}");
+        assert_eq!(micros_in(text, "UTC"), None, "{text}");
+    }
+}

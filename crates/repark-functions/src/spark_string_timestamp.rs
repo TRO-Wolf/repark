@@ -52,10 +52,14 @@ pub(crate) fn cast_invalid_input_timestamp(text: &str) -> DataFusionError {
 
 #[must_use]
 pub(crate) fn is_string_type(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
-    )
+    match data_type {
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => true,
+        DataType::Dictionary(_, value) => matches!(
+            value.as_ref(),
+            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+        ),
+        _ => false,
+    }
 }
 
 #[allow(clippy::missing_errors_doc)]

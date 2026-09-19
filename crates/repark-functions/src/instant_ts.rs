@@ -646,15 +646,11 @@ fn peel_naive_cast_of_ltz_producer(expr: Expr, schema: &DFSchema) -> Transformed
 }
 
 fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Utf8
-            | DataType::LargeUtf8
-            | DataType::Utf8View
-            | DataType::Date32
-            | DataType::Date64
-            | DataType::Timestamp(TimeUnit::Microsecond, None)
-    )
+    is_string_type(data_type)
+        || matches!(
+            data_type,
+            DataType::Date32 | DataType::Date64 | DataType::Timestamp(TimeUnit::Microsecond, None)
+        )
 }
 
 fn is_ltz_timestamp(data_type: &DataType) -> bool {

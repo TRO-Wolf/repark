@@ -875,6 +875,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   string `CAST` literal fold `spark_string_literal`, and `rewrite_string_try_cast` (a string
   `TRY_CAST(… AS TIMESTAMP)` → folded literal or `try_to_timestamp`). The rule lives in
   [`spark_string_timestamp/`](spark_string_timestamp/map.md). pins: cast-ts-string-1/C-001
+  `is_string_type` also accepts a dictionary of strings; `instant_ts.rs`'s cast-source check and
+  `timestamp_ltz_ntz.rs`'s `try_to_timestamp` use it. pins: cast-ts-string-1/C-013
 - `tests/` — crate-root unit battery ([tests/map.md](tests/map.md)).
 - `instant_ts.rs` — overwrite `now` / `current_timestamp` / `to_timestamp` with Arrow
   `Timestamp(µs, UTC)`. Zoneless LTZ inputs (`TIMESTAMP '…'`,

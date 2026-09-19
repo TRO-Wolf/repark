@@ -137,3 +137,49 @@ async fn one_argument_to_timestamp_and_try_to_timestamp_follow_the_cast() {
     assert_eq!(ltz_micros(&tolerant)[3], None);
     assert_eq!(ltz_micros(&tolerant)[0], Some(1_577_836_800_000_000));
 }
+
+#[tokio::test]
+async fn dictionary_encoded_string_columns_run_the_kernel() {
+    use arrow::array::DictionaryArray;
+    use arrow::datatypes::{Field, Int32Type, Schema};
+    use datafusion::datasource::MemTable;
+
+    let values: DictionaryArray<Int32Type> = vec![
+        Some("2020"),
+        Some("2020-06-01 10:00:00"),
+        Some("2999-01-01"),
+        Some("garbage"),
+        None,
+    ]
+    .into_iter()
+    .collect();
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "s",
+        DataType::Dictionary(Box::new(DataType::Int32), Box::new(DataType::Utf8)),
+        true,
+    )]));
+    let batch = RecordBatch::try_new(Arc::clone(&schema), vec![Arc::new(values)]).expect("batch");
+    let expected = vec![
+        Some(1_577_854_800_000_000),
+        Some(1_591_020_000_000_000),
+        Some(32_472_162_000_000_000),
+        None,
+        None,
+    ];
+    for statement in [
+        "SELECT CAST(s AS TIMESTAMP) FROM d",
+        "SELECT TRY_CAST(s AS TIMESTAMP) FROM d",
+        "SELECT try_to_timestamp(s) FROM d",
+    ] {
+        let ctx = context("America/New_York", false);
+        ctx.register_table(
+            "d",
+            Arc::new(
+                MemTable::try_new(Arc::clone(&schema), vec![vec![batch.clone()]]).expect("mem"),
+            ),
+        )
+        .expect("register");
+        let answer = run(&ctx, statement).await.expect(statement);
+        assert_eq!(ltz_micros(&answer), expected, "{statement}");
+    }
+}

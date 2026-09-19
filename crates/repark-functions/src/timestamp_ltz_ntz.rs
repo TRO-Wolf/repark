@@ -192,7 +192,7 @@ impl ScalarUDFImpl for SparkTryToTimestamp {
         }
         let zone = session_zone(args.config_options.as_ref())?;
         if let [value] = args.args.as_slice()
-            && is_utf8_type(&value.data_type())
+            && crate::spark_string_timestamp::is_string_type(&value.data_type())
         {
             return cast_columnar_strings_to_ltz(value, zone, StringCastFailure::Null);
         }
