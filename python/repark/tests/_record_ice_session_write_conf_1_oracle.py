@@ -9,11 +9,14 @@ Usage (PySpark 4.1.2 interpreter, e.g. ``/tmp/sparkenv/bin/python``)::
 ``record`` prints the fixture JSON to stdout; ``check`` re-derives every cell
 and exits non-zero naming the first mismatch against the committed
 ``ice_session_write_conf_1_spark_oracle.json``. Error cells compare by status
-plus a stable message needle (Spark stage and task ids vary per run). The
+plus a stable message needle (Spark stage and task ids vary per run); the
+``QR-*`` collision cells compare by their whole first message line. The QS / QZ
+/ QR path cells are derived by
+:mod:`_record_ice_session_write_conf_1_paths`. The
 Iceberg runtime GAV comes from :mod:`_oracle_pins` (CP-8: never restate a
 version literal).
 
-pins: ice-session-write-conf-1/C-001, C-002
+pins: ice-session-write-conf-1/C-001, C-002, C-036, C-037
 """
 
 from __future__ import annotations
@@ -32,6 +35,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+from _record_ice_session_write_conf_1_paths import derive_path_cells
 
 FIXTURE = Path(__file__).with_name("ice_session_write_conf_1_spark_oracle.json")
 ICEBERG_SPARK_EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
@@ -410,6 +414,7 @@ def _derive(spark: Any) -> list[dict[str, Any]]:
             _body_cz_rdf,
         ),
     ]
+    cells.extend(derive_path_cells(spark))
     return cells
 
 
@@ -420,6 +425,13 @@ def _sorted_data(obs: dict[str, Any]) -> dict[str, Any]:
     return {**obs, "data": sorted(obs["data"], key=repr)}
 
 
+def _needle(cell_id: str, cell: dict[str, Any]) -> str:
+    """The stable message needle one error cell is compared by."""
+    if cell_id.startswith("QR-"):
+        return cell["error"]["msg"].split("\n")[0]
+    return BOGUS_CODEC_NEEDLE if cell_id == "CZ-CONF-BOGUS" else SET_SYNTAX_NEEDLE
+
+
 def _checked(records: list[dict[str, Any]], fixture: dict[str, Any]) -> None:
     """Compare re-derived cells against the committed fixture."""
     expected = fixture["cells"]
@@ -428,7 +440,7 @@ def _checked(records: list[dict[str, Any]], fixture: dict[str, Any]) -> None:
         cell = expected[record["id"]]
         assert record["status"] == cell["status"], record["id"]
         if record["status"] == "error":
-            needle = BOGUS_CODEC_NEEDLE if record["id"] == "CZ-CONF-BOGUS" else SET_SYNTAX_NEEDLE
+            needle = _needle(record["id"], cell)
             assert needle in record["error"]["msg"], record["id"]
             assert needle in cell["error"]["msg"], record["id"]
         else:

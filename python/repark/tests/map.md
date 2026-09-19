@@ -764,6 +764,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-session-write-conf-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
   pins: ice-session-write-conf-1/C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026
   pins: ice-session-write-conf-1/C-027, C-028, C-029, C-030, C-031, C-032
+- [_record_ice_session_write_conf_1_paths.py](_record_ice_session_write_conf_1_paths.py) +
+  [test_ice_session_write_conf_1_paths.py](test_ice_session_write_conf_1_paths.py) —
+  **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c):** the 38 path cells added to the
+  unit fixture from the orchestrator recording `spark-qc1.json` (source SHA-256
+  `f854793685590d4d2210c4bf0409150061d4a520eef529f576ab29b7490b0034`, fixture SHA-256
+  `a78b6afe8ec591ce4d8158de0b870cc0fe2c8be7cdedccd735e393aa9c7951f8`): `QS-*` branch writes
+  (SQL INSERT, DataFrame append, DELETE / UPDATE / MERGE in CoW and MoR), TRUNCATE and the
+  metadata-only DELETE Spark does NOT stamp, MoR UPDATE / MERGE and the v3 twin; `QZ-*` the
+  position-delete codec (session conf over `write.delete.parquet.compression-codec` over
+  `write.parquet.compression-codec`, v3 DVs puffin) and the branch codec; `QR-*` the summary-key
+  family — an ACTUAL collision refuses with Spark's `Multiple entries with same key` text, a free
+  key stamps and feeds the totals. The recorder module holds the statement tuples the pins drive,
+  so the pin and the live re-recording cannot drift; the pins run the reserved family on BOTH SQL
+  doors. `QS-DELETE-PART-META` is a dated xfail under IPI-08 (RePark's whole-partition DELETE
+  rewrites where Spark commits metadata-only).
+  pins: ice-session-write-conf-1/C-036, C-037, C-038, C-039, C-040, C-041, C-042
 - [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
   UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
   `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).

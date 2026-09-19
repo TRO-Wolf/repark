@@ -5,7 +5,11 @@
   "source_sha256": "f1e732caf0f71ec61b5cd3d38f8a1c5bfe7f559a54db449f8a1c5bfe7f559a54db449f8b5d792f8a613112",
   "cells": "SP-* snapshot-property and CZ-* compression-codec cells",
   "recorded": "2026-09-19",
-  "v3_note": "format-version 3 twins of the INSERT, DataFrame and DELETE cells carry v3 expectations equal to the v2 Spark answers in this fixture"
+  "v3_note": "format-version 3 twins of the INSERT, DataFrame and DELETE cells carry v3 expectations equal to the v2 Spark answers in this fixture",
+  "qc1_source": "orchestrator recording spark-qc1.json",
+  "qc1_source_sha256": "f854793685590d4d2210c4bf0409150061d4a520eef529f576ab29b7490b0034",
+  "qc1_recorded": "2026-09-19 (run 25c)",
+  "qc1_cells": "QS-* branch / metadata-delete / MoR snapshot-property cells, QZ-* position-delete and branch codec cells, QR-* summary-key collision cells"
  },
  "cells": {
   "SP-INSERT": {
@@ -618,6 +622,1751 @@
      ],
      [
       "GZIP"
+     ]
+    ]
+   }
+  },
+  "QS-TRUNCATE": {
+   "id": "QS-TRUNCATE",
+   "group": "PROPS",
+   "title": "session snapshot-property TRUNCATE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      "3",
+      null,
+      null,
+      "0"
+     ]
+    ],
+    "refs": [
+     [
+      "main",
+      1
+     ]
+    ],
+    "data": []
+   }
+  },
+  "QS-TRUNCATE-V3": {
+   "id": "QS-TRUNCATE-V3",
+   "group": "PROPS",
+   "title": "session snapshot-property TRUNCATE-V3",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      "3",
+      null,
+      null,
+      "0"
+     ]
+    ],
+    "refs": [
+     [
+      "main",
+      1
+     ]
+    ],
+    "data": []
+   }
+  },
+  "QS-DELETE-ALL-META": {
+   "id": "QS-DELETE-ALL-META",
+   "group": "PROPS",
+   "title": "session snapshot-property DELETE-ALL-META",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      "3",
+      null,
+      null,
+      "0"
+     ]
+    ],
+    "refs": [
+     [
+      "main",
+      1
+     ]
+    ],
+    "data": []
+   }
+  },
+  "QS-DELETE-PART-META": {
+   "id": "QS-DELETE-PART-META",
+   "group": "PROPS",
+   "title": "session snapshot-property DELETE-PART-META",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      "1",
+      null,
+      null,
+      "2"
+     ]
+    ],
+    "refs": [
+     [
+      "main",
+      1
+     ]
+    ],
+    "data": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QS-BRANCH-INSERT": {
+   "id": "QS-BRANCH-INSERT",
+   "group": "PROPS",
+   "title": "session snapshot-property BRANCH-INSERT",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "append",
+      "a",
+      "1",
+      null,
+      null,
+      null,
+      "4"
+     ]
+    ],
+    "refs": [
+     [
+      "b",
+      1
+     ],
+     [
+      "main",
+      0
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ],
+    "branch-data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ],
+     [
+      4,
+      "d",
+      "x"
+     ]
+    ]
+   }
+  },
+  "QS-BRANCH-DELETE-COW": {
+   "id": "QS-BRANCH-DELETE-COW",
+   "group": "PROPS",
+   "title": "session snapshot-property BRANCH-DELETE-COW",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "overwrite",
+      "a",
+      "2",
+      "3",
+      null,
+      null,
+      "2"
+     ]
+    ],
+    "refs": [
+     [
+      "b",
+      1
+     ],
+     [
+      "main",
+      0
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ],
+    "branch-data": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QS-BRANCH-DELETE-MOR": {
+   "id": "QS-BRANCH-DELETE-MOR",
+   "group": "PROPS",
+   "title": "session snapshot-property BRANCH-DELETE-MOR",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      "a",
+      null,
+      null,
+      "1",
+      "1",
+      "3"
+     ]
+    ],
+    "refs": [
+     [
+      "b",
+      1
+     ],
+     [
+      "main",
+      0
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ],
+    "branch-data": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QS-BRANCH-UPDATE-COW": {
+   "id": "QS-BRANCH-UPDATE-COW",
+   "group": "PROPS",
+   "title": "session snapshot-property BRANCH-UPDATE-COW",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "overwrite",
+      "a",
+      "3",
+      "3",
+      null,
+      null,
+      "3"
+     ]
+    ],
+    "refs": [
+     [
+      "b",
+      1
+     ],
+     [
+      "main",
+      0
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ],
+    "branch-data": [
+     [
+      1,
+      "z",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QS-BRANCH-UPDATE-MOR": {
+   "id": "QS-BRANCH-UPDATE-MOR",
+   "group": "PROPS",
+   "title": "session snapshot-property BRANCH-UPDATE-MOR",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "overwrite",
+      "a",
+      "1",
+      null,
+      "1",
+      "1",
+      "4"
+     ]
+    ],
+    "refs": [
+     [
+      "b",
+      1
+     ],
+     [
+      "main",
+      0
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ],
+    "branch-data": [
+     [
+      1,
+      "z",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QS-BRANCH-MERGE": {
+   "id": "QS-BRANCH-MERGE",
+   "group": "PROPS",
+   "title": "session snapshot-property BRANCH-MERGE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "overwrite",
+      "a",
+      "3",
+      "3",
+      null,
+      null,
+      "3"
+     ]
+    ],
+    "refs": [
+     [
+      "b",
+      1
+     ],
+     [
+      "main",
+      0
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ],
+    "branch-data": [
+     [
+      1,
+      "m",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QS-BRANCH-DF-APPEND": {
+   "id": "QS-BRANCH-DF-APPEND",
+   "group": "PROPS",
+   "title": "session snapshot-property BRANCH-DF-APPEND",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "append",
+      "a",
+      "1",
+      null,
+      null,
+      null,
+      "4"
+     ]
+    ],
+    "refs": [
+     [
+      "b",
+      1
+     ],
+     [
+      "main",
+      0
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ],
+    "branch-data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ],
+     [
+      4,
+      "d",
+      "x"
+     ]
+    ]
+   }
+  },
+  "QS-UPDATE-MOR": {
+   "id": "QS-UPDATE-MOR",
+   "group": "PROPS",
+   "title": "session snapshot-property UPDATE-MOR",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "overwrite",
+      "a",
+      "1",
+      null,
+      "1",
+      "1",
+      "4"
+     ]
+    ],
+    "refs": [
+     [
+      "main",
+      1
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "z",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QS-MERGE-MOR": {
+   "id": "QS-MERGE-MOR",
+   "group": "PROPS",
+   "title": "session snapshot-property MERGE-MOR",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "overwrite",
+      "a",
+      "1",
+      null,
+      "1",
+      "1",
+      "4"
+     ]
+    ],
+    "refs": [
+     [
+      "main",
+      1
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "m",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QS-UPDATE-MOR-V3": {
+   "id": "QS-UPDATE-MOR-V3",
+   "group": "PROPS",
+   "title": "session snapshot-property UPDATE-MOR-V3",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "overwrite",
+      "a",
+      "1",
+      null,
+      "1",
+      "1",
+      "4"
+     ]
+    ],
+    "refs": [
+     [
+      "main",
+      1
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "z",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QZ-POSDEL-DELETE": {
+   "id": "QZ-POSDEL-DELETE",
+   "group": "PROPS",
+   "title": "session codec POSDEL-DELETE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "GZIP"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "GZIP"
+     ],
+     [
+      "ZSTD"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      null,
+      "1",
+      "5",
+      "50"
+     ]
+    ]
+   }
+  },
+  "QZ-POSDEL-UPDATE": {
+   "id": "QZ-POSDEL-UPDATE",
+   "group": "PROPS",
+   "title": "session codec POSDEL-UPDATE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "GZIP"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "GZIP"
+     ],
+     [
+      "GZIP"
+     ],
+     [
+      "ZSTD"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "overwrite",
+      null,
+      "5",
+      null,
+      "1",
+      "5",
+      "55"
+     ]
+    ]
+   }
+  },
+  "QZ-POSDEL-MERGE": {
+   "id": "QZ-POSDEL-MERGE",
+   "group": "PROPS",
+   "title": "session codec POSDEL-MERGE",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "GZIP"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "GZIP"
+     ],
+     [
+      "GZIP"
+     ],
+     [
+      "ZSTD"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "overwrite",
+      null,
+      "1",
+      null,
+      "1",
+      "1",
+      "51"
+     ]
+    ]
+   }
+  },
+  "QZ-POSDEL-PROP-DELETE-CODEC": {
+   "id": "QZ-POSDEL-PROP-DELETE-CODEC",
+   "group": "PROPS",
+   "title": "session codec POSDEL-PROP-DELETE-CODEC",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "GZIP"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "GZIP"
+     ],
+     [
+      "ZSTD"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      null,
+      "1",
+      "5",
+      "50"
+     ]
+    ]
+   }
+  },
+  "QZ-POSDEL-PROP-DATA-CODEC": {
+   "id": "QZ-POSDEL-PROP-DATA-CODEC",
+   "group": "PROPS",
+   "title": "session codec POSDEL-PROP-DATA-CODEC",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "GZIP"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "GZIP"
+     ],
+     [
+      "SNAPPY"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      null,
+      "1",
+      "5",
+      "50"
+     ]
+    ]
+   }
+  },
+  "QZ-POSDEL-V3-DV": {
+   "id": "QZ-POSDEL-V3-DV",
+   "group": "PROPS",
+   "title": "session codec POSDEL-V3-DV",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "non-parquet"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "ZSTD"
+     ],
+     [
+      "non-parquet"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      null,
+      "1",
+      "5",
+      "50"
+     ]
+    ]
+   }
+  },
+  "QZ-BRANCH-INSERT": {
+   "id": "QZ-BRANCH-INSERT",
+   "group": "PROPS",
+   "title": "session codec BRANCH-INSERT",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "GZIP"
+     ],
+     [
+      "ZSTD"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "GZIP"
+     ],
+     [
+      "ZSTD"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "append",
+      null,
+      "5",
+      null,
+      null,
+      null,
+      "55"
+     ]
+    ]
+   }
+  },
+  "QZ-BRANCH-DELETE-MOR": {
+   "id": "QZ-BRANCH-DELETE-MOR",
+   "group": "PROPS",
+   "title": "session codec BRANCH-DELETE-MOR",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "GZIP"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "GZIP"
+     ],
+     [
+      "ZSTD"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      null,
+      "1",
+      "5",
+      "50"
+     ]
+    ]
+   }
+  },
+  "QZ-TRUNCATE-NOFILES": {
+   "id": "QZ-TRUNCATE-NOFILES",
+   "group": "PROPS",
+   "title": "session codec TRUNCATE-NOFILES",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.compression-codec": "gzip"
+   },
+   "obs": {
+    "delete-codecs": [
+     [
+      "ZSTD"
+     ]
+    ],
+    "all-codecs": [
+     [
+      "ZSTD"
+     ]
+    ],
+    "summaries": [
+     [
+      "append",
+      null,
+      "50",
+      null,
+      null,
+      null,
+      "50"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      "50",
+      null,
+      null,
+      "0"
+     ]
+    ]
+   }
+  },
+  "QR-INSERT-DELETED-RECORDS": {
+   "id": "QR-INSERT-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key deleted-records INSERT-DELETED-RECORDS",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "append",
+      "a",
+      "3",
+      "5",
+      null,
+      null,
+      "1"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QR-INSERT-ADDED-DELETE-FILES": {
+   "id": "QR-INSERT-ADDED-DELETE-FILES",
+   "group": "PROPS",
+   "title": "reserved key added-delete-files INSERT-ADDED-DELETE-FILES",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.added-delete-files": "7",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "append",
+      "a",
+      "3",
+      null,
+      "7",
+      null,
+      "6"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QR-DELETE-COW-DELETED-RECORDS": {
+   "id": "QR-DELETE-COW-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key deleted-records DELETE-COW-DELETED-RECORDS",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: deleted-records=3 and deleted-records=5"
+   }
+  },
+  "QR-DELETE-COW-ADDED-RECORDS": {
+   "id": "QR-DELETE-COW-ADDED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key added-records DELETE-COW-ADDED-RECORDS",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.added-records": "999",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: added-records=2 and added-records=999"
+   }
+  },
+  "QR-DELETE-MOR-ADDED-RECORDS": {
+   "id": "QR-DELETE-MOR-ADDED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key added-records DELETE-MOR-ADDED-RECORDS",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.added-records": "999",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      "a",
+      "999",
+      null,
+      "1",
+      "1",
+      "1002"
+     ]
+    ],
+    "data": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ]
+    ]
+   }
+  },
+  "QR-DELETE-MOR-ADDED-DELETE-FILES": {
+   "id": "QR-DELETE-MOR-ADDED-DELETE-FILES",
+   "group": "PROPS",
+   "title": "reserved key added-delete-files DELETE-MOR-ADDED-DELETE-FILES",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.added-delete-files": "7",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: added-delete-files=1 and added-delete-files=7"
+   }
+  },
+  "QR-DELETE-META-DELETED-RECORDS": {
+   "id": "QR-DELETE-META-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key deleted-records DELETE-META-DELETED-RECORDS",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      "3",
+      null,
+      null,
+      "0"
+     ]
+    ],
+    "data": []
+   }
+  },
+  "QR-DELETE-META-ADDED-RECORDS": {
+   "id": "QR-DELETE-META-ADDED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key added-records DELETE-META-ADDED-RECORDS",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.added-records": "999",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      "3",
+      null,
+      null,
+      "0"
+     ]
+    ],
+    "data": []
+   }
+  },
+  "QR-MERGE-ADDED-RECORDS": {
+   "id": "QR-MERGE-ADDED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key added-records MERGE-ADDED-RECORDS",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.added-records": "999",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: added-records=3 and added-records=999"
+   }
+  },
+  "QR-MERGE-MOR-ADDED-DELETE-FILES": {
+   "id": "QR-MERGE-MOR-ADDED-DELETE-FILES",
+   "group": "PROPS",
+   "title": "reserved key added-delete-files MERGE-MOR-ADDED-DELETE-FILES",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.added-delete-files": "7",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: added-delete-files=1 and added-delete-files=7"
+   }
+  },
+  "QR-UPDATE-COW-CHANGED-PARTITION": {
+   "id": "QR-UPDATE-COW-CHANGED-PARTITION",
+   "group": "PROPS",
+   "title": "reserved key changed-partition-count UPDATE-COW-CHANGED-PARTITION",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.changed-partition-count": "9",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: changed-partition-count=1 and changed-partition-count=9"
+   }
+  },
+  "QR-OVERWRITE-DELETED-RECORDS": {
+   "id": "QR-OVERWRITE-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key deleted-records OVERWRITE-DELETED-RECORDS",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: deleted-records=3 and deleted-records=5"
+   }
+  },
+  "QR-TRUNCATE-DELETED-RECORDS": {
+   "id": "QR-TRUNCATE-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "reserved key deleted-records TRUNCATE-DELETED-RECORDS",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      "3",
+      null,
+      null,
+      "0"
+     ]
+    ],
+    "data": []
+   }
+  },
+  "QR-ENGINE-NAME": {
+   "id": "QR-ENGINE-NAME",
+   "group": "PROPS",
+   "title": "reserved key engine-name ENGINE-NAME",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.engine-name": "fake",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: engine-name=spark and engine-name=fake"
+   }
+  },
+  "QR-SPARK-APP-ID": {
+   "id": "QR-SPARK-APP-ID",
+   "group": "PROPS",
+   "title": "reserved key spark.app.id SPARK-APP-ID",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.spark.app.id": "fake",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      null,
+      null,
+      "3"
+     ],
+     [
+      "append",
+      "a",
+      "3",
+      null,
+      null,
+      null,
+      "6"
+     ]
+    ],
+    "data": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "z"
+     ],
+     [
+      3,
+      "c",
+      "z"
      ]
     ]
    }
