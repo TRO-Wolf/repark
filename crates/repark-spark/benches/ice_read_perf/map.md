@@ -105,8 +105,8 @@ spelling that reaches the scan today. Probed on 2026-09-19 and all left at `pred
 (id < b)]`. Every run records each query's scan predicate in the JSON
 (`iceberg_scan_predicate`, from the physical plan on the gate session after the R-3 check, `""`
 = a scan with no predicate, `null` = no `IcebergTableScan` in the plan: the query was answered
-from statistics, as `count(*)` is once ICE-COUNT-FOLD-1 lands). The pin holds Q3 at `""` and Q7 at the `id` range with the same row set. It is a
-sentinel: the unit that fixes the timestamp conversion flips the Q3 half.
+from statistics, as `count(*)` is once ICE-COUNT-FOLD-1 lands). The pin held Q3 at `""` as a sentinel until RP-36 (fork #312) made the timezone-bearing
+literal reach the scan; it now holds Q3 at the `ts` window and Q7 at the `id` range, same rows.
 
 The concurrent modes issue Q2, Q3, Q5 and Q6 at once. Q7 is **not** in that set: a fifth query
 would change what "four at once" measures for the other four (their timings and the group I/O).
@@ -259,8 +259,9 @@ would change what "four at once" measures for the other four (their timings and 
   source-binding pin holds `register_remote_catalog` to `register_late_configured_catalogs` and
   keeps the bare-handle builders out of `remote.rs` (Grok verification, PR #724).
   pins: ice-read-perf-0/C-006
-- Q3's scan predicate is `""` today and Q7's is `(id >= 540) AND (id < 552)` on the three-file
-  bed, with the same twelve ids; the plan-line parser. pins: ice-read-perf-0/C-013
+- Q3's scan predicate is the `ts` window since RP-36 (fork #312 F-TS-PUSHDOWN-1; it was `""`
+  before) and Q7's is `(id >= 540) AND (id < 552)` on the three-file bed, with the same twelve
+  ids; the plan-line parser. pins: ice-read-perf-0/C-013
 - Q1 reads only footers (3 footer reads, 0 page reads) and Q2 reads 3 footers plus pages, in
   cold and warm. pins: ice-read-perf-0/C-014
 - Every mode (four) with `--repeat 2`: two samples per query, medians, identical I/O across

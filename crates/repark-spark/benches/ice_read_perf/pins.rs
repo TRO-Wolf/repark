@@ -385,7 +385,7 @@ fn setup_writes_exactly_n_files_and_every_mode_runs_on_them() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn q3_never_reaches_the_scan_today_and_q7_does_with_the_same_rows() {
+async fn q3_and_q7_reach_the_scan_with_the_same_rows() {
     let dir = TempDir::new().unwrap();
     let options = SetupOptions {
         warehouse: dir.path().join("wh"),
@@ -411,7 +411,7 @@ async fn q3_never_reaches_the_scan_today_and_q7_does_with_the_same_rows() {
             .await
             .unwrap()
             .as_deref(),
-        Some("")
+        Some("(ts >= 2023-11-14 23:16:20 UTC) AND (ts < 2023-11-14 23:17:44 UTC)")
     );
     assert_eq!(
         run::scan_predicate(&session, spec("Q7"))
