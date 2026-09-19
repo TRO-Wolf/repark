@@ -40,6 +40,16 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_avro_name_1.py](test_ice_avro_name_1.py) +
+  [ice_avro_name_1_spark_oracle.json](ice_avro_name_1_spark_oracle.json) +
+  [_record_ice_avro_name_1_oracle.py](_record_ice_avro_name_1_oracle.py) —
+  **ICE-AVRO-NAME-1 / RP-35 (2026-09-19, fork #308, IPI-52):** 20 recorded Spark 4.1.2 +
+  Iceberg 1.11.0 cells (10 partition-column names — space, leading digit, dash, dot,
+  non-ASCII, CJK, emoji, `bucket` and `truncate` over them, a valid control — on format
+  versions 2 and 3, Hadoop catalog). Each pins the rows read back through a filter on the
+  partition column, the `partitions` metadata table and the data manifest's Avro partition
+  record (`my_x20col`, `iceberg-field-name`, field id). The recorder re-derives the fixture
+  in the live tier. pins: rp-35-fork-pin/C-001
 - [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) +
   [ice_tt_resolve_1_spark_oracle.json](ice_tt_resolve_1_spark_oracle.json) +
   [_record_ice_tt_resolve_1_oracle.py](_record_ice_tt_resolve_1_oracle.py) —
