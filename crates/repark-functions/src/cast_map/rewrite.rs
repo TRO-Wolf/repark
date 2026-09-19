@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType as ArrowDataType, Field, Fields, TimeUnit};
 use datafusion::sql::sqlparser::ast::{ArrayElemTypeDef, DataType as SqlDataType};
-use datafusion::sql::sqlparser::dialect::{GenericDialect, SparkSqlDialect};
+use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, Tokenizer};
@@ -141,7 +141,7 @@ fn byte_offset(line_starts: &[usize], char_bytes: &[usize], at: Location) -> Opt
 
 impl<'a> Lexed<'a> {
     fn new(sql: &'a str) -> Option<Self> {
-        let spanned = Tokenizer::new(&GenericDialect {}, sql)
+        let spanned = Tokenizer::new(&SparkSqlDialect {}, sql)
             .with_unescape(false)
             .tokenize_with_location()
             .ok()?;

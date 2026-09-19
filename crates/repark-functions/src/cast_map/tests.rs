@@ -200,3 +200,90 @@ async fn unaliased_cast_keeps_the_spark_projection_name() {
         "CAST(NULL AS MAP<STRING, INT>)"
     );
 }
+
+#[test]
+fn comment_hint_is_an_ordinary_comment() {
+    for sql in [
+        "SELECT 1 /*! CAST(x AS MAP<STRING,INT>) */, 2",
+        "SELECT 1 /* CAST(x AS MAP<STRING,INT>) */, 2",
+    ] {
+        assert_eq!(rewrite_map_casts(sql), None, "{sql}");
+    }
+}
+
+#[tokio::test]
+async fn colliding_keys_after_the_key_cast_stay_as_spark_stores_them() {
+    let batches = run(
+        &context(true),
+        "SELECT CAST(map('2', 'a', '1', 'b', '02', 'c') AS MAP<INT, STRING>) AS m",
+    )
+    .await
+    .unwrap();
+    assert_eq!(first_cell(&batches), "{2: a, 1: b, 2: c}");
+}
+
+#[tokio::test]
+async fn key_legality_follows_the_session_mode_and_try_cast() {
+    let refusal = "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]";
+    let legacy = run(
+        &context(false),
+        "SELECT CAST(map('1', 'a') AS MAP<INT, STRING>) AS m",
+    )
+    .await
+    .unwrap_err()
+    .to_string();
+    assert!(legacy.contains(refusal), "{legacy}");
+    for ansi in [true, false] {
+        let tried = run(
+            &context(ansi),
+            "SELECT try_cast(map('x', 1) AS MAP<INT, INT>) AS m",
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(tried.contains(refusal), "{tried}");
+        let widened = run(
+            &context(ansi),
+            "SELECT try_cast(map(1, 'a') AS MAP<BIGINT, STRING>) AS m",
+        )
+        .await
+        .unwrap();
+        assert_eq!(first_cell(&widened), "{1: a}");
+    }
+}
+
+#[tokio::test]
+async fn leaf_casts_follow_spark_overflow_and_trimming() {
+    let overflow = "SELECT CAST(map('a', 128) AS MAP<STRING, TINYINT>) AS m";
+    let error = run(&context(true), overflow).await.unwrap_err().to_string();
+    assert!(
+        error.contains("[CAST_OVERFLOW] The value 128")
+            && error.contains("cannot be cast to \"TINYINT\" due to an overflow"),
+        "{error}"
+    );
+    let wrapped = run(&context(false), overflow).await.unwrap();
+    assert_eq!(first_cell(&wrapped), "{a: -128}");
+    for ansi in [true, false] {
+        let trimmed = run(
+            &context(ansi),
+            "SELECT CAST(map('a', ' 1') AS MAP<STRING, INT>) AS m",
+        )
+        .await
+        .unwrap();
+        assert_eq!(first_cell(&trimmed), "{a: 1}");
+    }
+    let legacy_fraction = run(
+        &context(false),
+        "SELECT CAST(map('a', '1.5') AS MAP<STRING, INT>) AS m",
+    )
+    .await
+    .unwrap();
+    assert_eq!(first_cell(&legacy_fraction), "{a: 1}");
+    let boolean = run(
+        &context(true),
+        "SELECT CAST(map('a', ' true ') AS MAP<STRING, BOOLEAN>) AS m",
+    )
+    .await
+    .unwrap();
+    assert_eq!(first_cell(&boolean), "{a: true}");
+}

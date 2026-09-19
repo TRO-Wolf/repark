@@ -62,6 +62,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   whitespace and fractional text, and a `/*! … */` comment hint. Maps compare through a
   `str(key)` dict, as the recorder's `collect()` plus `json` does.
   pins: cast-map-spell-1/C-011, C-012, C-013, C-014
+  Green on the round-3 kernel except `native_door[comment_hint_ansi]`, a dated strict
+  xfail: the native door's stock Generic parser expands `/*! */` hints for every
+  statement, maps or not.
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —

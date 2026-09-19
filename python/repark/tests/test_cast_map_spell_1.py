@@ -396,7 +396,22 @@ _ROUND3: dict[str, dict[str, Any]] = json.loads(
         encoding="utf-8"
     )
 )["cells"]
-_ROUND3_NATIVE_KEYS: tuple[str, ...] = tuple(key for key, cell in _ROUND3.items() if cell["ansi"])
+_NATIVE_COMMENT_HINT_REASON = (
+    "2026-09-19: the native door parses with stock DataFusion's Generic dialect, which "
+    "expands MySQL /*! */ hints in every statement (SELECT 1 /*! 3 */, 2 refuses there with "
+    "no map in sight); the map-cast rewrite itself leaves the hint alone"
+)
+_ROUND3_NATIVE_KEYS: tuple[Any, ...] = tuple(
+    pytest.param(
+        key,
+        id=key,
+        marks=pytest.mark.xfail(strict=True, reason=_NATIVE_COMMENT_HINT_REASON),
+    )
+    if key.startswith("comment_hint")
+    else pytest.param(key, id=key)
+    for key, cell in _ROUND3.items()
+    if cell["ansi"]
+)
 
 
 def _round3_value(value: Any) -> Any:

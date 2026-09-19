@@ -456,6 +456,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `contains_map` / `spark_sql_name` serve the DataFrame door's token and display.
   Registered by `register_all` (Spark door) and by the ANSI door's `on_session_built`.
   pins: cast-map-spell-1/C-005, C-006, C-007
+  **Round 3 (2026-09-19):** the cast is a recursive `spark_cast` over map / list / struct
+  that hands leaves to `cast_map/leaf.rs` under a `Mode` (ANSI, legacy, `try_cast`) read from
+  the live session config at invoke. Key legality is checked twice: planning refuses a pair
+  illegal in every mode the flag allows (`try_cast` is known then), and invoke refuses the
+  legacy-only pairs under the live mode. A runtime `spark.sql.ansi.enabled` change never
+  reaches a registered UDF, so the mode cannot be fixed at registration. Colliding keys
+  after a key cast are kept, as Spark stores them.
+  pins: cast-map-spell-1/C-011, C-012, C-013
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty

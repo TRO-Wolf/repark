@@ -2,12 +2,11 @@ use std::str::FromStr;
 use std::sync::{Arc, LazyLock};
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, MapArray, StructArray, new_empty_array, new_null_array,
+    Array, ArrayRef, AsArray, ListArray, MapArray, StructArray, new_empty_array, new_null_array,
 };
 use datafusion::arrow::buffer::OffsetBuffer;
-use datafusion::arrow::compute::{CastOptions, can_cast_types, cast_with_options};
+use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
-use datafusion::arrow::util::display::array_value_to_string;
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
@@ -17,7 +16,9 @@ use datafusion::logical_expr::{
 use datafusion::prelude::SessionContext;
 
 use crate::ansi::spark_ansi_enabled_from_options;
+use leaf::{Mode, atomic_castable, key_castable, leaf_cast};
 
+mod leaf;
 mod rewrite;
 
 pub use rewrite::{map_cast_target, map_cast_token, rewrite_map_casts};
@@ -125,7 +126,7 @@ fn is_complex(data_type: &DataType) -> bool {
     )
 }
 
-fn spark_can_cast(source: &DataType, target: &DataType) -> bool {
+fn spark_can_cast(source: &DataType, target: &DataType, mode: Mode) -> bool {
     match (source, target) {
         (DataType::Null, _) => true,
         (DataType::Map(source_entries, _), DataType::Map(target_entries, _)) => {
@@ -134,8 +135,11 @@ fn spark_can_cast(source: &DataType, target: &DataType) -> bool {
                 map_entry_types(target_entries),
             ) {
                 (Some((source_key, source_value)), Some((target_key, target_value))) => {
-                    spark_can_cast(source_key, target_key)
-                        && spark_can_cast(source_value, target_value)
+                    (if is_complex(source_key) || is_complex(target_key) {
+                        spark_can_cast(source_key, target_key, mode)
+                    } else {
+                        key_castable(source_key, target_key, mode)
+                    }) && spark_can_cast(source_value, target_value, mode)
                 }
                 _ => false,
             }
@@ -145,16 +149,24 @@ fn spark_can_cast(source: &DataType, target: &DataType) -> bool {
             | DataType::LargeList(source_field)
             | DataType::FixedSizeList(source_field, _),
             DataType::List(target_field) | DataType::LargeList(target_field),
-        ) => spark_can_cast(source_field.data_type(), target_field.data_type()),
+        ) => spark_can_cast(source_field.data_type(), target_field.data_type(), mode),
         (DataType::Struct(source_fields), DataType::Struct(target_fields)) => {
             source_fields.len() == target_fields.len()
                 && source_fields
                     .iter()
                     .zip(target_fields.iter())
-                    .all(|(from, to)| spark_can_cast(from.data_type(), to.data_type()))
+                    .all(|(from, to)| spark_can_cast(from.data_type(), to.data_type(), mode))
         }
         _ if is_complex(source) || is_complex(target) => false,
-        _ => can_cast_types(source, target),
+        _ => atomic_castable(source, target, mode == Mode::Ansi),
+    }
+}
+
+fn session_mode(try_cast: bool, ansi: bool) -> Mode {
+    match (try_cast, ansi) {
+        (true, _) => Mode::Try,
+        (false, true) => Mode::Ansi,
+        (false, false) => Mode::Legacy,
     }
 }
 
@@ -162,17 +174,6 @@ fn cast_mismatch(operand: &str, source: &DataType, target: &DataType) -> DataFus
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"{operand}\" due to data \
          type mismatch: cannot cast \"{}\" to \"{}\". SQLSTATE: 42K09",
-        spark_sql_name(source),
-        spark_sql_name(target)
-    ))
-}
-
-fn cast_invalid_input(value: &str, source: &DataType, target: &DataType) -> DataFusionError {
-    DataFusionError::Execution(format!(
-        "[CAST_INVALID_INPUT] The value '{value}' of the type \"{}\" cannot be cast to \"{}\" \
-         because it is malformed. Correct the value as per the syntax, or change its target \
-         type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: \
-         22018",
         spark_sql_name(source),
         spark_sql_name(target)
     ))
@@ -224,68 +225,87 @@ fn empty_map(target: &DataType, rows: usize) -> Result<ArrayRef> {
     )?))
 }
 
-fn first_malformed(
-    source: &ArrayRef,
-    target: &DataType,
-) -> Result<Option<(String, DataType, DataType)>> {
-    match (source.data_type(), target) {
-        (DataType::Map(_, _), DataType::Map(target_entries, _)) => {
-            let Some((key, value)) = map_entry_types(target_entries) else {
-                return Ok(None);
-            };
-            let map = source.as_map();
-            if let Some(found) = first_malformed(map.keys(), key)? {
-                return Ok(Some(found));
-            }
-            first_malformed(map.values(), value)
-        }
-        (DataType::List(_), DataType::List(field) | DataType::LargeList(field)) => {
-            first_malformed(source.as_list::<i32>().values(), field.data_type())
-        }
-        (DataType::LargeList(_), DataType::List(field) | DataType::LargeList(field)) => {
-            first_malformed(source.as_list::<i64>().values(), field.data_type())
-        }
-        (DataType::Struct(_), DataType::Struct(fields)) => {
-            for (column, field) in source.as_struct().columns().iter().zip(fields.iter()) {
-                if let Some(found) = first_malformed(column, field.data_type())? {
-                    return Ok(Some(found));
-                }
-            }
-            Ok(None)
-        }
-        (DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View, _) => {
-            let options = CastOptions {
-                safe: true,
-                ..CastOptions::default()
-            };
-            let lenient = cast_with_options(source.as_ref(), target, &options)?;
-            let Some(index) =
-                (0..source.len()).find(|&row| source.is_valid(row) && lenient.is_null(row))
-            else {
-                return Ok(None);
-            };
-            let value = array_value_to_string(source.as_ref(), index)?;
-            Ok(Some((value, source.data_type().clone(), target.clone())))
-        }
-        _ => Ok(None),
+fn map_entries_field(target: &FieldRef, key: &ArrayRef, value: &ArrayRef) -> FieldRef {
+    match target.data_type() {
+        DataType::Struct(fields) if fields.len() == 2 => Arc::clone(target),
+        _ => Arc::new(Field::new(
+            target.name(),
+            DataType::Struct(
+                vec![
+                    Field::new("key", key.data_type().clone(), false),
+                    Field::new("value", value.data_type().clone(), true),
+                ]
+                .into(),
+            ),
+            false,
+        )),
     }
 }
 
-fn cast_values(source: &ArrayRef, target: &DataType, safe: bool) -> Result<ArrayRef> {
-    if source.data_type() == &DataType::Null {
-        return Ok(new_null_array(target, source.len()));
-    }
-    let options = CastOptions {
-        safe,
-        ..CastOptions::default()
+fn cast_map_array(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+    let DataType::Map(target_entries, sorted) = target else {
+        return exec_err!("expected a map target, got {target}");
     };
-    match cast_with_options(source.as_ref(), target, &options) {
-        Ok(cast) => Ok(cast),
-        Err(error) if !safe => match first_malformed(source, target)? {
-            Some((value, from, to)) => Err(cast_invalid_input(&value, &from, &to)),
-            None => Err(error.into()),
-        },
-        Err(error) => Err(error.into()),
+    let Some((key_type, value_type)) = map_entry_types(target_entries) else {
+        return exec_err!("malformed map target {target}");
+    };
+    let map = source.as_map();
+    let keys = spark_cast(map.keys(), key_type, mode)?;
+    let values = spark_cast(map.values(), value_type, mode)?;
+    if keys.null_count() > 0 {
+        return exec_err!("a map key cast produced NULL");
+    }
+    let offsets = map.offsets().clone();
+    let entries_field = map_entries_field(target_entries, &keys, &values);
+    let DataType::Struct(entry_fields) = entries_field.data_type() else {
+        return exec_err!("malformed map entries {target}");
+    };
+    let entries = StructArray::try_new(entry_fields.clone(), vec![keys, values], None)?;
+    Ok(Arc::new(MapArray::try_new(
+        entries_field,
+        offsets,
+        entries,
+        map.nulls().cloned(),
+        *sorted,
+    )?))
+}
+
+fn spark_cast(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+    match (source.data_type(), target) {
+        (DataType::Null, _) => Ok(new_null_array(target, source.len())),
+        (DataType::Map(_, _), DataType::Map(_, _)) => cast_map_array(source, target, mode),
+        (DataType::List(_), DataType::List(field)) => {
+            let list = source.as_list::<i32>();
+            let values = spark_cast(list.values(), field.data_type(), mode)?;
+            Ok(Arc::new(ListArray::try_new(
+                Arc::clone(field),
+                list.offsets().clone(),
+                values,
+                list.nulls().cloned(),
+            )?))
+        }
+        (DataType::Struct(_), DataType::Struct(fields)) => {
+            let structs = source.as_struct();
+            let columns = structs
+                .columns()
+                .iter()
+                .zip(fields.iter())
+                .map(|(column, field)| spark_cast(column, field.data_type(), mode))
+                .collect::<Result<Vec<_>>>()?;
+            Ok(Arc::new(StructArray::try_new(
+                fields.clone(),
+                columns,
+                structs.nulls().cloned(),
+            )?))
+        }
+        (from, to) if is_complex(from) || is_complex(to) => {
+            let options = CastOptions {
+                safe: mode.nulls_on_failure(),
+                ..CastOptions::default()
+            };
+            Ok(cast_with_options(source.as_ref(), target, &options)?)
+        }
+        _ => leaf_cast(source, target, mode),
     }
 }
 
@@ -376,7 +396,13 @@ impl ScalarUDFImpl for SparkCastMap {
             }
             return Ok(Arc::new(Field::new(self.name(), target, try_cast)));
         }
-        if !spark_can_cast(source.data_type(), &target) {
+        let legal = if try_cast {
+            spark_can_cast(source.data_type(), &target, Mode::Try)
+        } else {
+            spark_can_cast(source.data_type(), &target, Mode::Ansi)
+                || spark_can_cast(source.data_type(), &target, Mode::Legacy)
+        };
+        if !legal {
             return Err(cast_mismatch(source.name(), source.data_type(), &target));
         }
         let nullable = source.is_nullable() || try_cast;
@@ -395,14 +421,22 @@ impl ScalarUDFImpl for SparkCastMap {
             ColumnarValue::Scalar(flag) => literal_flag(Some(flag)).unwrap_or(false),
             ColumnarValue::Array(_) => false,
         };
-        let safe = try_cast || !spark_ansi_enabled_from_options(&args.config_options);
+        let mode = session_mode(
+            try_cast,
+            spark_ansi_enabled_from_options(&args.config_options),
+        );
+        if let Some(source) = args.arg_fields.first()
+            && !spark_can_cast(source.data_type(), &target, mode)
+        {
+            return Err(cast_mismatch(source.name(), source.data_type(), &target));
+        }
         match value {
             ColumnarValue::Array(source) => {
-                Ok(ColumnarValue::Array(cast_values(source, &target, safe)?))
+                Ok(ColumnarValue::Array(spark_cast(source, &target, mode)?))
             }
             ColumnarValue::Scalar(scalar) => {
                 let source = scalar.to_array_of_size(1)?;
-                let cast = cast_values(&source, &target, safe)?;
+                let cast = spark_cast(&source, &target, mode)?;
                 Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
                     &cast, 0,
                 )?))
