@@ -1,0 +1,1566 @@
+[
+ {
+  "id": "QP-ANC-DEFAULT",
+  "group": "QPROC",
+  "title": "ancestors_of(table)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S2",
+     true
+    ],
+    [
+     "S1",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 3.69
+ },
+ {
+  "id": "QP-ANC-ID",
+  "group": "QPROC",
+  "title": "ancestors_of(table, snapshot_id)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S1",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.92
+ },
+ {
+  "id": "QP-ANC-ROLLBACK",
+  "group": "QPROC",
+  "title": "ancestors_of after rollback + new commit",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S3",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 1.02
+ },
+ {
+  "id": "QP-ANC-BRANCH",
+  "group": "QPROC",
+  "title": "ancestors_of a branch head",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S3",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 1.12
+ },
+ {
+  "id": "QP-ANC-EMPTY",
+  "group": "QPROC",
+  "title": "ancestors_of a table with no snapshot",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Cannot find snapshot: -1"
+  },
+  "error_step": "CREATE TABLE sc.ns.t_qp_anc_empty (id BIGINT) USING iceberg",
+  "obs": {},
+  "notes": [],
+  "secs": 0.11
+ },
+ {
+  "id": "QP-ANC-MISSING-ID",
+  "group": "QPROC",
+  "title": "ancestors_of unknown snapshot id",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Cannot find snapshot: 12345"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.58
+ },
+ {
+  "id": "QP-ANC-POSITIONAL-ID",
+  "group": "QPROC",
+  "title": "ancestors_of positional snapshot id",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S2",
+     true
+    ],
+    [
+     "S1",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.6
+ },
+ {
+  "id": "QP-CTS-DEFAULT",
+  "group": "QPROC",
+  "title": "compute_table_stats (table)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur><uuid>9.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 1.22
+ },
+ {
+  "id": "QP-CTS-SNAPSHOT",
+  "group": "QPROC",
+  "title": "compute_table_stats snapshot_id",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<s0><uuid>d.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "3"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "3"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      0
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.64
+ },
+ {
+  "id": "QP-CTS-COLUMNS",
+  "group": "QPROC",
+  "title": "compute_table_stats columns => array('id')",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur><uuid>1.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.67
+ },
+ {
+  "id": "QP-CTS-COLUMNS-TWO",
+  "group": "QPROC",
+  "title": "compute_table_stats columns two, reversed",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur><uuid>c.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.71
+ },
+ {
+  "id": "QP-CTS-COLUMNS-UNKNOWN",
+  "group": "QPROC",
+  "title": "compute_table_stats unknown column raises",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Can't find column nope in table {\n  1: id: optional long\n  2: data: optional string\n  3: cat: optional string\n}"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.55
+ },
+ {
+  "id": "QP-CTS-TYPES",
+  "group": "QPROC",
+  "title": "compute_table_stats every primitive type",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<s0><uuid>a.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "3"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         4
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         5
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         6
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         7
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         8
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      0
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.46
+ },
+ {
+  "id": "QP-CTS-EMPTY",
+  "group": "QPROC",
+  "title": "compute_table_stats table with no snapshot",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [],
+   "statistics": []
+  },
+  "notes": [],
+  "secs": 0.04
+ },
+ {
+  "id": "QP-CTS-NESTED",
+  "group": "QPROC",
+  "title": "compute_table_stats struct column",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<s0><uuid>c.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      0
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.33
+ },
+ {
+  "id": "QP-CTS-TWICE",
+  "group": "QPROC",
+  "title": "compute_table_stats second run on same snapshot",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur><uuid>5.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.69
+ },
+ {
+  "id": "QP-CPS-DEFAULT",
+  "group": "QPROC",
+  "title": "compute_partition_stats (table)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "partition_statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/partition-stats<uuid>a2-a3ec-f681d98152a9.parquet"
+   ],
+   "partition-statistics": [
+    [
+     2,
+     true
+    ]
+   ],
+   "contents": [
+    [
+     [
+      "partition",
+      "spec_id",
+      "data_record_count",
+      "data_file_count",
+      "total_data_file_size_in_bytes",
+      "position_delete_record_count",
+      "position_delete_file_count",
+      "equality_delete_record_count",
+      "equality_delete_file_count",
+      "total_record_count",
+      "last_updated_at",
+      "last_updated_snapshot_id"
+     ],
+     [
+      [
+       [
+        "data_file_count",
+        3
+       ],
+       [
+        "data_record_count",
+        6
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "x"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ],
+      [
+       [
+        "data_file_count",
+        2
+       ],
+       [
+        "data_record_count",
+        2
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "y"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.83
+ },
+ {
+  "id": "QP-CPS-SNAPSHOT",
+  "group": "QPROC",
+  "title": "compute_partition_stats snapshot_id",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "partition_statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/partition-stats<uuid>de4-a5f8-a5ed75deeac7.parquet"
+   ],
+   "partition-statistics": [
+    [
+     0,
+     true
+    ]
+   ],
+   "contents": [
+    [
+     [
+      "partition",
+      "spec_id",
+      "data_record_count",
+      "data_file_count",
+      "total_data_file_size_in_bytes",
+      "position_delete_record_count",
+      "position_delete_file_count",
+      "equality_delete_record_count",
+      "equality_delete_file_count",
+      "total_record_count",
+      "last_updated_at",
+      "last_updated_snapshot_id"
+     ],
+     [
+      [
+       [
+        "data_file_count",
+        1
+       ],
+       [
+        "data_record_count",
+        2
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "x"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ],
+      [
+       [
+        "data_file_count",
+        1
+       ],
+       [
+        "data_record_count",
+        1
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "y"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.64
+ },
+ {
+  "id": "QP-CPS-UNPARTITIONED",
+  "group": "QPROC",
+  "title": "compute_partition_stats unpartitioned table",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Table must be partitioned"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.52
+ },
+ {
+  "id": "QP-CPS-V3",
+  "group": "QPROC",
+  "title": "compute_partition_stats format v3",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "partition_statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/partition-stats<uuid>14-ba1b-272bc8b39ef4.parquet"
+   ],
+   "partition-statistics": [
+    [
+     2,
+     true
+    ]
+   ],
+   "contents": [
+    [
+     [
+      "partition",
+      "spec_id",
+      "data_record_count",
+      "data_file_count",
+      "total_data_file_size_in_bytes",
+      "position_delete_record_count",
+      "position_delete_file_count",
+      "equality_delete_record_count",
+      "equality_delete_file_count",
+      "total_record_count",
+      "last_updated_at",
+      "last_updated_snapshot_id",
+      "dv_count"
+     ],
+     [
+      [
+       [
+        "data_file_count",
+        3
+       ],
+       [
+        "data_record_count",
+        6
+       ],
+       [
+        "dv_count",
+        0
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "x"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ],
+      [
+       [
+        "data_file_count",
+        2
+       ],
+       [
+        "data_record_count",
+        2
+       ],
+       [
+        "dv_count",
+        0
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "y"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.66
+ },
+ {
+  "id": "QP-RTP-DEFAULT",
+  "group": "QPROC",
+  "title": "rewrite_table_path (source_prefix, target_prefix)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v4.metadata.json",
+     "<src>/metadata/copy-table-staging-f2bf7f47-916b-414b-b875-111947efda20/file-list",
+     3,
+     0
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<id>7b0088eaba-0-00001.parquet,<dst>/data/cat=x/<id>7b0088eaba-0-00001.parquet",
+    "<src>/data/cat=x/<id>7d074809ef-0-00001.parquet,<dst>/data/cat=x/<id>7d074809ef-0-00001.parquet",
+    "<src>/data/cat=x/<id>b51c61661c-0-00001.parquet,<dst>/data/cat=x/<id>b51c61661c-0-00001.parquet",
+    "<src>/data/cat=y/<id>7b0088eaba-0-00002.parquet,<dst>/data/cat=y/<id>7b0088eaba-0-00002.parquet",
+    "<src>/data/cat=y/<id>b51c61661c-0-00002.parquet,<dst>/data/cat=y/<id>b51c61661c-0-00002.parquet",
+    "<src>/metadata/copy-table-staging<id>0/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>0/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>0/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>0/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
+    "<src>/metadata/copy-table-staging<id>0/metadata/<id>c67a527-c8d4-4c10-a7ec-1e90bb57cb1a.avro,<dst>/metadata/<id>c67a527-c8d4-4c10-a7ec-1e90bb57cb1a.avro",
+    "<src>/metadata/copy-table-staging<id>0/metadata/<id>f9752-1214-4da6-8073-25ff27da6944.avro,<dst>/metadata/<id>f9752-1214-4da6-8073-25ff27da6944.avro",
+    "<src>/metadata/copy-table-staging<id>0/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging<id>0/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging<id>0/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging<id>0/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 1.12
+ },
+ {
+  "id": "QP-RTP-STAGING",
+  "group": "QPROC",
+  "title": "rewrite_table_path staging_location",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v4.metadata.json",
+     "<stg>/file-list",
+     3,
+     0
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<id>789ddf53c8-0-00001.parquet,<dst>/data/cat=x/<id>789ddf53c8-0-00001.parquet",
+    "<src>/data/cat=x/<id>830119c83b-0-00001.parquet,<dst>/data/cat=x/<id>830119c83b-0-00001.parquet",
+    "<src>/data/cat=x/<id>b0a86<id>00001.parquet,<dst>/data/cat=x/<id>b0a86<id>00001.parquet",
+    "<src>/data/cat=y/<id>830119c83b-0-00002.parquet,<dst>/data/cat=y/<id>830119c83b-0-00002.parquet",
+    "<src>/data/cat=y/<id>b0a86<id>00002.parquet,<dst>/data/cat=y/<id>b0a86<id>00002.parquet",
+    "<stg>/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<stg>/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<stg>/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<stg>/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
+    "<stg>/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
+    "<stg>/metadata/<id>f7e8b2-61ae-4dc7-8777-0de184d955d1.avro,<dst>/metadata/<id>f7e8b2-61ae-4dc7-8777-0de184d955d1.avro",
+    "<stg>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<stg>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<stg>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<stg>/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 0.81
+ },
+ {
+  "id": "QP-RTP-NO-FILE-LIST",
+  "group": "QPROC",
+  "title": "rewrite_table_path create_file_list false",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v4.metadata.json",
+     "N/A",
+     3,
+     0
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.8
+ },
+ {
+  "id": "QP-RTP-MISSING-PREFIX-ERR",
+  "group": "QPROC",
+  "title": "rewrite_table_path wrong source_prefix raises",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Path /tmp/oc-worker/nc-inventory/wh/spark-spark-qc3/hc/ns/t_qp_rtp_missing_prefix_err/metadata/v4.metadata.json/ does not start with /nope/"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.62
+ },
+ {
+  "id": "QP-RTP-END-VERSION",
+  "group": "QPROC",
+  "title": "rewrite_table_path end_version",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v3.metadata.json",
+     "<src>/metadata/copy-table-staging-2e380ac3-1f3b-4cb1-862d-be6155ccd8cb/file-list",
+     2,
+     0
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<id>d29f68790b-0-00001.parquet,<dst>/data/cat=x/<id>d29f68790b-0-00001.parquet",
+    "<src>/data/cat=x/<id>ff09794fb9-0-00001.parquet,<dst>/data/cat=x/<id>ff09794fb9-0-00001.parquet",
+    "<src>/data/cat=y/<id>ff09794fb9-0-00002.parquet,<dst>/data/cat=y/<id>ff09794fb9-0-00002.parquet",
+    "<src>/metadata/copy-table-staging<id>b/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>b/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>b/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
+    "<src>/metadata/copy-table-staging<id>b/metadata/<id>e09c5f-790a-422e-aaf4-fed67a0076fe.avro,<dst>/metadata/<id>e09c5f-790a-422e-aaf4-fed67a0076fe.avro",
+    "<src>/metadata/copy-table-staging<id>b/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging<id>b/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging<id>b/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 0.79
+ },
+ {
+  "id": "QP-RTP-START-VERSION",
+  "group": "QPROC",
+  "title": "rewrite_table_path start_version incremental",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v4.metadata.json",
+     "<src>/metadata/copy-table-staging-bd7b3441-faff-4eee-aa6d-887fc3e22c64/file-list",
+     2,
+     0
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<id>12ca158d66-0-00001.parquet,<dst>/data/cat=x/<id>12ca158d66-0-00001.parquet",
+    "<src>/data/cat=x/<id>daf8b6c3d6-0-00001.parquet,<dst>/data/cat=x/<id>daf8b6c3d6-0-00001.parquet",
+    "<src>/data/cat=y/<id>daf8b6c3d6-0-00002.parquet,<dst>/data/cat=y/<id>daf8b6c3d6-0-00002.parquet",
+    "<src>/metadata/copy-table-staging<id>4/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>4/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>4/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
+    "<src>/metadata/copy-table-staging<id>4/metadata/<id>cefb706-cc88-41c4-be30-5c33c1e39fe3.avro,<dst>/metadata/<id>cefb706-cc88-41c4-be30-5c33c1e39fe3.avro",
+    "<src>/metadata/copy-table-staging<id>4/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging<id>4/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 0.94
+ },
+ {
+  "id": "QP-RTP-MOR-DELETES",
+  "group": "QPROC",
+  "title": "rewrite_table_path with position deletes",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v6.metadata.json",
+     "<src>/metadata/copy-table-staging-e0f871e1-e0ac-44b3-b303-ff876b6716cf/file-list",
+     4,
+     1
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<id>341b7b6838-0-00001.parquet,<dst>/data/cat=x/<id>341b7b6838-0-00001.parquet",
+    "<src>/data/cat=x/<id>75289642d7-0-00001.parquet,<dst>/data/cat=x/<id>75289642d7-0-00001.parquet",
+    "<src>/data/cat=x/<id>bbbbe3009d-0-00001.parquet,<dst>/data/cat=x/<id>bbbbe3009d-0-00001.parquet",
+    "<src>/data/cat=y/<id>341b7b6838-0-00002.parquet,<dst>/data/cat=y/<id>341b7b6838-0-00002.parquet",
+    "<src>/data/cat=y/<id>75289642d7-0-00002.parquet,<dst>/data/cat=y/<id>75289642d7-0-00002.parquet",
+    "<src>/metadata/copy-table-staging<id>f/data/cat=x/<id>039cad6969-00001-deletes.parquet,<dst>/data/cat=x/<id>039cad6969-00001-deletes.parquet",
+    "<src>/metadata/copy-table-staging<id>f/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>f/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>f/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>f/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
+    "<src>/metadata/copy-table-staging<id>f/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
+    "<src>/metadata/copy-table-staging<id>f/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
+    "<src>/metadata/copy-table-staging<id>f/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
+    "<src>/metadata/copy-table-staging<id>f/metadata/<id>be4fff4-7fe2-42ad-a7fa-d2d74cf86716.avro,<dst>/metadata/<id>be4fff4-7fe2-42ad-a7fa-d2d74cf86716.avro",
+    "<src>/metadata/copy-table-staging<id>f/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging<id>f/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging<id>f/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging<id>f/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json",
+    "<src>/metadata/copy-table-staging<id>f/metadata/v5.metadata.json,<dst>/metadata/v5.metadata.json",
+    "<src>/metadata/copy-table-staging<id>f/metadata/v6.metadata.json,<dst>/metadata/v6.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 1.46
+ }
+]

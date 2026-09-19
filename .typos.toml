@@ -53,6 +53,8 @@ adedd = "adedd"
 VAS = "VAS"
 IST = "IST"
 ECT = "ECT"
+ANC = "ANC"         # ICE-PROCS-ROUTE-1 QP-ANC-* oracle cell ids (ancestors_of)
+anc = "anc"         # ICE-PROCS-ROUTE-1 QP-ANC-* oracle cell ids (ancestors_of)
 
 [type.ledger]
 extend-glob = ["dfcore-4b-ledger.md", "*-dfcore-4b-ledger.md"]

@@ -3534,6 +3534,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
   UPDATE on an unpartitioned target; partial INSERT NULL-fills omitted nullable columns.
   Arrow path, value + type.
+- `test_ice_procs_route_1.py` + `ice_procs_route_1_spark_oracle.json` +
+  `_record_ice_procs_route_1_oracle.py` — **ICE-PROCS-ROUTE-1 (2026-09-19):**
+  `ancestors_of`, `compute_table_stats`, `compute_partition_stats`,
+  `rewrite_table_path` against the 27 measured PySpark-4.1.2 + Iceberg-1.11.0
+  cells (fixture SHA-256 `4baf8feef54cbdc373574de76843fbe3b7829573107fc0a8c45e33ecf65da2e4`,
+  provenance `spark-qc3.json` cells `cells_qc3.py`; the recorder re-derives
+  them and the live tier checks the fixture). Pins cover the ancestor chains
+  (default, id, rollback, branch, positional), the two not-found refusals, the
+  table-stats defaults/columns/types/nested/twice cells with exact ndv, the
+  empty-table zero rows, the partition-stats counts plus the unpartitioned
+  refusal and the v3 `dv_count`, and the rewrite-table-path staging/file-list
+  shapes plus the wrong-prefix refusal and the MoR delete count; the two
+  incremental version-range cells stay `xfail(strict)` (the owned fork's
+  `RewriteTablePath` has no version range). Every cell runs on the facade door
+  and pins the native-door CALL refusal.
+  pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells
