@@ -61,6 +61,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **FNP-8-REVIEW (2026-09-07):** the exists/forall three-valued pin gains the
   null-predicate legs (`exists`/`forall` over `make_array(1, NULL, 3)` answer NULL, F6).
   pins: fnp-8-review/C-006
+- `list_null_compound.rs` — **ICE-LIST-NULL-2 (2026-09-19):** copy-on-write DELETE with a
+  compound predicate over a nested column answers Spark through the Spark door — one pin per
+  nested kind (list, map, struct) per compound shape (`id > 1 AND xs IS NULL` keeps
+  `[1, 3, 4]`, `xs IS NULL OR id = 1` keeps `[3, 4]`, the fixture's surviving ids). Red
+  2026-09-19 on the loud `DataInvalid => Accessor for Field xs not found`; green once the
+  plain-identity claim declines non-primitive selections to the fork DELETE path.
+  pins: ice-list-null-2/C-002
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the DDL round-trips through
   `metadata.json` — each of the five forms plus the bare `DISTRIBUTED BY PARTITION ORDERED BY`
   spelling Spark also accepts, the `UNORDERED` reset, the bad-column refusal committing no new
