@@ -32,7 +32,7 @@ merge-on-read DELETE and an UPDATE: every selective predicate equals the
 unfiltered read filtered in Python on both doors, and on v3 every surviving
 row keeps its unfiltered ``_row_id`` and ``_last_updated_sequence_number``.
 
-pins: ice-page-prune-1/C-003, C-004, C-005, C-006, C-007
+pins: ice-page-prune-1/C-003, C-004, C-005, C-006, C-007, C-008
 """
 
 from __future__ import annotations

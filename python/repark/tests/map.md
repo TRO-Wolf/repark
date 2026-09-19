@@ -413,7 +413,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`REPARK_PARITY_LIVE=1`) rebuilds the five tables on live Spark 4.1.2 from
   the recorder seed path, asserts every answer still equals `truth.json`, and
   cross-reads the adopted live tables — the un-rewritten live `del_v2` reads
-  clean, isolating the fixture refusal to rewrite-stale manifest sizes.
+  clean, isolating the fixture refusal to rewrite-stale manifest sizes. The
+  live tables seed from the recorder's own seed functions, one code path.
   pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — **ICE-HADOOP-VN-1
   (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The

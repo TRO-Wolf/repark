@@ -136,6 +136,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   unchanged field ids, or a typed Spark-shaped refusal with a dated registry row.
   `risk_tier: standard`. Branch `fix/ice-column-reorder-1`.
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [ice-page-prune-1-ledger.md](ice-page-prune-1-ledger.md) —
+  **ICE-PAGE-PRUNE-1 (2026-09-19), in flight:** the RePark pins for page-level
+  row selection (slate unit 1, run 24a) — the Spark 4.1.2 recorder, the five
+  rewritten fixture warehouses plus compacted truth, both-door answer pins
+  with lineage, RePark-written self-consistency and page-index pins, and the
+  live re-derivation tier; the rewritten `del_v2` and the bare-decimal ranges
+  pin loud divergences. `risk_tier: standard`. Branch `perf/ice-page-prune-1`.
+  pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
   **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
   panicked during poll` versus the typed refusal — fixed at the root so the nested-loop
