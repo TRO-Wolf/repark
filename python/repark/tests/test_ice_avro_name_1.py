@@ -40,7 +40,11 @@ CELLS: dict[str, Any] = FIXTURE["cells"]
 @pytest.fixture
 def spark(tmp_path: Path) -> Any:
     _reset_active_session_for_tests()
-    session = ReparkSession.builder.appName("test-ice-avro-name-1").getOrCreate()
+    session = (
+        ReparkSession.builder.appName("test-ice-avro-name-1")
+        .config("repark.sql.allowCreateFormatVersion3", "true")
+        .getOrCreate()
+    )
     session.register_memory_catalog("sc", tmp_path / "wh")
     session.sql("CREATE NAMESPACE sc.ns")
     yield session
