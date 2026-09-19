@@ -20,6 +20,16 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
   plain-identity claim at all, a primitive-only compound and an unknown column stay off
   the fork, and a target-qualified nested column still needs it.
   pins: ice-list-null-2/C-001
+  **ICE-SESSION-WRITE-CONF-1 round 2 (2026-09-19):** the four-part row above is now the
+  opposite claim. Round 1's branch-write step made `split_branch_parts` peel a
+  `branch_<name>` selector, so `DELETE FROM ice.sales.t.branch_b WHERE id = 0` IS a plain
+  identity and carries `branch: Some("b")` — that is the whole point of the step, and the
+  owned route is the only one that can stamp the session conf on a branch head. The Spark
+  door still decides whether the ref-qualified name survives to get here
+  (`repark-spark` `write_to_branch.rs` keeps it only when the session write conf is set).
+  A `tag_<name>` selector and an empty `branch_` both stay four parts and decline, so a
+  tag is never written.
+  pins: ice-session-write-conf-1/C-043
 - `predicate_dml.rs` — DELETE: `IN` / `NOT IN (SELECT …)` including the NULL 3VL trap,
   `[NOT] EXISTS` with and without correlation, correlated `IN`, isolation-level pins
   (M19 / A10).
