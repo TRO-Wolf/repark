@@ -128,6 +128,7 @@ pub(crate) async fn commit_on_ref(
     .await
 }
 
+#[cfg(test)]
 pub(crate) async fn commit_overwrite(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -326,6 +327,7 @@ pub(crate) async fn commit_row_delta_kind(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg(test)]
 pub(crate) async fn commit_row_delta_kind_with_partitions(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
