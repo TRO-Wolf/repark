@@ -1,0 +1,3503 @@
+{
+ "provenance": {
+  "spark": "4.1.2",
+  "iceberg": "1.11.0",
+  "catalog": "InMemoryCatalog",
+  "recorded": "2026-09-19",
+  "cells": 96,
+  "shapes": "48 shapes x format v2 and v3",
+  "seed": "(1,a,x),(2,b,y),(3,c,x) PARTITIONED BY (cat); two-level tables add sub: (1,a,x,p),(2,b,y,p),(3,c,x,q),(4,d,y,q) PARTITIONED BY (cat, sub); a shape's own columns, seed and setup statements replace them",
+  "dataframe_source": "(7,g,x),(8,h,w) as id BIGINT, data STRING, cat STRING; the OW3 shapes write an empty frame of that schema",
+  "summary_keys": [
+   "added-records",
+   "deleted-records",
+   "total-records",
+   "changed-partition-count",
+   "added-data-files",
+   "deleted-data-files",
+   "total-data-files"
+  ],
+  "ow2_cells": "the 28 OW2 cells were measured 2026-09-19 by an independent harness recording on the same Spark and Iceberg pins, folded in with this recorder's cell shape, and are re-derived by its check mode",
+  "ow3_cells": "the 8 OW3 empty-frame cells were measured 2026-09-19 by the same independent harness on the same pins, folded in the same way, and are re-derived by its check mode"
+ },
+ "cells": {
+  "OW-SQL-PDYN-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-STATIC-EXPL-V2": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-STATIC-EXPL-V3": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-DYNMODE-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-DYNMODE-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PSTATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PSTATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PSTATIC-DYNMODE-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PSTATIC-DYNMODE-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PSTATIC-NEWPART-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     9,
+     "z",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "total-data-files": "3",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PSTATIC-NEWPART-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     9,
+     "z",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "total-data-files": "3",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-NOCLAUSE-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-NOCLAUSE-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-NOCLAUSE-DYNMODE-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-NOCLAUSE-DYNMODE-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-EMPTY-STATIC-V2": {
+   "status": "ok",
+   "data": [],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "0",
+      "total-records": "0"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-EMPTY-STATIC-V3": {
+   "status": "ok",
+   "data": [],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "0",
+      "total-records": "0"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-EMPTY-DYNMODE-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-EMPTY-DYNMODE-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-EMPTY-STATIC-V2": {
+   "status": "ok",
+   "data": [],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "0",
+      "total-records": "0"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-EMPTY-STATIC-V3": {
+   "status": "ok",
+   "data": [],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "0",
+      "total-records": "0"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PSTATIC-EMPTY-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PSTATIC-EMPTY-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-UNPART-PDYN-ERR-V2": {
+   "status": "error",
+   "error_class": "AnalysisException",
+   "condition": "NON_PARTITION_COLUMN",
+   "sql_state": "42000",
+   "message": "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: `cat`. SQLSTATE: 42000"
+  },
+  "OW-SQL-UNPART-PDYN-ERR-V3": {
+   "status": "error",
+   "error_class": "AnalysisException",
+   "condition": "NON_PARTITION_COLUMN",
+   "sql_state": "42000",
+   "message": "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: `cat`. SQLSTATE: 42000"
+  },
+  "OW-SQL-TWO-MIXED-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ],
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TWO-MIXED-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ],
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TWO-MIXED-DYNMODE-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     3,
+     "c",
+     "x",
+     "q"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ],
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TWO-MIXED-DYNMODE-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     3,
+     "c",
+     "x",
+     "q"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ],
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TWO-BOTH-DYN-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "4",
+      "deleted-data-files": "4",
+      "deleted-records": "4",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TWO-BOTH-DYN-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "4",
+      "deleted-data-files": "4",
+      "deleted-records": "4",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TRANSFORM-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TRANSFORM-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TRANSFORM-DYNMODE-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-TRANSFORM-DYNMODE-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-TABLE-KW-V2": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-SQL-PDYN-TABLE-KW-V3": {
+   "status": "ok",
+   "data": [
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "1",
+      "total-records": "1"
+     }
+    ]
+   ]
+  },
+  "OW-DF-INSERTINTO-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "3",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-INSERTINTO-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "3",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-INSERTINTO-DYNMODE-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-INSERTINTO-DYNMODE-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-OWMODE-DYN-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-OWMODE-DYN-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-OWMODE-STATIC-DYNSESSION-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-OWMODE-STATIC-DYNSESSION-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-PARTOWMODE-DYN-V2": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "3",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-PARTOWMODE-DYN-V3": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "3",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-OWMODE-DYN-MODE-OW-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-OWMODE-DYN-MODE-OW-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-OWMODE-BAD-V2": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "3",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-OPT-OWMODE-BAD-V3": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "3",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-WRITETO-OVERWRITEPARTS-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-WRITETO-OVERWRITEPARTS-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-WRITETO-OVERWRITEPARTS-OPT-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-WRITETO-OVERWRITEPARTS-OPT-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW-DF-SAVEASTABLE-OW-OPT-V2": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "2",
+      "changed-partition-count": "1",
+      "total-data-files": "1",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-SAVEASTABLE-OW-OPT-V3": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "2",
+      "changed-partition-count": "1",
+      "total-data-files": "1",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-SAVEASTABLE-OW-DYNSESSION-V2": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "2",
+      "changed-partition-count": "1",
+      "total-data-files": "1",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW-DF-SAVEASTABLE-OW-DYNSESSION-V3": {
+   "status": "ok",
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "2",
+      "changed-partition-count": "1",
+      "total-data-files": "1",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-R2-PDYN-EMPTY-DYN-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW2-R2-PDYN-EMPTY-DYN-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW2-R2-MIXED-EMPTY-DYN-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x",
+     "p"
+    ],
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     3,
+     "c",
+     "x",
+     "q"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW2-R2-MIXED-EMPTY-DYN-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x",
+     "p"
+    ],
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     3,
+     "c",
+     "x",
+     "q"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW2-R2-MIXED-EMPTY-STA-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-R2-MIXED-EMPTY-STA-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-R1-BUCKET-STATIC-V2": {
+   "status": "error",
+   "error_class": "AnalysisException",
+   "condition": "NON_PARTITION_COLUMN",
+   "sql_state": "42000",
+   "message": "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: `id`. SQLSTATE: 42000"
+  },
+  "OW2-R1-BUCKET-STATIC-V3": {
+   "status": "error",
+   "error_class": "AnalysisException",
+   "condition": "NON_PARTITION_COLUMN",
+   "sql_state": "42000",
+   "message": "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: `id`. SQLSTATE: 42000"
+  },
+  "OW2-R1-BUCKET-DYN-V2": {
+   "status": "error",
+   "error_class": "AnalysisException",
+   "condition": "NON_PARTITION_COLUMN",
+   "sql_state": "42000",
+   "message": "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: `id`. SQLSTATE: 42000"
+  },
+  "OW2-R1-BUCKET-DYN-V3": {
+   "status": "error",
+   "error_class": "AnalysisException",
+   "condition": "NON_PARTITION_COLUMN",
+   "sql_state": "42000",
+   "message": "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: `id`. SQLSTATE: 42000"
+  },
+  "OW2-R1-DAYS-STATIC-V2": {
+   "status": "error",
+   "error_class": "AnalysisException",
+   "condition": "NON_PARTITION_COLUMN",
+   "sql_state": "42000",
+   "message": "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: `ts`. SQLSTATE: 42000"
+  },
+  "OW2-R1-DAYS-STATIC-V3": {
+   "status": "error",
+   "error_class": "AnalysisException",
+   "condition": "NON_PARTITION_COLUMN",
+   "sql_state": "42000",
+   "message": "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: `ts`. SQLSTATE: 42000"
+  },
+  "OW2-R1-IDENT-AND-BUCKET-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "3",
+      "added-records": "3",
+      "changed-partition-count": "3",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-R1-IDENT-AND-BUCKET-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "3",
+      "added-records": "3",
+      "changed-partition-count": "3",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-R3-BYNAME-MIXED-STA-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ],
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW2-R3-BYNAME-MIXED-STA-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ],
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "2",
+      "total-data-files": "3",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW2-R3-BYNAME-MIXED-DYN-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     3,
+     "c",
+     "x",
+     "q"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ],
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW2-R3-BYNAME-MIXED-DYN-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y",
+     "p"
+    ],
+    [
+     3,
+     "c",
+     "x",
+     "q"
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "q"
+    ],
+    [
+     9,
+     "z",
+     "x",
+     "p"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "4",
+      "added-records": "4",
+      "changed-partition-count": "4",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "4",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW2-R3-BYNAME-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-R3-BYNAME-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-NULL-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     9,
+     "z",
+     null
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "append",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "total-data-files": "3",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "3",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW2-NULL-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     9,
+     "z",
+     null
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "append",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "total-data-files": "3",
+      "total-records": "4"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "3",
+      "total-records": "4"
+     }
+    ]
+   ]
+  },
+  "OW2-CAST-STATIC-DATE-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "2024-01-02"
+    ],
+    [
+     9,
+     "z",
+     "2024-01-01"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-CAST-STATIC-DATE-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "2024-01-02"
+    ],
+    [
+     9,
+     "z",
+     "2024-01-01"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "2",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-CASE-STATIC-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-CASE-STATIC-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-OPT-BOTH-SQL-V2": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW2-OPT-BOTH-SQL-V3": {
+   "status": "ok",
+   "data": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     9,
+     "z",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "overwrite",
+     {
+      "added-data-files": "1",
+      "added-records": "1",
+      "changed-partition-count": "1",
+      "deleted-data-files": "1",
+      "deleted-records": "2",
+      "total-data-files": "2",
+      "total-records": "2"
+     }
+    ]
+   ]
+  },
+  "OW3-WRITETO-OWP-EMPTY-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW3-WRITETO-OWP-EMPTY-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW3-WRITETO-OWP-EMPTY-DYN-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW3-WRITETO-OWP-EMPTY-DYN-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW3-INSERTINTO-OW-EMPTY-DYNOPT-V2": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW3-INSERTINTO-OW-EMPTY-DYNOPT-V3": {
+   "status": "ok",
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ]
+   ]
+  },
+  "OW3-INSERTINTO-OW-EMPTY-STATIC-V2": {
+   "status": "ok",
+   "data": [],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "0",
+      "total-records": "0"
+     }
+    ]
+   ]
+  },
+  "OW3-INSERTINTO-OW-EMPTY-STATIC-V3": {
+   "status": "ok",
+   "data": [],
+   "snapshots": [
+    [
+     "append",
+     {
+      "added-data-files": "2",
+      "added-records": "3",
+      "changed-partition-count": "2",
+      "total-data-files": "2",
+      "total-records": "3"
+     }
+    ],
+    [
+     "delete",
+     {
+      "changed-partition-count": "2",
+      "deleted-data-files": "2",
+      "deleted-records": "3",
+      "total-data-files": "0",
+      "total-records": "0"
+     }
+    ]
+   ]
+  }
+ }
+}

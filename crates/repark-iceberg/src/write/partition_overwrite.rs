@@ -21,11 +21,9 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use crate::write::commit_error::{commit_result, operation_id_and_summary};
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
+use crate::write::overwrite_scope::replace_partitions_is_noop;
+use crate::write::static_value::{cast_constant_array, cast_datum};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
-
-/// Needle for the empty-input dynamic overwrite refusal.
-pub const EMPTY_DYNAMIC_OVERWRITE_NEEDLE: &str =
-    "Cannot dynamically overwrite partitions with no data";
 
 /// A static equality (`k = v`) or a null (`k IS NULL` / `k = NULL`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,13 +47,12 @@ pub enum PartitionLiteral {
     String(String),
 }
 
-/// Static assignments versus dynamic names.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PartitionOverwriteRequest {
-    /// `PARTITION (k=v, …)` — `OverwriteFiles` by row filter.
-    Static(Vec<PartitionEquality>),
-    /// `PARTITION (k, …)` or empty `PARTITION ()` — `ReplacePartitions`.
-    Dynamic(Vec<String>),
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct PartitionOverwriteRequest {
+    pub equalities: Vec<PartitionEquality>,
+    pub dynamic_names: Vec<String>,
+    pub names: Vec<String>,
+    pub refused_values: Vec<String>,
 }
 
 /// Static overwrite: row filter plus the equalities to inject into the source.
@@ -67,126 +64,28 @@ pub struct StaticPartitionOverwrite {
     pub equalities: Vec<PartitionEquality>,
 }
 
-/// Resolved commit path after validating the request against the table spec.
-#[derive(Debug, Clone)]
-pub enum PartitionOverwritePlan {
-    /// Identity-field row filter for `overwrite_by_row_filter`.
-    Static(StaticPartitionOverwrite),
-    /// Dynamic replace of partitions present in the added files.
-    Dynamic,
-}
-
-/// Parse Hive `PARTITION (…)` expressions into a static or dynamic request.
-/// # Errors
-/// Mixed static/dynamic items, empty static list after filtering, or unsupported expression shapes.
+#[allow(clippy::missing_errors_doc)]
 pub fn partition_overwrite_request_from_exprs(
     expressions: &[Expr],
 ) -> Result<PartitionOverwriteRequest> {
-    if expressions.is_empty() {
-        return Ok(PartitionOverwriteRequest::Dynamic(Vec::new()));
-    }
-    let mut static_items: Vec<PartitionEquality> = Vec::new();
-    let mut dynamic_names: Vec<String> = Vec::new();
+    let mut request = PartitionOverwriteRequest::default();
     for expression in expressions {
         match partition_clause_item(expression)? {
-            PartitionClauseItem::Dynamic(name) => dynamic_names.push(name),
-            PartitionClauseItem::Static(item) => static_items.push(item),
-        }
-    }
-    match (!static_items.is_empty(), !dynamic_names.is_empty()) {
-        (true, true) => Err(DataFusionError::Plan(
-            "INSERT OVERWRITE PARTITION cannot mix static assignments (k=v) and dynamic names (k)"
-                .to_string(),
-        )),
-        (true, false) => Ok(PartitionOverwriteRequest::Static(static_items)),
-        (false, true) => Ok(PartitionOverwriteRequest::Dynamic(dynamic_names)),
-        (false, false) => Ok(PartitionOverwriteRequest::Dynamic(Vec::new())),
-    }
-}
-
-/// Bind a request to the table's default partition spec.
-/// # Errors
-/// Unpartitioned target, unknown names, non-identity fields on the static path, type mismatch.
-pub fn plan_partition_overwrite(
-    table: &Table,
-    request: &PartitionOverwriteRequest,
-) -> Result<PartitionOverwritePlan> {
-    let spec = table.metadata().default_partition_spec();
-    if spec.is_unpartitioned() {
-        return match request {
-            PartitionOverwriteRequest::Dynamic(_) => Ok(PartitionOverwritePlan::Dynamic),
-            PartitionOverwriteRequest::Static(_) => Err(DataFusionError::NotImplemented(
-                "INSERT OVERWRITE … PARTITION (…) requires a partitioned Iceberg table; \
-                 the target is unpartitioned"
-                    .to_string(),
-            )),
-        };
-    }
-    let schema = table.metadata().current_schema();
-    let bindings = spec
-        .fields()
-        .iter()
-        .map(|field| bind_partition_field(schema.as_ref(), field))
-        .collect::<Result<Vec<_>>>()?;
-    match request {
-        PartitionOverwriteRequest::Static(equalities) => {
-            let mut predicates: Vec<Predicate> = Vec::with_capacity(equalities.len());
-            for equality in equalities {
-                let binding = resolve_binding(&bindings, &equality.name).map_err(|_| {
-                    DataFusionError::NotImplemented(format!(
-                        "INSERT OVERWRITE … PARTITION (…) static assignment `{}` is not an \
-                         identity partition field of the target table",
-                        equality.name
-                    ))
-                })?;
-                if binding.transform != Transform::Identity {
-                    return Err(DataFusionError::NotImplemented(format!(
-                        "static INSERT OVERWRITE PARTITION only supports identity partition \
-                         fields; `{}` uses {}",
-                        binding.spec_field_name, binding.transform
-                    )));
-                }
-                predicates.push(equality_predicate(binding, equality)?);
+            PartitionClauseItem::Dynamic(name) => {
+                request.names.push(name.clone());
+                request.dynamic_names.push(name);
             }
-            let predicate = predicates
-                .into_iter()
-                .reduce(Predicate::and)
-                .ok_or_else(|| {
-                    DataFusionError::Plan(
-                        "INSERT OVERWRITE PARTITION static form needs at least one k=v assignment"
-                            .to_string(),
-                    )
-                })?;
-            Ok(PartitionOverwritePlan::Static(StaticPartitionOverwrite {
-                predicate,
-                equalities: equalities.clone(),
-            }))
-        }
-        PartitionOverwriteRequest::Dynamic(names) => {
-            if !names.is_empty() {
-                for name in names {
-                    resolve_binding(&bindings, name)?;
-                }
+            PartitionClauseItem::Static(item) => {
+                request.names.push(item.name.clone());
+                request.equalities.push(item);
             }
-            Ok(PartitionOverwritePlan::Dynamic)
+            PartitionClauseItem::Refused(name, refusal) => {
+                request.names.push(name);
+                request.refused_values.push(refusal);
+            }
         }
     }
-}
-
-/// Refuse an empty-input dynamic overwrite before any catalog mutation.
-/// # Errors
-/// [`DataFusionError::Plan`] naming the three empty-dynamic surfaces (Spark SQL STATIC wipe,
-/// Spark writeTo no-op, `RePark` loud refuse).
-pub fn refuse_empty_dynamic_overwrite(staged_files: &[DataFile]) -> Result<()> {
-    let total_rows: u64 = staged_files.iter().map(DataFile::record_count).sum();
-    if staged_files.is_empty() || total_rows == 0 {
-        return Err(DataFusionError::Plan(format!(
-            "{EMPTY_DYNAMIC_OVERWRITE_NEEDLE}. Spark SQL default-STATIC empty PARTITION (k) wipes \
-             the table. Spark writeTo().overwritePartitions() empty is a no-op. RePark refuses \
-             empty PARTITION (k)."
-        )));
-    }
-    Ok(())
+    Ok(request)
 }
 
 fn store_assign_source_column(source: &ArrayRef, field: &FieldRef) -> Result<ArrayRef> {
@@ -443,9 +342,7 @@ fn constant_partition_array(
             Some(PartitionLiteral::String(text)),
             DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View,
         ) => Ok(Arc::new(StringArray::from(vec![text.as_str(); rows]))),
-        (literal, other) => Err(DataFusionError::Plan(format!(
-            "INSERT OVERWRITE PARTITION cannot inject `{literal:?}` as {other}"
-        ))),
+        (Some(literal), other) => cast_constant_array(literal, other, rows),
     }
 }
 
@@ -484,9 +381,7 @@ pub async fn commit_overwrite_by_row_filter_to(
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
-/// Commit a dynamic partition overwrite: replace partitions present in `staged_files`.
-/// # Errors
-/// Isolation parse, empty-input guard, action apply, or catalog commit as [`DataFusionError`].
+#[allow(clippy::missing_errors_doc)]
 pub async fn commit_replace_partitions(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -502,7 +397,9 @@ pub async fn commit_replace_partitions_to(
     staged_files: Vec<DataFile>,
     branch: Option<&str>,
 ) -> Result<Table> {
-    refuse_empty_dynamic_overwrite(&staged_files)?;
+    if replace_partitions_is_noop(&staged_files) {
+        return Ok(table.clone());
+    }
     let isolation = parse_overwrite_isolation(table)?;
     let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
@@ -527,12 +424,13 @@ pub async fn commit_replace_partitions_to(
 enum PartitionClauseItem {
     Dynamic(String),
     Static(PartitionEquality),
+    Refused(String, String),
 }
 
-struct PartitionFieldBinding {
-    spec_field_name: String,
-    source_column_name: String,
-    transform: Transform,
+pub(crate) struct PartitionFieldBinding {
+    pub(crate) spec_field_name: String,
+    pub(crate) source_column_name: String,
+    pub(crate) transform: Transform,
     primitive_type: PrimitiveType,
 }
 
@@ -551,11 +449,16 @@ fn partition_clause_item(expression: &Expr) -> Result<PartitionClauseItem> {
             right,
         } => {
             let name = partition_name(left)?;
-            let value = partition_literal(right)?;
-            Ok(PartitionClauseItem::Static(PartitionEquality {
-                name,
-                value,
-            }))
+            match partition_literal(right) {
+                Ok(value) => Ok(PartitionClauseItem::Static(PartitionEquality {
+                    name,
+                    value,
+                })),
+                Err(DataFusionError::Plan(refusal)) => {
+                    Ok(PartitionClauseItem::Refused(name, refusal))
+                }
+                Err(other) => Err(other),
+            }
         }
         other => Err(DataFusionError::Plan(format!(
             "INSERT OVERWRITE PARTITION expected a name or k=v assignment, got `{other}`"
@@ -649,7 +552,7 @@ fn parse_number_literal(raw: &str) -> Result<Option<PartitionLiteral>> {
     )))
 }
 
-fn bind_partition_field(
+pub(crate) fn bind_partition_field(
     schema: &iceberg::spec::Schema,
     field: &iceberg::spec::PartitionField,
 ) -> Result<PartitionFieldBinding> {
@@ -678,7 +581,7 @@ fn nested_primitive(field: &NestedField) -> Result<PrimitiveType> {
     }
 }
 
-fn resolve_binding<'a>(
+pub(crate) fn resolve_binding<'a>(
     bindings: &'a [PartitionFieldBinding],
     name: &str,
 ) -> Result<&'a PartitionFieldBinding> {
@@ -696,19 +599,17 @@ fn resolve_binding<'a>(
             found = Some(binding);
         }
     }
-    found.ok_or_else(|| {
-        let names: Vec<&str> = bindings
-            .iter()
-            .map(|binding| binding.spec_field_name.as_str())
-            .collect();
-        DataFusionError::Plan(format!(
-            "PARTITION column `{name}` is not a partition field of the target table (fields: {})",
-            names.join(", ")
-        ))
-    })
+    found.ok_or_else(|| non_partition_column(name))
 }
 
-fn equality_predicate(
+pub(crate) fn non_partition_column(name: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: \
+         `{name}`. SQLSTATE: 42000"
+    ))
+}
+
+pub(crate) fn equality_predicate(
     binding: &PartitionFieldBinding,
     equality: &PartitionEquality,
 ) -> Result<Predicate> {
@@ -745,9 +646,7 @@ fn datum_for_type(
         (PrimitiveType::Long, PartitionLiteral::Long(value)) => Ok(Datum::long(*value)),
         (PrimitiveType::Long, PartitionLiteral::Int(value)) => Ok(Datum::long(i64::from(*value))),
         (PrimitiveType::String, PartitionLiteral::String(text)) => Ok(Datum::string(text)),
-        (other, literal) => Err(DataFusionError::Plan(format!(
-            "INSERT OVERWRITE PARTITION literal `{literal:?}` is not assignable to `{column}` ({other})"
-        ))),
+        (other, literal) => cast_datum(literal, other, column),
     }
 }
 
@@ -833,40 +732,35 @@ mod tests {
         );
     }
 
-    /// Static k=v and dynamic name parse into the two request arms.
     #[test]
     fn request_static_and_dynamic_shapes() {
         let static_request =
             partition_overwrite_request_from_exprs(&[eq("id", number("1"))]).expect("static");
-        match static_request {
-            PartitionOverwriteRequest::Static(items) => {
-                assert_eq!(items.len(), 1);
-                assert_eq!(items[0].name, "id");
-                assert_eq!(items[0].value, Some(PartitionLiteral::Int(1)));
-            }
-            PartitionOverwriteRequest::Dynamic(_) => panic!("expected static"),
-        }
+        assert_eq!(static_request.equalities.len(), 1);
+        assert_eq!(static_request.equalities[0].name, "id");
+        assert_eq!(
+            static_request.equalities[0].value,
+            Some(PartitionLiteral::Int(1))
+        );
+        assert!(static_request.dynamic_names.is_empty());
         let dynamic =
             partition_overwrite_request_from_exprs(&[ident("id"), ident("cat")]).expect("dynamic");
-        assert_eq!(
-            dynamic,
-            PartitionOverwriteRequest::Dynamic(vec!["id".into(), "cat".into()])
-        );
+        assert_eq!(dynamic.dynamic_names, vec!["id".to_string(), "cat".into()]);
+        assert!(dynamic.equalities.is_empty());
         let inferred = partition_overwrite_request_from_exprs(&[]).expect("empty");
-        assert_eq!(inferred, PartitionOverwriteRequest::Dynamic(Vec::new()));
+        assert_eq!(inferred, PartitionOverwriteRequest::default());
         let quoted = partition_overwrite_request_from_exprs(&[quoted("cat")]).expect("quoted");
-        assert_eq!(
-            quoted,
-            PartitionOverwriteRequest::Dynamic(vec!["cat".into()])
-        );
+        assert_eq!(quoted.dynamic_names, vec!["cat".to_string()]);
     }
 
-    /// Mixed static and dynamic items refuse.
     #[test]
-    fn mixed_static_dynamic_refuses() {
-        let error = partition_overwrite_request_from_exprs(&[eq("id", number("1")), ident("cat")])
-            .expect_err("mix");
-        assert!(error.to_string().contains("mix"), "got {error}");
+    fn mixed_static_dynamic_parses() {
+        let request =
+            partition_overwrite_request_from_exprs(&[eq("id", number("1")), ident("cat")])
+                .expect("mix");
+        assert_eq!(request.equalities.len(), 1);
+        assert_eq!(request.dynamic_names, vec!["cat".to_string()]);
+        assert_eq!(request.names, vec!["id".to_string(), "cat".into()]);
     }
 
     /// String and NULL literals parse.
@@ -876,35 +770,11 @@ mod tests {
         let request =
             partition_overwrite_request_from_exprs(&[eq("cat", quoted("a")), eq("id", null)])
                 .expect("literals");
-        match request {
-            PartitionOverwriteRequest::Static(items) => {
-                assert_eq!(items[0].value, Some(PartitionLiteral::String("a".into())));
-                assert_eq!(items[1].value, None);
-            }
-            PartitionOverwriteRequest::Dynamic(_) => panic!("expected static"),
-        }
-    }
-
-    /// Empty file list hits the dynamic guard.
-    #[test]
-    fn empty_dynamic_guard_refuses() {
-        let error = refuse_empty_dynamic_overwrite(&[]).expect_err("empty");
-        assert!(
-            error.to_string().contains(EMPTY_DYNAMIC_OVERWRITE_NEEDLE),
-            "got {error}"
+        assert_eq!(
+            request.equalities[0].value,
+            Some(PartitionLiteral::String("a".into()))
         );
-        assert!(
-            error
-                .to_string()
-                .contains("writeTo().overwritePartitions() empty is a no-op"),
-            "got {error}"
-        );
-        assert!(
-            error
-                .to_string()
-                .contains("default-STATIC empty PARTITION (k) wipes"),
-            "got {error}"
-        );
+        assert_eq!(request.equalities[1].value, None);
     }
 
     fn key_payload_batch(keys: &[i32], payloads: &[&str]) -> RecordBatch {
@@ -973,8 +843,9 @@ mod tests {
         .expect("stage key=2 file");
         let request =
             partition_overwrite_request_from_exprs(&[eq("key", number("1"))]).expect("static");
-        let PartitionOverwritePlan::Static(spec) =
-            plan_partition_overwrite(&table, &request).expect("plan")
+        let crate::write::OverwritePlan::RowFilter(spec) =
+            crate::write::plan_overwrite(&table, &request, crate::write::OverwriteMode::default())
+                .expect("plan")
         else {
             panic!("expected static plan");
         };

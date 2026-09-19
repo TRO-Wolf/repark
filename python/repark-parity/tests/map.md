@@ -175,6 +175,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror rows ratchet `functions.py` 1984 → 1983 and `functions_expr.py`
   2198 → 2178 with `scripts/check_lib_py.py`.
   pins: fnp-gen-1/C-002, C-003
+- `test_cap_1_source_file_line_cap.py` — **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):**
+  mirror row `writer_readwriter.py` 1095 → 1093, the value round 1 set in
+  `scripts/check_lib_py.py` without its mirror.
+  The verification fix ratchets it again, 1093 → 1091. pins: ice-overwrite-mode-1/C-018
 - `test_cap_1_source_file_line_cap.py` — **ICE-DROP-NS-1 (2026-09-19, run 24c):**
   mirror row ratchets `repark-sql/src/tests.rs` 1520 → 1513 with `scripts/check_rust_file_size.py`.
   pins: ice-drop-ns-1/C-011
@@ -601,6 +605,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   the 6-distinct reopening, the hash-order residual, both pin files).
   pins: v3-cov-statement-coverage/C-001, C-004, C-005
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** the stated totals follow the flipped verdict (EQUAL
+  73, DIVERGES 7). pins: ice-overwrite-mode-1/C-018
 - `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
   and true. The north star's §3.1 must carry twenty numbered audit rows, every one glyphed ✅
   and none naming a BACKLOG residual; each of the seven rows that has a residual must name its

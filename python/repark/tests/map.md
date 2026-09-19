@@ -40,6 +40,55 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) +
+  [ice_overwrite_mode_1_transform_spark_oracle.json](ice_overwrite_mode_1_transform_spark_oracle.json) +
+  [_record_ice_overwrite_mode_1_transform.py](_record_ice_overwrite_mode_1_transform.py) —
+  **ICE-OVERWRITE-MODE-1 (2026-09-19, verification critic):** 16 recorded Spark 4.1.2 cells —
+  `writeTo(t).overwritePartitions()` on `(cat, bucket(2, id))`, `bucket(4, id)`,
+  `truncate(1, cat)` and unpartitioned specs, static and dynamic session, v2 and v3: the rows
+  left and the last operation. The live tier re-derives the fixture.
+  pins: ice-overwrite-mode-1/C-018
+- [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) +
+  [ice_overwrite_mode_1_spark_oracle.json](ice_overwrite_mode_1_spark_oracle.json) +
+  [_record_ice_overwrite_mode_1_oracle.py](_record_ice_overwrite_mode_1_oracle.py) —
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** 96 Spark overwrite cells (48 shapes on format
+  versions 2 and 3; live PySpark 4.1.2 + Iceberg 1.11.0, InMemory catalog, recorded
+  2026-09-19 by the recorder's `record` mode; the 28 `OW2-*` cells of round 2 and the 8
+  `OW3-*` cells of round 3 were folded in from independent harness recordings on the same
+  pins and are re-derived by `check`;
+  SHA-256 `df60a90149005a9663a5a53ef889c78f0a737eb0095029a00095719b83640b90`). The `OW3`
+  shapes write an empty frame through `writeTo.overwritePartitions` (static and dynamic
+  mode) and `insertInto(overwrite)` (`overwrite-mode=dynamic`: no commit; static: a
+  `delete` snapshot and an empty table). The `OW2`
+  shapes cover the empty dynamic source, `BY NAME` mixed lists, a static value cast to a
+  `DATE` partition, `NULL` and upper-case static keys, and transform-field keys
+  (`NON_PARTITION_COLUMN`). Each cell holds
+  the table rows and the snapshot history (operation plus seven summary counters) or the
+  refusal class, condition and SQLSTATE. The recorder owns the shapes and the cell runner;
+  the pin file replays every cell on the facade and asserts rows, Arrow types and history,
+  or class plus condition token. The two `saveAsTable(overwrite)` shapes match rows only:
+  Spark's history there is an RTAS table replace, pinned as a strict xfail. The live tier
+  (`REPARK_PARITY_LIVE=1`) runs the recorder's `check` mode. Python's native `repark.sql`
+  door has no Iceberg `PARTITION` overwrite shape, so the native-door cells are Rust pins in
+  `crates/repark-sql`. Registry rows DML-1, ICE-OVERWRITE-MODE-1 and ICE-WRITE-OPTIONS-1
+  cite this file as their pin.
+  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010,
+  C-011, C-012, C-013, C-014, C-015, C-016
+  Flipped with the fix: `test_dml_b_partition_overwrite.py`'s dynamic `PARTITION (id)` and
+  empty-dynamic pins run under a `dynamic` fixture (restored after), and a static-mode twin
+  pins the whole-table replace and the empty wipe; `test_ice_v3_write_default_1.py`'s
+  named-list `PARTITION (id)` pin compares the recorded Spark table exactly (it replaced the
+  whole table; the old containment check hid that) and its mixed static/dynamic pin answers
+  the recorded `MIX_*` rows on `(id, cat, payload)` — RePark cannot create the probe's
+  `c` write-default, so `c` stays out of the compare.
+  pins: ice-overwrite-mode-1/C-002, C-003, C-004
+  Round 2 (2026-09-19): the empty-dynamic pins in `test_dml_b_partition_overwrite.py`,
+  `test_writer_v2.py` and `test_examples_window_catalog.py` now assert that the empty
+  dynamic overwrite commits nothing (snapshot count and rows unchanged), Spark's answer;
+  `test_ice_overwrite_mode_1.py` adds the invalid `DATE` cast pin; round 3's `OW3` cells
+  replace its single empty-frame `overwritePartitions` pin. pins: ice-overwrite-mode-1/C-011,
+  C-013
+
 - [test_ice_avro_name_1.py](test_ice_avro_name_1.py) +
   [ice_avro_name_1_spark_oracle.json](ice_avro_name_1_spark_oracle.json) +
   [_record_ice_avro_name_1_oracle.py](_record_ice_avro_name_1_oracle.py) —
@@ -698,8 +747,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   predicate / MERGE key / `NOT MATCHED BY SOURCE` arm),
   `test_dataframe_door_matches_spark` (the MERGE and INSERT cases through facade `mergeInto`,
   `writeTo().append()` and `writeTo().overwritePartitions()` against Spark's own DataFrame
-  door; the 16 `overwritePartitions()` cells are strict `xfail(raises=ParseException)` on the
-  separate EX-W2-4 unpartitioned-table defect), and `test_adopted_spark_table_matches_spark`
+  door; the 16 `overwritePartitions()` cells run plainly since the EX-W2-4 fix,
+  ICE-OVERWRITE-MODE-1, 2026-09-19), and `test_adopted_spark_table_matches_spark`
   (the committed Spark-created, Spark-evolved table materialized at its baked-in path under a
   directory lock, `register_table`, then MERGE `*` on both doors, UPDATE and DELETE), and
   `test_lineage_read_matches_spark` (the v3 `_row_id` / `_last_updated_sequence_number` read of
@@ -711,8 +760,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
   path, then `.venv/bin/python python/repark/tests/_record_ice_evo_dml_1.py`
   (`REPARK_ORACLE_IVY` points `spark.jars.ivy` at a warm Ivy cache). Registry rows (FIXED
-  2026-09-17): ICE-EVO-DML-1, ICE-EVO-SWAP-1, ICE-EVO-LINEAGE-READ-1; the `xfail` cells are
-  pinned on EX-W2-4; the RePark cells need the fork pin carrying F-PROMOTE-READ-1 (stacked
+  2026-09-17): ICE-EVO-DML-1, ICE-EVO-SWAP-1, ICE-EVO-LINEAGE-READ-1; the former EX-W2-4 `xfail` cells run plainly (2026-09-19); the RePark cells need the fork pin carrying F-PROMOTE-READ-1 (stacked
   on `fix/ice-promote-read-1`; local override until that unit's pin bump).
   pins: ice-evo-dml-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012
   pins: ice-evo-dml-1/C-014, C-015, C-016, C-017
@@ -1287,8 +1335,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusing where Spark performs the conditional overwrite (EX-W2-1), empty-source
   `overwritePartitions` refusing where Spark no-ops (EX-W2-2), `option`/`options` with a
   branch/tag key refusing where Spark silently writes the default branch (EX-W2-3), and
-  `overwritePartitions` on an unpartitioned table leaking a `ParseException` where Spark
-  replaces the whole table (EX-W2-4) — via a
+  `overwritePartitions` on an unpartitioned table, which replaces the whole table as Spark
+  does since the EX-W2-4 fix (ICE-OVERWRITE-MODE-1, 2026-09-19; it leaked a `ParseException`)
+  — via a
   `spark_v2` memory-catalog fixture. The module docstring carries the batch pins line.
   pins: ex-20-window-catalog/C-001
   pins: ex-22-types-writerv2/C-003, C-005
@@ -1790,6 +1839,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **RP-23 (2026-09-17):** `create-v3-properties` flips DIVERGES→EQUAL — the codec stamp was
   its sole open difference.
   pins: rp-23-pin-bump/C-001
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** `insert-overwrite-partition-dynamic` flips
+  DIVERGES→EQUAL — static-mode `PARTITION (part)` now replaces the whole table, and
+  `_v3_statement_coverage_repark.py` carries the re-measured answer, equal to the recorded
+  Spark half. pins: ice-overwrite-mode-1/C-002
 - [_v3_statement_coverage_repark.py](_v3_statement_coverage_repark.py) and
   [_v3_statement_coverage_spark.py](_v3_statement_coverage_spark.py) — **V3-COV (2026-09-03):**
   the measured halves, one entry per program, recorded 2026-09-03 against live PySpark 4.1.2 +

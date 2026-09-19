@@ -6,6 +6,8 @@ use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, Ex
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{SessionConfig, SessionContext};
 
+pub use repark_iceberg::write::OverwriteIntent;
+
 pub const PARTITION_OVERWRITE_MODE_KEY: &str = "spark.sql.sources.partitionOverwriteMode";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

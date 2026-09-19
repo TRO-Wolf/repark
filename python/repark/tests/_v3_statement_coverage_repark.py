@@ -162,10 +162,7 @@ REPARK: dict[str, Any] = {
     },
     "insert-overwrite-partition-dynamic": {
         "statements": [["OK", None]],
-        "probes": [
-            ["OK", [[3, "c", 20], [4, "d", 20], [7, "g", 10]]],
-            ["OK", [[3, 2, 1], [4, 3, 1], [7, 4, 2]]],
-        ],
+        "probes": [["OK", [[7, "g", 10]]], ["OK", [[7, 4, 2]]]],
     },
     "delete-where-mor": {
         "statements": [["OK", None]],

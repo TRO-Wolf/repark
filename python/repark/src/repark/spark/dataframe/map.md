@@ -689,9 +689,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   not compute — correct under the Rust-first instruction (API plumbing). The module
   also carries the write helpers moved out of `writer_readwriter.py`:
   `_sql_option_escape`, `_normalize_write_compression`,
-  `_normalize_parquet_write_compression`, `_merge_path_write_tree`, and
-  `_dynamic_partition_sql` (re-imported by `writer_readwriter`, so
-  `core.py`'s import surface is unchanged).
+  `_normalize_parquet_write_compression` and `_merge_path_write_tree` (re-imported by
+  `writer_readwriter`, so `core.py`'s import surface is unchanged).
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** `_dynamic_partition_sql` is gone:
+  `writeTo(t).overwritePartitions()` sends `INSERT OVERWRITE t (cols) SELECT …` with the
+  dynamic intent and no `PARTITION` clause, so Rust replaces the staged partitions of any spec
+  (a `PARTITION (<spec field names>)` clause refused `[NON_PARTITION_COLUMN]` on transform
+  fields). pins: ice-overwrite-mode-1/C-018
   pins: io-bucket-cluster-1/C-001, C-002
   Critic round 1 (2026-09-14): `_unpack_column_args` enforces Spark's call-time
   order — `CANNOT_SET_TOGETHER` for a list/tuple `col` with extra `cols`, the
@@ -707,6 +711,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   last-wins dedup shared by both writers) and `run_through_temp_view` (the one
   temp-view/action/drop funnel both writers share, options forwarded out of
   band). Round 3 deleted the text-clause rendering with the channel.
+  ICE-OVERWRITE-MODE-1 (2026-09-19): `run_through_temp_view` gains
+  `dynamic_overwrite`, and `run_overwrite_partitions(writer, build_sql)` runs
+  `writeTo.overwritePartitions` with it, so Rust replaces only the source partitions even in
+  Spark's default static mode (the `PARTITION (fields)` clause alone now means whole table
+  there). Writer options, `overwrite-mode` included, travel unchanged to Rust, which decides.
+  pins: ice-overwrite-mode-1/C-006, C-007
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1,
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1, **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
   2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`

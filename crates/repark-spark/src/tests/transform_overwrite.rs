@@ -787,7 +787,7 @@ async fn empty_overwrite_type_mismatch_on_transform_table_does_not_wipe() {
 
 /// PIN O5.
 #[tokio::test]
-async fn overwrite_partition_clause_on_transform_table_still_rejected() {
+async fn overwrite_partition_clause_on_transform_source_refuses_non_partition_column() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     let ids: Vec<i32> = vec![1, 2, 3, 5];
@@ -811,14 +811,14 @@ async fn overwrite_partition_clause_on_transform_table_still_rejected() {
     ] {
         let error = execute(&ctx, &catalogs, sql)
             .await
-            .expect_err("PARTITION (…) overwrite must be refused on a transform table");
+            .expect_err("a transform source is not a partition column");
+        assert!(matches!(error, DataFusionError::Plan(_)), "{error}");
         assert!(
-            matches!(error, DataFusionError::NotImplemented(_)),
-            "must stay a typed NotImplemented, got: {error}"
-        );
-        assert!(
-            error.to_string().contains("PARTITION"),
-            "the message must name the unsupported PARTITION form, got: {error}"
+            error.to_string().contains(
+                "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition \
+                           column: `id`"
+            ),
+            "{error}"
         );
     }
 

@@ -28,6 +28,7 @@ pub mod nested_type_sql;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;
 pub mod overwrite_commit;
+pub mod overwrite_scope;
 /// Partition-scoped INSERT OVERWRITE (static row-filter + dynamic replace-partitions).
 pub mod partition_overwrite;
 pub mod partition_spec;
@@ -40,6 +41,7 @@ pub mod scan_prune;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
 pub mod sort_order;
+mod static_value;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
 pub(crate) mod store_assign;
 pub mod summary_collision;
@@ -88,13 +90,17 @@ pub use overwrite::{
     write_overwrite_staged_files_from_stream,
 };
 pub use overwrite_commit::{commit_overwrite_replace_all_to, commit_replace_write};
+pub use overwrite_scope::{
+    OVERWRITE_MODE_OPTION, OverwriteIntent, OverwriteMode, OverwritePlan, OverwriteScope,
+    overwrite_mode_option_is_dynamic, plan_overwrite, replace_partitions_is_noop,
+    validated_static_equalities,
+};
 pub use partition_overwrite::{
-    EMPTY_DYNAMIC_OVERWRITE_NEEDLE, PartitionEquality, PartitionLiteral, PartitionOverwritePlan,
-    PartitionOverwriteRequest, StaticPartitionOverwrite, commit_overwrite_by_row_filter,
-    commit_overwrite_by_row_filter_to, commit_replace_partitions, commit_replace_partitions_to,
-    inject_static_partition_columns, partition_overwrite_request_from_exprs,
-    plan_partition_overwrite, refuse_empty_dynamic_overwrite,
-    stage_static_partition_overwrite_files, static_partition_source_columns,
+    PartitionEquality, PartitionLiteral, PartitionOverwriteRequest, StaticPartitionOverwrite,
+    commit_overwrite_by_row_filter, commit_overwrite_by_row_filter_to, commit_replace_partitions,
+    commit_replace_partitions_to, inject_static_partition_columns,
+    partition_overwrite_request_from_exprs, stage_static_partition_overwrite_files,
+    static_partition_source_columns,
 };
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
