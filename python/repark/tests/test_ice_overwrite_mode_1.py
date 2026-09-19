@@ -1,7 +1,7 @@
 """ICE-OVERWRITE-MODE-1 — Spark's overwrite partition set on every facade overwrite door.
 
 pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011,
-C-012, C-013, C-014
+C-012, C-013, C-014, C-016
 """
 
 from __future__ import annotations
