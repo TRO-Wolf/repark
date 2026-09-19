@@ -3573,6 +3573,24 @@ the pin rather than obeying it.
 - **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (**F-UPDATE-SCHEMA-SAME-1**): a
   schema update that changes nothing commits nothing, mirroring Java.
 
+### ICE-AVRO-NAME-1 — a partition column whose name is not a valid Avro name wrote an unreadable table — **FIXED 2026-09-19 (RP-35, fork #308 F-AVRO-NAME-1)**
+
+- **repark** — **FIXED 2026-09-19** at fork pin RP-35 (`7bd2fea3`). Before it (inventory cell
+  `E-QUOTED-SPACE-COL`, IPI-52, measured on main `6a140eb3`): a table ``PARTITIONED BY (`my col`)``
+  accepted the write, but the manifest's partition record kept the raw name `my col`, so every
+  later read of the table failed. The fork now sanitises Avro names as Java's
+  `AvroSchemaUtil` (`my col` → `my_x20col`, `1st` → `_1st`, `a-b` → `a_x2Db`, `a.b` → `a_x2Eb`,
+  `c😀` → `c_xD83D_xDE00`; letters such as `é` and `列` stay) and records the Iceberg name in
+  `iceberg-field-name`; manifests already written with a raw name read through a header repair.
+- **Apache Spark** — writes the sanitised record and reads the rows back. *(oracle: recorded —
+  PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-19,
+  `python/repark/tests/ice_avro_name_1_spark_oracle.json`, 20 cells, v2 and v3.)*
+- **Pin** — `python/repark/tests/test_ice_avro_name_1.py` (rows, the `partitions` metadata
+  table and the manifest's Avro partition record per cell; the live tier re-derives the
+  fixture).
+- **Rationale** — FIXED. Table-format behaviour, fixed in the fork (rule 3).
+  pins: rp-35-fork-pin/C-001
+
 ### ICE-NESTED-EVO-1 — a Spark table whose struct gained a child was unreadable — **FIXED 2026-09-17 (fork F-NESTED-EVO-1)**
 
 - **repark** — **FIXED 2026-09-17** on fork branch `fix/nested-evo-1` (fork PR #292,
