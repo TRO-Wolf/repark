@@ -1,10 +1,12 @@
 use super::super::*;
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use bytes::Bytes;
 use datafusion::prelude::SessionContext;
 use iceberg::io::{
-    FileIO, FileIOBuilder, FileMetadata, FileRead, FileWrite, InputFile, LocalFsStorageFactory,
-    OutputFile, Storage, StorageFactory,
+    FileIO, FileIOBuilder, FileInfo, FileMetadata, FileRead, FileWrite, InputFile,
+    LocalFsStorageFactory, OutputFile, Storage, StorageFactory,
 };
 use iceberg::spec::{DataFileFormat, NestedField, PrimitiveType, Schema, Type};
 use iceberg::writer::file_writer::location_generator::{
@@ -208,6 +210,110 @@ async fn a_ranged_read_counts_the_returned_length_not_the_requested_span() {
         one(1, 10)
     );
     assert_eq!(stats.total(), one(1, 10));
+}
+
+#[derive(Debug, Default)]
+struct DefaultedOnlyStorage {
+    write_new_calls: AtomicUsize,
+    list_calls: AtomicUsize,
+}
+
+impl serde::Serialize for DefaultedOnlyStorage {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_unit_struct("DefaultedOnlyStorage")
+    }
+}
+
+#[async_trait::async_trait]
+impl Storage for DefaultedOnlyStorage {
+    async fn exists(&self, _path: &str) -> iceberg::Result<bool> {
+        stub_unsupported()
+    }
+
+    async fn metadata(&self, _path: &str) -> iceberg::Result<FileMetadata> {
+        stub_unsupported()
+    }
+
+    async fn read(&self, _path: &str) -> iceberg::Result<Bytes> {
+        stub_unsupported()
+    }
+
+    async fn reader(&self, _path: &str) -> iceberg::Result<Box<dyn FileRead>> {
+        stub_unsupported()
+    }
+
+    async fn write(&self, _path: &str, _bs: Bytes) -> iceberg::Result<()> {
+        stub_unsupported()
+    }
+
+    async fn write_new(&self, _path: &str, _bs: Bytes) -> iceberg::Result<()> {
+        self.write_new_calls.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    async fn writer(&self, _path: &str) -> iceberg::Result<Box<dyn FileWrite>> {
+        stub_unsupported()
+    }
+
+    async fn delete(&self, _path: &str) -> iceberg::Result<()> {
+        stub_unsupported()
+    }
+
+    async fn delete_prefix(&self, _path: &str) -> iceberg::Result<()> {
+        stub_unsupported()
+    }
+
+    async fn list(&self, prefix: &str) -> iceberg::Result<Vec<FileInfo>> {
+        self.list_calls.fetch_add(1, Ordering::Relaxed);
+        Ok(vec![FileInfo::new(
+            format!("{prefix}/listed.parquet"),
+            7,
+            0,
+        )])
+    }
+
+    fn new_input(&self, _path: &str) -> iceberg::Result<InputFile> {
+        stub_unsupported()
+    }
+
+    fn new_output(&self, _path: &str) -> iceberg::Result<OutputFile> {
+        stub_unsupported()
+    }
+
+    fn typetag_name(&self) -> &'static str {
+        "DefaultedOnlyStorage"
+    }
+
+    fn typetag_deserialize(&self) {}
+}
+
+#[tokio::test]
+async fn every_defaulted_storage_method_delegates_to_the_inner_storage() {
+    let counters = Arc::new(IcebergIoCounters::new());
+    let inner = Arc::new(DefaultedOnlyStorage::default());
+    let storage = CountingStorage::new(
+        Arc::clone(&inner) as Arc<dyn Storage>,
+        Arc::clone(&counters),
+    );
+    let data = "/wh/t/data/00000-0-a.parquet";
+    storage
+        .write_new(data, Bytes::from(vec![1_u8; 12]))
+        .await
+        .unwrap();
+    assert_eq!(inner.write_new_calls.load(Ordering::Relaxed), 1);
+    let listed = storage.list("/wh/t/data").await.unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].location, "/wh/t/data/listed.parquet");
+    assert_eq!(listed[0].size, 7);
+    assert_eq!(inner.list_calls.load(Ordering::Relaxed), 1);
+    let stats = counters.snapshot();
+    assert_eq!(
+        count(&stats, IcebergIoOp::Write, IcebergFileClass::DataFile),
+        one(1, 12)
+    );
+    assert_eq!(stats.by_op(IcebergIoOp::List).requests, 1);
+    assert_eq!(stats.by_op(IcebergIoOp::Exists), one(0, 0));
+    assert_eq!(stats.total(), one(2, 12));
 }
 
 async fn write_file(file_io: &FileIO, path: &str, payload: Vec<u8>) {

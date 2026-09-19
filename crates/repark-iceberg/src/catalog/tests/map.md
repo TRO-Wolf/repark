@@ -35,7 +35,14 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   ranges through the counter; a second `load_table` with the metadata cache on reads fewer
   metadata JSON documents than with it off; clones share one counter set.
   The scan pin sums rows with `RecordBatch::num_rows` (clippy `redundant_closure_for_method_calls`).
-  pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005
+  Round 3 (verifier finding F-MUT-D): the fork's `Storage` trait (`43fcd243`) defaults two
+  methods, `write_new` (the default is `exists` then `write`) and `list` (the default is
+  `FeatureUnsupported`). `every_defaulted_storage_method_delegates_to_the_inner_storage` wraps a
+  stub whose `write_new` and `list` succeed and record the call, while its `exists` and `write`
+  error. The wrapper must reach the stub's own `write_new` and `list` once each, and count one
+  data-file write of 12 bytes and one list. Dropping either override, or re-spelling
+  `write_new` as `exists` + `write`, reds it (2026-09-19).
+  pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-010
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002
