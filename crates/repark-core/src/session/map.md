@@ -110,6 +110,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   as the memory catalog. A catalog passed to `register_iceberg_catalog` counts only if its
   builder was given these counters. pins: ice-read-perf-0/C-003
   pins: perf-ice-catalog-io-1/C-002, C-003, C-004
+  **ICE-CATALOG-CACHE-1 (2026-09-19):** `register_catalog_spec` hands the whole `CatalogCaches`
+  to the Glue and S3 Tables builders, so they now carry the session's metadata and manifest
+  caches too. `iceberg_metadata_cache_report()` returns the fork's `TableMetadataCacheStats`
+  (hits, misses, body fetches, evictions); `iceberg_metadata_cache_stats()` keeps its
+  `(hits, misses, body_fetches)` signature for the Python census binding.
+  pins: ice-catalog-cache-1/C-002, C-007
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

@@ -36,7 +36,7 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   `ranged_read`; every counter cell is 64-byte aligned (`size_of` = cells × 64);
   `InputFile` / `OutputFile` / `writer()` obtained through the wrapper still count; the Glue and
   S3 Tables defaults are the fork's `s3a` / `s3` OpenDAL factories and the counted builders keep
-  their prop errors; the classifier over literal paths, over every file a memory-catalog INSERT
+  their prop errors (called with `CatalogCaches::disabled()` since ICE-CATALOG-CACHE-1); the classifier over literal paths, over every file a memory-catalog INSERT
   writes, and over the names the `pos-del` / `dv` generators produce; a scan reads data-file
   ranges through the counter; a second `load_table` with the metadata cache on reads fewer
   metadata JSON documents than with it off; clones share one counter set.
@@ -50,6 +50,19 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   `write_new` as `exists` + `write`, reds it (2026-09-19).
   pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-010
   pins: rp-37-fork-pin/C-001
+- `cache_wiring.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the cache-wiring pins, offline. A
+  recording `CacheWiredBuilder` proves what `wire_caches` passes (the session's metadata `Arc`,
+  the manifest bytes, the credential context; nothing when disabled; each switch alone); real
+  Glue and S3 Tables builds (region and static keys in props, no service call at build) raise the
+  session handle's `strong_count` by one each and print no secret in `Debug`. The scope and
+  staleness pins run on the memory catalog behind the same `wire_caches` (the AWS builders'
+  pointer seam is `#[cfg(test)]` in the fork): two access keys adopting one metadata location
+  hold two entries, one key shares; no selector keeps each instance apart; a second handle's
+  commit is seen and a same-scope sibling at the old location never reads it; three 40 KiB
+  documents under a one-entry budget evict and never serve a sibling; a cold scan counts the same
+  manifest-list / manifest / data-file requests with the caches on as off (requests, not bytes:
+  the beds' temp paths differ in length). pins: ice-catalog-cache-1/C-001, C-003, C-005, C-006,
+  C-008, C-010
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002

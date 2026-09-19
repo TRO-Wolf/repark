@@ -46,8 +46,15 @@ Source comments retain only API and safety contracts; implementation narration i
   a `CountingStorageFactory` over `caches.io_counters()`; `glue_catalog_counted(props, counters)`
   and `s3tables_catalog_counted(props, counters)` pass `with_storage_factory(<counting wrapper
   over the fork default>)`; the unsuffixed `glue_catalog` / `s3tables_catalog` call them with a
-  fresh counter set. The metadata and manifest caches are **not** passed to Glue or S3 Tables
-  (unit ICE-CATALOG-CACHE-1). pins: ice-read-perf-0/C-003, C-004
+  fresh counter set. pins: ice-read-perf-0/C-003, C-004
+  **ICE-CATALOG-CACHE-1 (2026-09-19):** the counted AWS builders now take `caches:
+  &CatalogCaches` (its `io_counters()` replace the former `counters` argument) and, like
+  `memory_catalog_cached`, run the builder through `cache_wiring.rs::wire_caches`, so Glue and
+  S3 Tables receive the session's metadata handle, manifest byte budget and credential context.
+  The unsuffixed `glue_catalog` / `s3tables_catalog` pass `CatalogCaches::disabled()` (no
+  handles, as before). `memory_catalog_cached` delegates to the crate-private
+  `memory_catalog_wired(warehouse, caches, props)`, whose extra props are the offline stand-in
+  the scope pins drive. pins: ice-catalog-cache-1/C-001, C-002
   No product behaviour changes: the wrapper only delegates and counts.
   pins: ice-read-perf-0/C-010
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the Iceberg I/O counters. `IcebergIoCounters`
@@ -101,6 +108,19 @@ Source comments retain only API and safety contracts; implementation narration i
   (`catalog/glue/src/catalog.rs:253`, `catalog/s3tables/src/catalog.rs:235` at fork `43fcd243`) so
   the wrapped factory is byte-identical to today's. A fork repin re-reads those two lines.
   pins: ice-read-perf-0/C-001, C-004
+- `cache_wiring.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the one place a builder receives the
+  session's caches. `CacheWiredBuilder` (crate-private) maps three calls onto the fork's
+  inherent methods of `MemoryCatalogBuilder`, `GlueCatalogBuilder` and `S3TablesCatalogBuilder`
+  (`with_table_metadata_cache`, `with_shared_object_cache_bytes`,
+  `with_cache_credential_context`); `wire_caches(builder, caches, props)` passes the metadata
+  handle when the cache is on, the manifest bytes when nonzero, and — only with the metadata
+  handle — the credential context `cache_credential_context(props)`, which is the fork's public
+  `CacheScope::credential_context_from_props` (selectors only: access key id, profile, assume-role
+  ARN / session name / external id; never a secret, never region). No selector → no context →
+  the fork's per-instance scope for an injected factory. Why RePark may name the context although
+  it injects a factory: its counting factory wraps the fork's own default S3 factory with no
+  credential loader, so credentials come from the props alone — the ruling and its evidence are in
+  the unit ledger. pins: ice-catalog-cache-1/C-001, C-003, C-010
 - `caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session-scoped Iceberg cache handles
   and their knobs. **ICE-READ-PERF-0:** `CatalogCaches` also owns the session's
   `Arc<IcebergIoCounters>` (one set per session, cumulative, shared by clones) with
@@ -121,8 +141,15 @@ Source comments retain only API and safety contracts; implementation narration i
   parsed. `CatalogCaches::disabled()` is the pre-unit path the before/after measurement runs in
   the same process.
 
-  **The bound's scope is the statement door, not the load.** The fork's cache is an unbounded
-  `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
+  **ICE-CATALOG-CACHE-1 (2026-09-19):** the fork cache is now a bounded moka cache weighed by
+  document bytes; `CatalogCaches::new` builds it with `TableMetadataCache::with_max_entries(entries)`
+  (the fork's mapping: entries × 64 KiB, so the default 512 is 32 MiB), which bounds retention by
+  bytes on every insert, within a statement too, and makes evictions observable
+  (`metadata_stats().evictions`, advisory until moka's pending tasks run). The door `trim` below
+  still runs; a trim is an explicit clear, not an eviction. `TableMetadataCacheStats` is
+  re-exported from `mod.rs` for the session report. pins: ice-catalog-cache-1/C-006, C-007
+  **The bound's scope is the statement door, not the load.** Before ICE-CATALOG-CACHE-1 the fork's
+  cache was an unbounded `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
   session calls `trim` at the statement door (`session.rs::sql_with`). That bounds what a session
   ACCUMULATES across commits — measured: eight CREATEs at `entries=1` leave 2 retained and the
   next door clears to 0. It does NOT bound retention *within* one statement: an 8-way `UNION ALL`

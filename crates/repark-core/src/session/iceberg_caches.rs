@@ -2,7 +2,9 @@ use std::sync::{Arc, PoisonError, RwLock};
 
 use iceberg::Catalog;
 use repark_common::Result;
-use repark_iceberg::catalog::{CatalogCaches, IcebergIoCounters, IcebergIoStats};
+use repark_iceberg::catalog::{
+    CatalogCaches, IcebergIoCounters, IcebergIoStats, TableMetadataCacheStats,
+};
 
 use crate::catalog_state::CatalogRegistry;
 use crate::engine_err;
@@ -41,6 +43,11 @@ impl ReparkSession {
         caches_of(&self.catalogs)
             .metadata_stats()
             .map(|stats| (stats.hits, stats.misses, stats.body_fetches))
+    }
+
+    #[must_use]
+    pub fn iceberg_metadata_cache_report(&self) -> Option<TableMetadataCacheStats> {
+        caches_of(&self.catalogs).metadata_stats()
     }
 
     #[must_use]

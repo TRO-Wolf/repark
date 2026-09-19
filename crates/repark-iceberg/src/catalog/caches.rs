@@ -121,6 +121,10 @@ fn parse_bytes(raw: &str, key: &str, canonical: &str) -> Result<u64> {
     })
 }
 
+fn metadata_cache_for(entries: usize) -> TableMetadataCache {
+    TableMetadataCache::with_max_entries(u64::try_from(entries).unwrap_or(u64::MAX))
+}
+
 #[derive(Debug, Clone)]
 pub struct CatalogCaches {
     metadata: Option<Arc<TableMetadataCache>>,
@@ -141,7 +145,7 @@ impl CatalogCaches {
         Self {
             metadata: settings
                 .metadata_cache
-                .then(|| Arc::new(TableMetadataCache::new())),
+                .then(|| Arc::new(metadata_cache_for(settings.metadata_cache_entries))),
             metadata_entries: settings.metadata_cache_entries,
             manifest_bytes: settings.manifest_cache_bytes,
             io_counters: Arc::new(IcebergIoCounters::new()),
