@@ -40,6 +40,21 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
+  [ice_meta_delete_1_spark_oracle.json](ice_meta_delete_1_spark_oracle.json) +
+  [_record_ice_meta_delete_1.py](_record_ice_meta_delete_1.py) —
+  **ICE-META-DELETE-1 (2026-09-19):** 72 recorded Spark 4.1.2 + Iceberg 1.11.0 cells — 18
+  DELETE shapes (whole-file, partial, mixed, `WHERE true`, no predicate, no match, string
+  equality, identity and `bucket(4, id)` partition selection, partition plus metrics, prior
+  deletes, `IS NULL`, `OR`, `NOT IN`, `LIKE`) x format v2/v3 x
+  `write.delete.mode` merge-on-read/copy-on-write. Each cell carries the surviving rows, every
+  snapshot's operation and summary counters, and the live data files; the replay asserts all
+  three, so a whole-file DELETE that writes a position delete instead of removing the file is
+  caught by the snapshot summary, not by the rows. Source SHA-256
+  `3dd30491a9d9f9c58c10a8dd61077e3c07ea8b92bb57ef2952bbff69133828c9`; the live tier
+  re-derives the fixture with the recorder's `--check` mode.
+  pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005
+
 - [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) +
   [ice_overwrite_mode_1_transform_spark_oracle.json](ice_overwrite_mode_1_transform_spark_oracle.json) +
   [_record_ice_overwrite_mode_1_transform.py](_record_ice_overwrite_mode_1_transform.py) —
