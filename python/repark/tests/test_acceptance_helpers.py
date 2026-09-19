@@ -52,7 +52,7 @@ from _acceptance import (
 )
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, IllegalArgumentException
 
 _TESTS_DIR = pathlib.Path(__file__).resolve().parent
 
@@ -796,13 +796,14 @@ def test_format_denial_failure_names_action_resource_and_masks_account() -> None
 
 
 class _RaisingSql:
-    """Session stub whose ``sql`` always raises ``AnalysisException``."""
+    """Session stub whose ``sql`` always raises the configured error class."""
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str, error: type[BaseException] = AnalysisException) -> None:
         self._message = message
+        self._error = error
 
     def sql(self, statement: str) -> object:
-        raise AnalysisException(self._message)
+        raise self._error(self._message)
 
 
 class _OkSql:
@@ -825,9 +826,7 @@ def test_require_snapshot_expired_rejects_id_echo_and_generic_snapshot() -> None
 
 def test_require_snapshot_expired_accepts_the_engine_needle() -> None:
     require_snapshot_expired(
-        _RaisingSql(
-            "Error during planning: unknown Iceberg snapshot id 99: not found in table metadata"
-        ),
+        _RaisingSql("Cannot find snapshot with ID 99", IllegalArgumentException),
         "t",
         99,
     )

@@ -315,3 +315,9 @@ First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug
 `resolve_temp_view_home_ref`, the two lookups the Python facade uses so a product read path never
 emits a BARE reference for a session-local view (a bare one is re-resolved against the LIVE
 `datafusion.catalog.default_catalog`). Both go through `assert_home_intact` first.
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** the reader-options path resolves through the shared
+`time_travel::resolve_reader_spec` with the session zone; the production write path builds
+the context with `EngineContext::new_with_time_zone`. pins: ice-tt-resolve-1/C-002
+**ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `resolve_reader_spec` is async over the session
+context so reader strings cast through the engine. pins: ice-tt-resolve-1/C-002

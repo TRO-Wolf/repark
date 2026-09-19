@@ -169,6 +169,37 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   with schema only). Do not synthesise the rows engine-side from the DV — a hand-rolled position
   projection that drifts from the fork's would be worse than the refusal.
 
+#### ICE-TT-RESOLVE-1 — Iceberg time-travel resolution on every door — **FIXED 2026-09-19**
+
+- **Before** — 78/94 measured content/behavior cells differ from Spark (130/155 offline cells red
+  on main): bare `TIMESTAMP AS OF <ms>` silently read the ms as ms where Spark reads seconds,
+  and `versionAsOf`/`timestampAsOf` on `spark.read` plus `TIMESTAMP AS OF` expression forms on
+  `spark.sql` silently read current where Spark answers or refuses.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18.)*
+- **After** — one shared resolver in `repark-core` (`resolve_reader_spec`) serves the reader
+  options and both SQL doors: the built-ins travel as raw strings, the timestamp casts in the
+  session zone, integer means epoch seconds, combined pins raise Spark's refusal texts, and the
+  `AS OF` expression evaluates as a DataFusion constant (column refs and non-determinism refuse).
+- **Pin** — `python/repark/tests/test_ice_tt_resolve_1.py` (94-cell oracle, 155 offline cells
+  green plus the `REPARK_PARITY_LIVE=1` re-derivation leg), the
+  `reader_spec_builtin_pins_refuse_loud` / `reader_spec_legacy_pins_still_resolve` /
+  `sql_timestamp_asof_evaluates_constants_in_session_zone` Rust batteries, and the flipped ms
+  pins (`crates/repark-spark/src/tests/time_travel.rs`,
+  `python/repark/tests/test_time_travel.py::test_sql_timestamp_as_of`).
+- **Rationale** — FIXED 2026-09-19 (ICE-TT-RESOLVE-1 round 1, IPI-01 + IPI-02). TRIGGER: none, the
+  fix is engine-side. IPI-18 stays open: the legacy `snapshot-id` / `as-of-timestamp` /
+  `branch` / `tag` pins keep their behavior when used alone and are in scope only where the
+  fixture shows them.
+  **Residue (ruling Q-24c-1, 2026-09-19):** every string reaches a timestamp through the
+  engine's `CAST(<string> AS TIMESTAMP)`, which lacks Spark's `stringToTimestamp` grammar.
+  The reader's `timestampAsOf` and SQL `TIMESTAMP AS OF` therefore refuse
+  `INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT` on strings Spark accepts: a date past 2262
+  (`'2999-01-01'`), a wall without seconds (`'2999-01-01 00:00'`), a year alone (`'2020'`).
+  On main the reader ignored `timestampAsOf` and read the current snapshot, so the two
+  far-future reader shapes answered Spark's rows by accident and now refuse loud. They are
+  strict xfails citing the cast; the cast unit `CAST-TS-STRING-1` flips them.
+  pins: ice-tt-resolve-1/C-013
+
 ### 2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)
 
 Supported surface, for reference:

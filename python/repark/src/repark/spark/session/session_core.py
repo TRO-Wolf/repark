@@ -1342,26 +1342,21 @@ class ReparkSession:
         as_of_timestamp_ms: int | None = None,
         branch: str | None = None,
         tag: str | None = None,
+        version_as_of: str | None = None,
+        timestamp_as_of: str | None = None,
     ) -> DataFrame:
         """Read an Iceberg catalog table, optionally time-travel pinned (R-TIME-TRAVEL).
 
         At most one of ``snapshot_id`` / ``as_of_timestamp_ms`` / ``branch`` / ``tag`` may be
         set. Engine path: fork ``IcebergStaticTableProvider::try_new_from_table_snapshot`` —
         never a post-hoc filter.
+        ``version_as_of`` / ``timestamp_as_of`` travel as raw strings.
         """
-        from repark.errors import AnalysisException
+        from repark.spark.session import reader_support
 
         # Gate i64 domain before PyO3 — Python ints are unbounded.
-        if snapshot_id is not None and (snapshot_id < _I64_MIN or snapshot_id > _I64_MAX):
-            raise AnalysisException(
-                f"snapshot_id must fit a signed 64-bit integer, got {snapshot_id!r}"
-            )
-        if as_of_timestamp_ms is not None and (
-            as_of_timestamp_ms < _I64_MIN or as_of_timestamp_ms > _I64_MAX
-        ):
-            raise AnalysisException(
-                f"as_of_timestamp_ms must fit a signed 64-bit integer, got {as_of_timestamp_ms!r}"
-            )
+        reader_support.check_i64_pin("snapshot_id", snapshot_id)
+        reader_support.check_i64_pin("as_of_timestamp_ms", as_of_timestamp_ms)
         # Qualify bare / two-part / spark_catalog names like table() / writers;
         # TT targets Iceberg catalog tables, not temp views.
         resolved = self.resolve_table_name(table_name, prefer_temp_view=False)
@@ -1372,6 +1367,8 @@ class ReparkSession:
             as_of_timestamp_ms,
             branch,
             tag,
+            version_as_of,
+            timestamp_as_of,
         )
         return DataFrame(frame, inner, self._alive_token)
 

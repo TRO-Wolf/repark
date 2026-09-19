@@ -1,5 +1,6 @@
 //! Seam tests: the default dialect and the [`EngineContext`] construction contract.
 
+use crate::session_time_zone::SessionTimeZone;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -25,6 +26,7 @@ async fn datafusion_dialect_passthrough_executes_trivial_query() {
                 catalogs: &catalogs,
                 read_only: &read_only,
                 force_static_overwrite: false,
+                session_time_zone: SessionTimeZone::default(),
             },
             "SELECT 1 + 1 AS two",
         )
@@ -58,6 +60,7 @@ async fn engine_context_constructs_with_explicit_fields() {
         catalogs: &catalogs,
         read_only: &read_only,
         force_static_overwrite: false,
+        session_time_zone: SessionTimeZone::default(),
     };
     assert!(cx.read_only.is_empty());
     let dialect: Arc<dyn SqlDialect> = Arc::new(DataFusionDialect);

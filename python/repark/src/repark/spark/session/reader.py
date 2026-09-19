@@ -12,6 +12,10 @@ from repark.spark.session import (
     reader_text as _reader_text,
 )
 from repark.spark.session.session_core import ReparkSession
+from repark.spark.session.reader_support import (
+    _parse_as_of_timestamp_option,
+    _parse_snapshot_id_option,
+)
 from repark.spark.dataframe import io_declared as _io_declared
 
 for _name in dir(_session_funcs):
@@ -900,10 +904,15 @@ class DataFrameReader:
                 )
 
     def _iceberg_time_travel_opts(self) -> dict[str, Any] | None:
-        """Collect supported Iceberg time-travel options; mutual exclusion fails loud.
+        """Collect Iceberg time-travel options for :meth:`ReparkSession.read_iceberg_table`.
 
-        Returns ``None`` when no pin is set; otherwise a kwargs dict for
-        :meth:`ReparkSession.read_iceberg_table`.
+        Legacy pins (``snapshot-id`` / ``as-of-timestamp`` / ``branch`` / ``tag``)
+        parse here exactly as before and stay mutually exclusive while the Spark
+        built-ins are absent. The built-ins (``versionAsOf`` / ``timestampAsOf``,
+        matched case-insensitively) travel as raw strings; the engine parses
+        them and raises the Spark refusal, so this layer forwards every pin it
+        finds without pre-judging the combination. Returns ``None`` when no pin
+        is set.
         """
         from repark.errors import AnalysisException
 
@@ -914,43 +923,36 @@ class DataFrameReader:
                 found[lowered] = value
         if not found:
             return None
-        if len(found) > 1:
-            names = " and ".join(sorted(found))
-            raise AnalysisException(
-                f"Iceberg time-travel reader options are mutually exclusive; got {names}"
-            )
-        key, raw = next(iter(found.items()))
-        if key == "snapshot-id":
-            try:
-                parsed = int(raw)
-            except ValueError as error:
+        if found.get("versionasof") is None and found.get("timestampasof") is None:
+            if len(found) > 1:
+                names = " and ".join(sorted(found))
                 raise AnalysisException(
-                    f"snapshot-id must be an integer snapshot id, got {raw!r}"
-                ) from error
-            # Python int is unbounded; PyO3 i64 conversion would raise OverflowError
-            # Gate here so callers see AnalysisException consistently.
-            if parsed < _I64_MIN or parsed > _I64_MAX:
-                raise AnalysisException(
-                    f"snapshot-id must fit a signed 64-bit integer, got {raw!r}"
+                    f"Iceberg time-travel reader options are mutually exclusive; got {names}"
                 )
-            return {"snapshot_id": parsed}
-        if key == "as-of-timestamp":
-            try:
-                parsed = int(raw)
-            except ValueError as error:
-                raise AnalysisException(
-                    f"as-of-timestamp must be epoch milliseconds (int), got {raw!r}"
-                ) from error
-            if parsed < _I64_MIN or parsed > _I64_MAX:
-                raise AnalysisException(
-                    f"as-of-timestamp must fit a signed 64-bit integer epoch ms, got {raw!r}"
-                )
-            return {"as_of_timestamp_ms": parsed}
-        if key == "branch":
-            return {"branch": raw}
-        if key == "tag":
-            return {"tag": raw}
-        return None
+            key, raw = next(iter(found.items()))
+            if key == "snapshot-id":
+                return {"snapshot_id": _parse_snapshot_id_option(raw)}
+            if key == "as-of-timestamp":
+                return {"as_of_timestamp_ms": _parse_as_of_timestamp_option(raw)}
+            if key == "branch":
+                return {"branch": raw}
+            if key == "tag":
+                return {"tag": raw}
+            return None
+        kwargs: dict[str, Any] = {}
+        if found.get("snapshot-id") is not None:
+            kwargs["snapshot_id"] = _parse_snapshot_id_option(found["snapshot-id"])
+        if found.get("as-of-timestamp") is not None:
+            kwargs["as_of_timestamp_ms"] = _parse_as_of_timestamp_option(found["as-of-timestamp"])
+        if found.get("branch") is not None:
+            kwargs["branch"] = found["branch"]
+        if found.get("tag") is not None:
+            kwargs["tag"] = found["tag"]
+        if found.get("versionasof") is not None:
+            kwargs["version_as_of"] = str(found["versionasof"])
+        if found.get("timestampasof") is not None:
+            kwargs["timestamp_as_of"] = str(found["timestampasof"])
+        return kwargs
 
     def schema(self, schema: Any) -> DataFrameReader:
         """Set a user schema for the next load (PySpark ``DataFrameReader.schema``).

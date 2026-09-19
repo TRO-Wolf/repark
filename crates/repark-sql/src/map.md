@@ -215,6 +215,18 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   core name. Reader-options registrations remain because they back the returned frame.
   Tests: [time_travel/map.md](time_travel/map.md) + the both-prefix leak pin in
   [../tests/map.md](../tests/map.md).
+  **ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream
+  (whitespace kept) so the shared evaluator receives parseable SQL; the expression evaluates
+  as a constant in the session zone through
+  `repark_core::time_travel::evaluate_sql_timestamp_asof`. pins: ice-tt-resolve-1/C-003
+  **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the door call sites use the 3-arg
+  `EngineContext::new` again. pins: ice-tt-resolve-1/C-003
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** a four-part `FOR … AS OF` name refuses
+  before resolving — branch selectors with `Can't time travel in branch`, tag
+  selectors with the selector/spec text. pins: ice-tt-resolve-1/C-002
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `time_travel/exec_tests.rs` pins the
+  door end to end (string, integer-seconds, CAST expressions plus a version
+  control). pins: ice-tt-resolve-1/C-002
 - `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
   precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
   spelling stays Spark-only. `WITH SNAPSHOT RETENTION` takes both halves, count then optional

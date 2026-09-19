@@ -813,18 +813,32 @@ impl ReparkSession {
         &self,
         table_name: &str,
         opts: TimeTravelOpts,
+        version_as_of: Option<String>,
+        timestamp_as_of: Option<String>,
     ) -> Result<DataFrame> {
-        let spec = opts.into_spec()?;
         let parts = parse_table_identifier_segments(table_name).map_err(|message| {
             Error::Analysis(format!(
                 "read_iceberg_table: invalid table identifier: {message}"
             ))
         })?;
+        let selector = time_travel::RefSelector::from_table_parts(&parts);
+        let travel = time_travel::ReaderTimeTravel {
+            snapshot_id: opts.snapshot_id,
+            as_of_timestamp_ms: opts.as_of_timestamp_ms,
+            branch: opts.branch,
+            tag: opts.tag,
+            version_as_of,
+            timestamp_as_of,
+        };
+        let zone = self.session_time_zone();
+        let spec = time_travel::resolve_reader_spec(self.context(), &travel, selector)
+            .await
+            .map_err(engine_err)?;
         match spec {
             None => self.sql(&format!("SELECT * FROM {table_name}")).await,
             Some(spec) => {
                 let catalogs = self.catalogs_snapshot();
-                time_travel::read_table_at(self.context(), &catalogs, &parts, &spec)
+                time_travel::read_table_at(self.context(), &catalogs, &parts, &spec, &zone)
                     .await
                     .map_err(engine_err)
             }

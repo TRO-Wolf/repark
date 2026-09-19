@@ -786,6 +786,26 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the
   ONE minter of the `__repark_tt_` namespace** (H-1b fix pass, 2026-08-11). SQL-text rewriting
   remains deferred with the phase-2 router.
+  **ICE-TT-RESOLVE-1 (2026-09-19):** the module split at the 1000-line ceiling into
+  `time_travel/sql_text.rs` (string/zone parsing, token extraction), `time_travel/sql_ast.rs`
+  (column-refusal check), `time_travel/sql_eval.rs` (constant-expression
+  evaluation); the root keeps the spec types plus `resolve_reader_spec` (the ONE resolver both
+  SQL doors and the reader options share — `versionAsOf`/`timestampAsOf` raw strings, integer
+  means seconds).
+  pins: ice-tt-resolve-1/C-010
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** every string resolves through the
+  engine `CAST(... AS TIMESTAMP)` in the session zone; the hand parser and the AST leaf
+  rewrite are gone and `resolve_reader_spec` is async over the session context.
+  pins: ice-tt-resolve-1/C-002
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `RefSelector` names the fourth-segment
+  ref (`Branch` / `Tag` / `None`); a built-in beside a selector refuses with Spark's
+  text before resolving. pins: ice-tt-resolve-1/C-002
+  **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the moved names resolve only behind the
+  `time_travel` module; the stale root re-exports are gone. pins: ice-tt-resolve-1/C-010
+  **ICE-TT-RESOLVE-1 round 2 close (2026-09-19):** the root block narrows to the six
+  externally used names; `lib.rs` sits at the 150 default ceiling. pins: ice-tt-resolve-1/C-012
+  **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** `EngineContext::new` is 3-arg again (zone
+  defaults); `new_with_time_zone` carries an explicit zone. pins: ice-tt-resolve-1/C-003
   **Documented residual (H-1b, 2026-08-11):** `read_table_at` registers a `__repark_tt_<n>` temp
   view and never deregisters it. For its own caller — the reader-options path in `session.rs`
   (`spark.read.option("snapshot-id" | "as-of-timestamp" | "branch" | "tag", …)`) — that is

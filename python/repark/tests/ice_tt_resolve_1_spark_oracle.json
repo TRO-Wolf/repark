@@ -1,0 +1,2579 @@
+{
+ "provenance": {
+  "spark": "4.1.2",
+  "iceberg": "1.11.0",
+  "catalog": "InMemoryCatalog",
+  "recorded": "2026-09-19",
+  "cells": 115,
+  "shapes": "47 shapes x format v2 and v3, plus 21 TT2 logic-critic cells",
+  "table": "3 snapshots S0 insert (1,a,x),(2,b,y); S1 insert (3,c,x); S2 delete id=1; commits 2.2s apart; tag t0 -> S0, branch b0 -> S1; mid = halfway between S0 and S1 commits",
+  "session_time_zone": "UTC unless the cell needs America/New_York",
+  "tt2": "21 cells recorded 2026-09-19 by the critic harness (cells_tt2.py) on a 2-snapshot seed (two inserts; tag t0 and branch b0 on the first snapshot); CAST-* cells are bare SELECT statements with no table"
+ },
+ "cells": [
+  {
+   "id": "TT-DF-VAS-INT-V2",
+   "group": "TT",
+   "title": "versionAsOf=<snapshot id int> (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 9.31
+  },
+  {
+   "id": "TT-DF-VAS-INT-V3",
+   "group": "TT",
+   "title": "versionAsOf=<snapshot id int> (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.47
+  },
+  {
+   "id": "TT-DF-VAS-STR-V2",
+   "group": "TT",
+   "title": "versionAsOf='<snapshot id>' (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.27
+  },
+  {
+   "id": "TT-DF-VAS-STR-V3",
+   "group": "TT",
+   "title": "versionAsOf='<snapshot id>' (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.19
+  },
+  {
+   "id": "TT-DF-VAS-TAG-V2",
+   "group": "TT",
+   "title": "versionAsOf=<tag> (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.11
+  },
+  {
+   "id": "TT-DF-VAS-TAG-V3",
+   "group": "TT",
+   "title": "versionAsOf=<tag> (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.14
+  },
+  {
+   "id": "TT-DF-VAS-BRANCH-V2",
+   "group": "TT",
+   "title": "versionAsOf=<branch> (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.13
+  },
+  {
+   "id": "TT-DF-VAS-BRANCH-V3",
+   "group": "TT",
+   "title": "versionAsOf=<branch> (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.12
+  },
+  {
+   "id": "TT-DF-VAS-MAIN-V2",
+   "group": "TT",
+   "title": "versionAsOf='main' (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.07
+  },
+  {
+   "id": "TT-DF-VAS-MAIN-V3",
+   "group": "TT",
+   "title": "versionAsOf='main' (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.03
+  },
+  {
+   "id": "TT-DF-VAS-MISSING-ERR-V2",
+   "group": "TT",
+   "title": "versionAsOf=<unknown id> (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Cannot find snapshot with ID 12345"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_missing_err_v2 CREATE BRANCH b0 AS OF VERSION 5446794215446260171",
+   "obs": {},
+   "notes": [],
+   "secs": 5.09
+  },
+  {
+   "id": "TT-DF-VAS-MISSING-ERR-V3",
+   "group": "TT",
+   "title": "versionAsOf=<unknown id> (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Cannot find snapshot with ID 12345"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_missing_err_v3 CREATE BRANCH b0 AS OF VERSION 5787898789544199003",
+   "obs": {},
+   "notes": [],
+   "secs": 5.06
+  },
+  {
+   "id": "TT-DF-VAS-UNKNOWN-REF-ERR-V2",
+   "group": "TT",
+   "title": "versionAsOf=<unknown ref> (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Cannot find matching snapshot ID or reference name for version nope"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_unknown_ref_err_v2 CREATE BRANCH b0 AS OF VERSION 3718854228451886558",
+   "obs": {},
+   "notes": [],
+   "secs": 5.05
+  },
+  {
+   "id": "TT-DF-VAS-UNKNOWN-REF-ERR-V3",
+   "group": "TT",
+   "title": "versionAsOf=<unknown ref> (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Cannot find matching snapshot ID or reference name for version nope"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_unknown_ref_err_v3 CREATE BRANCH b0 AS OF VERSION 2543608492339114098",
+   "obs": {},
+   "notes": [],
+   "secs": 5.03
+  },
+  {
+   "id": "TT-DF-VAS-LOWER-V2",
+   "group": "TT",
+   "title": "versionasof lower-case key (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.02
+  },
+  {
+   "id": "TT-DF-VAS-LOWER-V3",
+   "group": "TT",
+   "title": "versionasof lower-case key (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.0
+  },
+  {
+   "id": "TT-DF-VAS-TABLE-API-V2",
+   "group": "TT",
+   "title": "read.option(versionAsOf).table (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.99
+  },
+  {
+   "id": "TT-DF-VAS-TABLE-API-V3",
+   "group": "TT",
+   "title": "read.option(versionAsOf).table (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.99
+  },
+  {
+   "id": "TT-DF-VAS-TAG-TABLE-API-V2",
+   "group": "TT",
+   "title": "read.option(versionAsOf=tag).table (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.0
+  },
+  {
+   "id": "TT-DF-VAS-TAG-TABLE-API-V3",
+   "group": "TT",
+   "title": "read.option(versionAsOf=tag).table (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.99
+  },
+  {
+   "id": "TT-DF-TAS-STR-V2",
+   "group": "TT",
+   "title": "timestampAsOf='<mid ts>' (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.99
+  },
+  {
+   "id": "TT-DF-TAS-STR-V3",
+   "group": "TT",
+   "title": "timestampAsOf='<mid ts>' (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.01
+  },
+  {
+   "id": "TT-DF-TAS-STR-EXACT-V2",
+   "group": "TT",
+   "title": "timestampAsOf=<exact commit ts of S1> (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.99
+  },
+  {
+   "id": "TT-DF-TAS-STR-EXACT-V3",
+   "group": "TT",
+   "title": "timestampAsOf=<exact commit ts of S1> (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 5.01
+  },
+  {
+   "id": "TT-DF-TAS-STR-T-V2",
+   "group": "TT",
+   "title": "timestampAsOf ISO 'T' form (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.98
+  },
+  {
+   "id": "TT-DF-TAS-STR-T-V3",
+   "group": "TT",
+   "title": "timestampAsOf ISO 'T' form (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-DF-TAS-DATE-V2",
+   "group": "TT",
+   "title": "timestampAsOf='2999-01-01' (date only) (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.96
+  },
+  {
+   "id": "TT-DF-TAS-DATE-V3",
+   "group": "TT",
+   "title": "timestampAsOf='2999-01-01' (date only) (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.98
+  },
+  {
+   "id": "TT-DF-TAS-BEFORE-ERR-V2",
+   "group": "TT",
+   "title": "timestampAsOf before first snapshot (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Cannot find a snapshot older than 2000-01-01T00:00:00+00:00"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_tas_before_err_v2 CREATE BRANCH b0 AS OF VERSION 7984490321849201321",
+   "obs": {},
+   "notes": [],
+   "secs": 5.04
+  },
+  {
+   "id": "TT-DF-TAS-BEFORE-ERR-V3",
+   "group": "TT",
+   "title": "timestampAsOf before first snapshot (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Cannot find a snapshot older than 2000-01-01T00:00:00+00:00"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_tas_before_err_v3 CREATE BRANCH b0 AS OF VERSION 1669756434703971106",
+   "obs": {},
+   "notes": [],
+   "secs": 5.04
+  },
+  {
+   "id": "TT-DF-TAS-GARBAGE-ERR-V2",
+   "group": "TT",
+   "title": "timestampAsOf='not a ts' (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"not a ts\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_tas_garbage_err_v2 CREATE BRANCH b0 AS OF VERSION 5606242616288871686",
+   "obs": {},
+   "notes": [],
+   "secs": 5.24
+  },
+  {
+   "id": "TT-DF-TAS-GARBAGE-ERR-V3",
+   "group": "TT",
+   "title": "timestampAsOf='not a ts' (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"not a ts\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_tas_garbage_err_v3 CREATE BRANCH b0 AS OF VERSION 3515071020820535268",
+   "obs": {},
+   "notes": [],
+   "secs": 4.97
+  },
+  {
+   "id": "TT-DF-TAS-EPOCH-SEC-V2",
+   "group": "TT",
+   "title": "timestampAsOf='<epoch seconds>' (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-DF-TAS-EPOCH-SEC-V3",
+   "group": "TT",
+   "title": "timestampAsOf='<epoch seconds>' (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-DF-TAS-EPOCH-MS-V2",
+   "group": "TT",
+   "title": "timestampAsOf='<epoch ms>' (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-DF-TAS-EPOCH-MS-V3",
+   "group": "TT",
+   "title": "timestampAsOf='<epoch ms>' (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-DF-TAS-NY-V2",
+   "group": "TT",
+   "title": "timestampAsOf wall clock in session tz New York (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.92
+  },
+  {
+   "id": "TT-DF-TAS-NY-V3",
+   "group": "TT",
+   "title": "timestampAsOf wall clock in session tz New York (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-DF-TAS-TABLE-API-V2",
+   "group": "TT",
+   "title": "read.option(timestampAsOf).table (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.9
+  },
+  {
+   "id": "TT-DF-TAS-TABLE-API-V3",
+   "group": "TT",
+   "title": "read.option(timestampAsOf).table (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "cols": [
+     "id",
+     "data",
+     "cat"
+    ]
+   },
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-DF-VAS-TAS-ERR-V2",
+   "group": "TT",
+   "title": "versionAsOf + timestampAsOf together (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_SPEC",
+    "getErrorClass": "INVALID_TIME_TRAVEL_SPEC",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_SPEC] Cannot specify both version and timestamp when time travelling the table. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_tas_err_v2 CREATE BRANCH b0 AS OF VERSION 8083290492193103064",
+   "obs": {},
+   "notes": [],
+   "secs": 4.94
+  },
+  {
+   "id": "TT-DF-VAS-TAS-ERR-V3",
+   "group": "TT",
+   "title": "versionAsOf + timestampAsOf together (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_SPEC",
+    "getErrorClass": "INVALID_TIME_TRAVEL_SPEC",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_SPEC] Cannot specify both version and timestamp when time travelling the table. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_tas_err_v3 CREATE BRANCH b0 AS OF VERSION 7549481666478411989",
+   "obs": {},
+   "notes": [],
+   "secs": 4.96
+  },
+  {
+   "id": "TT-DF-VAS-SNAPID-ERR-V2",
+   "group": "TT",
+   "title": "versionAsOf + snapshot-id together (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Time travel option `snapshot-id` is no longer supported, use Spark built-in `versionAsOf` instead"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_snapid_err_v2 CREATE BRANCH b0 AS OF VERSION 3381700327425373088",
+   "obs": {},
+   "notes": [],
+   "secs": 4.99
+  },
+  {
+   "id": "TT-DF-VAS-SNAPID-ERR-V3",
+   "group": "TT",
+   "title": "versionAsOf + snapshot-id together (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Time travel option `snapshot-id` is no longer supported, use Spark built-in `versionAsOf` instead"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_snapid_err_v3 CREATE BRANCH b0 AS OF VERSION 1436859311600387075",
+   "obs": {},
+   "notes": [],
+   "secs": 4.94
+  },
+  {
+   "id": "TT-DF-VAS-SNAPID-SAME-V2",
+   "group": "TT",
+   "title": "versionAsOf + snapshot-id same id (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Time travel option `snapshot-id` is no longer supported, use Spark built-in `versionAsOf` instead"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_snapid_same_v2 CREATE BRANCH b0 AS OF VERSION 6415861773478973301",
+   "obs": {},
+   "notes": [],
+   "secs": 4.94
+  },
+  {
+   "id": "TT-DF-VAS-SNAPID-SAME-V3",
+   "group": "TT",
+   "title": "versionAsOf + snapshot-id same id (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Time travel option `snapshot-id` is no longer supported, use Spark built-in `versionAsOf` instead"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_snapid_same_v3 CREATE BRANCH b0 AS OF VERSION 8266939815500043342",
+   "obs": {},
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-DF-VAS-BRANCH-OPT-V2",
+   "group": "TT",
+   "title": "versionAsOf + branch option (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel in branch"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_branch_opt_v2 CREATE BRANCH b0 AS OF VERSION 7929107551884053830",
+   "obs": {},
+   "notes": [],
+   "secs": 4.97
+  },
+  {
+   "id": "TT-DF-VAS-BRANCH-OPT-V3",
+   "group": "TT",
+   "title": "versionAsOf + branch option (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel in branch"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_branch_opt_v3 CREATE BRANCH b0 AS OF VERSION 5785411386921103013",
+   "obs": {},
+   "notes": [],
+   "secs": 4.95
+  },
+  {
+   "id": "TT-DF-TAS-ASOF-ERR-V2",
+   "group": "TT",
+   "title": "timestampAsOf + as-of-timestamp (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Time travel option `as-of-timestamp` (in millis) is no longer supported, use Spark built-in `timestampAsOf` instead (properly formatted timestamp)"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_tas_asof_err_v2 CREATE BRANCH b0 AS OF VERSION 1072329346143087132",
+   "obs": {},
+   "notes": [],
+   "secs": 4.95
+  },
+  {
+   "id": "TT-DF-TAS-ASOF-ERR-V3",
+   "group": "TT",
+   "title": "timestampAsOf + as-of-timestamp (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Time travel option `as-of-timestamp` (in millis) is no longer supported, use Spark built-in `timestampAsOf` instead (properly formatted timestamp)"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_tas_asof_err_v3 CREATE BRANCH b0 AS OF VERSION 8719604114175730259",
+   "obs": {},
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-DF-VAS-SELECTOR-ERR-V2",
+   "group": "TT",
+   "title": "versionAsOf on t.branch_b0 (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel in branch"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_selector_err_v2 CREATE BRANCH b0 AS OF VERSION 3096468710754494080",
+   "obs": {},
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-DF-VAS-SELECTOR-ERR-V3",
+   "group": "TT",
+   "title": "versionAsOf on t.branch_b0 (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel in branch"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt_df_vas_selector_err_v3 CREATE BRANCH b0 AS OF VERSION 2348404613043340689",
+   "obs": {},
+   "notes": [],
+   "secs": 4.94
+  },
+  {
+   "id": "TT-SQL-EXPR-CAST-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF CAST('<mid>' AS TIMESTAMP) (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-SQL-EXPR-CAST-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF CAST('<mid>' AS TIMESTAMP) (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-SQL-LIT-TS-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF TIMESTAMP '<mid>' (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.9
+  },
+  {
+   "id": "TT-SQL-LIT-TS-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF TIMESTAMP '<mid>' (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-SQL-STR-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF '<mid>' (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.92
+  },
+  {
+   "id": "TT-SQL-STR-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF '<mid>' (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.9
+  },
+  {
+   "id": "TT-SQL-EPOCH-INT-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <epoch seconds int> (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.88
+  },
+  {
+   "id": "TT-SQL-EPOCH-INT-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <epoch seconds int> (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.9
+  },
+  {
+   "id": "TT-SQL-EPOCH-MS-INT-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <epoch ms int> (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.92
+  },
+  {
+   "id": "TT-SQL-EPOCH-MS-INT-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <epoch ms int> (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.94
+  },
+  {
+   "id": "TT-SQL-EPOCH-DEC-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <epoch seconds decimal> (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.92
+  },
+  {
+   "id": "TT-SQL-EPOCH-DEC-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <epoch seconds decimal> (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-SQL-CURRENT-TS-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF current_timestamp() (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-SQL-CURRENT-TS-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF current_timestamp() (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.92
+  },
+  {
+   "id": "TT-SQL-EXPR-ARITH-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF CAST(...) + INTERVAL 1 SECOND (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Cannot find a snapshot older than 2026-09-18T03:08:19.284+00:00"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_expr_arith_v2 TIMESTAMP AS OF CAST('2026-09-19 03:08:19.284500' AS TIMESTAMP) - INTERVAL 1 DAYS",
+   "obs": {},
+   "notes": [],
+   "secs": 4.96
+  },
+  {
+   "id": "TT-SQL-EXPR-ARITH-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF CAST(...) + INTERVAL 1 SECOND (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Cannot find a snapshot older than 2026-09-18T03:08:24.255+00:00"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_expr_arith_v3 TIMESTAMP AS OF CAST('2026-09-19 03:08:24.255500' AS TIMESTAMP) - INTERVAL 1 DAYS",
+   "obs": {},
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-SQL-TO-TS-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF to_timestamp('<mid>') (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.89
+  },
+  {
+   "id": "TT-SQL-TO-TS-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF to_timestamp('<mid>') (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.87
+  },
+  {
+   "id": "TT-SQL-DATE-LIT-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF DATE '2999-01-01' (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.9
+  },
+  {
+   "id": "TT-SQL-DATE-LIT-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF DATE '2999-01-01' (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.9
+  },
+  {
+   "id": "TT-SQL-FST-INT-V2",
+   "group": "TT",
+   "title": "FOR SYSTEM_TIME AS OF <epoch seconds int> (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.89
+  },
+  {
+   "id": "TT-SQL-FST-INT-V3",
+   "group": "TT",
+   "title": "FOR SYSTEM_TIME AS OF <epoch seconds int> (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.89
+  },
+  {
+   "id": "TT-SQL-FST-EXPR-V2",
+   "group": "TT",
+   "title": "FOR SYSTEM_TIME AS OF CAST(...) (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.89
+  },
+  {
+   "id": "TT-SQL-FST-EXPR-V3",
+   "group": "TT",
+   "title": "FOR SYSTEM_TIME AS OF CAST(...) (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-SQL-STR-GARBAGE-ERR-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF 'garbage' (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"garbage\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_str_garbage_err_v2 TIMESTAMP AS OF 'garbage'",
+   "obs": {},
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-SQL-STR-GARBAGE-ERR-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF 'garbage' (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"garbage\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_str_garbage_err_v3 TIMESTAMP AS OF 'garbage'",
+   "obs": {},
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-SQL-COLREF-ERR-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <column ref> (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "ParseException",
+    "getCondition": "_LEGACY_ERROR_TEMP_0056",
+    "getErrorClass": "_LEGACY_ERROR_TEMP_0056",
+    "getSqlState": null,
+    "msg": "Invalid time travel spec: timestamp expression cannot refer to any columns.\n== SQL (line 1, position 44) ==\n...OM sc.ns.t_tt_sql_colref_err_v2 TIMESTAMP AS OF id\n                                   ^^^^^^^^^^^^^^^^^^"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_colref_err_v2 TIMESTAMP AS OF id",
+   "obs": {},
+   "notes": [],
+   "secs": 4.97
+  },
+  {
+   "id": "TT-SQL-COLREF-ERR-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <column ref> (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "ParseException",
+    "getCondition": "_LEGACY_ERROR_TEMP_0056",
+    "getErrorClass": "_LEGACY_ERROR_TEMP_0056",
+    "getSqlState": null,
+    "msg": "Invalid time travel spec: timestamp expression cannot refer to any columns.\n== SQL (line 1, position 44) ==\n...OM sc.ns.t_tt_sql_colref_err_v3 TIMESTAMP AS OF id\n                                   ^^^^^^^^^^^^^^^^^^"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_colref_err_v3 TIMESTAMP AS OF id",
+   "obs": {},
+   "notes": [],
+   "secs": 4.97
+  },
+  {
+   "id": "TT-SQL-SUBQ-ERR-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF (scalar subquery) (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.98
+  },
+  {
+   "id": "TT-SQL-SUBQ-ERR-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF (scalar subquery) (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.92
+  },
+  {
+   "id": "TT-SQL-NULL-ERR-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF NULL (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"NULL\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_null_err_v2 TIMESTAMP AS OF NULL",
+   "obs": {},
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-SQL-NULL-ERR-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF NULL (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"NULL\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_null_err_v3 TIMESTAMP AS OF NULL",
+   "obs": {},
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-SQL-RAND-ERR-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF non-deterministic (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC] The time travel timestamp expression \"CAST(2026-09-19 03:09:48.053000 AS TIMESTAMP) + make_interval(0, 0, 0, 0, 0, 0, rand())\" is invalid. Must be deterministic. SQLSTATE: 42K0E"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_rand_err_v2 TIMESTAMP AS OF CAST('2026-09-19 03:09:48.053000' AS TIMESTAMP) + make_interval(0,0,0,0,0,0,rand())",
+   "obs": {},
+   "notes": [],
+   "secs": 4.91
+  },
+  {
+   "id": "TT-SQL-RAND-ERR-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF non-deterministic (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC] The time travel timestamp expression \"CAST(2026-09-19 03:09:52.982500 AS TIMESTAMP) + make_interval(0, 0, 0, 0, 0, 0, rand())\" is invalid. Must be deterministic. SQLSTATE: 42K0E"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_rand_err_v3 TIMESTAMP AS OF CAST('2026-09-19 03:09:52.982500' AS TIMESTAMP) + make_interval(0,0,0,0,0,0,rand())",
+   "obs": {},
+   "notes": [],
+   "secs": 4.93
+  },
+  {
+   "id": "TT-SQL-EXPR-NY-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF CAST('<NY wall>' AS TIMESTAMP) in NY session (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.88
+  },
+  {
+   "id": "TT-SQL-EXPR-NY-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF CAST('<NY wall>' AS TIMESTAMP) in NY session (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.89
+  },
+  {
+   "id": "TT-SQL-STR-NY-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF '<NY wall>' in NY session (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.95
+  },
+  {
+   "id": "TT-SQL-STR-NY-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF '<NY wall>' in NY session (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.9
+  },
+  {
+   "id": "TT-SQL-EPOCH-NY-V2",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <epoch sec> in NY session (v2)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.88
+  },
+  {
+   "id": "TT-SQL-EPOCH-NY-V3",
+   "group": "TT",
+   "title": "TIMESTAMP AS OF <epoch sec> in NY session (v3)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 4.89
+  },
+  {
+   "id": "TT-SQL-VAS-EXPR-V2",
+   "group": "TT",
+   "title": "VERSION AS OF <int expr> 1+1 (v2)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "ParseException",
+    "getCondition": "PARSE_SYNTAX_ERROR",
+    "getErrorClass": "PARSE_SYNTAX_ERROR",
+    "getSqlState": "42601",
+    "msg": "[PARSE_SYNTAX_ERROR] Syntax error at or near '+'. SQLSTATE: 42601 (line 1, pos 75)\n\n== SQL ==\nSELECT * FROM sc.ns.t_tt_sql_vas_expr_v2 VERSION AS OF 6612232355136978470 + 0\n---------------------------------------------------------------------------^^^"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_vas_expr_v2 VERSION AS OF 6612232355136978470 + 0",
+   "obs": {},
+   "notes": [],
+   "secs": 5.17
+  },
+  {
+   "id": "TT-SQL-VAS-EXPR-V3",
+   "group": "TT",
+   "title": "VERSION AS OF <int expr> 1+1 (v3)",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "ParseException",
+    "getCondition": "PARSE_SYNTAX_ERROR",
+    "getErrorClass": "PARSE_SYNTAX_ERROR",
+    "getSqlState": "42601",
+    "msg": "[PARSE_SYNTAX_ERROR] Syntax error at or near '+'. SQLSTATE: 42601 (line 1, pos 75)\n\n== SQL ==\nSELECT * FROM sc.ns.t_tt_sql_vas_expr_v3 VERSION AS OF 5078961196239863001 + 0\n---------------------------------------------------------------------------^^^"
+   },
+   "error_step": "SELECT * FROM sc.ns.t_tt_sql_vas_expr_v3 VERSION AS OF 5078961196239863001 + 0",
+   "obs": {},
+   "notes": [],
+   "secs": 4.85
+  },
+  {
+   "id": "TT2-RANDOM-ERR",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF ... + make_interval(random())",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC] The time travel timestamp expression \"CAST(2026-09-19 06:57:07.200000 AS TIMESTAMP) + make_interval(0, 0, 0, 0, 0, 0, rand())\" is invalid. Must be deterministic. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_random_err CREATE BRANCH b0 AS OF VERSION 7577546614445480563",
+   "obs": {},
+   "notes": [],
+   "secs": 5.52
+  },
+  {
+   "id": "TT2-UUID-ERR",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF with uuid() inside",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC] The time travel timestamp expression \"CAST(concat(2026-09-19 06:57:10.985500, substr(uuid(), 1, 0)) AS TIMESTAMP)\" is invalid. Must be deterministic. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_uuid_err CREATE BRANCH b0 AS OF VERSION 8961334253168270618",
+   "obs": {},
+   "notes": [],
+   "secs": 2.97
+  },
+  {
+   "id": "TT2-WITH-RAND-SUBQ",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF (WITH x AS (SELECT rand() r) SELECT ts + make_interval(...r))",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "Py4JJavaError",
+    "msg": "An error occurred while calling o55.sql.\n: org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase analysis failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full stack trace. SQLSTATE: XX000"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_with_rand_subq CREATE BRANCH b0 AS OF VERSION 8462032649384742551",
+   "obs": {},
+   "notes": [],
+   "secs": 3.01
+  },
+  {
+   "id": "TT2-DATE-Z-FUTURE",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF '2999-01-01Z'",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"2999-01-01Z\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_date_z_future CREATE BRANCH b0 AS OF VERSION 3023599607611008787",
+   "obs": {},
+   "notes": [],
+   "secs": 2.74
+  },
+  {
+   "id": "TT2-CAST-DATE-Z",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-06-01Z' AS TIMESTAMP) in NY",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "DateTimeException",
+    "getCondition": "CAST_INVALID_INPUT",
+    "getErrorClass": "CAST_INVALID_INPUT",
+    "getSqlState": "22018",
+    "msg": "[CAST_INVALID_INPUT] The value '2020-06-01Z' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 13) ==\nSELECT CAST(CAST('2020-06-01Z' AS TIMESTAMP) AS STRING), unix_timestamp(CAST...\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+   },
+   "error_step": "SELECT CAST(CAST('2020-06-01Z' AS TIMESTAMP) AS STRING), unix_timestamp(CAST('2020-06-01Z' AS TIMESTAMP))",
+   "obs": {},
+   "notes": [],
+   "secs": 2.92
+  },
+  {
+   "id": "TT2-CAST-NOSEC-Z",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-06-01T00:00Z' AS TIMESTAMP) in NY",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "DateTimeException",
+    "getCondition": "CAST_INVALID_INPUT",
+    "getErrorClass": "CAST_INVALID_INPUT",
+    "getSqlState": "22018",
+    "msg": "[CAST_INVALID_INPUT] The value '2020-06-01T00:00Z' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018\n== SQL (line 1, position 23) ==\nSELECT unix_timestamp(CAST('2020-06-01T00:00Z' AS TIMESTAMP))\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+   },
+   "error_step": "SELECT unix_timestamp(CAST('2020-06-01T00:00Z' AS TIMESTAMP))",
+   "obs": {},
+   "notes": [],
+   "secs": 2.75
+  },
+  {
+   "id": "TT2-CAST-PLUS0000",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-06-01 00:00:00+0000' AS TIMESTAMP) in NY",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1590969600
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.7
+  },
+  {
+   "id": "TT2-CAST-DST-GAP",
+   "group": "TT2",
+   "title": "SELECT CAST('2026-03-08 02:30:00' AS TIMESTAMP) in NY (gap)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1772955000
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.66
+  },
+  {
+   "id": "TT2-CAST-DST-OVERLAP",
+   "group": "TT2",
+   "title": "SELECT CAST('2026-11-01 01:30:00' AS TIMESTAMP) in NY (overlap)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1793511000
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.62
+  },
+  {
+   "id": "TT2-CAST-SHORT",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-6-1 1:2:3' AS TIMESTAMP) UTC",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1590973323
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.62
+  },
+  {
+   "id": "TT2-CAST-NANOS",
+   "group": "TT2",
+   "title": "SELECT CAST('2020-06-01 00:00:00.123456789' AS TIMESTAMP) UTC",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      "2020-06-01 00:00:00.123456"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.64
+  },
+  {
+   "id": "TT2-CAST-YEAR-ONLY",
+   "group": "TT2",
+   "title": "SELECT CAST('2020' AS TIMESTAMP)",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1577836800
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.62
+  },
+  {
+   "id": "TT2-TAS-DATE-Z",
+   "group": "TT2",
+   "title": "reader timestampAsOf='2999-01-01Z'",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "getCondition": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getErrorClass": "INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT",
+    "getSqlState": "42K0E",
+    "msg": "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"2999-01-01Z\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_tas_date_z CREATE BRANCH b0 AS OF VERSION 2438116508064632655",
+   "obs": {},
+   "notes": [],
+   "secs": 2.69
+  },
+  {
+   "id": "TT2-TAS-NOSEC",
+   "group": "TT2",
+   "title": "reader timestampAsOf 'yyyy-MM-dd HH:mm' mid",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      3,
+      "c",
+      "x"
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.9
+  },
+  {
+   "id": "TT2-TAS-TAG-SELECTOR-ERR",
+   "group": "TT2",
+   "title": "versionAsOf on t.tag_t0",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel using selector and Spark time travel spec at the same time"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_tas_tag_selector_err CREATE BRANCH b0 AS OF VERSION 7083995748277542146",
+   "obs": {},
+   "notes": [],
+   "secs": 2.6
+  },
+  {
+   "id": "TT2-TAS-TS-TAG-SELECTOR-ERR",
+   "group": "TT2",
+   "title": "timestampAsOf on t.branch_b0",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel in branch"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_tas_ts_tag_selector_err CREATE BRANCH b0 AS OF VERSION 9191521717936700654",
+   "obs": {},
+   "notes": [],
+   "secs": 2.63
+  },
+  {
+   "id": "TT2-SQL-ALIAS-JOIN",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF ... a JOIN ... b ON a.id=b.id",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      null,
+      3
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.88
+  },
+  {
+   "id": "TT2-SQL-ALIAS-AS",
+   "group": "TT2",
+   "title": "TIMESTAMP AS OF '<mid>' AS t2 WHERE t2.id > 0",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.7
+  },
+  {
+   "id": "TT2-SQL-VERSION-ALIAS",
+   "group": "TT2",
+   "title": "VERSION AS OF <id> t2",
+   "engine": "spark",
+   "status": "ok",
+   "obs": {
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ]
+   },
+   "notes": [],
+   "secs": 2.62
+  },
+  {
+   "id": "TT2-SQL-TS-TAG-SELECTOR",
+   "group": "TT2",
+   "title": "SELECT FROM t.tag_t0 TIMESTAMP AS OF",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel using selector and Spark time travel spec at the same time"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_sql_ts_tag_selector CREATE BRANCH b0 AS OF VERSION 451507618713412928",
+   "obs": {},
+   "notes": [],
+   "secs": 2.64
+  },
+  {
+   "id": "TT2-SQL-VAS-BRANCH-SELECTOR",
+   "group": "TT2",
+   "title": "SELECT FROM t.branch_b0 VERSION AS OF id",
+   "engine": "spark",
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "getCondition": null,
+    "getErrorClass": null,
+    "getSqlState": null,
+    "msg": "Can't time travel in branch"
+   },
+   "error_step": "ALTER TABLE sc.ns.t_tt2_sql_vas_branch_selector CREATE BRANCH b0 AS OF VERSION 7607250883985981819",
+   "obs": {},
+   "notes": [],
+   "secs": 2.6
+  }
+ ]
+}

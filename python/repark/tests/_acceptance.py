@@ -18,7 +18,7 @@ import pyarrow as pa
 
 from repark import Window
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
-from repark.errors import AnalysisException
+from repark.errors import IllegalArgumentException
 from repark.spark.dataframe import DataFrame
 
 # Constants — mirrored from the real source publish job's config block
@@ -689,17 +689,17 @@ def require_snapshot_readable(
 
 
 def require_snapshot_expired(spark: object, table: str, snapshot_id: int) -> None:
-    """Fail unless ``VERSION AS OF`` is the unknown-snapshot analysis error.
+    """Fail unless ``VERSION AS OF`` is the unknown-snapshot Spark refusal.
 
-    Needle is the engine string in ``time_travel.rs`` (``unknown Iceberg snapshot id {id}: not
-    found in table metadata``); a generic ``AnalysisException`` is not expire proof.
+    Needle is the engine string in ``time_travel.rs`` (``Cannot find snapshot with ID {id}``);
+    a generic ``AnalysisException`` is not expire proof.
     """
     try:
         spark.sql(  # type: ignore[attr-defined]
             f"SELECT id FROM {table} VERSION AS OF {snapshot_id}"
         ).to_arrow()
-    except AnalysisException as error:
-        needle = f"unknown Iceberg snapshot id {snapshot_id}: not found in table metadata"
+    except IllegalArgumentException as error:
+        needle = f"Cannot find snapshot with ID {snapshot_id}"
         if needle in str(error):
             return
         raise

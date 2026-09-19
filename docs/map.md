@@ -41,7 +41,9 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **Run 17c registry pass (2026-09-16):** `TZ-3`,
+  single home for how repark differs from Apache Spark. **ICE-TT-RESOLVE-1 (2026-09-19):**
+  row `ICE-TT-RESOLVE-1` FIXED beside the MT-1 time-travel rows (shared resolver, 94-cell pins,
+  IPI-18 boundary). **Run 17c registry pass (2026-09-16):** `TZ-3`,
   `SET-ANSI-RUNTIME-1` and `BL-11` flip to FIXED with their pins; `SET-ANSI-RUNTIME-2` / `-3` record two
   narrow runtime-config residues and `SET-ANSI-RUNTIME-4` is a dated declared divergence (sub-minute
   fixed offsets: Spark accepts `+05:30:30`, repark refuses, because Arrow's `Tz` has no seconds-offset

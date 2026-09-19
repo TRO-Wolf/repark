@@ -1,8 +1,10 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use pyo3::prelude::*;
 
-use crate::fence::fenced;
+use crate::dataframe::PyDataFrame;
+use crate::fence::{fenced, fenced_span};
 use crate::session::PyReparkSession;
 use crate::to_py_err;
 
@@ -59,4 +61,37 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_source, module)?)?;
     module.add_function(wrap_pyfunction!(session_source_ping, module)?)?;
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn read_iceberg_table_pinned(
+    py: Python<'_>,
+    session: &PyReparkSession,
+    table_name: &str,
+    snapshot_id: Option<i64>,
+    as_of_timestamp_ms: Option<i64>,
+    branch: Option<String>,
+    tag: Option<String>,
+    version_as_of: Option<String>,
+    timestamp_as_of: Option<String>,
+) -> PyResult<PyDataFrame> {
+    fenced_span!("py.read", "PyReparkSession.read_iceberg_table", {
+        let opts = repark_core::time_travel::TimeTravelOpts {
+            snapshot_id,
+            as_of_timestamp_ms,
+            branch,
+            tag,
+        };
+        let df = py
+            .detach(|| {
+                session.runtime.block_on(session.session.read_iceberg_table(
+                    table_name,
+                    opts,
+                    version_as_of,
+                    timestamp_as_of,
+                ))
+            })
+            .map_err(to_py_err)?;
+        Ok(PyDataFrame::new(df, Arc::clone(&session.runtime)))
+    })
 }
