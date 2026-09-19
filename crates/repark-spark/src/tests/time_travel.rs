@@ -675,3 +675,54 @@ async fn sql_timestamp_asof_evaluates_constants_in_session_zone() {
         .expect_err("rand() must refuse");
     assert!(err.to_string().contains("NON_DETERMINISTIC"), "got: {err}");
 }
+
+#[tokio::test]
+async fn timestamp_as_of_is_inclusive_at_a_snapshot_commit_time() {
+    use repark_core::time_travel::{TimeTravelSpec, resolve_snapshot_id, snapshot_id_as_of_time};
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.tt_edge AS SELECT * FROM src",
+    )
+    .await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "tt_edge".into());
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    let s1 = table.metadata().current_snapshot_id().expect("s1");
+    let s1_ts = table.metadata().snapshot_by_id(s1).unwrap().timestamp_ms();
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.tt_edge SELECT 4 AS id, 'd' AS name",
+    )
+    .await;
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    let metadata = table.metadata();
+    let s2 = metadata.current_snapshot_id().expect("s2");
+    let s2_ts = metadata.snapshot_by_id(s2).unwrap().timestamp_ms();
+    assert!(s2_ts > s1_ts, "s1 {s1_ts} s2 {s2_ts}");
+    let zone = SessionTimeZone::default();
+
+    assert_eq!(snapshot_id_as_of_time(metadata, s1_ts), Some(s1));
+    assert_eq!(snapshot_id_as_of_time(metadata, s2_ts), Some(s2));
+    assert_eq!(snapshot_id_as_of_time(metadata, s2_ts - 1), Some(s1));
+    assert_eq!(snapshot_id_as_of_time(metadata, s1_ts - 1), None);
+    assert_eq!(
+        resolve_snapshot_id(metadata, &TimeTravelSpec::TimestampMs(s1_ts), &zone).unwrap(),
+        s1
+    );
+    assert_eq!(
+        resolve_snapshot_id(metadata, &TimeTravelSpec::TimestampMs(s2_ts), &zone).unwrap(),
+        s2
+    );
+    let err = resolve_snapshot_id(metadata, &TimeTravelSpec::TimestampMs(s1_ts - 1), &zone)
+        .expect_err("before the first snapshot must refuse");
+    assert!(
+        err.to_string()
+            .contains("Cannot find a snapshot older than"),
+        "got: {err}"
+    );
+}

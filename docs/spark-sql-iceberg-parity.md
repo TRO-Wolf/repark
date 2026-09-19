@@ -190,6 +190,15 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   fix is engine-side. IPI-18 stays open: the legacy `snapshot-id` / `as-of-timestamp` /
   `branch` / `tag` pins keep their behavior when used alone and are in scope only where the
   fixture shows them.
+  **Residue (ruling Q-24c-1, 2026-09-19):** every string reaches a timestamp through the
+  engine's `CAST(<string> AS TIMESTAMP)`, which lacks Spark's `stringToTimestamp` grammar.
+  The reader's `timestampAsOf` and SQL `TIMESTAMP AS OF` therefore refuse
+  `INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT` on strings Spark accepts: a date past 2262
+  (`'2999-01-01'`), a wall without seconds (`'2999-01-01 00:00'`), a year alone (`'2020'`).
+  On main the reader ignored `timestampAsOf` and read the current snapshot, so the two
+  far-future reader shapes answered Spark's rows by accident and now refuse loud. They are
+  strict xfails citing the cast; the cast unit `CAST-TS-STRING-1` flips them.
+  pins: ice-tt-resolve-1/C-013
 
 ### 2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)
 

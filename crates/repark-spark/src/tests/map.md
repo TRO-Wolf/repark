@@ -577,6 +577,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** the reader-spec batteries drive the
   async resolver behind `RefSelector`; tag selectors with a built-in refuse the
   selector/spec text. pins: ice-tt-resolve-1/C-002
+  **Verification (2026-09-19):** `timestamp_as_of_is_inclusive_at_a_snapshot_commit_time`
+  pins the inclusive `<=` boundary at a commit's exact ms. pins: ice-tt-resolve-1/C-013
 - [time_travel.rs](time_travel.rs) — statement-owned pinned-view cleanup and collision pins.
 - `collation.rs` pins parse-altitude refusals for expression `COLLATE`, `ORDER BY COLLATE` (two names),
   `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET/RESET of a collation
