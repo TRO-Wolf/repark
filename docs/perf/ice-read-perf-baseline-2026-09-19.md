@@ -24,6 +24,9 @@ Copy from the `environment` object of each run's JSON.
 | kernel | |
 | load average (start of each run) | |
 | date (UTC) | |
+| rustc version | |
+| cold kind / OS page cache | `new_session_same_process` / `not_dropped` |
+| repeats | `--repeat 5` (timings and RSS are medians; I/O is sample 1's, checked equal) |
 
 ## The bed
 
@@ -37,21 +40,28 @@ Copy from the `environment` object of each run's JSON.
 
 ## Results
 
-Per query: plan ms, first-batch ms, total ms, rows, data-file ranged requests / bytes, metadata
-JSON / manifest-list / manifest requests, total requests / bytes, metadata-cache hit / miss,
-peak RSS MiB.
+Paste each run's markdown table. The columns are defined in the bench map: medians over the
+samples, footer and page split, execute-to-first-batch beside first-batch-from-SQL-start, RSS
+at reset beside the peak. Record any `IO-MISMATCH` line verbatim. Record `cpu_count`: the
+footer cells depend on it (the scan re-pack splits files by the CPU count; see the unit ledger).
+Commands: `run --mode <mode> --warehouse <dir> --repeat 5 --out <mode>.json`.
 
 ### cold
 
-| query | plan ms | first batch ms | total ms | rows | data ranged req/bytes | meta json req | manifest-list req | manifest req | total req/bytes | cache hit/miss | peak RSS MiB |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| query | n | plan ms | exec→first ms | first batch ms | total ms | rows | data footer req/bytes | data page req/bytes | delete req/bytes | meta json req | manifest-list req | manifest req | total req/bytes | cache hit/miss | RSS at reset MiB | peak RSS MiB | io same |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
 
 ### warm
 
-| query | plan ms | first batch ms | total ms | rows | data ranged req/bytes | meta json req | manifest-list req | manifest req | total req/bytes | cache hit/miss | peak RSS MiB |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| query | n | plan ms | exec→first ms | first batch ms | total ms | rows | data footer req/bytes | data page req/bytes | delete req/bytes | meta json req | manifest-list req | manifest req | total req/bytes | cache hit/miss | RSS at reset MiB | peak RSS MiB | io same |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
 
-### concurrent (Q2, Q3, Q5, Q6 at once; I/O per group)
+### concurrent (Q2, Q3, Q5, Q6 at once after a warm-up; I/O per round)
 
-| query | plan ms | first batch ms | total ms | rows | data ranged req/bytes | meta json req | manifest-list req | manifest req | total req/bytes | cache hit/miss | peak RSS MiB |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| query | n | plan ms | exec→first ms | first batch ms | total ms | rows | data footer req/bytes | data page req/bytes | delete req/bytes | meta json req | manifest-list req | manifest req | total req/bytes | cache hit/miss | RSS at reset MiB | peak RSS MiB | io same |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+
+### concurrent-cold (Q2, Q3, Q5, Q6 at once on a fresh session, no warm-up; I/O per round)
+
+| query | n | plan ms | exec→first ms | first batch ms | total ms | rows | data footer req/bytes | data page req/bytes | delete req/bytes | meta json req | manifest-list req | manifest req | total req/bytes | cache hit/miss | RSS at reset MiB | peak RSS MiB | io same |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|

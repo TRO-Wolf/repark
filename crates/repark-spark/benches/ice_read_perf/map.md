@@ -146,7 +146,11 @@ would change what "four at once" measures for the other four (their timings and 
   on the three-file bed in every mode that measures per query: Q1 = one footer read per data
   file and zero page reads; Q2 = one footer read per data file plus page reads. On the 20-file
   smoke Q1 was 20 footer reads of exactly 524,288 bytes (the fork's 512 KiB prefetch hint) and
-  no page read.
+  no page read. Footer counts exceed the file count when the fork's scan re-pack (PERF-ICE-SCAN-1,
+  byte ranges of `max(total / CPUs, 64 KiB)`) splits a file into several tasks: each task
+  fetches the tail again. The 20-file smoke on 26 CPUs gave Q2 40 footers and Q4 and Q7 26
+  (their one surviving file split 26 ways). So the footer cells depend on `cpu_count` and on
+  the table size; compare them only at an equal CPU count.
 - **Repeats (`--repeat N`, default 1).** Every measured query (and every concurrent round) runs N
   times; cold takes N fresh sessions per query. The JSON keeps every sample (`samples`) and a
   `median` block (timings and RSS). Requests and bytes are sample 1's. Every other sample's I/O

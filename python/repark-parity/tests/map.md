@@ -122,6 +122,19 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   lists (dropped, renamed, appended, re-hosted, unmerged, cron removed, `pull_request`
   reachability) each fail. YAML read by indentation-aware regex, no PyYAML.
   pins: platform-1/C-001, C-002, C-003, C-004, C-005
+- `test_ice_read_perf_bench_workflow.py` — **ICE-READ-PERF-0 (2026-09-19):** pins over the
+  dispatch-only `ice-read-perf-bench` job of `aws-acceptance.yml`. `live-aws` keeps the nightly
+  and runs only on the schedule or `leg == acceptance`. The dispatch offers `leg` (choice,
+  `acceptance` default) and `purpose`. The bench job runs only on its dispatch, behind
+  `environment: aws-acceptance`, the ref guard, job-scoped `id-token: write`,
+  `persist-credentials: false` and no `continue-on-error`. It uses the same action SHAs as
+  `live-aws` plus the repo's `upload-artifact` SHA. Step order: build, then credentials, then
+  S3 Tables create, compaction `disabled` and read back, S3 Tables write, Glue create and write,
+  both run loops, the bytes summary, the upload. It runs four modes on both catalogs at
+  `BENCH_REPEAT: "3"` under `set -euo pipefail`. No `${{ }}` reaches a `run:` script, and the job
+  carries no `#` comment. Doctoring compaction to `enabled` or adding `continue-on-error` reds
+  it. YAML read by regex, no PyYAML.
+  pins: ice-read-perf-0/C-018, C-019
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,

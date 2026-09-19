@@ -1,7 +1,8 @@
 # Unit ledger — ICE-READ-PERF-0 · Iceberg I/O counting layer and the read bench bed
 
-**Date:** 2026-09-19 · **Branch:** `perf/ice-read-perf-0` · **Base:** `b0fb6feb` (`main`)
-**Model:** claude-opus-5 (round 1) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Date:** 2026-09-19 · **Branch:** `perf/ice-read-perf-0` · **Base:** `b0fb6feb` (`main`), rebased
+onto `0e3a899f` (fork pin RP-34 `43fcd243`) in round 2
+**Model:** claude-opus-5 (rounds 1 and 2) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
@@ -17,9 +18,14 @@ harness-free bench in repark-spark (`benches/ice_read_perf/`). No `unsafe`, no n
 (`bytes` and `serde` were already in the lockfile and are now declared by repark-iceberg; the
 fork's `typetag` storage traits need both), no Cargo feature.
 
+**Round 2 (review reports rv-perf0 / rv-verify0) added:** the footer / page split, the returned-length
+pin, one class per reader, 64-byte cells, Q7, the concurrent-cold mode, repeats, the H-3
+header fields, the AWS `setup --phase create|write`, and the dispatch-only
+`ice-read-perf-bench` job of `aws-acceptance.yml` (C-011 … C-019).
+
 **Not in this unit:** `STATUS.md`; the metadata and manifest caches for Glue and S3 Tables
-(ICE-CATALOG-CACHE-1); the AWS leg of `aws-acceptance.yml` and its Slack note (a later PR);
-the 200-file baseline numbers (the orchestrator records them in
+(ICE-CATALOG-CACHE-1); running the AWS leg (dispatch-only, owner-approved; no AWS call was made);
+the Slack note on an R-3 flag; the 200-file baseline numbers (the orchestrator records them in
 [../../../docs/perf/ice-read-perf-baseline-2026-09-19.md](../../../docs/perf/ice-read-perf-baseline-2026-09-19.md)).
 
 ## PROPOSITION LEDGER — ICE-READ-PERF-0 — 2026-09-19
@@ -43,6 +49,8 @@ the 200-file baseline numbers (the orchestrator records them in
 | C-015 | `run` has four modes: cold (fresh session per sample, same process), warm, concurrent (four warmed queries joined on one task), and concurrent-cold (a fresh session per round, no warm-up, four at once). `--repeat N` measures every query or round N times; the JSON keeps every sample, gives timing and RSS medians, and flags (never averages) any sample whose I/O or rows differ from sample 1's. The environment header carries `cold_kind`, `concurrent_kind`, `os_page_cache: "not_dropped"`, `rustc_version`. Each sample carries `execute_to_first_batch_ms` and `rss_at_reset_kib`, and the run carries `run_io_total`. | `setup_writes_exactly_n_files_and_every_mode_runs_on_them` (four modes × `--repeat 2`; the concurrent-cold group reads manifests, the warm concurrent group none); `the_parser_reads_the_repeat_and_remote_setup_flags`. | PROVEN | Green; adding a warm-up to concurrent-cold reds the mode pin (2026-09-19). |
 | C-016 | `run --catalog glue|s3tables` needs no local manifest: its query constants derive from `--files` / `--rows-per-file` and equal those a local manifest of the same counts records; every run refuses a table whose data files, rows or delete files differ from the expected bed. | `the_counts_derive_the_local_manifests_query_constants`; `aws_catalogs_fail_loud_on_missing_props_without_a_call` (`--manifest` on AWS is refused). | PROVEN | Green. |
 | C-017 | `setup --catalog glue|s3tables --phase create` is idempotent. It creates the namespace by the acceptance module's rule (Glue: location `<warehouse>/<ns>`, verified after the create; S3 Tables: no location) and then the empty bed table, or it reports that a table with the bed schema exists. `--phase write` writes the N files only into a table with no file, skips at exactly N data files with N × rows rows and no delete file, and in any other state fails loud before writing. Both phases end with the R-3 check. Every failure path is pinned offline. | `the_setup_phases_write_only_into_an_empty_table_and_skip_only_an_exact_one`, `the_create_phase_refuses_a_glue_namespace_at_another_location`, `both_setup_phases_end_with_the_r3_check`, `aws_catalogs_fail_loud_on_missing_props_without_a_call` (memory-catalog stand-in, no AWS call). | PROVEN | Green; the mutation "write whatever the state" reds the phase pin (2026-09-19). |
+| C-018 | `aws-acceptance.yml`: `workflow_dispatch` takes `leg` (choice, `acceptance` default, or `ice-read-perf-bench`) and `purpose`. `live-aws` runs only on the schedule or `leg == acceptance`, so the nightly is unchanged. `ice-read-perf-bench` runs only on a dispatch with that leg, behind `environment: aws-acceptance`, the ref guard, job-scoped `id-token: write` and `persist-credentials: false`, with the same pinned actions in the same order. It builds the bench before credentials, refuses an unset or placeholder warehouse and table bucket before signing, disables S3 Tables `icebergCompaction` and fails before any write unless it reads back `disabled`, makes no Glue optimizer call, passes every input, var and secret through `env:`, and adds no YAML comment. | `test_ice_read_perf_bench_workflow.py` (seven pins); `uvx zizmor@1.26.1 .github/workflows/aws-acceptance.yml`; `scripts/check_workflows_parse.py`. | PROVEN | 7 passed; doctoring compaction to `enabled` or adding `continue-on-error` reds two pins (2026-09-19). zizmor: `No findings to report` (3 suppressed; the pedantic persona adds only `undocumented-permissions`, which asks for the comment the owner ruling forbids, and `superfluous-actions` on the toolchain action `live-aws` also uses). Runner behaviour (environment gate, OIDC, the s3tables CLI calls) cannot be proven offline; the first dispatch is its acceptance step. |
+| C-019 | R-3 on every AWS step: each `setup` phase ends with the size check and each `run` checks before its first scan (C-007, C-017). The job runs them with no `continue-on-error` and under `set -euo pipefail`, so exit 3 fails it at once. It runs cold, warm, concurrent and concurrent-cold on both catalogs at `--repeat 3`, writes one summary line per run with `run_io_total.bytes` and the dispatch total, and uploads the JSONs. | `test_every_mode_runs_on_both_catalogs_at_three_repeats_with_r3_failing_the_job`, `test_the_bench_job_runs_only_on_its_dispatch_behind_the_same_gate`; `both_setup_phases_end_with_the_r3_check`. | PROVEN | Green. |
 
 ## Measured observations (not clauses — inputs to the slate's ranking)
 
@@ -64,6 +72,40 @@ From the step-3 smoke (20 files, release, a loaded box: load average about 21):
   bench spells the name with backticks. A product defect outside this unit.
 - **Cold mode:** `register_table` fills the metadata cache, so a cold query itself reads no
   metadata JSON; the registration's one read is in `register_io`.
+
+From the round-2 smoke (20 files × 50,000 rows = 142,885,570 B; release; head `41e04e60`; 26 CPUs;
+load average about 14–16; every mode once, then warm `--repeat 2`; numbers in the hand-back):
+
+- **Footer and page split, measured.** Q1 = 20 footer reads of exactly 524,288 B and zero
+  page reads (cold and warm). Q2 = **40** footer reads (20,971,520 B) plus 20 page reads
+  (2,215,799 B). Q3 and Q5: 40 footer + 20 page. Q6: 40 footer + 40 page (142,828,370 B). Q4 and
+  Q7: **26** footer reads (13,631,488 B) plus 2 page reads.
+- **Why footers exceed files: the scan re-pack splits files, and each split task reads the tail
+  again.** PERF-ICE-SCAN-1's fork re-pack cuts a sub-split-size plan into byte ranges of
+  `max(total / T, 64 KiB)`, with T the target partitions (the CPU count). Every range task opens
+  the file and fetches the 512 KiB tail. On 26 CPUs the 143 MB bed gives about 5.5 MB ranges, so
+  each 7 MB file is two tasks (Q2: 40). Q4 and Q7 keep one file after pruning, which splits into
+  26 tasks: 26 footer reads, 13.6 MB, to read a 7 MB file's two pages. `count(*)` (empty
+  projection) never re-splits (Q1: 20). The three-file pin bed (files under 64 KiB) never splits
+  (one footer per file). So **footer counts depend on the CPU count and on the table size**. On
+  the 200-file bed (about 1.4 GB, 55 MB ranges on 26 CPUs) the full scans should read one footer
+  per file, while Q4 and Q7 still split their one surviving file T ways. That is a direct target
+  for ICE-FOOTER-CACHE-1, and `cpu_count` in the H-3 header is load-bearing for every footer
+  cell.
+- **Q7 reaches the scan and prunes.** Warm: 28 requests / 13.7 MB (26 of them the split
+  footers), against Q3's 60 / 27.5 MB. Both return the same 10,000 rows. Q3 is unchanged from
+  round 1 (`predicate:[]`).
+- **concurrent-cold is the concurrent-miss case.** Its group reads 1 manifest list and 20
+  manifests (281 requests), and the warm concurrent group reads 0 and 0 (260). Group wall time
+  was 195 ms against 122 ms.
+- **The RSS floor is visible.** Warm Q7's `rss_at_reset` (585 MiB) equals its peak: Q6's
+  arenas are the floor. That is why the table carries both figures.
+- **Repeats.** Warm `--repeat 2`: every query's I/O was identical across both samples (`io
+  same: yes`), and no `IO-MISMATCH` was printed in any run.
+- **Run totals** (`run_io_total`, 20 files, one sample): cold 281,758,175 B; warm 561,980,211 B;
+  concurrent 484,281,369 B; concurrent-cold 242,326,070 B; warm × 2 842,882,045 B. Scaled ×10
+  to the 200-file AWS bed, that is the basis of docs/tier2-aws.md §8's estimate of about 70 GB
+  per dispatch at `--repeat 3`.
 
 ## Gates
 
