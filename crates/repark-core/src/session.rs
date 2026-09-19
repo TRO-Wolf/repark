@@ -488,15 +488,21 @@ impl ReparkSession {
                 self.register_memory_catalog(&spec.name, warehouse).await
             }
             CatalogKind::Glue => {
-                let catalog = repark_iceberg::catalog::glue_catalog(&spec.props)
-                    .await
-                    .map_err(engine_err)?;
+                let catalog = repark_iceberg::catalog::glue_catalog_counted(
+                    &spec.props,
+                    self.iceberg_io_counters(),
+                )
+                .await
+                .map_err(engine_err)?;
                 self.register_iceberg_catalog(&spec.name, catalog).await
             }
             CatalogKind::S3Tables => {
-                let catalog = repark_iceberg::catalog::s3tables_catalog(&spec.props)
-                    .await
-                    .map_err(engine_err)?;
+                let catalog = repark_iceberg::catalog::s3tables_catalog_counted(
+                    &spec.props,
+                    self.iceberg_io_counters(),
+                )
+                .await
+                .map_err(engine_err)?;
                 // S3 Tables assigns table location at create, so CTAS must route create-first.
                 self.register_iceberg_catalog_with_policy(
                     &spec.name,

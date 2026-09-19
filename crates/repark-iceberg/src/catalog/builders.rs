@@ -12,6 +12,10 @@ use iceberg_catalog_s3tables::{S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN, S3TablesC
 use tracing::Instrument;
 
 use crate::catalog::caches::{CatalogCaches, IcebergCacheSettings};
+use crate::catalog::counting_storage::{
+    CountingStorageFactory, glue_default_storage_factory, s3tables_default_storage_factory,
+};
+use crate::catalog::io_stats::IcebergIoCounters;
 use crate::catalog::location::storage_factory_for_location;
 
 /// Build the AWS-free in-memory catalog over `warehouse` for local development and tests.
@@ -45,9 +49,12 @@ pub async fn memory_catalog_cached(
     warehouse: &str,
     caches: &CatalogCaches,
 ) -> Result<Arc<dyn Catalog>> {
-    // Use the shared scheme selector so warehouses pick the correct FileIO backend.
-    let mut builder = MemoryCatalogBuilder::default()
-        .with_storage_factory(storage_factory_for_location(warehouse)?);
+    let mut builder = MemoryCatalogBuilder::default().with_storage_factory(Arc::new(
+        CountingStorageFactory::new(
+            storage_factory_for_location(warehouse)?,
+            caches.io_counters(),
+        ),
+    ));
     if let Some(metadata) = caches.metadata_cache() {
         builder = builder.with_table_metadata_cache(metadata);
     }
@@ -70,6 +77,15 @@ pub async fn memory_catalog_cached(
 pub async fn glue_catalog<S: BuildHasher>(
     props: &HashMap<String, String, S>,
 ) -> Result<Arc<dyn Catalog>> {
+    glue_catalog_counted(props, Arc::new(IcebergIoCounters::new())).await
+}
+
+/// # Errors
+/// Returns an error when `warehouse` is absent, empty, or rejected by the fork builder.
+pub async fn glue_catalog_counted<S: BuildHasher>(
+    props: &HashMap<String, String, S>,
+    counters: Arc<IcebergIoCounters>,
+) -> Result<Arc<dyn Catalog>> {
     // Record property names only because this map can contain credentials.
     let prop_keys = prop_key_names(props);
     let has_warehouse = props
@@ -78,6 +94,10 @@ pub async fn glue_catalog<S: BuildHasher>(
     async move {
         require_non_empty_prop(props, GLUE_CATALOG_PROP_WAREHOUSE, "Glue")?;
         let catalog = GlueCatalogBuilder::default()
+            .with_storage_factory(Arc::new(CountingStorageFactory::new(
+                Arc::new(glue_default_storage_factory()),
+                counters,
+            )))
             .load("glue", clone_props(props))
             .await
             .map_err(iceberg_to_datafusion)?;
@@ -97,6 +117,15 @@ pub async fn glue_catalog<S: BuildHasher>(
 pub async fn s3tables_catalog<S: BuildHasher>(
     props: &HashMap<String, String, S>,
 ) -> Result<Arc<dyn Catalog>> {
+    s3tables_catalog_counted(props, Arc::new(IcebergIoCounters::new())).await
+}
+
+/// # Errors
+/// Returns an error if `table_bucket_arn` is absent/empty or the fork builder rejects config.
+pub async fn s3tables_catalog_counted<S: BuildHasher>(
+    props: &HashMap<String, String, S>,
+    counters: Arc<IcebergIoCounters>,
+) -> Result<Arc<dyn Catalog>> {
     let prop_keys = prop_key_names(props);
     let has_table_bucket_arn = props
         .get(S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN)
@@ -104,6 +133,10 @@ pub async fn s3tables_catalog<S: BuildHasher>(
     async move {
         require_non_empty_prop(props, S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN, "S3 Tables")?;
         let catalog = S3TablesCatalogBuilder::default()
+            .with_storage_factory(Arc::new(CountingStorageFactory::new(
+                Arc::new(s3tables_default_storage_factory()),
+                counters,
+            )))
             .load("s3tables", clone_props(props))
             .await
             .map_err(iceberg_to_datafusion)?;

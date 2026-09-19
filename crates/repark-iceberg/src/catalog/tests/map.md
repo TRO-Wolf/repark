@@ -21,6 +21,15 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   and `row_id_read_after_swapping_two_names_reads_each_field_by_id` (projection and a
   `WHERE v = 'a'` filter) hold the rows under the current schema.
   pins: ice-evo-dml-1/C-016
+- `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the counting-layer pins. Every op kind
+  counts once with its bytes (local FS under the wrapper); ranged reads count the range length;
+  `InputFile` / `OutputFile` / `writer()` obtained through the wrapper still count; the Glue and
+  S3 Tables defaults are the fork's `s3a` / `s3` OpenDAL factories and the counted builders keep
+  their prop errors; the classifier over literal paths, over every file a memory-catalog INSERT
+  writes, and over the names the `pos-del` / `dv` generators produce; a scan reads data-file
+  ranges through the counter; a second `load_table` with the metadata cache on reads fewer
+  metadata JSON documents than with it off; clones share one counter set.
+  pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002

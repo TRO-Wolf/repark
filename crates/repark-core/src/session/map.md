@@ -102,6 +102,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `register_iceberg_catalog(name, catalog)` was built by its caller and therefore carries whatever
   caches that caller gave it — the fork's default is OFF, so the injection point is the builder,
   not the registration.
+  **ICE-READ-PERF-0 (2026-09-19):** `iceberg_io_stats()` returns the session's cumulative
+  `IcebergIoStats` snapshot and `reset_iceberg_io_stats()` zeroes it; `iceberg_io_counters()`
+  is what `session.rs::register_catalog_spec` hands `glue_catalog_counted` /
+  `s3tables_catalog_counted`, so a configured Glue or S3 Tables catalog counts into the same set
+  as the memory catalog. A catalog passed to `register_iceberg_catalog` counts only if its
+  builder was given these counters. pins: ice-read-perf-0/C-003
   pins: perf-ice-catalog-io-1/C-002, C-003, C-004
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
