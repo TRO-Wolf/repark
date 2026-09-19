@@ -51,6 +51,8 @@ daa = "daa"
 dbe = "dbe"
 adedd = "adedd"
 VAS = "VAS"
+IST = "IST"
+ECT = "ECT"
 
 [type.ledger]
 extend-glob = ["dfcore-4b-ledger.md", "*-dfcore-4b-ledger.md"]

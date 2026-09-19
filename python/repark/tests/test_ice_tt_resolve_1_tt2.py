@@ -184,7 +184,7 @@ _TT2_CAST_ERR = [
     ),
 ]
 
-_TT2_CAST_GAP = [
+_TT2_CAST_SHORT = [
     (
         "TT2-CAST-SHORT",
         "SELECT unix_timestamp(CAST('2020-6-1 1:2:3' AS TIMESTAMP))",
@@ -212,14 +212,12 @@ def test_facade_sql_tt2_cast_refusals(spark_ny: Any, cell: str, sql: str) -> Non
         spark_ny.sql(sql).to_arrow()
 
 
-@pytest.mark.parametrize("cell,sql", _TT2_CAST_GAP)
-@pytest.mark.xfail(
-    strict=True,
-    reason="engine Spark CAST refuses short/year-only strings the oracle accepts; "
-    "cast finding, do not special-case time travel",
-)
-def test_facade_sql_tt2_cast_engine_gap(spark: Any, cell: str, sql: str) -> None:
-    """TT2 short/year-only casts pin the Spark answer. pins: ice-tt-resolve-1/C-002"""
+@pytest.mark.parametrize("cell,sql", _TT2_CAST_SHORT)
+def test_facade_sql_tt2_short_and_year_only_casts(spark: Any, cell: str, sql: str) -> None:
+    """TT2 short/year-only casts answer Spark.
+
+    pins: ice-tt-resolve-1/C-002, cast-ts-string-1/C-009
+    """
     assert tuple(_tt2_scalar(spark, sql)) == _tt2_rows(cell)[0]
 
 
@@ -248,13 +246,11 @@ def test_reader_tt2_timestamp_as_of_refusal(spark: Any, version: int) -> None:
 
 
 @pytest.mark.parametrize("version", [2, 3])
-@pytest.mark.xfail(
-    strict=True,
-    reason="engine Spark CAST refuses no-seconds walls the oracle answers; "
-    "cast finding, do not special-case time travel",
-)
 def test_reader_tt2_timestamp_as_of_nosec(spark: Any, version: int) -> None:
-    """TT2 no-seconds timestampAsOf pins the Spark rows. pins: ice-tt-resolve-1/C-002"""
+    """TT2 no-seconds timestampAsOf answers the Spark rows.
+
+    pins: ice-tt-resolve-1/C-002, cast-ts-string-1/C-009
+    """
     table = f"mem.ns.tt2tas_v{version}"
     _seed_tt2_table(spark, table, version)
     frame = (
@@ -269,13 +265,16 @@ def test_reader_tt2_timestamp_as_of_nosec(spark: Any, version: int) -> None:
 
 @pytest.mark.parametrize("version", [2, 3])
 def test_facade_sql_tt2_alias_join(spark: Any, version: int) -> None:
-    """TT2 aliased self-join pins both sides rows. pins: ice-tt-resolve-1/C-002"""
+    """TT2 aliased self-join pins both sides rows with the oracle's 2999 literal.
+
+    pins: ice-tt-resolve-1/C-002, cast-ts-string-1/C-009
+    """
     table = f"mem.ns.tt2alias_v{version}"
     seed = _seed_tt2_table(spark, table, version)
     mid = seed["mid_str"]
     frame = spark.sql(
         f"SELECT a.id, b.id FROM {table} TIMESTAMP AS OF CAST('{mid}' AS TIMESTAMP) a "
-        f"FULL OUTER JOIN {table} TIMESTAMP AS OF '2261-01-01' b ON a.id = b.id "
+        f"FULL OUTER JOIN {table} TIMESTAMP AS OF '2999-01-01' b ON a.id = b.id "
         "ORDER BY b.id"
     )
     arrow = frame.to_arrow()
