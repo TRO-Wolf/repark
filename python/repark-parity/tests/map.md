@@ -143,6 +143,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror rows ratchet `functions.py` 1984 → 1983 and `functions_expr.py`
   2198 → 2178 with `scripts/check_lib_py.py`.
   pins: fnp-gen-1/C-002, C-003
+- `test_cap_1_source_file_line_cap.py` — **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):**
+  mirror row `writer_readwriter.py` 1095 → 1093, the value round 1 set in
+  `scripts/check_lib_py.py` without its mirror.
 - `test_cap_1_source_file_line_cap.py` — **ICE-TT-RESOLVE-1 (2026-09-19, run 24c):**
   mirror rows ratchet `repark-python/src/session.rs` 1126 → 1122 and `session_core.py`
   2290 → 2287 with `scripts/check_rust_file_size.py` and `scripts/check_lib_py.py`.

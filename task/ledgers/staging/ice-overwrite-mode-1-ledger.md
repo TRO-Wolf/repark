@@ -170,6 +170,35 @@ half now equals the Spark half and the verdict flips DIVERGES → EQUAL
   rust-file-size, python-conventions, docstring-presence, ledger-grammar, docs-links and
   map-sync clean. Comment ban: 0 hits on every commit.
 
+## Round 2 step 4 (2026-09-19) — the gates
+
+Release native rebuilt from the round-2 step-2 tree (no Rust change after it).
+
+- Harness replay (`cells_pc3.py`, 88 cells: the 60 base cells re-recorded plus 28 `OW2`):
+  rows, snapshot summaries and error presence equal on 84/88 — the 4 misses are the
+  `saveAsTable(overwrite)` RTAS histories (R-4). Every refusing cell matches Spark's class
+  and carries its `[NON_PARTITION_COLUMN]` token; `getCondition()` stays `None` (R-5).
+- Offline `-n 4`: the 29 test files `rg` finds for `INSERT OVERWRITE|insertInto|
+  overwritePartitions|overwrite_partitions|overwrite-mode` — 1128 passed, 37 skipped,
+  20 xfailed; the 32 further files naming `overwrite` or the V3-COV / promote-read programs —
+  1403 passed, 93 skipped, 1 xfailed.
+- Live (`REPARK_PARITY_LIVE=1`, PySpark 4.1.2, JVM lock): `test_ice_overwrite_mode_1.py`
+  92 passed, 4 xfailed; the recorder's `check` re-derives all 88 cells, so the 28 folded
+  `OW2` cells are reproduced by this unit's recorder on live Spark.
+- `cargo test -p repark-iceberg --lib` (overwrite filters) 38 passed; `-p repark-spark --lib`
+  (overwrite, partition, by-name, write-option, dialect, transform filters) 160 passed and
+  (`overwrite partition insert`) 277 passed; `-p repark-sql --lib` 365 passed, `--test
+  ansi_write_defaults` 8 passed; `-p repark-core --lib` (dialect, mode, write-option, session)
+  171 passed.
+- `cargo fmt --all --check` clean; `cargo clippy --locked -p <crate> --all-targets -- -D
+  warnings -A clippy::disallowed_methods` clean on repark-iceberg, -spark, -sql; the
+  panic-ban form (`--workspace --lib --bins --exclude repark-python -- -D warnings`) clean.
+- `ruff check .` clean; `ruff format --check` on the changed Python clean; rust-file-size,
+  lib-py, python-conventions, docstring-presence, ledger-grammar, docs-links and map-sync
+  clean. `test_cap_1_source_file_line_cap.py` was red on round 1's tree: round 1 lowered
+  `writer_readwriter.py`'s `check_lib_py.py` row 1095 → 1093 without its mirror; the mirror
+  now reads 1093 (23 passed). Comment ban: 0 hits after every commit.
+
 ## Coverage attestation
 
 ```yaml
