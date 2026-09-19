@@ -389,3 +389,76 @@ def test_live_oracle_matches_committed_fixture(spark_engine: Any) -> None:
             key,
             "live rows",
         )
+
+
+_ROUND3: dict[str, dict[str, Any]] = json.loads(
+    (_HERE / "cast_map_spell_1" / "cast_map_spell_1_round3_spark_oracle.json").read_text(
+        encoding="utf-8"
+    )
+)["cells"]
+_ROUND3_NATIVE_KEYS: tuple[str, ...] = tuple(key for key, cell in _ROUND3.items() if cell["ansi"])
+
+
+def _round3_value(value: Any) -> Any:
+    """Render one Arrow value the way the recorder's ``json`` pass rendered Spark's.
+
+    Arrow maps read as key/value pairs; folding them into a dict keyed by ``str(key)``
+    is what ``collect()`` plus ``json`` does to Spark's map (the later of two equal
+    keys wins the dict slot), so duplicate keys compare exactly as Spark shows them.
+    """
+    if (
+        isinstance(value, list)
+        and value
+        and all(isinstance(pair, tuple) and len(pair) == 2 for pair in value)
+    ):
+        return {str(key): _round3_value(item) for key, item in value}
+    if isinstance(value, list):
+        return [_round3_value(item) for item in value]
+    return value
+
+
+def _assert_round3_cell(key: str, run: Any) -> None:
+    """Assert one round-3 cell's rows, or its Spark error token, through ``run(sql)``."""
+    cell = _ROUND3[key]
+    if "error" in cell:
+        token = cell["error"].split("]")[0] + "]"
+        with pytest.raises(Exception, match=re.escape(token)):
+            run(cell["sql"]).to_arrow()
+        return
+    table = run(cell["sql"]).to_arrow()
+    rows = [
+        [
+            _round3_value(table.column(position).to_pylist()[index])
+            for position in range(table.num_columns)
+        ]
+        for index in range(table.num_rows)
+    ]
+    assert rows == cell["rows"], (key, rows)
+
+
+@pytest.mark.parametrize("key", sorted(_ROUND3))
+def test_round3_cell_matches_spark_on_facade(key: str) -> None:
+    """One round-3 cell answers Spark on the facade door under its recorded ANSI mode.
+
+    pins: cast-map-spell-1/C-011, C-012, C-013, C-014
+    """
+    session = _spark_session("true" if _ROUND3[key]["ansi"] else "false")
+    try:
+        _assert_round3_cell(key, session.sql)
+        if "error" not in _ROUND3[key]:
+            assert (
+                session.sql(_ROUND3[key]["sql"]).schema.simpleString() == (_ROUND3[key]["schema"])
+            ), key
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("key", _ROUND3_NATIVE_KEYS)
+def test_round3_cell_matches_spark_on_native_door(key: str) -> None:
+    """One ANSI-on round-3 cell answers Spark on the native ``repark.sql`` door.
+
+    pins: cast-map-spell-1/C-011, C-012, C-013, C-014
+    """
+    import repark
+
+    _assert_round3_cell(key, repark.sql)

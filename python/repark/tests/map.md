@@ -55,6 +55,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   live 95 passed; the re-deriver's `--check` matches the fixture). The facade value
   cells match rows as a multiset, because the `UNION ALL` cell promises no order; the
   registry row reads FIXED. pins: cast-map-spell-1/C-001, C-009, C-010
+  **Round 3 (2026-09-19):** 17 more cells from
+  `cast_map_spell_1/cast_map_spell_1_round3_spark_oracle.json`, each under its recorded
+  ANSI mode on the facade door and, when ANSI is on, on the native door: key legality
+  per mode and `try_cast`, colliding keys kept as Spark stores them, leaf overflow,
+  whitespace and fractional text, and a `/*! … */` comment hint. Maps compare through a
+  `str(key)` dict, as the recorder's `collect()` plus `json` does.
+  pins: cast-map-spell-1/C-011, C-012, C-013, C-014
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —
