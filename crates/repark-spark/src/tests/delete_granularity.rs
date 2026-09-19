@@ -122,7 +122,7 @@ async fn unknown_delete_granularity_refuses_before_any_write() {
     );
 }
 
-/// pins: mw-9-delete-granularity/C-005
+/// pins: mw-9-delete-granularity/C-005; pins: ice-meta-delete-1/C-001
 #[tokio::test]
 async fn fork_table_provider_delete_is_not_this_writer() {
     let wh = TempDir::new().unwrap();
@@ -138,18 +138,31 @@ async fn fork_table_provider_delete_is_not_this_writer() {
     run(
         &ctx,
         &catalogs,
+        "INSERT INTO ice.sales.del VALUES (7, 'v7'), (8, 'v8')",
+    )
+    .await;
+    run(&ctx, &catalogs, "DELETE FROM ice.sales.del WHERE id = 7").await;
+    assert_eq!(
+        delete_file_count(&ctx, &catalogs, "del").await,
+        1,
+        "a row-level SQL DELETE goes through iceberg-datafusion, which has no granularity knob \
+         (ENGINE_CONTRACT §7); MW-9 is the RePark MERGE writer"
+    );
+    run(
+        &ctx,
+        &catalogs,
         "DELETE FROM ice.sales.del WHERE id IN (1, 2, 3, 4, 5, 6)",
     )
     .await;
     assert_eq!(
         delete_file_count(&ctx, &catalogs, "del").await,
         1,
-        "SQL DELETE goes through iceberg-datafusion, which has no granularity knob \
-         (ENGINE_CONTRACT §7); MW-9 is the RePark MERGE writer"
+        "the whole-file DELETE is answered from metadata, so it writes no delete file at all \
+         (ICE-META-DELETE-1)"
     );
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.del").await,
-        0
+        1
     );
 }
 

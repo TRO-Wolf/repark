@@ -216,9 +216,15 @@ async fn try_metadata_delete_door(cx: &EngineContext<'_>, statement: &Statement)
     if cx.catalogs.get(&target.catalog_name).is_none() {
         return Ok(false);
     }
-    guards::refuse_mor_multi_spec_dml(cx, statement).await?;
     let handle = schema_ddl::catalog_handle(cx.catalogs, &target.catalog_name)?;
-    repark_iceberg::write::meta_delete::try_metadata_delete(handle, &target, false).await
+    let Some(plan) =
+        repark_iceberg::write::meta_delete::plan_metadata_delete(handle, &target, false).await?
+    else {
+        return Ok(false);
+    };
+    guards::refuse_mor_multi_spec_dml(cx, statement).await?;
+    repark_iceberg::write::meta_delete::commit_metadata_delete(handle, plan).await?;
+    Ok(true)
 }
 
 async fn commit_identity_dml(

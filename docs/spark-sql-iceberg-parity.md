@@ -586,6 +586,61 @@ perfectly good read.
   semantics change. Residue is stated on DML-1 (the cast refusal's text, typed literals) and
   here (RTAS history of `saveAsTable(overwrite)`, engine-wide `getCondition()`).
 
+#### ICE-META-DELETE-1 — a DELETE that covers whole data files deletes the files — **FIXED 2026-09-19**
+
+- **repark** — **FIXED 2026-09-19.** Before this row, every predicate DELETE went through the
+  row-level path: merge-on-read wrote position deletes or deletion vectors and copy-on-write
+  rewrote files, and a DELETE matching no row committed no snapshot at all. 29 of the 72
+  measured cells differed. Now both doors ask one Rust decision
+  (`repark_iceberg::write::meta_delete`) BEFORE the row-level plan, exactly where Java's
+  `SparkTable.canDeleteWhere` asks it: the `WHERE` is translated EXACTLY to an Iceberg
+  predicate (`AND`/`OR`, `=`/`<`/`<=`/`>`/`>=`, `IS [NOT] NULL`, a positive `IN` list,
+  `LIKE 'prefix%'`, literal `TRUE`, and a missing `WHERE`), the fork's
+  `Table::can_delete_using_metadata` answers whether every planned file is strictly covered,
+  and only a true answer commits the fork's `DeleteFilesAction::delete_from_row_filter` — one
+  `delete` snapshot that removes whole files and writes no delete file, in both
+  `write.delete.mode` values. A predicate that plans no file is vacuously true, so a no-match
+  DELETE commits Spark's empty `delete` snapshot. Anything the translation cannot represent
+  exactly — every negation (`NOT`, `<>`, `NOT IN`, `NOT LIKE`), a function, a cast, a
+  subquery, a non-primitive column — declines and keeps the row-level route unchanged.
+- **Apache Spark** — Spark decides above the mode and issues
+  `DeleteFiles.deleteFromRowFilter(expr)`; a conjunct it cannot convert makes the whole
+  decision false. *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19, 72
+  cells: 18 DELETE shapes x format v2/v3 x merge-on-read/copy-on-write.)*
+- **Pin** — `python/repark/tests/test_ice_meta_delete_1.py` +
+  `ice_meta_delete_1_spark_oracle.json` + `_record_ice_meta_delete_1.py` (72 cells offline,
+  the live re-derivation under `REPARK_PARITY_LIVE=1`);
+  `crates/repark-iceberg/src/write/meta_delete/tests.rs` (the decision and the translation);
+  `crates/repark-sql/tests/ansi_meta_delete.rs` (the native door).
+  pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- **Rationale** — FIXED 2026-09-19. TRIGGER: none of this unit's own — the commit is the
+  fork's action, already bytecode-verified against Java. 71 of the 72 cells answer Spark; the
+  72nd is ICE-META-DELETE-1-D1 below, a row-level merge-on-read difference this row's decision
+  never reaches.
+
+#### ICE-META-DELETE-1-D1 — v2 merge-on-read adds a second position-delete file where Spark rewrites the first — **DECLARED 2026-09-19**
+
+- **repark** — a row-level merge-on-read DELETE against a data file that ALREADY carries a
+  position-delete file writes a SECOND delete file: `added-position-deletes=2`,
+  `added-delete-files=1`, `total-delete-files=2`, and the earlier delete file stays live. Rows
+  read back exactly as Spark's do; only the delete-file bookkeeping differs. Format v3 is
+  unaffected — one deletion vector per data file replaces the previous one, and that cell is
+  equal.
+- **Apache Spark** — Spark rewrites the superseded delete file in the same commit:
+  `added-position-deletes=3`, `added-delete-files=1`, `removed-delete-files=1`,
+  `removed-position-deletes=1`, `total-delete-files=1` (Iceberg's file-granularity delete
+  write, `write.delete.granularity=file`). *(oracle: recorded, live PySpark 4.1.2 + Iceberg
+  1.11.0, 2026-09-19, cell `prior_deletes_then_rest_v2_mor`.)*
+- **Pin** — `python/repark/tests/test_ice_meta_delete_1.py::test_meta_delete_cell_matches_spark`
+  cell `prior_deletes_then_rest_v2_mor`, a STRICT `xfail` naming this row; it reds the day the
+  delete-file rewrite lands.
+  pins: ice-meta-delete-1/C-005
+- **Rationale** — DECLARED 2026-09-19, not fixed here: the difference is in the merge-on-read
+  row-delta writer (`write.delete.granularity` and the rewrite of a superseded delete file),
+  which ICE-META-DELETE-1's decision sits ABOVE and never reaches. Fixing it is a delete-write
+  unit of its own with a far wider blast radius (every merge-on-read summary in the suite), and
+  is named for the orchestrator as the open question of this unit.
+
 #### DML-1B — `partitionOverwriteMode=dynamic` on PARTITION-less `INSERT OVERWRITE`
 
 - **repark** — **FIXED 2026-09-17 (ICE-DYN-OVERWRITE-1).** The session conf

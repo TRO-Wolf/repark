@@ -12,6 +12,14 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
+- `ansi_meta_delete.rs` — **ICE-META-DELETE-1 (2026-09-19):** the native door's end of Spark's
+  metadata delete. A whole-file `DELETE` removes the file in ONE `delete` snapshot with no
+  delete file, on both `write.delete.mode` values; a no-match commits the empty `delete`
+  snapshot; a partial `DELETE` still writes a position delete; `DELETE FROM t` with no
+  predicate empties the table; and the case pins hold the door's own rule — an UNQUOTED
+  wrong-cased column folds (its planner lower-cases it), a QUOTED one keeps the door's
+  refusal and touches no file.
+  pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-006
 - `ansi_nested_ddl_oracle.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI
   door's twin of every recorded nested DDL cell, reading Spark's answers from
   `python/repark-parity/fixtures/torture/data/ice_nested_evo_1/oracle.json`. The `cells`

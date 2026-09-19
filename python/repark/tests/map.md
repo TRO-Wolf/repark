@@ -2092,6 +2092,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `rewrite_position_delete_files` / `rewrite_manifests` zeros on the evolved table. Every
   row set, schema and file multiset measured on live PySpark 4.1.2 first. Spark door only.
   pins: rdf-schema-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **ICE-META-DELETE-1 (2026-09-19):** the v3-DV shape seeds three two-row files instead of six
+  one-row files, so its `DELETE … WHERE id = 1` is still a PARTIAL match and still writes the
+  deletion vector the rewrite is there to drop; on one-row files that DELETE is now answered
+  from metadata, as Spark answers it, and no DV exists to rewrite (6→3 rewritten files).
+  pins: ice-meta-delete-1/C-003
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24; RP-5 2026-09-01):** the
   maintenance cycle `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end
   to end on a local catalog at gate scale (4,000 rows, 2 partitions, six MERGEs). F-16r

@@ -320,6 +320,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).
+  **ICE-META-DELETE-1 (2026-09-19):** the fork-residual pin now deletes ONE row of a two-row
+  file to keep a row-level DELETE in the shape (that is what has no granularity knob), and
+  asserts on the way that the whole-file `DELETE … IN (1..6)` writes no delete file at all —
+  it is answered from metadata.
+  pins: ice-meta-delete-1/C-001
 - `call_rewrite_dangling.rs` — the CALL's
   `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports
   `removed_delete_files_count` on a partitioned v2 fixture (C-006).

@@ -4,7 +4,7 @@ Replays the 72 recorded Spark 4.1.2 cells of ``ice_meta_delete_1_spark_oracle.js
 RePark's Spark SQL door and asserts, per cell, the surviving rows, the operation of every
 snapshot the cell produced, the recorded summary counters, and the live data files.
 
-pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005
+pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-008
 """
 
 from __future__ import annotations
@@ -37,8 +37,31 @@ from repark.spark.session import _reset_active_session_for_tests
 LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live Spark re-derivation is skipped (CI is JVM-free)"
 FIXTURE: dict[str, Any] = load_cells()
+DECLARED_DIVERGENCES: dict[str, str] = {
+    "prior_deletes_then_rest_v2_mor": (
+        "registry ICE-META-DELETE-1-D1 — a v2 merge-on-read DELETE against a data file that "
+        "already carries a position-delete file adds a SECOND delete file where Spark rewrites "
+        "the superseded one (rows equal; delete-file bookkeeping differs). The row-level "
+        "delete-write path, which this unit's decision sits above."
+    ),
+}
 CELLS = [
-    pytest.param(shape, version, mode, id=cell_id(shape, version, mode))
+    pytest.param(
+        shape,
+        version,
+        mode,
+        id=cell_id(shape, version, mode),
+        marks=(
+            [
+                pytest.mark.xfail(
+                    strict=True,
+                    reason=DECLARED_DIVERGENCES[cell_id(shape, version, mode)],
+                )
+            ]
+            if cell_id(shape, version, mode) in DECLARED_DIVERGENCES
+            else []
+        ),
+    )
     for shape in SHAPES
     for version in VERSIONS
     for mode in MODES

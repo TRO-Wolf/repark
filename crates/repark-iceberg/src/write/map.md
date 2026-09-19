@@ -50,6 +50,12 @@ repark-core's error map.
   statement keeps the row-level route. Negations (`NOT`, `<>`, `NOT IN`, `NOT LIKE`) decline on
   purpose: Iceberg's negated predicates MATCH a null where SQL's three-valued logic does not,
   and the recorded `not_in_whole_*_mor` cells show Spark taking the row-level route for them.
+  The decision splits into `plan_metadata_delete` and `commit_metadata_delete` so a door can
+  run its own refusals between them (the ANSI door runs the MoR multi-spec guard only once the
+  predicate has translated, which keeps the cheap G3-E8 subquery valve first).
+  A column reference binds the way the calling door's planner binds it: a case-insensitive
+  door folds, an exact door lower-cases an UNQUOTED reference (DataFusion's default ident
+  normalization) and binds a QUOTED one verbatim.
   `try_metadata_delete` then asks the fork's `Table::can_delete_using_metadata` (partition
   selection, else strict metrics on every planned file) and, only when it answers true, commits
   the fork's `DeleteFilesAction::delete_from_row_filter`. The decision precedes the commit, as

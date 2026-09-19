@@ -60,7 +60,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   allow-list, after the MoR multi-spec guard, so the ANSI door answers a whole-file DELETE with
   the same one `delete` snapshot the Spark door does. The door stays EXACT: it passes
   `case_insensitive = false`, so the fork binds the predicate case-sensitively, as
-  `commit_identity_dml` already does for the identity path.
+  `commit_identity_dml` already does for the identity path. The guard order is preserved by
+  splitting plan from commit: the metadata plan is built first (a subquery predicate never
+  translates, so it declines silently), the MoR multi-spec guard runs only for a statement the
+  route can actually answer, and the cheap G3-E8 subquery valve still fires first.
   pins: ice-meta-delete-1/C-006
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`;

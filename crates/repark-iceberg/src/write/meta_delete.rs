@@ -27,6 +27,12 @@ pub struct MetaDeleteTarget {
     pub selection_sql: Option<String>,
 }
 
+pub struct MetaDeletePlan {
+    table: Table,
+    predicate: Predicate,
+    case_sensitive: bool,
+}
+
 struct ColumnScope<'a> {
     schema: &'a Schema,
     target_alias: &'a str,
@@ -84,13 +90,26 @@ pub async fn try_metadata_delete(
     target: &MetaDeleteTarget,
     case_insensitive: bool,
 ) -> Result<bool> {
-    let Ok(table) = catalog.load_table(&target.target).await else {
+    let Some(plan) = plan_metadata_delete(catalog, target, case_insensitive).await? else {
         return Ok(false);
+    };
+    commit_metadata_delete(catalog, plan).await?;
+    Ok(true)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn plan_metadata_delete(
+    catalog: &Arc<dyn Catalog>,
+    target: &MetaDeleteTarget,
+    case_insensitive: bool,
+) -> Result<Option<MetaDeletePlan>> {
+    let Ok(table) = catalog.load_table(&target.target).await else {
+        return Ok(None);
     };
     let Some(predicate) =
         delete_predicate(target, table.metadata().current_schema(), case_insensitive)
     else {
-        return Ok(false);
+        return Ok(None);
     };
     let case_sensitive = !case_insensitive;
     if !table
@@ -98,10 +117,13 @@ pub async fn try_metadata_delete(
         .await
         .map_err(iceberg_err)?
     {
-        return Ok(false);
+        return Ok(None);
     }
-    commit_metadata_delete(catalog, &table, predicate, case_sensitive).await?;
-    Ok(true)
+    Ok(Some(MetaDeletePlan {
+        table,
+        predicate,
+        case_sensitive,
+    }))
 }
 
 #[must_use]
@@ -121,18 +143,17 @@ pub fn delete_predicate(
     exact_predicate(&parse_selection(selection_sql)?, &scope, 0)
 }
 
-async fn commit_metadata_delete(
+#[allow(clippy::missing_errors_doc)]
+pub async fn commit_metadata_delete(
     catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    predicate: Predicate,
-    case_sensitive: bool,
+    plan: MetaDeletePlan,
 ) -> Result<()> {
     let (operation_id, summary) = operation_id_and_summary();
-    let transaction = Transaction::new(table);
+    let transaction = Transaction::new(&plan.table);
     let action = transaction
         .delete_files()
-        .delete_from_row_filter(predicate)
-        .case_sensitive(case_sensitive)
+        .delete_from_row_filter(plan.predicate)
+        .case_sensitive(plan.case_sensitive)
         .set_snapshot_properties(summary);
     let transaction = action.apply(transaction).map_err(iceberg_err)?;
     commit_result(transaction.commit(catalog.as_ref()).await, &operation_id).map(|_| ())
@@ -290,24 +311,27 @@ fn literal_prefix(pattern: &Expr) -> Option<String> {
 }
 
 fn column_name(expr: &Expr, scope: &ColumnScope<'_>) -> Option<String> {
-    let raw = match expr {
-        Expr::Identifier(ident) => ident.value.as_str(),
+    let ident = match expr {
+        Expr::Identifier(ident) => ident,
         Expr::CompoundIdentifier(parts) if parts.len() == 2 => {
             if !parts[0].value.eq_ignore_ascii_case(scope.target_alias) {
                 return None;
             }
-            parts[1].value.as_str()
+            &parts[1]
         }
         _ => return None,
     };
-    if scope.case_insensitive {
-        return top_level_field(scope.schema, raw).map(|field| field.name.clone());
-    }
-    scope
-        .schema
-        .as_struct()
-        .field_by_name(raw)
-        .map(|field| field.name.clone())
+    let field = if scope.case_insensitive {
+        top_level_field(scope.schema, &ident.value)?
+    } else {
+        let normalized = if ident.quote_style.is_some() {
+            ident.value.clone()
+        } else {
+            ident.value.to_lowercase()
+        };
+        scope.schema.as_struct().field_by_name(&normalized)?
+    };
+    matches!(field.field_type.as_ref(), Type::Primitive(_)).then(|| field.name.clone())
 }
 
 fn primitive_type(schema: &Schema, name: &str) -> Option<PrimitiveType> {
@@ -320,3 +344,6 @@ fn primitive_type(schema: &Schema, name: &str) -> Option<PrimitiveType> {
 fn iceberg_err(error: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(error))
 }
+
+#[cfg(test)]
+mod tests;
