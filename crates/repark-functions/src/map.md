@@ -138,6 +138,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   from the shared helper, so a parenthesized `-(2147483648)` stays bigint in
   lambda bodies and constructors exactly as on the top-level door
   (LIT2-SQL-03); only the lexer-level negative token narrows.
+  **ICE-COUNT-FOLD-1 (2026-09-19):** the helper walks top-down; a non-distinct `count` whose
+  only argument is the literal `1` (`Int32` or `Int64`) keeps (or gets) DataFusion's
+  count-star expansion `Int64(1)` and its argument is not narrowed, so
+  `Count::value_from_stats` folds `count(*)` / `count(1)` / `groupBy().count()` from an
+  exact row-count statistic (the Iceberg scan's, among others). Its `FILTER` and `ORDER BY`
+  literals still narrow; the output name is preserved by `NamePreserver`; the result stays
+  `Int64`. `count(5)` and `count(DISTINCT 1)` narrow as before.
+  pins: ice-count-fold-1/C-002
   pins: sql-literal-typing-1/V-001
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
   twice — right after `SparkIntegerLiteral` and last. Two passes over lambda bindings: it

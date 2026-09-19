@@ -27,7 +27,8 @@ stay `Int64`, `count(*)`/`regr_count`/`ntile`/`rank()` keep their signed widths.
 - **ICE-COUNT-FOLD-1 (2026-09-19):** a non-distinct `count` whose only argument is the
   integer literal `1` (`Int32` or `Int64`) analyzes to DataFusion's count-star expansion
   `Int64(1)`, so `Count::value_from_stats` can fold it; the output name is preserved.
-  `count(5)`, `count(DISTINCT 1)` and a `FILTER` literal still narrow.
+  `count(5)`, `count(DISTINCT 1)` and a `FILTER` literal still narrow (the `FILTER` pin
+  reads the analyzed plan text, and fails when the filter is left un-narrowed).
   pins: ice-count-fold-1/C-002
 
 ## Pointers
