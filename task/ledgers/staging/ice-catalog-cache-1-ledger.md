@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-19 · **Branch:** `perf/ice-catalog-cache-1` · **Base:** `ab4e57d6` (a temporary
 pin to fork PR #311 head `03bfd336`, replaced by the RP-37 bump before the PR)
-**Model:** claude-opus-5 (round 1) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Model:** claude-opus-5 (rounds 1 and 2) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
@@ -82,6 +82,18 @@ catalog a per-instance scope (`instance:<uuid>`).
   `repark_iceberg::catalog::TableMetadataCacheStats`). The old
   `iceberg_metadata_cache_stats() -> Option<(u64, u64, u64)>` keeps its signature for the Python
   census binding (`crates/repark-python/src/catalog_census.rs`, not touched).
+- **Where the cache is settled, and why no more (round 2, verifier Q-002).** Four settle sites, each
+  immediately before a read whose value depends on moka's lagging `entry_count`, and none added
+  for its own sake: (1) the statement door's `trim` — the clear decision reads the retained count
+  (C-012's pin is red without it); (2) the Python census (`catalog_census.rs`) — it returns the
+  retained count, and without the settle the Python twin read `entries == 1` for 8 tables at the
+  pin commit; (3) and (4) the bench's `probe_before` / `probe_after` — `stats().evictions` is
+  `installed − entry_count − removed − cleared`, so an unsettled read counts every not-yet-applied
+  insert as an eviction and the per-query delta is wrong on both ends. The `probe_before` settle
+  is not redundant with the previous query's `probe_after`: registration, warm-up and the cold
+  mode's new session run between them. Settling an already settled cache has no pending work. No
+  `block_on` is added on the Rust door (the census's is the Python binding's existing one, under
+  `py.detach`); per-door latency was not measured in this unit.
 - **The unsuffixed `glue_catalog` / `s3tables_catalog`** pass `CatalogCaches::disabled()`, keeping
   their pre-unit behaviour (no handles, a fresh counter set). No production path calls them.
 
