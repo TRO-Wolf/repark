@@ -225,6 +225,15 @@ async fn try_execute_identity_dml(
         if catalogs.get(&allowed.catalog_name).is_none() {
             return Ok(None);
         }
+        let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
+        if repark_iceberg::write::predicate_dml::plain::plain_identity_needs_fork(
+            handle,
+            &allowed.spec,
+        )
+        .await
+        {
+            return Ok(None);
+        }
         let object_name = match inner {
             Statement::Delete(delete) => crate::delete_target_object_name(delete),
             Statement::Update(update) => crate::object_name_from_table_with_joins(&update.table),

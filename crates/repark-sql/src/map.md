@@ -60,6 +60,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `WHERE` still hits G3-E8 then BUG-001
   (cheap-first). Tests: [router/map.md](router/map.md).
   pins: rp-9-repin-f23/C-005
+  **ICE-LIST-NULL-2 (2026-09-19):** the three-part comparison arm declines through
+  `plain::plain_identity_needs_fork` after loading the target — a non-primitive
+  selection falls through to the fork delegate.
+  pins: ice-list-null-2/C-003
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait).
   `on_session_built` installs integer overflow so a bare `ReparkSession` + this

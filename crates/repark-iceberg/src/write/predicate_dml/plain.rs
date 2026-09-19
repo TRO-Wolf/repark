@@ -1,11 +1,18 @@
+use std::ops::ControlFlow;
+use std::sync::Arc;
+
 use datafusion::error::{DataFusionError, Result};
-use datafusion::sql::sqlparser::ast::{Expr, Statement};
-use iceberg::{NamespaceIdent, TableIdent};
+use datafusion::sql::sqlparser::ast::{Expr, Statement, Visit, Visitor};
+use datafusion::sql::sqlparser::dialect::GenericDialect;
+use datafusion::sql::sqlparser::parser::Parser;
+use iceberg::spec::{Schema, Type};
+use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
 use super::{
     AllowedDeleteIn, PredicateDmlSpec, delete_target_and_alias, expression_contains_subquery,
     object_name_parts, rewrite_target_refs_in_expr,
 };
+use crate::write::conflict_filter::top_level_field;
 
 /// # Errors
 /// A plan error when the target namespace is invalid.
@@ -32,6 +39,70 @@ pub fn try_allowed_plain_identity(statement: &Statement) -> Result<Option<Allowe
         return Ok(None);
     };
     allowed_from_target(object_name, alias, selection)
+}
+
+#[must_use]
+pub fn selection_refs_non_primitive(
+    selection_sql: &str,
+    target_alias: &str,
+    schema: &Schema,
+) -> bool {
+    let mut refs = ColumnRefs {
+        target_alias,
+        names: Vec::new(),
+    };
+    let Ok(parsed) = Parser::new(&GenericDialect {})
+        .try_with_sql(selection_sql)
+        .map(|mut parser| parser.parse_expr())
+    else {
+        return false;
+    };
+    let Ok(selection) = parsed else {
+        return false;
+    };
+    let _ = selection.visit(&mut refs);
+    refs.names.iter().any(|name| {
+        top_level_field(schema, name)
+            .is_some_and(|field| !matches!(field.field_type.as_ref(), Type::Primitive(_)))
+    })
+}
+
+pub async fn plain_identity_needs_fork(
+    catalog: &Arc<dyn Catalog>,
+    spec: &PredicateDmlSpec,
+) -> bool {
+    let Ok(table) = catalog.load_table(&spec.target).await else {
+        return false;
+    };
+    selection_refs_non_primitive(
+        &spec.selection_sql,
+        &spec.target_alias,
+        table.metadata().current_schema(),
+    )
+}
+
+struct ColumnRefs<'a> {
+    target_alias: &'a str,
+    names: Vec<String>,
+}
+
+impl Visitor for ColumnRefs<'_> {
+    type Break = ();
+
+    fn pre_visit_expr(&mut self, expr: &Expr) -> ControlFlow<Self::Break> {
+        match expr {
+            Expr::Identifier(ident) => self.names.push(ident.value.clone()),
+            Expr::CompoundIdentifier(parts)
+                if parts.len() >= 2
+                    && parts[0].value.eq_ignore_ascii_case(self.target_alias)
+                    && let Some(column) = parts.last() =>
+            {
+                self.names.push(column.value.clone());
+            }
+            _ => {}
+        }
+        ControlFlow::Continue(())
+    }
 }
 
 fn is_scalar_comparison(expr: &Expr) -> bool {
