@@ -192,12 +192,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split frame validation from expression lowering.",
     ),
     "crates/repark-sql/src/guards/tests.rs": (
-        1213,
+        1207,
         "ANSI guard refusal cases share one file-backed module.",
         "Split guards by statement or expression family.",
     ),
     "crates/repark-sql/src/tests.rs": (
-        1530,
+        1520,
         "Native ANSI-door end-to-end cases remain consolidated.",
         "Split statement families into production-aligned test modules.",
     ),

@@ -250,5 +250,4 @@ First checks: `cargo test -p repark-sql --test parser_productions`,
 `--test ansi_door_window_frames`, `--test ansi_door_float_agg`.
 Escalate to: [../map.md#debug](../map.md).
 - **FNP-4B remediation (2026-09-15):** one added comment line removed from `cross_door.rs`; ceiling ratcheted 1259 → 1258.
-- **ICE-TT-RESOLVE-1 (2026-09-19):** call sites pass the session zone to the 4-arg
-  `EngineContext::new`. pins: ice-tt-resolve-1/C-003
+- **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`. pins: ice-tt-resolve-1/C-003

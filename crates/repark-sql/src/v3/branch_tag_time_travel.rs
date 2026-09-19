@@ -14,7 +14,7 @@ use datafusion::arrow::array::{Int32Array, StringArray};
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::spec::FormatVersion;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 use crate::execute;
@@ -116,12 +116,7 @@ impl Door {
     ) -> datafusion::error::Result<Vec<datafusion::arrow::record_batch::RecordBatch>> {
         let read_only = HashSet::new();
         let frame = execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
             sql,
         )
         .await?;
@@ -203,7 +198,7 @@ async fn door() -> Door {
     let location = format!("{warehouse}/sales");
     let read_only = HashSet::new();
     execute(
-        EngineContext::new(&ctx, &catalogs, &read_only, SessionTimeZone::default()),
+        EngineContext::new(&ctx, &catalogs, &read_only),
         &format!("CREATE SCHEMA ice.sales WITH (location = '{location}')"),
     )
     .await

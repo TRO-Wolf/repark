@@ -34,18 +34,15 @@ impl ReparkSession {
         self.trim_iceberg_caches();
         let catalogs = self.catalogs_snapshot();
         let read_only = self.postgres_catalog_names_snapshot();
+        let mut cx = EngineContext::new_with_time_zone(
+            self.context(),
+            &catalogs,
+            &read_only,
+            self.session_time_zone().as_ref().clone(),
+        );
+        cx.force_static_overwrite = force_static_overwrite;
         dialect
-            .execute_with_write_options(
-                EngineContext {
-                    ctx: self.context(),
-                    catalogs: &catalogs,
-                    read_only: &read_only,
-                    force_static_overwrite,
-                    session_time_zone: self.session_time_zone().as_ref().clone(),
-                },
-                query,
-                options,
-            )
+            .execute_with_write_options(cx, query, options)
             .await
             .map_err(|error| engine_err_for_sql(query, error))
     }

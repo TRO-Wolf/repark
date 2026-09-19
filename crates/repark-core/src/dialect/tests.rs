@@ -78,7 +78,7 @@ async fn engine_context_new_is_the_downstream_constructor() {
     let ctx = SessionContext::new();
     let catalogs = CatalogRegistry::new();
     let read_only: HashSet<String> = HashSet::from(["ro_pg".to_string()]);
-    let cx = EngineContext::new(&ctx, &catalogs, &read_only, SessionTimeZone::default());
+    let cx = EngineContext::new(&ctx, &catalogs, &read_only);
     assert!(cx.read_only.contains("ro_pg"));
     let frame = DataFusionDialect
         .execute(cx, "SELECT 7 AS seven")

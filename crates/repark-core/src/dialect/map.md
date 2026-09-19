@@ -31,3 +31,5 @@ First checks: `cargo test -p repark-core dialect`. Escalate to: [../map.md#debug
 
 **ICE-TT-RESOLVE-1 (2026-09-19):** the dialect context carries `session_time_zone` so time-travel
 resolution sees the statement-time zone. pins: ice-tt-resolve-1/C-003
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** `new` is 3-arg again (zone defaults);
+`new_with_time_zone` carries an explicit zone. pins: ice-tt-resolve-1/C-003

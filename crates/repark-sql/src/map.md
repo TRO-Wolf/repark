@@ -208,6 +208,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   (whitespace kept) so the shared evaluator receives parseable SQL; the expression evaluates
   as a constant in the session zone through `repark_core::evaluate_sql_timestamp_asof`.
   pins: ice-tt-resolve-1/C-003
+  **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the door call sites use the 3-arg
+  `EngineContext::new` again. pins: ice-tt-resolve-1/C-003
 - `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
   precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
   spelling stays Spark-only. `WITH SNAPSHOT RETENTION` takes both halves, count then optional

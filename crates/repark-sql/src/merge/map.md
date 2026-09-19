@@ -34,5 +34,4 @@ mapping of the SAME target type (design §6 R3).
 
 First checks: `cargo test -p repark-sql merge::`. Escalate to: [../map.md#debug](../map.md).
 
-**ICE-TT-RESOLVE-1 (2026-09-19):** test call sites pass the session zone to the 4-arg
-`EngineContext::new`. pins: ice-tt-resolve-1/C-003
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`. pins: ice-tt-resolve-1/C-003

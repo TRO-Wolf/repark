@@ -8,7 +8,7 @@ use datafusion::arrow::datatypes::DataType;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::Catalog;
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 /// A native session with one registered in-memory Iceberg catalog (`ice`) over a temp warehouse.
@@ -24,12 +24,7 @@ impl Door {
     pub(super) async fn sql(&self, sql: &str) -> datafusion::error::Result<Vec<RecordBatch>> {
         let read_only = HashSet::new();
         let frame = crate::execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
             sql,
         )
         .await?;
@@ -50,12 +45,7 @@ impl Door {
     ) -> (datafusion::arrow::datatypes::SchemaRef, Vec<RecordBatch>) {
         let read_only = HashSet::new();
         let frame = crate::execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
             sql,
         )
         .await

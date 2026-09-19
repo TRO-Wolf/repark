@@ -9,7 +9,7 @@ use iceberg::spec::{
     UnboundPartitionSpec,
 };
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 struct Door {
@@ -23,12 +23,7 @@ impl Door {
     async fn sql(&self, sql: &str) -> datafusion::error::Result<Vec<RecordBatch>> {
         let read_only = HashSet::new();
         let frame = repark_sql::execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
             sql,
         )
         .await?;

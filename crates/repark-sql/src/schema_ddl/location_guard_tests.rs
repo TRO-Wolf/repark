@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::{Catalog, NamespaceIdent};
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 use std::collections::HashSet;
@@ -46,12 +46,7 @@ impl Door {
     async fn sql(&self, sql: &str) -> datafusion::error::Result<()> {
         let read_only = HashSet::new();
         crate::execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
             sql,
         )
         .await?;

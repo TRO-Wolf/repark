@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::Catalog;
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 use crate::execute;
@@ -25,12 +25,7 @@ impl Door {
     ) -> datafusion::error::Result<Vec<datafusion::arrow::record_batch::RecordBatch>> {
         let read_only = HashSet::new();
         let frame = execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
             sql,
         )
         .await?;

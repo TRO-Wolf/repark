@@ -317,5 +317,5 @@ emits a BARE reference for a session-local view (a bare one is re-resolved again
 `datafusion.catalog.default_catalog`). Both go through `assert_home_intact` first.
 
 **ICE-TT-RESOLVE-1 (2026-09-19):** the reader-options path resolves through the shared
-`time_travel::resolve_reader_spec` with the session zone; `EngineContext::new` takes the zone.
-pins: ice-tt-resolve-1/C-002
+`time_travel::resolve_reader_spec` with the session zone; the production write path builds
+the context with `EngineContext::new_with_time_zone`. pins: ice-tt-resolve-1/C-002

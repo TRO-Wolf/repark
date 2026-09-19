@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::Catalog;
-use repark_core::{CatalogRegistry, LocationPolicy, SessionTimeZone};
+use repark_core::{CatalogRegistry, LocationPolicy};
 use tempfile::TempDir;
 
 use super::*;
@@ -239,8 +239,7 @@ async fn mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate() {
     let ctx = SessionContext::new();
     let catalogs = CatalogRegistry::new();
     let read_only = HashSet::new();
-    let cx =
-        repark_core::EngineContext::new(&ctx, &catalogs, &read_only, SessionTimeZone::default());
+    let cx = repark_core::EngineContext::new(&ctx, &catalogs, &read_only);
     for sql in [
         // Not DML at all.
         "SELECT * FROM ice.sales.t",
@@ -500,7 +499,7 @@ async fn multi_statement_refuses_first_and_quote_aware() {
 
     let ctx = SessionContext::new();
     let read_only = HashSet::from(["pg".to_string()]);
-    let cx = EngineContext::new(&ctx, &catalogs, &read_only, SessionTimeZone::default());
+    let cx = EngineContext::new(&ctx, &catalogs, &read_only);
     let err = run_text_guards(&cx, "SELECT 1; INSERT INTO pg.public.t SELECT 1")
         .unwrap_err()
         .to_string();
@@ -711,12 +710,7 @@ impl AnsiDoor {
     /// Run through the door, returning the first Int64 column (the pins all read `id`).
     async fn ids(&self, sql: &str) -> datafusion::error::Result<Vec<i64>> {
         let frame = crate::execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &self.read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &self.read_only),
             sql,
         )
         .await?;

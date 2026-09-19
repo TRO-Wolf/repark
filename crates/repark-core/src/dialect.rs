@@ -28,6 +28,15 @@ impl<'a> EngineContext<'a> {
         ctx: &'a SessionContext,
         catalogs: &'a CatalogRegistry,
         read_only: &'a HashSet<String>,
+    ) -> Self {
+        Self::new_with_time_zone(ctx, catalogs, read_only, SessionTimeZone::default())
+    }
+
+    #[must_use]
+    pub fn new_with_time_zone(
+        ctx: &'a SessionContext,
+        catalogs: &'a CatalogRegistry,
+        read_only: &'a HashSet<String>,
         session_time_zone: SessionTimeZone,
     ) -> Self {
         Self {

@@ -8,7 +8,7 @@ use datafusion::arrow::datatypes::DataType;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use tempfile::TempDir;
 
 /// A native session with one registered in-memory Iceberg catalog (`ice`) over a temp warehouse.
@@ -25,12 +25,7 @@ impl Door {
     async fn sql(&self, sql: &str) -> datafusion::error::Result<Vec<RecordBatch>> {
         let read_only = HashSet::new();
         let frame = crate::execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
             sql,
         )
         .await?;
@@ -51,12 +46,7 @@ impl Door {
     ) -> (datafusion::arrow::datatypes::SchemaRef, Vec<RecordBatch>) {
         let read_only = HashSet::new();
         let frame = crate::execute(
-            EngineContext::new(
-                &self.ctx,
-                &self.catalogs,
-                &read_only,
-                SessionTimeZone::default(),
-            ),
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
             sql,
         )
         .await
@@ -761,7 +751,7 @@ async fn location_less_schema_fails_loud_on_a_strict_catalog() {
 
     let read_only = HashSet::new();
     let err = crate::execute(
-        EngineContext::new(&ctx, &catalogs, &read_only, SessionTimeZone::default()),
+        EngineContext::new(&ctx, &catalogs, &read_only),
         "CREATE TABLE glue_like.strict.t AS SELECT 1 AS id",
     )
     .await
@@ -788,7 +778,7 @@ async fn ddl_against_a_read_only_catalog_refuses_with_the_direction_note() {
     let read_only = HashSet::from(["pg".to_string()]);
 
     let err = crate::execute(
-        EngineContext::new(&door.ctx, &catalogs, &read_only, SessionTimeZone::default()),
+        EngineContext::new(&door.ctx, &catalogs, &read_only),
         "CREATE TABLE pg.public.t AS SELECT 1 AS id",
     )
     .await
