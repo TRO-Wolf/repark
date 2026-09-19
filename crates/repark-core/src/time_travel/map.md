@@ -14,6 +14,18 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
 ## Contents
 
 - `tests.rs` — parser + resolution pins (`#[cfg(test)] mod tests;` in `../time_travel.rs`).
+- `sql_text.rs` — SQL-text timestamp parsing, zone math, token extraction (re-exported at
+  `../time_travel.rs`). pins: ice-tt-resolve-1/C-010
+- `sql_ast.rs` — column-refusal check of the `AS OF` expression.
+  pins: ice-tt-resolve-1/C-010
+- `sql_eval.rs` — constant-expression evaluation of the `AS OF` value (`evaluate_sql_timestamp_asof`).
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** non-determinism decided from the planned
+  expression (`Volatility::Volatile` scalar functions, subquery plans included), not a name
+  list. pins: ice-tt-resolve-1/C-003
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** every string (reader `timestampAsOf`, bare
+  SQL literals, `Utf8` scalars) resolves through the engine `CAST(... AS TIMESTAMP)` in the
+  session zone; the hand parser is gone. pins: ice-tt-resolve-1/C-002
+  pins: ice-tt-resolve-1/C-010
 
 ## Pointers
 
@@ -23,6 +35,6 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
 
 | Symptom | First check |
 |---|---|
-| `TIMESTAMP AS OF` string fails to parse | Accepted forms: epoch ms, RFC3339/Zulu, `YYYY-MM-dd[ HH:MM:SS][Z]` (UTC) — `parse_timestamp_to_ms` in `../time_travel.rs`. |
+| `TIMESTAMP AS OF` string fails to parse | Accepted forms: epoch seconds (reader integers), anything the engine `CAST(... AS TIMESTAMP)` takes in the session zone — a cast failure is the `INPUT` refusal naming the text. |
 
 First checks: `cargo test -p repark-core time_travel`. Escalate to: [../map.md#debug](../map.md).

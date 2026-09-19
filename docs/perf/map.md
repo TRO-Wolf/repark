@@ -438,6 +438,15 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   function of live cache views; `ru_majflt` 0 everywhere.
   pins: eager-budget-1/C-001
 
+- [ice-read-perf-baseline-2026-09-19.md](ice-read-perf-baseline-2026-09-19.md) — **ICE-READ-PERF-0
+  (2026-09-19):** the 200-file local baseline of the Iceberg read bench
+  (`crates/repark-spark/benches/ice_read_perf/`) — cold, warm, concurrent and concurrent-cold
+  tables at `--repeat 5` (medians), with requests and bytes by op kind and file class and the
+  data-file footer / page split, recorded on the unit head `b15f1d47` (fork pin `43fcd243`)
+  under a load average of about 30: I/O is the reference; timing pairs are re-run back to back. It is the "before" of every unit of the
+  read-performance slate.
+  pins: ice-read-perf-0/C-006
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

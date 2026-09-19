@@ -65,6 +65,8 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   pins: v3-4-serve-lineage-columns/C-003, C-005, C-007, C-008, C-011, C-012, C-013, C-014,
   C-015, C-016, C-018, C-020
 
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`. pins: ice-tt-resolve-1/C-003
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

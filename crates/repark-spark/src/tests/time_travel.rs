@@ -1,6 +1,9 @@
 /// I1: VERSION/TIMESTAMP AS OF, branch, and tag pins, plus unknown-id loud error.
 use super::super::*;
 use super::common::*;
+use datafusion::prelude::SessionContext;
+use datafusion::sql::sqlparser::tokenizer::Token;
+use repark_core::SessionTimeZone;
 
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // multi-snapshot matrix + error pins in one oracle
@@ -85,17 +88,6 @@ async fn time_travel_version_timestamp_branch_tag_and_errors() {
         vec![1, 2, 3, 4]
     );
 
-    // TIMESTAMP AS OF — pin at s1's timestamp (latest with ts <= s1_ts is s1).
-    assert_eq!(
-        time_travel_id_multiset(
-            &ctx,
-            &catalogs,
-            &format!("SELECT id FROM ice.sales.tt TIMESTAMP AS OF {s1_ts}")
-        )
-        .await,
-        vec![1, 2, 3]
-    );
-    // Latest-match pin: as-of s2_ts must be s2 multiset, not s1.
     let table = catalogs["ice"].load_table(&ident).await.unwrap();
     let s2_ts = table.metadata().snapshot_by_id(s2).unwrap().timestamp_ms();
     let s3_ts = table.metadata().snapshot_by_id(s3).unwrap().timestamp_ms();
@@ -104,10 +96,19 @@ async fn time_travel_version_timestamp_branch_tag_and_errors() {
         time_travel_id_multiset(
             &ctx,
             &catalogs,
+            &format!("SELECT id FROM ice.sales.tt TIMESTAMP AS OF {s1_ts}")
+        )
+        .await,
+        vec![9]
+    );
+    assert_eq!(
+        time_travel_id_multiset(
+            &ctx,
+            &catalogs,
             &format!("SELECT id FROM ice.sales.tt TIMESTAMP AS OF {s2_ts}")
         )
         .await,
-        vec![1, 2, 3, 4]
+        vec![9]
     );
     assert_eq!(
         time_travel_id_multiset(
@@ -118,7 +119,6 @@ async fn time_travel_version_timestamp_branch_tag_and_errors() {
         .await,
         vec![9]
     );
-    // Mid-interval (s1_ts, s2_ts) → still s1.
     let mid = s1_ts + ((s2_ts - s1_ts) / 2).max(1);
     if mid < s2_ts {
         assert_eq!(
@@ -128,20 +128,22 @@ async fn time_travel_version_timestamp_branch_tag_and_errors() {
                 &format!("SELECT id FROM ice.sales.tt TIMESTAMP AS OF {mid}")
             )
             .await,
-            vec![1, 2, 3]
+            vec![9]
         );
     }
     // Earlier than first snapshot → loud error.
     let early_err = execute(
         &ctx,
         &catalogs,
-        &format!("SELECT * FROM ice.sales.tt TIMESTAMP AS OF {}", s1_ts - 1),
+        &format!(
+            "SELECT * FROM ice.sales.tt TIMESTAMP AS OF {}",
+            s1_ts.div_euclid(1000) - 3600
+        ),
     )
     .await
     .expect_err("ts earlier than first snapshot must fail");
     assert!(
-        early_err.to_string().contains("earlier")
-            || early_err.to_string().contains("no Iceberg snapshot"),
+        early_err.to_string().contains("snapshot older than"),
         "got: {early_err}"
     );
 
@@ -380,11 +382,12 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
 
     // The reader-options shape: `spark.read.option` reaches exactly this call.
     let table_parts = ["ice".to_string(), "sales".to_string(), "leak".to_string()];
-    let reader_frame = repark_core::read_table_at(
+    let reader_frame = repark_core::time_travel::read_table_at(
         &ctx,
         &catalogs,
         &table_parts,
-        &repark_core::TimeTravelSpec::SnapshotId(first),
+        &repark_core::time_travel::TimeTravelSpec::SnapshotId(first),
+        &repark_core::SessionTimeZone::default(),
     )
     .await
     .expect("the reader-options pinned read must plan");
@@ -432,7 +435,7 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
     );
 
     // 2.
-    let before_mint = temp_view_sequence(&repark_core::next_temp_view_name());
+    let before_mint = temp_view_sequence(&repark_core::time_travel::next_temp_view_name());
     let _ = execute(
         &ctx,
         &catalogs,
@@ -440,7 +443,7 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
     )
     .await
     .expect("the second statement must plan");
-    let after_mint = temp_view_sequence(&repark_core::next_temp_view_name());
+    let after_mint = temp_view_sequence(&repark_core::time_travel::next_temp_view_name());
     assert!(
         after_mint > before_mint + 1,
         "the Spark door must mint from repark-core's counter, not one of its own: \
@@ -449,4 +452,277 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
 
     // Nothing accumulated across either statement.
     assert_eq!(leftover_time_travel_views(&ctx), reader_views);
+}
+
+#[tokio::test]
+async fn reader_spec_builtin_pins_refuse_loud() {
+    use repark_core::time_travel::{RefSelector, TimeTravelSpec};
+    use repark_core::{ReaderTimeTravel, resolve_reader_spec};
+
+    let ctx = SessionContext::new();
+    let versioned = |version: &str| ReaderTimeTravel {
+        version_as_of: Some(version.to_string()),
+        ..Default::default()
+    };
+    let both = ReaderTimeTravel {
+        version_as_of: Some("1".to_string()),
+        timestamp_as_of: Some("2020-01-01".to_string()),
+        ..Default::default()
+    };
+    let err = resolve_reader_spec(&ctx, &both, RefSelector::None)
+        .await
+        .expect_err("version plus timestamp must refuse");
+    assert!(
+        err.to_string().contains("INVALID_TIME_TRAVEL_SPEC"),
+        "got: {err}"
+    );
+    let legacy_version = ReaderTimeTravel {
+        snapshot_id: Some(7),
+        version_as_of: Some("8".to_string()),
+        ..Default::default()
+    };
+    let err = resolve_reader_spec(&ctx, &legacy_version, RefSelector::None)
+        .await
+        .expect_err("snapshot-id plus versionAsOf must refuse");
+    assert!(err.to_string().contains("versionAsOf"), "got: {err}");
+    let legacy_timestamp = ReaderTimeTravel {
+        as_of_timestamp_ms: Some(1_750_000_000_000),
+        timestamp_as_of: Some("2020-01-01".to_string()),
+        ..Default::default()
+    };
+    let err = resolve_reader_spec(&ctx, &legacy_timestamp, RefSelector::None)
+        .await
+        .expect_err("as-of-timestamp plus timestampAsOf must refuse");
+    assert!(err.to_string().contains("timestampAsOf"), "got: {err}");
+    let branch_version = ReaderTimeTravel {
+        branch: Some("b0".to_string()),
+        version_as_of: Some("1".to_string()),
+        ..Default::default()
+    };
+    let err = resolve_reader_spec(&ctx, &branch_version, RefSelector::None)
+        .await
+        .expect_err("branch plus versionAsOf must refuse");
+    assert!(
+        err.to_string().contains("Can't time travel in branch"),
+        "got: {err}"
+    );
+    let err = resolve_reader_spec(&ctx, &versioned("1"), RefSelector::Branch)
+        .await
+        .expect_err("versionAsOf inside a branch must refuse");
+    assert!(
+        err.to_string().contains("Can't time travel in branch"),
+        "got: {err}"
+    );
+    assert_eq!(
+        resolve_reader_spec(&ctx, &versioned("42"), RefSelector::None)
+            .await
+            .unwrap(),
+        Some(TimeTravelSpec::SnapshotId(42))
+    );
+    assert_eq!(
+        resolve_reader_spec(&ctx, &versioned("audit"), RefSelector::None)
+            .await
+            .unwrap(),
+        Some(TimeTravelSpec::VersionRef("audit".to_string()))
+    );
+    let err = resolve_reader_spec(&ctx, &versioned(""), RefSelector::None)
+        .await
+        .expect_err("empty versionAsOf must refuse");
+    assert!(
+        err.to_string().contains("Cannot find matching"),
+        "got: {err}"
+    );
+}
+
+#[tokio::test]
+async fn reader_spec_legacy_pins_still_resolve() {
+    use repark_core::time_travel::{RefSelector, TimeTravelSpec};
+    use repark_core::{ReaderTimeTravel, resolve_reader_spec};
+
+    let ctx = SessionContext::new();
+    let stamped = ReaderTimeTravel {
+        timestamp_as_of: Some("1750000000".to_string()),
+        ..Default::default()
+    };
+    assert_eq!(
+        resolve_reader_spec(&ctx, &stamped, RefSelector::None)
+            .await
+            .unwrap(),
+        Some(TimeTravelSpec::TimestampMs(1_750_000_000_000))
+    );
+    let bad_stamp = ReaderTimeTravel {
+        timestamp_as_of: Some("not a ts".to_string()),
+        ..Default::default()
+    };
+    let err = resolve_reader_spec(&ctx, &bad_stamp, RefSelector::None)
+        .await
+        .expect_err("unparsable timestampAsOf must refuse");
+    assert!(
+        err.to_string()
+            .contains("INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT"),
+        "got: {err}"
+    );
+    let legacy_only = ReaderTimeTravel {
+        snapshot_id: Some(7),
+        ..Default::default()
+    };
+    assert_eq!(
+        resolve_reader_spec(&ctx, &legacy_only, RefSelector::None)
+            .await
+            .unwrap(),
+        Some(TimeTravelSpec::SnapshotId(7))
+    );
+    let legacy_clash = ReaderTimeTravel {
+        snapshot_id: Some(7),
+        branch: Some("b0".to_string()),
+        ..Default::default()
+    };
+    assert!(
+        resolve_reader_spec(&ctx, &legacy_clash, RefSelector::None)
+            .await
+            .is_err()
+    );
+    let tagged = ReaderTimeTravel {
+        tag: Some("t0".to_string()),
+        ..Default::default()
+    };
+    assert_eq!(
+        resolve_reader_spec(&ctx, &tagged, RefSelector::None)
+            .await
+            .unwrap(),
+        Some(TimeTravelSpec::VersionRef("t0".to_string()))
+    );
+    assert_eq!(
+        resolve_reader_spec(&ctx, &ReaderTimeTravel::default(), RefSelector::None)
+            .await
+            .unwrap(),
+        None
+    );
+}
+
+fn asof_tokens(text: &str) -> Vec<Token> {
+    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::tokenizer::Tokenizer;
+
+    Tokenizer::new(&GenericDialect {}, text)
+        .tokenize()
+        .unwrap()
+        .into_iter()
+        .filter(|token| !matches!(token, Token::EOF))
+        .collect()
+}
+
+async fn eval_one(
+    ctx: &SessionContext,
+    zone: &SessionTimeZone,
+    text: &str,
+) -> datafusion::error::Result<i64> {
+    use repark_core::time_travel::evaluate_sql_timestamp_asof;
+
+    let tokens = asof_tokens(text);
+    evaluate_sql_timestamp_asof(ctx, &tokens, zone).await
+}
+
+#[tokio::test]
+async fn sql_timestamp_asof_evaluates_constants_in_session_zone() {
+    let ctx = SessionContext::new();
+    let zone = SessionTimeZone::default();
+    assert_eq!(
+        eval_one(&ctx, &zone, "1750000000").await.unwrap(),
+        1_750_000_000_000
+    );
+    assert_eq!(
+        eval_one(&ctx, &zone, "'2020-06-01 00:00:00'")
+            .await
+            .unwrap(),
+        1_590_969_600_000
+    );
+    assert_eq!(
+        eval_one(&ctx, &zone, "CAST('2020-06-01 00:00:00' AS TIMESTAMP)")
+            .await
+            .unwrap(),
+        1_590_969_600_000
+    );
+    let before = chrono::Utc::now().timestamp_millis();
+    let current = eval_one(&ctx, &zone, "current_timestamp()").await.unwrap();
+    let after = chrono::Utc::now().timestamp_millis();
+    assert!(before <= current && current <= after + 1_000);
+    let err = eval_one(&ctx, &zone, "'not a ts'")
+        .await
+        .expect_err("garbage must refuse");
+    assert!(
+        err.to_string()
+            .contains("INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT"),
+        "got: {err}"
+    );
+    let err = eval_one(&ctx, &zone, "NULL")
+        .await
+        .expect_err("NULL must refuse");
+    assert!(
+        err.to_string()
+            .contains("INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT"),
+        "got: {err}"
+    );
+    let err = eval_one(&ctx, &zone, "id")
+        .await
+        .expect_err("a column reference must refuse");
+    assert!(
+        err.to_string().contains("cannot refer to any columns"),
+        "got: {err}"
+    );
+    let err = eval_one(&ctx, &zone, "rand()")
+        .await
+        .expect_err("rand() must refuse");
+    assert!(err.to_string().contains("NON_DETERMINISTIC"), "got: {err}");
+}
+
+#[tokio::test]
+async fn timestamp_as_of_is_inclusive_at_a_snapshot_commit_time() {
+    use repark_core::time_travel::{TimeTravelSpec, resolve_snapshot_id, snapshot_id_as_of_time};
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.tt_edge AS SELECT * FROM src",
+    )
+    .await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "tt_edge".into());
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    let s1 = table.metadata().current_snapshot_id().expect("s1");
+    let s1_ts = table.metadata().snapshot_by_id(s1).unwrap().timestamp_ms();
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.tt_edge SELECT 4 AS id, 'd' AS name",
+    )
+    .await;
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    let metadata = table.metadata();
+    let s2 = metadata.current_snapshot_id().expect("s2");
+    let s2_ts = metadata.snapshot_by_id(s2).unwrap().timestamp_ms();
+    assert!(s2_ts > s1_ts, "s1 {s1_ts} s2 {s2_ts}");
+    let zone = SessionTimeZone::default();
+
+    assert_eq!(snapshot_id_as_of_time(metadata, s1_ts), Some(s1));
+    assert_eq!(snapshot_id_as_of_time(metadata, s2_ts), Some(s2));
+    assert_eq!(snapshot_id_as_of_time(metadata, s2_ts - 1), Some(s1));
+    assert_eq!(snapshot_id_as_of_time(metadata, s1_ts - 1), None);
+    assert_eq!(
+        resolve_snapshot_id(metadata, &TimeTravelSpec::TimestampMs(s1_ts), &zone).unwrap(),
+        s1
+    );
+    assert_eq!(
+        resolve_snapshot_id(metadata, &TimeTravelSpec::TimestampMs(s2_ts), &zone).unwrap(),
+        s2
+    );
+    let err = resolve_snapshot_id(metadata, &TimeTravelSpec::TimestampMs(s1_ts - 1), &zone)
+        .expect_err("before the first snapshot must refuse");
+    assert!(
+        err.to_string()
+            .contains("Cannot find a snapshot older than"),
+        "got: {err}"
+    );
 }

@@ -40,6 +40,42 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) +
+  [ice_tt_resolve_1_spark_oracle.json](ice_tt_resolve_1_spark_oracle.json) +
+  [_record_ice_tt_resolve_1_oracle.py](_record_ice_tt_resolve_1_oracle.py) —
+  `test_ice_tt_resolve_1.py` is `ruff format` clean (orchestrator fix-up, round 3).
+  **ICE-TT-RESOLVE-1 (2026-09-19, round 1):** the 94 recorded Spark time-travel
+  cells (47 shapes on format versions 2 and 3, live PySpark 4.1.2 + Iceberg
+  1.11.0, InMemory catalog) replayed against RePark — reader `versionAsOf` /
+  `timestampAsOf` on `load` and `table`, facade `TIMESTAMP AS OF` /
+  `FOR SYSTEM_TIME AS OF` SQL, each answering expression as a bare native
+  `repark.sql` select, and the live tier re-deriving the fixture under
+  `REPARK_PARITY_LIVE=1`. One table per version serves every cell; per-test
+  sessions adopt the seeded tables by metadata file (memory-catalog metadata
+  is session-local).
+  **ICE-TT-RESOLVE-1 (2026-09-19, round 3):** 21 TT2 logic-critic cells join
+  the fixture (115 cells, SHA-256
+  `4fe461f9370860d9decb1b03beab337063e46845ad30b7123e346bef85b54bc2`) —
+  non-determinism, Spark string→timestamp casts, trailing aliases, and
+  selector clashes on a two-snapshot seed; the recorder replays them once on
+  version 2. Offline pins seed the two-snapshot shape per test and assert the
+  fixture class, message, or rows (`test_ice_tt_resolve_1_tt2.py` holds the TT2
+  pins under the default ceiling). Strings the engine CAST cannot take
+  (short/year-only/no-seconds forms, years past 2262) pin the Spark answer as
+  strict xfails citing the cast finding.
+  pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  Round 3 item 3: the extractor stops a `TIMESTAMP AS OF` expression at a trailing
+  alias (`AS ident` or a bare ident after a quoted/`)/number` value), so the alias
+  survives on the rewritten relation — pinned by the TT2 join, `AS t2`, and version-alias
+  cells. pins: ice-tt-resolve-1/C-002
+  Round 3 item 4: a built-in beside a branch/tag selector refuses with Spark's text —
+  `versionAsOf`/`TIMESTAMP AS OF` on a tag selector, `timestampAsOf`/`VERSION AS OF`
+  on a branch selector. pins: ice-tt-resolve-1/C-002
+  Round 3 item 6: the New York wall clocks use `zoneinfo.ZoneInfo("America/New_York")`
+  instead of a fixed -4h offset, so the pins hold in winter. pins: ice-tt-resolve-1/C-002
+  Round 3 item 8: the alias-join b-side literal is `2261-01-01` (the oracle cell's
+  `2999-01-01` exceeds the engine CAST range; identical expected rows).
+  pins: ice-tt-resolve-1/C-002
 - [test_cast_map_spell_1.py](test_cast_map_spell_1.py) +
   [cast_map_spell_1/](cast_map_spell_1/map.md) +
   [_record_cast_map_spell_1.py](_record_cast_map_spell_1.py) —
@@ -4545,6 +4581,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   format case-insensitivity, load-arg beats option
   path, unknown-key tolerate, missing format/path → `AnalysisException`, `.schema` disclosed
   `UnsupportedOperationException` (C1-Q-007)). JVM-free pins; mutation-proof.
+  **ICE-TT-RESOLVE-1 (2026-09-19):** `test_snapshot_id_option_parses_int_and_range` (legacy
+  pin parsing) and `test_version_asof_options_forward_raw_without_engine` (built-ins forward
+  raw, legacy junk still loud). pins: ice-tt-resolve-1/C-004
 - `test_group_agg.py` — **U2:** signed-zero collect_set fixture uses `createDataFrame`
   (SQL `-0.0` is DECIMAL 0, no IEEE sign bit). **Group E (E1/E2/E7) + Group J**: the aggregation family, pinned to real
   (2026-07-22 review: ruff-formatted — the unit left the format gate red at tip)

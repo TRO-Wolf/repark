@@ -11,6 +11,12 @@ name parts. The end-to-end (session) rows live in `../tests.rs`.
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../time_travel.rs`.
+- `exec_tests.rs` — native-door execution pins (`#[cfg(test)] mod exec_tests;` in
+  `../time_travel.rs`): string, integer-seconds, and CAST `FOR TIMESTAMP AS OF`
+  expressions plus a `FOR VERSION AS OF` control, each pinning the first of two
+  snapshots. Breaking `evaluate_sql_timestamp_asof` turns exactly the three
+  expression tests red (probed 2026-09-19, probe removed); the version control
+  stays green. pins: ice-tt-resolve-1/C-002
 
 ## Pointers
 
@@ -26,3 +32,8 @@ name parts. The end-to-end (session) rows live in `../tests.rs`.
 | A `__repark_tt_*` name (no `ansi`) outlived its statement | If core registration succeeds but `ctx.table` lookup fails, no frame returns and SQL cannot discover or record the core name. For a returned frame, `PinnedViews` releases both prefixes; reader-options registrations remain by design |
 
 First checks: `cargo test -p repark-sql time_travel::`. Escalate to: [../map.md#debug](../map.md).
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream so
+the shared evaluator receives parseable SQL. pins: ice-tt-resolve-1/C-003
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** imports resolve behind
+`repark_core::time_travel`. pins: ice-tt-resolve-1/C-010

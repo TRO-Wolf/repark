@@ -1,9 +1,6 @@
-//! Iceberg time-travel parsing, snapshot resolution, and reader-option support.
-
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use chrono::NaiveDateTime;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::TableMetadata;
@@ -11,45 +8,43 @@ use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
 use repark_common::Error;
 
+use crate::SessionTimeZone;
 use crate::catalog_state::CatalogRegistry;
+use crate::illegal_argument_error;
 
-/// Process-wide counter so ephemeral temp-view names never collide across concurrent sessions.
+mod sql_ast;
+mod sql_eval;
+mod sql_text;
+
+pub use sql_eval::evaluate_sql_timestamp_asof;
+pub use sql_text::{
+    extract_timestamp_expr, format_snapshot_bound_ms, parse_timestamp_to_ms, parse_version_value,
+};
+
 static TEMP_VIEW_SEQ: AtomicU64 = AtomicU64::new(1);
 
-/// Fold an Iceberg error into the DataFusion error type used by this module.
 #[allow(clippy::needless_pass_by_value)]
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
 }
 
-/// A time-travel pin: snapshot id, named ref (branch/tag), or as-of timestamp (epoch ms).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TimeTravelSpec {
-    /// Pin to a concrete snapshot id.
     SnapshotId(i64),
-    /// Pin to a branch or tag name (Spark Iceberg `VERSION AS OF '<ref>'`).
     VersionRef(String),
-    /// Pin to the latest snapshot with `timestamp_ms <=` this epoch-ms value.
     TimestampMs(i64),
 }
 
-/// Iceberg reader time-travel options (Spark `snapshot-id` / `as-of-timestamp` / `branch` / `tag`).
 #[derive(Debug, Clone, Default)]
 pub struct TimeTravelOpts {
-    /// Spark `snapshot-id` — pin to a concrete snapshot.
     pub snapshot_id: Option<i64>,
-    /// Spark `as-of-timestamp` — epoch **milliseconds**.
     pub as_of_timestamp_ms: Option<i64>,
-    /// Spark `branch` — pin to a branch ref.
     pub branch: Option<String>,
-    /// Spark `tag` — pin to a tag ref.
     pub tag: Option<String>,
 }
 
 impl TimeTravelOpts {
-    /// Convert to a [`TimeTravelSpec`], or `None` when no pin is set.
-    /// # Errors
-    /// Two or more pins set → [`Error::Analysis`] naming both option keys.
+    #[allow(clippy::missing_errors_doc)]
     pub fn into_spec(self) -> repark_common::Result<Option<TimeTravelSpec>> {
         let mut set: Vec<(&str, TimeTravelSpec)> = Vec::new();
         if let Some(snapshot_id) = self.snapshot_id {
@@ -58,7 +53,6 @@ impl TimeTravelOpts {
         if let Some(ms) = self.as_of_timestamp_ms {
             set.push(("as-of-timestamp", TimeTravelSpec::TimestampMs(ms)));
         }
-        // Trim branch/tag (SQL VERSION AS OF already trims via parse_version_value).
         if let Some(branch) = self.branch {
             let trimmed = branch.trim();
             if trimmed.is_empty() {
@@ -91,39 +85,144 @@ impl TimeTravelOpts {
     }
 }
 
-/// Resolve `spec` against `metadata` to a concrete snapshot id.
-/// # Errors
-/// Returns [`DataFusionError::Plan`] when the pin cannot be resolved.
-pub fn resolve_snapshot_id(metadata: &TableMetadata, spec: &TimeTravelSpec) -> Result<i64> {
+#[derive(Debug, Clone, Default)]
+pub struct ReaderTimeTravel {
+    pub snapshot_id: Option<i64>,
+    pub as_of_timestamp_ms: Option<i64>,
+    pub branch: Option<String>,
+    pub tag: Option<String>,
+    pub version_as_of: Option<String>,
+    pub timestamp_as_of: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RefSelector {
+    #[default]
+    None,
+    Branch,
+    Tag,
+}
+
+impl RefSelector {
+    #[must_use]
+    pub fn from_table_parts(parts: &[String]) -> Self {
+        let Some(last) = parts.last() else {
+            return Self::None;
+        };
+        if parts.len() < 4 {
+            return Self::None;
+        }
+        let lowered = last.to_ascii_lowercase();
+        if lowered.starts_with("branch_") {
+            Self::Branch
+        } else if lowered.starts_with("tag_") {
+            Self::Tag
+        } else {
+            Self::None
+        }
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn resolve_reader_spec(
+    ctx: &SessionContext,
+    opts: &ReaderTimeTravel,
+    selector: RefSelector,
+) -> Result<Option<TimeTravelSpec>> {
+    let version = opts.version_as_of.as_deref().map(str::trim);
+    let timestamp = opts.timestamp_as_of.as_deref().map(str::trim);
+    if version.is_some() && timestamp.is_some() {
+        return Err(DataFusionError::Plan(
+            "[INVALID_TIME_TRAVEL_SPEC] Cannot specify both version and timestamp when time travelling the table. SQLSTATE: 42K0E".to_string(),
+        ));
+    }
+    if opts.snapshot_id.is_some() && (version.is_some() || timestamp.is_some()) {
+        return Err(illegal_argument_error(
+            "Time travel option `snapshot-id` is no longer supported, use Spark built-in `versionAsOf` instead"
+                .to_string(),
+        ));
+    }
+    if opts.as_of_timestamp_ms.is_some() && (version.is_some() || timestamp.is_some()) {
+        return Err(illegal_argument_error(
+            "Time travel option `as-of-timestamp` (in millis) is no longer supported, use Spark built-in `timestampAsOf` instead (properly formatted timestamp)"
+                .to_string(),
+        ));
+    }
+    if (opts.branch.is_some() || opts.tag.is_some() || selector == RefSelector::Branch)
+        && (version.is_some() || timestamp.is_some())
+    {
+        return Err(branch_time_travel_refusal());
+    }
+    if selector == RefSelector::Tag && (version.is_some() || timestamp.is_some()) {
+        return Err(selector_time_travel_refusal());
+    }
+    if let Some(raw) = version {
+        if raw.is_empty() {
+            return Err(illegal_argument_error(
+                "Cannot find matching snapshot ID or reference name for version ".to_string(),
+            ));
+        }
+        if let Ok(snapshot_id) = raw.parse::<i64>() {
+            return Ok(Some(TimeTravelSpec::SnapshotId(snapshot_id)));
+        }
+        return Ok(Some(TimeTravelSpec::VersionRef(raw.to_string())));
+    }
+    if let Some(raw) = timestamp {
+        if let Ok(seconds) = raw.parse::<i64>() {
+            let millis = seconds
+                .checked_mul(1000)
+                .ok_or_else(|| invalid_timestamp_input(raw))?;
+            return Ok(Some(TimeTravelSpec::TimestampMs(millis)));
+        }
+        let millis = sql_eval::cast_string_to_timestamp_ms(ctx, raw).await?;
+        return Ok(Some(TimeTravelSpec::TimestampMs(millis)));
+    }
+    let legacy = TimeTravelOpts {
+        snapshot_id: opts.snapshot_id,
+        as_of_timestamp_ms: opts.as_of_timestamp_ms,
+        branch: opts.branch.clone(),
+        tag: opts.tag.clone(),
+    };
+    match legacy.into_spec() {
+        Ok(spec) => Ok(spec),
+        Err(Error::Analysis(message)) => Err(DataFusionError::Plan(message)),
+        Err(Error::IllegalArgument(message)) => Err(illegal_argument_error(message)),
+        Err(other) => Err(DataFusionError::External(Box::new(other))),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn resolve_snapshot_id(
+    metadata: &TableMetadata,
+    spec: &TimeTravelSpec,
+    zone: &SessionTimeZone,
+) -> Result<i64> {
     match spec {
         TimeTravelSpec::SnapshotId(snapshot_id) => metadata
             .snapshot_by_id(*snapshot_id)
             .map(|snapshot| snapshot.snapshot_id())
             .ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "unknown Iceberg snapshot id {snapshot_id}: not found in table metadata"
-                ))
+                illegal_argument_error(format!("Cannot find snapshot with ID {snapshot_id}"))
             }),
         TimeTravelSpec::VersionRef(ref_name) => metadata
             .snapshot_for_ref(ref_name)
             .map(|snapshot| snapshot.snapshot_id())
             .ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "unknown Iceberg snapshot ref {ref_name:?}: no branch or tag with that name"
+                illegal_argument_error(format!(
+                    "Cannot find matching snapshot ID or reference name for version {ref_name}"
                 ))
             }),
         TimeTravelSpec::TimestampMs(timestamp_ms) => {
             snapshot_id_as_of_time(metadata, *timestamp_ms).ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "no Iceberg snapshot at or before timestamp_ms={timestamp_ms} \
-                     (as-of is earlier than the table's first snapshot)"
+                illegal_argument_error(format!(
+                    "Cannot find a snapshot older than {}",
+                    format_snapshot_bound_ms(*timestamp_ms, zone)
                 ))
             })
         }
     }
 }
 
-/// Latest snapshot in `metadata.history()` with `timestamp_ms <= as_of_ms`.
 #[must_use]
 pub fn snapshot_id_as_of_time(metadata: &TableMetadata, as_of_ms: i64) -> Option<i64> {
     let mut snapshot_id = None;
@@ -135,80 +234,67 @@ pub fn snapshot_id_as_of_time(metadata: &TableMetadata, as_of_ms: i64) -> Option
     snapshot_id
 }
 
-/// Parse a Spark Iceberg `VERSION AS OF` value into a [`TimeTravelSpec`].
-/// # Errors
-/// Empty string → plan error.
-pub fn parse_version_value(raw: &str) -> Result<TimeTravelSpec> {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return Err(DataFusionError::Plan(
-            "VERSION AS OF requires a non-empty snapshot id or branch/tag name".to_string(),
-        ));
-    }
-    if let Ok(snapshot_id) = trimmed.parse::<i64>() {
-        return Ok(TimeTravelSpec::SnapshotId(snapshot_id));
-    }
-    Ok(TimeTravelSpec::VersionRef(trimmed.to_string()))
+#[must_use]
+pub fn invalid_timestamp_input(display: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"{display}\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+    ))
 }
 
-/// Parse a Spark Iceberg `TIMESTAMP AS OF` / `as-of-timestamp` value into epoch milliseconds.
-/// # Errors
-/// Unparsable string → plan error naming the input.
-pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return Err(DataFusionError::Plan(
-            "TIMESTAMP AS OF requires a non-empty timestamp".to_string(),
-        ));
-    }
-    if let Ok(ms) = trimmed.parse::<i64>() {
-        return Ok(ms);
-    }
-    // RFC 3339 / ISO-8601 with offset or `Z` (Spark jobs and JSON often emit these).
-    if let Ok(offset_dt) = chrono::DateTime::parse_from_rfc3339(trimmed) {
-        return Ok(offset_dt.timestamp_millis());
-    }
-    // `YYYY-MM-DD[ T]HH:MM:SS[.f]Z` (Zulu suffix on an otherwise-naive wall clock → UTC).
-    let without_z = trimmed
-        .strip_suffix('Z')
-        .or_else(|| trimmed.strip_suffix('z'))
-        .unwrap_or(trimmed);
-    // Strip optional surrounding SQL TIMESTAMP keyword residue is handled at the token layer.
-    let formats = [
-        "%Y-%m-%d %H:%M:%S%.f",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%dT%H:%M:%S%.f",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%d",
-    ];
-    for format in formats {
-        if let Ok(naive) = NaiveDateTime::parse_from_str(without_z, format) {
-            return Ok(naive.and_utc().timestamp_millis());
-        }
-        // Date-only: midnight UTC.
-        if format == "%Y-%m-%d"
-            && let Ok(date) = chrono::NaiveDate::parse_from_str(without_z, format)
-            && let Some(naive) = date.and_hms_opt(0, 0, 0)
-        {
-            return Ok(naive.and_utc().timestamp_millis());
-        }
-    }
-    Err(DataFusionError::Plan(format!(
-        "cannot parse TIMESTAMP AS OF value {trimmed:?} \
-         (expected epoch ms, RFC3339, or YYYY-MM-dd[ HH:MM:SS][Z])"
-    )))
+#[must_use]
+pub fn nondeterministic_timestamp_expr(display: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC] The time travel timestamp expression \"{display}\" is invalid. Must be deterministic. SQLSTATE: 42K0E"
+    ))
 }
 
-/// Build a snapshot-pinned [`DataFrame`] for a three-part Iceberg table and specification.
-/// # Errors
-/// Catalog / snapshot / provider errors as [`DataFusionError`].
+#[must_use]
+pub fn invalid_version_pin() -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(
+            datafusion::sql::sqlparser::parser::ParserError::ParserError(
+                "Invalid time travel spec: version must be an integer snapshot id or a 'branch-or-tag' string literal."
+                    .to_string(),
+            ),
+        ),
+        None,
+    )
+}
+
+#[must_use]
+pub fn branch_time_travel_refusal() -> DataFusionError {
+    illegal_argument_error("Can't time travel in branch".to_string())
+}
+
+#[must_use]
+pub fn selector_time_travel_refusal() -> DataFusionError {
+    illegal_argument_error(
+        "Can't time travel using selector and Spark time travel spec at the same time".to_string(),
+    )
+}
+
+#[must_use]
+pub fn timestamp_column_refusal() -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(
+            datafusion::sql::sqlparser::parser::ParserError::ParserError(
+                "Invalid time travel spec: timestamp expression cannot refer to any columns."
+                    .to_string(),
+            ),
+        ),
+        None,
+    )
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub async fn read_table_at(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table_parts: &[String],
     spec: &TimeTravelSpec,
+    zone: &SessionTimeZone,
 ) -> Result<DataFrame> {
-    let snapshot_id = resolve_table_snapshot(catalogs, table_parts, spec).await?;
+    let snapshot_id = resolve_table_snapshot(catalogs, table_parts, spec, zone).await?;
     let table = load_iceberg_table(catalogs, table_parts).await?;
     let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
         .await
@@ -228,7 +314,6 @@ pub async fn read_table_at(
     })
 }
 
-/// Mint the next ephemeral `__repark_tt_<n>` temp-view name.
 #[must_use]
 pub fn next_temp_view_name() -> String {
     let sequence = TEMP_VIEW_SEQ.fetch_add(1, Ordering::Relaxed);
@@ -239,9 +324,10 @@ async fn resolve_table_snapshot(
     catalogs: &CatalogRegistry,
     table_parts: &[String],
     spec: &TimeTravelSpec,
+    zone: &SessionTimeZone,
 ) -> Result<i64> {
     let table = load_iceberg_table(catalogs, table_parts).await?;
-    resolve_snapshot_id(table.metadata(), spec)
+    resolve_snapshot_id(table.metadata(), spec, zone)
 }
 
 async fn load_iceberg_table(

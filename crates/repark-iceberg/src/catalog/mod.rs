@@ -11,6 +11,8 @@ use iceberg::{Catalog, NamespaceIdent};
 mod builders;
 mod caches;
 mod catalog_ops;
+mod counting_storage;
+mod io_stats;
 mod lineage_columns;
 mod location;
 mod provider;
@@ -22,7 +24,8 @@ pub use provider::{
 };
 // Engine-side adapter for session `refresh_catalog_provider`, hoisted from v1 catalog_ops.
 pub use builders::{
-    glue_catalog, iceberg_to_datafusion, memory_catalog, memory_catalog_cached, s3tables_catalog,
+    glue_catalog, glue_catalog_counted, iceberg_to_datafusion, memory_catalog,
+    memory_catalog_cached, s3tables_catalog, s3tables_catalog_counted,
 };
 pub use caches::{
     CatalogCaches, DEFAULT_MANIFEST_CACHE_BYTES, DEFAULT_METADATA_CACHE_ENTRIES,
@@ -31,6 +34,15 @@ pub use caches::{
     METADATA_CACHE_KEY_ALT,
 };
 pub use catalog_ops::reregister_catalog_provider;
+pub use counting_storage::{
+    CountingStorage, CountingStorageFactory, GLUE_DEFAULT_CONFIGURED_SCHEME,
+    S3TABLES_DEFAULT_CONFIGURED_SCHEME, glue_default_storage_factory,
+    s3tables_default_storage_factory,
+};
+pub use io_stats::{
+    IcebergFileClass, IcebergIoCount, IcebergIoCounters, IcebergIoOp, IcebergIoStats,
+    PARQUET_TAIL_MAGIC, PUFFIN_TAIL_MAGIC, classify_iceberg_path, ranged_read_op,
+};
 pub use lineage_columns::{
     LineageColumnsTableProvider, table_serves_row_lineage, user_field_names,
 };

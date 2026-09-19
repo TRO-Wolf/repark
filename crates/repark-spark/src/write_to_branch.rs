@@ -7,7 +7,8 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergTableProvider;
-use repark_core::{CatalogRegistry, next_temp_view_name};
+use repark_core::CatalogRegistry;
+use repark_core::time_travel::next_temp_view_name;
 
 use crate::catalog_ops::{catalog_handle, iceberg_err};
 use crate::ref_ddl::{WriteToBranchSniff, sniff_write_to_branch};

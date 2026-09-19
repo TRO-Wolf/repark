@@ -214,6 +214,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
   L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
+- [ice-read-perf-0-ledger.md](ice-read-perf-0-ledger.md) —
+  **ICE-READ-PERF-0 (2026-09-19), in flight:** the Iceberg I/O counting layer (a counting
+  `StorageFactory` whose counters the session owns; Glue and S3 Tables wrap exactly the fork
+  default) and the `ice_read_perf` bench bed (setup, cold / warm / concurrent runs, the R-3
+  3 GiB size flag with exit 3). No product behaviour change. Every clause PROVEN, attestation
+  complete. `risk_tier: standard`. Branch `perf/ice-read-perf-0`.
+  pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
@@ -1108,6 +1116,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   new-table RTAS commits through the fork's public overwrite path, `commit_replace_write`).
   `risk_tier: standard`. Branch `ice-rtas-ops-2`.
   pins: ice-rtas-ops-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
+- [ice-tt-resolve-1-ledger.md](ice-tt-resolve-1-ledger.md) —
+  **ICE-TT-RESOLVE-1 (2026-09-19), in flight:** 1:1 Spark Iceberg time-travel resolution on
+  every door — one shared `repark-core` resolver for the reader built-ins and both SQL doors,
+  Spark refusal texts, the 94-cell oracle green offline plus live. Round 1 steps 1–2 committed
+  (`3413c537`, `4e19fee2`); this ledger carries C-001…C-012 PROVEN.
+  `risk_tier: standard`. Branch `fix/ice-tt-resolve-1`.
+  pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [ice-registry-sweep-1b-ledger.md](ice-registry-sweep-1b-ledger.md) —
   **ICE-REGISTRY-SWEEP-1B (2026-09-18), in flight:** the registry agrees with
   merged main for the twelve remaining rating rows and claims — every row state

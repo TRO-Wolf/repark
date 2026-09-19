@@ -53,3 +53,5 @@ refusing everything.
 | A DML guard did not run at all | Check WHICH parse the statement took. `router.rs` parses with `PARSER_DIALECT`; `delegate` re-parses through `create_logical_plan` with the session's `sql_parser.dialect`. They are the same today and `router_parse_dialect_matches_the_session_default` keeps them so — if that pin ever reds, every guard in the arm is fail-open for the forms the two parsers disagree about (the Spark door's L1 M-1 bypass class) |
 
 First checks: `cargo test -p repark-sql guards::`. Escalate to: [../map.md#debug](../map.md).
+
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** call sites use the 3-arg `EngineContext::new` again; the zone flows only through `new_with_time_zone`. pins: ice-tt-resolve-1/C-003

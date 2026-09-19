@@ -16,6 +16,19 @@ on:
   schedule:
     - cron: "43 8 * * *"  # nightly ~08:43 UTC — offset from the parity cron (07:17)
   workflow_dispatch:
+    inputs:
+      leg:
+        description: "acceptance (the nightly module) or ice-read-perf-bench (the read bench, docs/tier2-aws.md §8)"
+        type: choice
+        options:
+          - acceptance
+          - ice-read-perf-bench
+        default: acceptance
+      purpose:
+        description: "why this dispatch runs (the unit it measures), echoed into the job summary"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -27,6 +40,7 @@ concurrency:
 jobs:
   live-aws:
     name: tier-2 live AWS acceptance (Glue + S3 Tables, scratch-only)
+    if: github.event_name == 'schedule' || inputs.leg == 'acceptance'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     environment: aws-acceptance
@@ -97,3 +111,162 @@ jobs:
         run: >
           VIRTUAL_ENV="$PWD/.venv"
           uv run --no-project python -m pytest python/dbt-repark/tests/test_aws_acceptance_gold.py -q -rA
+
+  ice-read-perf-bench:
+    name: ICE-READ-PERF bench (S3 Tables + Glue, dispatch-only, scratch-only)
+    if: github.event_name == 'workflow_dispatch' && inputs.leg == 'ice-read-perf-bench'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    environment: aws-acceptance
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      BENCH_NAMESPACE: testing_repark_acceptance
+      BENCH_TABLE: ice_read_perf_bench
+      BENCH_REPEAT: "1"
+    steps:
+      - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "the bench runs against merged code only; refusing ref '${GITHUB_REF}'" >&2
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: "1.96.0"
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      - name: build the bench (before any credential exists)
+        run: cargo bench --locked -p repark-spark --bench ice_read_perf --no-run
+      - name: refuse a missing warehouse or table bucket before signing any request
+        env:
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: |
+          set -euo pipefail
+          case "${REPARK_ACCEPT_WAREHOUSE}" in
+            "" | "s3://example-warehouse/")
+              echo "REPARK_ACCEPT_WAREHOUSE is unset or the placeholder; the bench needs the Glue scratch warehouse (docs/tier2-aws.md §4)" >&2
+              exit 1
+              ;;
+          esac
+          if [ -z "${TABLE_BUCKET_ARN}" ]; then
+            echo "TABLE_BUCKET_ARN is unset; the bench needs the S3 Tables leg (docs/tier2-aws.md §4)" >&2
+            exit 1
+          fi
+          mkdir -p "${RUNNER_TEMP}/ice-read-perf-out"
+      - uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-ice-read-perf-bench
+          mask-aws-account-id: true
+      - name: S3 Tables — create the bench namespace and table (idempotent, R-3 checked)
+        env:
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: >
+          cargo bench --locked -p repark-spark --bench ice_read_perf --
+          setup --catalog s3tables --prop "table_bucket_arn=${TABLE_BUCKET_ARN}"
+          --table "${BENCH_NAMESPACE}.${BENCH_TABLE}" --phase create
+      - name: S3 Tables — disable AWS-managed compaction and fail unless it reads disabled
+        env:
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: |
+          set -euo pipefail
+          stop() {
+            {
+              echo "ICE-READ-PERF bench stopped before any write: $1."
+              echo "A denial means the owner must grant s3tables:PutTableMaintenanceConfiguration and s3tables:GetTableMaintenanceConfiguration on the bench table (docs/tier2-aws.md §2)."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            echo "$1" >&2
+            exit 1
+          }
+          aws s3tables put-table-maintenance-configuration \
+            --table-bucket-arn "${TABLE_BUCKET_ARN}" \
+            --namespace "${BENCH_NAMESPACE}" \
+            --name "${BENCH_TABLE}" \
+            --type icebergCompaction \
+            --value '{"status":"disabled"}' \
+            || stop "put-table-maintenance-configuration (icebergCompaction disabled) failed"
+          status="$(aws s3tables get-table-maintenance-configuration \
+            --table-bucket-arn "${TABLE_BUCKET_ARN}" \
+            --namespace "${BENCH_NAMESPACE}" \
+            --name "${BENCH_TABLE}" \
+            --query 'configuration.icebergCompaction.status' \
+            --output text)" \
+            || stop "get-table-maintenance-configuration failed"
+          if [ "${status}" != "disabled" ]; then
+            stop "icebergCompaction reads '${status}', not disabled"
+          fi
+          echo "S3 Tables icebergCompaction on ${BENCH_NAMESPACE}.${BENCH_TABLE}: disabled (read back)" >> "${GITHUB_STEP_SUMMARY}"
+      - name: S3 Tables — write the bed only into an empty table (R-3 checked)
+        env:
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: >
+          cargo bench --locked -p repark-spark --bench ice_read_perf --
+          setup --catalog s3tables --prop "table_bucket_arn=${TABLE_BUCKET_ARN}"
+          --table "${BENCH_NAMESPACE}.${BENCH_TABLE}" --phase write
+      - name: Glue — create the bench namespace and table (idempotent, R-3 checked)
+        env:
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+        run: >
+          cargo bench --locked -p repark-spark --bench ice_read_perf --
+          setup --catalog glue --prop "warehouse=${REPARK_ACCEPT_WAREHOUSE}"
+          --table "${BENCH_NAMESPACE}.${BENCH_TABLE}" --phase create
+      - name: Glue — write the bed only into an empty table (R-3 checked)
+        env:
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+        run: |
+          set -euo pipefail
+          echo "Glue: this workflow makes no table-optimizer call; Glue compaction stays off unless someone enables the optimizer on ${BENCH_NAMESPACE}.${BENCH_TABLE}." >> "${GITHUB_STEP_SUMMARY}"
+          cargo bench --locked -p repark-spark --bench ice_read_perf -- \
+            setup --catalog glue --prop "warehouse=${REPARK_ACCEPT_WAREHOUSE}" \
+            --table "${BENCH_NAMESPACE}.${BENCH_TABLE}" --phase write
+      - name: S3 Tables — cold, warm, concurrent, concurrent-cold (each R-3 checked)
+        env:
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: |
+          set -euo pipefail
+          for mode in cold warm concurrent concurrent-cold; do
+            cargo bench --locked -p repark-spark --bench ice_read_perf -- \
+              run --mode "${mode}" --catalog s3tables --prop "table_bucket_arn=${TABLE_BUCKET_ARN}" \
+              --table "${BENCH_NAMESPACE}.${BENCH_TABLE}" --repeat "${BENCH_REPEAT}" \
+              --out "${RUNNER_TEMP}/ice-read-perf-out/s3tables-${mode}.json"
+          done
+      - name: Glue — cold, warm, concurrent, concurrent-cold (each R-3 checked)
+        env:
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+        run: |
+          set -euo pipefail
+          for mode in cold warm concurrent concurrent-cold; do
+            cargo bench --locked -p repark-spark --bench ice_read_perf -- \
+              run --mode "${mode}" --catalog glue --prop "warehouse=${REPARK_ACCEPT_WAREHOUSE}" \
+              --table "${BENCH_NAMESPACE}.${BENCH_TABLE}" --repeat "${BENCH_REPEAT}" \
+              --out "${RUNNER_TEMP}/ice-read-perf-out/glue-${mode}.json"
+          done
+      - name: bytes read per run and for the dispatch
+        if: ${{ !cancelled() }}
+        env:
+          PURPOSE: ${{ inputs.purpose }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          total=0
+          {
+            echo "## ICE-READ-PERF bench — purpose: ${PURPOSE:-unstated}"
+            for file in "${RUNNER_TEMP}"/ice-read-perf-out/*.json; do
+              bytes="$(jq '.run_io_total.bytes' "${file}")"
+              total=$((total + bytes))
+              echo "- $(basename "${file}" .json): ${bytes} bytes read"
+            done
+            echo "- dispatch total: ${total} bytes read"
+          } >> "${GITHUB_STEP_SUMMARY}"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: ${{ !cancelled() }}
+        with:
+          name: ice-read-perf-bench
+          path: ${{ runner.temp }}/ice-read-perf-out/
+          if-no-files-found: warn
+          retention-days: 30

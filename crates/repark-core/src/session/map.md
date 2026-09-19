@@ -102,6 +102,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `register_iceberg_catalog(name, catalog)` was built by its caller and therefore carries whatever
   caches that caller gave it — the fork's default is OFF, so the injection point is the builder,
   not the registration.
+  **ICE-READ-PERF-0 (2026-09-19):** `iceberg_io_stats()` returns the session's cumulative
+  `IcebergIoStats` snapshot and `reset_iceberg_io_stats()` zeroes it; `iceberg_io_counters()`
+  (public, so a caller that builds its own Glue / S3 Tables catalog — the ICE-READ-PERF-0
+  bench — can count into the session's set) is what `session.rs::register_catalog_spec` hands `glue_catalog_counted` /
+  `s3tables_catalog_counted`, so a configured Glue or S3 Tables catalog counts into the same set
+  as the memory catalog. A catalog passed to `register_iceberg_catalog` counts only if its
+  builder was given these counters. pins: ice-read-perf-0/C-003
   pins: perf-ice-catalog-io-1/C-002, C-003, C-004
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
@@ -315,3 +322,9 @@ First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug
 `resolve_temp_view_home_ref`, the two lookups the Python facade uses so a product read path never
 emits a BARE reference for a session-local view (a bare one is re-resolved against the LIVE
 `datafusion.catalog.default_catalog`). Both go through `assert_home_intact` first.
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** the reader-options path resolves through the shared
+`time_travel::resolve_reader_spec` with the session zone; the production write path builds
+the context with `EngineContext::new_with_time_zone`. pins: ice-tt-resolve-1/C-002
+**ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `resolve_reader_spec` is async over the session
+context so reader strings cast through the engine. pins: ice-tt-resolve-1/C-002

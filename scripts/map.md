@@ -4,6 +4,8 @@ ICE-DROP-NS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-sql/src/t
 
 CAST-MAP-SPELL-1 (2026-09-19): `check_lib_py.py` ratchets `spark/column.py` 1532 → 1529 (unknown cast names forward to the native map-type token) and `check_rust_file_size.py` ratchets `repark-python/src/session.rs` 1127 → 1126 (SQL prep moves to `session_runtime.rs`), both shrink-only. pins: cast-map-spell-1/C-004, C-005
 
+ICE-TT-RESOLVE-1 round 2 (2026-09-19): ceilings down — `session.rs` 1135 → 1123, `session_core.py` 2297 → 2287, `guards/tests.rs` 1213 → 1207, `tests.rs` 1530 → 1520, the `repark-core` lib row removed (lib.rs ≤ 150). pins: ice-tt-resolve-1/C-011, C-012 Merged with main at RP-34: `repark-python/src/session.rs` ceiling 1122 (the merged file).
+
 ICE-WRITE-OPTIONS-1 (2026-09-17): `check_lib_py.py` sets `dataframe/core.py` 4015 → 3991 (the WriterV2 option warning machinery leaves) and `dataframe/writer_readwriter.py` 1101 → 1114 (options slots, storage, clause rendering). pins: ice-write-options-1/C-001, C-005
 
 ICE-WRITE-OPTIONS-1 round 2 (2026-09-17): `check_lib_py.py` sets `dataframe/writer_readwriter.py` 1114 → 1099 (dedup moves to `writer_layout.store_writer_option`, head-prefix rendering; ruff format collapses one call). pins: ice-write-options-1/C-001, C-005

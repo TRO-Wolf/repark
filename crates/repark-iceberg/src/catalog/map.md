@@ -42,8 +42,70 @@ Source comments retain only API and safety contracts; implementation narration i
   bump to `v(N+1).metadata.json` (registry `V3-ADOPT-1` FIXED, RP-3 / fork #235). S3 Tables
   `register_table` still refuses naming fork row R126 (pins: rp-3-fork-repin/C-008).
   Catalog-edge spans record **prop key names only**, never values.
+  **ICE-READ-PERF-0:** `memory_catalog_cached` wraps `storage_factory_for_location(warehouse)` in
+  a `CountingStorageFactory` over `caches.io_counters()`; `glue_catalog_counted(props, counters)`
+  and `s3tables_catalog_counted(props, counters)` pass `with_storage_factory(<counting wrapper
+  over the fork default>)`; the unsuffixed `glue_catalog` / `s3tables_catalog` call them with a
+  fresh counter set. The metadata and manifest caches are **not** passed to Glue or S3 Tables
+  (unit ICE-CATALOG-CACHE-1). pins: ice-read-perf-0/C-003, C-004
+  No product behaviour changes: the wrapper only delegates and counts.
+  pins: ice-read-perf-0/C-010
+- `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the Iceberg I/O counters. `IcebergIoCounters`
+  holds one pair of relaxed `AtomicU64` (requests, bytes) per operation kind (`IcebergIoOp`:
+  exists, metadata/HEAD, whole read, ranged read, footer read, write, delete, list) and per file class
+  (`IcebergFileClass`: table metadata JSON, manifest list, manifest, data file, delete file,
+  other). `snapshot()` returns an `IcebergIoStats` value (`get` / `by_op` / `by_class` /
+  `total`); `reset()` zeroes every cell — a snapshot taken during a reset is not atomic across
+  cells, which the bench never needs. `classify_iceberg_path` reads only the path:
+  `*.metadata.json[.gz]` is table metadata; an `.avro` in a `metadata/` directory is a manifest
+  list when it starts `snap-`, else a manifest; `.parquet` / `.orc` / `.avro` elsewhere is a data
+  file unless the name marks deletes (`pos-del*` — RePark's position-delete writer —, `eq-del*`,
+  `dv-*` — the fork's DV writer —, or Spark's `*-deletes.*`); a `.puffin` outside `metadata/` or
+  with a delete name is a delete file; everything else (`version-hint.text`, a stats puffin) is
+  `other`. pins: ice-read-perf-0/C-001, C-002
+  The classifier matches on the lower-cased extension after the `*.metadata.json[.gz]` check;
+  `by_op` / `by_class` / `total` saturate instead of wrapping.
+  **Round 2 (2026-09-19):** each cell is `#[repr(align(64))]` so no two cells share a cache line
+  (8 × 6 cells × 64 B = 3 KiB per session; the concurrent bench mode hammers the data-file cell).
+  pins: ice-read-perf-0/C-012
+  **Footer vs page** (`ranged_read_op`): a ranged read on a data or delete file whose returned
+  bytes END with the Parquet tail magic `PAR1` or the Puffin tail magic `PFA1` is a
+  `footer_read`; every other ranged read is a `ranged_read` (on data files: column pages, and a
+  page-index or oversize-footer read beyond the prefetched tail). Why this rule: the wrapper
+  never learns a file's size (the fork hands the manifest's `file_size_in_bytes` to the Parquet
+  reader, not to `Storage::reader`), and a Parquet / Puffin file ends with its magic, so "the read
+  ended on the tail magic" is "the read ended at the end of the file" without a HEAD request.
+  The fork's footer read is exactly that read: `ParquetMetaDataReader` with the 512 KiB prefetch
+  hint fetches `[size − hint, size)` (or the whole file when it is smaller). The rule survives a
+  footer cache: with prefetched metadata the reader's first read is a page read and stays a page
+  read (a "first read of each reader" rule would count it as a footer). Limits, stated: a page
+  range that happens to end on those four bytes counts as a footer (a 2⁻³² event on compressed
+  pages; the bed's string columns are lower-case hex and `cat_<n>`, which cannot spell `PAR1`);
+  a failed read counts as `ranged_read` with 0 bytes; ORC and Avro data files have no tail magic,
+  so all their reads stay `ranged_read`. pins: ice-read-perf-0/C-011
+- `counting_storage.rs` — **ICE-READ-PERF-0 (2026-09-19):** `CountingStorageFactory` wraps any
+  fork `StorageFactory`; the `Storage` it builds (`CountingStorage`) delegates every call to the
+  inner storage and records it. One request per `exists` / `metadata` / `read` / `write` /
+  `write_new` / `delete` / `delete_prefix` / `list`; a `reader()` open is free and every
+  `FileRead::read(range)` on it is one ranged-read (or footer-read) request of the RETURNED length,
+  never the requested span; the file class is computed once at `reader()` / `writer()` and kept
+  on the wrapper, so the per-read path allocates nothing and classifies nothing; a `writer()`
+  records bytes per chunk and one write request at `close`. Bytes count only what a call
+  returned or sent. `new_input` / `new_output` hand out `InputFile` / `OutputFile` over a clone of
+  the COUNTING storage — over the inner one, every manifest and data-file read would escape (a
+  mutation to that shape reds five pins). The fork's `Storage` / `StorageFactory` traits are
+  `typetag` traits; the impls write the two hidden `typetag_name` / `typetag_deserialize` items
+  by hand (no `typetag` dependency) and serialize as `{"type": …, "inner": <inner>}`; they are
+  never registered for deserialization. `glue_default_storage_factory()` (`s3a`) and
+  `s3tables_default_storage_factory()` (`s3`) restate the fork defaults
+  (`catalog/glue/src/catalog.rs:253`, `catalog/s3tables/src/catalog.rs:235` at fork `43fcd243`) so
+  the wrapped factory is byte-identical to today's. A fork repin re-reads those two lines.
+  pins: ice-read-perf-0/C-001, C-004
 - `caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session-scoped Iceberg cache handles
-  and their knobs. `IcebergCacheSettings::from_config_map` reads
+  and their knobs. **ICE-READ-PERF-0:** `CatalogCaches` also owns the session's
+  `Arc<IcebergIoCounters>` (one set per session, cumulative, shared by clones) with
+  `io_counters()`, `io_stats()` and `reset_io_stats()`. pins: ice-read-perf-0/C-003
+  `IcebergCacheSettings::from_config_map` reads
   `repark.iceberg.metadataCache` (default **true**) and `repark.iceberg.metadataCacheEntries`
   (default 512), both with an underscore alias; a bad value fails loud naming BOTH the key the
   user set and the canonical spelling it aliases.
