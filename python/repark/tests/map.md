@@ -6625,4 +6625,32 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   answers the recorded summary. Truth in
   [../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/](../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/map.md).
   pins: ice-write-options-rp-1/C-003, C-004, C-005, C-006, C-007, C-008
-
+- [_record_ice_list_null_1.py](_record_ice_list_null_1.py) — the **record driver**
+  for ICE-LIST-NULL-1 (NOT a `test_` module; never collected). `SHAPES` is the shape
+  catalog (column DDL, seed VALUES); `record_cell()` creates, seeds and runs one
+  shape x version x mode x statement x predicate cell on one short-lived local
+  Spark JVM with a Hadoop catalog at scratch and records ok, ids, operation and
+  the delete-file / DV counts; `record_all()` writes all 128 cells to
+  `spark_list_null_oracle.json`. Runtime GAV from `_oracle_pins`, Ivy cache from
+  `REPARK_ORACLE_IVY`, warehouse from `tempfile`. Re-record:
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2
+  on the path.
+  pins: ice-list-null-1/C-002
+- [test_ice_list_null_1.py](test_ice_list_null_1.py) —
+  **ICE-LIST-NULL-1 (2026-09-18, RP-31):** DELETE and UPDATE with IS NULL on nested
+  columns answer Spark 4.1.2 — one pin per recorded cell (128: four shapes by four
+  predicates by delete/update by copy-on-write / merge-on-read by v2/v3) asserting
+  the run answers, the ids left equal Spark's and the newest snapshot's operation
+  equals Spark's, each on a fresh RePark memory catalog with the recorder's DDL
+  and seed. The `map_int` empty-map seed row runs through a `map_from_arrays`
+  spelling RePark parses that reads back equal to Spark's seed (CAST-MAP-SPELL-1,
+  BACKLOG). The sixteen copy-on-write DELETE compound-predicate cells run verbatim
+  under strict xfail (fork #299 residue: the conjunction/disjunction path still
+  refuses `Accessor for Field xs not found`); the sixteen merge-on-read
+  `xs IS NOT NULL` cells pin RePark's measured 1 delete file (1 DV on v3) against
+  Spark's 2 (2 DVs). A second parametrization pins the delete-file / DV counts on
+  every cell. Live (`REPARK_PARITY_LIVE=1`): Spark re-derives one cell per shape
+  through the recorder's `record_cell` and answers the recorded ok, ids and
+  operation. Truth in
+  [../../repark-parity/fixtures/torture/data/ice_list_null_1/](../../repark-parity/fixtures/torture/data/ice_list_null_1/map.md).
+  pins: ice-list-null-1/C-003, C-004, C-005, C-006, C-008

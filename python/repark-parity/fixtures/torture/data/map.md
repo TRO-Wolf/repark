@@ -59,6 +59,13 @@ the committed landing zone, not a generation target.
   `replace-partitions` and `k` per cell (ICE-WRITE-OPTIONS-RP-1, 2026-09-18; JSON
   only, no table data).
   pins: ice-write-options-rp-1/C-001
+- [ice_list_null_1/](ice_list_null_1/map.md) — the recorded Spark 4.1.2 answers for
+  DELETE and UPDATE with IS NULL on nested columns (`spark_list_null_oracle.json`,
+  128 cells: four shapes by four predicates by delete/update by copy-on-write /
+  merge-on-read by v2/v3) with the ids left, the newest snapshot's operation and
+  its `added-delete-files` / `added-dvs` per cell (ICE-LIST-NULL-1, 2026-09-18;
+  JSON only, no table data).
+  pins: ice-list-null-1/C-001
 
 ## Pointers
 

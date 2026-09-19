@@ -1,0 +1,2198 @@
+{
+ "spark": "4.1.2",
+ "iceberg": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "cells": [
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "delete",
+   "added_delete_files": "2",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "2",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "delete",
+   "added_delete_files": "2",
+   "added_dvs": "2"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "2",
+   "added_dvs": "2"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "delete",
+   "added_delete_files": "2",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "2",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "delete",
+   "added_delete_files": "2",
+   "added_dvs": "2"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "2",
+   "added_dvs": "2"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "list_struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "delete",
+   "added_delete_files": "2",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "2",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "delete",
+   "added_delete_files": "2",
+   "added_dvs": "2"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "2",
+   "added_dvs": "2"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "map_int",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "delete",
+   "added_delete_files": "2",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "2",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 2,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "copy-on-write",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "0",
+   "added_dvs": "0"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NOT NULL",
+   "sql": "DELETE FROM <t> WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2
+   ],
+   "operation": "delete",
+   "added_delete_files": "2",
+   "added_dvs": "2"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "DELETE FROM <t> WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "delete",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "DELETE FROM <t> WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4
+   ],
+   "operation": "delete",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NOT NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NOT NULL",
+   "ok": true,
+   "ids": [
+    2,
+    101,
+    103,
+    104
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "2",
+   "added_dvs": "2"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "id > 1 AND xs IS NULL",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE id > 1 AND xs IS NULL",
+   "ok": true,
+   "ids": [
+    1,
+    3,
+    4,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  },
+  {
+   "shape": "struct",
+   "version": 3,
+   "mode": "merge-on-read",
+   "statement": "update",
+   "predicate": "xs IS NULL OR id = 1",
+   "sql": "UPDATE <t> SET id = id + 100 WHERE xs IS NULL OR id = 1",
+   "ok": true,
+   "ids": [
+    3,
+    4,
+    101,
+    102
+   ],
+   "operation": "overwrite",
+   "added_delete_files": "1",
+   "added_dvs": "1"
+  }
+ ]
+}
