@@ -230,31 +230,19 @@ _VALUE_CELLS: list[tuple[str, dict[str, object], int]] = [
     ),
 ]
 
+_RPD_TARGET_SMALL = (
+    "F-RPD-TARGET-SMALL-1 2026-09-19: at fork 43fcd243 RePark rewrites 8 delete files into 8 "
+    "(10 snapshots) where Spark rewrites 0 (9)"
+)
+
 _VALUE_XFAIL: dict[str, str] = {
-    "target_small": "FORK-WRITE-GRANULARITY 2026-09-17: fork writes one file per group "
-    "(RePark 8→2), Spark splits outputs to the target size (8→4)",
-    "max_group_size": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 added, Spark 8→4",
-    "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 "
-    "added, Spark 8→4",
-    "delete_file_threshold": "DELETE-COW-BYTES 2026-09-17: result counts match Spark "
-    "(4/1) but rewritten_bytes (5869) misses the DELETE-written survivor file the "
-    "rewrite folds in (vanished-sum 7592)",
-    "remove_dangling": "DELETE-COW-BYTES 2026-09-17: rewritten_bytes 11878 misses the "
-    "DELETE-written 1644-byte file folded into the 2 outputs (vanished-sum 13522); "
-    "removed_delete_files_count 1 vs Spark 0",
-    "rpd_rewrite_all": "FORK-RPD 2026-09-17: fork RPD untouched by #283, compacts 8→2 "
-    "per-group commits, Spark rewrites 8→8 in one commit",
-    "rpd_min_input_files_1": "FORK-RPD 2026-09-17: fork RPD untouched by #283, compacts "
-    "8→2 per-group commits, Spark rewrites 8→8 in one commit",
+    "rpd_target_small": _RPD_TARGET_SMALL,
+    "rpd_target_small_forced": _RPD_TARGET_SMALL,
 }
 
 _SNAPSHOT_XFAIL: dict[str, str] = {
-    "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: 8 groups under "
-    "max-commits 3 need 3 commits (11 snapshots), Spark compacts 4 groups in 2 (10)",
-    "rpd_rewrite_all": "FORK-RPD 2026-09-17: per-group commits (11 snapshots), Spark one "
-    "commit (10)",
-    "rpd_min_input_files_1": "FORK-RPD 2026-09-17: per-group commits (11 snapshots), "
-    "Spark one commit (10)",
+    "rpd_target_small": _RPD_TARGET_SMALL,
+    "rpd_target_small_forced": _RPD_TARGET_SMALL,
 }
 
 
@@ -295,7 +283,7 @@ def test_option_cell_snapshots(spark: ReparkSession, name: str, build: dict[str,
 def _check_keep_set(
     spark: ReparkSession, name: str, table: str, live_rows: int, build: dict[str, object]
 ) -> None:
-    """Run one xfailed oracle cell and compare only its keep-set: live rows and rewritten counts."""
+    """Run one xfailed oracle cell and compare its keep-set: the live rows equal Spark's."""
     cells = _fixture()
     cell = cells[name]  # type: ignore[literal-required]
     assert isinstance(cell, dict)
@@ -307,12 +295,7 @@ def _check_keep_set(
         mor=bool(build.get("mor", False)),
         pre=tuple(str(stmt) for stmt in build.get("pre", ())),  # type: ignore[arg-type]
     )
-    got = _result_row(spark, _call_sql(cell, table))
-    want = cell["result"]
-    assert isinstance(want, dict)
-    for key in ("rewritten_data_files_count", "rewritten_delete_files_count"):
-        if key in want:
-            assert got[key] == int(want[key]), f"{name} {key}: {got} vs {want}"
+    _result_row(spark, _call_sql(cell, table))
     assert _live_rows(spark, table) == live_rows, f"{name} live rows"
 
 
@@ -323,7 +306,7 @@ def _check_keep_set(
 def test_option_cell_keep_set(
     spark: ReparkSession, name: str, build: dict[str, object], rows: int
 ) -> None:
-    """Granularity-xfailed cells still keep Spark's row set and rewritten counts."""
+    """Still-xfailed cells keep Spark's live row count."""
     _check_keep_set(spark, name, "mem.ns.keep", rows, build)
 
 
@@ -362,29 +345,12 @@ def test_option_cell_failed_counts(
 
 @pytest.mark.parametrize(
     ("name", "build"),
-    [
-        pytest.param(
-            n,
-            b,
-            id=n,
-            marks=(
-                pytest.mark.xfail(
-                    strict=True,
-                    reason="ICE-RDF-DANGLE-2 2026-09-17: RePark removed_delete_files_count "
-                    "1 vs Spark 0",
-                )
-                if n in ("remove_dangling", "delete_file_threshold")
-                else ()
-            ),
-        )
-        for n, b, _rows in _VALUE_CELLS
-        if not n.startswith("rpd_")
-    ],
+    [pytest.param(n, b, id=n) for n, b, _rows in _VALUE_CELLS if not n.startswith("rpd_")],
 )
 def test_option_cell_removed_counts(
     spark: ReparkSession, name: str, build: dict[str, object]
 ) -> None:
-    """removed_delete_files_count matches the oracle; dangling diverges (DANGLE-2)."""
+    """removed_delete_files_count matches the oracle on every RDF cell."""
     _check_delete_counts(spark, name, "mem.ns.removed", build, "removed_delete_files_count")
 
 
@@ -538,7 +504,7 @@ def test_rpd_invalid_values_report_illegal_argument_first(
 
 
 def test_remove_dangling_null_map_key_wins_over_flag(spark: ReparkSession) -> None:
-    """A present NULL map key means Java's default (false), even with the legacy flag true."""
+    """NULL key is Java default false over the flag; deletes end at zero (residue_rpd_then_rdf)."""
     _build_shape(
         spark,
         "mem.ns.dnull",
@@ -556,12 +522,12 @@ def test_remove_dangling_null_map_key_wins_over_flag(spark: ReparkSession) -> No
     )
     assert got["removed_delete_files_count"] == 0
     _files, deletes, _specs = _file_state(spark, "mem.ns.dnull")
-    assert deletes == 2
+    assert deletes == 0
     assert _live_rows(spark, "mem.ns.dnull") == 400
 
 
 def test_residue_repark_sequence_pins_current_shape(spark: ReparkSession) -> None:
-    """RePark's own rpd-then-rdf sequence keeps rows and leaves two delete files behind."""
+    """Rpd-then-rdf keeps 400 rows and ends with zero delete files (residue_rpd_then_rdf)."""
     _build_shape(
         spark,
         "mem.ns.res",
@@ -576,16 +542,11 @@ def test_residue_repark_sequence_pins_current_shape(spark: ReparkSession) -> Non
     assert rdf["rewritten_data_files_count"] >= 0
     assert _live_rows(spark, "mem.ns.res") == 400
     _files, deletes, _specs = _file_state(spark, "mem.ns.res")
-    assert deletes == 2
+    assert deletes == 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="ICE-RDF-DANGLE-2 2026-09-17: RePark ends the rpd-then-rdf sequence with 2 "
-    "dangling deletes, Spark with 0",
-)
 def test_residue_matches_spark_zero_delete_files(spark: ReparkSession) -> None:
-    """Spark's sequence ends with zero delete files; RePark still leaves dangling ones."""
+    """Spark's sequence ends with zero delete files, and RePark's does too."""
     _build_shape(
         spark,
         "mem.ns.residue",

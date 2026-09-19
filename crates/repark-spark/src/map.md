@@ -31,6 +31,10 @@ pins: rp-4-fork-repin/C-005, C-006
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `execute_merge_statement` (OUTPUT refusal, timestamp_ns cast lowering) so `execute_inner` stays under clippy's 100-line cap (run 22b).
+  **CAST-MAP-SPELL-1 (2026-09-19):** `execute_inner` first runs
+  `repark_functions::cast_map::rewrite_map_casts`, so a `CAST` / `TRY_CAST` naming `MAP<…>`
+  reaches every intercept and the parser as the shared cast UDF call.
+  pins: cast-map-spell-1/C-005
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
   `return` path of the rewrite — see the `time_travel.rs` row below. **V3-4:** after time
@@ -714,6 +718,11 @@ pins: rp-4-fork-repin/C-005, C-006
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`
   for R1, plus `RestateIntervalBoundsAsNumeric` for R5). 6 in-module tests.
   pins: rp-9-repin-f23/C-005
+  **ICE-LIST-NULL-2 (2026-09-19):** the plain-identity attach declines through
+  `plain::plain_identity_needs_fork` after loading the target — a non-primitive
+  selection returns `None` to the fork DELETE path. Door battery:
+  [tests/list_null_compound.rs](tests/list_null_compound.rs).
+  pins: ice-list-null-2/C-002, C-003
   **TYPES-1 (2026-09-05):** after eager analysis, plain-`INSERT` DML wraps narrowed `Int32`
   sources into `BIGINT` targets (`conform_insert_narrowed_ints`); every other shape passes
   through untouched. pins: types-1/C-001

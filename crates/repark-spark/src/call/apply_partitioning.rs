@@ -196,12 +196,12 @@ async fn run_step(
         }
         StepKind::RewriteDataFiles => {
             let catalog = Arc::clone(crate::catalog_handle(catalogs, catalog_name)?);
-            let frame = super::rewrite_data_files::execute_rewrite_data_files(
+            let frame = Box::pin(super::rewrite_data_files::execute_rewrite_data_files(
                 ctx,
                 catalog,
                 catalog_name,
                 &table_args(table_arg),
-            )
+            ))
             .await?;
             frame.collect().await?;
             Ok("applied".to_string())
@@ -239,7 +239,7 @@ async fn apply_steps(
 ) -> Result<DataFrame> {
     let mut rows: Vec<(i32, String, String, String, String)> = Vec::new();
     for step in steps {
-        match run_step(ctx, catalogs, catalog_name, table_arg, step).await {
+        match Box::pin(run_step(ctx, catalogs, catalog_name, table_arg, step)).await {
             Ok(result) => rows.push((
                 step.ordinal,
                 step.procedure.clone(),

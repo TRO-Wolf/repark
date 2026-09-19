@@ -208,6 +208,8 @@ async fn execute_inner(
     sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    let rewritten = repark_functions::cast_map::rewrite_map_casts(sql);
+    let sql = rewritten.as_deref().unwrap_or(sql);
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {

@@ -346,6 +346,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   COLUMN-PARITY-1 critic round (2026-09-14): the inventory gains
   `spark/column.py` `_sql_string_literal` 1 — struct field access renders its join-ON
   bracket key through the helper rather than an f-string. pins: column-parity-1/C-007
+- `test_cap_1_source_file_line_cap.py` — **CAST-MAP-SPELL-1 (2026-09-19):** `repark-python/src/session.rs` row 1127 → 1126 and `spark/column.py` row 1532 → 1529 with the script baselines (the map-cast type token forwards to the native parser).
 - `test_cap_1_source_file_line_cap.py` — **COLUMN-PARITY-1 critic round (2026-09-14):** `spark/column.py` row 1548 → 1532, `dataframe/core.py` row 4044 → 4040 and `dataframe/plan_collapse.py` row 1057 → 1054 with the script baselines (the deferred struct-edit machinery is deleted for the native `update_fields` design; struct field access gains a join-ON bracket fragment). pins: column-parity-1/C-007
 - `test_cap_1_source_file_line_cap.py` — **FNP-11A (2026-09-15):** the `functions_expr.py` row ratchets 1010 → 1021 with the script baseline (the destubbed `make_timestamp` forwarder keeps the frozen 1.0 signature, D-10). pins: fnp-11a/C-001
 - `test_cap_1_source_file_line_cap.py` — **SET-ANSI-RUNTIME-1 (2026-09-15):** the `tests/test_session_timezone_parity.py` mirror row 1328 → 1318 with the script baseline (the applied-contract flips are net-negative). pins: set-ansi-runtime-1/C-005

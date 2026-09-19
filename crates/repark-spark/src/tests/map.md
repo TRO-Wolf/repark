@@ -61,6 +61,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **FNP-8-REVIEW (2026-09-07):** the exists/forall three-valued pin gains the
   null-predicate legs (`exists`/`forall` over `make_array(1, NULL, 3)` answer NULL, F6).
   pins: fnp-8-review/C-006
+- `list_null_compound.rs` — **ICE-LIST-NULL-2 (2026-09-19):** copy-on-write DELETE with a
+  compound predicate over a nested column answers Spark through the Spark door — one pin per
+  nested kind (list, map, struct) per compound shape (`id > 1 AND xs IS NULL` keeps
+  `[1, 3, 4]`, `xs IS NULL OR id = 1` keeps `[3, 4]`, the fixture's surviving ids). Red
+  2026-09-19 on the loud `DataInvalid => Accessor for Field xs not found`; green once the
+  plain-identity claim declines non-primitive selections to the fork DELETE path.
+  pins: ice-list-null-2/C-002
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the DDL round-trips through
   `metadata.json` — each of the five forms plus the bare `DISTRIBUTED BY PARTITION ORDERED BY`
   spelling Spark also accepts, the `UNORDERED` reset, the bad-column refusal committing no new
@@ -298,16 +305,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).
 - `call_rewrite_dangling.rs` — the CALL's
-  `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports a true
+  `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports
   `removed_delete_files_count` on a partitioned v2 fixture (C-006).
-  **RDF-1 (2026-09-02):** the file-scoped pair, both on RePark-owned MERGE deletes. A delete
-  file naming ONE data file has exact, equal `file_path` bounds, so the rewrite that replaces
-  that data file drops it with NO `remove-dangling-deletes` option
-  (`removed_delete_files_count = 1`, zero delete files after). Its incidental control: a
-  `partition`-granularity delete file naming TWO data files has unequal bounds, is not
-  file-scoped, and outlives the rewrite (`removed_delete_files_count = 0`, one delete file
-  after) with its shadowed rows still shadowed — F-16 residue 2, unchanged. Registry `RDF-1`.
+  **RDF-1 (2026-09-02; reflipped 2026-09-19 by RP-32 fork #301 F-RDF-COW-BYTES-1):** the fork
+  keeps parquet position deletes that still apply — removal by reference is Puffin-DV only.
+  The legacy-flag test keeps the RePark-only spelling and pins removed 0 with the deleted
+  row still deleted and live rows intact (Spark cell `rwd_remove_dangling` answers removed 0
+  on the same six-file shape; cell `rwd_legacy_flag` records Spark refuses the spelling).
+  The surviving delete on this shape is RePark-measured: Spark's DELETE drops the all-dead
+  single-row file with no delete file (measured snapshot summary in the rp32 fixture). The
+  MERGE test pins removed 0 with the delete file outliving the rewrite (1 data + 1 delete
+  file, merged row kept — Spark cell `rfs_merge_rewrite` on the same program). Its
+  incidental control: a `partition`-granularity delete file naming TWO data files has unequal
+  bounds, is not file-scoped, and outlives the rewrite (`removed_delete_files_count` = 0,
+  one delete file after) with its shadowed rows still shadowed — F-16 residue 2, unchanged.
+  Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-003
+  pins: rp-32-rdf-cow-bytes/C-006, C-007
 - `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** 35
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
   bad-job-order / bad-spec / band-crossing / negative-size texts, silent-false booleans,

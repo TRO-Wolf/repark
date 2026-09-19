@@ -95,6 +95,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   of one cell per shape, registry row ICE-LIST-NULL-1 FIXED. Test-only, no product
   change. `risk_tier: standard`. Branch `chore/rp-31-fork-pin`.
   pins: ice-list-null-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [ice-list-null-2-ledger.md](ice-list-null-2-ledger.md) —
+  **ICE-LIST-NULL-2 (2026-09-19), in flight:** copy-on-write DELETE with a compound
+  predicate over a nested column answers Spark — the identity path declines
+  non-primitive selections to the fork DELETE path on both SQL doors, the six-cell
+  Rust door battery and the seven gate unit pins, the 128-cell Python pins flipped
+  from strict-xfail to plain (the eight OR cells pinning RePark's measured
+  `overwrite` operation), registry row ICE-LIST-NULL-1 corrected to RePark-side
+  FIXED. Product-path valve plus pins. `risk_tier: standard`. Branch
+  `fix/ice-list-null-2`.
+  pins: ice-list-null-2/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice-rowid-order-1-ledger.md](ice-rowid-order-1-ledger.md) —
   **ICE-ROWID-ORDER-1 (2026-09-18), in flight:** one statement's v3 row ids are
   deterministic at fork #300 (F-ROWID-ORDER-1) — both Spark recordings (a/b/c
@@ -204,6 +214,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
   L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
+- [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
+  **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
+  `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
+  feature (stock sqlparser has no `MAP<…>` type and DataFusion 54 plans
+  `SQLDataType::Map` as unsupported); 21-cell recorded oracle plus red-first pins.
+  Steps 3–5 (claude-opus-5): the `repark_functions::cast_map` kernel serves every door,
+  the old refusal pins flip, every clause is PROVEN and the attestation is complete.
+  `risk_tier: standard`. Branch `fix/cast-map-spell-1`.
+  pins: cast-map-spell-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
@@ -468,6 +488,21 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   ICE-NAN-PUSHDOWN-1 FIXED. `risk_tier: standard`. Branch
   `fix/ice-nan-pushdown-1`.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+- [rp-32-rdf-cow-bytes-ledger.md](rp-32-rdf-cow-bytes-ledger.md) —
+  **RP-32-RDF-COW-BYTES (2026-09-19):** the flips fork #301 (F-RDF-COW-BYTES-1) causes —
+  the COW-BYTES and DANGLE-2 strict xfails run plain, the changed-meaning pins (NULL
+  precedence, residue sequence, C-011, two Rust dangling tests) move to new Spark 4.1.2
+  cells, five registry rows close or come true. Test-only, no product change. Round 1
+  CONCLUDED with all nine clauses PROVEN and the gates green.
+  `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
+  pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-34-fork-pin-ledger.md](rp-34-fork-pin-ledger.md) —
+  **RP-34-FORK-PIN (2026-09-19):** the fork pin moves to `43fcd243` (#306 parquet footer,
+  #305 dangling DVs); three `clippy::large_futures` calls are boxed; the three
+  `ICE-RDF-GRANULARITY-1` cells run plainly at Spark's 8→4, and the four `rpd_target_small`
+  cells are strict xfails under the new fork-ask row `ICE-RDF-RPD-TARGET-SMALL-1`. Round 1
+  CONCLUDED with three clauses PROVEN. `risk_tier: standard`. Branch `chore/rp-34-fork-pin`.
+  pins: rp-34-fork-pin/C-003
 - [ice-rdf-options-1-ledger.md](ice-rdf-options-1-ledger.md) —
   **ICE-RDF-OPTIONS-1 round 1 (2026-09-17), in flight:** the RePark side of the options-map
   remediation (rating V2-08/C-4) — `rewrite_data_files` (16 keys) and

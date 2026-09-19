@@ -1445,8 +1445,8 @@ def _spark_cast_type_name(engine_type: str) -> str:
 
     Unknown / hostile type text raises :class:`ParseException` — never fail-open via
     ``.upper()`` or a loose decimal suffix. Generator unnest SQL embeds this token as
-    ``CAST(... AS {type})``; non-generator casts still go
-    through native ``parse_data_type`` as a second gate.
+    ``CAST(... AS {type})``. Any other name goes to the native map-type parser, which
+    renders Spark's ``MAP<...>`` token from the parsed type and never echoes the input.
 
     The allowlist is the security control; the *exception class* is parity. Live PySpark
     4.1.2 raises ``ParseException`` for an unparsable cast token — and ``ParseException``
@@ -1477,10 +1477,7 @@ def _spark_cast_type_name(engine_type: str) -> str:
         "date": "DATE",
         "timestamp": "TIMESTAMP",
     }
-    spark_type = mapping.get(engine_type)
-    if spark_type is None:
-        raise ParseException(f"unknown cast type {engine_type!r}")
-    return spark_type
+    return mapping.get(engine_type) or _native.PyColumnParts.cast_type_token(engine_type)
 
 
 def _require_allowlisted_spark_cast_token(spark_type: str) -> str:

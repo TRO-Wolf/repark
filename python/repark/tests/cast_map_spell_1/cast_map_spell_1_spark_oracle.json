@@ -1,0 +1,293 @@
+{
+ "spark_version": "4.1.2",
+ "ansi_default": true,
+ "cells": {
+  "null_map_str_int": {
+   "sql": "SELECT CAST(NULL AS MAP<STRING, INT>) AS m",
+   "schema": "struct<m:map<string,int>>",
+   "nullable": [
+    true
+   ],
+   "rows": [
+    [
+     null
+    ]
+   ]
+  },
+  "null_map_str_list_int": {
+   "sql": "SELECT CAST(NULL AS MAP<STRING, ARRAY<INT>>) AS m",
+   "schema": "struct<m:map<string,array<int>>>",
+   "nullable": [
+    true
+   ],
+   "rows": [
+    [
+     null
+    ]
+   ]
+  },
+  "empty_map_str_int": {
+   "sql": "SELECT CAST(map() AS MAP<STRING, INT>) AS m",
+   "schema": "struct<m:map<string,int>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {}
+    ]
+   ]
+  },
+  "widen_value": {
+   "sql": "SELECT CAST(map('a', 1) AS MAP<STRING, BIGINT>) AS m",
+   "schema": "struct<m:map<string,bigint>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": 1
+     }
+    ]
+   ]
+  },
+  "value_to_string": {
+   "sql": "SELECT CAST(map('a', 1) AS MAP<STRING, STRING>) AS m",
+   "schema": "struct<m:map<string,string>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": "1"
+     }
+    ]
+   ]
+  },
+  "key_int_to_string": {
+   "sql": "SELECT CAST(map(1, 'x') AS MAP<STRING, STRING>) AS m",
+   "schema": "struct<m:map<string,string>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "1": "x"
+     }
+    ]
+   ]
+  },
+  "nested_map_in_map": {
+   "sql": "SELECT CAST(map('a', map('b', 1)) AS MAP<STRING, MAP<STRING, BIGINT>>) AS m",
+   "schema": "struct<m:map<string,map<string,bigint>>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": {
+       "b": 1
+      }
+     }
+    ]
+   ]
+  },
+  "array_of_map": {
+   "sql": "SELECT CAST(array(map('a', 1)) AS ARRAY<MAP<STRING, BIGINT>>) AS a",
+   "schema": "struct<a:array<map<string,bigint>>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     [
+      {
+       "a": 1
+      }
+     ]
+    ]
+   ]
+  },
+  "struct_with_map": {
+   "sql": "SELECT CAST(named_struct('m', map('a', 1)) AS STRUCT<m: MAP<STRING, BIGINT>>) AS s",
+   "schema": "struct<s:struct<m:map<string,bigint>>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     [
+      {
+       "a": 1
+      }
+     ]
+    ]
+   ]
+  },
+  "map_list_value_widen": {
+   "sql": "SELECT CAST(map('k', array(1, 2)) AS MAP<STRING, ARRAY<BIGINT>>) AS m",
+   "schema": "struct<m:map<string,array<bigint>>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "k": [
+       1,
+       2
+      ]
+     }
+    ]
+   ]
+  },
+  "map_colon_struct_spelling": {
+   "sql": "SELECT CAST(map('a', named_struct('x', 1)) AS MAP<STRING, STRUCT<x: BIGINT>>) AS m",
+   "schema": "struct<m:map<string,struct<x:bigint>>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": [
+       1
+      ]
+     }
+    ]
+   ]
+  },
+  "lowercase_spelling": {
+   "sql": "SELECT CAST(map('a', 1) AS map<string,bigint>) AS m",
+   "schema": "struct<m:map<string,bigint>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": 1
+     }
+    ]
+   ]
+  },
+  "invalid_value_cast_ansi": {
+   "sql": "SELECT CAST(map('a', 'x') AS MAP<STRING, INT>) AS m",
+   "error_class": "NumberFormatException",
+   "error": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  "int_to_map_refuses": {
+   "sql": "SELECT CAST(1 AS MAP<STRING, INT>) AS m",
+   "error_class": "AnalysisException",
+   "error": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"1\" due to data type mismatch: cannot cast \"INT\" to \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  "try_cast_invalid": {
+   "sql": "SELECT try_cast(map('a', 'x') AS MAP<STRING, INT>) AS m",
+   "schema": "struct<m:map<string,int>>",
+   "nullable": [
+    true
+   ],
+   "rows": [
+    [
+     {
+      "a": null
+     }
+    ]
+   ]
+  },
+  "null_key_map_cast": {
+   "sql": "SELECT CAST(map('a', CAST(NULL AS INT)) AS MAP<STRING, BIGINT>) AS m",
+   "schema": "struct<m:map<string,bigint>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": null
+     }
+    ]
+   ]
+  },
+  "union_with_typed_null": {
+   "sql": "SELECT map('k1', array(1, 2)) AS m UNION ALL SELECT CAST(NULL AS MAP<STRING, ARRAY<INT>>)",
+   "schema": "struct<m:map<string,array<int>>>",
+   "nullable": [
+    true
+   ],
+   "rows": [
+    [
+     {
+      "k1": [
+       1,
+       2
+      ]
+     }
+    ],
+    [
+     null
+    ]
+   ]
+  },
+  "df_cast_maptype": {
+   "call": "df_cast_maptype",
+   "schema": "struct<m:map<string,bigint>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": 1
+     }
+    ]
+   ]
+  },
+  "df_cast_ddl_string": {
+   "call": "df_cast_ddl_string",
+   "schema": "struct<m:map<string,bigint>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": 1
+     }
+    ]
+   ]
+  },
+  "df_cast_nested": {
+   "call": "df_cast_nested",
+   "schema": "struct<m:map<string,array<bigint>>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "k": [
+       1
+      ]
+     }
+    ]
+   ]
+  },
+  "invalid_value_cast_legacy": {
+   "sql": "SELECT CAST(map('a', 'x') AS MAP<STRING, INT>) AS m",
+   "ansi": false,
+   "schema": "struct<m:map<string,int>>",
+   "rows": [
+    [
+     {
+      "a": null
+     }
+    ]
+   ]
+  }
+ }
+}

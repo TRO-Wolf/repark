@@ -165,6 +165,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **DECIMAL-CACHE-1 remediation (2026-09-15):** `__neg__` documents the native
   unary-minus expression (decimal inputs keep their type, Spark `UnaryMinus` parity);
   the expression itself lives in `display.rs`. pins: decimal-cache-1/C-007
+  **CAST-MAP-SPELL-1 (2026-09-19):** `_spark_cast_type_name` forwards any name outside its
+  simple table to `_native.PyColumnParts.cast_type_token`, which answers Spark's `MAP<…>`
+  token for a map-bearing type (`MapType`, `"map<string,bigint>"`) and raises
+  `ParseException` otherwise; the file shrank to 1529 and its ceiling ratcheted down.
+  pins: cast-map-spell-1/C-004
 - `column_fields.py` — **COLUMN-PARITY-1 (2026-09-14):** method bodies bound on
   `Column` (kept out of `column.py`, which is at its exact line baseline):
   `between` / `eqNullSafe` (extracted for headroom), `isin`, `isNaN`, `astype`,

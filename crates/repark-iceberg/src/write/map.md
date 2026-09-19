@@ -97,6 +97,11 @@ repark-core's error map.
   [predicate_dml/tests/update.rs](predicate_dml/tests/update.rs) +
   [predicate_dml/tests/plain.rs](predicate_dml/tests/plain.rs)
   pins: rp-9-repin-f23/C-005
+  **ICE-LIST-NULL-2 (2026-09-19):** the three-part comparison claim additionally
+  declines selections over non-primitive columns (`plain::selection_refs_non_primitive`
+  against the loaded table's schema, via the shared `conflict_filter::top_level_field`
+  rule) to the fork DELETE path; primitive-only selections are unchanged.
+  pins: ice-list-null-2/C-003
   — **LRS-5 (2026-08-20):** moved into the canonical module tree, `#[path]` gone. Isolation
   property pins (M19 / A10: no trim, `to_ascii_lowercase`, default serializable,
   garbage ⇒ Plan `Invalid isolation level: {name}`) live in those two test

@@ -261,7 +261,7 @@ fn column(expr: &Expr, schema: &Schema, scope: ColumnScope<'_>) -> Option<String
     top_level_field(schema, raw).map(|field| field.name.clone())
 }
 
-fn top_level_field<'a>(schema: &'a Schema, raw: &str) -> Option<&'a NestedFieldRef> {
+pub(crate) fn top_level_field<'a>(schema: &'a Schema, raw: &str) -> Option<&'a NestedFieldRef> {
     if let Some(field) = schema.as_struct().field_by_name(raw) {
         return Some(field);
     }

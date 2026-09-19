@@ -3243,8 +3243,9 @@ the pin rather than obeying it.
 - **repark** — `transform(array(named_struct('n',1)), x -> x.n + 1)` refuses with
   `No field named x.n` through SQL and column-free `F.expr`; the Column `getField` spelling
   answers. `CAST(map() AS MAP<STRING,INT>)` and `CAST(NULL AS MAP<STRING,INT>)` inside
-  `transform_keys`, `transform_values`, and `map_filter` refuse at the `<` token.
-  Bare `map()` in `transform_keys(map(), (k,v) -> k)` refuses because the constructor
+  `transform_keys`, `transform_values`, and `map_filter` answer Spark's values and full Arrow
+  schema on both ANSI settings and both text doors since CAST-MAP-SPELL-1 (FIXED 2026-09-19);
+  the struct-field lambda and bare `map()` remain. Bare `map()` in `transform_keys(map(), (k,v) -> k)` refuses because the constructor
   requires at least one argument, before the null-key kernel validator runs.
 - **Apache Spark** — the struct transform returns the incremented fields, and the typed-map
   expressions return empty maps or NULL maps. Exact values and schemas are recorded in
@@ -3253,8 +3254,8 @@ the pin rather than obeying it.
   this collect diagnostic is not an Arrow-parity claim.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
 - **Pin** — `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
-  holds `binding-struct` SQL/expr and the six map `empty`/`null` SQL/expr cells, including
-  exception class and diagnostic. `test_live_fnp8_recorded_oracle` remeasures Spark.
+  holds `binding-struct` SQL/expr (exception class and diagnostic) and the six map
+  `empty`/`null` SQL/expr cells (Spark-equal schemas since 2026-09-19). `test_live_fnp8_recorded_oracle` remeasures Spark.
   `test_fnp8_sql_text_error_dispositions` and `test_live_fnp8_empty_map_collect_diagnostic`
   hold the bare-map boundary.
 - **Rationale** — BACKLOG (2026-09-07). These are parser/binder capabilities outside the
@@ -3724,17 +3725,14 @@ the pin rather than obeying it.
   is not possible to concatenate arrays of different data types`; the other doors on those
   two shapes already answered Spark's rows and footer ids; the re-rating's V2-10d "INSERT
   into a list column fails" cell is the rating-side before. After: every door answers
-  Spark on all three shapes — the `map_list` non-VALUES doors through a substitute source
-  (the recorded `CAST(NULL AS MAP<STRING, ARRAY<INT>>)` NULL-map row refuses `ParserError`,
-  registry row CAST-MAP-SPELL-1, BACKLOG; the pins write `CASE WHEN false THEN map('k1',
-  array(1, 2)) END`, which Spark 4.1.2 answers identically, measured 2026-09-18).
+  Spark on all three shapes; since CAST-MAP-SPELL-1 (FIXED 2026-09-19) the `map_list`
+  non-VALUES doors run the recorded statement verbatim, its
+  `CAST(NULL AS MAP<STRING, ARRAY<INT>>)` NULL-map row included.
 - **Apache Spark** — the recorded 30 cells (PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-18,
   `python/repark-parity/fixtures/torture/data/ice_array_insert_1/spark_array_insert_oracle.json`).
 - **Pin** — `python/repark/tests/test_ice_array_insert_1.py::test_cell_matches_spark` (one id
-  per cell; the 8 `map_list` non-VALUES ids run the recorded statement verbatim under
-  strict xfail on CAST-MAP-SPELL-1),
-  `…::test_cell_substitute_source_matches_spark` (the 8 substitute-source twins),
+  per cell, all 30 plain pins running the recorded statement verbatim),
   `…::test_live_spark_reads_repark_table` (live tier: Spark adopts each RePark-written
   table and reads the recorded rows).
 - **Rationale** — FIXED 2026-09-18 (RP-29) at fork #295 (F-LIST-INSERT-1): every Iceberg
@@ -3751,15 +3749,18 @@ the pin rather than obeying it.
   `STRUCT<a INT>` columns at format versions 2 and 3, under copy-on-write and
   merge-on-read. Before (release native at fork pin `18ab9761`, main `6a140eb3`):
   every nested-column `IS NULL` predicate refused loud with
-  `DataInvalid => Accessor for Field xs not found`. After: 112 of the 128 recorded
-  cells answer Spark's ok, ids and operation. The `map_int` seed's empty-map row
-  runs through `map_from_arrays(CAST(array() AS ARRAY<STRING>),
-  CAST(array() AS ARRAY<INT>))`, which reads back equal to Spark's seed (the recorded
-  `CAST(map() AS MAP<STRING, INT>)` refuses `ParserError`, registry row
-  CAST-MAP-SPELL-1, BACKLOG). Two residues, both pinned: copy-on-write DELETE with a
-  compound predicate over the nested column (16 cells: every shape x v2/v3 x the two
-  compound predicates) still refuses `Accessor for Field xs not found` — fork #299
-  fixed the single-predicate path only — and runs verbatim under strict xfail; the
+  `DataInvalid => Accessor for Field xs not found`. After: all 128 recorded
+  cells answer Spark's ok and ids; the snapshot operation equals Spark's except the
+  eight copy-on-write DELETE `xs IS NULL OR id = 1` cells, which pin RePark's
+  measured `overwrite` against Spark's `delete` (ICE-LIST-NULL-2, 2026-09-19,
+  RePark-side). Every seed runs verbatim, the `map_int`
+  seed's `CAST(map() AS MAP<STRING, INT>)` row included (CAST-MAP-SPELL-1, FIXED
+  2026-09-19). Two residues, both pinned: the copy-on-write DELETE
+  compound-predicate refusal was RePark-side, not fork-side — the identity path claimed
+  the conjunction/disjunction and built a commit-scope predicate the fork cannot bind on
+  a non-primitive column — and is FIXED 2026-09-19 (ICE-LIST-NULL-2): the identity path
+  declines non-primitive selections to the fork DELETE path and all sixteen cells
+  (every shape x v2/v3 x the two compound predicates) run as plain pins; the
   sixteen merge-on-read `xs IS NOT NULL` cells pin RePark's measured 1 delete file
   (1 DV on v3) against Spark's recorded 2 (2 DVs).
 - **Apache Spark** — the recorded 128 cells (PySpark 4.1.2 +
@@ -3767,7 +3768,8 @@ the pin rather than obeying it.
   `python/repark-parity/fixtures/torture/data/ice_list_null_1/spark_list_null_oracle.json`).
 - **Pin** — `python/repark/tests/test_ice_list_null_1.py::test_cell_answers_spark` (one id
   per cell; the 16 copy-on-write compound-predicate ids run the recorded statement
-  verbatim under strict xfail on the fork #299 residue),
+  verbatim as plain pins since ICE-LIST-NULL-2, with the 8 `xs IS NULL OR id = 1` ids
+  pinning RePark's measured `overwrite` operation against Spark's `delete`),
   `…::test_cell_file_counts_match_spark` (the delete-file / DV counts; the 16
   `xs IS NOT NULL` merge-on-read ids pin RePark's measured values),
   `…::test_map_seed_substitution_reads_back_empty` (the substitute seed),
@@ -3775,9 +3777,12 @@ the pin rather than obeying it.
   shape through the recorder and answers the recorded ok, ids and operation).
 - **Rationale** — FIXED 2026-09-18 (RP-31) at fork #299 (F-LIST-NULL-ACCESSOR-1): the
   DataFusion filter conversion binds list, map and struct columns in `IS [NOT] NULL`
-  tests. The conjunction/disjunction path on copy-on-write DELETE is fork-side
-  residue (a new fork ask, not filed); the delete-file packing difference on
-  `IS NOT NULL` is task-count noise the pins hold at RePark's measured values.
+  tests. The conjunction/disjunction failure on copy-on-write DELETE was RePark-side
+  (the identity claim, not fork #299's binding) and is FIXED 2026-09-19
+  (ICE-LIST-NULL-2, RePark-side, with pins); the delete-file packing difference on
+  `IS NOT NULL` is task-count noise the pins hold at RePark's measured values, as is
+  the `overwrite` operation on the eight copy-on-write `xs IS NULL OR id = 1` cells
+  against Spark's `delete`.
 
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
@@ -4998,18 +5003,54 @@ the pin rather than obeying it.
   array arm of COMPLEX-ELEM-NULL-1 — carried through the analyzer/schema path
   (or an equivalent analyzer rewrite), measured against `fixtures-batch7.json`.
 
-### CAST-MAP-SPELL-1 — `MAP<…>` target spelling refuses in CAST
+### CAST-MAP-SPELL-1 — `CAST(… AS MAP<…>)` and `.cast(MapType)` answer Spark — **FIXED 2026-09-19**
 
-- **repark** — `CAST(MAP('a',1) AS MAP<STRING,BIGINT>)` refuses on both doors with
-  `ParseException: Expected: (, found: <`; DataFrame `.cast(MapType(...))` refuses
-  with `unknown cast type 'map<string,long>'`. Stock sqlparser has no MAP type, so
-  there is no rewrite target — serving it is a cast-UDF plus token-rewrite feature.
-- **Apache Spark** — answers `{'a': 1}` at `map<string, int64>`, non-null.
-  *(oracle: live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-06.)*
-- **Pin** —
-  `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_refuses_per_cast_map_spell_1`
-  (red when fixed).
-- **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
+- **repark** — Before (main `e6ec5531`): `CAST(MAP('a',1) AS MAP<STRING,BIGINT>)` refused
+  on both doors with `ParseException: Expected: ), found: <` (facade) / `Expected: (, found:
+  <` (native); DataFrame `.cast(MapType(...))` refused with `unknown cast type
+  'map<string,long>'`. After: `CAST` / `TRY_CAST` to any type naming `MAP<K, V>` (any case,
+  spacing and nesting, inside `ARRAY<…>` / `STRUCT<…>` too) answers on the facade SQL door,
+  the native `repark.sql` door, `F.expr` and `Column.cast` / `try_cast` (a `MapType` object
+  or a DDL string). Elements cast key-wise and value-wise; ANSI raises
+  `[CAST_INVALID_INPUT]` naming the malformed value, legacy mode and `try_cast` yield NULL
+  elements; a non-map source refuses with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`.
+  Mechanism: `repark_functions::cast_map` rewrites the call to a cast UDF before either door
+  parses (stock DataFusion plans no SQL map type).
+  **Round 3 (2026-09-19):** before, on the round-2 tree, `try_cast(map('x', 1) AS MAP<INT,
+  INT>)` failed with Arrow's `Found unmasked nulls … "key"`. The ANSI-off
+  `CAST(map('1','a','01','b') AS MAP<INT, STRING>)` answered where Spark refuses.
+  `map('a', 128)` to `TINYINT` gave Arrow's error under ANSI and a silent NULL in legacy
+  mode, `map('a', ' 1')` to `INT` gave `CAST_INVALID_INPUT` / NULL, and a `/*! … */` hint
+  naming a map cast was spliced into. After: key legality is Spark's rule — ANSI
+  castability under ANSI; legacy castability plus a key cast that cannot produce NULL in
+  legacy mode and under `try_cast` — refusing with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`.
+  Leaf casts raise `[CAST_OVERFLOW]` under ANSI and wrap in legacy mode, trim whitespace,
+  and accept legacy fractional text. Colliding keys after a key cast are kept as Spark
+  stores them (`map_keys` `[2, 1, 2]` on both engines; `collect()` shows `{1: 'b'}` on
+  both, the later value winning the Python dict). The rewrite treats `/*! … */` as a
+  comment. Residues (ruling Q-23b-7, P3): L-004, the `EXPLAIN` / plan text names the
+  internal `__repark_cast_map__` call; L-007, the refusal names the operand by its
+  DataFusion display (`Int64(1)`), where Spark prints `"1"`. Separate from this row: the
+  native `repark.sql` door's stock Generic parser expands `/*! … */` hints in every
+  statement (`SELECT 1 /*! 3 */, 2` refuses there), pinned as a dated strict xfail.
+  **Round 4 (2026-09-19):** string leaves trim code points <= U+0020 and U+007F (DEL) only,
+  as Spark does (`concat(char(127), '1')` answers `1`; U+0085 raises `CAST_INVALID_INPUT` under
+  ANSI and gives NULL in legacy mode). The facade names `CAST_OVERFLOW` exactly as recorded
+  (`The value 128 of the type "INT"`). The native door types an untyped `128` as BIGINT and
+  says `128L` / `BIGINT` (a door-wide literal-typing gap, pinned as a dated strict xfail).
+  Residue L-008 (ruling Q-23b-9): `try_cast(map(128, 'a') AS MAP<TINYINT, STRING>)` — Spark
+  stores a map with one NULL key (size 1) that PySpark cannot collect. An Arrow map cannot
+  hold a NULL key, so RePark refuses loud (`a map key cast produced NULL`) in both modes.
+- **Apache Spark** — the recorded 21 cells in
+  `python/repark/tests/cast_map_spell_1/cast_map_spell_1_spark_oracle.json` and the 17
+  round-3 cells in `…/cast_map_spell_1_round3_spark_oracle.json`.
+  *(oracle: live PySpark 4.1.2, UTC, ANSI on plus legacy cells, 2026-09-19.)*
+- **Pin** — `python/repark/tests/test_cast_map_spell_1.py` (every cell on the facade door,
+  the native door where it can spell the cell, the three DataFrame cells, and a live drift
+  check); `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_answers_per_cast_map_spell_1`;
+  `crates/repark-functions/src/cast_map/tests.rs`.
+- **Rationale** — FIXED 2026-09-19. Filed 2026-09-06 (NULLABILITY-2 round 2).
+  pins: cast-map-spell-1/C-009, C-011, C-012, C-013, C-014, C-015, C-016
 
 ### LOGICAL-WIDTH-1 — narrow top-level widths report wide via `dtypes`/`schema`
 
@@ -5735,24 +5776,32 @@ the pin rather than obeying it.
   file itself **survives** all five steps with its 2,500 records and
   `removed_delete_files_count = 0` — dangling, because `remove-dangling-deletes` is off. The
   DATA-file reclaim reproduces; the 2026-08-24 "zero delete files" reading does not, at this
-  version. RePark now goes one step past this oracle: its rewrite attributes the file-scoped
-  delete to the data file it named and drops it.
+  version. RePark went one step past this oracle: its rewrite attributed the file-scoped
+  delete to the data file it named and dropped it.
+  **RP-32 (2026-09-19, fork #301 F-RDF-COW-BYTES-1):** the fork no longer drops live parquet
+  deletes by reference, so RePark converges back onto the 2026-09-02 oracle: `removed == 0`,
+  the delete survives with its records, and the DATA-file reclaim still reproduces (measured:
+  Spark cell `dead_file` in
+  `python/repark/tests/rp32_rdf_cow_bytes_spark_oracle.json` and the reflipped runbook pin —
+  removed 0, one data plus one delete file, seed gone, 2,000 rows).
 - **Pin** —
-  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies`
-  (the flipped runbook pin), and on the Spark door
-  `crates/repark-spark/src/tests/call_rewrite_dangling.rs::call_rewrite_data_files_drops_the_merge_delete_that_names_one_data_file`
+  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_survives`
+  (the reflipped runbook pin), and on the Spark door
+  `crates/repark-spark/src/tests/call_rewrite_dangling.rs::call_rewrite_data_files_keeps_the_merge_delete_that_still_applies`
   with its incidental control
   `…::call_rewrite_data_files_keeps_a_partition_delete_that_names_two_data_files`.
 - **Rationale** — FIXED for a position-delete file that names ONE data file, which is every
   `file` granularity write and every `partition` granularity write whose partition holds one
   data file. The bounds are the routing key: the fork's `referenced_data_file_location` reads
   `referenced_data_file` first and falls back to equal `file_path` bounds, and v2 parquet
-  deletes carry no `referenced_data_file`. The remaining miss is a delete file spanning two or
-  more data files — F-16 residue 2 in
+  deletes carry no `referenced_data_file`. At RP-32 the removal half retires: a live parquet
+  delete is kept by both engines, and removal by reference is Puffin-DV only. The remaining
+  miss is a delete file spanning two or more data files — F-16 residue 2 in
   [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md),
   fork work, and unchanged by this row. Heading kept as the historical anchor (MOR-2
   precedent), so the guide's and MW-8's `#rdf-1` links keep resolving.
   **Contents are unaffected.**
+  pins: rp-32-rdf-cow-bytes/C-006, C-007, C-008
 
 ### RDF-SCHEMA-EVO-1 — `rewrite_data_files` after schema evolution reads old files under the old schema and refuses — **FIXED 2026-09-06 (RP-15)**
 
@@ -6384,15 +6433,17 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   longs (`min-file-size-bytes` below 0 refuses `>= 0`; the band compares signed, so
   `max-file-size-bytes` `-1` renders in the IAE text). A present NULL
   `remove-dangling-deletes` map key wins over the legacy top-level flag (Java's default).
-  RPD byte pins compare against vanished delete files. Thirteen strict xfails stay, each
-  named under one of four fork-ask rows: `ICE-RDF-GRANULARITY-1` (output splitting and
-  file-group granularity — `target_small`, `max_group_size`, `partial_progress_groups`,
-  each with a green keep-set twin pinning rows and rewritten counts, plus the
-  `partial_progress_groups` snapshot cell), `ICE-RDF-COW-BYTES-1` (DELETE-written-file
-  byte accounting — `delete_file_threshold`, `remove_dangling`),
-  `ICE-RDF-RPD-COMMITS-1` (the untouched fork RPD — `rpd_rewrite_all`,
-  `rpd_min_input_files_1`, value and snapshot cells), and `ICE-RDF-DANGLE-2` (the
-  removed-count 1-vs-0 on the two MoR cells and the residue zero cell).
+  RPD byte pins compare against vanished delete files. `ICE-RDF-GRANULARITY-1` is FIXED:
+  `target_small` runs plain since RP-32 (fork #302), `max_group_size` and
+  `partial_progress_groups` since RP-34 (fork #306). Four strict xfails stay, under the
+  fork-ask row `ICE-RDF-RPD-TARGET-SMALL-1` (the `rpd_target_small` and
+  `rpd_target_small_forced` value and snapshot cells, each value cell with a green keep-set
+  twin pinning live rows).
+  The four `ICE-RDF-RPD-COMMITS-1` cells (`rpd_rewrite_all`, `rpd_min_input_files_1`, value and
+  snapshot) run plain since RP-33 (fork #304).
+  `ICE-RDF-COW-BYTES-1` and `ICE-RDF-DANGLE-2` are FIXED at RP-32 (fork #301
+  F-RDF-COW-BYTES-1): the two MoR value cells, every removed-count cell, and the residue
+  zero cell run plain (see those rows).
 - **Apache Spark** — the 49 recorded cells
   (`python/repark/tests/ice_rdf_options_1_spark_oracle.json`, live PySpark 4.1.2 + Iceberg
   1.11.0, 2026-09-17): default single-commit rewrites, per-key validation messages, the
@@ -6408,18 +6459,25 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   max-failed-commits no-effect pin, plus the live tier that re-runs the
   generator and asserts the fixture), and
   `call.rs::call_rewrite_position_delete_files_validates_options_and_refuses_where`.
+  The six RP-32 cells for the programs the 49-cell oracle does not cover (the legacy-flag
+  and NULL spellings, the six-file MERGE shape, the 2,000-row dead file) live in
+  `python/repark/tests/rp32_rdf_cow_bytes_spark_oracle.json`, recorded by
+  `python/repark/tests/_record_rp32_rdf_cow_bytes.py`.
 - **Rationale** — FIXED. The `NumberFormatException` leaf, the `inf`/`2d` double
   spellings, and multi-violation check order stay measured-and-noted gaps in the unit ledger.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-007, C-011
+  pins: rp-32-rdf-cow-bytes/C-002, C-003, C-004, C-005
 
-### RDF-DANGLING-1 — `rewrite_position_delete_files` → `rewrite_data_files` leaves partition-scoped deletes dangling — **BACKLOG 2026-09-17**
+### RDF-DANGLING-1 — `rewrite_position_delete_files` → `rewrite_data_files` left partition-scoped deletes dangling — **FIXED 2026-09-19 (RP-32, fork #301 F-RDF-COW-BYTES-1)**
 
 - **repark** — on a v2 merge-on-read table with 16 data files and 16 file-scoped position deletes,
-  RePark's default `rewrite_position_delete_files` compacts 16→2 partition-scoped deletes and the
-  following default `rewrite_data_files` (16→2) keeps both, so the sequence ends with 2 delete
-  files naming rewritten-away data files; row counts stay exact. The residue reproduces on the
-  smaller 2×8 half-deleted shape this unit pins (`test_residue_repark_sequence_pins_current_shape`
-  guards the direction, `test_residue_matches_spark_zero_delete_files` xfails on the zero).
+  RePark's default `rewrite_position_delete_files` compacted 16→2 partition-scoped deletes and the
+  following default `rewrite_data_files` (16→2) kept both, so the sequence ended with 2 delete
+  files naming rewritten-away data files; row counts stayed exact. At fork `29ea7f6d` the
+  sequence ends with 0 delete files: the rewrite keeps the still-applying deletes and the
+  merging commit retires delete files older than every live data file. Measured on the smaller
+  2×8 half-deleted shape this unit pins (`test_residue_repark_sequence_pins_current_shape`
+  asserts 400 rows and 0 deletes, `test_residue_matches_spark_zero_delete_files` runs plain).
 - **Apache Spark** — the same shape measured step by step (recorded `residue_rpd_then_rdf`,
   2026-09-17): the default position-delete rewrite turns 16→16 deletes in one commit, then the
   default data rewrite turns 16→2 data files and the delete count falls 16→0 with
@@ -6429,39 +6487,42 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** —
   `python/repark/tests/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape`
-  and `::test_residue_matches_spark_zero_delete_files`.
-- **Rationale** — BACKLOG, fork work: Spark's post-rewrite deletes die with their referents while
-  RePark's rewritten deletes come back partition-scoped and invisible to the data rewrite's drop
-  (the RDF-1 family). Rating residue #37.
+  and `::test_residue_matches_spark_zero_delete_files` (both assert the zero since RP-32).
+- **Rationale** — FIXED at RP-32 by the same fork change that closes `ICE-RDF-DANGLE-2`:
+  the merging commit retires delete files older than every live data file, so no
+  partition-scoped residue outlives the sequence. Rating residue #37 closes with it.
   pins: ice-rdf-options-1/C-006
+  pins: rp-32-rdf-cow-bytes/C-004
 
-### ICE-RDF-DANGLE-2 — `rewrite_position_delete_files` → `rewrite_data_files` still leaves 2 dangling deletes on fork `2f5323ca` — **OPEN 2026-09-17**
+### ICE-RDF-DANGLE-2 — `rewrite_position_delete_files` → `rewrite_data_files` left 2 dangling deletes — **FIXED 2026-09-19 (RP-32, fork #301 F-RDF-COW-BYTES-1)**
 
-- **repark** — re-measured on the wired tree with fork `2f5323ca` (F-RDF-OPTIONS-1 #283,
+- **repark** — measured on the wired tree with fork `2f5323ca` (F-RDF-OPTIONS-1 #283,
   which did not touch the RPD path or the dangling logic), 2×8 half-deleted MoR shape
   (`DELETE WHERE id % 2 = 0` hits every file; the DELETE itself leaves 32 data + 16 deletes):
-  default `rewrite_position_delete_files` compacts 16→2 deletes (17→19 snapshots — the fork
-  RPD still commits per group), then default `rewrite_data_files` answers 16 rewritten / 2 added /
-  0 removed and the table ends with 4 files (2 data + 2 deletes), 20 snapshots, 400 live rows.
+  default `rewrite_position_delete_files` compacted 16→2 deletes (17→19 snapshots — the fork
+  RPD still commits per group), then default `rewrite_data_files` answered 16 rewritten / 2 added /
+  0 removed and the table ended with 4 files (2 data + 2 deletes), 20 snapshots, 400 live rows.
+  At fork `29ea7f6d` the same sequence ends with 2 data + 0 delete files and `removed == 0`:
+  the rewrite keeps the still-applying parquet deletes and the merging commit retires delete
+  files older than every live data file. The single-shape cells answer `removed == 0` as well.
 - **Apache Spark** — the recorded `residue_rpd_then_rdf` sequence on the same shape ends with
   2 data + 0 delete files in 19 snapshots (`removed_delete_files_count = 0`).
   *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** —
   `python/repark/tests/test_ice_rdf_options_1.py::test_residue_repark_sequence_pins_current_shape`
-  (asserts RePark's current `deletes == 2` as the documented divergence) and
-  `::test_residue_matches_spark_zero_delete_files` (`xfail(strict)` on the zero).
-- **Rationale** — OPEN, fork ask: the remaining difference is exactly 2 partition-scoped deletes
-  surviving RePark's data rewrite. A later fix flips the current-count pin.
-  Same fork-side drop on single-shape cells (2026-09-17): `delete_file_threshold` and
-  `remove_dangling` report `removed_delete_files_count = 1` vs Spark `0` (strict-xfailed
-  pins on the removed-count assert only; result counts and rows match).
+  (asserts `deletes == 0`) and `::test_residue_matches_spark_zero_delete_files` (plain),
+  plus `::test_option_cell_removed_counts` (plain on every non-RPD cell).
+- **Rationale** — FIXED at RP-32. The remaining difference was exactly 2 partition-scoped deletes
+  surviving RePark's data rewrite; the fork fix flips the current-count pin.
   Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
-  target-size split did not close it.
+  target-size split did not close it. Closed 2026-09-19 on RP-32 (`29ea7f6d`).
   pins: ice-rdf-options-1/C-006
+  pins: rp-32-rdf-cow-bytes/C-003, C-004
 
-### ICE-RDF-GRANULARITY-1 — `rewrite_data_files` output splitting and file-group granularity stay fork-side — **OPEN 2026-09-17, fork ask**
+### ICE-RDF-GRANULARITY-1 — `rewrite_data_files` output splitting and file-group granularity stay fork-side — **FIXED 2026-09-19 (`target_small` at RP-32, fork #302; `max_group_size` and `partial_progress_groups` at RP-34, fork #306)**
 
-- **repark** — on the 8-file shapes the fork writes one file per group and compacts 8→8
+- **repark** — since RP-34 every cell answers Spark's 8→4 (10 snapshots on the groups cell).
+  Before it, on the 8-file shapes the fork wrote one file per group and compacted 8→8
   added where Spark splits outputs to the target size (reason strings 2026-09-17:
   `target_small` RePark 8→2 vs Spark 8→4; `max_group_size` and `partial_progress_groups`
   RePark 8→8 added vs Spark 8→4). Under `partial-progress.max-commits 3` 8 groups need
@@ -6477,22 +6538,56 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Pin** —
   `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[target_small]`,
   `[max_group_size]`, `[partial_progress_groups]` and
-  `::test_option_cell_snapshots[partial_progress_groups]` (`xfail(strict)` with the dated
-  reasons; green keep-set twins pin rows and rewritten counts).
-- **Rationale** — OPEN, fork ask: output splitting at the target file size and file-group
-  granularity live in the fork's rewrite path.
+  `::test_option_cell_snapshots[partial_progress_groups]`, all plain since RP-34.
+- **Rationale** — **FIXED 2026-09-19 (RP-34, fork #306).** It was a fork ask: output
+  splitting at the target file size and file-group granularity live in the fork's rewrite
+  path.
   Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
   target-size split did not close it.
+  **Re-measured 2026-09-19 at RP-32 (fork `e3eef24f`, #302 F-RDF-GRANULARITY-1):** the fork's
+  planner now follows Java's read-split planning (split size from the expected output count
+  plus 5120 B, clamped to the target and write maximum; tasks packed by length plus delete
+  bytes, lookback 10). `target_small` answered Spark's 8→4 and ran plainly. `max_group_size`
+  and `partial_progress_groups` stayed strict xfails until RP-34: the planner was Java's, and
+  the residual was parquet file size. Run 23a measured the fork writer's files at 1,694 B against Spark's
+  ~1,153 B on this shape, and Java's own rules applied to 1,694 B files answer 8/8/8+3.
+  **RP-34 (2026-09-19, fork `43fcd243`, #306 F-PARQUET-SIZE-1):** fork-written files now carry
+  Java's footer (`iceberg.schema`, no `ARROW:schema`), and the two remaining cells answer
+  Spark's 8→4 (CI smoke at `c2e79fb3`: `[XPASS(strict)]` on `max_group_size`,
+  `partial_progress_groups` and the `partial_progress_groups` snapshot cell). All three run
+  plainly; the row is FIXED.
   pins: ice-rdf-fork-asks-1/C-001
+  pins: rp-32-rdf-cow-bytes/C-010
+  pins: rp-34-fork-pin/C-001
 
-### ICE-RDF-COW-BYTES-1 — `rewritten_bytes` misses the DELETE-written survivor file the rewrite folds in — **OPEN 2026-09-17, fork ask**
+### ICE-RDF-RPD-TARGET-SMALL-1 — `rewrite_position_delete_files` with a small `target-file-size-bytes` rewrites delete files Spark leaves alone — **OPEN 2026-09-19, fork ask F-RPD-TARGET-SMALL-1**
 
-- **repark** — result counts match Spark (`delete_file_threshold` 4 rewritten / 1 added;
-  `remove_dangling` 8 rewritten / 2 added) but `rewritten_bytes_count` misses the
+- **repark** — at fork `43fcd243` (RP-34) the `rpd_target_small` and
+  `rpd_target_small_forced` cells (`target-file-size-bytes` 2000 on the 8-delete-file
+  merge-on-read shape) rewrite 8 delete files into 8 and commit a 10th snapshot. Rows are
+  unchanged (200 live).
+- **Apache Spark** — the same cells in
+  `python/repark/tests/ice_rdf_options_1_spark_oracle.json` rewrite 0 delete files
+  (`rewritten_delete_files_count = 0`, `added_delete_files_count = 0`, 9 snapshots).
+- **Pin** — `test_ice_rdf_options_1.py::test_option_cell_values[rpd_target_small]`,
+  `[rpd_target_small_forced]` and `::test_option_cell_snapshots[rpd_target_small]`,
+  `[rpd_target_small_forced]`, `xfail(strict)` with the dated `F-RPD-TARGET-SMALL-1` reason;
+  their keep-set twins run plainly and pin the 200 live rows only.
+- **Rationale** — OPEN, fork ask: the delete-file selection rule lives in the fork's
+  `rewrite_position_delete_files`. The cells answered Spark at RP-33; the smaller files
+  #306 writes moved them under the fork's selection threshold. Run 24d owns the fork half.
+  pins: rp-34-fork-pin/C-002
+
+### ICE-RDF-COW-BYTES-1 — `rewritten_bytes` missed the DELETE-written survivor file the rewrite folds in — **FIXED 2026-09-19 (RP-32, fork #301 F-RDF-COW-BYTES-1)**
+
+- **repark** — result counts matched Spark (`delete_file_threshold` 4 rewritten / 1 added;
+  `remove_dangling` 8 rewritten / 2 added) but `rewritten_bytes_count` missed the
   DELETE-written survivor file the rewrite folds in (reason strings 2026-09-17:
-  `delete_file_threshold` answers 5869 vs the vanished-sum 7592; `remove_dangling`
-  answers 11878 vs the vanished-sum 13522 — the DELETE-written 1644-byte file folds
-  into the 2 outputs).
+  `delete_file_threshold` answered 5869 vs the vanished-sum 7592; `remove_dangling`
+  answered 11878 vs the vanished-sum 13522 — the DELETE-written 1644-byte file folds
+  into the 2 outputs). At fork `29ea7f6d` both cells answer the recorded byte counts
+  (4544 / 9229) with `removed == 0`: the rewrite keeps the still-applying parquet deletes,
+  so the survivor file the bytes missed is counted with the rest.
 - **Apache Spark** — the recorded cell `delete_file_threshold`
   (`rewritten_data_files_count = 4`, `added_data_files_count = 1`,
   `rewritten_bytes_count = 4544`, `removed_delete_files_count = 0`, 6 data + 1 delete
@@ -6502,14 +6597,16 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   *(oracle: recorded — the committed generator replays byte-identical on its RDF section.)*
 - **Pin** —
   `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[delete_file_threshold]`
-  and `[remove_dangling]` (`xfail(strict)`; the removed-count asserts on the same cells
-  xfail separately under `ICE-RDF-DANGLE-2`).
-- **Rationale** — OPEN, fork ask: the byte accounting sits in the fork's rewrite commit path.
+  and `[remove_dangling]` (plain since RP-32, as are the removed-count asserts on the same
+  cells that used to xfail under `ICE-RDF-DANGLE-2`).
+- **Rationale** — FIXED at RP-32: the byte accounting sits in the fork's rewrite commit path,
+  and the keep changes which files count as vanished.
   Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
-  target-size split did not close it.
+  target-size split did not close it. Closed 2026-09-19 on RP-32 (`29ea7f6d`).
   pins: ice-rdf-fork-asks-1/C-002
+  pins: rp-32-rdf-cow-bytes/C-002
 
-### ICE-RDF-RPD-COMMITS-1 — the fork's `rewrite_position_delete_files` commits per group where Spark rewrites in one commit — **OPEN 2026-09-17, fork ask**
+### ICE-RDF-RPD-COMMITS-1 — the fork's `rewrite_position_delete_files` committed per group where Spark rewrites in one commit — **FIXED 2026-09-19 (RP-33, fork #304 F-RPD-COMMITS-1)**
 
 - **repark** — the fork RPD path (untouched by #283) compacts 8→2 with per-group commits
   (11 snapshots on the value cells' shapes); Spark rewrites 8→8 in one commit
@@ -6522,12 +6619,16 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Pin** —
   `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[rpd_rewrite_all]`,
   `[rpd_min_input_files_1]` and
-  `::test_option_cell_snapshots[rpd_rewrite_all]`, `[rpd_min_input_files_1]`
-  (`xfail(strict)` with the dated reasons).
-- **Rationale** — OPEN, fork ask: single-commit RPD batching lives in the fork's
-  position-delete rewrite.
-  Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
-  target-size split did not close it.
+  `::test_option_cell_snapshots[rpd_rewrite_all]`, `[rpd_min_input_files_1]` — plain pins
+  since RP-33 (they were `xfail(strict)` with the dated reasons).
+- **Rationale** — **FIXED 2026-09-19 (RP-33, fork `587d3592`, #304 F-RPD-COMMITS-1).**
+  The fork's `rewrite_position_delete_files` now makes one replace commit with partial
+  progress off. It writes file-scoped outputs per referenced data file
+  (`write.delete.granularity`, file by default, as Java's `SparkWriteConf`), drops dangling
+  positions, and preserves the data sequence number. Both value cells answer Spark's 8→8,
+  and both snapshot cells answer 10. Measured by CI's smoke job on the bump alone (four
+  `XPASS(strict)`, no other change) and re-run by the orchestrator.
+  Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed then.
   pins: ice-rdf-fork-asks-1/C-003
 
 ### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
