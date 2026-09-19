@@ -1,0 +1,1520 @@
+{
+ "spark_version": "4.1.2",
+ "iceberg_runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "shuffle_partitions": "4",
+ "cells": {
+  "rowid_sc_select": {
+   "runs": [
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ]
+   ],
+   "distinct": {
+    "[[\"a\", 0], [\"b\", 100], [\"c\", 200]]": 12
+   }
+  },
+  "rowid_sc_values": {
+   "runs": [
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ]
+   ],
+   "distinct": {
+    "[[\"a\", 0], [\"b\", 2], [\"c\", 4]]": 12
+   }
+  },
+  "rowid_sc_ctas": {
+   "runs": [
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ]
+   ],
+   "distinct": {
+    "[[\"a\", 0], [\"b\", 100], [\"c\", 200]]": 12
+   }
+  },
+  "rowid_sc_select_files": [
+   [
+    "a",
+    100,
+    0
+   ],
+   [
+    "b",
+    100,
+    100
+   ],
+   [
+    "c",
+    100,
+    200
+   ]
+  ],
+  "rowid_mc_select": {
+   "runs": [
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ]
+   ],
+   "distinct": {
+    "[[\"a\", 0], [\"b\", 100], [\"c\", 200]]": 12
+   }
+  },
+  "rowid_mc_values": {
+   "runs": [
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      2
+     ],
+     [
+      "c",
+      4
+     ]
+    ]
+   ],
+   "distinct": {
+    "[[\"a\", 0], [\"b\", 2], [\"c\", 4]]": 12
+   }
+  },
+  "rowid_mc_ctas": {
+   "runs": [
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ],
+    [
+     [
+      "a",
+      0
+     ],
+     [
+      "b",
+      100
+     ],
+     [
+      "c",
+      200
+     ]
+    ]
+   ],
+   "distinct": {
+    "[[\"a\", 0], [\"b\", 100], [\"c\", 200]]": 12
+   }
+  },
+  "rowid_mc_select_files": [
+   [
+    "a",
+    100,
+    0
+   ],
+   [
+    "b",
+    100,
+    100
+   ],
+   [
+    "c",
+    100,
+    200
+   ]
+  ],
+  "sc_v2_pts0_16_concurrent_inserts": [
+   {
+    "committed": 11,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     11,
+     11,
+     11
+    ]
+   },
+   {
+    "committed": 13,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     13,
+     13,
+     13
+    ]
+   },
+   {
+    "committed": 13,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     13,
+     13,
+     13
+    ]
+   },
+   {
+    "committed": 11,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     11,
+     11,
+     11
+    ]
+   }
+  ],
+  "sc_v3_pts0_16_concurrent_inserts": [
+   {
+    "committed": 14,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     14,
+     14,
+     14
+    ]
+   },
+   {
+    "committed": 14,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     14,
+     14,
+     14
+    ]
+   },
+   {
+    "committed": 15,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     15,
+     15,
+     15
+    ]
+   },
+   {
+    "committed": 12,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     12,
+     12,
+     12
+    ]
+   }
+  ],
+  "sc_v2_pts1_16_concurrent_inserts": [
+   {
+    "committed": 13,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o1231.sql.",
+     "Py4JJavaError: An error occurred while calling o1237.sql.",
+     "Py4JJavaError: An error occurred while calling o1261.sql."
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 10,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o1335.sql.",
+     "Py4JJavaError: An error occurred while calling o1338.sql.",
+     "Py4JJavaError: An error occurred while calling o1341.sql.",
+     "Py4JJavaError: An error occurred while calling o1362.sql.",
+     "Py4JJavaError: An error occurred while calling o1365.sql.",
+     "Py4JJavaError: An error occurred while calling o1380.sql."
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 11,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o1451.sql.",
+     "Py4JJavaError: An error occurred while calling o1460.sql.",
+     "Py4JJavaError: An error occurred while calling o1481.sql.",
+     "Py4JJavaError: An error occurred while calling o1484.sql.",
+     "Py4JJavaError: An error occurred while calling o1487.sql."
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 12,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o1560.sql.",
+     "Py4JJavaError: An error occurred while calling o1563.sql.",
+     "Py4JJavaError: An error occurred while calling o1572.sql.",
+     "Py4JJavaError: An error occurred while calling o1602.sql."
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   }
+  ],
+  "sc_v3_pts1_16_concurrent_inserts": [
+   {
+    "committed": 11,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o1671.sql.",
+     "Py4JJavaError: An error occurred while calling o1677.sql.",
+     "Py4JJavaError: An error occurred while calling o1689.sql.",
+     "Py4JJavaError: An error occurred while calling o1713.sql.",
+     "Py4JJavaError: An error occurred while calling o1716.sql."
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 12,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o1789.sql.",
+     "Py4JJavaError: An error occurred while calling o1792.sql.",
+     "Py4JJavaError: An error occurred while calling o1801.sql.",
+     "Py4JJavaError: An error occurred while calling o1825.sql."
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 12,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o1909.sql.",
+     "Py4JJavaError: An error occurred while calling o1918.sql.",
+     "Py4JJavaError: An error occurred while calling o1927.sql.",
+     "Py4JJavaError: An error occurred while calling o1933.sql."
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 10,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o2005.sql.",
+     "Py4JJavaError: An error occurred while calling o2011.sql.",
+     "Py4JJavaError: An error occurred while calling o2017.sql.",
+     "Py4JJavaError: An error occurred while calling o2035.sql.",
+     "Py4JJavaError: An error occurred while calling o2041.sql.",
+     "Py4JJavaError: An error occurred while calling o2047.sql."
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   }
+  ],
+  "mc_v2_pts0_16_concurrent_inserts": [
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 7,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     7,
+     7,
+     7
+    ]
+   },
+   {
+    "committed": 8,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     8,
+     8,
+     8
+    ]
+   },
+   {
+    "committed": 7,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     7,
+     7,
+     7
+    ]
+   }
+  ],
+  "mc_v3_pts0_16_concurrent_inserts": [
+   {
+    "committed": 8,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     8,
+     8,
+     8
+    ]
+   },
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "committed": 8,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     8,
+     8,
+     8
+    ]
+   },
+   {
+    "committed": 9,
+    "of": 16,
+    "errors": [
+     "Py4JJavaError: An error occurred while calling o57.sql."
+    ],
+    "rows_after": [
+     9,
+     9,
+     9
+    ]
+   }
+  ],
+  "mc_v2_pts1_16_concurrent_inserts": [
+   {
+    "committed": 0,
+    "of": 16,
+    "errors": [
+     "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `mc`.`ns`.`ins2_1_0` cannot be found. Verify the spelling and correctness of the schema and catal"
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 0,
+    "of": 16,
+    "errors": [
+     "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `mc`.`ns`.`ins2_1_1` cannot be found. Verify the spelling and correctness of the schema and catal"
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 0,
+    "of": 16,
+    "errors": [
+     "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `mc`.`ns`.`ins2_1_2` cannot be found. Verify the spelling and correctness of the schema and catal"
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 0,
+    "of": 16,
+    "errors": [
+     "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `mc`.`ns`.`ins2_1_3` cannot be found. Verify the spelling and correctness of the schema and catal"
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   }
+  ],
+  "mc_v3_pts1_16_concurrent_inserts": [
+   {
+    "committed": 0,
+    "of": 16,
+    "errors": [
+     "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `mc`.`ns`.`ins3_1_0` cannot be found. Verify the spelling and correctness of the schema and catal"
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 0,
+    "of": 16,
+    "errors": [
+     "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `mc`.`ns`.`ins3_1_1` cannot be found. Verify the spelling and correctness of the schema and catal"
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 0,
+    "of": 16,
+    "errors": [
+     "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `mc`.`ns`.`ins3_1_2` cannot be found. Verify the spelling and correctness of the schema and catal"
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "committed": 0,
+    "of": 16,
+    "errors": [
+     "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `mc`.`ns`.`ins3_1_3` cannot be found. Verify the spelling and correctness of the schema and catal"
+    ],
+    "rows_after": [
+     0,
+     0,
+     0
+    ]
+   }
+  ]
+ }
+}

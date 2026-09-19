@@ -84,6 +84,27 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   re-derivation of one cell, registry row ICE-WRITE-OPTIONS-1-R-RP FIXED. Test-only,
   no product change. `risk_tier: standard`. Branch `chore/rp-30-fork-pin`.
   pins: ice-write-options-rp-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [ice-list-null-1-ledger.md](ice-list-null-1-ledger.md) —
+  **ICE-LIST-NULL-1 (2026-09-18), in flight:** DELETE and UPDATE with IS NULL on
+  nested columns answer Spark 4.1.2 at fork #299 (F-LIST-NULL-ACCESSOR-1) — the
+  128-cell Spark oracle, the recorder, one pin per cell for ok, ids and operation
+  plus the delete-file / DV count parametrization, the `map_from_arrays` empty-map
+  substitute seed, the sixteen copy-on-write compound-predicate cells verbatim
+  under strict xfail (fork #299 residue), the sixteen merge-on-read IS NOT NULL
+  cells pinning RePark's measured 1 file against Spark's 2, the live re-derivation
+  of one cell per shape, registry row ICE-LIST-NULL-1 FIXED. Test-only, no product
+  change. `risk_tier: standard`. Branch `chore/rp-31-fork-pin`.
+  pins: ice-list-null-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [ice-rowid-order-1-ledger.md](ice-rowid-order-1-ledger.md) —
+  **ICE-ROWID-ORDER-1 (2026-09-18), in flight:** one statement's v3 row ids are
+  deterministic at fork #300 (F-ROWID-ORDER-1) — both Spark recordings (a/b/c
+  twelve-run, eight-category six-run per configuration), the one recorder, twelve
+  runs per a/b/c shape giving one mapping equal to Spark's recorded a:0, b:100,
+  c:200, twelve eight-category runs giving one ascending mapping with Spark's
+  default hash-partitioner order as DECLARED divergence, registry row V3-COV-3
+  FIXED with the residual stated and V3-FILEORDER-1 true on every writer.
+  Test-only, no product change. `risk_tier: standard`. Branch `chore/rp-31-fork-pin`.
+  pins: ice-rowid-order-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [ice-evo-dml-1-ledger.md](ice-evo-dml-1-ledger.md) —
   **ICE-EVO-DML-1 (2026-09-17), in flight:** MERGE / UPDATE / DELETE after `ADD COLUMN` or
   `RENAME COLUMN` with no write since answer Spark 4.1.2 instead of refusing `Column … not

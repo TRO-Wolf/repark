@@ -368,7 +368,10 @@ def test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered(
 
 
 def test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered(tmp_path: Path) -> None:
-    """Incidental control: the RePark-owned CTAS writer sorts partitions, so its mapping is not."""
+    """Incidental control: the RePark-owned CTAS writer sorts partitions.
+
+    Its mapping never rode the fork.
+    """
     from repark import ReparkSession
 
     repark = (

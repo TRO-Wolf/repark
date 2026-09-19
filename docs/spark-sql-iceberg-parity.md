@@ -1770,7 +1770,7 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   source refused its filters — rows **ICE-PROMOTE-READ-1**, **ICE-PROMOTE-DML-1** and
   **ICE-PROMOTE-PARTITION-1** in §7, FIXED the same day.
 
-### V3-COV-3 — OPEN (measured 2026-09-16; was FIXED at RP-8, 2026-09-03): partitioned `INSERT INTO` assigns `_row_id` by ascending partition order
+### V3-COV-3 — FIXED 2026-09-18 (RP-31, fork #300): one statement's v3 row ids are deterministic, Spark's where the orders coincide
 
 - **repark** — one `INSERT INTO t VALUES …` of four rows across two identity partitions on a v3
   table assigns row lineage from the manifest's data-file order. Filed 2026-09-03 (V3-COV) because
@@ -1780,30 +1780,41 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `{1:0, 2:1, 3:2, 4:3}`. The RePark-owned writers were always stable — the same partitioned
   layout written by CTAS (`write::file_order::ascending_partition_order`) is
   `{1:0, 2:1, 3:2, 4:3}` on every run, and an unpartitioned `INSERT` is stable and Spark-equal.
+  At fork pin `50350e33` (F-ROWID-ORDER-1) the delegated `INSERT` is deterministic too: the
+  DataFusion commit exec appends a statement's data files in ascending partition value, then
+  write-task index. Twelve runs of `INSERT INTO t SELECT id, cat, v FROM <temp view>` on a v3
+  table partitioned by `cat` give **one** partition-to-first-`_row_id` mapping — a:0, b:100,
+  c:200 — and Spark's recording answers the same mapping in 12 of 12.
 - **Apache Spark** — assigns `{1:0, 2:1, 3:2, 4:3}` for the same seed.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03; re-measured at the new pin by RP-8.)*
+  The a/b/c shape recording (PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, `local[8]`,
+  2026-09-18,
+  `python/repark-parity/fixtures/torture/data/ice_rowid_order_1/spark_rowid_abc_oracle.json`)
+  answers a:0, b:100, c:200 in 12 of 12 for INSERT INTO SELECT, VALUES and CTAS alike.
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
   and the incidental control
   `…::test_v3_ctas_partitioned_row_id_mapping_is_stable_and_spark_ordered`; plus the nine
   partitioned rows of the matrix, whose lineage probe is
-  `SELECT id, _row_id, _last_updated_sequence_number` again on both engine goldens
-- **Rationale** — OPEN (measured 2026-09-16). This narrowed a claim
+  `SELECT id, _row_id, _last_updated_sequence_number` again on both engine goldens;
+  plus `python/repark/tests/test_ice_rowid_order_1.py` (twelve-run determinism per shape
+  and the DECLARED-divergence pin below)
+- **Rationale** — FIXED 2026-09-18 (RP-31) at fork #300 (F-ROWID-ORDER-1) for determinism
+  and for the a/b/c shape. History: FIXED at RP-8 for the `INSERT … VALUES` shape and CTAS;
+  OPEN from the 2026-09-16 rating (probe `p_rowid_order` at `a92a68db` gave 5 distinct
+  mappings over 12 fresh tables, ascending in 1 of 12) and from the orchestrator's main-branch
+  probe (6 distinct mappings in 12 runs) — both closed by the fork's ordered commit exec.
+  **RESIDUAL, stated plainly:** Spark's same-commit data-file order is its hash-partitioner
+  task order (configuration-dependent: the eight-category recording answers
+  `z, x, m, a, q, b, c, d` under the default configuration and differs with AQE off, with
+  `range`, and with `none`), while RePark's is ascending partition value — so the
+  partition-to-first-`_row_id` mapping matches Spark only where those coincide (the a/b/c
+  shape is one such place). The divergence is DECLARED and pinned
+  (`test_ice_rowid_order_1.py::test_recorded_spark_default_order_differs_from_ascending`),
+  so a future convergence reds it. Row ids stay spec-correct on both engines either way:
+  contiguous, unique, every file's `first_row_id` the running sum. What narrowed
   [V3-FILEORDER-1](#v3-fileorder-1--declared-v3-11-2026-09-02-same-commit-data-file-order-is-ascending-partition-value-not-sparks-hash-bucket-order)
-  states unqualified — *ascending partition value … applied once per commit*. That rule held on
-  every writer RePark owns, and V3-11 pinned it on MERGE and CTAS; it did **not** hold on a
-  delegated `INSERT`, which runs inside the fork's `iceberg_datafusion::IcebergTableProvider`
-  where RePark does not own the file set the commit sees. The TRIGGER this row named — **fork
-  F-20 / `F-v3-10-partition-file-order`, taken at the RP-8 repin** — landed as fork `#261`:
-  `FanoutWriter::close` drains its partition map in ascending partition-value order, so the rule
-  was read as one rule on every writer that reaches a repark table. **Corrected 2026-09-17
-  from the 2026-09-16 rating** (probe `p_rowid_order` at `a92a68db`): `INSERT INTO t SELECT id,
-  cat, v FROM <temp view>` on a v3 table partitioned by `cat` gave 5 distinct
-  partition-to-first-`_row_id` mappings over 12 fresh tables, ascending in 1 of 12 runs — the
-  one-rule claim does not hold for that shape. The pinned `INSERT … VALUES` shape and CTAS
-  stayed ascending 12 of 12. The partitioned rows of the
-  coverage matrix pin `_row_id` again. What remains is `V3-FILEORDER-1`: ascending is not Spark's
-  `HashMap` bucket order, and the two coincide only on collision-free monotonic partition sets —
-  `{10, 20}`, this matrix's seed, is one of them.
+  to RePark-owned writers is closed with it: the rule now holds on the delegated `INSERT`
+  too, and it is NOT Spark's order in general.
 
 ### ICE-TSNS-SQL-1 — `timestamp_ns` / `timestamptz_ns` on the SQL door answer the Iceberg v3 spec — **FIXED 2026-09-17**
 
@@ -3708,6 +3719,43 @@ the pin rather than obeying it.
   writer relabels nested fields to the table's Iceberg types and `INSERT … VALUES` into
   nested columns plans. No adopted Spark tables were needed — RePark CREATE succeeds for
   all three shapes, so the pins create with RePark's own DDL.
+
+### ICE-LIST-NULL-1 — `DELETE` and `UPDATE … WHERE` a nested column `IS [NOT] NULL` answer Spark — **FIXED 2026-09-18 (RP-31, fork #299 F-LIST-NULL-ACCESSOR-1)**
+
+- **repark** — `DELETE FROM t WHERE xs IS NULL`, `xs IS NOT NULL`,
+  `id > 1 AND xs IS NULL` and `xs IS NULL OR id = 1`, and
+  `UPDATE t SET id = id + 100` under the same four predicates, answer Spark's ids and
+  snapshot operation on `ARRAY<INT>`, `ARRAY<STRUCT<a INT>>`, `MAP<STRING, INT>` and
+  `STRUCT<a INT>` columns at format versions 2 and 3, under copy-on-write and
+  merge-on-read. Before (release native at fork pin `18ab9761`, main `6a140eb3`):
+  every nested-column `IS NULL` predicate refused loud with
+  `DataInvalid => Accessor for Field xs not found`. After: 112 of the 128 recorded
+  cells answer Spark's ok, ids and operation. The `map_int` seed's empty-map row
+  runs through `map_from_arrays(CAST(array() AS ARRAY<STRING>),
+  CAST(array() AS ARRAY<INT>))`, which reads back equal to Spark's seed (the recorded
+  `CAST(map() AS MAP<STRING, INT>)` refuses `ParserError`, registry row
+  CAST-MAP-SPELL-1, BACKLOG). Two residues, both pinned: copy-on-write DELETE with a
+  compound predicate over the nested column (16 cells: every shape x v2/v3 x the two
+  compound predicates) still refuses `Accessor for Field xs not found` — fork #299
+  fixed the single-predicate path only — and runs verbatim under strict xfail; the
+  sixteen merge-on-read `xs IS NOT NULL` cells pin RePark's measured 1 delete file
+  (1 DV on v3) against Spark's recorded 2 (2 DVs).
+- **Apache Spark** — the recorded 128 cells (PySpark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-18,
+  `python/repark-parity/fixtures/torture/data/ice_list_null_1/spark_list_null_oracle.json`).
+- **Pin** — `python/repark/tests/test_ice_list_null_1.py::test_cell_answers_spark` (one id
+  per cell; the 16 copy-on-write compound-predicate ids run the recorded statement
+  verbatim under strict xfail on the fork #299 residue),
+  `…::test_cell_file_counts_match_spark` (the delete-file / DV counts; the 16
+  `xs IS NOT NULL` merge-on-read ids pin RePark's measured values),
+  `…::test_map_seed_substitution_reads_back_empty` (the substitute seed),
+  `…::test_live_spark_rederives_shape_cell` (live tier: Spark re-derives one cell per
+  shape through the recorder and answers the recorded ok, ids and operation).
+- **Rationale** — FIXED 2026-09-18 (RP-31) at fork #299 (F-LIST-NULL-ACCESSOR-1): the
+  DataFusion filter conversion binds list, map and struct columns in `IS [NOT] NULL`
+  tests. The conjunction/disjunction path on copy-on-write DELETE is fork-side
+  residue (a new fork ask, not filed); the delete-file packing difference on
+  `IS NOT NULL` is task-count noise the pins hold at RePark's measured values.
 
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
@@ -7095,8 +7143,15 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   partition value**: spec-field order, a null slot before every non-null, primitive literals
   ascending, a stable sort so files sharing a partition keep the order their writer produced.
   It is `write/file_order.rs::ascending_partition_order`, applied once per commit to the
-  already-written `Vec<DataFile>`. Because `first_row_id` is assigned in manifest-entry order,
-  this order decides every derived `_row_id` in the commit.
+  already-written `Vec<DataFile>` — and since fork #300 (F-ROWID-ORDER-1, RP-31) the delegated
+  `INSERT` path follows the same rule: the DataFusion commit exec appends a statement's data
+  files in ascending partition value, then write-task index, so the rule holds on every writer
+  that reaches a repark table, INCLUDING the delegated `INSERT`. Because `first_row_id` is
+  assigned in manifest-entry order, this order decides every derived `_row_id` in the commit.
+  It is NOT Spark's order in general: the eight-category cell of
+  `python/repark-parity/fixtures/torture/data/ice_rowid_order_1/spark_rowid_order_oracle.json`
+  answers Spark's hash-partitioner task order `z, x, m, a, q, b, c, d` under the default
+  configuration while RePark answers ascending `a, b, c, d, m, q, x, z`.
 - **Apache Spark** — orders the same files by the **`java.util.HashMap` bucket index** of the
   partition struct, which is not a value ordering at all. Decoded 2026-09-02 with
   `javap -p -c` over `iceberg-spark-runtime-4.1_2.13-1.11.0.jar`:
@@ -7160,6 +7215,11 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   unchanged in kind and the engine no longer has a second data-file ordering rule (the
   fork's `write_dv_blobs` still drains `HashMap` keys for the blob order inside one Puffin
   when a commit writes fresh DVs for more than one data file).
+  **Closed further (RP-31, 2026-09-18):** fork #300 (F-ROWID-ORDER-1) orders the delegated
+  `INSERT` path's commit the same way (ascending partition value, then task index), so no
+  writer that reaches a repark table keeps task-completion order — the divergence from Spark
+  is unchanged in kind (see the eight-category cell above) and the engine has one data-file
+  ordering rule everywhere.
   Revisiting this needs a new dated decision. Pins: v3-11-row-id-determinism/C-007,
   rp-8-repin-f21-f22/C-004.
 
