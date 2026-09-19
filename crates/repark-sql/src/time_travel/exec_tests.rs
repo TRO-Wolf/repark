@@ -1,6 +1,3 @@
-//! Execution pins for the ANSI `FOR … AS OF` rewrite: a string wall, integer
-//! seconds, and a CAST expression resolve through `evaluate_sql_timestamp_asof`.
-
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
