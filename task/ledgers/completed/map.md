@@ -988,6 +988,11 @@ else. The next pickup's `make ledger-archive` files everything here under
   `write.distribution-mode` gating in `hash_distribution`; per-writer sorting in the two
   funnel entries. `risk_tier: standard`. Branch `feat/write-order-dist-1`.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+- [ice-tt-resolve-1-ledger.md](ice-tt-resolve-1-ledger.md) —
+  **ICE-TT-RESOLVE-1 (2026-09-19), delivered:** 1:1 Spark Iceberg time-travel resolution on
+  every door — steps 2 (`4e19fee2`), 3 (`c467bdc7`), 4 (this commit). All twelve clauses
+  PROVEN; registry row `ICE-TT-RESOLVE-1` FIXED.
+  pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 
 ## Pointers
 - Up: [../map.md](../map.md)

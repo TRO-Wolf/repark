@@ -1073,13 +1073,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   new-table RTAS commits through the fork's public overwrite path, `commit_replace_write`).
   `risk_tier: standard`. Branch `ice-rtas-ops-2`.
   pins: ice-rtas-ops-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
-- [ice-tt-resolve-1-ledger.md](ice-tt-resolve-1-ledger.md) —
-  **ICE-TT-RESOLVE-1 (2026-09-19), in flight:** 1:1 Spark Iceberg time-travel resolution on
-  every door — one shared `repark-core` resolver for the reader built-ins and both SQL doors,
-  Spark refusal texts, the 94-cell oracle green offline plus live. Round 1 steps 1–2 committed
-  (`3413c537`, `4e19fee2`); this ledger carries C-001…C-012 PROVEN.
-  `risk_tier: standard`. Branch `fix/ice-tt-resolve-1`.
-  pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 - [ice-registry-sweep-1b-ledger.md](ice-registry-sweep-1b-ledger.md) —
   **ICE-REGISTRY-SWEEP-1B (2026-09-18), in flight:** the registry agrees with
   merged main for the twelve remaining rating rows and claims — every row state
