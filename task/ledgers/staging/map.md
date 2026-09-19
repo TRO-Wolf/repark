@@ -209,6 +209,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
   feature (stock sqlparser has no `MAP<…>` type and DataFusion 54 plans
   `SQLDataType::Map` as unsupported); 21-cell recorded oracle plus red-first pins.
+  Steps 3–5 (claude-opus-5): the `repark_functions::cast_map` kernel serves every door,
+  the old refusal pins flip, every clause is PROVEN and the attestation is complete.
   `risk_tier: standard`. Branch `fix/cast-map-spell-1`.
   pins: cast-map-spell-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010

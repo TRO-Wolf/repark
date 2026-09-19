@@ -3221,8 +3221,9 @@ the pin rather than obeying it.
 - **repark** — `transform(array(named_struct('n',1)), x -> x.n + 1)` refuses with
   `No field named x.n` through SQL and column-free `F.expr`; the Column `getField` spelling
   answers. `CAST(map() AS MAP<STRING,INT>)` and `CAST(NULL AS MAP<STRING,INT>)` inside
-  `transform_keys`, `transform_values`, and `map_filter` refuse at the `<` token.
-  Bare `map()` in `transform_keys(map(), (k,v) -> k)` refuses because the constructor
+  `transform_keys`, `transform_values`, and `map_filter` answer Spark's values and full Arrow
+  schema on both ANSI settings and both text doors since CAST-MAP-SPELL-1 (FIXED 2026-09-19);
+  the struct-field lambda and bare `map()` remain. Bare `map()` in `transform_keys(map(), (k,v) -> k)` refuses because the constructor
   requires at least one argument, before the null-key kernel validator runs.
 - **Apache Spark** — the struct transform returns the incremented fields, and the typed-map
   expressions return empty maps or NULL maps. Exact values and schemas are recorded in
@@ -3231,8 +3232,8 @@ the pin rather than obeying it.
   this collect diagnostic is not an Arrow-parity claim.
   *(oracle: live PySpark 4.1.2, UTC, both ANSI settings, 2026-09-07.)*
 - **Pin** — `python/repark/tests/test_fnp8_oracle_matrix.py::test_fnp8_recorded_parity_and_named_divergences`
-  holds `binding-struct` SQL/expr and the six map `empty`/`null` SQL/expr cells, including
-  exception class and diagnostic. `test_live_fnp8_recorded_oracle` remeasures Spark.
+  holds `binding-struct` SQL/expr (exception class and diagnostic) and the six map
+  `empty`/`null` SQL/expr cells (Spark-equal schemas since 2026-09-19). `test_live_fnp8_recorded_oracle` remeasures Spark.
   `test_fnp8_sql_text_error_dispositions` and `test_live_fnp8_empty_map_collect_diagnostic`
   hold the bare-map boundary.
 - **Rationale** — BACKLOG (2026-09-07). These are parser/binder capabilities outside the
@@ -3702,17 +3703,14 @@ the pin rather than obeying it.
   is not possible to concatenate arrays of different data types`; the other doors on those
   two shapes already answered Spark's rows and footer ids; the re-rating's V2-10d "INSERT
   into a list column fails" cell is the rating-side before. After: every door answers
-  Spark on all three shapes — the `map_list` non-VALUES doors through a substitute source
-  (the recorded `CAST(NULL AS MAP<STRING, ARRAY<INT>>)` NULL-map row refuses `ParserError`,
-  registry row CAST-MAP-SPELL-1, BACKLOG; the pins write `CASE WHEN false THEN map('k1',
-  array(1, 2)) END`, which Spark 4.1.2 answers identically, measured 2026-09-18).
+  Spark on all three shapes; since CAST-MAP-SPELL-1 (FIXED 2026-09-19) the `map_list`
+  non-VALUES doors run the recorded statement verbatim, its
+  `CAST(NULL AS MAP<STRING, ARRAY<INT>>)` NULL-map row included.
 - **Apache Spark** — the recorded 30 cells (PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0, Hadoop catalog, 2026-09-18,
   `python/repark-parity/fixtures/torture/data/ice_array_insert_1/spark_array_insert_oracle.json`).
 - **Pin** — `python/repark/tests/test_ice_array_insert_1.py::test_cell_matches_spark` (one id
-  per cell; the 8 `map_list` non-VALUES ids run the recorded statement verbatim under
-  strict xfail on CAST-MAP-SPELL-1),
-  `…::test_cell_substitute_source_matches_spark` (the 8 substitute-source twins),
+  per cell, all 30 plain pins running the recorded statement verbatim),
   `…::test_live_spark_reads_repark_table` (live tier: Spark adopts each RePark-written
   table and reads the recorded rows).
 - **Rationale** — FIXED 2026-09-18 (RP-29) at fork #295 (F-LIST-INSERT-1): every Iceberg
@@ -3730,11 +3728,9 @@ the pin rather than obeying it.
   merge-on-read. Before (release native at fork pin `18ab9761`, main `6a140eb3`):
   every nested-column `IS NULL` predicate refused loud with
   `DataInvalid => Accessor for Field xs not found`. After: 112 of the 128 recorded
-  cells answer Spark's ok, ids and operation. The `map_int` seed's empty-map row
-  runs through `map_from_arrays(CAST(array() AS ARRAY<STRING>),
-  CAST(array() AS ARRAY<INT>))`, which reads back equal to Spark's seed (the recorded
-  `CAST(map() AS MAP<STRING, INT>)` refuses `ParserError`, registry row
-  CAST-MAP-SPELL-1, BACKLOG). Two residues, both pinned: copy-on-write DELETE with a
+  cells answer Spark's ok, ids and operation. Every seed runs verbatim, the `map_int`
+  seed's `CAST(map() AS MAP<STRING, INT>)` row included (CAST-MAP-SPELL-1, FIXED
+  2026-09-19). Two residues, both pinned: copy-on-write DELETE with a
   compound predicate over the nested column (16 cells: every shape x v2/v3 x the two
   compound predicates) still refuses `Accessor for Field xs not found` — fork #299
   fixed the single-predicate path only — and runs verbatim under strict xfail; the
@@ -4976,18 +4972,32 @@ the pin rather than obeying it.
   array arm of COMPLEX-ELEM-NULL-1 — carried through the analyzer/schema path
   (or an equivalent analyzer rewrite), measured against `fixtures-batch7.json`.
 
-### CAST-MAP-SPELL-1 — `MAP<…>` target spelling refuses in CAST
+### CAST-MAP-SPELL-1 — `CAST(… AS MAP<…>)` and `.cast(MapType)` answer Spark — **FIXED 2026-09-19**
 
-- **repark** — `CAST(MAP('a',1) AS MAP<STRING,BIGINT>)` refuses on both doors with
-  `ParseException: Expected: (, found: <`; DataFrame `.cast(MapType(...))` refuses
-  with `unknown cast type 'map<string,long>'`. Stock sqlparser has no MAP type, so
-  there is no rewrite target — serving it is a cast-UDF plus token-rewrite feature.
-- **Apache Spark** — answers `{'a': 1}` at `map<string, int64>`, non-null.
-  *(oracle: live PySpark 4.1.2, UTC, both ANSI modes, 2026-09-06.)*
-- **Pin** —
-  `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_refuses_per_cast_map_spell_1`
-  (red when fixed).
-- **Rationale** — BACKLOG. Filed 2026-09-06 (NULLABILITY-2 round 2).
+- **repark** — Before (main `e6ec5531`): `CAST(MAP('a',1) AS MAP<STRING,BIGINT>)` refused
+  on both doors with `ParseException: Expected: ), found: <` (facade) / `Expected: (, found:
+  <` (native); DataFrame `.cast(MapType(...))` refused with `unknown cast type
+  'map<string,long>'`. After: `CAST` / `TRY_CAST` to any type naming `MAP<K, V>` (any case,
+  spacing and nesting, inside `ARRAY<…>` / `STRUCT<…>` too) answers on the facade SQL door,
+  the native `repark.sql` door, `F.expr` and `Column.cast` / `try_cast` (a `MapType` object
+  or a DDL string). Elements cast key-wise and value-wise; ANSI raises
+  `[CAST_INVALID_INPUT]` naming the malformed value, legacy mode and `try_cast` yield NULL
+  elements; a non-map source refuses with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`.
+  Mechanism: `repark_functions::cast_map` rewrites the call to a cast UDF before either door
+  parses (stock DataFusion plans no SQL map type). Residue, not in the 21 cells: a non-string
+  leaf that fails under ANSI (numeric overflow) keeps Arrow's message rather than Spark's
+  `CAST_OVERFLOW`; string leaves follow Arrow's parser, so Spark's whitespace trimming in
+  `CAST(' 1' AS INT)` is not reproduced inside a map; the refusal names the operand by its
+  DataFusion display (`Int64(1)`), where Spark prints `"1"`.
+- **Apache Spark** — the recorded 21 cells in
+  `python/repark/tests/cast_map_spell_1/cast_map_spell_1_spark_oracle.json`.
+  *(oracle: live PySpark 4.1.2, UTC, ANSI on plus one legacy cell, 2026-09-19.)*
+- **Pin** — `python/repark/tests/test_cast_map_spell_1.py` (every cell on the facade door,
+  the native door where it can spell the cell, the three DataFrame cells, and a live drift
+  check); `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_answers_per_cast_map_spell_1`;
+  `crates/repark-functions/src/cast_map/tests.rs`.
+- **Rationale** — FIXED 2026-09-19. Filed 2026-09-06 (NULLABILITY-2 round 2).
+  pins: cast-map-spell-1/C-009
 
 ### LOGICAL-WIDTH-1 — narrow top-level widths report wide via `dtypes`/`schema`
 

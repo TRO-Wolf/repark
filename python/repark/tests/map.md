@@ -50,6 +50,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   door for the three `.cast` cells; refusals pin Spark's exception class and
   error token. Red on main: 34 failed, 1 live-skip.
   pins: cast-map-spell-1/C-002, C-003, C-004
+  **Round 2 (2026-09-19):** green on the `repark_functions::cast_map` fix (offline 82
+  passed with `test_nullability_2.py` and `test_ice_array_insert_1.py`, 13 live-skipped;
+  live 95 passed; the re-deriver's `--check` matches the fixture). The facade value
+  cells match rows as a multiset, because the `UNION ALL` cell promises no order; the
+  registry row reads FIXED. pins: cast-map-spell-1/C-001, C-009, C-010
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —
