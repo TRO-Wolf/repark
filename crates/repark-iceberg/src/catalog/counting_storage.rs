@@ -12,7 +12,9 @@ use iceberg_storage_opendal::OpenDalStorageFactory;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 
-use crate::catalog::io_stats::{IcebergIoCounters, IcebergIoOp, classify_iceberg_path};
+use crate::catalog::io_stats::{
+    IcebergFileClass, IcebergIoCounters, IcebergIoOp, classify_iceberg_path, ranged_read_op,
+};
 
 pub const GLUE_DEFAULT_CONFIGURED_SCHEME: &str = "s3a";
 
@@ -133,7 +135,7 @@ impl Storage for CountingStorage {
         Ok(Box::new(CountingFileRead {
             inner,
             counters: Arc::clone(&self.counters),
-            path: path.to_string(),
+            class: classify_iceberg_path(path),
         }))
     }
 
@@ -152,7 +154,7 @@ impl Storage for CountingStorage {
         Ok(Box::new(CountingFileWrite {
             inner,
             counters: Arc::clone(&self.counters),
-            path: path.to_string(),
+            class: classify_iceberg_path(path),
         }))
     }
 
@@ -189,16 +191,18 @@ impl Storage for CountingStorage {
 struct CountingFileRead {
     inner: Box<dyn FileRead>,
     counters: Arc<IcebergIoCounters>,
-    path: String,
+    class: IcebergFileClass,
 }
 
 #[async_trait]
 impl FileRead for CountingFileRead {
     async fn read(&self, range: Range<u64>) -> Result<Bytes> {
         let result = self.inner.read(range).await;
-        let bytes = result.as_ref().map_or(0, byte_len);
-        self.counters
-            .record_path(IcebergIoOp::RangedRead, &self.path, 1, bytes);
+        let (op, bytes) = match &result {
+            Ok(returned) => (ranged_read_op(self.class, returned), byte_len(returned)),
+            Err(_) => (IcebergIoOp::RangedRead, 0),
+        };
+        self.counters.record(op, self.class, 1, bytes);
         result
     }
 }
@@ -206,24 +210,19 @@ impl FileRead for CountingFileRead {
 struct CountingFileWrite {
     inner: Box<dyn FileWrite>,
     counters: Arc<IcebergIoCounters>,
-    path: String,
+    class: IcebergFileClass,
 }
 
 #[async_trait]
 impl FileWrite for CountingFileWrite {
     async fn write(&mut self, bs: Bytes) -> Result<()> {
-        self.counters.record(
-            IcebergIoOp::Write,
-            classify_iceberg_path(&self.path),
-            0,
-            byte_len(&bs),
-        );
+        self.counters
+            .record(IcebergIoOp::Write, self.class, 0, byte_len(&bs));
         self.inner.write(bs).await
     }
 
     async fn close(&mut self) -> Result<()> {
-        self.counters
-            .record_path(IcebergIoOp::Write, &self.path, 1, 0);
+        self.counters.record(IcebergIoOp::Write, self.class, 1, 0);
         self.inner.close().await
     }
 }

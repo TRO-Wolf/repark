@@ -22,7 +22,12 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   `WHERE v = 'a'` filter) hold the rows under the current schema.
   pins: ice-evo-dml-1/C-016
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the counting-layer pins. Every op kind
-  counts once with its bytes (local FS under the wrapper); ranged reads count the range length;
+  counts once with its bytes (local FS under the wrapper); ranged reads count the RETURNED
+  length (a stub `FileRead` whose `read(0..1000)` returns 10 bytes counts 1 request / 10 bytes —
+  round 2, verifier finding F-MUT-5A: local in-bounds reads cannot tell the two apart); a ranged
+  read on a data or delete file that ends on the Parquet `PAR1` / Puffin `PFA1` tail magic is a
+  `footer_read`, every other ranged read (and every ranged read on another class) stays
+  `ranged_read`; every counter cell is 64-byte aligned (`size_of` = cells × 64);
   `InputFile` / `OutputFile` / `writer()` obtained through the wrapper still count; the Glue and
   S3 Tables defaults are the fork's `s3a` / `s3` OpenDAL factories and the counted builders keep
   their prop errors; the classifier over literal paths, over every file a memory-catalog INSERT

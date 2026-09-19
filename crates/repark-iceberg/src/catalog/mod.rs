@@ -41,7 +41,7 @@ pub use counting_storage::{
 };
 pub use io_stats::{
     IcebergFileClass, IcebergIoCount, IcebergIoCounters, IcebergIoOp, IcebergIoStats,
-    classify_iceberg_path,
+    PARQUET_TAIL_MAGIC, PUFFIN_TAIL_MAGIC, classify_iceberg_path, ranged_read_op,
 };
 pub use lineage_columns::{
     LineageColumnsTableProvider, table_serves_row_lineage, user_field_names,

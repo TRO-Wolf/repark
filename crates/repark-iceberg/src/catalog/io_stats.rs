@@ -6,17 +6,19 @@ pub enum IcebergIoOp {
     Metadata,
     Read,
     RangedRead,
+    FooterRead,
     Write,
     Delete,
     List,
 }
 
 impl IcebergIoOp {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Exists,
         Self::Metadata,
         Self::Read,
         Self::RangedRead,
+        Self::FooterRead,
         Self::Write,
         Self::Delete,
         Self::List,
@@ -29,6 +31,7 @@ impl IcebergIoOp {
             Self::Metadata => "metadata",
             Self::Read => "read",
             Self::RangedRead => "ranged_read",
+            Self::FooterRead => "footer_read",
             Self::Write => "write",
             Self::Delete => "delete",
             Self::List => "list",
@@ -41,9 +44,10 @@ impl IcebergIoOp {
             Self::Metadata => 1,
             Self::Read => 2,
             Self::RangedRead => 3,
-            Self::Write => 4,
-            Self::Delete => 5,
-            Self::List => 6,
+            Self::FooterRead => 4,
+            Self::Write => 5,
+            Self::Delete => 6,
+            Self::List => 7,
         }
     }
 }
@@ -121,6 +125,23 @@ pub fn classify_iceberg_path(path: &str) -> IcebergFileClass {
     }
 }
 
+pub const PARQUET_TAIL_MAGIC: &[u8; 4] = b"PAR1";
+
+pub const PUFFIN_TAIL_MAGIC: &[u8; 4] = b"PFA1";
+
+#[must_use]
+pub fn ranged_read_op(class: IcebergFileClass, returned: &[u8]) -> IcebergIoOp {
+    let splits = matches!(
+        class,
+        IcebergFileClass::DataFile | IcebergFileClass::DeleteFile
+    );
+    if splits && (returned.ends_with(PARQUET_TAIL_MAGIC) || returned.ends_with(PUFFIN_TAIL_MAGIC)) {
+        IcebergIoOp::FooterRead
+    } else {
+        IcebergIoOp::RangedRead
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct IcebergIoCount {
     pub requests: u64,
@@ -140,6 +161,7 @@ const OPS: usize = IcebergIoOp::ALL.len();
 const CLASSES: usize = IcebergFileClass::ALL.len();
 
 #[derive(Debug, Default)]
+#[repr(align(64))]
 struct IoCell {
     requests: AtomicU64,
     bytes: AtomicU64,

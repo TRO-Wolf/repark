@@ -2,7 +2,10 @@ use super::super::*;
 
 use bytes::Bytes;
 use datafusion::prelude::SessionContext;
-use iceberg::io::{FileIO, FileIOBuilder, LocalFsStorageFactory, StorageFactory};
+use iceberg::io::{
+    FileIO, FileIOBuilder, FileMetadata, FileRead, FileWrite, InputFile, LocalFsStorageFactory,
+    OutputFile, Storage, StorageFactory,
+};
 use iceberg::spec::{DataFileFormat, NestedField, PrimitiveType, Schema, Type};
 use iceberg::writer::file_writer::location_generator::{
     DefaultFileNameGenerator, DefaultLocationGenerator, FileNameGenerator, LocationGenerator,
@@ -82,6 +85,7 @@ async fn every_op_kind_counts_once_with_its_bytes() {
     assert_eq!(stats.by_op(IcebergIoOp::Delete), one(2, 0));
     assert_eq!(stats.by_op(IcebergIoOp::Write), one(0, 0));
     assert_eq!(stats.by_op(IcebergIoOp::RangedRead), one(0, 0));
+    assert_eq!(stats.by_op(IcebergIoOp::FooterRead), one(0, 0));
     assert_eq!(stats.total(), one(6, 1000));
 }
 
@@ -111,6 +115,181 @@ async fn ranged_reads_count_the_range_length() {
         one(2, 196)
     );
     assert_eq!(stats.total(), one(2, 196));
+}
+
+#[derive(Debug)]
+struct ShortReadStorage;
+
+struct ShortRead;
+
+const SHORT_READ_LEN: usize = 10;
+
+fn stub_unsupported<T>() -> iceberg::Result<T> {
+    Err(iceberg::Error::new(
+        iceberg::ErrorKind::FeatureUnsupported,
+        "stub storage",
+    ))
+}
+
+impl serde::Serialize for ShortReadStorage {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_unit_struct("ShortReadStorage")
+    }
+}
+
+#[async_trait::async_trait]
+impl FileRead for ShortRead {
+    async fn read(&self, _range: std::ops::Range<u64>) -> iceberg::Result<Bytes> {
+        Ok(Bytes::from(vec![1_u8; SHORT_READ_LEN]))
+    }
+}
+
+#[async_trait::async_trait]
+impl Storage for ShortReadStorage {
+    async fn exists(&self, _path: &str) -> iceberg::Result<bool> {
+        stub_unsupported()
+    }
+
+    async fn metadata(&self, _path: &str) -> iceberg::Result<FileMetadata> {
+        stub_unsupported()
+    }
+
+    async fn read(&self, _path: &str) -> iceberg::Result<Bytes> {
+        stub_unsupported()
+    }
+
+    async fn reader(&self, _path: &str) -> iceberg::Result<Box<dyn FileRead>> {
+        Ok(Box::new(ShortRead))
+    }
+
+    async fn write(&self, _path: &str, _bs: Bytes) -> iceberg::Result<()> {
+        stub_unsupported()
+    }
+
+    async fn writer(&self, _path: &str) -> iceberg::Result<Box<dyn FileWrite>> {
+        stub_unsupported()
+    }
+
+    async fn delete(&self, _path: &str) -> iceberg::Result<()> {
+        stub_unsupported()
+    }
+
+    async fn delete_prefix(&self, _path: &str) -> iceberg::Result<()> {
+        stub_unsupported()
+    }
+
+    fn new_input(&self, _path: &str) -> iceberg::Result<InputFile> {
+        stub_unsupported()
+    }
+
+    fn new_output(&self, _path: &str) -> iceberg::Result<OutputFile> {
+        stub_unsupported()
+    }
+
+    fn typetag_name(&self) -> &'static str {
+        "ShortReadStorage"
+    }
+
+    fn typetag_deserialize(&self) {}
+}
+
+#[tokio::test]
+async fn a_ranged_read_counts_the_returned_length_not_the_requested_span() {
+    let counters = Arc::new(IcebergIoCounters::new());
+    let storage = CountingStorage::new(Arc::new(ShortReadStorage), Arc::clone(&counters));
+    let reader = storage
+        .reader("/wh/t/data/00000-0-a.parquet")
+        .await
+        .unwrap();
+    assert_eq!(reader.read(0..1000).await.unwrap().len(), SHORT_READ_LEN);
+    let stats = counters.snapshot();
+    assert_eq!(
+        count(&stats, IcebergIoOp::RangedRead, IcebergFileClass::DataFile),
+        one(1, 10)
+    );
+    assert_eq!(stats.total(), one(1, 10));
+}
+
+async fn write_file(file_io: &FileIO, path: &str, payload: Vec<u8>) {
+    file_io
+        .new_output(path)
+        .unwrap()
+        .write(Bytes::from(payload))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn a_ranged_read_ending_on_the_tail_magic_of_a_data_or_delete_file_is_a_footer_read() {
+    let dir = TempDir::new().unwrap();
+    let root = dir.path().to_str().unwrap();
+    let counters = Arc::new(IcebergIoCounters::new());
+    let file_io = counting_file_io(&counters);
+    let mut parquet: Vec<u8> = b"PAR1".to_vec();
+    parquet.extend((0..=255_u8).cycle().take(992));
+    parquet.extend_from_slice(PARQUET_TAIL_MAGIC);
+    let mut puffin: Vec<u8> = (0..=255_u8).cycle().take(96).collect();
+    puffin.extend_from_slice(PUFFIN_TAIL_MAGIC);
+    let data = format!("{root}/t/data/00000-0-a.parquet");
+    let deletes = format!("{root}/t/data/00000-0-a-deletes.puffin");
+    let manifest = format!("{root}/t/metadata/abc-m0.avro");
+    write_file(&file_io, &data, parquet.clone()).await;
+    write_file(&file_io, &deletes, puffin).await;
+    write_file(&file_io, &manifest, parquet).await;
+    counters.reset();
+
+    let reader = file_io.new_input(&data).unwrap().reader().await.unwrap();
+    assert_eq!(reader.read(488..1000).await.unwrap().len(), 512);
+    assert_eq!(reader.read(4..100).await.unwrap().len(), 96);
+    assert_eq!(reader.read(100..200).await.unwrap().len(), 100);
+    let reader = file_io.new_input(&deletes).unwrap().reader().await.unwrap();
+    assert_eq!(reader.read(0..100).await.unwrap().len(), 100);
+    assert_eq!(reader.read(0..50).await.unwrap().len(), 50);
+    let reader = file_io
+        .new_input(&manifest)
+        .unwrap()
+        .reader()
+        .await
+        .unwrap();
+    assert_eq!(reader.read(0..1000).await.unwrap().len(), 1000);
+
+    let stats = counters.snapshot();
+    assert_eq!(
+        count(&stats, IcebergIoOp::FooterRead, IcebergFileClass::DataFile),
+        one(1, 512)
+    );
+    assert_eq!(
+        count(&stats, IcebergIoOp::RangedRead, IcebergFileClass::DataFile),
+        one(2, 196)
+    );
+    assert_eq!(
+        count(
+            &stats,
+            IcebergIoOp::FooterRead,
+            IcebergFileClass::DeleteFile
+        ),
+        one(1, 100)
+    );
+    assert_eq!(
+        count(
+            &stats,
+            IcebergIoOp::RangedRead,
+            IcebergFileClass::DeleteFile
+        ),
+        one(1, 50)
+    );
+    assert_eq!(
+        count(&stats, IcebergIoOp::RangedRead, IcebergFileClass::Manifest),
+        one(1, 1000)
+    );
+    assert_eq!(stats.by_op(IcebergIoOp::FooterRead), one(2, 612));
+}
+
+#[test]
+fn every_counter_cell_owns_its_cache_line() {
+    let cells = IcebergIoOp::ALL.len() * IcebergFileClass::ALL.len();
+    assert_eq!(std::mem::align_of::<IcebergIoCounters>(), 64);
+    assert_eq!(std::mem::size_of::<IcebergIoCounters>(), cells * 64);
 }
 
 #[tokio::test]
@@ -367,6 +546,9 @@ async fn a_scan_reads_data_file_ranges_through_the_counter() {
     let ranged = count(&stats, IcebergIoOp::RangedRead, IcebergFileClass::DataFile);
     assert!(ranged.requests > 0, "stats {stats:?}");
     assert!(ranged.bytes > 0, "stats {stats:?}");
+    let footer = count(&stats, IcebergIoOp::FooterRead, IcebergFileClass::DataFile);
+    assert_eq!(footer.requests, 1, "stats {stats:?}");
+    assert!(footer.bytes > 0, "stats {stats:?}");
 }
 
 async fn second_load_metadata_reads(caches: &CatalogCaches) -> u64 {
