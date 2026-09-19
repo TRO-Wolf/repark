@@ -79,6 +79,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-32 (2026-09-18):** `e3eef24f` (F-RDF-COW-BYTES-1 `#301` — `rewrite_data_files` keeps parquet position deletes that still apply; merging commits retire delete files older than every live data file; F-RDF-GRANULARITY-1 `#302` — `rewrite_data_files` output count follows Java's read-split planning).
   **RP-33 (2026-09-19):** `587d3592` (F-RPD-COMMITS-1 `#304` — `rewrite_position_delete_files` makes one replace commit with file-scoped outputs per referenced data file; dangling positions dropped, data sequence preserved).
   **RP-34 (2026-09-19):** `43fcd243` (F-PARQUET-SIZE-1 `#306` — fork-written parquet drops the `ARROW:schema` footer key and writes Java's `iceberg.schema`, plus `delete-type` on delete files; F-DANGLING-DV-COMMIT-1 `#305` — every merging commit drops the deletion vectors of removed data files).
+  **RP-35 (2026-09-19):** `7bd2fea3` (F-AVRO-NAME-1 `#308` — Avro field names in manifests are sanitised as Java's `AvroSchemaUtil`; a partition column such as `my col` writes and reads back, IPI-52).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
