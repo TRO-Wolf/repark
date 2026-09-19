@@ -269,6 +269,7 @@ Source comments retain only API and safety contracts; implementation narration i
   (2026-09-19, fork `#311` at `27e0d5fa`) `glue_catalog_counted` / `s3tables_catalog_counted`
   receive the session `CatalogCaches` through `cache_wiring.rs::wire_caches`; the AWS effect is
   unmeasured (the AWS bench is blocked on an IAM grant). Registry row `PERF-CATALOG-AWS-CACHE-1`.
+  pins: ice-catalog-cache-1/C-013
 
   **Creation is not cacheable.** `CREATE TABLE` and CTAS read back the metadata document they just
   wrote (the catalog proves reachability before claiming the pointer), so their census is 1
