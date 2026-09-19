@@ -368,7 +368,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   / identity-partitioned CTAS).
 - **Production-aligned leaves:**
   `ctas` (`register_memory_catalog` location-less CTAS lands under the warehouse), `create_table`,
-  `namespace_ddl` (`IF NOT EXISTS` create-new / same / conflicting / no-location behavior),
+  `namespace_ddl` (`IF NOT EXISTS` create-new / same / conflicting / no-location behavior;
+  ICE-DROP-NS-1: non-empty drop refuses on every spelling, empty drops, missing is
+  SCHEMA_NOT_FOUND. pins: ice-drop-ns-1/C-002, C-004, C-008),
   `catalog_ops`, `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,

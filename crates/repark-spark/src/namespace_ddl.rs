@@ -54,9 +54,20 @@ pub(crate) async fn execute_drop_namespace(
         let (catalog, namespace) = resolve_namespace(name)?;
         let handle = catalog_handle(catalogs, &catalog)?;
         let ident = NamespaceIdent::new(namespace.clone());
-        if if_exists && !handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
-            continue;
+        if !handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
+            if if_exists {
+                continue;
+            }
+            return Err(repark_iceberg::catalog::schema_not_found_on_drop(
+                &catalog, &namespace,
+            ));
         }
+        repark_iceberg::catalog::refuse_non_empty_namespace_drop(
+            handle.as_ref(),
+            &ident,
+            &namespace,
+        )
+        .await?;
         handle.drop_namespace(&ident).await.map_err(iceberg_err)?;
         reregister_drop_namespace(ctx, handle.clone(), &catalog, &namespace).await?;
     }

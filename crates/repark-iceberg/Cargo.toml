@@ -38,6 +38,8 @@ futures.workspace = true
 uuid.workspace = true
 # Catalog-edge spans; failed MERGE scratch-table deregister surfaces via `tracing::warn!`.
 tracing.workspace = true
+bytes.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 # In-memory Iceberg catalog + temp warehouse for AWS-free CTAS/read + transaction tests.

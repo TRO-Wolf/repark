@@ -49,3 +49,12 @@ chrono.workspace = true
 futures.workspace = true
 tokio.workspace = true
 tempfile = "3"
+serde_json.workspace = true
+
+[[bench]]
+name = "ice_read_perf"
+harness = false
+
+[[test]]
+name = "ice_read_perf_pins"
+path = "benches/ice_read_perf/pins.rs"

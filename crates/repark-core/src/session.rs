@@ -28,7 +28,7 @@ pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
 #[cfg(test)]
 pub(crate) use crate::idents::reject_path_escape_segment;
 use crate::{
-    engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
+    OverwriteIntent, engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
     parse_table_identifier_segments, resolve_s3_region_override,
 };
 
@@ -398,13 +398,8 @@ impl ReparkSession {
     /// # Errors
     /// Identical classification to [`Self::sql`]: every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
-        self.sql_with_write_options_inner(
-            dialect,
-            query,
-            &HashMap::new(),
-            crate::OverwriteIntent::Session,
-        )
-        .await
+        self.sql_with_write_options_inner(dialect, query, &HashMap::new(), OverwriteIntent::Session)
+            .await
     }
 
     /// Register an Iceberg [`Catalog`] as both a DataFusion provider and session write handle.
@@ -493,15 +488,21 @@ impl ReparkSession {
                 self.register_memory_catalog(&spec.name, warehouse).await
             }
             CatalogKind::Glue => {
-                let catalog = repark_iceberg::catalog::glue_catalog(&spec.props)
-                    .await
-                    .map_err(engine_err)?;
+                let catalog = repark_iceberg::catalog::glue_catalog_counted(
+                    &spec.props,
+                    self.iceberg_io_counters(),
+                )
+                .await
+                .map_err(engine_err)?;
                 self.register_iceberg_catalog(&spec.name, catalog).await
             }
             CatalogKind::S3Tables => {
-                let catalog = repark_iceberg::catalog::s3tables_catalog(&spec.props)
-                    .await
-                    .map_err(engine_err)?;
+                let catalog = repark_iceberg::catalog::s3tables_catalog_counted(
+                    &spec.props,
+                    self.iceberg_io_counters(),
+                )
+                .await
+                .map_err(engine_err)?;
                 // S3 Tables assigns table location at create, so CTAS must route create-first.
                 self.register_iceberg_catalog_with_policy(
                     &spec.name,

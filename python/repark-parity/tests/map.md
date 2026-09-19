@@ -122,6 +122,38 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   lists (dropped, renamed, appended, re-hosted, unmerged, cron removed, `pull_request`
   reachability) each fail. YAML read by indentation-aware regex, no PyYAML.
   pins: platform-1/C-001, C-002, C-003, C-004, C-005
+- `test_ice_read_perf_bench_workflow.py` — **ICE-READ-PERF-0 (2026-09-19):** pins over the
+  dispatch-only `ice-read-perf-bench` job of `aws-acceptance.yml`. `live-aws` keeps the nightly
+  and runs only on the schedule or `leg == acceptance`. The dispatch offers `leg` (choice,
+  `acceptance` default) and `purpose`. The bench job runs only on its dispatch, behind
+  `environment: aws-acceptance`, the ref guard, job-scoped `id-token: write`,
+  `persist-credentials: false` and no `continue-on-error`. It uses the same action SHAs as
+  `live-aws` plus the repo's `upload-artifact` SHA. Step order: build, then credentials, then
+  S3 Tables create, compaction `disabled` and read back, S3 Tables write, Glue create and write,
+  both run loops, the bytes summary, the upload. It runs four modes on both catalogs at
+  `BENCH_REPEAT: "1"` (Q-24a-1) under `set -euo pipefail`. No `${{ }}` reaches a `run:` script, and the job
+  carries no `#` comment. Doctoring compaction to `enabled` or adding `continue-on-error` reds
+  it. Round 3 (F-MUT-4B): no failure can be swallowed. The only `||` in the job's `run:`
+  scripts is `|| stop "…"` on the two `aws s3tables` calls, and every `cargo bench` command
+  line (backslash continuations joined, `>` scripts folded) carries no `||`, `&&`, `;` or
+  pipe, so `|| true`, `&& true` or `; true` after any of the seven bench commands or the two
+  compaction calls reds `test_no_bench_or_s3tables_failure_can_be_swallowed`. Round 3
+  (F-SEC-REF-ORDER): the bench job's ref guard (`if: github.ref != 'refs/heads/main'`, `exit
+  1`) is the first ordered marker. It must be the job's first step, ahead of
+  `actions/checkout@` and `aws-actions/configure-aws-credentials@`, so moving it after the
+  credentials or after checkout, or dropping its `exit 1`, reds the step-order pin. Round 3
+  (F-SEC-PURPOSE, hardening): every `${…}` in the job's `run:` scripts sits inside double
+  quotes. A small scanner tracks single quotes, double quotes, `$(…)` and `$((…))` to check it,
+  and it is self-pinned on a mixed sample. Unquoting `${PURPOSE:-unstated}`, the `mkdir`
+  target, `--mode "${mode}"` or the `--table-bucket-arn` inside the `$(aws …)` reds
+  `test_every_variable_expansion_in_the_bench_scripts_is_double_quoted`. Two more pins hold
+  every expansion braced (`test_every_variable_expansion_in_the_bench_scripts_is_braced`) and
+  errexit never turned off (`test_errexit_is_never_turned_off_in_the_bench_scripts`). The critic's claim
+  that `purpose` can run command substitution was measured false (bash 5.2.21, 2026-09-19).
+  `PURPOSE='$(touch /tmp/pa-pwn)'; echo "x ${PURPOSE:-unstated}"` prints the text literally and
+  creates no file; backticks and the unquoted form behave the same, because bash does not
+  re-evaluate an expanded value. YAML read by regex, no PyYAML.
+  pins: ice-read-perf-0/C-018, C-019
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
@@ -146,6 +178,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):**
   mirror row `writer_readwriter.py` 1095 → 1093, the value round 1 set in
   `scripts/check_lib_py.py` without its mirror.
+- `test_cap_1_source_file_line_cap.py` — **ICE-DROP-NS-1 (2026-09-19, run 24c):**
+  mirror row ratchets `repark-sql/src/tests.rs` 1520 → 1513 with `scripts/check_rust_file_size.py`.
+  pins: ice-drop-ns-1/C-011
 - `test_cap_1_source_file_line_cap.py` — **ICE-TT-RESOLVE-1 (2026-09-19, run 24c):**
   mirror rows ratchet `repark-python/src/session.rs` 1126 → 1122 and `session_core.py`
   2290 → 2287 with `scripts/check_rust_file_size.py` and `scripts/check_lib_py.py`.

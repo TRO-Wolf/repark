@@ -147,6 +147,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   unchanged field ids, or a typed Spark-shaped refusal with a dated registry row.
   `risk_tier: standard`. Branch `fix/ice-column-reorder-1`.
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [ice-page-prune-1-ledger.md](ice-page-prune-1-ledger.md) —
+  **ICE-PAGE-PRUNE-1 (2026-09-19), in flight:** the RePark pins for page-level
+  row selection (slate unit 1, run 24a) — the Spark 4.1.2 recorder, the five
+  rewritten fixture warehouses plus compacted truth, both-door answer pins
+  with lineage, RePark-written self-consistency and page-index pins, and the
+  live re-derivation tier; the rewritten `del_v2` and the bare-decimal ranges
+  pin loud divergences. `risk_tier: standard`. Branch `perf/ice-page-prune-1`.
+  pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [never-oom-panic-1-ledger.md](never-oom-panic-1-ledger.md) —
   **NEVER-OOM-PANIC-1 (2026-09-16), in flight:** the tight-pool NLJ race — `inner future
   panicked during poll` versus the typed refusal — fixed at the root so the nested-loop
@@ -225,6 +233,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
   L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
+- [ice-read-perf-0-ledger.md](ice-read-perf-0-ledger.md) —
+  **ICE-READ-PERF-0 (2026-09-19), in flight:** the Iceberg I/O counting layer (a counting
+  `StorageFactory` whose counters the session owns; Glue and S3 Tables wrap exactly the fork
+  default) and the `ice_read_perf` bench bed (setup, cold / warm / concurrent runs, the R-3
+  3 GiB size flag with exit 3). No product behaviour change. Every clause PROVEN, attestation
+  complete. `risk_tier: standard`. Branch `perf/ice-read-perf-0`.
+  pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
@@ -507,6 +523,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-35-fork-pin-ledger.md](rp-35-fork-pin-ledger.md) —
+  **RP-35-FORK-PIN (2026-09-19):** the fork pin moves to `7bd2fea3` (#308 Avro name
+  sanitising); 20 recorded Spark cells pin IPI-52 (rows, `partitions`, the manifest's Avro
+  partition record). `risk_tier: standard`. Branch `chore/rp-35-fork-pin`.
 - [rp-34-fork-pin-ledger.md](rp-34-fork-pin-ledger.md) —
   **RP-34-FORK-PIN (2026-09-19):** the fork pin moves to `43fcd243` (#306 parquet footer,
   #305 dangling DVs); three `clippy::large_futures` calls are boxed; the three
@@ -1136,3 +1156,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (ORC/Avro table-property refusal, ENC-1 cleartext bytes, north-star C-2 FIXED
   citation); V3-05 recorded in the ledger only (PR #700 owns the row).
   `risk_tier: standard`. Branch `docs/ice-registry-sweep-1b`.
+- [ice-drop-ns-1-ledger.md](ice-drop-ns-1-ledger.md) —
+  **ICE-DROP-NS-1 (2026-09-19), in flight:** `DROP NAMESPACE` on a non-empty
+  namespace refuses like Spark 4.1.2 — the 26-cell oracle plus red-first pins
+  on the facade door, one shared pre-drop emptiness helper in `repark-iceberg`
+  called by both doors, Rust pins at the helper and on both doors, registry
+  row FIXED with the nested-namespace boundary and the exception-class
+  residual. `risk_tier: standard`. Branch `fix/ice-drop-ns-1`.
+  pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

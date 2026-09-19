@@ -38,6 +38,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   are in force. **IO-ORC-1 (2026-09-16):** `orc-rust 0.8.0` (`default-features = false`, sync
   reader) in `[workspace.dependencies]` for the read-only ORC scan (owner ruling Q-15B-1),
   plus the codec crates the scan decodes with (DEFLATE/zlib, LZ4, LZO, Snappy, Zstandard).
+  **ICE-READ-PERF-0 (2026-09-19):** `bytes = "1"` — already in the lock under the fork's
+  storage traits — is declared for `repark-iceberg`'s counting `Storage`; no new package.
   **ICE-MIXED-CASE-1 run 22b (2026-09-18, Q-22b-MC-1):** `stacker 0.1.25` — already in the lock
   under DataFusion's `recursive` — is declared for `repark-core`'s column repair, which runs
   each poll of Spark-door planning on a stack grown to the statement's nesting depth.
@@ -79,6 +81,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-32 (2026-09-18):** `e3eef24f` (F-RDF-COW-BYTES-1 `#301` — `rewrite_data_files` keeps parquet position deletes that still apply; merging commits retire delete files older than every live data file; F-RDF-GRANULARITY-1 `#302` — `rewrite_data_files` output count follows Java's read-split planning).
   **RP-33 (2026-09-19):** `587d3592` (F-RPD-COMMITS-1 `#304` — `rewrite_position_delete_files` makes one replace commit with file-scoped outputs per referenced data file; dangling positions dropped, data sequence preserved).
   **RP-34 (2026-09-19):** `43fcd243` (F-PARQUET-SIZE-1 `#306` — fork-written parquet drops the `ARROW:schema` footer key and writes Java's `iceberg.schema`, plus `delete-type` on delete files; F-DANGLING-DV-COMMIT-1 `#305` — every merging commit drops the deletion vectors of removed data files).
+  **RP-35 (2026-09-19):** `7bd2fea3` (F-AVRO-NAME-1 `#308` — Avro field names in manifests are sanitised as Java's `AvroSchemaUtil`; a partition column such as `my col` writes and reads back, IPI-52).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
