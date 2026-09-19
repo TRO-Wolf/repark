@@ -231,8 +231,6 @@ _VALUE_CELLS: list[tuple[str, dict[str, object], int]] = [
 ]
 
 _VALUE_XFAIL: dict[str, str] = {
-    "target_small": "FORK-WRITE-GRANULARITY 2026-09-17: fork writes one file per group "
-    "(RePark 8→2), Spark splits outputs to the target size (8→4)",
     "max_group_size": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 added, Spark 8→4",
     "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 "
     "added, Spark 8→4",

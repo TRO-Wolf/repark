@@ -6407,7 +6407,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   pins: ice-rdf-options-1/C-006
   pins: rp-32-rdf-cow-bytes/C-003, C-004
 
-### ICE-RDF-GRANULARITY-1 — `rewrite_data_files` output splitting and file-group granularity stay fork-side — **OPEN 2026-09-17, fork ask**
+### ICE-RDF-GRANULARITY-1 — `rewrite_data_files` output splitting and file-group granularity stay fork-side — **OPEN 2026-09-17, fork ask; `target_small` FIXED 2026-09-19 (RP-32, fork #302)**
 
 - **repark** — on the 8-file shapes the fork writes one file per group and compacts 8→8
   added where Spark splits outputs to the target size (reason strings 2026-09-17:
@@ -6431,7 +6431,15 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   granularity live in the fork's rewrite path.
   Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
   target-size split did not close it.
+  **Re-measured 2026-09-19 at RP-32 (fork `e3eef24f`, #302 F-RDF-GRANULARITY-1):** the fork's
+  planner now follows Java's read-split planning (split size from the expected output count
+  plus 5120 B, clamped to the target and write maximum; tasks packed by length plus delete
+  bytes, lookback 10). `target_small` answers Spark's 8→4 and runs plainly. `max_group_size`
+  and `partial_progress_groups` stay strict xfails: the planner is Java's, and the residual
+  is parquet file size. Run 23a measured the fork writer's files at 1,694 B against Spark's
+  ~1,153 B on this shape, and Java's own rules applied to 1,694 B files answer 8/8/8+3.
   pins: ice-rdf-fork-asks-1/C-001
+  pins: rp-32-rdf-cow-bytes/C-010
 
 ### ICE-RDF-COW-BYTES-1 — `rewritten_bytes` missed the DELETE-written survivor file the rewrite folds in — **FIXED 2026-09-19 (RP-32, fork #301 F-RDF-COW-BYTES-1)**
 
