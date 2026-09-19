@@ -17,6 +17,8 @@ table is the "before" of every later unit of the slate. No product behaviour liv
 - `pins.rs` — the `[[test]] ice_read_perf_pins` root: declares the same modules and pins them
   offline (see "Pins"). Every tested function is also on the bench's own path, so neither root
   carries dead code.
+- `pins_report.rs` — pins-only module of the `pins.rs` root (ICE-CATALOG-CACHE-1): the report's
+  metadata-cache evictions in JSON and markdown. pins: ice-catalog-cache-1/C-009
 - `cli.rs` — hand-written argument parsing (no new dependency), the exit codes (`exit_code`
   maps an outcome to 0 / 1 / 3), and the runtime. `cargo bench` appends `--bench`; the parser
   drops it.
@@ -142,8 +144,10 @@ would change what "four at once" measures for the other four (their timings and 
   Iceberg scan's manifest planning), `first_batch_ms` (from the SQL start, so it INCLUDES
   planning), `execute_to_first_batch_ms` (first batch − planning), `total_ms`, rows, requests and
   bytes by operation kind and by file class (counters reset before each measured query or
-  round), metadata-cache hits / misses / body fetches (a delta of
-  `iceberg_metadata_cache_stats`), `rss_at_reset_kib`, and `peak_rss_kib`. RSS reset: the bench
+  round), metadata-cache hits / misses / body fetches / evictions (a delta of
+  `iceberg_metadata_cache_report`; the table's cache cell is `hits/misses/evictions` since
+  ICE-CATALOG-CACHE-1 — evictions are the fork's delta accounting, advisory until its cache
+  settles), `rss_at_reset_kib`, and `peak_rss_kib`. RSS reset: the bench
   writes `5` to `/proc/self/clear_refs`, which resets `VmHWM` to the CURRENT RSS, not to zero.
   `peak_rss_kib` is therefore `max(rss_at_reset, peak during the query)`: memory left over from
   earlier queries is a floor, and a query cannot show a peak below it. Read the two figures
@@ -231,6 +235,15 @@ would change what "four at once" measures for the other four (their timings and 
   defect outside this unit, reported in the unit's hand-back.
 
 ## Pins (`pins.rs`)
+
+- **ICE-CATALOG-CACHE-1 (2026-09-19), in `pins_report.rs`** (a module of the `pins.rs` root,
+  split out because `pins.rs` sits at the 1000-line ceiling; `pins.rs`'s three `std` imports
+  were grouped to make room for the `mod` line):
+  `the_report_carries_metadata_cache_evictions` builds a `QueryRecord` from an `IoDelta` with
+  evictions and reads them back from the JSON (`metadata_cache.evictions`) and from the markdown
+  (`| cache hit/miss/evict |`, `| 5/3/2 |`); `every_measured_sample_reports_its_evictions` runs
+  the cold and warm modes on the tiny bed and requires `metadata_cache.evictions` in Q1–Q3's
+  samples. Both red with the JSON field dropped. pins: ice-catalog-cache-1/C-009
 
 - The decision at limit − 1, limit and limit + 1 (and 0, `u64::MAX`); the constant; exit 3 is
   distinct; a flag appends exactly one line to the step summary and a pass appends none; no
