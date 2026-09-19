@@ -89,14 +89,18 @@ change. The sixteen strict xfails flip to plain pins against the recorded Spark 
 
 ## Facade evidence
 
-- `test_ice_list_null_1.py` offline (`-n 4`): TBD.
-- `test_ice_list_null_1.py` live (`REPARK_PARITY_LIVE=1`, Spark 4.1.2): TBD.
-- Identity-DELETE regression files: TBD.
-- `cargo test -p repark-iceberg predicate_dml`: 55 passed pre-existing + 7 new, 0 failed.
-- `cargo test -p repark-spark --lib list_null_compound`: 6 passed.
-- `cargo fmt --all --check`, `cargo clippy -p repark-iceberg -p repark-spark -p repark-sql --all-targets -- -D warnings -A clippy::disallowed_methods`, `ruff check`, `ruff format --check`: TBD.
-- `check_ledger_grammar.py`, `check_docs_links.py`, `sync_map_md.py --check`: TBD.
-- `rg -n "LIST-NULL" python/repark-parity/tests`: TBD.
+- `test_ice_list_null_1.py` offline (`-n 4`): 257 passed, 4 skipped (live tier), 0 xfailed.
+- `test_ice_list_null_1.py` live (`REPARK_PARITY_LIVE=1`, Spark 4.1.2): 261 passed.
+- Identity-DELETE regression files (`test_dml_subquery_parity`, `test_sql_dml_eager`,
+  `test_v3_cow_dml`, `test_v3_legacy_delete_merge`, `-n 4`): 52 passed, 3 skipped.
+- `cargo test -p repark-iceberg predicate_dml`: 55 passed, 0 failed (48 pre-existing + 7 new).
+- `cargo test -p repark-spark --lib list_null_compound`: 6 passed; `tests::dml`: 30 passed.
+- `cargo fmt --all --check`: clean. `cargo clippy -p repark-iceberg -p repark-spark
+  -p repark-sql --all-targets -- -D warnings -A clippy::disallowed_methods`: clean.
+  `ruff check .`: clean. `ruff format --check` on the changed Python file: clean.
+- `check_ledger_grammar.py`: 209 live ledgers clean. `check_docs_links.py`: 6005 links
+  clean. `sync_map_md.py --check`: 302 maps clean.
+- `grep -rn "LIST-NULL" python/repark-parity/tests`: no hits — no parity-docs pin to bring true.
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -144,4 +148,7 @@ COVERAGE_ATTESTATION:
 
 ## Outcome
 
-TBD.
+Done: three commits on `fix/ice-list-null-2` — red pins (`2c498d5a`), the fix with the
+flipped Python pins (`2fcd08a1`), registry plus ledger (`a1cd884f`) — and this close-out.
+All sixteen cells answer Spark's rows; the eight OR cells pin the measured `overwrite`
+operation (Q-2, flagged for orchestrator confirm). No ceiling raised, no fork change.
