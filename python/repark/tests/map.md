@@ -54,8 +54,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Spark's history there is an RTAS table replace, pinned as a strict xfail. The live tier
   (`REPARK_PARITY_LIVE=1`) runs the recorder's `check` mode. Python's native `repark.sql`
   door has no Iceberg `PARTITION` overwrite shape, so the native-door cells are Rust pins in
-  `crates/repark-sql`.
-  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  `crates/repark-sql`. Registry rows DML-1, ICE-OVERWRITE-MODE-1 and ICE-WRITE-OPTIONS-1
+  cite this file as their pin.
+  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
   Flipped with the fix: `test_dml_b_partition_overwrite.py`'s dynamic `PARTITION (id)` and
   empty-dynamic pins run under a `dynamic` fixture (restored after), and a static-mode twin
   pins the whole-table replace and the empty wipe; `test_ice_v3_write_default_1.py`'s

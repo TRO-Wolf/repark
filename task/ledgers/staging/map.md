@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-overwrite-mode-1-ledger.md](ice-overwrite-mode-1-ledger.md) —
+  **ICE-OVERWRITE-MODE-1 (2026-09-19), in flight:** Spark's overwrite partition set on
+  every overwrite door (IPI-03) — one Rust decision over the session
+  `partitionOverwriteMode`, the typed `saveAsTable` / `overwritePartitions` intent and the
+  `overwrite-mode` writer option; static-mode `PARTITION (k)` replaces the whole table,
+  mixed lists run, `NON_PARTITION_COLUMN` refuses; 60-cell recorded oracle plus red-first
+  pins. `risk_tier: standard`. Branch `fix/ice-overwrite-mode-1`.
+  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [range-tvf-id-1-ledger.md](range-tvf-id-1-ledger.md) —
   **RANGE-TVF-ID-1 (2026-09-18), in flight:** the `range(...)` table function
   names its column `id` like Spark 4.1.2 on both SQL doors — a RePark-owned
