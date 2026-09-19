@@ -21,6 +21,7 @@ mod catalog_cache_staleness;
 mod catalog_ops;
 mod collation;
 mod column_move;
+mod count_fold;
 mod create_table;
 mod ctas;
 mod ctas_view;

@@ -6885,6 +6885,15 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2
   on the path.
   pins: ice-list-null-1/C-002
+- [test_ice_count_fold_1.py](test_ice_count_fold_1.py) — **ICE-COUNT-FOLD-1
+  (2026-09-19):** offline, per-test four-file Iceberg bed. Names, LongType and values are
+  main's, asserted unchanged: SQL `count(*)` → `count(*)`, `count(1)` → `count(Int64(1))`,
+  `count(5)` → `count(Int64(5))` (Spark 4.1.2 names these `count(1)`, `count(1)`,
+  `count(5)`; the name gap predates this unit), `groupBy().count()` → `count`,
+  `agg(F.count('*'))` → `count(1)`, `df.count()` → a Python `int`. The fold is measured
+  through EXPLAIN text on the SQL door and `DataFrame.explain()` on the DataFrame door; a
+  `WHERE` residual still scans.
+  pins: ice-count-fold-1/C-003, C-004
 - [test_ice_list_null_1.py](test_ice_list_null_1.py) —
   **ICE-LIST-NULL-1 (2026-09-18, RP-31):** DELETE and UPDATE with IS NULL on nested
   columns answer Spark 4.1.2 — one pin per recorded cell (128: four shapes by four

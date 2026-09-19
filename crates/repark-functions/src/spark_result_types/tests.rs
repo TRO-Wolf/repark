@@ -4,8 +4,9 @@ use datafusion::arrow::array::AsArray;
 use datafusion::arrow::datatypes::{DataType, Int32Type, Int64Type};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::ScalarValue;
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::execution::SessionStateBuilder;
-use datafusion::logical_expr::Expr;
+use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::optimizer::Analyzer;
 use datafusion::prelude::SessionContext;
 
@@ -164,4 +165,117 @@ async fn signed_count_is_not_wrapped_twice() {
     let ctx = ctx_with_types();
     let batch = batch(&ctx, "SELECT count(*) AS v FROM (VALUES (1), (2)) AS t(x)").await;
     assert_eq!(batch.schema().field(0).data_type(), &DataType::Int64);
+}
+
+async fn analyzed_aggregate_args(ctx: &SessionContext, sql: &str) -> Vec<Expr> {
+    let plan = ctx.sql(sql).await.expect("plan").into_unoptimized_plan();
+    let analyzed = ctx
+        .state()
+        .analyzer()
+        .execute_and_check(plan, &ctx.state().config_options().clone(), |_, _| {})
+        .expect("analyze");
+    let mut args = Vec::new();
+    analyzed
+        .apply(|node| {
+            if let LogicalPlan::Aggregate(aggregate) = node {
+                for expr in &aggregate.aggr_expr {
+                    expr.apply(|inner| {
+                        if let Expr::AggregateFunction(call) = inner {
+                            args.extend(call.params.args.iter().cloned());
+                        }
+                        Ok(TreeNodeRecursion::Continue)
+                    })
+                    .expect("walk aggregate expr");
+                }
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })
+        .expect("walk plan");
+    args
+}
+
+fn count_star_expansion() -> Expr {
+    Expr::Literal(ScalarValue::Int64(Some(1)), None)
+}
+
+#[tokio::test]
+async fn count_star_keeps_the_int64_expansion() {
+    let ctx = ctx_with_types();
+    let args =
+        analyzed_aggregate_args(&ctx, "SELECT count(*) FROM (VALUES (1), (2)) AS t(x)").await;
+    assert_eq!(args, vec![count_star_expansion()]);
+}
+
+#[tokio::test]
+async fn count_one_keeps_the_int64_expansion() {
+    let ctx = ctx_with_types();
+    let args =
+        analyzed_aggregate_args(&ctx, "SELECT count(1) FROM (VALUES (1), (2)) AS t(x)").await;
+    assert_eq!(args, vec![count_star_expansion()]);
+}
+
+#[tokio::test]
+async fn count_of_an_int32_one_widens_to_the_expansion() {
+    let ctx = ctx_with_types();
+    let frame = ctx
+        .sql("SELECT * FROM (VALUES (1), (2)) AS t(x)")
+        .await
+        .expect("plan")
+        .aggregate(
+            vec![],
+            vec![datafusion::functions_aggregate::count::count(
+                Expr::Literal(ScalarValue::Int32(Some(1)), None),
+            )],
+        )
+        .expect("aggregate");
+    let analyzed = ctx
+        .state()
+        .analyzer()
+        .execute_and_check(
+            frame.logical_plan().clone(),
+            &ctx.state().config_options().clone(),
+            |_, _| {},
+        )
+        .expect("analyze");
+    let rendered = format!("{analyzed}");
+    assert!(rendered.contains("count(Int64(1))"), "{rendered}");
+    assert_eq!(frame.schema().field(0).name(), "count(Int32(1))");
+    assert_eq!(analyzed.schema().field(0).name(), "count(Int32(1))");
+}
+
+#[tokio::test]
+async fn count_five_and_distinct_one_still_narrow() {
+    let ctx = ctx_with_types();
+    let args =
+        analyzed_aggregate_args(&ctx, "SELECT count(5) FROM (VALUES (1), (2)) AS t(x)").await;
+    assert_eq!(args, vec![Expr::Literal(ScalarValue::Int32(Some(5)), None)]);
+    let args = analyzed_aggregate_args(
+        &ctx,
+        "SELECT count(DISTINCT 1) FROM (VALUES (1), (2)) AS t(x)",
+    )
+    .await;
+    assert_eq!(args, vec![Expr::Literal(ScalarValue::Int32(Some(1)), None)]);
+}
+
+#[tokio::test]
+async fn count_star_filter_literal_still_narrows() {
+    let ctx = ctx_with_types();
+    let args = analyzed_aggregate_args(
+        &ctx,
+        "SELECT count(*) FILTER (WHERE x > 1) FROM (VALUES (1), (2)) AS t(x)",
+    )
+    .await;
+    assert_eq!(args, vec![count_star_expansion()]);
+    let batch = batch(
+        &ctx,
+        "SELECT count(*) FILTER (WHERE x > 1) AS v, count(*) AS w, count(1) AS y, count(5) AS z FROM (VALUES (1), (2)) AS t(x)",
+    )
+    .await;
+    for index in 0..4 {
+        assert_eq!(batch.schema().field(index).data_type(), &DataType::Int64);
+    }
+    let firsts: Vec<i64> = (0..4)
+        .map(|index| batch.column(index).as_primitive::<Int64Type>().value(0))
+        .collect();
+    assert_eq!(firsts, vec![1, 2, 2, 2]);
 }

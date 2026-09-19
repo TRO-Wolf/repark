@@ -561,6 +561,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
   pins: ice-column-reorder-1/C-001, C-002
+- [count_fold.rs](count_fold.rs) — **ICE-COUNT-FOLD-1 (2026-09-19):** the `count(*)`
+  statistics fold over a four-file, twelve-row table on `common::setup`. Folded (no
+  `IcebergTableScan` in the physical plan) and correct: `count(*)`, `count(1)`, `count(*) …
+  LIMIT 1`, the DataFrame `count_all()` aggregate, after a copy-on-write DELETE, and
+  `VERSION AS OF` an older snapshot (the older snapshot's count). Scanned and correct: a
+  `WHERE id < 5` residual, a `LIMIT 5` subquery, a v2 merge-on-read position delete, a v3
+  deletion vector. An empty table answers 0. RePark writes no equality deletes, so no
+  equality-delete pin exists here.
+  pins: ice-count-fold-1/C-003
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
