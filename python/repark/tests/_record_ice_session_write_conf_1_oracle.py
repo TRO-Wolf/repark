@@ -83,9 +83,9 @@ def _names(cell_id: str, catalog: str) -> tuple[str, str, str]:
 def _summaries(spark: Any, table: str) -> list[dict[str, Any]]:
     """Read snapshot summaries oldest-first for one table."""
     rows = spark.sql(
-        f"SELECT summary, committed_at FROM {table}.snapshots ORDER BY committed_at"
+        f"SELECT operation, summary, committed_at FROM {table}.snapshots ORDER BY committed_at"
     ).collect()
-    return [dict(row["summary"]) for row in rows]
+    return [{"operation": row["operation"], **dict(row["summary"])} for row in rows]
 
 
 def _data_rows(spark: Any, table: str) -> list[list[Any]]:
@@ -172,7 +172,7 @@ def _cz_run(
     props: str = "",
 ) -> dict[str, Any]:
     """Run one compression-codec cell and record its Spark answer."""
-    table, table_two, _ = _names(cell_id, "hc")
+    table, table_two, short = _names(cell_id, "hc")
     record: dict[str, Any] = {"id": cell_id}
     applied = []
     try:
@@ -183,7 +183,7 @@ def _cz_run(
             f"CREATE TABLE {table} (id BIGINT, s STRING) USING iceberg "
             f"TBLPROPERTIES ('format-version'='2'{props})"
         )
-        body(spark, table, table_two, "")
+        body(spark, table, table_two, short)
         record["status"] = "ok"
         record["obs"] = {"codec": _file_codecs(spark, table)}
         return record
@@ -206,7 +206,7 @@ def _insert_rows(spark: Any, table: str, table_two: str, short: str) -> None:
     spark.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
 
 
-def _df_one_row(spark: Any, table: str) -> Any:
+def _df_one_row(spark: Any) -> Any:
     """Build the shared one-row DataFrame."""
     return spark.createDataFrame([(1, "a", "x")], "id BIGINT, data STRING, cat STRING")
 
@@ -413,6 +413,13 @@ def _derive(spark: Any) -> list[dict[str, Any]]:
     return cells
 
 
+def _sorted_data(obs: dict[str, Any]) -> dict[str, Any]:
+    """Return ``obs`` with its ``data`` rows in repr order, the order the fixture does not fix."""
+    if "data" not in obs:
+        return obs
+    return {**obs, "data": sorted(obs["data"], key=repr)}
+
+
 def _checked(records: list[dict[str, Any]], fixture: dict[str, Any]) -> None:
     """Compare re-derived cells against the committed fixture."""
     expected = fixture["cells"]
@@ -425,7 +432,7 @@ def _checked(records: list[dict[str, Any]], fixture: dict[str, Any]) -> None:
             assert needle in record["error"]["msg"], record["id"]
             assert needle in cell["error"]["msg"], record["id"]
         else:
-            assert record["obs"] == cell["obs"], record["id"]
+            assert _sorted_data(record["obs"]) == _sorted_data(cell["obs"]), record["id"]
 
 
 def main() -> None:

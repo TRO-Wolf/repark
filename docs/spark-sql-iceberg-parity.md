@@ -3158,15 +3158,19 @@ the pin rather than obeying it.
   session conf over table property for the codec (plus `compression-level`)
   and merges `spark.sql.iceberg.snapshot-property.*` under the writer
   option's `snapshot-property.*`, applied at every Iceberg commit the session
-  makes: SQL INSERT, `writeTo` append, `saveAsTable` append, COW DELETE /
-  UPDATE / MERGE overwrites, MoR DELETE delete, INSERT OVERWRITE, CTAS, and
-  the identity predicate-DML commits. The session conf is read in Rust from
+  makes: SQL INSERT, `writeTo` append, `saveAsTable` append, COW DELETE and
+  MERGE overwrites, MoR DELETE delete, INSERT OVERWRITE, CTAS, and the identity
+  predicate-DML commits. A plain `UPDATE … SET … WHERE` that commits through the
+  fork's DataFusion DML carries no session snapshot property yet (residue below,
+  measured by the orchestrator's local gate). The session conf is read in Rust from
   the session config (builder installs the carrier; the statement funnel
   merges it into the statement options; the router folds it into every write
   arm); Python forwards the key strings only. An unknown codec refuses before
   any file is written, naming the codec. Before: both confs silently ignored
   (measured 2026-09-19: 26 of 30 pins red on the base). After: the pin file is
-  green with two strict xfails (below).
+  green with three strict xfails, all fork asks under `F-RDF-SESSION-CONF-1`:
+  `rewrite_data_files` (codec and snapshot property) and the fork-committed
+  `UPDATE` (snapshot property).
 - **Apache Spark** — the recorded cells in
   `python/repark/tests/ice_session_write_conf_1_spark_oracle.json` (live
   PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18, 16 SP + 9 CZ cells): `team=a`
