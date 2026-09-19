@@ -134,3 +134,174 @@ fn escaping_identifiers_are_rejected() {
     assert!(reject_path_escape_ident("", "table").is_err());
     reject_path_escape_ident("orders", "table").expect("a plain identifier passes");
 }
+
+use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::prelude::{SessionConfig, SessionContext};
+use iceberg::{Catalog, TableIdent};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
+use repark_iceberg::catalog::{memory_catalog, register_iceberg_catalog};
+use std::collections::HashSet;
+use std::sync::Arc;
+use tempfile::TempDir;
+
+struct Door {
+    ctx: SessionContext,
+    catalogs: CatalogRegistry,
+    catalog: Arc<dyn Catalog>,
+    _warehouse_dir: TempDir,
+}
+
+impl Door {
+    async fn sql(&self, sql: &str) -> datafusion::error::Result<Vec<RecordBatch>> {
+        let read_only = HashSet::new();
+        let frame = crate::execute(
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
+            sql,
+        )
+        .await?;
+        frame.collect().await
+    }
+
+    async fn ok(&self, sql: &str) -> Vec<RecordBatch> {
+        self.sql(sql)
+            .await
+            .unwrap_or_else(|err| panic!("`{sql}` must succeed: {err}"))
+    }
+
+    async fn err(&self, sql: &str) -> String {
+        match self.sql(sql).await {
+            Ok(_) => panic!("`{sql}` must fail"),
+            Err(err) => err.to_string(),
+        }
+    }
+
+    async fn table_exists(&self, namespace: &str, table: &str) -> bool {
+        self.catalog
+            .table_exists(&TableIdent::new(
+                NamespaceIdent::new(namespace.to_string()),
+                table.to_string(),
+            ))
+            .await
+            .expect("table_exists")
+    }
+}
+
+async fn door() -> Door {
+    let warehouse_dir = TempDir::new().expect("warehouse tempdir");
+    let warehouse = warehouse_dir
+        .path()
+        .to_str()
+        .expect("utf8 warehouse")
+        .to_string();
+    let catalog: Arc<dyn Catalog> = memory_catalog(&warehouse).await.expect("memory catalog");
+    let ctx = SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+    register_iceberg_catalog(&ctx, "ice", Arc::clone(&catalog))
+        .await
+        .expect("register catalog");
+    let mut catalogs = CatalogRegistry::new();
+    catalogs.insert(
+        "ice".to_string(),
+        Arc::clone(&catalog),
+        LocationPolicy::TempFallbackAllowed {
+            root: warehouse_dir.path().to_path_buf(),
+        },
+    );
+    catalogs.note_local_warehouse_root(&warehouse);
+    Door {
+        ctx,
+        catalogs,
+        catalog,
+        _warehouse_dir: warehouse_dir,
+    }
+}
+
+#[tokio::test]
+async fn drop_schema_nonempty_refuses_and_keeps_everything() {
+    let door = door().await;
+    door.ok("CREATE SCHEMA ice.bronze").await;
+    door.ok("CREATE TABLE ice.bronze.orders AS SELECT 1 AS id")
+        .await;
+    let error = door.err("DROP SCHEMA ice.bronze").await;
+    assert!(
+        error.contains("Namespace bronze is not empty."),
+        "the refusal must name the namespace like Spark: {error}"
+    );
+    assert!(
+        error.contains("Contains 1 table(s)."),
+        "the refusal must name the table count like Spark: {error}"
+    );
+    assert!(
+        door.catalog
+            .namespace_exists(&NamespaceIdent::new("bronze".to_string()))
+            .await
+            .expect("namespace_exists"),
+        "a refused drop must leave the namespace behind"
+    );
+    assert!(
+        door.table_exists("bronze", "orders").await,
+        "a refused drop must leave the table readable"
+    );
+}
+
+#[tokio::test]
+async fn drop_schema_if_exists_and_cascade_still_refuse_a_nonempty_schema() {
+    let door = door().await;
+    door.ok("CREATE SCHEMA ice.bronze").await;
+    door.ok("CREATE TABLE ice.bronze.orders AS SELECT 1 AS id")
+        .await;
+    for statement in [
+        "DROP SCHEMA IF EXISTS ice.bronze",
+        "DROP SCHEMA ice.bronze CASCADE",
+        "DROP SCHEMA IF EXISTS ice.bronze CASCADE",
+        "DROP DATABASE ice.bronze",
+    ] {
+        let error = door.err(statement).await;
+        assert!(
+            error.contains("Namespace bronze is not empty. Contains 1 table(s)."),
+            "{statement} must refuse like Spark: {error}"
+        );
+    }
+    assert!(
+        door.table_exists("bronze", "orders").await,
+        "a refused drop must leave the table readable"
+    );
+}
+
+#[tokio::test]
+async fn drop_schema_missing_and_empty_cascade_answer_like_spark() {
+    let door = door().await;
+    let missing = door.err("DROP SCHEMA ice.bronze").await;
+    assert!(
+        missing.contains("[SCHEMA_NOT_FOUND] The schema `ice`.`bronze` cannot be found.")
+            && missing.contains("To tolerate the error on drop use DROP SCHEMA IF EXISTS."),
+        "a missing schema must refuse like Spark: {missing}"
+    );
+    door.ok("CREATE SCHEMA ice.silver").await;
+    door.ok("DROP SCHEMA ice.silver CASCADE").await;
+    assert!(
+        !door
+            .catalog
+            .namespace_exists(&NamespaceIdent::new("silver".to_string()))
+            .await
+            .expect("namespace_exists"),
+        "CASCADE drops an empty namespace as Spark does"
+    );
+}
+
+#[tokio::test]
+async fn drop_schema_after_table_drop_drops() {
+    let door = door().await;
+    door.ok("CREATE SCHEMA ice.bronze").await;
+    door.ok("CREATE TABLE ice.bronze.orders AS SELECT 1 AS id")
+        .await;
+    door.ok("DROP TABLE ice.bronze.orders").await;
+    door.ok("DROP SCHEMA ice.bronze").await;
+    assert!(
+        !door
+            .catalog
+            .namespace_exists(&NamespaceIdent::new("bronze".to_string()))
+            .await
+            .expect("namespace_exists"),
+        "a namespace emptied by an explicit table drop must drop"
+    );
+}

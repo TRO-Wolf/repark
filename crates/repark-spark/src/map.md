@@ -598,7 +598,13 @@ pins: rp-4-fork-repin/C-005, C-006
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:
   matching/no-location requests stay idempotent; contradictory `LOCATION` fails loud naming both
-  paths (`repark_core::refuse_contradictory_namespace_location`).
+  paths (`repark_core::refuse_contradictory_namespace_location`). `DROP` refuses a non-empty
+  namespace with Spark's `Namespace <ns> is not empty` text (CASCADE drops nothing, `IF EXISTS`
+  does not bypass) and answers `[SCHEMA_NOT_FOUND]` naming `catalog`.`namespace` when it is
+  missing — both through the shared `refuse_non_empty_namespace_drop` (**ICE-DROP-NS-1**,
+  2026-09-19).
+  pins: ice-drop-ns-1/C-002, C-004, C-007
+  The missing-namespace refusal is the shared `schema_not_found_on_drop`. pins: ice-drop-ns-1/C-011
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
   into the positional `execute_with_read_only` call; `#[async_trait(?Send)]` matches the
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
