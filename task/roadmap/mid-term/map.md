@@ -7,12 +7,13 @@ declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
 - [ice-parity-inventory-2026-09-19.md](ice-parity-inventory-2026-09-19.md) — **Spark–Iceberg parity inventory
-  (2026-09-19, night run 23c, owner direction "1 to 1 parity … NO STONES LEFT"):** 783 cells enumerated from the
-  iceberg-spark-runtime 1.11.0 jar and the 1.11 docs, measured on Spark 4.1.2 and RePark main `6a140eb3` — 399 EQUAL,
-  53 DIFFERENT, 112 unregistered refusals, 25 not parsed, 80 registered refusals, 114 Spark-cannot; cross-engine
-  interop 13 of 13 shapes both ways; a ranked slate of 51 units led by reader `versionAsOf` / `timestampAsOf` being
-  ignored, `TIMESTAMP AS OF <expression>`, the static-mode partition overwrite (contradicts DML-1), WAP writes landing
-  on main, and a partition column name that makes the table unreadable.
+  (2026-09-19, night run 23c, owner direction "1 to 1 parity … NO STONES LEFT"):** 842 cells enumerated from the
+  iceberg-spark-runtime 1.11.0 jar and the 1.11 docs, measured on Spark 4.1.2 and RePark main `6a140eb3` — 424 EQUAL,
+  57 DIFFERENT, 126 unregistered refusals, 28 not parsed, 87 registered refusals, 120 Spark-cannot; cross-engine
+  interop 13 of 13 shapes both ways; filter pushdown 0 silent of 369 predicate evaluations; a ranked slate of 56 units
+  led by reader `versionAsOf` / `timestampAsOf` being ignored, `TIMESTAMP AS OF <expression>`, the static-mode
+  partition overwrite (contradicts DML-1), WAP writes landing on main, and a partition column name that makes the
+  table unreadable.
 - [day-report-2026-09-18-22a.md](day-report-2026-09-18-22a.md) — **run 22a (2026-09-18 day run, the fork lane and
   the pin bumps):** fork #294 (exec conflict filter + five prune-soundness fixes), #296 (hour on ns, sorted and
   stamped COW DML and binpack) and #295 (ARRAY insert) merged; RP-26 #698, RP-27 #702 (V2-20a closed, UPDATE 4/4),
