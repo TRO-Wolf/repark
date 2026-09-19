@@ -65,7 +65,12 @@ Measured on the release native built from the step-2 tree:
   `repark-rc-round1.json`; 34 / 34 RC cells equal to `spark-pc1.json` on status and every
   observation, refusals matching on class core and message core.
 - Offline `-n 4`: `test_ice_replace_columns_1.py` 45 passed, 1 skipped (live-only);
-  `test_alter_table.py` 9 passed (the two flipped pins included).
+  `test_alter_table.py` 9 passed (the two flipped pins included) — the two files
+  `rg -l "REPLACE COLUMNS" python/repark/tests` finds.
+- Live (`REPARK_PARITY_LIVE=1`, PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0):
+  `test_ice_replace_columns_1.py` 46 passed; the recorder's `check` prints
+  `oracle fixture ice_replace_columns_1_spark_oracle.json reproduces on live Spark` (rc 0),
+  so all 34 cells re-derive — over a Hadoop catalog, where the InMemory recording was made.
 - `cargo test -p repark-spark --lib alter` 58 passed; `--lib replace_columns` 12 passed.
 - `cargo fmt --all --check` clean; `cargo clippy -p repark-spark --all-targets -- -D warnings
   -A clippy::disallowed_methods` (the canonical `rust-clippy` invocation) clean.
