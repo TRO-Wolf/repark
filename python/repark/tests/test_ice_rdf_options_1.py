@@ -230,15 +230,19 @@ _VALUE_CELLS: list[tuple[str, dict[str, object], int]] = [
     ),
 ]
 
+_RPD_TARGET_SMALL = (
+    "F-RPD-TARGET-SMALL-1 2026-09-19: at fork 43fcd243 RePark rewrites 8 delete files into 8 "
+    "(10 snapshots) where Spark rewrites 0 (9)"
+)
+
 _VALUE_XFAIL: dict[str, str] = {
-    "max_group_size": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 added, Spark 8→4",
-    "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: RePark compacts 8→8 "
-    "added, Spark 8→4",
+    "rpd_target_small": _RPD_TARGET_SMALL,
+    "rpd_target_small_forced": _RPD_TARGET_SMALL,
 }
 
 _SNAPSHOT_XFAIL: dict[str, str] = {
-    "partial_progress_groups": "FORK-GROUP-GRANULARITY 2026-09-17: 8 groups under "
-    "max-commits 3 need 3 commits (11 snapshots), Spark compacts 4 groups in 2 (10)",
+    "rpd_target_small": _RPD_TARGET_SMALL,
+    "rpd_target_small_forced": _RPD_TARGET_SMALL,
 }
 
 
@@ -279,7 +283,7 @@ def test_option_cell_snapshots(spark: ReparkSession, name: str, build: dict[str,
 def _check_keep_set(
     spark: ReparkSession, name: str, table: str, live_rows: int, build: dict[str, object]
 ) -> None:
-    """Run one xfailed oracle cell and compare only its keep-set: live rows and rewritten counts."""
+    """Run one xfailed oracle cell and compare its keep-set: live rows and rewritten data files."""
     cells = _fixture()
     cell = cells[name]  # type: ignore[literal-required]
     assert isinstance(cell, dict)
@@ -294,9 +298,9 @@ def _check_keep_set(
     got = _result_row(spark, _call_sql(cell, table))
     want = cell["result"]
     assert isinstance(want, dict)
-    for key in ("rewritten_data_files_count", "rewritten_delete_files_count"):
-        if key in want:
-            assert got[key] == int(want[key]), f"{name} {key}: {got} vs {want}"
+    if "rewritten_data_files_count" in want:
+        key = "rewritten_data_files_count"
+        assert got[key] == int(want[key]), f"{name} {key}: {got} vs {want}"
     assert _live_rows(spark, table) == live_rows, f"{name} live rows"
 
 
@@ -307,7 +311,7 @@ def _check_keep_set(
 def test_option_cell_keep_set(
     spark: ReparkSession, name: str, build: dict[str, object], rows: int
 ) -> None:
-    """Still-xfailed cells keep Spark's row set and rewritten counts."""
+    """Still-xfailed cells keep Spark's row set and rewritten data-file count."""
     _check_keep_set(spark, name, "mem.ns.keep", rows, build)
 
 

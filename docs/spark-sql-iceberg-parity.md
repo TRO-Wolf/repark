@@ -6411,10 +6411,12 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   longs (`min-file-size-bytes` below 0 refuses `>= 0`; the band compares signed, so
   `max-file-size-bytes` `-1` renders in the IAE text). A present NULL
   `remove-dangling-deletes` map key wins over the legacy top-level flag (Java's default).
-  RPD byte pins compare against vanished delete files. Three strict xfails stay, all under
-  the fork-ask row `ICE-RDF-GRANULARITY-1` (`max_group_size`, `partial_progress_groups`, each
-  with a green keep-set twin pinning rows and rewritten counts, plus the
-  `partial_progress_groups` snapshot cell). `target_small` runs plain since RP-32 (fork #302).
+  RPD byte pins compare against vanished delete files. `ICE-RDF-GRANULARITY-1` is FIXED:
+  `target_small` runs plain since RP-32 (fork #302), `max_group_size` and
+  `partial_progress_groups` since RP-34 (fork #306). Four strict xfails stay, under the
+  fork-ask row `ICE-RDF-RPD-TARGET-SMALL-1` (the `rpd_target_small` and
+  `rpd_target_small_forced` value and snapshot cells, each value cell with a green keep-set
+  twin pinning live rows).
   The four `ICE-RDF-RPD-COMMITS-1` cells (`rpd_rewrite_all`, `rpd_min_input_files_1`, value and
   snapshot) run plain since RP-33 (fork #304).
   `ICE-RDF-COW-BYTES-1` and `ICE-RDF-DANGLE-2` are FIXED at RP-32 (fork #301
@@ -6495,7 +6497,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   pins: ice-rdf-options-1/C-006
   pins: rp-32-rdf-cow-bytes/C-003, C-004
 
-### ICE-RDF-GRANULARITY-1 — `rewrite_data_files` output splitting and file-group granularity stay fork-side — **OPEN 2026-09-17, fork ask; `target_small` FIXED 2026-09-19 (RP-32, fork #302)**
+### ICE-RDF-GRANULARITY-1 — `rewrite_data_files` output splitting and file-group granularity stay fork-side — **FIXED 2026-09-19 (`target_small` at RP-32, fork #302; `max_group_size` and `partial_progress_groups` at RP-34, fork #306)**
 
 - **repark** — on the 8-file shapes the fork writes one file per group and compacts 8→8
   added where Spark splits outputs to the target size (reason strings 2026-09-17:
@@ -6513,8 +6515,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Pin** —
   `python/repark/tests/test_ice_rdf_options_1.py::test_option_cell_values[target_small]`,
   `[max_group_size]`, `[partial_progress_groups]` and
-  `::test_option_cell_snapshots[partial_progress_groups]` (`xfail(strict)` with the dated
-  reasons; green keep-set twins pin rows and rewritten counts).
+  `::test_option_cell_snapshots[partial_progress_groups]`, all plain since RP-34.
 - **Rationale** — OPEN, fork ask: output splitting at the target file size and file-group
   granularity live in the fork's rewrite path.
   Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed; the rolling writer's
@@ -6526,8 +6527,32 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   and `partial_progress_groups` stay strict xfails: the planner is Java's, and the residual
   is parquet file size. Run 23a measured the fork writer's files at 1,694 B against Spark's
   ~1,153 B on this shape, and Java's own rules applied to 1,694 B files answer 8/8/8+3.
+  **RP-34 (2026-09-19, fork `43fcd243`, #306 F-PARQUET-SIZE-1):** fork-written files now carry
+  Java's footer (`iceberg.schema`, no `ARROW:schema`), and the two remaining cells answer
+  Spark's 8→4 (CI smoke at `c2e79fb3`: `[XPASS(strict)]` on `max_group_size`,
+  `partial_progress_groups` and the `partial_progress_groups` snapshot cell). All three run
+  plainly; the row is FIXED.
   pins: ice-rdf-fork-asks-1/C-001
   pins: rp-32-rdf-cow-bytes/C-010
+  pins: rp-34-fork-pin/C-001
+
+### ICE-RDF-RPD-TARGET-SMALL-1 — `rewrite_position_delete_files` with a small `target-file-size-bytes` rewrites delete files Spark leaves alone — **OPEN 2026-09-19, fork ask F-RPD-TARGET-SMALL-1**
+
+- **repark** — at fork `43fcd243` (RP-34) the `rpd_target_small` and
+  `rpd_target_small_forced` cells (`target-file-size-bytes` 2000 on the 8-delete-file
+  merge-on-read shape) rewrite 8 delete files into 8 and commit a 10th snapshot. Rows are
+  unchanged (200 live).
+- **Apache Spark** — the same cells in
+  `python/repark/tests/ice_rdf_options_1_spark_oracle.json` rewrite 0 delete files
+  (`rewritten_delete_files_count = 0`, `added_delete_files_count = 0`, 9 snapshots).
+- **Pin** — `test_ice_rdf_options_1.py::test_option_cell_values[rpd_target_small]`,
+  `[rpd_target_small_forced]` and `::test_option_cell_snapshots[rpd_target_small]`,
+  `[rpd_target_small_forced]`, `xfail(strict)` with the dated `F-RPD-TARGET-SMALL-1` reason;
+  their keep-set twins run plainly and pin the 200 live rows.
+- **Rationale** — OPEN, fork ask: the delete-file selection rule lives in the fork's
+  `rewrite_position_delete_files`. The cells answered Spark at RP-33; the smaller files
+  #306 writes moved them under the fork's selection threshold. Run 24d owns the fork half.
+  pins: rp-34-fork-pin/C-002
 
 ### ICE-RDF-COW-BYTES-1 — `rewritten_bytes` missed the DELETE-written survivor file the rewrite folds in — **FIXED 2026-09-19 (RP-32, fork #301 F-RDF-COW-BYTES-1)**
 
