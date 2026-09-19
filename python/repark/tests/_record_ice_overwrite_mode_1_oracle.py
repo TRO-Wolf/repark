@@ -82,6 +82,7 @@ class OverwriteShape(BaseModel):
     columns: str = ""
     seed: str = ""
     setup: tuple[str, ...] = ()
+    empty_frame: bool = False
 
     def cell_id(self, version: int) -> str:
         """Return the fixture cell id for this shape on ``version``."""
@@ -346,6 +347,35 @@ SHAPES: tuple[OverwriteShape, ...] = (
         statement=PDYN,
         conf={MODE_KEY: "DYNAMIC"},
     ),
+    OverwriteShape(
+        group="OW3",
+        key="WRITETO-OWP-EMPTY",
+        title="writeTo.overwritePartitions empty frame, static mode",
+        action="overwrite_partitions",
+        empty_frame=True,
+    ),
+    OverwriteShape(
+        group="OW3",
+        key="WRITETO-OWP-EMPTY-DYN",
+        title="writeTo.overwritePartitions empty frame, dynamic mode",
+        action="overwrite_partitions",
+        conf=DYNAMIC,
+        empty_frame=True,
+    ),
+    OverwriteShape(
+        group="OW3",
+        key="INSERTINTO-OW-EMPTY-DYNOPT",
+        title="insertInto(overwrite) empty frame with overwrite-mode=dynamic",
+        action="option_dynamic_insert_into",
+        empty_frame=True,
+    ),
+    OverwriteShape(
+        group="OW3",
+        key="INSERTINTO-OW-EMPTY-STATIC",
+        title="insertInto(overwrite) empty frame, static mode",
+        action="insert_into",
+        empty_frame=True,
+    ),
 )
 
 VERSIONS = (2, 3)
@@ -450,7 +480,8 @@ def apply_shape(session: Any, shape: OverwriteShape, table: str) -> None:
     if shape.statement:
         session.sql(shape.statement.format(T=table)).collect()
         return
-    frame = session.createDataFrame([(7, "g", "x"), (8, "h", "w")], ONE_LEVEL)
+    rows = [] if shape.empty_frame else [(7, "g", "x"), (8, "h", "w")]
+    frame = session.createDataFrame(rows, ONE_LEVEL)
     ACTIONS[shape.action](frame, table)
 
 
@@ -560,11 +591,15 @@ def provenance(cell_count: int) -> dict[str, Any]:
         "seed": "(1,a,x),(2,b,y),(3,c,x) PARTITIONED BY (cat); two-level tables add sub: "
         "(1,a,x,p),(2,b,y,p),(3,c,x,q),(4,d,y,q) PARTITIONED BY (cat, sub); a shape's "
         "own columns, seed and setup statements replace them",
-        "dataframe_source": "(7,g,x),(8,h,w) as id BIGINT, data STRING, cat STRING",
+        "dataframe_source": "(7,g,x),(8,h,w) as id BIGINT, data STRING, cat STRING; the "
+        "OW3 shapes write an empty frame of that schema",
         "summary_keys": list(SUMMARY_KEYS),
         "ow2_cells": "the 28 OW2 cells were measured 2026-09-19 by an independent harness "
         "recording on the same Spark and Iceberg pins, folded in with this recorder's cell "
         "shape, and are re-derived by its check mode",
+        "ow3_cells": "the 8 OW3 empty-frame cells were measured 2026-09-19 by the same "
+        "independent harness on the same pins, folded in the same way, and are re-derived by "
+        "its check mode",
     }
 
 

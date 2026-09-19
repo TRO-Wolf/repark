@@ -124,26 +124,6 @@ def test_non_partition_column_refusal_keeps_every_row(spark: ReparkSession) -> N
     assert rows == [(1, "a", "x"), (2, "b", "y"), (3, "c", "x")]
 
 
-def _snapshot_ids(session: ReparkSession, table: str) -> list[int]:
-    """Return the table's snapshot ids in commit order."""
-    rows = session.sql(
-        f"SELECT snapshot_id FROM {table}.snapshots ORDER BY committed_at, snapshot_id"
-    ).collect()
-    return [row[0] for row in rows]
-
-
-def test_empty_frame_overwrite_partitions_commits_nothing(spark: ReparkSession) -> None:
-    """writeTo.overwritePartitions of an empty frame leaves rows and snapshots unchanged."""
-    shape = next(item for item in SHAPES if item.key == "WRITETO-OVERWRITEPARTS")
-    table = seed_table(spark, shape, 2)
-    before = _snapshot_ids(spark, table)
-    frame = spark.createDataFrame([], "id BIGINT, data STRING, cat STRING")
-    frame.writeTo(table).overwritePartitions()
-    rows = sorted(tuple(row) for row in spark.sql(f"SELECT * FROM {table}").collect())
-    assert rows == [(1, "a", "x"), (2, "b", "y"), (3, "c", "x")]
-    assert _snapshot_ids(spark, table) == before
-
-
 def test_invalid_static_date_refuses_like_the_engine_cast(spark: ReparkSession) -> None:
     """A static value the DATE cast rejects refuses with the engine's CAST refusal text.
 

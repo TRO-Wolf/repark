@@ -43,11 +43,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) +
   [ice_overwrite_mode_1_spark_oracle.json](ice_overwrite_mode_1_spark_oracle.json) +
   [_record_ice_overwrite_mode_1_oracle.py](_record_ice_overwrite_mode_1_oracle.py) —
-  **ICE-OVERWRITE-MODE-1 (2026-09-19):** 88 Spark overwrite cells (44 shapes on format
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** 96 Spark overwrite cells (48 shapes on format
   versions 2 and 3; live PySpark 4.1.2 + Iceberg 1.11.0, InMemory catalog, recorded
-  2026-09-19 by the recorder's `record` mode; the 28 `OW2-*` cells of round 2 were folded in
-  from an independent harness recording on the same pins and are re-derived by `check`;
-  SHA-256 `0c5dbb26e9655f53c287ce616cbfaa456162b52d728c6cb3d9c7f3f5374c8833`). The `OW2`
+  2026-09-19 by the recorder's `record` mode; the 28 `OW2-*` cells of round 2 and the 8
+  `OW3-*` cells of round 3 were folded in from independent harness recordings on the same
+  pins and are re-derived by `check`;
+  SHA-256 `df60a90149005a9663a5a53ef889c78f0a737eb0095029a00095719b83640b90`). The `OW3`
+  shapes write an empty frame through `writeTo.overwritePartitions` (static and dynamic
+  mode) and `insertInto(overwrite)` (`overwrite-mode=dynamic`: no commit; static: a
+  `delete` snapshot and an empty table). The `OW2`
   shapes cover the empty dynamic source, `BY NAME` mixed lists, a static value cast to a
   `DATE` partition, `NULL` and upper-case static keys, and transform-field keys
   (`NON_PARTITION_COLUMN`). Each cell holds
@@ -73,8 +77,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 2 (2026-09-19): the empty-dynamic pins in `test_dml_b_partition_overwrite.py`,
   `test_writer_v2.py` and `test_examples_window_catalog.py` now assert that the empty
   dynamic overwrite commits nothing (snapshot count and rows unchanged), Spark's answer;
-  `test_ice_overwrite_mode_1.py` adds the empty-frame `overwritePartitions` pin and the
-  invalid `DATE` cast pin. pins: ice-overwrite-mode-1/C-011, C-013
+  `test_ice_overwrite_mode_1.py` adds the invalid `DATE` cast pin; round 3's `OW3` cells
+  replace its single empty-frame `overwritePartitions` pin. pins: ice-overwrite-mode-1/C-011,
+  C-013
 
 - [test_ice_avro_name_1.py](test_ice_avro_name_1.py) +
   [ice_avro_name_1_spark_oracle.json](ice_avro_name_1_spark_oracle.json) +
