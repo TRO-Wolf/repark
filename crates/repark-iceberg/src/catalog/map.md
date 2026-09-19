@@ -54,6 +54,8 @@ Source comments retain only API and safety contracts; implementation narration i
   `dv-*` — the fork's DV writer —, or Spark's `*-deletes.*`); a `.puffin` outside `metadata/` or
   with a delete name is a delete file; everything else (`version-hint.text`, a stats puffin) is
   `other`. pins: ice-read-perf-0/C-001, C-002
+  The classifier matches on the lower-cased extension after the `*.metadata.json[.gz]` check;
+  `by_op` / `by_class` / `total` saturate instead of wrapping.
 - `counting_storage.rs` — **ICE-READ-PERF-0 (2026-09-19):** `CountingStorageFactory` wraps any
   fork `StorageFactory`; the `Storage` it builds (`CountingStorage`) delegates every call to the
   inner storage and records it. One request per `exists` / `metadata` / `read` / `write` /

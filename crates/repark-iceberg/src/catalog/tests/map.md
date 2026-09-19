@@ -29,6 +29,7 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   writes, and over the names the `pos-del` / `dv` generators produce; a scan reads data-file
   ranges through the counter; a second `load_table` with the metadata cache on reads fewer
   metadata JSON documents than with it off; clones share one counter set.
+  The scan pin sums rows with `RecordBatch::num_rows` (clippy `redundant_closure_for_method_calls`).
   pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003

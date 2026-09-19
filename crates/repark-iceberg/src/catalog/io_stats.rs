@@ -105,31 +105,20 @@ pub fn classify_iceberg_path(path: &str) -> IcebergFileClass {
         || name.starts_with("eq-del")
         || name.starts_with("dv-")
         || name.contains("-deletes");
-    if name.ends_with(".avro") && in_metadata_dir {
-        return if name.starts_with("snap-") {
-            IcebergFileClass::ManifestList
-        } else {
-            IcebergFileClass::Manifest
-        };
+    let extension = name.rsplit_once('.').map_or("", |(_, extension)| extension);
+    match extension {
+        "avro" if in_metadata_dir => {
+            if name.starts_with("snap-") {
+                IcebergFileClass::ManifestList
+            } else {
+                IcebergFileClass::Manifest
+            }
+        }
+        "puffin" if names_deletes || !in_metadata_dir => IcebergFileClass::DeleteFile,
+        "parquet" | "orc" | "avro" if names_deletes => IcebergFileClass::DeleteFile,
+        "parquet" | "orc" | "avro" => IcebergFileClass::DataFile,
+        _ => IcebergFileClass::Other,
     }
-    if name.ends_with(".puffin") {
-        return if names_deletes || !in_metadata_dir {
-            IcebergFileClass::DeleteFile
-        } else {
-            IcebergFileClass::Other
-        };
-    }
-    if [".parquet", ".orc", ".avro"]
-        .iter()
-        .any(|extension| name.ends_with(extension))
-    {
-        return if names_deletes {
-            IcebergFileClass::DeleteFile
-        } else {
-            IcebergFileClass::DataFile
-        };
-    }
-    IcebergFileClass::Other
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -141,8 +130,8 @@ pub struct IcebergIoCount {
 impl IcebergIoCount {
     fn add(self, other: Self) -> Self {
         Self {
-            requests: self.requests + other.requests,
-            bytes: self.bytes + other.bytes,
+            requests: self.requests.saturating_add(other.requests),
+            bytes: self.bytes.saturating_add(other.bytes),
         }
     }
 }

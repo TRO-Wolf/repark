@@ -29,8 +29,12 @@ TABLE, and the DML passthrough. The unit battery is under `src/tests/` (navigati
   `datafusion`, for the composed `TaExtension`), datafusion + fork family, regex (SHOW … LIKE),
   async-trait (dialect seam); dev-deps add chrono + futures (battery) and repark-common (the
   `surfaces` registry the `#[cfg(test)]` Q13 matrix audits this door against — dev-only because
-  no shipped code reads it).
+  no shipped code reads it). **ICE-READ-PERF-0 (2026-09-19):** dev-dep `serde_json` (the bench's
+  JSON output and bed manifest), a `[[bench]] ice_read_perf` (`harness = false`) and a
+  `[[test]] ice_read_perf_pins` whose root is `benches/ice_read_perf/pins.rs`, so the bench's
+  modules are unit-tested without a `#[path]` and without a second target on one file.
 - [src/map.md](src/map.md) — module-by-module navigation.
+- [benches/map.md](benches/map.md) — the Iceberg read-performance bench bed (ICE-READ-PERF-0).
 - [tests/map.md](tests/map.md) — integration tests using Session + SparkExtension + SparkDialect.
 
 ## I want to...

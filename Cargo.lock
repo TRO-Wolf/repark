@@ -5163,6 +5163,7 @@ dependencies = [
  "repark-functions",
  "repark-iceberg",
  "repark-ta",
+ "serde_json",
  "tempfile",
  "tokio",
 ]

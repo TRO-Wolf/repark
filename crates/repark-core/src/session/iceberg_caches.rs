@@ -22,7 +22,8 @@ impl ReparkSession {
             .map_err(engine_err)
     }
 
-    pub(crate) fn iceberg_io_counters(&self) -> Arc<IcebergIoCounters> {
+    #[must_use]
+    pub fn iceberg_io_counters(&self) -> Arc<IcebergIoCounters> {
         caches_of(&self.catalogs).io_counters()
     }
 

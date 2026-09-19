@@ -61,7 +61,7 @@ async fn the_session_counts_its_iceberg_reads_and_resets_them() {
         .await
         .unwrap()
         .iter()
-        .map(|batch| batch.num_rows())
+        .map(datafusion::arrow::array::RecordBatch::num_rows)
         .sum();
     assert_eq!(rows, 3);
     let stats = session.iceberg_io_stats();

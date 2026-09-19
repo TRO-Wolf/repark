@@ -80,8 +80,7 @@ pub async fn glue_catalog<S: BuildHasher>(
     glue_catalog_counted(props, Arc::new(IcebergIoCounters::new())).await
 }
 
-/// # Errors
-/// Returns an error when `warehouse` is absent, empty, or rejected by the fork builder.
+#[allow(clippy::missing_errors_doc)]
 pub async fn glue_catalog_counted<S: BuildHasher>(
     props: &HashMap<String, String, S>,
     counters: Arc<IcebergIoCounters>,
@@ -120,8 +119,7 @@ pub async fn s3tables_catalog<S: BuildHasher>(
     s3tables_catalog_counted(props, Arc::new(IcebergIoCounters::new())).await
 }
 
-/// # Errors
-/// Returns an error if `table_bucket_arn` is absent/empty or the fork builder rejects config.
+#[allow(clippy::missing_errors_doc)]
 pub async fn s3tables_catalog_counted<S: BuildHasher>(
     props: &HashMap<String, String, S>,
     counters: Arc<IcebergIoCounters>,

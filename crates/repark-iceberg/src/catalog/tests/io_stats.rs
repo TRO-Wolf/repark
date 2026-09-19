@@ -357,7 +357,10 @@ async fn a_scan_reads_data_file_ranges_through_the_counter() {
         .await
         .unwrap();
     assert_eq!(
-        batches.iter().map(|batch| batch.num_rows()).sum::<usize>(),
+        batches
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
         3
     );
     let stats = caches.io_stats();
