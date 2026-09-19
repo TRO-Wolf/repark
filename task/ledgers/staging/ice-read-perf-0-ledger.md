@@ -224,8 +224,8 @@ COVERAGE_ATTESTATION:
     - id: AT-7
       status: ATTACKED
       evidence: The unit measures but claims no speed-up. Its smoke numbers stay out of
-        the repo; the baseline file carries only the H-3 header skeleton for the
-        orchestrator's 200-file run.
+        the repo; the baseline file holds the orchestrator's 200-file run on this
+        unit's head (four modes, --repeat 5, fork pin 43fcd243) with its H-3 header.
       artifacts: [docs/perf/ice-read-perf-baseline-2026-09-19.md]
     - id: AT-8
       status: ATTACKED
