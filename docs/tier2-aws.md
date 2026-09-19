@@ -240,8 +240,8 @@ What the job does, in order (the same pinned actions as `live-aws`, the same ref
    `testing_repark_acceptance` (the namespace at `<REPARK_ACCEPT_WAREHOUSE>/testing_repark_acceptance`,
    verified as §5 requires). Glue's compaction optimizer is off unless someone enables it on the
    table. The job makes no optimizer call and says so in its summary.
-6. For each catalog, `run --mode cold`, `warm`, `concurrent`, `concurrent-cold` with `--repeat 3
-   --out <json>`.
+6. For each catalog, `run --mode cold`, `warm`, `concurrent`, `concurrent-cold` with `--repeat 1
+   --out <json>` (`BENCH_REPEAT`).
 7. The job summary gets one line per run with the bytes it read (`run_io_total.bytes` of the
    run's JSON: every request of every session the run opened) and the dispatch total. The eight
    JSONs upload as the `ice-read-perf-bench` artifact (30 days).
@@ -249,22 +249,20 @@ What the job does, in order (the same pinned actions as `live-aws`, the same ref
 **R-3 on every step.** Every `setup` phase ends with the table-size check, and every `run` makes
 it before its first scan. Above 3 × 1024³ bytes the bench prints `R3-SIZE-FLAG …`, appends it to
 the job summary and exits 3. No step sets `continue-on-error`, so the job fails at once. Raising
-the limit is an owner decision, never an option. The Slack note to the owner that the slate asks
-for is not wired yet.
+the limit is an owner decision, never an option. The one Slack note to the owner that the slate asks
+for is sent by whoever dispatched the run, on reading the failed job's summary.
 
 **Cost.** The slate's R-3 estimate was about 12 GB read per dispatch, so about $1 of data transfer
 out at about $0.09/GB, plus cents of requests and about $0.05 per table-month of storage, and
-$5–10 for six dispatches (cap $25). The job as built reads more, because every mode runs
-`--repeat 3` on both catalogs. From the 20-file local smoke scaled to 200 files (see the unit
+$5–10 for six dispatches (cap $25). From the 20-file local smoke scaled to 200 files (see the unit
 ledger), one pass of Q1–Q7 reads about 2.7 GB and one round of the four concurrent queries about
-2.4 GB. Per catalog: cold 3 passes, warm 4 (one warm-up), concurrent 4 rounds (one warm-up),
-concurrent-cold 3 rounds. That is about 36 GB per catalog and **about 70 GB per dispatch, about
-$6.5** before AWS's 100 GB/month free transfer tier. Six dispatches come to roughly 420 GB, about
-$29 after one month's free tier and above the slate's $25 cap. The job's `BENCH_REPEAT` env
-(`"3"`) is the one lever: at `"1"` a dispatch reads about 31 GB (about $2.8). The owner decides
-before the first dispatch. The writes (two tables of about 1.4 GB each, written once) are
-inbound and free. The summary's dispatch total is the measured figure to check against this
-estimate.
+2.4 GB. The job runs every mode at `BENCH_REPEAT` = `"1"` (ruling Q-24a-1, 2026-09-19): cold one
+pass, warm two (one warm-up), concurrent two rounds (one warm-up), concurrent-cold one round, so
+**about 31 GB per dispatch, about $2.8** before AWS's 100 GB/month free transfer tier, and about
+$17 for six dispatches before the free tier (about $8 after it), inside the $25 cap. At `"3"` a
+dispatch would read about 70 GB and six would pass the cap, so raising `BENCH_REPEAT` is an owner
+decision. The writes (two tables of about 1.4 GB each, written once) are inbound and free. The
+summary's dispatch total is the measured figure to check against this estimate.
 
 **The scratch lifecycle rule (§3) and the Glue bench table.** The Glue bench table's files live
 under the warehouse scratch prefix (`<REPARK_ACCEPT_WAREHOUSE>/testing_repark_acceptance/ice_read_perf_bench/`).

@@ -120,10 +120,10 @@ def test_the_bench_builds_before_credentials_and_disables_compaction_before_any_
     assert "s3tables:GetTableMaintenanceConfiguration" in block
 
 
-def test_every_mode_runs_on_both_catalogs_at_three_repeats_with_r3_failing_the_job() -> None:
-    """Four modes per catalog, ``--repeat 3``, every step under ``set -e`` semantics."""
+def test_every_mode_runs_on_both_catalogs_at_one_repeat_with_r3_failing_the_job() -> None:
+    """Four modes per catalog, ``--repeat 1`` (Q-24a-1), every step under ``set -e``."""
     block = _job_block(_text(), "ice-read-perf-bench")
-    assert re.search(r'(?m)^      BENCH_REPEAT: "3"\s*$', block)
+    assert re.search(r'(?m)^      BENCH_REPEAT: "1"\s*$', block)
     assert block.count(f"for mode in {' '.join(MODES)}; do") == 2
     assert block.count('--repeat "${BENCH_REPEAT}"') == 2
     assert "BENCH_NAMESPACE: testing_repark_acceptance" in block

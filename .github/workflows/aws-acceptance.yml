@@ -124,7 +124,7 @@ jobs:
     env:
       BENCH_NAMESPACE: testing_repark_acceptance
       BENCH_TABLE: ice_read_perf_bench
-      BENCH_REPEAT: "3"
+      BENCH_REPEAT: "1"
     steps:
       - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
         if: github.ref != 'refs/heads/main'

@@ -158,7 +158,7 @@ would change what "four at once" measures for the other four (their timings and 
   stdout and stderr, lands in the JSON's `io_mismatches`, sets `io_identical_across_samples:
   false`, and shows as **NO** in the table's `io same` column. It is never averaged. The
   markdown table shows medians. The orchestrator's local baseline uses `--repeat 5`, and the
-  AWS leg uses `--repeat 3`.
+  AWS leg uses `--repeat 1` (`BENCH_REPEAT`, ruling Q-24a-1).
 - **Run total:** `run_io_total` sums every request and byte the run made through the counters,
   across every session it opened: the R-3 gate, the scan-predicate probe, registrations,
   warm-ups and every sample. On the AWS leg that is what the dispatch paid to read. The workflow

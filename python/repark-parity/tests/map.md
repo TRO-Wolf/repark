@@ -131,7 +131,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `live-aws` plus the repo's `upload-artifact` SHA. Step order: build, then credentials, then
   S3 Tables create, compaction `disabled` and read back, S3 Tables write, Glue create and write,
   both run loops, the bytes summary, the upload. It runs four modes on both catalogs at
-  `BENCH_REPEAT: "3"` under `set -euo pipefail`. No `${{ }}` reaches a `run:` script, and the job
+  `BENCH_REPEAT: "1"` (Q-24a-1) under `set -euo pipefail`. No `${{ }}` reaches a `run:` script, and the job
   carries no `#` comment. Doctoring compaction to `enabled` or adding `continue-on-error` reds
   it. YAML read by regex, no PyYAML.
   pins: ice-read-perf-0/C-018, C-019
