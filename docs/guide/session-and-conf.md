@@ -344,10 +344,11 @@ Setting **both** on the same builder refuses too: same pool, ambiguous initial s
 | `repark.iceberg.metadataCache` | `repark.iceberg.metadata_cache` | session-scoped metadata-document cache (default `true`) |
 | `repark.iceberg.metadataCacheEntries` | `repark.iceberg.metadata_cache_entries` | retained-location bound (default `512`): the metadata cache's byte budget is this × 64 KiB (default 32 MiB, evicting single entries by document bytes, inside a statement too), and the statement door clears the whole cache once the retained count passes it |
 | `repark.iceberg.manifestCacheBytes` | `repark.iceberg.manifest_cache_bytes` | shared manifest-cache byte budget per catalog instance (default `33554432` = on; `0` disables) |
+| `repark.iceberg.footerCacheBytes` | `repark.iceberg.footer_cache_bytes` | session-wide Parquet footer-cache byte budget (default `67108864` = 64 MiB = on; `0` disables; a 10,000-file table needs more) |
 
-All three are build-time and session-scoped: the session hands its caches to every
+All four are build-time and session-scoped: the session hands its caches to every
 memory, Glue and S3 Tables catalog it builds (Glue and S3 Tables since ICE-CATALOG-CACHE-1,
-2026-09-19; their effect on AWS is wired but not yet measured). Glue and S3 Tables catalogs
+2026-09-19; the footer cache since ICE-FOOTER-CACHE-1; their effect on AWS is wired but not yet measured). Glue and S3 Tables catalogs
 share metadata entries only within one credential context (the access key id, profile or
 assumed role named in the catalog's options; with none, each catalog keeps its own entries).
 A bad value fails loud inside
@@ -369,6 +370,18 @@ churns, so a second pass over 2,000 tables at 128 KiB costs what explicit `"0"` 
 (8.1 s vs 8.2 s, against 5.6 s cached); below ~1 MiB prefer `"0"`. Numbers and the
 commit-side scope live in
 [../perf/iceberg-catalog-io-baseline.md](../perf/iceberg-catalog-io-baseline.md) §6.
+
+**The footer cache** (ICE-FOOTER-CACHE-1, fork PR #316) keeps each data file's parsed Parquet
+footer, keyed by the catalog's cache scope, the data-file path and the manifest's
+`file_size_in_bytes` — Iceberg data files are immutable and uniquely named, so the key cannot go
+stale. A repeated scan of the same files reads no footer at all; without the cache every scan
+reads one footer per file per partition reader (a single request of up to 512 KiB). When a
+filtered scan needs the page index of a footer cached by an unfiltered scan, the entry is
+upgraded in place rather than duplicated. One cache per session, never shared between
+sessions; the budget is moka weight over each footer's in-memory size, not a resident-bytes
+ceiling. Set the key to `"0"` to read every footer from storage, as before.
+`ReparkSession::iceberg_footer_cache_stats()` (Rust) reports hits, misses, fetches, upgrades
+and evictions.
 
 ## `repark.display.style` — a repark extra
 

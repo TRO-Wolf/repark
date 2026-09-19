@@ -170,8 +170,9 @@ Source comments retain only API and safety contracts; implementation narration i
   `mod.rs`). Why 64 MiB and not the fork's 256 MiB default: the orchestrator's ruling Q-24a-5 —
   the budget is per session, and 64 MiB holds the parsed footers of thousands of ordinary data
   files while staying a small share of the default memory pool. The budget is moka weight over
-  each footer's `ParquetMetaData::memory_size()`, not a resident-bytes ceiling.
-  pins: ice-footer-cache-1/C-001, C-006
+  each footer's `ParquetMetaData::memory_size()`, not a resident-bytes ceiling. The user-facing
+  row and paragraph live beside `manifestCacheBytes` in `docs/guide/session-and-conf.md`
+  ("Iceberg catalog caches"). pins: ice-footer-cache-1/C-001, C-006, C-009
   **The bound's scope is the statement door, not the load.** Before ICE-CATALOG-CACHE-1 the fork's
   cache was an unbounded `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
   session calls `trim` at the statement door (`session.rs::sql_with`). That bounds what a session
