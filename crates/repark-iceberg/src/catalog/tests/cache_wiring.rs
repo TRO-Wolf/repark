@@ -142,7 +142,7 @@ fn only_credential_selectors_name_a_context_and_never_a_secret() {
 }
 
 async fn within<T>(future: impl std::future::Future<Output = T>) -> T {
-    tokio::time::timeout(Duration::from_secs(60), future)
+    tokio::time::timeout(Duration::from_mins(1), future)
         .await
         .expect("an offline catalog build never waits on the network")
 }
@@ -157,7 +157,7 @@ async fn glue_and_s3tables_catalogs_hold_the_session_metadata_cache() {
         GLUE_CATALOG_PROP_WAREHOUSE.to_string(),
         "s3://w/".to_string(),
     );
-    let glue = within(glue_catalog_counted(&glue_props, &caches))
+    let glue = within(Box::pin(glue_catalog_counted(&glue_props, &caches)))
         .await
         .unwrap();
     assert_eq!(Arc::strong_count(&handle), before + 1);
@@ -166,7 +166,7 @@ async fn glue_and_s3tables_catalogs_hold_the_session_metadata_cache() {
         S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN.to_string(),
         "arn:aws:s3tables:us-east-1:1:bucket/b".to_string(),
     );
-    let s3tables = within(s3tables_catalog_counted(&s3tables_props, &caches))
+    let s3tables = within(Box::pin(s3tables_catalog_counted(&s3tables_props, &caches)))
         .await
         .unwrap();
     assert_eq!(Arc::strong_count(&handle), before + 2);
@@ -187,7 +187,7 @@ async fn disabled_glue_and_s3tables_catalogs_build_without_a_handle() {
         GLUE_CATALOG_PROP_WAREHOUSE.to_string(),
         "s3://w/".to_string(),
     );
-    within(glue_catalog_counted(&glue_props, &caches))
+    within(Box::pin(glue_catalog_counted(&glue_props, &caches)))
         .await
         .unwrap();
     let mut s3tables_props = keyed("AKIAONE");
@@ -195,7 +195,7 @@ async fn disabled_glue_and_s3tables_catalogs_build_without_a_handle() {
         S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN.to_string(),
         "arn:aws:s3tables:us-east-1:1:bucket/b".to_string(),
     );
-    within(s3tables_catalog_counted(&s3tables_props, &caches))
+    within(Box::pin(s3tables_catalog_counted(&s3tables_props, &caches)))
         .await
         .unwrap();
 }

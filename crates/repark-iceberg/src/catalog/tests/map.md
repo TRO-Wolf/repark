@@ -61,7 +61,8 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   commit is seen and a same-scope sibling at the old location never reads it; three 40 KiB
   documents under a one-entry budget evict and never serve a sibling; a cold scan counts the same
   manifest-list / manifest / data-file requests with the caches on as off (requests, not bytes:
-  the beds' temp paths differ in length). pins: ice-catalog-cache-1/C-001, C-003, C-005, C-006,
+  the beds' temp paths differ in length). The two AWS build futures are boxed (clippy
+  `large_futures`). pins: ice-catalog-cache-1/C-001, C-003, C-005, C-006,
   C-008, C-010
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003

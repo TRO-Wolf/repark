@@ -147,7 +147,11 @@ and hand execution, SQL, and ML semantics to the engine crates.
   shared `make_ctx`.
   pins: facade-3/C-010, C-013, C-014, C-016, C-017, C-019, C-020, C-024, C-025 |
 | [`cache_budget.rs`](cache_budget.rs) | **EAGER-BUDGET-1 step 1 (2026-09-13):** `_native.retained_cache_bytes(session)` returns the live session's distinct-buffer retained cache bytes (D-2) as `u64`, blocking on the shared runtime inside `py.detach`. A free `#[pyfunction]` like `catalog_census` because `session.rs` sits on its exact CAP-1 baseline and pyo3 allows one `#[pymethods]` block per type; `PyReparkSession.runtime` went `pub(crate)` (same line, same count) to expose the shared runtime. Step 2 (2026-09-13): unchanged — the session-total budget flows through `session.rs::materialize_as_cache_view`'s `(max_bytes, max_total_bytes)` budgets tuple. pins: eager-budget-1/C-002, C-003 |
-| [`catalog_census.rs`](catalog_census.rs) | **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
+| [`catalog_census.rs`](catalog_census.rs) | **ICE-CATALOG-CACHE-1 (2026-09-19):** the census first
+  settles the session's metadata cache (`settle_iceberg_metadata_cache`, run on the shared runtime
+  with the GIL detached): since fork PR #311 the cache is moka, whose entry count lags until its
+  pending tasks run, so an unsettled `entries` under-reports. The tuple is unchanged.
+  pins: ice-catalog-cache-1/C-012 **PERF-ICE-CATALOG-IO-1 (2026-09-05):**
   `iceberg_metadata_cache_census(session)` returns `(enabled, hits, misses, body_fetches,
   entries)` for this session's Iceberg metadata-location cache. It is the census the Python pins
   read: `body_fetches` is exactly the number of `metadata.json` documents parsed, which on a Glue

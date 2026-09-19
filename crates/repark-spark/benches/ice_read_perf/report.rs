@@ -54,7 +54,8 @@ pub struct Before {
     rss_at_reset_kib: Option<u64>,
 }
 
-pub fn probe_before(session: &ReparkSession, tally: &RunTally) -> Before {
+pub async fn probe_before(session: &ReparkSession, tally: &RunTally) -> Before {
+    session.settle_iceberg_metadata_cache().await;
     tally.drain(session);
     let peak_rss_reset = std::fs::write("/proc/self/clear_refs", "5").is_ok();
     Before {
@@ -64,7 +65,8 @@ pub fn probe_before(session: &ReparkSession, tally: &RunTally) -> Before {
     }
 }
 
-pub fn probe_after(session: &ReparkSession, before: &Before) -> IoDelta {
+pub async fn probe_after(session: &ReparkSession, before: &Before) -> IoDelta {
+    session.settle_iceberg_metadata_cache().await;
     let after = session.iceberg_metadata_cache_report().unwrap_or_default();
     IoDelta {
         io: session.iceberg_io_stats(),

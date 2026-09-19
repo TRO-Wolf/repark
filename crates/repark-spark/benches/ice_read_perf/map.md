@@ -40,7 +40,8 @@ table is the "before" of every later unit of the slate. No product behaviour liv
 - `r3.rs` — the R-3 size flag and the `files`-table footprint (bytes, files, delete files,
   data rows).
 - `report.rs` — the environment header, the I/O JSON (with the footer / page split), the RSS
-  probes, the run-level I/O tally, sample medians and the identical-I/O check, the markdown
+  probes (async since ICE-CATALOG-CACHE-1: each settles the metadata cache before reading its
+  counters, so evictions and counts are current; `run.rs` awaits them), the run-level I/O tally, sample medians and the identical-I/O check, the markdown
   table.
 
 ## Commands

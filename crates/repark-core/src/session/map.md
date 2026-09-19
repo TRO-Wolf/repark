@@ -17,7 +17,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
-- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
+- `write_options.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits
+  `trim_iceberg_caches()`, which settles the moka cache before it counts. pins: ice-catalog-cache-1/C-012
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
   its crate-private body, the session's one statement funnel (spill SET intercept, cache
   trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase
   (2026-09-18, Q-22b-WO-1):** it takes `force_static_overwrite` and fills
@@ -116,6 +118,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   (hits, misses, body fetches, evictions); `iceberg_metadata_cache_stats()` keeps its
   `(hits, misses, body_fetches)` signature for the Python census binding.
   pins: ice-catalog-cache-1/C-002, C-007
+  `trim_iceberg_caches` is async and `settle_iceberg_metadata_cache()` is public (the census
+  binding and the bench call it before reading counts). pins: ice-catalog-cache-1/C-012
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

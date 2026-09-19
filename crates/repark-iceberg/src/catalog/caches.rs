@@ -195,11 +195,23 @@ impl CatalogCaches {
         self.io_counters.reset();
     }
 
-    pub fn trim(&self) {
-        if let Some(cache) = self.metadata.as_ref()
-            && cache.len() > self.metadata_entries
+    pub async fn settle(&self) {
+        if let Some(cache) = self.metadata.as_ref() {
+            cache.run_pending_tasks().await;
+        }
+    }
+
+    pub async fn settled_metadata_len(&self) -> usize {
+        self.settle().await;
+        self.metadata_len()
+    }
+
+    pub async fn trim(&self) {
+        if self.settled_metadata_len().await > self.metadata_entries
+            && let Some(cache) = self.metadata.as_ref()
         {
             cache.clear();
+            cache.run_pending_tasks().await;
         }
     }
 }

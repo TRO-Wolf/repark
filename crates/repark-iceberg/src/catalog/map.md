@@ -148,6 +148,9 @@ Source comments retain only API and safety contracts; implementation narration i
   (`metadata_stats().evictions`, advisory until moka's pending tasks run). The door `trim` below
   still runs; a trim is an explicit clear, not an eviction. `TableMetadataCacheStats` is
   re-exported from `mod.rs` for the session report. pins: ice-catalog-cache-1/C-006, C-007
+  `settle()` runs the cache's pending tasks; `settled_metadata_len()` is the accurate count;
+  `trim()` is async — it settles, counts, and after a clear settles again — because moka's
+  entry count lags its writes. `metadata_len()` stays sync and approximate. pins: ice-catalog-cache-1/C-012
   **The bound's scope is the statement door, not the load.** Before ICE-CATALOG-CACHE-1 the fork's
   cache was an unbounded `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
   session calls `trim` at the statement door (`session.rs::sql_with`). That bounds what a session

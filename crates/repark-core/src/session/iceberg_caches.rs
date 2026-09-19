@@ -29,8 +29,12 @@ impl ReparkSession {
         caches_of(&self.catalogs).io_counters()
     }
 
-    pub(crate) fn trim_iceberg_caches(&self) {
-        caches_of(&self.catalogs).trim();
+    pub(crate) async fn trim_iceberg_caches(&self) {
+        caches_of(&self.catalogs).trim().await;
+    }
+
+    pub async fn settle_iceberg_metadata_cache(&self) {
+        caches_of(&self.catalogs).settle().await;
     }
 
     #[must_use]

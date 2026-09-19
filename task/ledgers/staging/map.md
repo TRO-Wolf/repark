@@ -229,7 +229,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   through `iceberg_metadata_cache_report` and the bench. The before/after pair is
   `TBD-orchestrator`. `risk_tier: standard`. Branch `perf/ice-catalog-cache-1`.
   pins: ice-catalog-cache-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-011
+  C-010, C-011, C-012
 - [ice-read-perf-0-ledger.md](ice-read-perf-0-ledger.md) —
   **ICE-READ-PERF-0 (2026-09-19), in flight:** the Iceberg I/O counting layer (a counting
   `StorageFactory` whose counters the session owns; Glue and S3 Tables wrap exactly the fork
