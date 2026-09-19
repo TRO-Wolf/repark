@@ -450,6 +450,17 @@ pins: rp-4-fork-repin/C-005, C-006
   schemas after bottom-up narrowing); `Values` clones rows only on change;
   `Union` rebuilds only on a moved child type.
   pins: sql-literal-typing-1/L-001, L-002, L-003
+  **ICE-COUNT-FOLD-1 (2026-09-19):** this is the rule that narrowed `count(*)`'s
+  `COUNT_STAR_EXPANSION` on both Spark doors, which kept DataFusion's `AggregateStatistics`
+  from folding `count(*)` over an exact Iceberg row count. Expressions now walk through
+  `repark_functions::spark_result_types::transform_keeping_count_star`: a non-distinct
+  `count` of the literal `1` keeps (or, for the DataFrame door's `Int32(1)`, gets)
+  `Int64(1)` while its `FILTER` / `ORDER BY` still narrow; the plan pre-check also fires on
+  such a count (`needs_count_star_expansion`), since `groupBy().count()` carries no `Int64`
+  literal. Names are preserved (`NamePreserver`), the result stays `Int64`. Unit pins
+  `count_star_keeps_the_int64_expansion_and_its_name`,
+  `int32_count_of_one_widens_without_an_int64_literal`.
+  pins: ice-count-fold-1/C-002
 - `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),

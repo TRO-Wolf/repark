@@ -7,6 +7,9 @@ use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder, Union, Values};
 use datafusion::optimizer::AnalyzerRule;
+use repark_functions::spark_result_types::{
+    needs_count_star_expansion, transform_keeping_count_star,
+};
 
 pub const SPARK_MAX_DECIMAL_PRECISION: u8 = 38;
 
@@ -56,7 +59,7 @@ fn plan_may_narrow(plan: &LogicalPlan) -> Result<bool> {
     plan.apply_with_subqueries(|node| {
         node.apply_expressions(|expr| {
             expr.apply(|leaf| {
-                if is_narrowable_literal(leaf) {
+                if is_narrowable_literal(leaf) || needs_count_star_expansion(leaf) {
                     found = true;
                     return Ok(TreeNodeRecursion::Stop);
                 }
@@ -128,7 +131,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(spark_integral_literal)?;
+        let rewritten = transform_keeping_count_star(expr, &spark_integral_literal)?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     let narrowed_flag = transformed.transformed;
@@ -536,5 +539,60 @@ mod tests {
         let config = ctx.state().config_options().clone();
         let analyzed = SparkIntegralLiteral.analyze(plan, &config).unwrap();
         assert_eq!(analyzed.schema().field(0).data_type(), &DataType::Int32);
+    }
+
+    #[tokio::test]
+    async fn count_star_keeps_the_int64_expansion_and_its_name() {
+        use datafusion::prelude::SessionContext;
+        let ctx = SessionContext::new();
+        let plan = ctx
+            .state()
+            .create_logical_plan("SELECT count(*), count(1), count(5) FROM (VALUES (1)) AS t(x)")
+            .await
+            .unwrap();
+        let names: Vec<String> = plan
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().clone())
+            .collect();
+        let config = ctx.state().config_options().clone();
+        let analyzed = SparkIntegralLiteral.analyze(plan, &config).unwrap();
+        let rendered = format!("{}", analyzed.display_indent());
+        assert!(
+            rendered.contains("aggr=[[count(Int64(1)), count(Int32(5)) AS count(Int64(5))]]"),
+            "{rendered}"
+        );
+        let analyzed_names: Vec<String> = analyzed
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().clone())
+            .collect();
+        assert_eq!(analyzed_names, names);
+    }
+
+    #[tokio::test]
+    async fn int32_count_of_one_widens_without_an_int64_literal() {
+        use datafusion::functions_aggregate::count::count;
+        use datafusion::prelude::SessionContext;
+        let ctx = SessionContext::new();
+        let plan = ctx
+            .read_empty()
+            .unwrap()
+            .aggregate(
+                vec![],
+                vec![count(Expr::Literal(ScalarValue::Int32(Some(1)), None))],
+            )
+            .unwrap()
+            .into_unoptimized_plan();
+        let config = ctx.state().config_options().clone();
+        let analyzed = SparkIntegralLiteral.analyze(plan, &config).unwrap();
+        let rendered = format!("{}", analyzed.display_indent());
+        assert!(
+            rendered.contains("count(Int64(1)) AS count(Int32(1))"),
+            "{rendered}"
+        );
+        assert_eq!(analyzed.schema().field(0).name(), "count(Int32(1))");
     }
 }

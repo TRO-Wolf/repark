@@ -144,7 +144,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `Count::value_from_stats` folds `count(*)` / `count(1)` / `groupBy().count()` from an
   exact row-count statistic (the Iceberg scan's, among others). Its `FILTER` and `ORDER BY`
   literals still narrow; the output name is preserved by `NamePreserver`; the result stays
-  `Int64`. `count(5)` and `count(DISTINCT 1)` narrow as before.
+  `Int64`. `count(5)` and `count(DISTINCT 1)` narrow as before. The walker is public as
+  `transform_keeping_count_star` (leaf rewrite as a parameter) with the pre-check
+  `needs_count_star_expansion`, so the Spark door's early `SparkIntegralLiteral` shares it.
   pins: ice-count-fold-1/C-002
   pins: sql-literal-typing-1/V-001
 - `lambda_rebind.rs` — **FNP-8 (2026-09-06):** `LambdaRebind`, in `analyzer_rules()`
