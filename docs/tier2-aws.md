@@ -88,6 +88,15 @@ the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
   snapshot management (keep 1 / 120 h, then permanent removal of noncurrent objects) fails for
   a whole table that carries any user-defined branch or tag or a `history.expire.*` property —
   the refs leg disables it on its scratch tables or expects that failure.
+- **The ICE-READ-PERF bench (§8) needs two more actions, which the role does NOT have today:**
+  `s3tables:PutTableMaintenanceConfiguration` and `s3tables:GetTableMaintenanceConfiguration`,
+  scoped to the one bench table
+  `arn:aws:s3tables:<REGION>:<ACCOUNT>:bucket/<TABLE-BUCKET>/table/*` with the same
+  `s3tables:namespace = testing_repark_acceptance` condition (or the bench table's own ARN once
+  it exists). The bench disables AWS-managed compaction on its table and reads the setting back
+  before it writes a byte, so the file layout stays identical across dispatches (slate R-2 / R-3
+  guard). Until the owner grants them, the bench job stops at that step, before any write, and
+  its summary names the two actions. The acceptance module does not need them.
 
 Never-teardown of **tables** is still a PERMISSIONS FACT: the harness creates into the scratch
 namespace with a scratch table prefix, has no DROP TABLE path, and the role still has no
@@ -196,3 +205,78 @@ time — the in-place `create or replace` publish must leave the same rows and g
 history by exactly one snapshot — then `dbt test` (ten blocks). It needs no new IAM action and no
 new variable: `glue:UpdateTable` and the warehouse scratch prefix are already granted, and it
 drops nothing.
+
+## 8. The ICE-READ-PERF bench leg (dispatch-only)
+
+The read-performance slate's AWS bed (task/roadmap/mid-term/ice-read-perf-slate-2026-09-18.md,
+unit 0 and ruling R-3) runs as a second job of the same workflow, `ice-read-perf-bench`. It runs
+**only** on a manual dispatch that asks for it, never on the nightly schedule. The nightly (and a
+plain dispatch, whose `leg` defaults to `acceptance`) runs only `live-aws`, exactly as before.
+
+```bash
+gh workflow run aws-acceptance.yml -f leg=ice-read-perf-bench -f purpose=<unit, e.g. ice-read-perf-0-baseline>
+```
+
+**The owner approves each dispatch at the `aws-acceptance` environment gate (§1)**: the job
+declares the same environment, so no credential mints before that approval. Check the ref and
+the commit, then approve.
+
+What the job does, in order (the same pinned actions as `live-aws`, the same ref guard,
+`persist-credentials: false`, `id-token: write` scoped to the job):
+
+1. Checkout, the Rust toolchain and the cache, then `cargo bench -p repark-spark --bench
+   ice_read_perf --no-run`: the bench is built **before** any credential exists.
+2. It refuses an unset or placeholder `REPARK_ACCEPT_WAREHOUSE` and an unset `TABLE_BUCKET_ARN`
+   before signing any request. Both legs are required, and neither is skipped.
+3. It mints the credentials (session name `repark-ice-read-perf-bench`, account id masked).
+4. **S3 Tables.** `setup --phase create` on `testing_repark_acceptance.ice_read_perf_bench`
+   (idempotent: the namespace without a location, the empty table with the bed schema, or a
+   report that it exists). Then `put-table-maintenance-configuration --type icebergCompaction`
+   with status `disabled`, and `get-table-maintenance-configuration`. The job fails before any
+   write unless compaction reads `disabled`. Then `setup --phase write`: it writes the 200 files
+   only into an empty table, skips a table that already holds exactly the bed, and fails loud on
+   any other state.
+5. **Glue.** The same `create` / `write` on `ice_read_perf_bench` in the Glue scratch namespace
+   `testing_repark_acceptance` (the namespace at `<REPARK_ACCEPT_WAREHOUSE>/testing_repark_acceptance`,
+   verified as §5 requires). Glue's compaction optimizer is off unless someone enables it on the
+   table. The job makes no optimizer call and says so in its summary.
+6. For each catalog, `run --mode cold`, `warm`, `concurrent`, `concurrent-cold` with `--repeat 3
+   --out <json>`.
+7. The job summary gets one line per run with the bytes it read (`run_io_total.bytes` of the
+   run's JSON: every request of every session the run opened) and the dispatch total. The eight
+   JSONs upload as the `ice-read-perf-bench` artifact (30 days).
+
+**R-3 on every step.** Every `setup` phase ends with the table-size check, and every `run` makes
+it before its first scan. Above 3 × 1024³ bytes the bench prints `R3-SIZE-FLAG …`, appends it to
+the job summary and exits 3. No step sets `continue-on-error`, so the job fails at once. Raising
+the limit is an owner decision, never an option. The Slack note to the owner that the slate asks
+for is not wired yet.
+
+**Cost.** The slate's R-3 estimate was about 12 GB read per dispatch, so about $1 of data transfer
+out at about $0.09/GB, plus cents of requests and about $0.05 per table-month of storage, and
+$5–10 for six dispatches (cap $25). The job as built reads more, because every mode runs
+`--repeat 3` on both catalogs. From the 20-file local smoke scaled to 200 files (see the unit
+ledger), one pass of Q1–Q7 reads about 2.7 GB and one round of the four concurrent queries about
+2.4 GB. Per catalog: cold 3 passes, warm 4 (one warm-up), concurrent 4 rounds (one warm-up),
+concurrent-cold 3 rounds. That is about 36 GB per catalog and **about 70 GB per dispatch, about
+$6.5** before AWS's 100 GB/month free transfer tier. Six dispatches come to roughly 420 GB, about
+$29 after one month's free tier and above the slate's $25 cap. The job's `BENCH_REPEAT` env
+(`"3"`) is the one lever: at `"1"` a dispatch reads about 31 GB (about $2.8). The owner decides
+before the first dispatch. The writes (two tables of about 1.4 GB each, written once) are
+inbound and free. The summary's dispatch total is the measured figure to check against this
+estimate.
+
+**The scratch lifecycle rule (§3) and the Glue bench table.** The Glue bench table's files live
+under the warehouse scratch prefix (`<REPARK_ACCEPT_WAREHOUSE>/testing_repark_acceptance/ice_read_perf_bench/`).
+The slate reuses that table from the baseline through the re-measure gate, which is weeks. A
+14-day expiry rule over the whole scratch prefix would delete its data files under a live
+table. The next dispatch would then find the table "exact" by metadata, skip the write, and fail
+its first scan. Before the baseline dispatch the owner either scopes the lifecycle rule away from
+that one table prefix or accepts that such a failure means dropping the table and writing it
+again. The S3 Tables table is not under that rule; its storage is the table bucket.
+
+**A wedged bench table.** If a `write` phase dies part-way (a network error at file 57 of 200),
+the next dispatch refuses the table (neither empty nor exact). The role cannot drop tables, by
+design (§2). The owner drops it with owner credentials (`aws s3tables delete-table …` /
+`aws glue delete-table …`) and dispatches again. The slate drops both bench tables when its
+re-measure gate closes. That too is an owner action.
