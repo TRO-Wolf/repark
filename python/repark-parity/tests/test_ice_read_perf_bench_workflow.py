@@ -90,6 +90,46 @@ def _logical_lines(script: str) -> list[str]:
     return re.sub(r"\\\n\s*", " ", script).splitlines()
 
 
+def _expansions(script: str) -> tuple[list[str], list[str]]:
+    """Return ``(quoted, unquoted)`` ``${…}`` expansions, tracking quotes through ``$(…)``."""
+    quoted: list[str] = []
+    unquoted: list[str] = []
+    stack = ["plain"]
+    index = 0
+    while index < len(script):
+        top = stack[-1]
+        if script[index] == "\\":
+            index += 2
+        elif top == "plain" and script[index] == "'":
+            index = script.index("'", index + 1) + 1
+        elif script.startswith("$((", index):
+            stack.append("arith")
+            index += 3
+        elif top == "arith" and script.startswith("))", index):
+            stack.pop()
+            index += 2
+        elif script.startswith("${", index):
+            end = script.index("}", index) + 1
+            (quoted if top == "double" else unquoted).append(script[index:end])
+            index = end
+        elif script.startswith("$(", index):
+            stack.append("plain")
+            index += 2
+        elif script[index] == '"' and top in ("plain", "double"):
+            if top == "double":
+                stack.pop()
+            else:
+                stack.append("double")
+            index += 1
+        elif script[index] == ")" and top == "plain" and len(stack) > 1:
+            stack.pop()
+            index += 1
+        else:
+            index += 1
+    assert stack == ["plain"], (stack, script)
+    return quoted, unquoted
+
+
 def _uses_pins(block: str) -> dict[str, str]:
     """Map each action used in ``block`` to its pinned ref."""
     return dict(re.findall(r"uses:\s*([\w./-]+)@([0-9a-f]{40})", block))
@@ -217,3 +257,19 @@ def test_no_bench_or_s3tables_failure_can_be_swallowed() -> None:
         assert line.count("||") == 1, line
         assert re.search(r'\|\| stop "[^"]+"$', line), line
         assert not re.search(r"&&|;", line), line
+
+
+def test_every_variable_expansion_in_the_bench_scripts_is_double_quoted() -> None:
+    """No ``${…}`` in a bench ``run:`` script is left to word splitting or globbing."""
+    quoted: list[str] = []
+    for script in _run_scripts(_job_block(_text(), "ice-read-perf-bench")):
+        inside, outside = _expansions(script)
+        assert outside == [], (outside, script)
+        quoted.extend(inside)
+    assert "${PURPOSE:-unstated}" in quoted
+    assert quoted.count("${TABLE_BUCKET_ARN}") >= 6
+    assert quoted.count("${mode}") == 4
+    assert _expansions('a ${X} "b ${Y}" \'${Z}\' "$(c "${W}") ${V}" $((1 + 2))') == (
+        ["${Y}", "${W}", "${V}"],
+        ["${X}"],
+    )

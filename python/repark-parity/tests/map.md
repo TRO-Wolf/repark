@@ -141,8 +141,16 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   (F-SEC-REF-ORDER): the bench job's ref guard (`if: github.ref != 'refs/heads/main'`, `exit
   1`) is the first ordered marker. It must be the job's first step, ahead of
   `actions/checkout@` and `aws-actions/configure-aws-credentials@`, so moving it after the
-  credentials or after checkout, or dropping its `exit 1`, reds the step-order pin. YAML read
-  by regex, no PyYAML.
+  credentials or after checkout, or dropping its `exit 1`, reds the step-order pin. Round 3
+  (F-SEC-PURPOSE, hardening): every `${…}` in the job's `run:` scripts sits inside double
+  quotes. A small scanner tracks single quotes, double quotes, `$(…)` and `$((…))` to check it,
+  and it is self-pinned on a mixed sample. Unquoting `${PURPOSE:-unstated}`, the `mkdir`
+  target, `--mode "${mode}"` or the `--table-bucket-arn` inside the `$(aws …)` reds
+  `test_every_variable_expansion_in_the_bench_scripts_is_double_quoted`. The critic's claim
+  that `purpose` can run command substitution was measured false (bash 5.2.21, 2026-09-19).
+  `PURPOSE='$(touch /tmp/pa-pwn)'; echo "x ${PURPOSE:-unstated}"` prints the text literally and
+  creates no file; backticks and the unquoted form behave the same, because bash does not
+  re-evaluate an expanded value. YAML read by regex, no PyYAML.
   pins: ice-read-perf-0/C-018, C-019
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names
