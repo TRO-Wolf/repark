@@ -56,6 +56,15 @@ works, so the attribute is gone rather than documented.
   selections stay on the identity path with no behaviour or performance change.
   pins: ice-list-null-2/C-001, C-003
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
+- `plain.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the UPDATE allow-list moves
+  here from `predicate_dml.rs` (which re-exports both entry points, so no caller moves) and
+  (the moved bodies shed their doc comments per the owner ban and carry
+  `#[allow(clippy::missing_errors_doc)]`; the error contract is: a `DataFusionError::Plan`
+  when the target namespace is invalid, `Ok(None)` for any shape outside the allow-list).
+  `try_allowed_plain_update` is `try_allowed_update_in` with the plain scalar-comparison
+  predicate instead of the uncorrelated `IN` hole (`allowed_update_with` is the shared body),
+  so an owned identity UPDATE can serve a plain `UPDATE … WHERE col = v`.
+  pins: ice-session-write-conf-1/C-038
 - `mor_commit.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the merge-on-read
   arms of the identity DELETE and UPDATE (`commit_identity_delete_mor` /
   `commit_identity_update_mor`), split out of `predicate_dml.rs` along its declared seam

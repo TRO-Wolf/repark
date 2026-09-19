@@ -759,8 +759,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Round 1 fix (2026-09-19, Q-24c-6):** `SP-CALL-RDF` and `CZ-CONF-RDF` are
   strict xfails (`F-RDF-SESSION-CONF-1`: the fork's `rewrite_data_files` takes
   no session writer/snapshot properties — declared residue, registry row names it).
-  **Orchestrator gate (2026-09-19):** `SP-UPDATE` is a third strict xfail under the same
-  ask (the fork-committed UPDATE takes no session snapshot property), and the recorder reads
+  **Orchestrator gate (2026-09-19):** `SP-UPDATE` was a third strict xfail under the same
+  ask; **round 1 (2026-09-19, run 25c)** turns it into a pin — a plain UPDATE is now owned when
+  the session conf is set, so it stamps like Spark. The recorder reads
   `operation` from its own `snapshots` column, builds the DataFrame cells' frame and the
   rdf cell's short name, and compares `data` in repr order; its live `check` re-derives
   all 25 cells. pins: ice-session-write-conf-1/C-035

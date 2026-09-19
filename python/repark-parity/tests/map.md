@@ -184,8 +184,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: ice-drop-ns-1/C-011
 - `test_cap_1_source_file_line_cap.py` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c):**
   mirror rows follow the two shrink-only ratchets of the round:
-  `write/predicate_dml.rs` 1034 → 1017 (the MoR arms split to `predicate_dml/mor_commit.rs`)
-  and `write/merge/tests/streaming_scan.rs` 3020 → 3018.
+  `write/predicate_dml.rs` loses its exception row outright (1034 → 960, under the default
+  ceiling) and `write/merge/tests/streaming_scan.rs` 3020 → 3018.
   pins: ice-session-write-conf-1/C-040
 - `test_cap_1_source_file_line_cap.py` — **ICE-TT-RESOLVE-1 (2026-09-19, run 24c):**
   mirror rows ratchet `repark-python/src/session.rs` 1126 → 1122 and `session_core.py`

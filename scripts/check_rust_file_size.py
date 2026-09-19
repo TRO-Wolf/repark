@@ -111,11 +111,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Overwrite planning and commit behavior share one module.",
         "Extract predicate and file-selection logic from commit assembly.",
     ),
-    "crates/repark-iceberg/src/write/predicate_dml.rs": (
-        1017,
-        "Predicate DELETE and UPDATE planning share one adapter.",
-        "Split predicate validation from operation-specific plan construction.",
-    ),
     "crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs": (
         1440,
         "Predicate DML scenarios share one consolidated test module.",

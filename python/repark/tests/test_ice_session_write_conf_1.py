@@ -255,11 +255,6 @@ def test_sp_delete_mor_stamps_delete(spark: Any) -> None:
         _end(spark, cell["spark_conf"], [table])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="F-RDF-SESSION-CONF-1 2026-09-19: UPDATE commits through the fork's DataFusion DML, "
-    "which takes no session snapshot properties",
-)
 def test_sp_update_stamps_overwrite(spark: Any) -> None:
     """UPDATE stamps team=a on append and overwrite. pins: ice-session-write-conf-1/C-010"""
     cell = _cell("SP-UPDATE")

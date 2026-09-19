@@ -361,6 +361,14 @@ pins: rp-4-fork-repin/C-005, C-006
   `fast_append`; the service-managed arm calls `commit_replace_write_with_summary`.
   Plain CTAS with options keeps the append summary.
   pins: ice-write-options-1/C-016
+- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `plain_identity_or_update` adds the plain `UPDATE … SET … WHERE <scalar comparison>` to the
+  owned identity-DML route when the session write conf is set. Without it the statement
+  commits through the fork's DataFusion DML, which takes no snapshot properties and no codec,
+  so Spark's stamp, its MoR delete-file codec and its summary-key refusal were all silently
+  lost (`QS-UPDATE-MOR`, `QZ-POSDEL-UPDATE`, `QR-UPDATE-COW-CHANGED-PARTITION`, `SP-UPDATE`).
+  The reroute is conf-scoped on purpose: making every plain UPDATE owned is a routing decision
+  of its own, tracked outside this unit. pins: ice-session-write-conf-1/C-038, C-040, C-041
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and

@@ -179,63 +179,6 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
     }))
 }
 
-/// Return catalog plus spec for allow-listed uncorrelated `UPDATE … SET` with `WHERE col IN`.
-/// # Errors
-/// Fails with [`DataFusionError::Plan`] when the allowed spelling's target is not three-part.
-pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
-    let Statement::Update(update) = statement else {
-        return Ok(None);
-    };
-    if update.from.is_some()
-        || update.returning.is_some()
-        || update.output.is_some()
-        || update.limit.is_some()
-        || !update.order_by.is_empty()
-        || !update.table.joins.is_empty()
-        || update.assignments.is_empty()
-    {
-        return Ok(None);
-    }
-    let Some(selection) = update.selection.as_ref() else {
-        return Ok(None);
-    };
-    // UPDATE hole is uncorrelated positive IN only (NOT IN / EXISTS stay refused this PR).
-    if !is_allowed_positive_uncorrelated_in(selection) {
-        return Ok(None);
-    }
-    let Some((object_name, alias)) = update_target_and_alias(update) else {
-        return Ok(None);
-    };
-    let parts = object_name_parts(object_name);
-    if parts.len() < 3 {
-        return Ok(None);
-    }
-    let catalog_name = parts[0].clone();
-    let table_name = parts[parts.len() - 1].clone();
-    let namespace = parts[1..parts.len() - 1].to_vec();
-    let namespace = NamespaceIdent::from_vec(namespace).map_err(|error| {
-        DataFusionError::Plan(format!(
-            "UPDATE target `{object_name}` has an invalid namespace: {error}"
-        ))
-    })?;
-    let target_alias = alias.unwrap_or_else(|| table_name.clone());
-    let Some(assignments) = scalar_set_assignments(update, &parts, &target_alias) else {
-        return Ok(None);
-    };
-    let mut scratch_selection = selection.clone();
-    rewrite_target_refs_in_expr(&mut scratch_selection, &parts, &target_alias);
-    Ok(Some(AllowedDeleteIn {
-        catalog_name,
-        spec: PredicateDmlSpec {
-            target: TableIdent::new(namespace, table_name),
-            target_alias,
-            selection_sql: scratch_selection.to_string(),
-            assignments: Some(assignments),
-            case_insensitive: true,
-        },
-    }))
-}
-
 /// Execute an identity DELETE or UPDATE: SELECT over the pinned scratch, then COW-rewrite or `MoR`
 /// # Errors
 /// Planning, write, or commit errors, plus `NotImplemented` for non-Parquet or non-V2 `MoR`.
@@ -1011,6 +954,7 @@ mod cow_commit;
 mod lineage;
 mod mor_commit;
 pub mod plain;
+pub use plain::{try_allowed_plain_update, try_allowed_update_in};
 mod residual;
 
 #[cfg(test)]
