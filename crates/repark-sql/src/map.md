@@ -171,7 +171,8 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   Tests: [schema_ddl/map.md](schema_ddl/map.md).
   pins: ice-drop-ns-1/C-006, C-007
   The blanket `CASCADE` refusal is gone: `CASCADE` runs the same emptiness check, and a missing
-  schema answers Spark's `[SCHEMA_NOT_FOUND]`; `router.rs` no longer passes `cascade`.
+  schema answers Spark's `[SCHEMA_NOT_FOUND]`; `router.rs` no longer passes `cascade`; `tests.rs`
+  sheds the stale `CASCADE`-refuses pin and its doc line (ceiling 1513).
   pins: ice-drop-ns-1/C-011
 - `alter.rs` — `ALTER TABLE` schema evolution (ADD/DROP/RENAME COLUMN, `ALTER COLUMN … SET DATA
   TYPE`, `ALTER COLUMN … FIRST|AFTER` moves, `RENAME TO`) through the tier-1

@@ -430,7 +430,6 @@ async fn create_schema_unknown_property_refuses() {
     assert!(err.contains("`location`"), "must list support: {err}");
 }
 
-/// `DROP SCHEMA` removes the namespace; `IF EXISTS` is idempotent; `CASCADE` drops an empty one.
 #[tokio::test]
 async fn drop_schema_drops_the_namespace() {
     let door = door().await;
