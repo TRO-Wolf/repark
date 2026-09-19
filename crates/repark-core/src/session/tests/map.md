@@ -31,6 +31,13 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `reset_iceberg_io_stats()` zeroes the set. pins: ice-read-perf-0/C-003
   It builds its table through the registered handle (`catalogs_snapshot().get`) and
   `refresh_catalog_provider`, because repark-core has no SQL door of its own.
+- `metadata_cache_report.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** `iceberg_metadata_cache_report()`
+  carries evictions (three 40 KiB-property tables under `metadataCacheEntries=1`, loads checked
+  for their own property) and the legacy `iceberg_metadata_cache_stats()` triple agrees with it;
+  a disabled cache reports `None` on both; two built sessions hold distinct caches; a source pin
+  reads `session.rs::register_catalog_spec` and requires both AWS builders to receive
+  `&iceberg_caches::caches_of(&self.catalogs)`. pins: ice-catalog-cache-1/C-002, C-004, C-006,
+  C-007
 - `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
 - `nlj_tight_pool.rs` — **NEVER-OOM-PANIC-1 (2026-09-16):** the tight-pool nested-loop-join
   loop pin. The plan shape is guarded (`NestedLoopJoinExec` in `EXPLAIN`), every iteration

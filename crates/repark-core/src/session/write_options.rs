@@ -31,7 +31,7 @@ impl ReparkSession {
         if let Some(frame) = super::spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);
         }
-        self.trim_iceberg_caches();
+        self.trim_iceberg_caches().await;
         let catalogs = self.catalogs_snapshot();
         let read_only = self.postgres_catalog_names_snapshot();
         let mut cx = EngineContext::new_with_time_zone(
