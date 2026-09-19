@@ -71,9 +71,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   selector clashes on a two-snapshot seed; the recorder replays them once on
   version 2. Offline pins seed the two-snapshot shape per test and assert the
   fixture class, message, or rows (`test_ice_tt_resolve_1_tt2.py` holds the TT2
-  pins under the default ceiling). Strings the engine CAST cannot take
-  (short/year-only/no-seconds forms, years past 2262) pin the Spark answer as
-  strict xfails citing the cast finding.
+  pins under the default ceiling). Strings the engine CAST could not take
+  (short/year-only/no-seconds forms, years past 2262) pinned the Spark answer as
+  strict xfails citing the cast finding; **CAST-TS-STRING-1 (2026-09-19)** flipped
+  them to plain pins (`test_reader_tas_date_past_2262`,
+  `test_facade_sql_tt2_short_and_year_only_casts`,
+  `test_reader_tt2_timestamp_as_of_nosec`). pins: cast-ts-string-1/C-009
   pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
   Round 3 item 3: the extractor stops a `TIMESTAMP AS OF` expression at a trailing
   alias (`AS ident` or a bare ident after a quoted/`)/number` value), so the alias
@@ -84,9 +87,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   on a branch selector. pins: ice-tt-resolve-1/C-002
   Round 3 item 6: the New York wall clocks use `zoneinfo.ZoneInfo("America/New_York")`
   instead of a fixed -4h offset, so the pins hold in winter. pins: ice-tt-resolve-1/C-002
-  Round 3 item 8: the alias-join b-side literal is `2261-01-01` (the oracle cell's
-  `2999-01-01` exceeds the engine CAST range; identical expected rows).
-  pins: ice-tt-resolve-1/C-002
+  Round 3 item 8: the alias-join b-side literal was `2261-01-01` (the oracle cell's
+  `2999-01-01` exceeded the engine CAST range; identical expected rows); CAST-TS-STRING-1
+  restores the oracle's `2999-01-01`. pins: ice-tt-resolve-1/C-002, cast-ts-string-1/C-009
 - [test_cast_map_spell_1.py](test_cast_map_spell_1.py) +
   [cast_map_spell_1/](cast_map_spell_1/map.md) +
   [_record_cast_map_spell_1.py](_record_cast_map_spell_1.py) —
