@@ -6676,4 +6676,4 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   it. Red on the old pin by the orchestrator's six-distinct-mappings probe.
   Truth in
   [../../repark-parity/fixtures/torture/data/ice_rowid_order_1/](../../repark-parity/fixtures/torture/data/ice_rowid_order_1/map.md).
-  pins: ice-rowid-order-1/C-003, C-004, C-005, C-006
+  pins: ice-rowid-order-1/C-003, C-004, C-005, C-006, C-007, C-008

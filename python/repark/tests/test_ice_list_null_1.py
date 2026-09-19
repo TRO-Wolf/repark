@@ -55,6 +55,8 @@ _PREDICATE_SLUGS = {
     "id > 1 AND xs IS NULL": "gt-and-is-null",
     "xs IS NULL OR id = 1": "or-eq-1",
 }
+
+
 def _cell_key(cell: dict[str, Any]) -> str:
     """Return the pin id of one oracle cell."""
     slug = _PREDICATE_SLUGS[cell["predicate"]]
