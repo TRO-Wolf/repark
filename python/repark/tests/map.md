@@ -1623,7 +1623,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `FanoutWriter::close` ascending, the mapping is Spark's in 12 of 12 runs, so `_P_LINEAGE` is
   back on every partitioned program — nine goldens re-measured on both engines — and the
   instability cell became `test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
-  beside the CTAS control that was always stable. Matrix and totals:
+  beside the CTAS control that was always stable. **RP-31 (2026-09-18):** the multi-partition
+  `INSERT … SELECT` order is deterministic at fork `#300`; its pins live in
+  `test_ice_rowid_order_1.py`. Matrix and totals:
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   pins: v3-cov-statement-coverage/C-002, C-003, C-004, C-006
   pins: rp-8-repin-f21-f22/C-007
@@ -6625,4 +6627,55 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   answers the recorded summary. Truth in
   [../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/](../../repark-parity/fixtures/torture/data/ice_write_options_rp_1/map.md).
   pins: ice-write-options-rp-1/C-003, C-004, C-005, C-006, C-007, C-008
-
+- [_record_ice_list_null_1.py](_record_ice_list_null_1.py) — the **record driver**
+  for ICE-LIST-NULL-1 (NOT a `test_` module; never collected). `SHAPES` is the shape
+  catalog (column DDL, seed VALUES); `record_cell()` creates, seeds and runs one
+  shape x version x mode x statement x predicate cell on one short-lived local
+  Spark JVM with a Hadoop catalog at scratch and records ok, ids, operation and
+  the delete-file / DV counts; `record_all()` writes all 128 cells to
+  `spark_list_null_oracle.json`. Runtime GAV from `_oracle_pins`, Ivy cache from
+  `REPARK_ORACLE_IVY`, warehouse from `tempfile`. Re-record:
+  `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2
+  on the path.
+  pins: ice-list-null-1/C-002
+- [test_ice_list_null_1.py](test_ice_list_null_1.py) —
+  **ICE-LIST-NULL-1 (2026-09-18, RP-31):** DELETE and UPDATE with IS NULL on nested
+  columns answer Spark 4.1.2 — one pin per recorded cell (128: four shapes by four
+  predicates by delete/update by copy-on-write / merge-on-read by v2/v3) asserting
+  the run answers, the ids left equal Spark's and the newest snapshot's operation
+  equals Spark's, each on a fresh RePark memory catalog with the recorder's DDL
+  and seed. The `map_int` empty-map seed row runs through a `map_from_arrays`
+  spelling RePark parses that reads back equal to Spark's seed (CAST-MAP-SPELL-1,
+  BACKLOG). The sixteen copy-on-write DELETE compound-predicate cells run verbatim
+  under strict xfail (fork #299 residue: the conjunction/disjunction path still
+  refuses `Accessor for Field xs not found`); the sixteen merge-on-read
+  `xs IS NOT NULL` cells pin RePark's measured 1 delete file (1 DV on v3) against
+  Spark's 2 (2 DVs). A second parametrization pins the delete-file / DV counts on
+  every cell. Live (`REPARK_PARITY_LIVE=1`): Spark re-derives one cell per shape
+  through the recorder's `record_cell` and answers the recorded ok, ids and
+  operation. Truth in
+  [../../repark-parity/fixtures/torture/data/ice_list_null_1/](../../repark-parity/fixtures/torture/data/ice_list_null_1/map.md).
+  pins: ice-list-null-1/C-003, C-004, C-005, C-006, C-008
+- [_record_ice_rowid_order_1.py](_record_ice_rowid_order_1.py) — the **record
+  driver** for ICE-ROWID-ORDER-1 (NOT a `test_` module; never collected).
+  `record_abc()` records the eight a/b/c cells (twelve runs each of INSERT INTO
+  SELECT, literal VALUES and CTAS on Hadoop and InMemory catalogs, `local[8]`,
+  `spark.sql.shuffle.partitions=4`); `record_order()` records the eight-category
+  cells (six runs per adaptive x row-count x distribution-mode configuration).
+  The a/b/c storm cells ride along unreproduced (ICE-APPEND-RETRY-1 owns them).
+  Runtime GAV from `_oracle_pins`, Ivy cache from `REPARK_ORACLE_IVY`, warehouse
+  from `tempfile`. Re-record: `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64
+  SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the path.
+  pins: ice-rowid-order-1/C-002
+- [test_ice_rowid_order_1.py](test_ice_rowid_order_1.py) —
+  **ICE-ROWID-ORDER-1 (2026-09-18, RP-31):** one statement's v3 row ids are
+  deterministic — twelve runs of each a/b/c shape (INSERT INTO SELECT, literal
+  VALUES, CTAS) on fresh RePark memory-catalog tables give one mapping and it
+  equals Spark's recorded a:0, b:100, c:200 (VALUES a:0, b:2, c:4); twelve runs
+  of the eight-category shape give one ascending mapping. A fifth pin holds the
+  DECLARED divergence: Spark's recorded default-configuration file order
+  (`z, x, m, a, q, b, c, d`) differs from ascending, so a future convergence reds
+  it. Red on the old pin by the orchestrator's six-distinct-mappings probe.
+  Truth in
+  [../../repark-parity/fixtures/torture/data/ice_rowid_order_1/](../../repark-parity/fixtures/torture/data/ice_rowid_order_1/map.md).
+  pins: ice-rowid-order-1/C-003, C-004, C-005, C-006, C-007, C-008

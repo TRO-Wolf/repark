@@ -110,16 +110,17 @@ def test_the_fork_routed_rows_name_a_trigger() -> None:
         assert "TRIGGER:" in body, row
 
 
-def test_v3_cov_3_records_the_measured_reopening() -> None:
-    """ICE-REGISTRY-SWEEP-1A: the row stands OPEN on the 2026-09-16 rating, not the RP-8 close."""
+def test_v3_cov_3_records_the_measured_close() -> None:
+    """ICE-ROWID-ORDER-1: the row closes at RP-31 on the measured reopening, with its residual."""
     registry = _read(_REGISTRY)
     start = registry.index("V3-COV-3 — ")
     body = registry[start : registry.index("\n### ", start)]
-    assert "OPEN (measured 2026-09-16" in body
-    assert "1 of 12" in body
+    assert "FIXED 2026-09-18 (RP-31, fork #300)" in body
+    assert "6 distinct" in body
     assert "12 of 12" in body
     assert "p_rowid_order" in body
-    assert "landed as fork `#261`" in body
+    assert "hash" in body
+    assert "test_ice_rowid_order_1" in body
     assert "test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered" in body
 
 

@@ -557,6 +557,8 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   **B-MOR-3 (2026-09-03):** `_TOTALS` moves to 72 EQUAL / 8 DIVERGES with the CALL row's flip,
   and `_CITED` drops `B-MOR-3` — the row is FIXED, not a covered divergence.
   pins: rp-8-repin-f21-f22/C-007
+  **RP-31 (2026-09-18):** the V3-COV-3 cell reads the row's close (`FIXED 2026-09-18 (RP-31, fork #300)`,
+  the 6-distinct reopening, the hash-order residual, both pin files).
   pins: v3-cov-statement-coverage/C-001, C-004, C-005
   pins: b-mor-3-rewrite-position-deletes-v3/C-004
 - `test_v1_gate_docs.py` — **V1-GATE (2026-09-03; tree pins):** the v1.0 gate audit is written
