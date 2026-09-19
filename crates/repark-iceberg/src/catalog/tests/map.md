@@ -78,7 +78,8 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   The cold scan reads at most as many footers with the cache on as off (measured 3 vs 4: the
   cache also collapses a split file's second footer read). A filtered scan after an unfiltered
   one answers right (100 rows, their sum), raises `upgrades`, fetches nothing new and reads no
-  footer; a repeat does not upgrade again. Warm page reads are identical on and off.
+  footer; a repeat does not upgrade again. Warm page reads are identical on and off. The table
+  is reached through `Arc<dyn Catalog>` method calls, so the module imports no `Catalog` trait.
   pins: ice-footer-cache-1/C-003, C-004, C-005
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003

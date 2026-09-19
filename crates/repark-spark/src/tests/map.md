@@ -726,6 +726,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   unsettled `metadata_len()` lags (three pins — the sibling-table guard, the one-statement
   retention and the many-commit bound — failed at the pin commit `ab4e57d6` itself, before this
   unit). pins: ice-catalog-cache-1/C-012
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** the two literal `IcebergCacheSettings` name the new
+  `footer_cache_bytes` field at its default; the 16 pins pass unchanged.
 - `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-3 (2026-09-05):** the default-ON flip.
   The funnel pin `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` now
   builds `CatalogCaches::default()` instead of sizing 32 MiB explicitly — it is the
