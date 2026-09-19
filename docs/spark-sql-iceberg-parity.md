@@ -5011,6 +5011,14 @@ the pin rather than obeying it.
   DataFusion display (`Int64(1)`), where Spark prints `"1"`. Separate from this row: the
   native `repark.sql` door's stock Generic parser expands `/*! … */` hints in every
   statement (`SELECT 1 /*! 3 */, 2` refuses there), pinned as a dated strict xfail.
+  **Round 4 (2026-09-19):** string leaves trim code points <= U+0020 and U+007F (DEL) only,
+  as Spark does (`concat(char(127), '1')` answers `1`; U+0085 raises `CAST_INVALID_INPUT` under
+  ANSI and gives NULL in legacy mode). The facade names `CAST_OVERFLOW` exactly as recorded
+  (`The value 128 of the type "INT"`). The native door types an untyped `128` as BIGINT and
+  says `128L` / `BIGINT` (a door-wide literal-typing gap, pinned as a dated strict xfail).
+  Residue L-008 (ruling Q-23b-9): `try_cast(map(128, 'a') AS MAP<TINYINT, STRING>)` — Spark
+  stores a map with one NULL key (size 1) that PySpark cannot collect. An Arrow map cannot
+  hold a NULL key, so RePark refuses loud (`a map key cast produced NULL`) in both modes.
 - **Apache Spark** — the recorded 21 cells in
   `python/repark/tests/cast_map_spell_1/cast_map_spell_1_spark_oracle.json` and the 17
   round-3 cells in `…/cast_map_spell_1_round3_spark_oracle.json`.
@@ -5020,7 +5028,7 @@ the pin rather than obeying it.
   check); `python/repark/tests/test_nullability_2.py::test_cast_to_map_type_spelling_answers_per_cast_map_spell_1`;
   `crates/repark-functions/src/cast_map/tests.rs`.
 - **Rationale** — FIXED 2026-09-19. Filed 2026-09-06 (NULLABILITY-2 round 2).
-  pins: cast-map-spell-1/C-009, C-011, C-012, C-013, C-014
+  pins: cast-map-spell-1/C-009, C-011, C-012, C-013, C-014, C-015, C-016
 
 ### LOGICAL-WIDTH-1 — narrow top-level widths report wide via `dtypes`/`schema`
 

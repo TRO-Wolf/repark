@@ -202,7 +202,7 @@ fn integral_literal(value: i64, source: &DataType) -> String {
 }
 
 fn spark_trim(text: &str) -> &str {
-    text.trim_matches(|character: char| character <= ' ')
+    text.trim_matches(|character: char| character <= ' ' || character == '\u{7f}')
 }
 
 fn parse_strict_integer(text: &str) -> Option<i64> {

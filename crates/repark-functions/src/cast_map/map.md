@@ -20,6 +20,8 @@ the module's tests.
   `safe = mode != ANSI`. RePark's scalar `CAST` has no Spark leaf kernel to reuse (it
   raises Arrow's error on both doors), so these live here.
   pins: cast-map-spell-1/C-011, C-013
+  **Round 4 (2026-09-19):** `spark_trim` drops code points <= U+0020 and U+007F (DEL) only,
+  as measured; U+0085 stays and fails the parse. pins: cast-map-spell-1/C-015
 - `rewrite.rs` — `rewrite_map_casts`: tokenizes the statement with the Spark dialect (strings, quoted identifiers and
   comments, `/*! … */` hints included, stay opaque), finds each `CAST(` / `TRY_CAST(` whose top-level `AS` target names
   `MAP <`, and splices the UDF call in by byte span so every other byte of the statement stays
@@ -39,6 +41,8 @@ the module's tests.
   Round 3: the comment hint, colliding keys kept in Spark's stored order, key legality
   by mode and `try_cast`, and leaf overflow, wrap, trimming and fractional text.
   pins: cast-map-spell-1/C-011, C-012, C-013, C-014
+  Round 4: the trim set, the full `CAST_OVERFLOW` message for INT and BIGINT sources, and
+  the loud refusal of a `try_cast` key that overflows. pins: cast-map-spell-1/C-013, C-015, C-016
 
 ## Pointers
 

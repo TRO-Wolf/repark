@@ -257,8 +257,7 @@ async fn leaf_casts_follow_spark_overflow_and_trimming() {
     let overflow = "SELECT CAST(map('a', 128) AS MAP<STRING, TINYINT>) AS m";
     let error = run(&context(true), overflow).await.unwrap_err().to_string();
     assert!(
-        error.contains("[CAST_OVERFLOW] The value 128")
-            && error.contains("cannot be cast to \"TINYINT\" due to an overflow"),
+        error.contains("[CAST_OVERFLOW] The value 128L of the type \"BIGINT\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"),
         "{error}"
     );
     let wrapped = run(&context(false), overflow).await.unwrap();
@@ -286,4 +285,66 @@ async fn leaf_casts_follow_spark_overflow_and_trimming() {
     .await
     .unwrap();
     assert_eq!(first_cell(&boolean), "{a: true}");
+}
+
+#[tokio::test]
+async fn overflow_names_the_source_type_as_spark_does() {
+    let error = run(
+        &context(true),
+        "SELECT CAST(map('a', CAST(128 AS INT)) AS MAP<STRING, TINYINT>) AS m",
+    )
+    .await
+    .unwrap_err()
+    .to_string();
+    assert!(
+        error.contains(
+            "[CAST_OVERFLOW] The value 128 of the type \"INT\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+        ),
+        "{error}"
+    );
+}
+
+#[tokio::test]
+async fn ascii_controls_and_del_trim_but_c1_controls_do_not() {
+    for ansi in [true, false] {
+        for (sql, expected) in [
+            (
+                "SELECT CAST(map('a', concat(chr(127), '1')) AS MAP<STRING, INT>) AS m",
+                "{a: 1}",
+            ),
+            (
+                "SELECT CAST(map('a', concat(chr(9), '1')) AS MAP<STRING, INT>) AS m",
+                "{a: 1}",
+            ),
+            (
+                "SELECT CAST(map('a', concat(chr(127), 'true')) AS MAP<STRING, BOOLEAN>) AS m",
+                "{a: true}",
+            ),
+        ] {
+            let batches = run(&context(ansi), sql).await.unwrap();
+            assert_eq!(first_cell(&batches), expected, "{sql} ansi={ansi}");
+        }
+    }
+    let c1 = "SELECT CAST(map('a', concat(chr(133), '1')) AS MAP<STRING, INT>) AS m";
+    let error = run(&context(true), c1).await.unwrap_err().to_string();
+    assert!(
+        error.contains("[CAST_INVALID_INPUT] The value '\u{85}1'"),
+        "{error}"
+    );
+    let legacy = run(&context(false), c1).await.unwrap();
+    assert_eq!(first_cell(&legacy), "{a: }");
+}
+
+#[tokio::test]
+async fn try_cast_key_overflow_refuses_loudly() {
+    for ansi in [true, false] {
+        let error = run(
+            &context(ansi),
+            "SELECT try_cast(map(CAST(128 AS INT), 'a') AS MAP<TINYINT, STRING>) AS m",
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("a map key cast produced NULL"), "{error}");
+    }
 }
