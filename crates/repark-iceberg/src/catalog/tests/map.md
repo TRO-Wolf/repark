@@ -68,6 +68,22 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   pending tasks run, so a `trim` that reads the unsettled `metadata_len()` never clears (red 3/3
   as `left: 4, right: 0`). pins: ice-catalog-cache-1/C-001, C-003, C-005, C-006,
   C-008, C-010, C-012
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** the recorder also records the footer `Arc`: it reaches
+  the builder by default, not when disabled, alone with a credential context, and not at
+  `footerCacheBytes = 0`; `every_builder_holds_the_session_footer_cache` raises the footer
+  handle's `strong_count` by one per memory, Glue and S3 Tables build. The counter pin now
+  compares warm data-file PAGE reads (requests and bytes) on vs off and requires zero warm
+  footer reads with the caches on (and some with them off). pins: ice-footer-cache-1/C-002, C-005
+- `footer_cache.rs` — **ICE-FOOTER-CACHE-1 (2026-09-19):** the footer-cache scan pins on a local
+  memory-catalog table (three data files of 60,000 rows written through DataFusion's
+  `generate_series`, read by a second catalog built with the caches under test). A warm re-scan
+  reads zero data-file footers with the cache on, and the cache's `fetches` equal the cold scan's
+  footer reads; with `footerCacheBytes = 0` the warm scan reads as many footers as the cold one.
+  The cold scan reads at most as many footers with the cache on as off (measured 3 vs 4: the
+  cache also collapses a split file's second footer read). A filtered scan after an unfiltered
+  one answers right (100 rows, their sum), raises `upgrades`, fetches nothing new and reads no
+  footer; a repeat does not upgrade again. Warm page reads are identical on and off.
+  pins: ice-footer-cache-1/C-003, C-004, C-005
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002
