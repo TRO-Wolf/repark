@@ -3729,15 +3729,20 @@ the pin rather than obeying it.
   `STRUCT<a INT>` columns at format versions 2 and 3, under copy-on-write and
   merge-on-read. Before (release native at fork pin `18ab9761`, main `6a140eb3`):
   every nested-column `IS NULL` predicate refused loud with
-  `DataInvalid => Accessor for Field xs not found`. After: 112 of the 128 recorded
-  cells answer Spark's ok, ids and operation. The `map_int` seed's empty-map row
+  `DataInvalid => Accessor for Field xs not found`. After: all 128 recorded
+  cells answer Spark's ok and ids; the snapshot operation equals Spark's except the
+  eight copy-on-write DELETE `xs IS NULL OR id = 1` cells, which pin RePark's
+  measured `overwrite` against Spark's `delete` (ICE-LIST-NULL-2, 2026-09-19,
+  RePark-side). The `map_int` seed's empty-map row
   runs through `map_from_arrays(CAST(array() AS ARRAY<STRING>),
   CAST(array() AS ARRAY<INT>))`, which reads back equal to Spark's seed (the recorded
   `CAST(map() AS MAP<STRING, INT>)` refuses `ParserError`, registry row
-  CAST-MAP-SPELL-1, BACKLOG). Two residues, both pinned: copy-on-write DELETE with a
-  compound predicate over the nested column (16 cells: every shape x v2/v3 x the two
-  compound predicates) still refuses `Accessor for Field xs not found` — fork #299
-  fixed the single-predicate path only — and runs verbatim under strict xfail; the
+  CAST-MAP-SPELL-1, BACKLOG). Two residues, both pinned: the copy-on-write DELETE
+  compound-predicate refusal was RePark-side, not fork-side — the identity path claimed
+  the conjunction/disjunction and built a commit-scope predicate the fork cannot bind on
+  a non-primitive column — and is FIXED 2026-09-19 (ICE-LIST-NULL-2): the identity path
+  declines non-primitive selections to the fork DELETE path and all sixteen cells
+  (every shape x v2/v3 x the two compound predicates) run as plain pins; the
   sixteen merge-on-read `xs IS NOT NULL` cells pin RePark's measured 1 delete file
   (1 DV on v3) against Spark's recorded 2 (2 DVs).
 - **Apache Spark** — the recorded 128 cells (PySpark 4.1.2 +
@@ -3745,7 +3750,8 @@ the pin rather than obeying it.
   `python/repark-parity/fixtures/torture/data/ice_list_null_1/spark_list_null_oracle.json`).
 - **Pin** — `python/repark/tests/test_ice_list_null_1.py::test_cell_answers_spark` (one id
   per cell; the 16 copy-on-write compound-predicate ids run the recorded statement
-  verbatim under strict xfail on the fork #299 residue),
+  verbatim as plain pins since ICE-LIST-NULL-2, with the 8 `xs IS NULL OR id = 1` ids
+  pinning RePark's measured `overwrite` operation against Spark's `delete`),
   `…::test_cell_file_counts_match_spark` (the delete-file / DV counts; the 16
   `xs IS NOT NULL` merge-on-read ids pin RePark's measured values),
   `…::test_map_seed_substitution_reads_back_empty` (the substitute seed),
@@ -3753,9 +3759,12 @@ the pin rather than obeying it.
   shape through the recorder and answers the recorded ok, ids and operation).
 - **Rationale** — FIXED 2026-09-18 (RP-31) at fork #299 (F-LIST-NULL-ACCESSOR-1): the
   DataFusion filter conversion binds list, map and struct columns in `IS [NOT] NULL`
-  tests. The conjunction/disjunction path on copy-on-write DELETE is fork-side
-  residue (a new fork ask, not filed); the delete-file packing difference on
-  `IS NOT NULL` is task-count noise the pins hold at RePark's measured values.
+  tests. The conjunction/disjunction failure on copy-on-write DELETE was RePark-side
+  (the identity claim, not fork #299's binding) and is FIXED 2026-09-19
+  (ICE-LIST-NULL-2, RePark-side, with pins); the delete-file packing difference on
+  `IS NOT NULL` is task-count noise the pins hold at RePark's measured values, as is
+  the `overwrite` operation on the eight copy-on-write `xs IS NULL OR id = 1` cells
+  against Spark's `delete`.
 
 ### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
 
