@@ -38,7 +38,7 @@ pub async fn execute_static_overwrite<S: std::hash::BuildHasher>(
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
     let write_options = crate::write_options::StatementWriteOptions {
-        force_static_overwrite: true,
+        overwrite_intent: repark_iceberg::write::OverwriteIntent::Static,
         ..crate::write_options::StatementWriteOptions::empty()
     };
     execute_with_statement_options(ctx, catalogs, sql, read_only_catalogs, &write_options).await

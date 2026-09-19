@@ -12,7 +12,8 @@ pub struct StatementWriteOptions {
     pub level: Option<String>,
     pub distribution_mode: Option<String>,
     pub isolation: Option<String>,
-    pub force_static_overwrite: bool,
+    pub overwrite_intent: repark_iceberg::write::OverwriteIntent,
+    pub overwrite_mode_dynamic: bool,
 }
 
 impl StatementWriteOptions {
@@ -37,6 +38,18 @@ impl StatementWriteOptions {
              honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)",
             keys.join(", ")
         )))
+    }
+
+    #[must_use]
+    pub fn overwrite_mode(
+        &self,
+        ctx: &datafusion::prelude::SessionContext,
+    ) -> repark_iceberg::write::OverwriteMode {
+        repark_iceberg::write::OverwriteMode {
+            session_dynamic: repark_core::partition_overwrite_mode_from_ctx(ctx).is_dynamic(),
+            intent: self.overwrite_intent,
+            option_dynamic: self.overwrite_mode_dynamic,
+        }
     }
 
     #[must_use]
@@ -80,6 +93,10 @@ impl StatementWriteOptions {
                     options.distribution_mode = Some(validate_distribution_mode(&value)?);
                 }
                 "isolation-level" => options.isolation = Some(validate_isolation_level(&value)?),
+                repark_iceberg::write::OVERWRITE_MODE_OPTION => {
+                    options.overwrite_mode_dynamic =
+                        repark_iceberg::write::overwrite_mode_option_is_dynamic(&value);
+                }
                 _ => {}
             }
         }

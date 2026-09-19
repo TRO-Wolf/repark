@@ -54,6 +54,7 @@ def run_through_temp_view(
     options: dict[str, str] | None,
     prefix: str,
     static_overwrite: bool = False,
+    dynamic_overwrite: bool = False,
 ) -> None:
     """Register a temp view, run the built write SQL with options, drop the view."""
     dataframe._ensure_alive()
@@ -62,10 +63,17 @@ def run_through_temp_view(
     session.create_or_replace_temp_view(view_name, dataframe._native_for_registration())
     try:
         _native.session_sql_with_write_options(
-            session, build_sql(view_name), options or {}, static_overwrite
+            session, build_sql(view_name), options or {}, static_overwrite, dynamic_overwrite
         )
     finally:
         session.drop_temp_view(view_name)
+
+
+def run_overwrite_partitions(writer: DataFrameWriterV2, build_sql: Callable[[str], str]) -> None:
+    """Run ``writeTo(t).overwritePartitions()`` SQL as a dynamic overwrite in every session mode."""
+    run_through_temp_view(
+        writer._dataframe, build_sql, writer._options, "_repark_writer_v2_", dynamic_overwrite=True
+    )
 
 
 def store_writer_option(options: dict[str, str], key: object, value: object) -> None:

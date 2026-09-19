@@ -4,13 +4,14 @@ Live PySpark 4.1.2 + Iceberg 1.11.0 (2026-08-30): static ``PARTITION (k=v)`` kee
 sibling files and stamps ``overwrite`` (nonempty) or ``delete`` (empty); Hive
 injects the partition columns. ``PARTITION (k)`` without values is Spark's
 dynamic replace under ``partitionOverwriteMode=dynamic`` / ``writeTo.overwritePartitions``
-(``replace-partitions=true``); Spark's default STATIC mode wipes the table — repark
-always takes the dynamic path. Empty dynamic refuses loud (Spark writeTo empty is a
-no-op; Spark SQL STATIC empty ``PARTITION (id)`` wipes).
+(``replace-partitions=true``); Spark's default STATIC mode replaces the whole table, and
+repark follows the mode (ICE-OVERWRITE-MODE-1). Empty dynamic refuses loud (Spark writeTo
+empty is a no-op); STATIC empty ``PARTITION (id)`` wipes like Spark.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ from repark.errors import AnalysisException, PySparkException
 
 CATALOG = "dmlb_cat"
 NS = "dmlb_ns"
+MODE_KEY = "spark.sql.sources.partitionOverwriteMode"
 
 
 @pytest.fixture
@@ -31,6 +33,16 @@ def spark(tmp_path: Path) -> ReparkSession:
     session.register_memory_catalog(CATALOG, tmp_path)
     session.sql(f"CREATE NAMESPACE {CATALOG}.{NS}")
     return session
+
+
+@pytest.fixture
+def dynamic(spark: ReparkSession) -> Iterator[ReparkSession]:
+    """The session in dynamic overwrite mode, restored to static after the test."""
+    spark.conf.set(MODE_KEY, "dynamic")
+    try:
+        yield spark
+    finally:
+        spark.conf.unset(MODE_KEY)
 
 
 def _seed(spark: ReparkSession, table: str) -> None:
@@ -126,43 +138,63 @@ def test_sql_static_partition_overwrite_rejects_injected_column(spark: ReparkSes
     ]
 
 
-def test_sql_dynamic_partition_overwrite_keeps_absent_partitions(spark: ReparkSession) -> None:
+def test_sql_dynamic_partition_overwrite_keeps_absent_partitions(dynamic: ReparkSession) -> None:
     """PARTITION (k) without values replaces only source partitions.
 
     pins: dml-b-insert-overwrite/C-002
     """
     table = f"{CATALOG}.{NS}.dynamic_nonempty"
-    _seed(spark, table)
-    spark.sql(f"INSERT OVERWRITE {table} PARTITION (id) SELECT 1 AS id, 'z' AS name")
-    got = _rows(spark, table)
+    _seed(dynamic, table)
+    dynamic.sql(f"INSERT OVERWRITE {table} PARTITION (id) SELECT 1 AS id, 'z' AS name")
+    got = _rows(dynamic, table)
     _assert_id_name_types(got)
     assert got.to_pylist() == [
         {"id": 1, "name": "z"},
         {"id": 2, "name": "b"},
         {"id": 3, "name": "c"},
     ]
-    assert _last_operation(spark, table) == "overwrite"
-    assert _last_summary(spark, table).get("replace-partitions") == "true"
+    assert _last_operation(dynamic, table) == "overwrite"
+    assert _last_summary(dynamic, table).get("replace-partitions") == "true"
 
 
-def test_sql_empty_dynamic_partition_overwrite_refuses(spark: ReparkSession) -> None:
+def test_sql_empty_dynamic_partition_overwrite_refuses(dynamic: ReparkSession) -> None:
     """Empty dynamic PARTITION refuses; every prior row remains.
 
     pins: dml-b-insert-overwrite/C-002, C-004
     """
     table = f"{CATALOG}.{NS}.dynamic_empty"
-    _seed(spark, table)
+    _seed(dynamic, table)
     with pytest.raises(
         (AnalysisException, PySparkException),
         match="Cannot dynamically overwrite partitions",
     ):
-        spark.sql(f"INSERT OVERWRITE {table} PARTITION (id) SELECT * FROM {table} WHERE false")
-    got = _rows(spark, table)
+        dynamic.sql(f"INSERT OVERWRITE {table} PARTITION (id) SELECT * FROM {table} WHERE false")
+    got = _rows(dynamic, table)
     assert got.to_pylist() == [
         {"id": 1, "name": "a"},
         {"id": 2, "name": "b"},
         {"id": 3, "name": "c"},
     ]
+
+
+def test_sql_static_mode_partition_without_values_replaces_whole_table(
+    spark: ReparkSession,
+) -> None:
+    """Static-mode PARTITION (k) replaces the table; its empty source wipes it.
+
+    pins: ice-overwrite-mode-1/C-002, C-003
+    """
+    table = f"{CATALOG}.{NS}.static_mode_dynamic_clause"
+    _seed(spark, table)
+    spark.sql(f"INSERT OVERWRITE {table} PARTITION (id) SELECT 1 AS id, 'z' AS name")
+    got = _rows(spark, table)
+    _assert_id_name_types(got)
+    assert got.to_pylist() == [{"id": 1, "name": "z"}]
+    assert _last_operation(spark, table) == "overwrite"
+    assert "replace-partitions" not in _last_summary(spark, table)
+    spark.sql(f"INSERT OVERWRITE {table} PARTITION (id) SELECT * FROM {table} WHERE false")
+    assert _rows(spark, table).to_pylist() == []
+    assert _last_operation(spark, table) == "delete"
 
 
 def test_sql_two_key_static_partition_overwrite_replaces_only_the_tuple(

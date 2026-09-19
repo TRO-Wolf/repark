@@ -20,10 +20,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
   its crate-private body, the session's one statement funnel (spill SET intercept, cache
   trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase
-  (2026-09-18, Q-22b-WO-1):** it takes `force_static_overwrite` and fills
-  `EngineContext::force_static_overwrite`, replacing ICE-DYN-OVERWRITE-1's
-  `static_overwrite.rs` body; `ReparkSession::sql_with` passes an empty map and `false`.
-  pins: ice-write-options-1/C-014
+  (2026-09-18, Q-22b-WO-1):** it replaced ICE-DYN-OVERWRITE-1's `static_overwrite.rs` body.
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** it takes an `OverwriteIntent` and fills
+  `EngineContext::overwrite_intent`; `ReparkSession::sql_with` passes an empty map and
+  `Session`. pins: ice-write-options-1/C-014; ice-overwrite-mode-1/C-007
 - `temp_views.rs` — **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
   the choke-point fix pushed that file past its ceiling. The old exception then retired under the
   prior default; CAP-1 records the file again at its exact source-size baseline. Holds

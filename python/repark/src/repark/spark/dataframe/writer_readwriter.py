@@ -937,10 +937,8 @@ class DataFrameWriterV2:
         session, table_ref = self._existing_table_ref()
         columns, projection = self._by_name_projection(session, table_ref=table_ref)
         clause = _dynamic_partition_sql(self._dataframe, table_ref)
-        head = f"INSERT OVERWRITE {table_ref} ({columns}){clause}"
-        self._run_through_temp_view(
-            lambda view: f"{head} SELECT {projection} FROM {view}", self._options
-        )
+        head = f"INSERT OVERWRITE {table_ref} ({columns}){clause} SELECT {projection} FROM "
+        writer_layout.run_overwrite_partitions(self, lambda view: head + view)
 
     overwrite_partitions = overwritePartitions
 

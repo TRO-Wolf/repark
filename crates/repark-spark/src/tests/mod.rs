@@ -45,6 +45,7 @@ mod namespace_ddl;
 mod nan_pushdown;
 mod nested_column_ddl;
 mod normalize;
+mod overwrite_mode;
 mod partition_overwrite;
 mod partitioned_ctas;
 mod partitioned_merge;

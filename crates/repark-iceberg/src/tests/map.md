@@ -9,6 +9,12 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `overwrite_scope.rs` — **ICE-OVERWRITE-MODE-1 (2026-09-19):** the decision table (session
+  mode × intent × `overwrite-mode` option × static values → scope), the option's
+  case-insensitive `dynamic` reading, `plan_overwrite` on a two-level identity table (mixed
+  list: row filter `cat = "x"` in static mode, replace partitions in dynamic mode; both keys
+  dynamic: whole table / replace), and `NON_PARTITION_COLUMN` on an unpartitioned table and
+  for a non-partition column. pins: ice-overwrite-mode-1/C-002, C-004, C-005, C-006, C-007
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.

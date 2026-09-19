@@ -101,10 +101,7 @@ pub(crate) async fn execute_insert_by_name(
             )
             .await;
         }
-        let dynamic = crate::insert_overwrite::overwrite_is_dynamic(
-            ctx,
-            write_options.force_static_overwrite,
-        );
+        let dynamic = crate::insert_overwrite::overwrite_is_dynamic(ctx, write_options);
         if projection_is_empty(ctx, catalogs, &projection_sql).await? {
             let namespace = namespace_schema_name(table.identifier().namespace());
             let type_table_sql =
@@ -354,10 +351,13 @@ fn static_partition_columns(
         ));
     }
     let request = repark_iceberg::write::partition_overwrite_request_from_exprs(partitioned)?;
-    let plan = repark_iceberg::write::plan_partition_overwrite(table, &request)?;
-    let repark_iceberg::write::PartitionOverwritePlan::Static(spec) = plan else {
-        return Ok(Vec::new());
-    };
+    if !request.equalities.is_empty() && !request.dynamic_names.is_empty() {
+        return Err(DataFusionError::Plan(
+            "INSERT … BY NAME PARTITION cannot mix static assignments (k=v) and dynamic names (k)"
+                .to_string(),
+        ));
+    }
+    let equalities = repark_iceberg::write::validated_static_equalities(table, &request)?;
     let fields = table
         .metadata()
         .current_schema()
@@ -366,7 +366,7 @@ fn static_partition_columns(
         .iter()
         .map(|field| field.name.clone())
         .collect::<Vec<_>>();
-    spec.equalities
+    equalities
         .iter()
         .map(|equality| {
             let canonical = fields

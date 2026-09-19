@@ -457,6 +457,25 @@ repark-core's error map.
   `stage_static_partition_overwrite_files` is `pub(crate) static_injected_stream`, shared
   with the options variant in `write_options.rs`; the file stays under the default ceiling.
   pins: ice-write-options-1/C-014
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** `PartitionOverwriteRequest` is a struct —
+  `equalities`, `dynamic_names`, and every key in clause order (`names`) — so a mixed
+  `PARTITION (k='v', k2)` parses; the static/dynamic plan enum and `plan_partition_overwrite`
+  moved to `overwrite_scope.rs`. A clause key that binds no partition field refuses Spark's
+  `[NON_PARTITION_COLUMN] … SQLSTATE: 42000` (`non_partition_column`).
+  pins: ice-overwrite-mode-1/C-004, C-005
+- `overwrite_scope.rs` — **ICE-OVERWRITE-MODE-1 (2026-09-19):** the one overwrite decision
+  for every door. `OverwriteMode` (session `partitionOverwriteMode`, the typed
+  `OverwriteIntent` — `Static` for `saveAsTable`, `Dynamic` for `writeTo.overwritePartitions`
+  — and the `overwrite-mode` writer option) plus "has static values" picks the scope:
+  dynamic → `ReplacePartitions`; static with values → `RowFilter` over the static values
+  (Spark's `OverwriteByExpression`); static without values → the whole table, unless the
+  writer option says `dynamic` (Iceberg's `SparkWriteBuilder.overwrite` turns an
+  `alwaysTrue` filter dynamic; the static intent ignores it). `plan_overwrite` validates the
+  clause first: an unpartitioned table refuses the first key `NON_PARTITION_COLUMN`, a static
+  key on a transform source keeps the O5 `NotImplemented` (registry residue), a non-identity
+  static field refuses as before. `validated_static_equalities` serves the `BY NAME` path.
+  Tests: [../tests/overwrite_scope.rs](../tests/overwrite_scope.rs).
+  pins: ice-overwrite-mode-1/C-002, C-004, C-005, C-006, C-007
 - `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
   `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
   duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
@@ -746,6 +765,7 @@ repark-core's error map.
 | Stream a SELECT into a staged (CTAS) write with bounded memory | `write_data_files_from_stream` (`merge/mod.rs`) / `write_partitioned_data_files_from_stream` (`append.rs`) |
 | Stage + commit full-table INSERT OVERWRITE | `overwrite.rs` |
 | Stage + commit partition-scoped INSERT OVERWRITE | `partition_overwrite.rs` |
+| Decide the overwrite scope (whole table / row filter / replace partitions) | `overwrite_scope.rs` |
 | Stage static-overwrite batches with statement levers | `partition_overwrite.rs` (`stage_static_partition_overwrite_files_with`, ICE-WRITE-OPTIONS-1) |
 | Cap concurrent Iceberg file writers (session conf) | `repark.write.max-concurrent-files` via `concurrency.rs` |
 | Send one partition value to one writer before a CTAS write (Spark's `hash` distribution) | `distribution.rs` (`hash_distribution`) |

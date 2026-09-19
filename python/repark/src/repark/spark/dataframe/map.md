@@ -707,6 +707,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   last-wins dedup shared by both writers) and `run_through_temp_view` (the one
   temp-view/action/drop funnel both writers share, options forwarded out of
   band). Round 3 deleted the text-clause rendering with the channel.
+  ICE-OVERWRITE-MODE-1 (2026-09-19): `run_through_temp_view` gains
+  `dynamic_overwrite`, and `run_overwrite_partitions(writer, build_sql)` runs
+  `writeTo.overwritePartitions` with it, so Rust replaces only the source partitions even in
+  Spark's default static mode (the `PARTITION (fields)` clause alone now means whole table
+  there). Writer options, `overwrite-mode` included, travel unchanged to Rust, which decides.
+  pins: ice-overwrite-mode-1/C-006, C-007
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1,
 - `surface_b.py` owns `foreach`, `foreachPartition`, and `observe` (DF-SURFACE-B-1, **DF-SURFACE-B-1 (2026-09-15, rebase onto #609):** `create_or_replace_temp_view` delegates to `surface_b.register_view_without_fill`, which wraps `catalog_surface._register_temp_view` in the Observation fill suppression; `dataframe/core.py` ratchets down. pins: df-surface-b-1/C-008
   2026-09-14), bound on the class from `core.py` at the exact ceiling. `foreach`

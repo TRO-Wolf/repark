@@ -28,6 +28,7 @@ pub mod nested_type_sql;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;
 pub mod overwrite_commit;
+pub mod overwrite_scope;
 /// Partition-scoped INSERT OVERWRITE (static row-filter + dynamic replace-partitions).
 pub mod partition_overwrite;
 pub mod partition_spec;
@@ -88,12 +89,15 @@ pub use overwrite::{
     write_overwrite_staged_files_from_stream,
 };
 pub use overwrite_commit::{commit_overwrite_replace_all_to, commit_replace_write};
+pub use overwrite_scope::{
+    OVERWRITE_MODE_OPTION, OverwriteIntent, OverwriteMode, OverwritePlan, OverwriteScope,
+    overwrite_mode_option_is_dynamic, plan_overwrite, validated_static_equalities,
+};
 pub use partition_overwrite::{
-    EMPTY_DYNAMIC_OVERWRITE_NEEDLE, PartitionEquality, PartitionLiteral, PartitionOverwritePlan,
-    PartitionOverwriteRequest, StaticPartitionOverwrite, commit_overwrite_by_row_filter,
-    commit_overwrite_by_row_filter_to, commit_replace_partitions, commit_replace_partitions_to,
-    inject_static_partition_columns, partition_overwrite_request_from_exprs,
-    plan_partition_overwrite, refuse_empty_dynamic_overwrite,
+    EMPTY_DYNAMIC_OVERWRITE_NEEDLE, PartitionEquality, PartitionLiteral, PartitionOverwriteRequest,
+    StaticPartitionOverwrite, commit_overwrite_by_row_filter, commit_overwrite_by_row_filter_to,
+    commit_replace_partitions, commit_replace_partitions_to, inject_static_partition_columns,
+    partition_overwrite_request_from_exprs, refuse_empty_dynamic_overwrite,
     stage_static_partition_overwrite_files, static_partition_source_columns,
 };
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};

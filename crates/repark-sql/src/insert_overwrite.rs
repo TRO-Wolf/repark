@@ -8,10 +8,10 @@ use datafusion::sql::sqlparser::ast::{Insert, ObjectName, TableObject};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::EngineContext;
 use repark_iceberg::write::{
-    PartitionOverwritePlan, commit_overwrite_by_row_filter, commit_replace_partitions,
-    partition_overwrite_request_from_exprs, plan_partition_overwrite,
-    refuse_empty_dynamic_overwrite, stage_static_partition_overwrite_files,
-    static_partition_source_columns, write_overwrite_staged_files_from_stream,
+    OverwriteMode, OverwritePlan, commit_overwrite_by_row_filter, commit_overwrite_replace_all,
+    commit_replace_partitions, partition_overwrite_request_from_exprs, plan_overwrite,
+    stage_static_partition_overwrite_files, static_partition_source_columns,
+    write_overwrite_staged_files_from_stream,
 };
 
 use crate::schema_ddl::{catalog_handle, name_parts};
@@ -50,7 +50,11 @@ async fn execute_partition_overwrite(
         ))
     })?;
     let request = partition_overwrite_request_from_exprs(partition_exprs)?;
-    let overwrite_plan = plan_partition_overwrite(&table, &request)?;
+    let mode = OverwriteMode {
+        session_dynamic: repark_core::partition_overwrite_mode_from_ctx(cx.ctx).is_dynamic(),
+        ..OverwriteMode::default()
+    };
+    let overwrite_plan = plan_overwrite(&table, &request, mode)?;
     let source = insert.source.as_ref().ok_or_else(|| {
         DataFusionError::Plan(
             "INSERT OVERWRITE … PARTITION requires a SELECT or VALUES source".to_string(),
@@ -66,12 +70,7 @@ async fn execute_partition_overwrite(
                 .map(|ident| ident.value.clone())
         })
         .collect();
-    let reserved = match &overwrite_plan {
-        PartitionOverwritePlan::Static(spec) => {
-            static_partition_source_columns(&table, &spec.equalities)?
-        }
-        PartitionOverwritePlan::Dynamic => Vec::new(),
-    };
+    let reserved = static_partition_source_columns(&table, overwrite_plan.equalities())?;
     let filled = repark_iceberg::write::insert_defaults::overwrite_source_with_defaults(
         table.metadata().current_schema(),
         &listed,
@@ -84,26 +83,33 @@ async fn execute_partition_overwrite(
     belt.guard(&plan)?;
     let source_df = belt.execute(plan).await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(cx.ctx);
+    let staged_files = if overwrite_plan.equalities().is_empty() {
+        let stream = source_df.execute_stream().await?;
+        write_overwrite_staged_files_from_stream(&table, stream, column_names, concurrency).await?
+    } else {
+        let batches = source_df.collect().await?;
+        stage_static_partition_overwrite_files(
+            &table,
+            batches,
+            overwrite_plan.equalities(),
+            &column_names,
+            concurrency,
+        )
+        .await?
+    };
     match overwrite_plan {
-        PartitionOverwritePlan::Static(spec) => {
-            let batches = source_df.collect().await?;
-            let staged_files = stage_static_partition_overwrite_files(
-                &table,
-                batches,
-                &spec.equalities,
-                &column_names,
-                concurrency,
-            )
-            .await?;
+        OverwritePlan::RowFilter(spec) => {
             commit_overwrite_by_row_filter(handle, &table, staged_files, spec.predicate).await?;
         }
-        PartitionOverwritePlan::Dynamic => {
-            let stream = source_df.execute_stream().await?;
-            let staged_files =
-                write_overwrite_staged_files_from_stream(&table, stream, column_names, concurrency)
-                    .await?;
-            refuse_empty_dynamic_overwrite(&staged_files)?;
+        OverwritePlan::ReplacePartitions(_) => {
             commit_replace_partitions(handle, &table, staged_files).await?;
+        }
+        OverwritePlan::WholeTable => {
+            let staged_files = staged_files
+                .into_iter()
+                .filter(|file| file.record_count() > 0)
+                .collect();
+            commit_overwrite_replace_all(handle, &table, staged_files).await?;
         }
     }
     let leaf = ident.namespace().as_ref().last().cloned().ok_or_else(|| {

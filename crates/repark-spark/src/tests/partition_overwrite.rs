@@ -8,7 +8,7 @@ use super::common::*;
 #[tokio::test]
 async fn empty_dynamic_partition_overwrite_refuses() {
     let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
+    let (ctx, catalogs) = super::dyn_partition_overwrite::setup_dynamic(&warehouse).await;
     run(
         &ctx,
         &catalogs,
@@ -39,7 +39,7 @@ async fn empty_dynamic_partition_overwrite_refuses() {
 #[tokio::test]
 async fn dynamic_partition_overwrite_replaces_source_partitions_only() {
     let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
+    let (ctx, catalogs) = super::dyn_partition_overwrite::setup_dynamic(&warehouse).await;
     run(
         &ctx,
         &catalogs,

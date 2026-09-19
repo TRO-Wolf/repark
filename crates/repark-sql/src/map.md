@@ -37,6 +37,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `insert_overwrite.rs` — **DML-B:** `INSERT OVERWRITE … PARTITION (…)` static/dynamic;
   whole-table stays Q9. pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-006
+  ICE-OVERWRITE-MODE-1 (2026-09-19): the native door plans through the same
+  `repark_iceberg::write::plan_overwrite` as the Spark door, with the session
+  `partitionOverwriteMode` (no writer options here): static-mode `PARTITION (k)` replaces the
+  whole table (`commit_overwrite_replace_all`), mixed lists are accepted, a non-partition
+  column refuses `NON_PARTITION_COLUMN`. pins: ice-overwrite-mode-1/C-009
   ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
   write-defaults through the shared `overwrite_source_with_defaults`; the dynamic arm
   no longer writes NULL for a defaulted column. pins: ice-v3-write-default-1/C-015
@@ -44,6 +49,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic
   `replace-partitions=true`, empty-dynamic refuse) and the remaining Q9 whole-table refuse.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005, C-006
+  ICE-OVERWRITE-MODE-1 (2026-09-19): `door_with_mode` installs the session mode; the dynamic
+  and empty-dynamic pins run in dynamic mode, and three native cells pin static-mode
+  whole-table replace plus wipe, the mixed list in both modes, and `NON_PARTITION_COLUMN`.
+  pins: ice-overwrite-mode-1/C-009
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   (**V3-4:** `prepare_lineage_sql` after time travel; composed statements refuse `V3-ROWID-2`;
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** short `INSERT INTO t (cols)` fills omitted
