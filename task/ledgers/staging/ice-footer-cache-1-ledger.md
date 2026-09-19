@@ -59,7 +59,7 @@ read one footer per file per partition reader (a 512 KiB prefetch each).
 | C-007 | `ReparkSession::iceberg_footer_cache_stats()` returns hits, misses, fetches, upgrades and evictions, `None` when the budget is `0`. | `footer_cache_report.rs`: `the_session_reports_its_footer_cache_and_a_warm_scan_reads_no_footer`, `a_zero_budget_session_reports_nothing_and_rereads_every_footer`. | **PROVEN** | Red by compilation before the method existed. |
 | C-008 | The bench's per-sample JSON carries `footer_cache` {hits, misses, fetches, upgrades, evictions} (`null` when off) beside `metadata_cache`, and the markdown table a `footer cache hit/miss` column (`off` when disabled). | `benches/ice_read_perf/pins_report.rs`: `the_report_carries_footer_cache_hits_and_misses_beside_the_metadata_cache`, `a_warm_sample_hits_the_footer_cache_and_a_cold_one_misses_it`. | **PROVEN** | The after-probe reading no stats reds the bed pin; the record pin was red by compilation. |
 | C-009 | The knob is documented where `manifestCacheBytes` is: the guide's Iceberg caches table and paragraph, the guide map, the catalog map's task table. | `make check-docs-links check-map-sync`. | **PROVEN** | `docs/guide/session-and-conf.md`, `docs/guide/map.md`, `crates/repark-iceberg/src/catalog/map.md`. No Python surface names the key (`python/repark` mentions `manifestCacheBytes` only in one test). |
-| C-010 | The before/after pair on unit 0's bed (local and AWS; cold, warm, concurrent) at this head against its base. | unit 0's bench. | **OPEN** | `TBD-orchestrator`. |
+| C-010 | The before/after pair on unit 0's local beds (the AWS bed is blocked on the owner's IAM grant). | main `8c1ae093` (RP-37) against this PR's head (RP-38 + the unit), built and run back to back, `--repeat 5`, default release profile, both beds; table in `docs/perf/ice-read-perf-baseline-2026-09-19.md` §"RP-38 + ICE-FOOTER-CACHE-1 pair". | **PROVEN** (local) | Warm scans read zero data-file footers on every query of both beds (200-file bed: 200 → 0 on Q1/Q2/Q5/Q6, 27/26 → 0 on Q3/Q4/Q7; warm Q1 104,857,600 → 0 bytes, 11.0 → 7.7 ms). Cold on the large bed the split file's second footer read is gone (Q2/Q5/Q6 40 → 20) and the pruned queries read one footer (Q3/Q4/Q7 26 → 1). Page bytes are unchanged everywhere. The AWS pair is owed with the IAM grant. |
 
 ## Red runs
 
@@ -96,3 +96,58 @@ read one footer per file per partition reader (a 512 KiB prefetch each).
 - FC-STATS-SINGLEFLIGHT: the fork counts concurrent first-access waiters as misses, so the
   split-file win shows in the bench's footer I/O cells rather than as hits.
 
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ice-footer-cache-1
+  categories:
+    - id: AT-1
+      status: N/A
+      justification: No Spark-visible answer changes; the cache serves footers of immutable, uniquely named data files.
+    - id: AT-2
+      status: ATTACKED
+      evidence: The wiring, stats and bench pins were red before they existed or with their arm
+        stubbed; the Grok verifier turned the S3-Tables-skip, shared-process-cache, zero-builds-a-cache
+        and footer-only-context mutations red.
+      artifacts: [crates/repark-iceberg/src/catalog/tests/footer_cache.rs, crates/repark-iceberg/src/catalog/tests/cache_wiring.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Memory, Glue and S3 Tables builders; disabled; two sessions; cold, warm and a
+        filtered scan after an unfiltered one (the page-index upgrade).
+      artifacts: [crates/repark-iceberg/src/catalog/tests/footer_cache.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: One cache per session behind an Arc; the fork's moka cache handles concurrent
+        first access (single-flight); the staleness suite passes with it on.
+      artifacts: [crates/repark-spark/src/tests/catalog_cache_staleness.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: The footer key carries the same credential scope as the metadata cache; two
+        contexts never share an entry.
+      artifacts: [crates/repark-iceberg/src/catalog/cache_wiring.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The residue records the one by-design stale case (an in-place overwrite at the same
+        path and size) and why RePark's writers never produce it.
+      artifacts: [task/ledgers/staging/ice-footer-cache-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: A back-to-back before/after pair on both local beds, default release profile.
+      artifacts: [docs/perf/ice-read-perf-baseline-2026-09-19.md]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No dependency or feature; the knob is documented in the guide with its default and the
+        10,000-file sizing note.
+      artifacts: [docs/guide/session-and-conf.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Every touched directory's map carries the change with pins citations.
+      artifacts: [crates/repark-iceberg/src/catalog/map.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The catalog, session, staleness and bench suites pass at RP-38; CI runs the rest.
+      artifacts: [crates/repark-iceberg/src/catalog/tests/cache_wiring.rs]
+  complete: true
+```

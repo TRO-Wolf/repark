@@ -325,6 +325,9 @@ would change what "four at once" measures for the other four (their timings and 
 - **RP-37 + ICE-CATALOG-CACHE-1 (fork `27e0d5fa`):** no regression on either local bed; the
   Glue / S3 Tables gain needs the AWS bed (blocked on the IAM grant).
   pins: ice-catalog-cache-1/C-011
+- **RP-38 + ICE-FOOTER-CACHE-1 (fork `f3bdd598`):** warm footer reads 200 → 0; cold split-file
+  footer reads halved on the large bed.
+  pins: ice-footer-cache-1/C-010
 
 ## Pointers
 
