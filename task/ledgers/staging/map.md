@@ -512,6 +512,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-35-fork-pin-ledger.md](rp-35-fork-pin-ledger.md) —
+  **RP-35-FORK-PIN (2026-09-19):** the fork pin moves to `7bd2fea3` (#308 Avro name
+  sanitising); 20 recorded Spark cells pin IPI-52 (rows, `partitions`, the manifest's Avro
+  partition record). `risk_tier: standard`. Branch `chore/rp-35-fork-pin`.
 - [rp-34-fork-pin-ledger.md](rp-34-fork-pin-ledger.md) —
   **RP-34-FORK-PIN (2026-09-19):** the fork pin moves to `43fcd243` (#306 parquet footer,
   #305 dangling DVs); three `clippy::large_futures` calls are boxed; the three
