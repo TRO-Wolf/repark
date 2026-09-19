@@ -399,3 +399,39 @@ async fn dynamic_intent_replaces_partitions_in_static_session_mode() {
         (Operation::Overwrite, true)
     );
 }
+
+#[tokio::test]
+async fn string_static_value_on_a_timestamp_partition_refuses_until_the_cast_follows_spark() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ts (id INT, name STRING, ts TIMESTAMP) USING iceberg \
+         PARTITIONED BY (ts)",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.ts VALUES (1, 'a', TIMESTAMP'2024-01-01 00:00:00')",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.ts PARTITION (ts = '2024-01-01 00:00:00') SELECT 9, 'z'",
+    )
+    .await
+    .expect_err("a string static value on a TIMESTAMP partition refuses");
+    assert!(error.to_string().contains("CAST-TS-STRING-1"), "{error}");
+    assert_eq!(
+        joined_rows_of(
+            &ctx,
+            &catalogs,
+            "SELECT concat_ws('|', CAST(id AS STRING), name) AS row FROM ice.sales.ts",
+        )
+        .await,
+        vec!["1|a"]
+    );
+}

@@ -388,18 +388,3 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
         if target.exists():
             target = destination_path / f"part-append-{uuid.uuid4().hex[:12]}{item.suffix}"
         shutil.move(str(item), str(target))
-
-
-def _dynamic_partition_sql(dataframe: DataFrame, table_ref: str) -> str:
-    """Return `` PARTITION (a, b)`` from ``{table}.partitions``, or `` PARTITION ()``."""
-    from repark.spark._idents import quote_ident
-    from repark.spark.dataframe.core import DataFrame
-    from repark.spark.types import StructType
-
-    native = dataframe._session.sql(f"SELECT * FROM {table_ref}.partitions LIMIT 0")
-    schema = DataFrame(native, dataframe._session, dataframe._alive_token).schema
-    dtype = schema["partition"].dataType if "partition" in schema.names else None
-    names = list(dtype.names) if isinstance(dtype, StructType) else []
-    if not names:
-        return " PARTITION ()"
-    return " PARTITION (" + ", ".join(quote_ident(name) for name in names) + ")"

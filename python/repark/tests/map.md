@@ -40,6 +40,14 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) +
+  [ice_overwrite_mode_1_transform_spark_oracle.json](ice_overwrite_mode_1_transform_spark_oracle.json) +
+  [_record_ice_overwrite_mode_1_transform.py](_record_ice_overwrite_mode_1_transform.py) —
+  **ICE-OVERWRITE-MODE-1 (2026-09-19, verification critic):** 16 recorded Spark 4.1.2 cells —
+  `writeTo(t).overwritePartitions()` on `(cat, bucket(2, id))`, `bucket(4, id)`,
+  `truncate(1, cat)` and unpartitioned specs, static and dynamic session, v2 and v3: the rows
+  left and the last operation. The live tier re-derives the fixture.
+  pins: ice-overwrite-mode-1/C-018
 - [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) +
   [ice_overwrite_mode_1_spark_oracle.json](ice_overwrite_mode_1_spark_oracle.json) +
   [_record_ice_overwrite_mode_1_oracle.py](_record_ice_overwrite_mode_1_oracle.py) —
@@ -716,8 +724,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   predicate / MERGE key / `NOT MATCHED BY SOURCE` arm),
   `test_dataframe_door_matches_spark` (the MERGE and INSERT cases through facade `mergeInto`,
   `writeTo().append()` and `writeTo().overwritePartitions()` against Spark's own DataFrame
-  door; the 16 `overwritePartitions()` cells are strict `xfail(raises=ParseException)` on the
-  separate EX-W2-4 unpartitioned-table defect), and `test_adopted_spark_table_matches_spark`
+  door; the 16 `overwritePartitions()` cells run plainly since the EX-W2-4 fix,
+  ICE-OVERWRITE-MODE-1, 2026-09-19), and `test_adopted_spark_table_matches_spark`
   (the committed Spark-created, Spark-evolved table materialized at its baked-in path under a
   directory lock, `register_table`, then MERGE `*` on both doors, UPDATE and DELETE), and
   `test_lineage_read_matches_spark` (the v3 `_row_id` / `_last_updated_sequence_number` read of
@@ -729,8 +737,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the
   path, then `.venv/bin/python python/repark/tests/_record_ice_evo_dml_1.py`
   (`REPARK_ORACLE_IVY` points `spark.jars.ivy` at a warm Ivy cache). Registry rows (FIXED
-  2026-09-17): ICE-EVO-DML-1, ICE-EVO-SWAP-1, ICE-EVO-LINEAGE-READ-1; the `xfail` cells are
-  pinned on EX-W2-4; the RePark cells need the fork pin carrying F-PROMOTE-READ-1 (stacked
+  2026-09-17): ICE-EVO-DML-1, ICE-EVO-SWAP-1, ICE-EVO-LINEAGE-READ-1; the former EX-W2-4 `xfail` cells run plainly (2026-09-19); the RePark cells need the fork pin carrying F-PROMOTE-READ-1 (stacked
   on `fix/ice-promote-read-1`; local override until that unit's pin bump).
   pins: ice-evo-dml-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-012
   pins: ice-evo-dml-1/C-014, C-015, C-016, C-017
@@ -1305,8 +1312,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusing where Spark performs the conditional overwrite (EX-W2-1), empty-source
   `overwritePartitions` refusing where Spark no-ops (EX-W2-2), `option`/`options` with a
   branch/tag key refusing where Spark silently writes the default branch (EX-W2-3), and
-  `overwritePartitions` on an unpartitioned table leaking a `ParseException` where Spark
-  replaces the whole table (EX-W2-4) — via a
+  `overwritePartitions` on an unpartitioned table, which replaces the whole table as Spark
+  does since the EX-W2-4 fix (ICE-OVERWRITE-MODE-1, 2026-09-19; it leaked a `ParseException`)
+  — via a
   `spark_v2` memory-catalog fixture. The module docstring carries the batch pins line.
   pins: ex-20-window-catalog/C-001
   pins: ex-22-types-writerv2/C-003, C-005

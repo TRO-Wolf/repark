@@ -689,9 +689,13 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   not compute — correct under the Rust-first instruction (API plumbing). The module
   also carries the write helpers moved out of `writer_readwriter.py`:
   `_sql_option_escape`, `_normalize_write_compression`,
-  `_normalize_parquet_write_compression`, `_merge_path_write_tree`, and
-  `_dynamic_partition_sql` (re-imported by `writer_readwriter`, so
-  `core.py`'s import surface is unchanged).
+  `_normalize_parquet_write_compression` and `_merge_path_write_tree` (re-imported by
+  `writer_readwriter`, so `core.py`'s import surface is unchanged).
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** `_dynamic_partition_sql` is gone:
+  `writeTo(t).overwritePartitions()` sends `INSERT OVERWRITE t (cols) SELECT …` with the
+  dynamic intent and no `PARTITION` clause, so Rust replaces the staged partitions of any spec
+  (a `PARTITION (<spec field names>)` clause refused `[NON_PARTITION_COLUMN]` on transform
+  fields). pins: ice-overwrite-mode-1/C-018
   pins: io-bucket-cluster-1/C-001, C-002
   Critic round 1 (2026-09-14): `_unpack_column_args` enforces Spark's call-time
   order — `CANNOT_SET_TOGETHER` for a list/tuple `col` with extra `cols`, the

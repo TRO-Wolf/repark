@@ -380,6 +380,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   ICE-OVERWRITE-MODE-1 (2026-09-19): the dynamic replace and the empty-dynamic guard now
   run under `setup_dynamic` — in the default static mode `PARTITION (k)` replaces the whole
   table like Spark),
+  `overwrite_mode` also pins the TIMESTAMP string static-value refusal (verification critic,
+  2026-09-19). pins: ice-overwrite-mode-1/C-019
   `overwrite_mode` (ICE-OVERWRITE-MODE-1, 2026-09-19: static-mode `PARTITION (k)` and
   `INSERT OVERWRITE TABLE … PARTITION (k)` replace the whole table and an empty source wipes
   it (`delete`), the mixed `PARTITION (k='v', k2)` list filters by the static value in static

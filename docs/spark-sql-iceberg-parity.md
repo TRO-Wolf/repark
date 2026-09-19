@@ -6297,7 +6297,7 @@ the pin rather than obeying it.
   (`target_scan_after_add_column_null_fills_the_added_column`,
   `target_scan_after_rename_reads_the_renamed_column_by_field_id`,
   `target_scan_residual_on_a_renamed_key_keeps_the_matching_row`). The
-  `writeTo().overwritePartitions()` cells stay strict `xfail` on EX-W2-4. The RePark cells
+  `writeTo().overwritePartitions()` cells run plainly since EX-W2-4's fix (2026-09-19). The RePark cells
   need the fork pin carrying F-PROMOTE-READ-1 (#285) and F-EVO-SCAN-1 (#289) (stacked on
   `fix/ice-promote-read-1`; local override until that pin bump lands).
 - **Rationale** — FIXED. The DML path is RePark's planner; no Iceberg semantics are patched.
@@ -10295,7 +10295,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (rows land identically on both engines) is the arm the example teaches; the branch/tag
   refusal is pinned, not taught.
 
-### EX-W2-4 — `overwritePartitions` on an unpartitioned table leaks a ParseException where Spark replaces the table
+### EX-W2-4 — `overwritePartitions` on an unpartitioned table leaks a ParseException where Spark replaces the table — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1)**
 
 - **repark** — `overwritePartitions()` on a table with no partition columns raises
   `ParseException('SQL error: ParserError("Expected: an expression, found: ) at Line: 1,
@@ -10312,10 +10312,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `python/repark/tests/test_ice_evo_dml_1.py::test_dataframe_door_matches_spark[grid/*/insert_overwrite]`,
   which hold Spark's recorded `writeTo(t).overwritePartitions()` answer on unpartitioned evolved
   tables and flip red when the fix lands.
-- **Rationale** — OPEN, filed 2026-09-04 from the EX-22 round-2 review. Not a disclosed
-  refusal: repark's own generated SQL fails to parse. Follow-up `WRITERV2-OVERWRITE-UNPART-1`
-  is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
-  than obeys it.
+- **Rationale** — **FIXED 2026-09-19** by ICE-OVERWRITE-MODE-1: `overwritePartitions()` now
+  sends `INSERT OVERWRITE t (cols) SELECT …` with the dynamic intent and no `PARTITION`
+  clause, and Rust replaces the partitions the frame's rows land in — the whole table when the
+  table is unpartitioned. The example pin now asserts Spark's `[(5, 'z')]`
+  (`test_writerv2_overwrite_partitions_unpartitioned_replaces_the_table`), and the 16
+  `test_ice_evo_dml_1.py` cells run plainly against Spark's recorded answers. Filed
+  2026-09-04 from the EX-22 round-2 review (repark's own generated SQL failed to parse).
+  pins: ice-overwrite-mode-1/C-018
 
 ### FNP9-ARRAYS-ZIP-NAMES-1 — `arrays_zip` names its struct fields by position, never after the column
 

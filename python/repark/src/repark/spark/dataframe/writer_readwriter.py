@@ -800,7 +800,6 @@ class DataFrameWriter:
 
 
 from repark.spark.dataframe.writer_layout import (  # noqa: E402
-    _dynamic_partition_sql,
     _merge_path_write_tree,
     _normalize_parquet_write_compression,
     _normalize_write_compression,
@@ -936,8 +935,7 @@ class DataFrameWriterV2:
         """Replace only the partitions present in this DataFrame (Spark dynamic overwrite)."""
         session, table_ref = self._existing_table_ref()
         columns, projection = self._by_name_projection(session, table_ref=table_ref)
-        clause = _dynamic_partition_sql(self._dataframe, table_ref)
-        head = f"INSERT OVERWRITE {table_ref} ({columns}){clause} SELECT {projection} FROM "
+        head = f"INSERT OVERWRITE {table_ref} ({columns}) SELECT {projection} FROM "
         writer_layout.run_overwrite_partitions(self, lambda view: head + view)
 
     overwrite_partitions = overwritePartitions

@@ -173,9 +173,26 @@ fn overwrite_through_the_binding(
     force_static_overwrite: bool,
     force_dynamic_overwrite: bool,
 ) -> Vec<String> {
+    overwrite_spec_through_the_binding(
+        session_mode,
+        "PARTITIONED BY (cat)",
+        "INSERT OVERWRITE sc.ns.t PARTITION (cat) SELECT 9, 'z', 'x'",
+        force_static_overwrite,
+        force_dynamic_overwrite,
+    )
+}
+
+fn overwrite_spec_through_the_binding(
+    session_mode: &str,
+    spec: &str,
+    statement: &str,
+    force_static_overwrite: bool,
+    force_dynamic_overwrite: bool,
+) -> Vec<String> {
     let warehouse = std::env::temp_dir().join(format!(
-        "repark-py-intent-{}-{session_mode}-{force_static_overwrite}-{force_dynamic_overwrite}",
-        std::process::id()
+        "repark-py-intent-{}-{session_mode}-{force_static_overwrite}-{force_dynamic_overwrite}-{}",
+        std::process::id(),
+        spec.len() + statement.len()
     ));
     let config = HashMap::from([(
         "spark.sql.sources.partitionOverwriteMode".to_string(),
@@ -193,7 +210,9 @@ fn overwrite_through_the_binding(
             .expect("memory catalog");
         for statement in [
             "CREATE NAMESPACE sc.ns",
-            "CREATE TABLE sc.ns.t (id BIGINT, data STRING, cat STRING) USING iceberg PARTITIONED BY (cat)",
+            &format!(
+                "CREATE TABLE sc.ns.t (id BIGINT, data STRING, cat STRING) USING iceberg {spec}"
+            ),
             "INSERT INTO sc.ns.t VALUES (1, 'a', 'x'), (2, 'b', 'y'), (3, 'c', 'x')",
         ] {
             session_ref.sql(py, statement).expect("seed statement");
@@ -202,7 +221,7 @@ fn overwrite_through_the_binding(
         crate::session_write_options::session_sql_with_write_options(
             py,
             session.borrow(py),
-            "INSERT OVERWRITE sc.ns.t PARTITION (cat) SELECT 9, 'z', 'x'",
+            statement,
             HashMap::new(),
             force_static_overwrite,
             force_dynamic_overwrite,
@@ -244,6 +263,33 @@ fn binding_session_intent_follows_the_session_mode() {
         overwrite_through_the_binding("dynamic", false, false),
         ["2,b,y", "9,z,x"]
     );
+}
+
+#[test]
+fn binding_dynamic_intent_without_a_clause_replaces_the_staged_partitions_of_a_transform_spec() {
+    let statement = "INSERT OVERWRITE sc.ns.t (id, data, cat) SELECT 9, 'z', 'x'";
+    for session_mode in ["static", "dynamic"] {
+        assert_eq!(
+            overwrite_spec_through_the_binding(
+                session_mode,
+                "PARTITIONED BY (cat, bucket(1, id))",
+                statement,
+                false,
+                true
+            ),
+            ["2,b,y", "9,z,x"]
+        );
+        assert_eq!(
+            overwrite_spec_through_the_binding(
+                session_mode,
+                "PARTITIONED BY (bucket(1, id))",
+                statement,
+                false,
+                true
+            ),
+            ["9,z,x"]
+        );
+    }
 }
 
 #[test]

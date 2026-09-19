@@ -19,6 +19,13 @@ fn literal_array(literal: &PartitionLiteral) -> ArrayRef {
 }
 
 fn cast_literal(literal: &PartitionLiteral, target: &DataType) -> Result<ScalarValue> {
+    if matches!(literal, PartitionLiteral::String(_)) && matches!(target, DataType::Timestamp(..)) {
+        return Err(DataFusionError::NotImplemented(format!(
+            "INSERT OVERWRITE PARTITION static value `{literal:?}` for a TIMESTAMP partition \
+             column: the engine's string-to-timestamp cast does not yet follow Spark's session \
+             time zone and grammar (CAST-TS-STRING-1)"
+        )));
+    }
     let options = CastOptions {
         safe: false,
         ..CastOptions::default()

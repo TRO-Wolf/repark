@@ -178,6 +178,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):**
   mirror row `writer_readwriter.py` 1095 → 1093, the value round 1 set in
   `scripts/check_lib_py.py` without its mirror.
+  The verification fix ratchets it again, 1093 → 1091. pins: ice-overwrite-mode-1/C-018
 - `test_cap_1_source_file_line_cap.py` — **ICE-DROP-NS-1 (2026-09-19, run 24c):**
   mirror row ratchets `repark-sql/src/tests.rs` 1520 → 1513 with `scripts/check_rust_file_size.py`.
   pins: ice-drop-ns-1/C-011

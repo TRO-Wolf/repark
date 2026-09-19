@@ -1,0 +1,294 @@
+{
+ "banner": "4.1.2",
+ "runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "cells": {
+  "ident_bucket_static_v2": {
+   "spec": "PARTITIONED BY (cat, bucket(2, id))",
+   "mode": "static",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "ident_bucket_static_v3": {
+   "spec": "PARTITIONED BY (cat, bucket(2, id))",
+   "mode": "static",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "ident_bucket_dynamic_v2": {
+   "spec": "PARTITIONED BY (cat, bucket(2, id))",
+   "mode": "dynamic",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "ident_bucket_dynamic_v3": {
+   "spec": "PARTITIONED BY (cat, bucket(2, id))",
+   "mode": "dynamic",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "bucket_only_static_v2": {
+   "spec": "PARTITIONED BY (bucket(4, id))",
+   "mode": "static",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "bucket_only_static_v3": {
+   "spec": "PARTITIONED BY (bucket(4, id))",
+   "mode": "static",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "bucket_only_dynamic_v2": {
+   "spec": "PARTITIONED BY (bucket(4, id))",
+   "mode": "dynamic",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "bucket_only_dynamic_v3": {
+   "spec": "PARTITIONED BY (bucket(4, id))",
+   "mode": "dynamic",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "truncate_cat_static_v2": {
+   "spec": "PARTITIONED BY (truncate(1, cat))",
+   "mode": "static",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "truncate_cat_static_v3": {
+   "spec": "PARTITIONED BY (truncate(1, cat))",
+   "mode": "static",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "truncate_cat_dynamic_v2": {
+   "spec": "PARTITIONED BY (truncate(1, cat))",
+   "mode": "dynamic",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "truncate_cat_dynamic_v3": {
+   "spec": "PARTITIONED BY (truncate(1, cat))",
+   "mode": "dynamic",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "unpartitioned_static_v2": {
+   "spec": "",
+   "mode": "static",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "unpartitioned_static_v3": {
+   "spec": "",
+   "mode": "static",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "unpartitioned_dynamic_v2": {
+   "spec": "",
+   "mode": "dynamic",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  },
+  "unpartitioned_dynamic_v3": {
+   "spec": "",
+   "mode": "dynamic",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "z",
+     "x"
+    ]
+   ],
+   "last_operation": "overwrite"
+  }
+ }
+}

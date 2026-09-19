@@ -476,6 +476,9 @@ repark-core's error map.
   replaces that partition and an invalid value refuses with the same `Cast error` text as
   `SELECT CAST(…)`. `cast_datum` turns the cast value into an Iceberg `Datum` (boolean, int,
   long, float, double, date, string, timestamp and timestamptz micros); other targets refuse.
+  A string value on a TIMESTAMP / TIMESTAMPTZ source refuses (`CAST-TS-STRING-1`): Arrow reads
+  it in UTC where Spark casts in the session zone (verification critic, 2026-09-19).
+  pins: ice-overwrite-mode-1/C-019
   pins: ice-overwrite-mode-1/C-013
 - `overwrite_scope.rs` — **ICE-OVERWRITE-MODE-1 (2026-09-19):** the one overwrite decision
   for every door. `OverwriteMode` (session `partitionOverwriteMode`, the typed
