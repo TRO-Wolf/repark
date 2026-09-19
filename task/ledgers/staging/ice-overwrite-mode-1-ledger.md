@@ -101,6 +101,39 @@ pin asserting the old refusal or the old dynamic reading; the PIN O5 transform r
 - **R-5** — native engine errors answer `getCondition() is None` engine-wide; the refusal's class
   and message carry Spark's condition token.
 
+## Step 4 (2026-09-19) — one more flipped pin, and the gates
+
+**Flipped in step 4.** The `rg` sweep of step 2 missed a pin that runs its statement from a
+helper module: V3-COV's `insert-overwrite-partition-dynamic`
+(`_v3_statement_coverage_programs.py`, static-mode `PARTITION (part)`). Its measured RePark
+half kept the other partitions; the recorded Spark half is the single written row. The RePark
+half now equals the Spark half and the verdict flips DIVERGES → EQUAL
+(`_v3_statement_coverage_repark.py`, `_v3_statement_coverage_golden.py`,
+`docs/design/v3-statement-coverage.md`). Evidence for C-002.
+
+**Gates** (release native rebuilt from the final tree):
+
+- Harness replay (`cells_ow.py`, 60 cells): rows equal on 60/60; rows plus snapshot summaries
+  plus refusal class and message equal on 56/60 — the 4 misses are the `saveAsTable(overwrite)`
+  RTAS histories (R-4). Strict key including `getCondition()`: 54/60 (R-5 adds the two
+  `NON_PARTITION_COLUMN` cells).
+- Offline `-n 4`: the new file plus every file `rg` finds for `INSERT OVERWRITE|insertInto|
+  overwritePartitions|overwrite-mode` (29 test files) — 1098 passed, 37 skipped, 20 xfailed;
+  the 30 further test files naming `overwrite` or the V3-COV / promote-read programs — 1346
+  passed, 93 skipped, 1 xfailed (after the V3-COV flip).
+- Live (`REPARK_PARITY_LIVE=1`, PySpark 4.1.2): `test_ice_overwrite_mode_1.py` 62 passed,
+  4 xfailed; the recorder's `check` reproduces the fixture.
+- `cargo test -p repark-spark --lib` (overwrite, partition, by-name, write-option, dialect,
+  transform filters) 158 passed; `-p repark-sql --lib` 365 passed; `--test
+  ansi_write_defaults` 8 passed; `-p repark-iceberg --lib` (overwrite filters) 36 passed;
+  `-p repark-core --lib` (dialect, mode, write-option, session filters) 171 passed.
+- `cargo fmt --all --check` clean; `cargo clippy -p <crate> --all-targets -- -D warnings -A
+  clippy::disallowed_methods` clean on repark-iceberg, -core, -spark, -sql, -python; the
+  panic-ban form (`--workspace --lib --bins --exclude repark-python -- -D warnings`) clean.
+- `ruff check .` clean; `ruff format --check` on the changed Python clean; lib-py,
+  rust-file-size, python-conventions, docstring-presence, ledger-grammar, docs-links and
+  map-sync clean. Comment ban: 0 hits on every commit.
+
 ## Coverage attestation
 
 ```yaml

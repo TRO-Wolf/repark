@@ -61,7 +61,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `insert-overwrite-table` | insert | `INSERT OVERWRITE t VALUES (9, 'z')` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `insert-overwrite-partition-static-values` | insert | `INSERT OVERWRITE t PARTITION (part = 10) VALUES (CAST(7 AS INT), 'g')` | part MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `insert-overwrite-partition-static-select` | insert | `INSERT OVERWRITE t PARTITION (part = 10) SELECT CAST(id AS INT), CAST(name AS STRING) FROM t WHERE id = 1` | part MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
-| `insert-overwrite-partition-dynamic` | insert | `INSERT OVERWRITE t PARTITION (part) SELECT CAST(7 AS INT), CAST('g' AS STRING), CAST(10 AS INT)` | part MoR v3 | 2 | replaces only `part = 10` | default-STATIC wipes the table | **DIVERGES** | `DML-1` |
+| `insert-overwrite-partition-dynamic` | insert | `INSERT OVERWRITE t PARTITION (part) SELECT CAST(7 AS INT), CAST('g' AS STRING), CAST(10 AS INT)` | part MoR v3 | 2 | replaced only `part = 10` until 2026-09-19; since ICE-OVERWRITE-MODE-1 the default-STATIC mode replaces the whole table | default-STATIC wipes the table | **EQUAL** (2026-09-19; DIVERGES before) | `DML-1` |
 | `delete-where-mor` | delete | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 3 | as Spark | as Spark | **EQUAL** | — |
 | `delete-where-cow` | delete | `DELETE FROM t WHERE id = 2` | flat COW v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `delete-where-partitioned-mor` | delete | `DELETE FROM t WHERE id = 2` | part MoR v3 | 3 | as Spark | as Spark | **EQUAL** | — |

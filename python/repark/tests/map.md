@@ -1753,6 +1753,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **RP-23 (2026-09-17):** `create-v3-properties` flips DIVERGES→EQUAL — the codec stamp was
   its sole open difference.
   pins: rp-23-pin-bump/C-001
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** `insert-overwrite-partition-dynamic` flips
+  DIVERGES→EQUAL — static-mode `PARTITION (part)` now replaces the whole table, and
+  `_v3_statement_coverage_repark.py` carries the re-measured answer, equal to the recorded
+  Spark half. pins: ice-overwrite-mode-1/C-002
 - [_v3_statement_coverage_repark.py](_v3_statement_coverage_repark.py) and
   [_v3_statement_coverage_spark.py](_v3_statement_coverage_spark.py) — **V3-COV (2026-09-03):**
   the measured halves, one entry per program, recorded 2026-09-03 against live PySpark 4.1.2 +
