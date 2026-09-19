@@ -69,12 +69,10 @@ _LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live Spark cell skipped (routine CI is
 _CATALOG = "ice_page_prune_1"
 _NAMESPACE = "ns"
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
-_TABLES = ("base_v2", "base_v3", "del_v3", "evo_v2")
-_DELETE_TABLES = ("del_v2",)
+_TABLES = ("base_v2", "base_v3", "del_v2", "del_v3", "evo_v2")
 _LINEAGE_TABLES = frozenset({"base_v3", "del_v3"})
 _DECIMAL_RANGE_CELLS = ("d_lt", "d_gt", "d_not_lt")
 _DECIMAL_RANGE_NEEDLE = "Overflowing on NaN"
-_DELETE_READ_NEEDLE = "Failed to load Parquet metadata"
 
 
 class _DirLock:
@@ -190,40 +188,6 @@ def test_sql_door_answers_every_recorded_cell() -> None:
                     table,
                     "_unfiltered",
                 )
-    finally:
-        session.stop()
-
-
-def test_sql_door_rewritten_position_deletes_refuse_loud() -> None:
-    """Rewritten v2 position deletes fail loud on every read, never silently.
-
-    ``rewrite_table_path`` rewrote the delete-file bytes without updating the
-    manifest sizes; RePark sizes its reads from the manifest while Spark reads
-    the footer, so RePark refuses and Spark answers the recorded rows. The
-    sub-message races with the scan (corrupt footer or short read); the stable
-    needle is the metadata-load failure. The recorded Spark answers in
-    ``truth.json`` are the fix target.
-    """
-    session = _new_session("ice-page-prune-1-deletes")
-    try:
-        session.register_memory_catalog(_CATALOG, Path("/tmp/repark-ice-page-prune-1-mem"))
-        session.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
-        for table in _DELETE_TABLES:
-            with _materialize(table) as metadata_file:
-                table_arg = f"{_NAMESPACE}.{table}"
-                _register(session, table_arg, metadata_file)
-                qualified = f"{_CATALOG}.{table_arg}"
-                for query in (
-                    f"SELECT count(*) FROM {qualified}",
-                    f"SELECT id FROM {qualified} WHERE {_queries(table)['id_range']} ORDER BY id",
-                ):
-                    with pytest.raises(Exception) as raised:
-                        session.sql(query).to_arrow()
-                    assert _DELETE_READ_NEEDLE in str(raised.value), (
-                        table,
-                        query[:60],
-                        str(raised.value)[:200],
-                    )
     finally:
         session.stop()
 
