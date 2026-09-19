@@ -22,6 +22,29 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
+- [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  the native door's plain `INSERT INTO` arm when the session write conf is set. Without it the
+  statement reaches the fork's DataFusion `insert_into`, which takes neither snapshot properties
+  nor a codec, so the native door answered differently from the facade door on the same session
+  conf (critic P1-2). Shape: resolve the Iceberg target, fill defaults through
+  `insert_defaults::overwrite_source_with_defaults`, plan the SELECT through `PreExecute`
+  (SEC-02 guard kept), stage with the resolved overrides, and commit through
+  `commit_append_with_summary` — the same Rust carrier the Spark door uses.
+  pins: ice-session-write-conf-1/C-042
+- [`session_write_conf.rs`](session_write_conf.rs) — **ICE-SESSION-WRITE-CONF-1 round 1
+  (2026-09-19):** the native-door battery (test-only): INSERT / CTAS / MERGE / DELETE stamp the
+  session snapshot property, a colliding summary key refuses with Spark's text and commits
+  nothing, a free key is stamped and feeds the totals like Java's producer (a negative total is
+  dropped, not written), and a bogus session codec refuses at the write naming the codec.
+  The native session carries its own `ConfigOptions`, so these pins build the door session with
+  `with_session_write_conf` — the Python facade cannot reach this door's carrier.
+  pins: ice-session-write-conf-1/C-042
+- [`create_table.rs`](create_table.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  CTAS stages its query with the resolved session codec and, when the session sets snapshot
+  properties, publishes through a transaction that carries the merged summary instead of the
+  staged transaction's unstamped commit. A `CREATE TABLE` with no query resolves nothing, so a
+  bogus session codec still refuses at the first write and not at DDL.
+  pins: ice-session-write-conf-1/C-042
 - `declared_refuse.rs` — FNP-15/16 ANSI-door parse valve (G15 dual-wire: Spark's copy lives in
   `repark-functions`). Sketches (32), CSV/XML/XPath (11), VARIANT (8), geospatial (5), and
   the XML pair `from_xml` / `schema_of_xml` (FNP-GEN-1 D-6, dated 2026-09-15, message names
@@ -317,3 +340,4 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 | `SHOW TABLES` listed a `__repark_tt_*` relation (no `ansi`) | The core half of the pinned view leaked. Each `FOR … AS OF` composes this door's view over `repark_core::read_table_at`, which registers its own `__repark_tt_<n>`. `register_pinned_view` records both names; check that record. A leftover after no `FOR … AS OF` is the reader-options residual (`spark.read.option("snapshot-id"…)`), which remains registered by design |
 
 First checks: `cargo test -p repark-sql --lib`. Escalate to: [../map.md#debug](../map.md).
+

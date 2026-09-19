@@ -157,6 +157,12 @@ async fn execute_time_travelled(
         Statement::Insert(insert) if insert.overwrite => {
             crate::insert_overwrite::execute_insert_overwrite(cx, insert).await
         }
+        Statement::Insert(insert)
+            if let Some(frame) =
+                crate::session_insert::try_execute_session_insert(cx, insert).await? =>
+        {
+            Ok(frame)
+        }
         Statement::Call(function) => Err(refusals::maintenance_call(&function.name.to_string())),
         Statement::Truncate(truncate) => truncate::execute_truncate(cx, truncate).await,
         // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves.

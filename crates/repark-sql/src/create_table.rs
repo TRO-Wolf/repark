@@ -170,6 +170,7 @@ async fn execute_staged_create(
     placement: Placement,
     replace_write: bool,
 ) -> Result<DataFrame> {
+    let mut replace_base: Option<String> = None;
     let staged = if let Placement::StagedCreate { location, file_io } = placement {
         let creation = iceberg_table_creation(
             &target.table,
@@ -200,6 +201,7 @@ async fn execute_staged_create(
             None,
             properties.format_version.as_deref(),
         );
+        replace_base = existing.metadata_location().map(str::to_string);
         StagedTableTransaction::begin_replace(&existing, creation)
             .await
             .map_err(iceberg_err)?
@@ -207,16 +209,82 @@ async fn execute_staged_create(
     };
 
     // Streaming bounds memory by batch size and open writers.
-    let data_files = match query {
-        Some(frame) => write_query(cx.ctx, staged.table(), frame).await?,
-        None => Vec::new(),
+    let (snapshot_extra, data_files) = match query {
+        Some(frame) => {
+            let (snapshot_extra, staging) =
+                repark_iceberg::write::resolve_empty_session_write(cx.ctx)?;
+            let files = stage_query(cx.ctx, staged.table(), frame, &staging).await?;
+            (snapshot_extra, files)
+        }
+        None => (Vec::new(), Vec::new()),
     };
-    staged
-        .add_data_files(data_files)
-        .commit(target.catalog.as_ref())
-        .await
-        .map_err(iceberg_err)?;
+    if snapshot_extra.is_empty() || (data_files.is_empty() && !replace_write) {
+        staged
+            .add_data_files(data_files)
+            .commit(target.catalog.as_ref())
+            .await
+            .map_err(iceberg_err)?;
+    } else {
+        publish_staged_with_summary(
+            target,
+            staged,
+            data_files,
+            &snapshot_extra,
+            replace_write,
+            replace_base,
+        )
+        .await?;
+    }
     finish(cx.ctx, target).await
+}
+
+async fn publish_staged_with_summary(
+    target: &CreateTarget,
+    staged: StagedTableTransaction,
+    data_files: Vec<iceberg::spec::DataFile>,
+    snapshot_extra: &[(String, String)],
+    replace_write: bool,
+    replace_base: Option<String>,
+) -> Result<()> {
+    use iceberg::transaction::{ApplyTransactionAction, StagedTableMode, Transaction};
+
+    let staged_table = staged.table().clone();
+    let mode = staged.mode();
+    let tx = Transaction::new(&staged_table);
+    let tx = if replace_write {
+        let engine =
+            repark_iceberg::write::EngineSummary::for_overwrite(&staged_table, &data_files, None);
+        let (_, summary) = repark_iceberg::write::summary_with_extras(snapshot_extra, &engine)?;
+        tx.overwrite_files()
+            .overwrite_by_row_filter(iceberg::expr::Predicate::AlwaysTrue)
+            .add_files(data_files)
+            .allow_empty_commit()
+            .set_snapshot_properties(summary)
+            .apply(tx)
+    } else {
+        let engine =
+            repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
+        let (_, summary) = repark_iceberg::write::summary_with_extras(snapshot_extra, &engine)?;
+        tx.fast_append()
+            .add_data_files(data_files)
+            .set_snapshot_properties(summary)
+            .apply(tx)
+    }
+    .map_err(iceberg_err)?;
+    let table = tx.apply_locally().await.map_err(iceberg_err)?;
+    match mode {
+        StagedTableMode::Create => target
+            .catalog
+            .publish_create_table(table)
+            .await
+            .map_err(iceberg_err)?,
+        StagedTableMode::Replace => target
+            .catalog
+            .publish_replace_table(table, replace_base)
+            .await
+            .map_err(iceberg_err)?,
+    };
+    Ok(())
 }
 
 /// Where a create's data will live, resolved before the SELECT runs.
@@ -444,12 +512,26 @@ async fn create_first_service_managed(
 
     let write: Result<()> = async {
         if let Some(frame) = query {
-            let data_files = write_query(cx.ctx, &table, frame).await?;
+            let (snapshot_extra, staging) =
+                repark_iceberg::write::resolve_empty_session_write(cx.ctx)?;
+            let data_files = stage_query(cx.ctx, &table, frame, &staging).await?;
             if replace_write {
-                repark_iceberg::write::commit_replace_write(&target.catalog, &table, data_files)
-                    .await?;
+                repark_iceberg::write::commit_replace_write_with_summary(
+                    &target.catalog,
+                    &table,
+                    data_files,
+                    &snapshot_extra,
+                )
+                .await?;
             } else if !data_files.is_empty() {
-                repark_iceberg::write::commit_append(&target.catalog, &table, data_files).await?;
+                repark_iceberg::write::commit_append_with_summary(
+                    &target.catalog,
+                    &table,
+                    data_files,
+                    &snapshot_extra,
+                    None,
+                )
+                .await?;
             }
         }
         Ok(())
@@ -478,15 +560,44 @@ async fn create_first_service_managed(
 }
 
 /// Stream a plan's batches into Iceberg data files, honouring the session's write concurrency.
-async fn write_query(
+async fn stage_query(
     ctx: &SessionContext,
     table: &iceberg::table::Table,
     query: DataFrame,
+    staging: &repark_iceberg::write::WriterStagingOverrides,
 ) -> Result<Vec<iceberg::spec::DataFile>> {
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    let task_ctx = Arc::new(query.task_ctx());
-    let plan = query.create_physical_plan().await?;
-    repark_iceberg::write::write_data_files_from_plan(table, plan, task_ctx, concurrency).await
+    if staging.codec.is_none()
+        && staging.level.is_none()
+        && staging.target_file_size_bytes.is_none()
+    {
+        let task_ctx = Arc::new(query.task_ctx());
+        let plan = query.create_physical_plan().await?;
+        return repark_iceberg::write::write_data_files_from_plan(
+            table,
+            plan,
+            task_ctx,
+            concurrency,
+        )
+        .await;
+    }
+    let stream = query.execute_stream().await?;
+    if table.metadata().default_partition_spec().is_unpartitioned() {
+        return repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
+            table,
+            stream,
+            concurrency,
+            staging,
+        )
+        .await;
+    }
+    repark_iceberg::write::stage_partitioned_stream_with_overrides(
+        table,
+        stream,
+        staging,
+        concurrency,
+    )
+    .await
 }
 
 /// Refresh the touched schema's name directory, then return an empty frame.

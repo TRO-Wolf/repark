@@ -64,7 +64,6 @@ pub struct PredicateDmlSpec {
     /// `None` = identity DELETE.
     pub assignments: Option<Vec<(String, String)>>,
     pub case_insensitive: bool,
-    /// `Some(name)` when the target named `<table>.branch_<name>`.
     pub branch: Option<String>,
 }
 
@@ -196,9 +195,6 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
     }))
 }
 
-/// Execute an identity DELETE or UPDATE: SELECT over the pinned scratch, then COW-rewrite or `MoR`
-/// # Errors
-/// Planning, write, or commit errors, plus `NotImplemented` for non-Parquet or non-V2 `MoR`.
 fn spec_snapshot_id(table: &iceberg::table::Table, spec: &PredicateDmlSpec) -> Option<i64> {
     let metadata = table.metadata();
     match spec.branch.as_deref() {
@@ -208,6 +204,7 @@ fn spec_snapshot_id(table: &iceberg::table::Table, spec: &PredicateDmlSpec) -> O
     .map(|snapshot| snapshot.snapshot_id())
 }
 
+#[allow(clippy::missing_errors_doc)]
 pub async fn execute_predicate_dml(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
