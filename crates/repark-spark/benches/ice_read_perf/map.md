@@ -132,3 +132,6 @@ The concurrent mode issues Q2, Q3, Q5 and Q6 at once.
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- Baseline file (filled by the orchestrator):
+  [docs/perf/ice-read-perf-baseline-2026-09-19.md](../../../../docs/perf/ice-read-perf-baseline-2026-09-19.md)
+- Ledger: [task/ledgers/staging/ice-read-perf-0-ledger.md](../../../../task/ledgers/staging/ice-read-perf-0-ledger.md)

@@ -41,6 +41,8 @@ Source comments retain only API and safety contracts; implementation narration i
   over the fork default>)`; the unsuffixed `glue_catalog` / `s3tables_catalog` call them with a
   fresh counter set. The metadata and manifest caches are **not** passed to Glue or S3 Tables
   (unit ICE-CATALOG-CACHE-1). pins: ice-read-perf-0/C-003, C-004
+  No product behaviour changes: the wrapper only delegates and counts.
+  pins: ice-read-perf-0/C-010
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the Iceberg I/O counters. `IcebergIoCounters`
   holds one pair of relaxed `AtomicU64` (requests, bytes) per operation kind (`IcebergIoOp`:
   exists, metadata/HEAD, whole read, ranged read, write, delete, list) and per file class
