@@ -1,13 +1,12 @@
 mod bed;
 mod cli;
+mod pins_report;
 mod r3;
 mod remote;
 mod report;
 mod run;
 
-use std::cell::RefCell;
-use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::{cell::RefCell, path::Path, path::PathBuf, process::ExitCode};
 
 use repark_core::ReparkSession;
 use repark_iceberg::catalog::{IcebergFileClass, IcebergIoOp};

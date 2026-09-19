@@ -9367,7 +9367,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   catalog, format-v3 table, measured **SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** metadata
   document READS (the analysis' §7.6 totals split into reads and the commit's own write). FIXED
   by a session-scoped cache keyed by metadata-file location, built once per session and handed to
-  every **memory** catalog it builds (`repark.iceberg.metadataCache`, default on;
+  every memory catalog it builds — and, since ICE-CATALOG-CACHE-1 (2026-09-19), every Glue and S3
+  Tables catalog (`repark.iceberg.metadataCache`, default on;
   `repark.iceberg.metadataCacheEntries`, default 512): reads are **0 on every statement that
   reads an existing table**. Three things this row does NOT claim. (1) `CREATE TABLE` and CTAS
   still read 1, with the cache on and off alike — the catalog reads back the document it wrote to
@@ -9375,8 +9376,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   catalog ROUND TRIPS per statement is **unchanged**: measured through the census counter
   (`hits + misses`, cache on) at SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3 — the same
   numbers as the knob-off read column, because the cache turns those calls into hits rather than
-  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) Glue and S3 Tables are **not wired** and pay exactly what they paid
-  before; that is `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
+  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) The read counts above are the memory catalog's; Glue and S3 Tables
+  receive the same session caches since ICE-CATALOG-CACHE-1 but are unmeasured — that is
+  `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
   (commit visibility, `ADD COLUMNS`, a MERGE after another door's commit, `rewrite_manifests` +
   `expire_snapshots`, DROP + re-CREATE, and a Hadoop pointer adopted by `CALL register_table`).
   Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
@@ -9396,30 +9398,48 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   behaviour alone. Implemented and test-green in the fork lane; measured through a temporary,
   never-committed path override as part of the 120.01 → 11.33 ms cell in
   `docs/perf/iceberg-catalog-io-baseline.md` §3.1.
-- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind a
-  fork pin bump. The metadata-location cache reaches the memory catalog only:
-  `MemoryCatalogBuilder::with_table_metadata_cache` exists at fork pin `189a73ed`, but
-  `GlueCatalogBuilder` and `S3TablesCatalogBuilder` have no such method, so `glue_catalog` and
-  `s3tables_catalog` are unchanged and a Glue statement still pays its S3 GET of the metadata
-  document (2 per SELECT, 3–6 per DML, by the census method). Fork trigger **F-CATIO-AWS**: the
-  two AWS builders take an `Option<Arc<TableMetadataCache>>` and route `load_table` through
-  `load_or_fetch_table_metadata`, as `MemoryCatalog` already does. The two acceptance legs
-  (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
-  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) are written and SKIP
-  naming this ask; they un-skip at the bump. No AWS was measured by this unit.
-- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind
-  a fork pin bump. The fork's `TableMetadataCache` is an unbounded `HashMap<String, CachedEntry>`
-  with no eviction of its own; `invalidate` and `clear` are the only ways out, so a session that
-  keeps loading distinct locations grows without limit. RePark's bound is a **high-water clear**:
-  `CatalogCaches::trim` empties the cache when the retained-location count passes
-  `repark.iceberg.metadataCacheEntries`, and the session calls it at the statement door
-  (`sql_with`). Two consequences that are recorded rather than fixed. A trip costs the whole
-  cache, not one entry. And the bound is checked BETWEEN statements, so retention inside one
-  statement is one entry per distinct table it names — measured: eight CREATEs at `entries=1`
-  leave 2 retained, while an 8-way `UNION ALL` at `entries=1` retains 8 until the next door
-  (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
-  Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
-  bounds within a statement by construction and evicts one entry instead of all of them.
+- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **Wired,
+  unmeasured (the AWS bench is blocked on an IAM grant)** since 2026-09-19 (ICE-CATALOG-CACHE-1)
+  at fork pin `27e0d5fa`: fork `#311` (ask `F-CATIO-AWS`) gave `GlueCatalogBuilder` and
+  `S3TablesCatalogBuilder` `with_table_metadata_cache`, `with_shared_object_cache_bytes` and
+  `with_cache_credential_context`, and RePark's `glue_catalog_counted` /
+  `s3tables_catalog_counted` hand them the session's `CatalogCaches` through the same
+  `wire_caches` the memory catalog uses, on every production registration path
+  (`register_catalog_spec`). The caches are session-scoped: one metadata cache per session,
+  shared by its catalogs within one credential context (the fork's
+  `CacheScope::credential_context_from_props`, selectors only; with no selector each catalog
+  instance keeps its own scope), and one manifest `ObjectCache` per catalog instance. Pinned
+  offline (`catalog/tests/cache_wiring.rs`, the session caches reach both real builders);
+  expected effect by the census method is 0 S3 GETs of `metadata.json` per statement on an
+  unchanged pointer (it was 2 per SELECT, 3–6 per DML), but no AWS number exists yet. The two
+  acceptance legs (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
+  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) still SKIP, now naming
+  the blocked AWS measurement (ledger `ice-catalog-cache-1` C-011) instead of the fork. The
+  `GetTable` count per statement is unchanged; that is `PERF-CATALOG-LOADS-1`.
+- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **FIXED
+  2026-09-19 (ICE-CATALOG-CACHE-1)** at fork pin `27e0d5fa` (fork `#311`, ask `F-CATIO-BOUND`).
+  The fork's `TableMetadataCache` is now a moka cache weighed by each entry's metadata-document
+  byte length (`max(body_len, 1)`), and RePark builds it with
+  `TableMetadataCache::with_max_entries(repark.iceberg.metadataCacheEntries)` — the fork's mapping
+  of entries × 64 KiB to a byte budget, so the default `512` is 33,554,432 bytes (32 MiB), half
+  the fork's own 64 MiB default. The budget is bytes, not a count: a one-column table's document
+  weighs about 538 bytes (four such tables measured 2,152 bytes), so for small tables the count
+  bound below binds long before the byte budget, and the byte budget binds first only when the
+  average document passes 64 KiB. **Eviction can now happen inside one statement**: moka evicts
+  single entries by weight when its maintenance runs (driven by cache traffic or an explicit
+  settle), and the fork counts them as `evictions` (advisory: `installed − retained − removed −
+  cleared`; exact once pending tasks run). Pinned: three 40 KiB-property tables under
+  `entries=1` evict and each load still reads its own table
+  (`catalog/tests/cache_wiring.rs::evictions_reach_the_stats_and_never_serve_a_sibling`). The
+  **statement-door high-water clear stays**: `CatalogCaches::trim` settles moka's pending tasks,
+  and when the settled retained-location count passes `metadataCacheEntries` it clears the whole
+  cache (a clear, not an eviction, in the fork's accounting). So small-document tables still
+  retain one entry per distinct table inside a statement that fits the byte budget — an 8-way
+  `UNION ALL` at `entries=1` retains 8 until the next door
+  (`one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its Python
+  twin) — while large documents are evicted mid-statement. The door's own settle is pinned by
+  `the_door_trim_settles_before_it_reads_the_high_water_mark` (red when `trim` reads the unsettled
+  count). Ledger: `task/ledgers/staging/ice-catalog-cache-1-ledger.md` C-006, C-012.
 - **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
   **OPEN — measured 2026-09-16** (corrected 2026-09-17 from the 2026-09-16 rating,
   probe `p_countstar` at `a92a68db`): no fold at the current pin — `EXPLAIN SELECT count(*)`
@@ -9528,8 +9548,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
   4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
   `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
-  build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
-  pin, so they are unchanged. Staleness pinned per cell on default sessions (MERGE after
+  build per-table caches; their builders had no `with_shared_object_cache_bytes` at this
+  pin, so they were unchanged (since RP-37, fork `27e0d5fa`, ICE-CATALOG-CACHE-1, 2026-09-19,
+  Glue and S3 Tables receive the session's shared manifest and metadata caches — wired,
+  unmeasured on AWS). Staleness pinned per cell on default sessions (MERGE after
   a commit, DROP + re-CREATE, `register_table`, rewrite + expire, time-travel and branch
   reads), the two-door Rust battery green with the cache on (the default), the funnel pin
   on the default session, the four upgrade-lineage tests green on default sessions, and a

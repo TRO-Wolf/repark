@@ -5,7 +5,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use repark_core::ReparkSession;
-use repark_iceberg::catalog::{IcebergFileClass, IcebergIoCount, IcebergIoOp, IcebergIoStats};
+use repark_iceberg::catalog::{
+    IcebergFileClass, IcebergIoCount, IcebergIoOp, IcebergIoStats, TableMetadataCacheStats,
+};
 use serde_json::{Value, json};
 
 use crate::run::{Mode, QuerySpec, Timing};
@@ -39,6 +41,7 @@ pub struct IoDelta {
     pub cache_hits: u64,
     pub cache_misses: u64,
     pub cache_body_fetches: u64,
+    pub cache_evictions: u64,
     pub peak_rss_kib: Option<u64>,
     pub rss_at_reset_kib: Option<u64>,
     pub peak_rss_reset: bool,
@@ -46,28 +49,31 @@ pub struct IoDelta {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Before {
-    cache: (u64, u64, u64),
+    cache: TableMetadataCacheStats,
     peak_rss_reset: bool,
     rss_at_reset_kib: Option<u64>,
 }
 
-pub fn probe_before(session: &ReparkSession, tally: &RunTally) -> Before {
+pub async fn probe_before(session: &ReparkSession, tally: &RunTally) -> Before {
+    session.settle_iceberg_metadata_cache().await;
     tally.drain(session);
     let peak_rss_reset = std::fs::write("/proc/self/clear_refs", "5").is_ok();
     Before {
-        cache: session.iceberg_metadata_cache_stats().unwrap_or((0, 0, 0)),
+        cache: session.iceberg_metadata_cache_report().unwrap_or_default(),
         peak_rss_reset,
         rss_at_reset_kib: status_kib("VmRSS:"),
     }
 }
 
-pub fn probe_after(session: &ReparkSession, before: &Before) -> IoDelta {
-    let (hits, misses, fetches) = session.iceberg_metadata_cache_stats().unwrap_or((0, 0, 0));
+pub async fn probe_after(session: &ReparkSession, before: &Before) -> IoDelta {
+    session.settle_iceberg_metadata_cache().await;
+    let after = session.iceberg_metadata_cache_report().unwrap_or_default();
     IoDelta {
         io: session.iceberg_io_stats(),
-        cache_hits: hits.saturating_sub(before.cache.0),
-        cache_misses: misses.saturating_sub(before.cache.1),
-        cache_body_fetches: fetches.saturating_sub(before.cache.2),
+        cache_hits: after.hits.saturating_sub(before.cache.hits),
+        cache_misses: after.misses.saturating_sub(before.cache.misses),
+        cache_body_fetches: after.body_fetches.saturating_sub(before.cache.body_fetches),
+        cache_evictions: after.evictions.saturating_sub(before.cache.evictions),
         peak_rss_kib: status_kib("VmHWM:"),
         rss_at_reset_kib: before.rss_at_reset_kib,
         peak_rss_reset: before.peak_rss_reset,
@@ -123,6 +129,7 @@ impl QueryRecord {
                 "hits": delta.cache_hits,
                 "misses": delta.cache_misses,
                 "body_fetches": delta.cache_body_fetches,
+                "evictions": delta.cache_evictions,
             })),
             "peak_rss_kib": self.delta.as_ref().and_then(|delta| delta.peak_rss_kib),
             "rss_at_reset_kib": self.delta.as_ref().and_then(|delta| delta.rss_at_reset_kib),
@@ -438,7 +445,10 @@ fn io_cells(delta: Option<&IoDelta>) -> [String; 8] {
             .to_string(),
         io.by_class(IcebergFileClass::Manifest).requests.to_string(),
         format!("{}/{}", total.requests, total.bytes),
-        format!("{}/{}", delta.cache_hits, delta.cache_misses),
+        format!(
+            "{}/{}/{}",
+            delta.cache_hits, delta.cache_misses, delta.cache_evictions
+        ),
     ]
 }
 
@@ -478,7 +488,7 @@ pub fn markdown(
         text,
         "| mode | query | n | plan ms | exec→first ms | first batch ms | total ms | rows | \
          data footer req/bytes | data page req/bytes | delete req/bytes | meta json req | \
-         manifest-list req | manifest req | total req/bytes | cache hit/miss | RSS at reset MiB | \
+         manifest-list req | manifest req | total req/bytes | cache hit/miss/evict | RSS at reset MiB | \
          peak RSS MiB | io same |"
     );
     let _ = writeln!(

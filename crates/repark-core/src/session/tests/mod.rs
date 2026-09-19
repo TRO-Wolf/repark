@@ -5,6 +5,7 @@ mod commit_unknown;
 mod conf_unread;
 mod df_guard;
 mod io_stats;
+mod metadata_cache_report;
 mod namespace_create;
 mod nlj_tight_pool;
 mod pool_refusals;

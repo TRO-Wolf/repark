@@ -9,6 +9,7 @@ use iceberg::{Catalog, NamespaceIdent};
 
 // === incremental catalog provider PERF-07 hook API (invalidate / rebuild).
 mod builders;
+mod cache_wiring;
 mod caches;
 mod catalog_ops;
 mod counting_storage;
@@ -39,6 +40,7 @@ pub use counting_storage::{
     S3TABLES_DEFAULT_CONFIGURED_SCHEME, glue_default_storage_factory,
     s3tables_default_storage_factory,
 };
+pub use iceberg::TableMetadataCacheStats;
 pub use io_stats::{
     IcebergFileClass, IcebergIoCount, IcebergIoCounters, IcebergIoOp, IcebergIoStats,
     PARQUET_TAIL_MAGIC, PUFFIN_TAIL_MAGIC, classify_iceberg_path, ranged_read_op,

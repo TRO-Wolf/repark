@@ -81,7 +81,8 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   read 1 with the cache on AND off, because the catalog reads back the document it just wrote —
   creation is not cacheable and the note says so. §7.6 of the analysis reports TOTAL opens; this
   note splits reads from the commit's own write, and reads + writes reproduce §7.6 exactly. The
-  AWS table reads **unchanged today** in both columns: only the memory catalog is wired, and the
+  AWS table reads **unchanged** in both columns as measured then (only the memory catalog was
+  wired at IO-1; ICE-CATALOG-CACHE-1 wired Glue and S3 Tables on 2026-09-19, unmeasured on AWS), and the
   note names the two separate asks that stand between it and a zero (`F-CATIO-AWS` for the S3 GET,
   `F-CATIO-A` for the `GetTable` count no cache can touch). The manifest cells do not move
   (120.4 → 120.0 ms) and were never going to: that cost is 192 manifests re-read through a fresh

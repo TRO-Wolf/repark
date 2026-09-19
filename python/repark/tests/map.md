@@ -5144,8 +5144,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   8-way `UNION ALL` at `entries=1` retains 8 inside the statement and comes back under the bound
   at the next door); and a 48-manifest table
   answers equal to its one-manifest twin. Two legs SKIP with a named reason: the AWS census legs
-  are fork-gated (ask `F-CATIO-AWS` — fork pin `189a73ed` has no `with_table_metadata_cache` on
-  the Glue / S3 Tables builders), so they un-skip at the pin bump that consumes them. The third
+  were fork-gated (ask `F-CATIO-AWS`); since ICE-CATALOG-CACHE-1 (2026-09-19, fork `#311`) the
+  caches are wired into Glue / S3 Tables and the legs SKIP naming the blocked AWS measurement
+  (IAM grant; ledger `ice-catalog-cache-1` C-011). The third
   skip IO-1 filed here — the `t_many` second-statement <= 20 ms target, fork ask `F-CATIO-B` —
   un-skipped in IO-2 and runs below.
   The measured tables, the machine, the recorded load and the re-measured floor live in that
