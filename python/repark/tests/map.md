@@ -6654,3 +6654,26 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   operation. Truth in
   [../../repark-parity/fixtures/torture/data/ice_list_null_1/](../../repark-parity/fixtures/torture/data/ice_list_null_1/map.md).
   pins: ice-list-null-1/C-003, C-004, C-005, C-006, C-008
+- [_record_ice_rowid_order_1.py](_record_ice_rowid_order_1.py) — the **record
+  driver** for ICE-ROWID-ORDER-1 (NOT a `test_` module; never collected).
+  `record_abc()` records the eight a/b/c cells (twelve runs each of INSERT INTO
+  SELECT, literal VALUES and CTAS on Hadoop and InMemory catalogs, `local[8]`,
+  `spark.sql.shuffle.partitions=4`); `record_order()` records the eight-category
+  cells (six runs per adaptive x row-count x distribution-mode configuration).
+  The a/b/c storm cells ride along unreproduced (ICE-APPEND-RETRY-1 owns them).
+  Runtime GAV from `_oracle_pins`, Ivy cache from `REPARK_ORACLE_IVY`, warehouse
+  from `tempfile`. Re-record: `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64
+  SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2 on the path.
+  pins: ice-rowid-order-1/C-002
+- [test_ice_rowid_order_1.py](test_ice_rowid_order_1.py) —
+  **ICE-ROWID-ORDER-1 (2026-09-18, RP-31):** one statement's v3 row ids are
+  deterministic — twelve runs of each a/b/c shape (INSERT INTO SELECT, literal
+  VALUES, CTAS) on fresh RePark memory-catalog tables give one mapping and it
+  equals Spark's recorded a:0, b:100, c:200 (VALUES a:0, b:2, c:4); twelve runs
+  of the eight-category shape give one ascending mapping. A fifth pin holds the
+  DECLARED divergence: Spark's recorded default-configuration file order
+  (`z, x, m, a, q, b, c, d`) differs from ascending, so a future convergence reds
+  it. Red on the old pin by the orchestrator's six-distinct-mappings probe.
+  Truth in
+  [../../repark-parity/fixtures/torture/data/ice_rowid_order_1/](../../repark-parity/fixtures/torture/data/ice_rowid_order_1/map.md).
+  pins: ice-rowid-order-1/C-003, C-004, C-005, C-006
