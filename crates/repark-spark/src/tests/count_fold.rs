@@ -147,7 +147,7 @@ async fn count_star_folds_on_a_plain_table() {
 }
 
 #[tokio::test]
-async fn count_star_on_an_empty_table_folds_to_zero() {
+async fn count_star_on_an_empty_table_answers_zero() {
     let wh = TempDir::new().unwrap();
     let session = spark_session(&wh).await;
     run(
