@@ -257,7 +257,7 @@ fn samples_named<'a>(records: &'a [QueryRecord], name: &str) -> Vec<&'a QueryRec
 pub fn queries_json(
     mode: &str,
     specs: &[QuerySpec],
-    predicates: &[(&str, String)],
+    predicates: &[(&str, Option<String>)],
     records: &[QueryRecord],
 ) -> (Vec<Value>, Vec<String>) {
     let mut entries = Vec::new();
@@ -270,7 +270,7 @@ pub fn queries_json(
         let predicate = predicates
             .iter()
             .find(|(name, _)| *name == spec.name)
-            .map(|(_, predicate)| predicate.as_str());
+            .and_then(|(_, predicate)| predicate.as_deref());
         let mismatches = sample_mismatches(mode, &samples);
         entries.push(entry_json(predicate, &samples, &mismatches));
         all.extend(mismatches);

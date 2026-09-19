@@ -638,13 +638,11 @@ pub fn iceberg_scan_predicate(plan_text: &str) -> Option<String> {
     Some(predicate.to_string())
 }
 
-pub async fn scan_predicate(session: &ReparkSession, spec: &QuerySpec) -> Result<String, BoxError> {
+pub async fn scan_predicate(
+    session: &ReparkSession,
+    spec: &QuerySpec,
+) -> Result<Option<String>, BoxError> {
     let plan = session.sql(&spec.sql).await?.create_physical_plan().await?;
     let text = displayable(plan.as_ref()).indent(false).to_string();
-    iceberg_scan_predicate(&text).ok_or_else(|| {
-        boxed(format!(
-            "{}: the physical plan has no IcebergTableScan:\n{text}",
-            spec.name
-        ))
-    })
+    Ok(iceberg_scan_predicate(&text))
 }

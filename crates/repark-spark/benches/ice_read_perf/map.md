@@ -99,7 +99,8 @@ spelling that reaches the scan today. Probed on 2026-09-19 and all left at `pred
 `TIMESTAMP_LTZ '…'`, `timestamp_seconds`. The `id` window plans as `predicate:[(id >= a) AND
 (id < b)]`. Every run records each query's scan predicate in the JSON
 (`iceberg_scan_predicate`, from the physical plan on the gate session after the R-3 check, `""`
-= none). The pin holds Q3 at `""` and Q7 at the `id` range with the same row set. It is a
+= a scan with no predicate, `null` = no `IcebergTableScan` in the plan: the query was answered
+from statistics, as `count(*)` is once ICE-COUNT-FOLD-1 lands). The pin holds Q3 at `""` and Q7 at the `id` range with the same row set. It is a
 sentinel: the unit that fixes the timestamp conversion flips the Q3 half.
 
 The concurrent modes issue Q2, Q3, Q5 and Q6 at once. Q7 is **not** in that set: a fifth query

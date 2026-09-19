@@ -405,10 +405,19 @@ async fn q3_never_reaches_the_scan_today_and_q7_does_with_the_same_rows() {
     let specs = run::queries(&bed::local_table_name(), &shape);
     let spec = |name: &str| specs.iter().find(|spec| spec.name == name).unwrap();
     assert!(spec("Q3").sql.contains("CAST(1700003780 AS TIMESTAMP)"));
-    assert_eq!(run::scan_predicate(&session, spec("Q3")).await.unwrap(), "");
     assert_eq!(
-        run::scan_predicate(&session, spec("Q7")).await.unwrap(),
-        "(id >= 540) AND (id < 552)"
+        run::scan_predicate(&session, spec("Q3"))
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("")
+    );
+    assert_eq!(
+        run::scan_predicate(&session, spec("Q7"))
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("(id >= 540) AND (id < 552)")
     );
     let mut answers = Vec::new();
     for name in ["Q3", "Q7"] {
