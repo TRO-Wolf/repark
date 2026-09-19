@@ -1782,16 +1782,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   recorded by [_record_rdf_options_1_oracle.py](_record_rdf_options_1_oracle.py)) — result counts
   (data bytes against vanished data files, delete bytes against vanished delete files),
   file/spec/row counts, snapshot count+ops, and `IllegalArgumentException` class+message
-  per error cell; the 7 granularity cells carry dated per-cell `xfail(strict)` reasons with
-  green keep-set (rows + rewritten) twins; failed/removed delete-count pins with the
-  DANGLE-2-only xfails; RPD unwired-key `UnsupportedOperationException` pins, IAE-first
+  per error cell; the 5 still-red cells carry dated per-cell `xfail(strict)` reasons with
+  green keep-set (rows + rewritten) twins; failed/removed delete-count pins, plain since
+  RP-32; RPD unwired-key `UnsupportedOperationException` pins, IAE-first
   order pins, the NULL-dangling-precedence pin, and the max-failed-commits no-effect pin;
   the live tier re-runs the generator and asserts the fixture plus a `4.1.` banner.
-  The thirteen strict xfails map to four registry fork asks: `ICE-RDF-GRANULARITY-1`,
-  `ICE-RDF-COW-BYTES-1`, `ICE-RDF-RPD-COMMITS-1`, `ICE-RDF-DANGLE-2` (re-measured
-  2026-09-17 on RP-23 `4151b488`: still xfailed, zero XPASS).
+  The eight strict xfails map to two registry fork asks: `ICE-RDF-GRANULARITY-1`,
+  `ICE-RDF-RPD-COMMITS-1` (re-measured 2026-09-17 on RP-23 `4151b488`: still xfailed).
+  **RP-32 (2026-09-19, fork #301 F-RDF-COW-BYTES-1):** the fork keeps parquet position
+  deletes that still apply and retires only delete files older than every live data file,
+  so `ICE-RDF-COW-BYTES-1` and `ICE-RDF-DANGLE-2` are FIXED — the two COW-BYTES value
+  cells, every removed-count cell, and the residue zero-delete cell run plain against
+  the recorded Spark values. Round 2 re-pins the changed meanings: the NULL-precedence and
+  repark-sequence pins assert zero deletes per the recorded `residue_rpd_then_rdf`, and the
+  [rp32 fixture](rp32_rdf_cow_bytes_spark_oracle.json) records why neither NULL spelling
+  has a Spark twin.
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009, C-010
   pins: ice-rdf-fork-asks-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  At fork `e3eef24f` (#302) `target_small` runs plainly at Spark's 8→4.
+  At fork `587d3592` (#304) the four RPD cells run plainly: one commit, 8→8, 10 snapshots.
+  pins: rp-32-rdf-cow-bytes/C-002, C-003, C-004, C-005, C-009, C-010
 - [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical
   from the committed generator; the 7 `rpd_*` cells and 2 `residue_*` sequences are this
@@ -1799,6 +1809,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [_record_rdf_options_1_oracle.py](_record_rdf_options_1_oracle.py) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the Spark 4.1.2 record driver (parameterised warehouse,
   ivy cache, and output paths); critics replay it to reproduce the fixture.
+- [rp32_rdf_cow_bytes_spark_oracle.json](rp32_rdf_cow_bytes_spark_oracle.json) —
+  **RP-32 (2026-09-19, fork #301 F-RDF-COW-BYTES-1):** six Spark 4.1.2 + Iceberg 1.11.0 cells
+  (banner 4.1.2, UTC) for the programs no recorded cell covered. `rwd_remove_dangling`
+  (six single-row files, one DELETE, options-map remove-dangling — removed 0, 5→1 files,
+  row 2 gone) with `rwd_legacy_flag` proving the legacy-flag spelling is RePark-only
+  (`PARSE_SYNTAX_ERROR`); `rfs_merge_rewrite` (six single-row files, one MERGE update, plain
+  rewrite — removed 0, 7→1 data files, the delete survives, merged row kept); `dead_file`
+  (one 2,000-row file fully shadowed by a MERGE, RPD no-op, rewrite — removed 0, one data
+  plus one delete file, seed gone); `null_map_key` (NULL-map-key-only rewrite refused
+  `INTERNAL_ERROR`) with `null_map_key_legacy` proving the NULL-plus-flag spelling is
+  RePark-only (`PARSE_SYNTAX_ERROR`). Second finding, measured: Spark's DELETE drops the
+  all-dead single-row file with no delete file (`deleted-data-files: 1`,
+  `total-position-deletes: 0` in the rwd snapshot summary).
+- [_record_rp32_rdf_cow_bytes.py](_record_rp32_rdf_cow_bytes.py) —
+  **RP-32 (2026-09-19):** the record driver behind the fixture above (required `--warehouse`
+  and `--ivy`, output beside the script; basenames only, so the fixture carries no local
+  paths); critics replay it to reproduce the fixture.
+  pins: rp-32-rdf-cow-bytes/C-001
 - [test_ice_tsns_sql_1.py](test_ice_tsns_sql_1.py) — **ICE-TSNS-SQL-1 (2026-09-17):**
   `timestamp_ns` / `timestamptz_ns` on the SQL door against the Iceberg spec plus a PyIceberg
   0.12.0 read-back (Spark 4.1.2 cannot read or write these types — ruling Q-21c-6). One pin per
@@ -1870,16 +1898,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   order with orphan cleanup last and dry-run; every timing carries the answer it was
   measured on and the answer does not move across maintenance; the generator is
   deterministic. Wall-clock is recorded in the ledger, never asserted.
-  **C-011 (2026-08-24, Critic remediation; flipped 2026-09-02 by RDF-1):**
-  `test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` pins registry row
+  **C-011 (2026-08-24, Critic remediation; flipped 2026-09-02 by RDF-1; reflipped
+  2026-09-19 by RP-32 fork #301 F-RDF-COW-BYTES-1):**
+  `test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_survives` pins registry row
   `RDF-1` — a 2,000-row v2 merge-on-read table written as ONE data file inside Java's bin-pack
-  band, then a MERGE deleting every one of its rows. The pin now asserts the reclaim: the
+  band, then a MERGE deleting every one of its rows. The pin now asserts the keep: the
   delete file's `file_path` bounds are exact and equal to the seeded path (field `2147483546`,
   read from the manifest, not inferred from a count), `rewrite_data_files` reports
-  `removed_delete_files_count = 1`, the seeded path leaves the live set, the sequence ends at
-  zero delete files and zero delete records, and `COUNT(*)` is still 2,000 — the reclaimed rows
-  do not resurrect. Its predecessor asserted the opposite (the file survives) because RePark's
-  own writer truncated those bounds away.
+  `removed_delete_files_count = 0`, the seeded path leaves the live set, the sequence ends with
+  the one surviving delete file holding 2,000 records whose bounds still name the seed, and
+  `COUNT(*)` is still 2,000. Spark cell `dead_file` in
+  [rp32_rdf_cow_bytes_spark_oracle.json](rp32_rdf_cow_bytes_spark_oracle.json) (recorded by
+  [_record_rp32_rdf_cow_bytes.py](_record_rp32_rdf_cow_bytes.py)) answers the same shape:
+  removed 0, one data plus one delete file, seed gone, 2,000 rows. Its predecessor asserted
+  the removal (removed 1, zero deletes) because the fork dropped live parquet deletes by
+  reference.
+  pins: rp-32-rdf-cow-bytes/C-008
   **RP-23 (2026-09-17):** 2,500 → 2,000 rows — 2,000 rows seed one 54,445 B in-band file
   under the fork's mid-stream rolling; 2,500 rolled into 2,000 + 500.
   pins: rp-23-pin-bump/C-002
@@ -5791,7 +5825,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
 | Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, the sliding-refuse set (**EMPTY since WIN-SLIDE-1, 2026-09-04** — the same pin, now the guard against a refusal returning), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009; win-slide-1/C-008 |
 | Pin an aggregate over a SLIDING window frame on both doors | `test_win_slide_1.py` — the thirteen once-refusing aggregates x five frame shapes x two doors against the recorded Spark 4.1.2 column, plus `collect_list` frame order, the `collect_set` multiset, `try_sum` BIGINT overflow inside a frame, `CURRENT ROW … UNBOUNDED FOLLOWING`, and the `percentile_approx` accuracy divergence. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007 |
-| Pin `RDF-1` (a 100 %-dead in-band data file IS compacted, and its delete file dies with it) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies` — exact equal `file_path` bounds, `removed_delete_files_count` 1, zero delete files, 2,000 rows. pins: rdf-1-position-delete-bounds/C-003 |
+| Pin `RDF-1` (a 100 %-dead in-band data file IS compacted, and its live delete file survives it) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_survives` — exact equal `file_path` bounds, `removed_delete_files_count` 0, one surviving delete file, 2,000 rows. pins: rdf-1-position-delete-bounds/C-003 |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |
 | Add a drop-in no-op / accepted-ignored disclosure test (OTH-010) | `test_dropin_disclosure.py` |
@@ -6680,10 +6714,14 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   the run answers, the ids left equal Spark's and the newest snapshot's operation
   equals Spark's, each on a fresh RePark memory catalog with the recorder's DDL
   and seed. The `map_int` seed runs verbatim, its `CAST(map() AS MAP<STRING, INT>)`
-  row included (CAST-MAP-SPELL-1, FIXED 2026-09-19, pins: cast-map-spell-1/C-008).
-  The sixteen copy-on-write DELETE compound-predicate cells run verbatim
-  under strict xfail (fork #299 residue: the conjunction/disjunction path still
-  refuses `Accessor for Field xs not found`); the sixteen merge-on-read
+  row included (CAST-MAP-SPELL-1, FIXED 2026-09-19, pins: cast-map-spell-1/C-008). **ICE-LIST-NULL-2 (2026-09-19):** all 128 cells answer — the sixteen
+  copy-on-write DELETE compound-predicate cells run as plain pins since the
+  identity path declines non-primitive selections to the fork DELETE path (the
+  fork #299 residue sentence is corrected: the conjunction/disjunction failure
+  was RePark-side, not fork-side). The rows left behind equal Spark's on all
+  sixteen; the eight `xs IS NULL OR id = 1` cells pin RePark's measured
+  `overwrite` snapshot operation against Spark's recorded `delete`
+  (`OPERATION_DIVERGENCES`); the sixteen merge-on-read
   `xs IS NOT NULL` cells pin RePark's measured 1 delete file (1 DV on v3) against
   Spark's 2 (2 DVs). A second parametrization pins the delete-file / DV counts on
   every cell. Live (`REPARK_PARITY_LIVE=1`): Spark re-derives one cell per shape
@@ -6691,6 +6729,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   operation. Truth in
   [../../repark-parity/fixtures/torture/data/ice_list_null_1/](../../repark-parity/fixtures/torture/data/ice_list_null_1/map.md).
   pins: ice-list-null-1/C-003, C-004, C-005, C-006, C-008
+  pins: ice-list-null-2/C-004, C-006
 - [_record_ice_rowid_order_1.py](_record_ice_rowid_order_1.py) — the **record
   driver** for ICE-ROWID-ORDER-1 (NOT a `test_` module; never collected).
   `record_abc()` records the eight a/b/c cells (twelve runs each of INSERT INTO

@@ -95,6 +95,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   of one cell per shape, registry row ICE-LIST-NULL-1 FIXED. Test-only, no product
   change. `risk_tier: standard`. Branch `chore/rp-31-fork-pin`.
   pins: ice-list-null-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [ice-list-null-2-ledger.md](ice-list-null-2-ledger.md) —
+  **ICE-LIST-NULL-2 (2026-09-19), in flight:** copy-on-write DELETE with a compound
+  predicate over a nested column answers Spark — the identity path declines
+  non-primitive selections to the fork DELETE path on both SQL doors, the six-cell
+  Rust door battery and the seven gate unit pins, the 128-cell Python pins flipped
+  from strict-xfail to plain (the eight OR cells pinning RePark's measured
+  `overwrite` operation), registry row ICE-LIST-NULL-1 corrected to RePark-side
+  FIXED. Product-path valve plus pins. `risk_tier: standard`. Branch
+  `fix/ice-list-null-2`.
+  pins: ice-list-null-2/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice-rowid-order-1-ledger.md](ice-rowid-order-1-ledger.md) —
   **ICE-ROWID-ORDER-1 (2026-09-18), in flight:** one statement's v3 row ids are
   deterministic at fork #300 (F-ROWID-ORDER-1) — both Spark recordings (a/b/c
@@ -478,6 +488,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   ICE-NAN-PUSHDOWN-1 FIXED. `risk_tier: standard`. Branch
   `fix/ice-nan-pushdown-1`.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+- [rp-32-rdf-cow-bytes-ledger.md](rp-32-rdf-cow-bytes-ledger.md) —
+  **RP-32-RDF-COW-BYTES (2026-09-19):** the flips fork #301 (F-RDF-COW-BYTES-1) causes —
+  the COW-BYTES and DANGLE-2 strict xfails run plain, the changed-meaning pins (NULL
+  precedence, residue sequence, C-011, two Rust dangling tests) move to new Spark 4.1.2
+  cells, five registry rows close or come true. Test-only, no product change. Round 1
+  CONCLUDED with all nine clauses PROVEN and the gates green.
+  `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
+  pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ice-rdf-options-1-ledger.md](ice-rdf-options-1-ledger.md) —
   **ICE-RDF-OPTIONS-1 round 1 (2026-09-17), in flight:** the RePark side of the options-map
   remediation (rating V2-08/C-4) — `rewrite_data_files` (16 keys) and

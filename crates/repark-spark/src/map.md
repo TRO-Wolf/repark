@@ -718,6 +718,11 @@ pins: rp-4-fork-repin/C-005, C-006
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`
   for R1, plus `RestateIntervalBoundsAsNumeric` for R5). 6 in-module tests.
   pins: rp-9-repin-f23/C-005
+  **ICE-LIST-NULL-2 (2026-09-19):** the plain-identity attach declines through
+  `plain::plain_identity_needs_fork` after loading the target — a non-primitive
+  selection returns `None` to the fork DELETE path. Door battery:
+  [tests/list_null_compound.rs](tests/list_null_compound.rs).
+  pins: ice-list-null-2/C-002, C-003
   **TYPES-1 (2026-09-05):** after eager analysis, plain-`INSERT` DML wraps narrowed `Int32`
   sources into `BIGINT` targets (`conform_insert_narrowed_ints`); every other shape passes
   through untouched. pins: types-1/C-001

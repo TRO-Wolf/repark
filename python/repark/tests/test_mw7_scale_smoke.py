@@ -460,8 +460,10 @@ def test_generated_frames_are_deterministic() -> None:
     assert not source.equals(overlap)
 
 
-def test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies(tmp_path: Path) -> None:
-    """C-011: a 100 %-dead in-band file is a candidate; the runbook ends at zero deletes."""
+def test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_survives(
+    tmp_path: Path,
+) -> None:
+    """C-011: a 100 %-dead file is rewritten away; its delete file survives, rows intact."""
     spark = ReparkSession.builder.appName("pytest-mw7-c011").getOrCreate()
     try:
         warehouse = tmp_path / "wh"
@@ -513,8 +515,8 @@ def test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies(tmp_pat
         assert int(rewrite["rewritten_data_files_count"]) > 0, (
             "the fixture must give compaction real work, or the clause proves nothing"
         )
-        assert int(rewrite["removed_delete_files_count"]) == 1, (
-            "the file-scoped delete file dies with the data file it covered"
+        assert int(rewrite["removed_delete_files_count"]) == 0, (
+            "the live delete file survives the rewrite (Spark cell dead_file, removed 0)"
         )
 
         live = {path for path, _size, _records in _data_files(spark, table)}
@@ -523,14 +525,16 @@ def test_delete_laden_in_band_file_is_rewritten_and_its_delete_file_dies(tmp_pat
         )
 
         census = measure.file_census(spark, table)
-        assert census.delete_files == 0, "the runbook ends with no delete file"
-        assert census.delete_records == 0
+        assert census.delete_files == 1, "the runbook ends with the one surviving delete"
+        assert census.delete_records == C011_ROWS
 
-        assert not _position_delete_path_bounds(spark, table)
+        assert _position_delete_path_bounds(spark, table) == [(seeded_path, seeded_path)], (
+            "the survivor still names the rewritten-away seed with exact equal bounds"
+        )
 
         rows_after = spark.sql(f"SELECT COUNT(*) AS n FROM {table}").to_arrow()
         assert int(rows_after.column("n")[0].as_py()) == C011_ROWS, (
-            "the reclaimed rows must not resurrect: the answer is the MERGE's 2,500"
+            "the reclaimed rows must not resurrect: the answer is the MERGE's 2,000"
         )
     finally:
         spark.stop()

@@ -53,13 +53,20 @@ PySpark to re-record. Raw-recording SHA-256: `spark_list_null_oracle.json`
   CAST(array() AS ARRAY<INT>))` instead, which RePark parses and which reads back
   equal to Spark's seed (`{k:1}` / NULL / `{}` / `{k:NULL}`, measured 2026-09-18
   on the release native).
-- Fork #299 residue: copy-on-write DELETE with a compound predicate over the
-  nested column still refuses `Accessor for Field xs not found` (sixteen cells:
-  every shape x v2/v3 x the two compound predicates). The pins run those cells
-  verbatim under strict xfail; the sixteen merge-on-read `xs IS NOT NULL` cells
-  pin RePark's measured 1 delete file (1 DV on v3) against Spark's 2 (2 DVs).
+- ICE-LIST-NULL-2 (2026-09-19): the sixteen copy-on-write DELETE cells with a
+  compound predicate over the nested column (every shape x v2/v3 x the two compound
+  predicates) answer Spark. The refusal was RePark-side, not fork-side: the identity
+  DELETE path claimed the conjunction/disjunction and built a commit-scope predicate
+  the fork cannot bind on a list, map or struct column. The identity path now declines
+  any selection over a non-primitive column to the fork's DataFusion DELETE path, which
+  binds nested columns since fork #299. The rows left behind equal Spark's on all
+  sixteen; the eight `xs IS NULL OR id = 1` cells pin RePark's measured `overwrite`
+  snapshot operation against Spark's recorded `delete`. The sixteen merge-on-read
+  `xs IS NOT NULL` cells still pin RePark's measured 1 delete file (1 DV on v3)
+  against Spark's 2 (2 DVs).
 
 pins: ice-list-null-1/C-001, C-002, C-007
+pins: ice-list-null-2/C-005
 
 ## Pointers
 

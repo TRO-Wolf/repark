@@ -12,11 +12,15 @@ behind equal Spark's and the newest snapshot's operation equals Spark's.
 
 Every seed runs verbatim: the ``map_int`` seed's empty-map row spells
 ``CAST(map() AS MAP<STRING, INT>)``, which answers since CAST-MAP-SPELL-1
-(FIXED 2026-09-19, pins: cast-map-spell-1/C-008). Sixteen cells run verbatim under strict
-xfail: copy-on-write DELETE with a compound predicate over the nested column
-(``id > 1 AND xs IS NULL``, ``xs IS NULL OR id = 1``) still refuses loud with
-``Accessor for Field xs not found``. Fork #299 fixed the single-predicate path
-only: the conjunction/disjunction path is fork-side residue. Delete-file and DV
+(FIXED 2026-09-19, pins: cast-map-spell-1/C-008). All 128 cells answer, including the
+sixteen copy-on-write DELETE cells with a compound predicate over the nested
+column (``id > 1 AND xs IS NULL``, ``xs IS NULL OR id = 1``): ICE-LIST-NULL-2
+declines those selections from the identity DELETE path to the fork's DataFusion
+DELETE path, which binds nested columns since fork #299. The rows left behind
+equal Spark's on all sixteen; the eight ``xs IS NULL OR id = 1`` cells pin
+RePark's measured ``overwrite`` snapshot operation against Spark's recorded
+``delete`` (``OPERATION_DIVERGENCES``), since RePark's file-rewriting CoW DELETE
+commits ``overwrite``. Delete-file and DV
 counts (``added-delete-files`` / ``added-dvs``) are asserted where RePark agrees
 with Spark; where the two engines differ (the sixteen merge-on-read
 ``xs IS NOT NULL`` cells: Spark writes 2 delete files, RePark 1) the pin asserts
@@ -24,6 +28,7 @@ RePark's measured values, so a future convergence reds the pin. The live tier
 re-derives one cell per shape on Spark through the recorder's own ``record_cell``.
 
 pins: ice-list-null-1/C-003, C-004, C-005, C-006, C-008
+pins: ice-list-null-2/C-004
 """
 
 from __future__ import annotations
@@ -78,21 +83,33 @@ def _file_count_divergences() -> dict[str, tuple[str, str]]:
 
 FILE_COUNT_DIVERGENCES = _file_count_divergences()
 
-_COW_COMPOUND_KEYS = frozenset(
-    key
-    for key, cell in _CELL_BY_KEY.items()
-    if cell["mode"] == "copy-on-write"
-    and cell["statement"] == "delete"
-    and cell["predicate"] in ("id > 1 AND xs IS NULL", "xs IS NULL OR id = 1")
-)
-
-assert len(_COW_COMPOUND_KEYS) == 16, _COW_COMPOUND_KEYS
 assert len(FILE_COUNT_DIVERGENCES) == 16, FILE_COUNT_DIVERGENCES
 
-_COW_COMPOUND_REASON = (
-    "fork #299 residue: copy-on-write DELETE with AND/OR over a nested IS NULL "
-    "column still refuses Accessor for Field xs not found"
-)
+
+def _operation_divergences() -> dict[str, str]:
+    """RePark's measured snapshot operation where it differs from Spark's.
+
+    Returns:
+        ``overwrite`` for every copy-on-write DELETE cell with predicate
+        ``xs IS NULL OR id = 1``: Spark records ``delete`` (with zero delete
+        files), RePark's file-rewriting CoW DELETE commits ``overwrite``,
+        measured 2026-09-19 on the release native. The rows left behind agree;
+        only the snapshot operation differs, so a future convergence reds
+        the pin rather than absorbing.
+    """
+    return {
+        key: "overwrite"
+        for key, cell in _CELL_BY_KEY.items()
+        if cell["mode"] == "copy-on-write"
+        and cell["statement"] == "delete"
+        and cell["predicate"] == "xs IS NULL OR id = 1"
+    }
+
+
+OPERATION_DIVERGENCES = _operation_divergences()
+
+assert len(OPERATION_DIVERGENCES) == 8, OPERATION_DIVERGENCES
+
 _LIVE_SHAPES = ("list_int", "list_struct", "map_int", "struct")
 
 
@@ -161,26 +178,13 @@ def _latest_snapshot(session: ReparkSession, table: str) -> dict[str, Any]:
     return {"operation": record["operation"], "summary": dict(record["summary"])}
 
 
-def _cell_param(key: str) -> Any:
-    """Return one cell key, strict-xfail where the verbatim statement still refuses."""
-    if key in _COW_COMPOUND_KEYS:
-        return pytest.param(
-            key,
-            id=key,
-            marks=pytest.mark.xfail(strict=True, reason=_COW_COMPOUND_REASON),
-        )
-    return pytest.param(key, id=key)
-
-
-@pytest.mark.parametrize("key", [_cell_param(key) for key in sorted(_CELL_BY_KEY)])
+@pytest.mark.parametrize("key", [pytest.param(key, id=key) for key in sorted(_CELL_BY_KEY)])
 def test_cell_answers_spark(key: str, tmp_path: Path) -> None:
     """One cell's statement answers Spark's ok, ids and snapshot operation.
 
     Notes:
-        The run itself proves `ok`: a refusal fails the pin. The sixteen
-        copy-on-write compound-predicate cells run verbatim and strict-xfail on
-        the fork #299 residue. Delete-file and DV counts are pinned separately
-        below.
+        The run itself proves `ok`: a refusal fails the pin. Delete-file and
+        DV counts are pinned separately below.
     """
     cell = _CELL_BY_KEY[key]
     assert cell["ok"] is True, (key, cell.get("error"))
@@ -189,7 +193,8 @@ def test_cell_answers_spark(key: str, tmp_path: Path) -> None:
         table = _create_and_seed(session, key, cell)
         _run_statement(session, table, cell)
         assert _read_ids(session, table) == cell["ids"], (key, "ids")
-        assert _latest_snapshot(session, table)["operation"] == cell["operation"], (
+        expected_operation = OPERATION_DIVERGENCES.get(key, cell["operation"])
+        assert _latest_snapshot(session, table)["operation"] == expected_operation, (
             key,
             "operation",
         )
@@ -197,7 +202,7 @@ def test_cell_answers_spark(key: str, tmp_path: Path) -> None:
         session.stop()
 
 
-@pytest.mark.parametrize("key", [_cell_param(key) for key in sorted(_CELL_BY_KEY)])
+@pytest.mark.parametrize("key", [pytest.param(key, id=key) for key in sorted(_CELL_BY_KEY)])
 def test_cell_file_counts_match_spark(key: str, tmp_path: Path) -> None:
     """One cell's newest snapshot carries Spark's delete-file and DV counts.
 

@@ -64,6 +64,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `repark_functions::cast_map::rewrite_map_casts` after `rewrite_set_properties`, so a
   `CAST` / `TRY_CAST` naming `MAP<…>` reaches the parser as the shared cast UDF call.
   pins: cast-map-spell-1/C-005
+  **ICE-LIST-NULL-2 (2026-09-19):** the three-part comparison arm declines through
+  `plain::plain_identity_needs_fork` after loading the target — a non-primitive
+  selection falls through to the fork delegate.
+  pins: ice-list-null-2/C-003
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait).
   `on_session_built` installs integer overflow so a bare `ReparkSession` + this

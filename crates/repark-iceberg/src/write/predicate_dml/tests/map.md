@@ -15,6 +15,11 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
   three-part name and refuses a subquery `WHERE`, a literal `IN` list, an `UPDATE`, and a
   four-part branch selector (those stay on the IN/EXISTS allow-list or the fork delete exec).
   pins: rp-9-repin-f23/C-005
+  **ICE-LIST-NULL-2 (2026-09-19):** the gate pins — a compound predicate over a list, a
+  map and a struct column each need the fork, a bare nested `IS NULL` is still not a
+  plain-identity claim at all, a primitive-only compound and an unknown column stay off
+  the fork, and a target-qualified nested column still needs it.
+  pins: ice-list-null-2/C-001
 - `predicate_dml.rs` — DELETE: `IN` / `NOT IN (SELECT …)` including the NULL 3VL trap,
   `[NOT] EXISTS` with and without correlation, correlated `IN`, isolation-level pins
   (M19 / A10).
