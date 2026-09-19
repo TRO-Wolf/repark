@@ -96,10 +96,8 @@ ICEBERG_SESSION_SNAPSHOT_PREFIX = "spark.sql.iceberg.snapshot-property."
 
 def is_iceberg_session_write_key(key: str) -> bool:
     """Return whether ``key`` is an Iceberg session write conf forwarded to Rust."""
-    return (
-        key == ICEBERG_SESSION_CODEC_KEY
-        or key == ICEBERG_SESSION_LEVEL_KEY
-        or key.startswith(ICEBERG_SESSION_SNAPSHOT_PREFIX)
+    return key in (ICEBERG_SESSION_CODEC_KEY, ICEBERG_SESSION_LEVEL_KEY) or key.startswith(
+        ICEBERG_SESSION_SNAPSHOT_PREFIX
     )
 
 
