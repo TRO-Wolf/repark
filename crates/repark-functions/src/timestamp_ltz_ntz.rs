@@ -19,11 +19,14 @@ use datafusion::logical_expr::{
 };
 
 use crate::ansi::{SparkAnsiConfig, spark_ansi_enabled_from_options};
-use crate::instant_ts::{ltz_timestamp_type, ntz_timestamp_type, to_timestamp_udf};
+use crate::instant_ts::{
+    arrow_grammar_to_timestamp_udf, ltz_timestamp_type, ntz_timestamp_type, to_timestamp_udf,
+};
 use crate::java_datetime::{
     FormatPlan, compile_java_pattern, parse_wall_or_null, plan_format_column,
 };
 use crate::session_time_zone::session_time_zone_from_options;
+use crate::spark_string_timestamp::{StringCastFailure, cast_columnar_strings_to_ltz};
 
 #[must_use]
 pub(crate) fn to_timestamp_ltz_udf() -> Arc<ScalarUDF> {
@@ -187,16 +190,13 @@ impl ScalarUDFImpl for SparkTryToTimestamp {
                 args.args.len()
             );
         }
-        session_zone(args.config_options.as_ref())?;
-        let shadow = without_ansi(&args);
-        if args.args.len() == 1 {
-            let arrays = ColumnarValue::values_to_arrays(&args.args)?;
-            if is_utf8_type(arrays[0].data_type()) {
-                let texts = utf8_strings(&arrays[0])?;
-                return Ok(ColumnarValue::Array(ltz_of_strings(&texts, &shadow, true)?));
-            }
+        let zone = session_zone(args.config_options.as_ref())?;
+        if let [value] = args.args.as_slice()
+            && is_utf8_type(&value.data_type())
+        {
+            return cast_columnar_strings_to_ltz(value, zone, StringCastFailure::Null);
         }
-        to_timestamp_udf().invoke_with_args(shadow)
+        to_timestamp_udf().invoke_with_args(without_ansi(&args))
     }
 }
 
@@ -244,7 +244,7 @@ fn forward_to_timestamp(values: ArrayRef, args: &ScalarFunctionArgs) -> Result<C
         return_field,
         config_options: Arc::clone(&args.config_options),
     };
-    to_timestamp_udf().invoke_with_args(forward)
+    arrow_grammar_to_timestamp_udf().invoke_with_args(forward)
 }
 
 fn retarget_to_ntz(error: &DataFusionError) -> DataFusionError {
@@ -272,7 +272,7 @@ fn ltz_of_strings(
         return_field,
         config_options: Arc::clone(&args.config_options),
     };
-    match to_timestamp_udf().invoke_with_args(forward) {
+    match arrow_grammar_to_timestamp_udf().invoke_with_args(forward) {
         Ok(produced) => {
             let arrays = ColumnarValue::values_to_arrays(std::slice::from_ref(&produced))?;
             if !tolerate {

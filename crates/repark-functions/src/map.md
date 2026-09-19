@@ -869,6 +869,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `NULL` answers a NULL `STRING`; any other type refuses
   `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`. The facade arm moved to `dispatch_spark.rs`,
   so both doors resolve this kernel. pins: door-converge-2/C-002
+- `spark_string_timestamp.rs` — **CAST-TS-STRING-1 (2026-09-19):** entry points of Spark's
+  `stringToTimestamp` kernel: `string_to_timestamp_micros`, `cast_strings_to_ltz` /
+  `cast_columnar_strings_to_ltz` (NULL or `CAST_INVALID_INPUT` on failure), the analyzer's
+  string `CAST` literal fold `spark_string_literal`, and `rewrite_string_try_cast` (a string
+  `TRY_CAST(… AS TIMESTAMP)` → folded literal or `try_to_timestamp`). The rule lives in
+  [`spark_string_timestamp/`](spark_string_timestamp/map.md). pins: cast-ts-string-1/C-001
+- `tests/` — crate-root unit battery ([tests/map.md](tests/map.md)).
 - `instant_ts.rs` — overwrite `now` / `current_timestamp` / `to_timestamp` with Arrow
   `Timestamp(µs, UTC)`. Zoneless LTZ inputs (`TIMESTAMP '…'`,
   zoneless `to_timestamp`, `CAST(str|date|ntz AS TIMESTAMP)`) in the session zone; a
@@ -881,6 +888,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   line ceiling). Pins: `instant_ts::tests::*`.
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `to_timestamp` is `Stable` (Spark answers
   it, so time travel plans it). pins: ice-tt-resolve-1/C-003
+  **CAST-TS-STRING-1 (2026-09-19):** a one-argument string `to_timestamp`, a string
+  `CAST(… AS TIMESTAMP)` literal fold, and a string `TRY_CAST(… AS TIMESTAMP)` (rewritten to
+  `try_to_timestamp`) run the [`spark_string_timestamp/`](spark_string_timestamp/map.md) kernel.
+  `arrow_grammar_to_timestamp_udf` keeps DataFusion's string parse for the `to_timestamp_ntz`
+  path only. pins: cast-ts-string-1/C-001, C-004, C-005
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
@@ -965,6 +977,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   written wall and malformed strings retarget `[CAST_INVALID_INPUT]` at the
   `TIMESTAMP_NTZ` name. pins: fnp-11b/C-002, C-003, C-004;
   `timestamp_ltz_ntz::tests::*`.
+  **CAST-TS-STRING-1 (2026-09-19):** one-argument string `try_to_timestamp` calls the Spark
+  kernel with NULL on failure; the `to_timestamp_ntz` arms keep DataFusion's parse through
+  `arrow_grammar_to_timestamp_udf`. pins: cast-ts-string-1/C-004
 - `time_family.rs` — **FNP-11B step 4 (2026-09-15):** the TIME family behind one
   refusal kernel (`TimeRefusal`, unconditional `[UNSUPPORTED_TIME_TYPE]`) serving
   `make_time` / `to_time` / `time_diff` / `time_trunc` on both doors;

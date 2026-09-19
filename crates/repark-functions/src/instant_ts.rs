@@ -22,6 +22,10 @@ use datafusion::optimizer::AnalyzerRule;
 
 use crate::datetime::localize_wall_micros_in_zone;
 use crate::session_time_zone::{current_timezone_udf, session_time_zone_from_options};
+use crate::spark_string_timestamp::{
+    StringCastFailure, cast_columnar_strings_to_ltz, is_string_type, rewrite_string_try_cast,
+    spark_string_literal,
+};
 use crate::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
 /// Spark's default `TIMESTAMP` / LTZ Arrow type — µs with a UTC annotation.
@@ -73,7 +77,11 @@ fn current_timestamp_udf() -> Arc<ScalarUDF> {
 /// Return the instant-typed `to_timestamp` kernel used by SQL and facade dispatch.
 #[must_use]
 pub fn to_timestamp_udf() -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::from(SparkToTimestamp::new()))
+    Arc::new(ScalarUDF::from(SparkToTimestamp::new(StringGrammar::Spark)))
+}
+
+pub(crate) fn arrow_grammar_to_timestamp_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkToTimestamp::new(StringGrammar::Arrow)))
 }
 
 fn cast_columnar_to_ltz(value: ColumnarValue) -> Result<ColumnarValue> {
@@ -165,23 +173,31 @@ impl ScalarUDFImpl for SparkNow {
 struct SparkToTimestamp {
     signature: Signature,
     inner: datafusion::functions::datetime::to_timestamp::ToTimestampFunc,
+    grammar: StringGrammar,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StringGrammar {
+    Spark,
+    Arrow,
 }
 
 impl SparkToTimestamp {
-    fn new() -> Self {
+    fn new(grammar: StringGrammar) -> Self {
         let inner = datafusion::functions::datetime::to_timestamp::ToTimestampFunc::new_with_config(
             &ConfigOptions::default(),
         );
         Self {
             signature: Signature::variadic_any(Volatility::Stable),
             inner,
+            grammar,
         }
     }
 }
 
 impl PartialEq for SparkToTimestamp {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.grammar == other.grammar
     }
 }
 
@@ -205,7 +221,7 @@ impl ScalarUDFImpl for SparkToTimestamp {
     }
 
     fn with_updated_config(&self, _config: &ConfigOptions) -> Option<ScalarUDF> {
-        Some(ScalarUDF::from(Self::new()))
+        Some(ScalarUDF::from(Self::new(self.grammar)))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -224,8 +240,19 @@ fn invoke_single(spark: &SparkToTimestamp, args: ScalarFunctionArgs) -> Result<C
     {
         return Ok(localized);
     }
-    let strings = args.args.first().and_then(columnar_utf8_strings);
     let ansi = crate::ansi::spark_ansi_enabled_from_options(args.config_options.as_ref());
+    if spark.grammar == StringGrammar::Spark
+        && let [value] = args.args.as_slice()
+        && is_string_type(&value.data_type())
+    {
+        let failure = if ansi {
+            StringCastFailure::Raise
+        } else {
+            StringCastFailure::Null
+        };
+        return cast_columnar_strings_to_ltz(value, zone, failure);
+    }
+    let strings = args.args.first().and_then(columnar_utf8_strings);
     match spark.inner.invoke_with_args(args) {
         Ok(produced) => {
             let ltz = cast_columnar_to_ltz(produced)?;
@@ -536,6 +563,9 @@ fn rewrite_cast(
     if timestamp_type.is_ntz() {
         return rewrite_cast_as_ntz(expr, schema);
     }
+    if let Some(rewritten) = rewrite_string_try_cast(&expr, schema, zone) {
+        return Transformed::yes(rewritten);
+    }
     if let Expr::Cast(cast) = &expr {
         let targeting_naive_us = matches!(
             cast.field.data_type(),
@@ -572,7 +602,7 @@ fn rewrite_cast(
                 return Transformed::yes(*cast.expr.clone());
             }
             if targeting_timestamp && is_wall_clock_cast_source(&source) {
-                if let Some(literal) = localized_zoneless_utf8_literal(&cast.expr, zone) {
+                if let Some(literal) = spark_string_literal(&cast.expr, zone) {
                     return Transformed::yes(literal);
                 }
                 return Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
@@ -633,34 +663,6 @@ fn is_ltz_timestamp(data_type: &DataType) -> bool {
         DataType::Timestamp(TimeUnit::Microsecond, Some(zone))
             if zone.as_ref().eq_ignore_ascii_case("UTC") || zone.as_ref() == "+00:00"
     )
-}
-
-/// A zoneless UTF-8 timestamp literal, localized in `zone` as a non-null LTZ literal.
-fn localized_zoneless_utf8_literal(expr: &Expr, zone: &str) -> Option<Expr> {
-    let Expr::Literal(scalar, _) = expr else {
-        return None;
-    };
-    let text = match scalar {
-        ScalarValue::Utf8(Some(text))
-        | ScalarValue::LargeUtf8(Some(text))
-        | ScalarValue::Utf8View(Some(text)) => text.as_str(),
-        _ => return None,
-    };
-    if string_carries_timezone(text) {
-        return None;
-    }
-    let parsed_zone = zone.parse::<Tz>().ok()?;
-    let naive = arrow::compute::cast(
-        &arrow::array::StringArray::from(vec![text]),
-        &DataType::Timestamp(TimeUnit::Microsecond, None),
-    )
-    .ok()?;
-    let wall = naive.as_primitive::<TimestampMicrosecondType>().value(0);
-    let localized = localize_wall_micros_in_zone(wall, parsed_zone)?;
-    Some(Expr::Literal(
-        ScalarValue::TimestampMicrosecond(Some(localized), Some(Arc::<str>::from("UTC"))),
-        None,
-    ))
 }
 
 fn wrap_as_ltz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {

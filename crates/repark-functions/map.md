@@ -175,6 +175,11 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **Q10:** NTZ opt-in arm of the CAST/literal rewrite.
   `to_timestamp` is `Stable` (Spark answers it, so time travel plans it).
   pins: ice-tt-resolve-1/C-003
+- `src/spark_string_timestamp.rs` (+ `src/spark_string_timestamp/`) — **CAST-TS-STRING-1
+  (2026-09-19):** Spark's `stringToTimestamp` kernel behind every string → `TIMESTAMP` (LTZ)
+  site: `CAST`, `TRY_CAST`, `Column.cast`, one-argument `to_timestamp` / `to_timestamp_ltz` /
+  `try_to_timestamp`, and time travel (which evaluates `CAST`). `to_timestamp_ntz` keeps
+  DataFusion's parse. Tests in `src/tests/`. pins: cast-ts-string-1/C-001
 - `src/datetime.rs` — the Spark calendar date shim: extractors `year`/`month`/`dayofmonth`/`day`/
   `dayofyear`/`quarter`/`weekofyear`/`yearofweek`/`dayofweek`/`weekday`, **hour/minute/second**
   (Time+Timestamp; X1-octo C3), `make_date`, and the WG2 calendar-math shims `add_months`
