@@ -3170,16 +3170,16 @@ the pin rather than obeying it.
   (measured 2026-09-19: 26 of 30 pins red on the base). After: the pin file is
   green with three strict xfails, all fork asks under `F-RDF-SESSION-CONF-1`:
   `rewrite_data_files` (codec and snapshot property) and the fork-committed
-  `UPDATE` (snapshot property). A snapshot property that names an Iceberg summary metric
-  (`added-records`, `total-records`, `engine-name`, …) refuses the write before any file is
-  written, as Spark does (measured 2026-09-19: Spark raises `IllegalArgumentException:
-  Multiple entries with same key: added-records=2 and added-records=999` on INSERT, MERGE and
-  merge-on-read DELETE).
-  **Open (verification critic 2026-09-19, next run):** the session confs do not yet reach
-  branch writes (`INSERT INTO t.branch_b`, DELETE/UPDATE on a branch), the native
-  `repark.sql` door's INSERT / CTAS / TRUNCATE, or the codec of v2 position-delete files;
-  TRUNCATE carries no session snapshot property (no Spark cell recorded).
-  pins: ice-session-write-conf-1/C-036
+  `UPDATE` (snapshot property).
+  **Open (verification critic 2026-09-19, for the next run):** the session confs do not yet
+  reach branch writes (`INSERT INTO t.branch_b`, DELETE/UPDATE on a branch), the native
+  `repark.sql` door's INSERT / CTAS / TRUNCATE, or the codec of v2 position-delete files. On
+  MERGE and the DML paths a snapshot property that names a summary metric (`added-records`)
+  replaces the engine's value after the fork's collector, where Spark refuses the write
+  (`Multiple entries with same key: added-records=2 and added-records=999`, measured on
+  INSERT, MERGE and merge-on-read DELETE); the INSERT path already refuses through
+  `EngineSummary`, and the DML fix must refuse only on an actual collision (the recorded
+  `COLL-*` cells of ICE-WRITE-OPTIONS-1 pin that).
 - **Apache Spark** — the recorded cells in
   `python/repark/tests/ice_session_write_conf_1_spark_oracle.json` (live
   PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18, 16 SP + 9 CZ cells): `team=a`
