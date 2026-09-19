@@ -66,3 +66,6 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
 | `CREATE TABLE (ts TIMESTAMP)` hit Iceberg `timestamp_ns` / v3 | A11: `refuse_nanosecond_timestamp_columns` must fire before `arrow_schema_to_schema_auto_assign_ids`. Declare `TIMESTAMP(6)`. |
 
 First checks: `cargo test -p repark-sql create_table::`. Escalate to: [../map.md#debug](../map.md).
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** test call sites pass the session zone to the 4-arg
+`EngineContext::new`. pins: ice-tt-resolve-1/C-003

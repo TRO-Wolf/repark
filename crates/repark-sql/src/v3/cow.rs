@@ -16,7 +16,7 @@ use datafusion::common::config::{ConfigEntry, ConfigExtension, ExtensionOptions}
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::spec::{FormatVersion, ManifestContentType};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
 use tempfile::TempDir;
 
 use crate::execute;
@@ -46,7 +46,12 @@ impl Door {
     ) -> datafusion::error::Result<Vec<datafusion::arrow::record_batch::RecordBatch>> {
         let read_only = HashSet::new();
         let frame = execute(
-            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
+            EngineContext::new(
+                &self.ctx,
+                &self.catalogs,
+                &read_only,
+                SessionTimeZone::default(),
+            ),
             sql,
         )
         .await?;

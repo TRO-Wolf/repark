@@ -198,3 +198,6 @@ See [crate navigation](../map.md), [Column navigation](column/map.md), and
 `repark_core::built_with_debug_assertions()`, so the measurement harness can prove a release
 build instead of guessing from the shared-object size.
 pins: perf-dynflatten-1-measure/C-002
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** `read_iceberg_table` gains the raw `version_as_of` /
+`timestamp_as_of` strings the shared Rust resolver parses. pins: ice-tt-resolve-1/C-004

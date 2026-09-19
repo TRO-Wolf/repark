@@ -139,6 +139,8 @@ _ICEBERG_TIME_TRAVEL_OPTIONS: frozenset[str] = frozenset(
         "as-of-timestamp",
         "branch",
         "tag",
+        "versionasof",
+        "timestampasof",
     }
 )
 
@@ -147,6 +149,40 @@ _I64_MIN = -(2**63)
 
 
 _I64_MAX = 2**63 - 1
+
+
+def _parse_snapshot_id_option(raw: Any) -> int:
+    """Parse a reader ``snapshot-id`` pin to a signed 64-bit snapshot id."""
+
+    from repark.errors import AnalysisException
+
+    try:
+        parsed = int(raw)
+    except (TypeError, ValueError) as error:
+        raise AnalysisException(
+            f"snapshot-id must be an integer snapshot id, got {raw!r}"
+        ) from error
+    if parsed < _I64_MIN or parsed > _I64_MAX:
+        raise AnalysisException(f"snapshot-id must fit a signed 64-bit integer, got {raw!r}")
+    return parsed
+
+
+def _parse_as_of_timestamp_option(raw: Any) -> int:
+    """Parse a reader ``as-of-timestamp`` pin to epoch milliseconds."""
+
+    from repark.errors import AnalysisException
+
+    try:
+        parsed = int(raw)
+    except (TypeError, ValueError) as error:
+        raise AnalysisException(
+            f"as-of-timestamp must be epoch milliseconds (int), got {raw!r}"
+        ) from error
+    if parsed < _I64_MIN or parsed > _I64_MAX:
+        raise AnalysisException(
+            f"as-of-timestamp must fit a signed 64-bit integer epoch ms, got {raw!r}"
+        )
+    return parsed
 
 
 def _parse_jdbc_int_option(name: str, raw: str | None) -> int | None:

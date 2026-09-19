@@ -517,6 +517,8 @@ impl PyReparkSession {
         as_of_timestamp_ms=None,
         branch=None,
         tag=None,
+        version_as_of=None,
+        timestamp_as_of=None,
     ))]
     pub fn read_iceberg_table(
         &self,
@@ -526,6 +528,8 @@ impl PyReparkSession {
         as_of_timestamp_ms: Option<i64>,
         branch: Option<String>,
         tag: Option<String>,
+        version_as_of: Option<String>,
+        timestamp_as_of: Option<String>,
     ) -> PyResult<PyDataFrame> {
         fenced_span!("py.read", "PyReparkSession.read_iceberg_table", {
             let opts = repark_core::TimeTravelOpts {
@@ -536,8 +540,12 @@ impl PyReparkSession {
             };
             let df = py
                 .detach(|| {
-                    self.runtime
-                        .block_on(self.session.read_iceberg_table(table_name, opts))
+                    self.runtime.block_on(self.session.read_iceberg_table(
+                        table_name,
+                        opts,
+                        version_as_of,
+                        timestamp_as_of,
+                    ))
                 })
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))

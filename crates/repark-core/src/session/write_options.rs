@@ -41,6 +41,7 @@ impl ReparkSession {
                     catalogs: &catalogs,
                     read_only: &read_only,
                     force_static_overwrite,
+                    session_time_zone: self.session_time_zone().as_ref().clone(),
                 },
                 query,
                 options,

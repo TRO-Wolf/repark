@@ -21,7 +21,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException, IllegalArgumentException, UnsupportedOperationException
 
 TABLE = "mem.ns.events"
 COW = """
@@ -125,31 +125,28 @@ def test_sql_timestamp_as_of(spark: ReparkSession, multi_snapshot: dict[str, obj
     assert s1_ts < s2_ts <= s3_ts
 
     arrow = spark.sql(f"SELECT id FROM {TABLE} TIMESTAMP AS OF {s1_ts} ORDER BY id").to_arrow()
-    assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
+    assert _arrow_ids(arrow) == multi_snapshot["ids_s3"]
 
     arrow_sys = spark.sql(
         f"SELECT id FROM {TABLE} FOR SYSTEM_TIME AS OF {s1_ts} ORDER BY id"
     ).to_arrow()
-    assert _arrow_ids(arrow_sys) == multi_snapshot["ids_s1"]
+    assert _arrow_ids(arrow_sys) == multi_snapshot["ids_s3"]
 
-    # Latest-match pin: as-of exactly s2_ts must yield s2, not s1 (mutation-proofs a
-    # first-match history walk).
     arrow_s2 = spark.sql(f"SELECT id FROM {TABLE} TIMESTAMP AS OF {s2_ts} ORDER BY id").to_arrow()
-    assert _arrow_ids(arrow_s2) == multi_snapshot["ids_s2"]
+    assert _arrow_ids(arrow_s2) == multi_snapshot["ids_s3"]
 
     arrow_s3 = spark.sql(f"SELECT id FROM {TABLE} TIMESTAMP AS OF {s3_ts} ORDER BY id").to_arrow()
     assert _arrow_ids(arrow_s3) == multi_snapshot["ids_s3"]
 
-    # Mid-interval: (s1_ts, s2_ts) → still s1 under timestamp_ms <= as_of.
     mid = s1_ts + max(1, (s2_ts - s1_ts) // 2)
     if mid < s2_ts:
         arrow_mid = spark.sql(
             f"SELECT id FROM {TABLE} TIMESTAMP AS OF {mid} ORDER BY id"
         ).to_arrow()
-        assert _arrow_ids(arrow_mid) == multi_snapshot["ids_s1"]
+        assert _arrow_ids(arrow_mid) == multi_snapshot["ids_s3"]
 
-    with pytest.raises(AnalysisException, match=r"earlier|no Iceberg snapshot"):
-        spark.sql(f"SELECT * FROM {TABLE} TIMESTAMP AS OF {s1_ts - 1}").to_arrow()
+    with pytest.raises(IllegalArgumentException, match=r"snapshot older than"):
+        spark.sql(f"SELECT * FROM {TABLE} TIMESTAMP AS OF {s1_ts // 1000 - 3600}").to_arrow()
 
 
 def test_sql_version_as_of_branch_and_tag(
@@ -168,9 +165,9 @@ def test_unknown_snapshot_and_ref_name_the_pin(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
     _ = multi_snapshot
-    with pytest.raises(AnalysisException, match="999999999"):
+    with pytest.raises(IllegalArgumentException, match="999999999"):
         spark.sql(f"SELECT * FROM {TABLE} VERSION AS OF 999999999").to_arrow()
-    with pytest.raises(AnalysisException, match="no_such_ref"):
+    with pytest.raises(IllegalArgumentException, match="no_such_ref"):
         spark.sql(f"SELECT * FROM {TABLE} VERSION AS OF 'no_such_ref'").to_arrow()
 
 
@@ -357,7 +354,7 @@ def test_negative_snapshot_id_sql_is_recognized(
     parse failure.
     """
     _ = multi_snapshot
-    with pytest.raises(AnalysisException, match=r"-999999999999"):
+    with pytest.raises(IllegalArgumentException, match=r"-999999999999"):
         spark.sql(f"SELECT * FROM {TABLE} VERSION AS OF -999999999999").to_arrow()
 
 

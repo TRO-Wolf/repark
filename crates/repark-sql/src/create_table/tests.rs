@@ -1,5 +1,6 @@
 //! `CREATE TABLE` clause-refusal unit tests.
 
+use repark_core::SessionTimeZone;
 use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
@@ -459,7 +460,7 @@ async fn service_managed_ctas_commit_state_unknown_keeps_table_and_surfaces_clas
     );
     let read_only = HashSet::new();
     let error = crate::execute(
-        EngineContext::new(&ctx, &catalogs, &read_only),
+        EngineContext::new(&ctx, &catalogs, &read_only, SessionTimeZone::default()),
         "CREATE TABLE svc.sales.t AS SELECT 1 AS id",
     )
     .await

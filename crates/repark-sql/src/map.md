@@ -204,6 +204,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   core name. Reader-options registrations remain because they back the returned frame.
   Tests: [time_travel/map.md](time_travel/map.md) + the both-prefix leak pin in
   [../tests/map.md](../tests/map.md).
+  **ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream
+  (whitespace kept) so the shared evaluator receives parseable SQL; the expression evaluates
+  as a constant in the session zone through `repark_core::evaluate_sql_timestamp_asof`.
+  pins: ice-tt-resolve-1/C-003
 - `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
   precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
   spelling stays Spark-only. `WITH SNAPSHOT RETENTION` takes both halves, count then optional

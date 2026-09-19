@@ -6,7 +6,7 @@ use iceberg::io::LocalFsStorageFactory;
 use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
 use iceberg::spec::Snapshot;
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableIdent};
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
 use tempfile::TempDir;
 
 struct NativeDoor {
@@ -59,7 +59,12 @@ impl NativeDoor {
     async fn ok(&self, sql: &str) {
         let read_only = HashSet::new();
         crate::execute(
-            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
+            EngineContext::new(
+                &self.ctx,
+                &self.catalogs,
+                &read_only,
+                SessionTimeZone::default(),
+            ),
             sql,
         )
         .await
@@ -89,7 +94,12 @@ impl NativeDoor {
     async fn row_count(&self, table: &str) -> usize {
         let read_only = HashSet::new();
         crate::execute(
-            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
+            EngineContext::new(
+                &self.ctx,
+                &self.catalogs,
+                &read_only,
+                SessionTimeZone::default(),
+            ),
             &format!("SELECT * FROM ice.sales.{table}"),
         )
         .await

@@ -33,3 +33,6 @@ mapping of the SAME target type (design §6 R3).
 | A MERGE expression did not resolve at execution | aliases: an unaliased relation is referenced by its bare name, and the alias is rendered WITH its quoting |
 
 First checks: `cargo test -p repark-sql merge::`. Escalate to: [../map.md#debug](../map.md).
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** test call sites pass the session zone to the 4-arg
+`EngineContext::new`. pins: ice-tt-resolve-1/C-003

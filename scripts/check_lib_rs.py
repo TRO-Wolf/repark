@@ -28,6 +28,12 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
     # Measured line counts are noted with each number; ceilings include slack. Keys sorted
     # alphabetically; ceilings ratchet DOWN only. Entries are added with a measured count and
     # reason in the same change that makes a crate root exceed the default.
+    "repark-core": (
+        154,
+        "the time-travel re-export block is root-legitimate; ICE-TT-RESOLVE-1 widened it to "
+        "the shared-resolver surface both SQL doors and the reader options resolve through; "
+        "RATCHET: if the time-travel re-exports move behind a manifest module",
+    ),
     "repark-functions": (
         182,
         "register_all / analyzer_rules registration glue is root-legitimate; "

@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use datafusion::prelude::{DataFrame, SessionContext};
 
 use crate::catalog_state::CatalogRegistry;
+use crate::session_time_zone::SessionTimeZone;
 
 /// Everything a [`SqlDialect`] receives for one statement execution.
 #[non_exhaustive]
@@ -17,6 +18,7 @@ pub struct EngineContext<'a> {
     /// Read-only (postgres) catalog names for the P11 DML direction-notes.
     pub read_only: &'a HashSet<String>,
     pub force_static_overwrite: bool,
+    pub session_time_zone: SessionTimeZone,
 }
 
 impl<'a> EngineContext<'a> {
@@ -26,12 +28,14 @@ impl<'a> EngineContext<'a> {
         ctx: &'a SessionContext,
         catalogs: &'a CatalogRegistry,
         read_only: &'a HashSet<String>,
+        session_time_zone: SessionTimeZone,
     ) -> Self {
         Self {
             ctx,
             catalogs,
             read_only,
             force_static_overwrite: false,
+            session_time_zone,
         }
     }
 }

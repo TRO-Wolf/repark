@@ -552,6 +552,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`leftover_time_travel_views`, `setup_time_travel_leak_table`, `temp_view_sequence` — used by
   that leaf only, so they stay out of `common.rs`). They read the default catalog/schema directly
   rather than `information_schema`, which this door's `setup` does not enable.
+  **ICE-TT-RESOLVE-1 (2026-09-19):** the ms pins in
+  `time_travel_version_timestamp_branch_tag_and_errors` flip to seconds semantics (ms reads as
+  seconds, so ms values pin current), plus the `reader_spec_builtin_pins_refuse_loud` /
+  `reader_spec_legacy_pins_still_resolve` unit batteries and
+  `sql_timestamp_asof_evaluates_constants_in_session_zone` for the shared evaluator.
+  pins: ice-tt-resolve-1/C-002, C-003
 - [time_travel.rs](time_travel.rs) — statement-owned pinned-view cleanup and collision pins.
 - `collation.rs` pins parse-altitude refusals for expression `COLLATE`, `ORDER BY COLLATE` (two names),
   `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET/RESET of a collation

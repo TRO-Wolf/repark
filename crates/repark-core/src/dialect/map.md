@@ -28,3 +28,6 @@ and the `EngineContext` construction contract.
 | Downstream dialect crate can't build an `EngineContext` | `EngineContext` is `#[non_exhaustive]`; construct via `EngineContext::new` (pinned by `engine_context_new_is_the_downstream_constructor`). |
 
 First checks: `cargo test -p repark-core dialect`. Escalate to: [../map.md#debug](../map.md).
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** the dialect context carries `session_time_zone` so time-travel
+resolution sees the statement-time zone. pins: ice-tt-resolve-1/C-003

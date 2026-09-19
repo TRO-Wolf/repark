@@ -29,7 +29,7 @@ mod tests {
     use std::collections::HashSet;
 
     use datafusion::prelude::SessionContext;
-    use repark_core::CatalogRegistry;
+    use repark_core::{CatalogRegistry, SessionTimeZone};
 
     use super::*;
 
@@ -41,7 +41,7 @@ mod tests {
         let read_only = HashSet::new();
         let frame = AnsiDialect
             .execute(
-                EngineContext::new(&ctx, &catalogs, &read_only),
+                EngineContext::new(&ctx, &catalogs, &read_only, SessionTimeZone::default()),
                 "SELECT 1 AS a",
             )
             .await
@@ -58,7 +58,7 @@ mod tests {
         let read_only = HashSet::new();
         let err = AnsiDialect
             .execute(
-                EngineContext::new(&ctx, &catalogs, &read_only),
+                EngineContext::new(&ctx, &catalogs, &read_only, SessionTimeZone::default()),
                 "SELECT 1; SELECT 2",
             )
             .await

@@ -7,7 +7,8 @@ use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use repark_core::{
-    EngineContext, TimeTravelSpec, parse_timestamp_to_ms, parse_version_value, read_table_at,
+    EngineContext, TimeTravelSpec, branch_time_travel_refusal, evaluate_sql_timestamp_asof,
+    extract_timestamp_expr, invalid_version_pin, parse_version_value, read_table_at,
 };
 
 /// Process-wide counter for ephemeral temp-view names.
@@ -23,7 +24,13 @@ struct TimeTravelSpan {
     /// The dotted table name, unquoted.
     table_parts: Vec<String>,
     /// What the clause pins to.
-    spec: TimeTravelSpec,
+    pin: TimeTravelPin,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TimeTravelPin {
+    Version(TimeTravelSpec),
+    TimestampExpr(Vec<Token>),
 }
 
 /// Which AS OF flavour a clause is.
@@ -105,13 +112,35 @@ async fn register_pinned_view(
     span: &TimeTravelSpan,
     pinned: &mut PinnedViews,
 ) -> Result<String> {
+    if span.table_parts.len() >= 4
+        && span
+            .table_parts
+            .last()
+            .is_some_and(|segment| segment.to_ascii_lowercase().starts_with("branch_"))
+    {
+        return Err(branch_time_travel_refusal());
+    }
     if span.table_parts.len() != 3 {
         return Err(DataFusionError::Plan(format!(
             "time travel requires a three-part `catalog.schema.table` name, got `{}`",
             span.table_parts.join(".")
         )));
     }
-    let frame = read_table_at(cx.ctx, cx.catalogs, &span.table_parts, &span.spec).await?;
+    let spec = match &span.pin {
+        TimeTravelPin::Version(spec) => spec.clone(),
+        TimeTravelPin::TimestampExpr(tokens) => {
+            let millis = evaluate_sql_timestamp_asof(cx.ctx, tokens, &cx.session_time_zone).await?;
+            TimeTravelSpec::TimestampMs(millis)
+        }
+    };
+    let frame = read_table_at(
+        cx.ctx,
+        cx.catalogs,
+        &span.table_parts,
+        &spec,
+        &cx.session_time_zone,
+    )
+    .await?;
     // `read_table_at` registers the core name first; record it before consuming the frame.
     if let Some(core_name) = core_pinned_name(frame.logical_plan()) {
         pinned.names.push(core_name);
@@ -164,7 +193,7 @@ fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
         };
         // `FOR <kind> AS OF` occupies four significant tokens starting at `index`.
         let value_index = index + 4;
-        let (spec, consumed) = parse_as_of_value(kind, &significant, value_index)?;
+        let (pin, consumed) = parse_as_of_value(kind, tokens, &significant, value_index)?;
 
         // The table name is the ident-dot-ident run immediately before FOR.
         let (name_start, table_parts) =
@@ -178,11 +207,15 @@ fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
 
         spans.push(TimeTravelSpan {
             table_start: significant[name_start].0,
-            clause_end: significant[value_index + consumed - 1].0 + 1,
+            clause_end: if consumed == 0 {
+                significant[value_index.min(significant.len().saturating_sub(1))].0
+            } else {
+                significant[value_index + consumed - 1].0 + 1
+            },
             table_parts,
-            spec,
+            pin,
         });
-        index = value_index + consumed;
+        index = (value_index + consumed).max(index + 1);
     }
     Ok(spans)
 }
@@ -205,82 +238,48 @@ fn clause_kind_at(significant: &[Sig<'_>], index: usize) -> Option<TimeTravelKin
     }
 }
 
-/// Read the AS OF value, returning the spec and how many significant tokens it consumed.
 fn parse_as_of_value(
     kind: TimeTravelKind,
+    tokens: &[Token],
     significant: &[Sig<'_>],
     index: usize,
-) -> Result<(TimeTravelSpec, usize)> {
-    let bad = |detail: &str| {
-        DataFusionError::Plan(format!(
-            "{} value is not usable: {detail}. Write {}",
-            kind.spelling(),
-            match kind {
-                TimeTravelKind::Version =>
-                    "FOR VERSION AS OF <snapshot-id> or FOR VERSION AS OF 'branch-or-tag'",
-                TimeTravelKind::Timestamp =>
-                    "FOR TIMESTAMP AS OF '2024-01-01 00:00:00' (or TIMESTAMP '…')",
-            }
-        ))
-    };
+) -> Result<(TimeTravelPin, usize)> {
+    if matches!(kind, TimeTravelKind::Timestamp) {
+        let found = extract_timestamp_expr(significant, index);
+        let consumed = found.len();
+        if consumed == 0 {
+            return Ok((TimeTravelPin::TimestampExpr(Vec::new()), 0));
+        }
+        let start = significant[index].0;
+        let end = significant[index + consumed - 1].0 + 1;
+        return Ok((
+            TimeTravelPin::TimestampExpr(tokens[start..end].to_vec()),
+            consumed,
+        ));
+    }
     let token = significant
         .get(index)
         .map(|(_, token)| *token)
-        .ok_or_else(|| bad("the clause ends after AS OF"))?;
-
-    // `TIMESTAMP '…'` — two significant tokens.
-    if matches!(token, Token::Word(word) if word.value.eq_ignore_ascii_case("TIMESTAMP")) {
-        let Some(Token::SingleQuotedString(text)) = significant.get(index + 1).map(|(_, t)| *t)
-        else {
-            return Err(bad("TIMESTAMP must be followed by a single-quoted literal"));
-        };
-        return match kind {
-            TimeTravelKind::Timestamp => parse_timestamp_to_ms(text)
-                .map(|ms| (TimeTravelSpec::TimestampMs(ms), 2))
-                .map_err(|error| bad(&error.to_string())),
-            TimeTravelKind::Version => Err(bad("a TIMESTAMP literal is not a version")),
-        };
-    }
+        .ok_or_else(invalid_version_pin)?;
 
     // Unary minus then number: sqlparser emits Minus then Number; a negative pin needs this arm.
     if matches!(token, Token::Minus) {
-        let Some(Token::Number(text, _)) = significant.get(index + 1).map(|(_, t)| *t) else {
-            return Err(bad("`-` must be followed by a number"));
+        let Some(Token::Number(text, _)) = significant.get(index + 1).map(|(_, token)| *token)
+        else {
+            return Err(invalid_version_pin());
         };
-        return spec_from_literal(kind, &format!("-{text}"), 2).map_err(|detail| bad(&detail));
+        return parse_version_value(&format!("-{text}"))
+            .map(|spec| (TimeTravelPin::Version(spec), 2))
+            .map_err(|_| invalid_version_pin());
     }
 
-    match token {
-        Token::Number(text, _) | Token::SingleQuotedString(text) => {
-            spec_from_literal(kind, text, 1).map_err(|detail| bad(&detail))
-        }
-        // A `"quoted"` token arrives as a `Word` carrying its quote style.
-        Token::Word(word) if word.quote_style == Some('"') => Err(bad(&format!(
-            "`\"{0}\"` is a quoted IDENTIFIER in this door, not a literal — use '{0}'",
-            word.value
-        ))),
-        Token::Word(word) => Err(bad(&format!(
-            "`{}` is a bare identifier, not a literal",
-            word.value
-        ))),
-        other => Err(bad(&format!("`{other}` is not a literal"))),
-    }
-}
-
-/// Turn an already-extracted literal into a [`TimeTravelSpec`], reusing the hoisted core parsers.
-fn spec_from_literal(
-    kind: TimeTravelKind,
-    raw: &str,
-    consumed: usize,
-) -> std::result::Result<(TimeTravelSpec, usize), String> {
-    match kind {
-        TimeTravelKind::Version => parse_version_value(raw)
-            .map(|spec| (spec, consumed))
-            .map_err(|error| error.to_string()),
-        TimeTravelKind::Timestamp => parse_timestamp_to_ms(raw)
-            .map(|ms| (TimeTravelSpec::TimestampMs(ms), consumed))
-            .map_err(|error| error.to_string()),
-    }
+    let raw = match token {
+        Token::Number(text, _) | Token::SingleQuotedString(text) => text.clone(),
+        _ => return Err(invalid_version_pin()),
+    };
+    parse_version_value(&raw)
+        .map(|spec| (TimeTravelPin::Version(spec), 1))
+        .map_err(|_| invalid_version_pin())
 }
 
 /// Walk left from `clause_start` over ident-dot-ident, returning the run start and token list.

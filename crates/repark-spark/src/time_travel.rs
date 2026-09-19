@@ -9,9 +9,10 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
 use repark_core::{
-    CatalogRegistry, TimeTravelSpec, next_temp_view_name, parse_timestamp_to_ms,
-    parse_version_value, resolve_snapshot_id,
+    CatalogRegistry, TimeTravelSpec, branch_time_travel_refusal, evaluate_sql_timestamp_asof,
+    invalid_version_pin, next_temp_view_name, parse_version_value, resolve_snapshot_id,
 };
+use repark_functions::session_time_zone::session_time_zone_from_options;
 
 use crate::catalog_ops::iceberg_err;
 
@@ -21,11 +22,14 @@ pub fn sql_has_time_travel(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
         return false;
     };
-    !find_pinned_spans(&tokens).is_empty()
+    match find_pinned_spans(&tokens) {
+        Err(_) => true,
+        Ok(spans) => !spans.is_empty(),
+    }
 }
 
-fn find_pinned_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
-    let mut spans = find_time_travel_spans(tokens);
+fn find_pinned_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
+    let mut spans = find_time_travel_spans(tokens)?;
     let claimed: Vec<(usize, usize)> = spans
         .iter()
         .map(|span| (span.table_start, span.clause_end))
@@ -39,7 +43,7 @@ fn find_pinned_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
         }
     }
     spans.sort_by_key(|span| span.table_start);
-    spans
+    Ok(spans)
 }
 
 /// One FROM/JOIN relation carrying an AS OF pin, with token indices for rewrite.
@@ -50,7 +54,13 @@ struct TimeTravelSpan {
     /// Token index one past the last AS OF value token.
     clause_end: usize,
     table_parts: Vec<String>,
-    spec: TimeTravelSpec,
+    pin: TimeTravelPin,
+}
+
+#[derive(Debug, Clone)]
+enum TimeTravelPin {
+    Version(TimeTravelSpec),
+    TimestampExpr(Vec<Token>),
 }
 
 /// Ephemeral names one statement registered, so the router can drop them after planning.
@@ -85,15 +95,34 @@ pub async fn prepare_time_travel_sql(
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
         return Ok(None);
     };
-    let spans = find_pinned_spans(&tokens);
+    let spans = find_pinned_spans(&tokens)?;
     if spans.is_empty() {
         return Ok(None);
     }
+    let zone = repark_core::SessionTimeZone::parse(session_time_zone_from_options(
+        ctx.state().config().options(),
+    ))
+    .map_err(|error| DataFusionError::Plan(error.to_string()))?;
 
     // Resolve + register right-to-left so token indices stay valid for splicing.
     let mut tokens = tokens;
     for span in spans.into_iter().rev() {
-        let snapshot_id = resolve_table_snapshot(catalogs, &span.table_parts, &span.spec).await?;
+        if span.table_parts.len() >= 4
+            && span
+                .table_parts
+                .last()
+                .is_some_and(|segment| segment.to_ascii_lowercase().starts_with("branch_"))
+        {
+            return Err(branch_time_travel_refusal());
+        }
+        let spec = match span.pin {
+            TimeTravelPin::Version(spec) => spec,
+            TimeTravelPin::TimestampExpr(tokens) => {
+                let millis = evaluate_sql_timestamp_asof(ctx, &tokens, &zone).await?;
+                TimeTravelSpec::TimestampMs(millis)
+            }
+        };
+        let snapshot_id = resolve_table_snapshot(catalogs, &span.table_parts, &spec, &zone).await?;
         let table = load_iceberg_table(catalogs, &span.table_parts).await?;
         let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
             .await
@@ -129,9 +158,10 @@ async fn resolve_table_snapshot(
     catalogs: &CatalogRegistry,
     table_parts: &[String],
     spec: &TimeTravelSpec,
+    zone: &repark_core::SessionTimeZone,
 ) -> Result<i64> {
     let table = load_iceberg_table(catalogs, table_parts).await?;
-    resolve_snapshot_id(table.metadata(), spec)
+    resolve_snapshot_id(table.metadata(), spec, zone)
 }
 
 async fn load_iceberg_table(
@@ -162,14 +192,14 @@ fn three_part_ident(parts: &[String]) -> Result<(String, TableIdent)> {
 }
 
 /// Scan tokens for `… VERSION AS OF …` / `… TIMESTAMP AS OF …` (and `FOR SYSTEM_*` forms).
-fn find_time_travel_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
+fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
     let significant: Vec<(usize, &Token)> = tokens
         .iter()
         .enumerate()
         .filter(|(_, token)| !matches!(token, Token::Whitespace(_) | Token::EOF))
         .collect();
     if significant.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
 
     let word_at = |sig_index: usize| -> Option<&str> {
@@ -239,10 +269,7 @@ fn find_time_travel_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
 
         // Value is the token(s) after OF.
         let value_sig = sig_index + 2;
-        let Some((spec, value_tokens)) = parse_as_of_value(kind, &significant, value_sig) else {
-            sig_index += 1;
-            continue;
-        };
+        let (pin, value_tokens) = parse_as_of_value(kind, tokens, &significant, value_sig)?;
         let value_end_sig = value_sig + value_tokens;
 
         let table_parts = collect_table_parts(&significant[name_sig_start..name_sig_end]);
@@ -253,20 +280,23 @@ fn find_time_travel_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
 
         let table_start = significant[name_sig_start].0;
         // One past the last original token of the value.
-        let last_value_token_index = significant[value_end_sig - 1].0;
-        let clause_end = last_value_token_index + 1;
+        let clause_end = if value_tokens == 0 {
+            significant[value_sig.min(significant.len().saturating_sub(1))].0
+        } else {
+            significant[value_end_sig - 1].0 + 1
+        };
 
         spans.push(TimeTravelSpan {
             table_start,
             clause_end,
             table_parts,
-            spec,
+            pin,
         });
         // Continue after the value.
-        sig_index = value_end_sig;
+        sig_index = value_end_sig.max(sig_index + 1);
     }
 
-    spans
+    Ok(spans)
 }
 
 fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
@@ -303,7 +333,7 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
             table_start: significant[name_start].0,
             clause_end: significant[name_end - 1].0 + 1,
             table_parts: parts[..parts.len() - 1].to_vec(),
-            spec: TimeTravelSpec::VersionRef(ref_name),
+            pin: TimeTravelPin::Version(TimeTravelSpec::VersionRef(ref_name)),
         });
         sig_index = name_end;
     }
@@ -371,58 +401,53 @@ fn collect_table_parts(significant_slice: &[(usize, &Token)]) -> Vec<String> {
     parts
 }
 
-/// Returns `(spec, number_of_significant_tokens_consumed)`.
 fn parse_as_of_value(
     kind: TimeTravelKind,
+    tokens: &[Token],
     significant: &[(usize, &Token)],
     value_sig: usize,
-) -> Option<(TimeTravelSpec, usize)> {
-    let token = significant.get(value_sig).map(|(_, t)| *t)?;
-
-    // TIMESTAMP '…' form as the AS OF value (two tokens).
-    if matches!(token, Token::Word(w) if w.value.eq_ignore_ascii_case("TIMESTAMP")) {
-        let next = significant.get(value_sig + 1).map(|(_, t)| *t)?;
-        let text = match next {
-            Token::SingleQuotedString(text) | Token::DoubleQuotedString(text) => text.clone(),
-            _ => return None,
-        };
-        return match kind {
-            TimeTravelKind::Timestamp => parse_timestamp_to_ms(&text)
-                .ok()
-                .map(|ms| (TimeTravelSpec::TimestampMs(ms), 2)),
-            TimeTravelKind::Version => None,
-        };
+) -> Result<(TimeTravelPin, usize)> {
+    if matches!(kind, TimeTravelKind::Timestamp) {
+        let found = repark_core::extract_timestamp_expr(significant, value_sig);
+        let consumed = found.len();
+        if consumed == 0 {
+            return Ok((TimeTravelPin::TimestampExpr(Vec::new()), 0));
+        }
+        let start = significant[value_sig].0;
+        let end = significant[value_sig + consumed - 1].0 + 1;
+        return Ok((
+            TimeTravelPin::TimestampExpr(tokens[start..end].to_vec()),
+            consumed,
+        ));
     }
+    let token = significant
+        .get(value_sig)
+        .map(|(_, token)| *token)
+        .ok_or_else(invalid_version_pin)?;
 
     // Unary minus + number: Iceberg snapshot ids are signed i64 and are often negative.
     if matches!(token, Token::Minus) {
-        let next = significant.get(value_sig + 1).map(|(_, t)| *t)?;
-        let Token::Number(text, _) = next else {
-            return None;
+        let next = significant.get(value_sig + 1).map(|(_, token)| *token);
+        let Some(Token::Number(text, _)) = next else {
+            return Err(invalid_version_pin());
         };
         let raw = format!("-{text}");
-        return match kind {
-            TimeTravelKind::Version => parse_version_value(&raw).ok().map(|spec| (spec, 2)),
-            TimeTravelKind::Timestamp => parse_timestamp_to_ms(&raw)
-                .ok()
-                .map(|ms| (TimeTravelSpec::TimestampMs(ms), 2)),
-        };
+        return parse_version_value(&raw)
+            .map(|spec| (TimeTravelPin::Version(spec), 2))
+            .map_err(|_| invalid_version_pin());
     }
 
     let raw = match token {
         Token::Number(text, _)
         | Token::SingleQuotedString(text)
         | Token::DoubleQuotedString(text) => text.clone(),
-        Token::Word(word) => word.value.clone(),
-        _ => return None,
+        Token::Word(word) if !word.value.eq_ignore_ascii_case("TIMESTAMP") => word.value.clone(),
+        _ => return Err(invalid_version_pin()),
     };
 
-    match kind {
-        TimeTravelKind::Version => parse_version_value(&raw).ok().map(|spec| (spec, 1)),
-        TimeTravelKind::Timestamp => parse_timestamp_to_ms(&raw)
-            .ok()
-            .map(|ms| (TimeTravelSpec::TimestampMs(ms), 1)),
-    }
+    parse_version_value(&raw)
+        .map(|spec| (TimeTravelPin::Version(spec), 1))
+        .map_err(|_| invalid_version_pin())
 }
 
 fn tokens_to_sql(tokens: &[Token]) -> String {
@@ -459,10 +484,13 @@ mod tests {
         let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
             .tokenize()
             .unwrap();
-        let spans = find_time_travel_spans(&tokens);
+        let spans = find_time_travel_spans(&tokens).unwrap();
         assert_eq!(spans.len(), 1);
         assert_eq!(spans[0].table_parts, vec!["ice", "sales", "t"]);
-        assert_eq!(spans[0].spec, TimeTravelSpec::SnapshotId(42));
+        assert!(matches!(
+            spans[0].pin,
+            TimeTravelPin::Version(TimeTravelSpec::SnapshotId(42))
+        ));
     }
 
     #[test]
@@ -471,18 +499,21 @@ mod tests {
         let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
             .tokenize()
             .unwrap();
-        let spans = find_time_travel_spans(&tokens);
-        assert_eq!(
-            spans[0].spec,
-            TimeTravelSpec::VersionRef("audit_branch".into())
-        );
+        let spans = find_time_travel_spans(&tokens).unwrap();
+        assert!(matches!(
+            spans[0].pin,
+            TimeTravelPin::Version(TimeTravelSpec::VersionRef(_))
+        ));
 
         let sql = "SELECT * FROM ice.sales.t FOR SYSTEM_TIME AS OF '2020-06-01 00:00:00'";
         let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
             .tokenize()
             .unwrap();
-        let spans = find_time_travel_spans(&tokens);
-        assert!(matches!(spans[0].spec, TimeTravelSpec::TimestampMs(_)));
+        let spans = find_time_travel_spans(&tokens).unwrap();
+        let TimeTravelPin::TimestampExpr(tokens) = &spans[0].pin else {
+            panic!("SYSTEM_TIME must pin a timestamp expression");
+        };
+        assert_eq!(tokens_to_sql(tokens), "'2020-06-01 00:00:00'");
     }
 
     #[test]
@@ -492,13 +523,59 @@ mod tests {
         let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
             .tokenize()
             .unwrap();
-        let spans = find_time_travel_spans(&tokens);
+        let spans = find_time_travel_spans(&tokens).unwrap();
         assert_eq!(spans.len(), 1);
-        assert_eq!(
-            spans[0].spec,
-            TimeTravelSpec::SnapshotId(-9_223_372_036_854_775_807)
-        );
+        assert!(matches!(
+            spans[0].pin,
+            TimeTravelPin::Version(TimeTravelSpec::SnapshotId(-9_223_372_036_854_775_807))
+        ));
         assert_eq!(spans[0].table_parts, vec!["ice", "sales", "t"]);
+    }
+
+    #[test]
+    fn find_spans_timestamp_expression_forms() {
+        for (sql, expected) in [
+            (
+                "SELECT * FROM ice.sales.t TIMESTAMP AS OF CAST('2020-06-01 00:00:00' AS TIMESTAMP)",
+                "CAST('2020-06-01 00:00:00' AS TIMESTAMP)",
+            ),
+            (
+                "SELECT * FROM ice.sales.t TIMESTAMP AS OF TIMESTAMP '2020-06-01 00:00:00'",
+                "TIMESTAMP '2020-06-01 00:00:00'",
+            ),
+            (
+                "SELECT * FROM ice.sales.t TIMESTAMP AS OF 1750000000",
+                "1750000000",
+            ),
+            (
+                "SELECT * FROM ice.sales.t TIMESTAMP AS OF current_timestamp() WHERE id > 0",
+                "current_timestamp()",
+            ),
+            (
+                "SELECT * FROM ice.sales.t TIMESTAMP AS OF (SELECT CAST('2020-06-01 00:00:00' AS TIMESTAMP))",
+                "(SELECT CAST('2020-06-01 00:00:00' AS TIMESTAMP))",
+            ),
+        ] {
+            let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
+                .tokenize()
+                .unwrap();
+            let spans = find_time_travel_spans(&tokens).unwrap();
+            assert_eq!(spans.len(), 1, "{sql}");
+            let TimeTravelPin::TimestampExpr(expr) = &spans[0].pin else {
+                panic!("{sql} must pin a timestamp expression");
+            };
+            assert_eq!(tokens_to_sql(expr), expected, "{sql}");
+        }
+    }
+
+    #[test]
+    fn find_spans_broken_version_value_is_loud() {
+        let sql = "SELECT * FROM ice.sales.t VERSION AS OF (SELECT 1)";
+        let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
+            .tokenize()
+            .unwrap();
+        assert!(find_time_travel_spans(&tokens).is_err());
+        assert!(sql_has_time_travel(sql));
     }
 
     #[test]
@@ -508,12 +585,18 @@ mod tests {
         let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
             .tokenize()
             .unwrap();
-        let spans = find_time_travel_spans(&tokens);
+        let spans = find_time_travel_spans(&tokens).unwrap();
         assert_eq!(spans.len(), 2);
         assert_eq!(spans[0].table_parts, vec!["ice", "sales", "a"]);
-        assert_eq!(spans[0].spec, TimeTravelSpec::SnapshotId(1));
+        assert!(matches!(
+            spans[0].pin,
+            TimeTravelPin::Version(TimeTravelSpec::SnapshotId(1))
+        ));
         assert_eq!(spans[1].table_parts, vec!["ice", "sales", "b"]);
-        assert_eq!(spans[1].spec, TimeTravelSpec::SnapshotId(2));
+        assert!(matches!(
+            spans[1].pin,
+            TimeTravelPin::Version(TimeTravelSpec::SnapshotId(2))
+        ));
     }
 
     #[test]
@@ -532,10 +615,13 @@ mod tests {
         let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
             .tokenize()
             .unwrap();
-        let spans = find_time_travel_spans(&tokens);
+        let spans = find_time_travel_spans(&tokens).unwrap();
         assert_eq!(spans.len(), 1);
         assert_eq!(spans[0].table_parts, vec!["ice", "sales", "t"]);
-        assert_eq!(spans[0].spec, TimeTravelSpec::SnapshotId(7));
+        assert!(matches!(
+            spans[0].pin,
+            TimeTravelPin::Version(TimeTravelSpec::SnapshotId(7))
+        ));
     }
 
     #[test]
@@ -544,8 +630,11 @@ mod tests {
         let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
             .tokenize()
             .unwrap();
-        let spans = find_time_travel_spans(&tokens);
+        let spans = find_time_travel_spans(&tokens).unwrap();
         assert_eq!(spans.len(), 1);
-        assert_eq!(spans[0].spec, TimeTravelSpec::VersionRef("main".into()));
+        assert!(matches!(
+            spans[0].pin,
+            TimeTravelPin::Version(TimeTravelSpec::VersionRef(_))
+        ));
     }
 }

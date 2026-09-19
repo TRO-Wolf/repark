@@ -1342,12 +1342,17 @@ class ReparkSession:
         as_of_timestamp_ms: int | None = None,
         branch: str | None = None,
         tag: str | None = None,
+        version_as_of: str | None = None,
+        timestamp_as_of: str | None = None,
     ) -> DataFrame:
         """Read an Iceberg catalog table, optionally time-travel pinned (R-TIME-TRAVEL).
 
-        At most one of ``snapshot_id`` / ``as_of_timestamp_ms`` / ``branch`` / ``tag`` may be
-        set. Engine path: fork ``IcebergStaticTableProvider::try_new_from_table_snapshot`` —
-        never a post-hoc filter.
+        The legacy pins (``snapshot_id`` / ``as_of_timestamp_ms`` / ``branch`` / ``tag``)
+        stay mutually exclusive. The Spark built-ins ``version_as_of`` /
+        ``timestamp_as_of`` travel as raw strings; the engine parses them, so an
+        unknown id, name, or instant raises the Spark refusal. Engine path: fork
+        ``IcebergStaticTableProvider::try_new_from_table_snapshot`` — never a
+        post-hoc filter.
         """
         from repark.errors import AnalysisException
 
@@ -1372,6 +1377,8 @@ class ReparkSession:
             as_of_timestamp_ms,
             branch,
             tag,
+            version_as_of,
+            timestamp_as_of,
         )
         return DataFrame(frame, inner, self._alive_token)
 

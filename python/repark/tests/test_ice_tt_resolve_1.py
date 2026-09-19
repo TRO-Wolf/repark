@@ -459,13 +459,15 @@ def _query_expected(cell: str, version: int) -> list[tuple[Any, ...]]:
 
 
 @pytest.mark.parametrize("cell,version", _query_ok_cases())
-def test_facade_sql_cells(spark: dict[str, Any], spark_ny: Any, cell: str, version: int) -> None:
+def test_facade_sql_cells(
+    spark: Any, spark_ny: Any, seeded: dict[str, Any], cell: str, version: int
+) -> None:
     """Facade SQL cells answer the fixture. pins: ice-tt-resolve-1/C-004"""
-    seed = spark["seeds"][version]
+    seed = seeded["seeds"][version]
     session = (
         spark_ny
         if cell in ("TT-SQL-EXPR-NY", "TT-SQL-STR-NY", "TT-SQL-EPOCH-NY")
-        else spark["session"]
+        else spark
     )
     frame = session.sql(_facade_query(cell, _facade_table(version), seed))
     assert _rows_of(frame) == _query_expected(cell, version)
@@ -618,9 +620,19 @@ def _live_rows(frame: Any) -> list[list[Any]]:
     return rows
 
 
+LIVE_TABLE_RE = re.compile(r"(?:ttlive\.ns\.t_v\d|sc\.ns\.t_[a-z0-9_]+)")
+LIVE_POSITION_RE = re.compile(r"position \d+")
+LIVE_POS_RE = re.compile(r"pos \d+")
+LIVE_SQL_ECHO_RE = re.compile(r"== SQL (?:\(line 1, position \{P\}\) )?==\n[^\n]*\n[ \-]*\^+")
+
+
 def _live_normalize(message: str) -> str:
-    """Replace run-varying ids and instants in a live message."""
-    return INSTANT_RE.sub("{TS}", re.sub(r"\b\d{10,}\b", "{SID}", message))
+    """Replace run-varying ids, instants, table echoes, positions, and SQL echo blocks."""
+    tabled = LIVE_TABLE_RE.sub("{T}", message)
+    placed = LIVE_POSITION_RE.sub("position {P}", tabled)
+    posed = LIVE_POS_RE.sub("pos {P}", placed)
+    echoed = LIVE_SQL_ECHO_RE.sub("{SQL}", posed)
+    return INSTANT_RE.sub("{TS}", re.sub(r"\b\d{10,}\b", "{SID}", echoed))
 
 
 def _live_error_info(error: BaseException) -> tuple[str, Any, Any, str]:
@@ -644,6 +656,8 @@ def test_live_cells_rederive_the_fixture(tmp_path: Path) -> None:
     """Live Spark replays every shape and matches the fixture. pins: ice-tt-resolve-1/C-008"""
     import _live_parity as live_parity
 
+    os.environ["TZ"] = "UTC"
+    time.tzset()
     warehouse = tmp_path / "live_wh"
     engine = live_parity.build_spark_iceberg_engine(warehouse, catalog="ttlive")
     session = engine.session
@@ -657,7 +671,7 @@ def test_live_cells_rederive_the_fixture(tmp_path: Path) -> None:
             for cell_id, cell in CELLS.items():
                 if not cell_id.endswith(f"-V{version}"):
                     continue
-                shape = cell_id.split("-V")[0]
+                shape = cell_id.rsplit("-V", 1)[0]
                 if shape.startswith("TT-DF-"):
                     action = shape[len("TT-DF-") :]
                     with live_parity.spark_session_conf(
@@ -692,6 +706,7 @@ def test_live_cells_rederive_the_fixture(tmp_path: Path) -> None:
                         )
                     assert rows == cell["obs"]["rows"], f"{cell_id}: live rows differ from fixture"
                 else:
+                    action = shape[len("TT-SQL-") :]
                     template = _live_template(action)
                     with live_parity.spark_session_conf(
                         engine,
@@ -711,6 +726,8 @@ def test_live_cells_rederive_the_fixture(tmp_path: Path) -> None:
                     assert rows == cell["obs"]["rows"], f"{cell_id}: live rows differ from fixture"
     finally:
         if namespace_ready:
+            for version in (2, 3):
+                session.sql(f"DROP TABLE IF EXISTS ttlive.ns.t_v{version}")
             session.sql("DROP NAMESPACE IF EXISTS ttlive.ns CASCADE")
 
 

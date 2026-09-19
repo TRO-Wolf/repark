@@ -4487,6 +4487,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   format case-insensitivity, load-arg beats option
   path, unknown-key tolerate, missing format/path → `AnalysisException`, `.schema` disclosed
   `UnsupportedOperationException` (C1-Q-007)). JVM-free pins; mutation-proof.
+  **ICE-TT-RESOLVE-1 (2026-09-19):** `test_snapshot_id_option_parses_int_and_range` (legacy
+  pin parsing) and `test_version_asof_options_forward_raw_without_engine` (built-ins forward
+  raw, legacy junk still loud). pins: ice-tt-resolve-1/C-004
 - `test_group_agg.py` — **U2:** signed-zero collect_set fixture uses `createDataFrame`
   (SQL `-0.0` is DECIMAL 0, no IEEE sign bit). **Group E (E1/E2/E7) + Group J**: the aggregation family, pinned to real
   (2026-07-22 review: ruff-formatted — the unit left the format gate red at tip)

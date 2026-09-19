@@ -23,3 +23,6 @@ in `../tests.rs` against a real catalog.
 | A path escaped the warehouse root | `reject_path_escape_ident` runs before any path is composed; check the call sites in `../create_table.rs` |
 
 First checks: `cargo test -p repark-sql schema_ddl::`. Escalate to: [../map.md#debug](../map.md).
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** test call sites pass the session zone to the 4-arg
+`EngineContext::new`. pins: ice-tt-resolve-1/C-003

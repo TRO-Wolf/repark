@@ -26,3 +26,6 @@ name parts. The end-to-end (session) rows live in `../tests.rs`.
 | A `__repark_tt_*` name (no `ansi`) outlived its statement | If core registration succeeds but `ctx.table` lookup fails, no frame returns and SQL cannot discover or record the core name. For a returned frame, `PinnedViews` releases both prefixes; reader-options registrations remain by design |
 
 First checks: `cargo test -p repark-sql time_travel::`. Escalate to: [../map.md#debug](../map.md).
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream so
+the shared evaluator receives parseable SQL. pins: ice-tt-resolve-1/C-003

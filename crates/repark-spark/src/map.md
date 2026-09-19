@@ -788,6 +788,10 @@ pins: rp-4-fork-repin/C-005, C-006
   combination. Only the relation a statement WRITES to is out of reach: the router's
   write-to-branch sniff refuses that one first.
   pins: ref-branch-tag-wap/C-002, C-007
+  **ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream
+  (whitespace kept) so the shared evaluator receives parseable SQL; the expression evaluates
+  as a constant in the session zone through `repark_core::evaluate_sql_timestamp_asof`.
+  pins: ice-tt-resolve-1/C-003
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation.

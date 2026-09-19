@@ -14,6 +14,12 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
 ## Contents
 
 - `tests.rs` — parser + resolution pins (`#[cfg(test)] mod tests;` in `../time_travel.rs`).
+- `sql_text.rs` — SQL-text timestamp parsing, zone math, token extraction (re-exported at
+  `../time_travel.rs`). pins: ice-tt-resolve-1/C-010
+- `sql_ast.rs` — determinism check + session-zone rewrite of the `AS OF` expression.
+  pins: ice-tt-resolve-1/C-010
+- `sql_eval.rs` — constant-expression evaluation of the `AS OF` value (`evaluate_sql_timestamp_asof`).
+  pins: ice-tt-resolve-1/C-010
 
 ## Pointers
 

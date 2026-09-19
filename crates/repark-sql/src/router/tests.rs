@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::prelude::{SessionConfig, SessionContext};
-use repark_core::CatalogRegistry;
+use repark_core::{CatalogRegistry, SessionTimeZone};
 
 use super::*;
 
@@ -16,7 +16,11 @@ fn native_ctx() -> SessionContext {
 async fn run(ctx: &SessionContext, sql: &str) -> Result<DataFrame> {
     let catalogs = CatalogRegistry::new();
     let read_only = HashSet::new();
-    execute(EngineContext::new(ctx, &catalogs, &read_only), sql).await
+    execute(
+        EngineContext::new(ctx, &catalogs, &read_only, SessionTimeZone::default()),
+        sql,
+    )
+    .await
 }
 
 /// A plain `SELECT` is delegated to DataFusion untouched — value AND type on the Arrow path.

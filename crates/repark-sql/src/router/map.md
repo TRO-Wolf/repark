@@ -28,3 +28,6 @@ order the guards run — as distinct from what each handler then does.
 | A DDL statement reached DataFusion's own CTAS/DROP | `metadata_reference_does_not_bypass_the_create_handler` pins the invariant that `$` metadata references do not bypass the statement match |
 
 First checks: `cargo test -p repark-sql router::`. Escalate to: [../map.md#debug](../map.md).
+
+**ICE-TT-RESOLVE-1 (2026-09-19):** test call sites pass the session zone to the 4-arg
+`EngineContext::new`. pins: ice-tt-resolve-1/C-003

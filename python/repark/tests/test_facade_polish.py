@@ -427,3 +427,49 @@ def test_read_schema_stores_for_csv_json(spark: ReparkSession, tmp_path: Path) -
     assert reader is not None
     rows = reader.csv(str(path), header=False).to_arrow().to_pylist()
     assert rows == [{"id": 1}, {"id": 2}]
+
+
+def test_snapshot_id_option_parses_int_and_range() -> None:
+    """ICE-TT-RESOLVE-1: legacy snapshot-id parses; bad text and i64 overflow fail loud."""
+    from repark.spark.session.reader_support import (
+        _parse_as_of_timestamp_option,
+        _parse_snapshot_id_option,
+    )
+
+    assert _parse_snapshot_id_option("42") == 42
+    assert _parse_as_of_timestamp_option("1700000000000") == 1700000000000
+    with pytest.raises(AnalysisException, match="integer snapshot id"):
+        _parse_snapshot_id_option("abc")
+    with pytest.raises(AnalysisException, match="signed 64-bit"):
+        _parse_snapshot_id_option(str(2**63))
+    with pytest.raises(AnalysisException, match="epoch milliseconds"):
+        _parse_as_of_timestamp_option("not-a-number")
+
+
+def test_version_asof_options_forward_raw_without_engine() -> None:
+    """ICE-TT-RESOLVE-1: versionAsOf/timestampAsOf forward raw; legacy pins still parse."""
+    from typing import cast
+
+    reader = DataFrameReader(cast(ReparkSession, None))
+    got = (
+        reader.format("iceberg")
+        .option("versionAsOf", "3")
+        .option("TIMESTAMPASOF", "2026-09-18 10:00:00")
+        ._iceberg_time_travel_opts()
+    )
+    assert got == {"version_as_of": "3", "timestamp_as_of": "2026-09-18 10:00:00"}
+    legacy = (
+        DataFrameReader(cast(ReparkSession, None))
+        .format("iceberg")
+        .option("snapshot-id", "7")
+        ._iceberg_time_travel_opts()
+    )
+    assert legacy == {"snapshot_id": 7}
+    with pytest.raises(AnalysisException, match="integer snapshot id"):
+        (
+            DataFrameReader(cast(ReparkSession, None))
+            .format("iceberg")
+            .option("snapshot-id", "bad-id")
+            .option("versionAsOf", "1")
+            ._iceberg_time_travel_opts()
+        )

@@ -6,7 +6,7 @@ use datafusion::arrow::array::RecordBatch;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::spec::Operation;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
-use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
+use repark_core::{CatalogRegistry, EngineContext, LocationPolicy, SessionTimeZone};
 use tempfile::TempDir;
 
 use crate::execute;
@@ -22,7 +22,12 @@ impl Door {
     async fn sql(&self, sql: &str) -> datafusion::error::Result<Vec<RecordBatch>> {
         let read_only = HashSet::new();
         let frame = execute(
-            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
+            EngineContext::new(
+                &self.ctx,
+                &self.catalogs,
+                &read_only,
+                SessionTimeZone::default(),
+            ),
             sql,
         )
         .await?;
