@@ -93,7 +93,7 @@ pub fn insert_sql(table: &str, first_id: u64, rows: u64) -> String {
          sha2(concat('b', CAST(id AS STRING)), 256), \
          sha2(concat('c', CAST(id AS STRING)), 256), \
          sha2(concat('d', CAST(id AS STRING)), 256)) AS payload \
-         FROM range({first_id}, {end})"
+         FROM range({first_id}, {end}) ORDER BY id"
     )
 }
 
