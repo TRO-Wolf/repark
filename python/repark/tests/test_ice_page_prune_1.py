@@ -52,6 +52,9 @@ from _record_ice_page_prune_1 import (
     EVO_QUERIES,
     PREFIX,
     QUERIES,
+    _apply_deletes,
+    _build_evo,
+    _seed_table,
     expand_cell,
 )
 
@@ -547,3 +550,94 @@ def test_repark_written_files_carry_page_indexes(tmp_path: Path) -> None:
                     assert chunk.has_column_index and chunk.has_offset_index, (path, group, column)
     finally:
         session.stop()
+
+
+_LIVE_CATALOG = "ice_page_prune_1_live"
+
+
+def _build_live_tables(spark: Any, catalog: str) -> dict[str, str]:
+    """Seed the five live tables from the recorder's seed path; return key to name."""
+    spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns")
+    names: dict[str, str] = {}
+    for version in ("2", "3"):
+        base = f"{catalog}.ns.base_v{version}"
+        _seed_table(spark, base, version)
+        names[f"base_v{version}"] = base
+        delete_table = f"{catalog}.ns.del_v{version}"
+        _seed_table(spark, delete_table, version)
+        _apply_deletes(spark, delete_table, version)
+        names[f"del_v{version}"] = delete_table
+    evo = f"{catalog}.ns.evo_v2"
+    _build_evo(spark, evo)
+    names["evo_v2"] = evo
+    return names
+
+
+def _live_rows(spark: Any, table: str, predicate: str | None, lineage: bool) -> list[list[int]]:
+    """Sorted answer rows of one live Spark read leg as plain ints."""
+    extra = ", _row_id, _last_updated_sequence_number" if lineage else ""
+    where = "" if predicate is None else f" WHERE {predicate}"
+    query = f"SELECT id{extra} FROM {table}{where} ORDER BY id"
+    return [[int(value) for value in row] for row in spark.sql(query).collect()]
+
+
+def _newest_live_metadata(warehouse: Path, table: str) -> Path:
+    """Newest Hadoop metadata file of one live table."""
+    root = warehouse / "ns" / table.split(".")[-1]
+    versions = sorted(
+        (root / "metadata").glob("v*.metadata.json"),
+        key=lambda path: int(path.name[1:].split(".", 1)[0]),
+    )
+    assert versions, f"no Hadoop metadata under {root}/metadata"
+    return versions[-1]
+
+
+def _assert_live_grid(spark: Any, live_names: dict[str, str]) -> None:
+    """Fail unless live Spark re-derives every recorded truth cell (oracle drift)."""
+    for key, table in live_names.items():
+        lineage = key in _LINEAGE_TABLES
+        legs = [(cell, predicate) for cell, predicate in _queries(key).items()]
+        legs.append(("_unfiltered", None))
+        for cell, predicate in legs:
+            got = _live_rows(spark, table, predicate, lineage)
+            assert got == expand_cell(_TRUTH[key][cell]), ("oracle drift", key, cell)
+
+
+@pytest.mark.skipif(not _LIVE, reason=_LIVE_SKIP)
+def test_live_grid_replays_spark(tmp_path: Path) -> None:
+    """Live Spark re-derives the grid; RePark matches truth and live on both doors."""
+    import _live_parity as lp
+
+    warehouse = tmp_path / "spark-warehouse"
+    spark = lp.build_spark_iceberg_engine(warehouse, catalog=_LIVE_CATALOG).session
+    live_names = _build_live_tables(spark, _LIVE_CATALOG)
+    _assert_live_grid(spark, live_names)
+    repark = _new_session("ice-page-prune-1-live")
+    try:
+        repark.register_memory_catalog(_CATALOG, tmp_path / "repark-warehouse")
+        repark.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
+        for key, live_table in live_names.items():
+            table_arg = f"{_NAMESPACE}.live_{key.replace('/', '_')}"
+            _register(repark, table_arg, _newest_live_metadata(warehouse, live_table))
+            qualified = f"{_CATALOG}.{table_arg}"
+            lineage = key in _LINEAGE_TABLES
+            columns = _columns(lineage)
+            for cell, predicate in _queries(key).items():
+                if cell in _DECIMAL_RANGE_CELLS:
+                    continue
+                arrow = repark.sql(
+                    f"SELECT {columns} FROM {qualified} WHERE {predicate} ORDER BY id"
+                ).to_arrow()
+                assert _table_rows(arrow, lineage) == expand_cell(_TRUTH[key][cell]), (
+                    "live",
+                    key,
+                    cell,
+                )
+            arrow = repark.sql(f"SELECT {columns} FROM {qualified} ORDER BY id").to_arrow()
+            assert _table_rows(arrow, lineage) == expand_cell(_TRUTH[key]["_unfiltered"]), (
+                "live",
+                key,
+                "_unfiltered",
+            )
+    finally:
+        repark.stop()

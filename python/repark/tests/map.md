@@ -409,8 +409,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   full 65,536-row files; one to two on remnant and position-delete files)
   assert filtered reads equal the unfiltered read filtered in Python on both
   doors past a merge-on-read DELETE and an UPDATE, v3 lineage stable, and
-  every written file carries column and offset indexes.
-  pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  every written file carries column and offset indexes. The live tier
+  (`REPARK_PARITY_LIVE=1`) rebuilds the five tables on live Spark 4.1.2 from
+  the recorder seed path, asserts every answer still equals `truth.json`, and
+  cross-reads the adopted live tables — the un-rewritten live `del_v2` reads
+  clean, isolating the fixture refusal to rewrite-stale manifest sizes.
+  pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — **ICE-HADOOP-VN-1
   (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The
   committed `fixtures/torture/data/ice_hadoop_vn_1` Spark-written v2 table (one seed
