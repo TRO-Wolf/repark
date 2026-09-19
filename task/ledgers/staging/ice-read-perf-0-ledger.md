@@ -247,3 +247,9 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/catalog/tests/catalog.rs]
   complete: true
 ```
+
+## Dispatch record
+
+| date | run | purpose | outcome | bytes read |
+|---|---|---|---|---|
+| 2026-09-19 | 35446174539 | baseline | failed safe at `S3 Tables — create`, before any write or scan: the bench had registered the S3 Tables handle without the service-managed location policy, so CREATE asked for a namespace location. Fixed by registering both AWS catalogs through the session's catalog config (`register_late_configured_catalogs`), pinned by `aws_catalogs_register_through_the_session_catalog_config` | 0 data bytes (catalog calls only) |

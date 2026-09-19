@@ -960,7 +960,10 @@ async fn both_setup_phases_end_with_the_r3_check() {
 #[test]
 fn aws_catalogs_register_through_the_session_catalog_config() {
     let props = vec![
-        ("table_bucket_arn".to_string(), "arn:aws:s3tables:us-east-2:1:bucket/b".to_string()),
+        (
+            "table_bucket_arn".to_string(),
+            "arn:aws:s3tables:us-east-2:1:bucket/b".to_string(),
+        ),
         ("region".to_string(), "us-east-2".to_string()),
     ];
     let config = remote_catalog_config("s3tables", &props);
