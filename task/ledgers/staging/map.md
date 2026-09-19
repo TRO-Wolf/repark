@@ -556,6 +556,22 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `feat/ice-sorted-insert-1`.
   pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
+- [ice-session-write-conf-1-ledger.md](ice-session-write-conf-1-ledger.md) —
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19), in flight:** the session confs
+  `spark.sql.iceberg.snapshot-property.*` and
+  `spark.sql.iceberg.compression-codec` reach every Iceberg write with
+  writer-option over session-conf over table-property precedence (one Rust
+  resolver, router fold, facade forwards keys only); the 25-cell Spark oracle
+  (`ice_session_write_conf_1_spark_oracle.json`) and the red-first pins
+  (`test_ice_session_write_conf_1.py`: 26 red, 3 green controls on the base).
+  Residue `F-RDF-SESSION-CONF-1` (fork `rewrite_data_files` takes no session
+  confs) rides strict xfails; registry row FIXED.
+  `risk_tier: standard`. Branch `fix/ice-session-write-conf-1`.
+  pins: ice-session-write-conf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: ice-session-write-conf-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  pins: ice-session-write-conf-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
+  pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
+  pins: ice-session-write-conf-1/C-033, C-034
 
 ## Pointers
 - Up: [../map.md](../map.md)

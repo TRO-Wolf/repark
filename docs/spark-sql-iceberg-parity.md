@@ -3150,6 +3150,57 @@ the pin rather than obeying it.
   cell: the write commits and the newest summary's `replace-partitions` — and `k` for
   the control — equals Spark's; the live tier re-derives one cell on Spark).
   pins: ice-write-options-rp-1/C-007
+
+### ICE-SESSION-WRITE-CONF-1 — session `spark.sql.iceberg.*` write confs — **FIXED 2026-09-19**
+
+- **repark** — **FIXED 2026-09-19.** One Rust resolver
+  (`repark-iceberg` `write/session_write_conf.rs`) layers writer option over
+  session conf over table property for the codec (plus `compression-level`)
+  and merges `spark.sql.iceberg.snapshot-property.*` under the writer
+  option's `snapshot-property.*`, applied at every Iceberg commit the session
+  makes: SQL INSERT, `writeTo` append, `saveAsTable` append, COW DELETE /
+  UPDATE / MERGE overwrites, MoR DELETE delete, INSERT OVERWRITE, CTAS, and
+  the identity predicate-DML commits. The session conf is read in Rust from
+  the session config (builder installs the carrier; the statement funnel
+  merges it into the statement options; the router folds it into every write
+  arm); Python forwards the key strings only. An unknown codec refuses before
+  any file is written, naming the codec. Before: both confs silently ignored
+  (measured 2026-09-19: 26 of 30 pins red on the base). After: the pin file is
+  green with two strict xfails (below).
+- **Apache Spark** — the recorded cells in
+  `python/repark/tests/ice_session_write_conf_1_spark_oracle.json` (live
+  PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18, 16 SP + 9 CZ cells): `team=a`
+  stamped on every committed snapshot, two keys at once, empty value stamps
+  `""`, writer option wins over conf wins over table property,
+  `snapshot-property.operation` never overrides `operation`,
+  `rollback_to_snapshot` makes no snapshot, `gzip`/`snappy`/upper-case `GZIP`
+  set every written file's codec including a COW DELETE's rewritten file, and
+  `bogus` fails the write (`Unsupported compression codec: bogus`).
+- **Pin** — `python/repark/tests/test_ice_session_write_conf_1.py` (one pin
+  per cell on the facade SQL / DataFrame doors, v2 and v3 twins; the live tier
+  re-derives the fixture under `REPARK_PARITY_LIVE=1`);
+  `crates/repark-iceberg/src/tests/session_write_conf.rs` (resolver precedence
+  carrier, 11 tests) and `crates/repark-spark/src/tests/session_write_conf.rs`
+  (Spark-door stamping, 4 tests).
+  pins: ice-session-write-conf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: ice-session-write-conf-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  pins: ice-session-write-conf-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
+  pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
+  pins: ice-session-write-conf-1/C-033, C-034
+- **Rationale** — FIXED for the measured doors. One residue stays named here,
+  not pinned as parity: **F-RDF-SESSION-CONF-1 (2026-09-19)** — the fork's
+  `RewriteDataFiles` takes no writer-property / snapshot-property hook, so the
+  `rewrite_data_files` `replace` commit and its output files ignore both
+  confs. `SP-CALL-RDF` and `CZ-CONF-RDF` are strict xfails with that dated
+  reason; the suite reds if the fork ever honours them there. No
+  table-property overlay was added.
+- **Round 1 fix (Q-24c-5, 2026-09-19).** The session-conf reroute first sent
+  option-less plain INSERT through the by-name append, which refused positional
+  `VALUES`. An option-less list-free INSERT now stages positionally
+  (`stage_overwrite_files_with` with an empty column list — empty means
+  positional over all columns, Spark's semantics); the by-name arm stays for
+  the option-carrying form. Pin: `session_team_stamps_plain_insert`.
+
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 
 - **repark** — `.option("write-format", "orc"|"avro")` on any Iceberg write refuses with
