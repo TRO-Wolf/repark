@@ -31,6 +31,20 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   `reset_iceberg_io_stats()` zeroes the set. pins: ice-read-perf-0/C-003
   It builds its table through the registered handle (`catalogs_snapshot().get`) and
   `refresh_catalog_provider`, because repark-core has no SQL door of its own.
+- `metadata_cache_report.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** `iceberg_metadata_cache_report()`
+  carries evictions (three 40 KiB-property tables under `metadataCacheEntries=1`, loads checked
+  for their own property) and the legacy `iceberg_metadata_cache_stats()` triple agrees with it;
+  a disabled cache reports `None` on both; two built sessions hold distinct caches; a source pin
+  reads `session.rs::register_catalog_spec` and requires both AWS builders to receive
+  `&iceberg_caches::caches_of(&self.catalogs)`. pins: ice-catalog-cache-1/C-002, C-004, C-006,
+  C-007
+- `footer_cache_report.rs` — **ICE-FOOTER-CACHE-1 (2026-09-19):** the session door for the footer
+  cache. A default session reports zeroed stats, then after a cold and a warm scan of a
+  memory-catalog table: zero warm data-file footer reads, hits and misses counted, `fetches`
+  equal to the cold scan's footer reads. `footerCacheBytes = 0` reports `None` and re-reads every
+  footer; a bad value on the alias fails `build()` naming both spellings. Two sessions hold
+  distinct caches (`Arc::ptr_eq`) and a second session adopting the first one's warm table still
+  reads footers with zero hits. pins: ice-footer-cache-1/C-001, C-003, C-006, C-007
 - `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
 - `nlj_tight_pool.rs` — **NEVER-OOM-PANIC-1 (2026-09-16):** the tight-pool nested-loop-join
   loop pin. The plan shape is guarded (`NestedLoopJoinExec` in `EXPLAIN`), every iteration

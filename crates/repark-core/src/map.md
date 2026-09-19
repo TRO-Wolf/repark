@@ -59,14 +59,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
   `register_catalog_spec` builds Glue and S3 Tables catalogs through
   `glue_catalog_counted` / `s3tables_catalog_counted` with the session's I/O counters
-  (see `session/map.md`). pins: ice-read-perf-0/C-003 **ICE-WRITE-OPTIONS-1
+  (see `session/map.md`). pins: ice-read-perf-0/C-003 **ICE-CATALOG-CACHE-1 (2026-09-19):**
+  both now receive the whole `CatalogCaches` (`iceberg_caches::caches_of`), so configured and
+  late-configured Glue and S3 Tables catalogs get the session's metadata and manifest caches.
+  pins: ice-catalog-cache-1/C-002 **ICE-WRITE-OPTIONS-1
   round 3 (2026-09-17):** `sql_with_write_options` runs the session dialect's
   `execute_with_write_options` (see `dialect.rs`). **Run 22b rebase (2026-09-18,
   Q-22b-WO-1):** ICE-DYN-OVERWRITE-1's `static_overwrite.rs` (`sql_with_overwrite_flag`,
   `sql_static_overwrite`) is retired; `session/write_options.rs` is the one statement
-  funnel, `sql_with_write_options(query, options, force_static_overwrite)` fills
-  `EngineContext::force_static_overwrite`, and `sql_with` calls it with an empty map and
-  `false`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014
+  funnel. **ICE-OVERWRITE-MODE-1 (2026-09-19):** `sql_with_write_options(query, options,
+  overwrite_intent)` fills `EngineContext::overwrite_intent` (`Session` / `Static` for
+  `saveAsTable` / `Dynamic` for `writeTo.overwritePartitions`), and `sql_with` calls it with an
+  empty map and `Session`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014;
+  ice-overwrite-mode-1/C-007
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the builder folds the
   `spark.sql.iceberg.*` write confs from its config map into the session
   (`with_session_write_conf`), so the funnel's `from_ctx` read answers them. Builder collects
@@ -495,7 +500,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   parse (unknown values refuse with Spark's
   `[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS]` class), the
   `PartitionOverwriteModeConfig` live carrier (`repark.overwrite` prefix, unsettable),
-  plus the build-map installer and the `SessionContext` reader.
+  plus the build-map installer and the `SessionContext` reader. **ICE-OVERWRITE-MODE-1
+  (2026-09-19):** re-exports `repark_iceberg::write::OverwriteIntent` as
+  `repark_core::OverwriteIntent`, so the binding (no `repark-iceberg` edge) names the typed
+  per-write intent. pins: ice-overwrite-mode-1/C-007
   pins: ice-dyn-overwrite-1/C-007, C-010, C-014
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).

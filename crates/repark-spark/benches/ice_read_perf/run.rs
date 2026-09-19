@@ -542,11 +542,11 @@ async fn concurrent_round(
     tally: &RunTally,
     measurements: &mut Measurements,
 ) -> Result<(), BoxError> {
-    let before = report::probe_before(session, tally);
+    let before = report::probe_before(session, tally).await;
     let started = Instant::now();
     let results = futures::future::join_all(chosen.iter().map(|spec| execute(session, spec))).await;
     let wall = started.elapsed();
-    let delta = report::probe_after(session, &before);
+    let delta = report::probe_after(session, &before).await;
     let mut rows = 0;
     for (spec, result) in chosen.iter().zip(results) {
         let timing = result?;
@@ -579,12 +579,12 @@ async fn measured(
     spec: &QuerySpec,
     tally: &RunTally,
 ) -> Result<QueryRecord, BoxError> {
-    let before = report::probe_before(session, tally);
+    let before = report::probe_before(session, tally).await;
     let timing = execute(session, spec).await?;
     Ok(QueryRecord::new(
         spec,
         timing,
-        Some(&report::probe_after(session, &before)),
+        Some(&report::probe_after(session, &before).await),
     ))
 }
 

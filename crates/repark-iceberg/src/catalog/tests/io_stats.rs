@@ -471,13 +471,13 @@ fn the_counting_factory_serializes_over_its_inner_factory() {
 
 #[tokio::test]
 async fn glue_and_s3tables_counted_builders_keep_their_prop_errors() {
-    let counters = Arc::new(IcebergIoCounters::new());
-    let glue = glue_catalog_counted(&HashMap::<String, String>::new(), Arc::clone(&counters))
+    let caches = CatalogCaches::disabled();
+    let glue = glue_catalog_counted(&HashMap::<String, String>::new(), &caches)
         .await
         .unwrap_err()
         .to_string();
     assert!(glue.contains(GLUE_CATALOG_PROP_WAREHOUSE), "got: {glue}");
-    let s3tables = s3tables_catalog_counted(&HashMap::<String, String>::new(), counters)
+    let s3tables = s3tables_catalog_counted(&HashMap::<String, String>::new(), &caches)
         .await
         .unwrap_err()
         .to_string();

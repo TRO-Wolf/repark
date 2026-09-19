@@ -199,6 +199,9 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   far-future reader shapes answered Spark's rows by accident and now refuse loud. They are
   strict xfails citing the cast; the cast unit `CAST-TS-STRING-1` flips them.
   pins: ice-tt-resolve-1/C-013
+  **Closed 2026-09-19 (CAST-TS-STRING-1):** the engine CAST now runs Spark's
+  `stringToTimestamp`, so these strings answer Spark's rows on both entries and the strict
+  xfails are plain pins. pins: cast-ts-string-1/C-009
 
 ### 2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)
 
@@ -469,38 +472,119 @@ perfectly good read.
 
 #### DML-1 — `INSERT OVERWRITE … PARTITION (…)`
 
-- **repark** — **FIXED 2026-08-30 (DML-B).** Identity-field static `PARTITION (k=v, …)` commits
-  through `OverwriteFiles.overwrite_by_row_filter` (sibling partitions stay; nonempty stamps
-  `overwrite`, empty stamps `delete`). Dynamic `PARTITION (k, …)` and
-  `writeTo().overwritePartitions()` commit through `ReplacePartitions` (source partitions
-  only; `replace-partitions=true`). Empty dynamic input refuses loud. The three empty-dynamic
-  surfaces are distinct: Spark SQL default-STATIC empty `PARTITION (k)` wipes the table;
-  Spark `writeTo().overwritePartitions()` empty is a no-op; RePark `PARTITION (k)` empty
-  refuses. Whole-table `INSERT OVERWRITE` (no `PARTITION` clause) is unchanged.
-  Transform-field static `PARTITION (id = 1)` on a bucket table still refuses (PIN O5).
-  Mixed static/dynamic `PARTITION (p1=1, p2)` refuses. ANSI whole-table `INSERT OVERWRITE`
-  stays Q9-omitted; PARTITION forms run on both SQL doors.
-- **Apache Spark** — static `PARTITION (k=v)` is `OverwriteByExpression` (sibling files stay;
-  empty stamps `delete`; Hive injects the partition columns). `writeTo().overwritePartitions()`
-  and `spark.sql.sources.partitionOverwriteMode=dynamic` are `OverwritePartitionsDynamic`
-  (`replace-partitions=true`). Empty `writeTo().overwritePartitions()` is a no-op. Default
-  STATIC empty `INSERT OVERWRITE t PARTITION (k)` (names, no values) wipes the table.
-  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-30.)*
+- **repark** — **FIXED 2026-08-30 (DML-B)** for identity static and dynamic forms;
+  **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1)** for the session-mode reading of the clause,
+  and in its round 2 (same day) for the empty dynamic source, `BY NAME` mixed lists, static
+  values that need a cast, and transform-source keys.
+  The clause follows `spark.sql.sources.partitionOverwriteMode` on both SQL doors. Static
+  mode: static values `PARTITION (k=v, …)` commit through `overwrite_by_row_filter` over
+  those values only (siblings stay; nonempty stamps `overwrite`, empty stamps `delete`), and
+  a clause with no static value — `PARTITION (k)`, `PARTITION (k1, k2)`, `INSERT OVERWRITE
+  TABLE t PARTITION (k)` — replaces the whole table (an empty source wipes it, `delete`).
+  Dynamic mode: every clause commits through `ReplacePartitions` over the source partitions,
+  static values injected (`replace-partitions=true`). Mixed lists `PARTITION (k1='v', k2)`
+  run in both modes: static filters by `k1='v'` (every `k2` under it), dynamic replaces only
+  the source's `(k1, k2)`. A clause key that is not an identity partition column of the table
+  refuses Spark's `[NON_PARTITION_COLUMN] … SQLSTATE: 42000` (an unpartitioned table refuses
+  every key; a `bucket`/`days` source or a transform field name refuses the same way, static
+  or dynamic, before its value is read). An empty source in dynamic mode — `PARTITION (k)`,
+  mixed lists, `writeTo().overwritePartitions()` of an empty frame — commits nothing (table
+  and snapshot list unchanged). `INSERT … PARTITION (k1='v', k2) BY NAME` follows the same
+  plan as the positional form. A static value is cast to the partition source type with the
+  engine's cast (`PARTITION (d = '2024-01-01')` on a `DATE` column); a value that cast
+  rejects refuses with its `Cast error` text. An empty frame through
+  `insertInto(overwrite=True)` commits nothing with `overwrite-mode=dynamic` and wipes the
+  table (`delete`) in static mode. `writeTo().overwritePartitions()` stays dynamic in every
+  mode (typed intent). ANSI whole-table `INSERT OVERWRITE` (no clause) stays
+  Q9-omitted.
+- **Apache Spark** — static mode with a PARTITION clause is `OverwriteByExpression` whose
+  filter holds the static values only (no static value → `true` → the whole table; empty
+  stamps `delete`; Hive injects the static columns). Dynamic mode and
+  `writeTo().overwritePartitions()` are `OverwritePartitionsDynamic`
+  (`replace-partitions=true`). A non-identity or non-partition key refuses
+  `NON_PARTITION_COLUMN`. An empty dynamic `PARTITION (k)` or mixed list commits nothing;
+  a static value is cast to the column type (ANSI: an invalid value raises
+  `CAST_INVALID_INPUT`). An empty frame through `writeTo().overwritePartitions()` (static or
+  dynamic session mode) or `insertInto(overwrite=True)` with `overwrite-mode=dynamic` commits
+  nothing; through `insertInto(overwrite=True)` in static mode it commits a `delete` and
+  empties the table.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-30 and 2026-09-19.)*
 - **Pin** — `crates/repark-spark/src/tests/insert_overwrite.rs::empty_insert_overwrite_partition_drops_only_named_partition`
-  and `crates/repark-spark/src/tests/insert_overwrite.rs::insert_overwrite_partition_nonempty_replaces_only_named_partition`
-  (flipped to partition-scoped success); `crates/repark-spark/src/tests/partition_overwrite.rs`;
+  and `crates/repark-spark/src/tests/insert_overwrite.rs::insert_overwrite_partition_nonempty_replaces_only_named_partition`;
+  `crates/repark-spark/src/tests/partition_overwrite.rs`;
+  `crates/repark-spark/src/tests/overwrite_mode.rs`;
   `crates/repark-sql/src/partition_overwrite.rs`;
+  `crates/repark-iceberg/src/tests/overwrite_scope.rs`;
   `crates/repark-iceberg/src/write/partition_overwrite.rs::commit_rejects_added_file_outside_overwrite_filter`;
   `python/repark/tests/test_dml_b_partition_overwrite.py`;
+  `python/repark/tests/test_ice_overwrite_mode_1.py` (row **ICE-OVERWRITE-MODE-1**);
   `python/repark/tests/test_writer_v2.py::test_write_to_overwrite_partitions_replaces_source_partitions_only`;
-  PIN O5 remains the transform-static refuse.
-- **Rationale** — identity static/dynamic closed. Remaining DECLARED residue: transform-field
-  static assignments; mixed static/dynamic PARTITION lists; Spark default-STATIC
-  `PARTITION (k)` (names) full-table wipe (repark always takes the dynamic path, matching
-  `writeTo` / `partitionOverwriteMode=dynamic`). Empty-dynamic loud refuse is stricter than
-  Spark writeTo no-op and safer than Spark SQL STATIC wipe. `partitionOverwriteMode=dynamic`
-  on a PARTITION-less `INSERT OVERWRITE` moved to rows DML-1B/DML-1C (FIXED 2026-09-17,
-  ICE-DYN-OVERWRITE-1); the residue above is unchanged.
+  PIN O5 (`transform_overwrite.rs::overwrite_partition_clause_on_transform_source_refuses_non_partition_column`)
+  now pins `NON_PARTITION_COLUMN`.
+- **Rationale** — the static-mode `PARTITION (k)` wipe, mixed lists, the empty static
+  source and `NON_PARTITION_COLUMN` closed 2026-09-19 (ICE-OVERWRITE-MODE-1); its round 2
+  (same day, 28 more measured cells) closed the three residues it had named: transform-source
+  keys now refuse `NON_PARTITION_COLUMN` as Spark does (measured on `bucket(4, id)` and
+  `days(ts)`), an empty dynamic source commits nothing, and `BY NAME` mixed lists run. The
+  static-value cast was a fourth refusal the round-2 cells found. Remaining residue on this
+  row: an invalid static value refuses with the engine's Arrow `Cast error` text where Spark
+  raises `CAST_INVALID_INPUT` (both refuse; the text is the engine-wide `CAST` text), and a
+  typed literal (`TIMESTAMP '…'`) on an identity key still refuses. `partitionOverwriteMode=dynamic`
+  on a PARTITION-less `INSERT OVERWRITE` is rows DML-1B/DML-1C.
+
+#### ICE-OVERWRITE-MODE-1 — Spark's overwrite partition set on every overwrite door — **FIXED 2026-09-19**
+
+- **Before** — 24 of 60 measured cells (30 shapes on format v2 and v3) differ from Spark, silent
+  wrong results among them: static-mode `INSERT OVERWRITE [TABLE] t PARTITION (cat)` and
+  `PARTITION (cat, sub)` kept the partitions absent from the source where Spark replaces the
+  whole table (stale rows); `PARTITION (cat)` on an unpartitioned table replaced everything
+  where Spark refuses `NON_PARTITION_COLUMN`; `overwrite-mode=dynamic` on `insertInto` (both
+  the `overwrite=True` and `mode("overwrite")` spellings) replaced the whole table where
+  Spark keeps the untouched partitions (data loss); an empty static `PARTITION (cat)` source
+  and both mixed `PARTITION (cat='x', sub)` modes refused where Spark answers.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18, re-recorded 2026-09-19.)*
+  Round 2 (28 more cells, 14 shapes on v2 and v3, measured 2026-09-19): 14 differed on the
+  round-1 tree — the empty source in dynamic mode (`PARTITION (cat)` and the mixed list)
+  refused `Cannot dynamically overwrite partitions with no data` where Spark commits nothing;
+  `PARTITION (cat = 'x', sub) BY NAME` refused in both modes where Spark answers; and
+  `PARTITION (d = '2024-01-01')` on a `DATE` partition refused where Spark casts and replaces
+  that partition. `PARTITION (id = 1)` on `bucket(4, id)` answered `NotImplemented` and
+  `PARTITION (ts = TIMESTAMP'…')` on `days(ts)` a literal refusal, where Spark refuses
+  `NON_PARTITION_COLUMN` (the class differed; the harness counted them equal).
+  Round 3 (8 more cells, 4 empty-frame shapes on v2 and v3, measured 2026-09-19):
+  `writeTo.overwritePartitions` in static and dynamic session mode and `insertInto(overwrite)`
+  with `overwrite-mode=dynamic` commit nothing; `insertInto(overwrite)` in static mode commits
+  a `delete` and empties the table. All 8 already answered Spark on the round-2 tree. The
+  typed intents rode on the Python writer's flags with no Rust test driving the binding
+  arguments, so dropping a flag passed every Rust filter.
+- **After** — one Rust decision, `repark_iceberg::write::overwrite_scope`, serves the Spark
+  door (SQL, `insertInto`, `saveAsTable`, `writeTo`) and the native door: session
+  `partitionOverwriteMode` × the typed intent (`Static` for `saveAsTable`, `Dynamic` for
+  `writeTo.overwritePartitions`) × the `overwrite-mode` writer option × whether the clause
+  holds static values picks whole table, row filter over the static values, or replace
+  partitions. The facade forwards the writer options unchanged. All 60 cells answer Spark's
+  rows and snapshot summaries except: the two `saveAsTable(overwrite)` shapes (4 cells) match
+  rows but not history — Spark's history there is an RTAS table replace (fresh `overwrite`
+  snapshot, no deleted files), not this row's subject; and the `NON_PARTITION_COLUMN`
+  refusal matches class and message while `getCondition()` answers `None`, as for every
+  engine error. Round 2: all 28 new cells answer Spark (rows, snapshot history, or the
+  `NON_PARTITION_COLUMN` class and condition token); the empty dynamic source commits no
+  snapshot on every door, `BY NAME` mixed lists plan through the same function, static
+  values are cast to the partition source type, and transform-source keys refuse before
+  their value is read. Round 3: all 96 cells answer Spark (the RTAS history aside); the
+  `session_sql_with_write_options` binding is pinned in Rust with each intent flag pair on a
+  real partitioned table in a static and a dynamic session.
+- **Pin** — `python/repark/tests/test_ice_overwrite_mode_1.py` +
+  `ice_overwrite_mode_1_spark_oracle.json` + `_record_ice_overwrite_mode_1_oracle.py` (96
+  cells offline, the live re-derivation under `REPARK_PARITY_LIVE=1`, the RTAS history as a
+  strict xfail); `crates/repark-iceberg/src/tests/overwrite_scope.rs` (decision table);
+  `crates/repark-spark/src/tests/overwrite_mode.rs`; `crates/repark-sql/src/partition_overwrite.rs`;
+  `crates/repark-python/src/tests.rs` (`binding_*`, the intent flags at the PyO3 seam).
+  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-011, C-012, C-013, C-014, C-016, C-017
+- **Rationale** — FIXED 2026-09-19. TRIGGER: none, planner/DML only; no table-format
+  semantics change. Residue is stated on DML-1 (the cast refusal's text, typed literals) and
+  here (RTAS history of `saveAsTable(overwrite)`, engine-wide `getCondition()`).
 
 #### DML-1B — `partitionOverwriteMode=dynamic` on PARTITION-less `INSERT OVERWRITE`
 
@@ -2012,6 +2096,57 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   `transform_literal` and the `Day` / `Month` / `Year` array transforms. RePark takes it
   at this fork repin.
 
+### CAST-TS-STRING-1 — `CAST(<string> AS TIMESTAMP)` follows Spark's `stringToTimestamp` — **FIXED 2026-09-19**
+
+- **repark** — Before (main `e36db95e`): the string → `TIMESTAMP` cast ran Arrow's
+  `Timestamp(ns)` parser, a strict grammar with a 1677–2262 range. 78 of 184 measured cells
+  differed from Spark. With ANSI off it answered NULL for strings Spark converts (`'2020'`,
+  `'2020-06'`, `'2020-6-1'`, `'2020-06-01 10:00'`, `'2020-06-01 1:2:3'`, `'2999-01-01'`,
+  `'9999-12-31 23:59:59.999999'`, `'1582-10-10'`, `' 2020-06-01 '`, `'+2020-06-01'`,
+  `'T10:00'`, `'10:00:00'`, `'2020-06-01 10'`, `'2020-06-01T10'`). In a New York session it read
+  `'… 10:00:00 UTC'` and `'… America/New_York'` in the session zone, a silent wrong instant.
+  With ANSI on it refused the same strings. `TRY_CAST(<string> AS TIMESTAMP)` answered
+  `timestamp[ns]`. Time travel refused `TIMESTAMP AS OF '2999-01-01'` and `timestampAsOf='2020'`.
+  After: one Rust kernel, `repark_functions::spark_string_timestamp`, ports
+  `parseTimestampString`, `getZoneId` and `stringToTimestamp`. It covers the trim set (bytes
+  <= 0x20 and DEL), 4–6 digit signed years, 1–2 digit fields, a fraction truncated to
+  microseconds, and a zone only after the seconds or the fraction. Zones are Java offsets,
+  `UTC` / `GMT` / `UT` prefixes, the 28 short ids and case-sensitive regions. A time-only
+  string takes today's date in its zone. A DST gap shifts forward and an overlap takes the
+  earlier offset. Far-future walls follow the final DST rule (chrono-tz tabulates only to
+  2099), and i64 microsecond overflow is a failure. `CAST` (literal and column), `TRY_CAST`
+  (`timestamp[us, UTC]`, NULL on failure), `Column.cast` / `try_cast`, one-argument
+  `to_timestamp` / `to_timestamp_ltz` / `try_to_timestamp`, typed `TIMESTAMP '…'` literals
+  and time travel (which evaluates `CAST`) all run it. ANSI on raises `[CAST_INVALID_INPUT]`
+  with Spark's message and `'…'` quoting. All 604 recorded cells answer on every leg.
+  Residues (open, not parity): `to_timestamp_ntz` keeps DataFusion's parse (`'2020'`
+  refuses; Spark answers). The date and time extractors (`year('2020')`, `hour(<string>)`, …)
+  still Arrow-cast a string argument, so a Spark-legal short string refuses there (loud;
+  verification critic 2026-09-19, P2). A string leaf inside `CAST(… AS MAP<…, TIMESTAMP>)` keeps Arrow's
+  parse. Rendering an LTZ instant after 2099 in a DST region zone uses standard time:
+  `CAST(CAST('2999-07-01 12:00:00' AS TIMESTAMP) AS STRING)` in New York answers
+  `2999-07-01 11:00:00`, and Java's final rule gives `12:00:00` (inferred from the recorded
+  instant, not recorded as text). The native `repark.sql` door has no LTZ `TIMESTAMP` (its
+  `TIMESTAMP` is the ANSI zoneless type), so no cell runs there.
+- **Apache Spark** — the 604 cells in `python/repark/tests/cast_ts_string_1_spark_oracle.json`:
+  151 strings x `UTC` / `America/New_York` x ANSI off / on, each with the `unix_micros` of
+  `CAST`, `TRY_CAST` and `to_timestamp`, or the error condition and message.
+  *(oracle: live PySpark 4.1.2, 2026-09-19, recorder `python/repark/tests/_record_cast_ts_string_1.py`.)*
+- **Pin** — `python/repark/tests/test_cast_ts_string_1.py` (literal and view-column `CAST` /
+  `TRY_CAST`, `Column.cast` / `try_cast`, `to_timestamp`, the Arrow type, and a live drift
+  check); `crates/repark-functions/src/tests/spark_string_timestamp.rs` and
+  `…/spark_string_timestamp_sql.rs`; the time-travel pins that were strict xfails
+  (`test_ice_tt_resolve_1.py::test_reader_tas_date_past_2262`,
+  `test_ice_tt_resolve_1_tt2.py::test_facade_sql_tt2_short_and_year_only_casts`,
+  `…::test_reader_tt2_timestamp_as_of_nosec`).
+- **Rationale** — FIXED 2026-09-19 (owner direction 2026-09-18: 1:1 parity with Spark). A
+  silent wrong result in a core scalar cast. pins: cast-ts-string-1/C-011
+  **Verification critic (2026-09-19):** a DICTIONARY-encoded string column bypassed the kernel
+  and took Arrow's parse (wrong instant and type, silently); every string predicate now
+  unwraps one dictionary layer, pinned on `CAST`, `TRY_CAST` and `try_to_timestamp`, and a
+  doubled blank between date and time is pinned as Spark's refusal in the kernel.
+  pins: cast-ts-string-1/C-013
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
@@ -3017,7 +3152,10 @@ the pin rather than obeying it.
   `distribution-mode` (`none`/`hash`/`range`), `fanout-enabled`, `check-nullability`,
   and `check-ordering` are accepted with Spark's leniency (any boolean spelling; unknown
   `distribution-mode` refused) while file layout follows the engine default; unknown
-  option keys are ignored. Bad values refuse loud: unknown `write-format` (`Invalid file
+  option keys are ignored. `overwrite-mode` is not ignored: `dynamic` (any case) turns a
+  whole-table overwrite into a dynamic partition overwrite, every other value is ignored,
+  as Iceberg's `SparkWriteBuilder` does (row **ICE-OVERWRITE-MODE-1**, FIXED 2026-09-19;
+  before that fix RePark ignored the key and replaced the whole table). Bad values refuse loud: unknown `write-format` (`Invalid file
   format`), non-numeric `target-file-size-bytes`, unknown codec or level, unknown
   distribution or isolation level, and `compression-level` with an effective gzip codec
   (Spark fails integer gzip levels). The process-once `UserWarning` is gone. The SQL
@@ -6277,7 +6415,7 @@ the pin rather than obeying it.
   (`target_scan_after_add_column_null_fills_the_added_column`,
   `target_scan_after_rename_reads_the_renamed_column_by_field_id`,
   `target_scan_residual_on_a_renamed_key_keeps_the_matching_row`). The
-  `writeTo().overwritePartitions()` cells stay strict `xfail` on EX-W2-4. The RePark cells
+  `writeTo().overwritePartitions()` cells run plainly since EX-W2-4's fix (2026-09-19). The RePark cells
   need the fork pin carrying F-PROMOTE-READ-1 (#285) and F-EVO-SCAN-1 (#289) (stacked on
   `fix/ice-promote-read-1`; local override until that pin bump lands).
 - **Rationale** — FIXED. The DML path is RePark's planner; no Iceberg semantics are patched.
@@ -9377,7 +9515,8 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   catalog, format-v3 table, measured **SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** metadata
   document READS (the analysis' §7.6 totals split into reads and the commit's own write). FIXED
   by a session-scoped cache keyed by metadata-file location, built once per session and handed to
-  every **memory** catalog it builds (`repark.iceberg.metadataCache`, default on;
+  every memory catalog it builds — and, since ICE-CATALOG-CACHE-1 (2026-09-19), every Glue and S3
+  Tables catalog (`repark.iceberg.metadataCache`, default on;
   `repark.iceberg.metadataCacheEntries`, default 512): reads are **0 on every statement that
   reads an existing table**. Three things this row does NOT claim. (1) `CREATE TABLE` and CTAS
   still read 1, with the cache on and off alike — the catalog reads back the document it wrote to
@@ -9385,8 +9524,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   catalog ROUND TRIPS per statement is **unchanged**: measured through the census counter
   (`hits + misses`, cache on) at SELECT 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3 — the same
   numbers as the knob-off read column, because the cache turns those calls into hits rather than
-  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) Glue and S3 Tables are **not wired** and pay exactly what they paid
-  before; that is `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
+  removing them. On Glue each is still a `GetTable`; cutting that is `PERF-CATALOG-LOADS-1`. (3) The read counts above are the memory catalog's; Glue and S3 Tables
+  receive the same session caches since ICE-CATALOG-CACHE-1 but are unmeasured — that is
+  `PERF-CATALOG-AWS-CACHE-1`. Staleness pinned across two doors over one catalog
   (commit visibility, `ADD COLUMNS`, a MERGE after another door's commit, `rewrite_manifests` +
   `expire_snapshots`, DROP + re-CREATE, and a Hadoop pointer adopted by `CALL register_table`).
   Pins: `crates/repark-spark/src/tests/catalog_cache_staleness.rs`,
@@ -9406,30 +9546,48 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   behaviour alone. Implemented and test-green in the fork lane; measured through a temporary,
   never-committed path override as part of the 120.01 → 11.33 ms cell in
   `docs/perf/iceberg-catalog-io-baseline.md` §3.1.
-- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind a
-  fork pin bump. The metadata-location cache reaches the memory catalog only:
-  `MemoryCatalogBuilder::with_table_metadata_cache` exists at fork pin `189a73ed`, but
-  `GlueCatalogBuilder` and `S3TablesCatalogBuilder` have no such method, so `glue_catalog` and
-  `s3tables_catalog` are unchanged and a Glue statement still pays its S3 GET of the metadata
-  document (2 per SELECT, 3–6 per DML, by the census method). Fork trigger **F-CATIO-AWS**: the
-  two AWS builders take an `Option<Arc<TableMetadataCache>>` and route `load_table` through
-  `load_or_fetch_table_metadata`, as `MemoryCatalog` already does. The two acceptance legs
-  (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
-  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) are written and SKIP
-  naming this ask; they un-skip at the bump. No AWS was measured by this unit.
-- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind
-  a fork pin bump. The fork's `TableMetadataCache` is an unbounded `HashMap<String, CachedEntry>`
-  with no eviction of its own; `invalidate` and `clear` are the only ways out, so a session that
-  keeps loading distinct locations grows without limit. RePark's bound is a **high-water clear**:
-  `CatalogCaches::trim` empties the cache when the retained-location count passes
-  `repark.iceberg.metadataCacheEntries`, and the session calls it at the statement door
-  (`sql_with`). Two consequences that are recorded rather than fixed. A trip costs the whole
-  cache, not one entry. And the bound is checked BETWEEN statements, so retention inside one
-  statement is one entry per distinct table it names — measured: eight CREATEs at `entries=1`
-  leave 2 retained, while an 8-way `UNION ALL` at `entries=1` retains 8 until the next door
-  (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
-  Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
-  bounds within a statement by construction and evicts one entry instead of all of them.
+- **PERF-CATALOG-AWS-CACHE-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **Wired,
+  unmeasured (the AWS bench is blocked on an IAM grant)** since 2026-09-19 (ICE-CATALOG-CACHE-1)
+  at fork pin `27e0d5fa`: fork `#311` (ask `F-CATIO-AWS`) gave `GlueCatalogBuilder` and
+  `S3TablesCatalogBuilder` `with_table_metadata_cache`, `with_shared_object_cache_bytes` and
+  `with_cache_credential_context`, and RePark's `glue_catalog_counted` /
+  `s3tables_catalog_counted` hand them the session's `CatalogCaches` through the same
+  `wire_caches` the memory catalog uses, on every production registration path
+  (`register_catalog_spec`). The caches are session-scoped: one metadata cache per session,
+  shared by its catalogs within one credential context (the fork's
+  `CacheScope::credential_context_from_props`, selectors only; with no selector each catalog
+  instance keeps its own scope), and one manifest `ObjectCache` per catalog instance. Pinned
+  offline (`catalog/tests/cache_wiring.rs`, the session caches reach both real builders);
+  expected effect by the census method is 0 S3 GETs of `metadata.json` per statement on an
+  unchanged pointer (it was 2 per SELECT, 3–6 per DML), but no AWS number exists yet. The two
+  acceptance legs (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
+  `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) still SKIP, now naming
+  the blocked AWS measurement (ledger `ice-catalog-cache-1` C-011) instead of the fork. The
+  `GetTable` count per statement is unchanged; that is `PERF-CATALOG-LOADS-1`.
+- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **FIXED
+  2026-09-19 (ICE-CATALOG-CACHE-1)** at fork pin `27e0d5fa` (fork `#311`, ask `F-CATIO-BOUND`).
+  The fork's `TableMetadataCache` is now a moka cache weighed by each entry's metadata-document
+  byte length (`max(body_len, 1)`), and RePark builds it with
+  `TableMetadataCache::with_max_entries(repark.iceberg.metadataCacheEntries)` — the fork's mapping
+  of entries × 64 KiB to a byte budget, so the default `512` is 33,554,432 bytes (32 MiB), half
+  the fork's own 64 MiB default. The budget is bytes, not a count: a one-column table's document
+  weighs about 538 bytes (four such tables measured 2,152 bytes), so for small tables the count
+  bound below binds long before the byte budget, and the byte budget binds first only when the
+  average document passes 64 KiB. **Eviction can now happen inside one statement**: moka evicts
+  single entries by weight when its maintenance runs (driven by cache traffic or an explicit
+  settle), and the fork counts them as `evictions` (advisory: `installed − retained − removed −
+  cleared`; exact once pending tasks run). Pinned: three 40 KiB-property tables under
+  `entries=1` evict and each load still reads its own table
+  (`catalog/tests/cache_wiring.rs::evictions_reach_the_stats_and_never_serve_a_sibling`). The
+  **statement-door high-water clear stays**: `CatalogCaches::trim` settles moka's pending tasks,
+  and when the settled retained-location count passes `metadataCacheEntries` it clears the whole
+  cache (a clear, not an eviction, in the fork's accounting). So small-document tables still
+  retain one entry per distinct table inside a statement that fits the byte budget — an 8-way
+  `UNION ALL` at `entries=1` retains 8 until the next door
+  (`one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its Python
+  twin) — while large documents are evicted mid-statement. The door's own settle is pinned by
+  `the_door_trim_settles_before_it_reads_the_high_water_mark` (red when `trim` reads the unsettled
+  count). Ledger: `task/ledgers/staging/ice-catalog-cache-1-ledger.md` C-006, C-012.
 - **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
   **OPEN — measured 2026-09-16** (corrected 2026-09-17 from the 2026-09-16 rating,
   probe `p_countstar` at `a92a68db`): no fold at the current pin — `EXPLAIN SELECT count(*)`
@@ -9538,8 +9696,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   so DML keeps its commit-side opens — DELETE 4/8 → 3/6, UPDATE 5/15 →
   4/12, MERGE and INSERT unchanged — and only its read-side repeats are saved. That is
   `PERF-CATALOG-COMMIT-CACHE-1`. (2) Glue, S3 Tables and every other non-memory catalog
-  build per-table caches; their builders have no `with_shared_object_cache_bytes` at this
-  pin, so they are unchanged. Staleness pinned per cell on default sessions (MERGE after
+  build per-table caches; their builders had no `with_shared_object_cache_bytes` at this
+  pin, so they were unchanged (since RP-37, fork `27e0d5fa`, ICE-CATALOG-CACHE-1, 2026-09-19,
+  Glue and S3 Tables receive the session's shared manifest and metadata caches — wired,
+  unmeasured on AWS). Staleness pinned per cell on default sessions (MERGE after
   a commit, DROP + re-CREATE, `register_table`, rewrite + expire, time-travel and branch
   reads), the two-door Rust battery green with the cache on (the default), the funnel pin
   on the default session, the four upgrade-lineage tests green on default sessions, and a
@@ -10243,19 +10403,22 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   so the name stays on the example backlog; `createOrReplace` teaches the deliberate full
   rebuild where the engines agree.
 
-### EX-W2-2 — `overwritePartitions` on an empty source refuses where Spark no-ops
+### EX-W2-2 — `overwritePartitions` on an empty source refuses where Spark no-ops — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1 round 2)**
 
-- **repark** — `overwritePartitions()` with a zero-row source raises `AnalysisException`
-  ("Cannot dynamically overwrite partitions with no data...") and leaves the table untouched.
+- **repark** — `overwritePartitions()` with a zero-row source commits nothing and leaves the
+  table and its snapshot list untouched, as Spark does. Before 2026-09-19 it raised
+  `AnalysisException` ("Cannot dynamically overwrite partitions with no data...").
 - **Apache Spark** — dynamic overwrite with an empty source is a no-op: the same table
   seeded `(1,'a'),(2,'b')`, overwritten from partition `a`, then overwritten again from an
   empty source, still answers `[(2,'b'), (9,'a')]`.
   *(oracle: live PySpark 4.1.2 + Iceberg runtime, same engine and fixture as EX-W2-1,
   2026-09-04, EX-22 WriterV2 batch.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-22 measurement. The populated-source
-  arm agrees (the source's partitions are replaced, the others survive) and is the arm the
-  example teaches; the empty-source arm is pinned, not taught.
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_partitions_empty_commits_nothing`;
+  `python/repark/tests/test_ice_overwrite_mode_1.py` cells `OW3-WRITETO-OWP-EMPTY-*` (static
+  and dynamic session mode, measured on Spark 4.1.2 + Iceberg 1.11.0, 2026-09-19).
+- **Rationale** — FIXED 2026-09-19 (row ICE-OVERWRITE-MODE-1, round 2): an empty dynamic
+  stage skips the commit. Filed 2026-09-04 from the EX-22 measurement; the example still
+  teaches the populated-source arm.
 
 ### EX-W2-3 — `option`/`options` with a branch or tag key refuse where Spark silently writes the default branch
 
@@ -10272,7 +10435,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (rows land identically on both engines) is the arm the example teaches; the branch/tag
   refusal is pinned, not taught.
 
-### EX-W2-4 — `overwritePartitions` on an unpartitioned table leaks a ParseException where Spark replaces the table
+### EX-W2-4 — `overwritePartitions` on an unpartitioned table leaks a ParseException where Spark replaces the table — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1)**
 
 - **repark** — `overwritePartitions()` on a table with no partition columns raises
   `ParseException('SQL error: ParserError("Expected: an expression, found: ) at Line: 1,
@@ -10289,10 +10452,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `python/repark/tests/test_ice_evo_dml_1.py::test_dataframe_door_matches_spark[grid/*/insert_overwrite]`,
   which hold Spark's recorded `writeTo(t).overwritePartitions()` answer on unpartitioned evolved
   tables and flip red when the fix lands.
-- **Rationale** — OPEN, filed 2026-09-04 from the EX-22 round-2 review. Not a disclosed
-  refusal: repark's own generated SQL fails to parse. Follow-up `WRITERV2-OVERWRITE-UNPART-1`
-  is the fix unit; the pin codifies today's behavior, and that unit updates the pin rather
-  than obeys it.
+- **Rationale** — **FIXED 2026-09-19** by ICE-OVERWRITE-MODE-1: `overwritePartitions()` now
+  sends `INSERT OVERWRITE t (cols) SELECT …` with the dynamic intent and no `PARTITION`
+  clause, and Rust replaces the partitions the frame's rows land in — the whole table when the
+  table is unpartitioned. The example pin now asserts Spark's `[(5, 'z')]`
+  (`test_writerv2_overwrite_partitions_unpartitioned_replaces_the_table`), and the 16
+  `test_ice_evo_dml_1.py` cells run plainly against Spark's recorded answers. Filed
+  2026-09-04 from the EX-22 round-2 review (repark's own generated SQL failed to parse).
+  pins: ice-overwrite-mode-1/C-018
 
 ### FNP9-ARRAYS-ZIP-NAMES-1 — `arrays_zip` names its struct fields by position, never after the column
 
@@ -12077,7 +12244,7 @@ field NAME.
   "unreachable by SQL" described RePark's parser; Spark reaches it.
   pins: ice-v3-write-default-1/C-015, C-020
 
-### ICE-V3-WRITE-DEFAULT-1-MIX-PARTITION — mixed static + dynamic `PARTITION (k1 = v, k2)` refuses where Spark overwrites — **OPEN 2026-09-18**
+### ICE-V3-WRITE-DEFAULT-1-MIX-PARTITION — mixed static + dynamic `PARTITION (k1 = v, k2)` refuses where Spark overwrites — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1)**
 
 - **repark** — `INSERT OVERWRITE t PARTITION (id = 1, cat) …` on a table partitioned
   by `(id, cat)` refuses loud on the Spark door with `cannot mix static assignments
@@ -12093,13 +12260,11 @@ field NAME.
   2026-09-17, orchestrator probe `probe_wd2.py`; cells
   `MIX_static_dynamic_positional` and `MIX_static_dynamic_named_list_omits_default`
   copied into `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`.)*
-- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_refuses`
-  asserts RePark's loud refusal and unchanged rows beside both recorded Spark
-  cells; it flips red when the mixed arm lands.
-- **Rationale** — OPEN, filed 2026-09-18 (ruling Q-21b-10): a loud refusal, never a
-  silent wrong answer, and out of the write-default unit's scope — implementing a
-  mixed static/dynamic arm (static-mode replacement of every matching partition plus
-  by-name fill) belongs to its own unit.
+- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_mixed_static_dynamic_partition_matches_spark`
+  answers both recorded Spark cells on `(id, cat, payload)` (RePark cannot create the
+  probe's `c` write-default, so `c` stays out of the compare).
+- **Rationale** — FIXED 2026-09-19 by ICE-OVERWRITE-MODE-1 (mixed lists run in both modes;
+  `BY NAME` in its round 2). Filed OPEN 2026-09-18 (ruling Q-21b-10) as a loud refusal.
   pins: ice-v3-write-default-1/C-022
 
 ### ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE — `saveAsTable(mode="overwrite")` is `INSERT OVERWRITE` by name, Spark replaces the table — **DECLARED 2026-09-17**

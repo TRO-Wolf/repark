@@ -28,7 +28,7 @@ pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
 #[cfg(test)]
 pub(crate) use crate::idents::reject_path_escape_segment;
 use crate::{
-    engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
+    OverwriteIntent, engine_err, iceberg_err, json_read_options_from_map, object_store_s3,
     parse_table_identifier_segments, resolve_s3_region_override,
 };
 
@@ -401,7 +401,7 @@ impl ReparkSession {
     /// # Errors
     /// Identical classification to [`Self::sql`]: every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
-        self.sql_with_write_options_inner(dialect, query, &HashMap::new(), false)
+        self.sql_with_write_options_inner(dialect, query, &HashMap::new(), OverwriteIntent::Session)
             .await
     }
 
@@ -493,7 +493,7 @@ impl ReparkSession {
             CatalogKind::Glue => {
                 let catalog = repark_iceberg::catalog::glue_catalog_counted(
                     &spec.props,
-                    self.iceberg_io_counters(),
+                    &iceberg_caches::caches_of(&self.catalogs),
                 )
                 .await
                 .map_err(engine_err)?;
@@ -502,7 +502,7 @@ impl ReparkSession {
             CatalogKind::S3Tables => {
                 let catalog = repark_iceberg::catalog::s3tables_catalog_counted(
                     &spec.props,
-                    self.iceberg_io_counters(),
+                    &iceberg_caches::caches_of(&self.catalogs),
                 )
                 .await
                 .map_err(engine_err)?;

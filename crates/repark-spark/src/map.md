@@ -107,6 +107,18 @@ pins: rp-4-fork-repin/C-005, C-006
   **Round 3 (2026-09-17):** the mode decision is one function,
   `overwrite_is_dynamic(ctx, force_static_overwrite)`, called here and by
   `insert_by_name.rs` — no second conf read.
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** the flag is gone; `overwrite_is_dynamic(ctx,
+  options)` and `execute_partition_overwrite` both read
+  `StatementWriteOptions::overwrite_mode(ctx)` (session mode, the typed
+  `overwrite_intent`, the `overwrite-mode` writer option) and ask
+  `repark_iceberg::write::plan_overwrite` for the scope. `PARTITION (…)` now answers
+  Spark in both modes: static mode with no static value replaces the whole table
+  (`commit_overwrite_replace_all_with_summary`; an empty source wipes, zero-record staged
+  files dropped), static values filter by row (`overwrite_by_row_filter`), dynamic mode
+  replaces the source partitions with the static values injected (mixed lists stage
+  through `stage_static_partition_overwrite_files_with`). Pins:
+  [tests/overwrite_mode.rs](tests/overwrite_mode.rs).
+  pins: ice-overwrite-mode-1/C-002, C-003, C-004, C-005, C-006, C-007
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `execute_append_with_options` (option-carrying
   plain INSERT stages on the owned path with the merged summary); the overwrite
   family threads `StatementWriteOptions` through staging (option-free arms keep the
@@ -177,6 +189,10 @@ pins: rp-4-fork-repin/C-005, C-006
   refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`
   (matching plus projection live in `plan_name_projection`).
   pins: ice-rtas-byname-1/C-007, C-008, C-009, C-010
+  **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):** the mixed-list refusal in
+  `static_partition_columns` is gone — `PARTITION (k='v', k2) BY NAME` projects the
+  non-static columns by name and delegates to `execute_partition_overwrite`, so it follows
+  the same plan as the positional form in both modes. pins: ice-overwrite-mode-1/C-012
   **ICE-DYN-OVERWRITE-1 round 3 (2026-09-17):** `execute_insert_by_name` takes the
   router's `force_static_overwrite` and asks `insert_overwrite::overwrite_is_dynamic`
   once. A non-empty PARTITION-less `BY NAME` overwrite passes that answer into
@@ -194,7 +210,10 @@ pins: rp-4-fork-repin/C-005, C-006
   no-code-comments ruling.
   pins: ice-v3-write-default-1/C-007
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the static flag is read from
-  `write_options.force_static_overwrite`. Only the static empty-projection wipe refuses a non-empty map
+  `write_options.force_static_overwrite` (ICE-OVERWRITE-MODE-1, 2026-09-19: now
+  `overwrite_is_dynamic(ctx, write_options)`; `static_partition_columns` validates the clause
+  through `validated_static_equalities` and keeps refusing a mixed `BY NAME` list).
+  Only the static empty-projection wipe refuses a non-empty map
   (it commits through `wipe_by_name_target` without a summary); the dynamic empty case
   commits nothing, and the non-empty dynamic case honours the map through
   `insert_overwrite_from_staged_source`.
@@ -218,6 +237,11 @@ pins: rp-4-fork-repin/C-005, C-006
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** `StatementWriteOptions` also merges
   the live session write conf (session codec plus snapshot properties), which the
   router folds into every Iceberg write arm.
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** the flag becomes `overwrite_intent`
+  (`OverwriteIntent::Session` / `Static` / `Dynamic`), and the `overwrite-mode` key
+  (lower-cased like every key) sets `overwrite_mode_dynamic` when its value is `dynamic` in
+  any case — Iceberg's `SparkWriteConf` reading; other values are ignored like Spark.
+  `overwrite_mode(ctx)` assembles the decision input. pins: ice-overwrite-mode-1/C-006
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
@@ -629,6 +653,8 @@ pins: rp-4-fork-repin/C-005, C-006
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
   `execute_with_write_options` copies `cx.force_static_overwrite` onto the validated
   options (ICE-WRITE-OPTIONS-1 run 22b, 2026-09-18). pins: ice-write-options-1/C-014
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** it copies `cx.overwrite_intent`; `execute` routes a
+  non-`Session` intent through `execute_with_statement_options`. pins: ice-overwrite-mode-1/C-007
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
   `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,

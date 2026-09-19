@@ -2,7 +2,10 @@ use std::sync::{Arc, PoisonError, RwLock};
 
 use iceberg::Catalog;
 use repark_common::Result;
-use repark_iceberg::catalog::{CatalogCaches, IcebergIoCounters, IcebergIoStats};
+use repark_iceberg::catalog::{
+    CatalogCaches, IcebergIoCounters, IcebergIoStats, ParquetFooterCacheStats,
+    TableMetadataCacheStats,
+};
 
 use crate::catalog_state::CatalogRegistry;
 use crate::engine_err;
@@ -27,8 +30,12 @@ impl ReparkSession {
         caches_of(&self.catalogs).io_counters()
     }
 
-    pub(crate) fn trim_iceberg_caches(&self) {
-        caches_of(&self.catalogs).trim();
+    pub(crate) async fn trim_iceberg_caches(&self) {
+        caches_of(&self.catalogs).trim().await;
+    }
+
+    pub async fn settle_iceberg_metadata_cache(&self) {
+        caches_of(&self.catalogs).settle().await;
     }
 
     #[must_use]
@@ -41,6 +48,16 @@ impl ReparkSession {
         caches_of(&self.catalogs)
             .metadata_stats()
             .map(|stats| (stats.hits, stats.misses, stats.body_fetches))
+    }
+
+    #[must_use]
+    pub fn iceberg_metadata_cache_report(&self) -> Option<TableMetadataCacheStats> {
+        caches_of(&self.catalogs).metadata_stats()
+    }
+
+    #[must_use]
+    pub fn iceberg_footer_cache_stats(&self) -> Option<ParquetFooterCacheStats> {
+        caches_of(&self.catalogs).footer_stats()
     }
 
     #[must_use]

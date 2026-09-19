@@ -9,6 +9,7 @@ use iceberg::{Catalog, NamespaceIdent};
 
 // === incremental catalog provider PERF-07 hook API (invalidate / rebuild).
 mod builders;
+mod cache_wiring;
 mod caches;
 mod catalog_ops;
 mod counting_storage;
@@ -28,7 +29,8 @@ pub use builders::{
     memory_catalog_cached, s3tables_catalog, s3tables_catalog_counted,
 };
 pub use caches::{
-    CatalogCaches, DEFAULT_MANIFEST_CACHE_BYTES, DEFAULT_METADATA_CACHE_ENTRIES,
+    CatalogCaches, DEFAULT_FOOTER_CACHE_BYTES, DEFAULT_MANIFEST_CACHE_BYTES,
+    DEFAULT_METADATA_CACHE_ENTRIES, FOOTER_CACHE_BYTES_KEY, FOOTER_CACHE_BYTES_KEY_ALT,
     IcebergCacheSettings, MANIFEST_CACHE_BYTES_KEY, MANIFEST_CACHE_BYTES_KEY_ALT,
     METADATA_CACHE_ENTRIES_KEY, METADATA_CACHE_ENTRIES_KEY_ALT, METADATA_CACHE_KEY,
     METADATA_CACHE_KEY_ALT,
@@ -39,6 +41,8 @@ pub use counting_storage::{
     S3TABLES_DEFAULT_CONFIGURED_SCHEME, glue_default_storage_factory,
     s3tables_default_storage_factory,
 };
+pub use iceberg::TableMetadataCacheStats;
+pub use iceberg::arrow::ParquetFooterCacheStats;
 pub use io_stats::{
     IcebergFileClass, IcebergIoCount, IcebergIoCounters, IcebergIoOp, IcebergIoStats,
     PARQUET_TAIL_MAGIC, PUFFIN_TAIL_MAGIC, classify_iceberg_path, ranged_read_op,

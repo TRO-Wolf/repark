@@ -75,7 +75,7 @@ illustrative. A claim with no verified basis does not go in.
   and the keys users actually set — `spark.sql.pyspark.inferNestedDictAsStruct.enabled` (FA-4),
   `spark.sql.session.timeZone` (TZ-2 / TZ-3), `spark.sql.ansi.enabled`, target partitions, batch
   size, the one-truth memory pool, the Iceberg catalog caches (`metadataCache` /
-  `metadataCacheEntries` / `manifestCacheBytes`, all build-time, memory-catalog-only),
+  `metadataCacheEntries` / `manifestCacheBytes` / `footerCacheBytes`, all build-time and session-scoped, reaching memory, Glue and S3 Tables catalogs since ICE-CATALOG-CACHE-1; the entry knob's 64 KiB-per-entry byte budget),
   the four `repark.display.*` keys (polars default, `max_rows` / `max_cols` / `str_len`;
   DISPLAY-POLARS-1 step 5, 2026-09-09 — every transcript executed; pins: display-polars-1/C-006).
   DISPLAY-LAZY-1 step 2 (2026-09-10): the `repr` paragraph states the R-22 schema-only

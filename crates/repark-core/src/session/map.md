@@ -17,13 +17,15 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
-- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
+- `write_options.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits
+  `trim_iceberg_caches()`, which settles the moka cache before it counts. pins: ice-catalog-cache-1/C-012
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
   its crate-private body, the session's one statement funnel (spill SET intercept, cache
   trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase
-  (2026-09-18, Q-22b-WO-1):** it takes `force_static_overwrite` and fills
-  `EngineContext::force_static_overwrite`, replacing ICE-DYN-OVERWRITE-1's
-  `static_overwrite.rs` body; `ReparkSession::sql_with` passes an empty map and `false`.
-  pins: ice-write-options-1/C-014
+  (2026-09-18, Q-22b-WO-1):** it replaced ICE-DYN-OVERWRITE-1's `static_overwrite.rs` body.
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** it takes an `OverwriteIntent` and fills
+  `EngineContext::overwrite_intent`; `ReparkSession::sql_with` passes an empty map and
+  `Session`. pins: ice-write-options-1/C-014; ice-overwrite-mode-1/C-007
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.
@@ -113,6 +115,20 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   as the memory catalog. A catalog passed to `register_iceberg_catalog` counts only if its
   builder was given these counters. pins: ice-read-perf-0/C-003
   pins: perf-ice-catalog-io-1/C-002, C-003, C-004
+  **ICE-CATALOG-CACHE-1 (2026-09-19):** `register_catalog_spec` hands the whole `CatalogCaches`
+  to the Glue and S3 Tables builders, so they now carry the session's metadata and manifest
+  caches too. `iceberg_metadata_cache_report()` returns the fork's `TableMetadataCacheStats`
+  (hits, misses, body fetches, evictions); `iceberg_metadata_cache_stats()` keeps its
+  `(hits, misses, body_fetches)` signature for the Python census binding.
+  pins: ice-catalog-cache-1/C-002, C-007
+  `trim_iceberg_caches` is async and `settle_iceberg_metadata_cache()` is public (the census
+  binding and the bench call it before reading counts). pins: ice-catalog-cache-1/C-012
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** `iceberg_footer_cache_stats()` returns the fork's
+  `ParquetFooterCacheStats` (hits, misses, fetches, upgrades, evictions) of the session's one
+  footer cache, `None` when `repark.iceberg.footerCacheBytes = 0`. The cache reaches every
+  catalog this session builds through the same `CatalogCaches`, so no registration path changed.
+  Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
+  there is no settle step before reading. pins: ice-footer-cache-1/C-006, C-007
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.

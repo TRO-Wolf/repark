@@ -591,7 +591,7 @@ def _cell_rows(shape: str) -> list[tuple[Any, ...]]:
 
 
 def test_dynamic_partition_named_list_fills_write_default() -> None:
-    """Dynamic PARTITION with a named column list fills the omitted defaulted column."""
+    """Static-mode PARTITION (k) with a named column list replaces the table like Spark."""
     session = _session("ice-v3-write-default-1-ow-dyn")
     try:
         with _materialize():
@@ -599,16 +599,16 @@ def test_dynamic_partition_named_list_fills_write_default() -> None:
             session.sql(
                 f"INSERT OVERWRITE {_CATALOG}.{_NAMESPACE}.pdflt PARTITION (id) (name) VALUES ('x')"
             ).collect()
-            assert _rows(session, _CATALOG, "pdflt") == _expect("pdflt", [(None, "x", 5)])
-            _cell_contains("ow_dynamic_partition_named_list_short", (None, "x", 5))
+            assert _rows(session, _CATALOG, "pdflt") == _cell_rows(
+                "ow_dynamic_partition_named_list_short"
+            )
             session.sql(
                 f"INSERT OVERWRITE {_CATALOG}.{_NAMESPACE}.pdflt PARTITION (id) (id, name)"
                 " SELECT 10, 'x'"
             ).collect()
-            assert _rows(session, _CATALOG, "pdflt") == _expect(
-                "pdflt", [(None, "x", 5), (10, "x", 5)]
+            assert _rows(session, _CATALOG, "pdflt") == _cell_rows(
+                "ow_dynamic_partition_named_list_full"
             )
-            _cell_contains("ow_dynamic_partition_named_list_full", (10, "x", 5))
     finally:
         session.stop()
 
@@ -827,10 +827,8 @@ def test_default_outside_the_insert_list_refuses() -> None:
         session.stop()
 
 
-def test_mixed_static_dynamic_partition_refuses() -> None:
-    """Mixed static and dynamic PARTITION keys refuse loud; Spark accepts (OPEN, Q-21b-10)."""
-    from repark.errors import AnalysisException
-
+def test_mixed_static_dynamic_partition_matches_spark() -> None:
+    """Mixed static and dynamic PARTITION keys answer Spark's recorded rows (Q-21b-10)."""
     table = f"{_CATALOG}.{_NAMESPACE}.p2"
     session = _session("ice-v3-write-default-1-mix")
     try:
@@ -842,7 +840,6 @@ def test_mixed_static_dynamic_partition_refuses() -> None:
             f"INSERT INTO {table} VALUES"
             " (1, 'east', 'e', 5), (1, 'west', 'w', 5), (2, 'west', 'w2', 5)"
         ).collect()
-        before = _rows(session, _CATALOG, "p2")
         shapes = {
             "MIX_static_dynamic_positional": (
                 f"INSERT OVERWRITE {table} PARTITION (id=1, cat) SELECT 'west', 'p', 9"
@@ -860,8 +857,8 @@ def test_mixed_static_dynamic_partition_refuses() -> None:
             (2, "west", "q", 5),
         ]
         for shape, sql in shapes.items():
-            with pytest.raises(AnalysisException, match="cannot mix static assignments"):
-                session.sql(sql).collect()
-            assert _rows(session, _CATALOG, "p2") == before, shape
+            session.sql(sql).collect()
+            got = [row[:3] for row in _rows(session, _CATALOG, "p2")]
+            assert got == [row[:3] for row in _cell_rows(shape)], shape
     finally:
         session.stop()

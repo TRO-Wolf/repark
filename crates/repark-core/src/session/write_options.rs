@@ -28,10 +28,10 @@ impl ReparkSession {
         &self,
         query: &str,
         options: &HashMap<String, String>,
-        force_static_overwrite: bool,
+        overwrite_intent: crate::OverwriteIntent,
     ) -> Result<DataFrame> {
         let dialect = Arc::clone(&self.dialect);
-        self.sql_with_write_options_inner(&dialect, query, options, force_static_overwrite)
+        self.sql_with_write_options_inner(&dialect, query, options, overwrite_intent)
             .await
     }
 
@@ -40,12 +40,12 @@ impl ReparkSession {
         dialect: &Arc<dyn SqlDialect>,
         query: &str,
         options: &HashMap<String, String>,
-        force_static_overwrite: bool,
+        overwrite_intent: crate::OverwriteIntent,
     ) -> Result<DataFrame> {
         if let Some(frame) = super::spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);
         }
-        self.trim_iceberg_caches();
+        self.trim_iceberg_caches().await;
         let catalogs = self.catalogs_snapshot();
         let read_only = self.postgres_catalog_names_snapshot();
         let mut cx = EngineContext::new_with_time_zone(
@@ -54,7 +54,7 @@ impl ReparkSession {
             &read_only,
             self.session_time_zone().as_ref().clone(),
         );
-        cx.force_static_overwrite = force_static_overwrite;
+        cx.overwrite_intent = overwrite_intent;
         dialect
             .execute_with_write_options(cx, query, options)
             .await

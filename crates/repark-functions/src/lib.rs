@@ -61,6 +61,7 @@ pub mod spark_sequence;
 pub mod spark_session_window;
 pub mod spark_split;
 pub mod spark_split_part;
+mod spark_string_timestamp;
 pub mod spark_time_window;
 pub mod spark_window_time;
 pub mod spark_year_pad;
@@ -74,6 +75,10 @@ pub mod timestamp_type;
 pub mod try_invert;
 pub mod url;
 pub mod validate;
+
+#[cfg(test)]
+mod tests;
+
 pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
 pub use registration::analyzer_rules;
 

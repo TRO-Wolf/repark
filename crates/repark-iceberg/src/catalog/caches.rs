@@ -3,6 +3,7 @@ use std::hash::BuildHasher;
 use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
+use iceberg::arrow::{ParquetFooterCache, ParquetFooterCacheStats};
 use iceberg::{TableMetadataCache, TableMetadataCacheStats};
 
 use crate::catalog::io_stats::{IcebergIoCounters, IcebergIoStats};
@@ -23,11 +24,18 @@ pub const MANIFEST_CACHE_BYTES_KEY_ALT: &str = "repark.iceberg.manifest_cache_by
 
 pub const DEFAULT_MANIFEST_CACHE_BYTES: u64 = 33_554_432;
 
+pub const FOOTER_CACHE_BYTES_KEY: &str = "repark.iceberg.footerCacheBytes";
+
+pub const FOOTER_CACHE_BYTES_KEY_ALT: &str = "repark.iceberg.footer_cache_bytes";
+
+pub const DEFAULT_FOOTER_CACHE_BYTES: u64 = 67_108_864;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IcebergCacheSettings {
     pub metadata_cache: bool,
     pub metadata_cache_entries: usize,
     pub manifest_cache_bytes: u64,
+    pub footer_cache_bytes: u64,
 }
 
 impl Default for IcebergCacheSettings {
@@ -36,6 +44,7 @@ impl Default for IcebergCacheSettings {
             metadata_cache: true,
             metadata_cache_entries: DEFAULT_METADATA_CACHE_ENTRIES,
             manifest_cache_bytes: DEFAULT_MANIFEST_CACHE_BYTES,
+            footer_cache_bytes: DEFAULT_FOOTER_CACHE_BYTES,
         }
     }
 }
@@ -61,6 +70,10 @@ impl IcebergCacheSettings {
             MANIFEST_CACHE_BYTES_KEY_ALT,
         ) {
             settings.manifest_cache_bytes = parse_bytes(raw, key, MANIFEST_CACHE_BYTES_KEY)?;
+        }
+        if let Some((raw, key)) = lookup(config, FOOTER_CACHE_BYTES_KEY, FOOTER_CACHE_BYTES_KEY_ALT)
+        {
+            settings.footer_cache_bytes = parse_bytes(raw, key, FOOTER_CACHE_BYTES_KEY)?;
         }
         Ok(settings)
     }
@@ -121,11 +134,16 @@ fn parse_bytes(raw: &str, key: &str, canonical: &str) -> Result<u64> {
     })
 }
 
+fn metadata_cache_for(entries: usize) -> TableMetadataCache {
+    TableMetadataCache::with_max_entries(u64::try_from(entries).unwrap_or(u64::MAX))
+}
+
 #[derive(Debug, Clone)]
 pub struct CatalogCaches {
     metadata: Option<Arc<TableMetadataCache>>,
     metadata_entries: usize,
     manifest_bytes: u64,
+    footer: Option<Arc<ParquetFooterCache>>,
     io_counters: Arc<IcebergIoCounters>,
 }
 
@@ -141,9 +159,14 @@ impl CatalogCaches {
         Self {
             metadata: settings
                 .metadata_cache
-                .then(|| Arc::new(TableMetadataCache::new())),
+                .then(|| Arc::new(metadata_cache_for(settings.metadata_cache_entries))),
             metadata_entries: settings.metadata_cache_entries,
             manifest_bytes: settings.manifest_cache_bytes,
+            footer: (settings.footer_cache_bytes > 0).then(|| {
+                Arc::new(ParquetFooterCache::with_max_bytes(
+                    settings.footer_cache_bytes,
+                ))
+            }),
             io_counters: Arc::new(IcebergIoCounters::new()),
         }
     }
@@ -153,6 +176,7 @@ impl CatalogCaches {
         Self::new(IcebergCacheSettings {
             metadata_cache: false,
             manifest_cache_bytes: 0,
+            footer_cache_bytes: 0,
             ..IcebergCacheSettings::default()
         })
     }
@@ -165,6 +189,16 @@ impl CatalogCaches {
     #[must_use]
     pub fn manifest_cache_bytes(&self) -> u64 {
         self.manifest_bytes
+    }
+
+    #[must_use]
+    pub fn footer_cache(&self) -> Option<Arc<ParquetFooterCache>> {
+        self.footer.clone()
+    }
+
+    #[must_use]
+    pub fn footer_stats(&self) -> Option<ParquetFooterCacheStats> {
+        self.footer.as_ref().map(|cache| cache.stats())
     }
 
     #[must_use]
@@ -191,11 +225,23 @@ impl CatalogCaches {
         self.io_counters.reset();
     }
 
-    pub fn trim(&self) {
-        if let Some(cache) = self.metadata.as_ref()
-            && cache.len() > self.metadata_entries
+    pub async fn settle(&self) {
+        if let Some(cache) = self.metadata.as_ref() {
+            cache.run_pending_tasks().await;
+        }
+    }
+
+    pub async fn settled_metadata_len(&self) -> usize {
+        self.settle().await;
+        self.metadata_len()
+    }
+
+    pub async fn trim(&self) {
+        if self.settled_metadata_len().await > self.metadata_entries
+            && let Some(cache) = self.metadata.as_ref()
         {
             cache.clear();
+            cache.run_pending_tasks().await;
         }
     }
 }
@@ -261,5 +307,66 @@ mod tests {
                 .to_string();
         assert!(error.contains(MANIFEST_CACHE_BYTES_KEY_ALT), "got: {error}");
         assert!(error.contains(MANIFEST_CACHE_BYTES_KEY), "got: {error}");
+    }
+
+    #[test]
+    fn the_footer_cache_defaults_to_64_mib_and_is_on() {
+        let settings = IcebergCacheSettings::from_config_map(&HashMap::new()).unwrap();
+        assert_eq!(settings.footer_cache_bytes, 67_108_864);
+        assert_eq!(DEFAULT_FOOTER_CACHE_BYTES, 67_108_864);
+        let caches = CatalogCaches::new(settings);
+        assert!(caches.footer_cache().is_some());
+        assert_eq!(
+            caches.footer_stats(),
+            Some(ParquetFooterCacheStats::default())
+        );
+    }
+
+    #[test]
+    fn both_footer_spellings_size_the_cache() {
+        for key in [FOOTER_CACHE_BYTES_KEY, FOOTER_CACHE_BYTES_KEY_ALT] {
+            let settings =
+                IcebergCacheSettings::from_config_map(&config_of(key, " 1048576 ")).unwrap();
+            assert_eq!(settings.footer_cache_bytes, 1_048_576, "{key}");
+            assert!(
+                CatalogCaches::new(settings).footer_cache().is_some(),
+                "{key}"
+            );
+        }
+    }
+
+    #[test]
+    fn zero_disables_the_footer_cache() {
+        let settings =
+            IcebergCacheSettings::from_config_map(&config_of(FOOTER_CACHE_BYTES_KEY, "0")).unwrap();
+        assert_eq!(settings.footer_cache_bytes, 0);
+        let caches = CatalogCaches::new(settings);
+        assert!(caches.footer_cache().is_none());
+        assert_eq!(caches.footer_stats(), None);
+        assert!(CatalogCaches::disabled().footer_cache().is_none());
+    }
+
+    #[test]
+    fn a_bad_footer_value_fails_loud_naming_the_key() {
+        for value in ["many", "-1", "", "64MiB", "1.5"] {
+            let error =
+                IcebergCacheSettings::from_config_map(&config_of(FOOTER_CACHE_BYTES_KEY, value))
+                    .unwrap_err()
+                    .to_string();
+            assert!(error.contains(FOOTER_CACHE_BYTES_KEY), "got: {error}");
+        }
+        let error =
+            IcebergCacheSettings::from_config_map(&config_of(FOOTER_CACHE_BYTES_KEY_ALT, "many"))
+                .unwrap_err()
+                .to_string();
+        assert!(error.contains(FOOTER_CACHE_BYTES_KEY_ALT), "got: {error}");
+        assert!(error.contains(FOOTER_CACHE_BYTES_KEY), "got: {error}");
+    }
+
+    #[test]
+    fn two_catalog_caches_never_share_a_footer_cache() {
+        let one = CatalogCaches::default().footer_cache().unwrap();
+        let two = CatalogCaches::default().footer_cache().unwrap();
+        assert!(!Arc::ptr_eq(&one, &two));
     }
 }

@@ -420,7 +420,9 @@ pub async fn commit_replace_partitions_with_summary(
     summary_extra: &[(String, String)],
     isolation_override: Option<&str>,
 ) -> Result<Table> {
-    crate::write::partition_overwrite::refuse_empty_dynamic_overwrite(&staged_files)?;
+    if crate::write::overwrite_scope::replace_partitions_is_noop(&staged_files) {
+        return Ok(table.clone());
+    }
     let isolation = isolation_with_override(table, isolation_override)?;
     let engine = EngineSummary::for_overwrite(table, &staged_files, branch);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;

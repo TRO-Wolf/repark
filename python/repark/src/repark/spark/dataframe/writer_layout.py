@@ -54,6 +54,7 @@ def run_through_temp_view(
     options: dict[str, str] | None,
     prefix: str,
     static_overwrite: bool = False,
+    dynamic_overwrite: bool = False,
 ) -> None:
     """Register a temp view, run the built write SQL with options, drop the view."""
     dataframe._ensure_alive()
@@ -62,10 +63,17 @@ def run_through_temp_view(
     session.create_or_replace_temp_view(view_name, dataframe._native_for_registration())
     try:
         _native.session_sql_with_write_options(
-            session, build_sql(view_name), options or {}, static_overwrite
+            session, build_sql(view_name), options or {}, static_overwrite, dynamic_overwrite
         )
     finally:
         session.drop_temp_view(view_name)
+
+
+def run_overwrite_partitions(writer: DataFrameWriterV2, build_sql: Callable[[str], str]) -> None:
+    """Run ``writeTo(t).overwritePartitions()`` SQL as a dynamic overwrite in every session mode."""
+    run_through_temp_view(
+        writer._dataframe, build_sql, writer._options, "_repark_writer_v2_", dynamic_overwrite=True
+    )
 
 
 def store_writer_option(options: dict[str, str], key: object, value: object) -> None:
@@ -380,18 +388,3 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
         if target.exists():
             target = destination_path / f"part-append-{uuid.uuid4().hex[:12]}{item.suffix}"
         shutil.move(str(item), str(target))
-
-
-def _dynamic_partition_sql(dataframe: DataFrame, table_ref: str) -> str:
-    """Return `` PARTITION (a, b)`` from ``{table}.partitions``, or `` PARTITION ()``."""
-    from repark.spark._idents import quote_ident
-    from repark.spark.dataframe.core import DataFrame
-    from repark.spark.types import StructType
-
-    native = dataframe._session.sql(f"SELECT * FROM {table_ref}.partitions LIMIT 0")
-    schema = DataFrame(native, dataframe._session, dataframe._alive_token).schema
-    dtype = schema["partition"].dataType if "partition" in schema.names else None
-    names = list(dtype.names) if isinstance(dtype, StructType) else []
-    if not names:
-        return " PARTITION ()"
-    return " PARTITION (" + ", ".join(quote_ident(name) for name in names) + ")"

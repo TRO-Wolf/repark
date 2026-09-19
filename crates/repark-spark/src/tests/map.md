@@ -380,7 +380,26 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
   sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,
   Hive too-many-columns refuse, empty-dynamic guard;
-  pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005),
+  pins: dml-b-insert-overwrite/C-001, C-002, C-004, C-005;
+  ICE-OVERWRITE-MODE-1 (2026-09-19): the dynamic replace and the empty-dynamic guard now
+  run under `setup_dynamic` — in the default static mode `PARTITION (k)` replaces the whole
+  table like Spark),
+  `overwrite_mode` also pins the TIMESTAMP string static-value refusal (verification critic,
+  2026-09-19). pins: ice-overwrite-mode-1/C-019
+  `overwrite_mode` (ICE-OVERWRITE-MODE-1, 2026-09-19: static-mode `PARTITION (k)` and
+  `INSERT OVERWRITE TABLE … PARTITION (k)` replace the whole table and an empty source wipes
+  it (`delete`), the mixed `PARTITION (k='v', k2)` list filters by the static value in static
+  mode and replaces the source partitions in dynamic mode, `NON_PARTITION_COLUMN` on an
+  unpartitioned table leaves every row, the `overwrite-mode` writer option (`dynamic` in any
+  key or value case turns a whole-table overwrite dynamic; `static`, `bogus` and
+  `partitionOverwriteMode` do not; static values and the static `saveAsTable` intent win),
+  and the typed dynamic intent of `writeTo.overwritePartitions` in static session mode;
+  pins: ice-overwrite-mode-1/C-002, C-003, C-004, C-005, C-006, C-007; round 2: the mixed
+  list also runs `BY NAME`, an empty mixed source commits nothing in dynamic mode and deletes
+  `k='v'` in static mode, and `PARTITION (d = '2024-01-01')` casts to a `DATE` partition
+  while `'2024-13-45'` refuses with the cast text; `partition_overwrite`'s empty dynamic
+  `PARTITION (id)` now commits nothing; `transform_overwrite`'s PIN O5 now asserts
+  `NON_PARTITION_COLUMN`; pins: ice-overwrite-mode-1/C-011, C-012, C-013, C-014),
   `dyn_by_name_overwrite` (ICE-DYN-OVERWRITE-1 round 3: `BY NAME` and column-list
   overwrites under dynamic keep siblings with `replace-partitions=true`, `BY NAME` with an
   empty source commits no snapshot under dynamic (partitioned and unpartitioned) and
@@ -725,6 +744,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   | `a_tiny_byte_budget_still_answers_across_many_tables` | C-005 |
 
   pins: perf-ice-catalog-io-2/C-002, C-004, C-005
+- `catalog_cache_staleness.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** every retained-entry read
+  is `settled_metadata_len().await` and every `trim` is awaited. Under fork PR #311's moka cache an
+  unsettled `metadata_len()` lags (three pins — the sibling-table guard, the one-statement
+  retention and the many-commit bound — failed at the pin commit `ab4e57d6` itself, before this
+  unit). pins: ice-catalog-cache-1/C-012
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** the two literal `IcebergCacheSettings` name the new
+  `footer_cache_bytes` field at its default; the 16 pins pass unchanged.
 - `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-3 (2026-09-05):** the default-ON flip.
   The funnel pin `a_second_door_reads_manifests_from_the_cache_the_first_door_filled` now
   builds `CatalogCaches::default()` instead of sizing 32 MiB explicitly — it is the

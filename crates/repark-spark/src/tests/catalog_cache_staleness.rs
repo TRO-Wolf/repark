@@ -1,7 +1,8 @@
 use super::super::*;
 use super::common::*;
 use repark_iceberg::catalog::{
-    CatalogCaches, DEFAULT_MANIFEST_CACHE_BYTES, IcebergCacheSettings, MANIFEST_CACHE_BYTES_KEY,
+    CatalogCaches, DEFAULT_FOOTER_CACHE_BYTES, DEFAULT_MANIFEST_CACHE_BYTES, IcebergCacheSettings,
+    MANIFEST_CACHE_BYTES_KEY,
 };
 
 async fn shared_catalog(wh: &TempDir, caches: &CatalogCaches) -> (Arc<dyn Catalog>, String) {
@@ -306,7 +307,7 @@ async fn a_table_is_never_served_a_sibling_tables_cached_metadata() {
         vec![40, 50, 60, 70, 80]
     );
     assert!(
-        caches.metadata_len() >= 2,
+        caches.settled_metadata_len().await >= 2,
         "both tables must be cached for this pin to mean anything"
     );
 }
@@ -325,10 +326,10 @@ async fn an_unchanged_pointer_costs_no_metadata_body_fetch() {
     run(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await;
 
     let before = caches.metadata_stats().expect("cache on").body_fetches;
-    let retained = caches.metadata_len();
-    caches.trim();
+    let retained = caches.settled_metadata_len().await;
+    caches.trim().await;
     run(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await;
-    caches.trim();
+    caches.trim().await;
     run(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await;
     let after = caches.metadata_stats().expect("cache on").body_fetches;
 
@@ -337,7 +338,7 @@ async fn an_unchanged_pointer_costs_no_metadata_body_fetch() {
         "two repeated reads on an unmoved pointer must read no metadata document"
     );
     assert_eq!(
-        caches.metadata_len(),
+        caches.settled_metadata_len().await,
         retained,
         "a trim under the bound must keep every entry: it is a high-water clear, not a per-statement flush"
     );
@@ -357,7 +358,7 @@ async fn a_commit_keys_a_new_location_and_seeds_it_rather_than_re_reading() {
     run(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await;
 
     let fetches_before = caches.metadata_stats().expect("cache on").body_fetches;
-    let keys_before = caches.metadata_len();
+    let keys_before = caches.settled_metadata_len().await;
     run(&ctx, &catalogs, "INSERT INTO ice.sales.t VALUES (4, 'd')").await;
 
     assert_eq!(
@@ -366,7 +367,7 @@ async fn a_commit_keys_a_new_location_and_seeds_it_rather_than_re_reading() {
         "the read after the commit must serve the committed snapshot"
     );
     assert_eq!(
-        caches.metadata_len(),
+        caches.settled_metadata_len().await,
         keys_before,
         "a commit evicts the pointer it replaced and keys the new one: retention is flat"
     );
@@ -390,7 +391,7 @@ async fn the_disabled_knob_reads_the_metadata_document_on_every_load() {
     .await;
 
     assert!(caches.metadata_stats().is_none());
-    assert_eq!(caches.metadata_len(), 0);
+    assert_eq!(caches.settled_metadata_len().await, 0);
     assert_eq!(
         ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![1, 2, 3]
@@ -404,6 +405,7 @@ async fn one_statement_over_many_tables_retains_one_entry_each_until_the_next_do
         metadata_cache: true,
         metadata_cache_entries: 1,
         manifest_cache_bytes: DEFAULT_MANIFEST_CACHE_BYTES,
+        footer_cache_bytes: DEFAULT_FOOTER_CACHE_BYTES,
     });
     let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
     for index in 0..8 {
@@ -413,7 +415,7 @@ async fn one_statement_over_many_tables_retains_one_entry_each_until_the_next_do
             &format!("CREATE TABLE ice.sales.t{index} AS SELECT * FROM src"),
         )
         .await;
-        caches.trim();
+        caches.trim().await;
     }
 
     let union = (0..8)
@@ -426,13 +428,13 @@ async fn one_statement_over_many_tables_retains_one_entry_each_until_the_next_do
     );
 
     assert_eq!(
-        caches.metadata_len(),
+        caches.settled_metadata_len().await,
         8,
         "the bound is a statement-door clear: one statement over N tables retains N"
     );
-    caches.trim();
+    caches.trim().await;
     assert!(
-        caches.metadata_len() <= 1,
+        caches.settled_metadata_len().await <= 1,
         "the next door brings it back under the bound"
     );
     assert_eq!(
@@ -672,6 +674,7 @@ async fn the_retained_location_bound_holds_across_many_commits() {
         metadata_cache: true,
         metadata_cache_entries: 4,
         manifest_cache_bytes: DEFAULT_MANIFEST_CACHE_BYTES,
+        footer_cache_bytes: DEFAULT_FOOTER_CACHE_BYTES,
     });
     let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
     run(
@@ -688,11 +691,11 @@ async fn the_retained_location_bound_holds_across_many_commits() {
             &format!("CREATE TABLE ice.sales.t{index} AS SELECT * FROM src"),
         )
         .await;
-        caches.trim();
+        caches.trim().await;
         assert!(
-            caches.metadata_len() <= 5,
+            caches.settled_metadata_len().await <= 5,
             "retained locations {} exceeded the bound",
-            caches.metadata_len()
+            caches.settled_metadata_len().await
         );
     }
 

@@ -56,6 +56,10 @@ impl Door {
 }
 
 async fn door_with_schema() -> Door {
+    door_with_mode(repark_core::PartitionOverwriteMode::Static).await
+}
+
+async fn door_with_mode(mode: repark_core::PartitionOverwriteMode) -> Door {
     let warehouse_dir = TempDir::new().expect("warehouse");
     let warehouse = warehouse_dir
         .path()
@@ -65,7 +69,10 @@ async fn door_with_schema() -> Door {
     let catalog: Arc<dyn Catalog> = repark_iceberg::catalog::memory_catalog(&warehouse)
         .await
         .expect("memory catalog");
-    let ctx = SessionContext::new_with_config(SessionConfig::new().with_information_schema(true));
+    let ctx = SessionContext::new_with_config(repark_core::with_partition_overwrite_mode(
+        SessionConfig::new().with_information_schema(true),
+        mode,
+    ));
     repark_iceberg::catalog::register_iceberg_catalog(&ctx, "ice", Arc::clone(&catalog))
         .await
         .expect("register");
@@ -198,7 +205,7 @@ async fn empty_static_partition_overwrite_stamps_delete() {
 /// pins: dml-b-insert-overwrite/C-002
 #[tokio::test]
 async fn dynamic_partition_overwrite_keeps_absent_partitions() {
-    let door = door_with_schema().await;
+    let door = door_with_mode(repark_core::PartitionOverwriteMode::Dynamic).await;
     door.ok(
         "CREATE TABLE ice.sales.t WITH (partitioning = ARRAY['id']) AS \
          SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name \
@@ -234,19 +241,28 @@ async fn dynamic_partition_overwrite_keeps_absent_partitions() {
 
 /// pins: dml-b-insert-overwrite/C-002, C-004
 #[tokio::test]
-async fn empty_dynamic_partition_overwrite_refuses() {
-    let door = door_with_schema().await;
+async fn empty_dynamic_partition_overwrite_commits_nothing() {
+    let door = door_with_mode(repark_core::PartitionOverwriteMode::Dynamic).await;
     door.ok(
         "CREATE TABLE ice.sales.t WITH (partitioning = ARRAY['id']) AS \
          SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name",
     )
     .await;
-    let error = door
-        .err("INSERT OVERWRITE ice.sales.t PARTITION (id) SELECT * FROM ice.sales.t WHERE false")
+    let before = door
+        .table("sales", "t")
+        .await
+        .metadata()
+        .snapshots()
+        .count();
+    door.ok("INSERT OVERWRITE ice.sales.t PARTITION (id) SELECT * FROM ice.sales.t WHERE false")
         .await;
-    assert!(
-        error.contains(repark_iceberg::write::EMPTY_DYNAMIC_OVERWRITE_NEEDLE),
-        "{error}"
+    assert_eq!(
+        door.table("sales", "t")
+            .await
+            .metadata()
+            .snapshots()
+            .count(),
+        before
     );
     let batches = door
         .ok("SELECT id, name FROM ice.sales.t ORDER BY id")
@@ -401,4 +417,90 @@ async fn static_null_partition_overwrite_keeps_siblings() {
             (Some(2), "b".into()),
         ]
     );
+}
+
+#[tokio::test]
+async fn static_mode_partition_clause_without_values_replaces_the_whole_table() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.t WITH (partitioning = ARRAY['id']) AS \
+         SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    door.ok("INSERT OVERWRITE ice.sales.t PARTITION (id) SELECT 1 AS id, 'z' AS name")
+        .await;
+    let batches = door
+        .ok("SELECT id, name FROM ice.sales.t ORDER BY id")
+        .await;
+    assert_eq!(id_name(&batches), vec![(1, "z".into())]);
+    door.ok("INSERT OVERWRITE ice.sales.t PARTITION (id) SELECT * FROM ice.sales.t WHERE false")
+        .await;
+    let batches = door
+        .ok("SELECT id, name FROM ice.sales.t ORDER BY id")
+        .await;
+    assert!(id_name(&batches).is_empty());
+    let snapshot = door
+        .table("sales", "t")
+        .await
+        .metadata()
+        .current_snapshot()
+        .expect("snapshot")
+        .clone();
+    assert_eq!(snapshot.summary().operation, Operation::Delete);
+}
+
+#[tokio::test]
+async fn mixed_partition_keys_follow_the_session_mode() {
+    for (mode, want) in [
+        (
+            repark_core::PartitionOverwriteMode::Static,
+            vec![
+                (1, "west".into(), "z".into()),
+                (2, "west".into(), "c".into()),
+            ],
+        ),
+        (
+            repark_core::PartitionOverwriteMode::Dynamic,
+            vec![
+                (1, "east".into(), "b".into()),
+                (1, "west".into(), "z".into()),
+                (2, "west".into(), "c".into()),
+            ],
+        ),
+    ] {
+        let door = door_with_mode(mode).await;
+        door.ok(
+            "CREATE TABLE ice.sales.two WITH (partitioning = ARRAY['id', 'cat']) AS \
+             SELECT 1 AS id, 'west' AS cat, 'a' AS payload \
+             UNION ALL SELECT 1, 'east', 'b' UNION ALL SELECT 2, 'west', 'c'",
+        )
+        .await;
+        door.ok("INSERT OVERWRITE ice.sales.two PARTITION (id = 1, cat) SELECT 'west', 'z'")
+            .await;
+        let batches = door
+            .ok("SELECT id, cat, payload FROM ice.sales.two ORDER BY id, cat")
+            .await;
+        assert_eq!(id_cat_payload(&batches), want, "{mode:?}");
+    }
+}
+
+#[tokio::test]
+async fn partition_clause_on_an_unpartitioned_table_refuses_non_partition_column() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.t AS SELECT 1 AS id, 'a' AS name")
+        .await;
+    let error = door
+        .err("INSERT OVERWRITE ice.sales.t PARTITION (name) SELECT 2 AS id, 'b' AS name")
+        .await;
+    assert!(
+        error.contains(
+            "[NON_PARTITION_COLUMN] PARTITION clause cannot contain the non-partition column: \
+             `name`. SQLSTATE: 42000"
+        ),
+        "{error}"
+    );
+    let batches = door
+        .ok("SELECT id, name FROM ice.sales.t ORDER BY id")
+        .await;
+    assert_eq!(id_name(&batches), vec![(1, "a".into())]);
 }

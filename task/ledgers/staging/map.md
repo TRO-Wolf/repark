@@ -4,6 +4,19 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-overwrite-mode-1-ledger.md](ice-overwrite-mode-1-ledger.md) —
+  **ICE-OVERWRITE-MODE-1 (2026-09-19), in flight:** Spark's overwrite partition set on
+  every overwrite door (IPI-03) — one Rust decision over the session
+  `partitionOverwriteMode`, the typed `saveAsTable` / `overwritePartitions` intent and the
+  `overwrite-mode` writer option; static-mode `PARTITION (k)` replaces the whole table,
+  mixed lists run, `NON_PARTITION_COLUMN` refuses; 60-cell recorded oracle plus red-first
+  pins. Round 2 (same day): 88 cells; an empty dynamic source commits nothing, `BY NAME`
+  mixed lists run, static values are cast to the partition type, transform-source keys
+  refuse `NON_PARTITION_COLUMN`. Round 3 (same day): 96 cells with the 8 empty-frame
+  `writeTo` / `insertInto` cells, and the typed intent flags pinned at the PyO3 binding.
+  `risk_tier: standard`. Branch `fix/ice-overwrite-mode-1`.
+  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015, C-016, C-017
 - [range-tvf-id-1-ledger.md](range-tvf-id-1-ledger.md) —
   **RANGE-TVF-ID-1 (2026-09-18), in flight:** the `range(...)` table function
   names its column `id` like Spark 4.1.2 on both SQL doors — a RePark-owned
@@ -222,6 +235,22 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/array-null-1`.
   pins: array-null-1/C-001, C-002, C-003, C-004, C-005, L-1, L-2, L-3, L-5, L-6,
   L-7, L-8, L-9, L-10, L-11, L-12, L-13, P2-1, P3-1
+- [ice-catalog-cache-1-ledger.md](ice-catalog-cache-1-ledger.md) —
+  **ICE-CATALOG-CACHE-1 (2026-09-19), in flight:** the session's Iceberg metadata and manifest
+  caches reach the Glue and S3 Tables builders (fork PR #311's handles); the credential-context
+  scope ruling (the fork's public selector derivation, else per instance); evictions surfaced
+  through `iceberg_metadata_cache_report` and the bench. The before/after pair is
+  `TBD-orchestrator`. `risk_tier: standard`. Branch `perf/ice-catalog-cache-1`.
+  pins: ice-catalog-cache-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012
+- [ice-footer-cache-1-ledger.md](ice-footer-cache-1-ledger.md) —
+  **ICE-FOOTER-CACHE-1 (2026-09-19), in flight:** the session owns one Parquet footer cache
+  (fork PR #316's `ParquetFooterCache`), sized by `repark.iceberg.footerCacheBytes` (default
+  64 MiB, `0` disables) and handed to the memory, Glue and S3 Tables builders by `wire_caches`;
+  `iceberg_footer_cache_stats()` and the bench report its counters. The before/after pair is
+  `TBD-orchestrator`. `risk_tier: standard`. Branch `perf/ice-footer-cache-1`.
+  pins: ice-footer-cache-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - [ice-read-perf-0-ledger.md](ice-read-perf-0-ledger.md) —
   **ICE-READ-PERF-0 (2026-09-19), in flight:** the Iceberg I/O counting layer (a counting
   `StorageFactory` whose counters the session owns; Glue and S3 Tables wrap exactly the fork
@@ -230,6 +259,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   complete. `risk_tier: standard`. Branch `perf/ice-read-perf-0`.
   pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010
+- [cast-ts-string-1-ledger.md](cast-ts-string-1-ledger.md) —
+  **CAST-TS-STRING-1 (2026-09-19), in flight:** `CAST(<string> AS TIMESTAMP)` follows Spark
+  4.1.2's `stringToTimestamp` on every door — one Rust kernel
+  (`repark_functions::spark_string_timestamp`) behind `CAST`, `TRY_CAST`, `Column.cast`,
+  one-argument `to_timestamp` and time travel; a 604-cell recorded oracle plus red-first pins;
+  ICE-TT-RESOLVE-1's cast-gap strict xfails flipped. `risk_tier: standard`. Branch
+  `fix/cast-ts-string-1`.
+  pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012
 - [cast-map-spell-1-ledger.md](cast-map-spell-1-ledger.md) —
   **CAST-MAP-SPELL-1 (2026-09-19), in flight:** `CAST(… AS MAP<…>)` and
   `.cast(MapType)` answer Spark 4.1.2 on every door — a cast-UDF plus token-rewrite
@@ -512,6 +550,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-38-fork-pin-ledger.md](rp-38-fork-pin-ledger.md) —
+  **RP-38-FORK-PIN (2026-09-19):** the fork pin moves to `f3bdd598` (#316 shared Parquet footer
+  cache, with ICE-FOOTER-CACHE-1 in the same PR; #313 metrics config and #315 transform types for
+  run 24c). `risk_tier: standard`. Branch `chore/rp-38`.
+- [rp-37-fork-pin-ledger.md](rp-37-fork-pin-ledger.md) —
+  **RP-37-FORK-PIN (2026-09-19):** the fork pin moves to `27e0d5fa` (#309 metadata-only DELETE
+  decision API, #311 catalog cache handles for Glue and S3 Tables, default off); no RePark answer
+  changes. `risk_tier: standard`. Branch `chore/rp-37`.
 - [rp-36-fork-pin-ledger.md](rp-36-fork-pin-ledger.md) —
   **RP-36-FORK-PIN (2026-09-19):** the fork pin moves to `fa77fb2b` (#312 timezone-bearing
   timestamp filters reach the scan, #310 page-index row selection on); the ICE-READ-PERF-0 Q3

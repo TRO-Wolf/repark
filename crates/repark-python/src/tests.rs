@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::*;
 use pyo3::exceptions::PyRuntimeError;
 use repark_core::Error;
@@ -142,4 +144,172 @@ fn allocator_mimalloc_is_off_unless_the_feature_is_enabled() {
 #[test]
 fn allocator_mimalloc_feature_compiles_the_global_allocator_module() {
     const { assert!(cfg!(feature = "allocator-mimalloc")) };
+}
+
+fn table_rows(session: &PyReparkSession, table: &str) -> Vec<String> {
+    let query = format!("SELECT id, data, cat FROM {table} ORDER BY id");
+    let batches = session.runtime.block_on(async {
+        let frame = session.session.sql(&query).await.expect("read query");
+        frame.collect().await.expect("read the table back")
+    });
+    let mut rows = Vec::new();
+    for batch in &batches {
+        for row in 0..batch.num_rows() {
+            let cells: Vec<String> = batch
+                .columns()
+                .iter()
+                .map(|column| {
+                    arrow::util::display::array_value_to_string(column, row).expect("render cell")
+                })
+                .collect();
+            rows.push(cells.join(","));
+        }
+    }
+    rows
+}
+
+fn overwrite_through_the_binding(
+    session_mode: &str,
+    force_static_overwrite: bool,
+    force_dynamic_overwrite: bool,
+) -> Vec<String> {
+    overwrite_spec_through_the_binding(
+        session_mode,
+        "PARTITIONED BY (cat)",
+        "INSERT OVERWRITE sc.ns.t PARTITION (cat) SELECT 9, 'z', 'x'",
+        force_static_overwrite,
+        force_dynamic_overwrite,
+    )
+}
+
+fn overwrite_spec_through_the_binding(
+    session_mode: &str,
+    spec: &str,
+    statement: &str,
+    force_static_overwrite: bool,
+    force_dynamic_overwrite: bool,
+) -> Vec<String> {
+    let warehouse = std::env::temp_dir().join(format!(
+        "repark-py-intent-{}-{session_mode}-{force_static_overwrite}-{force_dynamic_overwrite}-{}",
+        std::process::id(),
+        spec.len() + statement.len()
+    ));
+    let config = HashMap::from([(
+        "spark.sql.sources.partitionOverwriteMode".to_string(),
+        session_mode.to_string(),
+    )]);
+    let rows = Python::attach(|py| {
+        let session = Py::new(
+            py,
+            PyReparkSession::new(py, None, None, None, Some(config), None).expect("session"),
+        )
+        .expect("session object");
+        let session_ref = session.borrow(py);
+        session_ref
+            .register_memory_catalog(py, "sc", &warehouse.to_string_lossy())
+            .expect("memory catalog");
+        for statement in [
+            "CREATE NAMESPACE sc.ns",
+            &format!(
+                "CREATE TABLE sc.ns.t (id BIGINT, data STRING, cat STRING) USING iceberg {spec}"
+            ),
+            "INSERT INTO sc.ns.t VALUES (1, 'a', 'x'), (2, 'b', 'y'), (3, 'c', 'x')",
+        ] {
+            session_ref.sql(py, statement).expect("seed statement");
+        }
+        drop(session_ref);
+        crate::session_write_options::session_sql_with_write_options(
+            py,
+            session.borrow(py),
+            statement,
+            HashMap::new(),
+            force_static_overwrite,
+            force_dynamic_overwrite,
+        )
+        .expect("overwrite through the binding");
+        table_rows(&session.borrow(py), "sc.ns.t")
+    });
+    let _ = std::fs::remove_dir_all(&warehouse);
+    rows
+}
+
+#[test]
+fn binding_dynamic_intent_keeps_the_untouched_partition_in_a_static_session() {
+    assert_eq!(
+        overwrite_through_the_binding("static", false, true),
+        ["2,b,y", "9,z,x"]
+    );
+}
+
+#[test]
+fn binding_static_intent_replaces_the_table_in_either_session_mode() {
+    assert_eq!(
+        overwrite_through_the_binding("static", true, false),
+        ["9,z,x"]
+    );
+    assert_eq!(
+        overwrite_through_the_binding("dynamic", true, false),
+        ["9,z,x"]
+    );
+}
+
+#[test]
+fn binding_session_intent_follows_the_session_mode() {
+    assert_eq!(
+        overwrite_through_the_binding("static", false, false),
+        ["9,z,x"]
+    );
+    assert_eq!(
+        overwrite_through_the_binding("dynamic", false, false),
+        ["2,b,y", "9,z,x"]
+    );
+}
+
+#[test]
+fn binding_dynamic_intent_without_a_clause_replaces_the_staged_partitions_of_a_transform_spec() {
+    let statement = "INSERT OVERWRITE sc.ns.t (id, data, cat) SELECT 9, 'z', 'x'";
+    for session_mode in ["static", "dynamic"] {
+        assert_eq!(
+            overwrite_spec_through_the_binding(
+                session_mode,
+                "PARTITIONED BY (cat, bucket(1, id))",
+                statement,
+                false,
+                true
+            ),
+            ["2,b,y", "9,z,x"]
+        );
+        assert_eq!(
+            overwrite_spec_through_the_binding(
+                session_mode,
+                "PARTITIONED BY (bucket(1, id))",
+                statement,
+                false,
+                true
+            ),
+            ["9,z,x"]
+        );
+    }
+}
+
+#[test]
+fn binding_refuses_both_intent_flags() {
+    Python::attach(|py| {
+        let session = Py::new(
+            py,
+            PyReparkSession::new(py, None, None, None, None, None).expect("session"),
+        )
+        .expect("session object");
+        let refusal = crate::session_write_options::session_sql_with_write_options(
+            py,
+            session.borrow(py),
+            "SELECT 1",
+            HashMap::new(),
+            true,
+            true,
+        )
+        .err()
+        .expect("both flags refuse");
+        assert!(refusal.is_instance_of::<pyo3::exceptions::PyValueError>(py));
+    });
 }

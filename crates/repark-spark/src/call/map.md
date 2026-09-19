@@ -126,6 +126,11 @@ and measured-parity contract would grow `call.rs` beyond its exact
   **FNP-4B (2026-09-15):** the local `quote_ident` emits backticks (embedded doubled);
   fixed engine-internal names in the metadata reads stay bare. pins: fnp-4b/C-002
   (slice-3: needless raw-string-hash lint only, no behavior change).
+- `rewrite_data_files.rs` / `run_maintenance_apply.rs` — **ICE-FOOTER-CACHE-1 (2026-09-19):**
+  both calls to `run_rewrite` are behind `Box::pin`. At fork PR #316's pin the fork `Table` the
+  future holds across its awaits carries a footer-cache field, and the two futures reached
+  clippy's 16 KiB `large_futures` bound; boxing is behaviour-neutral (the rewrite pins pass
+  unchanged).
 - `run_maintenance_apply.rs` — **MAINT-POLICY-1 step 3 (2026-09-10):** the apply path. Each
   planned step runs through the same procedure body the CALL door dispatches to (built
   `CallArgs`, no SQL-text re-entry): position-delete, manifests, expire and orphan steps

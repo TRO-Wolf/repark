@@ -28,6 +28,9 @@ Source comments are condensed to API and safety contracts; executable behavior i
   [catalog/map.md](catalog/map.md).
   pins: perf-ice-catalog-io-1/C-002
   pins: perf-ice-catalog-io-2/C-001, C-002
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** a fourth knob, `repark.iceberg.footerCacheBytes` (default
+  64 MiB, `0` disables), sizes one session-owned `ParquetFooterCache` that every catalog builder
+  receives. pins: ice-footer-cache-1/C-001, C-002
 - `write/` — MERGE INTO / identity DELETE+UPDATE (`predicate_dml`) / append / overwrite /
   partition overwrite (DML-B) / ALTER /
   snapshot refs over the owned fork. Named-ref commits use `commit_target` / `to_branch`.

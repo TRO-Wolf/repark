@@ -15,10 +15,24 @@ impl SqlDialect for SparkDialect {
         cx: EngineContext<'_>,
         query: &str,
     ) -> datafusion::error::Result<DataFrame> {
-        if cx.force_static_overwrite {
-            crate::execute_static_overwrite(cx.ctx, cx.catalogs, query, cx.read_only).await
-        } else {
-            crate::execute_with_read_only(cx.ctx, cx.catalogs, query, cx.read_only).await
+        match cx.overwrite_intent {
+            repark_iceberg::write::OverwriteIntent::Session => {
+                crate::execute_with_read_only(cx.ctx, cx.catalogs, query, cx.read_only).await
+            }
+            intent => {
+                let write_options = crate::write_options::StatementWriteOptions {
+                    overwrite_intent: intent,
+                    ..crate::write_options::StatementWriteOptions::empty()
+                };
+                crate::execute_with_statement_options(
+                    cx.ctx,
+                    cx.catalogs,
+                    query,
+                    cx.read_only,
+                    &write_options,
+                )
+                .await
+            }
         }
     }
 
@@ -34,7 +48,7 @@ impl SqlDialect for SparkDialect {
             .collect();
         pairs.sort();
         let mut write_options = crate::write_options::StatementWriteOptions::validate(pairs)?;
-        write_options.force_static_overwrite = cx.force_static_overwrite;
+        write_options.overwrite_intent = cx.overwrite_intent;
         crate::execute_with_statement_options(
             cx.ctx,
             cx.catalogs,

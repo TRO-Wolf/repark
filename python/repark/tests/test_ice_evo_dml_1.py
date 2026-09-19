@@ -35,25 +35,12 @@ _ANSWERS = {answer["id"]: answer for answer in _TRUTH["answers"]}
 _TABLE_CASES = [case for case in _CASES if case["group"] not in {"adopted", "lineage_read"}]
 _LINEAGE_CASES = [case for case in _CASES if case["group"] == "lineage_read"]
 _DATAFRAME_CASES = [case for case in _TABLE_CASES if case["steps"][0]["dataframe"] is not None]
-_EX_W2_4 = (
-    "EX-W2-4 (OPEN, fix unit WRITERV2-OVERWRITE-UNPART-1): overwritePartitions() on an "
-    "unpartitioned table renders PARTITION () and leaks a ParseException"
-)
 _ERROR_TYPES = {
     "AnalysisException": AnalysisException,
     "ParseException": ParseException,
     "UnsupportedOperationException": UnsupportedOperationException,
 }
-_DATAFRAME_PARAMS = [
-    pytest.param(
-        case,
-        id=case["id"],
-        marks=pytest.mark.xfail(strict=True, raises=ParseException, reason=_EX_W2_4)
-        if "overwrite_partitions" in case["steps"][0]["dataframe"]
-        else (),
-    )
-    for case in _DATAFRAME_CASES
-]
+_DATAFRAME_PARAMS = [pytest.param(case, id=case["id"]) for case in _DATAFRAME_CASES]
 _ADOPTED_DOORS = [
     (case, door)
     for case in _CASES

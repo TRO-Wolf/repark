@@ -83,7 +83,10 @@ column, which no cache can touch: the count of round trips per statement is the 
 calls. Measured through the census counter (`hits + misses` per statement, cache on): **SELECT 2,
 SELECT-with-filter 2, INSERT 4, DELETE 5, UPDATE 6, MERGE 3** — the same numbers as the knob-off
 metadata-read column above, which is exactly the point. The AWS legs of
-`python/repark/tests/test_perf_ice_catalog_io_1.py` are written and SKIP naming `F-CATIO-AWS`.
+`python/repark/tests/test_perf_ice_catalog_io_1.py` are written and SKIP. **Update 2026-09-19
+(ICE-CATALOG-CACHE-1):** `F-CATIO-AWS` shipped as fork `#311` (pin `27e0d5fa`) and RePark wires
+the session caches into Glue and S3 Tables — wired, unmeasured (the AWS bench is blocked on an IAM
+grant), so the table above is still the pre-wiring AWS shape and the legs now SKIP naming that.
 The wall-clock evidence for Glue latency stays the recorded suite walls in
 [../tier2-aws.md](../tier2-aws.md); this unit measures no AWS.
 
@@ -132,9 +135,10 @@ Cargo.lock` is empty). They were implemented in the fork lane
   and both objects are immutable at their path — a `rewrite_manifests` or `expire_snapshots`
   writes NEW paths, and a deleted path is never asked for again. It is already bounded: moka
   weighted eviction, default 32 MiB, sized here by the catalog builder.
-- **`F-CATIO-AWS` — the Glue and S3 Tables metadata cache.** Not implemented. Their builders take
-  no `with_table_metadata_cache` at `189a73ed`, so §1's AWS table's `after` column is the memory
-  catalog's shape, argued by the census method, not measured on AWS.
+- **`F-CATIO-AWS` — the Glue and S3 Tables metadata cache.** Not implemented at `189a73ed`, so
+  §1's AWS table's `after` column is the memory catalog's shape, argued by the census method, not
+  measured on AWS. Implemented since as fork `#311` (pin `27e0d5fa`) and wired by
+  ICE-CATALOG-CACHE-1 (2026-09-19); still unmeasured on AWS (the bench is blocked on an IAM grant).
 
 Both are test-green in the fork lane: `cargo test -p iceberg --lib` 3,612 passed / 0 failed and
 `cargo test -p iceberg-datafusion` green including doctests, at the fork lane's own toolchain. A

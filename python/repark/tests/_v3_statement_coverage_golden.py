@@ -20,7 +20,7 @@ VERDICTS: dict[str, str] = {
     "insert-overwrite-table": "EQUAL",
     "insert-overwrite-partition-static-values": "EQUAL",
     "insert-overwrite-partition-static-select": "EQUAL",
-    "insert-overwrite-partition-dynamic": "DIVERGES",
+    "insert-overwrite-partition-dynamic": "EQUAL",
     "delete-where-mor": "EQUAL",
     "delete-where-cow": "EQUAL",
     "delete-where-partitioned-mor": "EQUAL",
