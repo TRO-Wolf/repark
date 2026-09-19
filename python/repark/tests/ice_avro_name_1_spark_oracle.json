@@ -1,0 +1,566 @@
+{
+ "banner": "4.1.2",
+ "runtime": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "cells": {
+  "space_v2": {
+   "create": "(id INT, `my col` STRING) PARTITIONED BY (`my col`)",
+   "column": "`my col`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "my col": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "my_x20col",
+     "iceberg-field-name": "my col",
+     "field-id": 1000
+    }
+   ]
+  },
+  "space_v3": {
+   "create": "(id INT, `my col` STRING) PARTITIONED BY (`my col`)",
+   "column": "`my col`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "my col": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "my_x20col",
+     "iceberg-field-name": "my col",
+     "field-id": 1000
+    }
+   ]
+  },
+  "leading_digit_v2": {
+   "create": "(id INT, `1st` STRING) PARTITIONED BY (`1st`)",
+   "column": "`1st`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "1st": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "_1st",
+     "iceberg-field-name": "1st",
+     "field-id": 1000
+    }
+   ]
+  },
+  "leading_digit_v3": {
+   "create": "(id INT, `1st` STRING) PARTITIONED BY (`1st`)",
+   "column": "`1st`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "1st": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "_1st",
+     "iceberg-field-name": "1st",
+     "field-id": 1000
+    }
+   ]
+  },
+  "dash_v2": {
+   "create": "(id INT, `a-b` STRING) PARTITIONED BY (`a-b`)",
+   "column": "`a-b`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "a-b": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "a_x2Db",
+     "iceberg-field-name": "a-b",
+     "field-id": 1000
+    }
+   ]
+  },
+  "dash_v3": {
+   "create": "(id INT, `a-b` STRING) PARTITIONED BY (`a-b`)",
+   "column": "`a-b`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "a-b": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "a_x2Db",
+     "iceberg-field-name": "a-b",
+     "field-id": 1000
+    }
+   ]
+  },
+  "dot_v2": {
+   "create": "(id INT, `a.b` STRING) PARTITIONED BY (`a.b`)",
+   "column": "`a.b`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "a.b": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "a_x2Eb",
+     "iceberg-field-name": "a.b",
+     "field-id": 1000
+    }
+   ]
+  },
+  "dot_v3": {
+   "create": "(id INT, `a.b` STRING) PARTITIONED BY (`a.b`)",
+   "column": "`a.b`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "a.b": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "a_x2Eb",
+     "iceberg-field-name": "a.b",
+     "field-id": 1000
+    }
+   ]
+  },
+  "non_ascii_letter_v2": {
+   "create": "(id INT, `é` STRING) PARTITIONED BY (`é`)",
+   "column": "`é`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "é": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "é",
+     "iceberg-field-name": null,
+     "field-id": 1000
+    }
+   ]
+  },
+  "non_ascii_letter_v3": {
+   "create": "(id INT, `é` STRING) PARTITIONED BY (`é`)",
+   "column": "`é`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "é": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "é",
+     "iceberg-field-name": null,
+     "field-id": 1000
+    }
+   ]
+  },
+  "cjk_v2": {
+   "create": "(id INT, `列` STRING) PARTITIONED BY (`列`)",
+   "column": "`列`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "列": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "列",
+     "iceberg-field-name": null,
+     "field-id": 1000
+    }
+   ]
+  },
+  "cjk_v3": {
+   "create": "(id INT, `列` STRING) PARTITIONED BY (`列`)",
+   "column": "`列`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "列": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "列",
+     "iceberg-field-name": null,
+     "field-id": 1000
+    }
+   ]
+  },
+  "emoji_v2": {
+   "create": "(id INT, `c😀` STRING) PARTITIONED BY (`c😀`)",
+   "column": "`c😀`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "c😀": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "c_xD83D_xDE00",
+     "iceberg-field-name": "c😀",
+     "field-id": 1000
+    }
+   ]
+  },
+  "emoji_v3": {
+   "create": "(id INT, `c😀` STRING) PARTITIONED BY (`c😀`)",
+   "column": "`c😀`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "c😀": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "c_xD83D_xDE00",
+     "iceberg-field-name": "c😀",
+     "field-id": 1000
+    }
+   ]
+  },
+  "bucket_space_v2": {
+   "create": "(id INT, `my col` STRING) PARTITIONED BY (bucket(4, `my col`))",
+   "column": "`my col`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "my col_bucket": 3
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "my_x20col_bucket",
+     "iceberg-field-name": "my col_bucket",
+     "field-id": 1000
+    }
+   ]
+  },
+  "bucket_space_v3": {
+   "create": "(id INT, `my col` STRING) PARTITIONED BY (bucket(4, `my col`))",
+   "column": "`my col`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "my col_bucket": 3
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "my_x20col_bucket",
+     "iceberg-field-name": "my col_bucket",
+     "field-id": 1000
+    }
+   ]
+  },
+  "truncate_dash_v2": {
+   "create": "(id INT, `a-b` STRING) PARTITIONED BY (truncate(2, `a-b`))",
+   "column": "`a-b`",
+   "value": "'xyz'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "xyz"
+    ],
+    [
+     2,
+     "xyz"
+    ]
+   ],
+   "parts": [
+    {
+     "a-b_trunc": "xy"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "a_x2Db_trunc",
+     "iceberg-field-name": "a-b_trunc",
+     "field-id": 1000
+    }
+   ]
+  },
+  "truncate_dash_v3": {
+   "create": "(id INT, `a-b` STRING) PARTITIONED BY (truncate(2, `a-b`))",
+   "column": "`a-b`",
+   "value": "'xyz'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "xyz"
+    ],
+    [
+     2,
+     "xyz"
+    ]
+   ],
+   "parts": [
+    {
+     "a-b_trunc": "xy"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "a_x2Db_trunc",
+     "iceberg-field-name": "a-b_trunc",
+     "field-id": 1000
+    }
+   ]
+  },
+  "valid_v2": {
+   "create": "(id INT, `ok_col` STRING) PARTITIONED BY (`ok_col`)",
+   "column": "`ok_col`",
+   "value": "'x'",
+   "version": 2,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "ok_col": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "ok_col",
+     "iceberg-field-name": null,
+     "field-id": 1000
+    }
+   ]
+  },
+  "valid_v3": {
+   "create": "(id INT, `ok_col` STRING) PARTITIONED BY (`ok_col`)",
+   "column": "`ok_col`",
+   "value": "'x'",
+   "version": 3,
+   "rows": [
+    [
+     1,
+     "x"
+    ],
+    [
+     2,
+     "x"
+    ]
+   ],
+   "parts": [
+    {
+     "ok_col": "x"
+    }
+   ],
+   "manifest_partition_fields": [
+    {
+     "name": "ok_col",
+     "iceberg-field-name": null,
+     "field-id": 1000
+    }
+   ]
+  }
+ }
+}

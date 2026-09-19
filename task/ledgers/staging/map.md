@@ -504,6 +504,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-35-fork-pin-ledger.md](rp-35-fork-pin-ledger.md) —
+  **RP-35-FORK-PIN (2026-09-19):** the fork pin moves to `7bd2fea3` (#308 Avro name
+  sanitising); 20 recorded Spark cells pin IPI-52 (rows, `partitions`, the manifest's Avro
+  partition record). `risk_tier: standard`. Branch `chore/rp-35-fork-pin`.
 - [rp-34-fork-pin-ledger.md](rp-34-fork-pin-ledger.md) —
   **RP-34-FORK-PIN (2026-09-19):** the fork pin moves to `43fcd243` (#306 parquet footer,
   #305 dangling DVs); three `clippy::large_futures` calls are boxed; the three
@@ -1133,3 +1137,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (ORC/Avro table-property refusal, ENC-1 cleartext bytes, north-star C-2 FIXED
   citation); V3-05 recorded in the ledger only (PR #700 owns the row).
   `risk_tier: standard`. Branch `docs/ice-registry-sweep-1b`.
+- [ice-drop-ns-1-ledger.md](ice-drop-ns-1-ledger.md) —
+  **ICE-DROP-NS-1 (2026-09-19), in flight:** `DROP NAMESPACE` on a non-empty
+  namespace refuses like Spark 4.1.2 — the 26-cell oracle plus red-first pins
+  on the facade door, one shared pre-drop emptiness helper in `repark-iceberg`
+  called by both doors, Rust pins at the helper and on both doors, registry
+  row FIXED with the nested-namespace boundary and the exception-class
+  residual. `risk_tier: standard`. Branch `fix/ice-drop-ns-1`.
+  pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

@@ -165,7 +165,15 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   shared catalog-handle / name-parts / identifier-hygiene helpers.
   `IF NOT EXISTS` runs the same location-conflict predicate as the Spark door
   (matching / no-location idempotent; contradictory location fails loud).
+  `DROP SCHEMA` refuses a non-empty schema through the shared
+  `refuse_non_empty_namespace_drop` (CASCADE keeps its own refusal ahead of it);
+  `IF EXISTS` does not bypass (**ICE-DROP-NS-1**, 2026-09-19).
   Tests: [schema_ddl/map.md](schema_ddl/map.md).
+  pins: ice-drop-ns-1/C-006, C-007
+  The blanket `CASCADE` refusal is gone: `CASCADE` runs the same emptiness check, and a missing
+  schema answers Spark's `[SCHEMA_NOT_FOUND]`; `router.rs` no longer passes `cascade`; `tests.rs`
+  sheds the stale `CASCADE`-refuses pin and its doc line (ceiling 1513).
+  pins: ice-drop-ns-1/C-011
 - `alter.rs` — `ALTER TABLE` schema evolution (ADD/DROP/RENAME COLUMN, `ALTER COLUMN … SET DATA
   TYPE`, `ALTER COLUMN … FIRST|AFTER` moves, `RENAME TO`) through the tier-1
   `repark_iceberg::write::alter` seams, plus Trino `SET PROPERTIES` and its ONE pre-parse

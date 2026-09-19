@@ -54,7 +54,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-spark/src/tests/transform_overwrite.rs", 1181),
     ("crates/repark-spark/src/window_range.rs", 1225),
     ("crates/repark-sql/src/guards/tests.rs", 1207),
-    ("crates/repark-sql/src/tests.rs", 1520),
+    ("crates/repark-sql/src/tests.rs", 1513),
     ("crates/repark-sql/tests/cross_door.rs", 1254),
     ("crates/repark-ta/src/momentum.rs", 2098),
     ("crates/repark-ta/src/overlap.rs", 1578),
