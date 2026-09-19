@@ -9353,19 +9353,30 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (`test_glue_parses_no_metadata_document_for_an_unchanged_pointer`,
   `test_s3tables_parses_no_metadata_document_for_an_unchanged_pointer`) are written and SKIP
   naming this ask; they un-skip at the bump. No AWS was measured by this unit.
-- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **BACKLOG** behind
-  a fork pin bump. The fork's `TableMetadataCache` is an unbounded `HashMap<String, CachedEntry>`
-  with no eviction of its own; `invalidate` and `clear` are the only ways out, so a session that
-  keeps loading distinct locations grows without limit. RePark's bound is a **high-water clear**:
-  `CatalogCaches::trim` empties the cache when the retained-location count passes
-  `repark.iceberg.metadataCacheEntries`, and the session calls it at the statement door
-  (`sql_with`). Two consequences that are recorded rather than fixed. A trip costs the whole
-  cache, not one entry. And the bound is checked BETWEEN statements, so retention inside one
-  statement is one entry per distinct table it names — measured: eight CREATEs at `entries=1`
-  leave 2 retained, while an 8-way `UNION ALL` at `entries=1` retains 8 until the next door
-  (pinned by `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its
-  Python twin). Fork trigger **F-CATIO-BOUND**: give the cache a byte- or entry-bounded LRU, which
-  bounds within a statement by construction and evicts one entry instead of all of them.
+- **PERF-CATALOG-CACHE-BOUND-1** — surfaced 2026-09-05, PERF-ICE-CATALOG-IO-1. **FIXED
+  2026-09-19 (ICE-CATALOG-CACHE-1)** at fork pin `27e0d5fa` (fork `#311`, ask `F-CATIO-BOUND`).
+  The fork's `TableMetadataCache` is now a moka cache weighed by each entry's metadata-document
+  byte length (`max(body_len, 1)`), and RePark builds it with
+  `TableMetadataCache::with_max_entries(repark.iceberg.metadataCacheEntries)` — the fork's mapping
+  of entries × 64 KiB to a byte budget, so the default `512` is 33,554,432 bytes (32 MiB), half
+  the fork's own 64 MiB default. The budget is bytes, not a count: a one-column table's document
+  weighs about 538 bytes (four such tables measured 2,152 bytes), so for small tables the count
+  bound below binds long before the byte budget, and the byte budget binds first only when the
+  average document passes 64 KiB. **Eviction can now happen inside one statement**: moka evicts
+  single entries by weight when its maintenance runs (driven by cache traffic or an explicit
+  settle), and the fork counts them as `evictions` (advisory: `installed − retained − removed −
+  cleared`; exact once pending tasks run). Pinned: three 40 KiB-property tables under
+  `entries=1` evict and each load still reads its own table
+  (`catalog/tests/cache_wiring.rs::evictions_reach_the_stats_and_never_serve_a_sibling`). The
+  **statement-door high-water clear stays**: `CatalogCaches::trim` settles moka's pending tasks,
+  and when the settled retained-location count passes `metadataCacheEntries` it clears the whole
+  cache (a clear, not an eviction, in the fork's accounting). So small-document tables still
+  retain one entry per distinct table inside a statement that fits the byte budget — an 8-way
+  `UNION ALL` at `entries=1` retains 8 until the next door
+  (`one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its Python
+  twin) — while large documents are evicted mid-statement. The door's own settle is pinned by
+  `the_door_trim_settles_before_it_reads_the_high_water_mark` (red when `trim` reads the unsettled
+  count). Ledger: `task/ledgers/staging/ice-catalog-cache-1-ledger.md` C-006, C-012.
 - **PERF-ICE-COUNTSTAR-1** — surfaced 2026-09-04, PERF-ANALYSIS-1 §2 row 4.
   **OPEN — measured 2026-09-16** (corrected 2026-09-17 from the 2026-09-16 rating,
   probe `p_countstar` at `a92a68db`): no fold at the current pin — `EXPLAIN SELECT count(*)`

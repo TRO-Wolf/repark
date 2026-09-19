@@ -144,7 +144,7 @@ Source comments retain only API and safety contracts; implementation narration i
   **ICE-CATALOG-CACHE-1 (2026-09-19):** the fork cache is now a bounded moka cache weighed by
   document bytes; `CatalogCaches::new` builds it with `TableMetadataCache::with_max_entries(entries)`
   (the fork's mapping: entries × 64 KiB, so the default 512 is 32 MiB), which bounds retention by
-  bytes on every insert, within a statement too, and makes evictions observable
+  document bytes whenever moka's maintenance runs, within a statement too, and makes evictions observable
   (`metadata_stats().evictions`, advisory until moka's pending tasks run). The door `trim` below
   still runs; a trim is an explicit clear, not an eviction. `TableMetadataCacheStats` is
   re-exported from `mod.rs` for the session report. pins: ice-catalog-cache-1/C-006, C-007
@@ -155,16 +155,16 @@ Source comments retain only API and safety contracts; implementation narration i
   cache was an unbounded `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
   session calls `trim` at the statement door (`session.rs::sql_with`). That bounds what a session
   ACCUMULATES across commits — measured: eight CREATEs at `entries=1` leave 2 retained and the
-  next door clears to 0. It does NOT bound retention *within* one statement: an 8-way `UNION ALL`
+  next door clears to 0. The door alone does NOT bound retention *within* one statement (the
+  byte budget above does, for large documents): an 8-way `UNION ALL` of small tables
   at `entries=1` retains 8 (measured; pinned by
   `one_statement_over_many_tables_retains_one_entry_each_until_the_next_door` and its Python
   twin). That residue is one entry per distinct table the statement names — live working set the
   planner needs, bounded by the statement's table count and cleared at the next door — not the
-  accumulation the knob exists to stop. Bounding within a statement needs a hook on cache INSERT,
-  which is fork-side; the RePark-side alternative is a `SchemaProvider` decorator carrying a
-  permanent forwarding-audit duty, which is not worth a bound on working set. Registry row
-  `PERF-CATALOG-CACHE-BOUND-1` / fork ask `F-CATIO-BOUND` carries the real fix: a bounded LRU
-  inside the fork's cache bounds within a statement by construction.
+  accumulation the knob exists to stop. The within-statement bound is the fork's byte budget
+  (fork `#311`, ask `F-CATIO-BOUND`); registry row `PERF-CATALOG-CACHE-BOUND-1` is FIXED by it
+  (ICE-CATALOG-CACHE-1) and records both halves: moka's per-entry byte eviction and this door
+  clear.
 
   **`memory_catalog(warehouse)` keeps its v1 signature but is no longer cache-free** — it now
   builds a private, always-on `CatalogCaches` per call, which nothing trims because no session

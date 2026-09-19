@@ -342,7 +342,7 @@ Setting **both** on the same builder refuses too: same pool, ambiguous initial s
 | Key | Alias | Meaning |
 |---|---|---|
 | `repark.iceberg.metadataCache` | `repark.iceberg.metadata_cache` | session-scoped metadata-document cache (default `true`) |
-| `repark.iceberg.metadataCacheEntries` | `repark.iceberg.metadata_cache_entries` | retained-location bound, cleared at the statement door (default `512`) |
+| `repark.iceberg.metadataCacheEntries` | `repark.iceberg.metadata_cache_entries` | retained-location bound (default `512`): the metadata cache's byte budget is this × 64 KiB (default 32 MiB, evicting single entries by document bytes, inside a statement too), and the statement door clears the whole cache once the retained count passes it |
 | `repark.iceberg.manifestCacheBytes` | `repark.iceberg.manifest_cache_bytes` | shared manifest-cache byte budget per memory catalog (default `33554432` = on; `0` disables) |
 
 All three are build-time and memory-catalog-only. A bad value fails loud inside
