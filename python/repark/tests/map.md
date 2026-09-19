@@ -63,6 +63,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (short/year-only/no-seconds forms, years past 2262) pin the Spark answer as
   strict xfails citing the cast finding.
   pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  Round 3 item 3: the extractor stops a `TIMESTAMP AS OF` expression at a trailing
+  alias (`AS ident` or a bare ident after a quoted/`)/number` value), so the alias
+  survives on the rewritten relation — pinned by the TT2 join, `AS t2`, and version-alias
+  cells. pins: ice-tt-resolve-1/C-002
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —

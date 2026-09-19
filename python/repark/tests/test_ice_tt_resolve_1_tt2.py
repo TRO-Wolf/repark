@@ -265,3 +265,42 @@ def test_reader_tt2_timestamp_as_of_nosec(spark: Any, version: int) -> None:
         .orderBy("id")
     )
     assert _rows_of(frame) == [tuple(row) for row in CELLS["TT2-TAS-NOSEC"]["obs"]["rows"]]
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_facade_sql_tt2_alias_join(spark: Any, version: int) -> None:
+    """TT2 aliased self-join pins both sides rows. pins: ice-tt-resolve-1/C-002"""
+    table = f"mem.ns.tt2alias_v{version}"
+    seed = _seed_tt2_table(spark, table, version)
+    mid = seed["mid_str"]
+    frame = spark.sql(
+        f"SELECT a.id, b.id FROM {table} TIMESTAMP AS OF CAST('{mid}' AS TIMESTAMP) a "
+        f"FULL OUTER JOIN {table} TIMESTAMP AS OF '2999-01-01' b ON a.id = b.id "
+        "ORDER BY b.id"
+    )
+    arrow = frame.to_arrow()
+    rows = list(zip(arrow.column(0).to_pylist(), arrow.column(1).to_pylist(), strict=True))
+    assert rows == _tt2_rows("TT2-SQL-ALIAS-JOIN")
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_facade_sql_tt2_alias_as(spark: Any, version: int) -> None:
+    """TT2 AS-alias on the pinned relation answers S0. pins: ice-tt-resolve-1/C-002"""
+    table = f"mem.ns.tt2alias_as_v{version}"
+    seed = _seed_tt2_table(spark, table, version)
+    frame = spark.sql(
+        f"SELECT t2.id FROM {table} TIMESTAMP AS OF '{seed['mid_str']}' AS t2 "
+        "WHERE t2.id > 0 ORDER BY t2.id"
+    )
+    ids = [(value,) for value in frame.to_arrow().column(0).to_pylist()]
+    assert ids == _tt2_rows("TT2-SQL-ALIAS-AS")
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_facade_sql_tt2_version_alias(spark: Any, version: int) -> None:
+    """TT2 bare alias on VERSION AS OF answers S0. pins: ice-tt-resolve-1/C-002"""
+    table = f"mem.ns.tt2aliasver_v{version}"
+    seed = _seed_tt2_table(spark, table, version)
+    frame = spark.sql(f"SELECT t2.id FROM {table} VERSION AS OF {seed['s0']} t2 ORDER BY t2.id")
+    ids = [(value,) for value in frame.to_arrow().column(0).to_pylist()]
+    assert ids == _tt2_rows("TT2-SQL-VERSION-ALIAS")
