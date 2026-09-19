@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::sync::Arc;
 
+use iceberg::arrow::ParquetFooterCache;
 use iceberg::memory::MemoryCatalogBuilder;
 use iceberg::{CacheScope, TableMetadataCache};
 use iceberg_catalog_glue::GlueCatalogBuilder;
@@ -17,6 +18,9 @@ pub(crate) trait CacheWiredBuilder: Sized {
     fn wire_manifest_cache_bytes(self, bytes: u64) -> Self;
 
     #[must_use]
+    fn wire_footer_cache(self, cache: Arc<ParquetFooterCache>) -> Self;
+
+    #[must_use]
     fn wire_credential_context(self, context: String) -> Self;
 }
 
@@ -27,6 +31,10 @@ impl CacheWiredBuilder for MemoryCatalogBuilder {
 
     fn wire_manifest_cache_bytes(self, bytes: u64) -> Self {
         self.with_shared_object_cache_bytes(bytes)
+    }
+
+    fn wire_footer_cache(self, cache: Arc<ParquetFooterCache>) -> Self {
+        self.with_shared_footer_cache(cache)
     }
 
     fn wire_credential_context(self, context: String) -> Self {
@@ -43,6 +51,10 @@ impl CacheWiredBuilder for GlueCatalogBuilder {
         self.with_shared_object_cache_bytes(bytes)
     }
 
+    fn wire_footer_cache(self, cache: Arc<ParquetFooterCache>) -> Self {
+        self.with_shared_footer_cache(cache)
+    }
+
     fn wire_credential_context(self, context: String) -> Self {
         self.with_cache_credential_context(context)
     }
@@ -55,6 +67,10 @@ impl CacheWiredBuilder for S3TablesCatalogBuilder {
 
     fn wire_manifest_cache_bytes(self, bytes: u64) -> Self {
         self.with_shared_object_cache_bytes(bytes)
+    }
+
+    fn wire_footer_cache(self, cache: Arc<ParquetFooterCache>) -> Self {
+        self.with_shared_footer_cache(cache)
     }
 
     fn wire_credential_context(self, context: String) -> Self {
@@ -77,11 +93,19 @@ pub(crate) fn wire_caches<B: CacheWiredBuilder, S: BuildHasher>(
     caches: &CatalogCaches,
     props: &HashMap<String, String, S>,
 ) -> B {
-    let Some(metadata) = caches.metadata_cache() else {
-        return wire_manifest_cache(builder, caches);
+    let metadata = caches.metadata_cache();
+    let footer = caches.footer_cache();
+    let scoped = metadata.is_some() || footer.is_some();
+    let builder = match metadata {
+        Some(metadata) => builder.wire_metadata_cache(metadata),
+        None => builder,
     };
-    let builder = wire_manifest_cache(builder.wire_metadata_cache(metadata), caches);
-    match cache_credential_context(props) {
+    let builder = match footer {
+        Some(footer) => builder.wire_footer_cache(footer),
+        None => builder,
+    };
+    let builder = wire_manifest_cache(builder, caches);
+    match cache_credential_context(props).filter(|_| scoped) {
         Some(context) => builder.wire_credential_context(context),
         None => builder,
     }

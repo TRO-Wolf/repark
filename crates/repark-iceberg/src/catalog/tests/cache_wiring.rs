@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use datafusion::prelude::SessionContext;
+use iceberg::arrow::ParquetFooterCache;
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent, TableMetadataCache};
@@ -19,6 +20,7 @@ const SECRET: &str = "wJalrXUtnFEMI-NEVER-IN-A-SCOPE";
 struct Recorder {
     metadata: Option<Arc<TableMetadataCache>>,
     manifest_bytes: Option<u64>,
+    footer: Option<Arc<ParquetFooterCache>>,
     context: Option<String>,
 }
 
@@ -30,6 +32,11 @@ impl CacheWiredBuilder for Recorder {
 
     fn wire_manifest_cache_bytes(mut self, bytes: u64) -> Self {
         self.manifest_bytes = Some(bytes);
+        self
+    }
+
+    fn wire_footer_cache(mut self, cache: Arc<ParquetFooterCache>) -> Self {
+        self.footer = Some(cache);
         self
     }
 
@@ -64,6 +71,10 @@ fn the_session_handles_reach_the_builder() {
         &caches.metadata_cache().unwrap()
     ));
     assert_eq!(wired.manifest_bytes, Some(DEFAULT_MANIFEST_CACHE_BYTES));
+    assert!(Arc::ptr_eq(
+        wired.footer.as_ref().unwrap(),
+        &caches.footer_cache().unwrap()
+    ));
     assert_eq!(wired.context.as_deref(), Some("aws_access_key_id=AKIAONE"));
 }
 
@@ -76,6 +87,7 @@ fn disabled_caches_wire_no_handle_and_no_context() {
     );
     assert!(wired.metadata.is_none());
     assert_eq!(wired.manifest_bytes, None);
+    assert!(wired.footer.is_none());
     assert_eq!(wired.context, None);
 }
 
@@ -88,15 +100,39 @@ fn each_switch_is_honoured_alone() {
     let wired = wire_caches(Recorder::default(), &metadata_only, &keyed("AKIAONE"));
     assert!(wired.metadata.is_some());
     assert_eq!(wired.manifest_bytes, None);
+    assert!(wired.footer.is_some());
     let manifest_only = CatalogCaches::new(IcebergCacheSettings {
         metadata_cache: false,
         manifest_cache_bytes: 4096,
+        footer_cache_bytes: 0,
         ..IcebergCacheSettings::default()
     });
     let wired = wire_caches(Recorder::default(), &manifest_only, &keyed("AKIAONE"));
     assert!(wired.metadata.is_none());
     assert_eq!(wired.manifest_bytes, Some(4096));
+    assert!(wired.footer.is_none());
     assert_eq!(wired.context, None);
+    let footer_only = CatalogCaches::new(IcebergCacheSettings {
+        metadata_cache: false,
+        manifest_cache_bytes: 0,
+        footer_cache_bytes: 4096,
+        ..IcebergCacheSettings::default()
+    });
+    let wired = wire_caches(Recorder::default(), &footer_only, &keyed("AKIAONE"));
+    assert!(wired.metadata.is_none());
+    assert_eq!(wired.manifest_bytes, None);
+    assert!(Arc::ptr_eq(
+        wired.footer.as_ref().unwrap(),
+        &footer_only.footer_cache().unwrap()
+    ));
+    assert_eq!(wired.context.as_deref(), Some("aws_access_key_id=AKIAONE"));
+    let footer_off = CatalogCaches::new(IcebergCacheSettings {
+        footer_cache_bytes: 0,
+        ..IcebergCacheSettings::default()
+    });
+    let wired = wire_caches(Recorder::default(), &footer_off, &keyed("AKIAONE"));
+    assert!(wired.metadata.is_some());
+    assert!(wired.footer.is_none());
 }
 
 #[test]
@@ -175,6 +211,38 @@ async fn glue_and_s3tables_catalogs_hold_the_session_metadata_cache() {
         assert!(!debug.contains(SECRET), "{debug}");
     }
     drop((glue, s3tables));
+    assert_eq!(Arc::strong_count(&handle), before);
+}
+
+#[tokio::test]
+async fn every_builder_holds_the_session_footer_cache() {
+    let dir = TempDir::new().unwrap();
+    let caches = CatalogCaches::default();
+    let handle = caches.footer_cache().unwrap();
+    let before = Arc::strong_count(&handle);
+    let memory = memory_catalog_cached(dir.path().to_str().unwrap(), &caches)
+        .await
+        .unwrap();
+    assert_eq!(Arc::strong_count(&handle), before + 1);
+    let mut glue_props = keyed("AKIAONE");
+    glue_props.insert(
+        GLUE_CATALOG_PROP_WAREHOUSE.to_string(),
+        "s3://w/".to_string(),
+    );
+    let glue = within(Box::pin(glue_catalog_counted(&glue_props, &caches)))
+        .await
+        .unwrap();
+    assert_eq!(Arc::strong_count(&handle), before + 2);
+    let mut s3tables_props = keyed("AKIAONE");
+    s3tables_props.insert(
+        S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN.to_string(),
+        "arn:aws:s3tables:us-east-1:1:bucket/b".to_string(),
+    );
+    let s3tables = within(Box::pin(s3tables_catalog_counted(&s3tables_props, &caches)))
+        .await
+        .unwrap();
+    assert_eq!(Arc::strong_count(&handle), before + 3);
+    drop((memory, glue, s3tables));
     assert_eq!(Arc::strong_count(&handle), before);
 }
 
@@ -449,8 +517,20 @@ async fn the_counter_sees_every_request_with_the_caches_on() {
         );
     }
     assert_eq!(
-        warm_on.by_class(IcebergFileClass::DataFile).requests,
-        warm_off.by_class(IcebergFileClass::DataFile).requests
+        warm_on.get(IcebergIoOp::RangedRead, IcebergFileClass::DataFile),
+        warm_off.get(IcebergIoOp::RangedRead, IcebergFileClass::DataFile)
+    );
+    assert!(
+        warm_off
+            .get(IcebergIoOp::FooterRead, IcebergFileClass::DataFile)
+            .requests
+            > 0
+    );
+    assert_eq!(
+        warm_on
+            .get(IcebergIoOp::FooterRead, IcebergFileClass::DataFile)
+            .requests,
+        0
     );
     assert!(
         warm_on.by_class(IcebergFileClass::Manifest).requests

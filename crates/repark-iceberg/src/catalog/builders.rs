@@ -42,7 +42,8 @@ pub async fn memory_catalog(warehouse: &str) -> Result<Arc<dyn Catalog>> {
     fields(
         warehouse = %warehouse,
         metadata_cache = caches.metadata_cache().is_some(),
-        manifest_cache_bytes = caches.manifest_cache_bytes()
+        manifest_cache_bytes = caches.manifest_cache_bytes(),
+        footer_cache = caches.footer_cache().is_some()
     )
 )]
 pub async fn memory_catalog_cached(
