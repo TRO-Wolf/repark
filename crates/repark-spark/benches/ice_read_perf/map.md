@@ -61,8 +61,10 @@ The bench profile inherits the default release profile; do not override it for a
   `<warehouse>/perf`, so the table is a plain path-based Iceberg directory
   (`<warehouse>/perf/events/{metadata,data}`), format v2. `run` re-registers it in a fresh
   session from the metadata file the manifest names (`Catalog::register_table`).
-- **Exactly N files:** one `INSERT … SELECT … FROM range(first, first + rows)` per data file
-  (`--files`, default 200). Setup counts the `files` metadata table afterwards and fails loud
+- **Exactly N files:** one `INSERT … SELECT … FROM range(first, first + rows) ORDER BY id` per
+  data file (`--files`, default 200). Without the `ORDER BY` the writer splits an INSERT of more
+  than 65,536 rows across eight writers (measured: 500,000 rows gave 8 files), so a large-file bed
+  (`--rows-per-file 500000`) needs it; at the default 50,000 rows the bytes are unchanged. Setup counts the `files` metadata table afterwards and fails loud
   unless it holds exactly N data files and no delete file.
 - **Columns** (all a pure function of `id`; no seed, no clock): `id BIGINT` (0‥N·rows, one
   contiguous range per file, so per-file min/max are tight); `ts TIMESTAMP` =
