@@ -219,6 +219,50 @@ pub fn resolve_empty_session_write(
     resolve_write_for_session(&[], &WriterStagingOverrides::none(), &session)
 }
 
+const SUMMARY_METRIC_KEYS: [&str; 28] = [
+    "added-data-files",
+    "deleted-data-files",
+    "total-data-files",
+    "added-delete-files",
+    "added-equality-delete-files",
+    "removed-equality-delete-files",
+    "added-position-delete-files",
+    "removed-position-delete-files",
+    "added-dvs",
+    "removed-dvs",
+    "removed-delete-files",
+    "total-delete-files",
+    "added-records",
+    "deleted-records",
+    "total-records",
+    "added-files-size",
+    "removed-files-size",
+    "total-files-size",
+    "added-position-deletes",
+    "removed-position-deletes",
+    "total-position-deletes",
+    "added-equality-deletes",
+    "removed-equality-deletes",
+    "total-equality-deletes",
+    "deleted-duplicate-files",
+    "changed-partition-count",
+    "engine-name",
+    "engine-version",
+];
+
+fn refuse_summary_metric_collision(extra: &[(String, String)]) -> Result<()> {
+    match extra
+        .iter()
+        .find(|(key, _)| SUMMARY_METRIC_KEYS.contains(&key.as_str()))
+    {
+        Some((key, value)) => Err(DataFusionError::Plan(format!(
+            "IllegalArgumentException: Multiple entries with same key: {key}=<engine value> and \
+             {key}={value} (snapshot-property `{key}` names an Iceberg snapshot summary metric)"
+        ))),
+        None => Ok(()),
+    }
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn resolve_write_for_session(
     statement_snapshot: &[(String, String)],
@@ -227,7 +271,9 @@ pub fn resolve_write_for_session(
 ) -> Result<(Vec<(String, String)>, WriterStagingOverrides)> {
     let staging = session.merged_staging(statement_staging);
     parse_compression(staging.codec.as_deref(), staging.level.as_deref())?;
-    Ok((session.merged_snapshot_extra(statement_snapshot), staging))
+    let extra = session.merged_snapshot_extra(statement_snapshot);
+    refuse_summary_metric_collision(&extra)?;
+    Ok((extra, staging))
 }
 
 pub fn apply_session_extras<S>(summary: &mut HashMap<String, String, S>, extra: &[(String, String)])

@@ -13,6 +13,8 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   resolver precedence pins (writer option over session conf over table property, bogus
   codec refuses naming the codec) plus the `SessionWriteView` carrier shape
   (comment-free per the owner ban).
+  A snapshot property naming a summary metric refuses (`Multiple entries with same key`).
+  pins: ice-session-write-conf-1/C-036
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.

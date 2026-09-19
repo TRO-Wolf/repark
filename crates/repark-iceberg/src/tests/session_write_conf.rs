@@ -185,3 +185,32 @@ fn builder_map_installs_carrier() {
     assert_eq!(staging.codec.as_deref(), Some("gzip"));
     assert_eq!(snapshot, vec![("team".to_string(), "a".to_string())]);
 }
+
+#[test]
+fn a_snapshot_property_naming_a_summary_metric_refuses_like_spark() {
+    for key in [
+        "added-records",
+        "total-records",
+        "engine-name",
+        "changed-partition-count",
+    ] {
+        let options = options_with(&[(&format!("{SESSION_SNAPSHOT_PREFIX}{key}"), "999")]);
+        let view = session_write_conf_from_options(&options);
+        let error = resolve_write_for_session(&[], &WriterStagingOverrides::none(), &view)
+            .expect_err("a metric key refuses");
+        assert!(
+            error
+                .to_string()
+                .contains(&format!("Multiple entries with same key: {key}=")),
+            "{error}"
+        );
+    }
+    let statement = vec![("added-records".to_string(), "5".to_string())];
+    let empty = session_write_conf_from_options(&ConfigOptions::new());
+    assert!(
+        resolve_write_for_session(&statement, &WriterStagingOverrides::none(), &empty).is_err()
+    );
+    let team = options_with(&[(&format!("{SESSION_SNAPSHOT_PREFIX}team"), "a")]);
+    let view = session_write_conf_from_options(&team);
+    assert!(resolve_write_for_session(&[], &WriterStagingOverrides::none(), &view).is_ok());
+}
