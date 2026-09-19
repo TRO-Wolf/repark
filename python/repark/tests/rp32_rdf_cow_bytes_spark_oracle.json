@@ -1,0 +1,630 @@
+{
+ "spark": "4.1.2",
+ "iceberg": "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "session_zone": "UTC",
+ "cells": {
+  "rwd_legacy_flag": {
+   "sql": "CALL sc.system.rewrite_data_files(table => 'ns.rwd', 'remove-dangling-deletes' => true)",
+   "before": {
+    "data_files": [
+     "00000-1-68fdde50-b4b0-4ecc-8ffe-5d565ee1b0f9-0-00001.parquet",
+     "00000-11-a7b18ea4-a5cf-4df5-9a91-e663d8029c2a-0-00001.parquet",
+     "00000-5-94d57f64-c4a5-40dd-9572-0fb6bc159017-0-00001.parquet",
+     "00000-7-3e616b8e-ab8e-4235-ba50-831dfc30822d-0-00001.parquet",
+     "00000-9-6a59c7d3-83ac-4d57-929f-38d1479cc22b-0-00001.parquet"
+    ],
+    "delete_files": [],
+    "other_content_files": [],
+    "delete_files_table_rows": 0,
+    "live_rows": 5
+   },
+   "error_class": "ParseException",
+   "error": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near '=>': extra input '=>'. SQLSTATE: 42601 (line 1, pos 79)\n\n== SQL ==\nCALL sc.system.rewrite_data_files(table => 'ns.rwd', 'remove-dangling-deletes' => true)\n-------------------------------------------------------------------------------^^^\n",
+   "after": {
+    "data_files": [
+     "00000-1-68fdde50-b4b0-4ecc-8ffe-5d565ee1b0f9-0-00001.parquet",
+     "00000-11-a7b18ea4-a5cf-4df5-9a91-e663d8029c2a-0-00001.parquet",
+     "00000-5-94d57f64-c4a5-40dd-9572-0fb6bc159017-0-00001.parquet",
+     "00000-7-3e616b8e-ab8e-4235-ba50-831dfc30822d-0-00001.parquet",
+     "00000-9-6a59c7d3-83ac-4d57-929f-38d1479cc22b-0-00001.parquet"
+    ],
+    "delete_files": [],
+    "other_content_files": [],
+    "delete_files_table_rows": 0,
+    "live_rows": 5
+   },
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete"
+   ]
+  },
+  "rwd_remove_dangling": {
+   "sql": "CALL sc.system.rewrite_data_files(table => 'ns.rwdd', options => map('remove-dangling-deletes', 'true'))",
+   "properties": {
+    "current-snapshot-id": "8782390894297942000",
+    "format": "iceberg/parquet",
+    "format-version": "2",
+    "write.delete.mode": "merge-on-read",
+    "write.parquet.compression-codec": "zstd"
+   },
+   "after_inserts": {
+    "data_files": [
+     "00000-27-caf98b56-ab56-4420-a2d6-6b7628b3427c-0-00001.parquet",
+     "00000-29-26be343a-5aba-4665-8131-67f0d74933bc-0-00001.parquet",
+     "00000-31-000594ad-1166-4c6c-8562-05f306e1c571-0-00001.parquet",
+     "00000-33-ec4db605-981f-4134-af83-e7d8bd738d13-0-00001.parquet",
+     "00000-35-05553d8e-8d20-4726-8fd3-7d656e89a66b-0-00001.parquet",
+     "00000-37-fa792d20-a760-41a1-ab18-d6953ed2c34c-0-00001.parquet"
+    ],
+    "delete_files": [],
+    "other_content_files": [],
+    "delete_files_table_rows": 0,
+    "live_rows": 6
+   },
+   "before": {
+    "data_files": [
+     "00000-27-caf98b56-ab56-4420-a2d6-6b7628b3427c-0-00001.parquet",
+     "00000-31-000594ad-1166-4c6c-8562-05f306e1c571-0-00001.parquet",
+     "00000-33-ec4db605-981f-4134-af83-e7d8bd738d13-0-00001.parquet",
+     "00000-35-05553d8e-8d20-4726-8fd3-7d656e89a66b-0-00001.parquet",
+     "00000-37-fa792d20-a760-41a1-ab18-d6953ed2c34c-0-00001.parquet"
+    ],
+    "delete_files": [],
+    "other_content_files": [],
+    "delete_files_table_rows": 0,
+    "live_rows": 5
+   },
+   "result": {
+    "rewritten_data_files_count": 5,
+    "added_data_files_count": 1,
+    "rewritten_bytes_count": 4194,
+    "failed_data_files_count": 0,
+    "removed_delete_files_count": 0
+   },
+   "after": {
+    "data_files": [
+     "00000-50-0285bf73-0eda-4211-98df-68131698050d-0-00001.parquet"
+    ],
+    "delete_files": [],
+    "other_content_files": [],
+    "delete_files_table_rows": 0,
+    "live_rows": 5
+   },
+   "snapshots": [
+    {
+     "operation": "append",
+     "summary": {
+      "engine-version": "4.1.2",
+      "added-data-files": "1",
+      "total-equality-deletes": "0",
+      "app-id": "local-1789784829644",
+      "added-records": "1",
+      "total-records": "1",
+      "app-name": "rp32-rdf-cow-bytes",
+      "spark.app.id": "local-1789784829644",
+      "changed-partition-count": "1",
+      "engine-name": "spark",
+      "manifests-created": "1",
+      "total-position-deletes": "0",
+      "added-files-size": "839",
+      "total-delete-files": "0",
+      "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+      "manifests-kept": "0",
+      "manifests-replaced": "0",
+      "total-files-size": "839",
+      "total-data-files": "1"
+     }
+    },
+    {
+     "operation": "append",
+     "summary": {
+      "engine-version": "4.1.2",
+      "added-data-files": "1",
+      "total-equality-deletes": "0",
+      "app-id": "local-1789784829644",
+      "added-records": "1",
+      "total-records": "2",
+      "app-name": "rp32-rdf-cow-bytes",
+      "spark.app.id": "local-1789784829644",
+      "changed-partition-count": "1",
+      "engine-name": "spark",
+      "manifests-created": "1",
+      "total-position-deletes": "0",
+      "added-files-size": "839",
+      "total-delete-files": "0",
+      "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+      "manifests-kept": "1",
+      "manifests-replaced": "0",
+      "total-files-size": "1678",
+      "total-data-files": "2"
+     }
+    },
+    {
+     "operation": "append",
+     "summary": {
+      "engine-version": "4.1.2",
+      "added-data-files": "1",
+      "total-equality-deletes": "0",
+      "app-id": "local-1789784829644",
+      "added-records": "1",
+      "total-records": "3",
+      "app-name": "rp32-rdf-cow-bytes",
+      "spark.app.id": "local-1789784829644",
+      "changed-partition-count": "1",
+      "engine-name": "spark",
+      "manifests-created": "1",
+      "total-position-deletes": "0",
+      "added-files-size": "839",
+      "total-delete-files": "0",
+      "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+      "manifests-kept": "2",
+      "manifests-replaced": "0",
+      "total-files-size": "2517",
+      "total-data-files": "3"
+     }
+    },
+    {
+     "operation": "append",
+     "summary": {
+      "engine-version": "4.1.2",
+      "added-data-files": "1",
+      "total-equality-deletes": "0",
+      "app-id": "local-1789784829644",
+      "added-records": "1",
+      "total-records": "4",
+      "app-name": "rp32-rdf-cow-bytes",
+      "spark.app.id": "local-1789784829644",
+      "changed-partition-count": "1",
+      "engine-name": "spark",
+      "manifests-created": "1",
+      "total-position-deletes": "0",
+      "added-files-size": "839",
+      "total-delete-files": "0",
+      "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+      "manifests-kept": "3",
+      "manifests-replaced": "0",
+      "total-files-size": "3356",
+      "total-data-files": "4"
+     }
+    },
+    {
+     "operation": "append",
+     "summary": {
+      "engine-version": "4.1.2",
+      "added-data-files": "1",
+      "total-equality-deletes": "0",
+      "app-id": "local-1789784829644",
+      "added-records": "1",
+      "total-records": "5",
+      "app-name": "rp32-rdf-cow-bytes",
+      "spark.app.id": "local-1789784829644",
+      "changed-partition-count": "1",
+      "engine-name": "spark",
+      "manifests-created": "1",
+      "total-position-deletes": "0",
+      "added-files-size": "838",
+      "total-delete-files": "0",
+      "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+      "manifests-kept": "4",
+      "manifests-replaced": "0",
+      "total-files-size": "4194",
+      "total-data-files": "5"
+     }
+    },
+    {
+     "operation": "append",
+     "summary": {
+      "engine-version": "4.1.2",
+      "added-data-files": "1",
+      "total-equality-deletes": "0",
+      "app-id": "local-1789784829644",
+      "added-records": "1",
+      "total-records": "6",
+      "app-name": "rp32-rdf-cow-bytes",
+      "spark.app.id": "local-1789784829644",
+      "changed-partition-count": "1",
+      "engine-name": "spark",
+      "manifests-created": "1",
+      "total-position-deletes": "0",
+      "added-files-size": "839",
+      "total-delete-files": "0",
+      "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+      "manifests-kept": "5",
+      "manifests-replaced": "0",
+      "total-files-size": "5033",
+      "total-data-files": "6"
+     }
+    },
+    {
+     "operation": "delete",
+     "summary": {
+      "engine-version": "4.1.2",
+      "total-equality-deletes": "0",
+      "app-id": "local-1789784829644",
+      "deleted-data-files": "1",
+      "deleted-records": "1",
+      "total-records": "5",
+      "app-name": "rp32-rdf-cow-bytes",
+      "spark.app.id": "local-1789784829644",
+      "removed-files-size": "839",
+      "changed-partition-count": "1",
+      "engine-name": "spark",
+      "manifests-created": "1",
+      "total-position-deletes": "0",
+      "total-delete-files": "0",
+      "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+      "manifests-kept": "5",
+      "manifests-replaced": "1",
+      "total-files-size": "4194",
+      "total-data-files": "5"
+     }
+    },
+    {
+     "operation": "replace",
+     "summary": {
+      "engine-version": "4.1.2",
+      "added-data-files": "1",
+      "total-equality-deletes": "0",
+      "app-id": "local-1789784829644",
+      "added-records": "5",
+      "deleted-data-files": "5",
+      "deleted-records": "5",
+      "total-records": "5",
+      "app-name": "rp32-rdf-cow-bytes",
+      "removed-files-size": "4194",
+      "changed-partition-count": "1",
+      "engine-name": "spark",
+      "manifests-created": "6",
+      "total-position-deletes": "0",
+      "added-files-size": "937",
+      "total-delete-files": "0",
+      "iceberg-version": "Apache Iceberg 1.11.0 (commit 6976e020b894f6a6777704df2b8c4458cb291ae9)",
+      "manifests-kept": "0",
+      "manifests-replaced": "5",
+      "total-files-size": "937",
+      "total-data-files": "1"
+     }
+    }
+   ],
+   "id_2_rows": 0
+  },
+  "rfs_merge_rewrite": {
+   "sql": "CALL sc.system.rewrite_data_files(table => 'ns.rfs')",
+   "before": {
+    "data_files": [
+     "00000-66-fef5126a-92cc-4a41-b50a-e0a5013644ae-0-00001.parquet",
+     "00000-67-6e82470d-a3bd-4180-9adf-962094021fd2-0-00001.parquet",
+     "00000-68-b4b78f0b-87d2-4f98-b351-8639d7123f71-0-00001.parquet",
+     "00000-69-1925c5c8-a0b3-47ce-bcbb-517618681f82-0-00001.parquet",
+     "00000-70-947b9840-8627-4166-8c1a-4f51dc9c2584-0-00001.parquet",
+     "00000-71-d112e505-e520-49c9-9b93-a94db12cc6cf-0-00001.parquet",
+     "00000-75-c34a8a91-1d7e-4698-893e-6f77341a2178-00001.parquet"
+    ],
+    "delete_files": [
+     "00000-75-c34a8a91-1d7e-4698-893e-6f77341a2178-00001-deletes.parquet"
+    ],
+    "other_content_files": [],
+    "delete_files_table_rows": 1,
+    "live_rows": 6
+   },
+   "result": {
+    "rewritten_data_files_count": 7,
+    "added_data_files_count": 1,
+    "rewritten_bytes_count": 4307,
+    "failed_data_files_count": 0,
+    "removed_delete_files_count": 0
+   },
+   "after": {
+    "data_files": [
+     "00000-84-5c4e8c4b-3cf0-4963-b95e-523a4824a69b-0-00001.parquet"
+    ],
+    "delete_files": [
+     "00000-75-c34a8a91-1d7e-4698-893e-6f77341a2178-00001-deletes.parquet"
+    ],
+    "other_content_files": [],
+    "delete_files_table_rows": 1,
+    "live_rows": 6
+   },
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "overwrite",
+    "replace"
+   ],
+   "merged_rows": 1
+  },
+  "null_map_key_legacy": {
+   "sql": "CALL sc.system.rewrite_data_files(table => 'ns.dnull', options => map('remove-dangling-deletes', NULL), 'remove-dangling-deletes' => true)",
+   "before": {
+    "data_files": [
+     "00000-101-a7ebb395-d427-4f8e-a47d-9a44dd76befd-0-00001.parquet",
+     "00000-106-269a99a8-d0a2-46fd-b8d2-33a7271744d0-0-00001.parquet",
+     "00000-111-ce4a8306-2423-4195-96dd-701c9d63b294-0-00001.parquet",
+     "00000-116-f92c68e6-2f58-4eca-a1a1-cf1ad6f431d1-0-00001.parquet",
+     "00000-121-abef5256-166b-4022-9f32-eeaabe82313e-0-00001.parquet",
+     "00000-126-a1400353-96c9-4d53-bc61-b248555c9196-0-00001.parquet",
+     "00000-131-7b4dad91-e348-42e6-a796-1d12e5d4b221-0-00001.parquet",
+     "00000-136-b9cc1e64-45cb-421a-b2d4-13728eb20f82-0-00001.parquet",
+     "00000-141-1a6a381f-106b-4506-b57b-26b263def676-0-00001.parquet",
+     "00000-146-6eb70cc7-2527-4628-b324-e3174c71630e-0-00001.parquet",
+     "00000-151-711325a1-cbdf-4e61-a008-e1c2b8e99638-0-00001.parquet",
+     "00000-156-22e50e6a-f0ac-473d-ba59-14470890f11a-0-00001.parquet",
+     "00000-161-02d81d05-f97e-4fda-83ed-4145591404a9-0-00001.parquet",
+     "00000-166-5702e21e-bb40-44ae-8942-4c34105089a4-0-00001.parquet",
+     "00000-171-6ee35f19-c3c4-422e-a2d1-b1948e9836aa-0-00001.parquet",
+     "00000-176-56eee988-ec30-42ff-b0aa-ccbaf249c43b-0-00001.parquet"
+    ],
+    "delete_files": [
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00001-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00002-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00003-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00004-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00005-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00006-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00007-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00008-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00001-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00002-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00003-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00004-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00005-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00006-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00007-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00008-deletes.parquet"
+    ],
+    "other_content_files": [],
+    "delete_files_table_rows": 16,
+    "live_rows": 400
+   },
+   "error_class": "ParseException",
+   "error": "\n[PARSE_SYNTAX_ERROR] Syntax error at or near '=>': extra input '=>'. SQLSTATE: 42601 (line 1, pos 130)\n\n== SQL ==\nCALL sc.system.rewrite_data_files(table => 'ns.dnull', options => map('remove-dangling-deletes', NULL), 'remove-dangling-deletes' => true)\n----------------------------------------------------------------------------------------------------------------------------------^^^\n",
+   "after": {
+    "data_files": [
+     "00000-101-a7ebb395-d427-4f8e-a47d-9a44dd76befd-0-00001.parquet",
+     "00000-106-269a99a8-d0a2-46fd-b8d2-33a7271744d0-0-00001.parquet",
+     "00000-111-ce4a8306-2423-4195-96dd-701c9d63b294-0-00001.parquet",
+     "00000-116-f92c68e6-2f58-4eca-a1a1-cf1ad6f431d1-0-00001.parquet",
+     "00000-121-abef5256-166b-4022-9f32-eeaabe82313e-0-00001.parquet",
+     "00000-126-a1400353-96c9-4d53-bc61-b248555c9196-0-00001.parquet",
+     "00000-131-7b4dad91-e348-42e6-a796-1d12e5d4b221-0-00001.parquet",
+     "00000-136-b9cc1e64-45cb-421a-b2d4-13728eb20f82-0-00001.parquet",
+     "00000-141-1a6a381f-106b-4506-b57b-26b263def676-0-00001.parquet",
+     "00000-146-6eb70cc7-2527-4628-b324-e3174c71630e-0-00001.parquet",
+     "00000-151-711325a1-cbdf-4e61-a008-e1c2b8e99638-0-00001.parquet",
+     "00000-156-22e50e6a-f0ac-473d-ba59-14470890f11a-0-00001.parquet",
+     "00000-161-02d81d05-f97e-4fda-83ed-4145591404a9-0-00001.parquet",
+     "00000-166-5702e21e-bb40-44ae-8942-4c34105089a4-0-00001.parquet",
+     "00000-171-6ee35f19-c3c4-422e-a2d1-b1948e9836aa-0-00001.parquet",
+     "00000-176-56eee988-ec30-42ff-b0aa-ccbaf249c43b-0-00001.parquet"
+    ],
+    "delete_files": [
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00001-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00002-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00003-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00004-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00005-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00006-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00007-deletes.parquet",
+     "00000-186-dc64ff9f-25a8-49fa-a6b6-1b4b0ca57431-00008-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00001-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00002-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00003-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00004-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00005-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00006-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00007-deletes.parquet",
+     "00000-187-8fe6930d-d7fa-4d50-ae22-d520d738d710-00008-deletes.parquet"
+    ],
+    "other_content_files": [],
+    "delete_files_table_rows": 16,
+    "live_rows": 400
+   },
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete",
+    "replace"
+   ]
+  },
+  "null_map_key": {
+   "sql": "CALL sc.system.rewrite_data_files(table => 'ns.dnullo', options => map('remove-dangling-deletes', NULL))",
+   "before": {
+    "data_files": [
+     "00000-228-dc031215-5a57-4774-aa90-efd3dcf8e9e6-0-00001.parquet",
+     "00000-233-ad4ee9d7-5f97-4a46-af37-8b59a5175531-0-00001.parquet",
+     "00000-238-cc123a90-01d5-4040-a678-125fcb931a00-0-00001.parquet",
+     "00000-243-39cd615f-f374-495e-b728-fbb40f4f0c29-0-00001.parquet",
+     "00000-248-67ff48dc-dd9a-4e00-a469-5b5a1c00c745-0-00001.parquet",
+     "00000-253-4a66403a-1130-4921-84c0-35d3f232e31e-0-00001.parquet",
+     "00000-258-1194a999-cf00-4e79-9520-eebb4ac8d56c-0-00001.parquet",
+     "00000-263-db6c0758-9fca-4336-805d-c6b4f480a017-0-00001.parquet",
+     "00000-268-aedebd58-d8cf-48bc-b6bd-183cdd0b94c6-0-00001.parquet",
+     "00000-273-abd299ee-5e9b-4696-ac8e-8928cb7b2d10-0-00001.parquet",
+     "00000-278-a1041b42-002c-4584-b506-5b2a8e50bd06-0-00001.parquet",
+     "00000-283-fc9ae5d5-f17b-4c65-9e1d-e637f623aa8c-0-00001.parquet",
+     "00000-288-89b72b01-9661-49d5-9811-39caa226d77c-0-00001.parquet",
+     "00000-293-31a2324a-af49-4b09-937b-209f8a725629-0-00001.parquet",
+     "00000-298-3581bf05-3dca-4a92-b397-c5db666d3b1b-0-00001.parquet",
+     "00000-303-bfd43d58-e2c7-471a-8086-f4c0e3dcef23-0-00001.parquet"
+    ],
+    "delete_files": [
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00001-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00002-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00003-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00004-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00005-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00006-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00007-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00008-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00001-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00002-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00003-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00004-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00005-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00006-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00007-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00008-deletes.parquet"
+    ],
+    "other_content_files": [],
+    "delete_files_table_rows": 16,
+    "live_rows": 400
+   },
+   "error_class": "Py4JJavaError",
+   "error": "An error occurred while calling o51.sql.\n: org.apache.spark.SparkException: [INTERNAL_ERROR] The Spark SQL phase analysis failed with an internal error. You hit a bug in Spark or the Spark plugins you use. Please, report this bug to the corresponding communities or vendors, and provide the full stack trace. SQLSTATE: XX000\n\tat org.apache.spark.SparkException$.internalError(SparkException.scala:107)\n\tat org.apache.spark.sql.execution.QueryExecution$.toInternalError(QueryExecution.scala:706)\n\tat org.apache.spark.sql.execution.QueryExecution$.withInternalError(QueryExecution.scala:719)\n\tat org.ap",
+   "after": {
+    "data_files": [
+     "00000-228-dc031215-5a57-4774-aa90-efd3dcf8e9e6-0-00001.parquet",
+     "00000-233-ad4ee9d7-5f97-4a46-af37-8b59a5175531-0-00001.parquet",
+     "00000-238-cc123a90-01d5-4040-a678-125fcb931a00-0-00001.parquet",
+     "00000-243-39cd615f-f374-495e-b728-fbb40f4f0c29-0-00001.parquet",
+     "00000-248-67ff48dc-dd9a-4e00-a469-5b5a1c00c745-0-00001.parquet",
+     "00000-253-4a66403a-1130-4921-84c0-35d3f232e31e-0-00001.parquet",
+     "00000-258-1194a999-cf00-4e79-9520-eebb4ac8d56c-0-00001.parquet",
+     "00000-263-db6c0758-9fca-4336-805d-c6b4f480a017-0-00001.parquet",
+     "00000-268-aedebd58-d8cf-48bc-b6bd-183cdd0b94c6-0-00001.parquet",
+     "00000-273-abd299ee-5e9b-4696-ac8e-8928cb7b2d10-0-00001.parquet",
+     "00000-278-a1041b42-002c-4584-b506-5b2a8e50bd06-0-00001.parquet",
+     "00000-283-fc9ae5d5-f17b-4c65-9e1d-e637f623aa8c-0-00001.parquet",
+     "00000-288-89b72b01-9661-49d5-9811-39caa226d77c-0-00001.parquet",
+     "00000-293-31a2324a-af49-4b09-937b-209f8a725629-0-00001.parquet",
+     "00000-298-3581bf05-3dca-4a92-b397-c5db666d3b1b-0-00001.parquet",
+     "00000-303-bfd43d58-e2c7-471a-8086-f4c0e3dcef23-0-00001.parquet"
+    ],
+    "delete_files": [
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00001-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00002-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00003-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00004-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00005-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00006-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00007-deletes.parquet",
+     "00000-313-e0abafd8-1411-4105-8495-d36fe4912742-00008-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00001-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00002-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00003-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00004-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00005-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00006-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00007-deletes.parquet",
+     "00000-314-21a50a6b-6e11-4553-9070-c01784be4b22-00008-deletes.parquet"
+    ],
+    "other_content_files": [],
+    "delete_files_table_rows": 16,
+    "live_rows": 400
+   },
+   "ops": [
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "append",
+    "delete",
+    "replace"
+   ]
+  },
+  "dead_file": {
+   "seeded": {
+    "data_files": [
+     "00000-356-44998352-e61e-4d02-8cf7-b2e87bc7ae0c-0-00001.parquet"
+    ],
+    "delete_files": [],
+    "other_content_files": [],
+    "delete_files_table_rows": 0,
+    "live_rows": 2000
+   },
+   "merged": {
+    "data_files": [
+     "00000-356-44998352-e61e-4d02-8cf7-b2e87bc7ae0c-0-00001.parquet",
+     "00000-367-a83cbf15-598b-4486-88ce-6b25ce201eb3-00001.parquet"
+    ],
+    "delete_files": [
+     "00000-367-a83cbf15-598b-4486-88ce-6b25ce201eb3-00001-deletes.parquet"
+    ],
+    "other_content_files": [],
+    "delete_files_table_rows": 1,
+    "live_rows": 2000
+   },
+   "rewrite_position_delete_files": {
+    "sql": "CALL sc.system.rewrite_position_delete_files(table => 'ns.tile')",
+    "result": {
+     "rewritten_delete_files_count": 0,
+     "added_delete_files_count": 0,
+     "rewritten_bytes_count": 0,
+     "added_bytes_count": 0
+    },
+    "state": {
+     "data_files": [
+      "00000-356-44998352-e61e-4d02-8cf7-b2e87bc7ae0c-0-00001.parquet",
+      "00000-367-a83cbf15-598b-4486-88ce-6b25ce201eb3-00001.parquet"
+     ],
+     "delete_files": [
+      "00000-367-a83cbf15-598b-4486-88ce-6b25ce201eb3-00001-deletes.parquet"
+     ],
+     "other_content_files": [],
+     "delete_files_table_rows": 1,
+     "live_rows": 2000
+    }
+   },
+   "rewrite_data_files": {
+    "sql": "CALL sc.system.rewrite_data_files(table => 'ns.tile')",
+    "result": {
+     "rewritten_data_files_count": 2,
+     "added_data_files_count": 1,
+     "rewritten_bytes_count": 10024,
+     "failed_data_files_count": 0,
+     "removed_delete_files_count": 0
+    },
+    "state": {
+     "data_files": [
+      "00000-380-17a5c2b2-844a-459b-b9fe-7a1a5751973f-0-00001.parquet"
+     ],
+     "delete_files": [
+      "00000-367-a83cbf15-598b-4486-88ce-6b25ce201eb3-00001-deletes.parquet"
+     ],
+     "other_content_files": [],
+     "delete_files_table_rows": 1,
+     "live_rows": 2000
+    }
+   },
+   "ops": [
+    "append",
+    "overwrite",
+    "replace"
+   ]
+  }
+ }
+}

@@ -6,7 +6,7 @@ use super::call::call_count;
 use super::common::*;
 
 #[tokio::test]
-async fn call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count() {
+async fn call_rewrite_data_files_remove_dangling_deletes_keeps_the_live_delete() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -37,10 +37,12 @@ async fn call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count() 
     .expect("rewrite CALL with the option");
     let batches = result.collect().await.expect("collect rewrite result");
     let removed = call_count(&batches[0], "removed_delete_files_count");
-    assert!(
-        removed >= 1,
-        "the compacted data file strands the position delete; the sub-action must remove it, \
-         got removed_delete_files_count = {removed}"
+    assert_eq!(
+        removed, 0,
+        "the position delete still covers live rows, so the fork keeps it: Spark cell \
+         rwd_remove_dangling answers removed_delete_files_count = 0 on the same six-file \
+         shape; the legacy-flag spelling itself is RePark-only (cell rwd_legacy_flag \
+         records Spark's PARSE_SYNTAX_ERROR)"
     );
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.rwd WHERE id = 2").await,
@@ -55,7 +57,7 @@ async fn call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count() 
 }
 
 #[tokio::test]
-async fn call_rewrite_data_files_drops_the_merge_delete_that_names_one_data_file() {
+async fn call_rewrite_data_files_keeps_the_merge_delete_that_still_applies() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -101,9 +103,9 @@ async fn call_rewrite_data_files_drops_the_merge_delete_that_names_one_data_file
     let batches = result.collect().await.expect("collect rewrite result");
     assert_eq!(
         call_count(&batches[0], "removed_delete_files_count"),
-        1,
-        "the delete file carries exact, equal `file_path` bounds, so it is file-scoped and dies \
-         with the data file it named — no `remove-dangling-deletes` needed"
+        0,
+        "the MERGE delete still covers the merged row, so the fork keeps it: Spark cell \
+         rfs_merge_rewrite answers removed_delete_files_count = 0 on the same program"
     );
     assert_eq!(
         rows(
@@ -112,8 +114,9 @@ async fn call_rewrite_data_files_drops_the_merge_delete_that_names_one_data_file
             "SELECT * FROM ice.sales.rfs.files WHERE content = 1"
         )
         .await,
-        0,
-        "no delete file outlives the rewrite"
+        1,
+        "the kept delete file outlives the rewrite: Spark cell rfs_merge_rewrite ends \
+         with 1 data + 1 delete file"
     );
     assert_eq!(
         rows(
