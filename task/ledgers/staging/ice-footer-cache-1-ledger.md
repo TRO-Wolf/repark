@@ -78,3 +78,21 @@ read one footer per file per partition reader (a 512 KiB prefetch each).
   `a_warm_sample_hits_the_footer_cache_and_a_cold_one_misses_it` (C-008).
 - The session and bench record pins were red by compilation (the method, the `IoDelta::footer`
   field and the JSON key did not exist).
+
+## Critic residue (Grok 4.6, 2026-09-19: verification PASS, Rust perf LOOKS-GOOD)
+
+- A-1 (by design, fork contract): the key is storage context + path + `file_size_in_bytes`, so a
+  data file rewritten in place at the same path and the same size (a Hadoop-layout overwrite)
+  would be served its old footer. RePark's writers use a UUID prefix per writer, `rewrite_table_path`
+  changes the path, and fork #310's stale-size retry keys the successful open by the actual size.
+- A-5: the 64 MiB bound is `ParquetMetaData::memory_size()` (decoded metadata), not a process RSS
+  ceiling; the 500-table RSS pin toggles only `manifestCacheBytes`, so it does not bound the footer
+  cache.
+- FC-SIZE-10K: 64 MiB holds the 200-file bed; a 10,000-file table of the same shape needs a higher
+  `repark.iceberg.footerCacheBytes` (the fork's 256 MiB default holds about 10,000 such footers).
+- FC-UPGRADE-FETCH: a filtered scan after an unfiltered one pays a `load_page_index` ranged read
+  but no second footer GET; the fork does not count it in `fetches` (fork follow-up: pass the
+  prefetched tail to `load_page_index`).
+- FC-STATS-SINGLEFLIGHT: the fork counts concurrent first-access waiters as misses, so the
+  split-file win shows in the bench's footer I/O cells rather than as hits.
+
