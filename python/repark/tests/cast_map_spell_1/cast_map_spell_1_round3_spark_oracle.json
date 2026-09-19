@@ -1,0 +1,214 @@
+{
+ "spark_version": "4.1.2",
+ "cells": {
+  "dup_keys_ansi": {
+   "ansi": true,
+   "sql": "SELECT CAST(map('1', 'a', '01', 'b') AS MAP<INT, STRING>) AS m",
+   "schema": "struct<m:map<int,string>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "1": "b"
+     }
+    ]
+   ]
+  },
+  "dup_keys_legacy": {
+   "ansi": false,
+   "sql": "SELECT CAST(map('1', 'a', '01', 'b') AS MAP<INT, STRING>) AS m",
+   "error_class": "AnalysisException",
+   "error": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"map(1, a, 01, b)\" due to data type mismatch: cannot cast \"MAP<STRING, STRING>\" to \"MAP<INT, STRING>\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  "dup_keys_order_ansi": {
+   "ansi": true,
+   "sql": "SELECT map_keys(m) AS k, map_values(m) AS v FROM (SELECT CAST(map('2', 'a', '1', 'b', '02', 'c') AS MAP<INT, STRING>) AS m)",
+   "schema": "struct<k:array<int>,v:array<string>>",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     [
+      2,
+      1,
+      2
+     ],
+     [
+      "a",
+      "b",
+      "c"
+     ]
+    ]
+   ]
+  },
+  "try_null_key_ansi": {
+   "ansi": true,
+   "sql": "SELECT try_cast(map('x', 1) AS MAP<INT, INT>) AS m",
+   "error_class": "AnalysisException",
+   "error": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"map(x, 1)\" due to data type mismatch: cannot cast \"MAP<STRING, INT>\" to \"MAP<INT, INT>\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  "try_null_key_legacy": {
+   "ansi": false,
+   "sql": "SELECT try_cast(map('x', 1) AS MAP<INT, INT>) AS m",
+   "error_class": "AnalysisException",
+   "error": "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"map(x, 1)\" due to data type mismatch: cannot cast \"MAP<STRING, INT>\" to \"MAP<INT, INT>\". SQLSTATE: 42K09; line 1 pos 7;"
+  },
+  "try_widen_key_ansi": {
+   "ansi": true,
+   "sql": "SELECT try_cast(map(1, 'a') AS MAP<BIGINT, STRING>) AS m",
+   "schema": "struct<m:map<bigint,string>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "1": "a"
+     }
+    ]
+   ]
+  },
+  "try_widen_key_legacy": {
+   "ansi": false,
+   "sql": "SELECT try_cast(map(1, 'a') AS MAP<BIGINT, STRING>) AS m",
+   "schema": "struct<m:map<bigint,string>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "1": "a"
+     }
+    ]
+   ]
+  },
+  "overflow_leaf_ansi": {
+   "ansi": true,
+   "sql": "SELECT CAST(map('a', 128) AS MAP<STRING, TINYINT>) AS m",
+   "error_class": "ArithmeticException",
+   "error": "[CAST_OVERFLOW] The value 128 of the type \"INT\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  "overflow_leaf_legacy": {
+   "ansi": false,
+   "sql": "SELECT CAST(map('a', 128) AS MAP<STRING, TINYINT>) AS m",
+   "schema": "struct<m:map<string,tinyint>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": -128
+     }
+    ]
+   ]
+  },
+  "bigint_overflow_leaf_ansi": {
+   "ansi": true,
+   "sql": "SELECT CAST(map('a', 3000000000L) AS MAP<STRING, INT>) AS m",
+   "error_class": "ArithmeticException",
+   "error": "[CAST_OVERFLOW] The value 3000000000L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  "bigint_overflow_leaf_legacy": {
+   "ansi": false,
+   "sql": "SELECT CAST(map('a', 3000000000L) AS MAP<STRING, INT>) AS m",
+   "schema": "struct<m:map<string,int>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": -1294967296
+     }
+    ]
+   ]
+  },
+  "whitespace_leaf_ansi": {
+   "ansi": true,
+   "sql": "SELECT CAST(map('a', ' 1') AS MAP<STRING, INT>) AS m",
+   "schema": "struct<m:map<string,int>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": 1
+     }
+    ]
+   ]
+  },
+  "whitespace_leaf_legacy": {
+   "ansi": false,
+   "sql": "SELECT CAST(map('a', ' 1') AS MAP<STRING, INT>) AS m",
+   "schema": "struct<m:map<string,int>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": 1
+     }
+    ]
+   ]
+  },
+  "fraction_text_leaf_ansi": {
+   "ansi": true,
+   "sql": "SELECT CAST(map('a', '1.5') AS MAP<STRING, INT>) AS m",
+   "error_class": "NumberFormatException",
+   "error": "[CAST_INVALID_INPUT] The value '1.5' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  "fraction_text_leaf_legacy": {
+   "ansi": false,
+   "sql": "SELECT CAST(map('a', '1.5') AS MAP<STRING, INT>) AS m",
+   "schema": "struct<m:map<string,int>>",
+   "nullable": [
+    false
+   ],
+   "rows": [
+    [
+     {
+      "a": 1
+     }
+    ]
+   ]
+  },
+  "comment_hint_ansi": {
+   "ansi": true,
+   "sql": "SELECT 1 /*! CAST(x AS MAP<STRING,INT>) */, 2",
+   "schema": "struct<1:int,2:int>",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     1,
+     2
+    ]
+   ]
+  },
+  "comment_hint_legacy": {
+   "ansi": false,
+   "sql": "SELECT 1 /*! CAST(x AS MAP<STRING,INT>) */, 2",
+   "schema": "struct<1:int,2:int>",
+   "nullable": [
+    false,
+    false
+   ],
+   "rows": [
+    [
+     1,
+     2
+    ]
+   ]
+  }
+ }
+}

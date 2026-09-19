@@ -442,6 +442,28 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`INVALID_CONF_VALUE.TYPE_MISMATCH`, SQLSTATE 22022).
   pins: ice-rtas-byname-1/C-010
   The module carries no doc comments (comment ban); the three `Result` parsers take `#[allow(clippy::missing_errors_doc)]`.
+- `cast_map.rs` (+ [`cast_map/`](cast_map/map.md)) — **CAST-MAP-SPELL-1 (2026-09-19):**
+  the Spark `CAST` / `TRY_CAST` to any type naming `MAP<…>`, shared by both SQL doors and the
+  DataFrame `.cast`. Stock DataFusion plans no SQL map type, so `cast_map/rewrite.rs` turns
+  the call into `__repark_cast_map__(v, '<arrow type>', <try>)` (a bare `map()` operand into
+  `__repark_empty_map_cast__(NULL, …)`) before either door parses. The UDF resolves its
+  return field from the literal target: a non-map, non-matching source refuses at planning
+  with `[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION]`; the field is nullable when the source
+  is or under `try_cast`. Execution reuses Arrow's map / list / struct cast kernels element
+  by element with `safe = try_cast || !ansi`; an ANSI failure on a string leaf raises
+  Spark's `[CAST_INVALID_INPUT]` naming the first malformed value, and other leaf failures
+  keep Arrow's message. `schema_name` renders `CAST(<operand> AS MAP<K, V>)`.
+  `contains_map` / `spark_sql_name` serve the DataFrame door's token and display.
+  Registered by `register_all` (Spark door) and by the ANSI door's `on_session_built`.
+  pins: cast-map-spell-1/C-005, C-006, C-007
+  **Round 3 (2026-09-19):** the cast is a recursive `spark_cast` over map / list / struct
+  that hands leaves to `cast_map/leaf.rs` under a `Mode` (ANSI, legacy, `try_cast`) read from
+  the live session config at invoke. Key legality is checked twice: planning refuses a pair
+  illegal in every mode the flag allows (`try_cast` is known then), and invoke refuses the
+  legacy-only pairs under the live mode. A runtime `spark.sql.ansi.enabled` change never
+  reaches a registered UDF, so the mode cannot be fixed at registration. Colliding keys
+  after a key cast are kept, as Spark stores them.
+  pins: cast-map-spell-1/C-011, C-012, C-013
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty

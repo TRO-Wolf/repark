@@ -1,0 +1,89 @@
+{
+ "spark_version": "4.1.2",
+ "cells": {
+  "del_prefix_leaf_ansi_true": {
+   "sql": "SELECT CAST(map('a', concat(char(127), '1')) AS MAP<STRING, INT>) AS m",
+   "ansi": "true",
+   "schema": "struct<m:map<string,int>>",
+   "json": "{\"a\":1}"
+  },
+  "del_prefix_leaf_ansi_false": {
+   "sql": "SELECT CAST(map('a', concat(char(127), '1')) AS MAP<STRING, INT>) AS m",
+   "ansi": "false",
+   "schema": "struct<m:map<string,int>>",
+   "json": "{\"a\":1}"
+  },
+  "c1_prefix_leaf_ansi_true": {
+   "sql": "SELECT CAST(map('a', concat(char(133), '1')) AS MAP<STRING, INT>) AS m",
+   "ansi": "true",
+   "error_class": "NumberFormatException",
+   "error": "[CAST_INVALID_INPUT] The value '\u00851' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  "c1_prefix_leaf_ansi_false": {
+   "sql": "SELECT CAST(map('a', concat(char(133), '1')) AS MAP<STRING, INT>) AS m",
+   "ansi": "false",
+   "schema": "struct<m:map<string,int>>",
+   "json": "{\"a\":null}"
+  },
+  "tab_prefix_leaf_ansi_true": {
+   "sql": "SELECT CAST(map('a', concat(char(9), '1')) AS MAP<STRING, INT>) AS m",
+   "ansi": "true",
+   "schema": "struct<m:map<string,int>>",
+   "json": "{\"a\":1}"
+  },
+  "tab_prefix_leaf_ansi_false": {
+   "sql": "SELECT CAST(map('a', concat(char(9), '1')) AS MAP<STRING, INT>) AS m",
+   "ansi": "false",
+   "schema": "struct<m:map<string,int>>",
+   "json": "{\"a\":1}"
+  },
+  "del_bool_leaf_ansi_true": {
+   "sql": "SELECT CAST(map('a', concat(char(127), 'true')) AS MAP<STRING, BOOLEAN>) AS m",
+   "ansi": "true",
+   "schema": "struct<m:map<string,boolean>>",
+   "json": "{\"a\":true}"
+  },
+  "del_bool_leaf_ansi_false": {
+   "sql": "SELECT CAST(map('a', concat(char(127), 'true')) AS MAP<STRING, BOOLEAN>) AS m",
+   "ansi": "false",
+   "schema": "struct<m:map<string,boolean>>",
+   "json": "{\"a\":true}"
+  },
+  "try_cast_overflow_key_ansi_true": {
+   "sql": "SELECT try_cast(map(128, 'a') AS MAP<TINYINT, STRING>) AS m",
+   "schema": "struct<m:map<tinyint,string>>",
+   "is_null": false,
+   "size": 1,
+   "keys": [
+    "None"
+   ],
+   "values": [
+    "a"
+   ]
+  },
+  "try_cast_overflow_key_ansi_false": {
+   "sql": "SELECT try_cast(map(128, 'a') AS MAP<TINYINT, STRING>) AS m",
+   "schema": "struct<m:map<tinyint,string>>",
+   "is_null": false,
+   "size": 1,
+   "keys": [
+    "None"
+   ],
+   "values": [
+    "a"
+   ]
+  },
+  "overflow_leaf_ansi_true": {
+   "sql": "SELECT CAST(map('a', 128) AS MAP<STRING, TINYINT>) AS m",
+   "ansi": "true",
+   "error_class": "ArithmeticException",
+   "error": "[CAST_OVERFLOW] The value 128 of the type \"INT\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003"
+  },
+  "overflow_leaf_ansi_false": {
+   "sql": "SELECT CAST(map('a', 128) AS MAP<STRING, TINYINT>) AS m",
+   "ansi": "false",
+   "schema": "struct<m:map<string,tinyint>>",
+   "json": "{\"a\":-128}"
+  }
+ }
+}

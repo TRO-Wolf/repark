@@ -51,6 +51,8 @@ pub(crate) async fn plan_expr_column(
     canonical: &str,
     original: &str,
 ) -> PyResult<Expr> {
+    let rewritten = repark_functions::cast_map::rewrite_map_casts(canonical);
+    let canonical = rewritten.as_deref().unwrap_or(canonical);
     let select_sql = format!("SELECT ({canonical}) AS _repark_expr");
     let plan = match context.sql(&select_sql).await {
         Ok(frame) => {
@@ -362,6 +364,23 @@ pub(super) fn parse_data_type(spec: &str) -> Result<DataType, String> {
         "binary" => Ok(DataType::Binary),
         other => parse_decimal_type(other),
     }
+}
+
+pub(super) fn cast_to(expr: Expr, spec: &str, try_cast: bool) -> Result<Expr, String> {
+    if let Some(target) = repark_functions::cast_map::map_cast_target(spec) {
+        return Ok(repark_functions::cast_map::cast_map_expr(
+            expr, &target, try_cast,
+        ));
+    }
+    let data_type = parse_data_type(spec)?;
+    Ok(if try_cast {
+        Expr::TryCast(datafusion::logical_expr::TryCast::new(
+            Box::new(expr),
+            data_type,
+        ))
+    } else {
+        Expr::Cast(Cast::new(Box::new(expr), data_type))
+    })
 }
 
 /// Parse a `decimal(precision,scale)` type string into an Arrow `Decimal128`.

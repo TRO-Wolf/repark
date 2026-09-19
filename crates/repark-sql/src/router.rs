@@ -43,6 +43,10 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
         Some(rewritten) => Cow::Owned(rewritten),
         None => sql,
     };
+    let sql = match repark_functions::cast_map::rewrite_map_casts(&sql) {
+        Some(rewritten) => Cow::Owned(rewritten),
+        None => sql,
+    };
     // Release every relation registered by the rewrite after planning.
     let mut pinned = time_travel::PinnedViews::default();
     let mut lineage_pins = repark_core::LineagePins::default();

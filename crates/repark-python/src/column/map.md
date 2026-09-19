@@ -22,6 +22,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **LOGICAL-WIDTH-1 (2026-09-16, round 2, R-12):** `wrap_cast` is `pub(crate)` so the
   the free `fill_expr_for_column` binding renders the fill literal's cast texts with
   the same renderer `Column.cast` uses. pins: logical-width-1/C-012
+  **CAST-MAP-SPELL-1 (2026-09-19):** `engine_cast` builds through `expr_build::cast_to`;
+  `cast_type_token` is the facade's Spark token for a map-bearing type string
+  (`repark_functions::cast_map::map_cast_token`, `ParseException` otherwise).
+  pins: cast-map-spell-1/C-004
   **Step-2b remediation (2026-09-12, review F1–F5):** operand parts extract as borrowed
   `&str` tuples, not owned `String`s — PyO3 borrows the UTF-8 cache instead of copying the
   growing SQL fragments across the boundary per op. `alias` returns a 2-tuple
@@ -143,6 +147,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   bool/string still refuse (no numeric coercion).
   pins: abs-expr-1/C-001, C-002
 - [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection.
+  **CAST-MAP-SPELL-1 (2026-09-19):** `cast_to` sends a map-bearing type string to
+  `repark_functions::cast_map::cast_map_expr` and every other one to `parse_data_type`;
+  `plan_expr_column` runs the shared map-cast rewrite, so `F.expr` spells it too.
+  pins: cast-map-spell-1/C-004
   **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `build_expr_context`
   seats the early integral-literal rule through the shared
   `insert_literal_rule_before_coercion` and installs the post-coercion rules

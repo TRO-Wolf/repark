@@ -10,10 +10,9 @@ the cell's DDL on a fresh RePark memory catalog, seeds the recorder's four rows,
 runs the cell's statement and asserts the run answers (``ok``), the ids left
 behind equal Spark's and the newest snapshot's operation equals Spark's.
 
-The ``map_int`` seed spells its empty-map row ``CAST(map() AS MAP<STRING, INT>)``,
-which RePark's parser refuses (registry row CAST-MAP-SPELL-1, BACKLOG). The pins
-seed that row through ``MAP_EMPTY_SUBSTITUTE`` instead, which RePark parses and
-which reads back equal to Spark's seed. All 128 cells answer, including the
+Every seed runs verbatim: the ``map_int`` seed's empty-map row spells
+``CAST(map() AS MAP<STRING, INT>)``, which answers since CAST-MAP-SPELL-1
+(FIXED 2026-09-19, pins: cast-map-spell-1/C-008). All 128 cells answer, including the
 sixteen copy-on-write DELETE cells with a compound predicate over the nested
 column (``id > 1 AND xs IS NULL``, ``xs IS NULL OR id = 1``): ICE-LIST-NULL-2
 declines those selections from the identity DELETE path to the fork's DataFusion
@@ -50,10 +49,6 @@ _CATALOG = "ice_list_null_1"
 _NAMESPACE = "ns"
 _LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 _LIVE_SKIP = "REPARK_PARITY_LIVE != 1: live Spark cell skipped (routine CI is JVM-free)"
-_MAP_EMPTY_RECORDED = "CAST(map() AS MAP<STRING, INT>)"
-_MAP_EMPTY_SUBSTITUTE = (
-    "map_from_arrays(CAST(array() AS ARRAY<STRING>), CAST(array() AS ARRAY<INT>))"
-)
 _PREDICATE_SLUGS = {
     "xs IS NULL": "is-null",
     "xs IS NOT NULL": "is-not-null",
@@ -131,12 +126,8 @@ def _session(warehouse: Path) -> ReparkSession:
 
 
 def _seed_values(cell: dict[str, Any]) -> str:
-    """Return the cell's seed VALUES list with the RePark-readable empty-map spelling."""
-    values = recorder.SHAPES[cell["shape"]][1]
-    if cell["shape"] == "map_int":
-        assert _MAP_EMPTY_RECORDED in values, cell["shape"]
-        values = values.replace(_MAP_EMPTY_RECORDED, _MAP_EMPTY_SUBSTITUTE)
-    return values
+    """Return the recorder's seed VALUES list for the cell's shape, verbatim."""
+    return recorder.SHAPES[cell["shape"]][1]
 
 
 def _table_name(key: str) -> str:

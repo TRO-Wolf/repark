@@ -1,5 +1,7 @@
 # map — scripts/
 
+CAST-MAP-SPELL-1 (2026-09-19): `check_lib_py.py` ratchets `spark/column.py` 1532 → 1529 (unknown cast names forward to the native map-type token) and `check_rust_file_size.py` ratchets `repark-python/src/session.rs` 1127 → 1126 (SQL prep moves to `session_runtime.rs`), both shrink-only. pins: cast-map-spell-1/C-004, C-005
+
 ICE-WRITE-OPTIONS-1 (2026-09-17): `check_lib_py.py` sets `dataframe/core.py` 4015 → 3991 (the WriterV2 option warning machinery leaves) and `dataframe/writer_readwriter.py` 1101 → 1114 (options slots, storage, clause rendering). pins: ice-write-options-1/C-001, C-005
 
 ICE-WRITE-OPTIONS-1 round 2 (2026-09-17): `check_lib_py.py` sets `dataframe/writer_readwriter.py` 1114 → 1099 (dedup moves to `writer_layout.store_writer_option`, head-prefix rendering; ruff format collapses one call). pins: ice-write-options-1/C-001, C-005

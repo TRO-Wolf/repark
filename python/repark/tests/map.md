@@ -40,6 +40,38 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_cast_map_spell_1.py](test_cast_map_spell_1.py) +
+  [cast_map_spell_1/](cast_map_spell_1/map.md) +
+  [_record_cast_map_spell_1.py](_record_cast_map_spell_1.py) —
+  **CAST-MAP-SPELL-1 (2026-09-19, round 1):** the 21-cell Spark 4.1.2 oracle for
+  `CAST(… AS MAP<…>)` and `.cast(MapType)` — one pin per cell on the facade SQL
+  door, the native ANSI door wherever it can spell the cell (`array(...)` and
+  bare `map()` have no native spelling and stay facade-only), and the DataFrame
+  door for the three `.cast` cells; refusals pin Spark's exception class and
+  error token. Red on main: 34 failed, 1 live-skip.
+  pins: cast-map-spell-1/C-002, C-003, C-004
+  **Round 2 (2026-09-19):** green on the `repark_functions::cast_map` fix (offline 82
+  passed with `test_nullability_2.py` and `test_ice_array_insert_1.py`, 13 live-skipped;
+  live 95 passed; the re-deriver's `--check` matches the fixture). The facade value
+  cells match rows as a multiset, because the `UNION ALL` cell promises no order; the
+  registry row reads FIXED. pins: cast-map-spell-1/C-001, C-009, C-010
+  **Round 3 (2026-09-19):** 17 more cells from
+  `cast_map_spell_1/cast_map_spell_1_round3_spark_oracle.json`, each under its recorded
+  ANSI mode on the facade door and, when ANSI is on, on the native door: key legality
+  per mode and `try_cast`, colliding keys kept as Spark stores them, leaf overflow,
+  whitespace and fractional text, and a `/*! … */` comment hint. Maps compare through a
+  `str(key)` dict, as the recorder's `collect()` plus `json` does.
+  pins: cast-map-spell-1/C-011, C-012, C-013, C-014
+  Green on the round-3 kernel except `native_door[comment_hint_ansi]`, a dated strict
+  xfail: the native door's stock Generic parser expands `/*! */` hints for every
+  statement, maps or not.
+  The re-deriver's `--check` compares both fixtures after a JSON round trip, so int map
+  keys read as the committed string keys.
+  **Round 4 (2026-09-19):** 12 cells from `cast_map_spell_1_round4_spark_oracle.json` — the
+  trim rule (bytes <= 0x20 and DEL, not U+0085), the full recorded `CAST_OVERFLOW` message,
+  and RePark's loud refusal where Spark stores a NULL key. The native door runs the ANSI-on
+  cells it can spell; its overflow cell is a dated strict xfail (it types `128` as BIGINT).
+  pins: cast-map-spell-1/C-013, C-015, C-016
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —
@@ -1563,7 +1595,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   4.1.2 on the shared `spark_engine`.
   Round 2 (2026-09-06): complex casts propagate the child flag with non-null
   `STRUCT()`/`MAP()`/`ARRAY()` constructors (both ANSI modes, both doors, live leg);
-  the `MAP<…>` CAST spelling stays a pinned refusal and the constructor element
+  the `MAP<…>` CAST spelling (answering on both doors since CAST-MAP-SPELL-1, FIXED
+  2026-09-19, pins: cast-map-spell-1/C-008) and the constructor element
   flags kept their pins (all three arms stay the backlog of COMPLEX-ELEM-NULL-1 —
   the 2026-09-16 array-arm flip was reverted 2026-09-15 under DOOR-CONVERGE-1
   ruling R-10 and handed to DOOR-CONVERGE-2);
@@ -6094,6 +6127,9 @@ alike — a disclosed round-8 residual, deliberately unpinned.
   in UTC with both ANSI settings. `fnp8_repark_dispositions.json` records each door
   schema or explicit refusal; residual reasons live in the parity registry.
   The live test remeasures the same goldens. pins: fnp-8/C-003, C-004, C-005, C-006
+  **CAST-MAP-SPELL-1 (2026-09-19):** the 24 typed-map `transform_keys` / `transform_values`
+  / `map_filter` cells (`CAST(map() AS MAP<…>)`, `CAST(NULL AS MAP<…>)`) now record a schema
+  equal to Spark's instead of the `<` refusal. pins: cast-map-spell-1/C-008
   `fnp8_error_oracle.json` retains the live arity, accumulator, and overflow measurements
   consumed by the same module; the SQL error pins remain in `lambda_door.rs`.
 
@@ -6649,9 +6685,8 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   rows and the first data file's footer field ids, walked with the recorder's `field_ids`
   (Spark's file count is recorded but never pinned — it follows Spark's task count). The
   eight non-VALUES `map_list` cells run the recorded `CAST(NULL AS MAP<...>)` statement
-  verbatim under strict xfail (CAST-MAP-SPELL-1, BACKLOG) with substitute-source twins
-  through the same door from a `CASE WHEN false` NULL-map row Spark answers identically
-  (measured 2026-09-18). Live (`REPARK_PARITY_LIVE=1`): Spark adopts each RePark-written
+  verbatim as plain pins since CAST-MAP-SPELL-1 (2026-09-19; the `CASE WHEN false`
+  substitute twins were dropped, pins: cast-map-spell-1/C-008). Live (`REPARK_PARITY_LIVE=1`): Spark adopts each RePark-written
   `sql_values` table via `register_table` and reads the recorded rows. Truth in
   [../../repark-parity/fixtures/torture/data/ice_array_insert_1/](../../repark-parity/fixtures/torture/data/ice_array_insert_1/map.md).
   pins: ice-array-insert-1/C-003, C-004, C-005, C-006, C-007, C-008
@@ -6695,9 +6730,8 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   predicates by delete/update by copy-on-write / merge-on-read by v2/v3) asserting
   the run answers, the ids left equal Spark's and the newest snapshot's operation
   equals Spark's, each on a fresh RePark memory catalog with the recorder's DDL
-  and seed. The `map_int` empty-map seed row runs through a `map_from_arrays`
-  spelling RePark parses that reads back equal to Spark's seed (CAST-MAP-SPELL-1,
-  BACKLOG). **ICE-LIST-NULL-2 (2026-09-19):** all 128 cells answer — the sixteen
+  and seed. The `map_int` seed runs verbatim, its `CAST(map() AS MAP<STRING, INT>)`
+  row included (CAST-MAP-SPELL-1, FIXED 2026-09-19, pins: cast-map-spell-1/C-008). **ICE-LIST-NULL-2 (2026-09-19):** all 128 cells answer — the sixteen
   copy-on-write DELETE compound-predicate cells run as plain pins since the
   identity path declines non-primitive selections to the fork DELETE path (the
   fork #299 residue sentence is corrected: the conjunction/disjunction failure

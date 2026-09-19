@@ -151,7 +151,7 @@ impl PyReparkSession {
             let builder =
                 apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
             let handle = finish_session(py, builder)?;
-            repark_functions::spark_log1p::register(handle.session.context());
+            crate::session_runtime::register_native_door_functions(handle.session.context());
             Ok(handle)
         })
     }
@@ -161,10 +161,9 @@ impl PyReparkSession {
     /// Returns `RuntimeError` on parse, planning, iceberg, or execution failure.
     pub fn sql(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.sql", "PyReparkSession.sql", {
-            repark_spark::refuse_declared_function_in_sql(query)
-                .map_err(crate::datafusion_to_py_err)?;
+            let query = crate::session_runtime::prepare_session_sql(query)?;
             let df = py
-                .detach(|| self.runtime.block_on(self.session.sql(query)))
+                .detach(|| self.runtime.block_on(self.session.sql(&query)))
                 .map_err(to_py_err)?;
             Ok(PyDataFrame::new(df, Arc::clone(&self.runtime)))
         })

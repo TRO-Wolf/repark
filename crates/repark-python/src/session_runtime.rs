@@ -184,3 +184,14 @@ fn write_session_zone(session: &ReparkSession, zone: repark_core::SessionTimeZon
         ))),
     }
 }
+
+pub(crate) fn prepare_session_sql(query: &str) -> PyResult<std::borrow::Cow<'_, str>> {
+    repark_spark::refuse_declared_function_in_sql(query).map_err(crate::datafusion_to_py_err)?;
+    Ok(repark_functions::cast_map::rewrite_map_casts(query)
+        .map_or(std::borrow::Cow::Borrowed(query), std::borrow::Cow::Owned))
+}
+
+pub(crate) fn register_native_door_functions(ctx: &datafusion::prelude::SessionContext) {
+    repark_functions::spark_log1p::register(ctx);
+    repark_functions::cast_map::register(ctx);
+}
