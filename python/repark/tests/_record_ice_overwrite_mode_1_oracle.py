@@ -6,7 +6,7 @@ Usage (a PySpark 4.1.2 interpreter with a JVM on PATH)::
         --warehouse <empty-dir> record
     ... check
 
-``record`` replays the 30 overwrite shapes on format versions 2 and 3 (60
+``record`` replays the 44 overwrite shapes on format versions 2 and 3 (88
 cells) against live Spark 4.1.2 + Iceberg 1.11.0 over an InMemory catalog and
 prints the fixture JSON to stdout. ``check`` replays the same cells and exits
 non-zero naming the first mismatch against the committed
@@ -22,6 +22,7 @@ pins: ice-overwrite-mode-1/C-001
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import sys
 from collections.abc import Callable
@@ -57,6 +58,12 @@ PSTATIC = "INSERT OVERWRITE {T} PARTITION (cat = 'x') SELECT 9, 'z'"
 NOCLAUSE = "INSERT OVERWRITE {T} SELECT 9, 'z', 'x'"
 EMPTY = "INSERT OVERWRITE {T} SELECT 9, 'z', 'x' WHERE false"
 MIXED = "INSERT OVERWRITE {T} PARTITION (cat = 'x', sub) SELECT 9, 'z', 'p'"
+MIXED_EMPTY = MIXED + " WHERE false"
+BY_NAME_MIXED = (
+    "INSERT OVERWRITE {T} PARTITION (cat = 'x', sub) BY NAME "
+    "SELECT 'z' AS data, 9 AS id, 'p' AS sub"
+)
+BY_BUCKET = "PARTITIONED BY (bucket(4, id))"
 
 
 class OverwriteShape(BaseModel):
@@ -71,11 +78,21 @@ class OverwriteShape(BaseModel):
     partition: str = BY_CAT
     conf: dict[str, str] = {}
     two_level: bool = False
+    group: str = ""
+    columns: str = ""
+    seed: str = ""
+    setup: tuple[str, ...] = ()
 
     def cell_id(self, version: int) -> str:
         """Return the fixture cell id for this shape on ``version``."""
+        if self.group:
+            return f"{self.group}-{self.key}-V{version}"
         family = "DF" if self.action else "SQL"
         return f"OW-{family}-{self.key}-V{version}"
+
+    def column_ddl(self) -> str:
+        """Return the table's column list."""
+        return self.columns or (TWO_LEVEL if self.two_level else ONE_LEVEL)
 
 
 SHAPES: tuple[OverwriteShape, ...] = (
@@ -220,6 +237,115 @@ SHAPES: tuple[OverwriteShape, ...] = (
         action="save_as_table",
         conf=DYNAMIC,
     ),
+    OverwriteShape(
+        group="OW2",
+        key="R2-PDYN-EMPTY-DYN",
+        title="PARTITION (cat) empty source, dynamic mode",
+        statement="INSERT OVERWRITE {T} PARTITION (cat) SELECT 9, 'z', 'x' WHERE false",
+        conf=DYNAMIC,
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R2-MIXED-EMPTY-DYN",
+        title="PARTITION (cat='x', sub) empty source, dynamic mode",
+        statement=MIXED_EMPTY,
+        partition=BY_CAT_SUB,
+        conf=DYNAMIC,
+        two_level=True,
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R2-MIXED-EMPTY-STA",
+        title="PARTITION (cat='x', sub) empty source, static mode",
+        statement=MIXED_EMPTY,
+        partition=BY_CAT_SUB,
+        two_level=True,
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R1-BUCKET-STATIC",
+        title="PARTITION (id = 1) on a bucket(4, id) table, static mode",
+        statement="INSERT OVERWRITE {T} PARTITION (id = 1) SELECT 'z', 'x'",
+        partition=BY_BUCKET,
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R1-BUCKET-DYN",
+        title="PARTITION (id) on a bucket(4, id) table, dynamic mode",
+        statement="INSERT OVERWRITE {T} PARTITION (id) SELECT 'z', 'x', 1",
+        partition=BY_BUCKET,
+        conf=DYNAMIC,
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R1-DAYS-STATIC",
+        title="PARTITION (ts = ...) on a days(ts) table",
+        statement=(
+            "INSERT OVERWRITE {T} PARTITION (ts = TIMESTAMP'2024-01-01 00:00:00') SELECT 9, 'z'"
+        ),
+        partition="PARTITIONED BY (days(ts))",
+        columns="id BIGINT, data STRING, ts TIMESTAMP",
+        seed="(1, 'a', TIMESTAMP'2024-01-01 05:00:00'), (2, 'b', TIMESTAMP'2024-01-02 05:00:00')",
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R1-IDENT-AND-BUCKET",
+        title="PARTITION (cat = 'x') on (cat, bucket(2, id))",
+        statement="INSERT OVERWRITE {T} PARTITION (cat = 'x') SELECT 9, 'z'",
+        partition="PARTITIONED BY (cat, bucket(2, id))",
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R3-BYNAME-MIXED-STA",
+        title="BY NAME mixed PARTITION (cat='x', sub), static mode",
+        statement=BY_NAME_MIXED,
+        partition=BY_CAT_SUB,
+        two_level=True,
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R3-BYNAME-MIXED-DYN",
+        title="BY NAME mixed PARTITION (cat='x', sub), dynamic mode",
+        statement=BY_NAME_MIXED,
+        partition=BY_CAT_SUB,
+        conf=DYNAMIC,
+        two_level=True,
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="R3-BYNAME-STATIC",
+        title="BY NAME PARTITION (cat='x'), static mode",
+        statement="INSERT OVERWRITE {T} PARTITION (cat = 'x') BY NAME SELECT 'z' AS data, 9 AS id",
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="NULL-STATIC",
+        title="PARTITION (cat = NULL), static mode",
+        statement="INSERT OVERWRITE {T} PARTITION (cat = NULL) SELECT 9, 'z'",
+        setup=("INSERT INTO {T} VALUES (5, 'n', NULL)",),
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="CAST-STATIC-DATE",
+        title="PARTITION (d = '2024-01-01') on a DATE partition",
+        statement="INSERT OVERWRITE {T} PARTITION (d = '2024-01-01') SELECT 9, 'z'",
+        partition="PARTITIONED BY (d)",
+        columns="id BIGINT, data STRING, d DATE",
+        seed="(1, 'a', DATE'2024-01-01'), (2, 'b', DATE'2024-01-02')",
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="CASE-STATIC",
+        title="PARTITION (CAT = 'x') upper-case column",
+        statement="INSERT OVERWRITE {T} PARTITION (CAT = 'x') SELECT 9, 'z'",
+    ),
+    OverwriteShape(
+        group="OW2",
+        key="OPT-BOTH-SQL",
+        title="session mode DYNAMIC upper-case + PARTITION (cat)",
+        statement=PDYN,
+        conf={MODE_KEY: "DYNAMIC"},
+    ),
 )
 
 VERSIONS = (2, 3)
@@ -303,16 +429,19 @@ def table_name(shape: OverwriteShape, version: int) -> str:
 def seed_table(session: Any, shape: OverwriteShape, version: int) -> str:
     """Create and seed the cell's table; return its name."""
     table = table_name(shape, version)
-    columns = TWO_LEVEL if shape.two_level else ONE_LEVEL
     session.sql(
-        f"CREATE TABLE {table} ({columns}) USING iceberg {shape.partition} "
+        f"CREATE TABLE {table} ({shape.column_ddl()}) USING iceberg {shape.partition} "
         f"TBLPROPERTIES ('format-version'='{version}')"
     ).collect()
-    if shape.two_level:
+    if shape.seed:
+        rows = shape.seed
+    elif shape.two_level:
         rows = "(1, 'a', 'x', 'p'), (2, 'b', 'y', 'p'), (3, 'c', 'x', 'q'), (4, 'd', 'y', 'q')"
     else:
         rows = "(1, 'a', 'x'), (2, 'b', 'y'), (3, 'c', 'x')"
     session.sql(f"INSERT INTO {table} VALUES {rows}").collect()
+    for statement in shape.setup:
+        session.sql(statement.format(T=table)).collect()
     return table
 
 
@@ -325,9 +454,17 @@ def apply_shape(session: Any, shape: OverwriteShape, table: str) -> None:
     ACTIONS[shape.action](frame, table)
 
 
+def plain_value(value: Any) -> Any:
+    """Return ``value`` with dates and timestamps as ISO strings."""
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        return value.isoformat()
+    return value
+
+
 def table_rows(session: Any, table: str) -> list[list[Any]]:
-    """Return every row of ``table`` as lists sorted by ``repr``."""
-    return sorted((list(row) for row in session.sql(f"SELECT * FROM {table}").collect()), key=repr)
+    """Return every row of ``table`` as lists of plain values sorted by ``repr``."""
+    rows = session.sql(f"SELECT * FROM {table}").collect()
+    return sorted(([plain_value(value) for value in row] for row in rows), key=repr)
 
 
 def snapshot_history(session: Any, table: str) -> list[list[Any]]:
@@ -408,20 +545,26 @@ def record_all(warehouse: Path) -> dict[str, Any]:
         }
     finally:
         session.stop()
+    return {"provenance": provenance(len(cells)), "cells": cells}
+
+
+def provenance(cell_count: int) -> dict[str, Any]:
+    """Return the fixture's provenance block for ``cell_count`` cells."""
     return {
-        "provenance": {
-            "spark": "4.1.2",
-            "iceberg": "1.11.0",
-            "catalog": "InMemoryCatalog",
-            "recorded": "2026-09-19",
-            "cells": len(cells),
-            "shapes": f"{len(SHAPES)} shapes x format v2 and v3",
-            "seed": "(1,a,x),(2,b,y),(3,c,x) PARTITIONED BY (cat); two-level tables add sub: "
-            "(1,a,x,p),(2,b,y,p),(3,c,x,q),(4,d,y,q) PARTITIONED BY (cat, sub)",
-            "dataframe_source": "(7,g,x),(8,h,w) as id BIGINT, data STRING, cat STRING",
-            "summary_keys": list(SUMMARY_KEYS),
-        },
-        "cells": cells,
+        "spark": "4.1.2",
+        "iceberg": "1.11.0",
+        "catalog": "InMemoryCatalog",
+        "recorded": "2026-09-19",
+        "cells": cell_count,
+        "shapes": f"{len(SHAPES)} shapes x format v2 and v3",
+        "seed": "(1,a,x),(2,b,y),(3,c,x) PARTITIONED BY (cat); two-level tables add sub: "
+        "(1,a,x,p),(2,b,y,p),(3,c,x,q),(4,d,y,q) PARTITIONED BY (cat, sub); a shape's "
+        "own columns, seed and setup statements replace them",
+        "dataframe_source": "(7,g,x),(8,h,w) as id BIGINT, data STRING, cat STRING",
+        "summary_keys": list(SUMMARY_KEYS),
+        "ow2_cells": "the 28 OW2 cells were measured 2026-09-19 by an independent harness "
+        "recording on the same Spark and Iceberg pins, folded in with this recorder's cell "
+        "shape, and are re-derived by its check mode",
     }
 
 

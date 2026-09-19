@@ -1,6 +1,7 @@
 """ICE-OVERWRITE-MODE-1 — Spark's overwrite partition set on every facade overwrite door.
 
-pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-011,
+C-012, C-013, C-014
 """
 
 from __future__ import annotations
@@ -37,6 +38,12 @@ FIXTURE: dict[str, Any] = json.loads(
     Path(__file__).with_name("ice_overwrite_mode_1_spark_oracle.json").read_text(encoding="utf-8")
 )["cells"]
 RTAS_HISTORY = frozenset({"SAVEASTABLE-OW-OPT", "SAVEASTABLE-OW-DYNSESSION"})
+ARROW_TYPES: dict[str, tuple[pa.DataType, ...]] = {
+    "BIGINT": (pa.int64(),),
+    "STRING": (pa.string(), pa.large_string()),
+    "DATE": (pa.date32(),),
+    "TIMESTAMP": (pa.timestamp("us", tz="UTC"),),
+}
 CELLS = [
     pytest.param(shape, version, id=shape.cell_id(version))
     for shape in SHAPES
@@ -69,9 +76,9 @@ def spark(tmp_path: Path) -> Iterator[ReparkSession]:
 def _assert_arrow_types(session: ReparkSession, shape: OverwriteShape, version: int) -> None:
     """Pin the Arrow column types of the overwritten table."""
     schema = session.sql(f"SELECT * FROM {table_name(shape, version)}").to_arrow().schema
-    assert schema.field("id").type == pa.int64()
-    for column in schema.names[1:]:
-        assert schema.field(column).type in (pa.string(), pa.large_string()), column
+    for column in shape.column_ddl().split(", "):
+        name, sql_type = column.split(" ")
+        assert schema.field(name).type in ARROW_TYPES[sql_type], column
 
 
 @pytest.mark.parametrize(("shape", "version"), CELLS)
@@ -115,6 +122,41 @@ def test_non_partition_column_refusal_keeps_every_row(spark: ReparkSession) -> N
     assert type(excinfo.value).__name__ == "AnalysisException"
     rows = sorted(tuple(row) for row in spark.sql(f"SELECT * FROM {table}").collect())
     assert rows == [(1, "a", "x"), (2, "b", "y"), (3, "c", "x")]
+
+
+def _snapshot_ids(session: ReparkSession, table: str) -> list[int]:
+    """Return the table's snapshot ids in commit order."""
+    rows = session.sql(
+        f"SELECT snapshot_id FROM {table}.snapshots ORDER BY committed_at, snapshot_id"
+    ).collect()
+    return [row[0] for row in rows]
+
+
+def test_empty_frame_overwrite_partitions_commits_nothing(spark: ReparkSession) -> None:
+    """writeTo.overwritePartitions of an empty frame leaves rows and snapshots unchanged."""
+    shape = next(item for item in SHAPES if item.key == "WRITETO-OVERWRITEPARTS")
+    table = seed_table(spark, shape, 2)
+    before = _snapshot_ids(spark, table)
+    frame = spark.createDataFrame([], "id BIGINT, data STRING, cat STRING")
+    frame.writeTo(table).overwritePartitions()
+    rows = sorted(tuple(row) for row in spark.sql(f"SELECT * FROM {table}").collect())
+    assert rows == [(1, "a", "x"), (2, "b", "y"), (3, "c", "x")]
+    assert _snapshot_ids(spark, table) == before
+
+
+def test_invalid_static_date_refuses_like_the_engine_cast(spark: ReparkSession) -> None:
+    """A static value the DATE cast rejects refuses with the engine's CAST refusal text."""
+    shape = next(item for item in SHAPES if item.key == "CAST-STATIC-DATE")
+    table = seed_table(spark, shape, 2)
+    with pytest.raises(Exception) as cast_error:
+        spark.sql("SELECT CAST('2024-13-45' AS DATE)").collect()
+    with pytest.raises(Exception) as insert_error:
+        spark.sql(f"INSERT OVERWRITE {table} PARTITION (d = '2024-13-45') SELECT 9, 'z'").collect()
+    condition = str(cast_error.value).split("]")[0] + "]"
+    assert condition.startswith("[CAST_INVALID_INPUT"), cast_error.value
+    assert condition in str(insert_error.value), insert_error.value
+    rows = sorted(tuple(row) for row in spark.sql(f"SELECT id, data FROM {table}").collect())
+    assert rows == [(1, "a"), (2, "b")]
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)

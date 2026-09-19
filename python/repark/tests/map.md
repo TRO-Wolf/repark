@@ -43,10 +43,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) +
   [ice_overwrite_mode_1_spark_oracle.json](ice_overwrite_mode_1_spark_oracle.json) +
   [_record_ice_overwrite_mode_1_oracle.py](_record_ice_overwrite_mode_1_oracle.py) —
-  **ICE-OVERWRITE-MODE-1 (2026-09-19):** 60 Spark overwrite cells (30 shapes on format
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** 88 Spark overwrite cells (44 shapes on format
   versions 2 and 3; live PySpark 4.1.2 + Iceberg 1.11.0, InMemory catalog, recorded
-  2026-09-19 by the recorder's `record` mode, SHA-256
-  `e4e4117721f9454f1d0f4b0b9b498ec3f4634e2963a0a0a04f3615d40262a917`). Each cell holds
+  2026-09-19 by the recorder's `record` mode; the 28 `OW2-*` cells of round 2 were folded in
+  from an independent harness recording on the same pins and are re-derived by `check`;
+  SHA-256 `0c5dbb26e9655f53c287ce616cbfaa456162b52d728c6cb3d9c7f3f5374c8833`). The `OW2`
+  shapes cover the empty dynamic source, `BY NAME` mixed lists, a static value cast to a
+  `DATE` partition, `NULL` and upper-case static keys, and transform-field keys
+  (`NON_PARTITION_COLUMN`). Each cell holds
   the table rows and the snapshot history (operation plus seven summary counters) or the
   refusal class, condition and SQLSTATE. The recorder owns the shapes and the cell runner;
   the pin file replays every cell on the facade and asserts rows, Arrow types and history,
