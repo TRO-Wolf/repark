@@ -61,6 +61,10 @@ pub fn main_with(args: &[String], summary: &StepSummary) -> ExitCode {
             Command::Run(options) => run::run(options, summary, None).await,
         }
     });
+    exit_code(result)
+}
+
+pub fn exit_code(result: Result<Outcome, BoxError>) -> ExitCode {
     match result {
         Ok(Outcome::Done) => ExitCode::SUCCESS,
         Ok(Outcome::SizeFlagged(io)) => {

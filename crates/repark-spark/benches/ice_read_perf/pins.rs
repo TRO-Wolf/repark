@@ -5,9 +5,11 @@ mod remote;
 mod report;
 mod run;
 
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use repark_core::ReparkSession;
 use repark_iceberg::catalog::{IcebergFileClass, IcebergIoOp};
 use serde_json::Value;
 use tempfile::TempDir;
@@ -21,7 +23,7 @@ use crate::r3::{
 use crate::remote::{
     CreateOutcome, NamespaceRule, Phase, PhaseRequest, RemoteSetupOptions, WriteOutcome,
 };
-use crate::run::{CatalogChoice, Mode, RunOptions};
+use crate::run::{CatalogChoice, Mode, RunOptions, SessionSource};
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -460,60 +462,192 @@ fn the_counts_derive_the_local_manifests_query_constants() {
     assert_eq!(defaults.rows, 10_000_000);
 }
 
-#[test]
-fn a_fake_size_above_the_limit_stops_the_run_before_any_data_file_read() {
-    let dir = TempDir::new().unwrap();
-    let warehouse = tiny_bed(&dir);
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-    runtime.block_on(fake_size_stops_the_run(&dir, &warehouse));
+struct StandIn {
+    warehouse: PathBuf,
+    metadata: String,
+    opened: RefCell<Vec<ReparkSession>>,
 }
 
-async fn fake_size_stops_the_run(dir: &TempDir, warehouse: &Path) {
-    let summary = summary_in(dir.path());
-    let outcome = run::run(
-        &local_run(Mode::Warm, warehouse),
-        &summary,
-        Some(R3_TABLE_SIZE_LIMIT_BYTES + 1),
-    )
-    .await
-    .unwrap();
-    let Outcome::SizeFlagged(io) = outcome else {
-        panic!("a size above the limit must flag, got {outcome:?}");
+impl StandIn {
+    fn new(warehouse: &Path, metadata: &str) -> Self {
+        Self {
+            warehouse: warehouse.to_path_buf(),
+            metadata: metadata.to_string(),
+            opened: RefCell::new(Vec::new()),
+        }
+    }
+}
+
+impl SessionSource for StandIn {
+    async fn open(&self) -> Result<ReparkSession, BoxError> {
+        let session = bed::spark_session()?;
+        bed::register_local_table(&session, &self.warehouse, &self.metadata).await?;
+        self.opened.borrow_mut().push(session.clone());
+        Ok(session)
+    }
+}
+
+const MODES: [Mode; 4] = [
+    Mode::Cold,
+    Mode::Warm,
+    Mode::Concurrent,
+    Mode::ConcurrentCold,
+];
+
+const CATALOGS: [CatalogChoice; 3] = [
+    CatalogChoice::Local,
+    CatalogChoice::Glue,
+    CatalogChoice::S3Tables,
+];
+
+fn gated_options(catalog: CatalogChoice, mode: Mode, warehouse: &Path) -> RunOptions {
+    match catalog {
+        CatalogChoice::Local => local_run(mode, warehouse),
+        CatalogChoice::Glue | CatalogChoice::S3Tables => RunOptions {
+            catalog,
+            warehouse: None,
+            table: Some(format!("{}.{}", bed::NAMESPACE, bed::TABLE)),
+            files: Some(3),
+            rows_per_file: Some(400),
+            ..local_run(mode, warehouse)
+        },
+    }
+}
+
+async fn gated(
+    options: &RunOptions,
+    source: &StandIn,
+    summary: &StepSummary,
+    size: u64,
+) -> Result<Outcome, BoxError> {
+    let target = run::resolve_target(options)?;
+    run::run_gated(options, &target, source, summary, Some(size)).await
+}
+
+fn assert_stopped_before_any_query(outcome: Outcome, source: &StandIn, case: &str) {
+    let Outcome::SizeFlagged(io) = &outcome else {
+        panic!("{case}: a size above the limit must flag, got {outcome:?}");
     };
     assert_eq!(
         io.by_class(IcebergFileClass::DataFile).requests,
         0,
-        "io {io:?}"
+        "{case}"
     );
     assert_eq!(
         io.by_class(IcebergFileClass::DeleteFile).requests,
         0,
-        "io {io:?}"
+        "{case}"
     );
     assert!(
         io.by_class(IcebergFileClass::Manifest).requests > 0,
-        "io {io:?}"
+        "{case}"
     );
-    assert!(
-        std::fs::read_to_string(summary.path.unwrap())
-            .unwrap()
-            .starts_with("R3-SIZE-FLAG table=bench.perf.events bytes=3221225473 limit=3221225472")
+    let opened = source.opened.borrow();
+    assert_eq!(opened.len(), 1, "{case}: a session opened after the gate");
+    assert_eq!(**io, opened[0].iceberg_io_stats(), "{case}");
+    assert_eq!(
+        cli::exit_code(Ok(outcome)),
+        ExitCode::from(R3_EXIT_CODE),
+        "{case}"
     );
+}
 
-    let within = run::run(
-        &RunOptions {
+#[test]
+fn a_fake_size_above_the_limit_stops_every_mode_and_catalog_before_any_query() {
+    let dir = TempDir::new().unwrap();
+    let warehouse = std::fs::canonicalize(tiny_bed(&dir)).unwrap();
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    runtime.block_on(fake_size_stops_every_mode_and_catalog(&dir, &warehouse));
+}
+
+async fn fake_size_stops_every_mode_and_catalog(dir: &TempDir, warehouse: &Path) {
+    let shape = bed::read_shape(&bed::manifest_path(warehouse)).unwrap();
+    let metadata = shape.metadata_location.unwrap();
+    for catalog in CATALOGS {
+        let options = RunOptions {
             query: Some("Q2".to_string()),
-            ..local_run(Mode::Warm, warehouse)
-        },
-        &StepSummary::default(),
-        Some(R3_TABLE_SIZE_LIMIT_BYTES),
-    )
-    .await
-    .unwrap();
-    assert!(matches!(within, Outcome::Done), "got {within:?}");
+            ..gated_options(catalog, Mode::Warm, warehouse)
+        };
+        let source = StandIn::new(warehouse, &metadata);
+        let within = gated(
+            &options,
+            &source,
+            &StepSummary::default(),
+            R3_TABLE_SIZE_LIMIT_BYTES,
+        )
+        .await
+        .unwrap();
+        assert!(matches!(within, Outcome::Done), "{catalog:?}: {within:?}");
+    }
+
+    std::fs::remove_dir_all(warehouse.join(bed::NAMESPACE).join(bed::TABLE).join("data")).unwrap();
+    for catalog in CATALOGS {
+        let options = RunOptions {
+            query: Some("Q2".to_string()),
+            ..gated_options(catalog, Mode::Warm, warehouse)
+        };
+        let source = StandIn::new(warehouse, &metadata);
+        let probe = gated(
+            &options,
+            &source,
+            &StepSummary::default(),
+            R3_TABLE_SIZE_LIMIT_BYTES,
+        )
+        .await;
+        assert!(
+            probe.is_err(),
+            "{catalog:?}: a query ran without its data files: {probe:?}"
+        );
+    }
+
+    for catalog in CATALOGS {
+        for mode in MODES {
+            let case = format!("{catalog:?} {mode:?}");
+            let summary = StepSummary {
+                path: Some(
+                    dir.path()
+                        .join(format!("{}-{}.md", catalog.name(), mode.name())),
+                ),
+            };
+            let source = StandIn::new(warehouse, &metadata);
+            let outcome = gated(
+                &gated_options(catalog, mode, warehouse),
+                &source,
+                &summary,
+                R3_TABLE_SIZE_LIMIT_BYTES + 1,
+            )
+            .await
+            .unwrap_or_else(|error| panic!("{case}: {error}"));
+            assert_stopped_before_any_query(outcome, &source, &case);
+            assert_eq!(
+                std::fs::read_to_string(summary.path.unwrap()).unwrap(),
+                "R3-SIZE-FLAG table=bench.perf.events bytes=3221225473 limit=3221225472\n",
+                "{case}"
+            );
+        }
+    }
+
+    for mode in MODES {
+        let outcome = run::run(
+            &local_run(mode, warehouse),
+            &StepSummary::default(),
+            Some(R3_TABLE_SIZE_LIMIT_BYTES + 1),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{mode:?}: {error}"));
+        let Outcome::SizeFlagged(io) = &outcome else {
+            panic!("{mode:?}: got {outcome:?}");
+        };
+        assert_eq!(
+            io.by_class(IcebergFileClass::DataFile).requests,
+            0,
+            "{mode:?}"
+        );
+        assert_eq!(cli::exit_code(Ok(outcome)), ExitCode::from(R3_EXIT_CODE));
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -189,13 +189,13 @@ pub fn queries(table: &str, shape: &BedShape) -> Vec<QuerySpec> {
     ]
 }
 
-struct Target {
-    table: String,
-    shape: BedShape,
-    warehouse: Option<PathBuf>,
+pub struct Target {
+    pub table: String,
+    pub shape: BedShape,
+    pub warehouse: Option<PathBuf>,
 }
 
-fn resolve_target(options: &RunOptions) -> Result<Target, BoxError> {
+pub fn resolve_target(options: &RunOptions) -> Result<Target, BoxError> {
     match options.catalog {
         CatalogChoice::Local => {
             if options.files.is_some() || options.rows_per_file.is_some() {
@@ -293,6 +293,21 @@ fn require_bed_shape(
     )))
 }
 
+pub trait SessionSource {
+    fn open(&self) -> impl Future<Output = Result<ReparkSession, BoxError>>;
+}
+
+pub struct ConfiguredSource<'a> {
+    pub options: &'a RunOptions,
+    pub target: &'a Target,
+}
+
+impl SessionSource for ConfiguredSource<'_> {
+    async fn open(&self) -> Result<ReparkSession, BoxError> {
+        open_session(self.options, self.target).await
+    }
+}
+
 pub struct Measurements {
     pub records: Vec<QueryRecord>,
     pub groups: Vec<QueryRecord>,
@@ -304,6 +319,20 @@ pub async fn run(
     size_override: Option<u64>,
 ) -> Result<Outcome, BoxError> {
     let target = resolve_target(options)?;
+    let source = ConfiguredSource {
+        options,
+        target: &target,
+    };
+    run_gated(options, &target, &source, summary, size_override).await
+}
+
+pub async fn run_gated<S: SessionSource>(
+    options: &RunOptions,
+    target: &Target,
+    source: &S,
+    summary: &StepSummary,
+    size_override: Option<u64>,
+) -> Result<Outcome, BoxError> {
     let mut specs = queries(&target.table, &target.shape);
     if let Some(only) = &options.query {
         specs.retain(|spec| spec.name == only);
@@ -312,13 +341,15 @@ pub async fn run(
         }
     }
     let repeat = options.repeat.max(1);
-    let gate_session = open_session(options, &target).await?;
+    let gate_session = source.open().await?;
     let (footprint, verdict) =
         r3_gate(&gate_session, &target.table, summary, size_override).await?;
-    let gate_io = gate_session.iceberg_io_stats();
     if verdict == R3Verdict::Flagged {
-        return Ok(Outcome::SizeFlagged(Box::new(gate_io)));
+        return Ok(Outcome::SizeFlagged(Box::new(
+            gate_session.iceberg_io_stats(),
+        )));
     }
+    let gate_io = gate_session.iceberg_io_stats();
     require_bed_shape(&target.table, &footprint, &target.shape)?;
     let tally = RunTally::default();
     let mut predicates = Vec::new();
@@ -327,7 +358,7 @@ pub async fn run(
     }
     tally.drain(&gate_session);
     let started = Instant::now();
-    let measurements = measure(options, &target, &specs, repeat, &gate_session, &tally).await?;
+    let measurements = measure(options.mode, source, &specs, repeat, &gate_session, &tally).await?;
     tally.drain(&gate_session);
     let wall_seconds = started.elapsed().as_secs_f64();
     let (queries_json, mut mismatches) = report::queries_json(
@@ -393,16 +424,16 @@ pub async fn run(
     Ok(Outcome::Done)
 }
 
-async fn measure(
-    options: &RunOptions,
-    target: &Target,
+async fn measure<S: SessionSource>(
+    mode: Mode,
+    source: &S,
     specs: &[QuerySpec],
     repeat: usize,
     gate_session: &ReparkSession,
     tally: &RunTally,
 ) -> Result<Measurements, BoxError> {
-    let measurements = match options.mode {
-        Mode::Cold => run_cold(options, target, specs, repeat, tally).await?,
+    let measurements = match mode {
+        Mode::Cold => run_cold(source, specs, repeat, tally).await?,
         Mode::Warm => run_warm(gate_session, specs, repeat, tally).await?,
         Mode::Concurrent => {
             let chosen = concurrent_specs(specs)?;
@@ -425,7 +456,7 @@ async fn measure(
                 groups: Vec::new(),
             };
             for _ in 0..repeat {
-                let session = open_session(options, target).await?;
+                let session = source.open().await?;
                 let registered = session.iceberg_io_stats();
                 concurrent_round(&session, &chosen, tally, &mut measurements).await?;
                 if let Some(group) = measurements.groups.last_mut() {
@@ -450,9 +481,8 @@ fn write_out(path: &Path, text: &str) -> Result<(), BoxError> {
     Ok(())
 }
 
-async fn run_cold(
-    options: &RunOptions,
-    target: &Target,
+async fn run_cold<S: SessionSource>(
+    source: &S,
     specs: &[QuerySpec],
     repeat: usize,
     tally: &RunTally,
@@ -460,7 +490,7 @@ async fn run_cold(
     let mut records = Vec::new();
     for _ in 0..repeat {
         for spec in specs {
-            let session = open_session(options, target).await?;
+            let session = source.open().await?;
             let registered = session.iceberg_io_stats();
             let mut record = measured(&session, spec, tally).await?;
             record.register_io = Some(registered);

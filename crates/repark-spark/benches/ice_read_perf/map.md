@@ -17,14 +17,19 @@ table is the "before" of every later unit of the slate. No product behaviour liv
 - `pins.rs` — the `[[test]] ice_read_perf_pins` root: declares the same modules and pins them
   offline (see "Pins"). Every tested function is also on the bench's own path, so neither root
   carries dead code.
-- `cli.rs` — hand-written argument parsing (no new dependency), the exit codes, and the
-  runtime. `cargo bench` appends `--bench`; the parser drops it.
+- `cli.rs` — hand-written argument parsing (no new dependency), the exit codes (`exit_code`
+  maps an outcome to 0 / 1 / 3), and the runtime. `cargo bench` appends `--bench`; the parser
+  drops it.
 - `bed.rs` — `setup`, the Spark-door session builder, the bed DDL and the one-INSERT-per-file
   writer, the bed manifest, `BedShape::from_counts`, and the local re-registration a `run` uses.
 - `remote.rs` — the AWS `setup --phase create|write` (namespace rules, the table-state checks,
   the closing R-3 check) and the Glue / S3 Tables catalog registration `run` shares.
 - `run.rs` — the queries, the four modes, repeats, the per-query measurement, the scan-predicate
-  probe.
+  probe. Every session a run uses comes from one `SessionSource` (`ConfiguredSource` opens the
+  local bed or the Glue / S3 Tables catalog). `run` resolves the target and calls `run_gated`,
+  the one path every mode and catalog takes. It opens the gate session, runs the R-3 gate,
+  and on the flag returns the live gate session's counters before any other session opens or
+  any query plans or runs.
 - `r3.rs` — the R-3 size flag and the `files`-table footprint (bytes, files, delete files,
   data rows).
 - `report.rs` — the environment header, the I/O JSON (with the footer / page split), the RSS
@@ -222,10 +227,21 @@ would change what "four at once" measures for the other four (their timings and 
 - The decision at limit − 1, limit and limit + 1 (and 0, `u64::MAX`); the constant; exit 3 is
   distinct; a flag appends exactly one line to the step summary and a pass appends none; no
   `--limit` option parses. pins: ice-read-perf-0/C-007
-- The pre-scan path on a real three-file local bed with an injected size of limit + 1
-  (`run::run(…, Some(size))`, a parameter no CLI flag reaches) returns the flag, and the gate
-  session's counters show zero data-file and zero delete-file requests (and manifest reads, so
-  the counter was live). The same path at exactly the limit runs Q2. pins: ice-read-perf-0/C-008
+- `a_fake_size_above_the_limit_stops_every_mode_and_catalog_before_any_query` (round 3,
+  F-MUT-4D / F-MUT-4E). It drives `run_gated` for all four modes on all three catalog choices,
+  so twelve cases, on a three-file bed through a stand-in `SessionSource`. The stand-in
+  registers the local bed as `bench.perf.events`, the name a `--catalog glue|s3tables --table
+  perf.events` run resolves to, and records every session it opens. The injected size is
+  limit + 1 (`Some(size)`, a parameter no CLI flag reaches). First, at exactly the limit, Q2
+  runs on each catalog choice. Then the bed's data files are deleted, and a Q2 run at the limit
+  now fails on each catalog choice. That makes the probe live: any query that executes after the
+  gate errors. Each flagged case must return `SizeFlagged` rather than an error. The stand-in
+  must have opened exactly one session. The boxed counters must equal that live session's
+  counters: zero data-file and delete-file requests, manifest reads above zero. `cli::exit_code`
+  must give 3, and the step summary must hold one flag line. The production `run::run` path
+  repeats the flag for every local mode. It reds under "return the flag after `measure()` with
+  the pre-scan snapshot", and under a flag skipped for concurrent-cold, cold, Glue or S3 Tables
+  (2026-09-19, round 3). pins: ice-read-perf-0/C-008, C-019
 - The `files` metadata table counts a merge-on-read position-delete file: the footprint of a
   table with one data and one delete file is 2 files, 1 delete file, and the byte sum equals
   the two files on disk, read without a data-file request. pins: ice-read-perf-0/C-009
