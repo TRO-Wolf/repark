@@ -75,6 +75,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   **RP-28 (2026-09-18):** `3296ffc7` (F-FORK-ASKS-22A `#296` — `hour` on nanosecond timestamps; COW DML and binpack output sorted by the default order and stamped).
   **RP-29 (2026-09-18):** `9e67e000` (F-LIST-INSERT-1 `#295` — nested fields relabelled to the Iceberg types on every write; `INSERT … VALUES` into nested columns; one advertised schema).
   **RP-30 (2026-09-18):** `18ab9761` (F-SHED-295 `#297` — relocated comment lines shed, no behaviour change; F-RP-SUMMARY-USER-1 `#298` — a caller's `replace-partitions` summary value wins).
+  **RP-31 (2026-09-18):** `50350e33` (F-LIST-NULL-ACCESSOR-1 `#299` — `IS [NOT] NULL` on list, map and struct columns in DELETE/UPDATE; F-ROWID-ORDER-1 `#300` — a DataFusion INSERT commits its data files in ascending partition value, then task index).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
