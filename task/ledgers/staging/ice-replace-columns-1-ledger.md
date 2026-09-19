@@ -52,7 +52,20 @@ parse refusals.
    in Hive-style REPLACE COLUMNS.`) without the `== SQL (line 1, position 1) ==` caret block.
 3. **Spec scope** — the partition / sort source check reads the **default** spec and sort order.
    An older spec that still names a dropped column is out of scope; no measured cell covers it.
-4. **Pre-existing, not this unit** — `RC-IDENTIFIER` fails on its first statement
+4. **Verification critic (Grok 4.6, 2026-09-19, verdict PASS) — four P3 residues.**
+   (a) `RC-IDENTIFIER` is a hollow REPLACE COLUMNS pin: both engines stop at `SET NOT NULL`, so the
+   identifier-field drop-and-re-add shape is unmeasured — a Spark cell would be needed to pin it.
+   (b) The oracle's only complex type is `STRUCT<a: INT, b: STRING>`; ARRAY, MAP, nested structs and
+   `NOT NULL` children ride the shared CREATE TABLE type path but have no REPLACE COLUMNS cell (and
+   the recorder's `flatten_schema` recurses into structs only).
+   (c) `refuse_lost_partition_source` skips `Transform::Void`, so a default spec whose only field is
+   void falls through to the fork's own bind error rather than Spark's sentence.
+   (d) The native-door refusal is pinned by the substring `REPLACE` rather than the full ANSI parse
+   message.
+   The bare-`TIMESTAMP` behaviour change the critic also raised is NOT a residue any more: it is
+   pinned by `test_bare_timestamp_in_the_list_follows_the_session_timestamp_type` (NTZ and LTZ
+   sessions, CREATE TABLE and REPLACE COLUMNS agree), added after the critic.
+5. **Pre-existing, not this unit** — `RC-IDENTIFIER` fails on its first statement
    (`ALTER COLUMN id SET NOT NULL`) on both engines; RePark's class there is
    `UnsupportedOperationException` where Spark raises `AnalysisException`
    (`_LEGACY_ERROR_TEMP_2330`). Untouched by this unit.

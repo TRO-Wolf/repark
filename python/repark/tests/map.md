@@ -6969,5 +6969,8 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `_oracle_pins`, run-stamped plan ids normalized); the live tier
   (`test_live_oracle_fixture_reproduces`) skips without a `/tmp/sparkenv`
   interpreter. The native ANSI door has no Hive-style REPLACE COLUMNS and is
-  pinned at its registered parse refusal.
+  pinned at its registered parse refusal. A bare `TIMESTAMP` in the list follows
+  the session `spark.sql.timestampType` (the shared CREATE TABLE / ADD COLUMNS
+  type path): both settings are pinned by
+  `test_bare_timestamp_in_the_list_follows_the_session_timestamp_type`.
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

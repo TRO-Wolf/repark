@@ -182,6 +182,48 @@ def test_native_door_refuses_hive_style_replace_columns(spark: Any) -> None:
     assert names == ["id", "data"]
 
 
+@pytest.mark.parametrize(
+    ("timestamp_type", "expected"),
+    [("TIMESTAMP_NTZ", "timestamp"), ("TIMESTAMP_LTZ", "timestamptz")],
+)
+def test_bare_timestamp_in_the_list_follows_the_session_timestamp_type(
+    tmp_path: Path, timestamp_type: str, expected: str
+) -> None:
+    """A bare TIMESTAMP added by REPLACE COLUMNS takes the same type CREATE TABLE gives it."""
+    _reset_active_session_for_tests()
+    warehouse = tmp_path / f"wh-{timestamp_type.lower()}"
+    session = (
+        ReparkSession.builder.appName(f"test-ice-replace-columns-1-{timestamp_type.lower()}")
+        .config("spark.sql.timestampType", timestamp_type)
+        .getOrCreate()
+    )
+    try:
+        session.register_memory_catalog("sc", warehouse)
+        session.sql("CREATE NAMESPACE sc.ns")
+        session.sql(
+            "CREATE TABLE sc.ns.ts_create (id BIGINT, ts TIMESTAMP) USING iceberg"
+        ).collect()
+        session.sql(
+            "CREATE TABLE sc.ns.ts_replace (id BIGINT, data STRING) USING iceberg"
+        ).collect()
+        session.sql(
+            "ALTER TABLE sc.ns.ts_replace REPLACE COLUMNS (id BIGINT, ts TIMESTAMP)"
+        ).collect()
+        created = _metadata(warehouse, "sc.ns.ts_create")
+        replaced = _metadata(warehouse, "sc.ns.ts_replace")
+
+        def _timestamp_field(metadata: dict[str, Any]) -> str:
+            current = metadata["current-schema-id"]
+            schema = next(s for s in metadata["schemas"] if s["schema-id"] == current)
+            return next(f["type"] for f in schema["fields"] if f["name"] == "ts")
+
+        assert _timestamp_field(created) == expected
+        assert _timestamp_field(replaced) == expected
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
 def test_live_oracle_fixture_reproduces(tmp_path: Path) -> None:
     """The recorder re-derives the fixture on live Spark. pins: ice-replace-columns-1/C-001"""
