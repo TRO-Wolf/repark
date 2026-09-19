@@ -153,7 +153,14 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `PURPOSE='$(touch /tmp/pa-pwn)'; echo "x ${PURPOSE:-unstated}"` prints the text literally and
   creates no file; backticks and the unquoted form behave the same, because bash does not
   re-evaluate an expanded value. YAML read by regex, no PyYAML.
-  pins: ice-read-perf-0/C-018, C-019
+  **ICE-BENCH-BASELINE-1 (2026-09-19):** the dispatch gains a boolean `baseline` input
+  (default false, "the before half of a pair on one head"). Both run loops take it through
+  `env: BASELINE`, append `--baseline` to all eight `run --mode` invocations only when it
+  is `true` (`baseline_flags` array, empty by default — an empty `"${array[@]}"` expands to
+  zero arguments under `set -u`, verified on bash 5.2.21), and the summary header names
+  `baseline=<value>` beside the purpose. Three pins hold the input, the threading and the
+  summary line.
+  pins: ice-read-perf-0/C-018, C-019; ice-bench-baseline-1/C-004
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
