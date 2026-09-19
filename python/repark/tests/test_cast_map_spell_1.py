@@ -477,3 +477,79 @@ def test_round3_cell_matches_spark_on_native_door(key: str) -> None:
     import repark
 
     _assert_round3_cell(key, repark.sql)
+
+
+_ROUND4: dict[str, dict[str, Any]] = json.loads(
+    (_HERE / "cast_map_spell_1" / "cast_map_spell_1_round4_spark_oracle.json").read_text(
+        encoding="utf-8"
+    )
+)["cells"]
+_NULL_KEY_REFUSAL = "a map key cast produced NULL"
+_NATIVE_INT64_LITERAL_REASON = (
+    "2026-09-19: the native door types an untyped integer literal as BIGINT (stock "
+    "DataFusion), so its CAST_OVERFLOW names 128L of the type BIGINT; the facade names INT"
+)
+
+
+def _round4_ansi(key: str) -> bool:
+    """Return the ANSI setting a round-4 cell was recorded under (its key suffix)."""
+    return key.endswith("_ansi_true")
+
+
+def _assert_round4_cell(key: str, run: Any) -> None:
+    """Assert one round-4 cell through ``run(sql)``: Spark's JSON map, error or RePark's refusal.
+
+    ``try_cast_overflow_key_*``: Spark answers a map holding a NULL key, which an Arrow map
+    cannot hold, so RePark refuses loud (ruling Q-23b-9); the pin holds that refusal.
+    """
+    cell = _ROUND4[key]
+    if key.startswith("try_cast_overflow_key"):
+        with pytest.raises(Exception, match=re.escape(_NULL_KEY_REFUSAL)):
+            run(cell["sql"]).to_arrow()
+        return
+    if "error" in cell:
+        with pytest.raises(Exception, match=re.escape(cell["error"])):
+            run(cell["sql"]).to_arrow()
+        return
+    value = run(cell["sql"]).to_arrow().column(0).to_pylist()[0]
+    assert _round3_value(value) == json.loads(cell["json"]), (key, value)
+
+
+@pytest.mark.parametrize("key", sorted(_ROUND4))
+def test_round4_cell_matches_spark_on_facade(key: str) -> None:
+    """One round-4 cell answers Spark on the facade door under its recorded ANSI mode.
+
+    pins: cast-map-spell-1/C-013, C-015, C-016
+    """
+    session = _spark_session("true" if _round4_ansi(key) else "false")
+    try:
+        _assert_round4_cell(key, session.sql)
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        pytest.param(
+            key,
+            id=key,
+            marks=pytest.mark.xfail(strict=True, reason=_NATIVE_INT64_LITERAL_REASON),
+        )
+        if key == "overflow_leaf_ansi_true"
+        else pytest.param(key, id=key)
+        for key in sorted(_ROUND4)
+        if _round4_ansi(key) and "char(" not in _ROUND4[key]["sql"]
+    ],
+)
+def test_round4_cell_matches_spark_on_native_door(key: str) -> None:
+    """One ANSI-on round-4 cell answers Spark on the native ``repark.sql`` door.
+
+    The ``char(...)`` cells have no native spelling (``UNRESOLVED_ROUTINE``) and stay
+    facade-only.
+
+    pins: cast-map-spell-1/C-013, C-015, C-016
+    """
+    import repark
+
+    _assert_round4_cell(key, repark.sql)

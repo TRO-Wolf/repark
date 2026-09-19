@@ -67,6 +67,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   statement, maps or not.
   The re-deriver's `--check` compares both fixtures after a JSON round trip, so int map
   keys read as the committed string keys.
+  **Round 4 (2026-09-19):** 12 cells from `cast_map_spell_1_round4_spark_oracle.json` — the
+  trim rule (bytes <= 0x20 and DEL, not U+0085), the full recorded `CAST_OVERFLOW` message,
+  and RePark's loud refusal where Spark stores a NULL key. The native door runs the ANSI-on
+  cells it can spell; its overflow cell is a dated strict xfail (it types `128` as BIGINT).
+  pins: cast-map-spell-1/C-013, C-015, C-016
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —
