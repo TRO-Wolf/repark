@@ -6,13 +6,15 @@ use datafusion::arrow::array::{Array, ArrayRef};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
+use datafusion::common::utils::expr::COUNT_STAR_EXPANSION;
 use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::functions_aggregate::regr::regr_count_udaf;
 use datafusion::functions_window::ntile::ntile_udwf;
 use datafusion::functions_window::rank::{dense_rank_udwf, rank_udwf};
 use datafusion::functions_window::row_number::row_number_udwf;
+use datafusion::logical_expr::expr::AggregateFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::function::{
     AccumulatorArgs, PartitionEvaluatorArgs, StateFieldsArgs, WindowUDFFieldArgs,
@@ -74,7 +76,49 @@ fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
 }
 
 pub(crate) fn narrow_provisional_integer_literals(expr: Expr) -> Result<Transformed<Expr>> {
-    expr.transform_up(|node| Ok(narrow_provisional_integer_literal(node)))
+    expr.transform_down(|node| match node {
+        Expr::AggregateFunction(call) if is_count_of_one(&call) => keep_count_star(call),
+        other => Ok(narrow_provisional_integer_literal(other)),
+    })
+}
+
+fn is_count_of_one(call: &AggregateFunction) -> bool {
+    call.func.name() == "count"
+        && !call.params.distinct
+        && matches!(
+            call.params.args.as_slice(),
+            [Expr::Literal(
+                ScalarValue::Int32(Some(1)) | ScalarValue::Int64(Some(1)),
+                _
+            )]
+        )
+}
+
+fn keep_count_star(mut call: AggregateFunction) -> Result<Transformed<Expr>> {
+    let mut changed = false;
+    for arg in &mut call.params.args {
+        if let Expr::Literal(value, _) = arg
+            && *value != COUNT_STAR_EXPANSION
+        {
+            *value = COUNT_STAR_EXPANSION;
+            changed = true;
+        }
+    }
+    if let Some(filter) = call.params.filter.take() {
+        let narrowed = narrow_provisional_integer_literals(*filter)?;
+        changed |= narrowed.transformed;
+        call.params.filter = Some(Box::new(narrowed.data));
+    }
+    for sort in &mut call.params.order_by {
+        let narrowed = narrow_provisional_integer_literals(sort.expr.clone())?;
+        changed |= narrowed.transformed;
+        sort.expr = narrowed.data;
+    }
+    Ok(Transformed::new(
+        Expr::AggregateFunction(call),
+        changed,
+        TreeNodeRecursion::Jump,
+    ))
 }
 
 pub(crate) fn narrow_provisional_integer_literal(expr: Expr) -> Transformed<Expr> {

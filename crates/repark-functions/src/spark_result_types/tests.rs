@@ -167,13 +167,16 @@ async fn signed_count_is_not_wrapped_twice() {
     assert_eq!(batch.schema().field(0).data_type(), &DataType::Int64);
 }
 
-async fn analyzed_aggregate_args(ctx: &SessionContext, sql: &str) -> Vec<Expr> {
+async fn analyzed(ctx: &SessionContext, sql: &str) -> LogicalPlan {
     let plan = ctx.sql(sql).await.expect("plan").into_unoptimized_plan();
-    let analyzed = ctx
-        .state()
+    ctx.state()
         .analyzer()
         .execute_and_check(plan, &ctx.state().config_options().clone(), |_, _| {})
-        .expect("analyze");
+        .expect("analyze")
+}
+
+async fn analyzed_aggregate_args(ctx: &SessionContext, sql: &str) -> Vec<Expr> {
+    let analyzed = analyzed(ctx, sql).await;
     let mut args = Vec::new();
     analyzed
         .apply(|node| {
@@ -266,6 +269,18 @@ async fn count_star_filter_literal_still_narrows() {
     )
     .await;
     assert_eq!(args, vec![count_star_expansion()]);
+    let rendered = format!(
+        "{}",
+        analyzed(
+            &ctx,
+            "SELECT count(*) FILTER (WHERE x > 1) FROM (VALUES (1), (2)) AS t(x)",
+        )
+        .await
+    );
+    assert!(
+        rendered.contains("FILTER (WHERE t.x > Int32(1))"),
+        "{rendered}"
+    );
     let batch = batch(
         &ctx,
         "SELECT count(*) FILTER (WHERE x > 1) AS v, count(*) AS w, count(1) AS y, count(5) AS z FROM (VALUES (1), (2)) AS t(x)",
