@@ -382,11 +382,11 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
 
     // The reader-options shape: `spark.read.option` reaches exactly this call.
     let table_parts = ["ice".to_string(), "sales".to_string(), "leak".to_string()];
-    let reader_frame = repark_core::read_table_at(
+    let reader_frame = repark_core::time_travel::read_table_at(
         &ctx,
         &catalogs,
         &table_parts,
-        &repark_core::TimeTravelSpec::SnapshotId(first),
+        &repark_core::time_travel::TimeTravelSpec::SnapshotId(first),
         &repark_core::SessionTimeZone::default(),
     )
     .await
@@ -435,7 +435,7 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
     );
 
     // 2.
-    let before_mint = temp_view_sequence(&repark_core::next_temp_view_name());
+    let before_mint = temp_view_sequence(&repark_core::time_travel::next_temp_view_name());
     let _ = execute(
         &ctx,
         &catalogs,
@@ -443,7 +443,7 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
     )
     .await
     .expect("the second statement must plan");
-    let after_mint = temp_view_sequence(&repark_core::next_temp_view_name());
+    let after_mint = temp_view_sequence(&repark_core::time_travel::next_temp_view_name());
     assert!(
         after_mint > before_mint + 1,
         "the Spark door must mint from repark-core's counter, not one of its own: \
@@ -456,7 +456,8 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
 
 #[test]
 fn reader_spec_builtin_pins_refuse_loud() {
-    use repark_core::{ReaderTimeTravel, TimeTravelSpec, resolve_reader_spec};
+    use repark_core::time_travel::TimeTravelSpec;
+    use repark_core::{ReaderTimeTravel, resolve_reader_spec};
 
     let zone = SessionTimeZone::default();
     let pin = |opts: &ReaderTimeTravel| resolve_reader_spec(opts, &zone, false);
@@ -521,7 +522,8 @@ fn reader_spec_builtin_pins_refuse_loud() {
 
 #[test]
 fn reader_spec_legacy_pins_still_resolve() {
-    use repark_core::{ReaderTimeTravel, TimeTravelSpec, resolve_reader_spec};
+    use repark_core::time_travel::TimeTravelSpec;
+    use repark_core::{ReaderTimeTravel, resolve_reader_spec};
 
     let zone = SessionTimeZone::default();
     let pin = |opts: &ReaderTimeTravel| resolve_reader_spec(opts, &zone, false);
@@ -585,7 +587,7 @@ async fn eval_one(
     zone: &SessionTimeZone,
     text: &str,
 ) -> datafusion::error::Result<i64> {
-    use repark_core::evaluate_sql_timestamp_asof;
+    use repark_core::time_travel::evaluate_sql_timestamp_asof;
 
     let tokens = asof_tokens(text);
     evaluate_sql_timestamp_asof(ctx, &tokens, zone).await

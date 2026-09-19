@@ -791,8 +791,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (determinism check + zone rewrite), `time_travel/sql_eval.rs` (constant-expression
   evaluation); the root keeps the spec types plus `resolve_reader_spec` (the ONE resolver both
   SQL doors and the reader options share — `versionAsOf`/`timestampAsOf` raw strings, integer
-  means seconds) and re-exports every moved public path unchanged.
+  means seconds).
   pins: ice-tt-resolve-1/C-010
+  **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the moved names resolve only behind the
+  `time_travel` module; the stale root re-exports are gone. pins: ice-tt-resolve-1/C-010
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** `EngineContext::new` is 3-arg again (zone
   defaults); `new_with_time_zone` carries an explicit zone. pins: ice-tt-resolve-1/C-003
   **Documented residual (H-1b, 2026-08-11):** `read_table_at` registers a `__repark_tt_<n>` temp

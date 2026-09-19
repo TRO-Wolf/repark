@@ -201,3 +201,5 @@ pins: perf-dynflatten-1-measure/C-002
 
 **ICE-TT-RESOLVE-1 (2026-09-19):** `read_iceberg_table` gains the raw `version_as_of` /
 `timestamp_as_of` strings the shared Rust resolver parses. pins: ice-tt-resolve-1/C-004
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the pin bundle resolves behind
+`repark_core::time_travel`. pins: ice-tt-resolve-1/C-010

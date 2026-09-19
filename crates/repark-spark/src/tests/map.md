@@ -558,6 +558,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `reader_spec_legacy_pins_still_resolve` unit batteries and
   `sql_timestamp_asof_evaluates_constants_in_session_zone` for the shared evaluator.
   pins: ice-tt-resolve-1/C-002, C-003
+  **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** imports resolve behind
+  `repark_core::time_travel`. pins: ice-tt-resolve-1/C-010
 - [time_travel.rs](time_travel.rs) — statement-owned pinned-view cleanup and collision pins.
 - `collation.rs` pins parse-altitude refusals for expression `COLLATE`, `ORDER BY COLLATE` (two names),
   `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET/RESET of a collation

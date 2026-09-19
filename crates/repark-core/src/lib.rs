@@ -43,7 +43,7 @@ mod text_partition;
 mod text_partition_fallback;
 mod text_scan;
 mod text_schema;
-mod time_travel;
+pub mod time_travel;
 mod transpose;
 mod unknown_routine;
 mod update_fields;
@@ -92,12 +92,10 @@ pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_sessio
 
 // === Time travel ===
 pub use time_travel::{
-    ReaderTimeTravel, TimeTravelOpts, TimeTravelSpec, branch_time_travel_refusal,
-    evaluate_sql_timestamp_asof, extract_timestamp_expr, format_snapshot_bound_ms,
-    invalid_timestamp_input, invalid_version_pin, next_temp_view_name,
-    nondeterministic_timestamp_expr, parse_timestamp_asof_to_ms, parse_timestamp_string_to_ms,
-    parse_timestamp_to_ms, parse_version_value, read_table_at, resolve_reader_spec,
-    resolve_snapshot_id, snapshot_id_as_of_time, timestamp_column_refusal,
+    ReaderTimeTravel, branch_time_travel_refusal, format_snapshot_bound_ms,
+    invalid_timestamp_input, invalid_version_pin, nondeterministic_timestamp_expr,
+    parse_timestamp_asof_to_ms, parse_timestamp_string_to_ms, parse_version_value,
+    resolve_reader_spec, resolve_snapshot_id, snapshot_id_as_of_time, timestamp_column_refusal,
 };
 
 pub use lineage_columns::{LineagePins, prepare_lineage_sql, sql_mentions_lineage_columns};

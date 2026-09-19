@@ -6,9 +6,11 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
+use repark_core::time_travel::{
+    TimeTravelSpec, evaluate_sql_timestamp_asof, extract_timestamp_expr, read_table_at,
+};
 use repark_core::{
-    EngineContext, TimeTravelSpec, branch_time_travel_refusal, evaluate_sql_timestamp_asof,
-    extract_timestamp_expr, invalid_version_pin, parse_version_value, read_table_at,
+    EngineContext, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
 };
 
 /// Process-wide counter for ephemeral temp-view names.

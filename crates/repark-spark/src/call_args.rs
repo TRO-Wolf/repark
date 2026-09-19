@@ -6,7 +6,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{
     Expr, FunctionArg, FunctionArgExpr, FunctionArguments, Value, ValueWithSpan,
 };
-use repark_core::parse_timestamp_to_ms;
+use repark_core::time_travel::parse_timestamp_to_ms;
 
 // === Argument bag ===
 

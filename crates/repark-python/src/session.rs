@@ -532,7 +532,7 @@ impl PyReparkSession {
         timestamp_as_of: Option<String>,
     ) -> PyResult<PyDataFrame> {
         fenced_span!("py.read", "PyReparkSession.read_iceberg_table", {
-            let opts = repark_core::TimeTravelOpts {
+            let opts = repark_core::time_travel::TimeTravelOpts {
                 snapshot_id,
                 as_of_timestamp_ms,
                 branch,

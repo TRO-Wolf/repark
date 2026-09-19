@@ -29,3 +29,5 @@ First checks: `cargo test -p repark-sql time_travel::`. Escalate to: [../map.md#
 
 **ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream so
 the shared evaluator receives parseable SQL. pins: ice-tt-resolve-1/C-003
+**ICE-TT-RESOLVE-1 round 2 (2026-09-19):** imports resolve behind
+`repark_core::time_travel`. pins: ice-tt-resolve-1/C-010

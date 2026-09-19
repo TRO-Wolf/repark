@@ -8,9 +8,10 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
+use repark_core::time_travel::{TimeTravelSpec, evaluate_sql_timestamp_asof, next_temp_view_name};
 use repark_core::{
-    CatalogRegistry, TimeTravelSpec, branch_time_travel_refusal, evaluate_sql_timestamp_asof,
-    invalid_version_pin, next_temp_view_name, parse_version_value, resolve_snapshot_id,
+    CatalogRegistry, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
+    resolve_snapshot_id,
 };
 use repark_functions::session_time_zone::session_time_zone_from_options;
 
@@ -408,7 +409,7 @@ fn parse_as_of_value(
     value_sig: usize,
 ) -> Result<(TimeTravelPin, usize)> {
     if matches!(kind, TimeTravelKind::Timestamp) {
-        let found = repark_core::extract_timestamp_expr(significant, value_sig);
+        let found = repark_core::time_travel::extract_timestamp_expr(significant, value_sig);
         let consumed = found.len();
         if consumed == 0 {
             return Ok((TimeTravelPin::TimestampExpr(Vec::new()), 0));
