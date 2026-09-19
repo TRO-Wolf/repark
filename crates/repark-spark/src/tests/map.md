@@ -562,9 +562,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
   pins: ice-column-reorder-1/C-001, C-002
 - [count_fold.rs](count_fold.rs) — **ICE-COUNT-FOLD-1 (2026-09-19):** the `count(*)`
-  statistics fold over a four-file, twelve-row table on `common::setup`. Folded (no
-  `IcebergTableScan` in the physical plan) and correct: `count(*)`, `count(1)`, `count(*) …
-  LIMIT 1`, the DataFrame `count_all()` aggregate, after a copy-on-write DELETE, and
+  statistics fold over a four-file, twelve-row table on the production session
+  (`ReparkSession` with `SparkExtension` + `SparkDialect`, so `SparkIntegralLiteral` runs —
+  `common::setup` installs the late `SparkIntegerLiteral` instead and would miss the
+  door's own narrowing). Folded (no `IcebergTableScan` in the physical plan) and correct:
+  `count(*)`, `count(1)`, `count(*) … LIMIT 1`, the DataFrame `count_all()` aggregate and
+  the `count(lit(1_i32))` shape the Python door builds (name `count(Int32(1))` kept), after a copy-on-write DELETE, and
   `VERSION AS OF` an older snapshot (the older snapshot's count). Scanned and correct: a
   `WHERE id < 5` residual, a `LIMIT 5` subquery, a v2 merge-on-read position delete, a v3
   deletion vector. An empty table answers 0. RePark writes no equality deletes, so no

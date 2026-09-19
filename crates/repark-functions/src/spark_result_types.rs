@@ -76,10 +76,32 @@ fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
 }
 
 pub(crate) fn narrow_provisional_integer_literals(expr: Expr) -> Result<Transformed<Expr>> {
+    transform_keeping_count_star(expr, &|node| Ok(narrow_provisional_integer_literal(node)))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn transform_keeping_count_star<F>(expr: Expr, leaf: &F) -> Result<Transformed<Expr>>
+where
+    F: Fn(Expr) -> Result<Transformed<Expr>>,
+{
     expr.transform_down(|node| match node {
-        Expr::AggregateFunction(call) if is_count_of_one(&call) => keep_count_star(call),
-        other => Ok(narrow_provisional_integer_literal(other)),
+        Expr::AggregateFunction(call) if is_count_of_one(&call) => keep_count_star(call, leaf),
+        other => leaf(other),
     })
+}
+
+#[must_use]
+pub fn needs_count_star_expansion(expr: &Expr) -> bool {
+    match expr {
+        Expr::AggregateFunction(call) => {
+            is_count_of_one(call)
+                && !matches!(
+                    call.params.args.as_slice(),
+                    [Expr::Literal(value, _)] if *value == COUNT_STAR_EXPANSION
+                )
+        }
+        _ => false,
+    }
 }
 
 fn is_count_of_one(call: &AggregateFunction) -> bool {
@@ -94,7 +116,10 @@ fn is_count_of_one(call: &AggregateFunction) -> bool {
         )
 }
 
-fn keep_count_star(mut call: AggregateFunction) -> Result<Transformed<Expr>> {
+fn keep_count_star<F>(mut call: AggregateFunction, leaf: &F) -> Result<Transformed<Expr>>
+where
+    F: Fn(Expr) -> Result<Transformed<Expr>>,
+{
     let mut changed = false;
     for arg in &mut call.params.args {
         if let Expr::Literal(value, _) = arg
@@ -105,14 +130,14 @@ fn keep_count_star(mut call: AggregateFunction) -> Result<Transformed<Expr>> {
         }
     }
     if let Some(filter) = call.params.filter.take() {
-        let narrowed = narrow_provisional_integer_literals(*filter)?;
-        changed |= narrowed.transformed;
-        call.params.filter = Some(Box::new(narrowed.data));
+        let rewritten = transform_keeping_count_star(*filter, leaf)?;
+        changed |= rewritten.transformed;
+        call.params.filter = Some(Box::new(rewritten.data));
     }
     for sort in &mut call.params.order_by {
-        let narrowed = narrow_provisional_integer_literals(sort.expr.clone())?;
-        changed |= narrowed.transformed;
-        sort.expr = narrowed.data;
+        let rewritten = transform_keeping_count_star(sort.expr.clone(), leaf)?;
+        changed |= rewritten.transformed;
+        sort.expr = rewritten.data;
     }
     Ok(Transformed::new(
         Expr::AggregateFunction(call),
