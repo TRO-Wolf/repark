@@ -674,7 +674,8 @@ repark-core's error map.
 - `file_scoped_rewrite.rs` — filter `FileScanTask`s by affected-path allowlist
   (`repark.merge.file-scoped-rewrite`); refuses a non-empty allowlist matching zero or partial
   path set (survivor-loss guard). Test helper `dummy_task` constructs `#183` Arc innards
-  (`data_file_path: Arc<str>`, `project_field_ids: Arc<[i32]>`, `deletes: Arc<[…]>`).
+  (`data_file_path: Arc<str>`, `project_field_ids: Arc<[i32]>`, `deletes: Arc<[…]>`), and at RP-39
+  fork #317's `file_record_count` field.
 - `name_resolution.rs` (crate-private) — the shared case-insensitive by-name column resolver
   (Spark `spark.sql.caseSensitive=false` conform semantics); used by both `append` conform and
   merge star expansion so the two surfaces cannot drift. `resolve_write_column` is the single
