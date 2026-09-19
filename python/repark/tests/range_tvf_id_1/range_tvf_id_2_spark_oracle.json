@@ -1,0 +1,172 @@
+{
+ "spark_version": "4.1.2",
+ "cells": {
+  "range_null": {
+   "sql": "SELECT * FROM range(NULL)",
+   "error_class": "AnalysisException",
+   "error": "[UNEXPECTED_INPUT_TYPE] Parameter second of function `range` requires the \"BIGINT\" type, however \"NULL\" has the type \"VOID\". SQLSTATE: 42K09; line 1 pos 14"
+  },
+  "range_null_end": {
+   "sql": "SELECT * FROM range(0, NULL)",
+   "error_class": "AnalysisException",
+   "error": "[UNEXPECTED_INPUT_TYPE] Parameter second of function `range` requires the \"BIGINT\" type, however \"NULL\" has the type \"VOID\". SQLSTATE: 42K09; line 1 pos 14"
+  },
+  "range_cast_null_bigint": {
+   "sql": "SELECT * FROM range(CAST(NULL AS BIGINT))",
+   "error_class": "AnalysisException",
+   "error": "[UNEXPECTED_INPUT_TYPE] Parameter second of function `range` requires the \"BIGINT\" type, however \"CAST(NULL AS BIGINT)\" has the type \"BIGINT\". SQLSTATE: 42K09; line 1 pos 14"
+  },
+  "range_cast_int": {
+   "sql": "SELECT * FROM range(CAST(3 AS INT))",
+   "schema": "struct<id:bigint>",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "range_tinyint": {
+   "sql": "SELECT * FROM range(3Y)",
+   "schema": "struct<id:bigint>",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "range_smallint": {
+   "sql": "SELECT * FROM range(3S)",
+   "schema": "struct<id:bigint>",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "range_decimal": {
+   "sql": "SELECT * FROM range(3.0)",
+   "schema": "struct<id:bigint>",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "range_double": {
+   "sql": "SELECT * FROM range(3.5D)",
+   "schema": "struct<id:bigint>",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "range_expr": {
+   "sql": "SELECT * FROM range(1 + 2)",
+   "schema": "struct<id:bigint>",
+   "rows": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  "range_neg": {
+   "sql": "SELECT * FROM range(-3)",
+   "schema": "struct<id:bigint>",
+   "rows": []
+  },
+  "range_overflow_up": {
+   "sql": "SELECT * FROM range(9223372036854775802, 9223372036854775807, 10)",
+   "schema": "struct<id:bigint>",
+   "rows": [
+    [
+     9223372036854775802
+    ]
+   ]
+  },
+  "range_overflow_down": {
+   "sql": "SELECT * FROM range(-9223372036854775807, -9223372036854775808, -2)",
+   "schema": "struct<id:bigint>",
+   "rows": [
+    [
+     -9223372036854775807
+    ]
+   ]
+  },
+  "range_near_max_step1": {
+   "sql": "SELECT count(*) FROM range(9223372036854775800, 9223372036854775807)",
+   "schema": "struct<count(1):bigint>",
+   "rows": [
+    [
+     7
+    ]
+   ]
+  },
+  "parts_zero": {
+   "sql": "SELECT * FROM range(0, 3, 1, 0)",
+   "error_class": "IllegalArgumentException",
+   "error": "Positive number of partitions required"
+  },
+  "parts_negative": {
+   "sql": "SELECT * FROM range(0, 3, 1, -1)",
+   "error_class": "IllegalArgumentException",
+   "error": "Positive number of partitions required"
+  },
+  "parts_zero_empty": {
+   "sql": "SELECT * FROM range(0, 0, 1, 0)",
+   "schema": "struct<id:bigint>",
+   "rows": []
+  },
+  "parts_string": {
+   "sql": "SELECT * FROM range(0, 3, 1, 'bogus')",
+   "error_class": "NumberFormatException",
+   "error": "[CAST_INVALID_INPUT] The value 'bogus' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  },
+  "parts_null": {
+   "sql": "SELECT * FROM range(0, 3, 1, NULL)",
+   "error_class": "AnalysisException",
+   "error": "[UNEXPECTED_INPUT_TYPE] Parameter 4th of function `range` requires the \"INT\" type, however \"NULL\" has the type \"VOID\". SQLSTATE: 42K09; line 1 pos 14"
+  },
+  "string_bogus": {
+   "sql": "SELECT * FROM range('abc')",
+   "error_class": "NumberFormatException",
+   "error": "[CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: 22018"
+  }
+ }
+}

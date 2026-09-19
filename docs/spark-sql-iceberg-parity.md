@@ -4504,7 +4504,54 @@ the pin rather than obeying it.
   over the same series generator in `ReparkSessionBuilder::build`, so both doors
   share the one registration. Residual: unaliased `sum(id)` renders
   `sum(range().id)` — the systemic table-function qualifier leak shared with
-  `generate_series`, owned by the SQL door (FNP-6D residual).
+  `generate_series`, owned by the SQL door (FNP-6D residual). The argument edge
+  cases below ride on RANGE-TVF-ID-2 (2026-09-19), which also validates the 4th
+  argument this row left unchecked.
+
+### RANGE-TVF-ID-2 — the `range(...)` argument edge cases answer Spark — **FIXED 2026-09-19**
+
+- **repark** — **FIXED 2026-09-19 (RANGE-TVF-ID-2).** A NULL start, end, step,
+  or `numPartitions` refuses with `AnalysisException` carrying
+  `UNEXPECTED_INPUT_TYPE`; every width Spark accepts answers Spark's rows on
+  both SQL doors (`CAST(3 AS INT)`, `3Y`, `3S`, `3.0`, `3.5D` each answer 0,
+  1, 2 — decimal and float truncate toward zero, verified on the `3.5D`
+  cell); malformed strings refuse with RePark's `CAST_INVALID_INPUT`
+  surfacing (base `PySparkException`, the class RePark raises for Spark's
+  malformed casts elsewhere); overflow bounds emit exactly Spark's single row
+  (the provider counts `ceil((end - start) / step)` in `i128` arithmetic, so
+  generation can never wrap); a non-empty range with a non-positive partition
+  count refuses with `IllegalArgumentException` (`Positive number of
+  partitions required`) while an empty range with 0 partitions answers empty.
+  Before: NULL bounds answered an empty table, narrow/decimal/float widths
+  refused loud, overflow bounds wrapped to negative ids and never ended, and
+  every `numPartitions` shape answered rows. Residual: unaliased `count(*)`
+  renders `count(*)` where Spark renders `count(1)` — the systemic SQL-door
+  display form, identical on `VALUES` (pinned explicitly, rows asserted).
+- **Apache Spark** — NULL bounds refuse with `AnalysisException`
+  (`UNEXPECTED_INPUT_TYPE`); every accepted width answers
+  `struct<id:bigint>`, non-nullable; overflow bounds answer their single row;
+  non-positive partitions on a non-empty range refuse with
+  `IllegalArgumentException`, malformed strings with `NumberFormatException`
+  (`CAST_INVALID_INPUT`). *(oracle: recorded — live PySpark 4.1.2,
+  `local[2]`, UTC, 2026-09-19,
+  `python/repark/tests/range_tvf_id_1/range_tvf_id_2_spark_oracle.json`;
+  re-deriver `python/repark/tests/_record_range_tvf_id_1.py` (`_SQL_CELLS_2`,
+  compact shape, `--check` covers both fixtures).)*
+- **Pin** —
+  `python/repark/tests/test_range_tvf_id_2.py::test_sql_range_id2_answer_cell_matches_recorded_schema_and_rows`,
+  `python/repark/tests/test_range_tvf_id_2.py::test_sql_range_id2_near_max_count_answers_rows_with_door_display_name`,
+  `python/repark/tests/test_range_tvf_id_2.py::test_sql_range_id2_refusal_matches_mapped_class_and_token`;
+  `crates/repark-core/src/range_table/tests.rs` (branch pins for every
+  refusal and coercion, both overflow cells, exact counts near both ends,
+  limit and projection).
+- **Rationale** — FIXED. The ID-1 provider let NULLs fall into DataFusion's
+  empty `ContainsNull` arm, coerced only `Int64`/`Utf8`, delegated row
+  generation to the wrapping `i64` stepper, and dropped the 4th argument
+  unchecked. The provider now coerces first (NULL → `UNEXPECTED_INPUT_TYPE`,
+  malformed string → `CAST_INVALID_INPUT`, out-of-range float/decimal and
+  unknown types loud) and streams exactly the precomputed `i128` element
+  count through one single-partition `StreamingTableExec` with session
+  batch-size batches, so an overflow bound is one row, not a hang.
 
 ### FN-APPROXPCT-ACC-TYPE-1 — SQL-door non-integral `accuracy` is AnalysisException without Spark's params
 
