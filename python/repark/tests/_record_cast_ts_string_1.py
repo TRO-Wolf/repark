@@ -5,8 +5,9 @@ Every string in ``STRINGS`` is cast to ``TIMESTAMP`` under the session zones ``U
 ``unix_micros(CAST(s AS TIMESTAMP))``, ``unix_micros(TRY_CAST(s AS TIMESTAMP))`` and
 ``unix_micros(to_timestamp(s))``, or the error condition and the first message line.
 Only ``unix_micros`` crosses into Python, so no PySpark ``datetime`` conversion can fail
-on a year outside Python's range. The string goes in as a named parameter, so no SQL
-escaping touches it.
+on a year outside Python's range. The string is spelled as a SQL literal. No string
+carries a quote or a backslash, so no escape applies. A named parameter would not bind
+under the Iceberg SQL extensions the shared live oracle loads.
 
 A time-only string resolves against today's date in its zone, so its cell also carries
 ``today_wall``: the zone Spark used and the local time of day. The pins check the local
@@ -205,9 +206,23 @@ TIME_ONLY_ZONES: dict[str, str | None] = {
     "T10": None,
 }
 
-_CAST_SQL = "SELECT unix_micros(CAST(:v AS TIMESTAMP)) AS us"
-_TRY_SQL = "SELECT unix_micros(TRY_CAST(:v AS TIMESTAMP)) AS us"
-_TO_TIMESTAMP_SQL = "SELECT unix_micros(to_timestamp(:v)) AS us"
+_CAST_SQL = "SELECT unix_micros(CAST({literal} AS TIMESTAMP)) AS us"
+_TRY_SQL = "SELECT unix_micros(TRY_CAST({literal} AS TIMESTAMP)) AS us"
+_TO_TIMESTAMP_SQL = "SELECT unix_micros(to_timestamp({literal})) AS us"
+
+
+def sql_literal(value: str) -> str:
+    """Spell a fixture string as a SQL string literal.
+
+    Args:
+        value: A fixture string; it carries no quote and no backslash.
+
+    Returns:
+        The single-quoted literal.
+    """
+    if "'" in value or "\\" in value:
+        raise ValueError(f"fixture string needs escaping: {value!r}")
+    return f"'{value}'"
 
 
 def zone_info(zone: str) -> datetime.tzinfo:
@@ -248,18 +263,18 @@ def today_wall(micros: int, zone: str) -> dict[str, str]:
 
 
 def run_micros(session: Any, sql: str, value: str) -> dict[str, Any]:
-    """Run one parameterized query and capture its micros or its error.
+    """Run one query over a string literal and capture its micros or its error.
 
     Args:
         session: A live PySpark session.
-        sql: The query with a ``:v`` parameter.
-        value: The string bound to ``:v``.
+        sql: The query with a ``{literal}`` slot.
+        value: The string spelled into the slot.
 
     Returns:
         ``{"us": int | None}`` on success, else the error condition and first line.
     """
     try:
-        row = session.sql(sql, args={"v": value}).collect()[0]
+        row = session.sql(sql.format(literal=sql_literal(value))).collect()[0]
     except Exception as error:
         condition = getattr(error, "getCondition", lambda: None)()
         return {"error": condition, "message": str(error).split("\n")[0].strip()}

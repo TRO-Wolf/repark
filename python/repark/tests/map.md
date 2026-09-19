@@ -139,7 +139,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   native door has no LTZ `TIMESTAMP` (its `TIMESTAMP` is the ANSI zoneless type) and carries
   no cell. The live leg re-derives the fixture. Red on main: 30 failed, 1 live-skip; green
   on the kernel fix. The registry row `CAST-TS-STRING-1` reads FIXED 2026-09-19 with its
-  residues. pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-011
+  residues. The recorder spells each string as a SQL literal: the shared live oracle loads
+  Iceberg's SQL extensions, whose parser does not bind named parameters. Live: 31 passed.
+  pins: cast-ts-string-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-011, C-012
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +
   [_record_range_tvf_id_1.py](_record_range_tvf_id_1.py) —

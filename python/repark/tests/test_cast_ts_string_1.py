@@ -29,7 +29,7 @@ from typing import Any
 
 import pyarrow as pa
 import pytest
-from _record_cast_ts_string_1 import comparable, record, zone_info
+from _record_cast_ts_string_1 import comparable, record, sql_literal, zone_info
 
 from repark import ReparkSession
 
@@ -63,12 +63,6 @@ def _configure(session: ReparkSession, zone: str, ansi: str) -> None:
 def _group(zone: str, ansi: str) -> list[dict[str, Any]]:
     """Return the fixture cells of one zone and ANSI mode, in recording order."""
     return [cell for cell in _CELLS if cell["zone"] == zone and cell["ansi"] == ansi]
-
-
-def _literal(value: str) -> str:
-    """Spell a string as a SQL literal; the fixture strings carry no quote or backslash."""
-    assert "'" not in value and "\\" not in value
-    return f"'{value}'"
 
 
 def _today_matches(micros: int, wall: dict[str, str]) -> bool:
@@ -122,7 +116,7 @@ def test_sql_literal_cast_matches_spark(spark: ReparkSession, zone: str, ansi: s
         (
             cell,
             cell["cast"],
-            _run_scalar(spark, f"SELECT unix_micros(CAST({_literal(cell['s'])} AS TIMESTAMP))"),
+            _run_scalar(spark, f"SELECT unix_micros(CAST({sql_literal(cell['s'])} AS TIMESTAMP))"),
         )
         for cell in _group(zone, ansi)
     ]
@@ -140,7 +134,9 @@ def test_sql_literal_try_cast_matches_spark(spark: ReparkSession, zone: str, ans
         (
             cell,
             cell["try_cast"],
-            _run_scalar(spark, f"SELECT unix_micros(TRY_CAST({_literal(cell['s'])} AS TIMESTAMP))"),
+            _run_scalar(
+                spark, f"SELECT unix_micros(TRY_CAST({sql_literal(cell['s'])} AS TIMESTAMP))"
+            ),
         )
         for cell in _group(zone, ansi)
     ]
@@ -155,7 +151,7 @@ def test_sql_literal_to_timestamp_matches_spark(spark: ReparkSession, zone: str,
         (
             cell,
             cell["to_timestamp"],
-            _run_scalar(spark, f"SELECT unix_micros(to_timestamp({_literal(cell['s'])}))"),
+            _run_scalar(spark, f"SELECT unix_micros(to_timestamp({sql_literal(cell['s'])}))"),
         )
         for cell in _group(zone, ansi)
     ]

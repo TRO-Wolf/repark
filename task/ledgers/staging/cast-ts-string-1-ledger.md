@@ -36,7 +36,32 @@ rendering.
 | C-009 | ICE-TT-RESOLVE-1's cast-gap strict xfails become plain pins, and the alias-join cell uses the oracle's `2999-01-01`. | The flipped tests green in step 3. | PROVEN | `test_reader_tas_date_past_2262` (4), `test_facade_sql_tt2_short_and_year_only_casts` (2), `test_reader_tt2_timestamp_as_of_nosec` (2), alias join (2): `test_ice_tt_resolve_1*.py` 189 passed. |
 | C-010 | `TIMESTAMP_NTZ` is untouched: `to_timestamp_ntz` keeps DataFusion's parse through `arrow_grammar_to_timestamp_udf`, and the `spark.sql.timestampType=TIMESTAMP_NTZ` rewrite is unchanged. | The existing NTZ tests stay green. | PROVEN | `timestamp_ltz_ntz::tests` and `instant_ts::tests::ntz_*` in the 820-test crate run; `to_timestamp_ntz('2020')` still refuses (a residue, see the registry row). |
 | C-011 | `CAST-TS-STRING-1` reads FIXED 2026-09-19 in the registry's type-and-value section with before / after and the residues; ICE-TT-RESOLVE-1's residue note reads closed. | Registry diff; `check_docs_links.py`. | PROVEN | `docs/spark-sql-iceberg-parity.md` §4 row and the §2.1 closing note. |
-| C-012 | The targeted gates are green on the release native built from this branch. | Summary lines in §Gates. | OPEN | Step 5. |
+| C-012 | The targeted gates are green on the release native built from this branch. | Summary lines in §Gates. | PROVEN | See §Gates. |
+
+## Gates
+
+Measured on the release native built from `45204211` (the step-4 tree):
+
+- `test_cast_ts_string_1.py` offline `-n 4`: 30 passed, 1 skipped (the live leg).
+- Live (`REPARK_PARITY_LIVE=1`, PySpark 4.1.2 with the shared oracle's Iceberg extensions):
+  31 passed. The live leg re-derives the fixture through the recorder. Named parameters do not
+  bind under the Iceberg SQL extension parser (`UNBOUND_SQL_PARAMETER`), so the recorder spells
+  each string as a SQL literal. The re-derived cells equal the parameter-recorded fixture.
+- Every file `rg -l "AS TIMESTAMP|cast\(.timestamp" python/repark/tests` finds (21 files)
+  offline `-n 4`: 1007 passed, 16 skipped, 3 xfailed. The `to_timestamp` / `try_to_timestamp`
+  / `to_timestamp_ltz` files (16): 800 passed, 12 skipped, 19 xfailed.
+- `cargo test -p repark-functions --lib --tests`: 820 passed, 1 ignored;
+  `… --lib tests::spark_string_timestamp`: 27 passed.
+- `cargo clippy --locked -p repark-functions --all-targets -- -D warnings -A
+  clippy::disallowed_methods` clean; the panic-ban flags (`--lib --bins -D
+  clippy::disallowed_methods -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D
+  clippy::todo -D clippy::unimplemented -D clippy::unreachable`) clean.
+- `cargo fmt --all --check` clean; `ruff check .` clean; `ruff format --check` on the changed
+  Python clean.
+- `check_rust_file_size.py` (694 files clean), `check_lib_rs.py` (10 roots clean),
+  `check_lib_py.py` (830 files clean), `check_ledger_grammar.py`, `check_docs_links.py`,
+  `sync_map_md.py --check`, `check_docstring_presence.py`, `check_python_conventions.py` clean.
+- Comment ban: 0 hits.
 
 ## Residues
 
