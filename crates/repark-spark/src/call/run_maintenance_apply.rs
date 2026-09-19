@@ -57,7 +57,7 @@ pub(super) async fn apply_steps(
             ));
             continue;
         }
-        match run_step(ctx, catalogs, catalog_name, table_arg, step).await {
+        match Box::pin(run_step(ctx, catalogs, catalog_name, table_arg, step)).await {
             Ok(result) => rows.push((
                 step.ordinal,
                 step.procedure.to_string(),

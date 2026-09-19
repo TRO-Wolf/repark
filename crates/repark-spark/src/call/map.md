@@ -18,6 +18,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
 
 - `apply_partitioning.rs` — **AP-2 step 1 (2026-09-11):** `CALL
   <catalog>.system.apply_partitioning(table => …, plan_id => … [, dry_run => …])`.
+  **RP-34 (2026-09-19):** the rewrite step and each `run_step` call are boxed (`Box::pin`), as
+  `clippy::large_futures` flags them at fork `43fcd243`; the same boxing holds for
+  `run_maintenance_apply.rs`'s `run_step`.
   `dry_run` defaults true (nothing commits; every row `status` `dry_run`). `dry_run => false`
   runs each `ALTER TABLE … ADD PARTITION FIELD …` from the matching plan row (one commit
   each; the `unpartitioned` candidate has no DDL step), then `rewrite_data_files`,
