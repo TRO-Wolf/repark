@@ -161,6 +161,18 @@ Step-4 commit: registry row `RANGE-TVF-ID-2` (**FIXED 2026-09-19**) plus the
 ID-1 pointer line, this ledger (C-005 and C-006 PROVEN, verdict 6/6), the
 staging map row.
 
+## Verification critic (Grok 4.6, 2026-09-19, orchestrator-run)
+
+Verdict **PASS** on head `6945f572`. Mutation first: reverting each of the four fixes (NULL arm,
+the i128-counted `RangeTable`, the width arms, the numPartitions check) turns the
+`range_table` Rust tests red, four of four. One P3, recorded here as residue:
+
+- **V-001 (P3).** `RangeTable` precomputes the Spark element count but exposes no statistics,
+  so `count(*)` over a very large `range(n)` streams every element (linear) where Spark reads
+  a row count. It is not a wrong answer, and `LIMIT` stays bounded (`StreamingTableExec
+  fetch=3`). Follow-up: report exact `num_rows` from an execution plan that carries
+  statistics, or short-circuit an empty projection.
+
 ## 5. Coverage attestation
 
 ```yaml
