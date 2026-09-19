@@ -1,7 +1,8 @@
 use super::super::*;
 use super::common::*;
 use repark_iceberg::catalog::{
-    CatalogCaches, DEFAULT_MANIFEST_CACHE_BYTES, IcebergCacheSettings, MANIFEST_CACHE_BYTES_KEY,
+    CatalogCaches, DEFAULT_FOOTER_CACHE_BYTES, DEFAULT_MANIFEST_CACHE_BYTES, IcebergCacheSettings,
+    MANIFEST_CACHE_BYTES_KEY,
 };
 
 async fn shared_catalog(wh: &TempDir, caches: &CatalogCaches) -> (Arc<dyn Catalog>, String) {
@@ -404,6 +405,7 @@ async fn one_statement_over_many_tables_retains_one_entry_each_until_the_next_do
         metadata_cache: true,
         metadata_cache_entries: 1,
         manifest_cache_bytes: DEFAULT_MANIFEST_CACHE_BYTES,
+        footer_cache_bytes: DEFAULT_FOOTER_CACHE_BYTES,
     });
     let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
     for index in 0..8 {
@@ -672,6 +674,7 @@ async fn the_retained_location_bound_holds_across_many_commits() {
         metadata_cache: true,
         metadata_cache_entries: 4,
         manifest_cache_bytes: DEFAULT_MANIFEST_CACHE_BYTES,
+        footer_cache_bytes: DEFAULT_FOOTER_CACHE_BYTES,
     });
     let ((ctx, catalogs), _) = two_doors(&wh, &caches).await;
     run(

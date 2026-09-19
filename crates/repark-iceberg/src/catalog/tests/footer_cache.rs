@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use datafusion::arrow::array::{Array, Int64Array, RecordBatch};
 use datafusion::prelude::SessionContext;
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
-use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
+use iceberg::{NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
 const FILES: i64 = 3;

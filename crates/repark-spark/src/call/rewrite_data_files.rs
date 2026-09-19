@@ -60,7 +60,7 @@ pub(super) async fn execute_rewrite_data_files(
         )?),
         None => None,
     };
-    run_rewrite(
+    Box::pin(run_rewrite(
         ctx,
         catalog,
         catalog_name,
@@ -68,7 +68,7 @@ pub(super) async fn execute_rewrite_data_files(
         table,
         where_predicate,
         options,
-    )
+    ))
     .await
 }
 
