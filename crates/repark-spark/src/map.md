@@ -581,7 +581,12 @@ pins: rp-4-fork-repin/C-005, C-006
   wrapper). Refusals carry Spark's text: `NOT NULL` / a column position / a nested name are
   Hive-style parse errors, a duplicate name is `[COLUMN_ALREADY_EXISTS]`, and a live partition
   or sort field whose source id would vanish is Iceberg's `Cannot find source column for …`
-  `ValidationException` — raised before the commit, so the table is untouched.
+  `ValidationException` — raised before the commit, so the table is untouched. The module
+  carries no comments (owner ruling): `parse` walks ALTER TABLE → name → REPLACE COLUMNS →
+  `(`, then one `parse_column` per entry (name, type, then `NOT NULL` / position / `COMMENT`
+  in any order) and requires end-of-statement; `plan` refuses duplicates before it loads the
+  table, then the partition and sort checks, then emits the drops before the adds — the
+  order the fork's `UpdateSchema` needs to allow a same-name re-add.
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** the `ALTER COLUMN …
   FIRST|AFTER` pre-parse (`try_parse_column_move_ddl` / `execute_column_move_ddl`, wired in

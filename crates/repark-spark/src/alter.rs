@@ -741,7 +741,6 @@ pub(crate) enum IcebergAlterDdl {
         /// Ordered ops (usually one; multi-clause future-proof).
         changes: Vec<PartitionSpecChange>,
     },
-    /// `REPLACE COLUMNS (col TYPE [COMMENT …], …)`.
     ReplaceColumns {
         /// `catalog.namespace.table` parts.
         table_parts: Vec<String>,

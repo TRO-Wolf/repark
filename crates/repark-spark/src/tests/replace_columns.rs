@@ -56,7 +56,6 @@ async fn null_rows(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) 
     out
 }
 
-/// RC-BASIC: every listed column is a fresh id, so the seeded rows read all-NULL.
 #[tokio::test]
 async fn replace_columns_assigns_fresh_ids_and_nulls_existing_rows() {
     let wh = TempDir::new().unwrap();
@@ -84,7 +83,6 @@ async fn replace_columns_assigns_fresh_ids_and_nulls_existing_rows() {
     );
 }
 
-/// RC-SAME: the same column list is still a drop + re-add, so the ids move and the rows go NULL.
 #[tokio::test]
 async fn replace_columns_with_the_same_list_still_rewrites_every_id() {
     let wh = TempDir::new().unwrap();
@@ -113,7 +111,6 @@ async fn replace_columns_with_the_same_list_still_rewrites_every_id() {
     );
 }
 
-/// RC-TYPE: a same-named column may change type freely — the old id is gone, nothing is promoted.
 #[tokio::test]
 async fn replace_columns_accepts_an_incompatible_type_on_a_kept_name() {
     let wh = TempDir::new().unwrap();
@@ -142,7 +139,6 @@ async fn replace_columns_accepts_an_incompatible_type_on_a_kept_name() {
     );
 }
 
-/// RC-STRUCT: a complex type goes through the shared column-type parser; fresh ids are level-order.
 #[tokio::test]
 async fn replace_columns_adds_a_struct_with_level_order_fresh_ids() {
     let wh = TempDir::new().unwrap();
@@ -173,7 +169,6 @@ async fn replace_columns_adds_a_struct_with_level_order_fresh_ids() {
     assert_eq!(schema.field_by_name("s.b").map(|field| field.id), Some(7));
 }
 
-/// RC-COMMENT: `COMMENT '…'` lands as the added column's doc.
 #[tokio::test]
 async fn replace_columns_keeps_the_column_comment() {
     let wh = TempDir::new().unwrap();
@@ -194,8 +189,6 @@ async fn replace_columns_keeps_the_column_comment() {
     assert_eq!(fields[1].doc, None);
 }
 
-/// RC-THEN-INSERT / RC-TWICE: a row written after the replace reads back; a second replace
-/// moves the ids again and NULLs it too.
 #[tokio::test]
 async fn replace_columns_twice_nulls_the_row_written_in_between() {
     let wh = TempDir::new().unwrap();
@@ -241,7 +234,6 @@ async fn replace_columns_twice_nulls_the_row_written_in_between() {
     );
 }
 
-/// RC-NOT-NULL: Spark's Hive-style form has no `NOT NULL` — a parse refusal, not a plan one.
 #[tokio::test]
 async fn replace_columns_refuses_not_null_as_a_parse_error() {
     let wh = TempDir::new().unwrap();
@@ -275,7 +267,6 @@ async fn replace_columns_refuses_not_null_as_a_parse_error() {
     );
 }
 
-/// RC-DUP: a duplicate name in the list is Spark's `[COLUMN_ALREADY_EXISTS]`.
 #[tokio::test]
 async fn replace_columns_refuses_a_duplicate_name() {
     let wh = TempDir::new().unwrap();
@@ -301,7 +292,6 @@ async fn replace_columns_refuses_a_duplicate_name() {
     );
 }
 
-/// RC-PART-DROP-SOURCE / RC-PART-KEEP-NAME: the partition field loses its source id either way.
 #[tokio::test]
 async fn replace_columns_refuses_when_a_partition_field_loses_its_source() {
     let wh = TempDir::new().unwrap();
@@ -343,7 +333,6 @@ async fn replace_columns_refuses_when_a_partition_field_loses_its_source() {
     );
 }
 
-/// RC-SORTED: the same loss on the write order refuses with Java's sort-field rendering.
 #[tokio::test]
 async fn replace_columns_refuses_when_a_sort_field_loses_its_source() {
     let wh = TempDir::new().unwrap();
@@ -380,7 +369,6 @@ async fn replace_columns_refuses_when_a_sort_field_loses_its_source() {
     );
 }
 
-/// The Hive-style form takes neither a column position nor a nested name.
 #[tokio::test]
 async fn replace_columns_refuses_a_position_and_a_nested_name() {
     let wh = TempDir::new().unwrap();

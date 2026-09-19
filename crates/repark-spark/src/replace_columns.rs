@@ -1,6 +1,3 @@
-//! Spark's Hive-style `ALTER TABLE … REPLACE COLUMNS`: drop every current top-level column,
-//! then add the listed ones with fresh field ids.
-
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::DataType as SqlDataType;
 use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
@@ -17,18 +14,13 @@ use crate::alter::IcebergAlterDdl;
 use crate::create_table::sql_type_to_iceberg_with_timestamp_type;
 use crate::iceberg_err;
 
-/// One column of a `REPLACE COLUMNS (…)` list, in list order.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ReplaceColumnDef {
-    /// Column name.
     pub(crate) name: String,
-    /// The declared SQL type; bare `TIMESTAMP` resolves against the session at execute time.
     pub(crate) data_type: SqlDataType,
-    /// Optional `COMMENT '…'`.
     pub(crate) doc: Option<String>,
 }
 
-/// Parse `ALTER TABLE <name> REPLACE COLUMNS (col TYPE [COMMENT '…'], …)`.
 pub(crate) fn parse(sql: &str, table_parts: Vec<String>) -> Result<IcebergAlterDdl> {
     let dialect = SparkSqlDialect {};
     let tokens = Tokenizer::new(&dialect, sql)
@@ -95,9 +87,6 @@ fn parse_column(parser: &mut Parser<'_>) -> Result<ReplaceColumnDef> {
     })
 }
 
-/// Plan the schema batch: one `DropColumn` per current top-level column, then one `AddColumn`
-/// per listed column. The fork's `UpdateSchema` assigns every added column a fresh id from
-/// `last-column-id + 1`, so no existing row is readable through the new schema.
 pub(crate) async fn plan(
     catalog: &dyn Catalog,
     ident: &TableIdent,
@@ -146,8 +135,6 @@ fn refuse_duplicate_names(columns: &[ReplaceColumnDef]) -> Result<()> {
     Ok(())
 }
 
-/// Every current field id disappears, so any live partition field loses its source column —
-/// Iceberg's `ValidationException`, which leaves the table untouched.
 fn refuse_lost_partition_source(metadata: &TableMetadata) -> Result<()> {
     for field in metadata.default_partition_spec().fields() {
         if field.transform == Transform::Void {
@@ -161,7 +148,6 @@ fn refuse_lost_partition_source(metadata: &TableMetadata) -> Result<()> {
     Ok(())
 }
 
-/// The same loss on the default sort order, with Java's `SortField` rendering.
 fn refuse_lost_sort_source(metadata: &TableMetadata) -> Result<()> {
     let Some(field) = metadata.default_sort_order().fields.first() else {
         return Ok(());

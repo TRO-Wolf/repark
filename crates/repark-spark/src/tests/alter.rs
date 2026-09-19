@@ -394,7 +394,6 @@ async fn alter_column_drop_not_null() {
     assert!(!id.required, "DROP NOT NULL must make the column optional");
 }
 
-/// I6 residual refusals.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // flat refuse battery: ORDERED/DISTRIBUTED/LHS/width=0 (octo C2)
 async fn alter_unsupported_forms_refuse_loud() {

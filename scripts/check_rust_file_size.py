@@ -137,7 +137,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split configuration bindings from query and catalog bindings.",
     ),
     "crates/repark-spark/src/alter.rs": (
-        1450,
+        1449,
         "Spark ALTER token rewrites and dispatch share one planner module.",
         "Split syntax normalization from Iceberg operation dispatch.",
     ),
@@ -147,7 +147,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract identifier resolution from metadata plan assembly.",
     ),
     "crates/repark-spark/src/tests/alter.rs": (
-        1185,
+        1184,
         "Spark ALTER behavior cases share one test module.",
         "Split property operations from schema-evolution operations.",
     ),

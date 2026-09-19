@@ -86,7 +86,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the table's ids and rows are untouched. The two identity-trap tests in `alter.rs`
   (`alter_replace_columns_promote_and_identity_trap`,
   `alter_replace_columns_float_decimal_promote_and_traps`) and the REPLACE block in
-  `alter_unsupported_forms_refuse_loud` encoded the opposite design and are gone.
+  `alter_unsupported_forms_refuse_loud` encoded the opposite design and are gone. Each test
+  names its measured cell in this map rather than in a comment (owner ruling): `rc_basic` is
+  RC-BASIC, `rc_same` RC-SAME, `rc_type` RC-TYPE, `rc_struct` RC-STRUCT, `rc_comment`
+  RC-COMMENT, `rc_twice` RC-THEN-INSERT + RC-TWICE, `rc_not_null` RC-NOT-NULL, `rc_dup`
+  RC-DUP, `rc_part` RC-PART-DROP-SOURCE + RC-PART-KEEP-NAME, `rc_sorted` RC-SORTED, and
+  `rc_shape` the two unmeasured Hive-style shapes (a column position, a nested name).
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
   counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
