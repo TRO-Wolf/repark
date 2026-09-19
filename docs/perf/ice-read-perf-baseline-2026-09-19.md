@@ -238,3 +238,55 @@ lose their second footer read and the pruned queries read one footer.
 | large-warm | Q6 | 1231.0 → 1134.8 | 40 → 0 | 1,373,195,126 → 1,373,195,126 | 1,394,166,646 → 1,373,195,126 |
 | large-warm | Q7 | 13.7 → 13.6 | 26 → 0 | 1,094,733 → 1,094,733 | 14,726,221 → 1,094,733 |
 
+## Re-measure gate (slate unit 4), local beds
+
+Pre-perf main `3eb1966e` (fork `43fcd243`, ICE-READ-PERF-0 only) against the code of main
+`7dc2c8ef` (fork `f3bdd598`: units 1–3 — timestamp pushdown, page selection, the AWS catalog
+caches, the footer cache), run 2026-09-19 15:26–15:44 EDT back to back (load average 7–44 on the
+first half, 15–22 on the second), default release profile, `--repeat 5`. The AWS half of the gate
+is owed: both bench dispatches stopped before any write on the missing
+`s3tables:Put/GetTableMaintenanceConfiguration` grant.
+
+| bed, mode | query | total ms | footer requests | page bytes | all bytes |
+|---|---|---|---|---|---|
+| default-cold | Q1 | 196.7 → 190.7 | 200 → 200 | 0 → 0 | 105,637,162 → 105,637,162 |
+| default-cold | Q2 | 213.8 → 210.1 | 200 → 200 | 22,157,067 → 22,157,067 | 127,794,229 → 127,794,229 |
+| default-cold | Q3 | 229.2 → 198.9 | 200 → 2 | 65,501,593 → 985,929 | 171,138,755 → 2,814,067 |
+| default-cold | Q4 | 170.7 → 189.1 | 26 → 1 | 1,008,817 → 1,008,817 | 15,419,867 → 2,312,667 |
+| default-cold | Q5 | 247.1 → 266.1 | 200 → 200 | 65,501,593 → 65,501,593 | 171,138,755 → 171,138,755 |
+| default-cold | Q6 | 803.5 → 920.2 | 200 → 200 | 1,428,284,966 → 1,428,284,966 | 1,533,922,128 → 1,533,922,128 |
+| default-cold | Q7 | 124.8 → 138.0 | 27 → 2 | 323,875 → 323,875 | 15,259,213 → 2,152,013 |
+| default-warm | Q1 | 11.7 → 7.7 | 200 → 0 | 0 → 0 | 104,857,600 → 0 |
+| default-warm | Q2 | 31.1 → 26.0 | 200 → 0 | 22,157,067 → 22,157,067 | 127,014,667 → 22,157,067 |
+| default-warm | Q3 | 84.4 → 11.3 | 200 → 0 | 65,501,593 → 985,929 | 170,359,193 → 985,929 |
+| default-warm | Q4 | 9.6 → 13.3 | 26 → 0 | 1,008,817 → 1,008,817 | 14,640,305 → 1,008,817 |
+| default-warm | Q5 | 62.5 → 53.1 | 200 → 0 | 65,501,593 → 65,501,593 | 170,359,193 → 65,501,593 |
+| default-warm | Q6 | 631.3 → 719.3 | 200 → 0 | 1,428,284,966 → 1,428,284,966 | 1,533,142,566 → 1,428,284,966 |
+| default-warm | Q7 | 8.2 → 8.4 | 27 → 0 | 323,875 → 323,875 | 14,479,651 → 323,875 |
+| large-cold | Q1 | 30.2 → 34.7 | 20 → 20 | 0 → 0 | 10,565,325 → 10,565,325 |
+| large-cold | Q2 | 52.4 → 51.5 | 40 → 20 | 21,271,973 → 21,271,973 | 42,323,058 → 31,837,298 |
+| large-cold | Q3 | 89.6 → 40.7 | 40 → 1 | 64,603,029 → 2,335,277 | 85,654,114 → 2,939,130 |
+| large-cold | Q4 | 37.8 → 32.2 | 26 → 1 | 2,542,390 → 2,114,116 | 16,253,443 → 2,717,969 |
+| large-cold | Q5 | 83.5 → 83.7 | 40 → 20 | 31,486,183 → 31,486,183 | 52,537,268 → 42,051,508 |
+| large-cold | Q6 | 1150.0 → 1178.4 | 40 → 20 | 1,373,195,126 → 1,373,195,126 | 1,394,246,211 → 1,383,760,451 |
+| large-cold | Q7 | 37.2 → 34.0 | 26 → 1 | 1,196,696 → 1,094,733 | 14,907,749 → 1,698,586 |
+| large-warm | Q1 | 6.8 → 5.9 | 20 → 0 | 0 → 0 | 10,485,760 → 0 |
+| large-warm | Q2 | 31.9 → 24.8 | 40 → 0 | 21,271,973 → 21,271,973 | 42,243,493 → 21,271,973 |
+| large-warm | Q3 | 55.9 → 20.1 | 40 → 0 | 64,603,029 → 2,335,277 | 85,574,549 → 2,335,277 |
+| large-warm | Q4 | 21.7 → 12.1 | 26 → 0 | 2,542,390 → 2,114,116 | 16,173,878 → 2,114,116 |
+| large-warm | Q5 | 54.9 → 51.6 | 40 → 0 | 31,486,183 → 31,486,183 | 52,457,703 → 31,486,183 |
+| large-warm | Q6 | 1166.3 → 1134.8 | 40 → 0 | 1,373,195,126 → 1,373,195,126 | 1,394,166,646 → 1,373,195,126 |
+| large-warm | Q7 | 18.0 → 13.6 | 26 → 0 | 1,196,696 → 1,094,733 | 14,828,184 → 1,094,733 |
+
+| bed, mode | group total ms | group requests | group bytes | footer requests |
+|---|---|---|---|---|
+| default-concurrent | 735.2 → 775.3 | 1,800 → 804 | 2,000,875,619 → 1,516,929,555 | 800 → 0 |
+| default-concurrent-cold | 835.9 → 843.4 | 2,001 → 1,382 | 2,001,655,181 → 1,622,926,381 | 800 → 200 |
+
+- Warm scans read no data-file footer on either bed; the concurrent group reads 1,800 → 804
+  requests and 2.00 → 1.52 GB.
+- The 1 % time window (Q3): 170 MB → 1 MB warm, 84 → 11 ms; cold 229 → 199 ms.
+- Still open: Q6 (a predicate no page can prune) is slower on the 200-file bed (warm 631 → 719 ms,
+  cold 804 → 920 ms) — fork F-PAGE-PRUNE-2 (#319); `count(*)` still reads footers cold (ICE-COUNT-FOLD-1,
+  #721, waits on fork #317).
+

@@ -444,7 +444,8 @@ This file closes when the H-3 campaign archives to `docs/history/`.
   (`crates/repark-spark/benches/ice_read_perf/`) — cold, warm, concurrent and concurrent-cold
   tables at `--repeat 5` (medians), with requests and bytes by op kind and file class and the
   data-file footer / page split, recorded on the unit head `b15f1d47` (fork pin `43fcd243`)
-  under a load average of about 30: I/O is the reference; timing pairs are re-run back to back. It is the "before" of every unit of the
+  under a load average of about 30: I/O is the reference; timing pairs are re-run back to back.
+  Carries each unit's before/after pair (RP-36, RP-37, RP-38) and the re-measure gate (local beds). It is the "before" of every unit of the
   read-performance slate.
   pins: ice-read-perf-0/C-006
 
