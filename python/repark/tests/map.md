@@ -1623,7 +1623,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `FanoutWriter::close` ascending, the mapping is Spark's in 12 of 12 runs, so `_P_LINEAGE` is
   back on every partitioned program — nine goldens re-measured on both engines — and the
   instability cell became `test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
-  beside the CTAS control that was always stable. Matrix and totals:
+  beside the CTAS control that was always stable. **RP-31 (2026-09-18):** the multi-partition
+  `INSERT … SELECT` order is deterministic at fork `#300`; its pins live in
+  `test_ice_rowid_order_1.py`. Matrix and totals:
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   pins: v3-cov-statement-coverage/C-002, C-003, C-004, C-006
   pins: rp-8-repin-f21-f22/C-007
