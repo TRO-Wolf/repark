@@ -173,6 +173,27 @@ async fn native_delete_stamps_the_session_snapshot_property() {
 }
 
 #[tokio::test]
+async fn native_merge_on_read_delete_stamps_the_session_snapshot_property() {
+    let door = door_with_conf(&[("spark.sql.iceberg.snapshot-property.team", "a")]).await;
+    door.ok("CREATE TABLE ice.sales.t (id BIGINT, name VARCHAR) WITH (\
+         extra_properties = MAP(ARRAY['write.delete.mode'], ARRAY['merge-on-read']))")
+        .await;
+    door.ok("INSERT INTO ice.sales.t VALUES (1, 'a'), (2, 'b')")
+        .await;
+    door.ok("DELETE FROM ice.sales.t WHERE id = 1").await;
+    let summaries = door.summaries("t").await;
+    assert_eq!(
+        ConfDoor::team_stamps(&summaries),
+        vec![Some("a".to_string()), Some("a".to_string())],
+    );
+    assert_eq!(
+        summaries[1].get("added-delete-files").map(String::as_str),
+        Some("1"),
+        "the delete must have committed through the row-delta arm, not a copy-on-write rewrite"
+    );
+}
+
+#[tokio::test]
 async fn native_insert_refuses_a_colliding_summary_key() {
     let door =
         door_with_conf(&[("spark.sql.iceberg.snapshot-property.added-records", "999")]).await;

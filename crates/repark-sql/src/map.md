@@ -39,6 +39,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   The native session carries its own `ConfigOptions`, so these pins build the door session with
   `with_session_write_conf` — the Python facade cannot reach this door's carrier.
   pins: ice-session-write-conf-1/C-042
+  **Round 2 (2026-09-19):** `native_merge_on_read_delete_stamps_the_session_snapshot_property`
+  joins it, on a `write.delete.mode=merge-on-read` table, because the round-1 battery left the
+  row-delta commit arm unpinned in Rust: dropping the extras at
+  `merge/snapshot_commit.rs`'s `commit_row_delta_kind_on_ref` alone reddened nothing, while the
+  copy-on-write arm was already covered by `native_merge_*` / `native_delete_*` here and by
+  `session_team_stamps_cow_delete_overwrite` in repark-spark. The pin asserts the stamp on both
+  snapshots and `added-delete-files=1`, so a silent reroute onto the rewrite arm reds it too.
+  pins: ice-session-write-conf-1/C-044
 - [`create_table.rs`](create_table.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   CTAS stages its query with the resolved session codec and, when the session sets snapshot
   properties, publishes through a transaction that carries the merged summary instead of the
