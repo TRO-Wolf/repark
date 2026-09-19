@@ -244,7 +244,21 @@ would change what "four at once" measures for the other four (their timings and 
   $files`); the Python facade quotes names first and does not see it. That is a product
   defect outside this unit, reported in the unit's hand-back.
 
-## Pins (`pins.rs`)
+## Pins (`pins.rs`, `pins_report.rs`)
+
+- **ICE-BENCH-BASELINE-1 (2026-09-19), in `pins_report.rs`:**
+  `the_parser_accepts_a_bare_baseline_flag_and_defaults_it_off` (bare `--baseline` on,
+  default off, `USAGE` names it, `setup` and `--baseline <value>` refuse);
+  `a_warm_baseline_run_reads_every_footer_on_its_second_sample` (warm Q1 second sample: 3
+  footer requests with `--baseline`, 0 by default, footer cache `null` vs 3 hits) with the
+  JSON `baseline` / `baseline_switches` asserts; `a_warm_baseline_run_records_no_metadata_cache_hits`
+  (all four metadata counters zero on every sample of every query, default Q1 hits > 0);
+  `page_selection_off_reads_more_page_bytes_on_a_selective_id_range` (Q7 on a 3 × 50,000-row
+  bed: 92,890 page bytes by default, 161,729 with page selection off, same 1,500 rows);
+  `the_human_table_names_the_baseline_in_its_header_line`. Each reds under the mutation that
+  removes its behaviour (ledger C-001…C-003, C-005). The workflow half (C-004) is pinned in
+  `python/repark-parity/tests/test_ice_read_perf_bench_workflow.py`.
+  pins: ice-bench-baseline-1/C-001, C-002, C-003, C-005
 
 - **ICE-CATALOG-CACHE-1 (2026-09-19), in `pins_report.rs`** (a module of the `pins.rs` root,
   split out because `pins.rs` sits at the 1000-line ceiling; `pins.rs`'s three `std` imports

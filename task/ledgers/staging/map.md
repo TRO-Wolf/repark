@@ -266,6 +266,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   complete. `risk_tier: standard`. Branch `perf/ice-read-perf-0`.
   pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010
+- [ice-bench-baseline-1-ledger.md](ice-bench-baseline-1-ledger.md) —
+  **ICE-BENCH-BASELINE-1 (2026-09-19), in flight:** the read bench's own "before" switch —
+  a bare `run --baseline` flag that builds every run session with the shared caches off and
+  the fork's page-index row selection disabled, reports `baseline` / `baseline_switches` in
+  the JSON and the baseline in the table header, plus the boolean `baseline` dispatch input
+  on the `ice-read-perf-bench` job. No product behaviour change. Every clause PROVEN. What it
+  cannot switch off (timestamp pushdown, the `count(*)` fold) is recorded in the ledger, so
+  the number is never read as pre-campaign main. `risk_tier: standard`. Branch
+  `perf/ice-bench-baseline-1`.
+  pins: ice-bench-baseline-1/C-001, C-002, C-003, C-004, C-005
 - [cast-ts-string-1-ledger.md](cast-ts-string-1-ledger.md) —
   **CAST-TS-STRING-1 (2026-09-19), in flight:** `CAST(<string> AS TIMESTAMP)` follows Spark
   4.1.2's `stringToTimestamp` on every door — one Rust kernel
