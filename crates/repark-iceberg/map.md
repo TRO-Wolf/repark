@@ -26,7 +26,9 @@ v1 crate-root re-export lists.
   write half; the catalog half stays `datafusion::error::Result` — the fold lives in
   repark-core) + `iceberg` + `iceberg-datafusion` + `iceberg-catalog-glue` +
   `iceberg-catalog-s3tables` + `iceberg-storage-opendal` (`opendal-s3`) + `datafusion` +
-  `parquet` + `async-trait` + `futures`/`uuid` + `tracing`. Dev-deps `tokio` + `tempfile` +
+  `parquet` + `async-trait` + `futures`/`uuid` + `tracing`. `bytes` + `serde` (ICE-READ-PERF-0: the
+  counting `Storage` names `bytes::Bytes` and implements `serde::Serialize`, which the fork's
+  `typetag` storage traits require; both crates were already in the lockfile). Dev-deps `tokio` + `tempfile` +
   `tracing-subscriber` (registry) + `serde_json` (ICE-OCC-SCOPED-1's race pin reads a Spark
   recording). The `iceberg*` family is sourced from the owned fork via the
   workspace `[patch.crates-io]`.
