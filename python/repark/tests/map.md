@@ -6946,3 +6946,25 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   where that door is reachable — the Python `repark.sql` callable plans
   catalog DDL through plain DataFusion and never reaches the native router.
   pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-009, C-010
+- [test_ice_replace_columns_1.py](test_ice_replace_columns_1.py) +
+  [ice_replace_columns_1_spark_oracle.json](ice_replace_columns_1_spark_oracle.json) +
+  [_record_ice_replace_columns_1_oracle.py](_record_ice_replace_columns_1_oracle.py) —
+  **ICE-REPLACE-COLUMNS-1 (2026-09-19):** `ALTER TABLE … REPLACE COLUMNS` drops
+  every current top-level column and adds the listed ones with **fresh** field
+  ids, as Spark's Hive-style form does, so existing rows read NULL through the
+  new ids. The 34-cell oracle (PC-1 inventory cells `RC-*`, live Spark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0 on `local[1]` over an InMemory catalog,
+  SHA-256 `e5fa53727f8d10359a0bcda7733ff2c15bb0f591fd4b77989db67896b946b89a`)
+  pins, for format-version 2 and 3 each: the fresh ids and `last-column-id`, the
+  new schema count, the all-NULL read-back (BASIC, SAME, RENAME, TYPE, ONE,
+  COMMENT, STRUCT), the insert-after-replace row, the twice-replaced ids, the
+  time-travel read of the first snapshot under the **old** schema, the empty
+  table, and the four refusals — `NOT NULL` (`ParseException`, Hive-style),
+  duplicate name (`[COLUMN_ALREADY_EXISTS]`), and the partition-field /
+  sort-field source loss (`Cannot find source column for …`, table unchanged).
+  The recorder re-derives every cell on live Spark (`record` / `check`, GAV from
+  `_oracle_pins`, run-stamped plan ids normalized); the live tier
+  (`test_live_oracle_fixture_reproduces`) skips without a `/tmp/sparkenv`
+  interpreter. The native ANSI door has no Hive-style REPLACE COLUMNS and is
+  pinned at its registered parse refusal.
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
