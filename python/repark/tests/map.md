@@ -1784,6 +1784,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-009, C-010
   pins: ice-rdf-fork-asks-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   At fork `e3eef24f` (#302) `target_small` runs plainly at Spark's 8→4.
+  At fork `587d3592` (#304) the four RPD cells run plainly: one commit, 8→8, 10 snapshots.
   pins: rp-32-rdf-cow-bytes/C-002, C-003, C-004, C-005, C-009, C-010
 - [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical
