@@ -5101,6 +5101,7 @@ name = "repark-iceberg"
 version = "1.4.2"
 dependencies = [
  "async-trait",
+ "bytes",
  "datafusion",
  "futures",
  "iceberg",
@@ -5110,6 +5111,7 @@ dependencies = [
  "iceberg-storage-opendal",
  "parquet",
  "repark-common",
+ "serde",
  "serde_json",
  "tempfile",
  "tokio",
@@ -5161,6 +5163,7 @@ dependencies = [
  "repark-functions",
  "repark-iceberg",
  "repark-ta",
+ "serde_json",
  "tempfile",
  "tokio",
 ]

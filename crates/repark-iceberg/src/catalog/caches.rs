@@ -5,6 +5,8 @@ use std::sync::Arc;
 use datafusion::error::{DataFusionError, Result};
 use iceberg::{TableMetadataCache, TableMetadataCacheStats};
 
+use crate::catalog::io_stats::{IcebergIoCounters, IcebergIoStats};
+
 pub const METADATA_CACHE_KEY: &str = "repark.iceberg.metadataCache";
 
 pub const METADATA_CACHE_KEY_ALT: &str = "repark.iceberg.metadata_cache";
@@ -124,6 +126,7 @@ pub struct CatalogCaches {
     metadata: Option<Arc<TableMetadataCache>>,
     metadata_entries: usize,
     manifest_bytes: u64,
+    io_counters: Arc<IcebergIoCounters>,
 }
 
 impl Default for CatalogCaches {
@@ -141,6 +144,7 @@ impl CatalogCaches {
                 .then(|| Arc::new(TableMetadataCache::new())),
             metadata_entries: settings.metadata_cache_entries,
             manifest_bytes: settings.manifest_cache_bytes,
+            io_counters: Arc::new(IcebergIoCounters::new()),
         }
     }
 
@@ -171,6 +175,20 @@ impl CatalogCaches {
     #[must_use]
     pub fn metadata_stats(&self) -> Option<TableMetadataCacheStats> {
         self.metadata.as_ref().map(|cache| cache.stats())
+    }
+
+    #[must_use]
+    pub fn io_counters(&self) -> Arc<IcebergIoCounters> {
+        Arc::clone(&self.io_counters)
+    }
+
+    #[must_use]
+    pub fn io_stats(&self) -> IcebergIoStats {
+        self.io_counters.snapshot()
+    }
+
+    pub fn reset_io_stats(&self) {
+        self.io_counters.reset();
     }
 
     pub fn trim(&self) {
