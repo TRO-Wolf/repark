@@ -572,7 +572,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `WHERE id < 5` residual, a `LIMIT 5` subquery, a v2 merge-on-read position delete, a v3
   deletion vector. An empty table answers 0. RePark writes no equality deletes, so no
   equality-delete pin exists here.
-  pins: ice-count-fold-1/C-003
+  pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
