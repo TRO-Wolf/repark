@@ -49,6 +49,7 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   data-file write of 12 bytes and one list. Dropping either override, or re-spelling
   `write_new` as `exists` + `write`, reds it (2026-09-19).
   pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-010
+  pins: rp-37-fork-pin/C-001
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002

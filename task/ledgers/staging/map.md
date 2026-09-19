@@ -512,6 +512,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-37-fork-pin-ledger.md](rp-37-fork-pin-ledger.md) —
+  **RP-37-FORK-PIN (2026-09-19):** the fork pin moves to `27e0d5fa` (#309 metadata-only DELETE
+  decision API, #311 catalog cache handles for Glue and S3 Tables, default off); no RePark answer
+  changes. `risk_tier: standard`. Branch `chore/rp-37`.
 - [rp-36-fork-pin-ledger.md](rp-36-fork-pin-ledger.md) —
   **RP-36-FORK-PIN (2026-09-19):** the fork pin moves to `fa77fb2b` (#312 timezone-bearing
   timestamp filters reach the scan, #310 page-index row selection on); the ICE-READ-PERF-0 Q3
