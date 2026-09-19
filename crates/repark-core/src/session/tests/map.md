@@ -38,6 +38,13 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   reads `session.rs::register_catalog_spec` and requires both AWS builders to receive
   `&iceberg_caches::caches_of(&self.catalogs)`. pins: ice-catalog-cache-1/C-002, C-004, C-006,
   C-007
+- `footer_cache_report.rs` — **ICE-FOOTER-CACHE-1 (2026-09-19):** the session door for the footer
+  cache. A default session reports zeroed stats, then after a cold and a warm scan of a
+  memory-catalog table: zero warm data-file footer reads, hits and misses counted, `fetches`
+  equal to the cold scan's footer reads. `footerCacheBytes = 0` reports `None` and re-reads every
+  footer; a bad value on the alias fails `build()` naming both spellings. Two sessions hold
+  distinct caches (`Arc::ptr_eq`) and a second session adopting the first one's warm table still
+  reads footers with zero hits. pins: ice-footer-cache-1/C-001, C-003, C-006, C-007
 - `namespace_create.rs` — `create_namespace` location-guard pins (G-6 Q1 / R-6).
 - `nlj_tight_pool.rs` — **NEVER-OOM-PANIC-1 (2026-09-16):** the tight-pool nested-loop-join
   loop pin. The plan shape is guarded (`NestedLoopJoinExec` in `EXPLAIN`), every iteration
