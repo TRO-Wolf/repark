@@ -50,6 +50,7 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
   `write_new` as `exists` + `write`, reds it (2026-09-19).
   pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-010
   pins: rp-37-fork-pin/C-001
+  pins: rp-38-fork-pin/C-001
 - `cache_wiring.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the cache-wiring pins, offline. A
   recording `CacheWiredBuilder` proves what `wire_caches` passes (the session's metadata `Arc`,
   the manifest bytes, the credential context; nothing when disabled; each switch alone); real

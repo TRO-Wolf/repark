@@ -550,6 +550,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-38-fork-pin-ledger.md](rp-38-fork-pin-ledger.md) —
+  **RP-38-FORK-PIN (2026-09-19):** the fork pin moves to `f3bdd598` (#316 shared Parquet footer
+  cache, with ICE-FOOTER-CACHE-1 in the same PR; #313 metrics config and #315 transform types for
+  run 24c). `risk_tier: standard`. Branch `chore/rp-38`.
 - [rp-37-fork-pin-ledger.md](rp-37-fork-pin-ledger.md) —
   **RP-37-FORK-PIN (2026-09-19):** the fork pin moves to `27e0d5fa` (#309 metadata-only DELETE
   decision API, #311 catalog cache handles for Glue and S3 Tables, default off); no RePark answer
