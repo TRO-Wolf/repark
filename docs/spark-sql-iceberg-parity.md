@@ -836,6 +836,41 @@ perfectly good read.
   "no children exist" rather than "nested listing is unsupported". Loud refusal keeps that
   ambiguity from laundering into a false empty result.
 
+#### ICE-DROP-NS-1 — `DROP NAMESPACE` on a non-empty namespace refuses — **FIXED 2026-09-19**
+
+- **repark** — every `DROP NAMESPACE|DATABASE|SCHEMA [IF EXISTS] … [CASCADE|RESTRICT]` spelling
+  on a namespace holding a table refuses with `AnalysisException`: `Namespace <ns> is not
+  empty. Contains <n> table(s).` — the InMemoryCatalog text, asserted by substring so the
+  HadoopCatalog spelling (no count) is covered too. The namespace and the table survive and
+  the table still reads. CASCADE drops nothing (Spark's Iceberg catalogs never cascade a
+  namespace drop); `IF EXISTS` does not bypass the refusal. An empty namespace drops, with or
+  without CASCADE, as does one whose only table was dropped first. A missing namespace without
+  `IF EXISTS` answers `[SCHEMA_NOT_FOUND]` naming ``catalog``.``namespace`` on the facade door.
+  The native door (`DROP SCHEMA`) refuses with the same text and keeps everything; its
+  pre-existing `CASCADE` refusal stays ahead of the emptiness check.
+- **Apache Spark** — every spelling refuses with `NamespaceNotEmptyException: Namespace <ns>
+  is not empty. Contains 1 table(s).` (InMemory; Hadoop prints only `Namespace <ns> is not
+  empty.`), the namespace and the table survive, and the table still reads `[[1]]`. Empty
+  namespaces drop. A missing namespace answers `AnalysisException [SCHEMA_NOT_FOUND]`. A
+  namespace holding only a child namespace refuses with `Contains 1 child namespace(s).`.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19,
+  `python/repark/tests/ice_drop_ns_1_spark_oracle.json`, re-derived by
+  `python/repark/tests/_record_ice_drop_ns_1_oracle.py`.)*
+- **Pin** — `python/repark/tests/test_ice_drop_ns_1.py` (one pin per cell on the facade door;
+  the ANSI door is pinned in Rust, where it is reachable);
+  `crates/repark-spark/src/tests/namespace_ddl.rs` (every spelling, empty, table-dropped-first,
+  missing); `crates/repark-sql/src/schema_ddl/tests.rs` (native non-empty refusal, survival,
+  table-dropped-first); `crates/repark-iceberg/src/catalog/tests/namespace_drop.rs` (the shared
+  helper: refusal, empty, dropped-first, missing).
+- **Rationale** — FIXED (2026-09-19). Before, the drop succeeded, the namespace vanished, and
+  the table became unreadable — a silent data-loss shape Spark refuses. Residuals, both
+  declared: (1) the exception class — PySpark surfaces Iceberg's `NamespaceNotEmptyException`
+  as a `Py4JJavaError`, RePark raises `AnalysisException`; the message core is identical.
+  (2) Nested namespaces are out of scope — RePark refuses `CREATE NAMESPACE n.c` loud
+  (`expected a two-part catalog.namespace name`), so the child-namespace refusal has no
+  fixture on this side; the Spark text is recorded in the oracle and the boundary is pinned.
+  pins: ice-drop-ns-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+
 #### DESC-1 — `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` answers Spark rows on Iceberg tables
 
 - **repark** — `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] cat.ns.t` on an Iceberg table in a

@@ -1118,3 +1118,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (ORC/Avro table-property refusal, ENC-1 cleartext bytes, north-star C-2 FIXED
   citation); V3-05 recorded in the ledger only (PR #700 owns the row).
   `risk_tier: standard`. Branch `docs/ice-registry-sweep-1b`.
+- [ice-drop-ns-1-ledger.md](ice-drop-ns-1-ledger.md) —
+  **ICE-DROP-NS-1 (2026-09-19), in flight:** `DROP NAMESPACE` on a non-empty
+  namespace refuses like Spark 4.1.2 — the 26-cell oracle plus red-first pins
+  on the facade door, one shared pre-drop emptiness helper in `repark-iceberg`
+  called by both doors, Rust pins at the helper and on both doors, registry
+  row FIXED with the nested-namespace boundary and the exception-class
+  residual. `risk_tier: standard`. Branch `fix/ice-drop-ns-1`.
+  pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
