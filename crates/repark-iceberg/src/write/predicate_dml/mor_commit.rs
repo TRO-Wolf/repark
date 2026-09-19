@@ -9,11 +9,12 @@ use iceberg::table::Table;
 use crate::write::concurrency::concurrency_from_ctx;
 use crate::write::merge::session_staging::write_new_data_files_from_stream_with;
 use crate::write::merge::{
-    CommitScope, KnownPartitions, RowDeltaKind, commit_row_delta_kind_with_partitions,
+    CommitScope, KnownPartitions, RowDeltaKind, commit_row_delta_kind_on_ref,
 };
 use crate::write::position_delete::PositionDeletePair;
 use crate::write::session_write_conf::resolve_empty_session_write;
 
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn commit_identity_delete_mor(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -22,9 +23,10 @@ pub(super) async fn commit_identity_delete_mor(
     pairs: Vec<PositionDeletePair>,
     scope: &CommitScope,
     known_partitions: KnownPartitions,
+    branch: Option<&str>,
 ) -> Result<()> {
     let (snapshot_extra, staging) = resolve_empty_session_write(ctx)?;
-    commit_row_delta_kind_with_partitions(
+    commit_row_delta_kind_on_ref(
         catalog,
         table,
         snapshot_id,
@@ -32,6 +34,7 @@ pub(super) async fn commit_identity_delete_mor(
         Vec::new(),
         concurrency_from_ctx(ctx),
         &scope.row_delta(RowDeltaKind::Delete),
+        branch,
         known_partitions,
         &snapshot_extra,
         &staging,
@@ -49,6 +52,7 @@ pub(super) async fn commit_identity_update_mor(
     rewrite: (Vec<PositionDeletePair>, Vec<RecordBatch>),
     scope: &CommitScope,
     known_partitions: KnownPartitions,
+    branch: Option<&str>,
 ) -> Result<()> {
     let (pairs, data_batches) = rewrite;
     let stream = futures::stream::iter(data_batches.into_iter().map(Ok));
@@ -61,7 +65,7 @@ pub(super) async fn commit_identity_update_mor(
         &staging,
     )
     .await?;
-    commit_row_delta_kind_with_partitions(
+    commit_row_delta_kind_on_ref(
         catalog,
         table,
         snapshot_id,
@@ -69,6 +73,7 @@ pub(super) async fn commit_identity_update_mor(
         data_files,
         concurrency_from_ctx(ctx),
         &scope.row_delta(RowDeltaKind::Merge),
+        branch,
         known_partitions,
         &snapshot_extra,
         &staging,

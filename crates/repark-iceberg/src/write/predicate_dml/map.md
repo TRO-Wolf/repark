@@ -56,6 +56,11 @@ works, so the attribute is gone rather than documented.
   selections stay on the identity path with no behaviour or performance change.
   pins: ice-list-null-2/C-001, C-003
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
+- `plain.rs` (branch) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `split_branch_parts`
+  reads a four-part `<catalog>.<ns>.<table>.branch_<name>` DML target into the table plus the
+  ref, which lands on `PredicateDmlSpec.branch`; the executor scans that ref's snapshot and
+  commits `to_branch`, so an owned identity DELETE / UPDATE can serve a branch.
+  pins: ice-session-write-conf-1/C-038
 - `plain.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the UPDATE allow-list moves
   here from `predicate_dml.rs` (which re-exports both entry points, so no caller moves) and
   (the moved bodies shed their doc comments per the owner ban and carry

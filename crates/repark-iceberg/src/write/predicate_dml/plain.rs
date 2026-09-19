@@ -114,15 +114,26 @@ pub(super) fn is_scalar_comparison(expr: &Expr) -> bool {
     }
 }
 
+#[must_use]
+pub fn split_branch_parts(parts: &[String]) -> (Vec<String>, Option<String>) {
+    if parts.len() == 4
+        && let Some(name) = parts[3].strip_prefix("branch_")
+        && !name.is_empty()
+    {
+        return (parts[..3].to_vec(), Some(name.to_string()));
+    }
+    (parts.to_vec(), None)
+}
+
 fn allowed_from_target(
     object_name: &datafusion::sql::sqlparser::ast::ObjectName,
     alias: Option<String>,
     selection: &Expr,
 ) -> Result<Option<AllowedDeleteIn>> {
-    if object_name.0.len() != 3 {
+    if object_name.0.len() != 3 && object_name.0.len() != 4 {
         return Ok(None);
     }
-    let parts = object_name_parts(object_name);
+    let (parts, branch) = split_branch_parts(&object_name_parts(object_name));
     if parts.len() != 3 {
         return Ok(None);
     }
@@ -145,6 +156,7 @@ fn allowed_from_target(
             selection_sql: scratch_selection.to_string(),
             assignments: None,
             case_insensitive: true,
+            branch,
         },
     }))
 }
@@ -185,7 +197,7 @@ fn allowed_update_with(
     let Some((object_name, alias)) = super::update_target_and_alias(update) else {
         return Ok(None);
     };
-    let parts = object_name_parts(object_name);
+    let (parts, branch) = split_branch_parts(&object_name_parts(object_name));
     if parts.len() < 3 {
         return Ok(None);
     }
@@ -211,6 +223,7 @@ fn allowed_update_with(
             selection_sql: scratch_selection.to_string(),
             assignments: Some(assignments),
             case_insensitive: true,
+            branch,
         },
     }))
 }

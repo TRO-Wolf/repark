@@ -112,7 +112,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract predicate and file-selection logic from commit assembly.",
     ),
     "crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs": (
-        1440,
+        1435,
         "Predicate DML scenarios share one consolidated test module.",
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),

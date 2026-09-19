@@ -14,12 +14,13 @@ use crate::write::concurrency::concurrency_from_ctx;
 use crate::write::merge::row_lineage::table_carries_merge_lineage;
 use crate::write::merge::session_staging::write_new_data_files_from_stream_with;
 use crate::write::merge::{
-    CommitScope, commit_overwrite, deregister_merge_scratch, quote_ident,
+    CommitScope, commit_overwrite_on_ref, deregister_merge_scratch, quote_ident,
     resolve_affected_data_files,
 };
 use crate::write::position_delete::PositionDeletePair;
 use crate::write::session_write_conf::resolve_empty_session_write;
 
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn commit_identity_update_cow(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -28,6 +29,7 @@ pub(super) async fn commit_identity_update_cow(
     snapshot_id: Option<i64>,
     rewrite: (Vec<PositionDeletePair>, Vec<RecordBatch>),
     scope: &CommitScope,
+    branch: Option<&str>,
 ) -> Result<()> {
     let (pairs, data_batches) = rewrite;
     let mut affected: Vec<String> = Vec::new();
@@ -66,13 +68,14 @@ pub(super) async fn commit_identity_update_cow(
     let new_files = rewrite_result?;
     let affected_entries = resolve_affected_data_files(table, snapshot_id, &affected).await?;
     let (snapshot_extra, _) = resolve_empty_session_write(ctx)?;
-    commit_overwrite(
+    commit_overwrite_on_ref(
         catalog,
         table,
         snapshot_id,
         affected_entries,
         new_files,
         scope,
+        branch,
         &snapshot_extra,
     )
     .await
@@ -91,6 +94,7 @@ fn register_update_values_table(ctx: &SessionContext, batches: Vec<RecordBatch>)
     Ok(name)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn commit_identity_cow(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -99,6 +103,7 @@ pub(super) async fn commit_identity_cow(
     snapshot_id: Option<i64>,
     pairs: &[PositionDeletePair],
     scope: &CommitScope,
+    branch: Option<&str>,
 ) -> Result<()> {
     let mut affected: Vec<String> = Vec::new();
     let mut seen = std::collections::HashSet::new();
@@ -129,13 +134,14 @@ pub(super) async fn commit_identity_cow(
     let new_files = rewrite_result?;
     let affected_entries = resolve_affected_data_files(table, snapshot_id, &affected).await?;
     let (snapshot_extra, _) = resolve_empty_session_write(ctx)?;
-    commit_overwrite(
+    commit_overwrite_on_ref(
         catalog,
         table,
         snapshot_id,
         affected_entries,
         new_files,
         scope,
+        branch,
         &snapshot_extra,
     )
     .await

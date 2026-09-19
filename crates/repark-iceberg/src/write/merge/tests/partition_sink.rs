@@ -424,6 +424,7 @@ async fn execute_predicate_dml_deletes_id_zero_on_an_eight_manifest_table() {
             selection_sql: "id = 0".to_string(),
             assignments: None,
             case_insensitive: true,
+            branch: None,
         },
     )
     .await

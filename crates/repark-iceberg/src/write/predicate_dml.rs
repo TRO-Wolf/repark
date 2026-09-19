@@ -64,6 +64,22 @@ pub struct PredicateDmlSpec {
     /// `None` = identity DELETE.
     pub assignments: Option<Vec<(String, String)>>,
     pub case_insensitive: bool,
+    /// `Some(name)` when the target named `<table>.branch_<name>`.
+    pub branch: Option<String>,
+}
+
+impl PredicateDmlSpec {
+    #[must_use]
+    pub fn identity(target: TableIdent, target_alias: String, selection_sql: String) -> Self {
+        Self {
+            target,
+            target_alias,
+            selection_sql,
+            assignments: None,
+            case_insensitive: true,
+            branch: None,
+        }
+    }
 }
 
 /// Catalog name and identity spec from an allow-listed `DELETE … IN` / `NOT IN` / `[NOT] EXISTS`.
@@ -175,6 +191,7 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
             selection_sql: scratch_selection.to_string(),
             assignments: None,
             case_insensitive: true,
+            branch: None,
         },
     }))
 }
@@ -182,6 +199,15 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
 /// Execute an identity DELETE or UPDATE: SELECT over the pinned scratch, then COW-rewrite or `MoR`
 /// # Errors
 /// Planning, write, or commit errors, plus `NotImplemented` for non-Parquet or non-V2 `MoR`.
+fn spec_snapshot_id(table: &iceberg::table::Table, spec: &PredicateDmlSpec) -> Option<i64> {
+    let metadata = table.metadata();
+    match spec.branch.as_deref() {
+        Some(name) => metadata.snapshot_for_ref(name),
+        None => metadata.current_snapshot(),
+    }
+    .map(|snapshot| snapshot.snapshot_id())
+}
+
 pub async fn execute_predicate_dml(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -202,10 +228,7 @@ pub async fn execute_predicate_dml(
         resolve_delete_isolation(&table)?,
         for_identity_dml(&table, &spec.selection_sql, &spec.target_alias),
     );
-    let snapshot_id = table
-        .metadata()
-        .current_snapshot()
-        .map(|snapshot| snapshot.snapshot_id());
+    let snapshot_id = spec_snapshot_id(&table, spec);
 
     let scratch = scratch_schema(&write_schema);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
@@ -236,6 +259,7 @@ pub async fn execute_predicate_dml(
                     snapshot_id,
                     &pairs,
                     &scope,
+                    spec.branch.as_deref(),
                 )
                 .await
             }
@@ -248,6 +272,7 @@ pub async fn execute_predicate_dml(
                     pairs,
                     &scope,
                     drain_partition_sink(&partitions),
+                    spec.branch.as_deref(),
                 )
                 .await
             }
@@ -280,10 +305,7 @@ async fn execute_identity_update(
         resolve_update_isolation(&table)?,
         for_identity_dml(&table, &spec.selection_sql, &spec.target_alias),
     );
-    let snapshot_id = table
-        .metadata()
-        .current_snapshot()
-        .map(|snapshot| snapshot.snapshot_id());
+    let snapshot_id = spec_snapshot_id(&table, spec);
 
     let scratch = scratch_schema_for_table(&write_schema, &table);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
@@ -315,6 +337,7 @@ async fn execute_identity_update(
                     snapshot_id,
                     (pairs, data_batches),
                     &scope,
+                    spec.branch.as_deref(),
                 )
                 .await
             }
@@ -328,6 +351,7 @@ async fn execute_identity_update(
                     (pairs, data_batches),
                     &scope,
                     drain_partition_sink(&partitions),
+                    spec.branch.as_deref(),
                 )
                 .await
             }

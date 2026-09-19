@@ -690,7 +690,8 @@ repark-core's error map.
   `ambiguous_write_message` are its pieces. Twin targets only exist on non-fork schemas: the
   fork refuses to load a twin Iceberg schema (round 21b step 5 applies the requested spelling and
   42704 in `ambiguous_write_message`). pins: ice-mixed-case-1/C-004, C-016
-- `predicate_dml.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+- `predicate_dml.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `PredicateDmlSpec`
+  carries the target `branch`, and the executor scans that ref's snapshot and commits on it;
   `try_allowed_plain_update` joins `plain::try_allowed_plain_identity` as an owned identity
   route (see `predicate_dml/map.md`). pins: ice-session-write-conf-1/C-038
 - `position_delete.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**

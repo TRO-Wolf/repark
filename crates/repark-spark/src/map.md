@@ -361,6 +361,17 @@ pins: rp-4-fork-repin/C-005, C-006
   `fast_append`; the service-managed arm calls `commit_replace_write_with_summary`.
   Plain CTAS with options keeps the append summary.
   pins: ice-write-options-1/C-016
+- `write_to_branch.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** when the session
+  write conf is set, a plain `INSERT` / `DELETE` / `UPDATE` on `<table>.branch_<name>` counts
+  as an owned write head, so the statement keeps its ref-qualified name and reaches RePark's
+  own append / identity-DML path instead of the fork temp provider (which carries neither
+  snapshot properties nor a codec — `QS-BRANCH-*`, `QZ-BRANCH-*`).
+  pins: ice-session-write-conf-1/C-038, C-039, C-040
+- `time_travel.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the ref-selector scan
+  skips the `FROM` that names a `DELETE` target, so `DELETE FROM t.branch_b …` is a write to
+  the branch and not a read pinned to it (the pin turned the target into a read-only temp
+  view; every other `FROM`, including a subquery's, still pins).
+  pins: ice-session-write-conf-1/C-038
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   `plain_identity_or_update` adds the plain `UPDATE … SET … WHERE <scalar comparison>` to the
   owned identity-DML route when the session write conf is set. Without it the statement

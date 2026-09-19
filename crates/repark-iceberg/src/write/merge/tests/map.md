@@ -9,6 +9,8 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- (branch round) every battery constructing a `PredicateDmlSpec` names its new `branch: None`
+  field — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19)**.
 - `streaming_scan.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** its
   position-delete case names the resolved staging the writer now takes; the file's
   size baseline ratchets 3020 → 3018.

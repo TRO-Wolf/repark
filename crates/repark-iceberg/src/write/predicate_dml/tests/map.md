@@ -37,3 +37,5 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the spec builders here name the new
+  `branch: None` field (a `None` branch is the current-ref write these batteries pin).
