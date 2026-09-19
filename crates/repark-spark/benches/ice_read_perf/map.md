@@ -4,8 +4,8 @@
 
 The ICE-READ-PERF-0 bench bed (slate
 [ice-read-perf-slate-2026-09-18.md](../../../../task/roadmap/mid-term/ice-read-perf-slate-2026-09-18.md)
-unit 0). It writes a deterministic local Iceberg table and measures six read queries in three
-modes through the product path, with request and byte counts from the session's counting
+unit 0). It writes a deterministic local Iceberg table (or, on the dispatch-only AWS leg, an S3 Tables
+and a Glue table) and measures seven read queries in four modes through the product path, with request and byte counts from the session's counting
 layer (`ReparkSession::iceberg_io_stats`, see
 [repark-iceberg/src/catalog/map.md](../../../repark-iceberg/src/catalog/map.md)). Its baseline
 table is the "before" of every later unit of the slate. No product behaviour lives here.
@@ -19,19 +19,29 @@ table is the "before" of every later unit of the slate. No product behaviour liv
   carries dead code.
 - `cli.rs` — hand-written argument parsing (no new dependency), the exit codes, and the
   runtime. `cargo bench` appends `--bench`; the parser drops it.
-- `bed.rs` — `setup`, the Spark-door session builder, the bed manifest, and the local
-  re-registration a `run` uses.
-- `run.rs` — the queries, the three modes, the per-query measurement.
-- `r3.rs` — the R-3 size flag.
-- `report.rs` — the environment header, the I/O JSON, the peak-RSS probe, the markdown table.
+- `bed.rs` — `setup`, the Spark-door session builder, the bed DDL and the one-INSERT-per-file
+  writer, the bed manifest, `BedShape::from_counts`, and the local re-registration a `run` uses.
+- `remote.rs` — the AWS `setup --phase create|write` (namespace rules, the table-state checks,
+  the closing R-3 check) and the Glue / S3 Tables catalog registration `run` shares.
+- `run.rs` — the queries, the four modes, repeats, the per-query measurement, the scan-predicate
+  probe.
+- `r3.rs` — the R-3 size flag and the `files`-table footprint (bytes, files, delete files,
+  data rows).
+- `report.rs` — the environment header, the I/O JSON (with the footer / page split), the RSS
+  probes, the run-level I/O tally, sample medians and the identical-I/O check, the markdown
+  table.
 
 ## Commands
 
 ```
 cargo bench -p repark-spark --bench ice_read_perf -- setup --warehouse <dir> [--files 200] [--rows-per-file 50000]
-cargo bench -p repark-spark --bench ice_read_perf -- run --mode cold|warm|concurrent --warehouse <dir> [--out <file.json>] [--query Q1..Q6]
-cargo bench -p repark-spark --bench ice_read_perf -- run --mode … --catalog glue|s3tables --prop k=v … --table <ns.table> --manifest <bed.json>
+cargo bench -p repark-spark --bench ice_read_perf -- run --mode cold|warm|concurrent|concurrent-cold --warehouse <dir> [--repeat N] [--out <file.json>] [--query Q1..Q7]
+cargo bench -p repark-spark --bench ice_read_perf -- setup --catalog glue|s3tables --prop k=v … --table <ns.table> --phase create|write [--files 200] [--rows-per-file 50000]
+cargo bench -p repark-spark --bench ice_read_perf -- run --mode … --catalog glue|s3tables --prop k=v … --table <ns.table> [--files 200] [--rows-per-file 50000] [--repeat N]
 ```
+
+Glue needs `--prop warehouse=<s3 uri>`, S3 Tables `--prop table_bucket_arn=<arn>`; the AWS
+region comes from the environment (`AWS_REGION`, set by the credentials action).
 
 The bench profile inherits the default release profile; do not override it for a baseline.
 
@@ -71,28 +81,118 @@ The bench profile inherits the default release profile; do not override it for a
 | Q4 | `* WHERE id = rows/2 + 17` | point lookup |
 | Q5 | `id, value WHERE value ∈ [500, 505)` | range filter with no file pruning |
 | Q6 | `id, payload WHERE category = 'cat_7'` | equality filter + wide projection |
+| Q7 | `id, value WHERE id ∈ [45%, 46%)` of the rows | Q3's exact rows spelled so the window reaches `IcebergTableScan` |
 
-The concurrent mode issues Q2, Q3, Q5 and Q6 at once.
+**Q3 and Q7 (round 2, review finding P1-Q3-NO-PREDICATE).** Q3 stays exactly as users write it
+(`CAST(<seconds> AS TIMESTAMP)`): the literal plans as `TimestampMicrosecond(…, "UTC")`, which
+the fork's predicate conversion drops, so the scan shows `predicate:[]` and reads every file.
+Q3 is the cell that moves when that gap is fixed (the 24b ask F-TS-PUSHDOWN-1). Q7 asks for the
+same rows (`ts = base + id·7`, so the `ts` window is exactly an `id` window) through the one
+spelling that reaches the scan today. Probed on 2026-09-19 and all left at `predicate:[]`:
+`CAST(n AS TIMESTAMP)`, `TIMESTAMP '…'` (with and without `+00:00`), `CAST('…' AS TIMESTAMP)`,
+`BETWEEN TIMESTAMP …`, `to_timestamp('…')`. Refused at the door: `TIMESTAMP_NTZ '…'` (TZ-6),
+`TIMESTAMP_LTZ '…'`, `timestamp_seconds`. The `id` window plans as `predicate:[(id >= a) AND
+(id < b)]`. Every run records each query's scan predicate in the JSON
+(`iceberg_scan_predicate`, from the physical plan on the gate session after the R-3 check, `""`
+= none). The pin holds Q3 at `""` and Q7 at the `id` range with the same row set. It is a
+sentinel: the unit that fixes the timestamp conversion flips the Q3 half.
+
+The concurrent modes issue Q2, Q3, Q5 and Q6 at once. Q7 is **not** in that set: a fifth query
+would change what "four at once" measures for the other four (their timings and the group I/O).
 
 ## The modes and metrics
 
-- **cold:** a fresh process; every query gets its own fresh session (new `ReparkSession`,
-  catalog registered, table registered from its metadata file), runs once, and is measured.
-  The registration's own I/O is recorded apart (`register_io`). The OS page cache is not
-  dropped (that needs root); on the AWS leg every read is a real request.
-- **warm:** one session; each query runs once unmeasured, then once measured.
-- **concurrent:** one session; the four queries run once unmeasured, then run at once
-  (`futures::future::join_all` on one task — the `tokio::spawn` ban holds); each query has its
-  own timings, and the I/O, cache and RSS figures belong to the group.
-- **Per query:** planning time (`session.sql` + `create_physical_plan`), time to first batch,
-  total time, rows, requests and bytes by operation kind and by file class (the counters are
-  reset before each measured query), metadata-cache hits / misses / body fetches (a delta of
-  `iceberg_metadata_cache_stats`), and peak RSS (`VmHWM`; the bench writes `5` to
-  `/proc/self/clear_refs` before each measured query so the mark is per query, and records
-  whether the reset worked). Linux only.
-- **Output:** one JSON document (`--out`, else stdout) with the H-3 environment header (git
-  head and dirty flag, fork pin read from the workspace `Cargo.toml`, profile, CPU count and
-  model, kernel, load average, UTC date), then a markdown table on stdout.
+- **cold:** every query sample gets its own fresh session (new `ReparkSession`, catalog
+  registered, table registered from its metadata file), runs once, and is measured. It is
+  **session-cold, not process-cold and not device-cold**: all samples share one process, and the
+  OS page cache is not dropped (that needs root), so a local cold run's later queries read files
+  the earlier ones pulled into the page cache. The JSON says so (`cold_kind:
+  "new_session_same_process"`, `os_page_cache: "not_dropped"`). Local request and byte counts
+  are exact. Local cold wall times are optimistic, so rank local latency on warm. On the AWS
+  leg every read is a real request. `--query Qn` runs one query per process. The
+  registration's own I/O is kept apart (`register_io`). With `--repeat N` the order is
+  sample-major: all queries, then all queries again.
+- **warm:** one session; each query runs once unmeasured, then N times measured.
+- **concurrent:** one session; the four queries run once unmeasured, then N rounds of all four at
+  once (`futures::future::join_all` on one driver task, so the `tokio::spawn` ban holds; the
+  scan partitions still fan out on the multi-thread runtime). Each query has its own timings;
+  I/O, cache and RSS belong to the round (`concurrent_group`). `concurrent_kind:
+  "join_all_four_warmed_queries_one_session_one_driver_task"`. This mode is not a 64-way scan
+  and cannot see concurrent cache misses.
+- **concurrent-cold:** N rounds; each round opens a fresh session, runs no warm-up, and issues the
+  four queries at once. This is the concurrent-miss case ICE-CATALOG-CACHE-1 must move: the
+  group reads manifests, which the warm concurrent group does not (pinned). `concurrent_kind:
+  "join_all_four_queries_fresh_session_no_warmup_one_driver_task"`. The round's registration I/O
+  is in the group sample's `register_io`. Concurrent misses can race, so the group's I/O may
+  differ between rounds. When it does, the mismatch is printed (see repeats) and not averaged.
+- **Per sample:** `planning_ms` (`session.sql` + `create_physical_plan`, which includes the
+  Iceberg scan's manifest planning), `first_batch_ms` (from the SQL start, so it INCLUDES
+  planning), `execute_to_first_batch_ms` (first batch − planning), `total_ms`, rows, requests and
+  bytes by operation kind and by file class (counters reset before each measured query or
+  round), metadata-cache hits / misses / body fetches (a delta of
+  `iceberg_metadata_cache_stats`), `rss_at_reset_kib`, and `peak_rss_kib`. RSS reset: the bench
+  writes `5` to `/proc/self/clear_refs`, which resets `VmHWM` to the CURRENT RSS, not to zero.
+  `peak_rss_kib` is therefore `max(rss_at_reset, peak during the query)`: memory left over from
+  earlier queries is a floor, and a query cannot show a peak below it. Read the two figures
+  together. Use the peak as a growth detector, not as a per-query allocation figure
+  (`peak_rss_kind` in the header). Linux only.
+- **Footer vs page (review finding P1-FOOTER-VS-PAGE).** Data-file (and delete-file) ranged
+  reads are split into `footer_read` and `ranged_read` by the counting layer's tail-magic rule
+  (a read that ends on `PAR1` / `PFA1` ended at the end of the file; see
+  [repark-iceberg/src/catalog/map.md](../../../repark-iceberg/src/catalog/map.md)). Each query's
+  `io` carries `data_file_ranged` / `delete_file_ranged` `{footer, page}` and the table shows
+  both columns. ICE-FOOTER-CACHE-1 moves the footer column (Q1 reads footers only), and
+  ICE-PAGE-PRUNE-1 moves the page column (Q7, and Q3 once its predicate reaches the scan). Proved
+  on the three-file bed in every mode that measures per query: Q1 = one footer read per data
+  file and zero page reads; Q2 = one footer read per data file plus page reads. On the 20-file
+  smoke Q1 was 20 footer reads of exactly 524,288 bytes (the fork's 512 KiB prefetch hint) and
+  no page read.
+- **Repeats (`--repeat N`, default 1).** Every measured query (and every concurrent round) runs N
+  times; cold takes N fresh sessions per query. The JSON keeps every sample (`samples`) and a
+  `median` block (timings and RSS). Requests and bytes are sample 1's. Every other sample's I/O
+  and rows are compared with it. A difference prints `IO-MISMATCH mode=… query=… sample=…` to
+  stdout and stderr, lands in the JSON's `io_mismatches`, sets `io_identical_across_samples:
+  false`, and shows as **NO** in the table's `io same` column. It is never averaged. The
+  markdown table shows medians. The orchestrator's local baseline uses `--repeat 5`, and the
+  AWS leg uses `--repeat 3`.
+- **Run total:** `run_io_total` sums every request and byte the run made through the counters,
+  across every session it opened: the R-3 gate, the scan-predicate probe, registrations,
+  warm-ups and every sample. On the AWS leg that is what the dispatch paid to read. The workflow
+  sums it into its step summary.
+- **Bed check:** after the R-3 check, every `run` requires the table to hold exactly the
+  expected data files and rows (from the manifest locally, from `--files` / `--rows-per-file` on
+  AWS) and no delete file. Otherwise the query constants would be wrong, so it fails loud.
+- **Output:** one JSON document (`--out`, else stdout) with the H-3 environment header (git head
+  and dirty flag, fork pin read from the workspace `Cargo.toml`, profile, CPU count and model,
+  kernel, load average, UTC date, `rustc_version` — `rustc --version` resolved in the workspace
+  at run time — `cold_kind`, `concurrent_kind`, `os_page_cache`, `peak_rss_kind`,
+  `first_batch_kind`), then the markdown table and `run_io_total` on stdout.
+
+## The AWS leg (`setup --catalog glue|s3tables --phase create|write`, `run --catalog …`)
+
+- **create** is idempotent. It creates the namespace the way the acceptance module does
+  (`python/repark/tests/_acceptance.py`): on Glue with `location = <warehouse>/<namespace>`, and
+  after the create it fails loud unless the stored location is exactly that (a missing or other
+  location refuses to adopt, as `assert_glue_scratch_namespace_location` does); on S3 Tables
+  with no location, because the table bucket is the storage. Then it creates the empty table
+  with the bed DDL. If the table exists, it checks that the schema is exactly the bed's (`id
+  long, ts timestamptz, category string, value double, payload string`) and reports it exists.
+  It fails loud on any other schema.
+- **write** writes the N files (one INSERT each, as locally) ONLY when the table holds no file.
+  When it holds exactly N data files and N × rows data rows and no delete file, it skips and
+  says so. In any other state it fails loud before writing (pinned: zero write requests). A
+  table that a failed write left part-written cannot be repaired from CI (the role has no drop):
+  an owner drops it with owner credentials, see
+  [docs/tier2-aws.md](../../../../docs/tier2-aws.md).
+- Both phases end with the R-3 check and exit 3 on the flag (pinned through `run_phase` with an
+  injected size).
+- `run --catalog glue|s3tables` needs no local manifest. The query constants derive from
+  `--files` / `--rows-per-file` (defaults 200 × 50,000), and they are pinned equal to the
+  constants a local manifest of the same counts records. `--manifest` with an AWS catalog is a
+  usage error.
+- Offline pins cover every failure path with no AWS call: missing `warehouse` /
+  `table_bucket_arn`, a missing or malformed `--table`, `--manifest` on AWS, and every table
+  state, on a local memory-catalog stand-in.
 
 ## R-3 — the size flag (owner ruling R-3, 2026-09-18)
 
@@ -104,7 +204,9 @@ The concurrent mode issues Q2, Q3, Q5 and Q6 at once.
   appends the same line to `$GITHUB_STEP_SUMMARY` when that is set, runs no scan, and exits
   **3**. At exactly the limit it passes.
 - Exit codes: 0 done, 1 runtime failure, 2 usage error, 3 the R-3 flag.
-- The Slack note to the owner is the workflow's job (the later AWS-leg PR), keyed on exit 3.
+- On the AWS leg every `setup` phase and every `run` makes this check (the workflow runs them
+  without `continue-on-error`, so exit 3 fails the job at once). The Slack note to the owner is
+  not wired yet. It is keyed on exit 3.
 - The size query spells the metadata table with backticks (`` `bench`.`perf`.`events`.`files` ``).
   On the bare Rust Spark door an unquoted `cat.ns.tbl.files` is rewritten to an unquoted
   `tbl$files` that the Databricks tokenizer splits (`Expected: end of statement, found:
@@ -126,8 +228,28 @@ The concurrent mode issues Q2, Q3, Q5 and Q6 at once.
 - `setup` writes exactly N files; every mode runs on them and writes its JSON (Q3 returns the
   1% window, Q4 one row, Q2 reads data-file ranges); the parser reads every flag and drops
   `--bench`; the Glue and S3 Tables legs fail loud on a missing `warehouse` /
-  `table_bucket_arn` / `--table` / `--manifest` before any AWS call.
+  `table_bucket_arn` / `--table` before any AWS call.
   pins: ice-read-perf-0/C-006
+- Q3's scan predicate is `""` today and Q7's is `(id >= 540) AND (id < 552)` on the three-file
+  bed, with the same twelve ids; the plan-line parser. pins: ice-read-perf-0/C-013
+- Q1 reads only footers (3 footer reads, 0 page reads) and Q2 reads 3 footers plus pages, in
+  cold and warm. pins: ice-read-perf-0/C-014
+- Every mode (four) with `--repeat 2`: two samples per query, medians, identical I/O across
+  samples in cold and warm, `rss_at_reset_kib` and `execute_to_first_batch_ms` present, the
+  environment header's `rustc_version`, `os_page_cache`, `cold_kind` and `concurrent_kind`, and
+  `run_io_total`; the concurrent-cold group reads manifests while the warm concurrent group reads
+  none. The parser reads `--repeat`, `--files`, `--rows-per-file`, `concurrent-cold` and the
+  remote `setup` flags and refuses `--repeat 0` and every mixed local / remote setup.
+  pins: ice-read-perf-0/C-015
+- The derived constants of `--files 3 --rows-per-file 400` equal the local manifest's (rows,
+  files, `ts` base and step, categories, and every query's SQL). pins: ice-read-perf-0/C-016
+- The remote phases on a memory-catalog stand-in: create, then create again (exists); write into
+  the empty table, then skip; three refusals at other counts or rows; a table with a delete
+  file refuses; zero write requests on every skip and refusal; a wrong schema refuses; a
+  namespace at another location or with none refuses under the Glue rule; the S3 Tables rule
+  creates without a location; both phases end with the R-3 flag under an injected size. The AWS
+  failure paths (missing props, `--table`, `--manifest`) fail before any call.
+  pins: ice-read-perf-0/C-017
 
 ## Pointers
 

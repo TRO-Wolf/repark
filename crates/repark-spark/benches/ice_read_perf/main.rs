@@ -1,6 +1,7 @@
 mod bed;
 mod cli;
 mod r3;
+mod remote;
 mod report;
 mod run;
 

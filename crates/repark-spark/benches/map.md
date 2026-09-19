@@ -12,8 +12,10 @@ re-measure gate (slate unit 4) closes and the owner drops the AWS bench tables.
 ## Contents
 
 - [ice_read_perf/](ice_read_perf/map.md) — **ICE-READ-PERF-0 (2026-09-19):** the Iceberg read
-  bench bed: `setup` writes the local bed, `run --mode cold|warm|concurrent` measures six
-  queries, and the R-3 size flag stops a run before its first scan.
+  bench bed: `setup` writes the local bed (or, with `--catalog glue|s3tables --phase
+  create|write`, the AWS bench tables), `run --mode cold|warm|concurrent|concurrent-cold
+  [--repeat N]` measures seven queries (round 2 added Q7, the footer / page split, concurrent-cold
+  and repeats), and the R-3 size flag stops a run before its first scan.
 
 ## Pointers
 

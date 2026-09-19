@@ -1,6 +1,7 @@
 mod bed;
 mod cli;
 mod r3;
+mod remote;
 mod report;
 mod run;
 
@@ -8,13 +9,17 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use repark_iceberg::catalog::{IcebergFileClass, IcebergIoOp};
+use serde_json::Value;
 use tempfile::TempDir;
 
-use crate::bed::SetupOptions;
+use crate::bed::{BedShape, SetupOptions};
 use crate::cli::{Command, EXIT_FAILURE, EXIT_USAGE, Outcome};
 use crate::r3::{
     R3_EXIT_CODE, R3_TABLE_SIZE_LIMIT_BYTES, R3Verdict, StepSummary, r3_check, r3_verdict,
     table_footprint,
+};
+use crate::remote::{
+    CreateOutcome, NamespaceRule, Phase, PhaseRequest, RemoteSetupOptions, WriteOutcome,
 };
 use crate::run::{CatalogChoice, Mode, RunOptions};
 
@@ -29,16 +34,7 @@ fn text(path: &Path) -> &str {
 }
 
 fn local_run(mode: Mode, warehouse: &Path) -> RunOptions {
-    RunOptions {
-        mode,
-        warehouse: Some(warehouse.to_path_buf()),
-        out: None,
-        catalog: CatalogChoice::Local,
-        props: Vec::new(),
-        table: None,
-        manifest: None,
-        query: None,
-    }
+    RunOptions::local(mode, warehouse)
 }
 
 fn summary_in(dir: &Path) -> StepSummary {
@@ -114,6 +110,62 @@ fn the_limit_is_not_a_cli_option() {
 }
 
 #[test]
+fn the_parser_reads_the_repeat_and_remote_setup_flags() {
+    assert_eq!(
+        cli::parse(&strings(&[
+            "run",
+            "--mode",
+            "concurrent-cold",
+            "--catalog",
+            "s3tables",
+            "--table",
+            "ns.t",
+            "--repeat",
+            "3",
+            "--files",
+            "20",
+            "--rows-per-file",
+            "100",
+        ]))
+        .unwrap(),
+        Command::Run(RunOptions {
+            mode: Mode::ConcurrentCold,
+            warehouse: None,
+            catalog: CatalogChoice::S3Tables,
+            table: Some("ns.t".to_string()),
+            repeat: 3,
+            files: Some(20),
+            rows_per_file: Some(100),
+            ..local_run(Mode::Warm, Path::new(""))
+        })
+    );
+    assert_eq!(
+        cli::parse(&strings(&[
+            "setup",
+            "--catalog",
+            "glue",
+            "--prop",
+            "warehouse=s3://b/w",
+            "--table",
+            "ns.t",
+            "--phase",
+            "write",
+            "--files",
+            "20",
+        ]))
+        .unwrap(),
+        Command::SetupRemote(RemoteSetupOptions {
+            catalog: CatalogChoice::Glue,
+            props: vec![("warehouse".to_string(), "s3://b/w".to_string())],
+            table: "ns.t".to_string(),
+            phase: Phase::Write,
+            files: 20,
+            rows_per_file: 50_000,
+        })
+    );
+}
+
+#[test]
 fn the_parser_ignores_cargo_bench_and_reads_every_flag() {
     let parsed = cli::parse(&strings(&[
         "run",
@@ -145,6 +197,9 @@ fn the_parser_ignores_cargo_bench_and_reads_every_flag() {
             table: Some("perf.events".to_string()),
             manifest: Some(PathBuf::from("/m.json")),
             query: Some("Q3".to_string()),
+            repeat: 1,
+            files: None,
+            rows_per_file: None,
         })
     );
     assert_eq!(
@@ -170,6 +225,38 @@ fn the_parser_ignores_cargo_bench_and_reads_every_flag() {
             "glue",
             "--prop",
             "novalue",
+        ],
+        vec![
+            "run",
+            "--mode",
+            "warm",
+            "--warehouse",
+            "/w",
+            "--repeat",
+            "0",
+        ],
+        vec!["setup", "--catalog", "glue", "--table", "a.b"],
+        vec!["setup", "--catalog", "glue", "--phase", "create"],
+        vec![
+            "setup",
+            "--catalog",
+            "glue",
+            "--phase",
+            "drop",
+            "--table",
+            "a.b",
+        ],
+        vec!["setup", "--warehouse", "/w", "--phase", "create"],
+        vec![
+            "setup",
+            "--catalog",
+            "s3tables",
+            "--phase",
+            "create",
+            "--table",
+            "a.b",
+            "--warehouse",
+            "/w",
         ],
         vec![],
     ] {
@@ -199,11 +286,44 @@ fn tiny_bed(dir: &TempDir) -> PathBuf {
     warehouse
 }
 
+fn run_mode(dir: &TempDir, warehouse: &Path, mode: &str, repeat: &str) -> Value {
+    let out = dir.path().join(format!("{mode}-{repeat}.json"));
+    let code = cli::main_with(
+        &strings(&[
+            "run",
+            "--mode",
+            mode,
+            "--warehouse",
+            text(warehouse),
+            "--repeat",
+            repeat,
+            "--out",
+            text(&out),
+        ]),
+        &StepSummary::from_env(),
+    );
+    assert_eq!(code, ExitCode::SUCCESS, "mode {mode}");
+    serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap()
+}
+
+fn query<'a>(document: &'a Value, name: &str) -> &'a Value {
+    document["queries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|query| query["name"] == name)
+        .unwrap()
+}
+
+fn requests(value: &Value) -> u64 {
+    value["requests"].as_u64().unwrap()
+}
+
 #[test]
 fn setup_writes_exactly_n_files_and_every_mode_runs_on_them() {
     let dir = TempDir::new().unwrap();
     let warehouse = tiny_bed(&dir);
-    let manifest: serde_json::Value =
+    let manifest: Value =
         serde_json::from_str(&std::fs::read_to_string(bed::manifest_path(&warehouse)).unwrap())
             .unwrap();
     assert_eq!(manifest["files"], 3);
@@ -212,50 +332,132 @@ fn setup_writes_exactly_n_files_and_every_mode_runs_on_them() {
     let data_dir = warehouse.join("perf").join("events").join("data");
     assert_eq!(std::fs::read_dir(data_dir).unwrap().count(), 3);
 
-    for mode in ["cold", "warm", "concurrent"] {
-        let out = dir.path().join(format!("{mode}.json"));
-        let code = cli::main_with(
-            &strings(&[
-                "run",
-                "--mode",
-                mode,
-                "--warehouse",
-                text(&warehouse),
-                "--out",
-                text(&out),
-            ]),
-            &StepSummary::from_env(),
-        );
-        assert_eq!(code, ExitCode::SUCCESS, "mode {mode}");
-        let document: serde_json::Value =
-            serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    for mode in ["cold", "warm", "concurrent", "concurrent-cold"] {
+        let document = run_mode(&dir, &warehouse, mode, "2");
         assert_eq!(document["mode"], mode);
-        assert!(document["environment"]["fork_pin"].is_string());
+        assert_eq!(document["repeat"], 2);
+        let environment = &document["environment"];
+        assert!(environment["fork_pin"].is_string());
+        assert!(environment["rustc_version"].is_string());
+        assert_eq!(environment["os_page_cache"], "not_dropped");
+        let cold = mode == "cold" || mode == "concurrent-cold";
+        assert_eq!(environment["cold_kind"].is_string(), cold, "mode {mode}");
+        assert_eq!(
+            environment["concurrent_kind"].is_string(),
+            mode.starts_with("concurrent"),
+            "mode {mode}"
+        );
+        assert!(document["run_io_total"]["bytes"].as_u64().unwrap() > 0);
         let queries = document["queries"].as_array().unwrap();
-        let expected = if mode == "concurrent" { 4 } else { 6 };
+        let expected = if mode.starts_with("concurrent") { 4 } else { 7 };
         assert_eq!(queries.len(), expected, "mode {mode}");
-        if let Some(point) = queries.iter().find(|query| query["name"] == "Q4") {
-            assert_eq!(point["rows"], 1);
+        for entry in queries {
+            assert_eq!(entry["samples_taken"], 2, "mode {mode}");
+            assert_eq!(entry["samples"].as_array().unwrap().len(), 2);
+            assert!(entry["median"]["total_ms"].is_number());
+            assert!(entry["samples"][0]["execute_to_first_batch_ms"].is_number());
         }
-        let window = queries.iter().find(|query| query["name"] == "Q3").unwrap();
-        assert_eq!(window["rows"], 12);
-        if mode == "concurrent" {
-            assert!(
-                document["concurrent_group"]["io"]["total"]["requests"]
-                    .as_u64()
-                    .unwrap()
-                    > 0
-            );
+        assert_eq!(query(&document, "Q3")["rows"], 12);
+        if mode.starts_with("concurrent") {
+            let group = &document["concurrent_group"];
+            assert_eq!(group["samples_taken"], 2);
+            let manifests = requests(&group["io"]["by_class"]["manifest"]);
+            assert_eq!(manifests > 0, mode == "concurrent-cold", "mode {mode}");
+            assert!(group["samples"][0]["rss_at_reset_kib"].is_number());
         } else {
-            let full = queries.iter().find(|query| query["name"] == "Q2").unwrap();
-            assert!(
-                full["io"]["by_op"]["ranged_read"]["by_class"]["data_file"]["requests"]
-                    .as_u64()
-                    .unwrap()
-                    > 0
-            );
+            assert_eq!(query(&document, "Q4")["rows"], 1);
+            assert_eq!(query(&document, "Q7")["rows"], 12);
+            for entry in queries {
+                assert_eq!(entry["io_identical_across_samples"], true, "mode {mode}");
+                assert!(entry["samples"][1]["rss_at_reset_kib"].is_number());
+            }
+            let count = &query(&document, "Q1")["io"]["data_file_ranged"];
+            assert_eq!(requests(&count["footer"]), 3, "mode {mode}");
+            assert_eq!(requests(&count["page"]), 0, "mode {mode}");
+            let full = &query(&document, "Q2")["io"]["data_file_ranged"];
+            assert_eq!(requests(&full["footer"]), 3, "mode {mode}");
+            assert!(requests(&full["page"]) > 0, "mode {mode}");
         }
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn q3_never_reaches_the_scan_today_and_q7_does_with_the_same_rows() {
+    let dir = TempDir::new().unwrap();
+    let options = SetupOptions {
+        warehouse: dir.path().join("wh"),
+        files: 3,
+        rows_per_file: 400,
+    };
+    bed::setup(&options, &StepSummary::default()).await.unwrap();
+    let warehouse = std::fs::canonicalize(&options.warehouse).unwrap();
+    let shape = bed::read_shape(&bed::manifest_path(&warehouse)).unwrap();
+    let session = bed::spark_session().unwrap();
+    bed::register_local_table(
+        &session,
+        &warehouse,
+        shape.metadata_location.as_deref().unwrap(),
+    )
+    .await
+    .unwrap();
+    let specs = run::queries(&bed::local_table_name(), &shape);
+    let spec = |name: &str| specs.iter().find(|spec| spec.name == name).unwrap();
+    assert!(spec("Q3").sql.contains("CAST(1700003780 AS TIMESTAMP)"));
+    assert_eq!(run::scan_predicate(&session, spec("Q3")).await.unwrap(), "");
+    assert_eq!(
+        run::scan_predicate(&session, spec("Q7")).await.unwrap(),
+        "(id >= 540) AND (id < 552)"
+    );
+    let mut answers = Vec::new();
+    for name in ["Q3", "Q7"] {
+        let batches = session
+            .sql(&spec(name).sql)
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let mut ids = Vec::new();
+        for batch in &batches {
+            let column = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<datafusion::arrow::array::Int64Array>()
+                .unwrap();
+            ids.extend(column.values().iter().copied());
+        }
+        ids.sort_unstable();
+        answers.push(ids);
+    }
+    assert_eq!(answers[0].len(), 12);
+    assert_eq!(answers[0], answers[1]);
+    assert_eq!(
+        run::iceberg_scan_predicate("  IcebergTableScan projection:[id] predicate:[id = 3] N=1"),
+        Some("id = 3".to_string())
+    );
+    assert_eq!(run::iceberg_scan_predicate("FilterExec: id@0 = 3"), None);
+}
+
+#[test]
+fn the_counts_derive_the_local_manifests_query_constants() {
+    let dir = TempDir::new().unwrap();
+    let warehouse = std::fs::canonicalize(tiny_bed(&dir)).unwrap();
+    let path = bed::manifest_path(&warehouse);
+    let manifest: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let from_manifest = bed::read_shape(&path).unwrap();
+    let derived = BedShape::from_counts(3, 400);
+    assert_eq!(derived.rows, from_manifest.rows);
+    assert_eq!(derived.files, from_manifest.files);
+    assert_eq!(manifest["ts_base_seconds"], bed::TS_BASE_SECONDS);
+    assert_eq!(manifest["ts_step_seconds"], bed::TS_STEP_SECONDS);
+    assert_eq!(manifest["categories"], bed::CATEGORIES);
+    let table = "bench.ns.events";
+    assert_eq!(
+        run::queries(table, &derived),
+        run::queries(table, &from_manifest)
+    );
+    let defaults = BedShape::from_counts(bed::DEFAULT_FILES, bed::DEFAULT_ROWS_PER_FILE);
+    assert_eq!(defaults.rows, 10_000_000);
 }
 
 #[test]
@@ -357,55 +559,256 @@ async fn the_files_table_counts_delete_files_in_the_footprint() {
 
 #[tokio::test]
 async fn aws_catalogs_fail_loud_on_missing_props_without_a_call() {
-    let dir = TempDir::new().unwrap();
-    let manifest = dir.path().join("bed.json");
-    std::fs::write(
-        &manifest,
-        r#"{"rows": 100, "files": 1, "metadata_location": null}"#,
-    )
-    .unwrap();
     for (catalog, key) in [
         (CatalogChoice::Glue, "warehouse"),
         (CatalogChoice::S3Tables, "table_bucket_arn"),
     ] {
         let options = RunOptions {
-            mode: Mode::Warm,
-            warehouse: None,
-            out: None,
             catalog,
-            props: Vec::new(),
+            warehouse: None,
             table: Some("perf.events".to_string()),
-            manifest: Some(manifest.clone()),
-            query: None,
+            ..local_run(Mode::Warm, Path::new(""))
         };
         let error = run::run(&options, &StepSummary::default(), None)
             .await
             .unwrap_err()
             .to_string();
         assert!(error.contains(key), "{catalog:?}: {error}");
-        let error = run::run(
-            &RunOptions {
-                table: None,
-                ..options.clone()
+        for (broken, needle) in [
+            (
+                RunOptions {
+                    table: None,
+                    ..options.clone()
+                },
+                "--table",
+            ),
+            (
+                RunOptions {
+                    table: Some("events".to_string()),
+                    ..options.clone()
+                },
+                "<namespace>.<table>",
+            ),
+            (
+                RunOptions {
+                    manifest: Some(PathBuf::from("/bed.json")),
+                    ..options.clone()
+                },
+                "--manifest",
+            ),
+        ] {
+            let error = run::run(&broken, &StepSummary::default(), None)
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains(needle), "{catalog:?}: {error}");
+        }
+        let setup = RemoteSetupOptions {
+            catalog,
+            props: Vec::new(),
+            table: "perf.events".to_string(),
+            phase: Phase::Create,
+            files: 3,
+            rows_per_file: 10,
+        };
+        let error = remote::setup_remote(&setup, &StepSummary::default())
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains(key), "{catalog:?}: {error}");
+        let error = remote::setup_remote(
+            &RemoteSetupOptions {
+                table: "events".to_string(),
+                ..setup
             },
             &StepSummary::default(),
-            None,
         )
         .await
         .unwrap_err()
         .to_string();
-        assert!(error.contains("--table"), "{catalog:?}: {error}");
-        let error = run::run(
-            &RunOptions {
-                manifest: None,
-                ..options
-            },
-            &StepSummary::default(),
-            None,
-        )
-        .await
-        .unwrap_err()
-        .to_string();
-        assert!(error.contains("--manifest"), "{catalog:?}: {error}");
+        assert!(
+            error.contains("<namespace>.<table>"),
+            "{catalog:?}: {error}"
+        );
     }
+    assert_eq!(
+        remote::namespace_rule(
+            CatalogChoice::Glue,
+            &[("warehouse".to_string(), "s3://w/".to_string())],
+            "scratch"
+        )
+        .unwrap(),
+        NamespaceRule::Located("s3://w/scratch".to_string())
+    );
+    assert_eq!(
+        remote::namespace_rule(CatalogChoice::S3Tables, &[], "scratch").unwrap(),
+        NamespaceRule::Unlocated
+    );
+}
+
+async fn stand_in_session(root: &str) -> repark_core::ReparkSession {
+    let session = bed::spark_session().unwrap();
+    session
+        .register_memory_catalog(bed::CATALOG, root)
+        .await
+        .unwrap();
+    session
+}
+
+fn writes(session: &repark_core::ReparkSession) -> u64 {
+    session
+        .iceberg_io_stats()
+        .by_op(IcebergIoOp::Write)
+        .requests
+}
+
+async fn sql(session: &repark_core::ReparkSession, statement: &str) {
+    session
+        .sql(statement)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_setup_phases_write_only_into_an_empty_table_and_skip_only_an_exact_one() {
+    let dir = TempDir::new().unwrap();
+    let root = text(dir.path());
+    let session = stand_in_session(root).await;
+    let located = NamespaceRule::Located(format!("{root}/scratch"));
+    let created = remote::create_phase(&session, "scratch", "t", &located)
+        .await
+        .unwrap();
+    assert_eq!(created, CreateOutcome::Created);
+    let again = remote::create_phase(&session, "scratch", "t", &located)
+        .await
+        .unwrap();
+    assert_eq!(again, CreateOutcome::Existed);
+
+    let table = "bench.scratch.t";
+    assert_eq!(
+        remote::write_phase(&session, table, 2, 50).await.unwrap(),
+        WriteOutcome::Wrote
+    );
+    let footprint = table_footprint(&session, table).await.unwrap();
+    assert_eq!((footprint.data_files(), footprint.data_rows), (2, 100));
+
+    session.reset_iceberg_io_stats();
+    assert_eq!(
+        remote::write_phase(&session, table, 2, 50).await.unwrap(),
+        WriteOutcome::Skipped
+    );
+    for (files, rows) in [(3, 50), (1, 50), (2, 49)] {
+        let error = remote::write_phase(&session, table, files, rows)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("refusing to write"), "{error}");
+    }
+    assert_eq!(writes(&session), 0);
+    assert_eq!(table_footprint(&session, table).await.unwrap(), footprint);
+
+    sql(
+        &session,
+        "CREATE TABLE bench.scratch.m (id BIGINT, ts TIMESTAMP, category STRING, value DOUBLE, \
+         payload STRING) USING iceberg TBLPROPERTIES ('format-version'='2', \
+         'write.delete.mode'='merge-on-read')",
+    )
+    .await;
+    bed::write_files(&session, "bench.scratch.m", 2, 50)
+        .await
+        .unwrap();
+    sql(&session, "DELETE FROM bench.scratch.m WHERE id = 1").await;
+    session.reset_iceberg_io_stats();
+    let error = remote::write_phase(&session, "bench.scratch.m", 2, 50)
+        .await
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("1 delete files"), "{error}");
+    assert_eq!(writes(&session), 0);
+
+    sql(
+        &session,
+        "CREATE TABLE bench.scratch.w (id BIGINT) USING iceberg",
+    )
+    .await;
+    let error = remote::create_phase(&session, "scratch", "w", &located)
+        .await
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("not the bed schema"), "{error}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_create_phase_refuses_a_glue_namespace_at_another_location() {
+    let dir = TempDir::new().unwrap();
+    let root = text(dir.path());
+    let session = stand_in_session(root).await;
+    session
+        .create_namespace(
+            bed::CATALOG,
+            "moved",
+            std::collections::HashMap::from([(
+                "location".to_string(),
+                format!("{root}/elsewhere"),
+            )]),
+        )
+        .await
+        .unwrap();
+    session
+        .create_namespace(bed::CATALOG, "bare", std::collections::HashMap::new())
+        .await
+        .unwrap();
+    for namespace in ["moved", "bare"] {
+        let rule = NamespaceRule::Located(format!("{root}/{namespace}"));
+        let error = remote::create_phase(&session, namespace, "t", &rule)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("location"), "{namespace}: {error}");
+    }
+    let created = remote::create_phase(&session, "plain", "t", &NamespaceRule::Unlocated)
+        .await
+        .unwrap();
+    assert_eq!(created, CreateOutcome::Created);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn both_setup_phases_end_with_the_r3_check() {
+    let dir = TempDir::new().unwrap();
+    let root = text(dir.path());
+    let session = stand_in_session(root).await;
+    let summary = summary_in(dir.path());
+    let mut request = PhaseRequest {
+        namespace: "scratch".to_string(),
+        name: "t".to_string(),
+        phase: Phase::Create,
+        rule: NamespaceRule::Located(format!("{root}/scratch")),
+        files: 2,
+        rows_per_file: 20,
+    };
+    let within = remote::run_phase(&session, &request, &summary, None)
+        .await
+        .unwrap();
+    assert!(matches!(within, Outcome::Done), "got {within:?}");
+    for phase in [Phase::Create, Phase::Write] {
+        request.phase = phase;
+        let flagged = remote::run_phase(
+            &session,
+            &request,
+            &summary,
+            Some(R3_TABLE_SIZE_LIMIT_BYTES + 1),
+        )
+        .await
+        .unwrap();
+        assert!(
+            matches!(flagged, Outcome::SizeFlagged(_)),
+            "{phase:?}: {flagged:?}"
+        );
+    }
+    let lines = std::fs::read_to_string(summary.path.unwrap()).unwrap();
+    assert_eq!(lines.lines().count(), 2);
+    assert!(lines.starts_with("R3-SIZE-FLAG table=bench.scratch.t "));
 }

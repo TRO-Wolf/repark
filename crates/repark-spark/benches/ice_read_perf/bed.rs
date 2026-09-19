@@ -46,6 +46,18 @@ pub struct BedShape {
     pub metadata_location: Option<String>,
 }
 
+impl BedShape {
+    #[must_use]
+    pub fn from_counts(files: usize, rows_per_file: u64) -> Self {
+        let files = u64::try_from(files).unwrap_or(u64::MAX);
+        Self {
+            rows: files.saturating_mul(rows_per_file),
+            files,
+            metadata_location: None,
+        }
+    }
+}
+
 pub fn spark_session() -> Result<ReparkSession, BoxError> {
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
     Ok(ReparkSession::builder()
@@ -85,6 +97,39 @@ pub fn insert_sql(table: &str, first_id: u64, rows: u64) -> String {
     )
 }
 
+#[must_use]
+pub fn create_table_sql(table: &str) -> String {
+    format!(
+        "CREATE TABLE {table} (id BIGINT, ts TIMESTAMP, category STRING, value DOUBLE, \
+         payload STRING) USING iceberg TBLPROPERTIES ('format-version'='2')"
+    )
+}
+
+pub async fn write_files(
+    session: &ReparkSession,
+    table: &str,
+    files: usize,
+    rows_per_file: u64,
+) -> Result<f64, BoxError> {
+    let started = Instant::now();
+    for file in 0..files {
+        let first_id = u64::try_from(file)? * rows_per_file;
+        session
+            .sql(&insert_sql(table, first_id, rows_per_file))
+            .await?
+            .collect()
+            .await?;
+        let written = file + 1;
+        if written % 20 == 0 || written == files {
+            println!(
+                "setup: {written}/{files} files in {:.1}s",
+                started.elapsed().as_secs_f64()
+            );
+        }
+    }
+    Ok(started.elapsed().as_secs_f64())
+}
+
 pub async fn setup(options: &SetupOptions, summary: &StepSummary) -> Result<Outcome, BoxError> {
     std::fs::create_dir_all(&options.warehouse)?;
     let warehouse = std::fs::canonicalize(&options.warehouse)?;
@@ -107,30 +152,11 @@ pub async fn setup(options: &SetupOptions, summary: &StepSummary) -> Result<Outc
         .await?;
     let table = local_table_name();
     session
-        .sql(&format!(
-            "CREATE TABLE {table} (id BIGINT, ts TIMESTAMP, category STRING, value DOUBLE, \
-             payload STRING) USING iceberg TBLPROPERTIES ('format-version'='2')"
-        ))
+        .sql(&create_table_sql(&table))
         .await?
         .collect()
         .await?;
-    let started = Instant::now();
-    for file in 0..options.files {
-        let first_id = u64::try_from(file)? * options.rows_per_file;
-        session
-            .sql(&insert_sql(&table, first_id, options.rows_per_file))
-            .await?
-            .collect()
-            .await?;
-        let written = file + 1;
-        if written % 20 == 0 || written == options.files {
-            println!(
-                "setup: {written}/{} files in {:.1}s",
-                options.files,
-                started.elapsed().as_secs_f64()
-            );
-        }
-    }
+    let setup_seconds = write_files(&session, &table, options.files, options.rows_per_file).await?;
     let handle = session
         .catalogs_snapshot()
         .get(CATALOG)
@@ -145,7 +171,7 @@ pub async fn setup(options: &SetupOptions, summary: &StepSummary) -> Result<Outc
         .to_string();
     let (footprint, verdict) = r3_gate(&session, &table, summary, None).await?;
     let expected_files = u64::try_from(options.files)?;
-    if footprint.files != expected_files || footprint.delete_files != 0 {
+    if footprint.data_files() != expected_files || footprint.delete_files != 0 {
         return Err(boxed(format!(
             "the bed has {} files ({} delete files); setup promises exactly {expected_files} data files",
             footprint.files, footprint.delete_files
@@ -167,7 +193,7 @@ pub async fn setup(options: &SetupOptions, summary: &StepSummary) -> Result<Outc
         "ts_step_seconds": TS_STEP_SECONDS,
         "categories": CATEGORIES,
         "first_file_pages_per_column": pages,
-        "setup_seconds": started.elapsed().as_secs_f64(),
+        "setup_seconds": setup_seconds,
     });
     std::fs::write(
         manifest_path(&warehouse),

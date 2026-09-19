@@ -58,6 +58,14 @@ pub struct TableFootprint {
     pub bytes: u64,
     pub files: u64,
     pub delete_files: u64,
+    pub data_rows: u64,
+}
+
+impl TableFootprint {
+    #[must_use]
+    pub fn data_files(&self) -> u64 {
+        self.files.saturating_sub(self.delete_files)
+    }
 }
 
 #[must_use]
@@ -78,8 +86,9 @@ pub async fn table_footprint(
     let sql = format!(
         "SELECT CAST(coalesce(sum(file_size_in_bytes), 0) AS BIGINT) AS bytes, \
          CAST(count(*) AS BIGINT) AS files, \
-         CAST(coalesce(sum(CASE WHEN content <> 0 THEN 1 ELSE 0 END), 0) AS BIGINT) AS deletes \
-         FROM {files_table}"
+         CAST(coalesce(sum(CASE WHEN content <> 0 THEN 1 ELSE 0 END), 0) AS BIGINT) AS deletes, \
+         CAST(coalesce(sum(CASE WHEN content = 0 THEN record_count ELSE 0 END), 0) AS BIGINT) \
+         AS data_rows FROM {files_table}"
     );
     let batches = session.sql(&sql).await?.collect().await?;
     let batch = batches
@@ -101,6 +110,7 @@ pub async fn table_footprint(
         bytes: cell(0)?,
         files: cell(1)?,
         delete_files: cell(2)?,
+        data_rows: cell(3)?,
     })
 }
 

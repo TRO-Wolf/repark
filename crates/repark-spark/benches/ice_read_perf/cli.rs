@@ -6,6 +6,7 @@ use repark_iceberg::catalog::{IcebergFileClass, IcebergIoStats};
 use crate::BoxError;
 use crate::bed::{self, SetupOptions};
 use crate::r3::{R3_EXIT_CODE, StepSummary};
+use crate::remote::{self, Phase, RemoteSetupOptions};
 use crate::run::{self, CatalogChoice, Mode, RunOptions};
 
 pub const EXIT_FAILURE: u8 = 1;
@@ -14,13 +15,18 @@ pub const EXIT_USAGE: u8 = 2;
 
 pub const USAGE: &str = "usage:
   ice_read_perf setup --warehouse <dir> [--files 200] [--rows-per-file 50000]
-  ice_read_perf run --mode cold|warm|concurrent [--warehouse <dir>] [--out <file.json>]
-                    [--catalog local|glue|s3tables] [--prop k=v]... [--table <ns.table>]
-                    [--manifest <bed.json>] [--query Q1..Q6]";
+  ice_read_perf setup --catalog glue|s3tables --prop k=v... --table <ns.table> --phase create|write
+                      [--files 200] [--rows-per-file 50000]
+  ice_read_perf run --mode cold|warm|concurrent|concurrent-cold [--repeat 1] [--out <file.json>]
+                    [--query Q1..Q7] then either
+                    --warehouse <dir> [--manifest <bed.json>]
+                    or --catalog glue|s3tables --prop k=v... --table <ns.table>
+                    [--files 200] [--rows-per-file 50000]";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     Setup(SetupOptions),
+    SetupRemote(RemoteSetupOptions),
     Run(RunOptions),
 }
 
@@ -51,6 +57,7 @@ pub fn main_with(args: &[String], summary: &StepSummary) -> ExitCode {
     let result = runtime.block_on(async {
         match &command {
             Command::Setup(options) => bed::setup(options, summary).await,
+            Command::SetupRemote(options) => remote::setup_remote(options, summary).await,
             Command::Run(options) => run::run(options, summary, None).await,
         }
     });
@@ -82,7 +89,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     };
     let pairs = flag_pairs(rest)?;
     match *subcommand {
-        "setup" => parse_setup(&pairs).map(Command::Setup),
+        "setup" => parse_setup(&pairs),
         "run" => parse_run(&pairs).map(Command::Run),
         other => Err(format!("unknown subcommand `{other}`")),
     }
@@ -105,35 +112,75 @@ fn flag_pairs<'a>(rest: &[&'a str]) -> Result<Vec<(&'a str, &'a str)>, String> {
     Ok(pairs)
 }
 
-fn parse_setup(pairs: &[(&str, &str)]) -> Result<SetupOptions, String> {
+fn prop_pair(value: &str) -> Result<(String, String), String> {
+    value
+        .split_once('=')
+        .map(|(key, prop_value)| (key.to_string(), prop_value.to_string()))
+        .ok_or_else(|| format!("--prop needs k=v, got `{value}`"))
+}
+
+fn parse_setup(pairs: &[(&str, &str)]) -> Result<Command, String> {
     let mut warehouse = None;
     let mut files = bed::DEFAULT_FILES;
     let mut rows_per_file = bed::DEFAULT_ROWS_PER_FILE;
+    let mut catalog = CatalogChoice::Local;
+    let mut props = Vec::new();
+    let mut table = None;
+    let mut phase = None;
     for (flag, value) in pairs {
         match *flag {
             "--warehouse" => warehouse = Some(PathBuf::from(value)),
             "--files" => files = positive(flag, value)?,
             "--rows-per-file" => rows_per_file = positive(flag, value)?,
+            "--catalog" => catalog = CatalogChoice::parse(value)?,
+            "--prop" => props.push(prop_pair(value)?),
+            "--table" => table = Some((*value).to_string()),
+            "--phase" => phase = Some(Phase::parse(value)?),
             other => return Err(format!("unknown setup flag `{other}`")),
         }
     }
-    Ok(SetupOptions {
-        warehouse: warehouse.ok_or("setup needs --warehouse")?,
+    if catalog == CatalogChoice::Local {
+        if phase.is_some() || table.is_some() || !props.is_empty() {
+            return Err(
+                "setup --phase / --table / --prop are for --catalog glue|s3tables".to_string(),
+            );
+        }
+        return Ok(Command::Setup(SetupOptions {
+            warehouse: warehouse.ok_or("setup needs --warehouse")?,
+            files,
+            rows_per_file,
+        }));
+    }
+    if warehouse.is_some() {
+        return Err(format!(
+            "setup --catalog {} writes into the catalog; --warehouse is for a local bed",
+            catalog.name()
+        ));
+    }
+    Ok(Command::SetupRemote(RemoteSetupOptions {
+        catalog,
+        props,
+        table: table.ok_or_else(|| {
+            format!(
+                "setup --catalog {} needs --table <ns.table>",
+                catalog.name()
+            )
+        })?,
+        phase: phase.ok_or_else(|| {
+            format!(
+                "setup --catalog {} needs --phase create|write",
+                catalog.name()
+            )
+        })?,
         files,
         rows_per_file,
-    })
+    }))
 }
 
 fn parse_run(pairs: &[(&str, &str)]) -> Result<RunOptions, String> {
     let mut options = RunOptions {
-        mode: Mode::Warm,
         warehouse: None,
-        out: None,
-        catalog: CatalogChoice::Local,
-        props: Vec::new(),
-        table: None,
-        manifest: None,
-        query: None,
+        ..RunOptions::local(Mode::Warm, std::path::Path::new(""))
     };
     let mut mode = None;
     for (flag, value) in pairs {
@@ -142,21 +189,17 @@ fn parse_run(pairs: &[(&str, &str)]) -> Result<RunOptions, String> {
             "--warehouse" => options.warehouse = Some(PathBuf::from(value)),
             "--out" => options.out = Some(PathBuf::from(value)),
             "--catalog" => options.catalog = CatalogChoice::parse(value)?,
-            "--prop" => {
-                let (key, prop_value) = value
-                    .split_once('=')
-                    .ok_or_else(|| format!("--prop needs k=v, got `{value}`"))?;
-                options
-                    .props
-                    .push((key.to_string(), prop_value.to_string()));
-            }
+            "--prop" => options.props.push(prop_pair(value)?),
             "--table" => options.table = Some((*value).to_string()),
             "--manifest" => options.manifest = Some(PathBuf::from(value)),
             "--query" => options.query = Some((*value).to_string()),
+            "--repeat" => options.repeat = positive(flag, value)?,
+            "--files" => options.files = Some(positive(flag, value)?),
+            "--rows-per-file" => options.rows_per_file = Some(positive(flag, value)?),
             other => return Err(format!("unknown run flag `{other}`")),
         }
     }
-    options.mode = mode.ok_or("run needs --mode cold|warm|concurrent")?;
+    options.mode = mode.ok_or("run needs --mode cold|warm|concurrent|concurrent-cold")?;
     if options.catalog == CatalogChoice::Local && options.warehouse.is_none() {
         return Err("run --catalog local needs --warehouse".to_string());
     }
