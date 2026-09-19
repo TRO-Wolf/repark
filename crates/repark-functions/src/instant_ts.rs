@@ -173,7 +173,7 @@ impl SparkToTimestamp {
             &ConfigOptions::default(),
         );
         Self {
-            signature: Signature::variadic_any(Volatility::Volatile),
+            signature: Signature::variadic_any(Volatility::Stable),
             inner,
         }
     }

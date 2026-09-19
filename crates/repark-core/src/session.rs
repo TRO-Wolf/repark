@@ -834,8 +834,9 @@ impl ReparkSession {
             timestamp_as_of,
         };
         let zone = self.session_time_zone();
-        let spec =
-            time_travel::resolve_reader_spec(&travel, &zone, in_branch).map_err(engine_err)?;
+        let spec = time_travel::resolve_reader_spec(self.context(), &travel, in_branch)
+            .await
+            .map_err(engine_err)?;
         match spec {
             None => self.sql(&format!("SELECT * FROM {table_name}")).await,
             Some(spec) => {

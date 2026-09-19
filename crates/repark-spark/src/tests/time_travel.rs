@@ -454,13 +454,12 @@ async fn time_travel_statement_pins_never_collide_with_a_reader_options_view() {
     assert_eq!(leftover_time_travel_views(&ctx), reader_views);
 }
 
-#[test]
-fn reader_spec_builtin_pins_refuse_loud() {
+#[tokio::test]
+async fn reader_spec_builtin_pins_refuse_loud() {
     use repark_core::time_travel::TimeTravelSpec;
     use repark_core::{ReaderTimeTravel, resolve_reader_spec};
 
-    let zone = SessionTimeZone::default();
-    let pin = |opts: &ReaderTimeTravel| resolve_reader_spec(opts, &zone, false);
+    let ctx = SessionContext::new();
     let versioned = |version: &str| ReaderTimeTravel {
         version_as_of: Some(version.to_string()),
         ..Default::default()
@@ -470,7 +469,9 @@ fn reader_spec_builtin_pins_refuse_loud() {
         timestamp_as_of: Some("2020-01-01".to_string()),
         ..Default::default()
     };
-    let err = pin(&both).expect_err("version plus timestamp must refuse");
+    let err = resolve_reader_spec(&ctx, &both, false)
+        .await
+        .expect_err("version plus timestamp must refuse");
     assert!(
         err.to_string().contains("INVALID_TIME_TRAVEL_SPEC"),
         "got: {err}"
@@ -480,66 +481,80 @@ fn reader_spec_builtin_pins_refuse_loud() {
         version_as_of: Some("8".to_string()),
         ..Default::default()
     };
-    let err = pin(&legacy_version).expect_err("snapshot-id plus versionAsOf must refuse");
+    let err = resolve_reader_spec(&ctx, &legacy_version, false)
+        .await
+        .expect_err("snapshot-id plus versionAsOf must refuse");
     assert!(err.to_string().contains("versionAsOf"), "got: {err}");
     let legacy_timestamp = ReaderTimeTravel {
         as_of_timestamp_ms: Some(1_750_000_000_000),
         timestamp_as_of: Some("2020-01-01".to_string()),
         ..Default::default()
     };
-    let err = pin(&legacy_timestamp).expect_err("as-of-timestamp plus timestampAsOf must refuse");
+    let err = resolve_reader_spec(&ctx, &legacy_timestamp, false)
+        .await
+        .expect_err("as-of-timestamp plus timestampAsOf must refuse");
     assert!(err.to_string().contains("timestampAsOf"), "got: {err}");
     let branch_version = ReaderTimeTravel {
         branch: Some("b0".to_string()),
         version_as_of: Some("1".to_string()),
         ..Default::default()
     };
-    let err = pin(&branch_version).expect_err("branch plus versionAsOf must refuse");
+    let err = resolve_reader_spec(&ctx, &branch_version, false)
+        .await
+        .expect_err("branch plus versionAsOf must refuse");
     assert!(
         err.to_string().contains("Can't time travel in branch"),
         "got: {err}"
     );
-    let err = resolve_reader_spec(&versioned("1"), &zone, true)
+    let err = resolve_reader_spec(&ctx, &versioned("1"), true)
+        .await
         .expect_err("versionAsOf inside a branch must refuse");
     assert!(
         err.to_string().contains("Can't time travel in branch"),
         "got: {err}"
     );
     assert_eq!(
-        pin(&versioned("42")).unwrap(),
+        resolve_reader_spec(&ctx, &versioned("42"), false)
+            .await
+            .unwrap(),
         Some(TimeTravelSpec::SnapshotId(42))
     );
     assert_eq!(
-        pin(&versioned("audit")).unwrap(),
+        resolve_reader_spec(&ctx, &versioned("audit"), false)
+            .await
+            .unwrap(),
         Some(TimeTravelSpec::VersionRef("audit".to_string()))
     );
-    let err = pin(&versioned("")).expect_err("empty versionAsOf must refuse");
+    let err = resolve_reader_spec(&ctx, &versioned(""), false)
+        .await
+        .expect_err("empty versionAsOf must refuse");
     assert!(
         err.to_string().contains("Cannot find matching"),
         "got: {err}"
     );
 }
 
-#[test]
-fn reader_spec_legacy_pins_still_resolve() {
+#[tokio::test]
+async fn reader_spec_legacy_pins_still_resolve() {
     use repark_core::time_travel::TimeTravelSpec;
     use repark_core::{ReaderTimeTravel, resolve_reader_spec};
 
-    let zone = SessionTimeZone::default();
-    let pin = |opts: &ReaderTimeTravel| resolve_reader_spec(opts, &zone, false);
+    let ctx = SessionContext::new();
     let stamped = ReaderTimeTravel {
         timestamp_as_of: Some("1750000000".to_string()),
         ..Default::default()
     };
     assert_eq!(
-        pin(&stamped).unwrap(),
+        resolve_reader_spec(&ctx, &stamped, false).await.unwrap(),
         Some(TimeTravelSpec::TimestampMs(1_750_000_000_000))
     );
     let bad_stamp = ReaderTimeTravel {
         timestamp_as_of: Some("not a ts".to_string()),
         ..Default::default()
     };
-    let err = pin(&bad_stamp).expect_err("unparsable timestampAsOf must refuse");
+    let err = resolve_reader_spec(&ctx, &bad_stamp, false)
+        .await
+        .expect_err("unparsable timestampAsOf must refuse");
     assert!(
         err.to_string()
             .contains("INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT"),
@@ -550,7 +565,9 @@ fn reader_spec_legacy_pins_still_resolve() {
         ..Default::default()
     };
     assert_eq!(
-        pin(&legacy_only).unwrap(),
+        resolve_reader_spec(&ctx, &legacy_only, false)
+            .await
+            .unwrap(),
         Some(TimeTravelSpec::SnapshotId(7))
     );
     let legacy_clash = ReaderTimeTravel {
@@ -558,16 +575,25 @@ fn reader_spec_legacy_pins_still_resolve() {
         branch: Some("b0".to_string()),
         ..Default::default()
     };
-    assert!(pin(&legacy_clash).is_err());
+    assert!(
+        resolve_reader_spec(&ctx, &legacy_clash, false)
+            .await
+            .is_err()
+    );
     let tagged = ReaderTimeTravel {
         tag: Some("t0".to_string()),
         ..Default::default()
     };
     assert_eq!(
-        pin(&tagged).unwrap(),
+        resolve_reader_spec(&ctx, &tagged, false).await.unwrap(),
         Some(TimeTravelSpec::VersionRef("t0".to_string()))
     );
-    assert_eq!(pin(&ReaderTimeTravel::default()).unwrap(), None);
+    assert_eq!(
+        resolve_reader_spec(&ctx, &ReaderTimeTravel::default(), false)
+            .await
+            .unwrap(),
+        None
+    );
 }
 
 fn asof_tokens(text: &str) -> Vec<Token> {

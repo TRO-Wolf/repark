@@ -788,11 +788,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   remains deferred with the phase-2 router.
   **ICE-TT-RESOLVE-1 (2026-09-19):** the module split at the 1000-line ceiling into
   `time_travel/sql_text.rs` (string/zone parsing, token extraction), `time_travel/sql_ast.rs`
-  (determinism check + zone rewrite), `time_travel/sql_eval.rs` (constant-expression
+  (column-refusal check), `time_travel/sql_eval.rs` (constant-expression
   evaluation); the root keeps the spec types plus `resolve_reader_spec` (the ONE resolver both
   SQL doors and the reader options share — `versionAsOf`/`timestampAsOf` raw strings, integer
   means seconds).
   pins: ice-tt-resolve-1/C-010
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** every string resolves through the
+  engine `CAST(... AS TIMESTAMP)` in the session zone; the hand parser and the AST leaf
+  rewrite are gone and `resolve_reader_spec` is async over the session context.
+  pins: ice-tt-resolve-1/C-002
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the moved names resolve only behind the
   `time_travel` module; the stale root re-exports are gone. pins: ice-tt-resolve-1/C-010
   **ICE-TT-RESOLVE-1 round 2 close (2026-09-19):** the root block narrows to the six

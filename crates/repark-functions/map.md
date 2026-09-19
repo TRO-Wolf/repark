@@ -173,6 +173,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/instant_ts.rs` — `now` / `current_timestamp` / `to_timestamp` emit `timestamp[us, tz=UTC]`;
   zoneless values localize in the session zone, while zone-suffixed values remain instants.
   **Q10:** NTZ opt-in arm of the CAST/literal rewrite.
+  `to_timestamp` is `Stable` (Spark answers it, so time travel plans it).
+  pins: ice-tt-resolve-1/C-003
 - `src/datetime.rs` — the Spark calendar date shim: extractors `year`/`month`/`dayofmonth`/`day`/
   `dayofyear`/`quarter`/`weekofyear`/`yearofweek`/`dayofweek`/`weekday`, **hour/minute/second**
   (Time+Timestamp; X1-octo C3), `make_date`, and the WG2 calendar-math shims `add_months`

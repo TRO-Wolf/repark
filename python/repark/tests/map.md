@@ -58,7 +58,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   non-determinism, Spark string→timestamp casts, trailing aliases, and
   selector clashes on a two-snapshot seed; the recorder replays them once on
   version 2. Offline pins seed the two-snapshot shape per test and assert the
-  fixture class, message, or rows.
+  fixture class, message, or rows (`test_ice_tt_resolve_1_tt2.py` holds the TT2
+  pins under the default ceiling). Strings the engine CAST cannot take
+  (short/year-only/no-seconds forms, years past 2262) pin the Spark answer as
+  strict xfails citing the cast finding.
   pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +

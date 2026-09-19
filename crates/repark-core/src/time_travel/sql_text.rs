@@ -66,64 +66,6 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
 }
 
 #[must_use]
-pub fn parse_timestamp_string_to_ms(text: &str, zone: &SessionTimeZone) -> Option<i64> {
-    const WALL: [&str; 4] = [
-        "%Y-%m-%d %H:%M:%S%.f",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%dT%H:%M:%S%.f",
-        "%Y-%m-%dT%H:%M:%S",
-    ];
-    const OFFSET_WALL: [&str; 4] = [
-        "%Y-%m-%d %H:%M:%S%.f%:z",
-        "%Y-%m-%d %H:%M:%S%:z",
-        "%Y-%m-%dT%H:%M:%S%.f%:z",
-        "%Y-%m-%dT%H:%M:%S%:z",
-    ];
-    let trimmed = text.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-    if let Ok(offset_dt) = DateTime::parse_from_rfc3339(trimmed) {
-        return Some(offset_dt.timestamp_millis());
-    }
-    let without_z = trimmed
-        .strip_suffix('Z')
-        .or_else(|| trimmed.strip_suffix('z'))
-        .unwrap_or(trimmed);
-    for format in WALL {
-        if let Ok(naive) = NaiveDateTime::parse_from_str(without_z, format) {
-            return zoned_wall_to_ms(naive, zone);
-        }
-    }
-    for format in OFFSET_WALL {
-        if let Ok(offset_dt) = DateTime::parse_from_str(without_z, format) {
-            return Some(offset_dt.timestamp_millis());
-        }
-    }
-    if let Ok(date) = chrono::NaiveDate::parse_from_str(without_z, "%Y-%m-%d")
-        && let Some(midnight) = date.and_hms_opt(0, 0, 0)
-    {
-        return zoned_wall_to_ms(midnight, zone);
-    }
-    None
-}
-
-#[must_use]
-pub fn parse_timestamp_asof_to_ms(raw: &str, zone: &SessionTimeZone) -> Option<i64> {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-    if let Ok(seconds) = trimmed.parse::<i64>() {
-        return seconds.checked_mul(1000);
-    }
-    if let Some(millis) = fixed_decimal_seconds_to_ms(trimmed) {
-        return Some(millis);
-    }
-    parse_timestamp_string_to_ms(trimmed, zone)
-}
-
-#[must_use]
 pub fn extract_timestamp_expr(significant: &[(usize, &Token)], value_sig: usize) -> Vec<Token> {
     const TERMINATORS: [&str; 20] = [
         "WHERE",
@@ -176,36 +118,66 @@ pub fn extract_timestamp_expr(significant: &[(usize, &Token)], value_sig: usize)
         out.push(token.clone());
         index += 1;
     }
+    strip_trailing_alias(&mut out);
     out
 }
 
-fn fixed_decimal_seconds_to_ms(trimmed: &str) -> Option<i64> {
-    let (sign, digits) = match trimmed.strip_prefix('-') {
-        Some(rest) => (-1_i128, rest),
-        None => (1_i128, trimmed.strip_prefix('+').unwrap_or(trimmed)),
+fn strip_trailing_alias(tokens: &mut Vec<Token>) {
+    let is_bare_ident = |token: &Token| -> bool { matches!(token, Token::Word(_)) };
+    let is_as = |token: &Token| -> bool {
+        matches!(token, Token::Word(word) if word.value.eq_ignore_ascii_case("AS"))
     };
-    let (secs, frac) = digits.split_once('.')?;
-    if !secs.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
+    if has_interval_unit_tail(tokens) {
+        return;
     }
-    if !frac.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
+    let len = tokens.len();
+    if len >= 3 && is_as(&tokens[len - 2]) && is_bare_ident(&tokens[len - 1]) {
+        tokens.truncate(len - 2);
+        return;
     }
-    let seconds: i128 = if secs.is_empty() {
-        0
-    } else {
-        secs.parse().ok()?
+    if len >= 2 && is_bare_ident(&tokens[len - 1]) {
+        match &tokens[len - 2] {
+            Token::RParen
+            | Token::Number(_, _)
+            | Token::SingleQuotedString(_)
+            | Token::DoubleQuotedString(_) => {
+                tokens.truncate(len - 1);
+            }
+            _ => {}
+        }
+    }
+}
+
+fn has_interval_unit_tail(tokens: &[Token]) -> bool {
+    let [.., Token::Word(interval), amount, Token::Word(unit)] = tokens else {
+        return false;
     };
-    if frac.is_empty() {
-        return i64::try_from(sign * seconds.checked_mul(1000)?).ok();
+    if !interval.value.eq_ignore_ascii_case("INTERVAL") {
+        return false;
     }
-    let mut whole = frac.to_string();
-    whole.truncate(3);
-    while whole.len() < 3 {
-        whole.push('0');
+    if !matches!(
+        amount,
+        Token::Number(_, _) | Token::SingleQuotedString(_) | Token::DoubleQuotedString(_)
+    ) {
+        return false;
     }
-    let frac_ms: i128 = whole.parse().ok()?;
-    i64::try_from(sign * (seconds.checked_mul(1000)?.checked_add(frac_ms)?)).ok()
+    matches!(
+        unit.value.to_ascii_uppercase().as_str(),
+        "DAY"
+            | "DAYS"
+            | "HOUR"
+            | "HOURS"
+            | "MINUTE"
+            | "MINUTES"
+            | "SECOND"
+            | "SECONDS"
+            | "MONTH"
+            | "MONTHS"
+            | "YEAR"
+            | "YEARS"
+            | "WEEK"
+            | "WEEKS"
+    )
 }
 
 pub(crate) fn zoned_wall_to_ms(naive: NaiveDateTime, zone: &SessionTimeZone) -> Option<i64> {

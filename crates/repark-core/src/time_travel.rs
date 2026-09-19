@@ -18,8 +18,7 @@ mod sql_text;
 
 pub use sql_eval::evaluate_sql_timestamp_asof;
 pub use sql_text::{
-    extract_timestamp_expr, format_snapshot_bound_ms, parse_timestamp_asof_to_ms,
-    parse_timestamp_string_to_ms, parse_timestamp_to_ms, parse_version_value,
+    extract_timestamp_expr, format_snapshot_bound_ms, parse_timestamp_to_ms, parse_version_value,
 };
 
 static TEMP_VIEW_SEQ: AtomicU64 = AtomicU64::new(1);
@@ -97,9 +96,9 @@ pub struct ReaderTimeTravel {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn resolve_reader_spec(
+pub async fn resolve_reader_spec(
+    ctx: &SessionContext,
     opts: &ReaderTimeTravel,
-    zone: &SessionTimeZone,
     in_branch: bool,
 ) -> Result<Option<TimeTravelSpec>> {
     let version = opts.version_as_of.as_deref().map(str::trim);
@@ -140,9 +139,13 @@ pub fn resolve_reader_spec(
         return Ok(Some(TimeTravelSpec::VersionRef(raw.to_string())));
     }
     if let Some(raw) = timestamp {
-        let Some(millis) = parse_timestamp_asof_to_ms(raw, zone) else {
-            return Err(invalid_timestamp_input(raw));
-        };
+        if let Ok(seconds) = raw.parse::<i64>() {
+            let millis = seconds
+                .checked_mul(1000)
+                .ok_or_else(|| invalid_timestamp_input(raw))?;
+            return Ok(Some(TimeTravelSpec::TimestampMs(millis)));
+        }
+        let millis = sql_eval::cast_string_to_timestamp_ms(ctx, raw).await?;
         return Ok(Some(TimeTravelSpec::TimestampMs(millis)));
     }
     let legacy = TimeTravelOpts {

@@ -10,8 +10,8 @@ use datafusion::sql::sqlparser::tokenizer::Token;
 
 use crate::SessionTimeZone;
 
-use super::sql_ast::{check_timestamp_expr, rewrite_timestamp_leaves};
-use super::sql_text::{parse_timestamp_string_to_ms, zoned_wall_to_ms};
+use super::sql_ast::check_timestamp_expr;
+use super::sql_text::zoned_wall_to_ms;
 use super::{invalid_timestamp_input, nondeterministic_timestamp_expr, timestamp_column_refusal};
 
 fn map_eval_error(error: &DataFusionError, display: &str) -> DataFusionError {
@@ -21,7 +21,34 @@ fn map_eval_error(error: &DataFusionError, display: &str) -> DataFusionError {
     invalid_timestamp_input(display)
 }
 
-fn scalar_to_ms(scalar: &ScalarValue, zone: &SessionTimeZone, display: &str) -> Result<i64> {
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn cast_string_to_timestamp_ms(ctx: &SessionContext, text: &str) -> Result<i64> {
+    let escaped = text.replace('\'', "''");
+    let frame = ctx
+        .sql(&format!("SELECT CAST('{escaped}' AS TIMESTAMP)"))
+        .await
+        .map_err(|_| invalid_timestamp_input(text))?;
+    let batches = frame
+        .collect()
+        .await
+        .map_err(|_| invalid_timestamp_input(text))?;
+    let Some(batch) = batches.first() else {
+        return Err(invalid_timestamp_input(text));
+    };
+    if batch.num_rows() != 1 || batch.num_columns() != 1 {
+        return Err(invalid_timestamp_input(text));
+    }
+    let scalar = ScalarValue::try_from_array(batch.column(0), 0)
+        .map_err(|_| invalid_timestamp_input(text))?;
+    timestamp_scalar_to_ms(&scalar, text)
+}
+
+async fn scalar_to_ms(
+    ctx: &SessionContext,
+    scalar: &ScalarValue,
+    zone: &SessionTimeZone,
+    display: &str,
+) -> Result<i64> {
     match scalar {
         ScalarValue::TimestampSecond(_, _)
         | ScalarValue::TimestampMillisecond(_, _)
@@ -74,8 +101,7 @@ fn scalar_to_ms(scalar: &ScalarValue, zone: &SessionTimeZone, display: &str) -> 
             let text = value
                 .as_ref()
                 .ok_or_else(|| invalid_timestamp_input(display))?;
-            parse_timestamp_string_to_ms(text, zone)
-                .ok_or_else(|| invalid_timestamp_input(text.as_str()))
+            cast_string_to_timestamp_ms(ctx, text).await
         }
         _ => Err(invalid_timestamp_input(display)),
     }
@@ -204,7 +230,6 @@ pub async fn evaluate_sql_timestamp_asof(
         return Err(timestamp_parse_error(format!("SELECT {display}")));
     };
     check_timestamp_expr(expr, false)?;
-    rewrite_timestamp_leaves(expr, zone);
     let frame = ctx
         .sql(&format!("SELECT {expr}"))
         .await
@@ -224,7 +249,7 @@ pub async fn evaluate_sql_timestamp_asof(
     }
     let scalar = ScalarValue::try_from_array(batch.column(0), 0)
         .map_err(|error| map_eval_error(&error, display))?;
-    scalar_to_ms(&scalar, zone, display)
+    scalar_to_ms(ctx, &scalar, zone, display).await
 }
 
 fn plan_uses_volatile_scalar(plan: &LogicalPlan) -> bool {

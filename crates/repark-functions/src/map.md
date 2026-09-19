@@ -857,6 +857,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   also carries `session_time_zone::current_timezone_udf` — the `lib.rs`-free registration
   slot for the session-zone family's SQL-door `current_timezone()` (crate root is at its
   line ceiling). Pins: `instant_ts::tests::*`.
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** `to_timestamp` is `Stable` (Spark answers
+  it, so time travel plans it). pins: ice-tt-resolve-1/C-003
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
