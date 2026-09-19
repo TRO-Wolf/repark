@@ -398,6 +398,35 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   doors, including RePark DML on adopted live tables. The bare-decimal-literal
   BACKLOG pins hold today's loud needles against the recorded Spark answers.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+- [_record_ice_page_prune_1.py](_record_ice_page_prune_1.py) +
+  [fixtures/ice_page_prune_1/](fixtures/ice_page_prune_1/map.md) +
+  [test_ice_page_prune_1.py](test_ice_page_prune_1.py) —
+  **ICE-PAGE-PRUNE-1 (2026-09-19, round 1, steps 1–2):** the Spark 4.1.2 oracle
+  behind the page-pruning pins — the five Spark-written warehouses (600,773
+  bytes, canonical `/tmp/repark-ice-page-prune-1` paths, rewritten with
+  `CALL …rewrite_table_path` and materialized under a directory lock) plus the
+  compacted `truth.json` (id runs, row-id and sequence segments on v3, decoded
+  by `expand_cell`). The recorder re-derives every cell from live Spark,
+  matches the fork lane's truth cell for cell, and verifies on re-run
+  (`--rewrite` re-records). The pin test adopts each warehouse and asserts
+  RePark equals Spark on every predicate, lineage, and unfiltered cell on the
+  SQL door (double bounds on the DataFrame door, ids only — lineage is
+  SQL-door-only), except the three bare-decimal `d`-range cells (loud under
+  ICE-NAN-DECIMAL-LITERAL-1) and `del_v2` (rewritten position deletes refuse
+  loud on a manifest-size mismatch Spark tolerates), both pinned as
+  divergences with the recorded answers as fix target. Step 3 (same file):
+  RePark-written 300,000-row v2/v3 tables (measured page counts per column
+  chunk: four on the narrow columns, six on the wide 86-char string column of
+  full 65,536-row files; one to two on remnant and position-delete files)
+  assert filtered reads equal the unfiltered read filtered in Python on both
+  doors past a merge-on-read DELETE and an UPDATE, v3 lineage stable, and
+  every written file carries column and offset indexes. The live tier
+  (`REPARK_PARITY_LIVE=1`) rebuilds the five tables on live Spark 4.1.2 from
+  the recorder seed path, asserts every answer still equals `truth.json`, and
+  cross-reads the adopted live tables — the un-rewritten live `del_v2` reads
+  clean, isolating the fixture refusal to rewrite-stale manifest sizes. The
+  live tables seed from the recorder's own seed functions, one code path.
+  pins: ice-page-prune-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — **ICE-HADOOP-VN-1
   (2026-09-17):** the stale Hadoop `vN` writer raises loud and loses nothing. The
   committed `fixtures/torture/data/ice_hadoop_vn_1` Spark-written v2 table (one seed
