@@ -40,6 +40,23 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) +
+  [ice_overwrite_mode_1_spark_oracle.json](ice_overwrite_mode_1_spark_oracle.json) +
+  [_record_ice_overwrite_mode_1_oracle.py](_record_ice_overwrite_mode_1_oracle.py) —
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** 60 Spark overwrite cells (30 shapes on format
+  versions 2 and 3; live PySpark 4.1.2 + Iceberg 1.11.0, InMemory catalog, recorded
+  2026-09-19 by the recorder's `record` mode, SHA-256
+  `e4e4117721f9454f1d0f4b0b9b498ec3f4634e2963a0a0a04f3615d40262a917`). Each cell holds
+  the table rows and the snapshot history (operation plus seven summary counters) or the
+  refusal class, condition and SQLSTATE. The recorder owns the shapes and the cell runner;
+  the pin file replays every cell on the facade and asserts rows, Arrow types and history,
+  or class plus condition token. The two `saveAsTable(overwrite)` shapes match rows only:
+  Spark's history there is an RTAS table replace, pinned as a strict xfail. The live tier
+  (`REPARK_PARITY_LIVE=1`) runs the recorder's `check` mode. Python's native `repark.sql`
+  door has no Iceberg `PARTITION` overwrite shape, so the native-door cells are Rust pins in
+  `crates/repark-sql`.
+  pins: ice-overwrite-mode-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+
 - [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) +
   [ice_tt_resolve_1_spark_oracle.json](ice_tt_resolve_1_spark_oracle.json) +
   [_record_ice_tt_resolve_1_oracle.py](_record_ice_tt_resolve_1_oracle.py) —
