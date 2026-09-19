@@ -16,9 +16,12 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
 - `tests.rs` — parser + resolution pins (`#[cfg(test)] mod tests;` in `../time_travel.rs`).
 - `sql_text.rs` — SQL-text timestamp parsing, zone math, token extraction (re-exported at
   `../time_travel.rs`). pins: ice-tt-resolve-1/C-010
-- `sql_ast.rs` — determinism check + session-zone rewrite of the `AS OF` expression.
+- `sql_ast.rs` — column-refusal check + session-zone rewrite of the `AS OF` expression.
   pins: ice-tt-resolve-1/C-010
 - `sql_eval.rs` — constant-expression evaluation of the `AS OF` value (`evaluate_sql_timestamp_asof`).
+  **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** non-determinism decided from the planned
+  expression (`Volatility::Volatile` scalar functions, subquery plans included), not a name
+  list. pins: ice-tt-resolve-1/C-003
   pins: ice-tt-resolve-1/C-010
 
 ## Pointers

@@ -7,18 +7,7 @@ use datafusion::sql::sqlparser::ast::{
 use crate::SessionTimeZone;
 
 use super::sql_text::parse_timestamp_string_to_ms;
-use super::{nondeterministic_timestamp_expr, timestamp_column_refusal};
-
-const VOLATILE_TIME_TRAVEL_NAMES: [&str; 8] = [
-    "rand",
-    "randn",
-    "uuid",
-    "spark_partition_id",
-    "monotonically_increasing_id",
-    "input_file_name",
-    "input_file_block_start",
-    "input_file_block_length",
-];
+use super::timestamp_column_refusal;
 
 fn function_exprs(expr: &Expr) -> Vec<&Expr> {
     let Expr::Function(function) = expr else {
@@ -52,7 +41,7 @@ fn function_last_name(expr: &Expr) -> Option<String> {
         .map(str::to_lowercase)
 }
 
-pub(crate) fn check_timestamp_expr(expr: &Expr, display: &str, in_subquery: bool) -> Result<()> {
+pub(crate) fn check_timestamp_expr(expr: &Expr, in_subquery: bool) -> Result<()> {
     let mut stack: Vec<(&Expr, bool)> = vec![(expr, in_subquery)];
     while let Some((current, nested)) = stack.pop() {
         match current {
@@ -66,11 +55,6 @@ pub(crate) fn check_timestamp_expr(expr: &Expr, display: &str, in_subquery: bool
                 push_query_exprs(&mut stack, subquery);
             }
             _ => {
-                if let Some(name) = function_last_name(current)
-                    && VOLATILE_TIME_TRAVEL_NAMES.contains(&name.as_str())
-                {
-                    return Err(nondeterministic_timestamp_expr(display));
-                }
                 for inner in child_exprs(current) {
                     stack.push((inner, nested));
                 }

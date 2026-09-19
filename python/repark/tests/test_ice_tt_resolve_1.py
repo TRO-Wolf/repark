@@ -511,6 +511,65 @@ def test_facade_sql_refusals(spark: Any, seeded: dict[str, Any], cell: str, vers
         spark.sql(_facade_query(cell, _facade_table(version), seed)).collect()
 
 
+def _seed_tt2_table(session: Any, table: str, version: int) -> dict[str, Any]:
+    """Build the two-snapshot critic shape with tag t0 and branch b0 on S0."""
+    session.sql(f"DROP TABLE IF EXISTS {table}")
+    session.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        f"TBLPROPERTIES ('format-version'='{version}')"
+    )
+    session.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
+    time.sleep(COMMIT_GAP)
+    session.sql(f"INSERT INTO {table} VALUES (3, 'c', 'x')")
+    snaps = session._testing_list_snapshots(table)
+    assert len(snaps) == 2
+    ids = [int(pair[0]) for pair in snaps]
+    stamps = [int(pair[1]) for pair in snaps]
+    assert stamps[1] - stamps[0] >= 2000
+    session._testing_create_ref(table, "tag", "t0", ids[0])
+    session._testing_create_ref(table, "branch", "b0", ids[0])
+    mid_ms = stamps[0] + (stamps[1] - stamps[0]) // 2
+    mid = datetime.datetime.fromtimestamp(mid_ms / 1000, tz=UTC)
+    return {"s0": ids[0], "mid_str": mid.strftime("%Y-%m-%d %H:%M:%S.%f")}
+
+
+def _tt2_query(cell: str, table: str, seed: dict[str, Any]) -> str:
+    """Build this run's facade SQL for a TT2 non-determinism cell."""
+    mid = seed["mid_str"]
+    if cell == "TT2-RANDOM-ERR":
+        return (
+            f"SELECT * FROM {table} TIMESTAMP AS OF CAST('{mid}' AS TIMESTAMP)"
+            " + make_interval(0,0,0,0,0,0,random())"
+        )
+    if cell == "TT2-UUID-ERR":
+        return (
+            f"SELECT * FROM {table} TIMESTAMP AS OF CAST(concat('{mid}', "
+            "substr(uuid(), 1, 0)) AS TIMESTAMP)"
+        )
+    if cell == "TT2-WITH-RAND-SUBQ":
+        return (
+            f"SELECT * FROM {table} TIMESTAMP AS OF (WITH z AS (SELECT rand() AS r) "
+            f"SELECT CAST('{mid}' AS TIMESTAMP) + make_interval(0,0,0,0,0,0,r) FROM z)"
+        )
+    raise AssertionError(f"unknown TT2 cell {cell!r}")
+
+
+@pytest.mark.parametrize("cell", ["TT2-RANDOM-ERR", "TT2-UUID-ERR", "TT2-WITH-RAND-SUBQ"])
+@pytest.mark.parametrize("version", [2, 3])
+def test_facade_sql_tt2_nondeterministic(spark: Any, cell: str, version: int) -> None:
+    """TT2 volatile expressions refuse by plan volatility. pins: ice-tt-resolve-1/C-003"""
+    table = f"mem.ns.tt2_v{version}"
+    seed = _seed_tt2_table(spark, table, version)
+    if cell == "TT2-WITH-RAND-SUBQ":
+        with pytest.raises(AnalysisException):
+            spark.sql(_tt2_query(cell, table, seed)).collect()
+    else:
+        with pytest.raises(
+            AnalysisException, match=re.escape(_cell_error(cell)["getErrorClass"])
+        ):
+            spark.sql(_tt2_query(cell, table, seed)).collect()
+
+
 def _native_expr_and_expected(cell: str, seed: dict[str, Any]) -> tuple[str, Any]:
     """Bare native select of an answering cell's expression plus its value."""
     from decimal import Decimal

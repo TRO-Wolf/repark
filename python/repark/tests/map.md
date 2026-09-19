@@ -57,7 +57,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `4fe461f9370860d9decb1b03beab337063e46845ad30b7123e346bef85b54bc2`) —
   non-determinism, Spark string→timestamp casts, trailing aliases, and
   selector clashes on a two-snapshot seed; the recorder replays them once on
-  version 2.
+  version 2. Offline pins seed the two-snapshot shape per test and assert the
+  fixture class, message, or rows.
   pins: ice-tt-resolve-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) +
   [range_tvf_id_1/](range_tvf_id_1/map.md) +

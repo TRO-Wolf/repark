@@ -1,5 +1,7 @@
 use datafusion::common::ScalarValue;
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::{Expr as PlanExpr, LogicalPlan, Volatility};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{Expr, Query, SelectItem, SetExpr, Statement};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
@@ -10,7 +12,7 @@ use crate::SessionTimeZone;
 
 use super::sql_ast::{check_timestamp_expr, rewrite_timestamp_leaves};
 use super::sql_text::{parse_timestamp_string_to_ms, zoned_wall_to_ms};
-use super::{invalid_timestamp_input, timestamp_column_refusal};
+use super::{invalid_timestamp_input, nondeterministic_timestamp_expr, timestamp_column_refusal};
 
 fn map_eval_error(error: &DataFusionError, display: &str) -> DataFusionError {
     if error.to_string().contains("No field named") {
@@ -201,12 +203,15 @@ pub async fn evaluate_sql_timestamp_asof(
     let Some(expr) = query_expr_mut(&mut query) else {
         return Err(timestamp_parse_error(format!("SELECT {display}")));
     };
-    check_timestamp_expr(expr, display, false)?;
+    check_timestamp_expr(expr, false)?;
     rewrite_timestamp_leaves(expr, zone);
     let frame = ctx
         .sql(&format!("SELECT {expr}"))
         .await
         .map_err(|error| map_eval_error(&error, display))?;
+    if plan_uses_volatile_scalar(frame.logical_plan()) {
+        return Err(nondeterministic_timestamp_expr(display));
+    }
     let batches = frame
         .collect()
         .await
@@ -220,6 +225,42 @@ pub async fn evaluate_sql_timestamp_asof(
     let scalar = ScalarValue::try_from_array(batch.column(0), 0)
         .map_err(|error| map_eval_error(&error, display))?;
     scalar_to_ms(&scalar, zone, display)
+}
+
+fn plan_uses_volatile_scalar(plan: &LogicalPlan) -> bool {
+    let mut plans = vec![plan];
+    while let Some(current) = plans.pop() {
+        for expr in current.expressions() {
+            if expr_uses_volatile_scalar(&expr) {
+                return true;
+            }
+        }
+        plans.extend(current.inputs());
+    }
+    false
+}
+
+fn expr_uses_volatile_scalar(expr: &PlanExpr) -> bool {
+    let mut found = false;
+    let _applied = expr.apply(|node| {
+        let volatile = match node {
+            PlanExpr::ScalarFunction(function) => {
+                function.func.signature().volatility == Volatility::Volatile
+            }
+            PlanExpr::ScalarSubquery(subquery) => plan_uses_volatile_scalar(&subquery.subquery),
+            PlanExpr::Exists(exists) => plan_uses_volatile_scalar(&exists.subquery.subquery),
+            PlanExpr::InSubquery(in_subquery) => {
+                plan_uses_volatile_scalar(&in_subquery.subquery.subquery)
+            }
+            _ => false,
+        };
+        if volatile {
+            found = true;
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    found
 }
 
 fn timestamp_parse_error(message: String) -> DataFusionError {
