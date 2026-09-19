@@ -55,6 +55,9 @@ Source comments retain only API and safety contracts; implementation narration i
   handles, as before). `memory_catalog_cached` delegates to the crate-private
   `memory_catalog_wired(warehouse, caches, props)`, whose extra props are the offline stand-in
   the scope pins drive. pins: ice-catalog-cache-1/C-001, C-002
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** the same `wire_caches` call now also hands all three
+  builders the session's footer cache; `memory_catalog_cached`'s span records `footer_cache`
+  (on/off). pins: ice-footer-cache-1/C-002
   No product behaviour changes: the wrapper only delegates and counts.
   pins: ice-read-perf-0/C-010
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** the Iceberg I/O counters. `IcebergIoCounters`
@@ -121,6 +124,13 @@ Source comments retain only API and safety contracts; implementation narration i
   it injects a factory: its counting factory wraps the fork's own default S3 factory with no
   credential loader, so credentials come from the props alone — the ruling and its evidence are in
   the unit ledger. pins: ice-catalog-cache-1/C-001, C-003, C-010
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** a fourth call, `wire_footer_cache` →
+  `with_shared_footer_cache(Arc<ParquetFooterCache>)` (fork PR #316), passed whenever the
+  session's footer cache is on. The credential context is now named when EITHER scoped cache
+  (metadata or footer) is on: the fork keys a footer by `CacheScope` + data-file path +
+  `file_size_in_bytes`, the same scope the metadata cache uses, so a footer-only session must
+  separate credential contexts exactly as a metadata session does. The manifest cache stays
+  unscoped (one `ObjectCache` per catalog instance). pins: ice-footer-cache-1/C-002
 - `caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session-scoped Iceberg cache handles
   and their knobs. **ICE-READ-PERF-0:** `CatalogCaches` also owns the session's
   `Arc<IcebergIoCounters>` (one set per session, cumulative, shared by clones) with
@@ -151,6 +161,18 @@ Source comments retain only API and safety contracts; implementation narration i
   `settle()` runs the cache's pending tasks; `settled_metadata_len()` is the accurate count;
   `trim()` is async — it settles, counts, and after a clear settles again — because moka's
   entry count lags its writes. `metadata_len()` stays sync and approximate. pins: ice-catalog-cache-1/C-012
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** `IcebergCacheSettings::footer_cache_bytes` reads
+  `repark.iceberg.footerCacheBytes` (alias `repark.iceberg.footer_cache_bytes`, default
+  `67108864` = 64 MiB, `0` disables), parsed and failing loud exactly like `manifestCacheBytes`.
+  `CatalogCaches` owns one `Arc<ParquetFooterCache>` built `with_max_bytes(bytes)` (`None` at
+  `0` and in `disabled()`); `footer_cache()` hands the `Arc` out and `footer_stats()` returns the
+  fork's `ParquetFooterCacheStats` (hits, misses, fetches, upgrades, evictions — re-exported from
+  `mod.rs`). Why 64 MiB and not the fork's 256 MiB default: the orchestrator's ruling Q-24a-5 —
+  the budget is per session, and 64 MiB holds the parsed footers of thousands of ordinary data
+  files while staying a small share of the default memory pool. The budget is moka weight over
+  each footer's `ParquetMetaData::memory_size()`, not a resident-bytes ceiling. The user-facing
+  row and paragraph live beside `manifestCacheBytes` in `docs/guide/session-and-conf.md`
+  ("Iceberg catalog caches"). pins: ice-footer-cache-1/C-001, C-006, C-009
   **The bound's scope is the statement door, not the load.** Before ICE-CATALOG-CACHE-1 the fork's
   cache was an unbounded `HashMap`, so `trim()` clears it once the retained-location count passes the knob, and the
   session calls `trim` at the statement door (`session.rs::sql_with`). That bounds what a session
@@ -355,6 +377,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `builders.rs` |
 | Turn the metadata-location cache off, or change its retained-entry bound | `repark.iceberg.metadataCache` / `repark.iceberg.metadataCacheEntries` (`caches.rs`) |
 | Turn the shared manifest cache off, or resize its byte budget | `repark.iceberg.manifestCacheBytes` (default `33554432` = on; `0` disables) (`caches.rs`) |
+| Turn the Parquet footer cache off, or resize its byte budget | `repark.iceberg.footerCacheBytes` (default `67108864` = on; `0` disables) (`caches.rs`, wired in `cache_wiring.rs`) |
 | Pick a FileIO backend by location scheme | `file_io_for_location` / `storage_factory_for_location` in `location.rs` |
 | Read / write a namespace's warehouse location | `resolve_namespace_location` / `mirror_namespace_location_keys` in `location.rs` |
 | Serve `_row_id` / `_last_updated_sequence_number` on a v3 read | `lineage_columns.rs` (`LineageColumnsTableProvider`); SQL doors call `repark_core::prepare_lineage_sql` |

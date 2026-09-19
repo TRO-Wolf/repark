@@ -105,7 +105,7 @@ async fn run_step(
                 .load_table(&ident)
                 .await
                 .map_err(crate::iceberg_err)?;
-            super::rewrite_data_files::run_rewrite(
+            Box::pin(super::rewrite_data_files::run_rewrite(
                 ctx,
                 catalog,
                 catalog_name,
@@ -116,7 +116,7 @@ async fn run_step(
                     target_file_size_bytes: target_size,
                     ..Default::default()
                 },
-            )
+            ))
             .await?
         }
         StepAction::RewriteManifests => {

@@ -243,6 +243,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `TBD-orchestrator`. `risk_tier: standard`. Branch `perf/ice-catalog-cache-1`.
   pins: ice-catalog-cache-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012
+- [ice-footer-cache-1-ledger.md](ice-footer-cache-1-ledger.md) —
+  **ICE-FOOTER-CACHE-1 (2026-09-19), in flight:** the session owns one Parquet footer cache
+  (fork PR #316's `ParquetFooterCache`), sized by `repark.iceberg.footerCacheBytes` (default
+  64 MiB, `0` disables) and handed to the memory, Glue and S3 Tables builders by `wire_caches`;
+  `iceberg_footer_cache_stats()` and the bench report its counters. The before/after pair is
+  `TBD-orchestrator`. `risk_tier: standard`. Branch `perf/ice-footer-cache-1`.
+  pins: ice-footer-cache-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - [ice-read-perf-0-ledger.md](ice-read-perf-0-ledger.md) —
   **ICE-READ-PERF-0 (2026-09-19), in flight:** the Iceberg I/O counting layer (a counting
   `StorageFactory` whose counters the session owns; Glue and S3 Tables wrap exactly the fork
@@ -542,6 +550,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   CONCLUDED with all nine clauses PROVEN and the gates green.
   `risk_tier: standard`. Branch `chore/rp-32-fork-pin`.
   pins: rp-32-rdf-cow-bytes/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [rp-38-fork-pin-ledger.md](rp-38-fork-pin-ledger.md) —
+  **RP-38-FORK-PIN (2026-09-19):** the fork pin moves to `f3bdd598` (#316 shared Parquet footer
+  cache, with ICE-FOOTER-CACHE-1 in the same PR; #313 metrics config and #315 transform types for
+  run 24c). `risk_tier: standard`. Branch `chore/rp-38`.
 - [rp-37-fork-pin-ledger.md](rp-37-fork-pin-ledger.md) —
   **RP-37-FORK-PIN (2026-09-19):** the fork pin moves to `27e0d5fa` (#309 metadata-only DELETE
   decision API, #311 catalog cache handles for Glue and S3 Tables, default off); no RePark answer

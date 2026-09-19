@@ -19,6 +19,7 @@ table is the "before" of every later unit of the slate. No product behaviour liv
   carries dead code.
 - `pins_report.rs` — pins-only module of the `pins.rs` root (ICE-CATALOG-CACHE-1): the report's
   metadata-cache evictions in JSON and markdown. pins: ice-catalog-cache-1/C-009
+  ICE-FOOTER-CACHE-1: the footer cache's per-sample counters too. pins: ice-footer-cache-1/C-008
 - `cli.rs` — hand-written argument parsing (no new dependency), the exit codes (`exit_code`
   maps an outcome to 0 / 1 / 3), and the runtime. `cargo bench` appends `--bench`; the parser
   drops it.
@@ -43,6 +44,14 @@ table is the "before" of every later unit of the slate. No product behaviour liv
   probes (async since ICE-CATALOG-CACHE-1: each settles the metadata cache before reading its
   counters, so evictions and counts are current; `run.rs` awaits them), the run-level I/O tally, sample medians and the identical-I/O check, the markdown
   table.
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** the probes also read `iceberg_footer_cache_stats()`
+  before and after each query; `footer_delta` diffs all five counters into `IoDelta::footer`
+  (`None` when the session runs with `footerCacheBytes = 0`). Each sample's JSON carries
+  `footer_cache` {hits, misses, fetches, upgrades, evictions} (`null` when off) beside
+  `metadata_cache`, and the markdown gains a `footer cache hit/miss` column right after the
+  metadata cache's (`off` when disabled). A warm sample now reads zero data-file footers (the
+  default session caches them); a cold sample is a fresh session and reads every one.
+  pins: ice-footer-cache-1/C-008
 
 ## Commands
 
@@ -245,6 +254,15 @@ would change what "four at once" measures for the other four (their timings and 
   (`| cache hit/miss/evict |`, `| 5/3/2 |`); `every_measured_sample_reports_its_evictions` runs
   the cold and warm modes on the tiny bed and requires `metadata_cache.evictions` in Q1–Q3's
   samples. Both red with the JSON field dropped. pins: ice-catalog-cache-1/C-009
+- **ICE-FOOTER-CACHE-1 (2026-09-19), in `pins_report.rs`:**
+  `the_report_carries_footer_cache_hits_and_misses_beside_the_metadata_cache` reads all five
+  footer counters back from the JSON, the `| cache hit/miss/evict | footer cache hit/miss |`
+  header and a `| 5/3/2 | 7/4 |` row, and `off` / `null` for a disabled cache;
+  `a_warm_sample_hits_the_footer_cache_and_a_cold_one_misses_it` runs the tiny bed: every cold
+  Q1–Q3 sample has zero hits and some misses, every warm one some hits and zero misses (red
+  with the probe reading no after-stats). In `pins.rs`, the Q1 / Q2 footer-request pin now
+  expects 3 in cold mode and 0 in warm mode (it was 3 in both before the cache).
+  pins: ice-footer-cache-1/C-003, C-008
 
 - The decision at limit − 1, limit and limit + 1 (and 0, `u64::MAX`); the constant; exit 3 is
   distinct; a flag appends exactly one line to the step summary and a pass appends none; no
@@ -307,6 +325,9 @@ would change what "four at once" measures for the other four (their timings and 
 - **RP-37 + ICE-CATALOG-CACHE-1 (fork `27e0d5fa`):** no regression on either local bed; the
   Glue / S3 Tables gain needs the AWS bed (blocked on the IAM grant).
   pins: ice-catalog-cache-1/C-011
+- **RP-38 + ICE-FOOTER-CACHE-1 (fork `f3bdd598`):** warm footer reads 200 → 0; cold split-file
+  footer reads halved on the large bed.
+  pins: ice-footer-cache-1/C-010
 
 ## Pointers
 
