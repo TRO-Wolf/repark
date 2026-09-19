@@ -120,6 +120,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   pins: ice-catalog-cache-1/C-002, C-007
   `trim_iceberg_caches` is async and `settle_iceberg_metadata_cache()` is public (the census
   binding and the bench call it before reading counts). pins: ice-catalog-cache-1/C-012
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** `iceberg_footer_cache_stats()` returns the fork's
+  `ParquetFooterCacheStats` (hits, misses, fetches, upgrades, evictions) of the session's one
+  footer cache, `None` when `repark.iceberg.footerCacheBytes = 0`. The cache reaches every
+  catalog this session builds through the same `CatalogCaches`, so no registration path changed.
+  Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
+  there is no settle step before reading. pins: ice-footer-cache-1/C-006, C-007
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.
