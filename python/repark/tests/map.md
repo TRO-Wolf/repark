@@ -7269,3 +7269,21 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   type path): both settings are pinned by
   `test_bare_timestamp_in_the_list_follows_the_session_timestamp_type`.
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [test_ice_system_functions_1.py](test_ice_system_functions_1.py) —
+  **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), round 1 of 3:** the Iceberg
+  `bucket(n, col)` and `truncate(w, col)` system functions as DataFusion scalar
+  UDFs under reserved internal names (`__iceberg_system_bucket`,
+  `__iceberg_system_truncate`), called directly until WO-3 lands the
+  `<cat>.system.<fn>` rewrite. Eight pins replay the inventory fixture on a
+  module-private memory catalog in UTC and assert the exact recorded Spark
+  values on the Arrow path, value AND type: `F-BUCKET-LONG`,
+  `F-BUCKET-STRING`, `F-BUCKET-DATE`, `F-BUCKET-DECIMAL-BINARY`,
+  `F-TRUNCATE-STRING` (`"z"` shorter than the width returns whole),
+  `F-TRUNCATE-LONG` (`-10` floors down), `F-TRUNCATE-DECIMAL` (schema
+  `decimal(10,2)` via `df.schema`), `F-TRUNCATE-BINARY` (schema `binary` via
+  `df.schema`). NULL in gives NULL out for both functions; zero and negative
+  widths refuse with the fork `Bucket::new` / `Truncate::new` text; the old
+  column-first order `bucket(id, 16)` refuses. Rows sort nulls-last so scan
+  order cannot flake a pin. Temporal functions, `iceberg_version`,
+  catalog-qualified registration and SHOW arrive in WO-2/WO-3.
+  pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
