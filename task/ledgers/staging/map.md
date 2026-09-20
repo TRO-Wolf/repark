@@ -39,7 +39,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   rewriters (IPI-43) — the shared identity grammar with direction-tied NULLS
   defaults, the z-order scan, Spark-measured in-file order pins over a 7-cell
   recorded oracle, and every refusal in Java's or the fork's text under Java's
-  class; all eleven clauses OPEN pending mutation. `risk_tier: standard`.
+  class; all eleven clauses OPEN pending mutation. Round 3 (2026-09-20) closes
+  V-001..V-005: verbatim fork messages by equality, the re-pinned facade and
+  maintenance rows, the retired `RDF-SORT-1` plus new `RDF-SORT-TRANSFORM-1`
+  registry rows, and the cell sort-state and `replace` pins. `risk_tier: standard`.
   Branch `fix/ipi-43-rdf-sort-zorder`.
   pins: ice-rdf-sort-parse-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011
