@@ -350,20 +350,20 @@ def test_remove_orphan_files_floor_matches_spark(spark: ReparkSession, tmp_path:
 
 
 def test_rewrite_sort_strategy_refuses_loud(spark: ReparkSession) -> None:
+    """Strategy sort on an unsorted table is the fork's message, named and positional."""
     spark.sql(
         f"CREATE TABLE {TABLE} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
     )
-    with pytest.raises(
-        (UnsupportedOperationException, PySparkException),
-        match=r"sort|not supported|binpack|R135",
-    ):
+    expected = (
+        "Cannot sort data without a valid sort order, "
+        "table 'ns.events' is unsorted and no sort order is provided"
+    )
+    with pytest.raises(IllegalArgumentException) as caught:
         spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.events', strategy => 'sort')")
-    # C1-L-001: positional strategy must refuse (never silent binpack).
-    with pytest.raises(
-        (UnsupportedOperationException, PySparkException),
-        match=r"sort|not supported|binpack|R135",
-    ):
+    assert str(caught.value) == expected
+    with pytest.raises(IllegalArgumentException) as caught:
         spark.sql("CALL mem.system.rewrite_data_files('ns.events', 'sort')")
+    assert str(caught.value) == expected
 
 
 def test_positional_rollback_args(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
