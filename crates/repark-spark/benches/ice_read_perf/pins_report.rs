@@ -190,14 +190,14 @@ fn a_warm_baseline_run_reads_every_footer_on_its_second_sample() {
     let plain = warm_run(
         &dir,
         &warehouse,
-        "plain-q1",
-        &["--repeat", "2", "--query", "Q1"],
+        "plain-q2",
+        &["--repeat", "2", "--query", "Q2"],
     );
     let baseline = warm_run(
         &dir,
         &warehouse,
-        "baseline-q1",
-        &["--repeat", "2", "--query", "Q1", "--baseline"],
+        "baseline-q2",
+        &["--repeat", "2", "--query", "Q2", "--baseline"],
     );
     assert_eq!(plain["baseline"], false);
     assert!(plain["baseline_switches"].is_null());
@@ -212,16 +212,16 @@ fn a_warm_baseline_run_reads_every_footer_on_its_second_sample() {
         })
     );
     for index in [0usize, 1] {
-        let footer = &query(&baseline, "Q1")["samples"][index]["io"]["data_file_ranged"]["footer"];
+        let footer = &query(&baseline, "Q2")["samples"][index]["io"]["data_file_ranged"]["footer"];
         assert_eq!(footer["requests"], 3, "sample {index}");
         assert!(
-            query(&baseline, "Q1")["samples"][index]["footer_cache"].is_null(),
+            query(&baseline, "Q2")["samples"][index]["footer_cache"].is_null(),
             "sample {index}"
         );
-        let footer = &query(&plain, "Q1")["samples"][index]["io"]["data_file_ranged"]["footer"];
+        let footer = &query(&plain, "Q2")["samples"][index]["io"]["data_file_ranged"]["footer"];
         assert_eq!(footer["requests"], 0, "sample {index}");
     }
-    assert_eq!(query(&plain, "Q1")["samples"][1]["footer_cache"]["hits"], 3);
+    assert_eq!(query(&plain, "Q2")["samples"][1]["footer_cache"]["hits"], 3);
 }
 
 #[test]

@@ -253,7 +253,7 @@ header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/
 - **ICE-BENCH-BASELINE-1 (2026-09-19), in `pins_report.rs`:**
   `the_parser_accepts_a_bare_baseline_flag_and_defaults_it_off` (bare `--baseline` on,
   default off, `USAGE` names it, `setup` and `--baseline <value>` refuse);
-  `a_warm_baseline_run_reads_every_footer_on_its_second_sample` (warm Q1 second sample: 3
+  `a_warm_baseline_run_reads_every_footer_on_its_second_sample` (warm Q2 second sample: 3
   footer requests with `--baseline`, 0 by default, footer cache `null` vs 3 hits) with the
   JSON `baseline` / `baseline_switches` asserts; `a_warm_baseline_run_records_no_metadata_cache_hits`
   (all four metadata counters zero on every sample of every query, default Q1 hits > 0);
