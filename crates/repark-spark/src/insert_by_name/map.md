@@ -47,3 +47,17 @@ plus the two commits.
 |---|---|
 | A `BY NAME` after the source stopped stripping | `find_by_name_span` in `../insert_by_name.rs` — the span must precede the source start and survive the paren-depth walk |
 | A quoted `"BY NAME"` strips | the tokenizer must mark quoted spans so the word walk skips them |
+
+## IPI-19 + IPI-37 (2026-09-20) — the schema-evolving by-name append
+
+- `evolution.rs` — `columns_to_add` applies the `write.spark.accept-any-schema`
+  gate and the merge-schema flag to the source columns the table does not have,
+  returning the names to add (empty means the existing refusal arms answer).
+  `append_with_evolution` plans the projection, drops NULL-typed fill columns
+  from the union input (a `NULL AS col` fill carries no type, and unioning it
+  would refuse) while refusing outright if an *added* column is itself typeless,
+  commits the union through `repark_iceberg::write::evolve_schema`, and writes
+  the data files against the table that returns. `INSERT OVERWRITE … BY NAME`
+  never evolves — no cell measures it and silently widening a schema on an
+  overwrite is the wrong default.
+  pins: ipi-19-56-37-schema-evolution-write/C-002, C-011

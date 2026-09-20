@@ -41,6 +41,9 @@ WAP_ID_KEY = "spark.wap.id"
 WAP_SESSION_KEYS: frozenset[str] = frozenset({WAP_BRANCH_KEY, WAP_ID_KEY})
 
 
+MERGE_SCHEMA_KEY = "spark.sql.iceberg.merge-schema"
+
+
 _SQLCONF_DEFAULTS: dict[str, str] = {
     PARTITION_OVERWRITE_MODE_KEY: "STATIC",
     # Default app name where we control the default (Spark has no default appName).

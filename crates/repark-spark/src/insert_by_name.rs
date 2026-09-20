@@ -75,6 +75,18 @@ pub(crate) async fn execute_insert_by_name(
     let case_sensitive = case_sensitive_insert(ctx);
     let source_names = probe_source_names(ctx, catalogs, source, case_sensitive).await?;
     let table_display = display_table_name(&catalog_name, &table);
+    let added = if insert.overwrite {
+        Vec::new()
+    } else {
+        evolution::columns_to_add(
+            ctx,
+            &table,
+            &target_field_names(&table),
+            &source_names,
+            case_sensitive,
+            write_options,
+        )?
+    };
     let (projection_sql, static_columns) = plan_name_projection(
         &table,
         &insert,
@@ -82,6 +94,7 @@ pub(crate) async fn execute_insert_by_name(
         &source_names,
         &table_display,
         case_sensitive,
+        &added,
     )?;
     if insert.overwrite {
         let query = parse_projection_query(&projection_sql)?;
@@ -133,7 +146,19 @@ pub(crate) async fn execute_insert_by_name(
         .await;
     }
     write_options.refuse_if_non_empty("INSERT ... BY NAME")?;
-    append_by_name_projection(
+    if added.is_empty() {
+        return append_by_name_projection(
+            ctx,
+            catalogs,
+            &catalog_name,
+            &catalog,
+            &table,
+            branch.as_deref(),
+            &projection_sql,
+        )
+        .await;
+    }
+    evolution::append_with_evolution(
         ctx,
         catalogs,
         &catalog_name,
@@ -141,8 +166,20 @@ pub(crate) async fn execute_insert_by_name(
         &table,
         branch.as_deref(),
         &projection_sql,
+        &added,
     )
     .await
+}
+
+fn target_field_names(table: &iceberg::table::Table) -> Vec<String> {
+    table
+        .metadata()
+        .current_schema()
+        .as_struct()
+        .fields()
+        .iter()
+        .map(|field| field.name.clone())
+        .collect()
 }
 
 async fn wipe_by_name_target(
@@ -321,8 +358,9 @@ fn plan_name_projection(
     source_names: &[SourceName],
     table_display: &str,
     case_sensitive: bool,
+    added: &[String],
 ) -> Result<(String, Vec<StaticColumn>)> {
-    let fields: Vec<(String, bool)> = table
+    let mut fields: Vec<(String, bool)> = table
         .metadata()
         .current_schema()
         .as_struct()
@@ -330,6 +368,7 @@ fn plan_name_projection(
         .iter()
         .map(|field| (field.name.clone(), field.required))
         .collect();
+    fields.extend(added.iter().map(|name| (name.clone(), false)));
     let static_columns = static_partition_columns(table, insert, case_sensitive)?;
     for name in source_names {
         if let Some(found) = static_columns.iter().find(|static_column| {
@@ -946,6 +985,8 @@ fn token_span_offsets(
     let name_end = offset_of(second.span.end.line, second.span.end.column)?;
     (by_start <= name_end).then_some((by_start, name_end))
 }
+
+mod evolution;
 
 #[cfg(test)]
 mod tests;

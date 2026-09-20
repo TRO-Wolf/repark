@@ -103,3 +103,12 @@ pins: perf-facade-cdf-1/C-002, C-003, C-004
 | The zone is set but timestamp extraction did not move | The conf surface landed without the extraction fix; the rows in `python/repark/tests/test_session_timezone_parity.py` pin the current divergence honestly. |
 
 ICE-MIXED-CASE-1 (2026-09-17): `spark.sql.caseSensitive` joins the live engine-knob set — default `false` in `_SQLCONF_DEFAULTS`, runtime set/unset routes through the native setter beside the ANSI and zone keys (`builder_conf.py`, `sql_set_statements.py`). pins: ice-mixed-case-1/C-006
+
+IPI-19 + IPI-37 (2026-09-20): `session_configuration.py` holds
+`MERGE_SCHEMA_KEY` (`spark.sql.iceberg.merge-schema`) and `builder_conf.py`
+forwards `set` of it to the native setter beside the overwrite-mode and WAP
+keys. It carries no `_SQLCONF_DEFAULTS` row — Spark answers no default for it —
+so `unset` forwards the literal `"false"`, which is the documented default the
+Rust carrier starts from. SQL `SET spark.sql.iceberg.merge-schema = true` needs
+no new parser: `sql_set_statements.py` already routes a plain assignment through
+`RuntimeConfig.set`. pins: ipi-19-56-37-schema-evolution-write/C-004, C-012

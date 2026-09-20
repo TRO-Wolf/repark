@@ -1271,3 +1271,24 @@ and when two spellings coexist the last one set wins (runtime layer over builder
   `writeTo("t.branch_b").append()` reaches the engine instead of failing the probe.
   pins: ice-session-write-conf-1/C-039
 
+- **FNP-4B (2026-09-15, run 15b cleared):** the aggregate rebind leaf matchers in `joins_columns.py` (simple / collect / first-last / binary forms) and `plan_collapse.py` (`_parse_count_distinct_simple_names`) accept a backtick or a double-quoted leaf, so `sum(`x`)` rebinds after internal SQL moved to backtick quoting. pins: `test_select_global_agg.py::test_select_case_preserved_sum_alias_and_alias_lit`, `::test_select_case_preserved_rebind_extended_afs`.
+
+## IPI-19 (2026-09-20) — the schema-evolving DataFrame append
+
+- `writer_schema.py` — the by-name write shapes both writers share.
+  `by_name_projection` is the old refusal path, still used by the overwrite
+  arms. `append_statement` is the new one: when the frame carries columns the
+  table does not have, the append lowers to `INSERT INTO t BY NAME SELECT …`
+  instead of being refused in Python, because that is the one engine path that
+  owns the `write.spark.accept-any-schema` gate and the merge-schema flag —
+  Python decides nothing about schema evolution. A frame that is merely
+  *missing* columns keeps the explicit column list, so those columns are still
+  filled with NULL.
+
+  This is why `saveAsTable(mode="append")` and `writeTo().append()` now answer
+  Spark's own `[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]` / `21S01`
+  for an extra column on a table without the property, where RePark used to
+  answer a message of its own with no error class.
+  `writer_readwriter.py` ratchets 1091 → 1077 as both copies of
+  `_by_name_projection` collapse into the shared one.
+  pins: ipi-19-56-37-schema-evolution-write/C-001, C-002

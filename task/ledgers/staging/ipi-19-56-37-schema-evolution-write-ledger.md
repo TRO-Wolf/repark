@@ -39,14 +39,14 @@ Spark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0` over an `InMemoryCatalog`,
 | # | Fact | Evidence |
 |---|---|---|
 | M-1 | `mergeSchema=true` REQUIRES `write.spark.accept-any-schema='true'`; without it the write fails with `[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]` / `21S01` and the table is unchanged | `D.mergeSchema.ms_plain` |
-| M-2 | With the property the new column lands **last, optional**; existing rows read NULL | `D.mergeSchema.ms_aas.schema`, `.rows` |
+| M-2 | With the property the new column lands **last, optional**; existing rows read NULL | `D.mergeSchema` (the accept-any-schema row), `.rows` |
 | M-3 | `writeTo(t).option("mergeSchema","true").append()` behaves identically, and fails identically without the property | `D.writeTo.mergeSchema` |
 | M-4 | A frame **missing** a table column succeeds and writes NULL; the schema is unchanged — `mergeSchema` is *union by name*, not *replace* | `D.mergeSchema.missing` |
 | M-5 | Type widening does NOT narrow the table: an INT source into a BIGINT column leaves `LongType` | `D.mergeSchema.widen` |
 | M-6 | `MERGE WITH SCHEMA EVOLUTION` does NOT need the property; it adds the column with the **source's** type, unwidened (`IntegerType`), optional, last | `D.mse` |
 | M-7 | `MERGE WITH SCHEMA EVOLUTION` with no new column is an ordinary upsert; the schema is unchanged | `D.mse_nonew` |
 | M-8 | A plain `MERGE INTO` whose source carries an extra column **succeeds**; the extra column is ignored | `D.mse_plain_no_evo` |
-| M-9 | `spark.sql.iceberg.merge-schema` only matters when the table carries the property. (no property, conf false) and (no property, conf true) → the arity error; (property, conf false) → `IllegalArgumentException: Field extra not found in source schema`; (property, conf true) → ok, `extra` `IntegerType` last | `D.sql_by_name.*`, `D.sql_by_name_aas.*` |
+| M-9 | `spark.sql.iceberg.merge-schema` only matters when the table carries the property. (no property, conf false) and (no property, conf true) → the arity error; (property, conf false) → `IllegalArgumentException: Field extra not found in source schema`; (property, conf true) → ok, `extra` `IntegerType` last | `D.sql_by_name.*` and its accept-any-schema twin |
 
 ## Clauses
 

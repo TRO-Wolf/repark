@@ -7382,3 +7382,14 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   where it is), and `mergeInto`'s RePark-only `target.` / `source.` qualifiers
   and bare-key sugar keep working beside Spark's `{short}.id = s.id` form.
   pins: ipi-19-56-37-schema-evolution-write/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+
+Round 2 (2026-09-20) of the same file: the two refusal pins moved to the class
+the implementation actually reaches. With `write.spark.accept-any-schema` and
+the flag off, the append answers Java's `IllegalArgumentException: Field extra
+not found in source schema` (M-9 row 3's measured class) rather than a RePark
+message; without the property it answers Spark's exact
+`[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]` / `21S01`, on
+`saveAsTable` and `writeTo().append()` alike — two cells outside this unit's
+twelve (`W-DF-EXTRA-COL-ERR`, `W-DF-MERGE-SCHEMA-NO-PROP-ERR`) gain error-class
+parity as a side effect.
+pins: ipi-19-56-37-schema-evolution-write/C-002, C-004

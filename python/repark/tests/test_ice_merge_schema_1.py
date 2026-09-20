@@ -159,13 +159,13 @@ def test_merge_schema_false_with_conf_true_still_raises(spark: ReparkSession) ->
     spark.conf.set(MERGE_SCHEMA_CONF, "true")
     try:
         frame = _frame(spark)
-        with pytest.raises(AnalysisException) as caught:
+        with pytest.raises(IllegalArgumentException) as caught:
             frame.withColumn("extra", frame.id * 2).write.format("iceberg").option(
                 "mergeSchema", "false"
             ).mode("append").saveAsTable(table)
     finally:
         spark.conf.unset(MERGE_SCHEMA_CONF)
-    assert "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]" in str(caught.value)
+    assert "Field extra not found in source schema" in str(caught.value)
     assert _schema(spark, table) == BASE_SCHEMA
     assert _snapshots(spark, table) == 1
 
@@ -186,17 +186,51 @@ def test_df_merge_schema_from_the_session_conf(spark: ReparkSession) -> None:
     assert _rows(spark, table) == MERGE_SCHEMA_ROWS
 
 
-def test_extra_column_without_merge_schema_keeps_the_python_refusal(
+def test_extra_column_with_the_property_but_no_flag_refuses_like_java(
     spark: ReparkSession,
 ) -> None:
     """pins: ipi-19-56-37-schema-evolution-write/C-002"""
     table = _create(spark, "df_plain_extra", accept_any=True)
     _seed_named(spark, table)
     frame = _frame(spark)
-    with pytest.raises(AnalysisException, match="extra in the DataFrame"):
+    with pytest.raises(IllegalArgumentException, match="Field extra not found in source schema"):
         frame.withColumn("extra", frame.id * 2).write.format("iceberg").mode("append").saveAsTable(
             table
         )
+    assert _schema(spark, table) == BASE_SCHEMA
+    assert _snapshots(spark, table) == 1
+
+
+def test_extra_column_without_the_property_is_the_arity_error(spark: ReparkSession) -> None:
+    """pins: ipi-19-56-37-schema-evolution-write/C-002"""
+    table = _create(spark, "df_plain_extra_no_prop")
+    _seed_named(spark, table)
+    frame = _frame(spark)
+    with pytest.raises(AnalysisException) as caught:
+        frame.withColumn("extra", frame.id * 2).write.format("iceberg").mode("append").saveAsTable(
+            table
+        )
+    message = str(caught.value)
+    assert "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]" in message
+    assert "Table columns: `id`, `data`, `cat`." in message
+    assert "Data columns: `id`, `data`, `cat`, `extra`." in message
+    assert "SQLSTATE: 21S01" in message
+    assert _schema(spark, table) == BASE_SCHEMA
+    assert _snapshots(spark, table) == 1
+
+
+def test_write_to_extra_column_without_the_property_is_the_arity_error(
+    spark: ReparkSession,
+) -> None:
+    """pins: ipi-19-56-37-schema-evolution-write/C-002"""
+    table = _create(spark, "df_v2_extra_no_prop")
+    _seed_named(spark, table)
+    frame = _frame(spark)
+    with pytest.raises(AnalysisException) as caught:
+        frame.withColumn("extra", frame.id * 2).writeTo(table).option(
+            "mergeSchema", "true"
+        ).append()
+    assert "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]" in str(caught.value)
     assert _schema(spark, table) == BASE_SCHEMA
 
 
@@ -427,20 +461,20 @@ def test_sql_insert_by_name_merge_schema_matrix(spark: ReparkSession) -> None:
         assert "SQLSTATE: 21S01" in str(arity_on.value)
         assert _schema(spark, plain_true) == BASE_SCHEMA
 
-        aas_false = _create(spark, "bn_aas_false", accept_any=True)
+        opted_false = _create(spark, "bn_opted_false", accept_any=True)
         spark.conf.set(MERGE_SCHEMA_CONF, "false")
         with pytest.raises(IllegalArgumentException) as not_found:
-            spark.sql(BY_NAME.format(t=aas_false))
+            spark.sql(BY_NAME.format(t=opted_false))
         assert "Field extra not found in source schema" in str(not_found.value)
         assert "EXTRA_COLUMNS" not in str(not_found.value)
-        assert _schema(spark, aas_false) == BASE_SCHEMA
+        assert _schema(spark, opted_false) == BASE_SCHEMA
 
-        aas_true = _create(spark, "bn_aas_true", accept_any=True)
+        opted_true = _create(spark, "bn_opted_true", accept_any=True)
         spark.conf.set(MERGE_SCHEMA_CONF, "true")
-        spark.sql(BY_NAME.format(t=aas_true))
-        assert _schema(spark, aas_true) == EVOLVED_INT
-        assert _rows(spark, aas_true) == [[1, "a", "x", 5]]
-        assert _snapshots(spark, aas_true) == 1
+        spark.sql(BY_NAME.format(t=opted_true))
+        assert _schema(spark, opted_true) == EVOLVED_INT
+        assert _rows(spark, opted_true) == [[1, "a", "x", 5]]
+        assert _snapshots(spark, opted_true) == 1
     finally:
         spark.conf.unset(MERGE_SCHEMA_CONF)
 

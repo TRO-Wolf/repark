@@ -8,6 +8,10 @@ use repark_functions::ansi::{
 use repark_functions::case_sensitive::{
     SPARK_SQL_CASE_SENSITIVE_KEY, SparkCaseSensitiveConfig, parse_runtime_spark_sql_case_sensitive,
 };
+use repark_functions::merge_schema::{
+    MergeSchemaConfig, SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY, is_merge_schema_session_key,
+    parse_merge_schema_value,
+};
 use repark_functions::session_time_zone::SessionTimeZoneConfig;
 
 use crate::fence::fenced_span;
@@ -93,6 +97,12 @@ fn apply_runtime_config(
         write_case_sensitive_flag(session, enabled)?;
         return Ok(());
     }
+    if is_merge_schema_session_key(key) {
+        let enabled = parse_merge_schema_value(value)
+            .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
+        write_merge_schema_flag(session, enabled)?;
+        return Ok(());
+    }
     if repark_spark::wap::is_wap_session_key(key) {
         let parsed = repark_spark::wap::parse_runtime_wap_value(value);
         write_wap_value(session, key, parsed)?;
@@ -110,7 +120,8 @@ fn apply_runtime_config(
     Err(Error::IllegalArgument(format!(
         "set_runtime_config refuses unknown key {key:?} (served: \
          {SPARK_SQL_ANSI_ENABLED_KEY:?}, {SESSION_TIME_ZONE_KEY:?}, \
-         {SPARK_SQL_CASE_SENSITIVE_KEY:?}, {:?}, {:?}, {:?})",
+         {SPARK_SQL_CASE_SENSITIVE_KEY:?}, {SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY:?}, \
+         {:?}, {:?}, {:?})",
         repark_core::PARTITION_OVERWRITE_MODE_KEY,
         repark_spark::wap::WAP_BRANCH_KEY,
         repark_spark::wap::WAP_ID_KEY
@@ -160,6 +171,26 @@ fn write_case_sensitive_flag(session: &ReparkSession, enabled: bool) -> Result<(
         None => Err(Error::IllegalArgument(format!(
             "set_runtime_config refuses {SPARK_SQL_CASE_SENSITIVE_KEY:?}: \
              the live session has no case-sensitivity carrier"
+        ))),
+    }
+}
+
+fn write_merge_schema_flag(session: &ReparkSession, enabled: bool) -> Result<()> {
+    let state_lock = session.context().state_ref();
+    let mut state = state_lock.write();
+    let carrier = state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<MergeSchemaConfig>();
+    match carrier {
+        Some(carrier) => {
+            carrier.enabled = enabled;
+            Ok(())
+        }
+        None => Err(Error::IllegalArgument(format!(
+            "set_runtime_config refuses {SPARK_SQL_ICEBERG_MERGE_SCHEMA_KEY:?}: \
+             the live session has no schema-merging carrier"
         ))),
     }
 }
