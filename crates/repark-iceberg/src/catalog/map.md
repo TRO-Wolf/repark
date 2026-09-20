@@ -313,6 +313,21 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3://`/`s3a://` → the fork's OpenDAL S3 factory; `file://`/bare **absolute** path → LocalFs;
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
+- `incremental_append.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `IncrementalAppendTableProvider`
+  serves `format('iceberg').option('start-snapshot-id', …).load(t)`. It calls the fork's
+  `Table::incremental_append_scan` directly (never `iceberg-datafusion`), mirroring
+  `lineage_columns.rs`: `try_new` builds the scan once so the range validation (Java's
+  ``Starting snapshot (exclusive) … is not a parent ancestor of end snapshot …``) fires at
+  load, and takes the arrow schema from the `to` snapshot — the schema Spark reads a
+  mid-range `ADD COLUMN` with. `AppendWindow.from_exclusive` is Java's exclusive `from`.
+  Non-append snapshots inside the range are skipped by the planner, never refused.
+  pins: ice-changelog-1/C-001, C-002, C-003, C-007, C-008
+- `scan_batches.rs` — **ICE-CHANGELOG-1 (2026-09-20):** the batch plumbing every
+  reserved-column provider shares, lifted out of `lineage_columns.rs` so the incremental and
+  changelog providers reuse one copy: `conform_batch` / `resolve_projection` (project the
+  reader's batch onto the declared schema, cast unsafely-lossless, cache the projection per
+  batch schema) and `iceberg_predicate_from_filters` (the equality filters worth pushing into
+  the Iceberg scan). pins: ice-changelog-1/C-008
 - `lineage_columns.rs` — **ICE-EVO-DML-1 (2026-09-17):** `scan_lineage_batches` plans the current
   snapshot with the fork's `project_current_schema()` and reads the tasks with
   `ArrowReaderBuilder`, so a `_row_id` read after `ADD COLUMN` / `RENAME COLUMN` with no write

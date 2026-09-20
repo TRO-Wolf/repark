@@ -791,6 +791,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   discards provider errors, and the only thing stopping SQL `CREATE CATALOG` from
   silently replacing the source's provider.
   pins: cfg-2/C-001, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
+- `time_travel/incremental.rs` (+ `time_travel/incremental/tests.rs`) — **ICE-CHANGELOG-1
+  (2026-09-20):** the Iceberg
+  incremental-read door. `IncrementalWindow::from_options` parses the four reader-option
+  strings the facade forwards verbatim (`start-snapshot-id`, `end-snapshot-id`,
+  `start-timestamp`, `end-timestamp`, case-insensitive); `append_boundaries` ports Java
+  `SparkReadConf.incrementalAppendScanBoundaries` — a timestamp bound on a plain table load
+  refuses ``Only changelog scans support `start-timestamp` and `end-timestamp`…`` and an end
+  without a start refuses ``Cannot set only `end-snapshot-id` for incremental scans…``.
+  `read_incremental` refuses a time-travel pin beside a window (`Cannot use time travel in
+  incremental scan`, Java `SparkScanBuilder`; a legacy `snapshot-id` keeps Spark's
+  "no longer supported" message, raised after the boundary checks as Java orders them) and
+  hands `TimeTravelSpec::Incremental { from, to }` to `time_travel::read_table_at`.
+  pins: ice-changelog-1/C-001, C-002, C-004, C-005, C-006
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,
@@ -801,8 +814,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved
   here from `session.rs` in CFG-1 step 3, next to the spec its `into_spec` builds) + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
-  (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the
-  ONE minter of the `__repark_tt_` namespace** (H-1b fix pass, 2026-08-11). SQL-text rewriting
+  (snapshot-pinned static provider via `iceberg-datafusion`, or — **ICE-CHANGELOG-1
+  (2026-09-20)** — `repark_iceberg`'s `IncrementalAppendTableProvider` for the
+  `TimeTravelSpec::Incremental { from, to }` variant, on one table load instead of two), and
+  **`next_temp_view_name` — the ONE minter of the `__repark_tt_` namespace** (H-1b fix pass,
+  2026-08-11). SQL-text rewriting
   remains deferred with the phase-2 router.
   **ICE-TT-RESOLVE-1 (2026-09-19):** the module split at the 1000-line ceiling into
   `time_travel/sql_text.rs` (string/zone parsing, token extraction), `time_travel/sql_ast.rs`

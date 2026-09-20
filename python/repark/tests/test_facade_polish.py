@@ -284,7 +284,8 @@ def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
     """Semantic gate on parquet(); time-travel options no longer denylisted.
 
     ``snapshot-id`` on format('iceberg') is supported; unknown table/snapshot still fails
-    analysis. Incremental ``start-snapshot-id`` stays loud.
+    analysis. ``start-snapshot-id`` is served too (ICE-CHANGELOG-1), so it reaches the same
+    unregistered-catalog refusal.
     """
     import pyarrow.parquet as pq
 
@@ -294,7 +295,7 @@ def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
         spark.read.option("pathGlobFilter", "*.ok.parquet").parquet(str(path))
     with pytest.raises(AnalysisException, match=r"catalog|not registered|table|snapshot"):
         spark.read.format("iceberg").option("snapshot-id", "1").load("glue_catalog.db.t")
-    with pytest.raises(AnalysisException, match=r"start-snapshot-id|incremental"):
+    with pytest.raises(AnalysisException, match=r"catalog|not registered|table|snapshot"):
         spark.read.format("iceberg").option("start-snapshot-id", "1").load("glue_catalog.db.t")
 
 
@@ -358,7 +359,7 @@ def test_multi_arm_case_values(spark: ReparkSession) -> None:
     ],
 )
 def test_denylist_semantic_keys_fail_loud(spark: ReparkSession, key: str) -> None:
-    """Residual denylist pinned (removed the four time-travel options)."""
+    """Residual denylist pinned; the incremental window bounds stay Iceberg-only on parquet."""
     with pytest.raises(AnalysisException, match=r"not supported|incremental"):
         spark.read.format("parquet").option(key, "x").load("/tmp/does_not_matter.parquet")
 

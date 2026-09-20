@@ -56,10 +56,37 @@ pub fn session_source_ping(session: PyRef<'_, PyReparkSession>, name: &str) -> P
     })
 }
 
+#[pyfunction]
+pub fn read_iceberg_incremental(
+    py: Python<'_>,
+    session: PyRef<'_, PyReparkSession>,
+    table_name: &str,
+    window: BTreeMap<String, String>,
+    travel: BTreeMap<String, String>,
+) -> PyResult<PyDataFrame> {
+    fenced_span!("py.read", "PyReparkSession.read_iceberg_incremental", {
+        let inner: &PyReparkSession = &session;
+        let df = py
+            .detach(|| {
+                inner
+                    .runtime
+                    .block_on(repark_core::time_travel::incremental::read_incremental(
+                        &inner.session,
+                        table_name,
+                        &window,
+                        &travel,
+                    ))
+            })
+            .map_err(to_py_err)?;
+        Ok(PyDataFrame::new(df, Arc::clone(&inner.runtime)))
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sources, module)?)?;
     module.add_function(wrap_pyfunction!(session_source, module)?)?;
     module.add_function(wrap_pyfunction!(session_source_ping, module)?)?;
+    module.add_function(wrap_pyfunction!(read_iceberg_incremental, module)?)?;
     Ok(())
 }
 

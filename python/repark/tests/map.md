@@ -7398,3 +7398,13 @@ message; without the property it answers Spark's exact
 twelve (`W-DF-EXTRA-COL-ERR`, `W-DF-MERGE-SCHEMA-NO-PROP-ERR`) gain error-class
 parity as a side effect.
 pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
+
+- **ICE-CHANGELOG-1 (2026-09-20)** — incremental append reads, `t.changes` and
+  `create_changelog_view` (IPI-22). Two existing pins flipped with the behaviour they pinned:
+  `test_time_travel.py::test_incremental_snapshot_bounds_reach_the_incremental_scan` now asserts
+  Spark's two refusals (a start that is not a parent ancestor of the end; an `end-snapshot-id`
+  with no start) instead of the retired "future seed" facade refusal, and
+  `test_facade_polish.py`'s semantic-gate row expects `start-snapshot-id` on an unregistered
+  catalog to reach the catalog refusal. The window options stay loud on a non-Iceberg format, so
+  the parametrized denylist row is unchanged.
+  pins: ice-changelog-1/C-001, C-004, C-007

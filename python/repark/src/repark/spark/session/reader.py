@@ -8,11 +8,14 @@ from typing import Any
 
 from repark.spark.session import (
     _funcs as _session_funcs,
+    reader_incremental as _reader_incremental,
     reader_orc as _reader_orc,
+    reader_support as _reader_support,
     reader_text as _reader_text,
 )
 from repark.spark.session.session_core import ReparkSession
 from repark.spark.session.reader_support import (
+    _ICEBERG_INCREMENTAL_OPTIONS,
     _parse_as_of_timestamp_option,
     _parse_snapshot_id_option,
 )
@@ -359,6 +362,11 @@ class DataFrameReader:
         """
         self._reject_unsupported_semantic_options()
         travel = self._iceberg_time_travel_opts()
+        window = _reader_support.collect_incremental_window(self._options)
+        if window:
+            return _reader_incremental.load_incremental(
+                self._session, table_name, window, travel
+            )
         if travel is not None:
             # read_iceberg_table resolves bare/two-part/spark_catalog; do not
             # bypass the shared layer by forwarding the raw user string only.
@@ -451,6 +459,11 @@ class DataFrameReader:
             # must not silent-shadow a catalog table with a same-name temp view.
             # Time-travel options + residual denylist already applied above.
             travel = self._iceberg_time_travel_opts()
+            window = _reader_support.collect_incremental_window(self._options)
+            if window:
+                return _reader_incremental.load_incremental(
+                    self._session, str(effective_path), window, travel
+                )
             if travel is not None:
                 return self._session.read_iceberg_table(str(effective_path), **travel)
             return self._session.read_iceberg_table(str(effective_path))
@@ -889,15 +902,16 @@ class DataFrameReader:
                     f"reader option {key!r} is only supported for format('iceberg') "
                     "(Iceberg time travel)"
                 )
+            if lowered in _ICEBERG_INCREMENTAL_OPTIONS:
+                if fmt in {"", "iceberg"}:
+                    continue
+                raise AnalysisException(
+                    f"reader option {key!r} is only supported for format('iceberg') "
+                    "(Iceberg incremental read window)"
+                )
             if lowered in _UNSUPPORTED_SEMANTIC_READER_OPTIONS:
                 if lowered == "basepath" and fmt == "text":
                     continue
-                if lowered in {"start-snapshot-id", "end-snapshot-id"}:
-                    raise AnalysisException(
-                        f"reader option {key!r} is not supported by repark yet "
-                        "(Iceberg incremental read / start-end snapshot window is a future seed; "
-                        "use snapshot-id / as-of-timestamp / branch / tag for time travel)"
-                    )
                 raise AnalysisException(
                     f"reader option {key!r} is not supported by repark yet "
                     "(would silently change load semantics if ignored)"

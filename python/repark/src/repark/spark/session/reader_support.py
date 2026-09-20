@@ -25,11 +25,34 @@ _UNSUPPORTED_SEMANTIC_READER_OPTIONS: frozenset[str] = frozenset(
         "datetimerebasemodeinread",
         "int96rebasemode",
         "int96rebasemodeinread",
-        # Iceberg incremental-read window (future seed) — not time-travel pins.
-        "start-snapshot-id",
-        "end-snapshot-id",
     }
 )
+
+
+_ICEBERG_INCREMENTAL_OPTIONS: frozenset[str] = frozenset(
+    {
+        "start-snapshot-id",
+        "end-snapshot-id",
+        "start-timestamp",
+        "end-timestamp",
+    }
+)
+
+
+def collect_incremental_window(options: dict[str, Any]) -> dict[str, str]:
+    """Collect the Iceberg incremental/changelog window option strings verbatim.
+
+    Returns the subset of ``options`` whose lower-cased key names a window bound
+    (``start-snapshot-id`` / ``end-snapshot-id`` / ``start-timestamp`` /
+    ``end-timestamp``), keyed by the lower-cased name and valued as a raw string.
+    Empty when no bound is set. The engine parses, validates and refuses; this
+    layer only forwards.
+    """
+    return {
+        key.lower(): str(value)
+        for key, value in options.items()
+        if key.lower() in _ICEBERG_INCREMENTAL_OPTIONS
+    }
 
 
 _CSV_UNSUPPORTED_PARSE_OPTIONS: frozenset[str] = frozenset(

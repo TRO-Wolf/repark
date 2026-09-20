@@ -1,17 +1,20 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use datafusion::datasource::TableProvider;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::TableMetadata;
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
 use repark_common::{Error, spark_error};
+use repark_iceberg::catalog::{AppendWindow, IncrementalAppendTableProvider};
 
 use crate::SessionTimeZone;
 use crate::catalog_state::CatalogRegistry;
 use crate::illegal_argument_error;
 
+pub mod incremental;
 mod sql_ast;
 mod sql_eval;
 mod sql_text;
@@ -33,6 +36,7 @@ pub enum TimeTravelSpec {
     SnapshotId(i64),
     VersionRef(String),
     TimestampMs(i64),
+    Incremental { from: Option<i64>, to: Option<i64> },
 }
 
 #[derive(Debug, Clone, Default)]
@@ -221,6 +225,9 @@ pub fn resolve_snapshot_id(
                 ))
             })
         }
+        TimeTravelSpec::Incremental { .. } => Err(DataFusionError::Internal(
+            "an incremental window has no single snapshot to resolve".to_string(),
+        )),
     }
 }
 
@@ -297,14 +304,29 @@ pub async fn read_table_at(
     spec: &TimeTravelSpec,
     zone: &SessionTimeZone,
 ) -> Result<DataFrame> {
-    let snapshot_id = resolve_table_snapshot(catalogs, table_parts, spec, zone).await?;
     let table = load_iceberg_table(catalogs, table_parts).await?;
-    let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
-        .await
-        .map_err(iceberg_err)?;
+    let provider: Arc<dyn TableProvider> = match spec {
+        TimeTravelSpec::Incremental { from, to } => {
+            Arc::new(IncrementalAppendTableProvider::try_new(
+                table,
+                AppendWindow {
+                    from_exclusive: *from,
+                    to_inclusive: *to,
+                },
+            )?)
+        }
+        pinned => {
+            let snapshot_id = resolve_snapshot_id(table.metadata(), pinned, zone)?;
+            Arc::new(
+                IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
+                    .await
+                    .map_err(iceberg_err)?,
+            )
+        }
+    };
     let temp_name = next_temp_view_name();
     let _ = ctx.deregister_table(temp_name.as_str());
-    ctx.register_table(temp_name.as_str(), Arc::new(provider))
+    ctx.register_table(temp_name.as_str(), provider)
         .map_err(|error| {
             DataFusionError::Plan(format!(
                 "failed to register time-travel temp view {temp_name}: {error}"
@@ -323,17 +345,7 @@ pub fn next_temp_view_name() -> String {
     format!("__repark_tt_{sequence}")
 }
 
-async fn resolve_table_snapshot(
-    catalogs: &CatalogRegistry,
-    table_parts: &[String],
-    spec: &TimeTravelSpec,
-    zone: &SessionTimeZone,
-) -> Result<i64> {
-    let table = load_iceberg_table(catalogs, table_parts).await?;
-    resolve_snapshot_id(table.metadata(), spec, zone)
-}
-
-async fn load_iceberg_table(
+pub(crate) async fn load_iceberg_table(
     catalogs: &CatalogRegistry,
     table_parts: &[String],
 ) -> Result<iceberg::table::Table> {

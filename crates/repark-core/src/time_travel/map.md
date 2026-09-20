@@ -13,6 +13,15 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
 
 ## Contents
 
+- `incremental.rs` (+ `incremental/`) — **ICE-CHANGELOG-1 (2026-09-20):** the Iceberg
+  incremental-read door, a submodule here because its window IS a `TimeTravelSpec` variant
+  (`Incremental { from, to }`) and `repark-core/src/lib.rs` holds a 150-line ceiling.
+  `IncrementalWindow::from_options` parses the four reader-option strings the facade forwards
+  verbatim; `append_boundaries` ports Java `SparkReadConf.incrementalAppendScanBoundaries`;
+  `read_incremental` rules a time-travel pin beside a window before handing the spec to
+  `read_table_at`. The module carries no doc comments (the owner's comment ban); its public
+  entry points take `#[allow(clippy::missing_errors_doc)]` instead, as `text_io.rs` does.
+  pins: ice-changelog-1/C-001, C-004, C-005, C-006
 - `tests.rs` — parser + resolution pins (`#[cfg(test)] mod tests;` in `../time_travel.rs`).
 - `sql_text.rs` — SQL-text timestamp parsing, zone math, token extraction (re-exported at
   `../time_travel.rs`). pins: ice-tt-resolve-1/C-010

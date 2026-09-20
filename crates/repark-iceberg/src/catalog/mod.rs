@@ -14,10 +14,12 @@ mod caches;
 mod catalog_ops;
 mod counting_storage;
 mod files;
+mod incremental_append;
 mod io_stats;
 mod lineage_columns;
 mod location;
 mod provider;
+mod scan_batches;
 
 // Public product surface (order: provider → builders → location).
 pub use provider::{
@@ -45,6 +47,7 @@ pub use counting_storage::{
 pub use files::write_text_file;
 pub use iceberg::TableMetadataCacheStats;
 pub use iceberg::arrow::ParquetFooterCacheStats;
+pub use incremental_append::{AppendWindow, IncrementalAppendTableProvider};
 pub use io_stats::{
     IcebergFileClass, IcebergIoCount, IcebergIoCounters, IcebergIoOp, IcebergIoStats,
     PARQUET_TAIL_MAGIC, PUFFIN_TAIL_MAGIC, classify_iceberg_path, ranged_read_op,
