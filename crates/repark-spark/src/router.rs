@@ -279,7 +279,7 @@ async fn execute_inner(
         return frame;
     }
     // If we can't parse it to a single statement we recognise, let DataFusion have it.
-    let Some((statement, partitioning)) = parse_single_normalized(sql)? else {
+    let Some((statement, partitioning, clauses)) = parse_single_normalized(sql)? else {
         write_options.refuse_if_non_empty("this INSERT form")?;
         return execute_unparsable_fallthrough(ctx, catalogs, sql).await;
     };
@@ -296,7 +296,7 @@ async fn execute_inner(
             execute_ctas(
                 ctx,
                 catalogs,
-                build_ctas(create, &partitioning)?,
+                build_ctas(create, &partitioning, &clauses)?,
                 write_options,
             )
             .await
@@ -309,7 +309,7 @@ async fn execute_inner(
                 return Err(DataFusionError::Plan(message));
             }
             write_options.refuse_if_non_empty("CREATE TABLE without AS SELECT")?;
-            create_table::execute_create_table(ctx, catalogs, create, &partitioning).await
+            create_table::execute_create_table(ctx, catalogs, create, &partitioning, &clauses).await
         }
         Statement::Drop {
             object_type: ObjectType::Table,

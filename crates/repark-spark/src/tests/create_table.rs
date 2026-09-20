@@ -247,18 +247,27 @@ async fn column_def_location_and_ctas_temporary_refuse() {
             .unwrap()
     );
 
-    // Table COMMENT must refuse.
-    let comment_err = execute(
+    execute(
         &ctx,
         &catalogs,
         "CREATE TABLE ice.sales.cm (id BIGINT) COMMENT 'hello'",
     )
     .await
-    .expect_err("COMMENT must refuse");
-    assert!(
-        comment_err.to_string().contains("COMMENT")
-            && comment_err.to_string().contains("not supported"),
-        "got: {comment_err}"
+    .expect("a table COMMENT must serve");
+    let commented = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "cm".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        commented
+            .metadata()
+            .properties()
+            .get("comment")
+            .map(String::as_str),
+        Some("hello")
     );
 
     // pins: v3-2-create-v3-opt-in/C-007

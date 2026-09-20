@@ -22,7 +22,7 @@ use crate::catalog_ops::{
 };
 use crate::normalize::{
     PartitionFieldSpec, PartitionedByElement, build_partition_spec, build_transform_field,
-    property_value,
+    create_clauses::CreateClauses, property_value,
 };
 use crate::spark_ast;
 
@@ -49,6 +49,7 @@ pub(crate) struct Ctas {
 pub(crate) fn build_ctas(
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
+    clauses: &CreateClauses,
 ) -> Result<Ctas> {
     let query = create.query.as_ref().ok_or_else(|| {
         DataFusionError::Plan("build_ctas requires a CTAS (query must be Some)".into())
@@ -127,6 +128,9 @@ pub(crate) fn build_ctas(
     }
     // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
+    if let Some(comment) = clauses.comment.clone() {
+        properties.insert("comment".to_string(), comment);
+    }
 
     Ok(Ctas {
         catalog: catalog.clone(),
@@ -655,27 +659,11 @@ pub(crate) fn refuse_unsupported_create_table_clauses(
              TBLPROPERTIES ('write.format.default' = 'parquet') when needed"
         )));
     }
-    // Table COMMENT is not mapped to Iceberg properties yet.
-    if create.comment.is_some() {
-        return Err(DataFusionError::NotImplemented(format!(
-            "CREATE TABLE … COMMENT is not supported for Iceberg {form} yet — use TBLPROPERTIES \
-             or ALTER TABLE when comment support lands"
-        )));
-    }
     match &create.table_options {
         CreateTableOptions::None | CreateTableOptions::TableProperties(_) => {}
         CreateTableOptions::Plain(options)
         | CreateTableOptions::With(options)
         | CreateTableOptions::Options(options) => {
-            let has_comment = options
-                .iter()
-                .any(|option| matches!(option, SqlOption::Comment(_)));
-            if has_comment {
-                return Err(DataFusionError::NotImplemented(format!(
-                    "CREATE TABLE … COMMENT is not supported for Iceberg {form} yet — use \
-                     TBLPROPERTIES or ALTER TABLE when comment support lands"
-                )));
-            }
             if !options.is_empty() {
                 return Err(DataFusionError::NotImplemented(format!(
                     "CREATE TABLE WITH/OPTIONS/plain options are not supported for Iceberg \
