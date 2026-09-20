@@ -65,6 +65,7 @@ fn union_input_schema(arrow: &ArrowSchema, added: &[String]) -> Result<ArrowSche
     Ok(ArrowSchema::new(fields))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn append_with_evolution(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,

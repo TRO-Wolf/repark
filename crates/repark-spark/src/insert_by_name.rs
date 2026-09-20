@@ -43,6 +43,7 @@ fn same_name(first: &str, second: &str, case_sensitive: bool) -> bool {
     fold_name(first, case_sensitive) == fold_name(second, case_sensitive)
 }
 
+#[allow(clippy::too_many_lines)]
 pub(crate) async fn execute_insert_by_name(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,

@@ -218,6 +218,7 @@ fn rewrite_sql_for_execute(sql: &str, catalogs: &CatalogRegistry) -> String {
     system_rewritten.unwrap_or_else(|| sql.to_owned())
 }
 
+#[allow(clippy::too_many_lines)]
 async fn execute_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
