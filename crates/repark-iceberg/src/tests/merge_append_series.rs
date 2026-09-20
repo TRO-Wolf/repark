@@ -221,3 +221,272 @@ async fn min_count_to_merge_series_matches_spark() {
 async fn merge_disabled_series_matches_spark() {
     assert_series_matches_spark("merge_disabled").await;
 }
+
+async fn append_steps(
+    catalog: &Arc<dyn Catalog>,
+    ident: &TableIdent,
+    steps: std::ops::RangeInclusive<usize>,
+    spec_id: i32,
+    partition: impl Fn(usize) -> Struct,
+    branch: Option<&str>,
+) {
+    for step in steps {
+        let table = catalog.load_table(ident).await.expect("load table");
+        let file = synthetic_data_file(step, spec_id, partition(step));
+        crate::write::commit_append_to(catalog, &table, vec![file], branch)
+            .await
+            .expect("append commit");
+    }
+}
+
+async fn manifest_entries(table: &Table) -> Vec<iceberg::spec::ManifestFile> {
+    let Some(snapshot) = table.metadata().current_snapshot() else {
+        return Vec::new();
+    };
+    snapshot
+        .load_manifest_list(table.file_io(), &table.metadata_ref())
+        .await
+        .expect("load manifest list")
+        .entries()
+        .to_vec()
+}
+
+#[tokio::test]
+async fn merge_never_mixes_partition_spec_ids() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_series_table(
+        &catalog,
+        "t_multi_spec",
+        variant_properties("defaults"),
+        None,
+    )
+    .await;
+
+    append_steps(&catalog, &ident, 1..=60, 0, |_| Struct::empty(), None).await;
+
+    crate::write::partition_spec::apply_partition_spec_changes(
+        catalog.as_ref(),
+        &ident,
+        &[
+            crate::write::partition_spec::PartitionSpecChange::AddField {
+                source_name: "id".to_string(),
+                transform: Transform::Identity,
+                name: Some("id_part".to_string()),
+            },
+        ],
+    )
+    .await
+    .expect("evolve the partition spec");
+
+    let evolved = catalog
+        .load_table(&ident)
+        .await
+        .expect("load evolved table");
+    let new_spec_id = evolved.metadata().default_partition_spec().spec_id();
+    assert_eq!(new_spec_id, 1, "the spec evolution must mint spec id 1");
+
+    append_steps(
+        &catalog,
+        &ident,
+        61..=120,
+        new_spec_id,
+        |step| {
+            Struct::from_iter([Some(iceberg::spec::Literal::int(
+                i32::try_from(step).expect("i32"),
+            ))])
+        },
+        None,
+    )
+    .await;
+
+    let table = catalog.load_table(&ident).await.expect("reload table");
+    let manifests = manifest_entries(&table).await;
+    let spec_ids: std::collections::BTreeSet<i32> = manifests
+        .iter()
+        .map(|manifest| manifest.partition_spec_id)
+        .collect();
+    assert_eq!(
+        spec_ids,
+        std::collections::BTreeSet::from([0, 1]),
+        "both spec ids must survive the merge — Java never merges across spec ids"
+    );
+    let (_, data_files) = manifest_and_file_counts(&table).await;
+    assert_eq!(
+        data_files, 120,
+        "every appended file stays live through the merge"
+    );
+    assert!(
+        manifests.len() < 120,
+        "the merge must have fired: {} manifests for 120 appends",
+        manifests.len()
+    );
+}
+
+#[tokio::test]
+async fn delete_manifests_carry_forward_through_a_merge() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_series_table(&catalog, "t_mor", variant_properties("defaults"), None).await;
+
+    append_steps(&catalog, &ident, 1..=1, 0, |_| Struct::empty(), None).await;
+
+    let table = catalog.load_table(&ident).await.expect("load table");
+    let delete_file = DataFileBuilder::default()
+        .content(DataContentType::PositionDeletes)
+        .file_path("series/deletes-1.parquet".to_string())
+        .file_format(DataFileFormat::Parquet)
+        .file_size_in_bytes(100)
+        .record_count(1)
+        .partition_spec_id(0)
+        .partition(Struct::empty())
+        .build()
+        .expect("build position-delete file");
+    let tx = iceberg::transaction::Transaction::new(&table);
+    let action = tx.row_delta().add_deletes(vec![delete_file]);
+    let tx =
+        iceberg::transaction::ApplyTransactionAction::apply(action, tx).expect("apply row delta");
+    tx.commit(catalog.as_ref())
+        .await
+        .expect("commit the position delete");
+
+    let before = catalog.load_table(&ident).await.expect("load after delete");
+    let delete_manifests_before: Vec<String> = manifest_entries(&before)
+        .await
+        .into_iter()
+        .filter(|manifest| manifest.content == ManifestContentType::Deletes)
+        .map(|manifest| manifest.manifest_path)
+        .collect();
+    assert_eq!(
+        delete_manifests_before.len(),
+        1,
+        "the row delta must have written exactly one DELETE manifest"
+    );
+
+    append_steps(&catalog, &ident, 2..=120, 0, |_| Struct::empty(), None).await;
+
+    let after = catalog.load_table(&ident).await.expect("reload table");
+    let manifests = manifest_entries(&after).await;
+    let delete_manifests_after: Vec<String> = manifests
+        .iter()
+        .filter(|manifest| manifest.content == ManifestContentType::Deletes)
+        .map(|manifest| manifest.manifest_path.clone())
+        .collect();
+    assert_eq!(
+        delete_manifests_after, delete_manifests_before,
+        "the DELETE manifest must carry forward byte-identically through every merging append"
+    );
+    let data_manifests = manifests
+        .iter()
+        .filter(|manifest| manifest.content == ManifestContentType::Data)
+        .count();
+    assert!(
+        data_manifests < 120,
+        "the DATA manifests must still merge beside the untouched DELETE manifest (got {data_manifests})"
+    );
+}
+
+#[tokio::test]
+async fn sequence_numbers_and_file_provenance_survive_a_merge() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_series_table(&catalog, "t_seq", variant_properties("defaults"), None).await;
+    append_steps(&catalog, &ident, 1..=100, 0, |_| Struct::empty(), None).await;
+
+    let table = catalog.load_table(&ident).await.expect("reload table");
+    let manifests = manifest_entries(&table).await;
+    assert_eq!(
+        manifests.len(),
+        1,
+        "the hundredth append merges to ONE manifest"
+    );
+
+    let mut measured: Vec<(String, i64)> = Vec::new();
+    for manifest in &manifests {
+        let loaded = manifest
+            .load_manifest(table.file_io())
+            .await
+            .expect("load manifest");
+        for entry in loaded.entries() {
+            measured.push((
+                entry.data_file().file_path().to_string(),
+                entry
+                    .sequence_number()
+                    .expect("an inherited sequence number"),
+            ));
+        }
+    }
+    measured.sort();
+    let expected: Vec<(String, i64)> = (1..=100)
+        .map(|step| {
+            (
+                format!("series/step-{step}.parquet"),
+                i64::try_from(step).expect("i64"),
+            )
+        })
+        .collect();
+    let mut expected_sorted = expected;
+    expected_sorted.sort();
+    assert_eq!(
+        measured, expected_sorted,
+        "each merged entry keeps the sequence number of the append that added it"
+    );
+}
+
+#[tokio::test]
+async fn branch_merging_append_moves_only_the_branch() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident =
+        create_series_table(&catalog, "t_branch", variant_properties("defaults"), None).await;
+
+    append_steps(&catalog, &ident, 1..=1, 0, |_| Struct::empty(), None).await;
+    let main_after_seed = catalog
+        .load_table(&ident)
+        .await
+        .expect("load table")
+        .metadata()
+        .current_snapshot_id();
+
+    append_steps(
+        &catalog,
+        &ident,
+        2..=100,
+        0,
+        |_| Struct::empty(),
+        Some("feat"),
+    )
+    .await;
+
+    let table = catalog.load_table(&ident).await.expect("reload table");
+    assert_eq!(
+        table.metadata().current_snapshot_id(),
+        main_after_seed,
+        "a branch-targeted merging append must not move main"
+    );
+    let branch = table
+        .metadata()
+        .snapshot_for_ref("feat")
+        .expect("the branch ref exists");
+    let manifest_list = branch
+        .load_manifest_list(table.file_io(), &table.metadata_ref())
+        .await
+        .expect("load the branch manifest list");
+    assert_eq!(
+        manifest_list.entries().len(),
+        1,
+        "the hundredth manifest ON THE BRANCH (the carried seed plus 99 branch appends) merges to one"
+    );
+    let live: usize = manifest_list
+        .entries()
+        .iter()
+        .map(|entry| {
+            usize::try_from(entry.added_files_count.unwrap_or(0)).expect("usize")
+                + usize::try_from(entry.existing_files_count.unwrap_or(0)).expect("usize")
+        })
+        .sum();
+    assert_eq!(
+        live, 100,
+        "the branch carries the seed plus its own 99 files"
+    );
+}

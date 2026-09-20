@@ -1618,7 +1618,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (fork #322) and the bare `INSERT INTO` statement, which plans on the fork's
   `IcebergCommitExec` (`fast_append`) and cannot be routed from this repository at pin
   `44834673`; today's fork-side number is pinned beside it so the fork's fix reds it.
-  pins: ice-merge-append-1/C-002, C-003, C-004, C-006, C-007, C-009
+  The C-005 regression half lives here too: a v3 table's `_row_id` stays contiguous and its
+  rows intact across the merging hundredth append, and a merged manifest still reads every
+  row of every append in order.
+  pins: ice-merge-append-1/C-002, C-003, C-004, C-005, C-006, C-007, C-009
 - [test_ice_branch_ops_1.py](test_ice_branch_ops_1.py) +
   [branch_ops_1_truth.json](branch_ops_1_truth.json) +
   [_record_branch_ops_1.py](_record_branch_ops_1.py) — **ICE-BRANCH-OPS-1 (2026-09-17):**

@@ -19,7 +19,7 @@ xfail that flips the moment the fork lands its half:
   commits inside the fork's ``IcebergCommitExec`` (``fast_append``), a commit
   site this repository cannot reach at fork pin ``44834673``.
 
-pins: ice-merge-append-1/C-002, C-003, C-004, C-006, C-009
+pins: ice-merge-append-1/C-002, C-003, C-004, C-005, C-006, C-009
 """
 
 from __future__ import annotations
@@ -102,7 +102,11 @@ def _expected(variant: str) -> list[dict[str, int]]:
 @pytest.fixture
 def session(tmp_path: Path) -> Any:
     """A session with a memory catalog for the recorded-series replay."""
-    built = ReparkSession.builder.appName("pytest-ice-merge-append-1").getOrCreate()
+    built = (
+        ReparkSession.builder.appName("pytest-ice-merge-append-1")
+        .config("repark.sql.allowCreateFormatVersion3", "true")
+        .getOrCreate()
+    )
     built.register_memory_catalog(_CATALOG, tmp_path / "warehouse")
     built.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
     yield built
@@ -184,3 +188,33 @@ def test_bare_insert_into_merges_like_spark(session: ReparkSession) -> None:
     for step in range(1, 101):
         session.sql(f"INSERT INTO {table} VALUES ({step}, 'v{step}')").collect()
     assert _counts(session, table) == (1, 100)
+
+
+def test_v3_row_lineage_survives_a_merging_append(session: ReparkSession) -> None:
+    """A merging commit leaves `_row_id` contiguous and the rows intact on a v3 table."""
+    table = f"{_CATALOG}.{_NAMESPACE}.t_lineage"
+    session.sql(
+        f"CREATE TABLE {table} (id INT, v STRING) USING iceberg "
+        "TBLPROPERTIES ('format-version'='3')"
+    ).collect()
+    for step in range(1, 101):
+        session.sql(
+            f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v"
+        ).collect()
+    assert _counts(session, table) == (1, 100)
+    rows = session.sql(f"SELECT id, v, _row_id FROM {table} ORDER BY id").collect()
+    assert [row[0] for row in rows] == list(range(1, 101))
+    assert [row[1] for row in rows] == [f"v{step}" for step in range(1, 101)]
+    assert sorted(row[2] for row in rows) == list(range(100))
+
+
+def test_a_merging_append_keeps_the_rows_readable(session: ReparkSession) -> None:
+    """The merged manifest still reads every row of every append, in order."""
+    table = f"{_CATALOG}.{_NAMESPACE}.t_readback"
+    _create(session, table, "min_count_5")
+    for step in range(1, 21):
+        session.sql(
+            f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v"
+        ).collect()
+    rows = session.sql(f"SELECT id, v FROM {table} ORDER BY id").collect()
+    assert [(row[0], row[1]) for row in rows] == [(step, f"v{step}") for step in range(1, 21)]

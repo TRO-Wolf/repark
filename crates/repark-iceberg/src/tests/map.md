@@ -31,6 +31,9 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   battery a merging commit could break: a two-spec table (Java never merges across spec ids),
   a MoR table whose delete manifests must carry forward, row lineage and sequence numbers
   across a merge, and a branch-targeted merging append.
+  All seven pins green after the routing change; the branch leg merges at the hundredth
+  manifest on the branch (the carried seed plus 99 branch appends), not the hundredth branch
+  append, and main's pointer never moves.
   pins: ice-merge-append-1/C-002, C-003, C-004, C-005, C-008
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and

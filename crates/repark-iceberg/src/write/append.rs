@@ -1,5 +1,3 @@
-//! Public bulk append through the fork's `merge_append` transaction path (Java `newAppend`).
-
 use std::str::FromStr;
 use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
 
@@ -234,7 +232,6 @@ where
 }
 
 /// Single-writer fanout loop (the historical serial body of `fanout_conformed_stream`).
-/// One stamped `merge_append` commit: `ENGINE_CONTRACT` §4 INSERT/append with MERGE's stamp class.
 /// # Errors
 /// Returns the fork's transaction/commit error (folded to this crate's error type) when the append
 pub async fn commit_append(

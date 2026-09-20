@@ -223,6 +223,8 @@ repark-core's error map.
   row-delta sites are untouched — Spark never merges there. A bare `INSERT INTO` does NOT
   reach these functions: it plans on the fork's `IcebergCommitExec`, which is
   `pub(crate)` and still calls `fast_append` (DECLARED, `ICE-MERGE-APPEND-INSERT-1`).
+  `append.rs` carries no module banner and `commit_append` no summary doc line under the
+  comment ban: the merge contract is stated here instead.
   pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005, C-007
   pins: rp-5-fork-repin/C-004
   pins: ice-rtas-byname-1/C-001
