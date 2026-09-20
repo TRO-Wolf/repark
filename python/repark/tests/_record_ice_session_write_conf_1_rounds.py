@@ -20,6 +20,10 @@ fixture did not hold:
 ``QC-*``
     a summary-metric name in a DIFFERENT case is a different key: Spark stamps
     ``Deleted-Records`` beside its own ``deleted-records``.
+``QD-*``
+    the removal side the round-4 resolver missed — a merge-on-read partition
+    whose delete files the overwrite drops too, and an identity DECIMAL /
+    DOUBLE / BOOLEAN partition column whose static literal Spark accepts.
 ``QU-*``
     the copy-on-write layout itself — one live data file and one added data
     file for the identity UPDATE and the DELETE, with a session conf and
@@ -29,11 +33,12 @@ fixture did not hold:
 QS / QZ / QR cells, so one ``record`` / ``check`` run re-derives the whole
 fixture.
 
-pins: ice-session-write-conf-1/C-047, C-048, C-049, C-054, C-056
+pins: ice-session-write-conf-1/C-047, C-048, C-049, C-054, C-056, C-059, C-060
 """
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any
 
 from _record_ice_session_write_conf_1_paths import (
@@ -68,6 +73,22 @@ LAYOUT_KEYS = (
     "deleted-records",
     "total-data-files",
     "total-records",
+)
+MOR_KEYS = (
+    "team",
+    "added-records",
+    "deleted-records",
+    "added-data-files",
+    "deleted-data-files",
+    "added-delete-files",
+    "removed-delete-files",
+    "added-position-deletes",
+    "removed-position-deletes",
+    "total-delete-files",
+    "total-position-deletes",
+    "total-records",
+    "total-data-files",
+    "changed-partition-count",
 )
 PARTITIONED_SEED = "INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'x'), (3, 'c', 'y')"
 COW_PROPS = ", 'write.update.mode'='copy-on-write', 'write.delete.mode'='copy-on-write'"
@@ -277,6 +298,83 @@ def _run_static_overwrite_cell(spark: Any, case: tuple[str, dict[str, str], str]
     return _cell(spark, cell_id, table, conf, run, _partition_observe)
 
 
+TEAM_CONF = {PREFIX + "team": "a"}
+MOR_OVERWRITE_CELLS: tuple[tuple[str, dict[str, str]], ...] = (
+    ("QD-MOR-FREE", TEAM_CONF),
+    ("QD-MOR-REMOVED-DELETE-FILES", {**TEAM_CONF, PREFIX + "removed-delete-files": "9"}),
+    ("QD-MOR-DELETED-RECORDS", {**TEAM_CONF, PREFIX + "deleted-records": "5"}),
+    ("QD-MOR-TOTAL-DELETE-FILES", {**TEAM_CONF, PREFIX + "total-delete-files": "1"}),
+    ("QD-MOR-REMOVED-POSITION-DELETES", {**TEAM_CONF, PREFIX + "removed-position-deletes": "9"}),
+)
+DECIMAL_SEED = "(1, 1.50), (2, 1.50), (3, 2.00)"
+DOUBLE_SEED = "(1, 1.5), (2, 1.5), (3, 2.0)"
+BOOLEAN_SEED = "(1, true), (2, true), (3, false)"
+DELETED_RECORDS_CONF = {**TEAM_CONF, PREFIX + "deleted-records": "5"}
+IDENTITY_TYPE_CELLS: tuple[tuple[str, dict[str, str], str, str, str], ...] = (
+    ("QD-TYPE-DECIMAL-FREE", TEAM_CONF, "DECIMAL(10,2)", DECIMAL_SEED, "1.50"),
+    (
+        "QD-TYPE-DECIMAL-DELETED-RECORDS",
+        DELETED_RECORDS_CONF,
+        "DECIMAL(10,2)",
+        DECIMAL_SEED,
+        "1.50",
+    ),
+    ("QD-TYPE-DOUBLE-FREE", TEAM_CONF, "DOUBLE", DOUBLE_SEED, "1.5"),
+    ("QD-TYPE-DOUBLE-DELETED-RECORDS", DELETED_RECORDS_CONF, "DOUBLE", DOUBLE_SEED, "1.5"),
+    ("QD-TYPE-BOOLEAN-FREE", TEAM_CONF, "BOOLEAN", BOOLEAN_SEED, "true"),
+    ("QD-TYPE-BOOLEAN-DELETED-RECORDS", DELETED_RECORDS_CONF, "BOOLEAN", BOOLEAN_SEED, "true"),
+)
+
+
+def _run_mor_overwrite_cell(spark: Any, case: tuple[str, dict[str, str]]) -> dict[str, Any]:
+    """Run one QD-MOR merge-on-read static-overwrite cell."""
+    cell_id, conf = case
+    table = _table_name(cell_id, "sc")
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat) TBLPROPERTIES ('format-version'='2', "
+        "'write.delete.mode'='merge-on-read')"
+    )
+    spark.sql(PARTITIONED_SEED.format(table=table))
+    spark.sql(f"DELETE FROM {table} WHERE id = 1")
+
+    def run(session: Any, name: str) -> None:
+        session.sql(f"INSERT OVERWRITE {name} PARTITION (cat = 'x') VALUES (9, 'z')")
+
+    def observe(session: Any, name: str) -> dict[str, Any]:
+        return {
+            "summaries": summary_rows(session, name, MOR_KEYS),
+            "data": data_rows(session, f"SELECT * FROM {name}"),
+        }
+
+    return _cell(spark, cell_id, table, conf, run, observe)
+
+
+def _run_identity_type_cell(
+    spark: Any, case: tuple[str, dict[str, str], str, str, str]
+) -> dict[str, Any]:
+    """Run one QD-TYPE identity typed-partition static-overwrite cell."""
+    cell_id, conf, column_type, values, literal = case
+    table = _table_name(cell_id, "sc")
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT, k {column_type}) USING iceberg "
+        "PARTITIONED BY (k) TBLPROPERTIES ('format-version'='2')"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES {values}")
+
+    def run(session: Any, name: str) -> None:
+        session.sql(f"INSERT OVERWRITE {name} PARTITION (k = '{literal}') VALUES (9)")
+
+    def observe(session: Any, name: str) -> dict[str, Any]:
+        rows = data_rows(session, f"SELECT * FROM {name}")
+        return {
+            "summaries": summary_rows(session, name, PARTITION_KEYS),
+            "data": [[str(v) if isinstance(v, Decimal) else v for v in row] for row in rows],
+        }
+
+    return _cell(spark, cell_id, table, conf, run, observe)
+
+
 def _run_suffix_case_cell(spark: Any, case: tuple[str, str]) -> dict[str, Any]:
     """Run one QC mixed-case summary-metric cell."""
     cell_id, suffix = case
@@ -323,11 +421,13 @@ def _run_layout_cell(spark: Any, case: tuple[str, dict[str, str], str]) -> dict[
 
 
 def derive_round_cells(spark: Any) -> list[dict[str, Any]]:
-    """Derive every QK / QM / QP / QO / QC / QU cell on the live session."""
+    """Derive every QK / QM / QP / QO / QD / QC / QU cell on the live session."""
     cells = [_run_key_case_cell(spark, case) for case in KEY_CASE_CELLS]
     cells.extend(_run_call_cell(spark, case) for case in CALL_CELLS)
     cells.extend(_run_replace_partition_cell(spark, case) for case in REPLACE_PARTITION_CELLS)
     cells.extend(_run_static_overwrite_cell(spark, case) for case in STATIC_OVERWRITE_CELLS)
+    cells.extend(_run_mor_overwrite_cell(spark, case) for case in MOR_OVERWRITE_CELLS)
+    cells.extend(_run_identity_type_cell(spark, case) for case in IDENTITY_TYPE_CELLS)
     cells.extend(_run_suffix_case_cell(spark, case) for case in SUFFIX_CASE_CELLS)
     cells.extend(_run_layout_cell(spark, case) for case in LAYOUT_CELLS)
     return cells

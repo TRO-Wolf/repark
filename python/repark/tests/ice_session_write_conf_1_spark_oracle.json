@@ -12,7 +12,10 @@
   "qc1_cells": "QS-* branch / metadata-delete / MoR snapshot-property cells, QZ-* position-delete and branch codec cells, QR-* summary-key collision cells",
   "round_cells_source": "orchestrator recordings spark-qc6.json, spark-qc7.json, spark-qc9.json, spark-qc10.json, spark-qc11.json, re-derived by _record_ice_session_write_conf_1_rounds",
   "round_cells_recorded": "2026-09-19 (QK/QM/QP, run 25c) and 2026-09-20 (QO/QC/QU, run 25c round 4)",
-  "round_cells": "QK-* conf-key case, QM-* maintenance CALLs, QP-* dynamic overwritePartitions, QO-* static INSERT OVERWRITE PARTITION, QC-* mixed-case summary metric, QU-* copy-on-write layout"
+  "round_cells": "QK-* conf-key case, QM-* maintenance CALLs, QP-* dynamic overwritePartitions, QO-* static INSERT OVERWRITE PARTITION, QC-* mixed-case summary metric, QU-* copy-on-write layout",
+  "round5_cells_source": "orchestrator recording spark-qc12.json",
+  "round5_cells_recorded": "2026-09-20 run 25c, PySpark 4.1.2 + Iceberg 1.11.0",
+  "round5_cells": "QD-MOR-* merge-on-read static partition overwrite and QD-TYPE-* identity DECIMAL / DOUBLE / BOOLEAN partition cells"
  },
  "cells": {
   "SP-INSERT": {
@@ -3656,6 +3659,333 @@
       "i"
      ]
     ]
+   }
+  },
+  "QD-MOR-FREE": {
+   "id": "QD-MOR-FREE",
+   "group": "PROPS",
+   "title": "merge-on-read static partition overwrite free",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      "2",
+      null,
+      null,
+      null,
+      null,
+      null,
+      "0",
+      "0",
+      "3",
+      "2",
+      "2"
+     ],
+     [
+      "delete",
+      null,
+      null,
+      null,
+      null,
+      null,
+      "1",
+      null,
+      "1",
+      null,
+      "1",
+      "1",
+      "3",
+      "2",
+      "1"
+     ],
+     [
+      "overwrite",
+      "a",
+      "1",
+      "2",
+      "1",
+      "1",
+      null,
+      "1",
+      null,
+      "1",
+      "0",
+      "0",
+      "2",
+      "2",
+      "1"
+     ]
+    ],
+    "data": [
+     [
+      3,
+      "c",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "x"
+     ]
+    ]
+   }
+  },
+  "QD-MOR-REMOVED-DELETE-FILES": {
+   "id": "QD-MOR-REMOVED-DELETE-FILES",
+   "group": "PROPS",
+   "title": "merge-on-read static partition overwrite removed-delete-files",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.removed-delete-files": "9",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: removed-delete-files=1 and removed-delete-files=9"
+   }
+  },
+  "QD-MOR-DELETED-RECORDS": {
+   "id": "QD-MOR-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "merge-on-read static partition overwrite deleted-records",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: deleted-records=2 and deleted-records=5"
+   }
+  },
+  "QD-MOR-TOTAL-DELETE-FILES": {
+   "id": "QD-MOR-TOTAL-DELETE-FILES",
+   "group": "PROPS",
+   "title": "merge-on-read static partition overwrite total-delete-files",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a",
+    "spark.sql.iceberg.snapshot-property.total-delete-files": "1"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: total-delete-files=0 and total-delete-files=1"
+   }
+  },
+  "QD-MOR-REMOVED-POSITION-DELETES": {
+   "id": "QD-MOR-REMOVED-POSITION-DELETES",
+   "group": "PROPS",
+   "title": "merge-on-read static partition overwrite removed-position-deletes",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.removed-position-deletes": "9",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: removed-position-deletes=1 and removed-position-deletes=9"
+   }
+  },
+  "QD-TYPE-DECIMAL-FREE": {
+   "id": "QD-TYPE-DECIMAL-FREE",
+   "group": "PROPS",
+   "title": "identity DECIMAL partition static overwrite free",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      "2",
+      null,
+      "2",
+      "3",
+      "2"
+     ],
+     [
+      "overwrite",
+      "a",
+      "1",
+      "2",
+      "1",
+      "1",
+      "1",
+      "2",
+      "2"
+     ]
+    ],
+    "data": [
+     [
+      3,
+      "2.00"
+     ],
+     [
+      9,
+      "1.50"
+     ]
+    ]
+   }
+  },
+  "QD-TYPE-DECIMAL-DELETED-RECORDS": {
+   "id": "QD-TYPE-DECIMAL-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "identity DECIMAL partition static overwrite deleted-records",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: deleted-records=2 and deleted-records=5"
+   }
+  },
+  "QD-TYPE-DOUBLE-FREE": {
+   "id": "QD-TYPE-DOUBLE-FREE",
+   "group": "PROPS",
+   "title": "identity DOUBLE partition static overwrite free",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      "2",
+      null,
+      "2",
+      "3",
+      "2"
+     ],
+     [
+      "overwrite",
+      "a",
+      "1",
+      "2",
+      "1",
+      "1",
+      "1",
+      "2",
+      "2"
+     ]
+    ],
+    "data": [
+     [
+      3,
+      2.0
+     ],
+     [
+      9,
+      1.5
+     ]
+    ]
+   }
+  },
+  "QD-TYPE-DOUBLE-DELETED-RECORDS": {
+   "id": "QD-TYPE-DOUBLE-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "identity DOUBLE partition static overwrite deleted-records",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: deleted-records=2 and deleted-records=5"
+   }
+  },
+  "QD-TYPE-BOOLEAN-FREE": {
+   "id": "QD-TYPE-BOOLEAN-FREE",
+   "group": "PROPS",
+   "title": "identity BOOLEAN partition static overwrite free",
+   "engine": "spark",
+   "status": "ok",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {
+    "summaries": [
+     [
+      "append",
+      null,
+      "3",
+      null,
+      "2",
+      null,
+      "2",
+      "3",
+      "2"
+     ],
+     [
+      "overwrite",
+      "a",
+      "1",
+      "2",
+      "1",
+      "1",
+      "1",
+      "2",
+      "2"
+     ]
+    ],
+    "data": [
+     [
+      3,
+      false
+     ],
+     [
+      9,
+      true
+     ]
+    ]
+   }
+  },
+  "QD-TYPE-BOOLEAN-DELETED-RECORDS": {
+   "id": "QD-TYPE-BOOLEAN-DELETED-RECORDS",
+   "group": "PROPS",
+   "title": "identity BOOLEAN partition static overwrite deleted-records",
+   "engine": "spark",
+   "status": "error",
+   "spark_conf": {
+    "spark.sql.iceberg.snapshot-property.deleted-records": "5",
+    "spark.sql.iceberg.snapshot-property.team": "a"
+   },
+   "obs": {},
+   "error": {
+    "type": "IllegalArgumentException",
+    "msg": "Multiple entries with same key: deleted-records=2 and deleted-records=5"
    }
   }
  }

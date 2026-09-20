@@ -431,7 +431,7 @@ def _sorted_data(obs: dict[str, Any]) -> dict[str, Any]:
 
 def _needle(cell_id: str, cell: dict[str, Any]) -> str:
     """The stable message needle one error cell is compared by."""
-    if cell_id.startswith(("QR-", "QP-", "QO-", "QC-")):
+    if cell_id.startswith(("QR-", "QP-", "QO-", "QD-", "QC-")):
         return cell["error"]["msg"].split("\n")[0]
     return BOGUS_CODEC_NEEDLE if cell_id == "CZ-CONF-BOGUS" else SET_SYNTAX_NEEDLE
 
