@@ -3412,8 +3412,9 @@ the pin rather than obeying it.
   `USE <catalog>[.<ns>]` / `USE DATABASE|SCHEMA` / `USE DEFAULT` move it (catalog-first
   one-part, `SCHEMA_NOT_FOUND` on a miss); `current_catalog()` / `current_schema()` /
   `current_database()` read it; `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` / bare
-  `SHOW NAMESPACES` answer from it; `CACHE` / `UNCACHE` / `REFRESH TABLE` route to the
-  catalog surface (and `REFRESH` rebuilds the provider on the native door); runtime
+  `SHOW NAMESPACES` answer from it; `CACHE TABLE` / `UNCACHE TABLE` route to the catalog
+  surface on the Python door (the native door keeps the engine's `Unsupported SQL
+  statement` refusal) while `REFRESH TABLE` rebuilds the provider on the native door; runtime
   `spark.conf.set` of `spark.sql.catalog.*` registers at the first complete block and
   feeds `table-default.*` / `table-override.*` into `CREATE TABLE` / CTAS with override
   > user > default precedence; `type=hadoop` and `InMemoryCatalog` alias to `Memory`.
