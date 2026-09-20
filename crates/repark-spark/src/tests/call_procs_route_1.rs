@@ -567,17 +567,29 @@ async fn call_compute_partition_stats_registers_older_snapshot_id() {
     );
 }
 
+async fn rewrite_table_path_locations(
+    wh: &TempDir,
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> (String, String) {
+    seed_three(ctx, catalogs, table).await;
+    let source = catalogs["ice"]
+        .load_table(&procs_ident(table))
+        .await
+        .expect("load table")
+        .metadata()
+        .location()
+        .to_string();
+    let target = format!("{}/dst", wh.path().to_str().unwrap());
+    (source, target)
+}
+
 #[tokio::test]
 async fn call_rewrite_table_path_stages_manifests_lists_and_answers_sparks_counts() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    seed_three(&ctx, &catalogs, "rtp").await;
-    let table = catalogs["ice"]
-        .load_table(&procs_ident("rtp"))
-        .await
-        .expect("load table");
-    let source = table.metadata().location().to_string();
-    let target = format!("{}/dst", wh.path().to_str().unwrap());
+    let (source, target) = rewrite_table_path_locations(&wh, &ctx, &catalogs, "rtp").await;
 
     let batches = execute(
         &ctx,
@@ -641,7 +653,13 @@ async fn call_rewrite_table_path_stages_manifests_lists_and_answers_sparks_count
             "to-side under the target: {line}"
         );
     }
+}
 
+#[tokio::test]
+async fn call_rewrite_table_path_refuses_wrong_prefix_with_router_owned_text() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_three(&ctx, &catalogs, "rtp").await;
     let error = execute(
         &ctx,
         &catalogs,
@@ -671,7 +689,13 @@ async fn call_rewrite_table_path_stages_manifests_lists_and_answers_sparks_count
         !error.to_string().contains("RewriteTablePath:"),
         "the fork error must not satisfy this pin, got: {error}"
     );
+}
 
+#[tokio::test]
+async fn call_rewrite_table_path_honors_create_file_list_false() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let (source, target) = rewrite_table_path_locations(&wh, &ctx, &catalogs, "rtp").await;
     let batches = execute(
         &ctx,
         &catalogs,
