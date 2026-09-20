@@ -856,6 +856,13 @@ pins: rp-4-fork-repin/C-005, C-006
   2026-09-19).
   pins: ice-drop-ns-1/C-002, C-004, C-007
   The missing-namespace refusal is the shared `schema_not_found_on_drop`. pins: ice-drop-ns-1/C-011
+  **IPI-51 (2026-09-20):** a `TableNotFound` from `Catalog::drop_table` without `IF EXISTS`
+  renders `[TABLE_OR_VIEW_NOT_FOUND]`/`SQLSTATE: 42P01` through `table_or_view_not_found`, and
+  the `create_table.rs` / `ctas.rs` already-exists arms render
+  `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`SQLSTATE: 42P07` through `table_or_view_already_exists`
+  (both `catalog_ops.rs`; `repark-common` is a dev-dependency here, so the catalogue itself
+  stays unreachable from this crate's production code).
+  pins: ice-error-conditions-1/C-011
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
   into the positional `execute_with_read_only` call; `#[async_trait(?Send)]` matches the
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
@@ -1085,9 +1092,12 @@ pins: rp-4-fork-repin/C-005, C-006
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
   is the single home of Spark's `[TABLE_OR_VIEW_NOT_FOUND]` text for a three-part name, condition
-  and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs` and
-  `namespace_ddl/purge.rs` all answer through it, so the three cannot drift apart.
-  pins: ipi-21-25-42-small-parser/C-007, C-008
+  and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs`,
+  `namespace_ddl/purge.rs` and `namespace_ddl.rs` DROP all answer through it, so they cannot
+  drift apart. **IPI-51 (2026-09-20):** `table_or_view_already_exists` is the sibling home of
+  Spark's `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`SQLSTATE: 42P07` text; the `create_table.rs` and
+  `ctas.rs` already-exists arms answer through it.
+  pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
   cross-door evidence in `crates/repark-sql/tests/cross_door.rs`.

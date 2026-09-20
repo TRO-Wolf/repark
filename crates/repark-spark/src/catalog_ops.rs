@@ -141,6 +141,19 @@ pub(crate) fn table_or_view_not_found(
     ))
 }
 
+pub(crate) fn table_or_view_already_exists(
+    catalog: &str,
+    namespace: &str,
+    table: &str,
+) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view \
+         `{catalog}`.`{namespace}`.`{table}` because it already exists. Choose a different \
+         name, drop or replace the existing object, or add the IF NOT EXISTS clause to \
+         tolerate pre-existing objects. SQLSTATE: 42P07"
+    ))
+}
+
 pub(crate) fn name_parts(name: &ObjectName) -> Vec<String> {
     name.0
         .iter()

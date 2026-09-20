@@ -253,8 +253,8 @@ async fn create_table_existing_refuses_and_if_not_exists_is_a_noop() {
     let err = door.err("CREATE TABLE ice.sales.t AS SELECT 2 AS id").await;
     assert!(err.contains("already exists"), "must name the class: {err}");
     assert!(
-        err.contains("CREATE OR REPLACE"),
-        "must offer the alternative: {err}"
+        err.contains("[TABLE_OR_VIEW_ALREADY_EXISTS]") && err.contains("SQLSTATE: 42P07"),
+        "must carry Spark's condition and SQLSTATE: {err}"
     );
 
     door.ok("CREATE TABLE IF NOT EXISTS ice.sales.t AS SELECT 2 AS id")

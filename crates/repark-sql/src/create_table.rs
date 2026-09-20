@@ -14,6 +14,7 @@ use iceberg::io::FileIO;
 use iceberg::spec::{FormatVersion, PrimitiveType, Type, UnboundPartitionSpec};
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
+use repark_common::spark_error;
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
 use repark_functions::cardinality::repark_sql_settings_from_options;
 
@@ -83,10 +84,15 @@ pub(crate) async fn execute_create_table(
             return cx.ctx.read_empty();
         }
         if !create.or_replace {
-            return Err(DataFusionError::Plan(format!(
-                "table `{}` already exists — use CREATE OR REPLACE TABLE to replace it, or \
-                 CREATE TABLE IF NOT EXISTS to make this a no-op",
-                target.full_name
+            let display = std::iter::once(target.catalog_name.as_str())
+                .chain(target.namespace.as_ref().iter().map(String::as_str))
+                .chain(std::iter::once(target.table.as_str()))
+                .map(|part| format!("`{part}`"))
+                .collect::<Vec<_>>()
+                .join(".");
+            return Err(DataFusionError::Plan(spark_error::message(
+                spark_error::TABLE_OR_VIEW_ALREADY_EXISTS,
+                &[("relationName", display.as_str())],
             )));
         }
     }

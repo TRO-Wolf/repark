@@ -9,13 +9,13 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
-use iceberg::{NamespaceIdent, TableIdent};
+use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 
 use repark_core::CatalogRegistry;
 
 use crate::catalog_ops::{
     catalog_handle, iceberg_err, name_parts, reregister, reregister_drop_namespace,
-    resolve_namespace, sqlparser_err,
+    resolve_namespace, sqlparser_err, table_or_view_not_found,
 };
 
 pub(crate) mod purge;
@@ -52,7 +52,12 @@ pub(crate) async fn execute_drop_table(
                 );
             }
         }
-        handle.drop_table(&ident).await.map_err(iceberg_err)?;
+        handle.drop_table(&ident).await.map_err(|error| {
+            if !if_exists && error.kind() == ErrorKind::TableNotFound {
+                return table_or_view_not_found(catalog, namespace, table);
+            }
+            iceberg_err(error)
+        })?;
         reregister(ctx, handle.clone(), catalog, namespace).await?;
     }
     ctx.read_empty()

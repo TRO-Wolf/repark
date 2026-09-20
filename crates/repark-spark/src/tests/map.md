@@ -550,7 +550,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `namespace_ddl` (`IF NOT EXISTS` create-new / same / conflicting / no-location behavior;
   ICE-DROP-NS-1: non-empty drop refuses on every spelling, empty drops, missing is
   SCHEMA_NOT_FOUND. pins: ice-drop-ns-1/C-002, C-004, C-008),
-  `catalog_ops`, `describe_show`, `alter`, `dml`
+  `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
+  CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`.
+  pins: ice-error-conditions-1/C-011), `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
   sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,

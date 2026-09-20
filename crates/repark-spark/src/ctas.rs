@@ -18,7 +18,7 @@ use repark_core::{CatalogRegistry, LocationPolicy};
 
 use crate::catalog_ops::{
     catalog_handle, iceberg_err, name_parts, namespace_schema_name, reject_path_escape_ident,
-    reregister,
+    reregister, table_or_view_already_exists,
 };
 use crate::normalize::{
     PartitionFieldSpec, PartitionedByElement, build_partition_spec, build_transform_field,
@@ -162,10 +162,11 @@ pub(crate) async fn execute_ctas(
         if ctas.if_not_exists {
             return ctx.read_empty();
         } else if !ctas.or_replace {
-            return Err(DataFusionError::Plan(format!(
-                "table `{}` already exists",
-                ctas.full_name
-            )));
+            return Err(table_or_view_already_exists(
+                &ctas.catalog,
+                ctas.namespace.to_string().as_str(),
+                &ctas.table,
+            ));
         }
     }
 
