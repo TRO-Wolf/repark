@@ -318,7 +318,7 @@ pub async fn commit_append_with_summary(
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let action = tx
-        .fast_append()
+        .merge_append()
         .add_data_files(new_files)
         .set_snapshot_properties(summary);
     let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));

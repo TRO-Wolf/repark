@@ -278,3 +278,12 @@ the next dispatch refuses the table (neither empty nor exact). The role cannot d
 design (§2). The owner drops it with owner credentials (`aws s3tables delete-table …` /
 `aws glue delete-table …`) and dispatches again. The slate drops both bench tables when its
 re-measure gate closes. That too is an owner action.
+
+**The `baseline` input (the before half of a pair on one head).** The dispatch takes
+`-f baseline=true` (default `false`). When true, all eight `run --mode` invocations carry
+`--baseline`: every session they open runs with page-index row selection off and no shared
+caches, and each JSON carries `"baseline": true` with its `baseline_switches` while the job
+summary names `baseline=true` beside the purpose. Dispatch the pair on the same head — once
+without the input, once with it — and compare the two artifacts. What the baseline cannot
+switch off (the timestamp predicate pushdown, the `count(*)` fold) stays on; see the
+`ice-bench-baseline-1` ledger for what the number means.

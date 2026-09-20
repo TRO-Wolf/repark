@@ -167,6 +167,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter.rs::alter_unsupported_forms_refuse_loud` in the same unit (`tests/alter.rs`
   1436→1397) — the forms execute now, so the refusal pin would fail.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
+  `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
+  level-order struct ids (`s` 5, `s.a` 6, `s.b` 7, `last-column-id` 7), the kept `COMMENT`, the
+  replace-insert-replace sequence that NULLs the row written in between, and the five refusals
+  with Spark's text (`NOT NULL` as a parse error, `[COLUMN_ALREADY_EXISTS]`, the partition-field
+  and sort-field source loss, the column position and the nested name) — each refusal asserting
+  the table's ids and rows are untouched. The two identity-trap tests in `alter.rs`
+  (`alter_replace_columns_promote_and_identity_trap`,
+  `alter_replace_columns_float_decimal_promote_and_traps`) and the REPLACE block in
+  `alter_unsupported_forms_refuse_loud` encoded the opposite design and are gone. Each test
+  names its measured cell in this map rather than in a comment (owner ruling): `rc_basic` is
+  RC-BASIC, `rc_same` RC-SAME, `rc_type` RC-TYPE, `rc_struct` RC-STRUCT, `rc_comment`
+  RC-COMMENT, `rc_twice` RC-THEN-INSERT + RC-TWICE, `rc_not_null` RC-NOT-NULL, `rc_dup`
+  RC-DUP, `rc_part` RC-PART-DROP-SOURCE + RC-PART-KEEP-NAME, `rc_sorted` RC-SORTED, and
+  `rc_shape` the two unmeasured Hive-style shapes (a column position, a nested name).
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
   counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
   upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the
@@ -432,6 +448,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `where` byte-identity pins above are the single-load regression guard.
   pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: maint-policy-1/C-028, C-029
+- `call_rm_deletes.rs` — **ICE-RM-DELETES-1 (2026-09-20):** the 14 recorded Spark 4.1.2
+  `rewrite_manifests` cells replayed through RePark DML — unpartitioned and data-only
+  cells pinned end to end against the oracle (before/result/after/rows/op/summary),
+  partitioned cells pinned on Spark's two-leg semantics over RePark's before-state
+  (RePark's DELETE writes position deletes where Spark's cells show copy-on-write),
+  the evolved default answering zeros with no new snapshot, a non-current `spec_id`
+  rewriting that spec, and the unknown-`spec_id` refusal (`Invalid spec id`, Spark's
+  recorded text). Layout tuples sort order-insensitively before comparison. The v3
+  `part_mor_real`
+  replay carries one empty delete manifest (as Spark's recorded before does) and still
+  answers `(7, 2)` with a two-file delete manifest after.
+  pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `write_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 round 2 (2026-09-18, run 21b):** Spark-door
   `write_default` pins on a catalog-created table carrying `c INT` write-default 5. `DEFAULT`
   on `INSERT OVERWRITE` (VALUES and named-list SELECT) fills 5 and goes red with the
@@ -533,6 +561,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: rp-11-repin-f24/C-002
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
+  `call_procs_route_1` (**ICE-PROCS-ROUTE-1 (2026-09-19)**) pins the four routed
+  procedure schemas and rows (ancestor chain newest-first with snapshot
+  timestamps, table-stats blobs in caller order, partition-stats registration,
+  rewrite-table-path staging plus Spark's counts across three focused tests
+  sharing one seed-and-locate helper), the older-snapshot answers
+  (ancestors from S1, table and partition stats registered on S0 with S0 ndv,
+  each asserted against the current head), the Spark-shaped refusals
+  (empty columns, struct column, unknown column, unpartitioned table, wrong
+  prefix with the router-owned text and class), the unpartitioned refusal on a
+  populated table with the fork External shape excluded, the whole-message
+  unknown-column dump with Spark's spacing, the nested-name
+  pass-through with no silent commit, the duplicate dedup, and the
+  version-range refusal.
+  The battery carries no code comments (round
+  rule); its pins are cited from this map and `call/map.md`.
+  pins: ice-procs-route-1/C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012,
+  C-013, C-014, C-015, C-016
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
   adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
   S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`
@@ -654,6 +699,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
   pins: ice-column-reorder-1/C-001, C-002
+- [count_fold.rs](count_fold.rs) — **ICE-COUNT-FOLD-1 (2026-09-19):** the `count(*)`
+  statistics fold over a four-file, twelve-row table on the production session
+  (`ReparkSession` with `SparkExtension` + `SparkDialect`, so `SparkIntegralLiteral` runs —
+  `common::setup` installs the late `SparkIntegerLiteral` instead and would miss the
+  door's own narrowing). Folded (no `IcebergTableScan` in the physical plan) and correct:
+  `count(*)`, `count(1)`, `count(*) … LIMIT 1`, the DataFrame `count_all()` aggregate and
+  the `count(lit(1_i32))` shape the Python door builds (name `count(Int32(1))` kept), after a copy-on-write DELETE, and
+  `VERSION AS OF` an older snapshot (the older snapshot's count). Scanned and correct: a
+  `WHERE id < 5` residual, a `LIMIT 5` subquery, a v2 merge-on-read position delete, a v3
+  deletion vector. An empty table answers 0. RePark writes no equality deletes, so no
+  equality-delete pin exists here.
+  pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the

@@ -153,7 +153,15 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `PURPOSE='$(touch /tmp/pa-pwn)'; echo "x ${PURPOSE:-unstated}"` prints the text literally and
   creates no file; backticks and the unquoted form behave the same, because bash does not
   re-evaluate an expanded value. YAML read by regex, no PyYAML.
+  **ICE-BENCH-BASELINE-1 (2026-09-19):** the dispatch gains a boolean `baseline` input
+  (default false, "the before half of a pair on one head"). Both run loops take it through
+  `env: BASELINE`, append `--baseline` to all eight `run --mode` invocations only when it
+  is `true` (`baseline_flags` array, empty by default — an empty `"${array[@]}"` expands to
+  zero arguments under `set -u`, verified on bash 5.2.21), and the summary header names
+  `baseline=<value>` beside the purpose. Three pins hold the input, the threading and the
+  summary line.
   pins: ice-read-perf-0/C-018, C-019
+  pins: ice-bench-baseline-1/C-004
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
@@ -179,6 +187,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror row `writer_readwriter.py` 1095 → 1093, the value round 1 set in
   `scripts/check_lib_py.py` without its mirror.
   The verification fix ratchets it again, 1093 → 1091. pins: ice-overwrite-mode-1/C-018
+- `test_cap_1_source_file_line_cap.py` — **ICE-REPLACE-COLUMNS-1 (2026-09-19, run 25c):**
+  mirror rows ratchet `repark-spark/src/alter.rs` 1813 → 1449 and
+  `repark-spark/src/tests/alter.rs` 1379 → 1184 with `scripts/check_rust_file_size.py`,
+  after the REPLACE COLUMNS planner moved into its own module.
+  pins: ice-replace-columns-1/C-008
 - `test_cap_1_source_file_line_cap.py` — **ICE-DROP-NS-1 (2026-09-19, run 24c):**
   mirror row ratchets `repark-sql/src/tests.rs` 1520 → 1513 with `scripts/check_rust_file_size.py`.
   pins: ice-drop-ns-1/C-011
@@ -426,7 +439,10 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
 - `test_cap_1_source_file_line_cap.py` — **COMMENT-CORE-1 (2026-09-13):** `dataframe/core.py` 4468 → 4117 with the script baseline (comments removed, no code change). pins: comment-core-1/C-004
 - `test_cap_1_source_file_line_cap.py` — **FACADE-2 step 2b (2026-09-12):** `spark/column.py` 1549 → 1548 with the script baseline. pins: facade-2/C-013
 - `test_cap_1_source_file_line_cap.py` — **FACADE-2 step 2 (2026-09-12):** `spark/column.py` 1589 → 1549 with the script baseline. pins: facade-2/C-008, C-009
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. The approved Rust exception count is 36 since CSV-INFER-PERF-1 retired `session.rs`.
+- `test_cap_1_source_file_line_cap.py` — **ICE-MERGE-APPEND-1 (2026-09-20):** `write/append.rs`
+  1819 → 1816 in both tables (the merging commit replaces three lines of fast-append assembly).
+  pins: ice-merge-append-1/C-001
+  **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. The approved Rust exception count is 36 since CSV-INFER-PERF-1 retired `session.rs`.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. WRITE-DISTRIBUTION-2 (2026-09-06): `write/append.rs` 1884 → 1883 in both tables. DFCORE-1 (2026-09-07): `dataframe/core.py` row 6302 → 5954 and `dataframe/joins_columns.py` row 1239 → 1238 with the script baseline. pins: dfcore-1/C-007
 - `test_cap_1_source_file_line_cap.py` — DFCORE-2 (2026-09-07): `dataframe/core.py` row 5954 → 5263 with the script baseline; the two new UDF projection modules carry no row. pins: dfcore-2/C-006
 - `test_cap_1_source_file_line_cap.py` — DFCORE-3 (2026-09-07): `dataframe/core.py` row 5263 → 5060 and `dataframe/writer_readwriter.py` row 1113 → 1111 with the script baseline; the new statistics module carries no row. pins: dfcore-3/C-006

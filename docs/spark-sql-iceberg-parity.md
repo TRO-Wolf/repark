@@ -3133,6 +3133,76 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### ICE-MERGE-APPEND-1 — an INSERT commits through a MERGING append — **FIXED 2026-09-19 (RePark paths)**
+
+- **repark** — **FIXED 2026-09-19.** Every append commit site RePark owns commits through the
+  fork's `merge_append()` (Java `MergeAppend`, what `Table.newAppend()` returns), not
+  `fast_append()`: `write/append.rs::commit_append` (the public `append()` and both doors' CTAS),
+  `write/commit_target.rs::commit_append_to` (`INSERT INTO … BY NAME`, branch-targeted),
+  `write/write_options.rs::commit_append_with_summary` (an `INSERT` or CTAS carrying write
+  options) and the staged-table CTAS append in `repark-spark/src/ctas.rs`. The three
+  `commit.manifest*` table properties now take effect: with defaults the hundredth append
+  replaces 99 manifests with 1, `commit.manifest.min-count-to-merge=5` holds the table between
+  1 and 4 manifests over 120 appends, and `commit.manifest-merge.enabled=false` keeps one
+  manifest per append. Before this unit all three variants produced one manifest per append
+  (120 → 120) and both properties were ignored.
+- **Apache Spark** — `SparkWrite$BatchAppend.commit` calls `Table.newAppend()`, which
+  `BaseTransaction.newAppend()` constructs as `org.apache.iceberg.MergeAppend`; only
+  `SparkWrite$StreamingAppend` calls `newFastAppend()`, and RePark has no streaming writer.
+  The recorded series is 120 sequential single-row `INSERT`s into one v2 table in each of the
+  three property variants, probed at 1, 5, 20, 50, 99, 100, 101, 110, 120.
+  *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19; producer mapping
+  disassembled with `javap -p -c` from `iceberg-spark-runtime-4.1_2.13:1.11.0`.)*
+- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_by_name_append_series_matches_spark`
+  (all three variants) and
+  `crates/repark-iceberg/src/tests/merge_append_series.rs::defaults_series_matches_spark`,
+  `…::min_count_to_merge_series_matches_spark`, `…::merge_disabled_series_matches_spark`
+- **Rationale** — FIXED. Two residues stay open below, both fork-routed:
+  `ICE-MERGE-APPEND-SUMMARY-1` and `ICE-MERGE-APPEND-INSERT-1`.
+  pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005
+
+### ICE-MERGE-APPEND-SUMMARY-1 — a merging append stamps no `manifests-*` summary keys — **BACKLOG 2026-09-19**
+
+- **repark** — an append snapshot's summary carries no `manifests-created`, `manifests-kept` or
+  `manifests-replaced` key, in every variant and at every append — including the commit that
+  actually replaced 99 manifests with 1. The manifest COUNTS are Spark-equal and observable from
+  `<table>.manifests`; only the summary keys are missing.
+- **Apache Spark** — EVERY append snapshot carries all three, and they describe the merge:
+  at the hundredth default append `manifests-created=1, manifests-kept=0, manifests-replaced=99`;
+  at the hundred-and-first `1 / 1 / 0`. *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0,
+  2026-09-19, `ice_merge_append_1_truth.json`.)*
+- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_merging_commit_stamps_the_manifests_summary_keys`
+  (strict xfail: it flips to a failure the moment the fork lands the keys)
+- **Rationale** — BACKLOG, fork-routed. TRIGGER: **fork #322**, extending
+  `MergeAppendAction`'s summary — the fork's own named deviation is "extra summary keys — same
+  shape as fast_append". Do NOT synthesise the three keys in RePark: a hand-rolled count that
+  drifts from what the fork's merge actually did would be worse than their absence.
+  pins: ice-merge-append-1/C-006
+
+### ICE-MERGE-APPEND-INSERT-1 — a bare `INSERT INTO` still commits through `fast_append` — **BACKLOG 2026-09-19**
+
+- **repark** — a bare `INSERT INTO cat.ns.t VALUES (…)` (and the facade's `insertInto` /
+  `saveAsTable(mode="append")`, which lower to it) falls through to DataFusion and plans on the
+  fork's provider: `IcebergCommitExec` → `IcebergWriteExec`. That exec's `InsertOp::Append` arm
+  commits through `tx.fast_append()`, so the manifest list is never merged — 100 appends leave
+  100 manifests — and the `commit.manifest*` properties are ignored on this door. Both
+  `IcebergCommitExec` and `IcebergWriteExec` are `pub(crate)` in the fork, so RePark can neither
+  reuse nor replace them at pin `44834673`. The RePark-owned append doors (`… BY NAME`, an
+  `INSERT` with write options, CTAS, the public `append()`) all merge; this one does not.
+- **Apache Spark** — the bare `INSERT INTO` **is** `SparkWrite$BatchAppend`, the merging producer:
+  the hundredth default append leaves ONE manifest. *(oracle: recorded, live PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-09-19.)*
+- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_bare_insert_into_still_commits_through_the_fork_commit_exec`
+  (codifies today's 100 manifests and the `IcebergCommitExec` plan node) and
+  `…::test_bare_insert_into_merges_like_spark` (strict xfail on Spark's number)
+- **Rationale** — BACKLOG, fork-routed. TRIGGER: **fork ask
+  `ICE-MERGE-APPEND-COMMITEXEC`** — route `IcebergCommitExec`'s `InsertOp::Append` arm through
+  `merge_append()`, the same mapping this unit justified from the Spark bytecode. Do NOT fix it
+  by intercepting `INSERT INTO` in the RePark routers and re-staging through the write-options
+  path: that would change distribution, file layout and the conform path for every insert in the
+  engine to buy one commit-site swap.
+  pins: ice-merge-append-1/C-009
+
 ### ICE-WRITE-OPTIONS-1 — DataFrame write options on Iceberg writes — **FIXED 2026-09-17**
 
 - **repark** — **FIXED 2026-09-17.** The facade stores `DataFrameWriterV2.option` /
@@ -4026,6 +4096,59 @@ the pin rather than obeying it.
   metadata-file count unchanged).
 - **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (**F-UPDATE-SCHEMA-SAME-1**): a
   schema update that changes nothing commits nothing, mirroring Java.
+
+### ICE-REPLACE-COLUMNS-1 — `ALTER TABLE … REPLACE COLUMNS` drops and re-adds every column — **FIXED 2026-09-19**
+
+- **repark** — **FIXED 2026-09-19.** `ALTER TABLE t REPLACE COLUMNS (…)` deletes every current
+  top-level column and adds the listed ones with **fresh** field ids (the fork's `UpdateSchema`
+  assigns them from `last-column-id + 1`, level-order inside a complex type), in one schema
+  commit: on the seed `(id BIGINT, data STRING, cat STRING)` with rows `(1,a,x),(2,b,y)`,
+  `REPLACE COLUMNS (id BIGINT, data STRING)` answers ids `4, 5`, `last-column-id` 5, a second
+  schema, and the two existing rows read `[NULL, NULL]`. The same holds when the list repeats
+  the current columns (`SAME`: ids 4, 5, 6, all NULL, a new schema), when a kept name changes
+  type (`id INT`, `data BINARY`), when the list is shorter (`ONE`), renamed (`k, v`), carries a
+  `COMMENT` (the doc lands on the new column), or declares a `STRUCT<a: INT, b: STRING>`
+  (`s`=5, `s.a`=6, `s.b`=7, `last-column-id` 7 — the shared sqlparser column-type path, so
+  STRUCT / ARRAY / MAP land like CREATE TABLE and ADD COLUMN, and bare `TIMESTAMP` follows the
+  session `spark.sql.timestampType` carrier). A row inserted after the replace reads back; a
+  second replace moves the ids again (6, 7) and NULLs it too; `VERSION AS OF <first snapshot>`
+  still answers the old rows under the old schema; an empty table replaces cleanly. Refusals
+  carry Spark's text and commit nothing: `NOT NULL` is a `ParseException` (`NOT NULL is not
+  supported in Hive-style REPLACE COLUMNS.`), a duplicate name is an `AnalysisException`
+  carrying `[COLUMN_ALREADY_EXISTS]` … `SQLSTATE: 42711`, and a live
+  partition or sort field whose source id would vanish is Iceberg's `ValidationException` text
+  — `Cannot find source column for partition field: 1000: cat: identity(3)` /
+  `Cannot find source column for sort field: identity(1) ASC NULLS FIRST` — raised before the
+  commit. A column position and a nested name refuse as Hive-style parse errors. The native
+  ANSI door has no Hive-style REPLACE COLUMNS and refuses at the parser.
+  Before (main, measured `repark-pc1-main.json`): a same-named column kept its field id **and
+  its values** (`BASIC` answered ids 1, 2 and rows `[[1,a],[2,b]]`), `SAME` committed nothing,
+  a re-typed name refused as an "identity trap", `STRUCT` refused `I7 primitives only`, and the
+  partition-keep-name and sorted cells silently kept a spec or order whose source column Spark
+  says is gone — 22 of the 34 measured cells differed.
+- **Apache Spark** — Spark's Hive-style `ReplaceColumns` lowers to one `DeleteColumn` per
+  current top-level column plus one `AddColumn` per listed column, so every id is fresh and
+  every existing row reads NULL; the refusals above are Spark's own (`ParseException`
+  `_LEGACY_ERROR_TEMP_0034`, `AnalysisException COLUMN_ALREADY_EXISTS`, and
+  `org.apache.iceberg.exceptions.ValidationException` through `Py4JJavaError`, the table
+  unchanged). *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
+  `local[1]` + InMemoryCatalog, 2026-09-19, cells `RC-*` (v2 and v3),
+  `python/repark/tests/ice_replace_columns_1_spark_oracle.json`, re-derived by
+  `python/repark/tests/_record_ice_replace_columns_1_oracle.py`.)*
+- **Pin** — `python/repark/tests/test_ice_replace_columns_1.py` (one pin per measured cell:
+  field ids, required flags, `last-column-id`, schema count, schema, data, time travel; the
+  refusal class and message; the table-untouched twin per refusal; the native-door refusal; the
+  live re-derivation leg); `crates/repark-spark/src/tests/replace_columns.rs` (12 Rust twins);
+  `python/repark/tests/test_alter_table.py` (the facade row, flipped).
+- **Rationale** — FIXED, not declared: the fork's `UpdateSchema` already allows a delete and a
+  same-name add in one batch, and already assigns fresh ids level-order; RePark only had to
+  stop keeping the old id. Residues, both declared: (1) the refusal classes — Spark surfaces
+  Iceberg's `ValidationException` as a `Py4JJavaError`, RePark raises `PySparkException` with
+  the same message core. (2) The `NOT NULL`, column-position and nested-name parse refusals
+  carry Spark's sentence but not its `== SQL ==` caret block. (3) The partition/sort source
+  check reads the **default** spec and sort order only; an older spec that still names a
+  dropped column is out of scope (no measured cell).
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 
 ### ICE-AVRO-NAME-1 — a partition column whose name is not a valid Avro name wrote an unreadable table — **FIXED 2026-09-19 (RP-35, fork #308 F-AVRO-NAME-1)**
 
@@ -6385,7 +6508,7 @@ the pin rather than obeying it.
   | MERGE `ON t.k = 'a' AND t.id = s.id` vs `INSERT INTO` partition `d`, MoR and COW | 2 of 2 | **FIXED** 2 of 2 |
   | 2 MERGEs `ON t.id < 50 …` / `ON t.id >= 50 …`, unpartitioned, copy-on-write | 2 of 2 | **FIXED** 2 of 2 |
   | 2 whole-partition DELETE statements `WHERE k = 'a'` / `k = 'b'` | 2 of 2 | 2 of 2 before and after (COW, one file per partition: each DELETE removes only its own file) |
-  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–7 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
+  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–10 of 16 at the 2026-09-19 jitter pin (16 of 16 with `commit.retry.num-retries=20`) — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
 
 - **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs` (fault-injected race
   through the real `execute_merge` / `execute_predicate_dml`, v2 and v3, MoR and COW:
@@ -6492,7 +6615,7 @@ the pin rather than obeying it.
 - **Rationale** — FIXED 2026-09-18, matching Spark. Java's `conflictDetectionFilter` is the
   target scan's filter, not the insert set, and RePark derives the same.
 
-### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5–7 of 16, Spark 7–15 — **BACKLOG 2026-09-17, corrected 2026-09-18**
+### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5–10 of 16, Spark 7–15, and a 20-retry budget commits all 16 — **BACKLOG 2026-09-17, corrected 2026-09-18, re-measured 2026-09-19 at the jitter pin**
 
 - **repark** — sixteen barrier-released `INSERT INTO … VALUES` against one memory-catalog table
   commit v2 7,5,5,6,5,6,6,6,5,5 and v3 6,5,7,5,5,6,5,5,6,7 over ten repetitions (release native,
@@ -6519,12 +6642,28 @@ the pin rather than obeying it.
   (v2/v3 × SQL / `writeTo().append()`: committed + losers = 16, at least one commit, every loser
   a `CatalogCommitConflicts` `PySparkException`, rows and snapshots equal the commits). The
   exact count is not pinned: it is scheduler-dependent in both engines.
+- **Re-measured 2026-09-19 at main `859c6506`** (fork pin `44834673`, which carries
+  F-COMMIT-JITTER-1, fork #320: Java's `Tasks.runTaskWithRetry` schedule with jitter of
+  +[0,10 %)). Thirty-two repetitions per format version, memory catalog, release native:
+  **v2 committed 5–10, mean 6.69; v3 committed 5–10, mean 6.50; sixteen of sixteen in 0 of 64
+  repetitions; no repetition lost a row** (the table's row count equalled the commit count every
+  time). Every loser is still the `CatalogCommitConflicts` class. So the jitter hypothesis of
+  2026-09-18 is **measured and refuted as the explanation**: with the jitter on the pin the top
+  of the band moved from 7 to 10 and the mean did not move.
+- **What the residue actually is — measured the same evening.** With
+  `commit.retry.num-retries = 20` on the table (the only change), the same storm commits
+  **16 of 16 in 8 of 8 repetitions**, mean 16.00, and so does the variant that also widens
+  `commit.retry.min-wait-ms`, `max-wait-ms` and `total-timeout-ms`. The fork honours the
+  Iceberg table properties, and the distance to Spark is the **default budget of four retries**
+  under a sixteen-writer barrier, not a missing or broken retry loop. Java's own default is the
+  same four; Spark's Hadoop catalog reaches 9–16 because its commit path also retries the
+  version-hint write, and its in-memory catalog reaches 7–9, the band RePark's top now touches.
 - **Rationale** — BACKLOG: Q-21a-5's "rarely, not never" was read off one repetition — both
   engines lose appends to the retry budget under a 16-writer barrier storm, Spark somewhat less
-  often. The remaining distance (5–7 vs 7–9 on the same catalog class) is retry jitter: Java's
-  `Tasks.exponentialBackoff` randomizes each wait while the fork's backoff does not — a
-  hypothesis, not a finding (fork card F-COMMIT-JITTER-1, not filed tonight). No product change
-  (ruling Q-23b-1).
+  often. No product change (ruling Q-23b-1, unchanged): the property is the documented lever, the
+  default matches Java's, and a user who needs a sixteen-writer barrier storm to land raises
+  `commit.retry.num-retries`. Evidence: `/tmp/oc-worker/qa/storm_results.json` and
+  `storm_retry_results.json` (run 25a, 2026-09-19).
 
 ### ICE-PROMOTE-READ-1 — filters on a column widened by `ALTER COLUMN … TYPE` dropped the rows written before the promotion — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1)**
 
@@ -7157,14 +7296,15 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed then.
   pins: ice-rdf-fork-asks-1/C-003
 
-### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
+### MANIFEST-1 — `rewrite_manifests` rewrote data manifests only; Spark rewrites delete manifests too — **FIXED 2026-09-20, ICE-RM-DELETES-1**
 
-- **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data**
-  manifests of the current partition spec and reports only that leg. On a merge-on-read table
-  with four data manifests and three delete manifests it answers
-  `rewritten_manifests_count = 4`, `added_manifests_count = 1`, and the three delete manifests
-  are carried forward untouched. When the data leg has nothing to do **and** two or more delete
-  manifests are present, the call **refuses** rather than answering two zeros.
+- **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data and
+  delete** manifests of the chosen partition spec in one commit and sums both legs. On a
+  merge-on-read table with four data manifests and three delete manifests it answers
+  `rewritten_manifests_count = 7`, `added_manifests_count = 2`, leaving one manifest per leg.
+  A leg with a single at-target manifest is kept, so a delete-only table answers its delete leg
+  alone (one data manifest plus three delete manifests answer `3, 1`) and a table quiet on both
+  legs answers two zeros and commits nothing.
 - **Apache Spark** — runs two legs in one procedure and sums them. Measured on the same shapes:
   five data manifests plus three delete manifests answered `8, 2` (both legs compacted, manifests
   8 → 2); one data manifest plus two delete manifests answered `2, 1`; one data manifest plus one
@@ -7178,22 +7318,26 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   the `DataSourceV2Relation` note this row used to carry is retired — see
   [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_reports_the_data_leg_and_leaves_delete_manifests`
-  and `::call_rewrite_manifests_refuses_zeros_while_delete_manifests_stay`
-- **Rationale** — BACKLOG, and it is fork work. The owned fork's `RewriteManifestsAction` keeps
-  every `Deletes`-content manifest byte-identical by design, so outstanding merge-on-read deletes
-  still apply after the rewrite; there is no delete leg to call. **Contents are unaffected** — the
-  live row set is identical either way, and this is manifest layout. The refusal covers the one
-  shape where the divergence would be invisible: two zeros read as "nothing to compact", so an
-  operator would run the procedure forever on a table that never compacts. Closing the row means a
-  delete-manifest rewrite in the fork.
+  `crates/repark-spark/src/tests/call_rm_deletes.rs` (the 14 recorded Spark 4.1.2 cells
+  replayed),
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_merges_both_legs`
+  and `::call_rewrite_manifests_merges_the_delete_leg_alone`, and
+  `python/repark/tests/test_ice_rm_deletes_1.py`
+- **Rationale** — FIXED 2026-09-20 (ICE-RM-DELETES-1, IPI-11 RePark half, on fork `44834673`
+  carrying the delete-manifest opt-in, fork #318). The fork's
+  `RewriteManifestsAction::rewrite_delete_manifests(true)` joins Spark's second leg in the same
+  `replace` commit with sequence numbers preserved and empty delete manifests dropped; the CALL
+  keeps a quiet leg out of `rewrite_if`, so a lone manifest is never rewritten one to one.
+  **Contents are unaffected** — the live row set is identical either way, and this is manifest
+  layout.
 
-### MANIFEST-2 — `rewrite_manifests` refuses `spec_id`; `use_caching` is accepted and does nothing
+### MANIFEST-2 — `rewrite_manifests` refused `spec_id`; `use_caching` is accepted and does nothing
 
-- **repark** — `spec_id` refuses loud, named or positional. The procedure always rewrites the
-  manifests of the table's **current** partition spec, which is Spark's default, and older specs'
-  manifests are kept. `use_caching` is accepted, type-checked as a boolean **literal**, and
-  changes nothing: a quoted `use_caching => 'true'` refuses here.
+- **repark** — `spec_id` selects the rewritten spec (default: the table's **current** partition
+  spec, which is Spark's default); an id the table does not have raises
+  `IllegalArgumentException: Invalid spec id 99`, Spark's own text. `use_caching` is accepted,
+  type-checked as a boolean **literal**, and changes nothing: a quoted
+  `use_caching => 'true'` refuses here.
 - **Apache Spark** — takes both (`RewriteManifestsProcedure.PARAMETERS`: `table` STRING required,
   `use_caching` BOOLEAN optional, `spec_id` INTEGER optional). `spec_id` selects the spec whose
   manifests are rewritten and refuses an id the table does not have (`Invalid spec id 7`);
@@ -7207,19 +7351,19 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   type "INT"`. So a migrating job written `use_caching => 'true'` runs on Spark and refuses here.
   *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MANIFEST-1.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_argument_surface_is_sparks`
-  and `python/repark/tests/test_maintenance_call.py::test_rewrite_manifests_spec_id_refuses_and_use_caching_is_accepted`
-- **Rationale** — DECLARED. `use_caching` is a Spark-side execution option with no counterpart
-  here, and accepting it keeps a migrating maintenance job's SQL unchanged while the type check
-  keeps a typo loud. The stricter literal rule is kept deliberately, and it is the same rule
-  `remove_orphan_files`' `dry_run` already carries: on this surface a quoted boolean is far more
-  likely a typo than an intent, and Spark's own cast would read `'yes'` as true and an
-  unrecognized string as null. The cost is one edit in a migrating job, and the refusal names the
-  argument. `spec_id` is a *behaviour* selector, so accepting it and ignoring it would
-  silently rewrite the wrong spec's manifests; refusing names what the engine actually does. The
-  fork exposes `RewriteManifestsAction::rewrite_if`, which this engine already uses to pin Spark's
-  default (current spec), so wiring the argument is possible — it is a scope decision, not a
-  capability gap.
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_argument_surface_is_sparks`,
+  `crates/repark-spark/src/tests/call_rm_deletes.rs` (current, non-current and unknown `spec_id`
+  pins) and
+  `python/repark/tests/test_maintenance_call.py::test_rewrite_manifests_spec_id_selects_and_use_caching_is_accepted`
+- **Rationale** — `spec_id` FIXED 2026-09-20 (ICE-RM-DELETES-1): the argument flows into the
+  `rewrite_if` predicate, which the sibling `rewrite_data_files` options map already validated
+  this way. The `use_caching` string-literal strictness stays DECLARED. `use_caching` is a
+  Spark-side execution option with no counterpart here, and accepting it keeps a migrating
+  maintenance job's SQL unchanged while the type check keeps a typo loud. The stricter literal
+  rule is kept deliberately, and it is the same rule `remove_orphan_files`' `dry_run` already
+  carries: on this surface a quoted boolean is far more likely a typo than an intent, and Spark's
+  own cast would read `'yes'` as true and an unrecognized string as null. The cost is one edit in
+  a migrating job, and the refusal names the argument.
 
 ### MANIFEST-3 — above the manifest target size, `rewrite_manifests` writes a different number of manifests
 
@@ -7247,6 +7391,76 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   would deny manifest compaction to exactly the large tables that need it most, and the number the
   engine reports is an honest count of what it wrote. Closing the row means giving the fork Java's
   `ceil(total / target)` sizing, which is fork work.
+
+### ICE-PROCS-ROUTE-1 — four maintenance procedures — **FIXED 2026-09-19**
+
+`ancestors_of`, `compute_table_stats`, `compute_partition_stats`, and
+`rewrite_table_path` refused before this row (`CALL … is not supported`);
+they now answer with Spark's schemas and rows over the owned fork's
+maintenance actions. Measured before/after on the 31-cell PySpark-4.1.2 +
+Iceberg-1.11.0 oracle (`python/repark/tests/ice_procs_route_1_spark_oracle.json`,
+re-derived by `python/repark/tests/_record_ice_procs_route_1_oracle.py`):
+before, every facade cell failed with the not-supported refusal; after, 28
+cells pass on the facade door with the recorded columns, rows, metadata
+entries, and file contents, the 2 incremental version-range cells plus the
+nested-column cell stay `xfail(strict)`, and the live tier re-derives the
+oracle on live Spark.
+
+- **RePark** (`CALL <catalog>.system.ancestors_of(table [, snapshot_id])`):
+  walks the snapshot parent chain newest-first, answering
+  `snapshot_id bigint, timestamp bigint` with the snapshot's own
+  timestamp-ms. No current snapshot refuses `Cannot find snapshot: -1`; an
+  unknown id refuses `Cannot find snapshot: <id>` — both as
+  `IllegalArgumentException`, Spark's procedure-layer class.
+- **RePark** (`CALL <catalog>.system.compute_table_stats(table [, snapshot_id]
+  [, columns])`): one `statistics_file` string row with the registered puffin
+  path; the metadata gains one `apache-datasketches-theta-v1` blob per column
+  with exact ndv at this size. The default covers every primitive top-level
+  column (`struct` fields skipped); `columns` keeps the listed ones in caller
+  order after dedup. An unknown column refuses `Can't find column <name> in
+  table <schema>`; an empty `columns` array refuses `Columns cannot be
+  null/empty`; a non-primitive column refuses `Can't compute stats on
+  non-primitive type column: <name> (<type>)`; a nested name passes through
+  to the fork, which has no nested scan projection yet, so it stays
+  `xfail(strict)` instead of answering Spark's nested blob. An empty table
+  answers zero rows and commits nothing.
+- **RePark** (`CALL <catalog>.system.compute_partition_stats(table [,
+  snapshot_id])`): one `partition_statistics_file` string row with
+  per-partition counts (`dv_count` on v3). An unpartitioned table refuses
+  `Table must be partitioned`.
+- **RePark** (`CALL <catalog>.system.rewrite_table_path(table, source_prefix,
+  target_prefix [, staging_location] [, create_file_list] [, start_version]
+  [, end_version])`): Spark's four columns — `latest_version` names the
+  current metadata file; `file_list_location` is the staged `file-list` CSV of
+  `src,target` lines (`N/A` when `create_file_list => false`); the manifest
+  count is the covered snapshots; the delete count is the staged parquet
+  position-delete files (1 on the MoR cell). Default staging sits under
+  `<table>/metadata/copy-table-staging-<…>/`. The file-list line shapes and
+  the staged metadata location match the oracle with the single-file
+  residue below; `latest_version` keeps the memory-catalog basename
+  (`NNNNN-<uuid>.metadata.json`, not the oracle Hadoop `vN` names). A wrong
+  prefix refuses `Path …/ does not start with …/` from the router-owned
+  guard; `start_version` / `end_version` refuse naming the fork's missing
+  incremental range.
+- **Apache Spark**: identical columns, rows, metadata entries, and refusal
+  texts per the 31 measured cells, except the two incremental version-range
+  cells, which only Spark answers (the fork stages a full rewrite), and the
+  nested-column stats cell, which only Spark answers (the fork scan has no
+  nested projection).
+- **Pin**: `python/repark/tests/test_ice_procs_route_1.py` (facade cells plus
+  the native-door CALL refusal each) and
+  `crates/repark-spark/src/tests/call_procs_route_1.rs` (schemas, rows, and
+  every refusal).
+- **Rationale**: routing, not table-format work — the fork already implements
+  the three actions, and the router only shapes Spark's surface around them.
+  Residue: the version-range `xfail(strict)` pair with the fork ask in the
+  ledger; the nested-column `xfail(strict)` with its fork ask; the fork stages
+  one rewritten metadata file where Spark stages every version (the file list
+  carries the staged file either way); default staging names use wall-clock
+  nanos plus pid because this crate carries no `uuid` dependency; the memory
+  catalog's metadata basenames diverge from Hadoop `vN` names (pinned by
+  shape); output columns are non-nullable by the rewrite-family precedent
+  (the fixture records no nullability).
 
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**
 

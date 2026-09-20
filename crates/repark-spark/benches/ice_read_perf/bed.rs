@@ -6,7 +6,11 @@ use std::time::Instant;
 use datafusion::parquet::arrow::arrow_reader::{ArrowReaderMetadata, ArrowReaderOptions};
 use datafusion::parquet::file::metadata::PageIndexPolicy;
 use iceberg::{NamespaceIdent, TableIdent};
+use iceberg_datafusion::IcebergScanOptions;
 use repark_core::{ReparkSession, SqlDialect};
+use repark_iceberg::catalog::{
+    FOOTER_CACHE_BYTES_KEY, MANIFEST_CACHE_BYTES_KEY, METADATA_CACHE_KEY,
+};
 use repark_spark::{SparkDialect, SparkExtension};
 use serde_json::{Value, json};
 
@@ -58,12 +62,31 @@ impl BedShape {
     }
 }
 
-pub fn spark_session() -> Result<ReparkSession, BoxError> {
+pub fn spark_session(baseline: bool) -> Result<ReparkSession, BoxError> {
     let dialect: Arc<dyn SqlDialect> = Arc::new(SparkDialect);
-    Ok(ReparkSession::builder()
+    let mut builder = ReparkSession::builder()
         .with_sql_dialect(dialect)
-        .with_extension(Arc::new(SparkExtension))
-        .build()?)
+        .with_extension(Arc::new(SparkExtension));
+    if baseline {
+        builder = builder
+            .config(METADATA_CACHE_KEY, "false")
+            .config(MANIFEST_CACHE_BYTES_KEY, "0")
+            .config(FOOTER_CACHE_BYTES_KEY, "0");
+    }
+    let session = builder.build()?;
+    if baseline {
+        let mut options = IcebergScanOptions::default();
+        options.row_selection_enabled = false;
+        session
+            .context()
+            .state_ref()
+            .write()
+            .config_mut()
+            .options_mut()
+            .extensions
+            .insert(options);
+    }
+    Ok(session)
 }
 
 #[must_use]
@@ -141,7 +164,7 @@ pub async fn setup(options: &SetupOptions, summary: &StepSummary) -> Result<Outc
             table_dir.display()
         )));
     }
-    let session = spark_session()?;
+    let session = spark_session(false)?;
     session.register_memory_catalog(CATALOG, root).await?;
     session
         .create_namespace(

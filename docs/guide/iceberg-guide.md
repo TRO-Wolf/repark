@@ -480,19 +480,18 @@ When there is nothing to re-group you get two zeros and no new snapshot, exactly
 
 Four things to know before you port a maintenance job:
 
-- **Only the current partition spec is rewritten.** Manifests written under an older spec are kept
-  as they are. That is Spark's default too.
-- **`spec_id` refuses**, because this engine always rewrites the current spec and will not accept
-  an argument it would ignore. `use_caching` is accepted and does nothing — it tunes Spark's own
+- **Only the current partition spec is rewritten by default.** Manifests written under an
+  older spec are kept as they are. That is Spark's default too; pass `spec_id` to rewrite
+  another spec's manifests instead.
+- **`spec_id` selects the rewritten spec**, and an id the table does not have raises
+  `Invalid spec id`. `use_caching` is accepted and does nothing — it tunes Spark's own
   DataFrame cache — but it takes a boolean literal here, where Spark also accepts a quoted
   `'true'`
-  ([MANIFEST-2](../spark-sql-iceberg-parity.md#manifest-2--rewrite_manifests-refuses-spec_id-use_caching-is-accepted-and-does-nothing)).
-- **Delete manifests are not rewritten.** Spark compacts them in a second leg of the same
-  procedure; this engine reports the data leg only and leaves them in place
-  ([MANIFEST-1](../spark-sql-iceberg-parity.md#manifest-1--rewrite_manifests-rewrites-data-manifests-only-spark-rewrites-delete-manifests-too)).
-  If that leaves nothing for the data leg to do, the call refuses rather than returning two zeros
-  that read as "already clean". Compacting the delete FILES first with
-  `rewrite_position_delete_files` is what reduces them.
+  ([MANIFEST-2](../spark-sql-iceberg-parity.md#manifest-2--rewrite_manifests-refused-spec_id-use_caching-is-accepted-and-does-nothing)).
+- **Delete manifests are rewritten in the same commit.** A leg with a single at-target
+  manifest is kept rather than rewritten one to one, so a table quiet on both legs answers
+  two zeros and commits nothing
+  ([MANIFEST-1](../spark-sql-iceberg-parity.md#manifest-1--rewrite_manifests-rewrote-data-manifests-only-spark-rewrites-delete-manifests-too--fixed-2026-09-20-ice-rm-deletes-1)).
 - **On a table whose manifests are individually larger than
   `commit.manifest.target-size-bytes`, `added_manifests_count` will not match Spark's**, because
   the two engines split the entries over a different number of manifests
@@ -772,16 +771,12 @@ exceptional.
 **On S3 Tables, a step can fail on a commit conflict.** "Maintenance on Glue and S3 Tables" above
 says why that is the concurrency control working rather than damage. Retry that step.
 
-**Step 4 refuses on an idle cycle.** When steps 2 and 3 rewrote nothing, `rewrite_manifests` has
-nothing to do on the data manifests. It then raises `UnsupportedOperationException` rather than
-answering two zeros while delete manifests stay uncompacted
-([MANIFEST-1](../spark-sql-iceberg-parity.md#manifest-1--rewrite_manifests-rewrites-data-manifests-only-spark-rewrites-delete-manifests-too)).
-Apache Spark answers `0, 0` there. The refusal points at step 2. Step 2 cannot help once the
-delete files are the `RDF-1` residue above — one delete file naming several data files — because
-those delete manifests never go away.
-Catch the exception, or guard step 4 on steps 2 and 3 having rewritten something. You reach this
-by running the cycle twice with no merges in between. A retry after a successful cycle does
-exactly that.
+**Step 4 answers zeros on an idle cycle.** When steps 2 and 3 rewrote nothing and the
+manifests are already compact, `rewrite_manifests` answers `0, 0` and commits nothing, exactly
+as Apache Spark does
+([MANIFEST-1](../spark-sql-iceberg-parity.md#manifest-1--rewrite_manifests-rewrote-data-manifests-only-spark-rewrites-delete-manifests-too--fixed-2026-09-20-ice-rm-deletes-1)).
+You reach this by running the cycle twice with no merges in between. A retry after a successful
+cycle does exactly that.
 
 #### Porting a Spark maintenance DAG
 
@@ -789,20 +784,16 @@ One edit is hygiene, not a divergence: pass `expire_snapshots` an explicit `olde
 block above does. Spark defaults the cutoff to the same five-day window, so a Spark DAG without
 the argument keeps five days of history there too.
 
-Five edits are divergences, and none of them changes what a query returns:
+Four edits are divergences, and none of them changes what a query returns:
 
 - `remove_orphan_files` needs an explicit `older_than` here. Spark defaults it
   ([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
 - `remove_orphan_files` is a dry run here by default. Spark deletes. Step 7 needs
   `dry_run => false`, as a boolean literal
   ([ORPHAN-2](../spark-sql-iceberg-parity.md#orphan-2--remove_orphan_files-defaults-to-a-dry-run-spark-defaults-to-deleting)).
-- `rewrite_manifests` refuses `spec_id`, and takes a boolean literal for `use_caching` where
+- `rewrite_manifests` takes a boolean literal for `use_caching` where
   Spark also casts a quoted `'true'`
-  ([MANIFEST-2](../spark-sql-iceberg-parity.md#manifest-2--rewrite_manifests-refuses-spec_id-use_caching-is-accepted-and-does-nothing)).
-- `rewrite_manifests` reports the data leg only, and **raises** where Spark answers `0, 0`, when
-  the data leg is idle and delete manifests remain
-  ([MANIFEST-1](../spark-sql-iceberg-parity.md#manifest-1--rewrite_manifests-rewrites-data-manifests-only-spark-rewrites-delete-manifests-too)).
-  A ported DAG needs a guard or a caught exception on that task.
+  ([MANIFEST-2](../spark-sql-iceberg-parity.md#manifest-2--rewrite_manifests-refused-spec_id-use_caching-is-accepted-and-does-nothing)).
 - `added_manifests_count` diverges from Spark's above `commit.manifest.target-size-bytes`
   ([MANIFEST-3](../spark-sql-iceberg-parity.md#manifest-3--above-the-manifest-target-size-rewrite_manifests-writes-a-different-number-of-manifests)).
   The rewritten count matches, and so does the row set.

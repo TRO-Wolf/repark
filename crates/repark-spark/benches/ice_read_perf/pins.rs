@@ -15,10 +15,8 @@ use tempfile::TempDir;
 
 use crate::bed::{BedShape, SetupOptions};
 use crate::cli::{Command, EXIT_FAILURE, EXIT_USAGE, Outcome};
-use crate::r3::{
-    R3_EXIT_CODE, R3_TABLE_SIZE_LIMIT_BYTES, R3Verdict, StepSummary, r3_check, r3_verdict,
-    table_footprint,
-};
+use crate::r3::{R3_EXIT_CODE, R3_TABLE_SIZE_LIMIT_BYTES, R3Verdict, StepSummary};
+use crate::r3::{r3_check, r3_verdict, table_footprint};
 use crate::remote::{
     CreateOutcome, NamespaceRule, Phase, PhaseRequest, RemoteSetupOptions, WriteOutcome,
     remote_catalog_config,
@@ -199,6 +197,7 @@ fn the_parser_ignores_cargo_bench_and_reads_every_flag() {
             table: Some("perf.events".to_string()),
             manifest: Some(PathBuf::from("/m.json")),
             query: Some("Q3".to_string()),
+            baseline: false,
             repeat: 1,
             files: None,
             rows_per_file: None,
@@ -374,9 +373,8 @@ fn setup_writes_exactly_n_files_and_every_mode_runs_on_them() {
                 assert!(entry["samples"][1]["rss_at_reset_kib"].is_number());
             }
             let footers = if mode == "warm" { 0 } else { 3 };
-            let count = &query(&document, "Q1")["io"]["data_file_ranged"];
-            assert_eq!(requests(&count["footer"]), footers, "mode {mode}");
-            assert_eq!(requests(&count["page"]), 0, "mode {mode}");
+            let count = &query(&document, "Q1")["io"]["by_class"]["data_file"];
+            assert_eq!(requests(count), 0, "mode {mode}");
             let full = &query(&document, "Q2")["io"]["data_file_ranged"];
             assert_eq!(requests(&full["footer"]), footers, "mode {mode}");
             assert!(requests(&full["page"]) > 0, "mode {mode}");
@@ -395,7 +393,7 @@ async fn q3_and_q7_reach_the_scan_with_the_same_rows() {
     bed::setup(&options, &StepSummary::default()).await.unwrap();
     let warehouse = std::fs::canonicalize(&options.warehouse).unwrap();
     let shape = bed::read_shape(&bed::manifest_path(&warehouse)).unwrap();
-    let session = bed::spark_session().unwrap();
+    let session = bed::spark_session(false).unwrap();
     bed::register_local_table(
         &session,
         &warehouse,
@@ -490,7 +488,7 @@ impl StandIn {
 
 impl SessionSource for StandIn {
     async fn open(&self) -> Result<ReparkSession, BoxError> {
-        let session = bed::spark_session()?;
+        let session = bed::spark_session(false)?;
         bed::register_local_table(&session, &self.warehouse, &self.metadata).await?;
         self.opened.borrow_mut().push(session.clone());
         Ok(session)
@@ -664,7 +662,7 @@ async fn fake_size_stops_every_mode_and_catalog(dir: &TempDir, warehouse: &Path)
 async fn the_files_table_counts_delete_files_in_the_footprint() {
     let dir = TempDir::new().unwrap();
     let root = text(dir.path());
-    let session = bed::spark_session().unwrap();
+    let session = bed::spark_session(false).unwrap();
     session
         .register_memory_catalog("bench", root)
         .await
@@ -791,7 +789,7 @@ async fn aws_catalogs_fail_loud_on_missing_props_without_a_call() {
 }
 
 async fn stand_in_session(root: &str) -> repark_core::ReparkSession {
-    let session = bed::spark_session().unwrap();
+    let session = bed::spark_session(false).unwrap();
     session
         .register_memory_catalog(bed::CATALOG, root)
         .await

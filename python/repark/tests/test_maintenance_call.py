@@ -22,7 +22,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import PySparkException, UnsupportedOperationException
+from repark.errors import IllegalArgumentException, PySparkException, UnsupportedOperationException
 
 TABLE = "mem.ns.events"
 COW = """
@@ -462,17 +462,18 @@ def test_rewrite_manifests_no_op_returns_zeros(spark: ReparkSession) -> None:
     assert after == snapshots_before, "a no-op rewrite commits no snapshot"
 
 
-def test_rewrite_manifests_spec_id_refuses_and_use_caching_is_accepted(
+def test_rewrite_manifests_spec_id_selects_and_use_caching_is_accepted(
     spark: ReparkSession,
 ) -> None:
-    """MW-6 / registry row MANIFEST-2 — the argument surface.
+    """ICE-RM-DELETES-1 — the argument surface.
 
     Spark takes ``table``, ``use_caching`` and ``spec_id``. ``use_caching`` caches Spark's own
     manifest DataFrame and changed no count on the oracle, so this engine accepts it and does
-    nothing with it. ``spec_id`` selects which partition spec to rewrite; this engine always
-    rewrites the current one and refuses the argument rather than accepting one value of it.
+    nothing with it. ``spec_id`` selects which partition spec to rewrite; the current id runs
+    like the default call and an unknown id raises ``IllegalArgumentException``
+    (``Invalid spec id``, Spark's own text).
 
-    pins: mw-6-rewrite-manifests/C-007, C-008
+    pins: ice-rm-deletes-1/C-003, C-004
     """
     table = "mem.ns.args"
     spark.sql(
@@ -481,14 +482,20 @@ def test_rewrite_manifests_spec_id_refuses_and_use_caching_is_accepted(
     for index in range(2, 6):
         spark.sql(f"INSERT INTO {table} SELECT {index} AS id, 'x' AS name")
 
-    with pytest.raises(
-        (UnsupportedOperationException, PySparkException),
-        match=r"spec_id",
-    ):
-        spark.sql("CALL mem.system.rewrite_manifests(table => 'ns.args', spec_id => 0)")
-
     result = spark.sql(
         "CALL mem.system.rewrite_manifests(table => 'ns.args', use_caching => true)"
     ).to_arrow()
     assert result.column("rewritten_manifests_count")[0].as_py() == 5
     assert result.column("added_manifests_count")[0].as_py() == 1
+
+    compacted = spark.sql(
+        "CALL mem.system.rewrite_manifests(table => 'ns.args', spec_id => 0)"
+    ).to_arrow()
+    assert compacted.column("rewritten_manifests_count")[0].as_py() == 0
+    assert compacted.column("added_manifests_count")[0].as_py() == 0
+
+    with pytest.raises(
+        IllegalArgumentException,
+        match=r"Invalid spec id 99",
+    ):
+        spark.sql("CALL mem.system.rewrite_manifests(table => 'ns.args', spec_id => 99)")

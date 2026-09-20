@@ -25,6 +25,21 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   plans the row filter `d = 2024-01-01` and `'2024-13-45'` refuses with the Arrow cast text;
   an empty dynamic stage skips the commit (`replace_partitions_is_noop`).
   pins: ice-overwrite-mode-1/C-011, C-013, C-014
+- `merge_append_series.rs` — **ICE-MERGE-APPEND-1 (2026-09-19):** replays the recorded Spark
+  4.1.2 / Iceberg 1.11.0 manifest series (`../../../../python/repark/tests/ice_merge_append_1_truth.json`)
+  through `write::commit_append` — 120 sequential single-file appends per variant, probed at
+  1, 5, 20, 50, 99, 100, 101, 110, 120, asserting the manifest count and the data-file count.
+  `defaults` collapses 99 manifests into 1 at the hundredth append,
+  `commit.manifest.min-count-to-merge=5` holds the table between 1 and 4 manifests, and
+  `commit.manifest-merge.enabled=false` keeps one manifest per append. Also the regression
+  battery a merging commit could break: a two-spec table (Java never merges across spec ids),
+  a MoR table whose delete manifests must carry forward, row lineage and sequence numbers
+  across a merge, and a branch-targeted merging append.
+  Mutations M1/M2/M3 each red their named subset of these pins and nothing else (ledger §3).
+  All seven pins green after the routing change; the branch leg merges at the hundredth
+  manifest on the branch (the carried seed plus 99 branch appends), not the hundredth branch
+  append, and main's pointer never moves.
+  pins: ice-merge-append-1/C-002, C-003, C-004, C-005, C-008
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.

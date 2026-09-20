@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-rm-deletes-1-ledger.md](ice-rm-deletes-1-ledger.md) —
+  **ICE-RM-DELETES-1 (2026-09-20), in flight:** `CALL rewrite_manifests` rewrites delete
+  manifests through the fork #318 opt-in and honours `spec_id` (IPI-11, RePark half) —
+  per-leg work gating in `rewrite_if`, the lone-manifest no-op on both legs, unknown-spec
+  refusal in Spark's recorded `Invalid spec id` text; 14-cell recorded Spark 4.1.2 oracle
+  plus red-first replay pins; registry MANIFEST-1 FIXED, MANIFEST-2 spec half FIXED.
+  `risk_tier: standard`. Branch `fix/ice-rm-deletes-1`.
+  pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice-overwrite-mode-1-ledger.md](ice-overwrite-mode-1-ledger.md) —
   **ICE-OVERWRITE-MODE-1 (2026-09-19), in flight:** Spark's overwrite partition set on
   every overwrite door (IPI-03) — one Rust decision over the session
@@ -108,6 +116,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   of one cell per shape, registry row ICE-LIST-NULL-1 FIXED. Test-only, no product
   change. `risk_tier: standard`. Branch `chore/rp-31-fork-pin`.
   pins: ice-list-null-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [ice-count-fold-1-ledger.md](ice-count-fold-1-ledger.md) —
+  **ICE-COUNT-FOLD-1 (2026-09-19), in flight:** `count(*)` folds from an exact Iceberg
+  row count again — both integer-literal rules (`SparkIntegerLiteral`, the Spark door's
+  `SparkIntegralLiteral`) keep a count-of-`1` argument as DataFusion's `Int64(1)`
+  expansion through one shared walker; names, LongType and values unchanged on both
+  doors. `risk_tier: standard`. Branch `perf/ice-count-fold-1`.
+  pins: ice-count-fold-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice-list-null-2-ledger.md](ice-list-null-2-ledger.md) —
   **ICE-LIST-NULL-2 (2026-09-19), in flight:** copy-on-write DELETE with a compound
   predicate over a nested column answers Spark — the identity path declines
@@ -176,6 +191,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   recorded Spark oracle (`branch_ops_1_truth.json`), red-first pins on both doors, and
   registry rows REF-5–REF-8. `risk_tier: standard`. Branch `fix/ice-branch-ops-1`.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice-procs-route-1-ledger.md](ice-procs-route-1-ledger.md) —
+  **ICE-PROCS-ROUTE-1 (2026-09-19), in flight:** `ancestors_of`,
+  `compute_table_stats`, `compute_partition_stats`, `rewrite_table_path` as
+  Spark-door routing over the fork's maintenance actions (no fork change), with
+  a 27-cell recorded Spark oracle, red-first pins on both doors, registry row
+  `ICE-PROCS-ROUTE-1`, and a strict-xfail pair plus fork ask for the
+  incremental version range. `risk_tier: standard`. Branch `fix/ice-procs-route-1`.
+  pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - [df-rust-3-ledger.md](df-rust-3-ledger.md) —
   **DF-RUST-3 (2026-09-15), in flight:** `DataFrame.freqItems`,
   `DataFrameStatFunctions.freqItems`, and `DataFrame.transpose` implemented Rust-first —
@@ -259,6 +283,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   complete. `risk_tier: standard`. Branch `perf/ice-read-perf-0`.
   pins: ice-read-perf-0/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010
+- [ice-bench-baseline-1-ledger.md](ice-bench-baseline-1-ledger.md) —
+  **ICE-BENCH-BASELINE-1 (2026-09-19), in flight:** the read bench's own "before" switch —
+  a bare `run --baseline` flag that builds every run session with the shared caches off and
+  the fork's page-index row selection disabled, reports `baseline` / `baseline_switches` in
+  the JSON and the baseline in the table header, plus the boolean `baseline` dispatch input
+  on the `ice-read-perf-bench` job. No product behaviour change. Every clause PROVEN. What it
+  cannot switch off (timestamp pushdown, the `count(*)` fold) is recorded in the ledger, so
+  the number is never read as pre-campaign main. `risk_tier: standard`. Branch
+  `perf/ice-bench-baseline-1`.
+  pins: ice-bench-baseline-1/C-001, C-002, C-003, C-004, C-005
 - [cast-ts-string-1-ledger.md](cast-ts-string-1-ledger.md) —
   **CAST-TS-STRING-1 (2026-09-19), in flight:** `CAST(<string> AS TIMESTAMP)` follows Spark
   4.1.2's `stringToTimestamp` on every door — one Rust kernel
@@ -1246,3 +1280,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   row FIXED with the nested-namespace boundary and the exception-class
   residual. `risk_tier: standard`. Branch `fix/ice-drop-ns-1`.
   pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [ice-replace-columns-1-ledger.md](ice-replace-columns-1-ledger.md) —
+  **ICE-REPLACE-COLUMNS-1 (2026-09-19), in flight:** `ALTER TABLE … REPLACE
+  COLUMNS` drops every current top-level column and adds the listed ones with
+  fresh field ids, as Spark's Hive-style form does — the 34-cell oracle
+  (`RC-*`, v2 and v3) plus red-first pins, the parser and planner moved to
+  `crates/repark-spark/src/replace_columns.rs` on the shared column-type path
+  (STRUCT / ARRAY / MAP), Spark's texts on the `NOT NULL`, duplicate-name and
+  partition/sort source-loss refusals, the identity-trap gate and its five
+  pins deleted, registry row FIXED with four declared residues, and a harness
+  replay of 34 / 34 equal (was 12 / 34). `risk_tier: standard`. Branch
+  `fix/ice-replace-columns-1`.
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

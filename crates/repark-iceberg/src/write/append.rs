@@ -1,5 +1,3 @@
-//! Public bulk append through the fork's `fast_append` transaction path.
-
 use std::str::FromStr;
 use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
 
@@ -234,7 +232,6 @@ where
 }
 
 /// Single-writer fanout loop (the historical serial body of `fanout_conformed_stream`).
-/// One stamped `fast_append` commit: `ENGINE_CONTRACT` §4 INSERT/append with MERGE's stamp class.
 /// # Errors
 /// Returns the fork's transaction/commit error (folded to this crate's error type) when the append
 pub async fn commit_append(
@@ -245,7 +242,7 @@ pub async fn commit_append(
     let (operation_id, summary) = operation_id_and_summary();
     let tx = Transaction::new(table);
     let action = tx
-        .fast_append()
+        .merge_append()
         .add_data_files(new_files)
         .set_snapshot_properties(summary);
     let tx = action.apply(tx).map_err(iceberg_err)?;

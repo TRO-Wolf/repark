@@ -333,7 +333,7 @@ async fn finish_ctas_staged_commit(
         let engine =
             repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
         let (_, summary) = repark_iceberg::write::summary_with_extras(&snapshot_extra, &engine)?;
-        tx.fast_append()
+        tx.merge_append()
             .add_data_files(data_files)
             .set_snapshot_properties(summary)
             .apply(tx)

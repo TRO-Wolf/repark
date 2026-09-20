@@ -244,7 +244,25 @@ would change what "four at once" measures for the other four (their timings and 
   $files`); the Python facade quotes names first and does not see it. That is a product
   defect outside this unit, reported in the unit's hand-back.
 
-## Pins (`pins.rs`)
+The human markdown header takes `mode=` and `baseline=` from the report document itself
+(`document["mode"]`, `document["baseline"]`), not from a second copy of the options, so the
+header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/C-003
+
+## Pins (`pins.rs`, `pins_report.rs`)
+
+- **ICE-BENCH-BASELINE-1 (2026-09-19), in `pins_report.rs`:**
+  `the_parser_accepts_a_bare_baseline_flag_and_defaults_it_off` (bare `--baseline` on,
+  default off, `USAGE` names it, `setup` and `--baseline <value>` refuse);
+  `a_warm_baseline_run_reads_every_footer_on_its_second_sample` (warm Q2 second sample: 3
+  footer requests with `--baseline`, 0 by default, footer cache `null` vs 3 hits) with the
+  JSON `baseline` / `baseline_switches` asserts; `a_warm_baseline_run_records_no_metadata_cache_hits`
+  (all four metadata counters zero on every sample of every query, default Q1 hits > 0);
+  `page_selection_off_reads_more_page_bytes_on_a_selective_id_range` (Q7 on a 3 × 50,000-row
+  bed: 92,890 page bytes by default, 161,729 with page selection off, same 1,500 rows);
+  `the_human_table_names_the_baseline_in_its_header_line`. Each reds under the mutation that
+  removes its behaviour (ledger C-001…C-003, C-005). The workflow half (C-004) is pinned in
+  `python/repark-parity/tests/test_ice_read_perf_bench_workflow.py`.
+  pins: ice-bench-baseline-1/C-001, C-002, C-003, C-005
 
 - **ICE-CATALOG-CACHE-1 (2026-09-19), in `pins_report.rs`** (a module of the `pins.rs` root,
   split out because `pins.rs` sits at the 1000-line ceiling; `pins.rs`'s three `std` imports
@@ -297,8 +315,11 @@ would change what "four at once" measures for the other four (their timings and 
   before) and Q7's is `(id >= 540) AND (id < 552)` on the three-file bed, with the same twelve
   ids; the plan-line parser. pins: ice-read-perf-0/C-013
   pins: rp-36-fork-pin/C-001
-- Q1 reads only footers (3 footer reads, 0 page reads) and Q2 reads 3 footers plus pages, in
-  cold and warm. pins: ice-read-perf-0/C-014
+- Q1 reads NO data file at all since ICE-COUNT-FOLD-1 (0 footer reads, 0 page reads, 0 data-file
+  requests of any op, in every mode — the count folds to the scan's exact row count); Q2 reads 3
+  footers plus pages in cold and warm; Q1's footer-cache counters are therefore zero on a cold
+  sample too, where Q2 and Q3 still miss cold and hit warm.
+  pins: ice-read-perf-0/C-014, ice-count-fold-1/C-006
 - Every mode (four) with `--repeat 2`: two samples per query, medians, identical I/O across
   samples in cold and warm, `rss_at_reset_kib` and `execute_to_first_batch_ms` present, the
   environment header's `rustc_version`, `os_page_cache`, `cold_kind` and `concurrent_kind`, and
@@ -328,6 +349,28 @@ would change what "four at once" measures for the other four (their timings and 
 - **RP-38 + ICE-FOOTER-CACHE-1 (fork `f3bdd598`):** warm footer reads 200 → 0; cold split-file
   footer reads halved on the large bed.
   pins: ice-footer-cache-1/C-010
+
+## Baseline (`--baseline`, round 1)
+
+A `run` with the bare `--baseline` flag records the "before" half of a pair on one head:
+every session it opens disables the shared caches (`repark.iceberg.metadataCache=false`,
+`manifestCacheBytes=0`, `footerCacheBytes=0`) and the fork's page-index row selection
+(`iceberg.row_selection_enabled=false`, inserted into the session state's config extensions
+from the bench — RePark registers no such extension). The JSON carries `baseline` and, when
+true, `baseline_switches`; the markdown names it in its header line. What the baseline
+cannot switch off: the timestamp predicate pushdown (fork #312) and the `count(*)` fold
+(ICE-COUNT-FOLD-1) stay on, so a baseline number is not "pre-campaign main". The switches live
+in `bed::spark_session(baseline)`, the one builder every run session takes (warm, cold,
+concurrent, concurrent-cold, local and remote): the memory catalog (`memory_catalog_cached`),
+and Glue / S3 Tables (`register_catalog_spec` via `register_late_configured_catalogs`), all
+build their `CatalogCaches` from the session's settings, so the builder config reaches every
+path with no product-code change. Measured on the pin beds (`pins_report.rs`): warm Q1 on the
+3-file bed reads 3 data-file footers on its second sample with `--baseline` against 0 by
+default (footer cache `null` vs 3 hits), every sample of every query shows zero metadata-cache
+hits / misses / fetches / evictions, and Q7 on a 3-file × 50,000-row bed (3 pages per column)
+reads 92,890 page bytes by default against 161,729 with page selection off, same 1,500 rows.
+The 3-file × 400-row bed carries one page per column, so no query on it can differ by pages —
+the page pin grows `rows_per_file` instead.
 
 ## Pointers
 

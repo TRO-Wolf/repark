@@ -270,10 +270,8 @@ async fn seed_delete_manifests(
     }
 }
 
-/// pins: mw-6-rewrite-manifests/C-005
-/// MW-6 / registry `MANIFEST-1`: zeros refuse while delete manifests stay uncompacted.
 #[tokio::test]
-async fn call_rewrite_manifests_refuses_zeros_while_delete_manifests_stay() {
+async fn call_rewrite_manifests_merges_the_delete_leg_alone() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_delete_manifests(&ctx, &catalogs, "del_man", 3).await;
@@ -282,25 +280,40 @@ async fn call_rewrite_manifests_refuses_zeros_while_delete_manifests_stay() {
         (1, 3, 4),
         "fixture must hold ONE data manifest and three delete manifests"
     );
+    let live_before = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.del_man").await;
 
-    let error = execute(
+    let batches = execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_manifests(table => 'sales.del_man')",
     )
     .await
-    .expect_err("zeros must refuse while Spark would compact the delete manifests");
-    let message = error.to_string();
-    assert!(
-        message.contains("3 delete manifest"),
-        "the refusal must count the delete manifests, got: {message}"
+    .expect("rewrite_manifests CALL")
+    .collect()
+    .await
+    .expect("collect result");
+    let batch = &batches[0];
+    assert_rewrite_manifests_schema_is_sparks(batch);
+    assert_eq!(
+        call_manifest_count(batch, "rewritten_manifests_count"),
+        3,
+        "the lone data manifest is kept, so only the three delete manifests count"
+    );
+    assert_eq!(call_manifest_count(batch, "added_manifests_count"), 1);
+    assert_eq!(
+        manifest_shape(catalogs["ice"].as_ref(), &sales("del_man")).await,
+        (1, 1, 2),
+        "the data manifest is kept; the three delete manifests become one"
+    );
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.del_man").await,
+        live_before,
+        "the live row set must survive the rewrite"
     );
 }
 
-/// pins: mw-6-rewrite-manifests/C-010
-/// MW-6 / registry `MANIFEST-1`: a working data leg runs and leaves the delete manifests.
 #[tokio::test]
-async fn call_rewrite_manifests_reports_the_data_leg_and_leaves_delete_manifests() {
+async fn call_rewrite_manifests_merges_both_legs() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -348,14 +361,14 @@ async fn call_rewrite_manifests_reports_the_data_leg_and_leaves_delete_manifests
     let batch = &batches[0];
     assert_eq!(
         call_manifest_count(batch, "rewritten_manifests_count"),
-        4,
-        "the data leg only — Spark counts its delete leg here too"
+        7,
+        "both legs: four data and three delete manifests"
     );
-    assert_eq!(call_manifest_count(batch, "added_manifests_count"), 1);
+    assert_eq!(call_manifest_count(batch, "added_manifests_count"), 2);
     assert_eq!(
         manifest_shape(catalogs["ice"].as_ref(), &ident).await,
-        (1, 3, 4),
-        "the three delete manifests are carried forward untouched"
+        (1, 1, 2),
+        "both legs collapse to one manifest each"
     );
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.mor_man").await,
@@ -438,47 +451,11 @@ async fn call_rewrite_manifests_rewrites_only_the_current_spec() {
     );
 }
 
-/// pins: mw-6-rewrite-manifests/C-007, C-008
-/// MW-6: `spec_id` refuses loud; `use_caching` is accepted and changes nothing.
 #[tokio::test]
 async fn call_rewrite_manifests_argument_surface_is_sparks() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_appends(&ctx, &catalogs, "args", 5).await;
-
-    let refused = execute(
-        &ctx,
-        &catalogs,
-        "CALL ice.system.rewrite_manifests(table => 'sales.args', spec_id => 0)",
-    )
-    .await
-    .expect_err("spec_id must refuse");
-    assert!(
-        refused.to_string().contains("spec_id"),
-        "the refusal must name spec_id, got: {refused}"
-    );
-    // Positional #2 is the same argument, so it must refuse the same way.
-    assert!(
-        execute(
-            &ctx,
-            &catalogs,
-            "CALL ice.system.rewrite_manifests('sales.args', true, 0)",
-        )
-        .await
-        .is_err(),
-        "positional spec_id must refuse too"
-    );
-    // A quoted use_caching refuses HERE and runs on Spark, which casts the string.
-    assert!(
-        execute(
-            &ctx,
-            &catalogs,
-            "CALL ice.system.rewrite_manifests(table => 'sales.args', use_caching => 'yes')",
-        )
-        .await
-        .is_err(),
-        "use_caching takes a boolean literal"
-    );
 
     let batches = execute(
         &ctx,
@@ -498,6 +475,66 @@ async fn call_rewrite_manifests_argument_surface_is_sparks() {
         "use_caching changes nothing about the answer"
     );
     assert_eq!(call_manifest_count(batch, "added_manifests_count"), 1);
+
+    let compacted = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests(table => 'sales.args', spec_id => 0)",
+    )
+    .await
+    .expect("the current spec id runs")
+    .collect()
+    .await
+    .expect("collect result");
+    assert_eq!(
+        call_manifest_count(&compacted[0], "rewritten_manifests_count"),
+        0
+    );
+    assert_eq!(
+        call_manifest_count(&compacted[0], "added_manifests_count"),
+        0
+    );
+
+    let compacted_positional = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests('sales.args', true, 0)",
+    )
+    .await
+    .expect("positional spec_id runs")
+    .collect()
+    .await
+    .expect("collect result");
+    assert_eq!(
+        call_manifest_count(&compacted_positional[0], "rewritten_manifests_count"),
+        0
+    );
+    assert_eq!(
+        call_manifest_count(&compacted_positional[0], "added_manifests_count"),
+        0
+    );
+
+    let refused = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests(table => 'sales.args', spec_id => 99)",
+    )
+    .await
+    .expect_err("an unknown spec id must refuse");
+    assert!(
+        refused.to_string().contains("Invalid spec id 99"),
+        "the refusal must name the unknown spec, got: {refused}"
+    );
+    assert!(
+        execute(
+            &ctx,
+            &catalogs,
+            "CALL ice.system.rewrite_manifests(table => 'sales.args', use_caching => 'yes')",
+        )
+        .await
+        .is_err(),
+        "use_caching takes a boolean literal"
+    );
 }
 
 /// Read an `Int32` result column as `i64`.
