@@ -21,6 +21,12 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `matrix.rs` calls from a `#[test]`. It lives here, at tier 0, because both tier-3 doors must
   reach it without a door→door edge (design §1). Tests: [surfaces/map.md](surfaces/map.md).
 
+- `spark_error.rs` — the Spark error-condition catalogue (IPI-51 PR2): the
+  closed `Condition` enum plus one screaming-cap constant per row, `message()`
+  rendering `[CONDITION] … SQLSTATE: XXXXX`, and the `analysis` / `parse` /
+  `unsupported` / `illegal_argument` constructors returning `Error`. Unit tests
+  at the bottom of the module pin every row's name, SQLSTATE, and template.
+
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
   unsupported-feature class (U4: no longer a scaffolding placeholder; `engine_err` folds
   `DataFusionError::NotImplemented` + iceberg `FeatureUnsupported` into it, verbatim `{0}`);
