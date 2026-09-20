@@ -33,6 +33,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `RTAS-OPS-1` widened, `ICE-DROP-PURGE-1` filed. `risk_tier: standard`.
   Branch `fix/ipi-21-25-42-small-parser`.
   pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [ice-rdf-sort-parse-1-ledger.md](ice-rdf-sort-parse-1-ledger.md) —
+  **ICE-RDF-SORT-PARSE-1 (2026-09-20), in flight:** `CALL rewrite_data_files`
+  `strategy` and `sort_order` parse and route onto the fork's sort and z-order
+  rewriters (IPI-43) — the shared identity grammar with direction-tied NULLS
+  defaults, the z-order scan, Spark-measured in-file order pins over a 7-cell
+  recorded oracle, and every refusal in Java's or the fork's text under Java's
+  class; all eleven clauses OPEN pending mutation. `risk_tier: standard`.
+  Branch `fix/ipi-43-rdf-sort-zorder`.
+  pins: ice-rdf-sort-parse-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011
 - [ice-wap-branch-1-ledger.md](ice-wap-branch-1-ledger.md) —
   **ICE-WAP-BRANCH-1 (2026-09-19), in flight:** the session conf `spark.wap.branch` redirects
   writes and the session's plain reads to an audit branch, as Spark does (IPI-05, RePark
