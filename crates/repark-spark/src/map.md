@@ -1206,6 +1206,18 @@ pins: rp-4-fork-repin/C-005, C-006
   `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]`/`SQLSTATE: 0A000` text over a caller-supplied
   command string (newlines flattened); the four v2-command router intercepts answer through it.
   pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
+  and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs` and
+  `namespace_ddl/purge.rs` all answer through it, so the three cannot drift apart.
+  pins: ipi-21-25-42-small-parser/C-007, C-008
+  `reregister*` provider invalidation.
+- `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the session-defaults seam:
+  `session_defaults` / `set_session_defaults` over DataFusion's
+  `default_catalog` / `default_schema`, the one `complete_name` 1/2/3-part resolver every
+  short-name call site shares, and `execute_use` (catalog-first one-part rule per live-Spark
+  probe P-1, per-type default namespace, `SCHEMA_NOT_FOUND` texts, `USE CATALOG` parse
+  refusal, `USE DEFAULT` pre-parse). `SparkExtension::configure` seeds
+  `spark_catalog` / `default` unless the builder map sets the keys explicitly (H-01).
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
   cross-door evidence in `crates/repark-sql/tests/cross_door.rs`.

@@ -369,6 +369,7 @@ async fn execute_inner(
         // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
         Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
         Statement::Truncate(truncate) => execute_truncate(ctx, catalogs, truncate).await,
+        Statement::Use(target) => crate::use_ddl::execute_use(ctx, catalogs, target).await,
         _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
     }
 }
@@ -648,6 +649,16 @@ async fn try_preparse_intercepts(
     }
     if let Some(outcome) = v2_tail_preparse(sql, parsed_ddl) {
         return Some(outcome);
+    }
+    if crate::use_ddl::is_use_default(sql) {
+        return Some(
+            crate::use_ddl::execute_use(
+                ctx,
+                catalogs,
+                &datafusion::sql::sqlparser::ast::Use::Default,
+            )
+            .await,
+        );
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {
