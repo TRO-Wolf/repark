@@ -1094,8 +1094,10 @@ above.
 - `ref_ddl.rs` — **IPI-42 (2026-09-20):**
   `ref_guards_are_conditional_and_never_move_an_existing_ref` is the mutation-proof half the four
   recorded cells cannot be: it pins `b1` at the OLDER of two snapshots before the guarded
-  `CREATE`, so a replace-if-different implementation moves it and reds, and it covers all four
-  conditional arms on both `BRANCH` and `TAG`.
+  `CREATE`, so a replace-if-different implementation moves it and reds.
+  `guarded_create_and_drop_apply_to_missing_refs` (split off for clippy's 100-line cap,
+  repark#751 CI) covers the create-a-missing-ref and the conditional-drop arms on both
+  `BRANCH` and `TAG`.
   `ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse` replaces the
   retired REF-2 refusal pin: the guarded spellings run on both grammars, and a leftover token
   still refuses naming its own dynamic span.

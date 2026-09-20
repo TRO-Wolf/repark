@@ -347,7 +347,9 @@ pins: rp-4-fork-repin/C-005, C-006
   the guarded form is ignored, as Spark ignores it). Spark's grammar attaches `IF NOT EXISTS` to
   the plain `CREATE` alone, so `CREATE OR REPLACE … IF NOT EXISTS` and `REPLACE … IF NOT EXISTS`
   refuse parse-class rather than being accepted and silently given one meaning
-  (**IPI-42**, 2026-09-20; registry `REF-2` retired).
+  (**IPI-42**, 2026-09-20; registry `REF-2` retired). The create arm's
+  create-vs-or-replace dispatch sits in `execute_create_ref` so `execute_ref_ddl`
+  stays under clippy's 100-line cap (repark#751 CI).
   pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004
   `WITH SNAPSHOT RETENTION` takes BOTH halves — `n SNAPSHOTS` then an optional
   `k DAYS|HOURS|MINUTES` — because Spark's grammar does; the reversed order is a Spark parse

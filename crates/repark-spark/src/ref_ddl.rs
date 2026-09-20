@@ -5,7 +5,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::ParserError;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
-use iceberg::{NamespaceIdent, TableIdent};
+use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_iceberg::write::{
     SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref,
     create_snapshot_ref_with_retention, drop_snapshot_ref, replace_snapshot_ref,
@@ -674,29 +674,16 @@ pub(crate) async fn execute_ref_ddl(
                         "CREATE BRANCH|TAG"
                     },
                 )?;
-                if or_replace {
-                    create_or_replace_snapshot_ref(
-                        handle.as_ref(),
-                        &ident,
-                        kind,
-                        &name,
-                        snapshot_id,
-                        retention,
-                    )
-                    .await
-                    .map_err(iceberg_err)?;
-                } else {
-                    create_snapshot_ref_with_retention(
-                        handle.as_ref(),
-                        &ident,
-                        kind,
-                        &name,
-                        snapshot_id,
-                        retention,
-                    )
-                    .await
-                    .map_err(iceberg_err)?;
-                }
+                execute_create_ref(
+                    handle.as_ref(),
+                    &ident,
+                    kind,
+                    &name,
+                    snapshot_id,
+                    retention,
+                    or_replace,
+                )
+                .await?;
             }
         }
         RefOp::Replace {
@@ -742,6 +729,26 @@ pub(crate) async fn execute_ref_ddl(
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, handle.clone(), catalog_name, &namespace).await?;
     ctx.read_empty()
+}
+
+async fn execute_create_ref(
+    handle: &dyn Catalog,
+    ident: &TableIdent,
+    kind: SnapshotRefKind,
+    name: &str,
+    snapshot_id: i64,
+    retention: SnapshotRefRetention,
+    or_replace: bool,
+) -> Result<()> {
+    if or_replace {
+        create_or_replace_snapshot_ref(handle, ident, kind, name, snapshot_id, retention)
+            .await
+            .map_err(iceberg_err)
+    } else {
+        create_snapshot_ref_with_retention(handle, ident, kind, name, snapshot_id, retention)
+            .await
+            .map_err(iceberg_err)
+    }
 }
 
 /// A sniffed write-to-branch candidate.

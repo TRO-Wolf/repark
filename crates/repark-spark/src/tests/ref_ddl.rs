@@ -286,7 +286,42 @@ async fn ref_guards_are_conditional_and_never_move_an_existing_ref() {
         second,
         "the AS OF VERSION of a guarded CREATE on an existing tag is ignored, not applied"
     );
+}
 
+#[tokio::test]
+async fn guarded_create_and_drop_apply_to_missing_refs() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.guards AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.guards SELECT * FROM src",
+    )
+    .await;
+    let history: Vec<i64> = load_sales_table(&catalogs, "guards")
+        .await
+        .metadata()
+        .history()
+        .iter()
+        .map(|entry| entry.snapshot_id)
+        .collect();
+    let [first, second] = history.as_slice() else {
+        panic!("expected two snapshots, got {history:?}");
+    };
+    let (first, second) = (*first, *second);
+
+    run(
+        &ctx,
+        &catalogs,
+        &format!("ALTER TABLE ice.sales.guards CREATE BRANCH b1 AS OF VERSION {first}"),
+    )
+    .await;
     run(
         &ctx,
         &catalogs,
