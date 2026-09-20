@@ -6069,7 +6069,7 @@ the pin rather than obeying it.
   | MERGE `ON t.k = 'a' AND t.id = s.id` vs `INSERT INTO` partition `d`, MoR and COW | 2 of 2 | **FIXED** 2 of 2 |
   | 2 MERGEs `ON t.id < 50 …` / `ON t.id >= 50 …`, unpartitioned, copy-on-write | 2 of 2 | **FIXED** 2 of 2 |
   | 2 whole-partition DELETE statements `WHERE k = 'a'` / `k = 'b'` | 2 of 2 | 2 of 2 before and after (COW, one file per partition: each DELETE removes only its own file) |
-  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–7 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
+  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–10 of 16 at the 2026-09-19 jitter pin (16 of 16 with `commit.retry.num-retries=20`) — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
 
 - **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs` (fault-injected race
   through the real `execute_merge` / `execute_predicate_dml`, v2 and v3, MoR and COW:
@@ -6176,7 +6176,7 @@ the pin rather than obeying it.
 - **Rationale** — FIXED 2026-09-18, matching Spark. Java's `conflictDetectionFilter` is the
   target scan's filter, not the insert set, and RePark derives the same.
 
-### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5–7 of 16, Spark 7–15 — **BACKLOG 2026-09-17, corrected 2026-09-18**
+### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5–10 of 16, Spark 7–15, and a 20-retry budget commits all 16 — **BACKLOG 2026-09-17, corrected 2026-09-18, re-measured 2026-09-19 at the jitter pin**
 
 - **repark** — sixteen barrier-released `INSERT INTO … VALUES` against one memory-catalog table
   commit v2 7,5,5,6,5,6,6,6,5,5 and v3 6,5,7,5,5,6,5,5,6,7 over ten repetitions (release native,
@@ -6203,12 +6203,28 @@ the pin rather than obeying it.
   (v2/v3 × SQL / `writeTo().append()`: committed + losers = 16, at least one commit, every loser
   a `CatalogCommitConflicts` `PySparkException`, rows and snapshots equal the commits). The
   exact count is not pinned: it is scheduler-dependent in both engines.
+- **Re-measured 2026-09-19 at main `859c6506`** (fork pin `44834673`, which carries
+  F-COMMIT-JITTER-1, fork #320: Java's `Tasks.runTaskWithRetry` schedule with jitter of
+  +[0,10 %)). Thirty-two repetitions per format version, memory catalog, release native:
+  **v2 committed 5–10, mean 6.69; v3 committed 5–10, mean 6.50; sixteen of sixteen in 0 of 64
+  repetitions; no repetition lost a row** (the table's row count equalled the commit count every
+  time). Every loser is still the `CatalogCommitConflicts` class. So the jitter hypothesis of
+  2026-09-18 is **measured and refuted as the explanation**: with the jitter on the pin the top
+  of the band moved from 7 to 10 and the mean did not move.
+- **What the residue actually is — measured the same evening.** With
+  `commit.retry.num-retries = 20` on the table (the only change), the same storm commits
+  **16 of 16 in 8 of 8 repetitions**, mean 16.00, and so does the variant that also widens
+  `commit.retry.min-wait-ms`, `max-wait-ms` and `total-timeout-ms`. The fork honours the
+  Iceberg table properties, and the distance to Spark is the **default budget of four retries**
+  under a sixteen-writer barrier, not a missing or broken retry loop. Java's own default is the
+  same four; Spark's Hadoop catalog reaches 9–16 because its commit path also retries the
+  version-hint write, and its in-memory catalog reaches 7–9, the band RePark's top now touches.
 - **Rationale** — BACKLOG: Q-21a-5's "rarely, not never" was read off one repetition — both
   engines lose appends to the retry budget under a 16-writer barrier storm, Spark somewhat less
-  often. The remaining distance (5–7 vs 7–9 on the same catalog class) is retry jitter: Java's
-  `Tasks.exponentialBackoff` randomizes each wait while the fork's backoff does not — a
-  hypothesis, not a finding (fork card F-COMMIT-JITTER-1, not filed tonight). No product change
-  (ruling Q-23b-1).
+  often. No product change (ruling Q-23b-1, unchanged): the property is the documented lever, the
+  default matches Java's, and a user who needs a sixteen-writer barrier storm to land raises
+  `commit.retry.num-retries`. Evidence: `/tmp/oc-worker/qa/storm_results.json` and
+  `storm_retry_results.json` (run 25a, 2026-09-19).
 
 ### ICE-PROMOTE-READ-1 — filters on a column widened by `ALTER COLUMN … TYPE` dropped the rows written before the promotion — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1)**
 
