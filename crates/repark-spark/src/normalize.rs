@@ -8,7 +8,7 @@ use datafusion::sql::sqlparser::ast::{
     Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor, TableWithJoins,
     Value, Visit, Visitor,
 };
-use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
+use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect, GenericDialect};
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
@@ -159,6 +159,18 @@ fn sql_has_lambda_arrow(sql: &str) -> bool {
     false
 }
 
+pub(crate) fn normalized_parse_dialect(tokens: &[Token]) -> &'static dyn Dialect {
+    if (is_create_table(tokens) || alter::tokens_are_alter_table(tokens))
+        && has_angle_map_column_type(tokens)
+    {
+        &datafusion::sql::sqlparser::dialect::SparkSqlDialect {}
+    } else if alter::tokens_are_alter_table(tokens) {
+        &GenericDialect {}
+    } else {
+        &DatabricksDialect {}
+    }
+}
+
 /// Parse one statement with Spark-isms normalized.
 /// # Errors
 /// # Errors A `CREATE TABLE` whose `PARTITIONED BY` clause is malformed errors loudly.
@@ -187,20 +199,7 @@ pub(crate) fn parse_single_normalized(
     if is_merge(&tokens) {
         tokens = merge::rewrite_merge_stars(&tokens);
     }
-    // ALTER TABLE uses GenericDialect.
-    let generic = GenericDialect {};
-    let spark = datafusion::sql::sqlparser::dialect::SparkSqlDialect {};
-    let parse_dialect: &dyn datafusion::sql::sqlparser::dialect::Dialect =
-        if (is_create_table(&tokens) || alter::tokens_are_alter_table(&tokens))
-            && has_angle_map_column_type(&tokens)
-        {
-            &spark
-        } else if alter::tokens_are_alter_table(&tokens) {
-            &generic
-        } else {
-            &dialect
-        };
-    let Ok(mut statements) = Parser::new(parse_dialect)
+    let Ok(mut statements) = Parser::new(normalized_parse_dialect(&tokens))
         .with_tokens(tokens)
         .parse_statements()
     else {

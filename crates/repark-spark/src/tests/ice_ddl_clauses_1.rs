@@ -1,9 +1,10 @@
 use super::super::*;
 use super::common::*;
+use datafusion::sql::sqlparser::dialect::{GenericDialect, SparkSqlDialect};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 
 use crate::alter::rewrite_add_columns_plural;
-use crate::normalize::has_angle_map_column_type;
+use crate::normalize::{has_angle_map_column_type, normalized_parse_dialect};
 
 fn tokenize(sql: &str) -> Vec<Token> {
     Tokenizer::new(&DatabricksDialect {}, sql)
@@ -181,4 +182,31 @@ fn dialect_widening_changes_no_other_alter() {
     let parsed =
         parse_single_normalized(plain).unwrap_or_else(|error| panic!("{plain:?}: {error}"));
     assert!(parsed.is_some(), "an ordinary SELECT still parses");
+}
+
+#[test]
+fn normalized_parse_dialect_widens_only_angle_map_statements() {
+    let alter_map = normalized_parse_dialect(&tokenize(
+        "ALTER TABLE ice.ns.t ADD COLUMN m MAP<STRING, INT>",
+    ));
+    assert!(
+        alter_map.is::<SparkSqlDialect>(),
+        "an ALTER carrying MAP< must take SparkSqlDialect"
+    );
+    let alter_plain = normalized_parse_dialect(&tokenize("ALTER TABLE ice.ns.t ADD COLUMN c INT"));
+    assert!(
+        alter_plain.is::<GenericDialect>(),
+        "an ALTER without MAP< must stay on GenericDialect"
+    );
+    let create_map =
+        normalized_parse_dialect(&tokenize("CREATE TABLE ice.ns.t (m MAP<STRING, INT>)"));
+    assert!(
+        create_map.is::<SparkSqlDialect>(),
+        "a CREATE carrying MAP< must take SparkSqlDialect"
+    );
+    let select = normalized_parse_dialect(&tokenize("SELECT id FROM t"));
+    assert!(
+        select.is::<DatabricksDialect>(),
+        "any other statement keeps the Databricks dialect"
+    );
 }
