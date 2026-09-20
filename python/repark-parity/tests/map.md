@@ -187,6 +187,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror row `writer_readwriter.py` 1095 → 1093, the value round 1 set in
   `scripts/check_lib_py.py` without its mirror.
   The verification fix ratchets it again, 1093 → 1091. pins: ice-overwrite-mode-1/C-018
+- `test_cap_1_source_file_line_cap.py` — **IPI-51 PR4 (2026-09-20):**
+  mirror row ratchets `repark-spark/src/alter.rs` 1449 → 1446 with
+  `scripts/check_rust_file_size.py`, shrink-only. pins: ice-error-conditions-1/C-011
 - `test_cap_1_source_file_line_cap.py` — **ICE-RDF-SORT-PARSE-1 (2026-09-20, run 26a):**
   mirror row ratchets `repark-spark/src/tests/call.rs` 1303 → 1287 with
   `scripts/check_rust_file_size.py`, shrink-only. pins: ice-rdf-sort-parse-1/C-004

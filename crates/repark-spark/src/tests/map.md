@@ -553,7 +553,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
   CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`; IPI-51 PR4 (2026-09-20):
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table
-  display, and `SQLSTATE: 42601`.
+  display, and `SQLSTATE: 42601`, and the Hive `ADD PARTITION` pin asserts the plan-class
+  stamp end to end.
   pins: ice-error-conditions-1/C-011), `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,

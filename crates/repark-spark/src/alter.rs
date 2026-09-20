@@ -34,6 +34,7 @@ pub(crate) async fn execute_alter_table(
     operations: &[AlterTableOperation],
 ) -> Result<DataFrame> {
     let (catalog_name, mut ident) = resolve_table(name)?;
+    let table_display = crate::catalog_ops::quoted_table_display(&name_parts(name));
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
     let mut schema_batch: Vec<SchemaChange> = Vec::new();
@@ -116,7 +117,7 @@ pub(crate) async fn execute_alter_table(
             }
             other => {
                 flush_schema_batch(handle.as_ref(), &ident, &mut schema_batch).await?;
-                return Err(unsupported_alter_op(other));
+                return Err(unsupported_alter_op(other, &table_display));
             }
         }
     }
@@ -301,7 +302,7 @@ fn is_iceberg_promotion_target(new_type: &PrimitiveType) -> bool {
     )
 }
 
-fn unsupported_alter_op(other: &AlterTableOperation) -> DataFusionError {
+fn unsupported_alter_op(other: &AlterTableOperation, table_display: &str) -> DataFusionError {
     let rendered = other.to_string();
     let lower = rendered.to_lowercase();
     if lower.contains("replace") && lower.contains("column") {
@@ -312,11 +313,7 @@ fn unsupported_alter_op(other: &AlterTableOperation) -> DataFusionError {
         );
     }
     if lower.contains("partition") {
-        return DataFusionError::NotImplemented(
-            "ALTER TABLE partition-spec evolution must use ADD/DROP/REPLACE PARTITION FIELD \
-             (I7); this AST shape is not recognised"
-                .into(),
-        );
+        return crate::catalog_ops::partition_management_unsupported(table_display);
     }
     DataFusionError::NotImplemented(format!("ALTER TABLE operation not supported yet: {other}"))
 }

@@ -743,6 +743,10 @@ pins: rp-4-fork-repin/C-005, C-006
   is gone; the move lives in `column_move.rs`. **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the
   REPLACE COLUMNS parser, planner and the identity-trap gate left this file for
   `replace_columns.rs`; `alter.rs` only detects the form and routes it.
+  **IPI-51 PR4 (2026-09-20):** the residual Hive `ADD PARTITION` refusal now answers
+  plan-class through `catalog_ops::partition_management_unsupported` with the backticked
+  target (`AnalysisException`, `SQLSTATE: 42601`); the file ratchets 1449 → 1446.
+  pins: ice-error-conditions-1/C-011
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** Spark's Hive-style
   `REPLACE COLUMNS` — one `DropColumn` per current top-level column, then one `AddColumn` per
   listed column, so the fork's `UpdateSchema` assigns every column a **fresh** id from
