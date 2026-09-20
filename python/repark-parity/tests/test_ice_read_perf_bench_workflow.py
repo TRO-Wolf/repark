@@ -1,6 +1,7 @@
 """ICE-READ-PERF-0 pins over the dispatch-only bench job of ``aws-acceptance.yml``.
 
 pins: ice-read-perf-0/C-018, C-019
+pins: ice-bench-baseline-1/C-004
 """
 
 from __future__ import annotations
@@ -289,3 +290,42 @@ def test_every_variable_expansion_in_the_bench_scripts_is_double_quoted() -> Non
         ["${Y}", "${W}", "${V}"],
         ["${X}"],
     )
+
+
+def test_the_dispatch_offers_a_baseline_before_half_input() -> None:
+    """``baseline`` is a boolean defaulting to false: the before half of a pair."""
+    text = _text()
+    dispatch = text[text.index("  workflow_dispatch:") : text.index("\npermissions:")]
+    assert re.search(r"(?m)^      baseline:\s*$", dispatch)
+    assert "run with page selection off and no shared caches" in dispatch
+    assert "the before half of a pair on one head" in dispatch
+    assert re.search(r"(?m)^        type: boolean\s*$", dispatch)
+    assert re.search(r"(?m)^        default: false\s*$", dispatch)
+
+
+def test_the_bench_run_steps_thread_the_baseline_flag_through_env() -> None:
+    """Both mode loops take ``BASELINE`` via ``env:`` and pass ``--baseline`` when true."""
+    block = _job_block(_text(), "ice-read-perf-bench")
+    assert block.count("BASELINE: ${{ inputs.baseline }}") == 3
+    loops = [
+        script
+        for script in _run_scripts(block)
+        if "cargo bench" in script and "for mode in" in script
+    ]
+    assert len(loops) == 2, loops
+    for script in loops:
+        assert "${{" not in script, script
+        assert 'if [ "${BASELINE}" = "true" ]; then' in script, script
+        assert "baseline_flags=(--baseline)" in script, script
+        assert '"${baseline_flags[@]}"' in script, script
+
+
+def test_the_step_summary_names_the_baseline_beside_the_purpose() -> None:
+    """The summary header carries ``baseline=<value>`` next to the purpose."""
+    block = _job_block(_text(), "ice-read-perf-bench")
+    summary = [step for step in _steps(block) if "run_io_total.bytes" in step]
+    assert len(summary) == 1, summary
+    assert "BASELINE: ${{ inputs.baseline }}" in summary[0], summary[0]
+    script = _run_script(summary[0])
+    assert script is not None
+    assert "baseline=${BASELINE:-false}" in script, script

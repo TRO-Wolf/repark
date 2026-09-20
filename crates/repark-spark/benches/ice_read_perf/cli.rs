@@ -18,7 +18,7 @@ pub const USAGE: &str = "usage:
   ice_read_perf setup --catalog glue|s3tables --prop k=v... --table <ns.table> --phase create|write
                       [--files 200] [--rows-per-file 50000]
   ice_read_perf run --mode cold|warm|concurrent|concurrent-cold [--repeat 1] [--out <file.json>]
-                    [--query Q1..Q7] then either
+                    [--query Q1..Q7] [--baseline] then either
                     --warehouse <dir> [--manifest <bed.json>]
                     or --catalog glue|s3tables --prop k=v... --table <ns.table>
                     [--files 200] [--rows-per-file 50000]";
@@ -106,6 +106,11 @@ fn flag_pairs<'a>(rest: &[&'a str]) -> Result<Vec<(&'a str, &'a str)>, String> {
         let flag = rest[index];
         if !flag.starts_with("--") {
             return Err(format!("unexpected argument `{flag}`"));
+        }
+        if flag == "--baseline" {
+            pairs.push((flag, ""));
+            index += 1;
+            continue;
         }
         let value = rest
             .get(index + 1)
@@ -197,6 +202,7 @@ fn parse_run(pairs: &[(&str, &str)]) -> Result<RunOptions, String> {
             "--table" => options.table = Some((*value).to_string()),
             "--manifest" => options.manifest = Some(PathBuf::from(value)),
             "--query" => options.query = Some((*value).to_string()),
+            "--baseline" => options.baseline = true,
             "--repeat" => options.repeat = positive(flag, value)?,
             "--files" => options.files = Some(positive(flag, value)?),
             "--rows-per-file" => options.rows_per_file = Some(positive(flag, value)?),

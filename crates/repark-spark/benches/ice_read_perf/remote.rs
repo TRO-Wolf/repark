@@ -339,7 +339,7 @@ pub async fn setup_remote(
 ) -> Result<Outcome, BoxError> {
     let (namespace, name) = split_table(&options.table)?;
     let rule = namespace_rule(options.catalog, &options.props, &namespace)?;
-    let session = bed::spark_session()?;
+    let session = bed::spark_session(false)?;
     register_remote_catalog(&session, options.catalog, &options.props).await?;
     let request = PhaseRequest {
         namespace,
