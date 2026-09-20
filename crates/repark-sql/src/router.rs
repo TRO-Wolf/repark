@@ -193,7 +193,9 @@ async fn execute_identity_or_delegate(
         return commit_identity_dml(cx, statement, allowed).await;
     }
     if let Some(allowed) =
-        repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity(statement)?
+        repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity_or_update(
+            statement,
+        )?
         && cx.catalogs.get(&allowed.catalog_name).is_some()
     {
         let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;

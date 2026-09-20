@@ -1,4 +1,6 @@
 use std::collections::{HashMap, HashSet};
+
+use datafusion::parquet::file::reader::FileReader;
 use std::sync::Arc;
 
 use datafusion::arrow::record_batch::RecordBatch;
@@ -250,4 +252,98 @@ async fn native_bogus_session_codec_refuses_naming_the_codec() {
         door.summaries("t").await.is_empty(),
         "no snapshot committed"
     );
+}
+
+#[tokio::test]
+async fn native_plain_update_stamps_the_session_snapshot_property() {
+    let door = door_with_conf(&[("spark.sql.iceberg.snapshot-property.team", "a")]).await;
+    door.ok("CREATE TABLE ice.sales.t (id BIGINT, name VARCHAR)")
+        .await;
+    door.ok("INSERT INTO ice.sales.t VALUES (1, 'a'), (2, 'b')")
+        .await;
+    door.ok("UPDATE ice.sales.t SET name = 'z' WHERE id = 1")
+        .await;
+    let summaries = door.summaries("t").await;
+    assert_eq!(
+        ConfDoor::team_stamps(&summaries),
+        vec![Some("a".to_string()), Some("a".to_string())],
+        "the native door's plain UPDATE must stamp the session snapshot property like the \
+         Spark door"
+    );
+}
+
+#[tokio::test]
+async fn native_partition_overwrite_stamps_the_session_snapshot_property() {
+    let door = door_with_conf(&[("spark.sql.iceberg.snapshot-property.team", "a")]).await;
+    door.ok("CREATE TABLE ice.sales.p (id BIGINT, cat VARCHAR) WITH (partitioning = ARRAY['cat'])")
+        .await;
+    door.ok("INSERT INTO ice.sales.p VALUES (1, 'x'), (2, 'y')")
+        .await;
+    door.ok("INSERT OVERWRITE ice.sales.p PARTITION (cat = 'x') SELECT 9 AS id")
+        .await;
+    let summaries = door.summaries("p").await;
+    assert_eq!(
+        ConfDoor::team_stamps(&summaries),
+        vec![Some("a".to_string()), Some("a".to_string())],
+        "the native door's INSERT OVERWRITE … PARTITION must stamp the session snapshot \
+         property like the Spark door"
+    );
+}
+
+#[tokio::test]
+async fn native_partition_overwrite_takes_the_session_codec() {
+    let door = door_with_conf(&[("spark.sql.iceberg.compression-codec", "gzip")]).await;
+    door.ok("CREATE TABLE ice.sales.p (id BIGINT, cat VARCHAR) WITH (partitioning = ARRAY['cat'])")
+        .await;
+    door.ok("INSERT INTO ice.sales.p VALUES (1, 'x')").await;
+    door.ok("INSERT OVERWRITE ice.sales.p PARTITION (cat = 'x') SELECT 9 AS id")
+        .await;
+    let table = door
+        .catalog
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "p".to_string(),
+        ))
+        .await
+        .expect("load table");
+    let codecs = live_data_file_codecs(&table).await;
+    assert_eq!(
+        codecs,
+        vec!["GZIP(GzipLevel(6))".to_string()],
+        "the native partition overwrite must write the session codec"
+    );
+}
+
+async fn live_data_file_codecs(table: &iceberg::table::Table) -> Vec<String> {
+    let snapshot = table.metadata().current_snapshot().expect("snapshot");
+    let manifest_list = snapshot
+        .load_manifest_list(table.file_io(), table.metadata())
+        .await
+        .expect("manifest list");
+    let mut codecs = Vec::new();
+    for entry in manifest_list.entries() {
+        if entry.content != iceberg::spec::ManifestContentType::Data {
+            continue;
+        }
+        let manifest = entry
+            .load_manifest(table.file_io())
+            .await
+            .expect("manifest");
+        for alive in manifest.entries().iter().filter(|entry| entry.is_alive()) {
+            codecs.push(parquet_codec_of(alive.data_file().file_path()));
+        }
+    }
+    codecs.sort();
+    codecs
+}
+
+fn parquet_codec_of(path: &str) -> String {
+    let local = path.strip_prefix("file://").unwrap_or(path);
+    let file = std::fs::File::open(local).expect("data file");
+    let reader = datafusion::parquet::file::reader::SerializedFileReader::new(file)
+        .expect("parquet file reader");
+    format!(
+        "{:?}",
+        reader.metadata().row_group(0).column(0).compression()
+    )
 }

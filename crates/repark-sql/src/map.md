@@ -46,6 +46,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   copy-on-write arm was already covered by `native_merge_*` / `native_delete_*` here and by
   `session_team_stamps_cow_delete_overwrite` in repark-spark. The pin asserts the stamp on both
   snapshots and `added-delete-files=1`, so a silent reroute onto the rewrite arm reds it too.
+  **Round 3 (2026-09-19):** the second verification critic's `P1-NATIVE-UPDATE` and
+  `P1-NATIVE-PARTITION-OVERWRITE` — `native_plain_update_stamps_the_session_snapshot_property`
+  and `native_partition_overwrite_{stamps_the_session_snapshot_property,takes_the_session_codec}`.
+  Each is red on the pre-round file: the UPDATE snapshot stamped `None`, the overwrite snapshot
+  stamped `None`, and the overwrite's data file was written `ZSTD` where the session named
+  `gzip`. `parquet_codec_of` reads the written footer through DataFusion's `parquet` re-export,
+  since this crate does not depend on `parquet` directly.
+  pins: ice-session-write-conf-1/C-046
   pins: ice-session-write-conf-1/C-044
 - [`create_table.rs`](create_table.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   CTAS stages its query with the resolved session codec and, when the session sets snapshot
@@ -73,6 +81,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `partitionOverwriteMode` (no writer options here): static-mode `PARTITION (k)` replaces the
   whole table (`commit_overwrite_replace_all`), mixed lists are accepted, a non-partition
   column refuses `NON_PARTITION_COLUMN`. pins: ice-overwrite-mode-1/C-009
+  ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19): the three commit arms take the
+  `*_with_summary` variants and the staging takes the resolved session overrides, so a session
+  snapshot property and the session codec reach `INSERT OVERWRITE … PARTITION` on the native
+  door exactly as they do on the Spark door's arm in `repark-spark/src/insert_overwrite.rs`.
+  Staging and commit moved into `stage_partition_overwrite` / `commit_partition_overwrite`
+  because the extra layering pushed `execute_partition_overwrite` past clippy's
+  `too_many_lines`; the split is along the same seam the Spark door already uses.
+  pins: ice-session-write-conf-1/C-046
   ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
   write-defaults through the shared `overwrite_source_with_defaults`; the dynamic arm
   no longer writes NULL for a defaulted column. pins: ice-v3-write-default-1/C-015

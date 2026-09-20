@@ -70,6 +70,21 @@ works, so the attribute is gone rather than documented.
   predicate instead of the uncorrelated `IN` hole (`allowed_update_with` is the shared body),
   so an owned identity UPDATE can serve a plain `UPDATE … WHERE col = v`.
   pins: ice-session-write-conf-1/C-038
+- `plain.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
+  `try_allowed_plain_identity_or_update` is the ONE rule both doors ask — plain identity
+  DELETE first, then the plain UPDATE allow-list. It exists because the two doors had drifted:
+  the Spark door consulted the UPDATE arm only when a session write conf was set (so a
+  codec-only conf could change a plain UPDATE's committed file count), and the native door
+  never consulted it at all (so `repark.sql`'s UPDATE committed unstamped where the facade
+  stamped). Neither door reads the session conf to decide ownership now.
+  pins: ice-session-write-conf-1/C-045, C-046
+- `cow_commit.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
+  `commit_identity_update_cow` drives ONE rolling writer. Its rewrite stream is
+  `survivors UNION ALL new-values`, and the parallel driver opens a file per sink that
+  receives a batch, so the plan's batch count — not the data — was choosing the committed
+  layout: two data files where Spark and the unowned route both write one. The rolling writer
+  still splits on the target file size, so only the plan-shaped fan-out is gone.
+  pins: ice-session-write-conf-1/C-045
 - `mor_commit.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the merge-on-read
   arms of the identity DELETE and UPDATE (`commit_identity_delete_mor` /
   `commit_identity_update_mor`), split out of `predicate_dml.rs` along its declared seam

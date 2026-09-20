@@ -167,6 +167,16 @@ pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDele
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub fn try_allowed_plain_identity_or_update(
+    statement: &Statement,
+) -> Result<Option<AllowedDeleteIn>> {
+    if let Some(allowed) = try_allowed_plain_identity(statement)? {
+        return Ok(Some(allowed));
+    }
+    try_allowed_plain_update(statement)
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub fn try_allowed_plain_update(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
     allowed_update_with(statement, is_scalar_comparison)
 }

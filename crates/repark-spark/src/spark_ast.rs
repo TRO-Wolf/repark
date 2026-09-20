@@ -197,17 +197,6 @@ async fn conform_insert_narrowed_ints(
     }))
 }
 
-fn plain_identity_or_update(
-    inner: &Statement,
-) -> Result<Option<repark_iceberg::write::predicate_dml::AllowedDeleteIn>> {
-    if let Some(allowed) =
-        repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity(inner)?
-    {
-        return Ok(Some(allowed));
-    }
-    repark_iceberg::write::predicate_dml::try_allowed_plain_update(inner)
-}
-
 async fn try_execute_identity_dml(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -230,7 +219,9 @@ async fn try_execute_identity_dml(
             _ => None,
         };
         (allowed, crate::MorDmlKind::Update, object_name)
-    } else if let Some(allowed) = plain_identity_or_update(inner)? {
+    } else if let Some(allowed) =
+        repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity_or_update(inner)?
+    {
         if catalogs.get(&allowed.catalog_name).is_none() {
             return Ok(None);
         }
