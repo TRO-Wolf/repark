@@ -136,6 +136,13 @@ def table_metadata(warehouse: Path, name: str) -> dict[str, Any]:
     return json.loads(newest.read_text(encoding="utf-8"))
 
 
+def newest_metadata_name(warehouse: Path, name: str) -> str:
+    """Return the newest metadata.json basename for the named table."""
+    directory = table_dir(warehouse, name)
+    files = list((directory / "metadata").glob("*.metadata.json"))
+    return max(files, key=lambda p: (p.stat().st_mtime_ns, p.name)).name
+
+
 def table_location(warehouse: Path, name: str) -> str:
     """Return the table location without a trailing slash."""
     return str(table_metadata(warehouse, name).get("location", "")).rstrip("/")
@@ -575,6 +582,7 @@ def check_rewrite_path(
     session: Any, warehouse: Path, sql: str, cell: str, source: str, target: str, staging: str
 ) -> None:
     """Assert rewrite_table_path rows, file list, and staged metadata."""
+    pre_newest = newest_metadata_name(warehouse, "t")
     arrow = session.sql(sql).to_arrow()
     check_columns(arrow, cell)
     rows = arrow.to_pylist()
@@ -585,11 +593,7 @@ def check_rewrite_path(
         row["rewritten_manifest_file_paths_count"],
         row["rewritten_delete_file_paths_count"],
     ] == want_rows[2:]
-    newest = max(
-        (table_dir(warehouse, "t") / "metadata").glob("*.metadata.json"),
-        key=lambda p: (p.stat().st_mtime_ns, p.name),
-    )
-    assert row["latest_version"] == newest.name
+    assert row["latest_version"] == pre_newest
     assert re.fullmatch(r"[0-9]{5}-[0-9a-fA-F-]+\.metadata\.json", row["latest_version"]), (
         "the memory catalog names versions NNNNN-<uuid>.metadata.json where "
         f"the oracle Hadoop door names them {want_rows[0]}"
@@ -626,7 +630,9 @@ def check_rewrite_path(
     live_meta = [s for s in live_shapes if s[2] in ("rewritten", "version")]
     want_meta = [s for s in want_shapes if s[2] in ("rewritten", "version")]
     assert len(live_meta) == 1 and live_meta[0][2] == "rewritten", live_meta
-    assert want_meta and all(s[2] == "version" for s in want_meta), want_meta
+    assert re.fullmatch(r"v[0-9]+\.metadata\.json", want_rows[0]) is not None, want_rows[0]
+    assert len(want_meta) == int(want_rows[0][1:].split(".")[0]), (want_meta, want_rows[0])
+    assert all(s[2] == "version" for s in want_meta), want_meta
     assert staged_metadata, "file list names no staged metadata.json"
     staged_doc = json.loads(
         Path(staged_metadata[-1].replace("file:", "")).read_text(encoding="utf-8")
