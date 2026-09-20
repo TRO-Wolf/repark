@@ -62,7 +62,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired
   through the fork's `RewriteDataFiles::filter` (file-selection, no residual). `strategy`
-  `binpack` runs; `sort` and `sort_order` refuse (fork R135 / registry `RDF-SORT-1`). Unknown
+  `binpack` runs. Unknown
   strategy and bad `where` use Spark 4.1.2 + Iceberg 1.11.0 text. v3 rewrite
   preserves lineage (`V3-LINEAGE-1` FIXED, RP-4 / fork #243) and drops
   in-scope Puffin DVs with a true `removed_delete_files_count` (`V3-DANGLE-1`
@@ -85,10 +85,30 @@ and measured-parity contract would grow `call.rs` beyond its exact
   pins: rp-4-fork-repin/C-003
   pins: v3-5-dv-compaction/C-002, C-004
   pins: ice-rdf-options-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-011
+  **ICE-RDF-SORT-PARSE-1 (2026-09-20):** `strategy` / `sort_order` route onto the fork's
+  `RewriteStrategy`, retiring registry `RDF-SORT-1`. `resolve_strategy` is a transcription of
+  Java `RewriteDataFilesProcedure.checkAndApplyStrategy` read from the 1.11.0 bytecode, and
+  three of its arms are not what the surface suggests: both parameters default to **null**, so
+  the procedure skips the strategy check entirely only when *both* are absent — which is why an
+  omitted `strategy` with a `sort_order` still sorts rather than bin-packing; `binpack` with any
+  `sort_order` reaches Java's `ensureRunnerNotSet` and must raise
+  `Cannot set rewrite mode, it has already been set to BIN-PACK`, z-order strings included; and
+  `strategy => 'zorder'` is an *unknown* strategy, not a z-order, so the existing
+  `unsupported strategy: …` arm stays. The `Cannot mix …` check runs before the strategy
+  dispatch, as it does in Java. Everything past the parse is the fork's: the sort execution, the
+  Z-order interleave and every refusal text are surfaced unchanged rather than re-authored, so
+  there is no second copy of a rule to drift. The procedure's `sort_order` is a one-shot rewrite
+  instruction and is never committed to the table — all three cells measure `md.sort-order`
+  unchanged. `branch` is deliberately still absent: the fork builder has no branch parameter, so
+  accepting it would ship a silently ignored argument (IPI-31 owns it).
+  pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008
 - `rewrite_options.rs` — **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(k, v, …)`
   extraction and validation for both rewrite procedures. String/number/boolean/NULL scalar
-  rendering, duplicate-key `[DUPLICATED_MAP_KEY]`, unknown-key listing in map order with the
-  `BIN-PACK` text, Java `Long.parseLong` / `parseBoolean` / `Double.parseDouble` value rules,
+  rendering, duplicate-key `[DUPLICATED_MAP_KEY]`, unknown-key listing in map order named for
+  the **resolved rewriter** (`BIN-PACK`, `SORT` or `Z-ORDER` — ICE-RDF-SORT-PARSE-1,
+  2026-09-20; the accepted set is `RDF_ACCEPTED` plus the fork's
+  `RewriteStrategy::valid_option_names()`, so the four layout options are accepted exactly
+  where Java accepts them and refused with Java's text everywhere else), Java `Long.parseLong` / `parseBoolean` / `Double.parseDouble` value rules,
   case-insensitive `rewrite-job-order` names, `output-spec-id` membership against the table
   specs, and the size-band cross-checks against the table-property (or 512 MiB) default.
   Sizes store as signed longs: `min-file-size-bytes` below 0 refuses `>= 0`, the band
@@ -101,6 +121,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   wins over the legacy top-level flag (Java's default, false). Errors return the
   `IllegalArgument` marker so Python raises `IllegalArgumentException`.
   pins: ice-rdf-options-1/C-001, C-002, C-005
+  pins: ice-rdf-sort-parse-1/C-009
+
 - `rewrite_where.rs` — SQL `where` string → Iceberg `Predicate` (eq/cmp/AND/OR/NOT/IS NULL/IN/
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
   In-module unit tests pin each convertible operator's Predicate shape.

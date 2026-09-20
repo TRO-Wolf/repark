@@ -225,26 +225,28 @@ async fn call_rewrite_unknown_strategy_matches_spark_message() {
 }
 
 #[tokio::test]
-async fn call_rewrite_sort_order_refuses_and_does_not_compact() {
+async fn call_rewrite_sort_order_sorts_and_does_compact() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
     seed_two_partition_groups(&ctx, &catalogs, "so").await;
     let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "so".into());
     let files_before = count_planned_data_files(catalogs["ice"].as_ref(), &ident).await;
-    let error = execute(
+    execute(
         &ctx,
         &catalogs,
-        "CALL ice.system.rewrite_data_files(table => 'sales.so', sort_order => 'id ASC')",
+        "CALL ice.system.rewrite_data_files(table => 'sales.so', sort_order => 'id ASC', \
+         options => map('rewrite-all', 'true'))",
     )
     .await
-    .expect_err("sort_order must refuse");
-    let message = error.to_string();
-    assert!(
-        message.contains("sort_order") && message.contains("not supported"),
-        "got: {message}"
-    );
+    .expect("sort_order must be accepted")
+    .collect()
+    .await
+    .expect("collect");
     let files_after = count_planned_data_files(catalogs["ice"].as_ref(), &ident).await;
-    assert_eq!(files_after, files_before, "a refused CALL must not compact");
+    assert!(
+        files_after < files_before,
+        "an accepted sort rewrite compacts ({files_after} < {files_before})"
+    );
 }
 
 #[tokio::test]

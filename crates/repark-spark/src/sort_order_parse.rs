@@ -1,5 +1,6 @@
 use iceberg::spec::{NullOrder, SortDirection};
 
+#[derive(Debug)]
 pub(crate) struct WriteOrderField {
     pub(crate) name: String,
     pub(crate) direction: SortDirection,

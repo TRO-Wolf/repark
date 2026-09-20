@@ -836,6 +836,12 @@ pins: rp-4-fork-repin/C-005, C-006
   door reaches the fork's `RewriteStrategy::ZOrder`. Mixed terms are Java's
   `Cannot mix identity sort columns and a Zorder sort expression`, checked before the strategy
   dispatch because that is where `RewriteDataFilesProcedure.checkAndApplyStrategy` checks it.
+  A non-`zorder` transform term (`bucket(4, id)`) is a *registered* refusal on the CALL door,
+  not a parse failure: Spark's `ExtendedParser.parseSortOrder` accepts transform sort terms, so
+  refusing one is a divergence that has to be declared rather than hidden behind Java's
+  `Unable to parse sortOrder`. It gets its own message and its own registry row
+  (`RDF-SORT-TRANSFORM-1`); reusing the ALTER door's wording would have mis-stated which door
+  refused.
   pins: ice-rdf-sort-parse-1/C-001, C-002, C-003
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:

@@ -110,7 +110,7 @@ fn resolve_requested_columns(
     Ok(Some(ordered))
 }
 
-fn spark_type_name(rendered: &Type) -> String {
+pub(super) fn spark_type_name(rendered: &Type) -> String {
     match rendered {
         Type::Primitive(primitive) => primitive.to_string(),
         Type::Struct(struct_type) => {
