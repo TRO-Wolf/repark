@@ -16,7 +16,8 @@ token is normalized at record time to its writer shape (canonical uuids, snap
 manifest names, data-file stems, staging directories, wall paths), so two
 derivations compare equal with no second pass. The Iceberg runtime GAV comes
 from :mod:`_oracle_pins`. Seed and normalization mirror the measured
-``cells_qc3.py`` shapes cell for cell.
+``cells_qc3.py`` shapes cell for cell, plus the ``cells_qc8.py`` refusal,
+nested-name, duplicate, stored-order, and twice-count shapes.
 
 pins: ice-procs-route-1/C-001, C-002, C-003
 """
@@ -176,6 +177,33 @@ def statistics_observation(context: OracleContext) -> list[list[list[Any]]]:
     return sorted(out, key=lambda pairs: repr(dict(pairs).get("snapshot")))
 
 
+def statistics_order_observation(context: OracleContext) -> list[list[Any]]:
+    """Record per-entry blob field ids in stored order with snapshot positions."""
+    metadata = context.metadata()
+    order = snapshot_order(metadata)
+    out = []
+    for entry in metadata.get("statistics", []):
+        out.append(
+            [
+                order.get(entry.get("snapshot-id")),
+                [b.get("fields", []) for b in entry.get("blob-metadata", [])],
+            ]
+        )
+    return sorted(out, key=repr)
+
+
+def seed_nested(context: OracleContext) -> list[int]:
+    """Create the struct seed table and return its snapshot ids."""
+    context.run(
+        f"CREATE TABLE {context.table} (id BIGINT, st STRUCT<a: INT, b: STRING>) USING iceberg"
+    )
+    context.run(
+        f"INSERT INTO {context.table} VALUES (1, named_struct('a', 1, 'b', 'x')), "
+        "(2, named_struct('a', 2, 'b', 'y'))"
+    )
+    return context.snaps()
+
+
 def seed_three(
     context: OracleContext, part: str = "PARTITIONED BY (cat)", version: str = "2"
 ) -> list[int]:
@@ -278,6 +306,7 @@ def table_stats_cell(context: OracleContext, extra: str) -> None:
         [stats_path_label(str(r[0]), metadata) if r[0] else None for r in rows],
     )
     context.observe("statistics", statistics_observation(context))
+    context.observe("statistics-order", statistics_order_observation(context))
 
 
 def record_table_stats(context: OracleContext, kind: str) -> None:
@@ -299,15 +328,14 @@ def record_table_stats(context: OracleContext, kind: str) -> None:
         context.run(f"CREATE TABLE {context.table} (id BIGINT) USING iceberg")
         table_stats_cell(context, "")
     elif kind == "CTS-NESTED":
-        context.run(
-            f"CREATE TABLE {context.table} (id BIGINT, st STRUCT<a: INT, b: STRING>) USING iceberg"
-        )
-        context.run(
-            f"INSERT INTO {context.table} VALUES (1, named_struct('a', 1, 'b', 'x')), "
-            "(2, named_struct('a', 2, 'b', 'y'))"
-        )
-        context.snaps()
+        seed_nested(context)
         table_stats_cell(context, "")
+    elif kind == "CTS-NESTED-NAME":
+        seed_nested(context)
+        table_stats_cell(context, ", columns => array('st.a')")
+    elif kind == "CTS-STRUCT-ARG":
+        seed_nested(context)
+        table_stats_cell(context, ", columns => array('st')")
     elif kind == "CTS-TWICE":
         seed_three(context)
         stats_call = (
@@ -318,12 +346,21 @@ def record_table_stats(context: OracleContext, kind: str) -> None:
     elif kind == "CTS-SNAPSHOT":
         ids = seed_three(context)
         table_stats_cell(context, f", snapshot_id => {ids[0]}")
-    elif kind in ("CTS-DEFAULT", "CTS-COLUMNS", "CTS-COLUMNS-TWO", "CTS-COLUMNS-UNKNOWN"):
+    elif kind in (
+        "CTS-DEFAULT",
+        "CTS-COLUMNS",
+        "CTS-COLUMNS-TWO",
+        "CTS-COLUMNS-UNKNOWN",
+        "CTS-EMPTY-ARRAY",
+        "CTS-DUP",
+    ):
         extras = {
             "CTS-DEFAULT": "",
             "CTS-COLUMNS": ", columns => array('id')",
             "CTS-COLUMNS-TWO": ", columns => array('data', 'id')",
             "CTS-COLUMNS-UNKNOWN": ", columns => array('nope')",
+            "CTS-EMPTY-ARRAY": ", columns => array()",
+            "CTS-DUP": ", columns => array('id', 'id')",
         }
         seed_three(context)
         table_stats_cell(context, extras[kind])
@@ -554,6 +591,10 @@ CELL_KINDS: tuple[tuple[str, str, str], ...] = (
     ("QP-CTS-COLUMNS", "table-stats", "CTS-COLUMNS"),
     ("QP-CTS-COLUMNS-TWO", "table-stats", "CTS-COLUMNS-TWO"),
     ("QP-CTS-COLUMNS-UNKNOWN", "table-stats", "CTS-COLUMNS-UNKNOWN"),
+    ("QP-CTS-EMPTY-ARRAY", "table-stats", "CTS-EMPTY-ARRAY"),
+    ("QP-CTS-NESTED-NAME", "table-stats", "CTS-NESTED-NAME"),
+    ("QP-CTS-STRUCT-ARG", "table-stats", "CTS-STRUCT-ARG"),
+    ("QP-CTS-DUP", "table-stats", "CTS-DUP"),
     ("QP-CTS-TYPES", "table-stats", "CTS-TYPES"),
     ("QP-CTS-EMPTY", "table-stats", "CTS-EMPTY"),
     ("QP-CTS-NESTED", "table-stats", "CTS-NESTED"),
@@ -584,6 +625,10 @@ CELL_TITLES = {
     "QP-CTS-COLUMNS": "compute_table_stats columns => array('id')",
     "QP-CTS-COLUMNS-TWO": "compute_table_stats columns two, reversed",
     "QP-CTS-COLUMNS-UNKNOWN": "compute_table_stats unknown column raises",
+    "QP-CTS-EMPTY-ARRAY": "compute_table_stats empty columns array refuses",
+    "QP-CTS-NESTED-NAME": "compute_table_stats nested column name",
+    "QP-CTS-STRUCT-ARG": "compute_table_stats struct column refuses",
+    "QP-CTS-DUP": "compute_table_stats duplicate column",
     "QP-CTS-TYPES": "compute_table_stats every primitive type",
     "QP-CTS-EMPTY": "compute_table_stats table with no snapshot",
     "QP-CTS-NESTED": "compute_table_stats struct column",
@@ -682,7 +727,7 @@ def record_cell(
 
 
 def record_oracle(warehouse: Path) -> list[dict[str, Any]]:
-    """Derive all 27 oracle cells on live Spark and return the records."""
+    """Derive all 31 oracle cells on live Spark and return the records."""
     session = live_session(warehouse)
     for catalog in ("sc", "hc"):
         session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns").collect()

@@ -276,6 +276,22 @@
       2
      ]
     ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    ]
    ]
   },
   "notes": [],
@@ -359,6 +375,22 @@
       0
      ]
     ]
+   ],
+   "statistics-order": [
+    [
+     0,
+     [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    ]
    ]
   },
   "notes": [],
@@ -412,6 +444,16 @@
      [
       "snapshot",
       2
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       1
+      ]
      ]
     ]
    ]
@@ -483,6 +525,19 @@
       2
      ]
     ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       2
+      ],
+      [
+       1
+      ]
+     ]
+    ]
    ]
   },
   "notes": [],
@@ -503,6 +558,172 @@
   },
   "error_step": "snapshots",
   "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-EMPTY-ARRAY",
+  "group": "QPROC",
+  "title": "compute_table_stats empty columns array refuses",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Columns cannot be null/empty"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-NESTED-NAME",
+  "group": "QPROC",
+  "title": "compute_table_stats nested column name",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<s0>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      0
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     0,
+     [
+      [
+       3
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-STRUCT-ARG",
+  "group": "QPROC",
+  "title": "compute_table_stats struct column refuses",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Can't compute stats on non-primitive type column: st (struct<3: a: optional int, 4: b: optional string>)"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-DUP",
+  "group": "QPROC",
+  "title": "compute_table_stats duplicate column",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       1
+      ]
+     ]
+    ]
+   ]
+  },
   "notes": [],
   "secs": 0.0
  },
@@ -654,6 +875,37 @@
       0
      ]
     ]
+   ],
+   "statistics-order": [
+    [
+     0,
+     [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       3
+      ],
+      [
+       4
+      ],
+      [
+       5
+      ],
+      [
+       6
+      ],
+      [
+       7
+      ],
+      [
+       8
+      ]
+     ]
+    ]
    ]
   },
   "notes": [],
@@ -673,7 +925,8 @@
     ]
    ],
    "out-rel": [],
-   "statistics": []
+   "statistics": [],
+   "statistics-order": []
   },
   "notes": [],
   "secs": 0.0
@@ -726,6 +979,16 @@
      [
       "snapshot",
       0
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     0,
+     [
+      [
+       1
+      ]
      ]
     ]
    ]
@@ -809,6 +1072,22 @@
      [
       "snapshot",
       2
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       3
+      ]
      ]
     ]
    ]
