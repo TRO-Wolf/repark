@@ -199,6 +199,46 @@ row-level path — by inserting, as its first statement:
 **After the revert** all three are green again: 8 passed / 6 passed / `72 passed, 1 skipped,
 1 xfailed`.
 
+## Mutation (C-009)
+
+**The mutation.** The same edit as C-008 — `plan_metadata_delete` made to answer "never a
+metadata delete" by returning `Ok(None)` as its first statement, so every DELETE takes the
+row-level route again:
+
+```rust
+) -> Result<Option<MetaDeletePlan>> {
+    return Ok(None);
+    #[allow(unreachable_code)]
+    let Ok(table) = catalog.load_table(&target.target).await else {
+```
+
+**Red under the mutation.** `cargo test -p repark-spark --lib call_rm_deletes` →
+**7 passed, 9 failed** — exactly the nine pins that moved on the rebase, and each one fails
+at its before-layout assertion having returned to the value the pre-round-2 pin asserted:
+
+| Pin | Layout under the mutation | = the pre-round-2 pin's |
+|---|---|---|
+| `rm_deletes_part_mor_v2` / `_v3` | `[(0,0,2,0)×3, (1,0,0,1)×3]` | yes |
+| `rm_deletes_part_mor_spec_v2` / `_v3` | `[(0,0,2,0)×3, (1,0,0,1)×2]` | yes |
+| `rm_deletes_part_mor_nocache_v2` / `_v3` | `[(0,0,2,0)×3, (1,0,0,1)×2]` | yes |
+| `rm_deletes_evolved_spec_v2` / `_v3` | `[(0,0,2,0)×3, (0,1,1,0), (1,0,0,1), (1,1,0,1)]` | yes |
+| `rm_deletes_non_current_spec_rewrites_that_spec` | the same six | yes |
+
+The seven that stay green are the cells the routing never touches (`unpart_mor`,
+`no_deletes`, `part_mor_real`, the unknown-`spec_id` refusal) — the partial-match DELETE
+statements keep the row-level route with or without the mutation.
+
+**The whole cell, not just the layout.** A failed assertion stops the test at the before-layout,
+so the mutation run above cannot show the result rows and summaries returning too. It was
+checked directly: with the mutation still in place, `call_rm_deletes.rs` was replaced by its
+**pre-round-2 copy** (`git show 98faa2b6:…`) and the suite answered **16 passed, 0 failed**.
+The old pins assert `(6, 2)` / `(5, 2)` / `(0, 0)` / `(3, 1)`, the old after-layouts, the old
+`manifests-created/kept/replaced` and the same rows — so the routing accounts for the entire
+move, on every field, and nothing else on the branch does.
+
+**After the revert** (both files restored, `git status` clean): `cargo test -p repark-spark
+--lib call_rm_deletes` → `16 passed; 0 failed`.
+
 ## Gates
 
 | Command | Last line |
