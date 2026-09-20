@@ -518,6 +518,16 @@ async fn try_preparse_intercepts(
     {
         return Some(describe_show::execute_show_system_functions(ctx, &show));
     }
+    if let Some(parsed) = describe_show::try_parse_show_partitions(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("SHOW PARTITIONS").map(|()| ddl)) {
+                Ok(show_partitions) => {
+                    Err(describe_show::show_partitions_refusal(&show_partitions))
+                }
+                Err(error) => Err(error),
+            },
+        );
+    }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {
         return Some(

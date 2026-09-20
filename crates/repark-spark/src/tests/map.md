@@ -555,7 +555,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table
   display, and `SQLSTATE: 42601`, and the Hive `ADD PARTITION` pin asserts the plan-class
   stamp end to end.
-  pins: ice-error-conditions-1/C-011), `describe_show`, `alter`, `dml`
+  pins: ice-error-conditions-1/C-011), `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
+  PARTITIONS refuses stamped, and SHOW NAMESPACES / SHOW FUNCTIONS keep their intercepts.
+  pins: ice-error-conditions-1/C-011), `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
   sibling file-path stability, two-key AND + incomplete-static, string/NULL partitions,
