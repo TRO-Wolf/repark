@@ -13,7 +13,7 @@ use datafusion::logical_expr::{Extension, LogicalPlan, UserDefinedLogicalNodeCor
 use datafusion::prelude::{DataFrame, SessionContext};
 use repark_common::spark_error;
 
-use crate::{Error, Result, engine_err};
+use crate::{Result, engine_err};
 
 pub use planner::StackQueryPlanner;
 pub use rewrite::StackRewrite;

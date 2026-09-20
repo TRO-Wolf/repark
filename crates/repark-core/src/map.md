@@ -314,7 +314,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **IPI-51 PR2 (2026-09-20):** the hand-formatted `[CONDITION]` strings in
   `text_scan.rs`, `orc_scan.rs`, `time_travel.rs`, `column_resolution.rs`,
   `stack.rs` (+ `stack/udf.rs`), and `session_time_zone.rs` render through
-  `repark_common::spark_error`, byte-identical.
+  `repark_common::spark_error`, byte-identical. `stack.rs` keeps `Result` and `engine_err` and drops the unused `Error` import the M-1 move left behind.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see
