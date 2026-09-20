@@ -28,6 +28,9 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   two empty-scan short-circuits.
   pins: ice-changelog-1/C-001, C-004, C-005, C-006, C-010
 - `tests.rs` — parser + resolution pins (`#[cfg(test)] mod tests;` in `../time_travel.rs`).
+  **ICE-CHANGELOG-1 round 1 (2026-09-20):** the incremental-refusal mapping pins — a
+  `DataInvalid` fork refusal becomes `IllegalArgument` with the message intact, every other
+  failure passes through. pins: ice-changelog-1/C-007
 - `sql_text.rs` — SQL-text timestamp parsing, zone math, token extraction (re-exported at
   `../time_travel.rs`). pins: ice-tt-resolve-1/C-010
 - `sql_ast.rs` — column-refusal check of the `AS OF` expression.

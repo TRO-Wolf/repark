@@ -840,6 +840,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   text before resolving. pins: ice-tt-resolve-1/C-002
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the moved names resolve only behind the
   `time_travel` module; the stale root re-exports are gone. pins: ice-tt-resolve-1/C-010
+  **ICE-CHANGELOG-1 round 1 (2026-09-20):** `read_table_at`'s Incremental arm re-raises a
+  `DataInvalid`-kind fork refusal through `illegal_argument_error`, so a bad window raises
+  `IllegalArgumentException` as Spark's does; the global `DataInvalid` mapping is untouched.
+  pins: ice-changelog-1/C-007
   **ICE-TT-RESOLVE-1 round 2 close (2026-09-19):** the root block narrows to the six
   externally used names; `lib.rs` sits at the 150 default ceiling. pins: ice-tt-resolve-1/C-012
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** `EngineContext::new` is 3-arg again (zone

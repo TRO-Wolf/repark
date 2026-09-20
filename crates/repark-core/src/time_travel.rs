@@ -33,6 +33,20 @@ fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
 }
 
+fn incremental_window_refusal(error: DataFusionError) -> DataFusionError {
+    let DataFusionError::External(inner) = &error else {
+        return error;
+    };
+    let Some(iceberg_error) = inner.downcast_ref::<iceberg::Error>() else {
+        return error;
+    };
+    if iceberg_error.kind() == iceberg::ErrorKind::DataInvalid {
+        illegal_argument_error(iceberg_error.to_string())
+    } else {
+        error
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TimeTravelSpec {
     SnapshotId(i64),
@@ -312,13 +326,13 @@ pub async fn read_table_at(
     let table = load_iceberg_table(catalogs, table_parts).await?;
     let provider: Arc<dyn TableProvider> = match spec {
         TimeTravelSpec::Incremental { from, to } => {
-            Arc::new(IncrementalAppendTableProvider::try_new(
-                table,
-                AppendWindow {
-                    from_exclusive: *from,
-                    to_inclusive: *to,
-                },
-            )?)
+            let window = AppendWindow {
+                from_exclusive: *from,
+                to_inclusive: *to,
+            };
+            let provider = IncrementalAppendTableProvider::try_new(table, window)
+                .map_err(incremental_window_refusal)?;
+            Arc::new(provider)
         }
         TimeTravelSpec::Changelog(window) => {
             let bounds = window.changelog_bounds(table.metadata())?;

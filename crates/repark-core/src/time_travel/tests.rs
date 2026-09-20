@@ -6,6 +6,8 @@
 //! deferred-test manifest.
 
 use super::*;
+use crate::{IllegalArgumentMarker, engine_err};
+use iceberg::{Error as IcebergError, ErrorKind};
 
 #[test]
 fn parse_version_integer_and_ref() {
@@ -52,4 +54,45 @@ fn parse_timestamp_ms_and_strings() {
     // Non-UTC offset must shift the epoch ms (not silently treat as naive UTC).
     let plus_one = parse_timestamp_to_ms("2020-01-15T01:00:00+01:00").unwrap();
     assert_eq!(plus_one, date_only);
+}
+
+#[test]
+fn incremental_datainvalid_refusal_maps_to_illegal_argument() {
+    let expected =
+        "DataInvalid => Starting snapshot (exclusive) 1 is not a parent ancestor of end snapshot 1";
+    let refusal = DataFusionError::External(Box::new(IcebergError::new(
+        ErrorKind::DataInvalid,
+        "Starting snapshot (exclusive) 1 is not a parent ancestor of end snapshot 1",
+    )));
+    let mapped = incremental_window_refusal(refusal);
+    let DataFusionError::External(inner) = &mapped else {
+        panic!("expected an External marker, got {mapped:?}");
+    };
+    let marker = inner
+        .downcast_ref::<IllegalArgumentMarker>()
+        .expect("expected an IllegalArgumentMarker");
+    assert_eq!(marker.0, expected);
+    match engine_err(mapped) {
+        Error::IllegalArgument(message) => assert_eq!(message, expected),
+        other => panic!("expected IllegalArgument, got {other:?}"),
+    }
+}
+
+#[test]
+fn incremental_other_failures_keep_their_error() {
+    let refusal = DataFusionError::External(Box::new(IcebergError::new(
+        ErrorKind::FeatureUnsupported,
+        "Delete files are currently not supported in changelog scans",
+    )));
+    let mapped = incremental_window_refusal(refusal);
+    let DataFusionError::External(inner) = &mapped else {
+        panic!("expected the External error untouched, got {mapped:?}");
+    };
+    let kept = inner
+        .downcast_ref::<IcebergError>()
+        .expect("expected the live iceberg error");
+    assert_eq!(kept.kind(), ErrorKind::FeatureUnsupported);
+    let planned = DataFusionError::Plan("boom".to_string());
+    let mapped = incremental_window_refusal(planned);
+    assert!(matches!(mapped, DataFusionError::Plan(_)));
 }
