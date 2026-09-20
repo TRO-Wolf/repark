@@ -22,6 +22,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
+from repark.errors import PySparkException
 
 CATALOG = "sysfn1"
 TABLE = f"{CATALOG}.w.t"
@@ -123,7 +124,7 @@ def test_truncate_binary_pins_recorded_values_and_schema(engine: ReparkSession) 
     """pins: ice-system-functions-1/C-008 — F-TRUNCATE-BINARY answers [0x01, 0xff] as binary."""
     frame = engine.sql(f"SELECT {TRUNCATE}(1, b) AS v FROM {TABLE}")
     table = frame.to_arrow()
-    assert table.schema.field("v").type == pa.binary()
+    assert table.schema.field("v").type == pa.large_binary()
     assert str(frame.schema.fields[0].dataType) == "BinaryType()"
     assert _sorted_rows(table) == [[b"\x01"], [b"\xff"], [None]]
 
@@ -144,17 +145,17 @@ def test_every_function_returns_null_for_null_input(engine: ReparkSession) -> No
 
 def test_bucket_width_must_be_a_positive_literal(engine: ReparkSession) -> None:
     """pins: ice-system-functions-1/C-010 — zero and negative widths refuse with the fork text."""
-    with pytest.raises(Exception, match=r"Invalid number of buckets: 0 \(must be > 0\)"):
+    with pytest.raises(PySparkException, match=r"Invalid number of buckets: 0 \(must be > 0\)"):
         engine.sql(f"SELECT {BUCKET}(0, id) AS v FROM {TABLE}").to_arrow()
-    with pytest.raises(Exception, match=r"Invalid number of buckets: -1 \(must be > 0\)"):
+    with pytest.raises(PySparkException, match=r"Invalid number of buckets: -1 \(must be > 0\)"):
         engine.sql(f"SELECT {BUCKET}(-1, id) AS v FROM {TABLE}").to_arrow()
-    with pytest.raises(Exception, match=r"Invalid truncate width: 0 \(must be > 0\)"):
+    with pytest.raises(PySparkException, match=r"Invalid truncate width: 0 \(must be > 0\)"):
         engine.sql(f"SELECT {TRUNCATE}(0, data) AS v FROM {TABLE}").to_arrow()
 
 
 def test_bucket_old_argument_order_refuses(engine: ReparkSession) -> None:
     """pins: ice-system-functions-1/C-010 — bucket(id, 16) refuses: the width is not a scalar."""
-    with pytest.raises(Exception, match="scalar"):
+    with pytest.raises(PySparkException, match="scalar"):
         engine.sql(f"SELECT {BUCKET}(id, 16) AS v FROM {TABLE}").to_arrow()
 
 

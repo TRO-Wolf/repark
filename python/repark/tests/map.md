@@ -7281,7 +7281,8 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `F-TRUNCATE-STRING` (`"z"` shorter than the width returns whole),
   `F-TRUNCATE-LONG` (`-10` floors down), `F-TRUNCATE-DECIMAL` (schema
   `decimal(10,2)` via `df.schema`), `F-TRUNCATE-BINARY` (schema `binary` via
-  `df.schema`). NULL in gives NULL out for both functions; zero and negative
+  `df.schema`, Arrow `large_binary` — the layout RePark reads BINARY columns
+  in, preserved by the fork). NULL in gives NULL out for both functions; zero and negative
   widths refuse with the fork `Bucket::new` / `Truncate::new` text; the old
   column-first order `bucket(id, 16)` refuses. Rows sort nulls-last so scan
   order cannot flake a pin. Temporal functions, `iceberg_version`,

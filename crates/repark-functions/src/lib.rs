@@ -28,6 +28,7 @@ pub mod format_version;
 pub mod generator;
 mod groups_null_state;
 pub mod higher_order;
+pub mod iceberg_system;
 pub mod instant_ts;
 mod int_to_binary;
 pub mod integer_spark;
@@ -158,6 +159,7 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in spark_session_window::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    iceberg_system::register(ctx);
     validate::register(ctx);
     try_invert::register(ctx);
     temporal_ctor::register(ctx);
