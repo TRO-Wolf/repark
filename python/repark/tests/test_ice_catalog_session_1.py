@@ -45,7 +45,7 @@ def test_refresh_table_answers_empty(spark: ReparkSession) -> None:
 
 def test_refresh_missing_table_raises_table_not_found(spark: ReparkSession) -> None:
     """N-7: ``REFRESH TABLE`` on a missing table refuses ``TABLE_OR_VIEW_NOT_FOUND``."""
-    with pytest.raises(AnalysisException, match="TABLE_OR_VIEW_NOT_FOUND"):
+    with pytest.raises(AnalysisException, match=r"TABLE_OR_VIEW_NOT_FOUND[\s\S]*SQLSTATE: 42P01"):
         spark.sql("REFRESH TABLE sc.ns.nothere").to_arrow()
 
 
@@ -75,7 +75,7 @@ def test_uncache_table_clears_is_cached(spark: ReparkSession) -> None:
 
 def test_uncache_missing_table_raises_table_not_found(spark: ReparkSession) -> None:
     """C-021 mechanism: ``UNCACHE TABLE`` on a missing table refuses loud."""
-    with pytest.raises(AnalysisException, match="TABLE_OR_VIEW_NOT_FOUND"):
+    with pytest.raises(AnalysisException, match=r"TABLE_OR_VIEW_NOT_FOUND[\s\S]*SQLSTATE: 42P01"):
         spark.sql("UNCACHE TABLE sc.ns.nothere").to_arrow()
 
 
@@ -242,10 +242,16 @@ def test_inmemory_catalog_impl_registers_memory_catalog(
 
 def test_current_catalog_answers_spark_catalog(spark: ReparkSession) -> None:
     """C-012: ``CAT-CURRENT-CATALOG`` replays EQUAL at session start."""
-    answered = spark.sql("SELECT current_catalog()").to_arrow().to_pylist()
+    import pyarrow as pa
+
+    table = spark.sql("SELECT current_catalog()").to_arrow()
+    answered = table.to_pylist()
     assert [[row["current_catalog()"]] for row in answered] == _cell_obs("CAT-CURRENT-CATALOG")[
         "current"
     ]
+    field = table.schema.field("current_catalog()")
+    assert field.type == pa.string()
+    assert field.nullable is False
     assert spark.sql("SELECT current_schema()").to_arrow().to_pylist() == [
         {"current_schema()": "default"}
     ]
@@ -277,8 +283,8 @@ def test_use_catalog_ns_cell(runtime_catalog: ReparkSession) -> None:
     assert [[row["namespace"], row["tableName"], row["isTemporary"]] for row in rows] == _cell_obs(
         "CAT-USE-CATALOG-NS"
     )["rows"]
-    current = spark.sql("SELECT current_catalog(), current_schema()").to_arrow().to_pylist()
-    assert [[row["current_catalog()"], row["current_schema()"]] for row in current] == _cell_obs(
+    current = spark.sql("SELECT current_catalog(), current_database()").to_arrow().to_pylist()
+    assert [[row["current_catalog()"], row["current_database()"]] for row in current] == _cell_obs(
         "CAT-USE-CATALOG-NS"
     )["current"]
 
@@ -383,6 +389,7 @@ def test_uncache_missing_table(spark: ReparkSession) -> None:
         spark.sql("UNCACHE TABLE sc.ns.nothere").to_arrow()
     text = str(caught.value)
     assert "TABLE_OR_VIEW_NOT_FOUND" in text
+    assert "SQLSTATE: 42P01" in text
     assert "current_schema()" in text
 
 
@@ -466,7 +473,7 @@ def test_catalog_impl_inmemory_cell(runtime_catalog: ReparkSession, tmp_path: Pa
     )
     spark.conf.set("spark.sql.catalog.c_inmem.warehouse", str(tmp_path / "imwh"))
     spark.sql("CREATE NAMESPACE IF NOT EXISTS c_inmem.n1").to_arrow()
-    assert _cell_obs("CAT-CATALOG-IMPL-INMEMORY")["ok"] is True
+    spark.sql("CREATE TABLE c_inmem.n1.t (id INT) USING iceberg").to_arrow()
     rows = spark.sql("SHOW NAMESPACES IN c_inmem").to_arrow().to_pylist()
     assert [[row["namespace"]] for row in rows] == [["n1"]]
 
@@ -475,13 +482,15 @@ def test_table_default_override_cell(runtime_catalog: ReparkSession, tmp_path: P
     """C-027: ``CAT-TABLE-DEFAULT-OVERRIDE`` replays EQUAL."""
     spark = runtime_catalog
     spark.conf.set("spark.sql.catalog.c_tdef", "org.apache.iceberg.spark.SparkCatalog")
-    spark.conf.set("spark.sql.catalog.c_tdef.type", "memory")
+    spark.conf.set("spark.sql.catalog.c_tdef.type", "hadoop")
     spark.conf.set("spark.sql.catalog.c_tdef.warehouse", str(tmp_path / "tdwh"))
     spark.conf.set("spark.sql.catalog.c_tdef.table-default.k1", "d1")
     spark.conf.set("spark.sql.catalog.c_tdef.table-override.k2", "o2")
     spark.conf.set("spark.sql.catalog.c_tdef.table-default.write.format.default", "parquet")
     spark.sql("CREATE NAMESPACE IF NOT EXISTS c_tdef.n1").to_arrow()
-    spark.sql("CREATE TABLE c_tdef.n1.t (a INT) USING iceberg").to_arrow()
+    spark.sql(
+        "CREATE TABLE c_tdef.n1.t (id INT) USING iceberg TBLPROPERTIES ('k2'='user')"
+    ).to_arrow()
     props = _table_properties(spark, "c_tdef.n1.t")
     for key, value in _cell_obs("CAT-TABLE-DEFAULT-OVERRIDE")["props"]:
         assert props[key] == value

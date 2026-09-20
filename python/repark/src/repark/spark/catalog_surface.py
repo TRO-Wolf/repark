@@ -72,7 +72,8 @@ def _raise_table_or_view_not_found(table_name: str) -> NoReturn:
         "Verify the spelling and correctness of the schema and catalog.\n"
         "If you did not qualify the name with a schema, verify the current_schema() "
         "output, or qualify the name with the correct schema and catalog.\n"
-        "To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS.",
+        "To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. "
+        "SQLSTATE: 42P01",
         "TABLE_OR_VIEW_NOT_FOUND",
         message_parameters={"relationName": f"`{table_name}`"},
     )
