@@ -32,7 +32,11 @@ pub(crate) fn strip_schema_evolution(sql: &str) -> Option<String> {
         &spanned[meaningful[1]],
         &spanned[meaningful[CLAUSE.len()]],
     )?;
-    Some(format!("{}{}", &sql[..start], &sql[end..]))
+    Some(format!(
+        "{} {}",
+        sql[..start].trim_end(),
+        sql[end..].trim_start()
+    ))
 }
 
 fn might_carry_the_clause(sql: &str) -> bool {
