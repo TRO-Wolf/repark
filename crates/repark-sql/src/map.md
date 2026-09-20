@@ -31,49 +31,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   a session conf owns writes the same Parquet layout the fork's insert exec writes without
   one. Every other RePark write keeps Java's `parquet.enable.dictionary` default.
   pins: ice-session-write-conf-1/C-064
-- [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
-  the owned native INSERT plans through `router::delegate_plan` — the delegated path's own
-  planner, `fill_insert_plan` and SEC-02 guards — and executes the `Dml` node's INPUT. The
-  session conf therefore changes what the commit STAMPS, never how the source types.
-  pins: ice-session-write-conf-1/C-055
-- [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
-  the native door's plain `INSERT INTO` arm when the session write conf is set. Without it the
-  statement reaches the fork's DataFusion `insert_into`, which takes neither snapshot properties
-  nor a codec, so the native door answered differently from the facade door on the same session
-  conf (critic P1-2). Shape: resolve the Iceberg target, fill defaults through
-  `insert_defaults::overwrite_source_with_defaults`, plan the SELECT through `PreExecute`
-  (SEC-02 guard kept), stage with the resolved overrides, and commit through
-  `commit_append_with_summary` — the same Rust carrier the Spark door uses.
-  pins: ice-session-write-conf-1/C-042
 - [`session_write_conf.rs`](session_write_conf.rs) — **ICE-SESSION-WRITE-CONF-1 round 4
   (2026-09-20):** `native_static_partition_overwrite_*` pins that the native door's
   static `INSERT OVERWRITE … PARTITION` shares the Spark door's collision oracle — the
   engine value where the filter removes files, a stamp where it removes none.
-  pins: ice-session-write-conf-1/C-054
-- [`session_write_conf.rs`](session_write_conf.rs) — **ICE-SESSION-WRITE-CONF-1 round 1
-  (2026-09-19):** the native-door battery (test-only): INSERT / CTAS / MERGE / DELETE stamp the
-  session snapshot property, a colliding summary key refuses with Spark's text and commits
-  nothing, a free key is stamped and feeds the totals like Java's producer (a negative total is
-  dropped, not written), and a bogus session codec refuses at the write naming the codec.
-  The native session carries its own `ConfigOptions`, so these pins build the door session with
-  `with_session_write_conf` — the Python facade cannot reach this door's carrier.
-  pins: ice-session-write-conf-1/C-042
-  **Round 2 (2026-09-19):** `native_merge_on_read_delete_stamps_the_session_snapshot_property`
-  joins it, on a `write.delete.mode=merge-on-read` table, because the round-1 battery left the
-  row-delta commit arm unpinned in Rust: dropping the extras at
-  `merge/snapshot_commit.rs`'s `commit_row_delta_kind_on_ref` alone reddened nothing, while the
-  copy-on-write arm was already covered by `native_merge_*` / `native_delete_*` here and by
-  `session_team_stamps_cow_delete_overwrite` in repark-spark. The pin asserts the stamp on both
-  snapshots and `added-delete-files=1`, so a silent reroute onto the rewrite arm reds it too.
-  **Round 3 (2026-09-19):** the second verification critic's `P1-NATIVE-UPDATE` and
-  `P1-NATIVE-PARTITION-OVERWRITE` — `native_plain_update_stamps_the_session_snapshot_property`
-  and `native_partition_overwrite_{stamps_the_session_snapshot_property,takes_the_session_codec}`.
-  Each is red on the pre-round file: the UPDATE snapshot stamped `None`, the overwrite snapshot
-  stamped `None`, and the overwrite's data file was written `ZSTD` where the session named
-  `gzip`. `parquet_codec_of` reads the written footer through DataFusion's `parquet` re-export,
-  since this crate does not depend on `parquet` directly.
-  pins: ice-session-write-conf-1/C-046
-  pins: ice-session-write-conf-1/C-044
+  pins: ice-session-write-conf-1/C-044, C-054
 - [`create_table.rs`](create_table.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   CTAS stages its query with the resolved session codec and, when the session sets snapshot
   properties, publishes through a transaction that carries the merged summary instead of the

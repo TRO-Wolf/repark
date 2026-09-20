@@ -397,7 +397,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: orphan-s3tables-1/C-001, C-002, C-004, C-005
-- `call/branch_ops.rs` — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`,
+- [call/branch_ops.rs](call/branch_ops.rs) — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`,
   `cherrypick_snapshot`, `set_current_snapshot`, `rollback_to_timestamp` (Spark 4.1.2
   parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).
   Details: [call/map.md](call/map.md).
@@ -762,7 +762,7 @@ pins: rp-4-fork-repin/C-005, C-006
   dotted `AFTER` references refuse with Spark's `[PARSE_SYNTAX_ERROR]`, nested paths resolve,
   every move commits through one loaded table (`apply_schema_changes_on_table`), unknown names
   refuse with Spark's `UNRESOLVED_COLUMN` framing. A sibling module, not an `alter.rs` arm,
-  because that file sits at its exact ceiling. 4 in-module tests + [`tests/column_move.rs`](tests/map.md).
+  because that file sits at its exact ceiling. 4 in-module tests + [`tests/column_move.rs`](tests/column_move.rs).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-014
 - `nested_column_ddl.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** the nested-path `ALTER TABLE`
   pre-parse (`try_parse_nested_column_ddl` / `execute_nested_column_ddl`, wired in `router.rs`
@@ -776,7 +776,7 @@ pins: rp-4-fork-repin/C-005, C-006
   fork's `UpdateSchema` (`add_column_to` / `add_required_column_to` with the parent path,
   `rename_column`, `delete_column`); RePark keeps no schema model of its own. A required child
   without a default refuses with the fork's `Incompatible change: cannot add required column…`.
-  Pins: [`tests/nested_column_ddl.rs`](tests/map.md).
+  Pins: [`tests/nested_column_ddl.rs`](tests/nested_column_ddl.rs).
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
   **Round 2 (2026-09-18, run 22b):** a claimed statement that holds a double-quoted word
   (`RENAME COLUMN s.a TO "x.y"`, `ADD COLUMN s."x.y" INT`) refuses Spark's
@@ -866,7 +866,7 @@ pins: rp-4-fork-repin/C-005, C-006
   **FNP-8 (2026-09-06):** `dialect_for_executing_parse` — `Databricks` when the SQL
   carries a `Token::Arrow` outside strings/comments, else the session dialect — so the
   Spark door parses `x -> y` lambdas without the session-wide FNP-4b flip. Unit pins are
-  inline in the module; door pins are [`tests/lambda_door.rs`](tests/map.md).
+  inline in the module; door pins are [`tests/lambda_door.rs`](tests/lambda_door.rs).
   pins: fnp-8/C-004
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
@@ -876,7 +876,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `RESET` of a collation key. `refuse_collation_in_statement` is called from
   `spark_ast.rs` (executing parse) and the router's successful parse (intercepted
   CREATE/ALTER). `refuse_collation_in_sql` is `pub` for the Python binding (`F.expr`,
-  `filter_sql`). Pins: [`tests/collation.rs`](tests/map.md). Ledger:
+  `filter_sql`). Pins: [`tests/collation.rs`](tests/collation.rs). Ledger:
   [`../../../task/y7-collation-refuse-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md).
 - `spark_type_names.rs` — the single canonical Spark DDL type spelling
   (`spark_ddl_type_name`, depth-bounded): `bigint` for 64-bit ints, the way `DESCRIBE`
@@ -982,7 +982,7 @@ pins: rp-4-fork-repin/C-005, C-006
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval
-  bounds restate to numeric magnitude. Pins: [`tests/window_temporal_range.rs`](tests/map.md);
+  bounds restate to numeric magnitude. Pins: [`tests/window_temporal_range.rs`](tests/window_temporal_range.rs);
   ledgers [`../../../task/g5b-temporal-range-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-12-g5b-temporal-range-ledger.md),
   [`../../../task/g5br-range-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-g5br-range-residuals-ledger.md),
   [`../../../task/z4-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-z4-residuals-ledger.md),

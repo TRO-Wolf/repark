@@ -82,7 +82,7 @@ its design and its one unit ledger. Where the next campaign stands is
 
 - Up: [../map.md](../map.md)
 - Briefs are operational documents, subordinate to the engineering contracts (the precedence chain
-  in [../AGENTS.md](../AGENTS.md) "Precedence"). A brief may narrow scope; it never relaxes a
+  in [../AGENTS.md](../AGENTS.md#precedence) "Precedence"). A brief may narrow scope; it never relaxes a
   contract rule.
 - **Import gate:** anything added here must pass the repository's forbidden-content greps (no
   account ids, ARNs, bucket names, credentials, personal identifiers, local absolute paths,

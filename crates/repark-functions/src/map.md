@@ -888,7 +888,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `is_string_type` also accepts a dictionary of strings; `instant_ts.rs`'s cast-source check and
   `timestamp_ltz_ntz.rs`'s `try_to_timestamp` use it. pins: cast-ts-string-1/C-013
 - `tests/` — crate-root unit battery ([tests/map.md](tests/map.md)).
-- `instant_ts.rs` — overwrite `now` / `current_timestamp` / `to_timestamp` with Arrow
+- [instant_ts.rs](instant_ts.rs) — overwrite `now` / `current_timestamp` / `to_timestamp` with Arrow
   `Timestamp(µs, UTC)`. Zoneless LTZ inputs (`TIMESTAMP '…'`,
   zoneless `to_timestamp`, `CAST(str|date|ntz AS TIMESTAMP)`) in the session zone; a
   zone-suffixed string is not localized. Analyzer rule `spark_ltz_timestamp_cast` still wraps

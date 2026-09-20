@@ -875,12 +875,23 @@ repark-parity slice.
   `rev` lines + `Cargo.lock` together (single-writer-per-pin invariant-checked), prints the
   fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
   contract in [../docs/fork-sync.md](../docs/fork-sync.md).
-- `check_map_md.sh` — the map.md lockstep guard: fails a commit if a staged `.rs`/`.py`/
-  `Cargo.toml`/`pyproject.toml` file's directory has no same-change `map.md` update (lockfiles
-  excluded; root-level manifests map to `map.md`, not `./map.md`). Invoked by
-  `.pre-commit-config.yaml`, `make check-map-md`, and the hook installed by `make install-hooks`.
-- `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one forces
-  a map to be TOUCHED; this one checks what the map actually says) and the SSOT for both rules.
+- `check_map_md.sh` — the map.md lockstep guard. MAP-PR-GATE-1 (2026-09-20): the unit of
+  "same change" is now the pull request, not the commit. `--base <ref>` is the branch mode the
+  gate runs: the code list is `git diff --name-only --diff-filter=d <ref>...HEAD` and the map
+  list is `git diff --name-only <ref>...HEAD`, so a map that lands in ANY commit of the branch
+  satisfies it, and it exits 1 on a violation. Bare (staged) mode keeps reading
+  `git diff --cached` but downgrades every finding to a `WARNING:` line and exits 0, followed
+  by one line naming ci.yml's `map.md guard` step as the check that holds the rule — a local
+  commit can no longer be blocked mid-rebase, and the PR still cannot merge a missing map.
+  Same rule in both modes: `.rs`/`.py`/`Cargo.toml`/`pyproject.toml` changes (lockfiles
+  excluded; root-level manifests map to `map.md`, not `./map.md`) require the directory's
+  `map.md`. Bare mode is invoked by `.pre-commit-config.yaml` and the hook installed by
+  `make install-hooks`; branch mode is invoked by `make check-map-md` (`BASE ?= origin/main`)
+  and ci.yml's `map.md guard` step on pull requests.
+  pins: map-pr-gate-1/C-009, C-010, C-011, C-012
+- `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one
+  requires the map to change in the same pull request; this one checks what the map actually
+  says) and the SSOT for its rules.
   Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
   (1) **link validity** — every relative markdown link resolves to an existing file or directory
   (`http(s)`/`mailto` links and bare `#anchors` are out of scope, nothing local can check them;
@@ -893,7 +904,11 @@ repark-parity slice.
   path-depth typos fixed in the arming commit; coverage **24** pre-existing unmentioned files — a
   FLOOR, not an exact debt, because a name counts as mentioned wherever it appears as a whole
   token — so the coverage rule is deliberately NOT armed: it lives behind `--strict` and is run by
-  hand (`python3 scripts/sync_map_md.py --check --strict`). `--fix` is mechanical only: it deletes
+  hand (`python3 scripts/sync_map_md.py --check --strict`);
+  (3) **duplicate rows**, unconditional — two list rows whose FIRST link carries the same target
+  are a finding (the shape a `merge=union` resolution leaves behind when two branches edited the
+  same row; a single row that mentions the same file twice is not a duplicate), which `--fix`
+  never resolves — which row keeps the target is a hand decision. `--fix` is mechanical only: it deletes
   a missing-target row when that row is a list item whose ONLY link is the dead one, taking the
   item's wrapped continuation lines with it — the deleted span is the bullet line plus every
   following indented line, ending at the first blank line, the first unindented line, or the first
@@ -1154,7 +1169,7 @@ repark-parity slice.
   missing scan root, unreadable source, empty scan, or exception outside the scan. Dual-wired by
   `make check-lib-py` and the ci.yml `python` job.
 
-- `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
+- [check_python_conventions.sh](check_python_conventions.sh) + `check_python_conventions.py` — the **Python conventions**
   guard: the three rules Ruff cannot express, and the SSOT for them (the prose homes that point at
   it: [AGENTS.md](../AGENTS.md) "Python", the code-quality and engineering-method skills under
   [.agents/skills/](../.agents/skills/map.md)). Over every `*.py` under

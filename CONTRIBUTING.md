@@ -29,8 +29,9 @@ Work in this repo — by the maintainer and delegated agents — runs under an e
   adversarial Actor–Critic → per-PR delivery → retrospective.
 - **Briefs** ([briefs/](briefs/)) define delegated work units; standing rules live in
   [AGENTS.md](AGENTS.md) "Delegated-agent standing rules".
-- **map.md lockstep**: every directory carries a `map.md`, updated in the same change as the code
-  it describes (`scripts/check_map_md.sh` enforces this).
+- **map.md lockstep**: every directory carries a `map.md`, updated in the same pull request as the
+  code it describes (`scripts/check_map_md.sh` enforces this on the PR diff in CI; the local hook
+  only warns).
 - **Tests-with-code**: tests land in the same commit as the code being tested — a hard block, per
   [docs/testing.md](docs/testing.md).
 - `make ci` is the canonical gate; `make preflight` mirrors the full CI surface.

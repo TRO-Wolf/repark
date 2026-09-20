@@ -1,0 +1,152 @@
+# Unit ledger — MAP-PR-GATE-1 · the map.md lockstep unit is the pull request
+
+**Date:** 2026-09-20 · **Branch:** `chore/map-pr-gate-1` · **Base:** `6d029ab8` (`origin/main`)
+**Model:** devin (SWE-2) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+
+**Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
+
+**What it is.** The invariant "`map.md` in every directory, updated in the same change" changes
+unit: the same change is now the pull request, and CI holds it. `check_map_md.sh` gains a branch
+mode (`--base <ref>`, `git diff <ref>...HEAD`); ci.yml's `map.md guard` runs it on pull requests
+only; `make check-map-md` calls it with `BASE ?= origin/main`; the two hook paths keep the staged
+mode, now warn-only. `.gitattributes` sets `map.md merge=union` so a local merge or rebase that
+touches one map on both sides keeps both rows, and `sync_map_md.py` gains a third unconditional
+rule — two list rows in one map sharing a first-link target are a `duplicate row` finding —
+for exactly what the union resolution leaves behind.
+
+**Union-merge measurement (scratch clone, local only).** Control: without the attribute, a merge
+of two branches that each added a row to the same `map.md` conflicted. With
+`map.md merge=union` / `**/map.md merge=union` committed on the base branch, the same merge
+exited 0 with both rows preserved; a rebase of the same pair exited 0 with both rows preserved —
+the duplicate rows that result are exactly what the new `sync_map_md.py` rule reports. GitHub's
+server-side mergeability check was **not measured**: the lane cannot push throwaway branches, so
+whether the server-side "mergeable" computation honours `merge=union` remains open (the work
+order expected it to ignore the driver; the local pre-merge rebase is where the conflicts cost
+time, and that path is measured).
+
+**Pre-existing duplicates.** With the rule armed, `sync_map_md.py --check` found **32**
+first-link collisions across the 310-map tree: `briefs` (1), `crates/repark-core/src` (2),
+`crates/repark-core/src/dynamic_flatten` (1), `crates/repark-core/src/session` (2),
+`crates/repark-core/src/session/df_guards` (1), `crates/repark-distributed` (1),
+`crates/repark-functions/src` (1), `crates/repark-python` (2),
+`crates/repark-spark/benches/ice_read_perf` (1), `crates/repark-spark/src` (6),
+`python/repark/tests` (9), `scripts` (1), `task` (1), `task/ledgers/completed` (1),
+`task/port` (2). Two were true duplicate rows (`python/repark/tests` `test_array_null_1.py` stub,
+`task/ledgers/completed` `java-double-fd-1-ledger.md` stub) plus one duplicated `## Pointers`
+block in `python/repark/tests`. Two more were same-file dual-campaign pairs — each campaign owns
+a row for the same file and both rows stay, the second filename unlinked (backticked), which
+hides the pair from union merges and the duplicate detector: `python/repark/tests/map.md` :1270
+and :1358 shared first-link `test_examples_window_catalog.py` (EX-21 vs EX-20), and :2353 and
+:2358 shared first-link `test_functions_d.py` (FNP-11B vs FN-D). The rest were rows whose first
+link was an incidental shared pointer (a sub-map, a baseline doc, `../map.md`) — resolved by
+linking each row's own subject or re-pointing file-named links at the real files. The tree is
+clean with the rule armed.
+
+**Main-merge dedupe (2026-09-20).** Merging `82952d40` (`origin/main` — #733's squash, the
+ice-session-write-conf-1 close-out) into this branch under `map.md merge=union` auto-resolved
+every map and kept both sides' rows; the duplicate-row rule then caught four first-link
+collisions on the merge preview. The work order rules them fixed in this pull request under
+newest-round-wins — a map keeps one navigation row per file, describing the current state —
+and the deleted round text remains in
+`task/ledgers/staging/ice-session-write-conf-1-ledger.md`. The four deleted rows:
+`crates/repark-sql/src/map.md`, first link `session_insert.rs` — kept the round-8 row,
+deleted the round-4 and round-1 rows; same map, first link `session_write_conf.rs` — kept the
+round-4 row, deleted the round-1 row (its Round-2/Round-3 continuations went with it);
+`python/repark/tests/map.md`, first link `_record_ice_session_write_conf_1_rounds.py` — kept
+the round-5 row, deleted the round-4 row. A pin is the file's, not the round's: two deleted
+rows were the only citations of `ice-session-write-conf-1/C-044` (pinned by the
+`native_merge_*` / `native_delete_*` battery in `crates/repark-sql/src/session_write_conf.rs`)
+and `C-058` (pinned by `_record_ice_session_write_conf_1_rounds::derive_round_cells`), so the
+kept rows absorb them — `pins:` …`C-044, C-054` and …`C-058, C-059, C-060, C-062` — and no
+other deleted pin was orphaned. `python3 scripts/sync_map_md.py --check` is clean on the
+merged tree (`map-sync: 310 maps clean`).
+
+**Not in this unit:** the GitHub server-side mergeability measurement above; no map format
+change, no sorting, no generator (step 2 owns map migration); no Rust or package source.
+
+## PROPOSITION LEDGER — MAP-PR-GATE-1 — 2026-09-20
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-001 | `check_map_md.sh --base <ref>` exits 0 when a code file and its directory's `map.md` both changed in the `<ref>...HEAD` diff. | `test_branch_mode_passes_when_code_and_map_change` (scratch repo, committed pair). | PROVEN | Green in `python/repark-parity/tests/test_map_pr_gate_1.py`. |
+| C-002 | The same mode exits 1 naming `<dir>/map.md` when code changed without its map. | `test_branch_mode_fails_when_only_code_changes`. | PROVEN | Green; the finding is `ERROR: pkg/map.md was not updated on this branch`. |
+| C-003 | A new directory carrying code but no `map.md` fails branch mode. | `test_branch_mode_fails_for_a_new_directory_without_map`. | PROVEN | Green; the finding is `ERROR: newdir has changed code but no map.md`. |
+| C-004 | A deletion-only code change is ignored: the code list reads `--diff-filter=d`. | `test_branch_mode_ignores_deletion_only_changes`. | PROVEN | Green. |
+| C-005 | A root-level code file's map is `map.md`, not `./map.md`: red without it, green once it changes in a later commit of the same branch. | `test_branch_mode_handles_a_root_level_file`. | PROVEN | Green; also proves the "passes once the map changes in a later commit" requirement. |
+| C-006 | Bare (staged) mode exits 0, prefixes each finding `WARNING:`, and names the CI check that holds the rule. | `test_staged_mode_warns_and_exits_zero`. | PROVEN | Green; the trailing line names ci.yml's `map.md guard` step. |
+| C-007 | `sync_map_md.py` reports `duplicate row` when two list rows in one map share a first-link target, unconditionally, and `--fix` never resolves it. | `test_duplicate_row_rule_fires_on_two_rows`, `test_duplicate_row_rule_survives_fix`. | PROVEN | Both green; `--fix` leaves both rows in place. |
+| C-008 | A single row that mentions the same target twice is not a duplicate (the comparison is between rows, on first links only). | `test_duplicate_row_rule_quiet_when_one_row_mentions_twice`. | PROVEN | Green. |
+| C-009 | `make check-map-md` invokes the branch mode: the Makefile carries `BASE ?= origin/main` and calls `bash scripts/check_map_md.sh --base "$(BASE)"`. | `test_makefile_runs_branch_mode_over_base`. | PROVEN | Green; `make check-map-md` also exercised in §Gates. |
+| C-010 | Both hook paths — the `install-hooks` printf in the Makefile and `.pre-commit-config.yaml` — call `scripts/check_map_md.sh` with no argument (the warn-only staged mode), identically. | `test_both_hook_paths_call_the_staged_mode_identically`. | PROVEN | Green; neither path passes `--base`. |
+| C-011 | ci.yml's `map.md guard` step is `if: github.event_name == 'pull_request'`, fetches `origin/${{ github.base_ref }}` explicitly, and runs `check_map_md.sh --base "origin/${{ github.base_ref }}"`; `.gitattributes` carries `map.md merge=union` and `**/map.md merge=union`. | `test_ci_guard_is_pr_only_and_gitattributes_carries_union`. | PROVEN | Green. The union driver's local merge/rebase behaviour is the measurement note above; the end-to-end "CI step fails on such a PR" proof is draft PR repark#754 (closed unmerged, branch deleted): the "Repo guards" job failed after 18s at `check_map_md.sh --base "origin/main"` with the lockstep-rule ERROR (run 35516586838, job 106093455282), all other concluded checks green; the PR never merged. GitHub server-side mergeability unmeasured. |
+| C-012 | `python3 scripts/sync_map_md.py --check` is clean on the tree with the duplicate-row rule armed; the 32 pre-existing findings are listed above and fixed in this pull request. | `python3 scripts/sync_map_md.py --check` on the branch tree. | PROVEN | `map-sync: 310 maps clean (strict=off)` after the fixes (§Gates). |
+
+## Gates
+
+- `python3 -m pytest python/repark-parity/tests/test_map_pr_gate_1.py` — 15 passed (uv-provisioned
+  pytest; system python carries none).
+- `make check-map-md check-map-sync check-docs-links check-manifest` — green on this branch.
+- `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xb-map origin/main HEAD` — clean.
+- `python3 scripts/check_ledger_grammar.py` — this ledger's clauses and attestation.
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: map-pr-gate-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: C-001–C-008 are pinned by fixture tests that exercise the exact wording;
+        C-009–C-011 are pinned by file-content pins; C-012 is proven from the ledger and
+        diff, not test-pinned.
+      artifacts: [python/repark-parity/tests/test_map_pr_gate_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundary inputs are exercised: deletion-only diffs, a root-level file, a new
+        directory with no map, a single row naming one target twice, `--fix` against duplicates.
+      artifacts: [python/repark-parity/tests/test_map_pr_gate_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Red paths are asserted, not assumed — exit 1 with the named `ERROR:` text in
+        branch mode, exit 0 with `WARNING:` in staged mode, exit 1 under `--fix` with the rows
+        untouched.
+      artifacts: [python/repark-parity/tests/test_map_pr_gate_1.py]
+    - id: AT-4
+      status: N/A
+      justification: No shared or mutable state; the guard is a pure `git diff` read per run.
+    - id: AT-5
+      status: N/A
+      justification: No credentials, network or privileged action; refs are local git objects.
+    - id: AT-6
+      status: ATTACKED
+      evidence: `merge=union` changes conflict resolution on maps; measured locally on merge and
+        rebase (both rows kept, exit 0). Server-side mergeability is unmeasured and recorded as
+        such rather than claimed.
+      artifacts: [.gitattributes, task/ledgers/staging/map-pr-gate-1-ledger.md]
+    - id: AT-7
+      status: N/A
+      justification: One extra `git diff` per guard run; nothing hot or unbounded.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The interface surface — the `--base` CLI, the Makefile `BASE` contract, the two
+        hook paths staying identical, the ci.yml event gate and base-ref fetch — is pinned by the
+        tests plus a diff read.
+      artifacts: [scripts/check_map_md.sh, Makefile, .pre-commit-config.yaml,
+        .github/workflows/ci.yml]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Failure paths are self-diagnosing: staged findings name the CI check that holds
+        the rule; `duplicate row` findings name both line numbers.
+      artifacts: [scripts/check_map_md.sh, scripts/sync_map_md.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Fifteen tests pin C-001–C-011 — behaviour over scratch repos (C-001–C-008)
+        and file-content assertions on the wiring (C-009–C-011); the merge-commit fixture
+        reds under a two-dot mutation and the suffix fixture reds when `*.py` leaves the
+        case (both mutations verified against a scratch copy, restored). C-012 is
+        ledger/diff-proven, not test-pinned.
+      artifacts: [python/repark-parity/tests/test_map_pr_gate_1.py]
+  complete: true
+```

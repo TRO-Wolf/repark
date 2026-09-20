@@ -796,20 +796,6 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-session-write-conf-1/C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026
   pins: ice-session-write-conf-1/C-027, C-028, C-029, C-030, C-031, C-032
 - [_record_ice_session_write_conf_1_rounds.py](_record_ice_session_write_conf_1_rounds.py) —
-  **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20, run 25c):** the third critic's
-  `P2-ROUND3-CELLS-ABSENT-FROM-FIXTURE`. Rounds 3 and 4 measured six families on live Spark
-  but left them in the orchestrator recordings, so the ledger's claim that they had entered
-  the unit fixture was false and the live recorder could not re-derive them. This module
-  derives all 32 — `QK-*` conf-key case (the prefix is case-sensitive, the snapshot-property
-  suffix verbatim), `QM-*` the maintenance CALLs, `QP-*` dynamic `overwritePartitions`,
-  `QO-*` static `INSERT OVERWRITE … PARTITION`, `QC-*` a summary-metric name in another case,
-  `QU-*` the copy-on-write layout — and `_record_ice_session_write_conf_1_oracle` appends them,
-  so one `check` run re-derives the whole 95-cell fixture (clean on PySpark 4.1.2). The six
-  error cells among them compare by their whole first message line, the `QR-*` rule. What
-  RePark must answer for each is pinned in Rust, per the owner's Rust-first ruling; the
-  fixture is the Spark side of those pins.
-  pins: ice-session-write-conf-1/C-047, C-048, C-049, C-054, C-056, C-057, C-058
-- [_record_ice_session_write_conf_1_rounds.py](_record_ice_session_write_conf_1_rounds.py) —
   **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20, run 25c):** the `QD-*` family takes the fixture
   to **106 cells**. `QD-MOR-*` (5) measure a merge-on-read `cat`-partitioned table whose target
   partition already holds a position-delete file: the static `INSERT OVERWRITE … PARTITION`
@@ -820,7 +806,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `2`. The eleven were cross-checked cell for cell against the orchestrator recording
   `spark-qc12.json` before they entered the fixture; the DECIMAL cells render their rows as
   strings, the one thing a `Decimal` cannot round-trip through JSON.
-  pins: ice-session-write-conf-1/C-059, C-060, C-062
+  pins: ice-session-write-conf-1/C-058, C-059, C-060, C-062
 - [_record_ice_session_write_conf_1_paths.py](_record_ice_session_write_conf_1_paths.py) +
   [test_ice_session_write_conf_1_paths.py](test_ice_session_write_conf_1_paths.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c; reformatted by ruff 0.15.22 at the queue):** the 38 path cells added to the
@@ -945,7 +931,6 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   'rewrite-all','true')` included, instead of writing six files per partition
   to clear the fork's `min_input_files = 5` default.
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
-- [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 step 0 (2026-09-14):**
 - [test_array_null_1.py](test_array_null_1.py) — **ARRAY-NULL-1 (2026-09-14):**
   `test_array_append_oracle_cells` / `test_array_prepend_oracle_cells` pin the nine
   D-2 oracle cells measured on live PySpark 4.1.2 through the facade on the Arrow
@@ -1456,7 +1441,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ex-15-dataframe-a/C-001
   pins: df-describe-str-1/C-004
   pins: df-colregex-1/C-002, C-003
-- [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-20 (2026-09-04):**
+- `test_examples_window_catalog.py` — **EX-20 (2026-09-04):**
   the four divergence pins for the window/catalog example batch — the DataFrame-door tied-key
   ordered default frame running per-row where Spark shares peer sums (EX-WIN-1, the G5
   default-frame class), `getDatabase('default')` answering None description/locationUri where
@@ -2456,7 +2441,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **FNP-11B step 5 (2026-09-15):** `test_fn_d_to_char_family_names_are_present`
   pins the four destubbed formatting names.
   pins: fnp-11b/C-001, C-007
-- [test_functions_d.py](test_functions_d.py) — FN-D (2026-08-15): datetime wrappers
+- `test_functions_d.py` — FN-D (2026-08-15): datetime wrappers
   through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias names resolve
   + one behavior case. `unix_seconds` pins toward-zero vs TZ-5 CAST floor.
   `current_timezone` pins Session zone, not `$TZ`.
@@ -4448,7 +4433,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md).
   pins: perf-ice-writepath-1/C-004, C-005, C-006, C-009, C-010
   pins: write-distribution-1/C-006
-- `test_write_distribution_1.py` — **WRITE-DISTRIBUTION-1** (2026-09-06): the hash distribution
+- [test_write_distribution_1.py](test_write_distribution_1.py) — **WRITE-DISTRIBUTION-1** (2026-09-06): the hash distribution
   rule before a partitioned CTAS, through the facade over a fixed four-file seed at
   `shuffle.partitions = 8`. Always-run: a v3 CTAS `PARTITIONED BY (part)` commits exactly eight
   data files, one per value, each holding a quarter of the seed with `first_row_id` tiling them
@@ -4460,7 +4445,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   deliberately NOT asserted here; `test_perf_ice_writepath_1.py` keeps it, unchanged. Numbers:
   [docs/perf/iceberg-write-baseline.md](../../../docs/perf/iceberg-write-baseline.md) §8.
   pins: write-distribution-1/C-001, C-004, C-005, C-007, C-009
-- `test_write_distribution_2.py` — **WRITE-DISTRIBUTION-2** (2026-09-06): the hash distribution
+- [test_write_distribution_2.py](test_write_distribution_2.py) — **WRITE-DISTRIBUTION-2** (2026-09-06): the hash distribution
   rule on the partitioned stream write paths, through the facade over the WD1 seed shape at
   `shuffle.partitions = 8` (the MERGE leg seeds 400,000 rows: at 120,000 the base funnel commits
   8 and the pin would not bite). Always-run: `INSERT OVERWRITE` and `MERGE ... WHEN NOT MATCHED
@@ -4726,7 +4711,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   is the ANSI-door callable (Arrow path, INT/INT truncates). `repark.spark.sql` alias
   package: `is` identity vs canonical `repark.spark.*`, loud gaps, sed
   `pyspark`→`repark.spark` smoke, top-level shim identity.
-- `test_catalog_surface.py` — **G-INT INT-004** (historical bullet; current surface is the
+- [test_catalog_surface.py](test_catalog_surface.py) — **G-INT INT-004** (historical bullet; current surface is the
   R-CURCAT entry above). Pins that still matter: `tableExists` / camelCase aliases /
   `clearCache`/`dropTempView`. Rowed listing refusals:
   [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
@@ -6375,6 +6360,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 
 - Up: [../map.md](../map.md)
 - Code under test: [../src/repark/map.md](../src/repark/map.md).
+- The parity harness nine of these files import:
+  `../../repark-parity/tests/test_compat_harness.py`.
 
 ### PR-6 tier-2 AWS security guard (2026-08-08)
 - `_acceptance.py` gained `assert_real_buckets_configured()` + env-overridable BRONZE_BUCKET /
@@ -6542,13 +6529,6 @@ First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../ma
 | Understand why a test is absent | [../../../task/port/deferred-python-tests.txt](../../../task/port/deferred-python-tests.txt) + [../../../task/port/deferred-tests.md](../../../task/port/deferred-tests.md) |
 | Reproduce the recorded cohort run | `docs/design/python-facade.md` §6.3 (environment clauses) |
 | See the port record for this suite | [p3e-facade-ledger.md](../../../docs/history/port-v2/p3e-facade-ledger.md) |
-
-## Pointers
-
-- Up: [../map.md](../map.md)
-- The package under test: [../src/repark/map.md](../src/repark/map.md).
-- The parity harness nine of these files import:
-  [../../repark-parity/tests/test_compat_harness.py](../../repark-parity/tests/test_compat_harness.py).
 
 ## Debug
 

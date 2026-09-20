@@ -796,6 +796,11 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
   ignore; EXCEPTIONS is 39 keys summing to 136, no `/tests/` path, sorted;
   Ruff pin matches the Makefile; dual-wired `make ci` + ci.yml; on the
   pre-commit hook (conventions stays off).
+- `test_map_pr_gate_1.py` — **MAP-PR-GATE-1:** the map.md lockstep unit is the pull request.
+  Branch-mode fixtures (`--base <ref>`) over scratch repos: pass on code+map, red on code-only,
+  red on a new directory without a map, quiet on deletion-only, root-level file maps to `map.md`;
+  staged mode exits 0 with `WARNING:` naming ci.yml's `map.md guard`; the `sync_map_md.py`
+  duplicate-row rule fires on a two-row fixture and stays quiet on a single row naming a file twice.
 - `test_pyc_5_close.py` — **PYC-5 (2026-08-22; the prose-homes pin retargeted to PYC's history
   record and its slate copy dropped by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;

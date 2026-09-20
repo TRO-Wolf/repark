@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Keep every `map.md` honest about the tree it navigates.
 
-The repo's hard rule is "`map.md` in every directory, updated in the same change" (AGENTS.md).
-`scripts/check_map_md.sh` holds the *lockstep* half: staged code forces a staged map. This
+The repo's hard rule is "`map.md` in every directory, updated in the same pull request"
+(AGENTS.md). `scripts/check_map_md.sh` holds the *lockstep* half: CI diffs the branch
+(`--base <ref>`) on every pull request, and the local hook's staged mode only warns. This
 script holds the *content* half — a touched map can still point at a file that moved and stay
 silent about a file that arrived.
 
-Two rules, over every tracked `map.md`:
+Three rules, over every tracked `map.md`:
 
 1. **Link validity.** Every relative markdown link in the map resolves to a file or directory
    that exists. External links (`http:`, `https:`, `mailto:`) and bare anchors (`#section`) are
@@ -19,6 +20,12 @@ Two rules, over every tracked `map.md`:
 2. **Coverage** (`--strict`). Every *mappable* tracked file sitting in the map's own directory
    is mentioned somewhere in the map by name. Mappable = one of MAPPABLE_SUFFIXES, excluding
    `map.md` itself, lockfiles, and dotfiles. Directories below the map belong to their own map.
+
+3. **Duplicate rows** (unconditional). Within one map, two list rows whose *first* link carries
+   the same target are a finding — the shape a `merge=union` resolution leaves behind when two
+   branches edited the same row. A single row that mentions the same file twice is not a
+   duplicate: the comparison is between rows, on each row's first link only. `--fix` never
+   resolves it — which row keeps the target is a hand decision.
 
 Coverage is behind `--strict` because the tree carries a large body of pre-existing unmentioned
 files; a gate nobody can run green is not a gate. Link validity is armed unconditionally. The
@@ -228,6 +235,31 @@ def drop_dead_rows(
     return kept, dropped, refused
 
 
+def find_duplicate_rows(lines: list[str]) -> list[tuple[int, str, int]]:
+    """List rows repeating an earlier row's first link: (1-based line, target, first line)."""
+    seen: dict[str, int] = {}
+    duplicates: list[tuple[int, str, int]] = []
+    in_fence = False
+    for index, line in enumerate(lines):
+        if FENCE_PATTERN.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence or not LIST_ITEM_PATTERN.match(line):
+            continue
+        end, _nested = _item_span(lines, index)
+        links = [link for row_line in lines[index:end] for link in _line_links(row_line)]
+        if not links:
+            continue
+        target = links[0].strip()
+        if target.startswith("<") and target.endswith(">"):
+            target = target[1:-1].strip()
+        if target in seen:
+            duplicates.append((index + 1, target, seen[target]))
+        else:
+            seen[target] = index + 1
+    return duplicates
+
+
 def contents_insert_index(lines: list[str]) -> int:
     """Line index to append stub rows at: end of `## Contents`, else end of file."""
     start = -1
@@ -283,6 +315,11 @@ def check_map(map_path: Path, tracked: list[str], map_relative: str, strict: boo
         f"{map_relative}:{lineno}: dead link — `{target}` {problem}"
         for lineno, target, problem in find_dead_links(map_path, lines)
     ]
+    findings.extend(
+        f"{map_relative}:{lineno}: duplicate row — `{target}` is already the "
+        f"first link of the row at line {first}"
+        for lineno, target, first in find_duplicate_rows(lines)
+    )
     if strict:
         findings.extend(
             f"{map_relative}: unmentioned — `{name}` is in this directory but not in the map"
@@ -295,7 +332,7 @@ def build_parser() -> argparse.ArgumentParser:
     """The CLI surface: `--check` (default), `--fix`, `--strict`."""
     parser = argparse.ArgumentParser(
         prog="sync_map_md.py",
-        description="Validate map.md links, and (--strict) that maps mention their own files.",
+        description="Validate map.md links and duplicate rows, and (--strict) coverage.",
     )
     parser.add_argument(
         "--check",
