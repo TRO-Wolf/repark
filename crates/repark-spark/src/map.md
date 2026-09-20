@@ -1211,7 +1211,7 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   honours them — every other unrecognised key is still ignored, which is
   Spark's measured behaviour and registry row `ICE-WRITE-OPTIONS-1`; this unit
   does not reopen it.
-- `insert_by_name.rs` + [`insert_by_name/evolution.rs`](insert_by_name/map.md)
+- `insert_by_name.rs` + [`insert_by_name/evolution.rs`](insert_by_name/evolution.rs)
   — extra source columns are a schema-evolution question, decided in
   `evolution::columns_to_add` **before** the arity and name arms run, so the
   three measured outcomes come out of three different places and keep their own
