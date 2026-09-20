@@ -940,7 +940,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: fnp-8/C-004
   **IPI-26/27 round 1 (2026-09-20):** the dialect switch sends a `CREATE` or
   `ALTER TABLE` carrying an angle-bracket `MAP<` to `SparkSqlDialect` (cell
-  `D-X-ADD-COL-MAP-KEY-STRUCT); every other `ALTER` stays on `GenericDialect`,
+  `D-X-ADD-COL-MAP-KEY-STRUCT`); every other `ALTER` stays on `GenericDialect`,
   pinned by the corpus in [`tests/ice_ddl_clauses_1.rs`](tests/ice_ddl_clauses_1.rs).
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks

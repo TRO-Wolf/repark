@@ -27,7 +27,7 @@ from `parse_single_normalized` in one line.
   into `PARTITIONED BY (bucket(n, col))`, before `extract_partitioned_by` consumes it.
   The field name falls out of the existing bucket rule as `{col}_bucket`, which is
   what Spark records (cell `D-X-CLUSTERED-BY`: `[["id_bucket","bucket[4]","id"]]`).
-  Multi-column, `SORTED BY`, and quoted shapes pass through untouched and fail loudly
+  Multi-column and `SORTED BY` shapes pass through untouched and fail loudly
   downstream; runs at or past the CTAS `AS` boundary are never rewritten. Unit pins
   are inline in the module; the parse-level pin is
   [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs).
