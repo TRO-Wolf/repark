@@ -31,6 +31,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   (SEC-02 guard kept), stage with the resolved overrides, and commit through
   `commit_append_with_summary` — the same Rust carrier the Spark door uses.
   pins: ice-session-write-conf-1/C-042
+- [`session_write_conf.rs`](session_write_conf.rs) — **ICE-SESSION-WRITE-CONF-1 round 4
+  (2026-09-20):** `native_static_partition_overwrite_*` pins that the native door's
+  static `INSERT OVERWRITE … PARTITION` shares the Spark door's collision oracle — the
+  engine value where the filter removes files, a stamp where it removes none.
+  pins: ice-session-write-conf-1/C-054
 - [`session_write_conf.rs`](session_write_conf.rs) — **ICE-SESSION-WRITE-CONF-1 round 1
   (2026-09-19):** the native-door battery (test-only): INSERT / CTAS / MERGE / DELETE stamp the
   session snapshot property, a colliding summary key refuses with Spark's text and commits

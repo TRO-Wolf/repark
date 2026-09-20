@@ -291,6 +291,41 @@ async fn native_partition_overwrite_stamps_the_session_snapshot_property() {
 }
 
 #[tokio::test]
+async fn native_static_partition_overwrite_names_the_engine_value() {
+    let door =
+        door_with_conf(&[("spark.sql.iceberg.snapshot-property.deleted-records", "5")]).await;
+    door.ok("CREATE TABLE ice.sales.p (id BIGINT, cat VARCHAR) WITH (partitioning = ARRAY['cat'])")
+        .await;
+    door.ok("INSERT INTO ice.sales.p VALUES (1, 'x'), (2, 'x'), (3, 'y')")
+        .await;
+    let message = door
+        .err("INSERT OVERWRITE ice.sales.p PARTITION (cat = 'x') SELECT 9 AS id")
+        .await;
+    assert!(
+        message.contains("Multiple entries with same key: deleted-records=2 and deleted-records=5"),
+        "the native door must name the engine value the row filter removes: {message}"
+    );
+}
+
+#[tokio::test]
+async fn native_static_partition_overwrite_stamps_a_free_removal_key() {
+    let door =
+        door_with_conf(&[("spark.sql.iceberg.snapshot-property.deleted-records", "5")]).await;
+    door.ok("CREATE TABLE ice.sales.p (id BIGINT, cat VARCHAR) WITH (partitioning = ARRAY['cat'])")
+        .await;
+    door.ok("INSERT INTO ice.sales.p VALUES (1, 'x'), (2, 'x'), (3, 'y')")
+        .await;
+    door.ok("INSERT OVERWRITE ice.sales.p PARTITION (cat = 'w') SELECT 9 AS id")
+        .await;
+    let summaries = door.summaries("p").await;
+    assert_eq!(
+        summaries[1].get("deleted-records").map(String::as_str),
+        Some("5"),
+        "the row filter reaches no live file, so the key is free and Spark stamps it"
+    );
+}
+
+#[tokio::test]
 async fn native_partition_overwrite_takes_the_session_codec() {
     let door = door_with_conf(&[("spark.sql.iceberg.compression-codec", "gzip")]).await;
     door.ok("CREATE TABLE ice.sales.p (id BIGINT, cat VARCHAR) WITH (partitioning = ARRAY['cat'])")

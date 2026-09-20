@@ -769,6 +769,11 @@ repark-core's error map.
   `tooHighDeleteRatio`. The setting is read from the fork rather than restated, so a fork
   policy change carries. Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-002
+- `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
+  `commit_overwrite_by_row_filter_with_summary` takes the plan's `StaticPartitionOverwrite`
+  rather than its bare predicate, so `engine_summary_for_row_filter` can resolve the
+  removal set from the same equalities the filter was built from.
+  pins: ice-session-write-conf-1/C-054
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame
   write-option staging and commits. `WriterStagingOverrides` (codec/level/target-size,
   option over table property) feeds override-capable builders that mirror the
@@ -833,6 +838,20 @@ repark-core's error map.
   set only when an extra names a removal-fed key. An empty dynamic overwrite still
   commits nothing, which is what Spark does.
   pins: ice-session-write-conf-1/C-047
+  **Round 4 (2026-09-20):** `row_filter_removed_files` does the same for the STATIC arm.
+  Spark 4.1.2 measured (cells `QO-*`, recorded 2026-09-20 run 25c) answers
+  `INSERT OVERWRITE t PARTITION (cat = 'x')` the same way it answers the dynamic
+  overwrite: overwriting the live partition refuses naming the engine value
+  (`deleted-records=2`, `deleted-data-files=1`, `total-records=2`), while overwriting a
+  never-written partition stamps `deleted-records=5` / `deleted-data-files=9` as free
+  keys and only the totals collide (`total-records=4`). The removed set here cannot come
+  from the staged files — an empty source stages nothing yet still clears the partition —
+  so it is resolved from the PARTITION equalities: the live files whose partition value
+  equals the equality literal, matched by partition-field name.
+  `partition_overwrite.rs`'s `equality_literal` is the one place a `PartitionLiteral`
+  becomes the `Literal` a data file carries, so the row filter and the removal set agree
+  on type coercion.
+  pins: ice-session-write-conf-1/C-054
 - `illegal_argument.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   `IllegalArgumentMarker` and `illegal_argument_error`, moved here from
   repark-core's `error_map.rs` (which re-exports them unchanged) so a

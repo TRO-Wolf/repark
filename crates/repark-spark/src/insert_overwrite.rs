@@ -223,7 +223,7 @@ pub(crate) async fn execute_partition_overwrite(
                 &catalog,
                 &table,
                 staged_files,
-                spec.predicate,
+                spec,
                 branch.as_deref(),
                 &snapshot_extra,
                 options.isolation.as_deref(),

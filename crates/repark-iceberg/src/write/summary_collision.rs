@@ -7,6 +7,9 @@ use iceberg::spec::{
 use iceberg::table::Table;
 
 use crate::write::illegal_argument::illegal_argument_error;
+use crate::write::partition_overwrite::{
+    PartitionEquality, bind_partition_field, equality_literal, resolve_binding,
+};
 
 const ENGINE_RESERVED_KEYS: [&str; 2] = ["engine-name", "engine-version"];
 const ENGINE_RESERVED_VALUE: &str = "<engine-reserved>";
@@ -162,6 +165,53 @@ pub async fn replaced_data_files(
         .into_iter()
         .filter(|file| replaced.contains(&partition_key_of(table, file)))
         .collect())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn row_filter_removed_files(
+    table: &Table,
+    branch: Option<&str>,
+    equalities: &[PartitionEquality],
+) -> Result<Vec<DataFile>> {
+    if equalities.is_empty() {
+        return Ok(Vec::new());
+    }
+    let expected = expected_partition_pairs(table, equalities)?;
+    let live = live_data_files(table, branch).await?;
+    Ok(live
+        .into_iter()
+        .filter(|file| {
+            let key = partition_key_of(table, file);
+            expected.iter().all(|(name, value)| {
+                key.iter()
+                    .any(|(field, actual)| field == name && actual == value)
+            })
+        })
+        .collect())
+}
+
+fn expected_partition_pairs(
+    table: &Table,
+    equalities: &[PartitionEquality],
+) -> Result<Vec<(String, Option<iceberg::spec::Literal>)>> {
+    let metadata = table.metadata();
+    let schema = metadata.current_schema();
+    let bindings = metadata
+        .default_partition_spec()
+        .fields()
+        .iter()
+        .map(|field| bind_partition_field(schema.as_ref(), field))
+        .collect::<Result<Vec<_>>>()?;
+    equalities
+        .iter()
+        .map(|equality| {
+            let binding = resolve_binding(&bindings, &equality.name)?;
+            Ok((
+                binding.spec_field_name.clone(),
+                equality_literal(binding, equality)?,
+            ))
+        })
+        .collect()
 }
 
 type PartitionKey = Vec<(String, Option<iceberg::spec::Literal>)>;

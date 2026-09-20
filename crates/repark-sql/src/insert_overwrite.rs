@@ -163,7 +163,7 @@ async fn commit_partition_overwrite(
                 handle,
                 table,
                 staged_files,
-                spec.predicate,
+                spec,
                 None,
                 snapshot_extra,
                 None,

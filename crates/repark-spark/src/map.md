@@ -90,6 +90,11 @@ pins: rp-4-fork-repin/C-005, C-006
   a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
   0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
   before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
+- `insert_overwrite.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the
+  `OverwritePlan::RowFilter` arm hands the whole `StaticPartitionOverwrite` to
+  `commit_overwrite_by_row_filter_with_summary`, so the commit resolves the files the
+  filter removes and the collision oracle answers as Spark's does.
+  pins: ice-session-write-conf-1/C-054
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).

@@ -326,6 +326,97 @@ async fn replace_partitions_into_an_existing_partition_names_the_engine_value() 
     );
 }
 
+async fn static_partition_overwrite_under(
+    table_name: &str,
+    key: &str,
+    value: &str,
+    overwrite: &str,
+) -> Result<Summaries, DataFusionError> {
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table_name} (id BIGINT, cat STRING) USING iceberg \
+             PARTITIONED BY (cat)"
+        ),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.{table_name} VALUES (1,'x'),(2,'x'),(3,'y')"),
+    )
+    .await;
+    set_session_conf(&ctx, key, value);
+    let outcome = execute(&ctx, &catalogs, overwrite).await.map(|_| ());
+    unset_session_conf(&ctx, key);
+    outcome?;
+    let table = load_sales_table(&catalogs, table_name).await;
+    Ok(summaries_of(&table, &[NONCE_KEY]))
+}
+
+#[tokio::test]
+async fn static_partition_overwrite_of_a_new_partition_stamps_deleted_records() {
+    let _: &str = "pins: ice-session-write-conf-1/C-054";
+    let summaries = static_partition_overwrite_under(
+        "sonew",
+        "spark.sql.iceberg.snapshot-property.deleted-records",
+        "5",
+        "INSERT OVERWRITE ice.sales.sonew PARTITION (cat = 'w') VALUES (9)",
+    )
+    .await
+    .expect("a partition the row filter does not reach removes nothing to collide with");
+    let (operation, pairs) = summaries.last().expect("an overwrite snapshot");
+    assert_eq!(operation, "Overwrite");
+    assert_eq!(
+        pairs
+            .iter()
+            .find(|(key, _)| key == "deleted-records")
+            .map(|(_, value)| value.as_str()),
+        Some("5"),
+        "the free key is stamped: {pairs:?}"
+    );
+}
+
+#[tokio::test]
+async fn static_partition_overwrite_of_a_live_partition_names_the_engine_value() {
+    let _: &str = "pins: ice-session-write-conf-1/C-054";
+    let error = static_partition_overwrite_under(
+        "soold",
+        "spark.sql.iceberg.snapshot-property.deleted-records",
+        "5",
+        "INSERT OVERWRITE ice.sales.soold PARTITION (cat = 'x') VALUES (9)",
+    )
+    .await
+    .expect_err("overwriting a live partition collides on deleted-records");
+    assert_eq!(
+        error.strip_backtrace(),
+        "External error: Multiple entries with same key: deleted-records=2 and \
+         deleted-records=5",
+        "the refusal must name Spark's computed engine value, not `<resolved at commit>`"
+    );
+}
+
+#[tokio::test]
+async fn static_partition_overwrite_names_the_total_it_would_have_written() {
+    let _: &str = "pins: ice-session-write-conf-1/C-054";
+    let error = static_partition_overwrite_under(
+        "sotot",
+        "spark.sql.iceberg.snapshot-property.total-records",
+        "77",
+        "INSERT OVERWRITE ice.sales.sotot PARTITION (cat = 'w') VALUES (9)",
+    )
+    .await
+    .expect_err("a total is always produced, so it always collides");
+    assert_eq!(
+        error.strip_backtrace(),
+        "External error: Multiple entries with same key: total-records=4 and total-records=77",
+        "the total counts the three live rows plus the added one, with nothing removed"
+    );
+}
+
 async fn rewrite_manifests_under(key: &str, value: &str, table_name: &str) -> Summaries {
     let warehouse = TempDir::new().expect("warehouse");
     let (ctx, catalogs) = setup(&warehouse).await;
