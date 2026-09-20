@@ -216,7 +216,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
   `task/g8-file-size-ledger.md`, or `task/g4-artifacts/` fails the same way: those moved to
   [../docs/history/hardening-h1/](../docs/history/hardening-h1/map.md) on **2026-08-11** (G-9).
 - **H-1 phase ledgers were promoted mid-campaign** to
-  [../docs/history/hardening-h1/](../docs/history/hardening-h1/map.md) (2026-08-11). **H-2+ unit
+  `../docs/history/hardening-h1/` (2026-08-11). **H-2+ unit
   ledgers re-accumulate here** until the next promotion. Empty-of-ledgers is again a valid steady
   state between units (the campaign continues; only the closed H-1 phase record left).
 - Looking for a backlog item that is not in [../STATUS.md](../STATUS.md)? Check

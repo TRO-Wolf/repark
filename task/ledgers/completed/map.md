@@ -679,7 +679,6 @@ else. The next pickup's `make ledger-archive` files everything here under
   re-exported by repark-spark).
   `risk_tier: standard`. Branch `feat/java-double-fd-1`.
   pins: java-double-fd-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [java-double-fd-1-ledger.md](java-double-fd-1-ledger.md) — Unit ledger — JAVA-DOUBLE-FD-1 · JDK 17 FloatingDecimal port for DOUBLE/FLOAT text
 - [java-double-str-1-ledger.md](java-double-str-1-ledger.md) — Unit ledger — JAVA-DOUBLE-STR-1 · DOUBLE/FLOAT stringify as Java does
 - [ledger-reading-1-ledger.md](ledger-reading-1-ledger.md) —
   **LEDGER-READING-1 step 1 (2026-09-09), in flight:**   reading units may prove clauses on

@@ -885,7 +885,7 @@ repark-parity slice.
   `make install-hooks`; branch mode is invoked by `make check-map-md` (`BASE ?= origin/main`)
   and ci.yml's `map.md guard` step on pull requests.
 - `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one forces
-  a map to be TOUCHED; this one checks what the map actually says) and the SSOT for both rules.
+  a map to be TOUCHED; this one checks what the map actually says) and the SSOT for its rules.
   Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
   (1) **link validity** — every relative markdown link resolves to an existing file or directory
   (`http(s)`/`mailto` links and bare `#anchors` are out of scope, nothing local can check them;
@@ -898,7 +898,11 @@ repark-parity slice.
   path-depth typos fixed in the arming commit; coverage **24** pre-existing unmentioned files — a
   FLOOR, not an exact debt, because a name counts as mentioned wherever it appears as a whole
   token — so the coverage rule is deliberately NOT armed: it lives behind `--strict` and is run by
-  hand (`python3 scripts/sync_map_md.py --check --strict`). `--fix` is mechanical only: it deletes
+  hand (`python3 scripts/sync_map_md.py --check --strict`);
+  (3) **duplicate rows**, unconditional — two list rows whose FIRST link carries the same target
+  are a finding (the shape a `merge=union` resolution leaves behind when two branches edited the
+  same row; a single row that mentions the same file twice is not a duplicate), which `--fix`
+  never resolves — which row keeps the target is a hand decision. `--fix` is mechanical only: it deletes
   a missing-target row when that row is a list item whose ONLY link is the dead one, taking the
   item's wrapped continuation lines with it — the deleted span is the bullet line plus every
   following indented line, ending at the first blank line, the first unindented line, or the first
@@ -1159,7 +1163,7 @@ repark-parity slice.
   missing scan root, unreadable source, empty scan, or exception outside the scan. Dual-wired by
   `make check-lib-py` and the ci.yml `python` job.
 
-- `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
+- [check_python_conventions.sh](check_python_conventions.sh) + `check_python_conventions.py` — the **Python conventions**
   guard: the three rules Ruff cannot express, and the SSOT for them (the prose homes that point at
   it: [AGENTS.md](../AGENTS.md) "Python", the code-quality and engineering-method skills under
   [.agents/skills/](../.agents/skills/map.md)). Over every `*.py` under

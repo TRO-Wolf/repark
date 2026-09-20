@@ -73,7 +73,7 @@ feature — the Ballista-backed cluster executor. Ballista Milestone 1; the grou
   codec entry. S3/Glue executor credentials stay residue (D-2).
   pins: ballista-m1-d/C-001, C-002, C-003
 - **BALLISTA-M1-D step 2.** Iceberg section and success-list line 17 in
-  [docs/design/distributed-m1.md](../../docs/design/distributed-m1.md). The runtime
+  `docs/design/distributed-m1.md`. The runtime
   abstraction is in place. Iceberg writes and the commit coordinator are Milestone 3
   (ADR-0004). The `IcebergTableScan` serde wall fell at BALLISTA-M2-A: `datafusion-proto`
   is now a `cluster`-gated dependency and the codec carries the scan.

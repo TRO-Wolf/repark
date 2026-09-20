@@ -172,7 +172,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `NljBuildSideReset` physical-optimizer rule (guard 3, same 54.1-defect family as the two
   above): it runs after DataFusion's own physical rules and wraps each nested-loop-join
   build side so the OOM fallback's second `execute(0)` meets fresh `RepartitionExec`
-  channels. Full design in [../map.md](../map.md) (`nlj_build_reset.rs`).
+  channels. Full design in `../map.md` (`nlj_build_reset.rs`).
   pins: never-oom-panic-1/C-004, C-005
   **CONF-UNREAD-1 step 1 (2026-09-11):** `df_guards.rs` also owns
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
@@ -258,7 +258,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `df_guards/` (see [df_guards/map.md](df_guards/map.md)) because it is the third DF-54.1 guard
   and because `../session.rs` is at its file-size baseline and may not gain a `mod` line.
   pins: win-slide-1/C-001, C-002, C-005, C-006, C-007
-- `df_guards/subquery.rs` — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery —
+- [df_guards/subquery.rs](df_guards/subquery.rs) — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery —
   outer-reference scope resolution plus three optimizer rules and the
   `__repark_single_row` guard UDAF, all installed on every core session through
   `df_guards.rs` (see [df_guards/map.md](df_guards/map.md) for the full design note).
