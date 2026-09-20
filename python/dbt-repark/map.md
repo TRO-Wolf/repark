@@ -84,4 +84,4 @@ compile time with a named registry row rather than deep in the parser.
 | `table 'datafusion.<ns>.<t>' not found` | a two-part name reached the SQL door; every relation must render `catalog.namespace.table` |
 | `incremental` / `snapshot` model refuses | deliberate — RePark has no temporary views, so dbt's merge staging cannot run |
 | a `view` model refuses | deliberate — `DBT-VIEW-1` in the registry |
-| `persist_docs` or `location_root` refuses | deliberate — `DBT-RELCOMMENT-1` / `DBT-COLCOMMENT-1` / `DBT-CTASCLAUSE-1` |
+| `persist_docs.relation` or `location_root` refuses | regression — both serve since IPI-26/27 round 2 (2026-09-20); `persist_docs.columns` still refuses (`DBT-COLCOMMENT-1`), as do `OPTIONS` and `CLUSTERED BY` (`DBT-CTASCLAUSE-1`) |

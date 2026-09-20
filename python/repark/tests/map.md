@@ -3787,6 +3787,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `CLUSTERED BY` pin asserts the spec `[["id_bucket","bucket[4]","id"]]` in table
   metadata, never mere absence of an error; the corpus pin replays the non-MAP
   `ALTER` shapes and asserts each keeps its pre-widening behaviour.
+  **IPI-26/27 round 2 (2026-09-20):** `COMMENT` everywhere plus `LOCATION`.
+  The column-comment pin asserts the doc as the schema row's fourth field, the
+  table/`COMMENT ON` pins assert the `comment` property, the `LOCATION` pins
+  assert the metadata location and parquet under the given path, the Hive
+  `CHANGE COLUMN` pins assert type plus doc (and the rename twin) with rows
+  intact, and the `DESCRIBE` pin re-checks the comment column. Cells
+  `D-CREATE-COL-COMMENT`, `D-CREATE-COMMENT`, `D-CTAS-COMMENT`, `D-COMMENT-ON`,
+  `D-X-CHANGE-COLUMN-TYPE`, `D-CREATE-LOCATION`, `D-CTAS-LOCATION`,
+  `D-DESCRIBE`. A replace-with-`LOCATION` pin holds the loud refusal.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to

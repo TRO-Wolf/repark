@@ -10,11 +10,30 @@ and the P11 read-only threading pin.
 Location translation follows byte equality across owned and borrowed buffers.
 The lib-root battery lives in `../tests/`
 (`crate::tests`; see [../tests/map.md](../tests/map.md)).
+**IPI-26/27 round 2 (2026-09-20):** the directory also holds pre-parse intercept
+modules, which live here because `lib.rs` is at its re-export ceiling.
 
 ## Contents
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../router.rs`.
   **MW-6:** the CALL dispatch covers all supported procedures, including `register_table`.
+- `comment_on_table.rs` — **IPI-26/27 round 2 (2026-09-20):** the
+  `COMMENT ON TABLE t IS 'lit'` / `IS NULL` intercept. The parser is a
+  `DatabricksDialect` reader for `COMMENT ON TABLE <3-part> IS <literal|NULL>`;
+  `COMMENT ON COLUMN` is not the shape and passes through. Execute sets or
+  unsets the `comment` property with no reregister, like `SET TBLPROPERTIES`
+  (cell `D-COMMENT-ON`). Unit pins are inline; door pins are
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py).
+- `hive_change_column.rs` — **IPI-26/27 round 2 (2026-09-20):** the two-name
+  Hive `ALTER TABLE t CHANGE [COLUMN] old new TYPE [COMMENT 'lit']` intercept.
+  The type parses with `SparkSqlDialect` and maps at execute time, so
+  non-primitive targets refuse with the session timestamp type applied. Execute
+  applies `UpdateColumnType` plus an optional `UpdateColumnDoc` against the old
+  name, then a `RenameColumn` last when the names differ: the fork resolves
+  replay lookups against the base schema, so an update addressed to the new name
+  would miss (cells `D-X-CHANGE-COLUMN-TYPE`, `D-X-CHANGE-COLUMN-RENAME`). Unit
+  pins are inline; door pins are in `test_ice_ddl_clauses_1.py` beside the
+  `COMMENT ON` pins.
 
 ## Pointers
 

@@ -101,6 +101,12 @@ pins: rp-4-fork-repin/C-005, C-006
   NAMESPACE arm moves into `describe_namespace_preparse` so the function holds clippy's
   line cap.
   pins: ice-error-conditions-1/C-011
+  **IPI-26/27 round 2 (2026-09-20):** `COMMENT ON TABLE` and the two-name Hive
+  `CHANGE COLUMN` are true pre-parse intercepts
+  ([`router/comment_on_table.rs`](router/comment_on_table.rs),
+  [`router/hive_change_column.rs`](router/hive_change_column.rs)), wired after the
+  column-move intercept inside `try_preparse_comment_ddl` so the intercept chain
+  keeps clippy's line limit (cells `D-COMMENT-ON`, `D-X-CHANGE-COLUMN-TYPE`).
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
@@ -466,6 +472,12 @@ pins: rp-4-fork-repin/C-005, C-006
   possibly-landed create is never abort-dropped, and the class + `operation_id` reach the
   caller; definite kinds keep the drop-and-explain abort.
   pins: ice-commit-unknown-1/C-001, C-003, C-004
+  **IPI-26/27 round 2 (2026-09-20):** the extracted table `COMMENT` lands as the
+  `comment` property and the extracted `LOCATION` overrides the namespace-derived
+  location in `CreatePlan`, `TableCreation`, and the scheme-selected `FileIO`, so
+  CTAS data files land under the given path. Service-managed catalogs and
+  `OR REPLACE` refuse a custom location loudly (`check_custom_location`; cells
+  `D-CTAS-COMMENT`, `D-CTAS-LOCATION`).
   **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming
   from `write_data_files_from_stream_with_concurrency` (Utf8View/BinaryView → table schema).
   pins: ctas-view-1-conform-stream/C-001, C-002
@@ -764,6 +776,11 @@ pins: rp-4-fork-repin/C-005, C-006
   only the column-definition list is rewritten; a CTAS query keeps its `struct < 1 AND x IS
   NOT NULL` as written.
   pins: ice-nested-evo-1/C-022
+  **IPI-26/27 round 2 (2026-09-20):** a column `COMMENT` maps to the field doc
+  via `NestedField::with_doc`, the extracted table `COMMENT` lands as the `comment`
+  property, and the extracted `LOCATION` flows through `SchemaCreate.location`
+  into the staged plan (cells `D-CREATE-COL-COMMENT`, `D-CREATE-COMMENT`,
+  `D-CREATE-LOCATION`, `D-DESCRIBE`).
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the
   transaction (so it is never persisted), resolves it against the table's current version and the
@@ -960,6 +977,12 @@ pins: rp-4-fork-repin/C-005, C-006
   `ALTER TABLE` carrying an angle-bracket `MAP<` to `SparkSqlDialect` (cell
   `D-X-ADD-COL-MAP-KEY-STRUCT`); every other `ALTER` stays on `GenericDialect`,
   pinned by the corpus in [`tests/ice_ddl_clauses_1.rs`](tests/ice_ddl_clauses_1.rs).
+  **IPI-26/27 round 2 (2026-09-20):** `parse_single_normalized` also runs
+  [`normalize/create_clauses.rs`](normalize/create_clauses.rs), which strips the
+  table `COMMENT` and `LOCATION` clauses at paren depth zero before the CTAS `AS`
+  (column `COMMENT` options and the query pass through), so both clauses parse on
+  either side of `TBLPROPERTIES`. `strip_create_table_using` moved into that
+  module to hold the 1000-line ceiling.
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
   **ICE-PROCEDURES-1 (2026-09-20):** mixed positional and named arguments are
   legal (Spark accepts the mix), and `bind` binds a `CallArgs` against a
