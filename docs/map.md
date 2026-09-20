@@ -166,6 +166,11 @@ repo.
   `strategy` / `sort_order` route onto the fork, the deleted refusal pins are
   replaced by the unit's pins — and new DECLARED `RDF-SORT-TRANSFORM-1` files the
   CALL-door transform-term refusal.
+  **IPI-26/27 round 1 (2026-09-20):** §7 `DBT-CTASCLAUSE-1` rewritten — `CLUSTERED BY (…) INTO
+  n BUCKETS` on an Iceberg CTAS is served at the SQL door (rewrites to a `bucket(n, col)`
+  partition transform, INDEX-19; pin `test_served_shapes_run[S-CTAS-CLUSTERED-BY]`); `LOCATION`
+  and `OPTIONS` stay refused, and the adapter's `clustered_by` / `buckets` compile-time refusal
+  awaits the IPI-26/27 dbt-retirement round (A-12).
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;
