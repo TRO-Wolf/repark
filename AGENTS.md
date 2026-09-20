@@ -137,11 +137,11 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   ("Spark parity", "fixed #n") pins *every* class it names, per user entry point, on the Arrow path
   (`collect`/`to_arrow`, value AND type — never only `show`); one representative case is not the
   claim. Full contract: [docs/testing.md](docs/testing.md).
-- **`map.md` in every directory, updated in the same change.** Enforced by
-  `scripts/check_map_md.sh` (pre-commit). New directory → new `map.md`, no judgment call. Maps
+- **`map.md` in every directory, updated in the same pull request.** CI gate:
+  `scripts/check_map_md.sh`; the hook warns. New directory → new `map.md`, no judgment call. Maps
   are **hand-written**: there is no generator, and the one piece of `map.md` automation
   (`check_manifest.py`'s crate-root consistency rule) only *checks* that a map exists and agrees
-  with `repo-manifest.toml` — it never writes, scaffolds, or rewrites one.
+  with `repo-manifest.toml` — it never writes or rewrites one.
 - **Rust house style:** one-line comments; `// === name ===` stay; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
@@ -284,7 +284,7 @@ it is what keeps a live document from silently accumulating a closed campaign's 
 |---|---|---|
 | **contract** | [AGENTS.md](AGENTS.md), [docs/testing.md](docs/testing.md), [PROJECT.md](PROJECT.md) | permanent; amended deliberately, never as a passenger on another change |
 | **state** | [STATUS.md](STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) | trued up at every unit close **and** at pickup; git is their history, so they carry no changelog section |
-| **navigation** | every `map.md` | lockstep with the directory's content, in the same commit |
+| **navigation** | every `map.md` | lockstep with the directory's content, in the same pull request |
 | **campaign** | [briefs/](briefs/map.md), [docs/design/](docs/design/map.md) | amended in place, dated; frozen and archived to [docs/history/](docs/history/map.md) when the campaign closes |
 | **ledger** | [task/ledgers/](task/ledgers/map.md): `staging/<unit>-ledger.md` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<unit>-ledger.md` | the directory is the status. Append-only in `staging/` while the unit runs (a charter stays until the event it names); `move`d to `completed/` in the unit's last commit and frozen; filed to `archive/` by `make ledger-archive` at the next pickup, immutable. A campaign's `docs/history/` folder links to its ledgers in the monthly archive; the folders archived before 2026-08-23 keep theirs |
 | **skill** | [.agents/skills/](.agents/skills/map.md) | versioned with the procedure it records; a rule measured and **declined** is written down so nobody re-litigates it |
@@ -414,7 +414,7 @@ never relax them.
   exit codes (never a pipe's); lint only via the Makefile's pinned toolchain targets. Before a
   PR: `make preflight` (verify + `py-test-facade` + `py-test-dbt` + audit + workflow lint).
 - **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
-  directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit.
+  directory's `map.md` in the same pull request; `move`d to `completed/` in the unit's last commit.
   Ledger presence is a gate item.
 - **Oracles:** oracle/differential test files are NAMED deliverables per unit; live-oracle
   output recorded verbatim; hand-computed expectations are not an oracle. Divergences get
