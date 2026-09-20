@@ -224,6 +224,42 @@ def test_writer_v2_append_missing_stamped_message_parses() -> None:
     assert error.getSqlState() == "42P01"
 
 
+def test_truncate_partition_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] "
+        "The partition command is invalid. Table `ice`.`sales`.`part` does not support "
+        "partition management. SQLSTATE: 42601"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED"
+    assert error.getSqlState() == "42601"
+
+
+def test_alter_add_partition_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] "
+        "The partition command is invalid. Table `ice`.`sales`.`t` does not support "
+        "partition management. SQLSTATE: 42601"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED"
+    assert error.getSqlState() == "42601"
+
+
+def test_show_partitions_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] "
+        "The partition command is invalid. Table `ice`.`sales`.`t` does not support "
+        "partition management. SQLSTATE: 42601"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED"
+    assert error.getSqlState() == "42601"
+
+
 def test_attach_error_condition_wins_over_class_parser() -> None:
     """An instance attach must outrank the class-level message parser."""
     error = AnalysisException("[WRONG_CLASS] hello SQLSTATE: 00000")
