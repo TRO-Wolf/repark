@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-error-conditions-1-ledger.md](ice-error-conditions-1-ledger.md) —
+  **ICE-ERROR-CONDITIONS-1 (2026-09-20), in flight:** IPI-51 PR1 — the native
+  error-condition parser only: PyO3 exceptions report `getCondition`/`getErrorClass`/
+  `getSqlState` by parsing an already Spark-shaped message (at most one known engine
+  prefix, a column-0 `[CONDITION]` token, the last `SQLSTATE: XXXXX` anywhere);
+  `attach_error_condition` instance binds still win. No catalogue, no raise-site
+  sweep — C-010 through C-014 stay OPEN for later PRs.
+  `risk_tier: standard`. Branch `fix/ipi-51-error-conditions`.
+  pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ice-wap-branch-1-ledger.md](ice-wap-branch-1-ledger.md) —
   **ICE-WAP-BRANCH-1 (2026-09-19), in flight:** the session conf `spark.wap.branch` redirects
   writes and the session's plain reads to an audit branch, as Spark does (IPI-05, RePark

@@ -155,6 +155,7 @@ def test_native_exception_surface_shim_methods() -> None:
         error = exception_type("native diagnostic")
         assert error.getCondition() is None
         assert error.getErrorClass() is None
+        assert error.getSqlState() is None
         assert error.getMessageParameters() is None
         assert error.getQueryContext() == []
         # Identity re-export

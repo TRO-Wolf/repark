@@ -40,6 +40,13 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
+  **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
+  error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3
+  exception classes read a Spark-shaped message: at most one known engine prefix, the
+  bracket at column 0 of what remains, an all-caps condition token, the last
+  `SQLSTATE: XXXXX` anywhere. `attach_error_condition` instance binds still win.
+  pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
   [ice_meta_delete_1_spark_oracle.json](ice_meta_delete_1_spark_oracle.json) +
   [_record_ice_meta_delete_1.py](_record_ice_meta_delete_1.py) —
@@ -1104,6 +1111,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`FN-APPROXPCT-ACC-TYPE-1`, red-when-fixed);
   `test_run_cells_help_exits_zero` pins argparse `--help`.
   pins: perf-approxpct-1/C-002
+  **ICE-ERROR-CONDITIONS-1 (2026-09-20):** the native message parser flips the
+  getErrorClass half — it now answers `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`;
+  `getMessageParameters` stays None until the catalogue PR.
+  pins: ice-error-conditions-1/C-001
 - [test_win_slide_1.py](test_win_slide_1.py) — **WIN-SLIDE-1 (2026-09-04):** the sliding-frame
   corpus. One eight-row typed seed (`id` INT so the `range_frame` shape also pins `WIN-RANGE-DF-1`,
   `g` for the partition boundary, NULLs in `v` / `v2` / `vi` / `b`, all-NULL `vn` / `vin` / `bn`,
