@@ -376,7 +376,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **ICE-CATALOG-SESSION-1 S7 (2026-09-20):** `kind_from_type` + `kind_from_catalog_impl`
   move to `catalog_kind.rs` (1028 → 1007, ratcheted); the accepted sets gain `hadoop` and
   `InMemoryCatalog` (both → `Memory`), with the refusal texts updated.
-  pins: ice-catalog-session-1/C-025, C-026
+  pins: ice-catalog-session-1/C-025, C-026, C-030
   **REVIEW-FIX-5 (2026-09-10):** `prop_key_is_secret` is `pub` (re-exported at the crate
   root) so `DESCRIBE TABLE EXTENDED` redacts through the same predicate; no second
   predicate exists. pins: review-fix-5/C-004

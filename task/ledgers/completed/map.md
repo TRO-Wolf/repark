@@ -997,6 +997,16 @@ else. The next pickup's `make ledger-archive` files everything here under
   `write.distribution-mode` gating in `hash_distribution`; per-writer sorting in the two
   funnel entries. `risk_tier: standard`. Branch `feat/write-order-dist-1`.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+- [ice-catalog-session-1-ledger.md](ice-catalog-session-1-ledger.md) —
+  **ICE-CATALOG-SESSION-1 (2026-09-20), completed:** the session's current
+  catalog / namespace (IPI-32, RePark half) — Spark's `USE`, `current_catalog()`
+  / `current_schema()` / `current_database()`, name completion, `SHOW CATALOGS` /
+  `SHOW COLUMNS` / `SHOW TABLES`, `REFRESH` / `CACHE` / `UNCACHE TABLE`,
+  catalog-less `CALL`, runtime `spark.sql.catalog.*` registration, and the
+  `hadoop` / `InMemoryCatalog` / `table-default.*` config gaps; eleven cells
+  replay EQUAL (38 passed, 2 pinned: EAGER-1, HADOOP-1). 30 clauses, 30 PROVEN.
+  `risk_tier: standard`. Branch `fix/ipi-32-catalog-session`.
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030
 
 ## Pointers
 - Up: [../map.md](../map.md)

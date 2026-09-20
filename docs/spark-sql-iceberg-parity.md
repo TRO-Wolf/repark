@@ -3405,6 +3405,68 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### ICE-CATALOG-SESSION-1 — the session has no CURRENT CATALOG / NAMESPACE; USE, SHOW, CACHE, REFRESH and runtime catalog SQL all refuse — **FIXED 2026-09-20**
+
+- **repark** — **FIXED 2026-09-20.** The session carries `CURRENT CATALOG` /
+  `CURRENT NAMESPACE` on the engine defaults (`spark_catalog` / `default` at build):
+  `USE <catalog>[.<ns>]` / `USE DATABASE|SCHEMA` / `USE DEFAULT` move it (catalog-first
+  one-part, `SCHEMA_NOT_FOUND` on a miss); `current_catalog()` / `current_schema()` /
+  `current_database()` read it; `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` / bare
+  `SHOW NAMESPACES` answer from it; `CACHE` / `UNCACHE` / `REFRESH TABLE` route to the
+  catalog surface (and `REFRESH` rebuilds the provider on the native door); runtime
+  `spark.conf.set` of `spark.sql.catalog.*` registers at the first complete block and
+  feeds `table-default.*` / `table-override.*` into `CREATE TABLE` / CTAS with override
+  > user > default precedence; `type=hadoop` and `InMemoryCatalog` alias to `Memory`.
+  All eleven inventory cells replay EQUAL against the oracle below. A runtime block
+  that never completes stays silent and first use refuses `unknown catalog`.
+  `D-SHOW-COLUMNS` pins declaration order (the cell's recorded rows are the harness
+  sort, N-6); `CAT-TABLE-DEFAULT-OVERRIDE` reads its three pairs out of
+  `DESCRIBE TABLE EXTENDED`, whose one extra derived row belongs to that door.
+- **Apache Spark** — session `currentCatalog` / `currentNamespace` with the same
+  statements and answers.
+  *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-20;
+  `python/repark/tests/ice_catalog_session_1_oracle.json`, transcribed verbatim from the
+  inventory cells plus the `F.show_columns*` / `F.td_props` / `F.rename_result` /
+  `F.show_tables_after_use` / `F.unqualified_select` / `F.cache_then_insert_then_read`
+  probes.)*
+- **Pin** — the eleven `*_cell` replays in
+  `python/repark/tests/test_ice_catalog_session_1.py`
+  (`test_current_catalog_answers_spark_catalog`, `test_use_catalog_ns_cell`,
+  `test_show_catalogs_lists_registered`, `test_refresh_table_cell`,
+  `test_cache_table_cell`, `test_show_columns_is_declaration_order`,
+  `test_rename_to_two_part_cell`, `test_call_no_catalog_cell`, `test_hadoop_type_cell`,
+  `test_catalog_impl_inmemory_cell`, `test_table_default_override_cell`)
+- **Rationale** — FIXED. Two deliberate divergences stay open below:
+  `ICE-CATALOG-SESSION-EAGER-1` and `ICE-CATALOG-SESSION-HADOOP-1`.
+  pins: ice-catalog-session-1/C-012, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-022, C-023, C-024, C-025, C-026, C-027
+
+### ICE-CATALOG-SESSION-EAGER-1 — `SHOW CATALOGS` lists configured-but-never-touched catalogs
+
+- **repark** — `SHOW CATALOGS` lists every registered catalog eagerly: a catalog configured
+  at build time but never touched still appears.
+- **Apache Spark** — lists only catalogs that have been touched or registered: before `hc`
+  was used, `SHOW CATALOGS` returned `[["sc"],["spark_catalog"]]` though `hc` was
+  configured at build time (N-11).
+  *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-20; `F.show_catalogs`
+  vs the `CAT-SHOW-CATALOGS` cell.)*
+- **Pin** —
+  `python/repark/tests/test_ice_catalog_session_1.py::test_show_catalogs_lists_untouched_configured_catalog`
+- **Rationale** — BACKLOG, deliberate (INDEX 26): closing it needs first-touch tracking
+  per catalog, and the leniency only ever shows more names, never fewer.
+  pins: ice-catalog-session-1/C-015
+
+### ICE-CATALOG-SESSION-HADOOP-1 — `type=hadoop` aliases to a memory catalog (UUID metadata names, no version-hint file)
+
+- **repark** — `type=hadoop` registers a memory catalog: metadata files take
+  `<version>-<uuid>.metadata.json` names and no `version-hint.text` is written.
+- **Apache Spark** — a Hadoop catalog writes `version-hint.text` and `vN.metadata.json`
+  names; that naming is load-bearing for `rewrite_table_path` (ipi-30-31 A-8).
+- **Pin** —
+  `python/repark/tests/test_ice_catalog_session_1.py::test_hadoop_alias_writes_uuid_metadata_names`
+- **Rationale** — BACKLOG, deliberate (INDEX 25): card a real `Hadoop` kind if the `vN`
+  naming turns out to matter elsewhere.
+  pins: ice-catalog-session-1/C-025
+
 ### ICE-MERGE-APPEND-1 — an INSERT commits through a MERGING append — **FIXED 2026-09-19 (RePark paths)**
 
 - **repark** — **FIXED 2026-09-19.** Every append commit site RePark owns commits through the
