@@ -195,7 +195,24 @@ async fn layout_under(
     (count, records, summaries_of(&table, drop))
 }
 
-async fn assert_session_conf_keeps_the_layout(tag: &str, statement: &str) {
+fn assert_spark_layout(layout: &Layout, statement: &str, spark_files: usize) {
+    let (count, _, summaries) = layout;
+    assert_eq!(
+        *count, spark_files,
+        "Spark commits {spark_files} live data file(s) for {statement} (cells QU-*)"
+    );
+    let (_, pairs) = summaries.last().expect("a committed snapshot");
+    assert_eq!(
+        pairs
+            .iter()
+            .find(|(key, _)| key == "added-data-files")
+            .map(|(_, value)| value.as_str()),
+        Some("1"),
+        "and one added data file: {pairs:?}"
+    );
+}
+
+async fn assert_session_conf_keeps_the_layout(tag: &str, statement: &str, spark_files: usize) {
     let base_for_property = layout_under(&format!("{tag}pb"), statement, None, &[NONCE_KEY]).await;
     let under_property = layout_under(
         &format!("{tag}pp"),
@@ -204,6 +221,8 @@ async fn assert_session_conf_keeps_the_layout(tag: &str, statement: &str) {
         &[NONCE_KEY, "team"],
     )
     .await;
+    assert_spark_layout(&base_for_property, statement, spark_files);
+    assert_spark_layout(&under_property, statement, spark_files);
     assert_eq!(
         base_for_property, under_property,
         "a snapshot-property-only session conf changed more than the stamp on {statement}"
@@ -231,6 +250,7 @@ async fn a_session_conf_keeps_a_plain_update_layout() {
     Box::pin(assert_session_conf_keeps_the_layout(
         "u",
         "UPDATE ice.sales.{t} SET data = 'z' WHERE id = 1",
+        1,
     ))
     .await;
 }
@@ -241,6 +261,7 @@ async fn a_session_conf_keeps_a_plain_insert_layout() {
     Box::pin(assert_session_conf_keeps_the_layout(
         "i",
         "INSERT INTO ice.sales.{t} VALUES (9,'i')",
+        2,
     ))
     .await;
 }
@@ -251,6 +272,7 @@ async fn a_session_conf_keeps_a_plain_delete_layout() {
     Box::pin(assert_session_conf_keeps_the_layout(
         "d",
         "DELETE FROM ice.sales.{t} WHERE id = 2",
+        1,
     ))
     .await;
 }
@@ -476,6 +498,80 @@ async fn a_session_conf_keeps_the_default_keyword_refusal() {
             && message.contains("`DEFAULT`")
             && message.contains("42703"),
         "the session conf must not cost the Spark-shaped refusal: {message}"
+    );
+}
+
+async fn cow_delete_under_metric_suffix(
+    table_name: &str,
+    suffix: &str,
+) -> Result<Summaries, DataFusionError> {
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table_name} (id BIGINT, data STRING) USING iceberg \
+             TBLPROPERTIES('write.delete.mode' = 'copy-on-write')"
+        ),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.{table_name} VALUES (1,'a'),(2,'b'),(3,'c')"),
+    )
+    .await;
+    let key = format!("spark.sql.iceberg.snapshot-property.{suffix}");
+    set_session_conf(&ctx, &key, "5");
+    let outcome = execute(
+        &ctx,
+        &catalogs,
+        &format!("DELETE FROM ice.sales.{table_name} WHERE id = 1"),
+    )
+    .await
+    .map(|_| ());
+    unset_session_conf(&ctx, &key);
+    outcome?;
+    let table = load_sales_table(&catalogs, table_name).await;
+    Ok(summaries_of(&table, &[NONCE_KEY]))
+}
+
+#[tokio::test]
+async fn a_mixed_case_metric_suffix_is_a_different_key_and_stamps() {
+    let _: &str = "pins: ice-session-write-conf-1/C-056";
+    let summaries = cow_delete_under_metric_suffix("mixdel", "Deleted-Records")
+        .await
+        .expect("`Deleted-Records` is not the key the engine computed");
+    let (operation, pairs) = summaries.last().expect("a delete snapshot");
+    assert_eq!(operation, "Overwrite");
+    assert_eq!(
+        pairs
+            .iter()
+            .find(|(key, _)| key == "Deleted-Records")
+            .map(|(_, value)| value.as_str()),
+        Some("5"),
+        "the suffix is stamped verbatim beside the engine's own key: {pairs:?}"
+    );
+    assert!(
+        pairs
+            .iter()
+            .any(|(key, _)| key == "deleted-records" && key != "Deleted-Records"),
+        "and the engine's lower-case key is still its own: {pairs:?}"
+    );
+}
+
+#[tokio::test]
+async fn the_exact_metric_suffix_still_refuses() {
+    let _: &str = "pins: ice-session-write-conf-1/C-056";
+    let error = cow_delete_under_metric_suffix("exactdel", "deleted-records")
+        .await
+        .expect_err("the engine computed this exact key");
+    assert!(
+        error
+            .strip_backtrace()
+            .contains("Multiple entries with same key: deleted-records="),
+        "{error}"
     );
 }
 

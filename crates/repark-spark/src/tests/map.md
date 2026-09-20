@@ -16,6 +16,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4, the absolute layout
+  (2026-09-20):** the layout battery no longer compares conf against no-conf alone — both runs
+  assert Spark's OWN answer (cells `QU-*`): one live data file and `added-data-files=1` for the
+  CoW UPDATE and DELETE, two for the second INSERT. Restoring per-batch writers on the identity
+  UPDATE moves both sides together, so only the absolute assertion catches it; it reds.
+  `a_mixed_case_metric_suffix_is_a_different_key_and_stamps` and `the_exact_metric_suffix_still_refuses`
+  are the `QC-*` pair.
+  pins: ice-session-write-conf-1/C-056
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
   `a_session_conf_keeps_the_values_list_typing`, `a_session_conf_keeps_a_compound_null_insert`
   and `a_session_conf_keeps_the_default_keyword_refusal` are the three shapes the third critic

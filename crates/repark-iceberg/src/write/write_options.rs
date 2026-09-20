@@ -56,7 +56,7 @@ pub fn summary_with_extras(
         if folded == "operation" || folded == OPERATION_ID_PROP {
             continue;
         }
-        engine.refuse_collision(&folded, value)?;
+        engine.refuse_collision(key, value)?;
         summary.insert(key.clone(), value.clone());
     }
     Ok((operation_id, summary))

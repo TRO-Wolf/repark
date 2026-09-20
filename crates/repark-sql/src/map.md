@@ -22,6 +22,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
+- `router.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `delegate` is
+  `delegate_plan` plus execute, so the session-conf INSERT arm can take the delegated PLAN and
+  execute only its input. One planner, two endings.
+  pins: ice-session-write-conf-1/C-055
 - [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
   the owned native INSERT plans through `router::delegate_plan` — the delegated path's own
   planner, `fill_insert_plan` and SEC-02 guards — and executes the `Dml` node's INPUT. The

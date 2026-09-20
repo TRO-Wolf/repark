@@ -774,6 +774,14 @@ repark-core's error map.
   rather than its bare predicate, so `engine_summary_for_row_filter` can resolve the
   removal set from the same equalities the filter was built from.
   pins: ice-session-write-conf-1/C-054
+  **Round 4, the collision lookup (2026-09-20):** `summary_with_extras` asks
+  `refuse_collision` about the VERBATIM extra key — the spelling it is about to insert — not an
+  ascii-lowered copy. Spark 4.1.2 measured (cells `QC-*`, 2026-09-20): a session
+  `snapshot-property.Deleted-Records=5` on a CoW DELETE commits BOTH `Deleted-Records=5` and the
+  engine's own `deleted-records=3`, because the producer's `ImmutableMap` is case-sensitive; only
+  the exact spelling refuses. Folding stays the WRITER-OPTION rule, applied at
+  `StatementWriteOptions::validate`, so an option still arrives here already lower-cased.
+  pins: ice-session-write-conf-1/C-056
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame
   write-option staging and commits. `WriterStagingOverrides` (codec/level/target-size,
   option over table property) feeds override-capable builders that mirror the

@@ -251,7 +251,6 @@ pub(crate) async fn delegate_plan(
     listed: Option<&[String]>,
     preloaded: Option<iceberg::table::Table>,
 ) -> Result<datafusion::logical_expr::LogicalPlan> {
-    // Plan and apply SEC-02 through the shared pre-execute belt.
     let belt = repark_core::PreExecute::from_engine_context(cx);
     let plan = match belt.plan(sql).await {
         Ok(plan) => plan,
