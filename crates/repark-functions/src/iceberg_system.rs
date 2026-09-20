@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, ArrayRef, Int32Array, NullArray};
+use datafusion::arrow::array::{Array, new_null_array};
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{
@@ -13,7 +13,15 @@ use iceberg::transform::create_transform_function;
 
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![bucket_udf(), truncate_udf()]
+    vec![
+        bucket_udf(),
+        truncate_udf(),
+        years_udf(),
+        months_udf(),
+        days_udf(),
+        hours_udf(),
+        iceberg_version_udf(),
+    ]
 }
 
 pub(crate) fn register(ctx: &datafusion::prelude::SessionContext) {
@@ -38,6 +46,45 @@ pub fn truncate_udf() -> Arc<ScalarUDF> {
     }))
 }
 
+#[must_use]
+pub fn years_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(IcebergSystemTemporal {
+        signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        kind: SystemTemporalKind::Year,
+    }))
+}
+
+#[must_use]
+pub fn months_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(IcebergSystemTemporal {
+        signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        kind: SystemTemporalKind::Month,
+    }))
+}
+
+#[must_use]
+pub fn days_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(IcebergSystemTemporal {
+        signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        kind: SystemTemporalKind::Day,
+    }))
+}
+
+#[must_use]
+pub fn hours_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(IcebergSystemTemporal {
+        signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        kind: SystemTemporalKind::Hour,
+    }))
+}
+
+#[must_use]
+pub fn iceberg_version_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(IcebergVersion {
+        signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+    }))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum SystemKind {
     Bucket,
@@ -58,11 +105,32 @@ impl SystemKind {
             SystemKind::Truncate => Transform::Truncate(width),
         }
     }
+}
 
-    fn null_output(self, length: usize) -> ArrayRef {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum SystemTemporalKind {
+    Year,
+    Month,
+    Day,
+    Hour,
+}
+
+impl SystemTemporalKind {
+    fn output_type(self) -> DataType {
         match self {
-            SystemKind::Bucket => Arc::new(Int32Array::new_null(length)),
-            SystemKind::Truncate => Arc::new(NullArray::new(length)),
+            SystemTemporalKind::Day => DataType::Date32,
+            SystemTemporalKind::Year | SystemTemporalKind::Month | SystemTemporalKind::Hour => {
+                DataType::Int32
+            }
+        }
+    }
+
+    fn build(self) -> Transform {
+        match self {
+            SystemTemporalKind::Year => Transform::Year,
+            SystemTemporalKind::Month => Transform::Month,
+            SystemTemporalKind::Day => Transform::Day,
+            SystemTemporalKind::Hour => Transform::Hour,
         }
     }
 }
@@ -84,6 +152,45 @@ impl Eq for IcebergSystemWidth {}
 impl Hash for IcebergSystemWidth {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.kind.hash(state);
+    }
+}
+
+#[derive(Debug)]
+struct IcebergSystemTemporal {
+    signature: Signature,
+    kind: SystemTemporalKind,
+}
+
+impl PartialEq for IcebergSystemTemporal {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+    }
+}
+
+impl Eq for IcebergSystemTemporal {}
+
+impl Hash for IcebergSystemTemporal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.kind.hash(state);
+    }
+}
+
+#[derive(Debug)]
+struct IcebergVersion {
+    signature: Signature,
+}
+
+impl PartialEq for IcebergVersion {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for IcebergVersion {}
+
+impl Hash for IcebergVersion {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
     }
 }
 
@@ -125,6 +232,32 @@ fn transform_for_width(kind: SystemKind, width: i64) -> Result<Transform> {
         }
     })?;
     Ok(kind.build(candidate))
+}
+
+fn apply_transform(
+    transform: Transform,
+    value: &ColumnarValue,
+    output: &DataType,
+) -> Result<ColumnarValue> {
+    let function = create_transform_function(&transform)
+        .map_err(|error| DataFusionError::Execution(error.to_string()))?;
+    let input = match value {
+        ColumnarValue::Scalar(scalar) => scalar.to_array_of_size(1)?,
+        ColumnarValue::Array(array) => Arc::clone(array),
+    };
+    let output = if matches!(input.data_type(), DataType::Null) {
+        new_null_array(output, input.len())
+    } else {
+        function
+            .transform(input)
+            .map_err(|error| DataFusionError::Execution(error.to_string()))?
+    };
+    match value {
+        ColumnarValue::Scalar(_) => Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
+            &output, 0,
+        )?)),
+        ColumnarValue::Array(_) => Ok(ColumnarValue::Array(output)),
+    }
 }
 
 impl ScalarUDFImpl for IcebergSystemWidth {
@@ -173,24 +306,104 @@ impl ScalarUDFImpl for IcebergSystemWidth {
             return exec_err!("'{}' expects a width and a value argument", self.name());
         };
         let transform = transform_for_width(self.kind, width)?;
-        let function = create_transform_function(&transform)
-            .map_err(|error| DataFusionError::Execution(error.to_string()))?;
-        let input = match value {
-            ColumnarValue::Scalar(scalar) => scalar.to_array_of_size(1)?,
-            ColumnarValue::Array(array) => Arc::clone(array),
+        let output = match self.kind {
+            SystemKind::Bucket => DataType::Int32,
+            SystemKind::Truncate => value.data_type(),
         };
-        let output = if matches!(input.data_type(), DataType::Null) {
-            self.kind.null_output(input.len())
+        apply_transform(transform, value, &output)
+    }
+}
+
+impl ScalarUDFImpl for IcebergSystemTemporal {
+    fn name(&self) -> &'static str {
+        match self.kind {
+            SystemTemporalKind::Year => "__iceberg_system_years",
+            SystemTemporalKind::Month => "__iceberg_system_months",
+            SystemTemporalKind::Day => "__iceberg_system_days",
+            SystemTemporalKind::Hour => "__iceberg_system_hours",
+        }
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(self.kind.output_type())
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        let [value] = arg_types else {
+            return exec_err!(
+                "'{}' expects a single date or timestamp argument",
+                self.name()
+            );
+        };
+        if self.kind == SystemTemporalKind::Hour {
+            match value {
+                DataType::Timestamp(_, _) => {}
+                other => {
+                    return exec_err!(
+                        "'{}' expects a timestamp argument, got {other}",
+                        self.name()
+                    );
+                }
+            }
         } else {
-            function
-                .transform(input)
-                .map_err(|error| DataFusionError::Execution(error.to_string()))?
+            match value {
+                DataType::Date32 | DataType::Timestamp(_, _) => {}
+                other => {
+                    return exec_err!(
+                        "'{}' expects a date or timestamp argument, got {other}",
+                        self.name()
+                    );
+                }
+            }
+        }
+        Ok(vec![value.clone()])
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let Some(value) = args.args.first() else {
+            return exec_err!(
+                "'{}' expects a single date or timestamp argument",
+                self.name()
+            );
         };
-        match value {
-            ColumnarValue::Scalar(_) => Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
-                &output, 0,
-            )?)),
-            ColumnarValue::Array(_) => Ok(ColumnarValue::Array(output)),
+        let transform = self.kind.build();
+        let output = self.kind.output_type();
+        apply_transform(transform, value, &output)
+    }
+}
+
+impl ScalarUDFImpl for IcebergVersion {
+    fn name(&self) -> &'static str {
+        "__iceberg_system_iceberg_version"
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Utf8)
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        if arg_types.is_empty() {
+            Ok(vec![])
+        } else {
+            exec_err!("'{}' expects no arguments", self.name())
+        }
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        if args.args.is_empty() {
+            Ok(ColumnarValue::Scalar(ScalarValue::Utf8(Some(
+                env!("CARGO_PKG_VERSION").to_owned(),
+            ))))
+        } else {
+            exec_err!("'{}' expects no arguments", self.name())
         }
     }
 }

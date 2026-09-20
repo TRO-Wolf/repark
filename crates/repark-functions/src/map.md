@@ -490,6 +490,18 @@ scalars live under [`try_invert/`](try_invert/map.md).
   UDFs into `functions()`. `Cargo.toml` adds the external `iceberg` dependency
   (invisible to `check-crate-dag` per packet addendum H-02).
   pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  **Round 2 (2026-09-20):** `years` / `months` / `days` / `hours` join as
+  single-argument UDFs over `Transform::Year` / `Month` / `Day` / `Hour`
+  (`__iceberg_system_years` etc.), sharing the new `apply_transform` helper
+  with the width functions. `days()` returns `Date32` straight from the fork —
+  never recast to Int32 (H-01; the fork enum comment claiming int is stale,
+  Java's `DaysFunction.resultType` is DateType). `hours` takes timestamps only;
+  the other three take date or timestamp. `iceberg_version()` is a nullary
+  UTF8 scalar reporting `env!("CARGO_PKG_VERSION")` — the compiled crate
+  version, since the fork exposes no version API (H-07) — evaluated per row,
+  never null, refusing extra arguments. No `lib.rs` change: the H-05 budget
+  was spent in round 1.
+  pins: ice-system-functions-1/C-012, C-013, C-014, C-015, C-016, C-017
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty
