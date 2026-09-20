@@ -19,6 +19,8 @@ use crate::{
     try_parse_create_namespace, wap, write_to_branch,
 };
 
+mod comment_on_table;
+
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
 /// # Errors
 /// Propagates parse, planning, iceberg, and execution errors as [`DataFusionError`].
@@ -569,6 +571,14 @@ async fn try_preparse_intercepts(
         return Some(
             match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
                 Ok(ddl) => column_move::execute_column_move_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
+    }
+    if let Some(parsed) = comment_on_table::try_parse_comment_on_table_ddl(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("COMMENT ON TABLE").map(|()| ddl)) {
+                Ok(ddl) => comment_on_table::execute_comment_on_table_ddl(ctx, catalogs, ddl).await,
                 Err(error) => Err(error),
             },
         );
