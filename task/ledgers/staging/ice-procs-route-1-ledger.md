@@ -36,9 +36,9 @@ range), the clause stops, pins what is equal, and records the fork ask below.
 
 | # | Clause | Verdict | Evidence |
 |---|--------|---------|----------|
-| C-001 | The 27 measured Spark cells ship as a committed fixture with provenance and hash | PROVEN | `python/repark/tests/ice_procs_route_1_spark_oracle.json` (SHA-256 `4baf8fee…3ecf`, provenance `spark-qc3.json` / `cells_qc3.py`); step-1 commit `7c58d046` |
+| C-001 | The 27 measured Spark cells ship as a committed fixture with provenance and hash | PROVEN | `python/repark/tests/ice_procs_route_1_spark_oracle.json` (SHA-256 `cfffc500…b9eb7`, provenance `spark-qc3.json` / `cells_qc3.py`, re-recorded by the round-2 recorder); step-1 commit `7c58d046` |
 | C-002 | A tree recorder re-derives the cells on live PySpark | PROVEN | `python/repark/tests/_record_ice_procs_route_1_oracle.py` replays every cell shape against live Spark 4.1.2 + Iceberg 1.11.0 |
-| C-003 | The live tier re-runs the recorder against the fixture | PROVEN | `test_live_oracle_matches_recorded` (`REPARK_PARITY_LIVE=1`); passed 2026-09-19 on fresh randomness after canonicalizing uuid, snapshot-id, task-bit, and wall-path tails |
+| C-003 | The live tier re-runs the recorder against the fixture | PROVEN | `test_live_oracle_matches_recorded` (`REPARK_PARITY_LIVE=1`); round 2 normalizes every run-varying token at record time to its exact writer shape, so two fresh-warehouse derivations are byte-identical and `check` compares minus `secs` with no second pass |
 | C-004 | `ancestors_of` answers Spark's columns, newest-first chains, and timestamps | PROVEN | `crates/repark-spark/src/call/ancestors_of.rs`; facade pins default/id/rollback/branch/positional; Rust `call_ancestors_of_walks_newest_first_with_snapshot_timestamps` |
 | C-005 | `ancestors_of` refusals carry Spark's class and text | PROVEN | `Cannot find snapshot: -1` / `Cannot find snapshot: 12345` as `IllegalArgumentException`; facade `test_ancestors_empty`, `test_ancestors_missing_id`; Rust `call_ancestors_of_names_missing_snapshots_like_spark` |
 | C-006 | `compute_table_stats` default/snapshot/twice register exact ndv blobs | PROVEN | `crates/repark-spark/src/call/compute_table_stats.rs` over fork `ComputeTableStats`; facade `test_table_stats_default`, `test_table_stats_snapshot`, `test_table_stats_twice` assert the registered path and the full statistics entries |

@@ -32,7 +32,7 @@
    ]
   },
   "notes": [],
-  "secs": 3.69
+  "secs": 0.0
  },
  {
   "id": "QP-ANC-ID",
@@ -63,7 +63,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.92
+  "secs": 0.0
  },
  {
   "id": "QP-ANC-ROLLBACK",
@@ -94,7 +94,7 @@
    ]
   },
   "notes": [],
-  "secs": 1.02
+  "secs": 0.0
  },
  {
   "id": "QP-ANC-BRANCH",
@@ -125,7 +125,7 @@
    ]
   },
   "notes": [],
-  "secs": 1.12
+  "secs": 0.0
  },
  {
   "id": "QP-ANC-EMPTY",
@@ -143,7 +143,7 @@
   "error_step": "CREATE TABLE sc.ns.t_qp_anc_empty (id BIGINT) USING iceberg",
   "obs": {},
   "notes": [],
-  "secs": 0.11
+  "secs": 0.0
  },
  {
   "id": "QP-ANC-MISSING-ID",
@@ -161,7 +161,7 @@
   "error_step": "snapshots",
   "obs": {},
   "notes": [],
-  "secs": 0.58
+  "secs": 0.0
  },
  {
   "id": "QP-ANC-POSITIONAL-ID",
@@ -196,7 +196,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.6
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-DEFAULT",
@@ -212,7 +212,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/<cur><uuid>9.stats"
+    "metadata/<cur>-<uuid>.stats"
    ],
    "statistics": [
     [
@@ -279,7 +279,7 @@
    ]
   },
   "notes": [],
-  "secs": 1.22
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-SNAPSHOT",
@@ -295,7 +295,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/<s0><uuid>d.stats"
+    "metadata/<s0>-<uuid>.stats"
    ],
    "statistics": [
     [
@@ -362,7 +362,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.64
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-COLUMNS",
@@ -378,7 +378,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/<cur><uuid>1.stats"
+    "metadata/<cur>-<uuid>.stats"
    ],
    "statistics": [
     [
@@ -417,7 +417,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.67
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-COLUMNS-TWO",
@@ -433,7 +433,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/<cur><uuid>c.stats"
+    "metadata/<cur>-<uuid>.stats"
    ],
    "statistics": [
     [
@@ -486,7 +486,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.71
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-COLUMNS-UNKNOWN",
@@ -504,7 +504,7 @@
   "error_step": "snapshots",
   "obs": {},
   "notes": [],
-  "secs": 0.55
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-TYPES",
@@ -520,7 +520,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/<s0><uuid>a.stats"
+    "metadata/<s0>-<uuid>.stats"
    ],
    "statistics": [
     [
@@ -657,7 +657,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.46
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-EMPTY",
@@ -676,7 +676,7 @@
    "statistics": []
   },
   "notes": [],
-  "secs": 0.04
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-NESTED",
@@ -692,7 +692,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/<s0><uuid>c.stats"
+    "metadata/<s0>-<uuid>.stats"
    ],
    "statistics": [
     [
@@ -731,7 +731,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.33
+  "secs": 0.0
  },
  {
   "id": "QP-CTS-TWICE",
@@ -747,7 +747,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/<cur><uuid>5.stats"
+    "metadata/<cur>-<uuid>.stats"
    ],
    "statistics": [
     [
@@ -814,7 +814,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.69
+  "secs": 0.0
  },
  {
   "id": "QP-CPS-DEFAULT",
@@ -830,7 +830,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/partition-stats<uuid>a2-a3ec-f681d98152a9.parquet"
+    "metadata/partition-stats-<cur>-<uuid>.parquet"
    ],
    "partition-statistics": [
     [
@@ -946,7 +946,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.83
+  "secs": 0.0
  },
  {
   "id": "QP-CPS-SNAPSHOT",
@@ -962,7 +962,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/partition-stats<uuid>de4-a5f8-a5ed75deeac7.parquet"
+    "metadata/partition-stats-<s0>-<uuid>.parquet"
    ],
    "partition-statistics": [
     [
@@ -1078,7 +1078,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.64
+  "secs": 0.0
  },
  {
   "id": "QP-CPS-UNPARTITIONED",
@@ -1096,7 +1096,7 @@
   "error_step": "snapshots",
   "obs": {},
   "notes": [],
-  "secs": 0.52
+  "secs": 0.0
  },
  {
   "id": "QP-CPS-V3",
@@ -1112,7 +1112,7 @@
     ]
    ],
    "out-rel": [
-    "metadata/partition-stats<uuid>14-ba1b-272bc8b39ef4.parquet"
+    "metadata/partition-stats-<cur>-<uuid>.parquet"
    ],
    "partition-statistics": [
     [
@@ -1237,7 +1237,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.66
+  "secs": 0.0
  },
  {
   "id": "QP-RTP-DEFAULT",
@@ -1267,32 +1267,32 @@
    "rows": [
     [
      "v4.metadata.json",
-     "<src>/metadata/copy-table-staging-f2bf7f47-916b-414b-b875-111947efda20/file-list",
+     "<src>/metadata/copy-table-staging-<uuid>/file-list",
      3,
      0
     ]
    ],
    "file-list": [
-    "<src>/data/cat=x/<id>7b0088eaba-0-00001.parquet,<dst>/data/cat=x/<id>7b0088eaba-0-00001.parquet",
-    "<src>/data/cat=x/<id>7d074809ef-0-00001.parquet,<dst>/data/cat=x/<id>7d074809ef-0-00001.parquet",
-    "<src>/data/cat=x/<id>b51c61661c-0-00001.parquet,<dst>/data/cat=x/<id>b51c61661c-0-00001.parquet",
-    "<src>/data/cat=y/<id>7b0088eaba-0-00002.parquet,<dst>/data/cat=y/<id>7b0088eaba-0-00002.parquet",
-    "<src>/data/cat=y/<id>b51c61661c-0-00002.parquet,<dst>/data/cat=y/<id>b51c61661c-0-00002.parquet",
-    "<src>/metadata/copy-table-staging<id>0/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>0/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>0/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>0/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
-    "<src>/metadata/copy-table-staging<id>0/metadata/<id>c67a527-c8d4-4c10-a7ec-1e90bb57cb1a.avro,<dst>/metadata/<id>c67a527-c8d4-4c10-a7ec-1e90bb57cb1a.avro",
-    "<src>/metadata/copy-table-staging<id>0/metadata/<id>f9752-1214-4da6-8073-25ff27da6944.avro,<dst>/metadata/<id>f9752-1214-4da6-8073-25ff27da6944.avro",
-    "<src>/metadata/copy-table-staging<id>0/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
-    "<src>/metadata/copy-table-staging<id>0/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
-    "<src>/metadata/copy-table-staging<id>0/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
-    "<src>/metadata/copy-table-staging<id>0/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=x/<file#2>-0-00001.parquet,<dst>/data/cat=x/<file#2>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/data/cat=y/<file#1>-0-00002.parquet,<dst>/data/cat=y/<file#1>-0-00002.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#2>-m0.avro,<dst>/metadata/<file#2>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#2>.avro,<dst>/metadata/snap-<snap>-1-<file#2>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
    ],
    "staged-metadata-location": "<dst>"
   },
   "notes": [],
-  "secs": 1.12
+  "secs": 0.0
  },
  {
   "id": "QP-RTP-STAGING",
@@ -1328,17 +1328,17 @@
     ]
    ],
    "file-list": [
-    "<src>/data/cat=x/<id>789ddf53c8-0-00001.parquet,<dst>/data/cat=x/<id>789ddf53c8-0-00001.parquet",
-    "<src>/data/cat=x/<id>830119c83b-0-00001.parquet,<dst>/data/cat=x/<id>830119c83b-0-00001.parquet",
-    "<src>/data/cat=x/<id>b0a86<id>00001.parquet,<dst>/data/cat=x/<id>b0a86<id>00001.parquet",
-    "<src>/data/cat=y/<id>830119c83b-0-00002.parquet,<dst>/data/cat=y/<id>830119c83b-0-00002.parquet",
-    "<src>/data/cat=y/<id>b0a86<id>00002.parquet,<dst>/data/cat=y/<id>b0a86<id>00002.parquet",
-    "<stg>/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<stg>/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<stg>/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<stg>/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
-    "<stg>/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
-    "<stg>/metadata/<id>f7e8b2-61ae-4dc7-8777-0de184d955d1.avro,<dst>/metadata/<id>f7e8b2-61ae-4dc7-8777-0de184d955d1.avro",
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=x/<file#2>-0-00001.parquet,<dst>/data/cat=x/<file#2>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/data/cat=y/<file#1>-0-00002.parquet,<dst>/data/cat=y/<file#1>-0-00002.parquet",
+    "<stg>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<stg>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<stg>/metadata/<file#2>-m0.avro,<dst>/metadata/<file#2>-m0.avro",
+    "<stg>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<stg>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<stg>/metadata/snap-<snap>-1-<file#2>.avro,<dst>/metadata/snap-<snap>-1-<file#2>.avro",
     "<stg>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
     "<stg>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
     "<stg>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
@@ -1347,7 +1347,7 @@
    "staged-metadata-location": "<dst>"
   },
   "notes": [],
-  "secs": 0.81
+  "secs": 0.0
  },
  {
   "id": "QP-RTP-NO-FILE-LIST",
@@ -1384,7 +1384,7 @@
    ]
   },
   "notes": [],
-  "secs": 0.8
+  "secs": 0.0
  },
  {
   "id": "QP-RTP-MISSING-PREFIX-ERR",
@@ -1397,12 +1397,12 @@
    "getCondition": null,
    "getErrorClass": null,
    "getSqlState": null,
-   "msg": "Path /tmp/oc-worker/nc-inventory/wh/spark-spark-qc3/hc/ns/t_qp_rtp_missing_prefix_err/metadata/v4.metadata.json/ does not start with /nope/"
+   "msg": "Path <src>/metadata/v4.metadata.json/ does not start with /nope/"
   },
   "error_step": "snapshots",
   "obs": {},
   "notes": [],
-  "secs": 0.62
+  "secs": 0.0
  },
  {
   "id": "QP-RTP-END-VERSION",
@@ -1432,27 +1432,27 @@
    "rows": [
     [
      "v3.metadata.json",
-     "<src>/metadata/copy-table-staging-2e380ac3-1f3b-4cb1-862d-be6155ccd8cb/file-list",
+     "<src>/metadata/copy-table-staging-<uuid>/file-list",
      2,
      0
     ]
    ],
    "file-list": [
-    "<src>/data/cat=x/<id>d29f68790b-0-00001.parquet,<dst>/data/cat=x/<id>d29f68790b-0-00001.parquet",
-    "<src>/data/cat=x/<id>ff09794fb9-0-00001.parquet,<dst>/data/cat=x/<id>ff09794fb9-0-00001.parquet",
-    "<src>/data/cat=y/<id>ff09794fb9-0-00002.parquet,<dst>/data/cat=y/<id>ff09794fb9-0-00002.parquet",
-    "<src>/metadata/copy-table-staging<id>b/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>b/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>b/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
-    "<src>/metadata/copy-table-staging<id>b/metadata/<id>e09c5f-790a-422e-aaf4-fed67a0076fe.avro,<dst>/metadata/<id>e09c5f-790a-422e-aaf4-fed67a0076fe.avro",
-    "<src>/metadata/copy-table-staging<id>b/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
-    "<src>/metadata/copy-table-staging<id>b/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
-    "<src>/metadata/copy-table-staging<id>b/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json"
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json"
    ],
    "staged-metadata-location": "<dst>"
   },
   "notes": [],
-  "secs": 0.79
+  "secs": 0.0
  },
  {
   "id": "QP-RTP-START-VERSION",
@@ -1482,26 +1482,26 @@
    "rows": [
     [
      "v4.metadata.json",
-     "<src>/metadata/copy-table-staging-bd7b3441-faff-4eee-aa6d-887fc3e22c64/file-list",
+     "<src>/metadata/copy-table-staging-<uuid>/file-list",
      2,
      0
     ]
    ],
    "file-list": [
-    "<src>/data/cat=x/<id>12ca158d66-0-00001.parquet,<dst>/data/cat=x/<id>12ca158d66-0-00001.parquet",
-    "<src>/data/cat=x/<id>daf8b6c3d6-0-00001.parquet,<dst>/data/cat=x/<id>daf8b6c3d6-0-00001.parquet",
-    "<src>/data/cat=y/<id>daf8b6c3d6-0-00002.parquet,<dst>/data/cat=y/<id>daf8b6c3d6-0-00002.parquet",
-    "<src>/metadata/copy-table-staging<id>4/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>4/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>4/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
-    "<src>/metadata/copy-table-staging<id>4/metadata/<id>cefb706-cc88-41c4-be30-5c33c1e39fe3.avro,<dst>/metadata/<id>cefb706-cc88-41c4-be30-5c33c1e39fe3.avro",
-    "<src>/metadata/copy-table-staging<id>4/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
-    "<src>/metadata/copy-table-staging<id>4/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
    ],
    "staged-metadata-location": "<dst>"
   },
   "notes": [],
-  "secs": 0.94
+  "secs": 0.0
  },
  {
   "id": "QP-RTP-MOR-DELETES",
@@ -1531,36 +1531,36 @@
    "rows": [
     [
      "v6.metadata.json",
-     "<src>/metadata/copy-table-staging-e0f871e1-e0ac-44b3-b303-ff876b6716cf/file-list",
+     "<src>/metadata/copy-table-staging-<uuid>/file-list",
      4,
      1
     ]
    ],
    "file-list": [
-    "<src>/data/cat=x/<id>341b7b6838-0-00001.parquet,<dst>/data/cat=x/<id>341b7b6838-0-00001.parquet",
-    "<src>/data/cat=x/<id>75289642d7-0-00001.parquet,<dst>/data/cat=x/<id>75289642d7-0-00001.parquet",
-    "<src>/data/cat=x/<id>bbbbe3009d-0-00001.parquet,<dst>/data/cat=x/<id>bbbbe3009d-0-00001.parquet",
-    "<src>/data/cat=y/<id>341b7b6838-0-00002.parquet,<dst>/data/cat=y/<id>341b7b6838-0-00002.parquet",
-    "<src>/data/cat=y/<id>75289642d7-0-00002.parquet,<dst>/data/cat=y/<id>75289642d7-0-00002.parquet",
-    "<src>/metadata/copy-table-staging<id>f/data/cat=x/<id>039cad6969-00001-deletes.parquet,<dst>/data/cat=x/<id>039cad6969-00001-deletes.parquet",
-    "<src>/metadata/copy-table-staging<id>f/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>f/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>f/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>f/metadata/<id>-m0.avro,<dst>/metadata/<id>-m0.avro",
-    "<src>/metadata/copy-table-staging<id>f/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
-    "<src>/metadata/copy-table-staging<id>f/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
-    "<src>/metadata/copy-table-staging<id>f/metadata/<id><id>.avro,<dst>/metadata/<id><id>.avro",
-    "<src>/metadata/copy-table-staging<id>f/metadata/<id>be4fff4-7fe2-42ad-a7fa-d2d74cf86716.avro,<dst>/metadata/<id>be4fff4-7fe2-42ad-a7fa-d2d74cf86716.avro",
-    "<src>/metadata/copy-table-staging<id>f/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
-    "<src>/metadata/copy-table-staging<id>f/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
-    "<src>/metadata/copy-table-staging<id>f/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
-    "<src>/metadata/copy-table-staging<id>f/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json",
-    "<src>/metadata/copy-table-staging<id>f/metadata/v5.metadata.json,<dst>/metadata/v5.metadata.json",
-    "<src>/metadata/copy-table-staging<id>f/metadata/v6.metadata.json,<dst>/metadata/v6.metadata.json"
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=x/<file#2>-0-00001.parquet,<dst>/data/cat=x/<file#2>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/data/cat=y/<file#1>-0-00002.parquet,<dst>/data/cat=y/<file#1>-0-00002.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/data/cat=x/<file#0>-00001-deletes.parquet,<dst>/data/cat=x/<file#0>-00001-deletes.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#2>-m0.avro,<dst>/metadata/<file#2>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#3>-m0.avro,<dst>/metadata/<file#3>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#2>.avro,<dst>/metadata/snap-<snap>-1-<file#2>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#3>.avro,<dst>/metadata/snap-<snap>-1-<file#3>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v5.metadata.json,<dst>/metadata/v5.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v6.metadata.json,<dst>/metadata/v6.metadata.json"
    ],
    "staged-metadata-location": "<dst>"
   },
   "notes": [],
-  "secs": 1.46
+  "secs": 0.0
  }
 ]

@@ -3538,7 +3538,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_record_ice_procs_route_1_oracle.py` — **ICE-PROCS-ROUTE-1 (2026-09-19):**
   `ancestors_of`, `compute_table_stats`, `compute_partition_stats`,
   `rewrite_table_path` against the 27 measured PySpark-4.1.2 + Iceberg-1.11.0
-  cells (fixture SHA-256 `4baf8feef54cbdc373574de76843fbe3b7829573107fc0a8c45e33ecf65da2e4`,
+  cells (fixture SHA-256 `cfffc50077b19ceb5840ff2a60fa5beae7b0dd00f93fc449d0b49343488b9eb7`,
   provenance `spark-qc3.json` cells `cells_qc3.py`; the recorder re-derives
   them and the live tier checks the fixture). Pins cover the ancestor chains
   (default, id, rollback, branch, positional), the two not-found refusals, the
@@ -3559,6 +3559,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   manifest names, data-file stems with stable ordinals, staging directories,
   wall paths), replacing the fixed-width hex windows whose misaligned tails
   failed the live re-derivation intermittently; `check` compares minus `secs`.
+  The fixture above is the recorder's `record` output on live Spark 4.1.2
+  (two fresh warehouses byte-identical; every non-path observation agrees
+  with `spark-qc3.json`), committed with `secs` 0.0 throughout.
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells
