@@ -8,7 +8,9 @@ Per-procedure bodies for the maintenance `CALL` router (`../call.rs`). The route
 parsing, table-ident resolution, and the other procedures; a procedure moves here when its body
 and measured-parity contract would grow `call.rs` beyond its exact
 `check_rust_file_size` baseline. This directory contains
-`apply_partitioning`, `branch_ops`, `rewrite_manifests`, `rewrite_data_files`, and `rewrite_where`; `call.rs` keeps
+`ancestors_of`, `apply_partitioning`, `branch_ops`, `compute_partition_stats`,
+`compute_table_stats`, `rewrite_manifests`, `rewrite_data_files`, `rewrite_table_path`, and
+`rewrite_where`; `call.rs` keeps
 `apply_partitioning`, `rewrite_manifests`, `rewrite_data_files`, `rewrite_options`, and
 `rewrite_where`; `call.rs` keeps
 `expire_snapshots`, `rewrite_position_delete_files`, `remove_orphan_files`,
@@ -130,7 +132,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   both calls to `run_rewrite` are behind `Box::pin`. At fork PR #316's pin the fork `Table` the
   future holds across its awaits carries a footer-cache field, and the two futures reached
   clippy's 16 KiB `large_futures` bound; boxing is behaviour-neutral (the rewrite pins pass
-  unchanged).
+  unchanged). **RP-40 (2026-09-20):** the action's own `execute` future joined them at 23,184
+  bytes once fork #323 added the sort and zorder strategies; it is boxed the same way.
 - `run_maintenance_apply.rs` — **MAINT-POLICY-1 step 3 (2026-09-10):** the apply path. Each
   planned step runs through the same procedure body the CALL door dispatches to (built
   `CallArgs`, no SQL-text re-entry): position-delete, manifests, expire and orphan steps
@@ -148,6 +151,55 @@ and measured-parity contract would grow `call.rs` beyond its exact
   the chain continues (a service-managed orphan sweep on `s3tables`), unlike a
   chain-stopped `skipped` row, which carries an empty result.
   pins: maint-policy-1/C-013, C-014, C-015, C-016, C-017
+- `ancestors_of.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
+  <catalog>.system.ancestors_of(table [, snapshot_id])` walks the snapshot
+  parent chain newest-first, answering `snapshot_id bigint, timestamp bigint`
+  (the snapshot's own timestamp-ms). No current snapshot refuses `Cannot find
+  snapshot: -1`; an unknown id refuses `Cannot find snapshot: <id>` — both as
+  `IllegalArgumentException`, matching Spark's procedure-layer class.
+  pins: ice-procs-route-1/C-004, C-005
+- `compute_table_stats.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
+  <catalog>.system.compute_table_stats(table [, snapshot_id] [, columns])`
+  over the fork's `ComputeTableStats`, answering the single `statistics_file`
+  string column with the registered path. The router keeps Spark's guards:
+  an empty table answers zero rows and commits nothing; an empty `columns`
+  array refuses `Columns cannot be null/empty`; `columns` keeps caller order
+  after dedup (a reversed input registers `[data]` blobs first); an unknown
+  column refuses `Can't find column <name> in table <schema>`; a
+  non-primitive column refuses `Can't compute stats on non-primitive type
+  column: <name> (<type>)` with Spark's struct rendering — all as
+  `IllegalArgumentException`. The schema dump trims the fork `NestedField`
+  rendering's trailing spaces to Spark's measured text. Nested names pass
+  through to the fork, which has
+  no nested scan projection yet (fork ask R-005 in the unit ledger), so they
+  fail loud instead of collapsing to empty stats. The `columns` argument
+  parses both `array(…)` call and `ARRAY[…]` literal spellings.
+  pins: ice-procs-route-1/C-006, C-007, C-008, C-009, C-010
+  Round 3 (2026-09-19, run 25c) measured the refusal texts, the nested field
+  id, the dedup, and the caller-order blobs on live Spark 4.1.2.
+- `compute_partition_stats.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
+  <catalog>.system.compute_partition_stats(table [, snapshot_id])` over the
+  fork's `ComputePartitionStats`, answering the single
+  `partition_statistics_file` string column. An unpartitioned default spec
+  refuses `Table must be partitioned` as `IllegalArgumentException`.
+  pins: ice-procs-route-1/C-011, C-012
+- `rewrite_table_path.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
+  <catalog>.system.rewrite_table_path(table, source_prefix, target_prefix [,
+  staging_location] [, create_file_list] [, start_version] [, end_version])`
+  over the fork's `RewriteTablePath`, answering Spark's four columns
+  (`latest_version` names the current metadata file; `file_list_location` is
+  the staged `file-list` CSV or `N/A`; the manifest count is the covered
+  snapshots; the delete count is the staged parquet position-delete files).
+  Default staging is `<table>/metadata/copy-table-staging-<nanos>-<pid>/` (no
+  `uuid` dependency in this crate). A source prefix the table is not under
+  refuses `Path …/ does not start with …/` as `IllegalArgumentException`;
+  `start_version` / `end_version` refuse naming the fork's missing incremental
+  range. The file list is the fork copy plan plus the staged rewritten
+  metadata entry (the fork stages it but plans no copy for it; Spark's list
+  carries staged metadata files), written through
+  `repark_iceberg::catalog::write_text_file`, the one fork-`Bytes` call this
+  door needs.
+  pins: ice-procs-route-1/C-013, C-014, C-015, C-016
 - `rewrite_manifests.rs` — **MW-6**: `CALL <catalog>.system.rewrite_manifests(table => …)` over
   the fork's `RewriteManifestsAction` (`transaction/rewrite_manifests.rs`). The action returns no
   counts, so Spark's two columns are read from the new snapshot's summary

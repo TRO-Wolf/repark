@@ -28,6 +28,14 @@ pins: rp-4-fork-repin/C-005, C-006
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
   pins: fnp-15-16/C-001
+- `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
+  `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
+  deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)
+  and BEFORE `execute_passthrough`, so a refusal still wins and the decision cannot reach a
+  statement the door rejects. It carries the session's case sensitivity
+  (`spark_door_case_insensitive`, Spark's `spark.sql.caseSensitive=false` default), which is the
+  flag Java's `SparkTable` reads. A false answer falls through unchanged.
+  pins: ice-meta-delete-1/C-001, C-006
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `execute_merge_statement` (OUTPUT refusal, timestamp_ns cast lowering) so `execute_inner` stays under clippy's 100-line cap (run 22b).
@@ -294,7 +302,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `REF-3` BACKLOG, `REF-4` FIXED.
   pins: ref-branch-tag-wap/C-003, C-004, C-006, C-007
   pins: rp-5-fork-repin/C-004
-- `call.rs` — fourteen maintenance procedures: thirteen maintenance calls plus `register_table`. Each
+- `call.rs` — eighteen maintenance procedures: seventeen maintenance calls plus `register_table`
+  (**ICE-PROCS-ROUTE-1 (2026-09-19):** `ancestors_of`, `compute_table_stats`,
+  `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the
+  fork's maintenance actions; the shared `illegal_argument` helper maps
+  procedure-layer validations to `IllegalArgumentException`). Each
   preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
   `dry_run` to true, and refuses shared fallback roots; on a `ServiceManagedLocation`
   catalog (the `s3tables` kind) it refuses before any IO — table buckets answer

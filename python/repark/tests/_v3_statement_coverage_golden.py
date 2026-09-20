@@ -30,7 +30,7 @@ VERDICTS: dict[str, str] = {
     "delete-exists-subquery-mor": "EQUAL",
     "delete-not-exists-subquery-mor": "EQUAL",
     "delete-in-subquery-cow": "EQUAL",
-    "delete-all-rows-mor": "DIVERGES",
+    "delete-all-rows-mor": "EQUAL",
     "update-where-mor": "EQUAL",
     "update-where-cow": "EQUAL",
     "update-where-partitioned-mor": "EQUAL",

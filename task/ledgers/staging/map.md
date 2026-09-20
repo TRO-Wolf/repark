@@ -201,6 +201,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   recorded Spark oracle (`branch_ops_1_truth.json`), red-first pins on both doors, and
   registry rows REF-5–REF-8. `risk_tier: standard`. Branch `fix/ice-branch-ops-1`.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [ice-procs-route-1-ledger.md](ice-procs-route-1-ledger.md) —
+  **ICE-PROCS-ROUTE-1 (2026-09-19), in flight:** `ancestors_of`,
+  `compute_table_stats`, `compute_partition_stats`, `rewrite_table_path` as
+  Spark-door routing over the fork's maintenance actions (no fork change), with
+  a 27-cell recorded Spark oracle, red-first pins on both doors, registry row
+  `ICE-PROCS-ROUTE-1`, and a strict-xfail pair plus fork ask for the
+  incremental version range. `risk_tier: standard`. Branch `fix/ice-procs-route-1`.
+  pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - [df-rust-3-ledger.md](df-rust-3-ledger.md) —
   **DF-RUST-3 (2026-09-15), in flight:** `DataFrame.freqItems`,
   `DataFrameStatFunctions.freqItems`, and `DataFrame.transpose` implemented Rust-first —
@@ -1251,3 +1260,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   replay of 34 / 34 equal (was 12 / 34). `risk_tier: standard`. Branch
   `fix/ice-replace-columns-1`.
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [ice-writer-metrics-1-ledger.md](ice-writer-metrics-1-ledger.md) —
+  **ICE-WRITER-METRICS-1 (2026-09-20), in flight:** RePark's writers honour
+  `write.metadata.metrics.*` and write Java's position-delete properties (IPI-09,
+  RePark half) — `MetricsConfig::for_table` on every Parquet data-file writer,
+  `for_position_delete_table` on the delete writer, the fork's delete-properties
+  helper behind RePark's codec validation, twelve recorded Spark 4.1.2 metrics
+  cells replayed as Rust pins. `risk_tier: standard`. Branch
+  `fix/ice-writer-metrics-1`.
+  pins: ice-writer-metrics-1/C-001, C-002, C-003, C-004, C-005

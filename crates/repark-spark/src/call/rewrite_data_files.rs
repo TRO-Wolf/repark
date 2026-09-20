@@ -129,8 +129,7 @@ pub(super) async fn run_rewrite(
     {
         action = action.max_concurrent_file_group_rewrites(limit);
     }
-    let result = action
-        .execute(catalog.as_ref())
+    let result = Box::pin(action.execute(catalog.as_ref()))
         .await
         .map_err(iceberg_err)?;
 

@@ -111,6 +111,12 @@ Source comments retain only API and safety contracts; implementation narration i
   (`catalog/glue/src/catalog.rs:253`, `catalog/s3tables/src/catalog.rs:235` at fork `43fcd243`) so
   the wrapped factory is byte-identical to today's. A fork repin re-reads those two lines.
   pins: ice-read-perf-0/C-001, C-004
+- `files.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `write_text_file(file_io, path,
+  contents)` writes one small text object through the table's fork `FileIO`
+  (the Spark `rewrite_table_path` copy-plan file list). The helper lives here,
+  not in the Spark door, because this crate already carries the buffer-type
+  dependency and the door must not gain one for a single write.
+  pins: ice-procs-route-1/C-013
 - `cache_wiring.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the one place a builder receives the
   session's caches. `CacheWiredBuilder` (crate-private) maps three calls onto the fork's
   inherent methods of `MemoryCatalogBuilder`, `GlueCatalogBuilder` and `S3TablesCatalogBuilder`

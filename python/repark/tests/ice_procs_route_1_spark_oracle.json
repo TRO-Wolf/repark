@@ -1,0 +1,1845 @@
+[
+ {
+  "id": "QP-ANC-DEFAULT",
+  "group": "QPROC",
+  "title": "ancestors_of(table)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S2",
+     true
+    ],
+    [
+     "S1",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-ANC-ID",
+  "group": "QPROC",
+  "title": "ancestors_of(table, snapshot_id)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S1",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-ANC-ROLLBACK",
+  "group": "QPROC",
+  "title": "ancestors_of after rollback + new commit",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S3",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-ANC-BRANCH",
+  "group": "QPROC",
+  "title": "ancestors_of a branch head",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S3",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-ANC-EMPTY",
+  "group": "QPROC",
+  "title": "ancestors_of a table with no snapshot",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Cannot find snapshot: -1"
+  },
+  "error_step": "CREATE TABLE sc.ns.t_qp_anc_empty (id BIGINT) USING iceberg",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-ANC-MISSING-ID",
+  "group": "QPROC",
+  "title": "ancestors_of unknown snapshot id",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Cannot find snapshot: 12345"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-ANC-POSITIONAL-ID",
+  "group": "QPROC",
+  "title": "ancestors_of positional snapshot id",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "snapshot_id",
+     "bigint"
+    ],
+    [
+     "timestamp",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     "S2",
+     true
+    ],
+    [
+     "S1",
+     true
+    ],
+    [
+     "S0",
+     true
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-DEFAULT",
+  "group": "QPROC",
+  "title": "compute_table_stats (table)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-SNAPSHOT",
+  "group": "QPROC",
+  "title": "compute_table_stats snapshot_id",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<s0>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "3"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "3"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      0
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     0,
+     [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-COLUMNS",
+  "group": "QPROC",
+  "title": "compute_table_stats columns => array('id')",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       1
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-COLUMNS-TWO",
+  "group": "QPROC",
+  "title": "compute_table_stats columns two, reversed",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       2
+      ],
+      [
+       1
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-COLUMNS-UNKNOWN",
+  "group": "QPROC",
+  "title": "compute_table_stats unknown column raises",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Can't find column nope in table {\n  1: id: optional long\n  2: data: optional string\n  3: cat: optional string\n}"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-EMPTY-ARRAY",
+  "group": "QPROC",
+  "title": "compute_table_stats empty columns array refuses",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Columns cannot be null/empty"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-NESTED-NAME",
+  "group": "QPROC",
+  "title": "compute_table_stats nested column name",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<s0>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      0
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     0,
+     [
+      [
+       3
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-STRUCT-ARG",
+  "group": "QPROC",
+  "title": "compute_table_stats struct column refuses",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Can't compute stats on non-primitive type column: st (struct<3: a: optional int, 4: b: optional string>)"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-DUP",
+  "group": "QPROC",
+  "title": "compute_table_stats duplicate column",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       1
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-TYPES",
+  "group": "QPROC",
+  "title": "compute_table_stats every primitive type",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<s0>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "3"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         4
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         5
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         6
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         7
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         8
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      0
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     0,
+     [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       3
+      ],
+      [
+       4
+      ],
+      [
+       5
+      ],
+      [
+       6
+      ],
+      [
+       7
+      ],
+      [
+       8
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-EMPTY",
+  "group": "QPROC",
+  "title": "compute_table_stats table with no snapshot",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [],
+   "statistics": [],
+   "statistics-order": []
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-NESTED",
+  "group": "QPROC",
+  "title": "compute_table_stats struct column",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<s0>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        0,
+        1,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      0
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     0,
+     [
+      [
+       1
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CTS-TWICE",
+  "group": "QPROC",
+  "title": "compute_table_stats second run on same snapshot",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/<cur>-<uuid>.stats"
+   ],
+   "statistics": [
+    [
+     [
+      "blobs",
+      [
+       [
+        "apache-datasketches-theta-v1",
+        [
+         1
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         2
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "8"
+         ]
+        ]
+       ],
+       [
+        "apache-datasketches-theta-v1",
+        [
+         3
+        ],
+        2,
+        3,
+        [
+         [
+          "ndv",
+          "2"
+         ]
+        ]
+       ]
+      ]
+     ],
+     [
+      "footer>0",
+      true
+     ],
+     [
+      "size>0",
+      true
+     ],
+     [
+      "snapshot",
+      2
+     ]
+    ]
+   ],
+   "statistics-order": [
+    [
+     2,
+     [
+      [
+       1
+      ],
+      [
+       2
+      ],
+      [
+       3
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CPS-DEFAULT",
+  "group": "QPROC",
+  "title": "compute_partition_stats (table)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "partition_statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/partition-stats-<cur>-<uuid>.parquet"
+   ],
+   "partition-statistics": [
+    [
+     2,
+     true
+    ]
+   ],
+   "contents": [
+    [
+     [
+      "partition",
+      "spec_id",
+      "data_record_count",
+      "data_file_count",
+      "total_data_file_size_in_bytes",
+      "position_delete_record_count",
+      "position_delete_file_count",
+      "equality_delete_record_count",
+      "equality_delete_file_count",
+      "total_record_count",
+      "last_updated_at",
+      "last_updated_snapshot_id"
+     ],
+     [
+      [
+       [
+        "data_file_count",
+        3
+       ],
+       [
+        "data_record_count",
+        6
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "x"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ],
+      [
+       [
+        "data_file_count",
+        2
+       ],
+       [
+        "data_record_count",
+        2
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "y"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CPS-SNAPSHOT",
+  "group": "QPROC",
+  "title": "compute_partition_stats snapshot_id",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "partition_statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/partition-stats-<s0>-<uuid>.parquet"
+   ],
+   "partition-statistics": [
+    [
+     0,
+     true
+    ]
+   ],
+   "contents": [
+    [
+     [
+      "partition",
+      "spec_id",
+      "data_record_count",
+      "data_file_count",
+      "total_data_file_size_in_bytes",
+      "position_delete_record_count",
+      "position_delete_file_count",
+      "equality_delete_record_count",
+      "equality_delete_file_count",
+      "total_record_count",
+      "last_updated_at",
+      "last_updated_snapshot_id"
+     ],
+     [
+      [
+       [
+        "data_file_count",
+        1
+       ],
+       [
+        "data_record_count",
+        2
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "x"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ],
+      [
+       [
+        "data_file_count",
+        1
+       ],
+       [
+        "data_record_count",
+        1
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "y"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CPS-UNPARTITIONED",
+  "group": "QPROC",
+  "title": "compute_partition_stats unpartitioned table",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Table must be partitioned"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-CPS-V3",
+  "group": "QPROC",
+  "title": "compute_partition_stats format v3",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "partition_statistics_file",
+     "string"
+    ]
+   ],
+   "out-rel": [
+    "metadata/partition-stats-<cur>-<uuid>.parquet"
+   ],
+   "partition-statistics": [
+    [
+     2,
+     true
+    ]
+   ],
+   "contents": [
+    [
+     [
+      "partition",
+      "spec_id",
+      "data_record_count",
+      "data_file_count",
+      "total_data_file_size_in_bytes",
+      "position_delete_record_count",
+      "position_delete_file_count",
+      "equality_delete_record_count",
+      "equality_delete_file_count",
+      "total_record_count",
+      "last_updated_at",
+      "last_updated_snapshot_id",
+      "dv_count"
+     ],
+     [
+      [
+       [
+        "data_file_count",
+        3
+       ],
+       [
+        "data_record_count",
+        6
+       ],
+       [
+        "dv_count",
+        0
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "x"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ],
+      [
+       [
+        "data_file_count",
+        2
+       ],
+       [
+        "data_record_count",
+        2
+       ],
+       [
+        "dv_count",
+        0
+       ],
+       [
+        "equality_delete_file_count",
+        0
+       ],
+       [
+        "equality_delete_record_count",
+        0
+       ],
+       [
+        "partition",
+        [
+         [
+          "cat",
+          "y"
+         ]
+        ]
+       ],
+       [
+        "position_delete_file_count",
+        0
+       ],
+       [
+        "position_delete_record_count",
+        0
+       ],
+       [
+        "spec_id",
+        0
+       ],
+       [
+        "total_record_count",
+        null
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-RTP-DEFAULT",
+  "group": "QPROC",
+  "title": "rewrite_table_path (source_prefix, target_prefix)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v4.metadata.json",
+     "<src>/metadata/copy-table-staging-<uuid>/file-list",
+     3,
+     0
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=x/<file#2>-0-00001.parquet,<dst>/data/cat=x/<file#2>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/data/cat=y/<file#1>-0-00002.parquet,<dst>/data/cat=y/<file#1>-0-00002.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#2>-m0.avro,<dst>/metadata/<file#2>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#2>.avro,<dst>/metadata/snap-<snap>-1-<file#2>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-RTP-STAGING",
+  "group": "QPROC",
+  "title": "rewrite_table_path staging_location",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v4.metadata.json",
+     "<stg>/file-list",
+     3,
+     0
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=x/<file#2>-0-00001.parquet,<dst>/data/cat=x/<file#2>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/data/cat=y/<file#1>-0-00002.parquet,<dst>/data/cat=y/<file#1>-0-00002.parquet",
+    "<stg>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<stg>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<stg>/metadata/<file#2>-m0.avro,<dst>/metadata/<file#2>-m0.avro",
+    "<stg>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<stg>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<stg>/metadata/snap-<snap>-1-<file#2>.avro,<dst>/metadata/snap-<snap>-1-<file#2>.avro",
+    "<stg>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<stg>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<stg>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<stg>/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-RTP-NO-FILE-LIST",
+  "group": "QPROC",
+  "title": "rewrite_table_path create_file_list false",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v4.metadata.json",
+     "N/A",
+     3,
+     0
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-RTP-MISSING-PREFIX-ERR",
+  "group": "QPROC",
+  "title": "rewrite_table_path wrong source_prefix raises",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Path <src>/metadata/v4.metadata.json/ does not start with /nope/"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-RTP-END-VERSION",
+  "group": "QPROC",
+  "title": "rewrite_table_path end_version",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v3.metadata.json",
+     "<src>/metadata/copy-table-staging-<uuid>/file-list",
+     2,
+     0
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-RTP-START-VERSION",
+  "group": "QPROC",
+  "title": "rewrite_table_path start_version incremental",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v4.metadata.json",
+     "<src>/metadata/copy-table-staging-<uuid>/file-list",
+     2,
+     0
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 0.0
+ },
+ {
+  "id": "QP-RTP-MOR-DELETES",
+  "group": "QPROC",
+  "title": "rewrite_table_path with position deletes",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "latest_version",
+     "string"
+    ],
+    [
+     "file_list_location",
+     "string"
+    ],
+    [
+     "rewritten_manifest_file_paths_count",
+     "int"
+    ],
+    [
+     "rewritten_delete_file_paths_count",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     "v6.metadata.json",
+     "<src>/metadata/copy-table-staging-<uuid>/file-list",
+     4,
+     1
+    ]
+   ],
+   "file-list": [
+    "<src>/data/cat=x/<file#0>-0-00001.parquet,<dst>/data/cat=x/<file#0>-0-00001.parquet",
+    "<src>/data/cat=x/<file#1>-0-00001.parquet,<dst>/data/cat=x/<file#1>-0-00001.parquet",
+    "<src>/data/cat=x/<file#2>-0-00001.parquet,<dst>/data/cat=x/<file#2>-0-00001.parquet",
+    "<src>/data/cat=y/<file#0>-0-00002.parquet,<dst>/data/cat=y/<file#0>-0-00002.parquet",
+    "<src>/data/cat=y/<file#1>-0-00002.parquet,<dst>/data/cat=y/<file#1>-0-00002.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/data/cat=x/<file#0>-00001-deletes.parquet,<dst>/data/cat=x/<file#0>-00001-deletes.parquet",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#0>-m0.avro,<dst>/metadata/<file#0>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#1>-m0.avro,<dst>/metadata/<file#1>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#2>-m0.avro,<dst>/metadata/<file#2>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/<file#3>-m0.avro,<dst>/metadata/<file#3>-m0.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#0>.avro,<dst>/metadata/snap-<snap>-1-<file#0>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#1>.avro,<dst>/metadata/snap-<snap>-1-<file#1>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#2>.avro,<dst>/metadata/snap-<snap>-1-<file#2>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/snap-<snap>-1-<file#3>.avro,<dst>/metadata/snap-<snap>-1-<file#3>.avro",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v1.metadata.json,<dst>/metadata/v1.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v2.metadata.json,<dst>/metadata/v2.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v3.metadata.json,<dst>/metadata/v3.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v4.metadata.json,<dst>/metadata/v4.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v5.metadata.json,<dst>/metadata/v5.metadata.json",
+    "<src>/metadata/copy-table-staging-<uuid>/metadata/v6.metadata.json,<dst>/metadata/v6.metadata.json"
+   ],
+   "staged-metadata-location": "<dst>"
+  },
+  "notes": [],
+  "secs": 0.0
+ }
+]

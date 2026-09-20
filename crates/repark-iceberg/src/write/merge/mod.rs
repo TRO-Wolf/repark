@@ -23,7 +23,7 @@ use datafusion::physical_plan::streaming::PartitionStream;
 use datafusion::prelude::SessionContext;
 use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
-use iceberg::arrow::{FieldMatchMode, schema_to_arrow_schema};
+use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::expr::Predicate;
 use iceberg::spec::{
     DataFile, DataFileFormat, FormatVersion, ManifestContentType, PartitionKey, Struct,
@@ -31,7 +31,6 @@ use iceberg::spec::{
 use iceberg::table::Table;
 
 use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
-use iceberg::writer::file_writer::ParquetWriterBuilder;
 use iceberg::writer::file_writer::location_generator::{
     DefaultFileNameGenerator, DefaultLocationGenerator,
 };
@@ -1544,11 +1543,7 @@ async fn build_unpartitioned_data_file_writer(table: &Table) -> Result<impl Iceb
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
     let file_format =
         DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        crate::write::writer_props::writer_properties_for(table)?,
-        row_lineage::iceberg_parquet_schema(table)?,
-        FieldMatchMode::Name,
-    );
+    let parquet_builder = crate::write::writer_props::name_matched_parquet_builder(table)?;
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
     let file_name_generator =

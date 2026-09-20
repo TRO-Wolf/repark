@@ -59,7 +59,8 @@ where
         writer_properties_with(table, staging.codec.as_deref(), staging.level.as_deref())?,
         table.metadata().current_schema().clone(),
         FieldMatchMode::Name,
-    );
+    )
+    .with_metrics_config(crate::write::writer_props::metrics_config_for(table)?);
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
     let file_name_generator =

@@ -227,7 +227,7 @@ REPARK: dict[str, Any] = {
     },
     "delete-all-rows-mor": {
         "statements": [["OK", None]],
-        "probes": [["OK", []], ["OK", []], ["OK", [[1, "PUFFIN", 4]]], ["OK", [[0, 4], [1, 4]]]],
+        "probes": [["OK", []], ["OK", []], ["OK", []], ["OK", []]],
     },
     "update-where-mor": {
         "statements": [["OK", None]],

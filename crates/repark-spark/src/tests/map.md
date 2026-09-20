@@ -320,6 +320,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).
+  **ICE-META-DELETE-1 (2026-09-19):** the fork-residual pin now deletes ONE row of a two-row
+  file to keep a row-level DELETE in the shape (that is what has no granularity knob), and
+  asserts on the way that the whole-file `DELETE … IN (1..6)` writes no delete file at all —
+  it is answered from metadata.
+  pins: ice-meta-delete-1/C-001
+  **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
 - `call_rewrite_dangling.rs` — the CALL's
   `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports
   `removed_delete_files_count` on a partitioned v2 fixture (C-006).
@@ -355,18 +361,25 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `where` byte-identity pins above are the single-load regression guard.
   pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: maint-policy-1/C-028, C-029
-- `call_rm_deletes.rs` — **ICE-RM-DELETES-1 (2026-09-20):** the 14 recorded Spark 4.1.2
-  `rewrite_manifests` cells replayed through RePark DML — unpartitioned and data-only
-  cells pinned end to end against the oracle (before/result/after/rows/op/summary),
-  partitioned cells pinned on Spark's two-leg semantics over RePark's before-state
-  (RePark's DELETE writes position deletes where Spark's cells show copy-on-write),
-  the evolved default answering zeros with no new snapshot, a non-current `spec_id`
-  rewriting that spec, and the unknown-`spec_id` refusal (`Invalid spec id`, Spark's
-  recorded text). Layout tuples sort order-insensitively before comparison. The v3
-  `part_mor_real`
-  replay carries one empty delete manifest (as Spark's recorded before does) and still
-  answers `(7, 2)` with a two-file delete manifest after.
+- `call_rm_deletes.rs` — **ICE-RM-DELETES-1 (2026-09-20), re-measured by ICE-META-DELETE-1
+  round 2 (2026-09-19):** the 14 recorded Spark 4.1.2 `rewrite_manifests` cells replayed
+  through RePark DML. Since the metadata-delete routing landed, **twelve of the fourteen are
+  pinned literally** against the oracle (before layout / result / after layout / rows / op /
+  the three `manifests-*` counters): the unpartitioned and data-only cells, the
+  `part_mor`, `part_mor_spec` and `part_mor_nocache` cells in v2 and v3 — whose DELETE statements each
+  cover a whole data file, so RePark now enters the procedure with Spark's own data-only
+  before-state — and `part_mor_real_v3`, whose replay carries one empty delete manifest (as
+  Spark's recorded before does) and answers `(7, 2)` with a two-file delete manifest after.
+  Two cells keep a rule shape over RePark's own measured before-state and say why:
+  `evolved_spec_v2/v3` (Spark holds the five live spec-0 data files in ONE manifest, RePark
+  in the three append manifests its metadata delete rewrote in place — registry MANIFEST-4)
+  and `part_mor_real_v2` (a third position-delete file where Spark rewrites the superseded
+  one — registry ICE-META-DELETE-1-D1). `non_current_spec_rewrites_that_spec` has no Spark
+  cell and asserts RePark's own answer. Every partitioned pin reads the live rows BEFORE and
+  AFTER the CALL and asserts they are equal, so a rewrite that lost or resurrected a delete
+  cannot pass. Layout tuples sort order-insensitively before comparison.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: ice-meta-delete-1/C-009
 - `write_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 round 2 (2026-09-18, run 21b):** Spark-door
   `write_default` pins on a catalog-created table carrying `c INT` write-default 5. `DEFAULT`
   on `INSERT OVERWRITE` (VALUES and named-list SELECT) fills 5 and goes red with the
@@ -468,6 +481,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: rp-11-repin-f24/C-002
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
+  `call_procs_route_1` (**ICE-PROCS-ROUTE-1 (2026-09-19)**) pins the four routed
+  procedure schemas and rows (ancestor chain newest-first with snapshot
+  timestamps, table-stats blobs in caller order, partition-stats registration,
+  rewrite-table-path staging plus Spark's counts across three focused tests
+  sharing one seed-and-locate helper), the older-snapshot answers
+  (ancestors from S1, table and partition stats registered on S0 with S0 ndv,
+  each asserted against the current head), the Spark-shaped refusals
+  (empty columns, struct column, unknown column, unpartitioned table, wrong
+  prefix with the router-owned text and class), the unpartitioned refusal on a
+  populated table with the fork External shape excluded, the whole-message
+  unknown-column dump with Spark's spacing, the nested-name
+  pass-through with no silent commit, the duplicate dedup, and the
+  version-range refusal.
+  The battery carries no code comments (round
+  rule); its pins are cited from this map and `call/map.md`.
+  pins: ice-procs-route-1/C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012,
+  C-013, C-014, C-015, C-016
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
   adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
   S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`
