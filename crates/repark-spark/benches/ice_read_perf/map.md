@@ -297,8 +297,11 @@ would change what "four at once" measures for the other four (their timings and 
   before) and Q7's is `(id >= 540) AND (id < 552)` on the three-file bed, with the same twelve
   ids; the plan-line parser. pins: ice-read-perf-0/C-013
   pins: rp-36-fork-pin/C-001
-- Q1 reads only footers (3 footer reads, 0 page reads) and Q2 reads 3 footers plus pages, in
-  cold and warm. pins: ice-read-perf-0/C-014
+- Q1 reads NO data file at all since ICE-COUNT-FOLD-1 (0 footer reads, 0 page reads, 0 data-file
+  requests of any op, in every mode — the count folds to the scan's exact row count); Q2 reads 3
+  footers plus pages in cold and warm; Q1's footer-cache counters are therefore zero on a cold
+  sample too, where Q2 and Q3 still miss cold and hit warm.
+  pins: ice-read-perf-0/C-014, ice-count-fold-1/C-006
 - Every mode (four) with `--repeat 2`: two samples per query, medians, identical I/O across
   samples in cold and warm, `rss_at_reset_kib` and `execute_to_first_batch_ms` present, the
   environment header's `rustc_version`, `os_page_cache`, `cold_kind` and `concurrent_kind`, and

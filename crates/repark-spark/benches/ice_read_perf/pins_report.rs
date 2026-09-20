@@ -114,7 +114,10 @@ fn a_warm_sample_hits_the_footer_cache_and_a_cold_one_misses_it() {
     let warehouse = tiny_bed(&dir);
     for mode in ["cold", "warm"] {
         let document = run_mode(&dir, &warehouse, mode, "1");
-        for name in ["Q1", "Q2", "Q3"] {
+        let folded = &query(&document, "Q1")["samples"][0]["footer_cache"];
+        assert_eq!(folded["hits"].as_u64().unwrap(), 0, "{mode} Q1 {folded}");
+        assert_eq!(folded["misses"].as_u64().unwrap(), 0, "{mode} Q1 {folded}");
+        for name in ["Q2", "Q3"] {
             let footer = &query(&document, name)["samples"][0]["footer_cache"];
             let hits = footer["hits"].as_u64().unwrap();
             let misses = footer["misses"].as_u64().unwrap();
