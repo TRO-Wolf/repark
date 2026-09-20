@@ -152,3 +152,29 @@ async fn an_identity_boolean_partition_overwrite_names_the_engine_value() {
     .await;
     names_two_live_rows(&error, "BOOLEAN");
 }
+
+#[tokio::test]
+async fn an_empty_source_static_overwrite_names_the_partition_it_clears() {
+    let _: &str = "pins: ice-session-write-conf-1/C-061";
+    let seed = vec![
+        "CREATE TABLE ice.sales.soempty (id BIGINT, cat STRING) USING iceberg PARTITIONED BY \
+         (cat)"
+            .to_string(),
+        "INSERT INTO ice.sales.soempty VALUES (1,'x'),(2,'x'),(3,'y')".to_string(),
+    ];
+    let error = overwrite_refusal(
+        &seed,
+        DELETED_RECORDS,
+        "5",
+        "INSERT OVERWRITE ice.sales.soempty PARTITION (cat = 'x') \
+         SELECT id FROM ice.sales.soempty WHERE id > 100",
+    )
+    .await;
+    assert_eq!(
+        error,
+        "External error: Multiple entries with same key: deleted-records=2 and \
+         deleted-records=5",
+        "an empty source stages no file, and the partition equalities are the only thing \
+         that can name what the overwrite clears"
+    );
+}

@@ -33,6 +33,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   round-4 removed-set resolver has to RUN on those shapes. Dropping the `Decimal128` arm of
   `cast_datum` reds the DECIMAL pin and nothing else; DOUBLE and BOOLEAN already cast.
   pins: ice-session-write-conf-1/C-060
+- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):**
+  `an_empty_source_static_overwrite_names_the_partition_it_clears` is the discriminator the
+  round-4 `C-054` battery lacked. `INSERT OVERWRITE … PARTITION (cat = 'x') SELECT … WHERE <false>`
+  stages NO file and still clears the live partition, so a removed set taken from the staged files
+  resolves nothing and the session `deleted-records=5` stamps instead of refusing
+  `deleted-records=2`. Every other static pin stages a file in the named partition, which is why
+  they stayed green under that revert. The revert now reds this pin and the three `QD-MOR-*`
+  delete-side pins.
+  pins: ice-session-write-conf-1/C-061
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4, the absolute layout
   (2026-09-20):** the layout battery no longer compares conf against no-conf alone — both runs
   assert Spark's OWN answer (cells `QU-*`): one live data file and `added-data-files=1` for the
