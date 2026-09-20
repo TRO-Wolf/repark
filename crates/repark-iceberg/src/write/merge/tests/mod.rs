@@ -19,3 +19,4 @@ mod partition_sink;
 mod promoted_scan;
 mod streaming;
 mod streaming_scan;
+mod writer_metrics;

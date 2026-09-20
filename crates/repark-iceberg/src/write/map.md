@@ -754,7 +754,12 @@ repark-core's error map.
 - `writer_props.rs` — Parquet `WriterProperties` from Iceberg
   `write.parquet.compression-codec` (+ optional level). Default **zstd** when absent (Java
   Iceberg 1.4+ parity); accepted `zstd|snappy|gzip|lz4|uncompressed`; unknown = loud error.
-  Shared by append / MERGE data files / position deletes.
+  Shared by append / MERGE data files / position deletes. **ICE-WRITER-METRICS-1 (2026-09-19):**
+  `metrics_config_for` resolves the fork's `MetricsConfig::for_table`, and
+  `name_matched_parquet_builder` returns the name-matched `ParquetWriterBuilder` already carrying
+  it, so the MERGE executor asks for a configured builder instead of assembling one (that move
+  is why `merge/mod.rs` shrank to 1,756 lines and its size exception ratcheted down).
+  pins: ice-writer-metrics-1/C-001
   **RDF-1 (2026-09-02):** position deletes take a second builder,
   `position_delete_writer_properties_for`, which adds the fork's own
   `position_delete_writer_properties()` truncation setting
@@ -765,6 +770,21 @@ repark-core's error map.
   `tooHighDeleteRatio`. The setting is read from the fork rather than restated, so a fork
   policy change carries. Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-002
+  **ICE-WRITER-METRICS-1 (2026-09-20):** every Parquet data-file builder applies
+  `MetricsConfig::for_table` of the table it writes — `write_options.rs` (INSERT
+  stage), `append_fanout_serial.rs` (fanout), `merge/mod.rs` (CoW rewrite),
+  `merge/row_lineage.rs` (lineage rewrite) — and the position-delete builder applies
+  `for_position_delete_table`. `position_delete_writer_properties_for` keeps RePark's
+  `parse_compression` validation (the gzip-with-level refusal stays) and builds through
+  the fork's `position_delete_writer_properties_for`, gaining the
+  `delete-type=position` key/value; the unset-zstd default moves from level 1 to the
+  fork's level 3 (both valid zstd, readers cannot tell). Pins in
+  `merge/tests/writer_metrics.rs` (+ `writer_metrics_truth.json` fixture).
+  pins: ice-writer-metrics-1/C-001
+  pins: ice-writer-metrics-1/C-002
+  pins: ice-writer-metrics-1/C-003
+  pins: ice-writer-metrics-1/C-004
+  pins: ice-writer-metrics-1/C-005
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame
   write-option staging and commits. `WriterStagingOverrides` (codec/level/target-size,
   option over table property) feeds override-capable builders that mirror the

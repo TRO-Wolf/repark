@@ -1,8 +1,11 @@
 //! Parquet [`WriterProperties`] from Iceberg table properties.
 
 use datafusion::error::{DataFusionError, Result};
+use iceberg::arrow::FieldMatchMode;
+use iceberg::spec::MetricsConfig;
 use iceberg::table::Table;
-use iceberg::writer::base_writer::position_delete_writer::position_delete_writer_properties;
+use iceberg::writer::base_writer::position_delete_writer::position_delete_writer_properties_for as fork_position_delete_writer_properties_for;
+use iceberg::writer::file_writer::ParquetWriterBuilder;
 use parquet::basic::{Compression, GzipLevel, ZstdLevel};
 use parquet::file::properties::WriterProperties;
 
@@ -71,13 +74,24 @@ pub fn parse_target_file_size(raw: &str) -> Result<u64> {
     })
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn metrics_config_for(table: &Table) -> Result<MetricsConfig> {
+    MetricsConfig::for_table(table.metadata()).map_err(crate::catalog::iceberg_to_datafusion)
+}
+
+pub(crate) fn name_matched_parquet_builder(table: &Table) -> Result<ParquetWriterBuilder> {
+    Ok(ParquetWriterBuilder::new_with_match_mode(
+        writer_properties_for(table)?,
+        crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
+        FieldMatchMode::Name,
+    )
+    .with_metrics_config(metrics_config_for(table)?))
+}
+
 pub(crate) fn position_delete_writer_properties_for(table: &Table) -> Result<WriterProperties> {
-    Ok(WriterProperties::builder()
-        .set_compression(compression_for(table)?)
-        .set_statistics_truncate_length(
-            position_delete_writer_properties().statistics_truncate_length(),
-        )
-        .build())
+    let _ = compression_for(table)?;
+    fork_position_delete_writer_properties_for(table.metadata().properties())
+        .map_err(crate::catalog::iceberg_to_datafusion)
 }
 
 fn compression_for(table: &Table) -> Result<Compression> {

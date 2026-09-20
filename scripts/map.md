@@ -1,5 +1,7 @@
 # map — scripts/
 
+ICE-WRITER-METRICS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/merge/mod.rs` 1761 → 1756 (the name-matched Parquet builder, now carrying the table's metrics config, moves to `write/writer_props::name_matched_parquet_builder`), shrink-only. pins: ice-writer-metrics-1/C-001
+
 ICE-REPLACE-COLUMNS-1 (2026-09-19): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1813 → 1449 (the REPLACE COLUMNS parser, planner and identity-trap gate move to `replace_columns.rs`) and `repark-spark/src/tests/alter.rs` 1379 → 1184 (the two identity-trap tests move to `tests/replace_columns.rs`), both shrink-only. pins: ice-replace-columns-1/C-009
 ICE-MERGE-APPEND-1 (2026-09-19): `check_rust_file_size.py` ratchets `write/append.rs` 1819 → 1816 (the module banner and the `commit_append` summary doc line are deleted rather than reworded when the site routes to `merge_append`; their contract moves to `write/map.md`), shrink-only. pins: ice-merge-append-1/C-001
 ICE-OVERWRITE-MODE-1 (2026-09-19): `check_lib_py.py` ratchets `dataframe/writer_readwriter.py` 1095 → 1093 → 1091 (the verification fix drops the `_dynamic_partition_sql` import) (`overwritePartitions` hands its SQL to `writer_layout.run_overwrite_partitions`), shrink-only. pins: ice-overwrite-mode-1/C-007

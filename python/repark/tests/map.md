@@ -2011,8 +2011,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: rp-32-rdf-cow-bytes/C-002, C-003, C-004, C-005, C-009, C-010
   At fork `43fcd243` (RP-34, #306) `max_group_size` and `partial_progress_groups` run plainly
   at Spark's 8→4, and the four `rpd_target_small` / `rpd_target_small_forced` value and
-  snapshot cells are strict xfails under `F-RPD-TARGET-SMALL-1` (RePark rewrites 8 delete
-  files where Spark rewrites 0); their keep-set twins pin the 200 live rows only.
+  snapshot cells are xfails (RePark rewrites 8 delete files where Spark rewrites 0); their
+  keep-set twins pin the 200 live rows only. **2026-09-20:** the fork's selection rule is Java's,
+  measured identical on Spark-sized files (#307), so the four are a DECLARED byte-size
+  divergence — a parquet-rs delete file of this shape is about 1,297 B where parquet-mr writes
+  1,590 B, and a 2,000 B target sits on that line. The delete file carries the data file's full
+  path in its bounds, so a longer warehouse path lands the other side: the cells are red on this
+  box and green on a CI runner. They are NOT strict for that reason; neither outcome is a
+  regression, and the keep-set twins keep the rows pinned either way.
   pins: rp-34-fork-pin/C-001, C-002
 - [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) —
   **ICE-RDF-OPTIONS-1 (2026-09-17):** the 33-cell RDF oracle section replays byte-identical
