@@ -88,12 +88,6 @@ def test_alter_column_drop_not_null(spark: ReparkSession) -> None:
 
 def test_alter_unsupported_forms_refuse_loud(spark: ReparkSession) -> None:
     spark.sql("CREATE TABLE mem.ns.loud (id INT, name STRING) USING iceberg")
-    # Identity-trap twin: same-name incompatible type on REPLACE COLUMNS.
-    with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
-        spark.sql("ALTER TABLE mem.ns.loud REPLACE COLUMNS (id STRING, name STRING)")
-    message = str(caught.value).lower()
-    assert "identity trap" in message or "replace columns" in message or "not supported" in message
-
     with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
         spark.sql("ALTER TABLE mem.ns.loud ADD COLUMN flag BOOLEAN NOT NULL")
     assert "NOT NULL" in str(caught.value) or "not supported" in str(caught.value).lower()
@@ -153,7 +147,13 @@ def test_alter_add_drop_partition_field_and_write_after(spark: ReparkSession) ->
 
 
 def test_alter_replace_partition_field_and_replace_columns(spark: ReparkSession) -> None:
-    """Stretch: REPLACE PARTITION FIELD; REPLACE COLUMNS promote + identity-trap twin."""
+    """Stretch: REPLACE PARTITION FIELD; REPLACE COLUMNS drops and re-adds every column.
+
+    ICE-REPLACE-COLUMNS-1 (2026-09-19) replaced the old identity-trap design: Spark
+    deletes every current column and adds the listed ones with fresh field ids, so a
+    same-named column keeps neither its id nor its values. The measured cells live in
+    ``test_ice_replace_columns_1.py``; this row keeps the facade twin.
+    """
     spark.sql("CREATE TABLE mem.ns.prepl (id INT, label STRING) USING iceberg")
     spark.sql("ALTER TABLE mem.ns.prepl ADD PARTITION FIELD bucket(8, id) AS id_b8")
     spark.sql(
@@ -169,11 +169,12 @@ def test_alter_replace_partition_field_and_replace_columns(spark: ReparkSession)
     arrow = spark.sql("SELECT * FROM mem.ns.rcols").to_arrow()
     assert [field.name for field in arrow.schema] == ["id", "name"]
     assert str(arrow.schema.field(0).type) == "int64"
-    assert arrow.column("id").to_pylist() == [1]
+    assert arrow.column("id").to_pylist() == [None]
 
-    with pytest.raises((UnsupportedOperationException, AnalysisException, Exception)) as caught:
-        spark.sql("ALTER TABLE mem.ns.rcols REPLACE COLUMNS (id STRING, name STRING)")
-    assert "identity trap" in str(caught.value).lower()
+    spark.sql("ALTER TABLE mem.ns.rcols REPLACE COLUMNS (id STRING, name STRING)")
+    retyped = spark.sql("SELECT * FROM mem.ns.rcols").to_arrow()
+    assert str(retyped.schema.field(0).type) == "string"
+    assert retyped.column("id").to_pylist() == [None]
 
 
 def test_alter_float_decimal_twins_and_case_insensitive(spark: ReparkSession) -> None:

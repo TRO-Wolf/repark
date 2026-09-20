@@ -566,9 +566,28 @@ pins: rp-4-fork-repin/C-005, C-006
 - `alter.rs` — ALTER TABLE handlers (SET/UNSET TBLPROPERTIES, RENAME TO, schema evolution I6,
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;
   9 in-module tests. **Q10:** ADD/ALTER COLUMN bare `TIMESTAMP` follows the session
-  `spark.sql.timestampType` carrier. REPLACE COLUMNS stays on the LTZ wrapper
-  (parse-time, no session). **ICE-COLUMN-REORDER-1 (2026-09-17):** the I6 move refusal
-  is gone; the move lives in `column_move.rs`.
+  `spark.sql.timestampType` carrier. **ICE-COLUMN-REORDER-1 (2026-09-17):** the I6 move refusal
+  is gone; the move lives in `column_move.rs`. **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the
+  REPLACE COLUMNS parser, planner and the identity-trap gate left this file for
+  `replace_columns.rs`; `alter.rs` only detects the form and routes it.
+- `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** Spark's Hive-style
+  `REPLACE COLUMNS` — one `DropColumn` per current top-level column, then one `AddColumn` per
+  listed column, so the fork's `UpdateSchema` assigns every column a **fresh** id from
+  `last-column-id + 1` and existing rows read NULL (measured: Spark 4.1.2 + Iceberg 1.11.0, cells
+  `RC-*`). The column list goes through the shared sqlparser column-type path
+  (`rewrite_nested_type_tokens` → `parse_data_type` → `sql_type_to_iceberg_with_timestamp_type`),
+  so STRUCT / ARRAY / MAP land like CREATE TABLE and ADD COLUMN do, and bare `TIMESTAMP` now
+  follows the session `spark.sql.timestampType` carrier (it used to be pinned to the LTZ
+  wrapper). Refusals carry Spark's text: `NOT NULL` / a column position / a nested name are
+  Hive-style parse errors, a duplicate name is `[COLUMN_ALREADY_EXISTS]`, and a live partition
+  or sort field whose source id would vanish is Iceberg's `Cannot find source column for …`
+  `ValidationException` — raised before the commit, so the table is untouched. The module
+  carries no comments (owner ruling): `parse` walks ALTER TABLE → name → REPLACE COLUMNS →
+  `(`, then one `parse_column` per entry (name, type, then `NOT NULL` / position / `COMMENT`
+  in any order) and requires end-of-statement; `plan` refuses duplicates before it loads the
+  table, then the partition and sort checks, then emits the drops before the adds — the
+  order the fork's `UpdateSchema` needs to allow a same-name re-add.
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** the `ALTER COLUMN …
   FIRST|AFTER` pre-parse (`try_parse_column_move_ddl` / `execute_column_move_ddl`, wired in
   `router.rs` ahead of the residual refusal): an `ALTER`-prefix fast path before any tokenize,
