@@ -19,21 +19,28 @@ use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_roo
 use crate::call_args::CallArgs;
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
+mod ancestors_of;
 mod apply_partitioning;
 mod branch_ops;
+mod compute_partition_stats;
+mod compute_table_stats;
 mod plan_partitioning;
 mod plan_partitioning_bytes;
 mod plan_partitioning_score;
 mod rewrite_data_files;
 mod rewrite_manifests;
 pub(crate) mod rewrite_options;
+mod rewrite_table_path;
 mod rewrite_where;
 mod run_maintenance;
 mod run_maintenance_apply;
 
 const SUPPORTED_PROCEDURES: &[&str] = &[
+    "ancestors_of",
     "apply_partitioning",
     "cherrypick_snapshot",
+    "compute_partition_stats",
+    "compute_table_stats",
     "expire_snapshots",
     "fast_forward",
     "plan_partitioning",
@@ -42,6 +49,7 @@ const SUPPORTED_PROCEDURES: &[&str] = &[
     "rewrite_manifests",
     "remove_orphan_files",
     "rewrite_position_delete_files",
+    "rewrite_table_path",
     "rollback_to_snapshot",
     "rollback_to_timestamp",
     "run_maintenance",
@@ -61,6 +69,25 @@ pub async fn execute_call(
     let args = CallArgs::parse(&function.args)?;
 
     match procedure.as_str() {
+        "ancestors_of" => {
+            ancestors_of::execute_ancestors_of(ctx, catalog, &catalog_name, &args).await
+        }
+        "compute_table_stats" => {
+            compute_table_stats::execute_compute_table_stats(ctx, catalog, &catalog_name, &args)
+                .await
+        }
+        "compute_partition_stats" => {
+            compute_partition_stats::execute_compute_partition_stats(
+                ctx,
+                catalog,
+                &catalog_name,
+                &args,
+            )
+            .await
+        }
+        "rewrite_table_path" => {
+            rewrite_table_path::execute_rewrite_table_path(ctx, catalog, &catalog_name, &args).await
+        }
         "expire_snapshots" => execute_expire_snapshots(ctx, catalog, &catalog_name, &args).await,
         "rewrite_data_files" => {
             Box::pin(rewrite_data_files::execute_rewrite_data_files(
@@ -179,6 +206,10 @@ fn resolve_table_ident(catalog_name: &str, table_arg: &str) -> Result<TableIdent
             "CALL table `{table_arg}` must be `namespace.table` or `catalog.namespace.table`"
         ))),
     }
+}
+
+pub(super) fn illegal_argument(message: String) -> DataFusionError {
+    DataFusionError::Configuration(message)
 }
 
 fn count_as_i64(count: usize) -> Result<i64> {

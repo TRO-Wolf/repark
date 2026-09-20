@@ -468,6 +468,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: rp-11-repin-f24/C-002
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
+  `call_procs_route_1` (**ICE-PROCS-ROUTE-1 (2026-09-19)**) pins the four routed
+  procedure schemas and rows (ancestor chain newest-first with snapshot
+  timestamps, table-stats blobs in schema order, partition-stats registration,
+  rewrite-table-path staging plus Spark's counts), the Spark-shaped refusals,
+  and the version-range refusal.
+  pins: ice-procs-route-1/C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012,
+  C-013, C-014, C-015, C-016
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
   adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
   S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`

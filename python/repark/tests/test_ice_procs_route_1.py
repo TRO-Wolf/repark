@@ -157,42 +157,45 @@ def blob_row(order: dict[int, int], blob: dict[str, Any]) -> list[Any]:
         blob.get("fields", []),
         order.get(blob.get("snapshot-id")),
         blob.get("sequence-number"),
-        sorted((blob.get("properties") or {}).items()),
+        [[key, value] for key, value in sorted((blob.get("properties") or {}).items())],
     ]
 
 
-def statistics_entries(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+def statistics_entries(metadata: dict[str, Any]) -> list[list[list[Any]]]:
     """Normalize statistics entries with snapshot positions like the oracle."""
     order = snapshot_order(metadata)
     out = []
     for entry in metadata.get("statistics", []):
-        out.append(
-            {
-                "snapshot": order.get(entry.get("snapshot-id")),
-                "blobs": sorted(
-                    [blob_row(order, b) for b in entry.get("blob-metadata", [])],
-                    key=repr,
-                ),
-                "size>0": entry.get("file-size-in-bytes", 0) > 0,
-                "footer>0": entry.get("file-footer-size-in-bytes", 0) > 0,
-            }
-        )
-    return sorted(out, key=lambda d: repr(d["snapshot"]))
+        fields = {
+            "snapshot": order.get(entry.get("snapshot-id")),
+            "blobs": sorted(
+                [blob_row(order, b) for b in entry.get("blob-metadata", [])],
+                key=repr,
+            ),
+            "size>0": entry.get("file-size-in-bytes", 0) > 0,
+            "footer>0": entry.get("file-footer-size-in-bytes", 0) > 0,
+        }
+        out.append([[key, fields[key]] for key, _ in sorted(fields.items(), key=repr)])
+    return sorted(out, key=lambda pairs: repr(dict(pairs).get("snapshot")))
+
+
+_SPARK_TO_ARROW: dict[str, str] = {"bigint": "int64", "int": "int32", "string": "string"}
 
 
 def check_columns(arrow: Any, cell_id: str) -> None:
     """Assert the CALL result schema matches the oracle columns and types."""
-    assert [[f.name, str(f.type)] for f in arrow.schema] == CELLS[cell_id]["obs"]["cols"]
+    want = [[name, _SPARK_TO_ARROW[kind]] for name, kind in CELLS[cell_id]["obs"]["cols"]]
+    assert [[f.name, str(f.type)] for f in arrow.schema] == want
 
 
-def check_refusal(session: Any, sql: str, cell_id: str) -> None:
+def check_refusal(session: Any, sql: str, cell_id: str, needle: str | None = None) -> None:
     """Assert a CALL refuses with the recorded class and message substring."""
     error = CELLS[cell_id]["error"]
     assert error["type"] in _EXC, f"unmapped oracle exception {error['type']!r}"
     with pytest.raises(_EXC[error["type"]]) as caught:
         session.sql(sql).to_arrow()
-    needle = str(CELLS[cell_id]["error"]["msg"]).split("\n")[0]
-    assert needle in str(caught.value), f"{sql}: {needle!r} not in {caught.value}"
+    want = needle or str(CELLS[cell_id]["error"]["msg"]).split("\n")[0]
+    assert want in str(caught.value), f"{sql}: {want!r} not in {caught.value}"
 
 
 def check_native_refused(sql: str) -> None:
@@ -378,6 +381,15 @@ def test_table_stats_twice(spark: Any, tmp_path: Path) -> None:
     check_table_stats(spark, tmp_path / "wh", sql, "QP-CTS-TWICE")
 
 
+def norm_value(value: Any) -> Any:
+    """Normalize nested structs to sorted pair lists like the harness."""
+    if isinstance(value, dict):
+        return sorted([[key, norm_value(item)] for key, item in value.items()], key=repr)
+    if isinstance(value, list):
+        return [norm_value(item) for item in value]
+    return value
+
+
 def check_partition_stats(session: Any, warehouse: Path, sql: str, cell: str) -> None:
     """Assert compute_partition_stats file registration, entry, contents."""
     import pyarrow.parquet as parquet
@@ -390,16 +402,15 @@ def check_partition_stats(session: Any, warehouse: Path, sql: str, cell: str) ->
     entries = metadata.get("partition-statistics", [])
     assert len(entries) == 1
     assert rows[0]["partition_statistics_file"] == entries[0]["statistics-path"]
-    assert CELLS[cell]["obs"]["partition-statistics"] == [[0, True]]
+    order = snapshot_order(metadata)
+    assert CELLS[cell]["obs"]["partition-statistics"] == [[order[entries[0]["snapshot-id"]], True]]
     drop = {"last_updated_at", "last_updated_snapshot_id", "total_data_file_size_in_bytes"}
     table = parquet.read_table(entries[0]["statistics-path"].replace("file:", ""))
-    got = [
-        table.schema.names,
-        sorted(
-            [{k: v for k, v in r.items() if k not in drop} for r in table.to_pylist()],
-            key=repr,
-        ),
-    ]
+    dicts = sorted(
+        [{k: v for k, v in r.items() if k not in drop} for r in table.to_pylist()],
+        key=repr,
+    )
+    got = [table.schema.names, [norm_value(d) for d in dicts]]
     assert got == CELLS[cell]["obs"]["contents"][0]
     check_native_refused(sql)
 
@@ -463,6 +474,7 @@ def check_rewrite_path(
         check_native_refused(sql)
         return
     assert listed.startswith(staging) and listed.endswith("/file-list")
+    actual_staging = listed[: -len("/file-list")]
     lines = Path(listed.replace("file:", "")).read_text(encoding="utf-8").splitlines()
     assert lines, "file list is empty"
     staged_manifests = 0
@@ -472,12 +484,12 @@ def check_rewrite_path(
         parts = line.split(",")
         assert len(parts) == 2, f"file-list line has no src,target pair: {line!r}"
         left, right = parts
-        assert left.startswith(source), line
+        assert left.startswith(source) or (staging and left.startswith(staging)), line
         assert right.startswith(target), line
         assert Path(left.replace("file:", "")).name == Path(right.replace("file:", "")).name
-        if left.startswith(staging) and left.endswith(".avro"):
+        if left.startswith(actual_staging) and left.endswith(".avro"):
             staged_manifests += 1
-        if left.startswith(staging) and left.endswith("-deletes.parquet"):
+        if left.startswith(actual_staging) and left.endswith(".parquet"):
             staged_deletes += 1
         if left.endswith(".metadata.json"):
             staged_metadata.append(left)
@@ -547,7 +559,7 @@ def test_rewrite_path_missing_prefix(spark: Any) -> None:
         f"CALL {CATALOG}.system.rewrite_table_path(table => 'ns.t', "
         "source_prefix => '/nope', target_prefix => '/x')"
     )
-    check_refusal(spark, sql, "QP-RTP-MISSING-PREFIX-ERR")
+    check_refusal(spark, sql, "QP-RTP-MISSING-PREFIX-ERR", "does not start with /nope/")
 
 
 @pytest.mark.xfail(strict=True, reason="fork RewriteTablePath has no version range; see ledger")

@@ -13,6 +13,7 @@ mod cache_wiring;
 mod caches;
 mod catalog_ops;
 mod counting_storage;
+mod files;
 mod io_stats;
 mod lineage_columns;
 mod location;
@@ -41,6 +42,7 @@ pub use counting_storage::{
     S3TABLES_DEFAULT_CONFIGURED_SCHEME, glue_default_storage_factory,
     s3tables_default_storage_factory,
 };
+pub use files::write_text_file;
 pub use iceberg::TableMetadataCacheStats;
 pub use iceberg::arrow::ParquetFooterCacheStats;
 pub use io_stats::{
