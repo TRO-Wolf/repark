@@ -436,7 +436,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   standing requirement (inventory §8 ruling 6). Always-run: the committed
   `fixtures/torture/data/ice_spark_table_1` Spark-written v2 CoW table (67.8 KB,
   `truth.json` seed oracle — Spark's own CoW MERGE and a `hash` distribution ALTER are
-  baked in) is materialized at its baked-in path under a directory lock, adopted via
+  baked in). **RP-40 (2026-09-20):** `manifests-created`, `manifests-kept` and
+  `manifests-replaced` moved from the Spark-only summary keys to a SHARED set — fork #322
+  writes Java's manifest counts on every operation, and Spark's own append summaries carry
+  them too (measured against Spark 4.1.2 tonight), so the twin having them is parity, not drift is materialized at its baked-in path under a directory lock, adopted via
   `CALL system.register_table` at `v5`, hit with the production
   `UPDATE SET * / INSERT *` MERGE twice and the weekly CALLs
   (`expire_snapshots` / `rewrite_manifests` / `rewrite_data_files` binpack /
@@ -1629,9 +1632,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   1, 5, 20, 50, 99, 100, 101, 110, 120 for the manifest count and the data-file count. The
   suite replays each series through RePark's own append commit path (`INSERT INTO … BY NAME`
   → `commit_append_to`) and asserts Spark's numbers at every probe, plus the headline cell
-  (100 default appends → ONE manifest, 100 files, 100 rows) and the escape hatch. Two strict
-  xfails name their fork asks: the `manifests-created`/`-kept`/`-replaced` summary keys
-  (fork #322) and the bare `INSERT INTO` statement, which plans on the fork's
+  (100 default appends → ONE manifest, 100 files, 100 rows) and the escape hatch. **RP-40 (2026-09-20):** fork #322 stamps
+  `manifests-created`/`-kept`/`-replaced` on every operation, so that pin is a plain assertion
+  (five appends at `min-count-to-merge=5` stamp `1 / 0 / 4`) and registry row
+  ICE-MERGE-APPEND-SUMMARY-1 is FIXED. One strict xfail is left, naming its fork ask: the bare
+  `INSERT INTO` statement, which plans on the fork's
   `IcebergCommitExec` (`fast_append`) and cannot be routed from this repository at pin
   `44834673`; today's fork-side number is pinned beside it so the fork's fix reds it.
   The C-005 regression half lives here too: a v3 table's `_row_id` stays contiguous and its

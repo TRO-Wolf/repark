@@ -53,10 +53,12 @@ _SPARK_ONLY_SUMMARY_KEYS = (
     "engine-name",
     "engine-version",
     "iceberg-version",
+    "spark.app.id",
+)
+_SHARED_MANIFEST_SUMMARY_KEYS = (
     "manifests-created",
     "manifests-kept",
     "manifests-replaced",
-    "spark.app.id",
 )
 _REPARK_METADATA_NAME = re.compile(r"^\d{5}-[0-9a-f-]{36}\.metadata\.json$")
 _TRANSFORM_REFUSAL = (
@@ -631,6 +633,7 @@ def test_spark_created_and_repark_created_metadata_shapes(tmp_path: Path) -> Non
     spark_keys = set(spark_doc["snapshots"][0]["summary"])
     twin_keys = set(twin_doc["snapshots"][0]["summary"])
     assert set(_SPARK_ONLY_SUMMARY_KEYS) <= spark_keys - twin_keys
+    assert set(_SHARED_MANIFEST_SUMMARY_KEYS) <= spark_keys & twin_keys
     assert _REPARK_ONLY_SUMMARY_KEY in twin_keys - spark_keys
 
 

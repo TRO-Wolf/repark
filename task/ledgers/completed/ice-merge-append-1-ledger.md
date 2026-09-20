@@ -1,3 +1,11 @@
+> **ERRATA 2026-09-20 (RP-40).** C-006's declared half is closed. Fork #322 stamps Java's
+> `manifests-created` / `-kept` / `-replaced` on every operation, so this unit's strict xfail
+> xpassed at the RP-40 pin and is a plain assertion now: five appends at
+> `commit.manifest.min-count-to-merge=5` stamp `1 / 0 / 4`. Registry row
+> `ICE-MERGE-APPEND-SUMMARY-1` is FIXED. The other declared half — the bare `INSERT INTO` door,
+> which commits inside the fork's `IcebergCommitExec` — is unchanged and still carries its fork
+> ask. Nothing was synthesised engine-side at any point, which is why the row could wait.
+
 # Unit ledger — ICE-MERGE-APPEND-1 · an INSERT commits through `merge_append`, as Spark's `newAppend()` does
 
 **Date:** 2026-09-19 · **Branch:** `fix/ice-merge-append-1` · **Base:** `main` `859c6506` ·
