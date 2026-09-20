@@ -353,6 +353,19 @@ here because no cell was recorded for it, and this unit does not write an
 expectation it has not measured. Round 6 or a follow-on unit should record
 `QD-DYN-*` / `QD-ALL-*` and close it.
 
+**New and reported — the oracle is ahead of the commit.** With C-059 in, all four
+`QD-MOR-*` refusals match Spark. The fifth cell, the one that COMMITS, does not:
+RePark's overwrite snapshot carries `total-delete-files=1` and no
+`removed-delete-files`, where Spark carries `removed-delete-files=1` and
+`total-delete-files=0` (harness replay: 10 of 11 equal, data rows equal). The
+fork's overwrite action does not remove delete files at all — its summary
+collector says as much in its own `remove_file` — so a static partition overwrite
+of a merge-on-read partition leaves that partition's position-delete file live
+against a data file that is gone. Reads stay correct; the delete-file count is
+overstated and the file leaks. The oracle answers SPARK's number anyway, because
+the refusal is the user-visible contract and stamping an extra Spark refuses is
+the louder divergence. Fork ask filed in the registry row.
+
 **Still open, unchanged from §8:** the owned writers' random v4 UUID file names
 against the fork's time-ordered v7, which wants a workspace manifest edit this
 brief forbids.

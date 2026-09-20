@@ -3568,6 +3568,23 @@ the pin rather than obeying it.
     EMPTY source stages nothing and still clears a live partition. Pinned; that revert now
     reds it and the three delete-side pins. C-061.
   - **Fixture:** `ice-session-write-conf-1 oracle check clean (106 cells)`. C-062.
+  - **OPEN and reported — the oracle is ahead of the commit (measured 2026-09-20).** With
+    C-059 in, all four `QD-MOR-*` refusals match Spark exactly, but the one cell that
+    COMMITS does not: replaying `QD-MOR-FREE` against RePark gives `total-delete-files=1`
+    and `total-position-deletes=1` with no `removed-delete-files` / `removed-position-deletes`
+    at all, where Spark commits `removed-delete-files=1`, `removed-position-deletes=1` and
+    `total-delete-files=0` (10 of 11 cells equal; this is the eleventh, and the data rows are
+    equal). The fork's overwrite action does not remove delete files — its own summary
+    collector says so: "no Rust commit path REMOVES delete files yet (`RowDelta.removeDeletes`
+    / delete-manifest filtering are deferred)". So a static partition overwrite of a
+    merge-on-read partition leaves that partition's position-delete file live and referencing
+    a data file that is gone. Reads are correct (the delete file's data file is no longer in
+    the scan), but the delete-file count is overstated and the file leaks until a rewrite.
+    **The collision oracle deliberately answers Spark's number rather than RePark's**, because
+    the refusal is what a user sees and stamping an extra Spark refuses is the louder
+    divergence; the gap is the fork's to close. **Fork ask:** give `OverwriteFiles` /
+    `ReplacePartitions` the delete-manifest filtering Java's `MergingSnapshotProducer` has, so
+    an overwrite drops the delete files whose data files it drops.
   - **OPEN and reported, measured only for the static arm.** The dynamic
     `overwritePartitions` arm (`replaced_data_files`) and the whole-table replace-all arm
     (`live_data_files`) have the SAME delete-file shape the static arm just closed, and
