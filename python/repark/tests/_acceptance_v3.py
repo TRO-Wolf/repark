@@ -48,12 +48,12 @@ V3_MERGE_VIEW = "v3_merge_view"
 V3_ADOPTED_SUFFIX = "_adopted"
 DELETION_VECTOR_CONTENT = POSITION_DELETE_CONTENT
 DELETION_VECTOR_FILE_FORMAT = "PUFFIN"
-V3_EXPECTED_DELETE_FILES_AFTER_DELETE = 1
-V3_EXPECTED_DELETE_FILES_AFTER_MERGE = 2
+V3_EXPECTED_DELETE_FILES_AFTER_DELETE = 0
+V3_EXPECTED_DELETE_FILES_AFTER_MERGE = 1
 V3_EXPECTED_DELETE_FILES_AFTER_REWRITE = 0
-V3_EXPECTED_REWRITTEN_DATA_FILES = 12
+V3_EXPECTED_REWRITTEN_DATA_FILES = 11
 V3_EXPECTED_ADDED_DATA_FILES = 2
-V3_EXPECTED_REMOVED_DELETE_FILES = 2
+V3_EXPECTED_REMOVED_DELETE_FILES = 1
 V3_EXPECTED_SNAPSHOTS_BEFORE_EXPIRE = 13
 V3_EXPECTED_SNAPSHOTS_AFTER_EXPIRE = 1
 V3_EXPECTED_PRE_MERGE_LINEAGE: tuple[tuple[int, int, int], ...] = (
@@ -148,7 +148,13 @@ def v3_ctas_sql(table: str, source_view: str) -> str:
 
 
 def v3_row_delete_sql(table: str, id_col: str, row_id: int) -> str:
-    """The one row-scoped delete in this harness: a single key, never an unfiltered statement."""
+    """The one row-scoped delete in this harness: a single key, never an unfiltered statement.
+
+    The harness appends one id per statement, so the key's data file holds only that row and
+    the delete is answered from metadata — the file is removed and no deletion vector is
+    written, which is what Spark does for the same statement (ICE-META-DELETE-1). The v3
+    deletion vectors this harness exercises come from the MERGE that follows.
+    """
     return f"DELETE FROM {table} WHERE {id_col} = {row_id}"
 
 

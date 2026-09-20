@@ -6603,20 +6603,23 @@ the pin rather than obeying it.
   `fix/ice-promote-read-1`; local override until that pin bump lands).
 - **Rationale** — FIXED. The swapped read was silent.
 
-### V3-COV-4 — a MoR `DELETE` covering every row writes a full-coverage DV where Spark drops the file
+### V3-COV-4 — a MoR `DELETE` covering every row writes a full-coverage DV where Spark drops the file — **FIXED 2026-09-20 (ICE-META-DELETE-1)**
 
-- **repark** — `DELETE FROM t WHERE id > 0` on a merge-on-read v3 table whose predicate matches
-  every row of the single data file commits one Puffin deletion vector with
-  `record_count = 4`; the data file stays live. The rows read back empty, which is correct.
+- **repark** — **FIXED 2026-09-20.** `DELETE FROM t WHERE id > 0` on a merge-on-read v3 table
+  whose predicate matches every row of the single data file is now answered from metadata: the
+  data file is removed, `t.delete_files` is empty, and the recorded RePark answer for
+  `delete-all-rows-mor` is byte-identical to Spark's recorded answer, so the cell's verdict moves
+  from DIVERGES to EQUAL. Before the fix it committed one Puffin deletion vector with
+  `record_count = 4` and left the data file live (the rows read back empty either way).
 - **Apache Spark** — commits the same delete as a metadata delete: the data file is removed and
   `t.delete_files` is empty. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[delete-all-rows-mor]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[delete-all-rows-mor]`
-- **Rationale** — BACKLOG. Not a wrong answer: both engines read the same rows, and both
-  time-travel correctly. It is a storage-shape divergence — a whole-file delete leaves RePark
-  paying a DV read on every later scan and leaves the bytes on disk until an expire. The fix is
-  the file-coverage check Java's `SparkPositionDeltaWrite` makes before choosing the delete
-  path; it is not local to any statement handler, so it is queued rather than taken here.
+- **Rationale** — FIXED. It was never a wrong answer — both engines read the same rows — but the
+  storage shape cost a DV read on every later scan and left the bytes on disk until an expire.
+  The fix is the file-coverage check itself, taken as ICE-META-DELETE-1: the decision is Java's
+  `SparkTable.canDeleteUsingMetadata`, reached from both doors before the row-level path, so it
+  is not local to a statement handler — which is why this row waited for it.
 
 ### V3-COV-5 — `ALTER TABLE … WRITE ORDERED BY` is unimplemented
 

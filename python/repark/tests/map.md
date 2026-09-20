@@ -1872,6 +1872,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **RP-23 (2026-09-17):** `create-v3-properties` flips DIVERGES→EQUAL — the codec stamp was
   its sole open difference.
   pins: rp-23-pin-bump/C-001
+  **ICE-META-DELETE-1 (2026-09-20):** `delete-all-rows-mor` flips DIVERGES→EQUAL — a merge-on-read
+  DELETE covering every row of its data file is answered from metadata, so the file is removed and
+  no deletion vector is written, and the re-measured RePark answer is byte-identical to the
+  recorded Spark half. Registry row V3-COV-4 is FIXED.
+  pins: ice-meta-delete-1/C-001
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** `insert-overwrite-partition-dynamic` flips
   DIVERGES→EQUAL — static-mode `PARTITION (part)` now replaces the whole table, and
   `_v3_statement_coverage_repark.py` carries the re-measured answer, equal to the recorded
@@ -5580,6 +5585,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `part` reaches the five-file `min-input-files` floor and `_row_id` assignment stays sequential —
   a two-row CTAS and two-row appends both shuffled survivor ids between runs), `v3_ctas_sql`
   (`PARTITIONED BY (part)`, no IF NOT EXISTS), `v3_row_delete_sql`, `v3_merge_source_sql`,
+  — **ICE-META-DELETE-1 (2026-09-20):** because each append writes one row into its own file,
+  `v3_row_delete_sql`'s single-key DELETE now covers a whole file and is answered from metadata,
+  as Spark answers it: 0 delete files after the DELETE (was 1), 1 after the MERGE (was 2), 11
+  rewritten data files (was 12) and 1 removed delete file (was 2). The harness's deletion-vector
+  coverage comes from the MERGE that follows. pins: ice-meta-delete-1/C-001 —
   `delete_file_rows`, `v3_lineage_rows`, `v3_ordered_rows`, `v3_data_files_per_partition`
   (arms `V3_FILES_PER_PARTITION`: the appends must land 5+5, exactly AT Spark's
   `min-input-files` floor, or step 6 is a no-op — asserted, not assumed),
