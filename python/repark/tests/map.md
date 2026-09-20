@@ -3566,6 +3566,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The fixture above is the recorder's `record` output on live Spark 4.1.2
   (two fresh warehouses byte-identical; every non-path observation agrees
   with `spark-qc3.json`), committed with `secs` 0.0 throughout.
+  Round 3 (2026-09-19, run 25c, IPI-30): four new cells (empty-array refusal,
+  nested name, struct refusal, duplicate) plus a stored blob-order recording
+  on every table-stats cell; the pins assert the full statistics list (the
+  twice cell keeps one entry), the stored order unsorted, the registered path
+  tokens against `out-rel`, and the rewrite file-list shapes plus staged
+  location against the oracle with the single-file R-002 delta. The nested
+  name stays `xfail(strict)` (the fork scan has no nested projection); the
+  memory catalog's `NNNNN-<uuid>.metadata.json` basenames diverge from the
+  oracle Hadoop `vN` names and are pinned by shape, not token.
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells

@@ -180,6 +180,8 @@ def statistics_entries(metadata: dict[str, Any]) -> list[list[list[Any]]]:
 
 
 _SPARK_TO_ARROW: dict[str, str] = {"bigint": "int64", "int": "int32", "string": "string"}
+_CANON_UUID = re.compile(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")
+_STAGING_ID = re.compile(r"copy-table-staging-(?:<uuid>|[0-9a-fA-F-]+)")
 
 
 def check_columns(arrow: Any, cell_id: str) -> None:
@@ -279,6 +281,31 @@ def test_ancestors_positional_id(spark: Any, tmp_path: Path) -> None:
     check_ancestors(spark, tmp_path / "wh", sql, "QP-ANC-POSITIONAL-ID", 2)
 
 
+def statistics_order(metadata: dict[str, Any]) -> list[list[Any]]:
+    """Return per-entry blob field ids in stored order with snapshot positions."""
+    order = snapshot_order(metadata)
+    out = []
+    for entry in metadata.get("statistics", []):
+        out.append(
+            [
+                order.get(entry.get("snapshot-id")),
+                [blob.get("fields", []) for blob in entry.get("blob-metadata", [])],
+            ]
+        )
+    return sorted(out, key=repr)
+
+
+def stats_path_label(path: str, metadata: dict[str, Any]) -> str:
+    """Normalize a statistics path with snapshot and uuid markers like the oracle."""
+    ordered = sorted(
+        metadata.get("snapshots", []), key=lambda s: (s["timestamp-ms"], s["snapshot-id"])
+    )
+    out = re.sub(r"^.*/metadata/", "metadata/", path)
+    out = out.replace(str(ordered[0]["snapshot-id"]), "<s0>")
+    out = out.replace(str(metadata.get("current-snapshot-id")), "<cur>")
+    return _CANON_UUID.sub("<uuid>", out)
+
+
 def check_table_stats(session: Any, warehouse: Path, sql: str, cell: str) -> None:
     """Assert compute_table_stats path registration and statistics entries."""
     arrow = session.sql(sql).to_arrow()
@@ -290,8 +317,9 @@ def check_table_stats(session: Any, warehouse: Path, sql: str, cell: str) -> Non
     registered = metadata["statistics"][-1]["statistics-path"]
     assert rows[0]["statistics_file"] == registered
     assert registered.startswith(table_location(warehouse, "t") + "/metadata/")
-    assert re.fullmatch(r".*/metadata/[0-9]+-[0-9a-f-]+\.stats", registered), registered
-    assert statistics_entries(metadata)[-1:] == CELLS[cell]["obs"]["statistics"]
+    assert stats_path_label(registered, metadata) == CELLS[cell]["obs"]["out-rel"][0]
+    assert statistics_entries(metadata) == CELLS[cell]["obs"]["statistics"]
+    assert statistics_order(metadata) == CELLS[cell]["obs"]["statistics-order"]
     check_native_refused(sql)
 
 
@@ -317,7 +345,7 @@ def test_table_stats_columns(spark: Any, tmp_path: Path) -> None:
 
 
 def test_table_stats_columns_two(spark: Any, tmp_path: Path) -> None:
-    """compute_table_stats reversed columns land in schema order. pins: ice-procs-route-1/C-007"""
+    """compute_table_stats reversed columns keep caller order. pins: ice-procs-route-1/C-007"""
     seed_three(spark)
     sql = (
         f"CALL {CATALOG}.system.compute_table_stats(table => 'ns.t', "
@@ -331,6 +359,51 @@ def test_table_stats_unknown_column(spark: Any) -> None:
     seed_three(spark)
     sql = f"CALL {CATALOG}.system.compute_table_stats(table => 'ns.t', columns => array('nope'))"
     check_refusal(spark, sql, "QP-CTS-COLUMNS-UNKNOWN")
+
+
+def test_table_stats_empty_array(spark: Any, tmp_path: Path) -> None:
+    """compute_table_stats empty columns refuses. pins: ice-procs-route-1/C-008"""
+    seed_three(spark)
+    sql = f"CALL {CATALOG}.system.compute_table_stats(table => 'ns.t', columns => array())"
+    check_refusal(spark, sql, "QP-CTS-EMPTY-ARRAY")
+    assert table_metadata(tmp_path / "wh", "t").get("statistics", []) == []
+
+
+def seed_nested(spark: Any) -> None:
+    """Create the struct seed table for nested column shapes."""
+    spark.sql(
+        f"CREATE TABLE {TABLE} (id BIGINT, st STRUCT<a: INT, b: STRING>) USING iceberg"
+    ).to_arrow()
+    spark.sql(
+        f"INSERT INTO {TABLE} VALUES (1, named_struct('a', 1, 'b', 'x')), "
+        "(2, named_struct('a', 2, 'b', 'y'))"
+    ).to_arrow()
+
+
+@pytest.mark.xfail(
+    strict=True, reason="fork ComputeTableStats has no nested scan projection; see ledger R-005"
+)
+def test_table_stats_nested_name(spark: Any, tmp_path: Path) -> None:
+    """compute_table_stats st.a resolves to the nested field id. pins: ice-procs-route-1/C-007"""
+    seed_nested(spark)
+    sql = f"CALL {CATALOG}.system.compute_table_stats(table => 'ns.t', columns => array('st.a'))"
+    check_table_stats(spark, tmp_path / "wh", sql, "QP-CTS-NESTED-NAME")
+
+
+def test_table_stats_struct_arg(spark: Any) -> None:
+    """compute_table_stats struct column refuses as non-primitive. pins: ice-procs-route-1/C-008"""
+    seed_nested(spark)
+    sql = f"CALL {CATALOG}.system.compute_table_stats(table => 'ns.t', columns => array('st'))"
+    check_refusal(spark, sql, "QP-CTS-STRUCT-ARG")
+
+
+def test_table_stats_duplicate(spark: Any, tmp_path: Path) -> None:
+    """compute_table_stats duplicate column dedupes to one blob. pins: ice-procs-route-1/C-007"""
+    seed_three(spark)
+    sql = (
+        f"CALL {CATALOG}.system.compute_table_stats(table => 'ns.t', columns => array('id', 'id'))"
+    )
+    check_table_stats(spark, tmp_path / "wh", sql, "QP-CTS-DUP")
 
 
 def test_table_stats_types(spark: Any, tmp_path: Path) -> None:
@@ -390,6 +463,19 @@ def norm_value(value: Any) -> Any:
     return value
 
 
+def partition_path_label(path: Any, metadata: dict[str, Any]) -> Any:
+    """Normalize a partition-statistics path with snapshot and uuid markers."""
+    if path is None:
+        return None
+    ordered = sorted(
+        metadata.get("snapshots", []), key=lambda s: (s["timestamp-ms"], s["snapshot-id"])
+    )
+    out = re.sub(r"^.*/metadata/", "metadata/", str(path))
+    out = _CANON_UUID.sub("<uuid>", out)
+    out = out.replace(str(metadata.get("current-snapshot-id")), "<cur>")
+    return out.replace(str(ordered[0]["snapshot-id"]), "<s0>")
+
+
 def check_partition_stats(session: Any, warehouse: Path, sql: str, cell: str) -> None:
     """Assert compute_partition_stats file registration, entry, contents."""
     import pyarrow.parquet as parquet
@@ -402,6 +488,10 @@ def check_partition_stats(session: Any, warehouse: Path, sql: str, cell: str) ->
     entries = metadata.get("partition-statistics", [])
     assert len(entries) == 1
     assert rows[0]["partition_statistics_file"] == entries[0]["statistics-path"]
+    assert (
+        partition_path_label(entries[0]["statistics-path"], metadata)
+        == CELLS[cell]["obs"]["out-rel"][0]
+    )
     order = snapshot_order(metadata)
     assert CELLS[cell]["obs"]["partition-statistics"] == [[order[entries[0]["snapshot-id"]], True]]
     drop = {"last_updated_at", "last_updated_snapshot_id", "total_data_file_size_in_bytes"}
@@ -450,6 +540,37 @@ def test_partition_stats_v3(spark: Any, tmp_path: Path) -> None:
     check_partition_stats(spark, tmp_path / "wh", sql, "QP-CPS-V3")
 
 
+def mark_rewrite_side(side: str, source: str, target: str, staging: str) -> str:
+    """Replace rewrite path prefixes and the staging id with stable markers."""
+    out = side
+    for prefix, marker in ((source, "<src>"), (target, "<dst>"), (staging, "<stg>")):
+        if prefix and (out == prefix or out.startswith(prefix + "/")):
+            out = marker + out[len(prefix) :]
+            break
+    return _STAGING_ID.sub("copy-table-staging-<id>", out)
+
+
+def rewrite_line_shape(line: str, source: str, target: str, staging: str) -> list[str]:
+    """Reduce one file-list line to marked dirs plus the basename kind."""
+    left, _, right = line.partition(",")
+    marked = [mark_rewrite_side(side, source, target, staging) for side in (left, right)]
+    name = left.rpartition("/")[2]
+    staged = marked[0].startswith("<stg>/") or "copy-table-staging-<id>/" in marked[0]
+    if name.endswith(".parquet"):
+        kind = "deletes" if staged else "data"
+    elif name.endswith("-m0.avro"):
+        kind = "manifest"
+    elif name.startswith("snap-") and name.endswith(".avro"):
+        kind = "snap"
+    elif re.fullmatch(r"v[0-9]+\.metadata\.json", name):
+        kind = "version"
+    elif name.endswith(".metadata.json"):
+        kind = "rewritten"
+    else:
+        kind = "other:" + name
+    return [marked[0].rpartition("/")[0], marked[1].rpartition("/")[0], kind]
+
+
 def check_rewrite_path(
     session: Any, warehouse: Path, sql: str, cell: str, source: str, target: str, staging: str
 ) -> None:
@@ -459,26 +580,31 @@ def check_rewrite_path(
     rows = arrow.to_pylist()
     assert len(rows) == 1
     row = rows[0]
+    want_rows = CELLS[cell]["obs"]["rows"][0]
     assert [
         row["rewritten_manifest_file_paths_count"],
         row["rewritten_delete_file_paths_count"],
-    ] == CELLS[cell]["obs"]["rows"][0][2:]
+    ] == want_rows[2:]
     newest = max(
         (table_dir(warehouse, "t") / "metadata").glob("*.metadata.json"),
         key=lambda p: (p.stat().st_mtime_ns, p.name),
     )
     assert row["latest_version"] == newest.name
+    assert re.fullmatch(r"[0-9]{5}-[0-9a-fA-F-]+\.metadata\.json", row["latest_version"]), (
+        "the memory catalog names versions NNNNN-<uuid>.metadata.json where "
+        f"the oracle Hadoop door names them {want_rows[0]}"
+    )
     listed = row["file_list_location"]
     if listed == "N/A":
-        assert CELLS[cell]["obs"]["rows"][0][1] == "N/A"
+        assert want_rows[1] == "N/A"
         check_native_refused(sql)
         return
     assert listed.startswith(staging) and listed.endswith("/file-list")
     actual_staging = listed[: -len("/file-list")]
+    file_list_token = mark_rewrite_side(listed, source, target, actual_staging)
+    assert file_list_token == want_rows[1].replace("<uuid>", "<id>"), file_list_token
     lines = Path(listed.replace("file:", "")).read_text(encoding="utf-8").splitlines()
     assert lines, "file list is empty"
-    staged_manifests = 0
-    staged_deletes = 0
     staged_metadata: list[str] = []
     for line in lines:
         parts = line.split(",")
@@ -487,19 +613,29 @@ def check_rewrite_path(
         assert left.startswith(source) or (staging and left.startswith(staging)), line
         assert right.startswith(target), line
         assert Path(left.replace("file:", "")).name == Path(right.replace("file:", "")).name
-        if left.startswith(actual_staging) and left.endswith(".avro"):
-            staged_manifests += 1
-        if left.startswith(actual_staging) and left.endswith(".parquet"):
-            staged_deletes += 1
         if left.endswith(".metadata.json"):
             staged_metadata.append(left)
-    assert staged_manifests >= row["rewritten_manifest_file_paths_count"]
-    assert staged_deletes == row["rewritten_delete_file_paths_count"]
+    live_shapes = sorted(rewrite_line_shape(line, source, target, actual_staging) for line in lines)
+    want_shapes = sorted(
+        rewrite_line_shape(line, "<src>", "<dst>", "<stg>")
+        for line in CELLS[cell]["obs"]["file-list"]
+    )
+    assert [s for s in live_shapes if s[2] not in ("rewritten", "version")] == [
+        s for s in want_shapes if s[2] not in ("rewritten", "version")
+    ]
+    live_meta = [s for s in live_shapes if s[2] in ("rewritten", "version")]
+    want_meta = [s for s in want_shapes if s[2] in ("rewritten", "version")]
+    assert len(live_meta) == 1 and live_meta[0][2] == "rewritten", live_meta
+    assert want_meta and all(s[2] == "version" for s in want_meta), want_meta
     assert staged_metadata, "file list names no staged metadata.json"
     staged_doc = json.loads(
         Path(staged_metadata[-1].replace("file:", "")).read_text(encoding="utf-8")
     )
     assert staged_doc.get("location") == target
+    assert (
+        mark_rewrite_side(staged_doc.get("location"), source, target, actual_staging)
+        == CELLS[cell]["obs"]["staged-metadata-location"]
+    )
     check_native_refused(sql)
 
 
