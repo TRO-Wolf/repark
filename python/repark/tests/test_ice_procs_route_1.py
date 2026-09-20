@@ -143,6 +143,15 @@ def newest_metadata_name(warehouse: Path, name: str) -> str:
     return max(files, key=lambda p: (p.stat().st_mtime_ns, p.name)).name
 
 
+def snapshot_state(metadata: dict[str, Any]) -> tuple[list[int], int | None, Any]:
+    """Return snapshot ids, current id, and format version for stability pins."""
+    return (
+        [s["snapshot-id"] for s in metadata.get("snapshots", [])],
+        metadata.get("current-snapshot-id"),
+        metadata.get("format-version"),
+    )
+
+
 def table_location(warehouse: Path, name: str) -> str:
     """Return the table location without a trailing slash."""
     return str(table_metadata(warehouse, name).get("location", "")).rstrip("/")
@@ -315,11 +324,13 @@ def stats_path_label(path: str, metadata: dict[str, Any]) -> str:
 
 def check_table_stats(session: Any, warehouse: Path, sql: str, cell: str) -> None:
     """Assert compute_table_stats path registration and statistics entries."""
+    before = snapshot_state(table_metadata(warehouse, "t"))
     arrow = session.sql(sql).to_arrow()
     check_columns(arrow, cell)
     rows = arrow.to_pylist()
     assert len(rows) == len(CELLS[cell]["obs"]["out-rel"]) == 1
     metadata = table_metadata(warehouse, "t")
+    assert snapshot_state(metadata) == before
     assert metadata.get("statistics", [])
     registered = metadata["statistics"][-1]["statistics-path"]
     assert rows[0]["statistics_file"] == registered
@@ -487,11 +498,13 @@ def check_partition_stats(session: Any, warehouse: Path, sql: str, cell: str) ->
     """Assert compute_partition_stats file registration, entry, contents."""
     import pyarrow.parquet as parquet
 
+    before = snapshot_state(table_metadata(warehouse, "t"))
     arrow = session.sql(sql).to_arrow()
     check_columns(arrow, cell)
     rows = arrow.to_pylist()
     assert len(rows) == len(CELLS[cell]["obs"]["out-rel"]) == 1
     metadata = table_metadata(warehouse, "t")
+    assert snapshot_state(metadata) == before
     entries = metadata.get("partition-statistics", [])
     assert len(entries) == 1
     assert rows[0]["partition_statistics_file"] == entries[0]["statistics-path"]
@@ -582,7 +595,10 @@ def check_rewrite_path(
     session: Any, warehouse: Path, sql: str, cell: str, source: str, target: str, staging: str
 ) -> None:
     """Assert rewrite_table_path rows, file list, and staged metadata."""
+    pre_meta = table_metadata(warehouse, "t")
     pre_newest = newest_metadata_name(warehouse, "t")
+    pre_state = snapshot_state(pre_meta)
+    pre_location = pre_meta.get("location")
     arrow = session.sql(sql).to_arrow()
     check_columns(arrow, cell)
     rows = arrow.to_pylist()
@@ -594,6 +610,10 @@ def check_rewrite_path(
         row["rewritten_delete_file_paths_count"],
     ] == want_rows[2:]
     assert row["latest_version"] == pre_newest
+    post_meta = table_metadata(warehouse, "t")
+    assert snapshot_state(post_meta) == pre_state
+    assert post_meta.get("location") == pre_location
+    assert newest_metadata_name(warehouse, "t") == pre_newest
     assert re.fullmatch(r"[0-9]{5}-[0-9a-fA-F-]+\.metadata\.json", row["latest_version"]), (
         "the memory catalog names versions NNNNN-<uuid>.metadata.json where "
         f"the oracle Hadoop door names them {want_rows[0]}"

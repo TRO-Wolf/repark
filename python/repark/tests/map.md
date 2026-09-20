@@ -3579,7 +3579,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   recorded Spark message, so the unknown-column schema dump (with the
   trailing-space fix in the router) can fail the pin; `check_rewrite_path`
   pins `latest_version` to the pre-CALL metadata basename and the staged
-  metadata lines to the oracle's recorded version count.
+  metadata lines to the oracle's recorded version count; the three check
+  helpers pin pre/post snapshot stability (stats keep snapshots, current id,
+  and format version; rewrite also keeps location and metadata file).
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells
