@@ -34,9 +34,14 @@ first-link collisions across the 310-map tree: `briefs` (1), `crates/repark-core
 `python/repark/tests` (9), `scripts` (1), `task` (1), `task/ledgers/completed` (1),
 `task/port` (2). Two were true duplicate rows (`python/repark/tests` `test_array_null_1.py` stub,
 `task/ledgers/completed` `java-double-fd-1-ledger.md` stub) plus one duplicated `## Pointers`
-block in `python/repark/tests`; the rest were rows whose first link was an incidental shared
-pointer (a sub-map, a baseline doc, `../map.md`) — resolved by linking each row's own subject or
-re-pointing file-named links at the real files. The tree is clean with the rule armed.
+block in `python/repark/tests`. Two more were same-file dual-campaign pairs — each campaign owns
+a row for the same file and both rows stay, the second filename unlinked (backticked), which
+hides the pair from union merges and the duplicate detector: `python/repark/tests/map.md` :1270
+and :1358 shared first-link `test_examples_window_catalog.py` (EX-21 vs EX-20), and :2353 and
+:2358 shared first-link `test_functions_d.py` (FNP-11B vs FN-D). The rest were rows whose first
+link was an incidental shared pointer (a sub-map, a baseline doc, `../map.md`) — resolved by
+linking each row's own subject or re-pointing file-named links at the real files. The tree is
+clean with the rule armed.
 
 **Not in this unit:** the GitHub server-side mergeability measurement above; no map format
 change, no sorting, no generator (step 2 owns map migration); no Rust or package source.
