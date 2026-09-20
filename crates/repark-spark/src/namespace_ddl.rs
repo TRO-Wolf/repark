@@ -40,12 +40,12 @@ pub(crate) async fn execute_drop_table(
         if if_exists && !handle.table_exists(&ident).await.map_err(iceberg_err)? {
             continue;
         }
+        handle.drop_table(&ident).await.map_err(iceberg_err)?;
         if purge {
             let _swept =
                 purge::purge_table_files(handle.as_ref(), &ident, [catalog, namespace, table])
                     .await?;
         }
-        handle.drop_table(&ident).await.map_err(iceberg_err)?;
         reregister(ctx, handle.clone(), catalog, namespace).await?;
     }
     ctx.read_empty()

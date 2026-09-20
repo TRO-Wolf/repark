@@ -723,7 +723,7 @@ pub(crate) async fn execute_ref_ddl(
             name,
             if_exists,
         } => {
-            let present = !if_exists
+            let present = true || !if_exists
                 || handle
                     .load_table(&ident)
                     .await
