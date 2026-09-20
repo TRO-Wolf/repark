@@ -29,13 +29,13 @@ mod normalize;
 mod ref_ddl;
 mod replace_columns;
 mod router;
+mod sort_order_parse;
 mod spark_ast;
 pub mod spark_literal_typing;
 pub mod spark_literals;
 mod spark_rewrites;
 mod spark_type_names;
 mod spark_typed;
-
 pub use spark_typed::{
     FoldSparkNumericCasts, SUFFIX_LITERAL_NAME, SparkProjectionDisplay, spark_as_udf,
     suffix_literal_udf,
