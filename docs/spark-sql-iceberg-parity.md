@@ -3133,6 +3133,76 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### ICE-MERGE-APPEND-1 — an INSERT commits through a MERGING append — **FIXED 2026-09-19 (RePark paths)**
+
+- **repark** — **FIXED 2026-09-19.** Every append commit site RePark owns commits through the
+  fork's `merge_append()` (Java `MergeAppend`, what `Table.newAppend()` returns), not
+  `fast_append()`: `write/append.rs::commit_append` (the public `append()` and both doors' CTAS),
+  `write/commit_target.rs::commit_append_to` (`INSERT INTO … BY NAME`, branch-targeted),
+  `write/write_options.rs::commit_append_with_summary` (an `INSERT` or CTAS carrying write
+  options) and the staged-table CTAS append in `repark-spark/src/ctas.rs`. The three
+  `commit.manifest*` table properties now take effect: with defaults the hundredth append
+  replaces 99 manifests with 1, `commit.manifest.min-count-to-merge=5` holds the table between
+  1 and 4 manifests over 120 appends, and `commit.manifest-merge.enabled=false` keeps one
+  manifest per append. Before this unit all three variants produced one manifest per append
+  (120 → 120) and both properties were ignored.
+- **Apache Spark** — `SparkWrite$BatchAppend.commit` calls `Table.newAppend()`, which
+  `BaseTransaction.newAppend()` constructs as `org.apache.iceberg.MergeAppend`; only
+  `SparkWrite$StreamingAppend` calls `newFastAppend()`, and RePark has no streaming writer.
+  The recorded series is 120 sequential single-row `INSERT`s into one v2 table in each of the
+  three property variants, probed at 1, 5, 20, 50, 99, 100, 101, 110, 120.
+  *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19; producer mapping
+  disassembled with `javap -p -c` from `iceberg-spark-runtime-4.1_2.13:1.11.0`.)*
+- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_by_name_append_series_matches_spark`
+  (all three variants) and
+  `crates/repark-iceberg/src/tests/merge_append_series.rs::defaults_series_matches_spark`,
+  `…::min_count_to_merge_series_matches_spark`, `…::merge_disabled_series_matches_spark`
+- **Rationale** — FIXED. Two residues stay open below, both fork-routed:
+  `ICE-MERGE-APPEND-SUMMARY-1` and `ICE-MERGE-APPEND-INSERT-1`.
+  pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005
+
+### ICE-MERGE-APPEND-SUMMARY-1 — a merging append stamps no `manifests-*` summary keys — **BACKLOG 2026-09-19**
+
+- **repark** — an append snapshot's summary carries no `manifests-created`, `manifests-kept` or
+  `manifests-replaced` key, in every variant and at every append — including the commit that
+  actually replaced 99 manifests with 1. The manifest COUNTS are Spark-equal and observable from
+  `<table>.manifests`; only the summary keys are missing.
+- **Apache Spark** — EVERY append snapshot carries all three, and they describe the merge:
+  at the hundredth default append `manifests-created=1, manifests-kept=0, manifests-replaced=99`;
+  at the hundred-and-first `1 / 1 / 0`. *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0,
+  2026-09-19, `ice_merge_append_1_truth.json`.)*
+- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_merging_commit_stamps_the_manifests_summary_keys`
+  (strict xfail: it flips to a failure the moment the fork lands the keys)
+- **Rationale** — BACKLOG, fork-routed. TRIGGER: **fork #322**, extending
+  `MergeAppendAction`'s summary — the fork's own named deviation is "extra summary keys — same
+  shape as fast_append". Do NOT synthesise the three keys in RePark: a hand-rolled count that
+  drifts from what the fork's merge actually did would be worse than their absence.
+  pins: ice-merge-append-1/C-006
+
+### ICE-MERGE-APPEND-INSERT-1 — a bare `INSERT INTO` still commits through `fast_append` — **BACKLOG 2026-09-19**
+
+- **repark** — a bare `INSERT INTO cat.ns.t VALUES (…)` (and the facade's `insertInto` /
+  `saveAsTable(mode="append")`, which lower to it) falls through to DataFusion and plans on the
+  fork's provider: `IcebergCommitExec` → `IcebergWriteExec`. That exec's `InsertOp::Append` arm
+  commits through `tx.fast_append()`, so the manifest list is never merged — 100 appends leave
+  100 manifests — and the `commit.manifest*` properties are ignored on this door. Both
+  `IcebergCommitExec` and `IcebergWriteExec` are `pub(crate)` in the fork, so RePark can neither
+  reuse nor replace them at pin `44834673`. The RePark-owned append doors (`… BY NAME`, an
+  `INSERT` with write options, CTAS, the public `append()`) all merge; this one does not.
+- **Apache Spark** — the bare `INSERT INTO` **is** `SparkWrite$BatchAppend`, the merging producer:
+  the hundredth default append leaves ONE manifest. *(oracle: recorded, live PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-09-19.)*
+- **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_bare_insert_into_still_commits_through_the_fork_commit_exec`
+  (codifies today's 100 manifests and the `IcebergCommitExec` plan node) and
+  `…::test_bare_insert_into_merges_like_spark` (strict xfail on Spark's number)
+- **Rationale** — BACKLOG, fork-routed. TRIGGER: **fork ask
+  `ICE-MERGE-APPEND-COMMITEXEC`** — route `IcebergCommitExec`'s `InsertOp::Append` arm through
+  `merge_append()`, the same mapping this unit justified from the Spark bytecode. Do NOT fix it
+  by intercepting `INSERT INTO` in the RePark routers and re-staging through the write-options
+  path: that would change distribution, file layout and the conform path for every insert in the
+  engine to buy one commit-site swap.
+  pins: ice-merge-append-1/C-009
+
 ### ICE-WRITE-OPTIONS-1 — DataFrame write options on Iceberg writes — **FIXED 2026-09-17**
 
 - **repark** — **FIXED 2026-09-17.** The facade stores `DataFrameWriterV2.option` /

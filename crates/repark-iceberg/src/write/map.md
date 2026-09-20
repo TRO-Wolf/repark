@@ -225,7 +225,9 @@ repark-core's error map.
   `pub(crate)` and still calls `fast_append` (DECLARED, `ICE-MERGE-APPEND-INSERT-1`).
   `append.rs` carries no module banner and `commit_append` no summary doc line under the
   comment ban: the merge contract is stated here instead.
-  pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005, C-007
+  The routing needs no dependency movement: `Transaction::merge_append()` is already in the
+  pinned fork `44834673`, and `Cargo.toml` / `Cargo.lock` are untouched by the unit.
+  pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005, C-007, C-010
   pins: rp-5-fork-repin/C-004
   pins: ice-rtas-byname-1/C-001
 - `commit_error.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `CommitStateUnknownError`, the
