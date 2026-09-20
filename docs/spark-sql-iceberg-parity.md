@@ -153,7 +153,7 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   projection). Not a TZ-4 representation miss (data values match). Do not "fix" in
   repark by skipping the meta read.
 
-#### V3-COV-6 — the `position_deletes` metadata table is schema-only — **FIXED 2026-09-20**
+#### V3-COV-6 — FIXED 2026-09-20 (RP-42, fork #332, pin `886b94c1`): the `position_deletes` metadata table answers the deleted positions
 
 - **repark** — **FIXED 2026-09-20 (RP-42, fork `886b94c1`).** Fork #332 ported
   `PositionDeletesTable`'s scan, so `SELECT … FROM cat.ns.t.position_deletes` on a v3 table
