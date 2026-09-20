@@ -6,7 +6,9 @@ use datafusion::sql::sqlparser::ast::{
     Expr, FunctionArguments, Ident, Statement, VisitMut, VisitorMut,
 };
 
-const REFUSING: &[&str] = &[
+const REFUSING: &[&str] = &["localtimestamp", "current_timezone", "now"];
+
+const MAPPED: &[&str] = &[
     "localtimestamp",
     "current_catalog",
     "current_database",
@@ -57,7 +59,7 @@ pub(crate) fn map_bare_nullary_column_error(error: DataFusionError) -> DataFusio
     let Some(name) = missing_field_name(&text) else {
         return error;
     };
-    if !REFUSING.contains(&name.to_ascii_lowercase().as_str()) {
+    if !MAPPED.contains(&name.to_ascii_lowercase().as_str()) {
         return error;
     }
     let candidates = suggestion_list(&text);
@@ -156,6 +158,41 @@ mod tests {
                 .remove(0);
         demote_refusing_nullary_calls(&mut statement);
         assert!(statement.to_string().contains("localtimestamp()"));
+    }
+
+    #[test]
+    fn parenthesised_current_catalog_survives_demotion() {
+        use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+        use datafusion::sql::sqlparser::parser::Parser;
+        let mut statement =
+            Parser::parse_sql(&DatabricksDialect {}, "SELECT current_catalog() AS v")
+                .unwrap()
+                .remove(0);
+        demote_refusing_nullary_calls(&mut statement);
+        assert!(statement.to_string().contains("current_catalog()"));
+    }
+
+    #[test]
+    fn bare_current_catalog_parses_as_identifier() {
+        use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+        use datafusion::sql::sqlparser::parser::Parser;
+        let mut statement = Parser::parse_sql(&DatabricksDialect {}, "SELECT current_catalog AS v")
+            .unwrap()
+            .remove(0);
+        demote_refusing_nullary_calls(&mut statement);
+        assert!(!format!("{statement:?}").contains("Function"));
+    }
+
+    #[test]
+    fn bare_current_catalog_column_error_stays_mapped() {
+        let mapped =
+            map_bare_nullary_column_error(schema_error("current_catalog", &["t.a", "t.b"]));
+        let text = mapped.to_string();
+        assert!(
+            text.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]")
+                && text.contains("with name `current_catalog` cannot be resolved"),
+            "{text}"
+        );
     }
 
     #[test]

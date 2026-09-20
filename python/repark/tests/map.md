@@ -1655,6 +1655,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Kiritimati / `Etc/GMT+12` session-zone pin holds the measured UTC-date defect as
   strict-xfail under registry row TZ-9.
   pins: test-hygiene-1/C-003.
+  **ICE-CATALOG-SESSION-1 (2026-09-20):** the Q14 session-name pins split —
+  `current_user` / `user` / `session_user` still refuse while `current_catalog` /
+  `current_database` / `current_schema` answer the engine defaults (value, string
+  type, non-null); the paren-less spellings stay in `Q14_REFUSING_BARE`.
+  pins: ice-catalog-session-1/C-011, C-029.
 - [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
   [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's

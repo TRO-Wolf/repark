@@ -42,6 +42,7 @@ pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;
 pub mod registration;
+pub mod session_names;
 pub mod session_time_zone;
 pub mod spark_base64;
 pub mod spark_chr;
@@ -162,6 +163,7 @@ pub fn register_all(ctx: &SessionContext) {
     }
     iceberg_system::register(ctx);
     validate::register(ctx);
+    session_names::register(ctx);
     try_invert::register(ctx);
     temporal_ctor::register(ctx);
     higher_order::register(ctx);

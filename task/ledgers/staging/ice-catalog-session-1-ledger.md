@@ -51,6 +51,19 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
   (literal `?`) while the 4.0.0 `SHOW NAMESPACES` truth table pins `.*` matching all
   (regex `.`). One datum does not overturn thirty; `filter_pattern_matches` is reused
   unchanged and the conflict is recorded here as suspected oracle drift.
+- T-1 (tree measurement, H-06 deviation): the Databricks executing parse reads paren-less
+  `current_catalog` as a bare `Identifier`, never as a `Function` — so it cannot resolve
+  as the UDF (H-06's parenthetical does not hold on this path; proven by
+  `session_names::tests::bare_session_name_does_not_resolve_as_call`). `REFUSING` loses
+  the three names per H-06, but the column-error mapper keeps them (`MAPPED`) so the
+  paren-less spellings still refuse `UNRESOLVED_COLUMN` like Spark and like the
+  `now` / `current_timezone` siblings. `Q14_REFUSING_BARE` keeps all six names; H-06's
+  drop instruction is declined with this measurement (hand-back open question).
+- T-2 (tree measurement): H-01 lives in `SparkDialect::on_session_built`, not
+  `SparkExtension::configure`. The temp-view home is captured from the same build-time
+  config between the two, and a `spark_catalog` / `default` home breaks every temp-view
+  write (the facade registers `spark_catalog` over it). Diagnosis: `q14` errored on the
+  fixture's `createOrReplaceTempView` until the move; green after.
 
 ## Proposition ledger
 
@@ -66,7 +79,7 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
 | C-008 | `USE` returns zero rows. | `use_returns_no_rows`. | **PROVEN** | Same run. pins: ice-catalog-session-1/C-008 |
 | C-009 | `USE DEFAULT` reaches the USE arm (never the generic wildcard). | `use_default_reaches_the_use_arm`. | **PROVEN** | Same run. pins: ice-catalog-session-1/C-009 |
 | C-010 | The shared completer expands 1/2/3-part names and refuses a bare name under an empty namespace with `TABLE_OR_VIEW_NOT_FOUND`. | `complete_name_expands_one_and_two_part_names`, `complete_name_bare_table_under_empty_namespace_is_not_found`. | **PROVEN** | Same run. pins: ice-catalog-session-1/C-010 |
-| C-011 | Session build defaults are `spark_catalog` / `default` unless the builder map sets the DataFusion keys explicitly. | `SparkExtension::configure` in `crates/repark-spark/src/extension.rs` + facade `test_defaults_are_spark_catalog_and_default`. | OPEN | Implemented S1; pinned S8. |
+| C-011 | Session build defaults are `spark_catalog` / `default` unless the builder map sets the DataFusion keys explicitly. | `SparkDialect::on_session_built` in `crates/repark-spark/src/dialect.rs` + `test_q14_session_names_sql_answer`. | **PROVEN** | q14 green (88 passed, 2 xfailed). pins: ice-catalog-session-1/C-011 |
 | C-012 | `CAT-CURRENT-CATALOG` replays EQUAL: `SELECT current_catalog()` answers `spark_catalog` at session start. | `test_current_catalog_answers_spark_catalog` in `python/repark/tests/test_ice_catalog_session_1.py`. | OPEN | S8. |
 | C-013 | `current_schema()` / `current_database()` track `USE`, including `""` after catalog-only `USE`. | `test_use_catalog_leaves_namespace_empty`, `test_current_database_alias`. | OPEN | S8. |
 | C-014 | `CAT-USE-CATALOG-NS` replays EQUAL. | `test_use_catalog_ns_cell` + `test_two_part_name_resolves_against_current_catalog`. | OPEN | S8. |
@@ -84,10 +97,10 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
 | C-026 | `CAT-CATALOG-IMPL-INMEMORY` replays EQUAL. | `test_catalog_impl_inmemory_cell` + `kind_from_catalog_impl` unit pins. | OPEN | S8. |
 | C-027 | `CAT-TABLE-DEFAULT-OVERRIDE` replays EQUAL with override > user > default precedence on all three legs. | `test_table_default_override_cell` + `test_table_override_beats_user_property` + `test_user_property_beats_table_default` + `test_both_default_and_override_resolves_to_override`. | OPEN | S8. |
 | C-028 | Facade `_catalog_state` agrees with the engine after `USE`, `setCurrentCatalog` / `setCurrentDatabase`, and `SET datafusion.catalog.*`. | `test_use_updates_facade_state`, `test_set_current_catalog_updates_engine_state`, `test_set_datafusion_catalog_keys_updates_facade_state`. | OPEN | S8. |
-| C-029 | `current_catalog` / `current_schema` / `current_database` leave `bare_nullary.rs` `REFUSING`; the q14 pins assert answers. | Rewritten `test_q14_session_names_sql_divergence` + `test_q14_bare_refusing_names` + `parenthesised_current_catalog_survives_demotion`. | OPEN | S2. |
+| C-029 | `current_catalog` / `current_schema` / `current_database` leave `bare_nullary.rs` `REFUSING`; the q14 pins assert answers. | Rewritten `test_q14_session_names_sql_divergence` + `test_q14_session_names_sql_answer` + `parenthesised_current_catalog_survives_demotion` + `bare_current_catalog_column_error_stays_mapped`. | **PROVEN** | q14 green; `bare_nullary` 11/11; UDF 3/3. H-06 drop declined per T-1. pins: ice-catalog-session-1/C-029 |
 | C-030 | `catalog_config.rs` extraction ratchets down with `hadoop` / `InMemoryCatalog` arms and updated refusal texts. | `scripts/check_rust_file_size.py` green + `type_short_forms_resolve_each_kind` siblings. | OPEN | S7. |
 
-VERDICT: 30 clauses, 10 PROVEN, 20 OPEN, 0 REJECTED.
+VERDICT: 30 clauses, 12 PROVEN, 18 OPEN, 0 REJECTED.
 
 ## Coverage attestation
 

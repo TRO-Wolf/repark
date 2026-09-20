@@ -530,6 +530,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **R-17c-4:** the carrier holds `display` (raw echo) + canonical `zone` (extractor reader).
   **R-17c-6:** the in-crate canonicaliser mirrors the core gate (exact-case prefixes,
   zero-seconds to `±HH:MM`) and asserts the same shared table. pins: set-ansi-runtime-1/C-002
+- `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
+  `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one
+  `SessionName` impl reading `default_catalog` / `default_schema` from the invoke-time
+  `ConfigOptions`, non-nullable Utf8, `Stable`. `current_database` shares the namespace
+  source. Registers through one `register(ctx)` line (crate root 181/182).
+  pins: ice-catalog-session-1/C-012, C-013, C-029
 - `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` /
   `coerce_to_timestamp_micros` /
   `coerce_to_date32`: `Timestamp(_, Some(_))` is an LTZ instant; `Timestamp(_, None)` is NTZ

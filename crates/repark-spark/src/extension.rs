@@ -60,19 +60,6 @@ impl SessionExtension for SparkExtension {
         let verbatim =
             crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
         let config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
-        let mut config = config;
-        if !session
-            .conf
-            .contains_key("datafusion.catalog.default_catalog")
-        {
-            config.options_mut().catalog.default_catalog = "spark_catalog".to_string();
-        }
-        if !session
-            .conf
-            .contains_key("datafusion.catalog.default_schema")
-        {
-            config.options_mut().catalog.default_schema = "default".to_string();
-        }
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),

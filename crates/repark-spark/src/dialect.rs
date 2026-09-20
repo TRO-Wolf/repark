@@ -10,6 +10,22 @@ pub struct SparkDialect;
 
 #[async_trait(?Send)]
 impl SqlDialect for SparkDialect {
+    fn on_session_built(&self, ctx: &datafusion::prelude::SessionContext) {
+        let builtin = datafusion::prelude::SessionConfig::new()
+            .options()
+            .catalog
+            .clone();
+        let state = ctx.state_ref();
+        let mut guard = state.write();
+        let options = guard.config_mut().options_mut();
+        if options.catalog.default_catalog == builtin.default_catalog {
+            options.catalog.default_catalog = "spark_catalog".to_string();
+        }
+        if options.catalog.default_schema == builtin.default_schema {
+            options.catalog.default_schema = "default".to_string();
+        }
+    }
+
     async fn execute(
         &self,
         cx: EngineContext<'_>,

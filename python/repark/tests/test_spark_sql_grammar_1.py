@@ -193,6 +193,12 @@ Q14_REFUSING_BARE: list[str] = [
     "now",
 ]
 
+Q14_SESSION_NAMES_ANSWERING: list[str] = [
+    "current_catalog",
+    "current_database",
+    "current_schema",
+]
+
 
 @pytest.mark.parametrize("name", Q14_REFUSING_BARE)
 def test_q14_bare_refusing_names(spark: ReparkSession, name: str) -> None:
@@ -349,19 +355,16 @@ def test_q14_current_timezone_paren(spark: ReparkSession) -> None:
     assert table.schema.field("v").nullable is False
 
 
-Q14_SESSION_NAMES: list[str] = [
+Q14_SESSION_NAMES_REFUSING: list[str] = [
     "current_user",
     "user",
     "session_user",
-    "current_catalog",
-    "current_database",
-    "current_schema",
 ]
 
 
-@pytest.mark.parametrize("name", Q14_SESSION_NAMES)
+@pytest.mark.parametrize("name", Q14_SESSION_NAMES_REFUSING)
 def test_q14_session_names_sql_divergence(spark: ReparkSession, name: str) -> None:
-    """Q14-6/7/9/11/13/14…17: Spark answers ``string``; the SQL door still refuses.
+    """Q14-6/7/9: Spark answers ``string``; the SQL door still refuses.
 
     The Python door answers these as foldable session strings (another lane's
     design); wiring the SQL door to the same session plumbing is a P2 hand-off
@@ -369,3 +372,22 @@ def test_q14_session_names_sql_divergence(spark: ReparkSession, name: str) -> No
     """
     with pytest.raises(AnalysisException):
         _table(spark, f"SELECT {name}() AS v")
+
+
+@pytest.mark.parametrize("name", Q14_SESSION_NAMES_ANSWERING)
+def test_q14_session_names_sql_answer(spark: ReparkSession, name: str) -> None:
+    """Q14-11/13/14…17: the session-name UDFs answer the engine defaults.
+
+    ICE-CATALOG-SESSION-1 wired the SQL door to the session's
+    ``default_catalog`` / ``default_schema`` (``spark_catalog`` / ``default``
+    at build). The paren-less spellings stay refusing nullary names (the
+    ``Q14_REFUSING_BARE`` pins): the Databricks executing parse reads them as
+    bare identifiers, so they cannot resolve as UDF calls.
+
+    pins: ice-catalog-session-1/C-029
+    """
+    table = _table(spark, f"SELECT {name}() AS v")
+    expected = "spark_catalog" if name == "current_catalog" else "default"
+    assert table.column("v").to_pylist() == [expected]
+    assert table.schema.field("v").type == pa.string()
+    assert table.schema.field("v").nullable is False
