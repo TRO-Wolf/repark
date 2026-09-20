@@ -67,7 +67,6 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-- [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) —
 - [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
   [ice_catalog_session_1_oracle.json](ice_catalog_session_1_oracle.json) —
   **ICE-CATALOG-SESSION-1 (2026-09-20):** the unit pin file; S5 carries the eight

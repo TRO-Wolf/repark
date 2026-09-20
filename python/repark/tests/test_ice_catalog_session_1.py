@@ -243,7 +243,9 @@ def test_inmemory_catalog_impl_registers_memory_catalog(
 def test_current_catalog_answers_spark_catalog(spark: ReparkSession) -> None:
     """C-012: ``CAT-CURRENT-CATALOG`` replays EQUAL at session start."""
     answered = spark.sql("SELECT current_catalog()").to_arrow().to_pylist()
-    assert [[row["current_catalog()"]] for row in answered] == _cell_obs("CAT-CURRENT-CATALOG")["current"]
+    assert [[row["current_catalog()"]] for row in answered] == _cell_obs("CAT-CURRENT-CATALOG")[
+        "current"
+    ]
     assert spark.sql("SELECT current_schema()").to_arrow().to_pylist() == [
         {"current_schema()": "default"}
     ]
@@ -254,9 +256,7 @@ def test_use_catalog_leaves_namespace_empty(runtime_catalog: ReparkSession) -> N
     spark = runtime_catalog
     spark.sql("USE sc").to_arrow()
     assert spark.catalog.currentCatalog() == "sc"
-    assert spark.sql("SELECT current_schema()").to_arrow().to_pylist() == [
-        {"current_schema()": ""}
-    ]
+    assert spark.sql("SELECT current_schema()").to_arrow().to_pylist() == [{"current_schema()": ""}]
 
 
 def test_current_database_alias(spark: ReparkSession) -> None:
@@ -328,7 +328,9 @@ def test_show_tables_after_use_lists_current_namespace(spark: ReparkSession) -> 
 
 def test_show_columns_is_declaration_order(spark: ReparkSession) -> None:
     """C-017: ``D-SHOW-COLUMNS`` replays EQUAL in declaration order (N-6, not the harness sort)."""
-    spark.sql("CREATE TABLE sc.ns.t_cols (id INT, data STRING, cat STRING) USING iceberg").to_arrow()
+    spark.sql(
+        "CREATE TABLE sc.ns.t_cols (id INT, data STRING, cat STRING) USING iceberg"
+    ).to_arrow()
     for statement in (
         "SHOW COLUMNS IN sc.ns.t_cols",
         "SHOW COLUMNS IN t_cols",
@@ -341,7 +343,9 @@ def test_show_columns_is_declaration_order(spark: ReparkSession) -> None:
 
 def test_show_columns_beats_information_schema(spark: ReparkSession) -> None:
     """C-017: the ``SHOW COLUMNS`` intercept wins even with ``information_schema`` on."""
-    spark.sql("CREATE TABLE sc.ns.t_cols (id INT, data STRING, cat STRING) USING iceberg").to_arrow()
+    spark.sql(
+        "CREATE TABLE sc.ns.t_cols (id INT, data STRING, cat STRING) USING iceberg"
+    ).to_arrow()
     spark.conf.set("datafusion.catalog.information_schema", "true")
     rows = spark.sql("SHOW COLUMNS IN sc.ns.t_cols").to_arrow().to_pylist()
     assert [[row["col_name"]] for row in rows] == _probe("F.show_columns")
@@ -385,8 +389,7 @@ def test_uncache_missing_table(spark: ReparkSession) -> None:
 def test_rename_to_two_part_cell(spark: ReparkSession) -> None:
     """C-022: ``D-RENAME-TABLE-SHORT`` replays EQUAL."""
     spark.sql(
-        "CREATE TABLE sc.ns.t_d_rename_table_short (id INT, data STRING, cat STRING)"
-        " USING iceberg"
+        "CREATE TABLE sc.ns.t_d_rename_table_short (id INT, data STRING, cat STRING) USING iceberg"
     ).to_arrow()
     spark.sql(
         "INSERT INTO sc.ns.t_d_rename_table_short VALUES"
@@ -395,7 +398,9 @@ def test_rename_to_two_part_cell(spark: ReparkSession) -> None:
     spark.sql(
         "ALTER TABLE sc.ns.t_d_rename_table_short RENAME TO ns.u_d_rename_table_short"
     ).to_arrow()
-    rows = spark.sql("SELECT * FROM sc.ns.u_d_rename_table_short ORDER BY id").to_arrow().to_pylist()
+    rows = (
+        spark.sql("SELECT * FROM sc.ns.u_d_rename_table_short ORDER BY id").to_arrow().to_pylist()
+    )
     assert [[row["id"], row["data"], row["cat"]] for row in rows] == _cell_obs(
         "D-RENAME-TABLE-SHORT"
     )["data"]
@@ -424,9 +429,7 @@ def test_call_no_catalog_cell(spark: ReparkSession) -> None:
     spark.sql("INSERT INTO sc.ns.t_call VALUES (8, 'h', 'z')").to_arrow()
     snaps = [
         row["snapshot_id"]
-        for row in spark.sql(
-            "SELECT snapshot_id FROM sc.ns.t_call.snapshots ORDER BY committed_at"
-        )
+        for row in spark.sql("SELECT snapshot_id FROM sc.ns.t_call.snapshots ORDER BY committed_at")
         .to_arrow()
         .to_pylist()
     ]
@@ -511,9 +514,12 @@ def test_hadoop_alias_writes_uuid_metadata_names(tmp_path: Path) -> None:
     metas = sorted(glob.glob(f"{warehouse}/**/*.metadata.json", recursive=True))
     assert len(metas) >= 1
     for meta in metas:
-        assert re.fullmatch(
-            r"[0-9]+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-            r"\.metadata\.json",
-            os.path.basename(meta),
-        ) is not None
+        assert (
+            re.fullmatch(
+                r"[0-9]+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                r"\.metadata\.json",
+                os.path.basename(meta),
+            )
+            is not None
+        )
     assert glob.glob(f"{warehouse}/**/version-hint*", recursive=True) == []
