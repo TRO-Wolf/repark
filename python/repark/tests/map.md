@@ -1969,7 +1969,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   instability cell became `test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
   beside the CTAS control that was always stable. **RP-31 (2026-09-18):** the multi-partition
   `INSERT … SELECT` order is deterministic at fork `#300`; its pins live in
-  `test_ice_rowid_order_1.py`. Matrix and totals:
+  `test_ice_rowid_order_1.py`. **RP-42 (2026-09-20):**
+  `test_v3_coverage_inventory_carries_every_program_once` now derives each stored verdict
+  from the two recorded halves, so a `VERDICTS` mutation reds offline, not only under the
+  live oracle. Matrix and totals:
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   pins: v3-cov-statement-coverage/C-002, C-003, C-004, C-006
   pins: rp-8-repin-f21-f22/C-007
@@ -1994,6 +1997,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   DIVERGES→EQUAL — static-mode `PARTITION (part)` now replaces the whole table, and
   `_v3_statement_coverage_repark.py` carries the re-measured answer, equal to the recorded
   Spark half. pins: ice-overwrite-mode-1/C-002
+  **RP-42 (2026-09-20):** `meta-position-deletes` flips DIVERGES→EQUAL — fork #332 ports the
+  `position_deletes` scan at pin `886b94c1`, and the recorded repark answer `[[1]]` is the
+  recorded Spark half. Registry row V3-COV-6 is FIXED.
 - [_v3_statement_coverage_repark.py](_v3_statement_coverage_repark.py) and
   [_v3_statement_coverage_spark.py](_v3_statement_coverage_spark.py) — **V3-COV (2026-09-03):**
   the measured halves, one entry per program, recorded 2026-09-03 against live PySpark 4.1.2 +
@@ -2007,6 +2013,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **WRITE-ORDER-DIST-1 (2026-09-06):** the `alter-write-ordered-by` repark half is `OK` —
   the statement the row runs now executes instead of refusing.
   pins: write-order-dist-1/C-001
+  **RP-42 (2026-09-20):** the `meta-position-deletes` repark half is `OK [[1]]` — the
+  `position_deletes` scan serves the one `pos` row instead of refusing `FeatureUnsupported`.
 - [test_v3_legacy_delete_merge.py](test_v3_legacy_delete_merge.py) — **V3-12 (2026-09-02):** the
   facade door's cell for a v3 merge-on-read write over an upgraded table's legacy parquet
   position delete. `_repark_legacy_merge_shape` and `_spark_legacy_merge_shape` run the SAME five

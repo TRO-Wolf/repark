@@ -506,7 +506,6 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
     );
 }
 
-/// pins: rp-1-fork-repin/C-012 — `position_deletes` is schema-only at this pin; scan refuses.
 /// Metadata-table projection honors empty, partial.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat battery over the full MetadataTableType set
@@ -530,27 +529,6 @@ async fn metadata_table_projection_honor_all_types() {
     for metadata_type in iceberg::inspect::MetadataTableType::all_types() {
         let suffix = metadata_type.as_str();
         let table_path = format!("ice.sales.proj.{suffix}");
-
-        // Fork schema-only at pin 5e7b2e4: rewrite and schema plan; collect refuses loud.
-        if suffix == "position_deletes" {
-            let planned = execute(&ctx, &catalogs, &format!("SELECT * FROM {table_path}"))
-                .await
-                .expect("position_deletes must rewrite and plan");
-            assert!(
-                !planned.schema().fields().is_empty(),
-                "position_deletes schema must be advertised"
-            );
-            let err = planned
-                .collect()
-                .await
-                .expect_err("position_deletes collect must refuse");
-            let message = err.to_string();
-            assert!(
-                message.contains("position_deletes") && message.contains("not yet ported"),
-                "fork schema-only refuse, got: {message}"
-            );
-            continue;
-        }
 
         // Full SELECT * — plan schema non-empty + collect must not Internal-error.
         let star_df = execute(&ctx, &catalogs, &format!("SELECT * FROM {table_path}"))

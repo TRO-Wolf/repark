@@ -693,7 +693,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   4.1.2 + Iceberg 1.11.0; retention values are the oracle's own `refs` rows).
   pins: ref-branch-tag-wap/C-001, C-002, C-003, C-005, C-007),
   `time_travel`, `metadata_tables` (**RP-5:** the two pins guard the fork behavior with the engine shim gone, pins: rp-5-fork-repin/C-003; **RP-1:** projection battery iterates
-  `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.
+  `MetadataTableType::all_types`; **RP-42:** `position_deletes` joins the battery — fork #332
+  ports the scan, so it serves rather than refusing and its schema and row total are pinned by
+  the same `SELECT *` / `count(*)` / partial-projection assertions as every other type.
   **TYPES-1 (2026-09-05):** CTAS-inferred integer literals are `Int32` (Spark `int`) on
   the Iceberg/Arrow path — the CTAS guard reads its literal column as `Int32`.
   pins: types-1/C-001.

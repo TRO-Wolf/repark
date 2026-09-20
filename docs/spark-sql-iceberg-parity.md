@@ -153,21 +153,22 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   projection). Not a TZ-4 representation miss (data values match). Do not "fix" in
   repark by skipping the meta read.
 
-#### V3-COV-6 — the `position_deletes` metadata table is schema-only
+#### V3-COV-6 — FIXED 2026-09-20 (RP-42, fork #332, pin `886b94c1`): the `position_deletes` metadata table answers the deleted positions
 
-- **repark** — `SELECT … FROM cat.ns.t.position_deletes` on a v3 table carrying a live Puffin
-  deletion vector refuses with `FeatureUnsupported`: *`position_deletes` metadata table scan is
-  not yet ported: only its schema is available*. The other nine metadata tables this unit
-  measured (`snapshots`, `files`, `delete_files`, `manifests`, `history`, `refs`, `partitions`,
-  `entries`, `all_data_files`) all answer Spark-equal on the same fixture.
+- **repark** — **FIXED 2026-09-20 (RP-42, fork `886b94c1`).** Fork #332 ported
+  `PositionDeletesTable`'s scan, so `SELECT … FROM cat.ns.t.position_deletes` on a v3 table
+  carrying a live Puffin deletion vector answers the deleted positions — one `pos` row for the
+  single-row MoR DELETE on the V3-COV flat seed — where it had refused `FeatureUnsupported` with
+  only the schema available. The other nine metadata tables this unit measured (`snapshots`,
+  `files`, `delete_files`, `manifests`, `history`, `refs`, `partitions`, `entries`,
+  `all_data_files`) answer Spark-equal on the same fixture.
 - **Apache Spark** — returns the deleted positions (one `pos` row for the single-row MoR DELETE on
   the V3-COV flat seed). *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[meta-position-deletes]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[meta-position-deletes]`
-- **Rationale** — DECLARED 2026-09-03, fork-routed. TRIGGER: the fork ports
-  `PositionDeletesTable`'s scan (RP-1 registered the 16th `MetadataTableType` at pin `5e7b2e4`
-  with schema only). Do not synthesise the rows engine-side from the DV — a hand-rolled position
-  projection that drifts from the fork's would be worse than the refusal.
+- **Rationale** — FIXED 2026-09-20 (RP-42). The DECLARED row's TRIGGER fired: the fork ported
+  `PositionDeletesTable`'s scan (fork #332, consumed at pin `886b94c1`), so no engine-side
+  position projection was ever synthesised.
 
 #### ICE-TT-RESOLVE-1 — Iceberg time-travel resolution on every door — **FIXED 2026-09-19**
 

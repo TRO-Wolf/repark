@@ -331,10 +331,12 @@ def test_v3_statement_row_matches_the_live_spark_oracle(
 
 
 def test_v3_coverage_inventory_carries_every_program_once() -> None:
-    """The golden, the verdict table and the program list are the same set of rows."""
+    """The three inventories are the same rows, each verdict derived from its halves."""
     names = [program.name for program in _PROGRAMS]
     assert len(names) == len(set(names))
     assert set(names) == set(VERDICTS) == set(REPARK) == set(SPARK)
+    for name in names:
+        assert _verdict(REPARK[name], SPARK[name]) == VERDICTS[name], name
 
 
 def _partitioned_row_id_mapping(warehouse: Path) -> tuple[tuple[int, int], ...]:

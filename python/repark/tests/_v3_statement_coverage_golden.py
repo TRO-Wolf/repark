@@ -73,7 +73,7 @@ VERDICTS: dict[str, str] = {
     "meta-partitions": "EQUAL",
     "meta-entries": "EQUAL",
     "meta-all-data-files": "EQUAL",
-    "meta-position-deletes": "DIVERGES",
+    "meta-position-deletes": "EQUAL",
     "lineage-projection": "EQUAL",
     "time-travel-version-as-of": "EQUAL",
     "time-travel-timestamp-as-of": "EQUAL",
