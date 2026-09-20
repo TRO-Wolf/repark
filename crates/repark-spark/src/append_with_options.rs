@@ -55,8 +55,9 @@ pub(crate) async fn execute_append_with_options(
             .await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    let (snapshot_extra, staging) = options.resolve_with_session(ctx)?;
+    let (snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;
     if options.is_empty() {
+        staging.fork_insert_dictionary_rule = true;
         let files = repark_iceberg::write::stage_overwrite_files_with(
             &table,
             stream,

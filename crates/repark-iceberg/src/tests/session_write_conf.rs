@@ -103,6 +103,7 @@ fn statement_codec_and_level_win_over_session() {
         codec: Some("snappy".to_string()),
         level: Some("3".to_string()),
         target_file_size_bytes: None,
+        ..WriterStagingOverrides::none()
     };
     let (_, staging) = resolve_write_for_session(&[], &statement, &view).expect("resolve");
     assert_eq!(staging.codec.as_deref(), Some("snappy"));
@@ -119,6 +120,7 @@ fn empty_session_leaves_statement_untouched() {
         codec: Some("zstd".to_string()),
         level: None,
         target_file_size_bytes: Some(8),
+        ..WriterStagingOverrides::none()
     };
     let (snapshot, staging) = resolve_write_for_session(
         &[("team".to_string(), "opt".to_string())],

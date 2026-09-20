@@ -161,11 +161,7 @@ where
     let calculator =
         PartitionValueCalculator::try_new(&partition_spec, &user_schema).map_err(iceberg_err)?;
     let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        crate::write::writer_props::writer_properties_with(
-            table,
-            staging.codec.as_deref(),
-            staging.level.as_deref(),
-        )?,
+        crate::write::write_options::staged_writer_properties(table, staging)?,
         write_schema,
         FieldMatchMode::Name,
     )

@@ -35,6 +35,7 @@ pub struct WriterStagingOverrides {
     pub codec: Option<String>,
     pub level: Option<String>,
     pub target_file_size_bytes: Option<u64>,
+    pub fork_insert_dictionary_rule: bool,
 }
 
 impl WriterStagingOverrides {
@@ -42,6 +43,19 @@ impl WriterStagingOverrides {
     pub fn none() -> Self {
         Self::default()
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn staged_writer_properties(
+    table: &Table,
+    staging: &WriterStagingOverrides,
+) -> Result<parquet::file::properties::WriterProperties> {
+    writer_properties_with(
+        table,
+        staging.codec.as_deref(),
+        staging.level.as_deref(),
+        staging.fork_insert_dictionary_rule,
+    )
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -279,7 +293,7 @@ async fn build_unpartitioned_writer_with(
     let file_format =
         DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
     let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        writer_properties_with(table, staging.codec.as_deref(), staging.level.as_deref())?,
+        staged_writer_properties(table, staging)?,
         crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
         FieldMatchMode::Name,
     )

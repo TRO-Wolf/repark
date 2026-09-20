@@ -16,6 +16,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `parquet_dictionary.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the
+  `parquet.enable.dictionary` battery, read from the written footers: a table that names no
+  such property is dictionary-encoded on the owned CTAS route (Java's default), `false` turns
+  every dictionary page off, `TRUE` is read case-insensitively, and the owned plain INSERT
+  writes the fork insert exec's layout so no session conf decides the bytes.
+  pins: ice-session-write-conf-1/C-064
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `an_owned_plain_update_resolves_a_mixed_case_set_target` and
   `..._a_wrong_case_quoted_set_target` hold the owned plain-UPDATE route to Spark's

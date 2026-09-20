@@ -28,7 +28,7 @@ pub const ENABLE_DICTIONARY_PROP: &str = "parquet.enable.dictionary";
 /// # Errors
 /// Unknown codec, unparsable level, or level out of range for gzip/zstd.
 pub fn writer_properties_for(table: &Table) -> Result<WriterProperties> {
-    writer_properties_with(table, None, None)
+    writer_properties_with(table, None, None, false)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -36,6 +36,7 @@ pub fn writer_properties_with(
     table: &Table,
     codec_override: Option<&str>,
     level_override: Option<&str>,
+    fork_insert_dictionary_rule: bool,
 ) -> Result<WriterProperties> {
     let properties = table.metadata().properties();
     let effective_codec = codec_override
@@ -52,16 +53,14 @@ pub fn writer_properties_with(
     }
     Ok(WriterProperties::builder()
         .set_compression(compression_with(table, codec_override, level_override)?)
-        .set_dictionary_enabled(dictionary_enabled(table))
+        .set_dictionary_enabled(
+            properties
+                .get(ENABLE_DICTIONARY_PROP)
+                .map_or(!fork_insert_dictionary_rule, |value| {
+                    value.eq_ignore_ascii_case("true")
+                }),
+        )
         .build())
-}
-
-fn dictionary_enabled(table: &Table) -> bool {
-    table
-        .metadata()
-        .properties()
-        .get(ENABLE_DICTIONARY_PROP)
-        .is_some_and(|value| value.eq_ignore_ascii_case("true"))
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -99,7 +98,7 @@ pub(crate) fn name_matched_parquet_builder(
     staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<ParquetWriterBuilder> {
     Ok(ParquetWriterBuilder::new_with_match_mode(
-        writer_properties_with(table, staging.codec.as_deref(), staging.level.as_deref())?,
+        crate::write::write_options::staged_writer_properties(table, staging)?,
         crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
         FieldMatchMode::Name,
     )
@@ -738,6 +737,7 @@ mod tests {
             codec: codec.map(str::to_string),
             level: level.map(str::to_string),
             target_file_size_bytes: size,
+            ..WriterStagingOverrides::none()
         }
     }
 
@@ -881,7 +881,7 @@ mod tests {
         )
         .await;
         let table = catalog.load_table(&ident).await.expect("load");
-        let error = writer_properties_with(&table, Some("gzip"), None)
+        let error = writer_properties_with(&table, Some("gzip"), None, false)
             .expect_err("table level plus gzip option codec must refuse");
         assert!(
             error.to_string().contains("compression-level"),

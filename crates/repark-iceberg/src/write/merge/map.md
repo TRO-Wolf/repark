@@ -315,6 +315,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   commit's codec (a v3 DV is puffin and takes none). `mod.rs`'s MERGE executor
   and the row-delta commit arms thread that staging from the session resolve.
   pins: ice-session-write-conf-1/C-040
+- `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the lineage writer
+  builds its Parquet properties through `write_options::staged_writer_properties`, the one
+  staging-to-properties bridge, so it keeps Java's `parquet.enable.dictionary` default with
+  every other RePark-owned write. pins: ice-session-write-conf-1/C-064
 - `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the lineage
   fanout writer site honours the session write conf
   (`write_partitioned_lineage_files_with`).

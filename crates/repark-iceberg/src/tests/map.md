@@ -9,6 +9,10 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the two
+  staging literals take `..WriterStagingOverrides::none()`, so the struct's new
+  `fork_insert_dictionary_rule` field defaults there instead of being restated.
+  pins: ice-session-write-conf-1/C-064
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
   resolver precedence pins (writer option over session conf over table property, bogus
   codec refuses naming the codec) plus the `SessionWriteView` carrier shape

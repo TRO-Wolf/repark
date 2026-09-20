@@ -166,6 +166,11 @@ pins: rp-4-fork-repin/C-005, C-006
   every `execute` future stays under clippy's `large_futures` 16 KiB threshold (the
   round-1 inline awaits grew it to 16,384–16,544 bytes and tripped 135 test call sites).
   pins: ice-v3-write-default-1/C-024
+- `append_with_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the
+  no-write-options arm is the append that stands in for the fork's DataFusion insert exec, so
+  it alone sets `WriterStagingOverrides::fork_insert_dictionary_rule` and writes that exec's
+  Parquet layout; the option-carrying arm keeps Java's dictionary default.
+  pins: ice-session-write-conf-1/C-064
 - `append_with_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the owned
   append plans the WHOLE insert, not a reconstructed `SELECT`. `spark_ast::execute_insert_source`
   runs the passthrough pipeline (marker rewrite, eager analysis, `fill_insert_plan`, the

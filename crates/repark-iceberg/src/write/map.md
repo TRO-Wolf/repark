@@ -56,6 +56,17 @@ repark-core's error map.
   settings map. Two suffixes that differ only in case are two properties, as they are in
   Spark, so `unset` clears the exact spelling.
   pins: ice-session-write-conf-1/C-048
+- `writer_props.rs`, `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
+  `writer_properties_with` takes Java's `parquet.enable.dictionary` default — absent = ON
+  (`ParquetProperties.DEFAULT_IS_DICTIONARY_ENABLED = true`, measured by javap on the
+  Iceberg 1.11.0 Spark runtime and confirmed by dictionary pages in the checked-in
+  Spark-written fixtures) — and only an explicit `false` turns dictionary pages off. Round 3
+  had copied the fork insert exec's opposite rule into this shared function, which changed the
+  bytes of EVERY file RePark writes and moved the MW-7 / MW-8 bin-pack bands. That rule now
+  travels on `WriterStagingOverrides::fork_insert_dictionary_rule`, set only by the owned
+  append that stands in for the fork's insert exec, so the owned and unowned INSERT routes
+  still write one layout. `staged_writer_properties` is the single staging-to-properties
+  bridge the three writer builders call. pins: ice-session-write-conf-1/C-064
 - `writer_props.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
   `position_delete_codec_resolves_over_the_data_file_property`, the critic's
   `P2-POSDEL-CODEC-PYTHON-ONLY`. The round-1 footer pin set only

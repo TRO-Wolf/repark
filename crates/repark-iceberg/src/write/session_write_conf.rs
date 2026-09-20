@@ -137,6 +137,7 @@ impl SessionWriteView {
             codec: statement.codec.clone().or_else(|| self.codec.clone()),
             level: statement.level.clone().or_else(|| self.level.clone()),
             target_file_size_bytes: statement.target_file_size_bytes,
+            fork_insert_dictionary_rule: statement.fork_insert_dictionary_rule,
         }
     }
 }

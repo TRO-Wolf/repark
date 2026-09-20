@@ -58,6 +58,7 @@ impl StatementWriteOptions {
             codec: self.codec.clone(),
             level: self.level.clone(),
             target_file_size_bytes: self.target_file_size_bytes,
+            ..repark_iceberg::write::WriterStagingOverrides::none()
         }
     }
 

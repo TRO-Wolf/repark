@@ -26,6 +26,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `delegate_plan` plus execute, so the session-conf INSERT arm can take the delegated PLAN and
   execute only its input. One planner, two endings.
   pins: ice-session-write-conf-1/C-055
+- [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
+  the owned append sets `WriterStagingOverrides::fork_insert_dictionary_rule`, so the INSERT
+  a session conf owns writes the same Parquet layout the fork's insert exec writes without
+  one. Every other RePark write keeps Java's `parquet.enable.dictionary` default.
+  pins: ice-session-write-conf-1/C-064
 - [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
   the owned native INSERT plans through `router::delegate_plan` — the delegated path's own
   planner, `fill_insert_plan` and SEC-02 guards — and executes the `Dml` node's INPUT. The
