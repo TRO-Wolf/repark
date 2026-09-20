@@ -39,6 +39,7 @@ struct SchemaCreate {
     properties: HashMap<String, String>,
     partition_fields: Vec<PartitionFieldSpec>,
     schema: Schema,
+    location: Option<String>,
     /// Requested `TBLPROPERTIES ('format-version' = …)`, consumed at execute (session opt-in).
     format_version: Option<String>,
 }
@@ -90,7 +91,6 @@ fn build_schema_create(
                 .into(),
         ));
     }
-    // LOCATION / Hive ROW FORMAT etc.
     crate::refuse_unsupported_create_table_clauses(create, "column-def CREATE")?;
     // LIKE / CLONE before empty-column check so the honest NotImplemented surfaces.
     if create.like.is_some() || create.clone.is_some() {
@@ -174,6 +174,7 @@ fn build_schema_create(
         properties,
         partition_fields,
         schema,
+        location: clauses.location.clone(),
         format_version,
     })
 }
@@ -419,6 +420,12 @@ async fn execute_schema_create(
             ));
         }
     }
+    crate::ctas::check_custom_location(
+        create.location.as_deref(),
+        existed,
+        catalogs.location_policy(&create.catalog) == Some(LocationPolicy::ServiceManagedLocation),
+        "column-def CREATE",
+    )?;
 
     let partition_spec = build_partition_spec(&create.schema, &create.partition_fields)?;
     let format_version = iceberg_create_format_version(ctx, create.format_version.as_deref())?;
@@ -472,6 +479,7 @@ async fn execute_schema_create(
             &create.namespace,
             &create.table,
             &create.full_name,
+            create.location.as_deref(),
         )
         .await?;
         commit_staged_schema_only(

@@ -234,3 +234,26 @@ fn table_comment_extracts_on_either_side_of_tblproperties() {
         );
     }
 }
+
+#[test]
+fn table_location_extracts_on_either_side_of_tblproperties() {
+    for sql in [
+        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg LOCATION '/a' TBLPROPERTIES ('k' = 'v')",
+        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg TBLPROPERTIES ('k' = 'v') LOCATION '/a'",
+    ] {
+        let parsed =
+            parse_single_normalized(sql).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
+        let Some((statement, _, clauses)) = parsed else {
+            panic!("{sql:?} must parse with its location extracted");
+        };
+        assert!(
+            matches!(statement, Statement::CreateTable(_)),
+            "{sql:?} must stay a CreateTable"
+        );
+        assert_eq!(
+            clauses.location.as_deref(),
+            Some("/a"),
+            "{sql:?} keeps its location"
+        );
+    }
+}

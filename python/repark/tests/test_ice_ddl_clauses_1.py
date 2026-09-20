@@ -325,6 +325,16 @@ def test_ctas_location_and_comment_after_tblproperties(spark: Any, tmp_path: Pat
     assert _properties(meta)["k"] == "v"
 
 
+def test_replace_with_location_refuses(spark: Any) -> None:
+    """``OR REPLACE`` with ``LOCATION`` refuses: the replace keeps its location."""
+    from repark.errors import PySparkException
+
+    table = _create(spark, "t_replace_loc")
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(f"CREATE OR REPLACE TABLE {table} (id BIGINT) USING iceberg LOCATION '/tmp/x'")
+    assert "OR REPLACE" in str(caught.value)
+
+
 def test_describe_shows_column_comment(spark: Any) -> None:
     """Cell ``D-DESCRIBE`` re-check: the comment column carries the doc."""
     table = f"{CATALOG}.{NAMESPACE}.t_describe_doc"

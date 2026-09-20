@@ -4,6 +4,7 @@ use datafusion::sql::sqlparser::tokenizer::Token;
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct CreateClauses {
     pub(crate) comment: Option<String>,
+    pub(crate) location: Option<String>,
 }
 
 pub(crate) fn extract_create_clauses(tokens: &[Token]) -> (Vec<Token>, CreateClauses) {
@@ -28,10 +29,15 @@ pub(crate) fn extract_create_clauses(tokens: &[Token]) -> (Vec<Token>, CreateCla
                 if index < boundary
                     && depth == 0
                     && word.quote_style.is_none()
-                    && word.keyword == Keyword::COMMENT =>
+                    && matches!(word.keyword, Keyword::COMMENT | Keyword::LOCATION) =>
             {
-                if let Some((literal, end)) = match_comment_literal(tokens, index + 1) {
-                    clauses.comment = Some(literal);
+                let allow_eq = word.keyword == Keyword::COMMENT;
+                if let Some((literal, end)) = match_clause_literal(tokens, index + 1, allow_eq) {
+                    if word.keyword == Keyword::LOCATION {
+                        clauses.location = Some(literal);
+                    } else {
+                        clauses.comment = Some(literal);
+                    }
                     index = end;
                 } else {
                     kept.push(tokens[index].clone());
@@ -47,9 +53,9 @@ pub(crate) fn extract_create_clauses(tokens: &[Token]) -> (Vec<Token>, CreateCla
     (kept, clauses)
 }
 
-fn match_comment_literal(tokens: &[Token], start: usize) -> Option<(String, usize)> {
+fn match_clause_literal(tokens: &[Token], start: usize, allow_eq: bool) -> Option<(String, usize)> {
     let mut cursor = skip_whitespace(tokens, start);
-    if matches!(tokens.get(cursor), Some(Token::Eq)) {
+    if allow_eq && matches!(tokens.get(cursor), Some(Token::Eq)) {
         cursor = skip_whitespace(tokens, cursor + 1);
     }
     match tokens.get(cursor) {
@@ -143,5 +149,26 @@ mod tests {
             "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg COMMENT 'first' COMMENT 'second'",
         );
         assert_eq!(clauses.comment.as_deref(), Some("second"));
+    }
+
+    #[test]
+    fn strips_location_on_either_side_of_tblproperties() {
+        for sql in [
+            "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg LOCATION '/a' \
+             TBLPROPERTIES ('k' = 'v')",
+            "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg TBLPROPERTIES ('k' = 'v') \
+             LOCATION '/a'",
+        ] {
+            let (rendered, clauses) = extract(sql);
+            assert_eq!(clauses.location.as_deref(), Some("/a"), "got: {rendered}");
+            assert!(!rendered.contains("LOCATION"), "got: {rendered}");
+        }
+    }
+
+    #[test]
+    fn leaves_bare_location_names_alone() {
+        let (rendered, clauses) = extract("CREATE TABLE ice.ns.location (id BIGINT) USING iceberg");
+        assert_eq!(clauses.location, None);
+        assert!(rendered.contains("ice.ns.location"), "got: {rendered}");
     }
 }
