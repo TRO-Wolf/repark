@@ -454,6 +454,15 @@ pins: rp-4-fork-repin/C-005, C-006
   the branch and not a read pinned to it (the pin turned the target into a read-only temp
   view; every other `FROM`, including a subquery's, still pins).
   pins: ice-session-write-conf-1/C-038
+- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
+  `canonicalize_identity_selection` canonicalises the selection and each SET *value* through
+  `rewrite_fragment_case` (a SQL fragment in, a SQL fragment out — the repair backticks a
+  stored spelling it had to change), and each SET *target* through
+  `canonical_assignment_target`, a bare name-to-name lookup. A target is a column name, not a
+  fragment: rendered as SQL it reached `validate_update_assignments` as `` `eventName` `` and
+  refused where Spark answers (MC-UPD-01/02). No unique case-insensitive match leaves the
+  requested spelling alone, so the ambiguity and missing-column refusals still fire there.
+  pins: ice-session-write-conf-1/C-063
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `execute_insert_source`
   is `execute_passthrough` stopped one step short — same parse, same rewrites, same analysis,
   but it executes the insert's INPUT instead of the insert. One pipeline answers both routes,

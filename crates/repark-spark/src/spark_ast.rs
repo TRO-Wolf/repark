@@ -311,13 +311,22 @@ async fn canonicalize_identity_selection(
     )?;
     if let Some(assignments) = spec.assignments.as_mut() {
         for (target, value) in assignments {
-            *target =
-                repark_core::column_resolution::rewrite_fragment_case(target, &scopes, true, home)?;
+            *target = canonical_assignment_target(target, &fields);
             *value =
                 repark_core::column_resolution::rewrite_fragment_case(value, &scopes, true, home)?;
         }
     }
     Ok(())
+}
+
+fn canonical_assignment_target(requested: &str, fields: &[String]) -> String {
+    let mut matched = fields
+        .iter()
+        .filter(|field| field.eq_ignore_ascii_case(requested));
+    match (matched.next(), matched.next()) {
+        (Some(only), None) => only.clone(),
+        _ => requested.to_string(),
+    }
 }
 
 /// Apply Spark's bare-`RANGE`-offset rules to a freshly-planned statement (G5b).

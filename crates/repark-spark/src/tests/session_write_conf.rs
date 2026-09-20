@@ -848,3 +848,70 @@ async fn truncate_does_not_stamp_and_does_not_refuse_a_colliding_key() {
         "and it takes no colliding session value either: {pairs:?}"
     );
 }
+
+async fn mixed_case_update_readback(statement: &str) -> Vec<(i64, String)> {
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.mcu (`userId` BIGINT, `eventName` STRING) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.mcu VALUES (1,'a'),(2,'b')",
+    )
+    .await;
+    run(&ctx, &catalogs, statement).await;
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "SELECT `userId`, `eventName` FROM ice.sales.mcu ORDER BY `userId`",
+    )
+    .await
+    .expect("read back")
+    .collect()
+    .await
+    .expect("collect");
+    let mut out = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Int64Array>()
+            .expect("userId is int64");
+        let names = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("eventName is utf8");
+        for index in 0..batch.num_rows() {
+            out.push((ids.value(index), names.value(index).to_string()));
+        }
+    }
+    out
+}
+
+#[tokio::test]
+async fn an_owned_plain_update_resolves_a_mixed_case_set_target() {
+    let _: &str = "pins: ice-session-write-conf-1/C-063";
+    assert_eq!(
+        mixed_case_update_readback("UPDATE ice.sales.mcu SET eventName = 'z' WHERE userId = 1")
+            .await,
+        vec![(1, "z".to_string()), (2, "b".to_string())],
+        "Spark resolves an unquoted SET target case-insensitively and answers"
+    );
+}
+
+#[tokio::test]
+async fn an_owned_plain_update_resolves_a_wrong_case_quoted_set_target() {
+    let _: &str = "pins: ice-session-write-conf-1/C-063";
+    assert_eq!(
+        mixed_case_update_readback("UPDATE ice.sales.mcu SET `EVENTNAME` = 'q' WHERE `USERID` = 2")
+            .await,
+        vec![(1, "a".to_string()), (2, "q".to_string())],
+        "a wrong-case quoted SET target resolves to the stored column, not to a quoted literal"
+    );
+}

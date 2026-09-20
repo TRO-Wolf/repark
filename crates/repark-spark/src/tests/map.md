@@ -16,6 +16,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
+  `an_owned_plain_update_resolves_a_mixed_case_set_target` and
+  `..._a_wrong_case_quoted_set_target` hold the owned plain-UPDATE route to Spark's
+  case-insensitive SET resolution, the regression the round-8 CI red found on MC-UPD-01/02.
+  pins: ice-session-write-conf-1/C-063
 - `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** the
   removal side of the static `INSERT OVERWRITE … PARTITION` oracle, the fourth critic's
   `P1-MOR-ROW-FILTER-REMOVED-SET-OMITS-DELETE-FILES`. Cells `QD-MOR-*` (Spark 4.1.2, run 25c)
@@ -115,7 +120,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   sets BOTH `team` and a colliding `deleted-records=5` and asserts the delete snapshot
   carries neither, so mutation (h) — routing TRUNCATE through
   `commit_overwrite_replace_all_with_summary` — reds it on the refusal.
-  pins: ice-session-write-conf-1/C-051, C-052
+  pins: ice-session-write-conf-1/C-064, C-052
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
   pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`
