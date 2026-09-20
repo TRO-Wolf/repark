@@ -178,7 +178,7 @@ def test_branch_mode_manifest_changes_and_unlisted_files(repo: Path) -> None:
     """pins: map-pr-gate-1/C-002 — `Cargo.toml` is inside the filter; an unlisted
     suffix is ignored entirely."""
     base = _git(repo, "rev-parse", "HEAD").strip()
-    (repo / "pkg" / "Cargo.toml").write_text("[package]\nname = \"pkg\"\n", encoding="utf-8")
+    (repo / "pkg" / "Cargo.toml").write_text('[package]\nname = "pkg"\n', encoding="utf-8")
     _commit(repo, "manifest")
     failed = _guard(repo, "--base", base)
     assert failed.returncode == 1
