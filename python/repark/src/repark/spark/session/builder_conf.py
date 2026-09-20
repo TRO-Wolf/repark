@@ -204,11 +204,7 @@ class RuntimeConfig:
             _native.set_runtime_config(inner, key, text)
             if key == SESSION_TIME_ZONE_KEY:
                 refresh_session_zone_canonical(self._session)
-        if (
-            key == PARTITION_OVERWRITE_MODE_KEY
-            or key == MERGE_SCHEMA_KEY
-            or key in WAP_SESSION_KEYS
-        ):
+        if key in (PARTITION_OVERWRITE_MODE_KEY, MERGE_SCHEMA_KEY) or key in WAP_SESSION_KEYS:
             _native.set_runtime_config(inner, key, text)
         if is_iceberg_session_write_key(key):
             _native.set_runtime_config(inner, key, text)
