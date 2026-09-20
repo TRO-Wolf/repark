@@ -586,6 +586,65 @@ perfectly good read.
   semantics change. Residue is stated on DML-1 (the cast refusal's text, typed literals) and
   here (RTAS history of `saveAsTable(overwrite)`, engine-wide `getCondition()`).
 
+#### ICE-META-DELETE-1 — a DELETE that covers whole data files deletes the files — **FIXED 2026-09-19**
+
+- **repark** — **FIXED 2026-09-19.** Before this row, every predicate DELETE went through the
+  row-level path: merge-on-read wrote position deletes or deletion vectors and copy-on-write
+  rewrote files, and a DELETE matching no row committed no snapshot at all. 29 of the 72
+  measured cells differed. Now both doors ask one Rust decision
+  (`repark_iceberg::write::meta_delete`) BEFORE the row-level plan, exactly where Java's
+  `SparkTable.canDeleteWhere` asks it: the `WHERE` is translated EXACTLY to an Iceberg
+  predicate (`AND`/`OR`, `=`/`<`/`<=`/`>`/`>=`, `IS [NOT] NULL`, a positive `IN` list,
+  `LIKE 'prefix%'`, literal `TRUE`, and a missing `WHERE`), the fork's
+  `Table::can_delete_using_metadata` answers whether every planned file is strictly covered,
+  and only a true answer commits the fork's `DeleteFilesAction::delete_from_row_filter` — one
+  `delete` snapshot that removes whole files and writes no delete file, in both
+  `write.delete.mode` values. A predicate that plans no file is vacuously true, so a no-match
+  DELETE commits Spark's empty `delete` snapshot. Anything the translation cannot represent
+  exactly — every negation (`NOT`, `<>`, `NOT IN`, `NOT LIKE`), a function, a cast, a
+  subquery, a non-primitive column — declines and keeps the row-level route unchanged.
+- **Apache Spark** — Spark decides above the mode and issues
+  `DeleteFiles.deleteFromRowFilter(expr)`; a conjunct it cannot convert makes the whole
+  decision false. *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19, 72
+  cells: 18 DELETE shapes x format v2/v3 x merge-on-read/copy-on-write.)*
+- **Pin** — `python/repark/tests/test_ice_meta_delete_1.py` +
+  `ice_meta_delete_1_spark_oracle.json` + `_record_ice_meta_delete_1.py` (72 cells offline,
+  the live re-derivation under `REPARK_PARITY_LIVE=1`);
+  `crates/repark-iceberg/src/write/meta_delete/tests.rs` (the decision and the translation);
+  `crates/repark-sql/tests/ansi_meta_delete.rs` (the native door).
+  pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- **Rationale** — FIXED 2026-09-19. TRIGGER: none of this unit's own — the commit is the
+  fork's action, already bytecode-verified against Java. 71 of the 72 cells answer Spark; the
+  72nd is ICE-META-DELETE-1-D1 below, a row-level merge-on-read difference this row's decision
+  never reaches. The routing also closes six of IPI-11's `rewrite_manifests` cells
+  (`part_mor`, `part_mor_spec`, `part_mor_nocache`, v2 and v3): a whole-file DELETE no longer
+  writes position deletes, so RePark enters that procedure with Spark's own before-state and
+  answers the recorded cell literally — see
+  [MANIFEST-1](#manifest-1--rewrite_manifests-rewrote-data-manifests-only-spark-rewrites-delete-manifests-too--fixed-2026-09-20-ice-rm-deletes-1).
+
+#### ICE-META-DELETE-1-D1 — v2 merge-on-read adds a second position-delete file where Spark rewrites the first — **DECLARED 2026-09-19**
+
+- **repark** — a row-level merge-on-read DELETE against a data file that ALREADY carries a
+  position-delete file writes a SECOND delete file: `added-position-deletes=2`,
+  `added-delete-files=1`, `total-delete-files=2`, and the earlier delete file stays live. Rows
+  read back exactly as Spark's do; only the delete-file bookkeeping differs. Format v3 is
+  unaffected — one deletion vector per data file replaces the previous one, and that cell is
+  equal.
+- **Apache Spark** — Spark rewrites the superseded delete file in the same commit:
+  `added-position-deletes=3`, `added-delete-files=1`, `removed-delete-files=1`,
+  `removed-position-deletes=1`, `total-delete-files=1` (Iceberg's file-granularity delete
+  write, `write.delete.granularity=file`). *(oracle: recorded, live PySpark 4.1.2 + Iceberg
+  1.11.0, 2026-09-19, cell `prior_deletes_then_rest_v2_mor`.)*
+- **Pin** — `python/repark/tests/test_ice_meta_delete_1.py::test_meta_delete_cell_matches_spark`
+  cell `prior_deletes_then_rest_v2_mor`, a STRICT `xfail` naming this row; it reds the day the
+  delete-file rewrite lands.
+  pins: ice-meta-delete-1/C-005
+- **Rationale** — DECLARED 2026-09-19, not fixed here: the difference is in the merge-on-read
+  row-delta writer (`write.delete.granularity` and the rewrite of a superseded delete file),
+  which ICE-META-DELETE-1's decision sits ABOVE and never reaches. Fixing it is a delete-write
+  unit of its own with a far wider blast radius (every merge-on-read summary in the suite), and
+  is named for the orchestrator as the open question of this unit.
+
 #### DML-1B — `partitionOverwriteMode=dynamic` on PARTITION-less `INSERT OVERWRITE`
 
 - **repark** — **FIXED 2026-09-17 (ICE-DYN-OVERWRITE-1).** The session conf
@@ -6544,20 +6603,23 @@ the pin rather than obeying it.
   `fix/ice-promote-read-1`; local override until that pin bump lands).
 - **Rationale** — FIXED. The swapped read was silent.
 
-### V3-COV-4 — a MoR `DELETE` covering every row writes a full-coverage DV where Spark drops the file
+### V3-COV-4 — a MoR `DELETE` covering every row writes a full-coverage DV where Spark drops the file — **FIXED 2026-09-20 (ICE-META-DELETE-1)**
 
-- **repark** — `DELETE FROM t WHERE id > 0` on a merge-on-read v3 table whose predicate matches
-  every row of the single data file commits one Puffin deletion vector with
-  `record_count = 4`; the data file stays live. The rows read back empty, which is correct.
+- **repark** — **FIXED 2026-09-20.** `DELETE FROM t WHERE id > 0` on a merge-on-read v3 table
+  whose predicate matches every row of the single data file is now answered from metadata: the
+  data file is removed, `t.delete_files` is empty, and the recorded RePark answer for
+  `delete-all-rows-mor` is byte-identical to Spark's recorded answer, so the cell's verdict moves
+  from DIVERGES to EQUAL. Before the fix it committed one Puffin deletion vector with
+  `record_count = 4` and left the data file live (the rows read back empty either way).
 - **Apache Spark** — commits the same delete as a metadata delete: the data file is removed and
   `t.delete_files` is empty. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[delete-all-rows-mor]`
   and `…::test_v3_statement_row_matches_the_live_spark_oracle[delete-all-rows-mor]`
-- **Rationale** — BACKLOG. Not a wrong answer: both engines read the same rows, and both
-  time-travel correctly. It is a storage-shape divergence — a whole-file delete leaves RePark
-  paying a DV read on every later scan and leaves the bytes on disk until an expire. The fix is
-  the file-coverage check Java's `SparkPositionDeltaWrite` makes before choosing the delete
-  path; it is not local to any statement handler, so it is queued rather than taken here.
+- **Rationale** — FIXED. It was never a wrong answer — both engines read the same rows — but the
+  storage shape cost a DV read on every later scan and left the bytes on disk until an expire.
+  The fix is the file-coverage check itself, taken as ICE-META-DELETE-1: the decision is Java's
+  `SparkTable.canDeleteUsingMetadata`, reached from both doors before the row-level path, so it
+  is not local to a statement handler — which is why this row waited for it.
 
 ### V3-COV-5 — `ALTER TABLE … WRITE ORDERED BY` is unimplemented
 
@@ -7006,7 +7068,21 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   replayed),
   `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_merges_both_legs`
   and `::call_rewrite_manifests_merges_the_delete_leg_alone`, and
-  `python/repark/tests/test_ice_rm_deletes_1.py`
+  `python/repark/tests/test_ice_rm_deletes_1.py`.
+  **Which of the 14 are literal (re-measured 2026-09-19, ICE-META-DELETE-1 round 2):** twelve
+  — `unpart_mor`, `no_deletes`, `part_mor`, `part_mor_spec` and `part_mor_nocache` in v2 and
+  v3, plus `part_mor_real_v3` — are pinned against the recorded cell on every field (before
+  layout, result row, after layout, rows, operation, the three `manifests-*` counters). When
+  ICE-RM-DELETES-1 landed, only five of those were: the six partitioned whole-file-DELETE
+  cells could not be replayed literally, because RePark's partitioned DELETE wrote position
+  deletes where Spark's cells answer from metadata, so the two engines entered the procedure
+  with different tables and those pins asserted Spark's two-leg RULE over RePark's own
+  before-state. ICE-META-DELETE-1 removed that cause and the six now assert the cell.
+  Two cells keep RePark's measured before-state and say why: `evolved_spec_v2/v3`
+  ([MANIFEST-4](#manifest-4--an-append-after-a-partition-spec-evolution-does-not-merge-the-old-spec-manifests--declared-2026-09-19))
+  and `part_mor_real_v2`
+  ([ICE-META-DELETE-1-D1](#ice-meta-delete-1-d1--v2-merge-on-read-adds-a-second-position-delete-file-where-spark-rewrites-the-first--declared-2026-09-19)
+  — never named in this row before, and unchanged by either unit).
 - **Rationale** — FIXED 2026-09-20 (ICE-RM-DELETES-1, IPI-11 RePark half, on fork `44834673`
   carrying the delete-manifest opt-in, fork #318). The fork's
   `RewriteManifestsAction::rewrite_delete_manifests(true)` joins Spark's second leg in the same
@@ -7145,6 +7221,45 @@ oracle on live Spark.
   catalog's metadata basenames diverge from Hadoop `vN` names (pinned by
   shape); output columns are non-nullable by the rewrite-family precedent
   (the fixture records no nullability).
+### MANIFEST-4 — an append after a partition-spec evolution does not merge the old-spec manifests — **DECLARED 2026-09-19**
+
+- **repark** — on a table whose partition spec has evolved, an `INSERT` writes its new
+  spec-1 manifest and leaves every old spec-0 manifest exactly where it was. The recorded
+  `evolved_spec` shape (three two-file appends, a whole-file DELETE, `ADD PARTITION FIELD
+  bucket(2, id)`, one more `INSERT`, one more whole-file DELETE) ends with FOUR manifests —
+  `[(0,0,1,0), (0,0,2,0), (0,0,2,0), (0,1,0,0)]`, five live spec-0 data files spread over the
+  three append manifests. The live rows, the file count, the spec ids and the empty spec-1
+  manifest are Spark's; only how many manifests hold them differs. `CALL
+  rewrite_manifests(spec_id => 0)` produces Spark's layout exactly —
+  `[(0,0,5,0), (0,1,0,0)]` — so nothing but the merge is missing.
+- **Apache Spark** — the same shape ends with TWO manifests, the five live spec-0 data files
+  in ONE. The merge happens **at the append after the evolution**, not at either DELETE: that
+  `append` snapshot records `manifests-created: 2, manifests-kept: 0, manifests-replaced: 3`,
+  while both `delete` snapshots record `manifests-replaced: 1`. This is Iceberg's
+  merge-on-commit in the snapshot producer.
+  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-20, cells
+  `evolved_spec_v2` and `evolved_spec_v3`, byte-identical; the snapshot summaries above are
+  read from the recorded warehouse the cells were taken from.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_rm_deletes.rs::rm_deletes_evolved_spec_v2` / `_v3` and
+  `python/repark/tests/test_ice_rm_deletes_1.py::test_evolved_spec_default_is_a_no_op`
+  assert RePark's four-manifest layout, and
+  `::rm_deletes_non_current_spec_rewrites_that_spec` asserts that an explicit `spec_id => 0`
+  reaches Spark's two-manifest layout.
+  pins: ice-meta-delete-1/C-009
+- **Rationale** — DECLARED 2026-09-19 (ICE-META-DELETE-1 round 2). This is the second half of
+  the parity-inventory row IPI-11 — "manifest merging: `commit.manifest.min-count-to-merge` /
+  merge-on-commit is not applied", inventory token `TP-MANIFEST-MIN-MERGE`. ICE-RM-DELETES-1
+  fixed the first half (`P-RM-DELETE-MANIFESTS`,
+  [MANIFEST-1](#manifest-1--rewrite_manifests-rewrote-data-manifests-only-spark-rewrites-delete-manifests-too--fixed-2026-09-20-ice-rm-deletes-1));
+  this half was there before it and is untouched by it and by ICE-META-DELETE-1 — the
+  metadata-delete routing changed only that the two delete manifests no longer stand beside
+  the three. **Contents are unaffected**: the live row set, the live data files and the
+  procedure's own answer (`0, 0`, no snapshot committed) are identical either way. Fixing it
+  is fork work in the snapshot producer's manifest-merge path, where the exact Java trigger
+  (`min-count-to-merge` is 100 by default, yet Spark merged three manifests here — a
+  non-current-spec group looks to be merged regardless) still has to be read off the
+  bytecode before a unit is scoped.
 
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**
 

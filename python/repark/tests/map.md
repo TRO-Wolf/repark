@@ -40,6 +40,22 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
+  [ice_meta_delete_1_spark_oracle.json](ice_meta_delete_1_spark_oracle.json) +
+  [_record_ice_meta_delete_1.py](_record_ice_meta_delete_1.py) —
+  **ICE-META-DELETE-1 (2026-09-19):** 72 recorded Spark 4.1.2 + Iceberg 1.11.0 cells — 18
+  DELETE shapes (whole-file, partial, mixed, `WHERE true`, no predicate, no match, string
+  equality, identity and `bucket(4, id)` partition selection, partition plus metrics, prior
+  deletes, `IS NULL`, `OR`, `NOT IN`, `LIKE`) x format v2/v3 x
+  `write.delete.mode` merge-on-read/copy-on-write. Each cell carries the surviving rows, every
+  snapshot's operation and summary counters, and the live data files; the replay asserts all
+  three, so a whole-file DELETE that writes a position delete instead of removing the file is
+  caught by the snapshot summary, not by the rows. Source SHA-256
+  `3dd30491a9d9f9c58c10a8dd61077e3c07ea8b92bb57ef2952bbff69133828c9`; the live tier
+  re-derives the fixture with the recorder's `--check` mode.
+  pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005
+  **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
+
 - [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) +
   [ice_overwrite_mode_1_transform_spark_oracle.json](ice_overwrite_mode_1_transform_spark_oracle.json) +
   [_record_ice_overwrite_mode_1_transform.py](_record_ice_overwrite_mode_1_transform.py) —
@@ -1856,6 +1872,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **RP-23 (2026-09-17):** `create-v3-properties` flips DIVERGES→EQUAL — the codec stamp was
   its sole open difference.
   pins: rp-23-pin-bump/C-001
+  **ICE-META-DELETE-1 (2026-09-20):** `delete-all-rows-mor` flips DIVERGES→EQUAL — a merge-on-read
+  DELETE covering every row of its data file is answered from metadata, so the file is removed and
+  no deletion vector is written, and the re-measured RePark answer is byte-identical to the
+  recorded Spark half. Registry row V3-COV-4 is FIXED.
+  pins: ice-meta-delete-1/C-001
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** `insert-overwrite-partition-dynamic` flips
   DIVERGES→EQUAL — static-mode `PARTITION (part)` now replaces the whole table, and
   `_v3_statement_coverage_repark.py` carries the re-measured answer, equal to the recorded
@@ -2004,16 +2025,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   from the committed generator; the 7 `rpd_*` cells and 2 `residue_*` sequences are this
   unit's own Spark measurements (MoR half-delete shapes).
 - [test_ice_rm_deletes_1.py](test_ice_rm_deletes_1.py) —
-  **ICE-RM-DELETES-1 (2026-09-20):** replay pins over the recorded 14-cell Spark 4.1.2
+  **ICE-RM-DELETES-1 (2026-09-20), re-measured by ICE-META-DELETE-1 round 2 (2026-09-19):**
+  replay pins over the recorded 14-cell Spark 4.1.2
   `rewrite_manifests` oracle ([ice_rm_deletes_1_spark_oracle.json](ice_rm_deletes_1_spark_oracle.json)
-  and [ice_rm_deletes_1_spark_oracle2.json](ice_rm_deletes_1_spark_oracle2.json)) — literal
-  layout/count/row/op pins for the unpartitioned and data-only cells, two-leg semantic
-  pins for the partitioned cells (RePark's DELETE writes position deletes where Spark's
-  cells show copy-on-write), the evolved zeros-with-no-snapshot pin, the current-spec /
-  positional-spec pins, the unknown-spec `Invalid spec id` pin (Spark's recorded text),
-  and the `use_caching` no-effect pin. The session
+  and [ice_rm_deletes_1_spark_oracle2.json](ice_rm_deletes_1_spark_oracle2.json)). The
+  unpartitioned, data-only, `part_mor`, `part_mor_spec` and `part_mor_nocache` cells are
+  literal — layout, counts, rows and op all read FROM the fixture, never hand-written —
+  because the metadata-delete routing gives RePark Spark's own data-only before-state on the
+  whole-file DELETE statements. `evolved_spec` keeps RePark's measured layout (registry MANIFEST-4) and
+  `part_mor_real` its length-shaped one; the current-spec, positional-spec, unknown-spec
+  (`Invalid spec id`, Spark's recorded text) and `use_caching` pins are unchanged. Each
+  literal pin reads the rows before and after the CALL and asserts they are equal. The session
   enables `repark.sql.allowCreateFormatVersion3` for the v3 replays.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: ice-meta-delete-1/C-009
 - [ice_rm_deletes_1_spark_oracle.json](ice_rm_deletes_1_spark_oracle.json) —
   **ICE-RM-DELETES-1 (2026-09-20):** the 12 recorded Spark 4.1.2 cells
   (`record_rewrite_manifests.py`): `unpart_mor`, `part_mor`, `part_mor_spec`,
@@ -2083,6 +2108,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `rewrite_position_delete_files` / `rewrite_manifests` zeros on the evolved table. Every
   row set, schema and file multiset measured on live PySpark 4.1.2 first. Spark door only.
   pins: rdf-schema-evo-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **ICE-META-DELETE-1 (2026-09-19):** the v3-DV shape seeds three two-row files instead of six
+  one-row files, so its `DELETE … WHERE id = 1` is still a PARTIAL match and still writes the
+  deletion vector the rewrite is there to drop; on one-row files that DELETE is now answered
+  from metadata, as Spark answers it, and no DV exists to rewrite (6→3 rewritten files).
+  pins: ice-meta-delete-1/C-003
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24; RP-5 2026-09-01):** the
   maintenance cycle `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end
   to end on a local catalog at gate scale (4,000 rows, 2 partitions, six MERGEs). F-16r
@@ -5561,6 +5591,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `part` reaches the five-file `min-input-files` floor and `_row_id` assignment stays sequential —
   a two-row CTAS and two-row appends both shuffled survivor ids between runs), `v3_ctas_sql`
   (`PARTITIONED BY (part)`, no IF NOT EXISTS), `v3_row_delete_sql`, `v3_merge_source_sql`,
+  — **ICE-META-DELETE-1 (2026-09-20):** because each append writes one row into its own file,
+  `v3_row_delete_sql`'s single-key DELETE now covers a whole file and is answered from metadata,
+  as Spark answers it: 0 delete files after the DELETE (was 1), 1 after the MERGE (was 2), 11
+  rewritten data files (was 12) and 1 removed delete file (was 2). The harness's deletion-vector
+  coverage comes from the MERGE that follows. pins: ice-meta-delete-1/C-001 —
   `delete_file_rows`, `v3_lineage_rows`, `v3_ordered_rows`, `v3_data_files_per_partition`
   (arms `V3_FILES_PER_PARTITION`: the appends must land 5+5, exactly AT Spark's
   `min-input-files` floor, or step 6 is a no-op — asserted, not assumed),
@@ -6098,7 +6133,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Pin rewrite_data_files `where` / strategy / sort_order | `test_rewrite_data_files_options.py` — filtered rewrite byte-identity, Spark unknown-strategy and bad-where text, `sort_order` refuse (`RDF-SORT-1`) |
 | Pin rewrite `options` maps against the recorded oracle | `test_ice_rdf_options_1.py` — 42 offline pins over `ice_rdf_options_1_spark_oracle.json` (recorded by `_record_rdf_options_1_oracle.py`), fork cells `xfail(strict)` (`BLOCKED-ON-FORK F-RDF-OPTIONS-1`), live tier re-runs the generator (`ICE-RDF-OPTIONS-1`, `RDF-DANGLING-1`) |
 | Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and no options map is passed, so the zero is a real count (the map itself is accepted since **ICE-RDF-OPTIONS-1 round 1**). *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `use_caching` is accepted and changes nothing (`MANIFEST-2`). **ICE-RM-DELETES-1 (2026-09-20):** the current `spec_id` runs like the default call and an unknown id raises `IllegalArgumentException` |
-| Pin `rewrite_manifests` delete-manifest and `spec_id` behavior against the recorded oracle | `test_ice_rm_deletes_1.py` — the 14 recorded Spark 4.1.2 cells replayed (`ice_rm_deletes_1_spark_oracle.json`, `ice_rm_deletes_1_spark_oracle2.json`): literal layout/count/row/op pins for the unpartitioned and data-only cells, two-leg semantic pins for the partitioned cells, the evolved zeros-with-no-snapshot pin, current/positional/unknown `spec_id` pins, the `use_caching` no-effect pin. pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005 |
+| Pin `rewrite_manifests` delete-manifest and `spec_id` behavior against the recorded oracle | `test_ice_rm_deletes_1.py` — the 14 recorded Spark 4.1.2 cells replayed (`ice_rm_deletes_1_spark_oracle.json`, `ice_rm_deletes_1_spark_oracle2.json`): literal layout/count/row/op pins for the unpartitioned, data-only and whole-file-DELETE partitioned cells (**ICE-META-DELETE-1 round 2, 2026-09-19** — the metadata-delete routing gives RePark Spark's own before-state there), RePark-measured layout pins for `evolved_spec` (registry MANIFEST-4) and `part_mor_real`, the evolved zeros-with-no-snapshot pin, current/positional/unknown `spec_id` pins, the `use_caching` no-effect pin. pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005; ice-meta-delete-1/C-009 |
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
 | Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, the sliding-refuse set (**EMPTY since WIN-SLIDE-1, 2026-09-04** — the same pin, now the guard against a refusal returning), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009; win-slide-1/C-008 |
 | Pin an aggregate over a SLIDING window frame on both doors | `test_win_slide_1.py` — the thirteen once-refusing aggregates x five frame shapes x two doors against the recorded Spark 4.1.2 column, plus `collect_list` frame order, the `collect_set` multiset, `try_sum` BIGINT overflow inside a frame, `CURRENT ROW … UNBOUNDED FOLLOWING`, and the `percentile_approx` accuracy divergence. pins: win-slide-1/C-001, C-002, C-003, C-004, C-007 |
