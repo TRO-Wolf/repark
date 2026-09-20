@@ -394,18 +394,18 @@ async fn call_rewrite_positional_strategy_routes_to_the_rewriter() {
     .await
     .expect("positional binpack must be accepted");
 
-    // C2-Q-002: third positional exceeds supported arity (not silent ignore).
     let error = execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_data_files('sales.t', 'binpack', 'id ASC')",
     )
     .await
-    .expect_err("third positional must refuse");
+    .expect_err("binpack plus positional sort_order must refuse");
     let message = error.to_string();
+    assert!(message.contains("it has already been set to BIN-PACK"));
     assert!(
-        message.contains("at most") || message.contains("positional"),
-        "excess positional must name arity, got: {message}"
+        !message.contains("at most"),
+        "sort_order must bind, not trip arity, got: {message}"
     );
 }
 
@@ -490,23 +490,23 @@ async fn call_expire_retain_last_zero_refuses_loud() {
     );
 }
 
-/// C3-Q-002: mixing named and positional CALL args refuses (Spark procedures).
 #[tokio::test]
-async fn call_mixed_named_and_positional_refuses() {
+async fn call_mixed_named_and_positional_binds() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    let error = execute(
+    run(
         &ctx,
         &catalogs,
-        "CALL ice.system.rollback_to_snapshot('sales.t', snapshot_id => 1)",
+        "CREATE TABLE ice.sales.tm AS SELECT * FROM src",
+    )
+    .await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files('sales.tm', strategy => 'binpack')",
     )
     .await
-    .expect_err("mixed args must refuse");
-    let message = error.to_string();
-    assert!(
-        message.contains("mixing") || message.contains("named and positional"),
-        "got: {message}"
-    );
+    .expect("mixed args must bind");
 }
 
 /// C3-Q-003: expire accepts full positional form (`table`, `older_than`, `retain_last`).
