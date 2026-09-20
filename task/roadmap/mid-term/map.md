@@ -6,6 +6,10 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [map-currency-card-2026-09-20.md](map-currency-card-2026-09-20.md) — **card MAP-CURRENCY (2026-09-20):** maps
+  checked like a build target — 310 maps, 3.06 MB, the lockstep rule unenforced in CI and firing per commit; step 1
+  (work order MAP-PR-GATE-1, chartered) moves the rule to the pull request; steps 2–3 (generated navigation with
+  per-row blob ids, `pins.toml`, a size gate, a clerk-written prose pass) wait for five owner rulings.
 - [night-report-2026-09-20-25a.md](night-report-2026-09-20-25a.md) — **run 25a (every bump, the perf remainder, the
   RePark halves):** RP-39 and RP-40, the `count(*)` fold, the bench baseline switch, metadata-only DELETE, delete-manifest
   rewrite, writer metrics config on main; the AWS pair and the first gate scoreboard in the orchestrating note.
