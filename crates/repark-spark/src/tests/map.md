@@ -21,6 +21,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   such property is dictionary-encoded on the owned CTAS route (Java's default), `false` turns
   every dictionary page off, `TRUE` is read case-insensitively, and the owned plain INSERT
   writes the fork insert exec's layout so no session conf decides the bytes.
+  Lint fix (2026-09-20): the `use super::super::*;` house line resolved nothing here —
+  only `super::common::*` and `super::session_write_conf` paths are used — so it is dropped
+  for `unused_imports` (repark#733 `Rust lint`).
   pins: ice-session-write-conf-1/C-064
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `an_owned_plain_update_resolves_a_mixed_case_set_target` and
