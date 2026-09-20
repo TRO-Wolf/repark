@@ -13,10 +13,11 @@ against RePark, so a critic with no Spark on the box runs them unchanged.
 Run with a PySpark 4.1.2 interpreter that can resolve the Iceberg runtime GAV from
 ``_oracle_pins``::
 
-    _record_ice_meta_delete_1.py [warehouse]          # rewrite the fixture
-    _record_ice_meta_delete_1.py --check [warehouse]  # re-derive and exit non-zero on drift
+    _record_ice_meta_delete_1.py [warehouse]
+    _record_ice_meta_delete_1.py --check [warehouse]
 
-``warehouse`` is created fresh (removed first) and defaults to a scratch directory.
+The first form rewrites the fixture; ``--check`` re-derives every cell and exits non-zero on
+drift. ``warehouse`` is created fresh (removed first) and defaults to a scratch directory.
 """
 
 from __future__ import annotations
@@ -126,10 +127,7 @@ def cell_id(shape: str, version: int, mode: str) -> str:
 def cell_ids() -> list[str]:
     """Return every recorded cell key, in shape order."""
     return [
-        cell_id(shape, version, mode)
-        for shape in SHAPES
-        for version in VERSIONS
-        for mode in MODES
+        cell_id(shape, version, mode) for shape in SHAPES for version in VERSIONS for mode in MODES
     ]
 
 
@@ -202,7 +200,7 @@ def _spark_cell(session: Any, shape: str, version: int, mode: str) -> dict[str, 
                 f"SELECT content, record_count FROM {table}.files ORDER BY content, record_count"
             ).collect()
         ]
-    except Exception as error:  # noqa: BLE001 - a refusal is part of the recorded cell
+    except Exception as error:
         cell["error"] = f"{type(error).__name__}: {str(error)[:300]}"
     return cell
 

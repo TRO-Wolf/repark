@@ -162,9 +162,7 @@ def test_rewrite_v3_deletion_vectors_after_evolution_matches_spark(spark_v3: Rep
         "TBLPROPERTIES ('format-version' = '3', 'write.delete.mode' = 'merge-on-read')"
     )
     for i in range(0, 6, 2):
-        spark_v3.sql(
-            f"INSERT INTO mem.ns.v3dv VALUES ({i}, {100 + i}), ({i + 1}, {101 + i})"
-        )
+        spark_v3.sql(f"INSERT INTO mem.ns.v3dv VALUES ({i}, {100 + i}), ({i + 1}, {101 + i})")
     spark_v3.sql("DELETE FROM mem.ns.v3dv WHERE id = 1")
     assert spark_v3.sql("SELECT * FROM mem.ns.v3dv.delete_files").to_arrow().num_rows == 1
     spark_v3.sql("ALTER TABLE mem.ns.v3dv ADD COLUMN note STRING")

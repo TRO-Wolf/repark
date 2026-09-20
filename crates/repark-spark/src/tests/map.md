@@ -325,6 +325,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   asserts on the way that the whole-file `DELETE … IN (1..6)` writes no delete file at all —
   it is answered from metadata.
   pins: ice-meta-delete-1/C-001
+  **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
 - `call_rewrite_dangling.rs` — the CALL's
   `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports
   `removed_delete_files_count` on a partitioned v2 fixture (C-006).

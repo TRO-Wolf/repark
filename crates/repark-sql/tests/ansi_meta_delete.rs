@@ -149,7 +149,6 @@ fn summary(entry: &(String, HashMap<String, String>), key: &str) -> Option<Strin
     entry.1.get(key).cloned()
 }
 
-/// pins: ice-meta-delete-1/C-001
 #[tokio::test]
 async fn the_ansi_door_removes_whole_files_in_one_delete_snapshot_on_both_modes() {
     for mode in ["merge-on-read", "copy-on-write"] {
@@ -174,7 +173,6 @@ async fn the_ansi_door_removes_whole_files_in_one_delete_snapshot_on_both_modes(
     }
 }
 
-/// pins: ice-meta-delete-1/C-002
 #[tokio::test]
 async fn the_ansi_door_commits_an_empty_delete_snapshot_on_a_no_match() {
     for mode in ["merge-on-read", "copy-on-write"] {
@@ -199,7 +197,6 @@ async fn the_ansi_door_commits_an_empty_delete_snapshot_on_a_no_match() {
     }
 }
 
-/// pins: ice-meta-delete-1/C-003
 #[tokio::test]
 async fn the_ansi_door_keeps_a_partial_delete_on_the_row_level_route() {
     let door = door("merge-on-read").await;
@@ -212,7 +209,6 @@ async fn the_ansi_door_keeps_a_partial_delete_on_the_row_level_route() {
     assert_eq!(summary(last, "deleted-data-files"), None);
 }
 
-/// pins: ice-meta-delete-1/C-004
 #[tokio::test]
 async fn the_ansi_door_deletes_every_file_without_a_predicate() {
     let door = door("merge-on-read").await;
@@ -225,7 +221,6 @@ async fn the_ansi_door_deletes_every_file_without_a_predicate() {
     assert_eq!(summary(last, "total-data-files").as_deref(), Some("0"));
 }
 
-/// pins: ice-meta-delete-1/C-006
 #[tokio::test]
 async fn the_ansi_door_folds_an_unquoted_column_and_stays_exact_on_a_quoted_one() {
     let door = door("merge-on-read").await;
@@ -247,7 +242,6 @@ async fn the_ansi_door_folds_an_unquoted_column_and_stays_exact_on_a_quoted_one(
     );
 }
 
-/// pins: ice-meta-delete-1/C-001
 #[tokio::test]
 async fn the_ansi_door_answers_a_string_equality_from_metadata() {
     let door = door("merge-on-read").await;

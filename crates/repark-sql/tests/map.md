@@ -20,6 +20,7 @@ holds behavior observed from outside the crate.
   wrong-cased column folds (its planner lower-cases it), a QUOTED one keeps the door's
   refusal and touches no file.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-006
+  **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
 - `ansi_nested_ddl_oracle.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI
   door's twin of every recorded nested DDL cell, reading Spark's answers from
   `python/repark-parity/fixtures/torture/data/ice_nested_evo_1/oracle.json`. The `cells`

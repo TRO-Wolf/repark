@@ -54,6 +54,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `3dd30491a9d9f9c58c10a8dd61077e3c07ea8b92bb57ef2952bbff69133828c9`; the live tier
   re-derives the fixture with the recorder's `--check` mode.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005
+  **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
 
 - [test_ice_overwrite_mode_1_transform.py](test_ice_overwrite_mode_1_transform.py) +
   [ice_overwrite_mode_1_transform_spark_oracle.json](ice_overwrite_mode_1_transform_spark_oracle.json) +

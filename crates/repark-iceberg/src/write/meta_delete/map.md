@@ -22,6 +22,9 @@ here even though its own end-to-end battery lives in
   negations, functions, casts, subqueries and non-primitive columns that keep the row-level
   route.
 
+The per-test `pins:` citations live in this map's header row, not in the source: the owner's
+comment ban covers doc comments too.
+
 ## Pointers
 
 - Up: [`../map.md`](../map.md)

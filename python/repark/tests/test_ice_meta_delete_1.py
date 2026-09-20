@@ -102,11 +102,9 @@ def _run_cell(session: ReparkSession, shape: str, version: int, mode: str) -> di
         cell["snapshots"] = _ordered_snapshots(session, table)
         cell["files"] = sorted(
             [row[0], row[1]]
-            for row in session.sql(
-                f"SELECT content, record_count FROM {table}.files"
-            ).collect()
+            for row in session.sql(f"SELECT content, record_count FROM {table}.files").collect()
         )
-    except Exception as error:  # noqa: BLE001 - a refusal is part of the compared cell
+    except Exception as error:
         cell["error"] = f"{type(error).__name__}: {str(error)[:300]}"
     return cell
 
@@ -160,10 +158,7 @@ def test_fixture_provenance_covers_every_cell() -> None:
     assert document["provenance"]["iceberg"] == "1.11.0"
     assert len(document["cells"]) == 72
     assert sorted(document["cells"]) == sorted(
-        cell_id(shape, version, mode)
-        for shape in SHAPES
-        for version in VERSIONS
-        for mode in MODES
+        cell_id(shape, version, mode) for shape in SHAPES for version in VERSIONS for mode in MODES
     )
 
 

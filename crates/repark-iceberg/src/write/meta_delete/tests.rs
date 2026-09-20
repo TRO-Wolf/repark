@@ -181,7 +181,6 @@ fn summary_value(summary: &HashMap<String, String>, key: &str) -> Option<String>
     summary.get(key).cloned()
 }
 
-/// pins: ice-meta-delete-1/C-001
 #[tokio::test]
 async fn a_whole_file_delete_removes_the_file_in_both_delete_modes() {
     for mode in [MERGE_ON_READ, COPY_ON_WRITE] {
@@ -231,7 +230,6 @@ async fn a_whole_file_delete_removes_the_file_in_both_delete_modes() {
     }
 }
 
-/// pins: ice-meta-delete-1/C-002
 #[tokio::test]
 async fn a_no_match_delete_commits_an_empty_delete_snapshot() {
     for mode in [MERGE_ON_READ, COPY_ON_WRITE] {
@@ -268,7 +266,6 @@ async fn a_no_match_delete_commits_an_empty_delete_snapshot() {
     }
 }
 
-/// pins: ice-meta-delete-1/C-003
 #[tokio::test]
 async fn a_partial_match_declines_before_any_commit() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -303,7 +300,6 @@ async fn a_partial_match_declines_before_any_commit() {
     );
 }
 
-/// pins: ice-meta-delete-1/C-004
 #[tokio::test]
 async fn no_predicate_and_literal_true_delete_every_file() {
     for (name, sql) in [
@@ -344,7 +340,6 @@ async fn no_predicate_and_literal_true_delete_every_file() {
     }
 }
 
-/// pins: ice-meta-delete-1/C-005
 #[tokio::test]
 async fn a_prior_position_delete_does_not_change_the_route() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -385,7 +380,6 @@ async fn a_prior_position_delete_does_not_change_the_route() {
     );
 }
 
-/// pins: ice-meta-delete-1/C-006
 #[tokio::test]
 async fn the_decision_binds_columns_with_the_doors_case_sensitivity() {
     let warehouse = TempDir::new().expect("temp warehouse");
@@ -427,7 +421,6 @@ async fn the_decision_binds_columns_with_the_doors_case_sensitivity() {
     assert_eq!(read_ids(&catalog, &ident).await, vec![1, 2, 3]);
 }
 
-/// pins: ice-meta-delete-1/C-007
 #[test]
 fn a_branch_selector_and_every_non_identity_clause_decline() {
     for sql in [
@@ -452,7 +445,6 @@ fn a_branch_selector_and_every_non_identity_clause_decline() {
     );
 }
 
-/// pins: ice-meta-delete-1/C-003
 #[test]
 fn the_translation_keeps_spark_answerable_shapes_and_refuses_the_rest() {
     let schema = target_schema();

@@ -122,7 +122,7 @@ async fn unknown_delete_granularity_refuses_before_any_write() {
     );
 }
 
-/// pins: mw-9-delete-granularity/C-005; pins: ice-meta-delete-1/C-001
+/// pins: mw-9-delete-granularity/C-005
 #[tokio::test]
 async fn fork_table_provider_delete_is_not_this_writer() {
     let wh = TempDir::new().unwrap();
