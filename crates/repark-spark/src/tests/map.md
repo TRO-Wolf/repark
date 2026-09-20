@@ -468,6 +468,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: rp-11-repin-f24/C-002
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
+  `call_procs_route_1` (**ICE-PROCS-ROUTE-1 (2026-09-19)**) pins the four routed
+  procedure schemas and rows (ancestor chain newest-first with snapshot
+  timestamps, table-stats blobs in caller order, partition-stats registration,
+  rewrite-table-path staging plus Spark's counts across three focused tests
+  sharing one seed-and-locate helper), the older-snapshot answers
+  (ancestors from S1, table and partition stats registered on S0 with S0 ndv,
+  each asserted against the current head), the Spark-shaped refusals
+  (empty columns, struct column, unknown column, unpartitioned table, wrong
+  prefix with the router-owned text and class), the unpartitioned refusal on a
+  populated table with the fork External shape excluded, the whole-message
+  unknown-column dump with Spark's spacing, the nested-name
+  pass-through with no silent commit, the duplicate dedup, and the
+  version-range refusal.
+  The battery carries no code comments (round
+  rule); its pins are cited from this map and `call/map.md`.
+  pins: ice-procs-route-1/C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012,
+  C-013, C-014, C-015, C-016
   `call_register` (**V3-1 / RP-3 C-008**): `CALL system.register_table` arguments, three nullable BIGINT columns,
   adoption/read-back, occupied-ident refusal, Hadoop `vN.metadata.json` write bumps to `v(N+1)`,
   S3 Tables register names R126, and the Spark-written `fixtures/v3-spark-mor/`
