@@ -15,6 +15,9 @@ Source comments are condensed to API and safety contracts; executable behavior i
   V3-1 re-exports `iceberg_to_datafusion` so the Spark CALL router shares the iceberg error
   fold): `pub mod catalog; pub mod write;` + the union of the two v1
   crate-root re-export lists (public names unchanged except that one added mapper).
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** also re-exports the session-write-conf
+  surface (`SessionWriteView`, `resolve_write_for_session`, the `session_write_conf_from_*`
+  readers, `with_session_write_conf`).
 - `catalog/` — Glue + S3 Tables + memory catalog builders, DataFusion `CatalogProvider`
   registration, scheme-based `FileIO` selection, the hoisted `reregister_catalog_provider`
   session-refresh adapter (`catalog_ops.rs`), and V3-4 current-snapshot

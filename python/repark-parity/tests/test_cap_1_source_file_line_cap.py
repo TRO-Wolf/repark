@@ -32,13 +32,12 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1843),
     ("crates/repark-iceberg/src/write/alter.rs", 1607),
     ("crates/repark-iceberg/src/write/append.rs", 1816),
-    ("crates/repark-iceberg/src/write/merge/mod.rs", 1756),
+    ("crates/repark-iceberg/src/write/merge/mod.rs", 1701),
     ("crates/repark-iceberg/src/write/merge/tests/merge.rs", 1032),
     ("crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs", 1023),
-    ("crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs", 3020),
+    ("crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs", 3018),
     ("crates/repark-iceberg/src/write/overwrite.rs", 1053),
-    ("crates/repark-iceberg/src/write/predicate_dml.rs", 1139),
-    ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1440),
+    ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1435),
     ("crates/repark-python/src/column/mod.rs", 1013),
     ("crates/repark-python/src/dataframe.rs", 1017),
     ("crates/repark-python/src/session.rs", 1122),
@@ -180,7 +179,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 38
+    assert len(rust_approved) == 37
     assert len(python_approved) == 32
 
 

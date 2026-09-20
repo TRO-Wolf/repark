@@ -58,7 +58,24 @@ impl StatementWriteOptions {
             codec: self.codec.clone(),
             level: self.level.clone(),
             target_file_size_bytes: self.target_file_size_bytes,
+            ..repark_iceberg::write::WriterStagingOverrides::none()
         }
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub(crate) fn resolve_with_session(
+        &self,
+        ctx: &datafusion::prelude::SessionContext,
+    ) -> Result<(
+        Vec<(String, String)>,
+        repark_iceberg::write::WriterStagingOverrides,
+    )> {
+        let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
+        repark_iceberg::write::resolve_write_for_session(
+            &self.snapshot_extra,
+            &self.staging_overrides(),
+            &session,
+        )
     }
 
     #[allow(clippy::missing_errors_doc)]

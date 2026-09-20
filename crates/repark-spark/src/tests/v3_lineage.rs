@@ -432,7 +432,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
     let pinned: [(&str, u64); 4] = [
         (
             "crates/repark-spark/src/tests/v3_subquery_dml.rs",
-            0x0fdb_1a29_04f3_cbf4,
+            0x83fa_a411_70d6_4ad3,
         ),
         (
             "crates/repark-spark/src/tests/v3_cow.rs",
@@ -457,7 +457,7 @@ fn cow_keep_refusal_files_are_byte_untouched() {
              (feat/v3-11-row-id-determinism) re-records the `v3/cow.rs` hash for the two ANSI \
              same-commit file-order twins it adds there, and again in its remediation round \
              when those two were renamed off the misleading `sparks_..._order` spelling; \
-             later units re-record only for a change they themselves made"
+             later units re-record only for a change they themselves made;              ICE-SESSION-WRITE-CONF-1 round 3 re-records `v3_subquery_dml.rs` for the              `V3_8_UPDATE_FILES` 2 -> 1 layout close it makes"
         );
     }
 }

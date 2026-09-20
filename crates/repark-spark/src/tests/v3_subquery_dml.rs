@@ -141,7 +141,7 @@ async fn data_file_count(catalogs: &CatalogRegistry, table: &str) -> usize {
     files
 }
 
-const F_V3_8_UPDATE_FILES: usize = 2;
+const V3_8_UPDATE_FILES: usize = 1;
 
 const SEED_ROWS: [(i32, &str); 3] = [(1, "a"), (2, "b"), (3, "c")];
 const SEED_TRIPLES: [(i32, i64, i64); 3] = [(1, 0, 1), (2, 1, 1), (3, 2, 1)];
@@ -188,7 +188,7 @@ fn update_cell() -> Cell {
             snapshot_first_row_id: Some(3),
             snapshot_added_rows: Some(3),
         },
-        data_files: F_V3_8_UPDATE_FILES,
+        data_files: V3_8_UPDATE_FILES,
     }
 }
 

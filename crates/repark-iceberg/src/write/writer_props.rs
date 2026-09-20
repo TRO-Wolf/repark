@@ -18,11 +18,17 @@ pub const COMPRESSION_LEVEL_PROP: &str = "write.parquet.compression-level";
 /// Accepted codec spellings (case-insensitive), shown in loud-error messages.
 pub const ACCEPTED_CODECS: &str = "zstd, snappy, gzip, lz4, uncompressed";
 
+pub const DELETE_COMPRESSION_CODEC_PROP: &str = "write.delete.parquet.compression-codec";
+
+pub const DELETE_COMPRESSION_LEVEL_PROP: &str = "write.delete.parquet.compression-level";
+
+pub const ENABLE_DICTIONARY_PROP: &str = "parquet.enable.dictionary";
+
 /// Build [`WriterProperties`] for `table` from `write.parquet.compression-codec` (+ level).
 /// # Errors
 /// Unknown codec, unparsable level, or level out of range for gzip/zstd.
 pub fn writer_properties_for(table: &Table) -> Result<WriterProperties> {
-    writer_properties_with(table, None, None)
+    writer_properties_with(table, None, None, false)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -30,6 +36,7 @@ pub fn writer_properties_with(
     table: &Table,
     codec_override: Option<&str>,
     level_override: Option<&str>,
+    fork_insert_dictionary_rule: bool,
 ) -> Result<WriterProperties> {
     let properties = table.metadata().properties();
     let effective_codec = codec_override
@@ -46,6 +53,13 @@ pub fn writer_properties_with(
     }
     Ok(WriterProperties::builder()
         .set_compression(compression_with(table, codec_override, level_override)?)
+        .set_dictionary_enabled(
+            properties
+                .get(ENABLE_DICTIONARY_PROP)
+                .map_or(!fork_insert_dictionary_rule, |value| {
+                    value.eq_ignore_ascii_case("true")
+                }),
+        )
         .build())
 }
 
@@ -79,23 +93,55 @@ pub(crate) fn metrics_config_for(table: &Table) -> Result<MetricsConfig> {
     MetricsConfig::for_table(table.metadata()).map_err(crate::catalog::iceberg_to_datafusion)
 }
 
-pub(crate) fn name_matched_parquet_builder(table: &Table) -> Result<ParquetWriterBuilder> {
+pub(crate) fn name_matched_parquet_builder(
+    table: &Table,
+    staging: &crate::write::write_options::WriterStagingOverrides,
+) -> Result<ParquetWriterBuilder> {
     Ok(ParquetWriterBuilder::new_with_match_mode(
-        writer_properties_for(table)?,
+        crate::write::write_options::staged_writer_properties(table, staging)?,
         crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
         FieldMatchMode::Name,
     )
     .with_metrics_config(metrics_config_for(table)?))
 }
 
-pub(crate) fn position_delete_writer_properties_for(table: &Table) -> Result<WriterProperties> {
-    let _ = compression_for(table)?;
-    fork_position_delete_writer_properties_for(table.metadata().properties())
-        .map_err(crate::catalog::iceberg_to_datafusion)
+pub(crate) fn position_delete_writer_properties_for(
+    table: &Table,
+    staging: &crate::write::write_options::WriterStagingOverrides,
+) -> Result<WriterProperties> {
+    let fork = fork_position_delete_writer_properties_for(table.metadata().properties())
+        .map_err(crate::catalog::iceberg_to_datafusion)?;
+    let Some(compression) = delete_compression_with(table, staging)? else {
+        return Ok(fork);
+    };
+    Ok(WriterProperties::builder()
+        .set_compression(compression)
+        .set_statistics_truncate_length(fork.statistics_truncate_length())
+        .set_key_value_metadata(fork.key_value_metadata().cloned())
+        .build())
 }
 
-fn compression_for(table: &Table) -> Result<Compression> {
-    compression_with(table, None, None)
+fn delete_compression_with(
+    table: &Table,
+    staging: &crate::write::write_options::WriterStagingOverrides,
+) -> Result<Option<Compression>> {
+    let properties = table.metadata().properties();
+    let delete_codec = staging.codec.as_deref().or_else(|| {
+        properties
+            .get(DELETE_COMPRESSION_CODEC_PROP)
+            .map(String::as_str)
+    });
+    let delete_level = staging.level.as_deref().or_else(|| {
+        properties
+            .get(DELETE_COMPRESSION_LEVEL_PROP)
+            .map(String::as_str)
+    });
+    if delete_codec.is_none() && delete_level.is_none() {
+        return Ok(None);
+    }
+    let codec = delete_codec.or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str));
+    let level = delete_level.or_else(|| properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str));
+    parse_compression(codec, level).map(Some)
 }
 
 fn compression_with(
@@ -570,6 +616,7 @@ mod tests {
             &table,
             &pairs,
             WriteConcurrency::new(1).expect("K=1"),
+            &crate::write::write_options::WriterStagingOverrides::none(),
         )
         .await
         .expect("pos deletes");
@@ -579,6 +626,77 @@ mod tests {
             matches!(compression, Compression::GZIP(_)),
             "position-delete files must use the same table codec; got {compression:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn position_delete_codec_resolves_over_the_data_file_property() {
+        let _: &str = "pins: ice-session-write-conf-1/C-050";
+        for (properties, staging, want) in [
+            (
+                vec![
+                    (COMPRESSION_CODEC_PROP, "snappy"),
+                    (DELETE_COMPRESSION_CODEC_PROP, "gzip"),
+                ],
+                None,
+                "GZIP",
+            ),
+            (
+                vec![
+                    (COMPRESSION_CODEC_PROP, "snappy"),
+                    (DELETE_COMPRESSION_CODEC_PROP, "snappy"),
+                ],
+                Some("gzip"),
+                "GZIP",
+            ),
+            (
+                vec![(COMPRESSION_CODEC_PROP, "gzip")],
+                Some("snappy"),
+                "SNAPPY",
+            ),
+        ] {
+            let warehouse = TempDir::new().expect("tmp");
+            let catalog = memory_catalog(&warehouse).await;
+            let ident = create_table(
+                &catalog,
+                "t_posdel_order",
+                properties
+                    .iter()
+                    .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+                    .collect(),
+            )
+            .await;
+            append(&catalog, &ident, vec![numeric_batch(10)])
+                .await
+                .expect("seed");
+            let data_path: std::sync::Arc<str> = {
+                let files = live_data_files(&catalog, &ident).await;
+                std::sync::Arc::from(files[0].file_path())
+            };
+            let pairs = vec![(data_path, 0_i64)];
+            let table = catalog.load_table(&ident).await.expect("reload");
+            let overrides = crate::write::write_options::WriterStagingOverrides {
+                codec: staging.map(ToString::to_string),
+                ..crate::write::write_options::WriterStagingOverrides::none()
+            };
+            let written = crate::write::position_delete::write_position_deletes(
+                &table,
+                &pairs,
+                WriteConcurrency::new(1).expect("K=1"),
+                &overrides,
+            )
+            .await
+            .expect("pos deletes");
+            let compression = footer_compression(&catalog, &ident, written[0].file_path()).await;
+            assert_eq!(
+                format!("{compression:?}")
+                    .split('(')
+                    .next()
+                    .unwrap_or_default(),
+                want,
+                "delete codec order is override > `{DELETE_COMPRESSION_CODEC_PROP}` > \
+                 `{COMPRESSION_CODEC_PROP}`; properties {properties:?} staging {staging:?}"
+            );
+        }
     }
 
     #[tokio::test]
@@ -619,6 +737,7 @@ mod tests {
             codec: codec.map(str::to_string),
             level: level.map(str::to_string),
             target_file_size_bytes: size,
+            ..WriterStagingOverrides::none()
         }
     }
 
@@ -762,7 +881,7 @@ mod tests {
         )
         .await;
         let table = catalog.load_table(&ident).await.expect("load");
-        let error = writer_properties_with(&table, Some("gzip"), None)
+        let error = writer_properties_with(&table, Some("gzip"), None, false)
             .expect_err("table level plus gzip option codec must refuse");
         assert!(
             error.to_string().contains("compression-level"),

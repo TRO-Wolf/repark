@@ -26,7 +26,7 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use serde_json::Value;
 use tempfile::TempDir;
 
-use super::super::row_lineage::write_partitioned_lineage_files;
+use super::super::row_lineage::write_partitioned_lineage_files_with;
 use super::super::write_data_files;
 use crate::write::append::{append, write_partitioned_data_files_with_concurrency};
 use crate::write::concurrency::WriteConcurrency;
@@ -545,9 +545,13 @@ async fn merge_lineage_path_applies_table_metrics_config() {
     )
     .expect("lineage batch builds");
     let batches: Vec<Result<RecordBatch, DataFusionError>> = vec![Ok(batch)];
-    let files = write_partitioned_lineage_files(&table, futures::stream::iter(batches))
-        .await
-        .expect("rewrite lineage rows");
+    let files = write_partitioned_lineage_files_with(
+        &table,
+        futures::stream::iter(batches),
+        &WriterStagingOverrides::none(),
+    )
+    .await
+    .expect("rewrite lineage rows");
     assert!(
         !files.is_empty(),
         "lineage rewrite stages at least one data file"
@@ -612,6 +616,7 @@ async fn position_delete_files_carry_delete_type_and_full_path_bounds() {
         &table,
         &pairs,
         WriteConcurrency::new(1).expect("concurrency builds"),
+        &WriterStagingOverrides::none(),
     )
     .await
     .expect("write position deletes");
@@ -671,6 +676,7 @@ async fn a_metrics_none_table_keeps_the_delete_files_path_bounds() {
         &table,
         &pairs,
         WriteConcurrency::new(1).expect("concurrency builds"),
+        &WriterStagingOverrides::none(),
     )
     .await
     .expect("write position deletes");

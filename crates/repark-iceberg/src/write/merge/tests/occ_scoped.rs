@@ -455,6 +455,7 @@ async fn predicate_dml(
         selection_sql: selection_sql.to_string(),
         assignments: set_value.map(|value| vec![("v".to_string(), format!("'{value}'"))]),
         case_insensitive: true,
+        branch: None,
     };
     execute_predicate_dml(&SessionContext::new(), catalog, &spec).await
 }

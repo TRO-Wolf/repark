@@ -21,24 +21,21 @@ use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use std::str::FromStr;
 use uuid::Uuid;
 
-use crate::write::concurrency::concurrency_from_ctx;
 use crate::write::conflict_filter::for_identity_dml;
 use crate::write::file_scoped_rewrite::allowlist_from_paths;
 use crate::write::merge::row_lineage::{scratch_schema_for_table, table_carries_merge_lineage};
 use crate::write::merge::{
-    CommitScope, FILE_PATH_COL, IsolationLevel, POS_COL, RowDeltaKind, TargetScanStream,
-    commit_overwrite, commit_row_delta_kind_with_partitions, dedup_key, deregister_merge_scratch,
-    drain_partition_sink, iceberg_err, new_partition_sink, quote_ident, register_streaming_target,
-    reserved_name_guard, resolve_affected_data_files, resolve_write_column, scratch_schema,
-    write_new_data_files_from_stream,
+    CommitScope, FILE_PATH_COL, IsolationLevel, POS_COL, TargetScanStream, dedup_key,
+    deregister_merge_scratch, drain_partition_sink, iceberg_err, new_partition_sink, quote_ident,
+    register_streaming_target, reserved_name_guard, resolve_write_column, scratch_schema,
 };
 use crate::write::position_delete::PositionDeletePair;
 use crate::write::predicate_dml::lineage::{
-    project_update_data_batch, rewrite_column_names, survivor_sql, update_projection_sql,
-    update_values_schema,
+    project_update_data_batch, update_projection_sql, update_values_schema,
 };
 use crate::write::predicate_dml::residual::identity_scan_residual;
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
+use cow_commit::{commit_identity_cow, commit_identity_update_cow};
 
 /// Iceberg standard table property selecting the DELETE write strategy.
 const WRITE_DELETE_MODE: &str = "write.delete.mode";
@@ -67,6 +64,21 @@ pub struct PredicateDmlSpec {
     /// `None` = identity DELETE.
     pub assignments: Option<Vec<(String, String)>>,
     pub case_insensitive: bool,
+    pub branch: Option<String>,
+}
+
+impl PredicateDmlSpec {
+    #[must_use]
+    pub fn identity(target: TableIdent, target_alias: String, selection_sql: String) -> Self {
+        Self {
+            target,
+            target_alias,
+            selection_sql,
+            assignments: None,
+            case_insensitive: true,
+            branch: None,
+        }
+    }
 }
 
 /// Catalog name and identity spec from an allow-listed `DELETE … IN` / `NOT IN` / `[NOT] EXISTS`.
@@ -178,70 +190,21 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
             selection_sql: scratch_selection.to_string(),
             assignments: None,
             case_insensitive: true,
+            branch: None,
         },
     }))
 }
 
-/// Return catalog plus spec for allow-listed uncorrelated `UPDATE … SET` with `WHERE col IN`.
-/// # Errors
-/// Fails with [`DataFusionError::Plan`] when the allowed spelling's target is not three-part.
-pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
-    let Statement::Update(update) = statement else {
-        return Ok(None);
-    };
-    if update.from.is_some()
-        || update.returning.is_some()
-        || update.output.is_some()
-        || update.limit.is_some()
-        || !update.order_by.is_empty()
-        || !update.table.joins.is_empty()
-        || update.assignments.is_empty()
-    {
-        return Ok(None);
+fn spec_snapshot_id(table: &iceberg::table::Table, spec: &PredicateDmlSpec) -> Option<i64> {
+    let metadata = table.metadata();
+    match spec.branch.as_deref() {
+        Some(name) => metadata.snapshot_for_ref(name),
+        None => metadata.current_snapshot(),
     }
-    let Some(selection) = update.selection.as_ref() else {
-        return Ok(None);
-    };
-    // UPDATE hole is uncorrelated positive IN only (NOT IN / EXISTS stay refused this PR).
-    if !is_allowed_positive_uncorrelated_in(selection) {
-        return Ok(None);
-    }
-    let Some((object_name, alias)) = update_target_and_alias(update) else {
-        return Ok(None);
-    };
-    let parts = object_name_parts(object_name);
-    if parts.len() < 3 {
-        return Ok(None);
-    }
-    let catalog_name = parts[0].clone();
-    let table_name = parts[parts.len() - 1].clone();
-    let namespace = parts[1..parts.len() - 1].to_vec();
-    let namespace = NamespaceIdent::from_vec(namespace).map_err(|error| {
-        DataFusionError::Plan(format!(
-            "UPDATE target `{object_name}` has an invalid namespace: {error}"
-        ))
-    })?;
-    let target_alias = alias.unwrap_or_else(|| table_name.clone());
-    let Some(assignments) = scalar_set_assignments(update, &parts, &target_alias) else {
-        return Ok(None);
-    };
-    let mut scratch_selection = selection.clone();
-    rewrite_target_refs_in_expr(&mut scratch_selection, &parts, &target_alias);
-    Ok(Some(AllowedDeleteIn {
-        catalog_name,
-        spec: PredicateDmlSpec {
-            target: TableIdent::new(namespace, table_name),
-            target_alias,
-            selection_sql: scratch_selection.to_string(),
-            assignments: Some(assignments),
-            case_insensitive: true,
-        },
-    }))
+    .map(|snapshot| snapshot.snapshot_id())
 }
 
-/// Execute an identity DELETE or UPDATE: SELECT over the pinned scratch, then COW-rewrite or `MoR`
-/// # Errors
-/// Planning, write, or commit errors, plus `NotImplemented` for non-Parquet or non-V2 `MoR`.
+#[allow(clippy::missing_errors_doc)]
 pub async fn execute_predicate_dml(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -262,10 +225,7 @@ pub async fn execute_predicate_dml(
         resolve_delete_isolation(&table)?,
         for_identity_dml(&table, &spec.selection_sql, &spec.target_alias),
     );
-    let snapshot_id = table
-        .metadata()
-        .current_snapshot()
-        .map(|snapshot| snapshot.snapshot_id());
+    let snapshot_id = spec_snapshot_id(&table, spec);
 
     let scratch = scratch_schema(&write_schema);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
@@ -296,19 +256,20 @@ pub async fn execute_predicate_dml(
                     snapshot_id,
                     &pairs,
                     &scope,
+                    spec.branch.as_deref(),
                 )
                 .await
             }
             DeleteWriteMode::MergeOnRead => {
-                commit_row_delta_kind_with_partitions(
+                mor_commit::commit_identity_delete_mor(
+                    ctx,
                     catalog,
                     &table,
                     snapshot_id,
                     pairs,
-                    Vec::new(),
-                    concurrency_from_ctx(ctx),
-                    &scope.row_delta(RowDeltaKind::Delete),
+                    &scope,
                     drain_partition_sink(&partitions),
+                    spec.branch.as_deref(),
                 )
                 .await
             }
@@ -341,10 +302,7 @@ async fn execute_identity_update(
         resolve_update_isolation(&table)?,
         for_identity_dml(&table, &spec.selection_sql, &spec.target_alias),
     );
-    let snapshot_id = table
-        .metadata()
-        .current_snapshot()
-        .map(|snapshot| snapshot.snapshot_id());
+    let snapshot_id = spec_snapshot_id(&table, spec);
 
     let scratch = scratch_schema_for_table(&write_schema, &table);
     let scan_concurrency = scan_concurrency_from_ctx(ctx);
@@ -376,27 +334,21 @@ async fn execute_identity_update(
                     snapshot_id,
                     (pairs, data_batches),
                     &scope,
+                    spec.branch.as_deref(),
                 )
                 .await
             }
             DeleteWriteMode::MergeOnRead => {
-                let stream = futures::stream::iter(data_batches.into_iter().map(Ok));
-                let data_files = write_new_data_files_from_stream(
-                    &table,
-                    &write_schema,
-                    stream,
-                    concurrency_from_ctx(ctx),
-                )
-                .await?;
-                commit_row_delta_kind_with_partitions(
+                mor_commit::commit_identity_update_mor(
+                    ctx,
                     catalog,
                     &table,
+                    &write_schema,
                     snapshot_id,
-                    pairs,
-                    data_files,
-                    concurrency_from_ctx(ctx),
-                    &scope.row_delta(RowDeltaKind::Merge),
+                    (pairs, data_batches),
+                    &scope,
                     drain_partition_sink(&partitions),
+                    spec.branch.as_deref(),
                 )
                 .await
             }
@@ -471,74 +423,6 @@ async fn collect_identity_update_rows(
     Ok((pairs, data_batches))
 }
 
-/// Rewrite affected files as survivors UNION ALL updated rows, then overwrite-commit.
-async fn commit_identity_update_cow(
-    ctx: &SessionContext,
-    catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    write_schema: &datafusion::arrow::datatypes::SchemaRef,
-    snapshot_id: Option<i64>,
-    rewrite: (Vec<PositionDeletePair>, Vec<RecordBatch>),
-    scope: &CommitScope,
-) -> Result<()> {
-    let (pairs, data_batches) = rewrite;
-    let mut affected: Vec<String> = Vec::new();
-    let mut seen = std::collections::HashSet::new();
-    for (path, _) in &pairs {
-        if seen.insert(path.clone()) {
-            affected.push(path.to_string());
-        }
-    }
-    let ident_table = register_identity_table(ctx, &pairs)?;
-    let rewrite_name =
-        register_affected_rewrite_target(ctx, table, snapshot_id, write_schema, &affected)?;
-    let new_table = register_update_values_table(ctx, data_batches)?;
-    let carry_lineage = table_carries_merge_lineage(table);
-    let columns = rewrite_column_names(write_schema, carry_lineage)
-        .iter()
-        .map(|name| quote_ident(name))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let rewrite_sql = format!(
-        "{survivors} UNION ALL SELECT {columns} FROM {newvals}",
-        survivors = survivor_sql(write_schema, &rewrite_name, &ident_table, carry_lineage),
-        newvals = quote_ident(&new_table),
-    );
-    let rewrite_result = async {
-        let stream = ctx.sql(&rewrite_sql).await?.execute_stream().await?;
-        let concurrency = concurrency_from_ctx(ctx);
-        write_new_data_files_from_stream(table, write_schema, stream, concurrency).await
-    }
-    .await;
-    let _ = ctx.deregister_table(ident_table.as_str());
-    let _ = ctx.deregister_table(new_table.as_str());
-    let _ = deregister_merge_scratch(ctx, &rewrite_name);
-    let new_files = rewrite_result?;
-    let affected_entries = resolve_affected_data_files(table, snapshot_id, &affected).await?;
-    commit_overwrite(
-        catalog,
-        table,
-        snapshot_id,
-        affected_entries,
-        new_files,
-        scope,
-    )
-    .await
-}
-
-fn register_update_values_table(ctx: &SessionContext, batches: Vec<RecordBatch>) -> Result<String> {
-    let name = format!("__repark_pred_upd_{}", Uuid::new_v4().simple());
-    if batches.is_empty() {
-        return Err(DataFusionError::Internal(
-            "identity UPDATE COW rewrite has no new-value batches".to_string(),
-        ));
-    }
-    let schema = batches[0].schema();
-    let provider = MemTable::try_new(schema, vec![batches])?;
-    ctx.register_table(name.as_str(), Arc::new(provider))?;
-    Ok(name)
-}
-
 fn validate_update_assignments(
     write_schema: &datafusion::arrow::datatypes::SchemaRef,
     assignments: &[(String, String)],
@@ -558,54 +442,10 @@ fn validate_update_assignments(
     Ok(())
 }
 
-/// Rewrite affected files, dropping the identity pairs, then overwrite-commit.
-async fn commit_identity_cow(
+pub(super) fn register_identity_table(
     ctx: &SessionContext,
-    catalog: &Arc<dyn Catalog>,
-    table: &Table,
-    write_schema: &datafusion::arrow::datatypes::SchemaRef,
-    snapshot_id: Option<i64>,
     pairs: &[PositionDeletePair],
-    scope: &CommitScope,
-) -> Result<()> {
-    let mut affected: Vec<String> = Vec::new();
-    let mut seen = std::collections::HashSet::new();
-    for (path, _) in pairs {
-        if seen.insert(path.clone()) {
-            affected.push(path.to_string());
-        }
-    }
-    let ident_table = register_identity_table(ctx, pairs)?;
-    let rewrite_name =
-        register_affected_rewrite_target(ctx, table, snapshot_id, write_schema, &affected)?;
-    let rewrite_sql = survivor_sql(
-        write_schema,
-        &rewrite_name,
-        &ident_table,
-        table_carries_merge_lineage(table),
-    );
-    let rewrite_result = async {
-        let stream = ctx.sql(&rewrite_sql).await?.execute_stream().await?;
-        let concurrency = concurrency_from_ctx(ctx);
-        write_new_data_files_from_stream(table, write_schema, stream, concurrency).await
-    }
-    .await;
-    let _ = ctx.deregister_table(ident_table.as_str());
-    let _ = deregister_merge_scratch(ctx, &rewrite_name);
-    let new_files = rewrite_result?;
-    let affected_entries = resolve_affected_data_files(table, snapshot_id, &affected).await?;
-    commit_overwrite(
-        catalog,
-        table,
-        snapshot_id,
-        affected_entries,
-        new_files,
-        scope,
-    )
-    .await
-}
-
-fn register_identity_table(ctx: &SessionContext, pairs: &[PositionDeletePair]) -> Result<String> {
+) -> Result<String> {
     let name = format!("__repark_pred_ident_{}", Uuid::new_v4().simple());
     let schema = Arc::new(ArrowSchema::new(vec![
         Field::new(FILE_PATH_COL, DataType::Utf8, false),
@@ -625,7 +465,7 @@ fn register_identity_table(ctx: &SessionContext, pairs: &[PositionDeletePair]) -
     Ok(name)
 }
 
-fn register_affected_rewrite_target(
+pub(super) fn register_affected_rewrite_target(
     ctx: &SessionContext,
     table: &Table,
     snapshot_id: Option<i64>,
@@ -1131,8 +971,11 @@ pub(crate) fn object_name_parts(name: &ObjectName) -> Vec<String> {
         .filter_map(|part| part.as_ident().map(|ident| ident.value.clone()))
         .collect()
 }
+mod cow_commit;
 mod lineage;
+mod mor_commit;
 pub mod plain;
+pub use plain::{try_allowed_plain_update, try_allowed_update_in};
 mod residual;
 
 #[cfg(test)]

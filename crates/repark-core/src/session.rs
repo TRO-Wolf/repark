@@ -251,6 +251,8 @@ impl ReparkSessionBuilder {
         let scan_concurrency =
             repark_iceberg::write::scan_concurrency_from_config_map(&self.config)
                 .map_err(|error| Error::Config(error.to_string()))?;
+        let session_write_conf =
+            repark_iceberg::write::session_write_conf_from_config_map(&self.config);
         // The extension hooks run at fixed positions in this construction order.
         let ext: Arc<dyn SessionExtension> = self
             .extension
@@ -264,6 +266,7 @@ impl ReparkSessionBuilder {
             file_scoped_rewrite,
         );
         config = repark_iceberg::write::with_scan_concurrency(config, scan_concurrency);
+        config = repark_iceberg::write::with_session_write_conf(config, session_write_conf);
         // Typed settings use defaults unless an explicit configuration key overrides them below.
         config = config.with_batch_size(self.batch_size.unwrap_or(DEFAULT_BATCH_SIZE));
         if let Some(partitions) = self.target_partitions {

@@ -12,7 +12,7 @@ use super::KnownPartitions;
 use super::abort;
 use super::dv_close;
 use super::iceberg_err;
-use crate::write::commit_error::{commit_err, operation_id_and_summary};
+use crate::write::commit_error::commit_err;
 use crate::write::concurrency::WriteConcurrency;
 
 pub(crate) const WRITE_MERGE_ISOLATION_LEVEL: &str = "write.merge.isolation-level";
@@ -98,10 +98,12 @@ pub(crate) async fn commit(
         new_files,
         &Predicate::AlwaysTrue,
         None,
+        &[],
     )
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn commit_on_ref(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -110,6 +112,7 @@ pub(crate) async fn commit_on_ref(
     new_files: Vec<DataFile>,
     conflict_filter: &Predicate,
     branch: Option<&str>,
+    summary_extra: &[(String, String)],
 ) -> Result<()> {
     let isolation = resolve_merge_isolation(table)?;
     commit_overwrite_on_ref(
@@ -120,10 +123,12 @@ pub(crate) async fn commit_on_ref(
         new_files,
         &CommitScope::scoped(isolation, conflict_filter.clone()),
         branch,
+        summary_extra,
     )
     .await
 }
 
+#[cfg(test)]
 pub(crate) async fn commit_overwrite(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -131,6 +136,7 @@ pub(crate) async fn commit_overwrite(
     affected: Vec<DataFile>,
     new_files: Vec<DataFile>,
     scope: &CommitScope,
+    summary_extra: &[(String, String)],
 ) -> Result<()> {
     commit_overwrite_on_ref(
         catalog,
@@ -140,10 +146,12 @@ pub(crate) async fn commit_overwrite(
         new_files,
         scope,
         None,
+        summary_extra,
     )
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn commit_overwrite_on_ref(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -152,12 +160,17 @@ pub(crate) async fn commit_overwrite_on_ref(
     new_files: Vec<DataFile>,
     scope: &CommitScope,
     branch: Option<&str>,
+    summary_extra: &[(String, String)],
 ) -> Result<()> {
     if affected.is_empty() && new_files.is_empty() {
         return Ok(());
     }
     let new_file_paths = abort::written_file_paths(&new_files);
-    let (operation_id, summary) = operation_id_and_summary();
+    let engine = crate::write::summary_collision::EngineSummary::for_changes(
+        table, &new_files, &affected, branch,
+    );
+    let (operation_id, summary) =
+        crate::write::write_options::summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let tx = if affected.is_empty() {
         let mut action = tx
@@ -249,6 +262,8 @@ pub(crate) async fn commit_row_delta_on_ref(
         &CommitScope::unscoped(isolation).row_delta(RowDeltaKind::Merge),
         branch,
         KnownPartitions::new(),
+        &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
 }
@@ -264,6 +279,8 @@ pub(crate) async fn commit_row_delta_on_ref_with_partitions(
     conflict_filter: &Predicate,
     branch: Option<&str>,
     known_partitions: KnownPartitions,
+    summary_extra: &[(String, String)],
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<()> {
     let isolation = resolve_merge_isolation(table)?;
     let scope = CommitScope::scoped(isolation, conflict_filter.clone());
@@ -277,6 +294,8 @@ pub(crate) async fn commit_row_delta_on_ref_with_partitions(
         &scope.row_delta(RowDeltaKind::Merge),
         branch,
         known_partitions,
+        summary_extra,
+        staging,
     )
     .await
 }
@@ -301,11 +320,14 @@ pub(crate) async fn commit_row_delta_kind(
         policy,
         None,
         KnownPartitions::new(),
+        &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg(test)]
 pub(crate) async fn commit_row_delta_kind_with_partitions(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -315,6 +337,8 @@ pub(crate) async fn commit_row_delta_kind_with_partitions(
     concurrency: WriteConcurrency,
     policy: &RowDeltaPolicy,
     known_partitions: KnownPartitions,
+    summary_extra: &[(String, String)],
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<()> {
     commit_row_delta_kind_on_ref(
         catalog,
@@ -326,6 +350,8 @@ pub(crate) async fn commit_row_delta_kind_with_partitions(
         policy,
         None,
         known_partitions,
+        summary_extra,
+        staging,
     )
     .await
 }
@@ -341,6 +367,8 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     policy: &RowDeltaPolicy,
     branch: Option<&str>,
     known_partitions: KnownPartitions,
+    summary_extra: &[(String, String)],
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<()> {
     if pairs.is_empty() && data_files.is_empty() {
         return Ok(());
@@ -354,6 +382,7 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
         concurrency,
         known_partitions,
         snapshot_id,
+        staging,
     )
     .instrument(tracing::info_span!(
         "merge.write_deletes",
@@ -365,7 +394,17 @@ pub(crate) async fn commit_row_delta_kind_on_ref(
     let delete_file_count = delete_file_paths.len() as u64;
     let arm_deleted_on_delete = prepared.arm_validate_deleted_files_on_delete;
 
-    let (operation_id, summary) = operation_id_and_summary();
+    let (added_deletes, removed_deletes) = prepared.delete_file_changes();
+    let mut added_files = data_files.clone();
+    added_files.extend(added_deletes.iter().cloned());
+    let engine = crate::write::summary_collision::EngineSummary::for_changes(
+        table,
+        &added_files,
+        removed_deletes,
+        branch,
+    );
+    let (operation_id, summary) =
+        crate::write::write_options::summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let mut action = tx.row_delta().add_data_files(data_files);
     action = prepared.apply(action);

@@ -14,7 +14,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 use iceberg::Catalog;
 use iceberg::expr::{Predicate, Reference};
-use iceberg::spec::{DataFile, Datum, NestedField, PrimitiveType, Transform, Type};
+use iceberg::spec::{DataFile, Datum, Literal, NestedField, PrimitiveType, Transform, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
@@ -623,6 +623,23 @@ pub(crate) fn equality_predicate(
                 &binding.source_column_name,
             )?;
             Ok(reference.equal_to(datum))
+        }
+    }
+}
+
+pub(crate) fn equality_literal(
+    binding: &PartitionFieldBinding,
+    equality: &PartitionEquality,
+) -> Result<Option<Literal>> {
+    match &equality.value {
+        None => Ok(None),
+        Some(literal) => {
+            let datum = datum_for_type(
+                &binding.primitive_type,
+                literal,
+                &binding.source_column_name,
+            )?;
+            Ok(Some(Literal::from(datum)))
         }
     }
 }

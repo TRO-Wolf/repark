@@ -655,6 +655,50 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `feat/ice-sorted-insert-1`.
   pins: ice-sorted-insert-1/C-001, C-002, C-003, C-004, C-005
   pins: ice-sorted-insert-1/C-006, C-007, C-008, C-009, C-010
+- [ice-session-write-conf-1-ledger.md](ice-session-write-conf-1-ledger.md) —
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19), in flight:** the session confs
+  `spark.sql.iceberg.snapshot-property.*` and
+  `spark.sql.iceberg.compression-codec` reach every Iceberg write with
+  writer-option over session-conf over table-property precedence (one Rust
+  resolver, router fold, facade forwards keys only); the 63-cell Spark oracle
+  (`ice_session_write_conf_1_spark_oracle.json`) and the red-first pins
+  (`test_ice_session_write_conf_1.py`: 26 red, 3 green controls on the base;
+  `test_ice_session_write_conf_1_paths.py`: the 38 run-25c path cells, 23 red).
+  Rounds 1 and 2 (2026-09-19) close a verification critic's four P1s and two P2s:
+  branch writes, the native `repark.sql` door, position-delete codecs, the
+  one-collision-rule summary merge, the mutation-proof Rust pins, and the
+  measured no-stamp on TRUNCATE / metadata-only delete. Three named residues —
+  `F-RDF-SESSION-CONF-1` (fork `rewrite_data_files`) on strict xfails, `IPI-08`
+  (whole-partition DELETE routing) on a dated xfail, and the
+  `engine-name` / `engine-version` reading; registry row FIXED. Round 6 (2026-09-20)
+  CLOSES the `IPI-08` residue: #739 landed the metadata-delete route, the dated xfail
+  re-measured green on the merged build, and `QS-DELETE-PART-META` is a pin.
+  Round 3 (2026-09-19) closes a SECOND verification critic's four P1s, six P2s and one
+  P3: no session conf decides a statement's route any more (a codec-only conf was
+  changing a plain UPDATE's committed file count), the native door answers a plain
+  UPDATE and `INSERT OVERWRITE … PARTITION`, a dynamic `overwritePartitions` builds its
+  collision oracle from the partitions it actually replaces, the property suffix is
+  carried verbatim as Spark carries it, and the three claims that lived only in the
+  Python pins have Rust pins. Two of the critic's premises were refuted by measurement
+  (Spark folds no conf-key prefix; Spark stamps no `rewrite_manifests` replace snapshot)
+  and a third measurement narrowed `F-RDF-SESSION-CONF-1` to its codec half. Fifteen new
+  Spark cells (`QP-*`, `QK-*`, `QM-*`); the fixture gains a per-cell `stamped` observation.
+  Round 4 (2026-09-20) closes a THIRD verification critic's two P1s and two P2s: the STATIC
+  `INSERT OVERWRITE … PARTITION` resolves the files its row filter removes (eight `QO-*`
+  cells), the owned INSERT plans the insert rather than a rebuilt `SELECT` so a session conf
+  changes what a commit stamps and never how its source types, the collision lookup uses the
+  verbatim suffix Spark stamps (three `QC-*` cells), and the layout battery asserts Spark's
+  OWN file count (six `QU-*` cells). The thirty-two round-3 and round-4 cells entered the
+  fixture and the live recorder, which re-derives all 95.
+  `risk_tier: standard`. Branch `fix/ice-session-write-conf-1`.
+  pins: ice-session-write-conf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: ice-session-write-conf-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  pins: ice-session-write-conf-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
+  pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
+  pins: ice-session-write-conf-1/C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040
+  pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048
+  pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053, C-054, C-055, C-056
+  pins: ice-session-write-conf-1/C-057, C-058
 
 ## Pointers
 - Up: [../map.md](../map.md)

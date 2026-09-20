@@ -6,24 +6,9 @@ use datafusion::error::DataFusionError;
 use iceberg::ErrorKind;
 use repark_common::{Error, Result};
 use repark_iceberg::write::CommitStateUnknownError;
+pub use repark_iceberg::write::{IllegalArgumentMarker, illegal_argument_error};
 
 use crate::object_store_s3;
-
-#[derive(Debug)]
-pub struct IllegalArgumentMarker(pub String);
-
-impl std::fmt::Display for IllegalArgumentMarker {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.0)
-    }
-}
-
-impl std::error::Error for IllegalArgumentMarker {}
-
-#[must_use]
-pub fn illegal_argument_error(message: String) -> DataFusionError {
-    DataFusionError::External(Box::new(IllegalArgumentMarker(message)))
-}
 
 /// DataFusion error partition used before conversion to [`Error`].
 #[derive(Debug)]

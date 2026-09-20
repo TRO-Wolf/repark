@@ -95,7 +95,32 @@ fn sniff_applies(ctx: &SessionContext, sniff: &WriteToBranchSniff) -> bool {
     }
 }
 
-fn is_owned_write_head(sql: &str) -> bool {
+fn is_owned_write_head(ctx: &SessionContext, sql: &str) -> bool {
+    if repark_iceberg::write::session_write_conf_is_set(ctx) && is_session_conf_owned_head(sql) {
+        return true;
+    }
+    is_owned_write_head_always(sql)
+}
+
+fn is_session_conf_owned_head(sql: &str) -> bool {
+    let Some(head) = statement_head(sql) else {
+        return false;
+    };
+    matches!(head.as_str(), "INSERT" | "DELETE" | "UPDATE")
+}
+
+fn statement_head(sql: &str) -> Option<String> {
+    let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
+    let significant = tokens
+        .iter()
+        .find(|token| !matches!(token, Token::Whitespace(_) | Token::EOF | Token::SemiColon))?;
+    match significant {
+        Token::Word(word) => Some(word.value.to_ascii_uppercase()),
+        _ => None,
+    }
+}
+
+fn is_owned_write_head_always(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
         return false;
     };
@@ -432,7 +457,7 @@ async fn commit_write_on_branch<'a>(
         )
         .await?;
     }
-    if is_owned_write_head(sql) {
+    if is_owned_write_head(ctx, sql) {
         if target.keep_existing_selector {
             return Ok(Cow::Borrowed(sql));
         }

@@ -21,7 +21,7 @@ use super::append::iceberg_err;
 use super::distribution::stamp;
 use super::file_order::ascending_partition_order;
 use super::write_options::WriterStagingOverrides;
-use super::writer_props::{target_file_size_with, writer_properties_with};
+use super::writer_props::target_file_size_with;
 
 pub(crate) async fn fanout_conformed_stream_serial<S>(
     table: &Table,
@@ -56,7 +56,7 @@ where
     .map_err(iceberg_err)?;
 
     let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        writer_properties_with(table, staging.codec.as_deref(), staging.level.as_deref())?,
+        crate::write::write_options::staged_writer_properties(table, staging)?,
         table.metadata().current_schema().clone(),
         FieldMatchMode::Name,
     )

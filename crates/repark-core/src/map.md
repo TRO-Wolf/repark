@@ -71,7 +71,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   overwrite_intent)` fills `EngineContext::overwrite_intent` (`Session` / `Static` for
   `saveAsTable` / `Dynamic` for `writeTo.overwritePartitions`), and `sql_with` calls it with an
   empty map and `Session`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014;
-  ice-overwrite-mode-1/C-007 Builder collects
+  ice-overwrite-mode-1/C-007
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the builder folds the
+  `spark.sql.iceberg.*` write confs from its config map into the session
+  (`with_session_write_conf`), so the funnel's `from_ctx` read answers them. Builder collects
   the Spark-style `.config(...)` map (`config(key, value)` / `configs(map)`); sync `build()`
   validates knobs, parses the config's `spark.sql.catalog.<name>.*` /
   `repark.sql.catalog.<name>.*` blocks into `CatalogSpec`s (fail-loud, synchronous), threads every
@@ -293,7 +296,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast first to repark-iceberg's `CommitStateUnknownError`
   stamp (→ `Error::CommitStateUnknown` with the minted `engine.operation-id`, ICE-COMMIT-UNKNOWN-1),
-  then to the local `IllegalArgumentMarker` (the `IllegalArgumentMarked` arm → `Error::IllegalArgument`, so the CALL options
+  then to `IllegalArgumentMarker` (defined in repark-iceberg's `write/illegal_argument.rs` since ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19) and re-exported here unchanged; the `IllegalArgumentMarked` arm → `Error::IllegalArgument`, so the CALL options
   validation raises `IllegalArgumentException` — **ICE-RDF-OPTIONS-1 round 1, 2026-09-17**),
   then to a live `iceberg::Error` → classified by its
   structured `ErrorKind` (`classify_iceberg_error`, the ONE iceberg kind→class mapping — also

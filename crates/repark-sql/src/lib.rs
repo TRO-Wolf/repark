@@ -14,6 +14,7 @@ mod refusals;
 mod router;
 mod scan;
 mod schema_ddl;
+mod session_insert;
 mod sniff;
 mod time_travel;
 mod truncate;
@@ -37,6 +38,8 @@ mod column_defaults;
 mod delete_granularity;
 #[cfg(test)]
 mod partition_overwrite;
+#[cfg(test)]
+mod session_write_conf;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

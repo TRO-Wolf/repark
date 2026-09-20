@@ -299,13 +299,8 @@ async fn live_data_file_paths(catalog: &Arc<dyn Catalog>, ident: &TableIdent) ->
 }
 
 fn identity_spec_for(table: &str, selection_sql: &str) -> PredicateDmlSpec {
-    PredicateDmlSpec {
-        target: TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string()),
-        target_alias: table.to_string(),
-        selection_sql: selection_sql.to_string(),
-        assignments: None,
-        case_insensitive: true,
-    }
+    let target = TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string());
+    PredicateDmlSpec::identity(target, table.to_string(), selection_sql.to_string())
 }
 
 const IN_SELECTION: &str = "id IN (SELECT id FROM keys)";

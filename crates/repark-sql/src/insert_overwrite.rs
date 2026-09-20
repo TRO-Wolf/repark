@@ -8,9 +8,10 @@ use datafusion::sql::sqlparser::ast::{Insert, ObjectName, TableObject};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::EngineContext;
 use repark_iceberg::write::{
-    OverwriteMode, OverwritePlan, commit_overwrite_by_row_filter, commit_overwrite_replace_all,
-    commit_replace_partitions, partition_overwrite_request_from_exprs, plan_overwrite,
-    stage_static_partition_overwrite_files, static_partition_source_columns,
+    OverwriteMode, OverwritePlan, commit_overwrite_by_row_filter_with_summary,
+    commit_overwrite_replace_all_with_summary, commit_replace_partitions_with_summary,
+    partition_overwrite_request_from_exprs, plan_overwrite, stage_overwrite_files_with,
+    stage_static_partition_overwrite_files_with, static_partition_source_columns,
     write_overwrite_staged_files_from_stream,
 };
 
@@ -82,36 +83,26 @@ async fn execute_partition_overwrite(
     let plan = belt.plan(&filled.sql).await?;
     belt.guard(&plan)?;
     let source_df = belt.execute(plan).await?;
-    let concurrency = repark_iceberg::write::concurrency_from_ctx(cx.ctx);
-    let staged_files = if overwrite_plan.equalities().is_empty() {
-        let stream = source_df.execute_stream().await?;
-        write_overwrite_staged_files_from_stream(&table, stream, column_names, concurrency).await?
-    } else {
-        let batches = source_df.collect().await?;
-        stage_static_partition_overwrite_files(
-            &table,
-            batches,
-            overwrite_plan.equalities(),
-            &column_names,
-            concurrency,
-        )
-        .await?
-    };
-    match overwrite_plan {
-        OverwritePlan::RowFilter(spec) => {
-            commit_overwrite_by_row_filter(handle, &table, staged_files, spec.predicate).await?;
-        }
-        OverwritePlan::ReplacePartitions(_) => {
-            commit_replace_partitions(handle, &table, staged_files).await?;
-        }
-        OverwritePlan::WholeTable => {
-            let staged_files = staged_files
-                .into_iter()
-                .filter(|file| file.record_count() > 0)
-                .collect();
-            commit_overwrite_replace_all(handle, &table, staged_files).await?;
-        }
-    }
+    let (snapshot_extra, resolved) = repark_iceberg::write::resolve_empty_session_write(cx.ctx)?;
+    let staging = (!repark_iceberg::write::session_write_conf_from_ctx(cx.ctx).is_empty())
+        .then_some(resolved);
+    let staged_files = stage_partition_overwrite(
+        cx,
+        &table,
+        &overwrite_plan,
+        source_df,
+        column_names,
+        staging.as_ref(),
+    )
+    .await?;
+    commit_partition_overwrite(
+        handle,
+        &table,
+        overwrite_plan,
+        staged_files,
+        &snapshot_extra,
+    )
+    .await?;
     let leaf = ident.namespace().as_ref().last().cloned().ok_or_else(|| {
         DataFusionError::Plan(
             "INSERT OVERWRITE … PARTITION target namespace has no leaf".to_string(),
@@ -125,6 +116,88 @@ async fn execute_partition_overwrite(
     )
     .await?;
     cx.ctx.read_empty()
+}
+
+async fn stage_partition_overwrite(
+    cx: &EngineContext<'_>,
+    table: &iceberg::table::Table,
+    overwrite_plan: &OverwritePlan,
+    source_df: DataFrame,
+    column_names: Vec<String>,
+    staging: Option<&repark_iceberg::write::WriterStagingOverrides>,
+) -> Result<Vec<iceberg::spec::DataFile>> {
+    let concurrency = repark_iceberg::write::concurrency_from_ctx(cx.ctx);
+    if !overwrite_plan.equalities().is_empty() {
+        let batches = source_df.collect().await?;
+        return stage_static_partition_overwrite_files_with(
+            table,
+            batches,
+            overwrite_plan.equalities(),
+            &column_names,
+            concurrency,
+            staging,
+        )
+        .await;
+    }
+    let stream = source_df.execute_stream().await?;
+    match staging {
+        None => {
+            write_overwrite_staged_files_from_stream(table, stream, column_names, concurrency).await
+        }
+        Some(overrides) => {
+            stage_overwrite_files_with(table, stream, column_names, concurrency, overrides).await
+        }
+    }
+}
+
+async fn commit_partition_overwrite(
+    handle: &Arc<dyn iceberg::Catalog>,
+    table: &iceberg::table::Table,
+    overwrite_plan: OverwritePlan,
+    staged_files: Vec<iceberg::spec::DataFile>,
+    snapshot_extra: &[(String, String)],
+) -> Result<()> {
+    match overwrite_plan {
+        OverwritePlan::RowFilter(spec) => {
+            commit_overwrite_by_row_filter_with_summary(
+                handle,
+                table,
+                staged_files,
+                spec,
+                None,
+                snapshot_extra,
+                None,
+            )
+            .await?;
+        }
+        OverwritePlan::ReplacePartitions(_) => {
+            commit_replace_partitions_with_summary(
+                handle,
+                table,
+                staged_files,
+                None,
+                snapshot_extra,
+                None,
+            )
+            .await?;
+        }
+        OverwritePlan::WholeTable => {
+            let staged_files = staged_files
+                .into_iter()
+                .filter(|file| file.record_count() > 0)
+                .collect();
+            commit_overwrite_replace_all_with_summary(
+                handle,
+                table,
+                staged_files,
+                None,
+                snapshot_extra,
+                None,
+            )
+            .await?;
+        }
+    }
+    Ok(())
 }
 
 fn resolve_iceberg_ident(table_name: &ObjectName) -> Result<(String, TableIdent)> {

@@ -19,9 +19,8 @@ use iceberg::spec::{
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::super::{
-    IsolationLevel, WRITE_UPDATE_ISOLATION_LEVEL, commit_overwrite, resolve_update_isolation, *,
-};
+use super::super::{IsolationLevel, WRITE_UPDATE_ISOLATION_LEVEL, resolve_update_isolation, *};
+use crate::write::merge::commit_overwrite;
 
 fn parse_statement(sql: &str) -> Statement {
     Parser::parse_sql(&GenericDialect {}, sql)
@@ -280,6 +279,7 @@ fn update_spec(table: &str, assignments: Vec<(&str, &str)>) -> PredicateDmlSpec 
                 .collect(),
         ),
         case_insensitive: true,
+        branch: None,
     }
 }
 
@@ -740,6 +740,7 @@ async fn identity_delete_correlated_in_deletes_the_key_row() {
             selection_sql: "id IN (SELECT k.id FROM keys k WHERE k.id = corrin.id)".to_string(),
             assignments: None,
             case_insensitive: true,
+            branch: None,
         },
     )
     .await
@@ -885,6 +886,7 @@ async fn update_isolation_serializable_rejects_concurrent_append() {
         vec![a],
         vec![synthetic_data_file("test/a-prime.parquet")],
         &CommitScope::unscoped(isolation),
+        &[],
     )
     .await
     .expect_err("serializable UPDATE must reject a concurrent append");
@@ -935,6 +937,7 @@ async fn update_isolation_snapshot_commits_through_concurrent_append() {
         vec![a],
         vec![synthetic_data_file("test/a-prime.parquet")],
         &CommitScope::unscoped(isolation),
+        &[],
     )
     .await
     .expect("snapshot UPDATE must commit through a concurrent append");

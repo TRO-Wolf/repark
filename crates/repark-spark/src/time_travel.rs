@@ -310,6 +310,10 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
         .collect();
     let mut spans = Vec::new();
     let mut sig_index = 0usize;
+    let mut delete_target_pending = matches!(
+        significant.first().map(|(_, token)| *token),
+        Some(Token::Word(word)) if word.value.eq_ignore_ascii_case("DELETE")
+    );
     while sig_index < significant.len() {
         let opens_relation = matches!(
             significant.get(sig_index).map(|(_, token)| *token),
@@ -327,6 +331,11 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
             sig_index += 1;
             continue;
         };
+        if delete_target_pending {
+            delete_target_pending = false;
+            sig_index = name_end;
+            continue;
+        }
         let parts = collect_table_parts(&significant[name_start..name_end]);
         let Some(ref_name) = ref_selector_name(&parts) else {
             sig_index = name_end;

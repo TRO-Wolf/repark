@@ -14,8 +14,7 @@ use super::{
 };
 use crate::write::conflict_filter::top_level_field;
 
-/// # Errors
-/// A plan error when the target namespace is invalid.
+#[allow(clippy::missing_errors_doc)]
 pub fn try_allowed_plain_identity(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
     let Statement::Delete(delete) = statement else {
         return Ok(None);
@@ -105,7 +104,7 @@ impl Visitor for ColumnRefs<'_> {
     }
 }
 
-fn is_scalar_comparison(expr: &Expr) -> bool {
+pub(super) fn is_scalar_comparison(expr: &Expr) -> bool {
     match expr {
         Expr::BinaryOp { left, right, .. } => {
             !expression_contains_subquery(left) && !expression_contains_subquery(right)
@@ -115,15 +114,26 @@ fn is_scalar_comparison(expr: &Expr) -> bool {
     }
 }
 
+#[must_use]
+pub fn split_branch_parts(parts: &[String]) -> (Vec<String>, Option<String>) {
+    if parts.len() == 4
+        && let Some(name) = parts[3].strip_prefix("branch_")
+        && !name.is_empty()
+    {
+        return (parts[..3].to_vec(), Some(name.to_string()));
+    }
+    (parts.to_vec(), None)
+}
+
 fn allowed_from_target(
     object_name: &datafusion::sql::sqlparser::ast::ObjectName,
     alias: Option<String>,
     selection: &Expr,
 ) -> Result<Option<AllowedDeleteIn>> {
-    if object_name.0.len() != 3 {
+    if object_name.0.len() != 3 && object_name.0.len() != 4 {
         return Ok(None);
     }
-    let parts = object_name_parts(object_name);
+    let (parts, branch) = split_branch_parts(&object_name_parts(object_name));
     if parts.len() != 3 {
         return Ok(None);
     }
@@ -146,6 +156,84 @@ fn allowed_from_target(
             selection_sql: scratch_selection.to_string(),
             assignments: None,
             case_insensitive: true,
+            branch,
+        },
+    }))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn try_allowed_update_in(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
+    allowed_update_with(statement, super::is_allowed_positive_uncorrelated_in)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn try_allowed_plain_identity_or_update(
+    statement: &Statement,
+) -> Result<Option<AllowedDeleteIn>> {
+    if let Some(allowed) = try_allowed_plain_identity(statement)? {
+        return Ok(Some(allowed));
+    }
+    try_allowed_plain_update(statement)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn try_allowed_plain_update(statement: &Statement) -> Result<Option<AllowedDeleteIn>> {
+    allowed_update_with(statement, is_scalar_comparison)
+}
+
+fn allowed_update_with(
+    statement: &Statement,
+    accepts_selection: fn(&Expr) -> bool,
+) -> Result<Option<AllowedDeleteIn>> {
+    let Statement::Update(update) = statement else {
+        return Ok(None);
+    };
+    if update.from.is_some()
+        || update.returning.is_some()
+        || update.output.is_some()
+        || update.limit.is_some()
+        || !update.order_by.is_empty()
+        || !update.table.joins.is_empty()
+        || update.assignments.is_empty()
+    {
+        return Ok(None);
+    }
+    let Some(selection) = update.selection.as_ref() else {
+        return Ok(None);
+    };
+    if !accepts_selection(selection) {
+        return Ok(None);
+    }
+    let Some((object_name, alias)) = super::update_target_and_alias(update) else {
+        return Ok(None);
+    };
+    let (parts, branch) = split_branch_parts(&object_name_parts(object_name));
+    if parts.len() < 3 {
+        return Ok(None);
+    }
+    let catalog_name = parts[0].clone();
+    let table_name = parts[parts.len() - 1].clone();
+    let namespace = parts[1..parts.len() - 1].to_vec();
+    let namespace = NamespaceIdent::from_vec(namespace).map_err(|error| {
+        DataFusionError::Plan(format!(
+            "UPDATE target `{object_name}` has an invalid namespace: {error}"
+        ))
+    })?;
+    let target_alias = alias.unwrap_or_else(|| table_name.clone());
+    let Some(assignments) = super::scalar_set_assignments(update, &parts, &target_alias) else {
+        return Ok(None);
+    };
+    let mut scratch_selection = selection.clone();
+    rewrite_target_refs_in_expr(&mut scratch_selection, &parts, &target_alias);
+    Ok(Some(AllowedDeleteIn {
+        catalog_name,
+        spec: PredicateDmlSpec {
+            target: TableIdent::new(namespace, table_name),
+            target_alias,
+            selection_sql: scratch_selection.to_string(),
+            assignments: Some(assignments),
+            case_insensitive: true,
+            branch,
         },
     }))
 }

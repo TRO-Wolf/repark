@@ -87,7 +87,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1756,
+        1701,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
         "Split plan preparation from COW and MOR execution modules.",
     ),
@@ -102,7 +102,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split retryable conflicts from terminal conflict cases.",
     ),
     "crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs": (
-        3020,
+        3018,
         "Streaming MERGE scan and rewrite scenarios share one test battery.",
         "Split position-delete, rewrite, and scan-shape scenario families.",
     ),
@@ -111,13 +111,8 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Overwrite planning and commit behavior share one module.",
         "Extract predicate and file-selection logic from commit assembly.",
     ),
-    "crates/repark-iceberg/src/write/predicate_dml.rs": (
-        1139,
-        "Predicate DELETE and UPDATE planning share one adapter.",
-        "Split predicate validation from operation-specific plan construction.",
-    ),
     "crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs": (
-        1440,
+        1435,
         "Predicate DML scenarios share one consolidated test module.",
         "Split DELETE and UPDATE scenario families with shared setup retained.",
     ),

@@ -195,6 +195,18 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **ICE-DROP-NS-1 (2026-09-19, run 24c):**
   mirror row ratchets `repark-sql/src/tests.rs` 1520 → 1513 with `scripts/check_rust_file_size.py`.
   pins: ice-drop-ns-1/C-011
+- `test_cap_1_source_file_line_cap.py` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c):**
+  mirror rows follow the two shrink-only ratchets of the round:
+  `write/predicate_dml.rs` loses its exception row outright (1034 → 960, under the default
+  ceiling), `write/merge/tests/streaming_scan.rs` 3020 → 3018 and
+  `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435 (the identity spec builder becomes
+  `PredicateDmlSpec::identity`).
+  pins: ice-session-write-conf-1/C-040
+  **Round 2 (2026-09-19):** dropping that exception row also drops the Rust exception
+  COUNT, 38 → 37, which round 1 left at its old literal — the gate itself reported 37 and
+  only this mirror still said 38, so `test_cap_1_exception_tables_equal_the_measured_debt`
+  was red. The count now matches the gate.
+  pins: ice-session-write-conf-1/C-040
 - `test_cap_1_source_file_line_cap.py` — **ICE-TT-RESOLVE-1 (2026-09-19, run 24c):**
   mirror rows ratchet `repark-python/src/session.rs` 1126 → 1122 and `session_core.py`
   2290 → 2287 with `scripts/check_rust_file_size.py` and `scripts/check_lib_py.py`.
@@ -202,6 +214,9 @@ pins: perf-dynflatten-1-measure/C-001, C-003
 - `test_cap_1_source_file_line_cap.py` — **ICE-MIXED-CASE-1 (2026-09-18, run 22b):**
   mirror row ratchets `write/merge/mod.rs` to 1761 with `scripts/check_rust_file_size.py`.
   pins: ice-mixed-case-1/C-012
+- `test_cap_1_source_file_line_cap.py` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):**
+  mirror rows ratchet `write/merge/mod.rs` 1761 → 1701 and
+  `write/predicate_dml.rs` 1139 → 1034 with `scripts/check_rust_file_size.py`.
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 3 (2026-09-16, run 18a):**
   mirror row ratchets `functions_expr.py` 2178 → 2175 with
   `scripts/check_lib_py.py`.

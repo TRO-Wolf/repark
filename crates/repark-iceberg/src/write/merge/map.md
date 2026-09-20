@@ -287,6 +287,41 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `ColumnDefaults` build (`schema_has_primitive_fill` pre-scan).
   pins: ice-v3-write-default-1/C-019
 - [tests/](tests/map.md) — MERGE unit batteries (primary, OCC, streaming, parallel write).
+- `session_staging.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
+  session-conf-aware staged-write entry (`write_new_data_files_from_stream_with`
+  over `WriterStagingOverrides`), split out of `mod.rs` so the parent stays under
+  its exact size baseline; every MERGE writer site stages through it
+  (comment-free per the owner ban).
+- `mod.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** MERGE staging and
+  insert-stream sites take the session write conf through `session_staging`.
+- `snapshot_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
+  commit arms take the resolved session write (snapshot properties plus codec)
+  and stamp it on the commit they build. **Round 1 (2026-09-19):** both arms
+  build `EngineSummary::for_changes` from the files they hold — the CoW arm from
+  the new and affected data files, the row-delta arm from the data files plus
+  `PreparedDeletes::delete_file_changes()` — and go through `summary_with_extras`,
+  so an extra that collides with an engine-computed key refuses like Spark
+  instead of replacing the engine value. pins: ice-session-write-conf-1/C-041
+  **Round 2 (2026-09-19):** once round 1 threaded `branch` through every
+  production commit site, the `None`-branch wrappers `commit_overwrite` and
+  `commit_row_delta_kind_with_partitions` lost their last production caller, so
+  they join `commit_row_delta_kind` / `commit_row_delta_on_ref` and
+  `CommitScope::unscoped` under `#[cfg(test)]`: the merge and predicate-DML
+  batteries keep their existing spellings and the shipped lib builds neither.
+- `dv_close.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `delete_file_changes()` exposes the added and superseded delete files the
+  row-delta summary needs, and `prepare_row_delta_deletes` takes the resolved
+  `WriterStagingOverrides` so a v2 position-delete file is written with the
+  commit's codec (a v3 DV is puffin and takes none). `mod.rs`'s MERGE executor
+  and the row-delta commit arms thread that staging from the session resolve.
+  pins: ice-session-write-conf-1/C-040
+- `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the lineage writer
+  builds its Parquet properties through `write_options::staged_writer_properties`, the one
+  staging-to-properties bridge, so it keeps Java's `parquet.enable.dictionary` default with
+  every other RePark-owned write. pins: ice-session-write-conf-1/C-064
+- `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the lineage
+  fanout writer site honours the session write conf
+  (`write_partitioned_lineage_files_with`).
 
 ## I want to…
 

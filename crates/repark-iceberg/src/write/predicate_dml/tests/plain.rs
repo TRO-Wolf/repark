@@ -161,11 +161,32 @@ fn literal_in_list_delete_is_not_plain_identity() {
 }
 
 #[test]
-fn branch_selector_delete_is_not_plain_identity() {
+fn branch_selector_delete_is_identity_dml_on_the_branch() {
     let allowed = try_allowed_plain_identity(&parse_statement(
         "DELETE FROM ice.sales.t.branch_b WHERE id = 0",
     ))
-    .expect("branch delete must parse");
+    .expect("branch delete must parse")
+    .expect("branch delete must be identity DML");
+    assert_eq!(allowed.catalog_name, "ice");
+    assert_eq!(allowed.spec.target.name(), "t");
+    assert_eq!(allowed.spec.branch.as_deref(), Some("b"));
+}
+
+#[test]
+fn tag_selector_delete_is_not_plain_identity() {
+    let allowed = try_allowed_plain_identity(&parse_statement(
+        "DELETE FROM ice.sales.t.tag_v1 WHERE id = 0",
+    ))
+    .expect("tag delete must parse");
+    assert!(allowed.is_none());
+}
+
+#[test]
+fn empty_branch_selector_delete_is_not_plain_identity() {
+    let allowed = try_allowed_plain_identity(&parse_statement(
+        "DELETE FROM ice.sales.t.branch_ WHERE id = 0",
+    ))
+    .expect("empty branch selector must parse");
     assert!(allowed.is_none());
 }
 

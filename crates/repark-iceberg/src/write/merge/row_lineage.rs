@@ -143,9 +143,10 @@ pub(super) fn attach_present_lineage(
     }
 }
 
-pub(super) async fn write_partitioned_lineage_files<S>(
+pub(super) async fn write_partitioned_lineage_files_with<S>(
     table: &Table,
     mut stream: S,
+    staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
@@ -160,7 +161,7 @@ where
     let calculator =
         PartitionValueCalculator::try_new(&partition_spec, &user_schema).map_err(iceberg_err)?;
     let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        crate::write::writer_props::writer_properties_for(table)?,
+        crate::write::write_options::staged_writer_properties(table, staging)?,
         write_schema,
         FieldMatchMode::Name,
     )
@@ -171,7 +172,7 @@ where
         DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
     let rolling_builder = RollingFileWriterBuilder::new(
         parquet_builder,
-        table_props.write_target_file_size_bytes,
+        crate::write::writer_props::target_file_size_with(table, staging.target_file_size_bytes)?,
         table.file_io().clone(),
         location_generator,
         file_name_generator,

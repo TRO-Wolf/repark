@@ -8,7 +8,8 @@ use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
 use iceberg::spec::{DataContentType, NestedField, PrimitiveType, Schema, Type};
 use iceberg::{CatalogBuilder, NamespaceIdent, TableCreation};
 
-use crate::write::position_delete::PositionDeletePair;
+use crate::write::position_delete::{PositionDeletePair, write_position_deletes};
+use crate::write::write_options::WriterStagingOverrides;
 use tempfile::TempDir;
 
 use super::super::*;
@@ -2895,13 +2896,10 @@ async fn write_position_deletes_sorts_reverse_ordered_pairs_onto_disk() {
         (Arc::clone(&path0), 1),
     ];
     let table = catalog.load_table(&ident).await.expect("load table");
-    let written = crate::write::position_delete::write_position_deletes(
-        &table,
-        &pairs,
-        crate::write::concurrency::WriteConcurrency::default(),
-    )
-    .await
-    .expect("write position deletes");
+    let staging = WriterStagingOverrides::none();
+    let written = write_position_deletes(&table, &pairs, WriteConcurrency::default(), &staging)
+        .await
+        .expect("write position deletes");
     assert_eq!(
         written.len(),
         1,
