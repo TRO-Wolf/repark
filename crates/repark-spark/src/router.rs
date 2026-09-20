@@ -207,18 +207,23 @@ async fn execute_merge_statement(
     .await
 }
 
+fn rewrite_sql_for_execute(sql: &str, catalogs: &CatalogRegistry) -> String {
+    let rewritten = repark_functions::cast_map::rewrite_map_casts(sql);
+    let sql = rewritten.as_deref().unwrap_or(sql);
+    let system_rewritten = crate::describe_show::rewrite_system_function_calls(sql, |name| {
+        catalogs.get(name).is_some()
+    });
+    system_rewritten.unwrap_or_else(|| sql.to_owned())
+}
+
 async fn execute_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
-    let rewritten = repark_functions::cast_map::rewrite_map_casts(sql);
-    let sql = rewritten.as_deref().unwrap_or(sql);
-    let system_rewritten = crate::describe_show::rewrite_system_function_calls(sql, |name| {
-        catalogs.get(name).is_some()
-    });
-    let sql = system_rewritten.as_deref().unwrap_or(sql);
+    let rewritten_sql = rewrite_sql_for_execute(sql, catalogs);
+    let sql = rewritten_sql.as_str();
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
