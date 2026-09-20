@@ -257,8 +257,9 @@ def test_duplicate_row_rule_quiet_when_one_row_mentions_twice(tmp_path: Path) ->
 def test_makefile_runs_branch_mode_over_base() -> None:
     """pins: map-pr-gate-1/C-009."""
     makefile = (_REPO / "Makefile").read_text(encoding="utf-8")
-    assert "BASE ?= origin/main" in makefile
-    assert 'bash scripts/check_map_md.sh --base "$(BASE)"' in makefile
+    makefile_lines = [line.strip() for line in makefile.splitlines()]
+    assert "BASE ?= origin/main" in makefile_lines
+    assert 'bash scripts/check_map_md.sh --base "$(BASE)"' in makefile_lines
 
 
 def test_both_hook_paths_call_the_staged_mode_identically() -> None:
