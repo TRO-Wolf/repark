@@ -28,8 +28,10 @@ use iceberg::expr::Predicate;
 use iceberg::spec::{DataFile, DataFileFormat, FormatVersion, ManifestContentType};
 use iceberg::table::Table;
 
+use iceberg::Catalog;
+#[cfg(test)]
+use iceberg::TableIdent;
 use iceberg::writer::IcebergWriter;
-use iceberg::{Catalog, TableIdent};
 
 use tracing::Instrument;
 use uuid::Uuid;
@@ -42,12 +44,14 @@ mod not_matched_by_source;
 pub(crate) mod row_lineage;
 pub(super) mod session_staging;
 mod snapshot_commit;
+pub(crate) mod spec;
 pub(crate) mod target_scan;
 
 use insert::{
     insert_stream_checked, store_assignment_then_sql, table_projection, update_stream_checked,
 };
 pub use not_matched_by_source::{NotMatchedBySourceAction, NotMatchedBySourceClause};
+pub use spec::{InsertAction, InsertClause, MatchedAction, MatchedClause, MergeSpec};
 pub(crate) use target_scan::{
     KnownPartitions, PartitionSink, TargetScanStream, drain_partition_sink, new_partition_sink,
     residual_join_key_filter,
@@ -74,75 +78,6 @@ const MATCH_FLAG_PREFIX: &str = "__repark_matched_";
 
 /// Snapshot-summary key stamping every MERGE commit with a unique id.
 pub const OPERATION_ID_PROP: &str = "engine.operation-id";
-
-/// A lowered `MERGE INTO` statement.
-#[derive(Debug, Clone)]
-pub struct MergeSpec {
-    /// The Iceberg target table.
-    pub target: TableIdent,
-    /// Alias the statement uses for the target (defaults to the bare table name upstream).
-    pub target_alias: String,
-    /// What to put after `FROM` for the source: a table reference or a parenthesized subquery.
-    pub source_from_sql: String,
-    /// Alias the statement uses for the source.
-    pub source_alias: String,
-    /// The `ON` join condition, SQL-rendered.
-    pub on_sql: String,
-    /// `WHEN MATCHED` clauses, in declaration order.
-    pub matched: Vec<MatchedClause>,
-    /// `WHEN NOT MATCHED [BY TARGET]` clauses, in declaration order.
-    pub not_matched: Vec<InsertClause>,
-    /// `WHEN NOT MATCHED BY SOURCE` clauses, in declaration order.
-    pub not_matched_by_source: Vec<NotMatchedBySourceClause>,
-    pub commit_branch: Option<String>,
-    pub case_insensitive: bool,
-}
-
-/// One `WHEN MATCHED [AND …] THEN UPDATE/DELETE` clause.
-#[derive(Debug, Clone)]
-pub struct MatchedClause {
-    /// The `AND …` predicate, if present (SQL-rendered).
-    pub predicate_sql: Option<String>,
-    /// What the clause does to a matched row.
-    pub action: MatchedAction,
-}
-
-/// The action of a `WHEN MATCHED` clause.
-#[derive(Debug, Clone)]
-pub enum MatchedAction {
-    /// `UPDATE SET col = expr, …` — `(column, SQL expression)` pairs.
-    Update {
-        /// Assignments as `(target column, SQL expression)` pairs.
-        assignments: Vec<(String, String)>,
-    },
-    /// `UPDATE SET *` — every target column from the same-named source column.
-    UpdateAll,
-    /// `DELETE` — drop the matched row.
-    Delete,
-}
-
-/// One `WHEN NOT MATCHED [AND …] THEN INSERT …` clause.
-#[derive(Debug, Clone)]
-pub struct InsertClause {
-    /// The `AND …` predicate, if present (SQL-rendered).
-    pub predicate_sql: Option<String>,
-    /// What the clause inserts.
-    pub action: InsertAction,
-}
-
-/// What a `WHEN NOT MATCHED` clause inserts.
-#[derive(Debug, Clone)]
-pub enum InsertAction {
-    /// `INSERT (…) VALUES (…)` — explicit columns and expressions.
-    Explicit {
-        /// Insert column list; empty means positional (all target columns in schema order).
-        columns: Vec<String>,
-        /// The `VALUES` expressions, SQL-rendered, one per column.
-        values_sql: Vec<String>,
-    },
-    /// `INSERT *` — every target column from the same-named source column.
-    All,
-}
 
 /// Execute a lowered `MERGE INTO` against an Iceberg table — copy-on-write, one atomic commit.
 /// # Errors

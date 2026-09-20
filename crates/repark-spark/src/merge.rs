@@ -208,6 +208,7 @@ fn lower(
         not_matched_by_source,
         commit_branch,
         case_insensitive: true,
+        schema_evolution: false,
     };
     Ok((catalog, spec))
 }

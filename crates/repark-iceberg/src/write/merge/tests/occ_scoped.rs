@@ -440,6 +440,7 @@ pub(super) fn merge_spec(ident: &TableIdent, source_from_sql: &str, on_sql: &str
         not_matched_by_source: Vec::new(),
         commit_branch: None,
         case_insensitive: true,
+        schema_evolution: false,
     }
 }
 
