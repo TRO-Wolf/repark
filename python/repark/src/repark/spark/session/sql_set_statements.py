@@ -91,8 +91,6 @@ _TYPED_VALUE_KINDS: dict[str, str] = {
     "spark.sql.shuffle.partitions": "int",
 }
 
-_WAP_SESSION_KEY_PREFIX = "spark.wap."
-
 _INVALID_SET_SYNTAX = (
     "[INVALID_SET_SYNTAX] Expected format is 'SET', 'SET key', or 'SET key=value'. "
     "If you want to include special characters in key, or include keyword in "
@@ -130,7 +128,7 @@ def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | Non
     assign_match = _SET_ASSIGN_RE.fullmatch(text)
     if assign_match is not None:
         key = _matched_key(assign_match)
-        if _looks_like_datafusion_conf_key(key) or _is_wap_session_key(key):
+        if _looks_like_datafusion_conf_key(key):
             return None
         return _apply_set(session, key, assign_match.group("value").strip())
     read_match = _SET_READ_RE.fullmatch(text)
@@ -146,7 +144,7 @@ def try_sql_set_statement(session: ReparkSession, query: str) -> DataFrame | Non
     reset_key_match = _RESET_KEY_RE.fullmatch(text)
     if reset_key_match is not None:
         key = _matched_key(reset_key_match)
-        if _looks_like_datafusion_conf_key(key) or _is_wap_session_key(key):
+        if _looks_like_datafusion_conf_key(key):
             return None
         if key.upper() == "ALL":
             return _reset_all(session)
@@ -165,11 +163,6 @@ def _matched_key(match: re.Match[str]) -> str:
     if quoted is not None:
         return quoted
     return match.group("plain_key") or ""
-
-
-def _is_wap_session_key(key: str) -> bool:
-    """Whether ``key`` is a ``spark.wap.*`` conf the engine must keep refusing."""
-    return key.lower().startswith(_WAP_SESSION_KEY_PREFIX)
 
 
 def _strip_sql_comments(text: str) -> tuple[str, bool]:

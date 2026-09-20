@@ -490,12 +490,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `rollback_to_timestamp` by `TIMESTAMP` literal (integer epoch-millis arguments refuse
   `DATATYPE_MISMATCH`, like Spark) with the ancient-timestamp refusal; every CALL
   adds no snapshot. pins: ice-branch-ops-1/C-007, C-009, C-011, C-016, C-018),
+  `wap_branch` (**ICE-WAP-BRANCH-1, 2026-09-19:** the resolver's decision table on the Rust
+  door — a `spark.wap.branch` write lands on the branch and the session's plain read follows
+  it while main stays put; the same conf is inert without `write.wap.enabled=true`; an
+  explicit `t.branch_other` selector outranks the conf on the write side and
+  `VERSION AS OF 'main'` outranks it on the read side; a branch that does not exist yet is
+  created by the commit; both WAP keys together refuse with Java's text and write nothing;
+  the `t.snapshots` metadata path is untouched (the regression that found the
+  `table$suffix` re-tokenization); plus the carrier's config-map round trip and its
+  unserved-key refusal. pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006,
+  C-010),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a
   metadata-table suffix nor a real table whose own name starts with `branch_`; and WAP
-  declared — the remaining publish procedure and the `spark.wap.*` confs all fail closed and
-  leave the branch where it was (`fast_forward` and `cherrypick_snapshot` moved to
+  declared — the remaining publish procedure fails closed, and the engine's own `SET` door
+  still rejects the `spark` conf namespace, so that statement leaves the branch where it was
+  (`fast_forward` and `cherrypick_snapshot` moved to
   `branch_ops` when ICE-BRANCH-OPS-1 implemented them); and the read-vs-write boundary —
   a selector in a DML statement's
   source, `USING` operand or predicate subquery reads the ref (four classes plus CTAS, each

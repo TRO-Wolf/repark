@@ -1605,6 +1605,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   naming it and does not create the branch.
   pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007
   pins: rp-5-fork-repin/C-004
+  **ICE-WAP-BRANCH-1 (2026-09-19):** the two `spark.wap.*` fail-closed rows are re-pointed at
+  the new truth — both keys store through the SQL `SET` door and read back, `spark.wap.branch`
+  is inert on a table without `write.wap.enabled=true`, and `spark.wap.id` on its own still
+  lands the write on `main` (the staged half is fork ask F-STAGE-ONLY-1, registry REF-3).
+  pins: ice-wap-branch-1/C-004, C-007, C-010
 - [test_ice_merge_append_1.py](test_ice_merge_append_1.py) +
   [ice_merge_append_1_truth.json](ice_merge_append_1_truth.json) — **ICE-MERGE-APPEND-1
   (2026-09-19):** the recorded-oracle pins for merge-on-commit (IPI-11). The truth JSON holds
@@ -3476,6 +3481,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   door (CONF-WAP-1), and `format("jdbc")` reaches the PostgreSQL path where `spark.read.jdbc` refuses a
   non-PostgreSQL URL (IO-JDBC-FORMAT-1). Each pin holds today's answer and reds when its row's fix lands.
   pins: registry-16b-1/C-001, C-002, C-003
+  **ICE-WAP-BRANCH-1 (2026-09-19):** the SQL-`SET` half of CONF-WAP-1 landed, so that pin
+  redded as designed and now asserts Spark's answer — `SET spark.wap.branch=b2` returns the
+  `(key, value)` row and the value reads back. The `isModifiable` half of the row stays open
+  (repark still answers `True` where Spark answers `False`).
+  pins: ice-wap-branch-1/C-007
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves

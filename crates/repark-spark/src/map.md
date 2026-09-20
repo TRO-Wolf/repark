@@ -237,6 +237,34 @@ pins: rp-4-fork-repin/C-005, C-006
   `split_write_ref_parts` sniffs four-part names and two-part `branch_`/`tag_` names;
   a three-part table whose last segment starts with `branch_` is an ordinary table.
   pins: rp-5-fork-repin/C-004
+  **ICE-WAP-BRANCH-1 (2026-09-19):** one resolver decides the effective write branch.
+  `apply_write_to_branch` now also runs when only `spark.wap.branch` is set: it reads the
+  target span (one part is enough, qualified through the session defaults), and an explicit
+  `t.branch_b` selector outranks the conf. Without a selector, `wap_branch_target` loads the
+  target and takes the conf's branch only when the table carries
+  `write.wap.enabled=true` — refusing first when `spark.wap.id` is set too. A wap branch that
+  does not exist is NOT pre-checked (`require_existing_branch` is false): the commit creates
+  the ref from main, as Java's `SnapshotProducer` does. An explicit selector keeps the
+  `Cannot use branch (does not exist)` refusal.
+  pins: ice-wap-branch-1/C-002, C-004, C-005
+- `wap.rs` — **ICE-WAP-BRANCH-1 (2026-09-19):** the `spark.wap.*` session carrier and the
+  read half of the resolver. `WapSessionConfig` is a DataFusion `ConfigExtension`
+  (`repark.wap`) holding `spark.wap.branch` and `spark.wap.id`; the Spark extension installs
+  it from the builder conf map and the binding's `set_runtime_config` writes the live one, so
+  the decision is Rust's and Python only forwards the string (an empty value clears the key).
+  `apply_wap_read_redirect` runs before the time-travel pass: with the conf set, every
+  FROM/JOIN/USING relation naming a `write.wap.enabled=true` table is pinned to the branch's
+  snapshot (falling back to the table's current snapshot when the ref does not exist yet) and
+  spliced to an ephemeral provider, so the session's plain reads follow the branch while the
+  conf is set. Skipped: a relation that carries its own `VERSION/TIMESTAMP AS OF` clause, a
+  `branch_`/`tag_` selector, a metadata-table path (including the `table$suffix` word the
+  metadata rewrite emits, which re-tokenizes as a `$`-placeholder glued to the base name), and
+  the statement's own write target. `both_wap_keys_message` carries Java's exact
+  `Cannot set both WAP ID and branch, but got ID [id] and branch [branch]`, raised as an
+  `IllegalArgumentException` through `repark_core::illegal_argument_error`.
+  `spark.wap.id` on its own stays inert — staged snapshots are fork ask F-STAGE-ONLY-1,
+  registry row REF-3.
+  pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.

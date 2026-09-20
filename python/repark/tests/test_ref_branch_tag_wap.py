@@ -147,9 +147,36 @@ def test_wap_publish_procedures_refuse_loud(spark: ReparkSession, call: str) -> 
 
 
 @pytest.mark.parametrize("key", ["spark.wap.branch", "spark.wap.id"])
-def test_wap_session_conf_is_fail_closed(spark: ReparkSession, key: str) -> None:
-    """The WAP session confs cannot be set, so no write is silently redirected."""
-    with pytest.raises(PySparkException) as caught:
-        spark.sql(f"SET {key} = 'audit'")
-    assert "spark" in str(caught.value)
-    assert "Could not find config namespace" in str(caught.value)
+def test_wap_session_conf_stores_through_the_sql_set_door(spark: ReparkSession, key: str) -> None:
+    """Both WAP confs store and read back, as Spark does. pins: ice-wap-branch-1/C-007"""
+    answer = spark.sql(f"SET {key} = audit").to_arrow()
+    assert answer.to_pylist() == [{"key": key, "value": "audit"}]
+    assert spark.conf.get(key) == "audit"
+    spark.sql(f"RESET {key}").collect()
+    assert spark.conf.get(key, None) is None
+
+
+def test_wap_branch_leaves_a_table_without_the_property_on_main(spark: ReparkSession) -> None:
+    """Without write.wap.enabled the conf is inert. pins: ice-wap-branch-1/C-004"""
+    spark.sql(f"ALTER TABLE {TABLE} CREATE BRANCH audit")
+    spark.conf.set("spark.wap.branch", "audit")
+    try:
+        spark.sql(f"INSERT INTO {TABLE} SELECT 2 AS id, 'b' AS name").collect()
+    finally:
+        spark.conf.unset("spark.wap.branch")
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1, 2]
+    audit = spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF 'audit'").to_arrow()
+    assert sorted(audit.column("id").to_pylist()) == [1]
+
+
+def test_wap_id_alone_still_lands_on_main(spark: ReparkSession) -> None:
+    """spark.wap.id stages nothing yet (fork ask F-STAGE-ONLY-1). pins: ice-wap-branch-1/C-010"""
+    spark.sql(f"ALTER TABLE {TABLE} SET TBLPROPERTIES ('write.wap.enabled'='true')").collect()
+    spark.conf.set("spark.wap.id", "w1")
+    try:
+        spark.sql(f"INSERT INTO {TABLE} SELECT 2 AS id, 'b' AS name").collect()
+    finally:
+        spark.conf.unset("spark.wap.id")
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1, 2]

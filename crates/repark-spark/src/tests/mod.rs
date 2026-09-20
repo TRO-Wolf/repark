@@ -77,6 +77,7 @@ mod v3_upgrade;
 mod v3_upgrade_calls;
 mod v3e3;
 mod v3e4;
+mod wap_branch;
 mod window_temporal_range;
 mod write_defaults;
 mod write_to_branch;

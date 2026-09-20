@@ -79,6 +79,11 @@ fn apply_runtime_config(
         write_case_sensitive_flag(session, enabled)?;
         return Ok(());
     }
+    if repark_spark::wap::is_wap_session_key(key) {
+        let parsed = repark_spark::wap::parse_runtime_wap_value(value);
+        write_wap_value(session, key, parsed)?;
+        return Ok(());
+    }
     if key == repark_core::PARTITION_OVERWRITE_MODE_KEY {
         let mode = repark_core::parse_partition_overwrite_mode(value)
             .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
@@ -88,8 +93,10 @@ fn apply_runtime_config(
     Err(Error::IllegalArgument(format!(
         "set_runtime_config refuses unknown key {key:?} (served: \
          {SPARK_SQL_ANSI_ENABLED_KEY:?}, {SESSION_TIME_ZONE_KEY:?}, \
-         {SPARK_SQL_CASE_SENSITIVE_KEY:?}, {:?})",
-        repark_core::PARTITION_OVERWRITE_MODE_KEY
+         {SPARK_SQL_CASE_SENSITIVE_KEY:?}, {:?}, {:?}, {:?})",
+        repark_core::PARTITION_OVERWRITE_MODE_KEY,
+        repark_spark::wap::WAP_BRANCH_KEY,
+        repark_spark::wap::WAP_ID_KEY
     )))
 }
 
@@ -160,6 +167,24 @@ fn write_overwrite_mode(
             "set_runtime_config refuses {:?}: \
              the live session has no partition-overwrite-mode carrier",
             repark_core::PARTITION_OVERWRITE_MODE_KEY
+        ))),
+    }
+}
+
+fn write_wap_value(session: &ReparkSession, key: &str, value: Option<String>) -> Result<()> {
+    let state_lock = session.context().state_ref();
+    let mut state = state_lock.write();
+    let carrier = state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<repark_spark::wap::WapSessionConfig>();
+    match carrier {
+        Some(carrier) => carrier
+            .set_value(key, value)
+            .map_err(|error| Error::IllegalArgument(configuration_message(error))),
+        None => Err(Error::IllegalArgument(format!(
+            "set_runtime_config refuses {key:?}: the live session has no WAP carrier"
         ))),
     }
 }
