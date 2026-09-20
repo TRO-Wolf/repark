@@ -109,6 +109,19 @@ def test_df_write_to_merge_schema_adds_the_column_last(spark: ReparkSession) -> 
     assert _snapshots(spark, table) == 2
 
 
+def test_df_merge_schema_commits_exactly_one_snapshot(spark: ReparkSession) -> None:
+    """pins: ipi-19-56-37-schema-evolution-write/C-001"""
+    table = _create(spark, "df_one_snap", accept_any=True)
+    _seed_named(spark, table)
+    before = _snapshots(spark, table)
+    frame = _frame(spark)
+    frame.withColumn("extra", frame.id * 2).write.format("iceberg").option(
+        "mergeSchema", "true"
+    ).mode("append").saveAsTable(table)
+    assert _schema(spark, table) == EVOLVED_LONG
+    assert _snapshots(spark, table) - before == 1
+
+
 def test_merge_schema_without_accept_any_schema_raises(spark: ReparkSession) -> None:
     """pins: ipi-19-56-37-schema-evolution-write/C-002"""
     table = _create(spark, "df_no_prop")
@@ -270,6 +283,15 @@ def test_merge_with_schema_evolution_bigint(spark: ReparkSession) -> None:
         [4, "D", "z", 8],
     ]
     assert _snapshots(spark, table) == 2
+
+
+def test_schema_evolution_commits_one_snapshot(spark: ReparkSession) -> None:
+    """pins: ipi-19-56-37-schema-evolution-write/C-005"""
+    table = _merge_fixture(spark, "mse_one_snap", BIGINT_SOURCE)
+    before = _snapshots(spark, table)
+    spark.sql(MERGE_STMT.format(t=table, v="v_mse_one_snap"))
+    assert _schema(spark, table) == EVOLVED_INT
+    assert _snapshots(spark, table) - before == 1
 
 
 def test_merge_with_schema_evolution_no_new_column(spark: ReparkSession) -> None:
