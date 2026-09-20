@@ -201,3 +201,143 @@ def test_clustered_by_is_not_silently_dropped(spark: Any, tmp_path: Path) -> Non
     spark.sql(f"INSERT INTO {table} VALUES (1, 'a'), (2, 'b')")
     arrow = spark.sql(f"SELECT id FROM {table} ORDER BY id").to_arrow()
     assert arrow.column("id").to_pylist() == [1, 2]
+
+
+def _properties(meta: dict[str, Any]) -> dict[str, Any]:
+    """Table properties of one metadata document."""
+    return dict(meta.get("properties", {}))
+
+
+def test_create_column_comment(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-CREATE-COL-COMMENT``: the doc is the schema row's fourth field."""
+    table = f"{CATALOG}.{NAMESPACE}.t_col_comment"
+    spark.sql(f"CREATE TABLE {table} (id BIGINT COMMENT 'the id', data STRING) USING iceberg")
+
+    rows, _ = _schema_rows(_metadata(tmp_path / "wh", "t_col_comment"))
+    assert ["id", "long", False, "the id"] in rows
+    assert ["data", "string", False, None] in rows
+    assert str(_arrow_fields(spark, table)["id"].type) == "int64"
+
+
+def test_create_table_comment(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-CREATE-COMMENT``: the table comment is the ``comment`` property."""
+    table = f"{CATALOG}.{NAMESPACE}.t_create_comment"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT COMMENT 'the id', data STRING) "
+        "USING iceberg COMMENT 'tbl doc'"
+    )
+
+    meta = _metadata(tmp_path / "wh", "t_create_comment")
+    assert _properties(meta)["comment"] == "tbl doc"
+    rows, _ = _schema_rows(meta)
+    assert ["id", "long", False, "the id"] in rows
+
+
+def test_ctas_comment(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-CTAS-COMMENT``: CTAS carries the table comment and the rows."""
+    table = f"{CATALOG}.{NAMESPACE}.t_ctas_comment"
+    spark.sql(f"CREATE TABLE {table} USING iceberg COMMENT 'hello' AS SELECT 1 AS i")
+
+    assert _properties(_metadata(tmp_path / "wh", "t_ctas_comment"))["comment"] == "hello"
+    arrow = spark.sql(f"SELECT i FROM {table} ORDER BY i").to_arrow()
+    assert arrow.column("i").to_pylist() == [1]
+
+
+def test_comment_on_table(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-COMMENT-ON``: the statement sets the ``comment`` property."""
+    table = _create(spark, "t_comment_on")
+    spark.sql(f"COMMENT ON TABLE {table} IS 'doc here'")
+
+    assert _properties(_metadata(tmp_path / "wh", "t_comment_on"))["comment"] == "doc here"
+
+
+def test_comment_on_table_is_null_removes_the_property(spark: Any, tmp_path: Path) -> None:
+    """``COMMENT ON TABLE t IS NULL`` removes the ``comment`` property."""
+    table = _create(spark, "t_comment_null")
+    spark.sql(f"COMMENT ON TABLE {table} IS 'doc here'")
+    spark.sql(f"COMMENT ON TABLE {table} IS NULL")
+
+    assert "comment" not in _properties(_metadata(tmp_path / "wh", "t_comment_null"))
+
+
+def test_change_column_hive_type_and_comment(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-X-CHANGE-COLUMN-TYPE``: the Hive form sets type and doc, keeps rows."""
+    table = _create(spark, "t_hive_change")
+    spark.sql(f"INSERT INTO {table} VALUES (1, 'a')")
+    spark.sql(f"ALTER TABLE {table} CHANGE COLUMN id id BIGINT COMMENT 'hive-style'")
+
+    rows, _ = _schema_rows(_metadata(tmp_path / "wh", "t_hive_change"))
+    assert ["id", "long", False, "hive-style"] in rows
+    assert ["data", "string", False, None] in rows
+    arrow = spark.sql(f"SELECT id, data FROM {table} ORDER BY id").to_arrow()
+    assert arrow.to_pylist() == [{"id": 1, "data": "a"}]
+
+
+def test_change_column_hive_rename(spark: Any, tmp_path: Path) -> None:
+    """The Hive form renames when its two names differ, and keeps the rows."""
+    table = _create(spark, "t_hive_rename")
+    spark.sql(f"INSERT INTO {table} VALUES (1, 'a')")
+    spark.sql(f"ALTER TABLE {table} CHANGE COLUMN data payload STRING")
+
+    rows, _ = _schema_rows(_metadata(tmp_path / "wh", "t_hive_rename"))
+    assert ["payload", "string", False, None] in rows
+    arrow = spark.sql(f"SELECT id, payload FROM {table} ORDER BY id").to_arrow()
+    assert arrow.to_pylist() == [{"id": 1, "payload": "a"}]
+
+
+def test_create_location_files_land_under_path(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-CREATE-LOCATION``: data files land under the given path."""
+    location = tmp_path / "custom_loc" / "t_create_loc"
+    table = f"{CATALOG}.{NAMESPACE}.t_create_loc"
+    spark.sql(f"CREATE TABLE {table} (id BIGINT) USING iceberg LOCATION '{location}'")
+    spark.sql(f"INSERT INTO {table} VALUES (1)")
+
+    assert _metadata(tmp_path / "custom_loc", "t_create_loc")["location"] == str(location)
+    assert sorted(location.rglob("*.parquet"))
+    arrow = spark.sql(f"SELECT id FROM {table} ORDER BY id").to_arrow()
+    assert arrow.column("id").to_pylist() == [1]
+
+
+def test_ctas_location_files_land_under_path(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-CTAS-LOCATION``: CTAS data files land under the given path."""
+    location = tmp_path / "ctasloc" / "t_ctas_loc"
+    table = f"{CATALOG}.{NAMESPACE}.t_ctas_loc"
+    spark.sql(f"CREATE TABLE {table} USING iceberg LOCATION '{location}' AS SELECT 1 AS i")
+
+    assert _metadata(tmp_path / "ctasloc", "t_ctas_loc")["location"] == str(location)
+    assert sorted(location.rglob("*.parquet"))
+    arrow = spark.sql(f"SELECT i FROM {table} ORDER BY i").to_arrow()
+    assert arrow.column("i").to_pylist() == [1]
+
+
+def test_ctas_location_and_comment_after_tblproperties(spark: Any, tmp_path: Path) -> None:
+    """dbt emits ``tblproperties`` before ``location`` and ``comment``; that order serves."""
+    location = tmp_path / "dbtorder" / "t_dbt_order"
+    table = f"{CATALOG}.{NAMESPACE}.t_dbt_order"
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg TBLPROPERTIES ('k' = 'v') "
+        f"LOCATION '{location}' COMMENT 'dbt order' AS SELECT 1 AS i"
+    )
+
+    meta = _metadata(tmp_path / "dbtorder", "t_dbt_order")
+    assert meta["location"] == str(location)
+    assert _properties(meta)["comment"] == "dbt order"
+    assert _properties(meta)["k"] == "v"
+
+
+def test_describe_shows_column_comment(spark: Any) -> None:
+    """Cell ``D-DESCRIBE`` re-check: the comment column carries the doc."""
+    table = f"{CATALOG}.{NAMESPACE}.t_describe_doc"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT COMMENT 'c', data STRING) "
+        "USING iceberg PARTITIONED BY (bucket(4, id))"
+    )
+
+    rows = spark.sql(f"DESCRIBE TABLE {table}").to_arrow().to_pylist()
+    by_name = {row["col_name"]: row for row in rows}
+    assert by_name["id"] == {"col_name": "id", "data_type": "bigint", "comment": "c"}
+    assert by_name["Part 0"] == {
+        "col_name": "Part 0",
+        "data_type": "bucket(4, id)",
+        "comment": "",
+    }
