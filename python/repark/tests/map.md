@@ -46,7 +46,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   exception classes read a Spark-shaped message: at most one known engine prefix, the
   bracket at column 0 of what remains, an all-caps condition token, the last
   `SQLSTATE: XXXXX` anywhere. `attach_error_condition` instance binds still win.
-  pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **IPI-51 PR3 (2026-09-20):** six stamped-message constructor pins assert type +
+  `getCondition` + `getSqlState` on the new TABLE_OR_VIEW texts — the DROP/CREATE catalogue
+  shapes and the four stamped `writer_readwriter.py` strings; the historical col-0
+  no-SQLSTATE pins stay.
+  pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-011
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
   [ice_meta_delete_1_spark_oracle.json](ice_meta_delete_1_spark_oracle.json) +
   [_record_ice_meta_delete_1.py](_record_ice_meta_delete_1.py) —
@@ -4606,7 +4611,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `PySparkAttributeError` `[ATTRIBUTE_NOT_SUPPORTED]`; collect surface end-to-end. Out of
   charter: pickling, `Row("name","age")` factory. Select-display residue (ROW-003) is
   already closed on main by Group H (`test_select_naming.py`) — verified, no invented work.
-- `test_errors.py` — the WG-3/U4 error-taxonomy matrix, end to end through the public facade: the
+- `test_errors.py` — the WG-3/U4 error-taxonomy matrix, end to end through the public facade
+  (IPI-51 PR3, 2026-09-20: the DROP-missing pin now asserts `getCondition()` =
+  `TABLE_OR_VIEW_NOT_FOUND` and `getSqlState()` = `42P01` since the raise site stamps them):
+  the
   subclass tree (`ParseException` ⊂ `AnalysisException` ⊂ `PySparkException` ⊂ `RuntimeError`,
   `UnsupportedOperationException` ⊂ `PySparkException`,
   `CommitStateUnknownException` ⊂ `PySparkException` — **ICE-COMMIT-UNKNOWN-1**, the

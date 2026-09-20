@@ -271,7 +271,8 @@ def test_drop_missing_table_raises_analysis_exception(
     spark = spark_with_catalog
     with pytest.raises(AnalysisException) as raised:
         spark.sql("DROP TABLE mem.silver.__never_created__")
-    assert "TableNotFound" in str(raised.value)
+    assert raised.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert raised.value.getSqlState() == "42P01"
 
 
 # Near-drop-in compatibility: the whole reason the typed exceptions subclass RuntimeError
