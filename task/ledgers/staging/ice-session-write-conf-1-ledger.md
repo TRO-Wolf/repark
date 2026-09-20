@@ -100,6 +100,10 @@ pin moves (rule: pin moves only via their own PR).
 | C-056 | Third verification critic, P2-COLLISION-FOLDS-VERBATIM-SUFFIX: a summary-metric name in a different case is a DIFFERENT key — it stamps beside the engine's own, and only the exact spelling refuses. | Measure Spark, then pin. | PROVEN | Three `QC-*` cells (run 25c, 2026-09-20): `snapshot-property.Deleted-Records=5` on a copy-on-write DELETE COMMITS, and the snapshot carries both `Deleted-Records=5` and the engine's `deleted-records=3`; `DELETED-RECORDS` likewise; `deleted-records` refuses. C-048 had already made the stamped suffix verbatim, but `summary_with_extras` still asked `refuse_collision` about an ascii-lowered copy, so a spelling Spark stamps was refused. It asks about the spelling it inserts. Folding stays the WRITER-OPTION rule, applied at `StatementWriteOptions::validate`. Pins `a_mixed_case_metric_suffix_is_a_different_key_and_stamps` and `the_exact_metric_suffix_still_refuses`; the folded lookup reds the first and nothing else. |
 | C-057 | Third verification critic, P2-ONE-WRITER-UNPINNED-IN-UNIT: the layout battery asserts Spark's OWN committed file count, not only equality across conf on and off. | Measure Spark, then pin absolutely, then run the mutation. | PROVEN | Six `QU-*` cells (run 25c, 2026-09-20): Spark commits ONE live data file and `added-data-files=1` after the identity copy-on-write UPDATE and after the DELETE, and two live files after a second INSERT — with a session conf and without. Both runs of each layout pin now assert those numbers through `assert_spark_layout`. Mutation: restoring `concurrency_from_ctx` on `commit_identity_update_cow` (per-batch writers) moves BOTH sides of the comparison together and left the pin green before; it now reds `a_session_conf_keeps_a_plain_update_layout` and nothing else. |
 | C-058 | Third verification critic, P2-ROUND3-CELLS-ABSENT-FROM-FIXTURE: every Spark cell this unit claims is in the unit fixture is in it, and the live recorder re-derives all of them. | Recorder `check` rc 0 naming the cell count. | PROVEN | Rounds 3 and 4 measured six families but left them in the orchestrator recordings, so the fixture held 63 cells while the ledger and registry claimed fifteen more. `_record_ice_session_write_conf_1_rounds::derive_round_cells` derives all 32 — `QK-*`, `QM-*`, `QP-*`, `QO-*`, `QC-*`, `QU-*` — and the oracle recorder appends them. Recorded on PySpark 4.1.2 + Iceberg 1.11.0: the 63 committed cells re-derive byte-identical, the 32 new ones match the orchestrator recordings cell for cell, and `check` prints `ice-session-write-conf-1 oracle check clean (95 cells)`. Fixture SHA-256 `b32404c71f9c964ad31206317d0823b87a2bdbca7f5718aa75051ae30f0522b6`. What RePark must answer for each is pinned in Rust, per the owner's Rust-first ruling. |
+| C-059 | Fourth verification critic, P1-MOR-ROW-FILTER-REMOVED-SET-OMITS-DELETE-FILES: a static `INSERT OVERWRITE … PARTITION` on a merge-on-read table resolves the DELETE files the commit removes as well as the data files, so a session snapshot property naming a delete-side removal key refuses on the engine's value. | Five new Spark cells + refusal pins + the data-only mutation. | PROVEN | Measured first (`QD-MOR-*`, Spark 4.1.2 + Iceberg 1.11.0, run 25c 2026-09-20): a `cat`-partitioned merge-on-read table seeded (1,x) (2,x) (3,y) with `DELETE … WHERE id = 1` leaves one position-delete file in partition `x`; the static overwrite of `x` commits `removed-delete-files=1`, `removed-position-deletes=1`, `total-delete-files=0`, `total-position-deletes=0` and `deleted-records=2`, and REFUSES a session extra naming any of the three delete-side keys (`removed-delete-files=1 and removed-delete-files=9`, `removed-position-deletes=1 and 9`, `total-delete-files=0 and 1`). `live_data_files` kept only `ManifestContentType::Data`, so RePark stamped each extra beside the engine's own key. `live_files` is now the one manifest walk parameterised by content type, `live_delete_files` its delete-manifest case, and `row_filter_removed_files` runs the same partition-tuple filter over both sides. `deleted-records` stays `2`, the record count of the removed data file: a position delete does not lower it, and Spark counts it the same way. Pins `a_merge_on_read_overwrite_names_the_delete_file_it_removes`, `…names_the_positions_it_removes`, `…subtracts_the_delete_file_from_the_total`, `…names_the_records_of_the_data_file_it_removes`. Mutation: the removed set from the live DATA files alone reds the first three and nothing else in the 1237-test battery. |
+| C-060 | Fourth verification critic, P2-DECIMAL-IDENTITY-PARTITION-CAST-MISSING: a static `INSERT OVERWRITE … PARTITION (k = '<literal>')` on an identity DECIMAL, DOUBLE or BOOLEAN column is planned, not refused, so the removed-set resolver runs on those Spark-legal shapes. | Six new Spark cells + refusal pins + the dropped-arm mutation. | PROVEN | Measured first (`QD-TYPE-*`): Spark 4.1.2 takes all three column types — a free key stamps `team=a`, and `snapshot-property.deleted-records=5` refuses `deleted-records=2 and deleted-records=5`, the two live rows of the partition cleared. `cast_datum` matched Boolean/Int/Long/Float/Double/Date32/Utf8/Timestamp and `_ => None`, so `PARTITION (amt = '1.50')` on `DECIMAL(10,2)` failed loud with `literal … is not assignable to … (decimal(10,2))` and C-054's resolver never ran there. `decimal_datum` takes the mantissa the arrow cast has already landed at the column's own precision and scale and builds the datum through `Datum::try_from_bytes` with the column's `PrimitiveType`, so the row-filter predicate and the partition-tuple lookup compare one typed value. DOUBLE and BOOLEAN needed no code and are pinned so the measurement is not lost. Mutation: dropping the `Decimal128` arm reds `an_identity_decimal_partition_overwrite_names_the_engine_value` and nothing else. |
+| C-061 | Fourth verification critic, P2-STATIC-OVERWRITE-PINS-MISS-STAGED-FILES-REVERT: the static-overwrite battery reds when the removed set is taken from the staged files instead of the PARTITION equalities. | A pin whose source stages no file + the staged-files mutation. | PROVEN | The critic measured that `engine_summary_for_row_filter` on `replaced_data_files` left every C-054 pin green: `VALUES (9)` and `SELECT 9` both stage a file in the named partition, so the staged-file partition keys happen to match. The case that motivated the equalities resolver is the discriminator — an EMPTY source stages nothing and still clears a live partition, so a staged-files removed set resolves nothing and the session `deleted-records=5` is stamped where Spark refuses `deleted-records=2`. `an_empty_source_static_overwrite_names_the_partition_it_clears` pins the refusal. Mutation: the staged-files revert now reds this pin and the three `QD-MOR-*` delete-side pins, and nothing else; before this round it reddened nothing. |
+| C-062 | Every Spark cell round 5 cites is in the unit fixture and re-derived by the live recorder. | Recorder `check` rc 0 naming the cell count. | PROVEN | `_record_ice_session_write_conf_1_rounds` derives the eleven `QD-*` cells on the live session and the oracle recorder appends them. Recorded on PySpark 4.1.2 + Iceberg 1.11.0: all 95 committed cells re-derive equal under the check leg's own rules (`CZ-CONF-BOGUS` by its needle, the error family by its first message line), and the eleven new ones match the orchestrator recording `spark-qc12.json` cell for cell. `check` prints `ice-session-write-conf-1 oracle check clean (106 cells)`. Fixture SHA-256 `56a2ca565dda8a43546f4142c6ec142ea741fd4b6e40ebd925443113c98502c4`, mirrored in `python/repark/tests/map.md`. |
 
 ## 1. Red-first record (base `2c232c59`, 2026-09-19)
 
@@ -317,11 +321,47 @@ against the fork's time-ordered v7. The one-word fix wants `uuid`'s `v7` feature
 declared in the workspace manifest, which this brief forbids; it is also the only
 reason the INSERT route still depends on the conf.
 
+## 9. Round 5 — the fourth verification critic's one P1 and two P2s (2026-09-20)
+
+A fourth Grok critic ran every round-4 mutation red and filed three findings. All
+three are closed, each measured on live Spark before anything was written.
+
+- **`P1-MOR-ROW-FILTER-REMOVED-SET-OMITS-DELETE-FILES` was real.** C-054 taught
+  the static arm to resolve the DATA files its row filter removes and stopped
+  there. On a merge-on-read table the same commit also drops the partition's
+  position-delete files, and Spark's producer counts them: `removed-delete-files`,
+  `removed-position-deletes` and `total-delete-files` are engine-produced there,
+  so a session property naming one must REFUSE. Five `QD-MOR-*` cells measure it;
+  the resolver now walks the delete manifests beside the data manifests. C-059.
+- **`P2-DECIMAL-IDENTITY-PARTITION-CAST-MISSING` was real, and the measurement
+  widened it to a class.** Spark takes an identity DECIMAL, DOUBLE *and* BOOLEAN
+  partition column; RePark refused only DECIMAL, and refused it loud, so C-054's
+  resolver never ran on that shape. The other two are pinned beside it so the
+  measurement outlives this round. C-060.
+- **`P2-STATIC-OVERWRITE-PINS-MISS-STAGED-FILES-REVERT` was real and was purely a
+  coverage hole.** The production path already answered the empty-source case
+  correctly; nothing in the battery would have caught a revert to
+  `replaced_data_files`. The pin that reds under it is the empty source that still
+  clears a live partition — the case the equalities resolver exists for. C-061.
+
+**Measured but NOT changed, and therefore stated:** the dynamic
+`overwritePartitions` arm (`replaced_data_files`) and the whole-table replace-all
+arm (`live_data_files`) have the SAME delete-file shape as the static arm, and
+this round did not measure Spark's answer for them. They keep their data-only
+removed set. The fix is the same two lines the static arm took; it is not taken
+here because no cell was recorded for it, and this unit does not write an
+expectation it has not measured. Round 6 or a follow-on unit should record
+`QD-DYN-*` / `QD-ALL-*` and close it.
+
+**Still open, unchanged from §8:** the owned writers' random v4 UUID file names
+against the fork's time-ordered v7, which wants a workspace manifest edit this
+brief forbids.
+
 ## 7a. Registry
 
 Row `ICE-SESSION-WRITE-CONF-1` in `docs/spark-sql-iceberg-parity.md`, beside
-ICE-WRITE-OPTIONS-1: **FIXED 2026-09-19, round 4 2026-09-20**, with every critic
-P1 and P2 of all three rounds recorded closed and three named residues
+ICE-WRITE-OPTIONS-1: **FIXED 2026-09-19, rounds 4 and 5 2026-09-20**, with every critic
+P1 and P2 of all four rounds recorded closed and three named residues
 (`F-RDF-SESSION-CONF-1`, `IPI-08`, the `engine-name` / `engine-version` reading).
 No correction to ICE-WRITE-OPTIONS-1 was needed (R-24c-2).
 
@@ -500,5 +540,46 @@ COVERAGE_ATTESTATION:
         alone - the finding the critic filed was precisely that this last one
         reddened nothing before.
       artifacts: [crates/repark-spark/src/tests/session_write_conf.rs, crates/repark-iceberg/src/write/write_options.rs, crates/repark-iceberg/src/write/predicate_dml/cow_commit.rs]
+  round_5_reattested:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Nothing round 5 asserts was reasoned. The delete-side removal
+        keys, the three identity partition column types and the record counts
+        were all recorded on live Spark 4.1.2 first (eleven QD-* cells), then
+        pinned, then entered into the unit fixture and the live recorder, which
+        re-derives all 106 and re-derived the 95 older ones equal in the same
+        run.
+      artifacts: [python/repark/tests/ice_session_write_conf_1_spark_oracle.json, python/repark/tests/_record_ice_session_write_conf_1_rounds.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Round 5 attacks the removal side the earlier rounds only
+        attacked on its data half. The merge-on-read overwrite is attacked on
+        all three delete-side keys AND on deleted-records, which must NOT move
+        (a position delete does not lower the removed data file's record count).
+        The identity partition column is attacked on three types, not just the
+        one the critic named, because the JVM was up and a measurement is
+        cheaper than a guess. The static battery is attacked with the one source
+        shape that stages no file.
+      artifacts: [crates/repark-spark/src/tests/session_write_conf_removals.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: What round 5 did NOT do is stated where it can be read. The
+        dynamic and replace-all arms have the same delete-file hole as the
+        static arm; no Spark cell was recorded for them in this round, so they
+        were left alone rather than fixed on an unmeasured expectation, and the
+        gap is named in section 9 and in the registry row. The DECIMAL finding
+        was widened to DOUBLE and BOOLEAN by measurement, and the two that
+        needed no code are pinned as such rather than claimed as fixes.
+      artifacts: [task/ledgers/staging/ice-session-write-conf-1-ledger.md, docs/spark-sql-iceberg-parity.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Every round-5 pin was run against the mutation that names it and
+        confirmed to red under it AND to be the only thing that reds, over the
+        whole 1237-test repark-spark battery. The data-only removed set reds the
+        three delete-side pins alone; dropping the Decimal128 arm reds the
+        DECIMAL pin alone; the staged-files revert reds the empty-source pin and
+        the three delete-side pins and nothing else - and reddened NOTHING
+        before this round, which is the finding the critic filed.
+      artifacts: [crates/repark-spark/src/tests/session_write_conf_removals.rs, crates/repark-iceberg/src/write/summary_collision.rs, crates/repark-iceberg/src/write/static_value.rs]
   complete: true
 ```

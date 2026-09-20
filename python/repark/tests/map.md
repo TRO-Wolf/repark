@@ -794,7 +794,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `2`. The eleven were cross-checked cell for cell against the orchestrator recording
   `spark-qc12.json` before they entered the fixture; the DECIMAL cells render their rows as
   strings, the one thing a `Decimal` cannot round-trip through JSON.
-  pins: ice-session-write-conf-1/C-059, C-060
+  pins: ice-session-write-conf-1/C-059, C-060, C-062
 - [_record_ice_session_write_conf_1_paths.py](_record_ice_session_write_conf_1_paths.py) +
   [test_ice_session_write_conf_1_paths.py](test_ice_session_write_conf_1_paths.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c):** the 38 path cells added to the

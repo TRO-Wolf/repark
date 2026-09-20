@@ -3289,7 +3289,7 @@ the pin rather than obeying it.
   the control — equals Spark's; the live tier re-derives one cell on Spark).
   pins: ice-write-options-rp-1/C-007
 
-### ICE-SESSION-WRITE-CONF-1 — session `spark.sql.iceberg.*` write confs — **FIXED 2026-09-19, round 4 2026-09-20**
+### ICE-SESSION-WRITE-CONF-1 — session `spark.sql.iceberg.*` write confs — **FIXED 2026-09-19, rounds 4 and 5 2026-09-20**
 
 - **repark** — **FIXED 2026-09-19.** One Rust resolver
   (`repark-iceberg` `write/session_write_conf.rs`) layers writer option over
@@ -3544,6 +3544,38 @@ the pin rather than obeying it.
     claimed to be in the unit fixture and were not. All fifteen plus this round's seventeen
     are now in it and re-derived by the live recorder: `ice-session-write-conf-1 oracle
     check clean (95 cells)`. C-058.
+- **Round 5 (2026-09-20) — the fourth critic's one P1 and two P2s, all closed.**
+  - **A merge-on-read partition overwrite removes delete files too (P1).** Round 4 resolved
+    the DATA files the row filter drops and stopped there. Five new `QD-MOR-*` cells: on a
+    `cat`-partitioned merge-on-read table holding one position-delete file in partition `x`,
+    the static overwrite of `x` commits `removed-delete-files=1`,
+    `removed-position-deletes=1` and `total-delete-files=0` beside `deleted-records=2`, and
+    REFUSES a session property naming any of the three delete-side keys — where RePark
+    stamped the extra next to the engine's own value. `live_files` is now one
+    content-type-parameterised manifest walk and the removed set carries both sides.
+    `deleted-records` stays `2`: a position delete does not lower the removed data file's
+    record count, in Spark either. C-059.
+  - **An identity DECIMAL partition takes its static literal (P2).** Six `QD-TYPE-*` cells:
+    Spark plans `INSERT OVERWRITE … PARTITION (k = '<literal>')` on an identity
+    `DECIMAL(10,2)`, `DOUBLE` and `BOOLEAN` column alike — a free key stamps,
+    `deleted-records` refuses naming `2`. RePark failed the DECIMAL shape loud (`not
+    assignable`), so C-054's resolver never ran there; `cast_datum` now builds the datum
+    from the mantissa the arrow cast lands at the column's own precision and scale. DOUBLE
+    and BOOLEAN needed no code and are pinned so the measurement is not lost. C-060.
+  - **The static battery catches a staged-files revert (P2).** Taking the removed set from
+    the staged files left every round-4 pin green, because `VALUES (9)` stages a file in the
+    named partition. The discriminator is the case the equalities resolver exists for: an
+    EMPTY source stages nothing and still clears a live partition. Pinned; that revert now
+    reds it and the three delete-side pins. C-061.
+  - **Fixture:** `ice-session-write-conf-1 oracle check clean (106 cells)`. C-062.
+  - **OPEN and reported, measured only for the static arm.** The dynamic
+    `overwritePartitions` arm (`replaced_data_files`) and the whole-table replace-all arm
+    (`live_data_files`) have the SAME delete-file shape the static arm just closed, and
+    round 5 recorded no Spark cell for them, so they keep their data-only removed set. A
+    session property naming `removed-delete-files` on a merge-on-read table overwritten by
+    either of those two routes is still stamped where Spark would very likely refuse. The
+    fix is the two lines the static arm took; it waits on `QD-DYN-*` / `QD-ALL-*` cells,
+    because this unit does not write an expectation it has not measured.
 - **Round 3 note, an approach that does NOT work (measured 2026-09-19; superseded by round 4).** Routing every
   Iceberg plain INSERT through the owned append — the other way to make the session conf
   irrelevant to the route — reds five pinned Spark-visible typing answers
