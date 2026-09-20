@@ -631,19 +631,21 @@ fn rewrite_drop_columns_at(
 fn split_top_level_comma_segments(tokens: &[Token]) -> Vec<Vec<Token>> {
     let mut segments = Vec::new();
     let mut current = Vec::new();
-    let mut depth = 0_i32;
+    let mut paren_depth = 0_u32;
+    let mut angle_depth = 0_u32;
     for token in tokens {
         match token {
-            Token::LParen | Token::Lt => depth += 1,
-            Token::RParen | Token::Gt => depth -= 1,
-            Token::ShiftLeft => depth += 2,
-            Token::ShiftRight => depth -= 2,
-            Token::Comma if depth == 0 => {
-                let trimmed = trim_ws_tokens(current);
+            Token::LParen => paren_depth += 1,
+            Token::RParen => paren_depth = paren_depth.saturating_sub(1),
+            Token::Lt => angle_depth += 1,
+            Token::Gt => angle_depth = angle_depth.saturating_sub(1),
+            Token::ShiftLeft => angle_depth += 2,
+            Token::ShiftRight => angle_depth = angle_depth.saturating_sub(2),
+            Token::Comma if paren_depth == 0 && angle_depth == 0 => {
+                let trimmed = trim_ws_tokens(std::mem::take(&mut current));
                 if !trimmed.is_empty() {
                     segments.push(trimmed);
                 }
-                current = Vec::new();
                 continue;
             }
             _ => {}
@@ -651,9 +653,7 @@ fn split_top_level_comma_segments(tokens: &[Token]) -> Vec<Vec<Token>> {
         current.push(token.clone());
     }
     let trimmed = trim_ws_tokens(current);
-    if !trimmed.is_empty() {
-        segments.push(trimmed);
-    }
+    segments.extend((!trimmed.is_empty()).then_some(trimmed));
     segments
 }
 

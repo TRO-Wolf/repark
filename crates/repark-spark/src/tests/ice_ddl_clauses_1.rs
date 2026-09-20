@@ -71,6 +71,26 @@ fn add_columns_plural_splitter_handles_paren_depth_one_and_shift_close() {
 }
 
 #[test]
+fn add_columns_plural_splitter_splits_after_top_level_gt() {
+    let sql = "ALTER TABLE ice.ns.t ADD COLUMNS (a INT DEFAULT 1 > 0, b INT)";
+    let rendered = rewritten_add_columns(sql);
+    assert_eq!(
+        rendered.matches("ADD COLUMN").count(),
+        2,
+        "a top-level `>` must not suppress the comma split, got: {rendered}"
+    );
+    let parsed = parse_single_normalized(sql).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
+    let Some((statement, _)) = parsed else {
+        panic!("{sql:?} must parse once the comma splits the two column defs");
+    };
+    if let Statement::AlterTable(alter) = &statement {
+        assert_eq!(alter.operations.len(), 2);
+    } else {
+        panic!("{sql:?} must parse as ALTER TABLE, got: {statement}");
+    }
+}
+
+#[test]
 fn angle_map_alter_parses_under_widened_dialect() {
     let sql = "ALTER TABLE ice.ns.t ADD COLUMN m MAP<STRUCT<a: INT>, STRING>";
     assert!(
