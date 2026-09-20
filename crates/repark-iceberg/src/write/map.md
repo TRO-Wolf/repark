@@ -157,7 +157,7 @@ repark-core's error map.
   `write-default`: conform builds that batch against the reduced schema and the fork's
   `DataFileWriter::write` fills it — **V3-6 C-005**; **WI-1** ANSI store-assignment gate then
   strict casts, overflow never NULLs) → identity-partition fanout write → ONE stamped
-  `fast_append` commit
+  `merge_append` commit
   (append×append commutes via the fork's refresh-and-re-apply retry; empty input commits an
   empty stamped snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned
   staged-write core. **V3-1 / RP-3 C-008:** `iceberg_err` goes through
@@ -210,6 +210,24 @@ repark-core's error map.
   optional named branch, mirroring `commit_overwrite_replace_all_to`; the Spark door's
   `INSERT … BY NAME` staged append commits through it. Like its sibling it carries
   `#[allow(clippy::missing_errors_doc)]` rather than a doc comment.
+- **ICE-MERGE-APPEND-1 (2026-09-19):** every append commit site in this directory —
+  `append.rs::commit_append`, `commit_target.rs::commit_append_to`,
+  `write_options.rs::commit_append_with_summary` — commits through the fork's
+  `merge_append()` (Java `MergeAppend`, what `Table.newAppend()` returns), not
+  `fast_append()`. The 1.11.0 bytecode of `SparkWrite$BatchAppend.commit` calls
+  `Table.newAppend()`; only `SparkWrite$StreamingAppend` calls `newFastAppend()`, and RePark
+  has no streaming writer, so none of these sites is a fast-append site. The three
+  `commit.manifest*` table properties (`-merge.enabled`, `.min-count-to-merge`,
+  `.target-size-bytes`) therefore take effect as they do in Spark: with defaults the
+  hundredth append replaces 99 manifests with 1. The overwrite, replace-partitions and
+  row-delta sites are untouched — Spark never merges there. A bare `INSERT INTO` does NOT
+  reach these functions: it plans on the fork's `IcebergCommitExec`, which is
+  `pub(crate)` and still calls `fast_append` (DECLARED, `ICE-MERGE-APPEND-INSERT-1`).
+  `append.rs` carries no module banner and `commit_append` no summary doc line under the
+  comment ban: the merge contract is stated here instead.
+  The routing needs no dependency movement: `Transaction::merge_append()` is already in the
+  pinned fork `44834673`, and `Cargo.toml` / `Cargo.lock` are untouched by the unit.
+  pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005, C-007, C-010
   pins: rp-5-fork-repin/C-004
   pins: ice-rtas-byname-1/C-001
 - `commit_error.rs` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** `CommitStateUnknownError`, the
