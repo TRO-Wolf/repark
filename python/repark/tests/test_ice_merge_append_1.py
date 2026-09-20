@@ -10,11 +10,11 @@ MERGING append producer and every Spark batch write uses it
 site is a merging-append site, and the three ``commit.manifest*`` table
 properties must take effect exactly as they do in Spark.
 
-Two halves of the parity are DECLARED rather than fixed here, each with a strict
-xfail that flips the moment the fork lands its half:
+One half of the parity is DECLARED rather than fixed here, with a strict xfail
+that flips the moment the fork lands it. The other flipped at RP-40: fork #322
+stamps the ``manifests-created`` / ``-kept`` / ``-replaced`` snapshot summary
+keys on every operation, so that pin is a plain assertion now.
 
-* the ``manifests-created`` / ``-kept`` / ``-replaced`` snapshot summary keys,
-  which the fork's ``MergeAppendAction`` does not write (fork ask #322);
 * the bare ``INSERT INTO`` statement, which falls through to DataFusion and
   commits inside the fork's ``IcebergCommitExec`` (``fast_append``), a commit
   site this repository cannot reach at fork pin ``44834673``.
@@ -37,11 +37,6 @@ _CATALOG = "ma"
 _NAMESPACE = "ns"
 _VARIANTS = ("defaults", "min_count_5", "merge_disabled")
 _SUMMARY_KEYS = ("manifests-created", "manifests-kept", "manifests-replaced")
-_FORK_SUMMARY_ASK = (
-    "fork #322: MergeAppendAction does not write the manifests-created/-kept/-replaced "
-    "summary keys (the fork's own named deviation: 'extra summary keys — same shape as "
-    "fast_append'). DECLARED in docs/spark-sql-iceberg-parity.md as ICE-MERGE-APPEND-SUMMARY-1."
-)
 _FORK_INSERT_ASK = (
     "fork ask ICE-MERGE-APPEND-COMMITEXEC: a bare INSERT INTO plans on the fork's "
     "IcebergCommitExec, whose InsertOp::Append arm commits through fast_append(); the exec is "
@@ -148,7 +143,6 @@ def test_merge_disabled_is_a_real_escape_hatch(session: ReparkSession) -> None:
     assert _counts(session, table) == (100, 100)
 
 
-@pytest.mark.xfail(strict=True, reason=_FORK_SUMMARY_ASK)
 def test_merging_commit_stamps_the_manifests_summary_keys(session: ReparkSession) -> None:
     """Spark stamps manifests-created/-kept/-replaced on EVERY append snapshot."""
     table = f"{_CATALOG}.{_NAMESPACE}.t_summary"
