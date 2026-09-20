@@ -389,7 +389,7 @@ async fn rewrite_manifests_does_not_refuse_a_colliding_session_key() {
     );
 }
 
-async fn branch_head_summary(table: &iceberg::table::Table, branch: &str) -> SummaryPairs {
+fn branch_head_summary(table: &iceberg::table::Table, branch: &str) -> SummaryPairs {
     let snapshot = table
         .metadata()
         .snapshot_for_ref(branch)
@@ -430,7 +430,7 @@ async fn branch_write_stamp(table_name: &str, statement: &str) -> SummaryPairs {
     run(&ctx, &catalogs, &statement.replace("{t}", table_name)).await;
     unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team");
     let table = load_sales_table(&catalogs, table_name).await;
-    branch_head_summary(&table, "b").await
+    branch_head_summary(&table, "b")
 }
 
 #[tokio::test]
