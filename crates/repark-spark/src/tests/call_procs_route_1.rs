@@ -501,6 +501,7 @@ async fn call_compute_partition_stats_registers_entry_and_refuses_unpartitioned(
         "CREATE TABLE ice.sales.cpsflat (id BIGINT) USING iceberg",
     )
     .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.cpsflat VALUES (1)").await;
     let error = execute(
         &ctx,
         &catalogs,
@@ -509,8 +510,16 @@ async fn call_compute_partition_stats_registers_entry_and_refuses_unpartitioned(
     .await
     .expect_err("unpartitioned table must refuse");
     assert!(
+        matches!(error, DataFusionError::Configuration(_)),
+        "Spark's IllegalArgumentException class, got: {error}"
+    );
+    assert!(
         error.to_string().contains("Table must be partitioned"),
         "Spark's unpartitioned text, got: {error}"
+    );
+    assert!(
+        !error.to_string().contains("External") && !error.to_string().contains("DataInvalid"),
+        "the router guard raises, not the fork External shape, got: {error}"
     );
 }
 

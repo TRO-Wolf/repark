@@ -475,8 +475,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (ancestors from S1, table and partition stats registered on S0 with S0 ndv,
   each asserted against the current head), the Spark-shaped refusals
   (empty columns, struct column, unknown column, unpartitioned table, wrong
-  prefix with the router-owned text and class), the nested-name pass-through
-  with no silent commit, the duplicate dedup, and the version-range refusal.
+  prefix with the router-owned text and class), the unpartitioned refusal on a
+  populated table with the fork External shape excluded, the nested-name
+  pass-through with no silent commit, the duplicate dedup, and the
+  version-range refusal.
   The battery carries no code comments (round
   rule); its pins are cited from this map and `call/map.md`.
   pins: ice-procs-route-1/C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012,
