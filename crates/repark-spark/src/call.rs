@@ -26,6 +26,7 @@ mod changelog;
 mod compute_partition_stats;
 mod compute_table_stats;
 mod create_changelog_view;
+mod params;
 mod plan_partitioning;
 mod plan_partitioning_bytes;
 mod plan_partitioning_score;

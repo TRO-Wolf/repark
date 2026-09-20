@@ -955,6 +955,13 @@ pins: rp-4-fork-repin/C-005, C-006
   `D-X-ADD-COL-MAP-KEY-STRUCT`); every other `ALTER` stays on `GenericDialect`,
   pinned by the corpus in [`tests/ice_ddl_clauses_1.rs`](tests/ice_ddl_clauses_1.rs).
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
+  **ICE-PROCEDURES-1 (2026-09-20):** mixed positional and named arguments are
+  legal (Spark accepts the mix), and `bind` binds a `CallArgs` against a
+  declared parameter list into a `BoundArgs` — positionals in declared order, SQL
+  NULL as unset, a loud duplicate-binding Plan error when one parameter is bound
+  both ways, today's unknown/arity/missing strings otherwise. Array-of-literal
+  coercions land here for the rounds that wire array parameters.
+  pins: ice-procedures-1/C-003, C-004, C-006, C-007, C-008, C-011
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),

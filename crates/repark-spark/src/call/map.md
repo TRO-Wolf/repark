@@ -331,6 +331,21 @@ and measured-parity contract would grow `call.rs` beyond its exact
   against the target and `projected_partitions` stays a pure value count.
   pins: ap-1/C-001, C-009, C-010
   pins: ap-3/C-003
+- `params.rs` — **ICE-PROCEDURES-1 (2026-09-20):** the per-procedure declared
+  parameter lists `bind` in `../call_args.rs` binds against — name, jar type
+  and required flag transcribed from `procedure-params.txt` (`javap`-derived
+  from the 1.11.0 jar), in jar order. Positional arguments bind in this order;
+  the jar type rides along for the rounds that switch the remaining handlers
+  (the array and map coercions read it when a handler wires an array or map
+  parameter). `params_for` resolves all twenty jar procedures and answers an
+  empty list for anything else, which `bind` then refuses loud. Two deliberate
+  gaps: `branch` is absent from the RDF list because the fork builder has no
+  branch parameter, so accepting it would ship a silently ignored argument —
+  the binder's unknown-argument refusal is the loud guard until the wiring
+  round adds it; `remove-dangling-deletes` is not declared here either because
+  it is a RePark-only extra the RDF handler passes to `bind` separately, which
+  keeps it named-only.
+  pins: ice-procedures-1/C-001, C-002, C-005, C-011
 
 ## Pointers
 

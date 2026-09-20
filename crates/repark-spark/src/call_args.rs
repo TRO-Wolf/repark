@@ -79,13 +79,6 @@ impl CallArgs {
                         }
                     }
                 }
-                if !named.is_empty() && !positional.is_empty() {
-                    return Err(DataFusionError::Plan(
-                        "CALL does not support mixing named and positional arguments \
-                         (Iceberg Spark Procedures — named or positional, not both)"
-                            .to_string(),
-                    ));
-                }
                 Ok(Self { named, positional })
             }
         }
@@ -251,6 +244,130 @@ impl CallArgs {
     }
 }
 
+pub(crate) struct ParamDecl {
+    pub(crate) name: &'static str,
+    #[allow(dead_code)]
+    pub(crate) data_type: &'static str,
+    pub(crate) required: bool,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct BoundArgs {
+    bound: Vec<(String, Option<Expr>)>,
+}
+
+impl BoundArgs {
+    pub(crate) fn get(&self, name: &str) -> Option<&Expr> {
+        self.bound
+            .iter()
+            .find(|(key, _)| key == name)
+            .and_then(|(_, expr)| expr.as_ref())
+    }
+
+    fn declared_position(&self, name: &str) -> usize {
+        self.bound
+            .iter()
+            .position(|(key, _)| key == name)
+            .unwrap_or(0)
+    }
+
+    pub(crate) fn require_string(&self, name: &str) -> Result<String> {
+        if let Some(expr) = self.get(name) {
+            return expr_as_string(expr, name);
+        }
+        let position = self.declared_position(name);
+        Err(DataFusionError::Plan(format!(
+            "CALL argument `{name}` is required (named `{name} => …` or positional #{position})"
+        )))
+    }
+
+    pub(crate) fn optional_string(&self, name: &str) -> Result<Option<String>> {
+        self.get(name)
+            .map(|expr| expr_as_string(expr, name))
+            .transpose()
+    }
+
+    pub(crate) fn optional_bool(&self, name: &str) -> Result<Option<bool>> {
+        self.get(name)
+            .map(|expr| expr_as_bool(expr, name))
+            .transpose()
+    }
+}
+
+fn is_sql_null(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Value(ValueWithSpan {
+            value: Value::Null,
+            ..
+        })
+    )
+}
+
+pub(crate) fn bind(args: &CallArgs, params: &[ParamDecl], extras: &[&str]) -> Result<BoundArgs> {
+    let mut names: Vec<&str> = params.iter().map(|param| param.name).collect();
+    names.extend_from_slice(extras);
+    for key in args.named.keys() {
+        if !names.contains(&key.as_str()) {
+            return Err(DataFusionError::Plan(format!(
+                "unknown CALL argument `{key}`; allowed: {}",
+                names.join(", ")
+            )));
+        }
+    }
+    let max_arity = params.len();
+    if args.positional.len() > max_arity {
+        return Err(DataFusionError::Plan(format!(
+            "CALL accepts at most {max_arity} positional argument(s); got {}",
+            args.positional.len()
+        )));
+    }
+    let mut slots: Vec<Option<Expr>> = vec![None; params.len()];
+    for (index, expr) in args.positional.iter().enumerate() {
+        let name = params[index].name;
+        if args.named.contains_key(name) {
+            return Err(DataFusionError::Plan(format!(
+                "CALL argument `{name}` is bound twice (positionally and by name)"
+            )));
+        }
+        if !is_sql_null(expr) {
+            slots[index] = Some(expr.clone());
+        }
+    }
+    for (index, param) in params.iter().enumerate() {
+        if slots[index].is_none()
+            && let Some(expr) = args.named.get(param.name)
+            && !is_sql_null(expr)
+        {
+            slots[index] = Some(expr.clone());
+        }
+    }
+    let mut bound: Vec<(String, Option<Expr>)> = params
+        .iter()
+        .zip(slots)
+        .map(|(param, expr)| (param.name.to_string(), expr))
+        .collect();
+    for extra in extras {
+        let expr = args.named.get(*extra).and_then(|candidate| {
+            if is_sql_null(candidate) {
+                None
+            } else {
+                Some(candidate.clone())
+            }
+        });
+        bound.push(((*extra).to_string(), expr));
+    }
+    for (index, param) in params.iter().enumerate() {
+        if param.required && bound[index].1.is_none() {
+            let name = param.name;
+            return Err(DataFusionError::Plan(format!(
+                "CALL argument `{name}` is required (named `{name} => …` or positional #{index})"
+            )));
+        }
+    }
+    Ok(BoundArgs { bound })
+}
+
 pub(crate) fn expr_as_string(expr: &Expr, arg_name: &str) -> Result<String> {
     match expr {
         Expr::Value(ValueWithSpan {
@@ -377,9 +494,253 @@ pub(crate) fn expr_as_bool(expr: &Expr, name: &str) -> Result<bool> {
     }
 }
 
+#[allow(dead_code)]
+pub(crate) fn expr_as_string_array(expr: &Expr, arg_name: &str) -> Result<Vec<String>> {
+    match expr {
+        Expr::Array(array) => array
+            .elem
+            .iter()
+            .map(|element| expr_as_string(element, arg_name))
+            .collect(),
+        Expr::Function(function) if function.name.to_string().eq_ignore_ascii_case("array") => {
+            match &function.args {
+                FunctionArguments::List(list) => list
+                    .args
+                    .iter()
+                    .map(|arg| match arg {
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(element)) => {
+                            expr_as_string(element, arg_name)
+                        }
+                        other => Err(DataFusionError::Plan(format!(
+                            "CALL argument `{arg_name}` must be an array of string \
+                             literals, got {other}"
+                        ))),
+                    })
+                    .collect(),
+                other => Err(DataFusionError::Plan(format!(
+                    "CALL argument `{arg_name}` must be an array of string \
+                     literals, got {other}"
+                ))),
+            }
+        }
+        other => Err(DataFusionError::Plan(format!(
+            "CALL argument `{arg_name}` must be an array of string \
+             literals, got {other}"
+        ))),
+    }
+}
+
+#[allow(dead_code)]
+pub(crate) fn expr_as_i64_array(expr: &Expr, arg_name: &str) -> Result<Vec<i64>> {
+    match expr {
+        Expr::Array(array) => array
+            .elem
+            .iter()
+            .map(|element| expr_as_i64(element, arg_name))
+            .collect(),
+        Expr::Function(function) if function.name.to_string().eq_ignore_ascii_case("array") => {
+            match &function.args {
+                FunctionArguments::List(list) => list
+                    .args
+                    .iter()
+                    .map(|arg| match arg {
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(element)) => {
+                            expr_as_i64(element, arg_name)
+                        }
+                        other => Err(DataFusionError::Plan(format!(
+                            "CALL argument `{arg_name}` must be an array of integer \
+                             literals, got {other}"
+                        ))),
+                    })
+                    .collect(),
+                other => Err(DataFusionError::Plan(format!(
+                    "CALL argument `{arg_name}` must be an array of integer \
+                     literals, got {other}"
+                ))),
+            }
+        }
+        other => Err(DataFusionError::Plan(format!(
+            "CALL argument `{arg_name}` must be an array of integer \
+             literals, got {other}"
+        ))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use datafusion::sql::sqlparser::ast::{SelectItem, SetExpr, Statement};
+    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::parser::Parser;
+
+    fn select_expr(sql: &str) -> Expr {
+        let statements = Parser::parse_sql(&GenericDialect {}, sql).expect("test sql parses");
+        let Statement::Query(query) = &statements[0] else {
+            panic!("test sql must be a query");
+        };
+        let SetExpr::Select(select) = query.body.as_ref() else {
+            panic!("test sql must be a plain SELECT");
+        };
+        let SelectItem::UnnamedExpr(expr) = &select.projection[0] else {
+            panic!("test SELECT must project one expression");
+        };
+        expr.clone()
+    }
+
+    fn test_params() -> Vec<ParamDecl> {
+        vec![
+            ParamDecl {
+                name: "table",
+                data_type: "StringType",
+                required: true,
+            },
+            ParamDecl {
+                name: "strategy",
+                data_type: "StringType",
+                required: false,
+            },
+            ParamDecl {
+                name: "options",
+                data_type: "None",
+                required: false,
+            },
+        ]
+    }
+
+    fn plan_message(error: DataFusionError) -> String {
+        let DataFusionError::Plan(message) = error else {
+            panic!("expected a Plan error, got {error}");
+        };
+        message
+    }
+
+    #[test]
+    fn bind_positional_follows_declared_order_and_null_means_unset() {
+        let args = CallArgs {
+            named: HashMap::from([("options".to_string(), select_expr("SELECT 'o'"))]),
+            positional: vec![select_expr("SELECT 't'"), select_expr("SELECT NULL")],
+        };
+        let bound = bind(&args, &test_params(), &[]).expect("bind");
+        assert_eq!(bound.require_string("table").expect("table"), "t");
+        assert_eq!(bound.optional_string("strategy").expect("strategy"), None);
+        assert_eq!(
+            bound.optional_string("options").expect("options"),
+            Some("o".to_string())
+        );
+        assert_eq!(bound.get("missing"), None);
+    }
+
+    #[test]
+    fn bind_unknown_named_names_allowed() {
+        let args = CallArgs {
+            named: HashMap::from([("bogus".to_string(), select_expr("SELECT 1"))]),
+            positional: Vec::new(),
+        };
+        let error = bind(&args, &test_params(), &["extra"]).expect_err("unknown must refuse");
+        assert_eq!(
+            plan_message(error),
+            "unknown CALL argument `bogus`; allowed: table, strategy, options, extra"
+        );
+    }
+
+    #[test]
+    fn bind_excess_positional_names_arity() {
+        let args = CallArgs {
+            named: HashMap::new(),
+            positional: vec![
+                select_expr("SELECT 't'"),
+                select_expr("SELECT 's'"),
+                select_expr("SELECT 'o'"),
+                select_expr("SELECT 'x'"),
+            ],
+        };
+        let error = bind(&args, &test_params(), &[]).expect_err("excess must refuse");
+        assert_eq!(
+            plan_message(error),
+            "CALL accepts at most 3 positional argument(s); got 4"
+        );
+    }
+
+    #[test]
+    fn bind_duplicate_positional_and_named_refuses() {
+        let args = CallArgs {
+            named: HashMap::from([("table".to_string(), select_expr("SELECT 'n'"))]),
+            positional: vec![select_expr("SELECT 't'")],
+        };
+        let error = bind(&args, &test_params(), &[]).expect_err("duplicate must refuse");
+        assert_eq!(
+            plan_message(error),
+            "CALL argument `table` is bound twice (positionally and by name)"
+        );
+    }
+
+    #[test]
+    fn bind_missing_required_names_position() {
+        let args = CallArgs {
+            named: HashMap::from([("strategy".to_string(), select_expr("SELECT 's'"))]),
+            positional: Vec::new(),
+        };
+        let error = bind(&args, &test_params(), &[]).expect_err("missing must refuse");
+        assert_eq!(
+            plan_message(error),
+            "CALL argument `table` is required (named `table => …` or positional #0)"
+        );
+        let nulled = CallArgs {
+            named: HashMap::from([("table".to_string(), select_expr("SELECT NULL"))]),
+            positional: Vec::new(),
+        };
+        let error = bind(&nulled, &test_params(), &[]).expect_err("null required must refuse");
+        assert_eq!(
+            plan_message(error),
+            "CALL argument `table` is required (named `table => …` or positional #0)"
+        );
+    }
+
+    #[test]
+    fn expr_as_string_array_accepts_call_and_literal() {
+        assert_eq!(
+            expr_as_string_array(&select_expr("SELECT array('a', 'b')"), "columns")
+                .expect("call form"),
+            vec!["a".to_string(), "b".to_string()]
+        );
+        assert_eq!(
+            expr_as_string_array(&select_expr("SELECT ARRAY['a', 'b']"), "columns")
+                .expect("literal form"),
+            vec!["a".to_string(), "b".to_string()]
+        );
+    }
+
+    #[test]
+    fn expr_as_string_array_rejects_non_arrays_and_non_strings() {
+        let error = expr_as_string_array(&select_expr("SELECT 'x'"), "columns")
+            .expect_err("scalar must refuse");
+        assert_eq!(
+            plan_message(error),
+            "CALL argument `columns` must be an array of string literals, got 'x'"
+        );
+        let error = expr_as_string_array(&select_expr("SELECT array('a', 1)"), "columns")
+            .expect_err("mixed element must refuse");
+        assert!(plan_message(error).contains("must be a string literal"));
+    }
+
+    #[test]
+    fn expr_as_i64_array_accepts_call_and_literal() {
+        assert_eq!(
+            expr_as_i64_array(&select_expr("SELECT array(1, -2)"), "snapshot_ids")
+                .expect("call form"),
+            vec![1, -2]
+        );
+        assert_eq!(
+            expr_as_i64_array(&select_expr("SELECT ARRAY[3]"), "snapshot_ids").expect("literal"),
+            vec![3]
+        );
+        let error = expr_as_i64_array(&select_expr("SELECT 'x'"), "snapshot_ids")
+            .expect_err("scalar must refuse");
+        assert_eq!(
+            plan_message(error),
+            "CALL argument `snapshot_ids` must be an array of integer literals, got 'x'"
+        );
+    }
 
     #[test]
     fn expr_as_i64_unary_minus_min_refuses_overflow() {
