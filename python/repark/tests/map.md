@@ -1605,6 +1605,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   naming it and does not create the branch.
   pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007
   pins: rp-5-fork-repin/C-004
+- [test_ice_merge_append_1.py](test_ice_merge_append_1.py) +
+  [ice_merge_append_1_truth.json](ice_merge_append_1_truth.json) — **ICE-MERGE-APPEND-1
+  (2026-09-19):** the recorded-oracle pins for merge-on-commit (IPI-11). The truth JSON holds
+  three 120-append series recorded from live PySpark 4.1.2 + Iceberg 1.11.0 — `defaults`,
+  `commit.manifest.min-count-to-merge=5`, `commit.manifest-merge.enabled=false` — probed at
+  1, 5, 20, 50, 99, 100, 101, 110, 120 for the manifest count and the data-file count. The
+  suite replays each series through RePark's own append commit path (`INSERT INTO … BY NAME`
+  → `commit_append_to`) and asserts Spark's numbers at every probe, plus the headline cell
+  (100 default appends → ONE manifest, 100 files, 100 rows) and the escape hatch. Two strict
+  xfails name their fork asks: the `manifests-created`/`-kept`/`-replaced` summary keys
+  (fork #322) and the bare `INSERT INTO` statement, which plans on the fork's
+  `IcebergCommitExec` (`fast_append`) and cannot be routed from this repository at pin
+  `44834673`; today's fork-side number is pinned beside it so the fork's fix reds it.
+  pins: ice-merge-append-1/C-002, C-003, C-004, C-006, C-007, C-009
 - [test_ice_branch_ops_1.py](test_ice_branch_ops_1.py) +
   [branch_ops_1_truth.json](branch_ops_1_truth.json) +
   [_record_branch_ops_1.py](_record_branch_ops_1.py) — **ICE-BRANCH-OPS-1 (2026-09-17):**

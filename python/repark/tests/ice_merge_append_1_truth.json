@@ -1,0 +1,287 @@
+{
+ "unit": "ice-merge-append-1",
+ "oracle": {
+  "spark": "4.1.2",
+  "iceberg": "1.11.0",
+  "session_tz": "UTC",
+  "recorded": "2026-09-19"
+ },
+ "recorder": "record_merge_append.py \u2014 120 sequential single-row appends into one v2 Hadoop-catalog table per variant",
+ "table": {
+  "namespace": "ns",
+  "format_version": 2,
+  "columns": "id INT, v STRING"
+ },
+ "steps": 120,
+ "probes": [
+  1,
+  5,
+  20,
+  50,
+  99,
+  100,
+  101,
+  110,
+  120
+ ],
+ "variants": {
+  "defaults": {},
+  "min_count_5": {
+   "commit.manifest.min-count-to-merge": "5"
+  },
+  "merge_disabled": {
+   "commit.manifest-merge.enabled": "false"
+  }
+ },
+ "series": {
+  "defaults": [
+   {
+    "appends": 1,
+    "manifests": 1,
+    "data_files": 1,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "0",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 5,
+    "manifests": 5,
+    "data_files": 5,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "4",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 20,
+    "manifests": 20,
+    "data_files": 20,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "19",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 50,
+    "manifests": 50,
+    "data_files": 50,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "49",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 99,
+    "manifests": 99,
+    "data_files": 99,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "98",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 100,
+    "manifests": 1,
+    "data_files": 100,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "0",
+    "manifests_replaced": "99"
+   },
+   {
+    "appends": 101,
+    "manifests": 2,
+    "data_files": 101,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "1",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 110,
+    "manifests": 11,
+    "data_files": 110,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "10",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 120,
+    "manifests": 21,
+    "data_files": 120,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "20",
+    "manifests_replaced": "0"
+   }
+  ],
+  "min_count_5": [
+   {
+    "appends": 1,
+    "manifests": 1,
+    "data_files": 1,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "0",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 5,
+    "manifests": 1,
+    "data_files": 5,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "0",
+    "manifests_replaced": "4"
+   },
+   {
+    "appends": 20,
+    "manifests": 4,
+    "data_files": 20,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "3",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 50,
+    "manifests": 2,
+    "data_files": 50,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "1",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 99,
+    "manifests": 3,
+    "data_files": 99,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "2",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 100,
+    "manifests": 4,
+    "data_files": 100,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "3",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 101,
+    "manifests": 1,
+    "data_files": 101,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "0",
+    "manifests_replaced": "4"
+   },
+   {
+    "appends": 110,
+    "manifests": 2,
+    "data_files": 110,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "1",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 120,
+    "manifests": 4,
+    "data_files": 120,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "3",
+    "manifests_replaced": "0"
+   }
+  ],
+  "merge_disabled": [
+   {
+    "appends": 1,
+    "manifests": 1,
+    "data_files": 1,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "0",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 5,
+    "manifests": 5,
+    "data_files": 5,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "4",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 20,
+    "manifests": 20,
+    "data_files": 20,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "19",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 50,
+    "manifests": 50,
+    "data_files": 50,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "49",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 99,
+    "manifests": 99,
+    "data_files": 99,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "98",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 100,
+    "manifests": 100,
+    "data_files": 100,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "99",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 101,
+    "manifests": 101,
+    "data_files": 101,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "100",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 110,
+    "manifests": 110,
+    "data_files": 110,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "109",
+    "manifests_replaced": "0"
+   },
+   {
+    "appends": 120,
+    "manifests": 120,
+    "data_files": 120,
+    "operation": "append",
+    "manifests_created": "1",
+    "manifests_kept": "119",
+    "manifests_replaced": "0"
+   }
+  ]
+ }
+}
