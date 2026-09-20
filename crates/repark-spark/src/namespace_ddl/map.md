@@ -15,8 +15,10 @@ The table-lifecycle work `../namespace_ddl.rs` delegates rather than inlines.
   `SparkCatalog.purgeTable`'s text, and hands back the metadata location and `FileIO` so a test can
   drive the action itself. `purge_table_files` runs the sweep and **returns** the
   `DeleteReachableFilesResult`: per-file delete failures are collected by the fork rather than
-  raised, Java suppresses them too, and this crate has no logging facade to route them to — so the
-  result is returned rather than discarded and the pin proves the `DROP` still completes.
+  raised, and the door logs them — `execute_drop_table` emits one `tracing::warn` naming the
+  table and the failure count when the list is non-empty — never surfaced in the SQL or
+  DataFrame result, exactly as Spark leaves them to the Java log; the pin proves the `DROP`
+  still completes.
   The `gc.enabled` read follows Java `PropertyUtil.propertyAsBoolean`: only the literal `true`
   reads as true, and an absent property defaults to `true`
   (`TableProperties::PROPERTY_GC_ENABLED_DEFAULT`). `GC_DISABLED_REFUSAL` is the refusal text,

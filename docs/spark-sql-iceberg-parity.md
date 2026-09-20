@@ -1175,8 +1175,9 @@ perfectly good read.
   sweeps nor drops. A missing target with `PURGE` answers `[TABLE_OR_VIEW_NOT_FOUND]` /
   SQLSTATE `42P01`; `IF EXISTS` composes with `PURGE` in both directions. Per-file delete
   failures are collected in `DeleteReachableFilesResult::delete_failures` and do **not** fail the
-  `DROP` (Java suppresses them under `suppressFailureWhenFinished()`); this crate has no logging
-  facade, so the result is returned to the caller rather than discarded.
+  `DROP` (Java suppresses them under `suppressFailureWhenFinished()`); a non-empty list is
+  logged once at the door — one `tracing::warn` naming the table and the failure count — and is
+  never surfaced in the SQL or DataFrame result, exactly as Spark leaves them to the Java log.
 - **Apache Spark** — `DROP TABLE t PURGE` deletes the data files
   (`data_files_exist_after: [false]`); a plain `DROP TABLE` keeps them
   (`data_files_exist_after: [true]`); `DROP TABLE t PURGE` on a table with
