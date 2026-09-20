@@ -10,7 +10,7 @@ use iceberg::table::Table;
 use repark_core::illegal_argument_error;
 use repark_functions::java_double::java_double_text;
 
-use super::CallArgs;
+use crate::call_args::BoundArgs;
 use crate::iceberg_err;
 
 const RDF_ACCEPTED: &[&str] = &[
@@ -92,16 +92,13 @@ pub(crate) struct RewriteOptions {
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) fn extract_option_pairs(
-    args: &CallArgs,
+    bound: &BoundArgs,
     procedure: &str,
 ) -> Result<Vec<(String, Option<String>)>> {
-    let Some(expr) = args.named.get("options") else {
+    let Some(expr) = bound.get("options") else {
         return Ok(Vec::new());
     };
     match expr {
-        Expr::Value(ValueWithSpan {
-            value: Value::Null, ..
-        }) => Ok(Vec::new()),
         Expr::Function(function) if function.name.to_string().eq_ignore_ascii_case("map") => {
             pairs_from_map_args(&function.args, procedure)
         }

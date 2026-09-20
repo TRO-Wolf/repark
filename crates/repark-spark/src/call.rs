@@ -16,7 +16,7 @@ use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
 use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 
-use crate::call_args::CallArgs;
+use crate::call_args::{CallArgs, bind};
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
 mod ancestors_of;
@@ -358,10 +358,12 @@ async fn execute_rewrite_position_delete_files(
     catalog_name: &str,
     args: &CallArgs,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&["table", "options", "where"])?;
-    // Only `table` is supported positionally.
-    args.reject_excess_positional(1)?;
-    if args.has_named("where") {
+    let bound = bind(
+        args,
+        params::params_for("rewrite_position_delete_files"),
+        &[],
+    )?;
+    if bound.get("where").is_some() {
         return Err(DataFusionError::NotImplemented(
             "CALL rewrite_position_delete_files where filter is not supported in v1 (the fork \
              exposes RewritePositionDeleteFiles::filter but it is not wired through CALL yet)"
@@ -369,10 +371,10 @@ async fn execute_rewrite_position_delete_files(
         ));
     }
 
-    let table_arg = args.require_string("table", 0)?;
+    let table_arg = bound.require_string("table")?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-    let pairs = rewrite_options::extract_option_pairs(args, "rewrite_position_delete_files")?;
+    let pairs = rewrite_options::extract_option_pairs(&bound, "rewrite_position_delete_files")?;
     let options = rewrite_options::parse_rpd_options(&pairs, &table)?;
 
     let mut action = RewritePositionDeleteFiles::new(table);
