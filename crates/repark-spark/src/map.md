@@ -841,8 +841,11 @@ pins: rp-4-fork-repin/C-005, C-006
   refusing one is a divergence that has to be declared rather than hidden behind Java's
   `Unable to parse sortOrder`. It gets its own message and its own registry row
   (`RDF-SORT-TRANSFORM-1`); reusing the ALTER door's wording would have mis-stated which door
-  refused.
-  pins: ice-rdf-sort-parse-1/C-001, C-002, C-003
+  refused. The ALTER half of the split — `WRITE ORDERED BY (zorder(id))` refusing with no
+  commit — is pinned by
+  `tests/alter_write_order.rs::write_order_zorder_term_refuses_and_commits_nothing`.
+  pins: ice-rdf-sort-parse-1/C-001, C-002, C-003,
+  tests/alter_write_order.rs::write_order_zorder_term_refuses_and_commits_nothing
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:
   matching/no-location requests stay idempotent; contradictory `LOCATION` fails loud naming both
