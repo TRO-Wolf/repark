@@ -3540,6 +3540,54 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
   UPDATE on an unpartitioned target; partial INSERT NULL-fills omitted nullable columns.
   Arrow path, value + type.
+- `test_ice_procs_route_1.py` + `ice_procs_route_1_spark_oracle.json` +
+  `_record_ice_procs_route_1_oracle.py` — **ICE-PROCS-ROUTE-1 (2026-09-19):**
+  `ancestors_of`, `compute_table_stats`, `compute_partition_stats`,
+  `rewrite_table_path` against the 31 measured PySpark-4.1.2 + Iceberg-1.11.0
+  cells (fixture SHA-256 `0997d81d187b5498d02c9f87e1a3056d960b2b5af76f2fb6834744eecd358586`,
+  provenance `spark-qc3.json` cells `cells_qc3.py` plus the round-3 refusal,
+  nested-name, duplicate, stored-order, and twice-count shapes in
+  `cells_qc8.py` (the brief's `cells_qc6.py` name was taken by another lane, so
+  the six shapes ran as `qc8`); the recorder re-derives
+  them and the live tier checks the fixture). Pins cover the ancestor chains
+  (default, id, rollback, branch, positional), the two not-found refusals, the
+  table-stats defaults/columns/types/nested/twice cells with exact ndv, the
+  empty-table zero rows, the empty-array and struct-column refusals, the nested
+  and duplicate column shapes, the stored blob order, the partition-stats counts
+  plus the unpartitioned refusal and the v3 `dv_count`, and the
+  rewrite-table-path staging/file-list shapes plus the wrong-prefix refusal and
+  the MoR delete count; the two incremental version-range cells stay
+  `xfail(strict)` (the owned fork's `RewriteTablePath` has no version range).
+  Every cell runs on the facade door and pins the native-door CALL refusal.
+  pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  Round 1 routing (2026-09-19): the facade pins go green against the release
+  native (25 passed, 2 strict xfails for the version range), and the live
+  re-derivation passes on fresh randomness (canonicalized run-stamped tails).
+  Round 2 (2026-09-19, run 25c): the recorder normalizes every run-varying
+  token at record time to its exact writer shape (canonical uuids, snap
+  manifest names, data-file stems with stable ordinals, staging directories,
+  wall paths), replacing the fixed-width hex windows whose misaligned tails
+  failed the live re-derivation intermittently; `check` compares minus `secs`.
+  The fixture above is the recorder's `record` output on live Spark 4.1.2
+  (two fresh warehouses byte-identical; every non-path observation agrees
+  with `spark-qc3.json`), committed with `secs` 0.0 throughout.
+  Round 3 (2026-09-19, run 25c, IPI-30): four new cells (empty-array refusal,
+  nested name, struct refusal, duplicate) plus a stored blob-order recording
+  on every table-stats cell; the pins assert the full statistics list (the
+  twice cell keeps one entry), the stored order unsorted, the registered path
+  tokens against `out-rel`, and the rewrite file-list shapes plus staged
+  location against the oracle with the single-file R-002 delta. The nested
+  name stays `xfail(strict)` (the fork scan has no nested projection); the
+  memory catalog's `NNNNN-<uuid>.metadata.json` basenames diverge from the
+  oracle Hadoop `vN` names and are pinned by shape, not token.
+  Round 4 (2026-09-20, run 25c, IPI-30): `check_refusal` compares the whole
+  recorded Spark message, so the unknown-column schema dump (with the
+  trailing-space fix in the router) can fail the pin; `check_rewrite_path`
+  pins `latest_version` to the pre-CALL metadata basename and the staged
+  metadata lines to the oracle's recorded version count; the three check
+  helpers pin pre/post snapshot stability (stats keep snapshots, current id,
+  and format version; rewrite also keeps location and metadata file).
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells
