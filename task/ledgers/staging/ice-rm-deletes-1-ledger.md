@@ -97,9 +97,25 @@ Python (`test_ice_rm_deletes_1.py`): `12 failed, 4 passed`, mirroring Rust exact
   `pytest python/repark/tests/test_ice_rm_deletes_1.py`: `16 passed`.
 - `pytest python/repark/tests/test_maintenance_call.py -k rewrite_manifests`: `3 passed`.
 
-## Gates
+## Gates (final tree, 2026-09-20)
 
-(TBD step 6.)
+- `cargo test -p repark-spark rm_deletes`: `16 passed, 0 failed`.
+- `cargo test -p repark-spark rewrite_manifests` (the brief's gate command):
+  `11 passed, 0 failed`.
+- `pytest python/repark/tests/test_ice_rm_deletes_1.py
+  python/repark/tests/test_maintenance_call.py`: `31 passed` (release native rebuilt
+  after the refusal-text switch).
+- `cargo fmt --all`: clean (applied twice: the step-2 pin formats, one step-3 hunk).
+- `cargo clippy --locked -p repark-spark --all-targets -- -D warnings
+  -A clippy::disallowed_methods` (the Makefile `rust-clippy` form): clean. The brief's
+  literal form without `-A` reds only on pre-existing test-target `expect` hits
+  (documented since ICE-RDF-OPTIONS-1 round 2); the one new finding it surfaced in my
+  files (`sort_unstable` on primitive tuples) is fixed. No new findings.
+- `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/qa-bs origin/main`:
+  `comment-ban hits=0`.
+- `python3 scripts/check_ledger_grammar.py`: 224 live ledgers clean.
+- `python3 scripts/sync_map_md.py --check`: 309 maps clean (new registry anchors resolve).
+- Ruff `check` + `format --check` (pinned `ruff@0.15.22`): clean on both touched Python files.
 
 ## Mutations (C-006, 2026-09-20, both reverted green)
 

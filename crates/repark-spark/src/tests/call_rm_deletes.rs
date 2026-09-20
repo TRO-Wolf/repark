@@ -67,7 +67,7 @@ async fn layout(catalogs: &CatalogRegistry, table: &str) -> Vec<(u8, i32, usize,
         };
         shaped.push((content, manifest.partition_spec_id, data, deletes));
     }
-    shaped.sort();
+    shaped.sort_unstable();
     shaped
 }
 
