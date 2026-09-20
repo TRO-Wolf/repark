@@ -429,8 +429,8 @@ pub async fn run_gated<S: SessionSource>(
     println!(
         "{}",
         report::markdown(
-            options.mode.name(),
-            options.baseline,
+            document["mode"].as_str().unwrap_or(options.mode.name()),
+            document["baseline"] == Value::Bool(true),
             &specs,
             &measurements.records,
             &measurements.groups

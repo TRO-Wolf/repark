@@ -244,6 +244,10 @@ would change what "four at once" measures for the other four (their timings and 
   $files`); the Python facade quotes names first and does not see it. That is a product
   defect outside this unit, reported in the unit's hand-back.
 
+The human markdown header takes `mode=` and `baseline=` from the report document itself
+(`document["mode"]`, `document["baseline"]`), not from a second copy of the options, so the
+header cannot disagree with the JSON a reader keeps. pins: ice-bench-baseline-1/C-003
+
 ## Pins (`pins.rs`, `pins_report.rs`)
 
 - **ICE-BENCH-BASELINE-1 (2026-09-19), in `pins_report.rs`:**
