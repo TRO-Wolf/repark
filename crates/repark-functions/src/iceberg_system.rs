@@ -85,6 +85,38 @@ pub fn iceberg_version_udf() -> Arc<ScalarUDF> {
     }))
 }
 
+pub const BUCKET_INTERNAL_NAME: &str = "__iceberg_system_bucket";
+pub const TRUNCATE_INTERNAL_NAME: &str = "__iceberg_system_truncate";
+pub const YEARS_INTERNAL_NAME: &str = "__iceberg_system_years";
+pub const MONTHS_INTERNAL_NAME: &str = "__iceberg_system_months";
+pub const DAYS_INTERNAL_NAME: &str = "__iceberg_system_days";
+pub const HOURS_INTERNAL_NAME: &str = "__iceberg_system_hours";
+pub const ICEBERG_VERSION_INTERNAL_NAME: &str = "__iceberg_system_iceberg_version";
+
+pub const SYSTEM_FUNCTION_NAMES: [&str; 7] = [
+    "bucket",
+    "days",
+    "hours",
+    "iceberg_version",
+    "months",
+    "truncate",
+    "years",
+];
+
+#[must_use]
+pub fn internal_name(public: &str) -> Option<&'static str> {
+    match public {
+        "bucket" => Some(BUCKET_INTERNAL_NAME),
+        "truncate" => Some(TRUNCATE_INTERNAL_NAME),
+        "years" => Some(YEARS_INTERNAL_NAME),
+        "months" => Some(MONTHS_INTERNAL_NAME),
+        "days" => Some(DAYS_INTERNAL_NAME),
+        "hours" => Some(HOURS_INTERNAL_NAME),
+        "iceberg_version" => Some(ICEBERG_VERSION_INTERNAL_NAME),
+        _ => None,
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum SystemKind {
     Bucket,
@@ -263,8 +295,8 @@ fn apply_transform(
 impl ScalarUDFImpl for IcebergSystemWidth {
     fn name(&self) -> &'static str {
         match self.kind {
-            SystemKind::Bucket => "__iceberg_system_bucket",
-            SystemKind::Truncate => "__iceberg_system_truncate",
+            SystemKind::Bucket => BUCKET_INTERNAL_NAME,
+            SystemKind::Truncate => TRUNCATE_INTERNAL_NAME,
         }
     }
 
@@ -317,10 +349,10 @@ impl ScalarUDFImpl for IcebergSystemWidth {
 impl ScalarUDFImpl for IcebergSystemTemporal {
     fn name(&self) -> &'static str {
         match self.kind {
-            SystemTemporalKind::Year => "__iceberg_system_years",
-            SystemTemporalKind::Month => "__iceberg_system_months",
-            SystemTemporalKind::Day => "__iceberg_system_days",
-            SystemTemporalKind::Hour => "__iceberg_system_hours",
+            SystemTemporalKind::Year => YEARS_INTERNAL_NAME,
+            SystemTemporalKind::Month => MONTHS_INTERNAL_NAME,
+            SystemTemporalKind::Day => DAYS_INTERNAL_NAME,
+            SystemTemporalKind::Hour => HOURS_INTERNAL_NAME,
         }
     }
 
@@ -378,7 +410,7 @@ impl ScalarUDFImpl for IcebergSystemTemporal {
 
 impl ScalarUDFImpl for IcebergVersion {
     fn name(&self) -> &'static str {
-        "__iceberg_system_iceberg_version"
+        ICEBERG_VERSION_INTERNAL_NAME
     }
 
     fn signature(&self) -> &Signature {

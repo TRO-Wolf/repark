@@ -215,6 +215,10 @@ async fn execute_inner(
 ) -> Result<DataFrame> {
     let rewritten = repark_functions::cast_map::rewrite_map_casts(sql);
     let sql = rewritten.as_deref().unwrap_or(sql);
+    let system_rewritten = crate::describe_show::rewrite_system_function_calls(sql, |name| {
+        catalogs.get(name).is_some()
+    });
+    let sql = system_rewritten.as_deref().unwrap_or(sql);
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
@@ -502,6 +506,15 @@ async fn try_preparse_intercepts(
                 Err(error) => Err(error),
             },
         );
+    }
+    if let Some(parsed) = describe_show::try_parse_show_system_functions(sql) {
+        match parsed.and_then(|ddl| parsed_ddl("SHOW FUNCTIONS").map(|()| ddl)) {
+            Ok(show) if catalogs.get(&show.catalog).is_some() => {
+                return Some(describe_show::execute_show_system_functions(ctx, &show));
+            }
+            Ok(_) => {}
+            Err(error) => return Some(Err(error)),
+        }
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {

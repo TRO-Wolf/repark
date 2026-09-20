@@ -10,7 +10,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
-use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
+use datafusion::sql::sqlparser::tokenizer::{Location, Token, Tokenizer, Word};
 use iceberg::spec::{
     PartitionField, Schema as IcebergSchema, TableMetadata, Transform, Type as IcebergType,
 };
@@ -22,6 +22,7 @@ use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, resolve_namesp
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
 use repark_core::{CatalogRegistry, DescribeOwnerConfig, prop_key_is_secret};
+use repark_functions::iceberg_system;
 
 /// A parsed Spark `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace`.
 pub(crate) struct DescribeNamespace {
@@ -620,3 +621,187 @@ pub(crate) fn filter_pattern_matches(name: &str, pattern: &str) -> bool {
             .is_ok_and(|regex| regex.is_match(name))
     })
 }
+
+pub(crate) struct ShowSystemFunctions {
+    pub(crate) catalog: String,
+}
+
+pub(crate) fn try_parse_show_system_functions(sql: &str) -> Option<Result<ShowSystemFunctions>> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !parser.parse_keyword(Keyword::SHOW) {
+        return None;
+    }
+    consume_word(&mut parser, "USER");
+    if !consume_word(&mut parser, "FUNCTIONS") {
+        return None;
+    }
+    if !parser.parse_keyword(Keyword::IN) {
+        return None;
+    }
+    Some(parse_show_system_functions_tail(&mut parser))
+}
+
+fn parse_show_system_functions_tail(parser: &mut Parser) -> Result<ShowSystemFunctions> {
+    let name = parser
+        .parse_object_name(false)
+        .map_err(show_system_functions_err)?;
+    if !matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
+        return Err(DataFusionError::Plan(format!(
+            "could not parse `SHOW [USER] FUNCTIONS IN <catalog>.system` at `{}` — the supported \
+             form is SHOW [USER] FUNCTIONS IN <catalog>.system",
+            parser.peek_token()
+        )));
+    }
+    let parts = name_parts(&name);
+    let [catalog, system] = parts.as_slice() else {
+        return Err(DataFusionError::Plan(format!(
+            "expected a two-part `IN <catalog>.system` name, got `{name}`"
+        )));
+    };
+    if !system.eq_ignore_ascii_case("system") {
+        return Err(DataFusionError::Plan(format!(
+            "expected `IN <catalog>.system`, got `{name}`"
+        )));
+    }
+    Ok(ShowSystemFunctions {
+        catalog: catalog.clone(),
+    })
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn show_system_functions_err(err: ParserError) -> DataFusionError {
+    DataFusionError::Plan(format!("could not parse SHOW FUNCTIONS: {err}"))
+}
+
+pub(crate) fn execute_show_system_functions(
+    ctx: &SessionContext,
+    show: &ShowSystemFunctions,
+) -> Result<DataFrame> {
+    let mut rows: Vec<String> = iceberg_system::SYSTEM_FUNCTION_NAMES
+        .iter()
+        .map(|name| format!("{}.system.{name}", show.catalog))
+        .collect();
+    rows.sort();
+    ctx.read_batch(show_system_functions_batch(rows)?)
+}
+
+pub(crate) fn show_system_functions_batch(rows: Vec<String>) -> Result<RecordBatch> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "function",
+        DataType::Utf8,
+        false,
+    )]));
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![Arc::new(StringArray::from(rows))],
+    )?)
+}
+
+pub(crate) fn rewrite_system_function_calls(
+    sql: &str,
+    is_iceberg_catalog: impl Fn(&str) -> bool,
+) -> Option<String> {
+    let lower = sql.to_ascii_lowercase();
+    if !lower.contains("system") || !lower.contains('(') {
+        return None;
+    }
+    let lexed = SpannedStatement::new(sql)?;
+    let mut sites: Vec<(usize, usize, &'static str)> = Vec::new();
+    for (offset, window) in lexed.tokens.windows(6).enumerate() {
+        let [
+            Token::Word(catalog),
+            Token::Period,
+            Token::Word(system),
+            Token::Period,
+            Token::Word(function),
+            Token::LParen,
+        ] = window
+        else {
+            continue;
+        };
+        if catalog.quote_style.is_some()
+            || system.quote_style.is_some()
+            || function.quote_style.is_some()
+        {
+            continue;
+        }
+        if !system.value.eq_ignore_ascii_case("system") {
+            continue;
+        }
+        let Some(internal) = iceberg_system::internal_name(&function.value.to_ascii_lowercase())
+        else {
+            continue;
+        };
+        if !is_iceberg_catalog(&catalog.value) {
+            continue;
+        }
+        sites.push((lexed.starts[offset], lexed.ends[offset + 4], internal));
+    }
+    if sites.is_empty() {
+        return None;
+    }
+    let mut out = String::with_capacity(sql.len() + sites.len() * 16);
+    let mut cursor = 0;
+    for (start, end, internal) in sites {
+        out.push_str(&sql[cursor..start]);
+        out.push_str(internal);
+        cursor = end;
+    }
+    out.push_str(&sql[cursor..]);
+    Some(out)
+}
+
+struct SpannedStatement {
+    tokens: Vec<Token>,
+    starts: Vec<usize>,
+    ends: Vec<usize>,
+}
+
+fn byte_offset(line_starts: &[usize], char_bytes: &[usize], at: Location) -> Option<usize> {
+    let line = usize::try_from(at.line).ok()?.checked_sub(1)?;
+    let column = usize::try_from(at.column).ok()?.checked_sub(1)?;
+    char_bytes
+        .get(line_starts.get(line)?.checked_add(column)?)
+        .copied()
+}
+
+impl SpannedStatement {
+    fn new(sql: &str) -> Option<Self> {
+        let spanned = Tokenizer::new(&DatabricksDialect {}, sql)
+            .tokenize_with_location()
+            .ok()?;
+        let mut char_bytes: Vec<usize> = Vec::with_capacity(sql.len() + 1);
+        let mut line_starts: Vec<usize> = vec![0];
+        for (index, (byte, character)) in sql.char_indices().enumerate() {
+            char_bytes.push(byte);
+            if character == '\n' {
+                line_starts.push(index + 1);
+            }
+        }
+        char_bytes.push(sql.len());
+        let mut lexed = SpannedStatement {
+            tokens: Vec::new(),
+            starts: Vec::new(),
+            ends: Vec::new(),
+        };
+        for spanned in spanned {
+            if matches!(spanned.token, Token::Whitespace(_) | Token::EOF) {
+                continue;
+            }
+            let start = byte_offset(&line_starts, &char_bytes, spanned.span.start)?;
+            let end = byte_offset(&line_starts, &char_bytes, spanned.span.end)?;
+            if start > end || !sql.is_char_boundary(start) || !sql.is_char_boundary(end) {
+                return None;
+            }
+            lexed.tokens.push(spanned.token);
+            lexed.starts.push(start);
+            lexed.ends.push(end);
+        }
+        Some(lexed)
+    }
+}
+
+#[cfg(test)]
+mod tests;

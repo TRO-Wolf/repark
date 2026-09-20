@@ -502,6 +502,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   never null, refusing extra arguments. No `lib.rs` change: the H-05 budget
   was spent in round 1.
   pins: ice-system-functions-1/C-012, C-013, C-014, C-015, C-016, C-017
+  **Round 3 (2026-09-20):** the seven internal-name consts, the sorted
+  `SYSTEM_FUNCTION_NAMES` roster, and `internal_name()` join so the Spark
+  door's pre-parse rewrite and SHOW executor share one name home with the
+  UDFs (the `name()` arms now read the consts).
+  pins: ice-system-functions-1/C-018, C-020
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty
