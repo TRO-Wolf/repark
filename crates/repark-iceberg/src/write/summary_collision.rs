@@ -118,8 +118,11 @@ pub fn extras_need_removed_files(extra: &[(String, String)]) -> bool {
     })
 }
 
-#[allow(clippy::missing_errors_doc)]
-pub async fn live_data_files(table: &Table, branch: Option<&str>) -> Result<Vec<DataFile>> {
+async fn live_files(
+    table: &Table,
+    branch: Option<&str>,
+    content: ManifestContentType,
+) -> Result<Vec<DataFile>> {
     let metadata = table.metadata();
     let snapshot = match branch {
         Some(name) => metadata.snapshot_for_ref(name),
@@ -134,7 +137,7 @@ pub async fn live_data_files(table: &Table, branch: Option<&str>) -> Result<Vec<
         .map_err(crate::catalog::iceberg_to_datafusion)?;
     let mut files = Vec::new();
     for manifest_file in manifest_list.entries() {
-        if manifest_file.content != ManifestContentType::Data {
+        if manifest_file.content != content {
             continue;
         }
         let manifest = manifest_file
@@ -142,12 +145,30 @@ pub async fn live_data_files(table: &Table, branch: Option<&str>) -> Result<Vec<
             .await
             .map_err(crate::catalog::iceberg_to_datafusion)?;
         for entry in manifest.entries() {
-            if entry.is_alive() && entry.data_file().content_type() == DataContentType::Data {
+            if entry.is_alive() && holds(entry.data_file(), content) {
                 files.push(entry.data_file().clone());
             }
         }
     }
     Ok(files)
+}
+
+fn holds(file: &DataFile, content: ManifestContentType) -> bool {
+    let is_data = file.content_type() == DataContentType::Data;
+    match content {
+        ManifestContentType::Data => is_data,
+        ManifestContentType::Deletes => !is_data,
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn live_data_files(table: &Table, branch: Option<&str>) -> Result<Vec<DataFile>> {
+    live_files(table, branch, ManifestContentType::Data).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn live_delete_files(table: &Table, branch: Option<&str>) -> Result<Vec<DataFile>> {
+    live_files(table, branch, ManifestContentType::Deletes).await
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -177,8 +198,21 @@ pub async fn row_filter_removed_files(
         return Ok(Vec::new());
     }
     let expected = expected_partition_pairs(table, equalities)?;
-    let live = live_data_files(table, branch).await?;
-    Ok(live
+    let mut removed = in_partition(table, live_data_files(table, branch).await?, &expected);
+    removed.extend(in_partition(
+        table,
+        live_delete_files(table, branch).await?,
+        &expected,
+    ));
+    Ok(removed)
+}
+
+fn in_partition(
+    table: &Table,
+    files: Vec<DataFile>,
+    expected: &[(String, Option<iceberg::spec::Literal>)],
+) -> Vec<DataFile> {
+    files
         .into_iter()
         .filter(|file| {
             let key = partition_key_of(table, file);
@@ -187,7 +221,7 @@ pub async fn row_filter_removed_files(
                     .any(|(field, actual)| field == name && actual == value)
             })
         })
-        .collect())
+        .collect()
 }
 
 fn expected_partition_pairs(

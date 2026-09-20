@@ -1,7 +1,7 @@
 use super::super::*;
 use super::common::*;
 
-fn set_session_conf(ctx: &SessionContext, key: &str, value: &str) {
+pub(super) fn set_session_conf(ctx: &SessionContext, key: &str, value: &str) {
     let state = ctx.state_ref();
     let mut guard = state.write();
     assert!(repark_iceberg::write::apply_session_write_key(
@@ -11,7 +11,7 @@ fn set_session_conf(ctx: &SessionContext, key: &str, value: &str) {
     ));
 }
 
-fn unset_session_conf(ctx: &SessionContext, key: &str) {
+pub(super) fn unset_session_conf(ctx: &SessionContext, key: &str) {
     let state = ctx.state_ref();
     let mut guard = state.write();
     assert!(repark_iceberg::write::unset_session_write_key(

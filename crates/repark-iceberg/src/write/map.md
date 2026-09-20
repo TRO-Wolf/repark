@@ -831,6 +831,14 @@ repark-core's error map.
   carrying Spark's message verbatim — the class Spark 4.1.2 raises
   (`QR-*`, and ICE-WRITE-OPTIONS-1's `COLL-*` cells record the same).
   pins: ice-session-write-conf-1/C-041
+  **Round 5 (2026-09-20):** `live_files` is the one manifest walk and `live_delete_files` its
+  delete-manifest case, so `row_filter_removed_files` resolves BOTH sides of what a static
+  partition overwrite drops — the live data files whose partition tuple matches the PARTITION
+  equalities AND the position/equality delete files in that same tuple. Spark's own producer
+  counts them (`QD-MOR-*`), so a merge-on-read partition that already holds deletes refuses
+  `removed-delete-files`, `removed-position-deletes` and `total-delete-files` instead of
+  stamping the session extra beside the engine's own key.
+  pins: ice-session-write-conf-1/C-059
   **Round 3 (2026-09-19):** `replaced_data_files` gives `replace_partitions` the same
   resolution the whole-table arm already had. `for_overwrite` marks every removal key
   `<resolved at commit>` the moment a previous snapshot exists, which is wrong for a

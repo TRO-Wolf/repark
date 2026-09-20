@@ -16,6 +16,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** the
+  removal side of the static `INSERT OVERWRITE … PARTITION` oracle, the fourth critic's
+  `P1-MOR-ROW-FILTER-REMOVED-SET-OMITS-DELETE-FILES`. Cells `QD-MOR-*` (Spark 4.1.2, run 25c)
+  measure a merge-on-read table whose target partition already holds a position-delete file:
+  the overwrite removes that delete file too, so `removed-delete-files=1`,
+  `removed-position-deletes=1` and `total-delete-files=0` are ENGINE-produced there and refuse.
+  `deleted-records=2` stays the record count of the data file, which the position delete does
+  not lower. Taking the removed set from the live DATA files only reds these three delete-side
+  pins and nothing else.
+  pins: ice-session-write-conf-1/C-059
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4, the absolute layout
   (2026-09-20):** the layout battery no longer compares conf against no-conf alone — both runs
   assert Spark's OWN answer (cells `QU-*`): one live data file and `added-data-files=1` for the
