@@ -6,6 +6,9 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1):**
+  structured streaming read and write of Iceberg tables leaves the v1.5.0 parity gate (3 inventory cells, IPI-47) and
+  is scheduled with the connectors minor; step 0 is a recorded Spark oracle, then six design questions to rule.
 - [day-report-2026-09-19-24a.md](day-report-2026-09-19-24a.md) — **run 24a (read-performance unit 0, the RePark
   halves, the perf bumps):** the bench bed with counted I/O and the R-3 size flag, page pruning, the catalog cache and
   the footer cache on main (RP-36 → RP-38); the local re-measure gate table; `count(*)` fold held as a draft; the AWS
