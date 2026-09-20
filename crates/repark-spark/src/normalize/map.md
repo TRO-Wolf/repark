@@ -22,6 +22,15 @@ from `parse_single_normalized` in one line.
   and both the rewrite and `is_replace_table_sql` read it, so the rewrite and the existence check
   can never disagree about which statements are the elided spelling.
   pins: ipi-21-25-42-small-parser/C-005, C-006, C-007
+- `clustered_by.rs` — **IPI-26/27 round 1 (2026-09-20):** `rewrite_clustered_by`
+  splices a single-column `CLUSTERED BY (col) INTO n BUCKETS` run on a `CREATE TABLE`
+  into `PARTITIONED BY (bucket(n, col))`, before `extract_partitioned_by` consumes it.
+  The field name falls out of the existing bucket rule as `{col}_bucket`, which is
+  what Spark records (cell `D-X-CLUSTERED-BY`: `[["id_bucket","bucket[4]","id"]]`).
+  Multi-column, `SORTED BY`, and quoted shapes pass through untouched and fail loudly
+  downstream; runs at or past the CTAS `AS` boundary are never rewritten. Unit pins
+  are inline in the module; the parse-level pin is
+  [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs).
 
 ## Pointers
 
@@ -39,5 +48,6 @@ from `parse_single_normalized` in one line.
 | `REPLACE TABLE` reports `Unsupported statement REPLACE` | the rewrite did not fire — `replace_table_head` needs the first two significant tokens to be the unquoted keywords `REPLACE` then `TABLE` |
 | `REPLACE TABLE` created a table that did not exist | `refuse_missing_replace_target` was skipped in `../router.rs`; `CREATE OR REPLACE` is allowed to create and the rewrite erases the spelling |
 | `USING iceberg` reached the stock parser | the rewrite ran too late; it must precede `is_create_table` in `parse_single_normalized` |
+| `CLUSTERED BY` reached the stock parser | `rewrite_clustered_by` only fires on one unquoted column with `INTO n BUCKETS` before the CTAS `AS`; anything else is deliberately left for the loud parse error |
 
 First checks: `cargo test -p repark-spark ctas`. Escalate to: [../map.md#debug](../map.md).

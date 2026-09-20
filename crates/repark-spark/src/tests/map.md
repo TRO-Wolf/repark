@@ -1065,6 +1065,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refusal; temp-view fall-through stays pinned end to end).
   pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
 
+- [ice_ddl_clauses_1.rs](ice_ddl_clauses_1.rs) — **IPI-26/27 round 1 (2026-09-20):**
+  the pre-parse rewrite pins. `add_columns_plural_splitter_tracks_angle_brackets_at_depth_zero`
+  and `add_columns_plural_splitter_handles_paren_depth_one_and_shift_close` pin the
+  `ALTER` comma splitter on `STRUCT`/`MAP`/`ARRAY` defs, `DECIMAL(10, 2)` at paren
+  depth 1, and `>>` / `>>>` closes. `angle_map_alter_parses_under_widened_dialect`
+  pins the singular and plural `MAP<…>` `ALTER` parses. `dialect_widening_changes_no_other_alter`
+  is the blast-radius corpus: fourteen `ALTER` shapes plus a `MAP<>` `SELECT` and a
+  plain `SELECT`, each pinned to its pre-widening outcome.
+  `clustered_by_reaches_partitioning_before_parse` pins the rewritten `bucket(4, id)`
+  element. Cells `D-ADD-COL-STRUCT`, `D-X-ADD-COL-MAP-KEY-STRUCT`, `D-X-CLUSTERED-BY`.
+
 ## Mapping rule
 
 1. Production-module alignment by name / primary assertion.

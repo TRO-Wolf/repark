@@ -178,9 +178,7 @@ def test_dialect_widening_changes_no_other_alter(spark: Any) -> None:
     spark.sql(f"ALTER TABLE {table} ALTER COLUMN data FIRST")
     spark.sql(f"ALTER TABLE {table} ALTER COLUMN c1 AFTER id")
     spark.sql(f"ALTER TABLE {table} ADD PARTITION FIELD bucket(8, id) AS id_b8")
-    spark.sql(
-        f"ALTER TABLE {table} REPLACE PARTITION FIELD id_b8 WITH bucket(16, id) AS id_b16"
-    )
+    spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD id_b8 WITH bucket(16, id) AS id_b16")
     spark.sql(f"ALTER TABLE {table} DROP PARTITION FIELD id_b16")
 
     arrow = spark.sql(f"SELECT * FROM {table}").to_arrow()
