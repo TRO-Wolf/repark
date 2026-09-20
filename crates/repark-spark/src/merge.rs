@@ -6,8 +6,6 @@ use datafusion::sql::sqlparser::ast::{
     Assignment, AssignmentTarget, Expr, MergeAction, MergeClause, MergeClauseKind, MergeInsertExpr,
     MergeInsertKind, MergeUpdateExpr, ObjectName, TableFactor,
 };
-use datafusion::sql::sqlparser::keywords::Keyword;
-use datafusion::sql::sqlparser::tokenizer::Token;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::write::merge::{
     InsertAction, InsertClause, MatchedAction, MatchedClause, MergeSpec, NotMatchedBySourceAction,
@@ -18,8 +16,10 @@ use repark_core::CatalogRegistry;
 
 use crate::{catalog_handle, name_parts};
 
-/// The identifier [`rewrite_merge_stars`] substitutes for the `*` in `UPDATE SET *` / `INSERT *`.
-const STAR_SENTINEL: &str = "__repark_merge_star_sentinel__";
+pub(crate) mod schema_evolution;
+mod stars;
+
+pub(crate) use stars::{STAR_SENTINEL, rewrite_merge_stars};
 
 /// Oracle-style action sub-predicates are not Spark MERGE grammar.
 const ORACLE_STYLE_SUB_PREDICATE_REFUSAL: &str = "Oracle-style `UPDATE SET … WHERE` / `DELETE WHERE` / `INSERT … WHERE` is not Spark MERGE \
@@ -51,87 +51,14 @@ pub(crate) async fn execute_merge(
     source: &TableFactor,
     on: &Expr,
     clauses: &[MergeClause],
+    schema_evolution: bool,
 ) -> Result<DataFrame> {
     let (catalog_name, mut spec) = lower(table, source, on, clauses)?;
+    spec.schema_evolution = schema_evolution;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     crate::merge_fragments::maybe_rewrite_merge_fragments(ctx, handle, &mut spec).await?;
     repark_iceberg::write::merge::execute_merge(ctx, handle, &spec).await?;
     ctx.read_empty()
-}
-
-/// Rewrite `UPDATE SET *` and `INSERT *` into sentinel forms stock sqlparser can parse.
-pub(crate) fn rewrite_merge_stars(tokens: &[Token]) -> Vec<Token> {
-    let mut out = Vec::with_capacity(tokens.len());
-    for (index, token) in tokens.iter().enumerate() {
-        if matches!(token, Token::Mul) {
-            let prior = keywords_before(tokens, index, 3);
-            if prior.ends_with(&[Keyword::THEN, Keyword::UPDATE, Keyword::SET])
-                && star_can_end_here(tokens, index + 1, true)
-            {
-                out.extend([sentinel_token(), Token::Eq, sentinel_token()]);
-                continue;
-            }
-            if prior.ends_with(&[Keyword::THEN, Keyword::INSERT])
-                && star_can_end_here(tokens, index + 1, false)
-            {
-                out.extend([
-                    Token::LParen,
-                    sentinel_token(),
-                    Token::RParen,
-                    Token::make_keyword("VALUES"),
-                    Token::LParen,
-                    sentinel_token(),
-                    Token::RParen,
-                ]);
-                continue;
-            }
-        }
-        out.push(token.clone());
-    }
-    out
-}
-
-/// True when whatever follows position `after` can legally FOLLOW a real star form.
-fn star_can_end_here(tokens: &[Token], after: usize, allow_comma: bool) -> bool {
-    for token in &tokens[after..] {
-        match token {
-            Token::Whitespace(_) => {}
-            Token::Word(word) => {
-                return matches!(
-                    word.keyword,
-                    Keyword::WHEN | Keyword::OUTPUT | Keyword::RETURNING
-                );
-            }
-            Token::SemiColon => return true,
-            Token::Comma => return allow_comma,
-            _ => return false,
-        }
-    }
-    true
-}
-
-/// The last (up to) `n` keyword tokens strictly before `index`, in statement order.
-fn keywords_before(tokens: &[Token], index: usize, n: usize) -> Vec<Keyword> {
-    let mut found = Vec::with_capacity(n);
-    for token in tokens[..index].iter().rev() {
-        match token {
-            Token::Whitespace(_) => {}
-            Token::Word(word) => {
-                found.push(word.keyword);
-                if found.len() == n {
-                    break;
-                }
-            }
-            _ => break,
-        }
-    }
-    found.reverse();
-    found
-}
-
-/// The sentinel as an unquoted identifier token.
-fn sentinel_token() -> Token {
-    Token::make_word(STAR_SENTINEL, None)
 }
 
 /// Lower the sqlparser MERGE pieces into the executor's plain-string spec.

@@ -828,7 +828,7 @@ fn classify_insert_by_name(sql: &str) -> ByNameShape {
     }
 }
 
-fn is_word_at(
+pub(crate) fn is_word_at(
     spanned: &[datafusion::sql::sqlparser::tokenizer::TokenWithSpan],
     index: usize,
     word: &str,
@@ -961,7 +961,7 @@ fn is_partition_paren(
             .is_some_and(|previous| is_word_at(spanned, *previous, "PARTITION"))
 }
 
-fn token_span_offsets(
+pub(crate) fn token_span_offsets(
     sql: &str,
     first: &datafusion::sql::sqlparser::tokenizer::TokenWithSpan,
     second: &datafusion::sql::sqlparser::tokenizer::TokenWithSpan,
