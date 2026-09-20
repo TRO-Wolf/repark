@@ -52,7 +52,13 @@ list element `8`.
 
 ## Red runs
 
-(step 2 records the red-first run here)
+- 2026-09-20, pre-fix tree: `cargo test -p repark-iceberg --lib writer_metrics` →
+  3 passed, 15 failed. Failing for the named reason in every case: the writer ignores
+  `write.metadata.metrics.*`, so `none` still records `{1,2,3,6,7}` counts and bounds,
+  `truncate4` keeps the untruncated 16-char string bound instead of the 4-char truncation, and the delete
+  file footer carries no `delete-type` marker. Green pre-fix (controls): `default`,
+  `bad_mode` (both equal the fallback the builder already uses) and the
+  `for_position_delete_table` resolution pin (it calls the fork API directly).
 
 ## Mutations
 
