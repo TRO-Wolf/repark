@@ -629,7 +629,7 @@ pub(crate) struct ShowPartitions {
     table: String,
 }
 
-pub(crate) fn try_parse_show_partitions(sql: &str) -> Option<Result<ShowPartitions>> {
+pub(crate) fn try_parse_show_partitions(sql: &str) -> Option<ShowPartitions> {
     let dialect = DatabricksDialect {};
     let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
     let mut parser = Parser::new(&dialect).with_tokens(tokens);
@@ -644,7 +644,7 @@ pub(crate) fn try_parse_show_partitions(sql: &str) -> Option<Result<ShowPartitio
         return None;
     }
     let table = quoted_table_display(&name_parts(&name));
-    Some(Ok(ShowPartitions { table }))
+    Some(ShowPartitions { table })
 }
 
 pub(crate) fn show_partitions_refusal(show: &ShowPartitions) -> DataFusionError {

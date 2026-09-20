@@ -1070,7 +1070,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `PARTITIONS` head check, so the sibling SHOW parsers keep their statements) and the router
   arm always refuses it through `catalog_ops::partition_management_unsupported` with the
   backticked table (`AnalysisException`, `SQLSTATE: 42601`) — Iceberg has no Hive partition
-  catalog to list.
+  catalog to list. The arm delegates to a `show_partitions_preparse` helper in `router.rs`
+  so `try_preparse_intercepts` stays under clippy's line cap.
   pins: ice-error-conditions-1/C-011
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
