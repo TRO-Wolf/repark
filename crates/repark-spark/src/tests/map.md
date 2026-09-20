@@ -476,7 +476,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   each asserted against the current head), the Spark-shaped refusals
   (empty columns, struct column, unknown column, unpartitioned table, wrong
   prefix with the router-owned text and class), the unpartitioned refusal on a
-  populated table with the fork External shape excluded, the nested-name
+  populated table with the fork External shape excluded, the whole-message
+  unknown-column dump with Spark's spacing, the nested-name
   pass-through with no silent commit, the duplicate dedup, and the
   version-range refusal.
   The battery carries no code comments (round

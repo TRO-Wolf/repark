@@ -435,11 +435,16 @@ async fn call_compute_table_stats_refuses_unknown_column_and_empty_answers_zero_
     )
     .await
     .expect_err("unknown column must refuse");
-    assert!(
-        error
-            .to_string()
-            .contains("Can't find column nope in table"),
-        "Spark's unknown-column text, got: {error}"
+    let text = if let DataFusionError::Configuration(text) = &error {
+        text.clone()
+    } else {
+        panic!("Spark's IllegalArgumentException class, got: {error}");
+    };
+    assert_eq!(
+        text,
+        "Can't find column nope in table {\n  1: id: optional long\n  2: data: optional \
+         string\n  3: cat: optional string\n}",
+        "Spark's whole unknown-column text with no trailing spaces, got: {error}"
     );
 
     run(

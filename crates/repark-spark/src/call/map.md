@@ -167,7 +167,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
   column refuses `Can't find column <name> in table <schema>`; a
   non-primitive column refuses `Can't compute stats on non-primitive type
   column: <name> (<type>)` with Spark's struct rendering — all as
-  `IllegalArgumentException`. Nested names pass through to the fork, which has
+  `IllegalArgumentException`. The schema dump trims the fork `NestedField`
+  rendering's trailing spaces to Spark's measured text. Nested names pass
+  through to the fork, which has
   no nested scan projection yet (fork ask R-005 in the unit ledger), so they
   fail loud instead of collapsing to empty stats. The `columns` argument
   parses both `array(…)` call and `ARRAY[…]` literal spellings.

@@ -3575,6 +3575,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   name stays `xfail(strict)` (the fork scan has no nested projection); the
   memory catalog's `NNNNN-<uuid>.metadata.json` basenames diverge from the
   oracle Hadoop `vN` names and are pinned by shape, not token.
+  Round 4 (2026-09-20, run 25c, IPI-30): `check_refusal` compares the whole
+  recorded Spark message, so the unknown-column schema dump (with the
+  trailing-space fix in the router) can fail the pin.
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells

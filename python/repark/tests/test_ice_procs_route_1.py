@@ -191,12 +191,12 @@ def check_columns(arrow: Any, cell_id: str) -> None:
 
 
 def check_refusal(session: Any, sql: str, cell_id: str, needle: str | None = None) -> None:
-    """Assert a CALL refuses with the recorded class and message substring."""
+    """Assert a CALL refuses with the recorded class and whole message."""
     error = CELLS[cell_id]["error"]
     assert error["type"] in _EXC, f"unmapped oracle exception {error['type']!r}"
     with pytest.raises(_EXC[error["type"]]) as caught:
         session.sql(sql).to_arrow()
-    want = needle or str(CELLS[cell_id]["error"]["msg"]).split("\n")[0]
+    want = needle or str(CELLS[cell_id]["error"]["msg"])
     assert want in str(caught.value), f"{sql}: {want!r} not in {caught.value}"
 
 

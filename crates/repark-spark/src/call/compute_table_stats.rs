@@ -170,7 +170,7 @@ fn schema_debug(schema: &iceberg::spec::Schema) -> String {
     use std::fmt::Write as _;
     let mut out = String::from("table {\n");
     for field in schema.as_struct().fields() {
-        let _ = writeln!(out, "  {field}");
+        let _ = writeln!(out, "  {}", field.to_string().trim_end());
     }
     out.push('}');
     out
