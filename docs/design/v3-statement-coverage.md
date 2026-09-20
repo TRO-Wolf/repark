@@ -17,10 +17,10 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | Statement programs measured | **81** |
 | Statement classes covered | 12 groups (create · insert · delete · update · merge · alter · lifecycle · metadata · lineage · time travel · refs · call) |
 | Comparison cells (statements + probes) | 267 |
-| **EQUAL** — repark and Spark agree on every cell | **73** |
+| **EQUAL** — repark and Spark agree on every cell | **74** |
 | **REFUSED** — both engines refuse the statement | **1** |
-| **DIVERGES** — a registry row | **7** |
-| Registry rows filed by this unit | 6 (`V3-COV-3` **FIXED at RP-8, 2026-09-03** · `V3-COV-4` BACKLOG · `V3-COV-5` BACKLOG · `V3-COV-6` DECLARED · `V3-COV-7` BACKLOG · `V3-COV-8` BACKLOG) |
+| **DIVERGES** — a registry row | **6** |
+| Registry rows filed by this unit | 6 (`V3-COV-3` **FIXED at RP-8, 2026-09-03** · `V3-COV-4` BACKLOG · `V3-COV-5` BACKLOG · `V3-COV-6` **FIXED at RP-42, 2026-09-20** · `V3-COV-7` BACKLOG · `V3-COV-8` BACKLOG) |
 | Registry rows an existing row already covers | 2 (`DML-1` — FIXED 2026-09-19 by ICE-OVERWRITE-MODE-1, `G3-E8` ×2); `B-MOR-3` FIXED 2026-09-03 |
 | Defects FIXED inside this unit | 2 (`V3-COV-1`, `V3-COV-2`) |
 | Live runtime, matrix co-collected with the nightly live legs | 1 min 57 s |
@@ -114,7 +114,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `meta-partitions` | metadata | `DELETE FROM t WHERE id = 2` | part MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `meta-entries` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `meta-all-data-files` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
-| `meta-position-deletes` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | refuses — scan not ported (schema only) | one `pos` row | **DIVERGES** | `V3-COV-6` |
+| `meta-position-deletes` | metadata | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | refused until RP-42; served since fork `886b94c1` | one `pos` row | **EQUAL** | — |
 | `lineage-projection` | lineage | `UPDATE t SET name = 'z' WHERE id = 2` | flat MoR v3 | 2 | as Spark | as Spark | **EQUAL** | — |
 | `time-travel-version-as-of` | time travel | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
 | `time-travel-timestamp-as-of` | time travel | `DELETE FROM t WHERE id = 2` | flat MoR v3 | 1 | as Spark | as Spark | **EQUAL** | — |
@@ -141,7 +141,7 @@ seed on 2026-09-03, and every divergence carries a registry row in
 | `V3-COV-3` | partitioned `INSERT INTO` on v3 | `_row_id` was assigned by an unstable data-file order — two permutations across twelve runs | **FIXED (RP-8, 2026-09-03)** — the fork's `FanoutWriter::close` drains ascending, 12 of 12 runs give Spark's mapping | fork `IcebergTableProvider::insert_into` |
 | `V3-COV-4` | `DELETE FROM t WHERE id > 0` (MoR) | repark writes one Puffin DV covering every row and keeps both data files live (`t.files` `[(0, 4), (1, 4)]`); Spark drops the data file and leaves `t.files` and `t.delete_files` empty | BACKLOG | repark |
 | `V3-COV-5` | `ALTER TABLE t WRITE ORDERED BY id` | repark refuses (sort-order evolution outside I7); Spark sets the write order | BACKLOG | repark |
-| `V3-COV-6` | `SELECT … FROM t.position_deletes` | repark refuses (`FeatureUnsupported`, schema-only port); Spark returns the positions | DECLARED, fork TRIGGER | fork metadata-table scan |
+| `V3-COV-6` | `SELECT … FROM t.position_deletes` | repark refused (`FeatureUnsupported`, schema-only port); Spark returns the positions | **FIXED (RP-42, 2026-09-20)** — fork #332 ports `PositionDeletesTable`'s scan at pin `886b94c1`; repark returns the one `pos` row | fork metadata-table scan |
 | `V3-COV-7` | `CREATE TABLE … TBLPROPERTIES (…)` | Spark stamps `write.parquet.compression-codec = zstd` beside the DDL's keys; repark stamps only the DDL's | BACKLOG | repark |
 | `V3-COV-8` | `CREATE TABLE … AS SELECT 1 AS id, 'a' AS name` | repark derives `id: long, required`; Spark derives `id: int, optional` | BACKLOG | repark |
 

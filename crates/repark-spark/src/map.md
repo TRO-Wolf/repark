@@ -1064,7 +1064,8 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-system-functions-1/C-018, C-019, C-020, C-022, C-023, C-024
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
-  `MetadataTableType` at pin `5e7b2e4`; scan is fork schema-only). **MW-4b:** Glue/HMS
+  `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves
+  rather than refusing. **MW-4b:** Glue/HMS
   `table_exists` returns `DataInvalid` for a two-level namespace (not `NamespaceNotFound`).
   The "real table wins" probe on `cat.ns.tbl.snapshots` treats that as absent so the `$`
   rewrite runs; single-level `DataInvalid` and `Unexpected` stay fatal.
