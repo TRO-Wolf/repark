@@ -31,7 +31,7 @@ first-link collisions across the 310-map tree: `briefs` (1), `crates/repark-core
 `crates/repark-core/src/session/df_guards` (1), `crates/repark-distributed` (1),
 `crates/repark-functions/src` (1), `crates/repark-python` (2),
 `crates/repark-spark/benches/ice_read_perf` (1), `crates/repark-spark/src` (6),
-`python/repark/tests` (8), `scripts` (1), `task` (1), `task/ledgers/completed` (1),
+`python/repark/tests` (9), `scripts` (1), `task` (1), `task/ledgers/completed` (1),
 `task/port` (2). Two were true duplicate rows (`python/repark/tests` `test_array_null_1.py` stub,
 `task/ledgers/completed` `java-double-fd-1-ledger.md` stub) plus one duplicated `## Pointers`
 block in `python/repark/tests`; the rest were rows whose first link was an incidental shared
