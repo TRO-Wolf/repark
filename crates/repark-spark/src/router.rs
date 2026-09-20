@@ -20,6 +20,7 @@ use crate::{
 };
 
 mod comment_on_table;
+mod hive_change_column;
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
 /// # Errors
@@ -575,13 +576,8 @@ async fn try_preparse_intercepts(
             },
         );
     }
-    if let Some(parsed) = comment_on_table::try_parse_comment_on_table_ddl(sql) {
-        return Some(
-            match parsed.and_then(|ddl| parsed_ddl("COMMENT ON TABLE").map(|()| ddl)) {
-                Ok(ddl) => comment_on_table::execute_comment_on_table_ddl(ctx, catalogs, ddl).await,
-                Err(error) => Err(error),
-            },
-        );
+    if let Some(frame) = try_preparse_comment_ddl(ctx, catalogs, sql, write_options).await {
+        return Some(frame);
     }
     // I6 residual — forms stock sqlparser still cannot model.
     if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
@@ -646,6 +642,34 @@ async fn try_preparse_intercepts(
         return Some(
             match parsed.and_then(|ddl| parsed_ddl("BRANCH/TAG DDL").map(|()| ddl)) {
                 Ok(ddl) => ref_ddl::execute_ref_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
+    }
+    None
+}
+
+async fn try_preparse_comment_ddl(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
+    if let Some(parsed) = comment_on_table::try_parse_comment_on_table_ddl(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("COMMENT ON TABLE").map(|()| ddl)) {
+                Ok(ddl) => comment_on_table::execute_comment_on_table_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
+    }
+    if let Some(parsed) = hive_change_column::try_parse_hive_change_column_ddl(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => {
+                    hive_change_column::execute_hive_change_column_ddl(ctx, catalogs, ddl).await
+                }
                 Err(error) => Err(error),
             },
         );
