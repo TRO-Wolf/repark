@@ -1969,7 +1969,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   instability cell became `test_v3_partitioned_insert_row_id_mapping_is_stable_and_spark_ordered`
   beside the CTAS control that was always stable. **RP-31 (2026-09-18):** the multi-partition
   `INSERT … SELECT` order is deterministic at fork `#300`; its pins live in
-  `test_ice_rowid_order_1.py`. Matrix and totals:
+  `test_ice_rowid_order_1.py`. **RP-42 (2026-09-20):**
+  `test_v3_coverage_inventory_carries_every_program_once` now derives each stored verdict
+  from the two recorded halves, so a `VERDICTS` mutation reds offline, not only under the
+  live oracle. Matrix and totals:
   [../../../docs/design/v3-statement-coverage.md](../../../docs/design/v3-statement-coverage.md).
   pins: v3-cov-statement-coverage/C-002, C-003, C-004, C-006
   pins: rp-8-repin-f21-f22/C-007
