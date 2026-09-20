@@ -13,6 +13,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   sweep — C-010 through C-014 stay OPEN for later PRs.
   `risk_tier: standard`. Branch `fix/ipi-51-error-conditions`.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [map-pr-gate-1-ledger.md](map-pr-gate-1-ledger.md) —
+  **MAP-PR-GATE-1 (2026-09-20), in flight:** the map.md lockstep unit moves from the commit to
+  the pull request — `check_map_md.sh --base` diffs the branch in ci.yml's `map.md guard`
+  (pull requests only), `make check-map-md` runs it over `BASE ?= origin/main`, the two hook
+  paths keep a warn-only staged mode, `.gitattributes` sets `map.md merge=union`, and
+  `sync_map_md.py` gains the unconditional duplicate-row rule for what a union merge leaves
+  behind; 32 pre-existing first-link collisions cleaned. `risk_tier: standard`. Branch
+  `chore/map-pr-gate-1`.
+  pins: map-pr-gate-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012
 - [ice-wap-branch-1-ledger.md](ice-wap-branch-1-ledger.md) —
   **ICE-WAP-BRANCH-1 (2026-09-19), in flight:** the session conf `spark.wap.branch` redirects
   writes and the session's plain reads to an audit branch, as Spark does (IPI-05, RePark
