@@ -179,6 +179,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror row `writer_readwriter.py` 1095 → 1093, the value round 1 set in
   `scripts/check_lib_py.py` without its mirror.
   The verification fix ratchets it again, 1093 → 1091. pins: ice-overwrite-mode-1/C-018
+- `test_cap_1_source_file_line_cap.py` — **ICE-REPLACE-COLUMNS-1 (2026-09-19, run 25c):**
+  mirror rows ratchet `repark-spark/src/alter.rs` 1813 → 1449 and
+  `repark-spark/src/tests/alter.rs` 1379 → 1184 with `scripts/check_rust_file_size.py`,
+  after the REPLACE COLUMNS planner moved into its own module.
+  pins: ice-replace-columns-1/C-008
 - `test_cap_1_source_file_line_cap.py` — **ICE-DROP-NS-1 (2026-09-19, run 24c):**
   mirror row ratchets `repark-sql/src/tests.rs` 1520 → 1513 with `scripts/check_rust_file_size.py`.
   pins: ice-drop-ns-1/C-011

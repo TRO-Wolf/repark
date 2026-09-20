@@ -1211,3 +1211,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   row FIXED with the nested-namespace boundary and the exception-class
   residual. `risk_tier: standard`. Branch `fix/ice-drop-ns-1`.
   pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [ice-replace-columns-1-ledger.md](ice-replace-columns-1-ledger.md) —
+  **ICE-REPLACE-COLUMNS-1 (2026-09-19), in flight:** `ALTER TABLE … REPLACE
+  COLUMNS` drops every current top-level column and adds the listed ones with
+  fresh field ids, as Spark's Hive-style form does — the 34-cell oracle
+  (`RC-*`, v2 and v3) plus red-first pins, the parser and planner moved to
+  `crates/repark-spark/src/replace_columns.rs` on the shared column-type path
+  (STRUCT / ARRAY / MAP), Spark's texts on the `NOT NULL`, duplicate-name and
+  partition/sort source-loss refusals, the identity-trap gate and its five
+  pins deleted, registry row FIXED with four declared residues, and a harness
+  replay of 34 / 34 equal (was 12 / 34). `risk_tier: standard`. Branch
+  `fix/ice-replace-columns-1`.
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

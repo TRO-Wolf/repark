@@ -53,6 +53,7 @@ mod partitioned_merge;
 mod plan_partitioning;
 mod ref_ddl;
 mod refs_and_wap;
+mod replace_columns;
 mod router;
 mod run_maintenance;
 mod service_managed_ctas;
