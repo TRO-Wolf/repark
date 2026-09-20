@@ -304,7 +304,7 @@ async fn call_rewrite_sort_order_sorts_and_does_compact() {
         ids_by_part
             .entry(identity_partition_int(&task))
             .or_default()
-            .extend(ids_i32_in_file_order(&task.data_file_path.to_string()));
+            .extend(ids_i32_in_file_order(task.data_file_path.as_ref()));
     }
     assert_eq!(
         ids_by_part.get(&0),
