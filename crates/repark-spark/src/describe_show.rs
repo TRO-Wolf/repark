@@ -626,7 +626,7 @@ pub(crate) struct ShowSystemFunctions {
     pub(crate) catalog: String,
 }
 
-pub(crate) fn try_parse_show_system_functions(sql: &str) -> Option<Result<ShowSystemFunctions>> {
+pub(crate) fn try_parse_show_system_functions(sql: &str) -> Option<ShowSystemFunctions> {
     let dialect = DatabricksDialect {};
     let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
     let mut parser = Parser::new(&dialect).with_tokens(tokens);
@@ -640,39 +640,24 @@ pub(crate) fn try_parse_show_system_functions(sql: &str) -> Option<Result<ShowSy
     if !parser.parse_keyword(Keyword::IN) {
         return None;
     }
-    Some(parse_show_system_functions_tail(&mut parser))
+    parse_show_system_functions_tail(&mut parser)
 }
 
-fn parse_show_system_functions_tail(parser: &mut Parser) -> Result<ShowSystemFunctions> {
-    let name = parser
-        .parse_object_name(false)
-        .map_err(show_system_functions_err)?;
+fn parse_show_system_functions_tail(parser: &mut Parser) -> Option<ShowSystemFunctions> {
+    let name = parser.parse_object_name(false).ok()?;
     if !matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
-        return Err(DataFusionError::Plan(format!(
-            "could not parse `SHOW [USER] FUNCTIONS IN <catalog>.system` at `{}` — the supported \
-             form is SHOW [USER] FUNCTIONS IN <catalog>.system",
-            parser.peek_token()
-        )));
+        return None;
     }
     let parts = name_parts(&name);
     let [catalog, system] = parts.as_slice() else {
-        return Err(DataFusionError::Plan(format!(
-            "expected a two-part `IN <catalog>.system` name, got `{name}`"
-        )));
+        return None;
     };
     if !system.eq_ignore_ascii_case("system") {
-        return Err(DataFusionError::Plan(format!(
-            "expected `IN <catalog>.system`, got `{name}`"
-        )));
+        return None;
     }
-    Ok(ShowSystemFunctions {
+    Some(ShowSystemFunctions {
         catalog: catalog.clone(),
     })
-}
-
-#[allow(clippy::needless_pass_by_value)]
-fn show_system_functions_err(err: ParserError) -> DataFusionError {
-    DataFusionError::Plan(format!("could not parse SHOW FUNCTIONS: {err}"))
 }
 
 pub(crate) fn execute_show_system_functions(

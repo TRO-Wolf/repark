@@ -507,14 +507,11 @@ async fn try_preparse_intercepts(
             },
         );
     }
-    if let Some(parsed) = describe_show::try_parse_show_system_functions(sql) {
-        match parsed.and_then(|ddl| parsed_ddl("SHOW FUNCTIONS").map(|()| ddl)) {
-            Ok(show) if catalogs.get(&show.catalog).is_some() => {
-                return Some(describe_show::execute_show_system_functions(ctx, &show));
-            }
-            Ok(_) => {}
-            Err(error) => return Some(Err(error)),
-        }
+    if let Some(show) = describe_show::try_parse_show_system_functions(sql)
+        && parsed_ddl("SHOW FUNCTIONS").is_ok()
+        && catalogs.get(&show.catalog).is_some()
+    {
+        return Some(describe_show::execute_show_system_functions(ctx, &show));
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {

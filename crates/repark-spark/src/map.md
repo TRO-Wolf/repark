@@ -1022,10 +1022,12 @@ pins: rp-4-fork-repin/C-005, C-006
   executor. The rewrite fires only for unquoted three-part calls whose head is
   a live Iceberg catalog and whose tail names one of the seven functions;
   strings, quoted identifiers, two-part `system.<fn>`, `CALL`, and unknown
-  catalogs pass through untouched. The router gates SHOW on a live catalog
-  entry, so unknown catalogs keep DataFusion's old error. Unit pins live
-  file-backed in [`describe_show/`](describe_show/map.md).
-  pins: ice-system-functions-1/C-018, C-019, C-020, C-022, C-024
+  catalogs pass through untouched. The SHOW tail parser claims only an exact
+  two-part `<cat>.system` name — one-part, non-`system`, and trailing-token
+  forms all fall through to stock handling — and the router gates on a live
+  catalog entry, so unknown catalogs keep DataFusion's old error. Unit pins
+  live file-backed in [`describe_show/`](describe_show/map.md).
+  pins: ice-system-functions-1/C-018, C-019, C-020, C-022, C-023, C-024
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`; scan is fork schema-only). **MW-4b:** Glue/HMS

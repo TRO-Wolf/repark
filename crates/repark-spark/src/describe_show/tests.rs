@@ -125,17 +125,14 @@ fn internal_names_match_registered_udfs() {
 
 #[test]
 fn parses_show_user_functions_in_system() {
-    let parsed = try_parse_show_system_functions("SHOW USER FUNCTIONS IN sc.system")
-        .expect("matches")
-        .expect("parses");
+    let parsed =
+        try_parse_show_system_functions("SHOW USER FUNCTIONS IN sc.system").expect("matches");
     assert_eq!(parsed.catalog, "sc");
 }
 
 #[test]
 fn parses_show_functions_in_system_without_user() {
-    let parsed = try_parse_show_system_functions("SHOW FUNCTIONS IN sc.system")
-        .expect("matches")
-        .expect("parses");
+    let parsed = try_parse_show_system_functions("SHOW FUNCTIONS IN sc.system").expect("matches");
     assert_eq!(parsed.catalog, "sc");
 }
 
@@ -152,18 +149,13 @@ fn ignores_show_forms_without_in() {
 }
 
 #[test]
-fn refuses_non_system_show_scope() {
+fn ignores_non_system_show_scope() {
     for sql in [
         "SHOW USER FUNCTIONS IN sc.sales",
         "SHOW USER FUNCTIONS IN sc",
         "SHOW USER FUNCTIONS IN sc.system EXTRA",
     ] {
-        assert!(
-            try_parse_show_system_functions(sql)
-                .expect("matches")
-                .is_err(),
-            "{sql}"
-        );
+        assert!(try_parse_show_system_functions(sql).is_none(), "{sql}");
     }
 }
 

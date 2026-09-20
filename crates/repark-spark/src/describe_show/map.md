@@ -4,7 +4,7 @@
 
 File-backed tests for the SHOW handlers (`../describe_show.rs`): the
 `SHOW [USER] FUNCTIONS IN <catalog>.system` parser pins (USER-optional match,
-bare-SHOW fallthrough, non-`system` scope and trailing-junk refusals), the
+bare-SHOW fallthrough, non-`system` scope and trailing-junk fall-through), the
 one-column `function` batch shape, and the `<cat>.system.<fn>(` pre-parse
 rewrite pins (all seven names, multi-call statements, unknown-catalog /
 two-part / CALL / string-literal / quoted-identifier / missing-paren
