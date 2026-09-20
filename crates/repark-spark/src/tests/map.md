@@ -213,8 +213,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (RP-22, 2026-09-17: the `assert_created` / `assert_adopted` awaits are wrapped in `Box::pin` — the fork pin grew those futures past clippy's `large_futures` bound; `v3_lineage.rs`'s byte tripwire re-records this file's hash for that edit)
   on created and adopted v3 — `DELETE … IN` / `NOT IN` / `EXISTS` / `NOT EXISTS` and
   `UPDATE … IN`, each pinning rows, `(id,_row_id,seq)`, next-row-id / first-row-id /
-  added-rows and the live data-file count at the single-file seed. `F_V3_8_UPDATE_FILES` is
-  the named layout artefact: the UPDATE cell writes 2 data files where Spark writes 1.
+  added-rows and the live data-file count at the single-file seed. `V3_8_UPDATE_FILES` is 1
+  since **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19)**: the identity UPDATE copy-on-write
+  rewrite drives one rolling writer, so the `survivors UNION ALL new-values` plan's batch
+  count no longer decides the layout. It was `F_V3_8_UPDATE_FILES = 2`, the named artefact
+  where the UPDATE cell wrote 2 data files against Spark's 1.
   Also the correlated-to-target `DELETE` (served, created and adopted), its zero-row
   `s.id = tgt.id + 1` variant (`F-v3-8-empty-delete-snapshot`: the engine commits nothing
   where Spark commits an empty overwrite), and — since **V3-9 (2026-09-02)** — the

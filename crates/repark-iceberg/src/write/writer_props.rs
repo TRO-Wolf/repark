@@ -19,6 +19,8 @@ pub const DELETE_COMPRESSION_CODEC_PROP: &str = "write.delete.parquet.compressio
 
 pub const DELETE_COMPRESSION_LEVEL_PROP: &str = "write.delete.parquet.compression-level";
 
+pub const ENABLE_DICTIONARY_PROP: &str = "parquet.enable.dictionary";
+
 /// Build [`WriterProperties`] for `table` from `write.parquet.compression-codec` (+ level).
 /// # Errors
 /// Unknown codec, unparsable level, or level out of range for gzip/zstd.
@@ -47,7 +49,16 @@ pub fn writer_properties_with(
     }
     Ok(WriterProperties::builder()
         .set_compression(compression_with(table, codec_override, level_override)?)
+        .set_dictionary_enabled(dictionary_enabled(table))
         .build())
+}
+
+fn dictionary_enabled(table: &Table) -> bool {
+    table
+        .metadata()
+        .properties()
+        .get(ENABLE_DICTIONARY_PROP)
+        .is_some_and(|value| value.eq_ignore_ascii_case("true"))
 }
 
 #[allow(clippy::missing_errors_doc)]

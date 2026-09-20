@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use super::lineage::{rewrite_column_names, survivor_sql};
 use super::{register_affected_rewrite_target, register_identity_table};
-use crate::write::concurrency::concurrency_from_ctx;
+use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
 use crate::write::merge::row_lineage::table_carries_merge_lineage;
 use crate::write::merge::session_staging::write_new_data_files_from_stream_with;
 use crate::write::merge::{
@@ -56,10 +56,15 @@ pub(super) async fn commit_identity_update_cow(
     );
     let rewrite_result = async {
         let stream = ctx.sql(&rewrite_sql).await?.execute_stream().await?;
-        let concurrency = concurrency_from_ctx(ctx);
         let (_, staging) = resolve_empty_session_write(ctx)?;
-        write_new_data_files_from_stream_with(table, write_schema, stream, concurrency, &staging)
-            .await
+        write_new_data_files_from_stream_with(
+            table,
+            write_schema,
+            stream,
+            WriteConcurrency::new(1)?,
+            &staging,
+        )
+        .await
     }
     .await;
     let _ = ctx.deregister_table(ident_table.as_str());
