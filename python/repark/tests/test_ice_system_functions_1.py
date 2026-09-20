@@ -1,19 +1,21 @@
-"""IPI-29 system functions round 1 — bucket/truncate UDF pins on the recorded Spark values.
+"""IPI-29 system functions rounds 1-2 — bucket/truncate/temporal/version UDF pins.
 
 Round 1 of 3 on lane xb-sysfn: the Iceberg ``bucket(n, col)`` and
 ``truncate(w, col)`` system functions as DataFusion scalar UDFs under reserved
-internal names. Temporal functions, ``iceberg_version``, catalog-qualified
-registration and SHOW arrive in later rounds. Every value pin replays the
-inventory fixture from cells_misc.py against a module-private memory catalog
-and asserts the exact recorded Spark answer on the Arrow path, value AND type.
+internal names. Round 2 adds the temporal functions (``years``, ``months``,
+``days``, ``hours``) and ``iceberg_version``. Catalog-qualified registration
+and SHOW arrive in round 3. Every value pin replays the inventory fixture from
+cells_misc.py against a module-private memory catalog and asserts the exact
+recorded Spark answer on the Arrow path, value AND type.
 
 pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-C-009, C-010, C-011
+C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -28,6 +30,11 @@ CATALOG = "sysfn1"
 TABLE = f"{CATALOG}.w.t"
 BUCKET = "__iceberg_system_bucket"
 TRUNCATE = "__iceberg_system_truncate"
+YEARS = "__iceberg_system_years"
+MONTHS = "__iceberg_system_months"
+DAYS = "__iceberg_system_days"
+HOURS = "__iceberg_system_hours"
+ICEBERG_VERSION = "__iceberg_system_iceberg_version"
 
 
 @pytest.fixture()
@@ -130,13 +137,15 @@ def test_truncate_binary_pins_recorded_values_and_schema(engine: ReparkSession) 
 
 
 def test_every_function_returns_null_for_null_input(engine: ReparkSession) -> None:
-    """pins: ice-system-functions-1/C-009 — NULL in gives NULL out for bucket and truncate."""
+    """pins: ice-system-functions-1/C-009, C-017 — NULL in gives NULL out, all six functions."""
     table = engine.sql(
         f"SELECT {BUCKET}(16, id) AS a, {BUCKET}(16, data) AS b, "
         f"{BUCKET}(8, d) AS c, {BUCKET}(8, ts) AS d, "
         f"{BUCKET}(8, dec) AS e, {BUCKET}(8, b) AS f, "
         f"{TRUNCATE}(2, data) AS g, {TRUNCATE}(10, id) AS h, "
-        f"{TRUNCATE}(100, dec) AS i, {TRUNCATE}(1, b) AS j "
+        f"{TRUNCATE}(100, dec) AS i, {TRUNCATE}(1, b) AS j, "
+        f"{YEARS}(ts) AS k, {MONTHS}(ts) AS l, {DAYS}(ts) AS m, "
+        f"{DAYS}(d) AS n, {HOURS}(ts) AS o "
         f"FROM {TABLE} WHERE id IS NULL"
     ).to_arrow()
     assert table.num_rows == 1
@@ -169,3 +178,63 @@ def test_truncate_long_negative_floors_down(engine: ReparkSession) -> None:
     """pins: ice-system-functions-1/C-006 — truncate(10, -7) floors to -10, not toward zero."""
     table = engine.sql(f"SELECT {TRUNCATE}(10, id) AS v FROM {TABLE} WHERE id = -7").to_arrow()
     assert table.column("v").to_pylist() == [-10]
+
+
+def test_years_pins_recorded_values(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-012 — F-YEARS answers [[-1,-1],[54,54],[null,null]]."""
+    table = engine.sql(f"SELECT {YEARS}(ts) AS a, {YEARS}(d) AS b FROM {TABLE}").to_arrow()
+    assert table.schema.field("a").type == pa.int32()
+    assert table.schema.field("b").type == pa.int32()
+    assert _sorted_rows(table) == [[-1, -1], [54, 54], [None, None]]
+
+
+def test_months_pins_recorded_values(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-013 — F-MONTHS answers [[-1,-1],[650,650],[null,null]]."""
+    table = engine.sql(f"SELECT {MONTHS}(ts) AS a, {MONTHS}(d) AS b FROM {TABLE}").to_arrow()
+    assert table.schema.field("a").type == pa.int32()
+    assert table.schema.field("b").type == pa.int32()
+    assert _sorted_rows(table) == [[-1, -1], [650, 650], [None, None]]
+
+
+def test_days_pins_recorded_values_and_schema(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-014 — F-DAYS answers dates as DATE, not int or string."""
+    frame = engine.sql(f"SELECT {DAYS}(ts) AS a, {DAYS}(d) AS b FROM {TABLE}")
+    table = frame.to_arrow()
+    assert table.schema.field("a").type == pa.date32()
+    assert table.schema.field("b").type == pa.date32()
+    assert [str(field.dataType) for field in frame.schema.fields] == ["DateType()", "DateType()"]
+    assert _sorted_rows(table) == [
+        [date(1969, 12, 31), date(1969, 12, 31)],
+        [date(2024, 3, 5), date(2024, 3, 5)],
+        [None, None],
+    ]
+
+
+def test_hours_pins_recorded_values(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-015 — F-HOURS answers [[-1],[474898],[null]]."""
+    table = engine.sql(f"SELECT {HOURS}(ts) AS v FROM {TABLE}").to_arrow()
+    assert table.schema.field("v").type == pa.int32()
+    assert _sorted_rows(table) == [[-1], [474898], [None]]
+
+
+def test_iceberg_version_is_non_null_per_row(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-016 — the version is a stable non-null string per row."""
+    frame = engine.sql(f"SELECT {ICEBERG_VERSION}() AS v FROM {TABLE}")
+    table = frame.to_arrow()
+    assert table.schema.field("v").type == pa.string()
+    assert str(frame.schema.fields[0].dataType) == "StringType()"
+    values = table.column("v").to_pylist()
+    assert len(values) == 3
+    assert all(isinstance(value, str) for value in values)
+    assert len(set(values)) == 1
+    flags = engine.sql(f"SELECT {ICEBERG_VERSION}() IS NOT NULL AS ok FROM {TABLE}").to_arrow()
+    assert flags.column("ok").to_pylist() == [True, True, True]
+
+
+def test_years_pre_epoch_is_negative(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-012 — years of a 1969 instant is -1, not 0."""
+    table = engine.sql(
+        f"SELECT {YEARS}(ts) AS a, {YEARS}(d) AS b FROM {TABLE} WHERE id = -7"
+    ).to_arrow()
+    assert table.column("a").to_pylist() == [-1]
+    assert table.column("b").to_pylist() == [-1]

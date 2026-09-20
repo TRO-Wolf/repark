@@ -7270,7 +7270,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `test_bare_timestamp_in_the_list_follows_the_session_timestamp_type`.
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [test_ice_system_functions_1.py](test_ice_system_functions_1.py) —
-  **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), round 1 of 3:** the Iceberg
+  **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), rounds 1-2 of 3:** the Iceberg
   `bucket(n, col)` and `truncate(w, col)` system functions as DataFusion scalar
   UDFs under reserved internal names (`__iceberg_system_bucket`,
   `__iceberg_system_truncate`), called directly until WO-3 lands the
@@ -7282,9 +7282,14 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `F-TRUNCATE-LONG` (`-10` floors down), `F-TRUNCATE-DECIMAL` (schema
   `decimal(10,2)` via `df.schema`), `F-TRUNCATE-BINARY` (schema `binary` via
   `df.schema`, Arrow `large_binary` — the layout RePark reads BINARY columns
-  in, preserved by the fork). NULL in gives NULL out for both functions; zero and negative
+  in, preserved by the fork). NULL in gives NULL out for the round-1 functions; zero and negative
   widths refuse with the fork `Bucket::new` / `Truncate::new` text; the old
   column-first order `bucket(id, 16)` refuses. Rows sort nulls-last so scan
-  order cannot flake a pin. Temporal functions, `iceberg_version`,
-  catalog-qualified registration and SHOW arrive in WO-2/WO-3.
-  pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  order cannot flake a pin. **Round 2** adds the temporal pins on the same
+  fixture: `F-YEARS` (the `-1` pre-epoch leg), `F-MONTHS`, `F-DAYS` (values
+  plus `date32` / `DateType()` — `days()` is DATE, never int), `F-HOURS`, and
+  `F-ICEBERG-VERSION` (`IS NOT NULL` per row; the version text itself stays
+  unpinned, only its stability and its string schema). The NULL pin grows to
+  all six value-taking functions. Catalog-qualified registration and SHOW
+  arrive in WO-3.
+  pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
