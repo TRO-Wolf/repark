@@ -51,9 +51,7 @@ _FORK_INSERT_ASK = (
 
 
 def _table_properties(variant: str) -> str:
-    extra = "".join(
-        f", '{key}'='{value}'" for key, value in _TRUTH["variants"][variant].items()
-    )
+    extra = "".join(f", '{key}'='{value}'" for key, value in _TRUTH["variants"][variant].items())
     return f"'format-version'='2'{extra}"
 
 
@@ -136,9 +134,7 @@ def test_defaults_collapse_to_one_manifest_at_the_hundredth_append(
     table = f"{_CATALOG}.{_NAMESPACE}.t_collapse"
     _create(session, table, "defaults")
     for step in range(1, 101):
-        session.sql(
-            f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v"
-        ).collect()
+        session.sql(f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v").collect()
     assert _counts(session, table) == (1, 100)
     assert session.sql(f"SELECT count(*) FROM {table}").collect()[0][0] == 100
 
@@ -148,9 +144,7 @@ def test_merge_disabled_is_a_real_escape_hatch(session: ReparkSession) -> None:
     table = f"{_CATALOG}.{_NAMESPACE}.t_escape"
     _create(session, table, "merge_disabled")
     for step in range(1, 101):
-        session.sql(
-            f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v"
-        ).collect()
+        session.sql(f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v").collect()
     assert _counts(session, table) == (100, 100)
 
 
@@ -160,9 +154,7 @@ def test_merging_commit_stamps_the_manifests_summary_keys(session: ReparkSession
     table = f"{_CATALOG}.{_NAMESPACE}.t_summary"
     _create(session, table, "min_count_5")
     for step in range(1, 6):
-        session.sql(
-            f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v"
-        ).collect()
+        session.sql(f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v").collect()
     summary = _last_summary(session, table)
     assert [summary.get(key) for key in _SUMMARY_KEYS] == ["1", "0", "4"]
 
@@ -198,9 +190,7 @@ def test_v3_row_lineage_survives_a_merging_append(session: ReparkSession) -> Non
         "TBLPROPERTIES ('format-version'='3')"
     ).collect()
     for step in range(1, 101):
-        session.sql(
-            f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v"
-        ).collect()
+        session.sql(f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v").collect()
     assert _counts(session, table) == (1, 100)
     rows = session.sql(f"SELECT id, v, _row_id FROM {table} ORDER BY id").collect()
     assert [row[0] for row in rows] == list(range(1, 101))
@@ -213,8 +203,6 @@ def test_a_merging_append_keeps_the_rows_readable(session: ReparkSession) -> Non
     table = f"{_CATALOG}.{_NAMESPACE}.t_readback"
     _create(session, table, "min_count_5")
     for step in range(1, 21):
-        session.sql(
-            f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v"
-        ).collect()
+        session.sql(f"INSERT INTO {table} BY NAME SELECT {step} AS id, 'v{step}' AS v").collect()
     rows = session.sql(f"SELECT id, v FROM {table} ORDER BY id").collect()
     assert [(row[0], row[1]) for row in rows] == [(step, f"v{step}") for step in range(1, 21)]
