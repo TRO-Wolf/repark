@@ -9,7 +9,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::expr::Predicate;
 use iceberg::maintenance::{RewriteDataFiles, RewriteStrategy, ZOrderSpec};
 use iceberg::spec::{SortField, SortOrder, Transform, Type};
-use iceberg::{Catalog, TableIdent, table::Table};
+use iceberg::{Catalog, Error, TableIdent, table::Table};
 use repark_core::illegal_argument_error;
 
 use super::compute_table_stats::spark_type_name;
@@ -138,13 +138,26 @@ pub(super) async fn run_rewrite(
     {
         action = action.max_concurrent_file_group_rewrites(limit);
     }
-    let result = Box::pin(action.execute(catalog.as_ref()))
-        .await
-        .map_err(iceberg_err)?;
+    let result = match Box::pin(action.execute(catalog.as_ref())).await {
+        Err(error) if is_fork_validation_refusal(&error) => {
+            return Err(illegal_argument_error(error.to_string()));
+        }
+        result => result.map_err(iceberg_err)?,
+    };
 
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
     rewrite_result_dataframe(ctx, &result)
+}
+
+fn is_fork_validation_refusal(error: &Error) -> bool {
+    const NEEDLES: [&str; 3] = [
+        "Cannot sort data without a valid sort order",
+        "Cannot ZOrder when no columns are specified",
+        "Cannot find column '",
+    ];
+    let message = error.to_string();
+    NEEDLES.iter().any(|needle| message.contains(needle))
 }
 
 fn strategy_argument(args: &CallArgs) -> Result<Option<String>> {

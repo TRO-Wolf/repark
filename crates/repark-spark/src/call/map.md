@@ -100,8 +100,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   there is no second copy of a rule to drift. The procedure's `sort_order` is a one-shot rewrite
   instruction and is never committed to the table — all three cells measure `md.sort-order`
   unchanged. `branch` is deliberately still absent: the fork builder has no branch parameter, so
-  accepting it would ship a silently ignored argument (IPI-31 owns it).
-  pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008
+  accepting it would ship a silently ignored argument (IPI-31 owns it). The fork's
+  sort/z-order validation refusals are re-raised through `illegal_argument_error` with the
+  fork text verbatim, so the door reports Java's class as well as Java's text.
+  pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009
 - `rewrite_options.rs` — **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(k, v, …)`
   extraction and validation for both rewrite procedures. String/number/boolean/NULL scalar
   rendering, duplicate-key `[DUPLICATED_MAP_KEY]`, unknown-key listing in map order named for
