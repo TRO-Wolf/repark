@@ -634,23 +634,21 @@ fn split_top_level_comma_segments(tokens: &[Token]) -> Vec<Vec<Token>> {
     let mut depth = 0_i32;
     for token in tokens {
         match token {
-            Token::LParen => {
-                depth += 1;
-                current.push(token.clone());
-            }
-            Token::RParen => {
-                depth -= 1;
-                current.push(token.clone());
-            }
+            Token::LParen | Token::Lt => depth += 1,
+            Token::RParen | Token::Gt => depth -= 1,
+            Token::ShiftLeft => depth += 2,
+            Token::ShiftRight => depth -= 2,
             Token::Comma if depth == 0 => {
                 let trimmed = trim_ws_tokens(current);
                 if !trimmed.is_empty() {
                     segments.push(trimmed);
                 }
                 current = Vec::new();
+                continue;
             }
-            other => current.push(other.clone()),
+            _ => {}
         }
+        current.push(token.clone());
     }
     let trimmed = trim_ws_tokens(current);
     if !trimmed.is_empty() {
