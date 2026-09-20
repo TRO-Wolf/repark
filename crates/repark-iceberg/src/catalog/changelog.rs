@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::Session;
 use datafusion::datasource::{TableProvider, TableType};
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::TaskContext;
 use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
 use datafusion::physical_plan::ExecutionPlan;
@@ -76,6 +76,28 @@ fn build_scan(table: &Table, window: ChangelogWindow) -> Result<IncrementalChang
     builder.build().map_err(iceberg_to_datafusion)
 }
 
+#[allow(clippy::missing_errors_doc)]
+async fn probe_changelog_plan(table: &Table, window: ChangelogWindow) -> Result<()> {
+    if window.empty {
+        return Ok(());
+    }
+    let scan = build_scan(table, window)?;
+    if let Err(error) = scan.plan_files().await
+        && let Some(refusal) = surfaced_changelog_refusal(error)
+    {
+        return Err(refusal);
+    }
+    Ok(())
+}
+
+fn surfaced_changelog_refusal(error: iceberg::Error) -> Option<DataFusionError> {
+    if error.kind() == iceberg::ErrorKind::FeatureUnsupported {
+        Some(iceberg_to_datafusion(error))
+    } else {
+        None
+    }
+}
+
 #[async_trait]
 impl TableProvider for ChangelogTableProvider {
     fn schema(&self) -> SchemaRef {
@@ -100,6 +122,7 @@ impl TableProvider for ChangelogTableProvider {
         filters: &[Expr],
         limit: Option<usize>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
+        probe_changelog_plan(&self.table, self.window).await?;
         let output_schema = match projection {
             None => Arc::clone(&self.schema),
             Some(indices) => Arc::new(self.schema.project(indices)?),
@@ -187,4 +210,39 @@ async fn scan_changelog_batches(
         futures::future::ready(conform_batch(&batch, &schema_for_map, &mut projection))
     });
     Ok(Box::pin(RecordBatchStreamAdapter::new(schema, conformed)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn changelog_probe_surfaces_feature_unsupported() {
+        let refusal = surfaced_changelog_refusal(iceberg::Error::new(
+            iceberg::ErrorKind::FeatureUnsupported,
+            "Delete files are currently not supported in changelog scans",
+        ));
+        let Some(DataFusionError::External(inner)) = refusal else {
+            panic!("expected a surfaced External refusal, got {refusal:?}");
+        };
+        let kept = inner
+            .downcast_ref::<iceberg::Error>()
+            .expect("expected the live iceberg error");
+        assert_eq!(kept.kind(), iceberg::ErrorKind::FeatureUnsupported);
+        assert_eq!(
+            kept.to_string(),
+            "FeatureUnsupported => Delete files are currently not supported in changelog scans"
+        );
+    }
+
+    #[test]
+    fn changelog_probe_ignores_other_plan_failures() {
+        for kind in [
+            iceberg::ErrorKind::DataInvalid,
+            iceberg::ErrorKind::Unexpected,
+        ] {
+            let refusal = surfaced_changelog_refusal(iceberg::Error::new(kind, "probe"));
+            assert!(refusal.is_none(), "expected {kind:?} to stay mid-stream");
+        }
+    }
 }

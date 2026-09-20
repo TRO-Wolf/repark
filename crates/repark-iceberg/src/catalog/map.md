@@ -322,6 +322,11 @@ Source comments retain only API and safety contracts; implementation narration i
   shape). `ChangelogWindow.empty` carries Java's two empty-scan short-circuits
   (`noSnapshotsAfter` / `noSnapshotsBetween`). A range holding delete manifests is refused by
   the planner, not here. pins: ice-changelog-1/C-009, C-010, C-015
+  **ICE-CHANGELOG-1 round 1 (2026-09-20):** `scan` probes the fork's `plan_files` first and
+  surfaces ONLY a `FeatureUnsupported` refusal at plan time, so the view read raises
+  `UnsupportedOperationException` through the existing classifier instead of a mid-stream
+  `PySparkException`; every other probe failure stays mid-stream exactly as before, and an
+  empty window skips the probe. pins: ice-changelog-1/C-015
 - `changelog_view.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `ChangelogViewProvider`, the LAZY view
   `create_changelog_view` registers: it scans its source provider unprojected, applies one
   row transform (passed in as `ChangelogRowTransform` so the Spark-engine semantics stay in
