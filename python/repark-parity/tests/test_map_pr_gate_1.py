@@ -274,9 +274,11 @@ def test_ci_guard_is_pr_only_and_gitattributes_carries_union() -> None:
     """pins: map-pr-gate-1/C-011."""
     workflow = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     step = workflow.split("- name: map.md guard", 1)[1].split("- name:", 1)[0]
-    assert "if: github.event_name == 'pull_request'" in step
+    if_line = next(line for line in step.splitlines() if line.strip().startswith("if:"))
+    assert if_line.strip() == "if: github.event_name == 'pull_request'"
     assert "git fetch --no-tags origin" in step
+    assert "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}" in step
     assert 'check_map_md.sh --base "origin/${{ github.base_ref }}"' in step
-    attributes = (_REPO / ".gitattributes").read_text(encoding="utf-8")
+    attributes = (_REPO / ".gitattributes").read_text(encoding="utf-8").splitlines()
     assert "map.md merge=union" in attributes
     assert "**/map.md merge=union" in attributes
