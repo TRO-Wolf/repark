@@ -7294,5 +7294,7 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `F-BUCKET-IN-WHERE`, the order-preserved `F-SHOW-FUNCTIONS` roster (USER and
   bare spellings), the `hc` catalog twin, the bare-`truncate` non-claim pin
   (both arities stay `UNRESOLVED_ROUTINE` — the SQL door has no bare
-  `truncate` builtin on this tree), and the untouched-SHOW-forms fence.
+  `truncate` builtin on this tree), and the untouched-SHOW-forms fence:
+  forms without `IN` and non-`.system` / one-part / trailing-token `IN`
+  scopes all keep DataFusion's stock error.
   pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025

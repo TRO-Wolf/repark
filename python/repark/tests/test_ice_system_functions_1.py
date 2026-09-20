@@ -17,6 +17,7 @@ C-021, C-022, C-023, C-024, C-025
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
@@ -311,6 +312,20 @@ def test_show_functions_without_in_is_unchanged(engine: ReparkSession) -> None:
         engine.sql("SHOW USER FUNCTIONS").to_arrow()
     with pytest.raises(AnalysisException, match=r"SHOW \[VARIABLE\] is not supported"):
         engine.sql("SHOW SYSTEM FUNCTIONS").to_arrow()
+
+
+def test_show_functions_in_non_system_scope_is_unchanged(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-023 — non-`.system` IN scopes keep today's error."""
+    message = re.escape(
+        "Error during planning: SHOW [VARIABLE] is not supported "
+        "unless information_schema is enabled"
+    )
+    with pytest.raises(AnalysisException, match=message):
+        engine.sql("SHOW USER FUNCTIONS IN sc.sales").to_arrow()
+    with pytest.raises(AnalysisException, match=message):
+        engine.sql("SHOW USER FUNCTIONS IN sc").to_arrow()
+    with pytest.raises(AnalysisException, match=message):
+        engine.sql("SHOW USER FUNCTIONS IN sc.system EXTRA").to_arrow()
 
 
 def test_internal_bucket_name_still_resolves(engine: ReparkSession) -> None:
