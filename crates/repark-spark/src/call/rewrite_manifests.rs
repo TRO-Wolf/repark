@@ -44,12 +44,7 @@ pub(super) async fn execute_rewrite_manifests(
             .metadata()
             .partition_spec_by_id(id)
             .map(|_| id)
-            .ok_or_else(|| {
-                illegal_argument_error(format!(
-                    "Cannot use spec id {id} because the table does not contain a reference to \
-                     this spec-id."
-                ))
-            })?,
+            .ok_or_else(|| illegal_argument_error(format!("Invalid spec id {id}")))?,
         None => table.metadata().default_partition_spec_id(),
     };
 

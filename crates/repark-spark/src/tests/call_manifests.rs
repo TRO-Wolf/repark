@@ -522,9 +522,7 @@ async fn call_rewrite_manifests_argument_surface_is_sparks() {
     .await
     .expect_err("an unknown spec id must refuse");
     assert!(
-        refused
-            .to_string()
-            .contains("does not contain a reference to this spec-id"),
+        refused.to_string().contains("Invalid spec id 99"),
         "the refusal must name the unknown spec, got: {refused}"
     );
     assert!(

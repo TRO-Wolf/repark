@@ -158,12 +158,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `commit.manifest.target-size-bytes`) — a quiet leg is kept, never rewritten one to one —
   so a delete-only table compacts its deletes and a table quiet on both legs answers zeros
   and commits nothing. A table with no snapshot answers zeros where the action errors.
-  `spec_id` selects the rewritten spec (unknown ids raise the sibling `output-spec-id`
-  shaped refusal) and `use_caching` is an accepted no-op. Above
+  `spec_id` selects the rewritten spec (unknown ids raise Spark's `Invalid spec id`
+  refusal) and `use_caching` is an accepted no-op. Above
   `commit.manifest.target-size-bytes` the two engines write a different NUMBER of manifests, so
   `added_manifests_count` diverges there (registry `MANIFEST-3`); `rewritten_manifests_count`
   agrees at every size measured.
-  pins: ice-rm-deletes-1/C-001, C-003, C-004, C-005, C-006
+  pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `plan_partitioning.rs` (+ `plan_partitioning/`) — **AP-1 step 1 (2026-09-10):** `CALL
   <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
   target positive). Statistics come from one `files WHERE content = 0` read

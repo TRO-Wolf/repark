@@ -274,7 +274,7 @@ def test_unknown_spec_id_refuses(tmp_path: Path) -> None:
     session = _session(tmp_path)
     table = "mem.ns.unknown_spec"
     _replay(session, table, _BUILDS["part_mor_spec"], "2")
-    with pytest.raises(IllegalArgumentException, match="reference to this spec-id"):
+    with pytest.raises(IllegalArgumentException, match="Invalid spec id 99"):
         session.sql(f"CALL mem.system.rewrite_manifests(table => '{_ref(table)}', spec_id => 99)")
     session.stop()
 

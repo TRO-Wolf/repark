@@ -135,12 +135,14 @@ illustrative. A claim with no verified basis does not go in.
   travel both spellings plus the reader options, the sixteen metadata tables, maintenance `CALL`
   plus `register_table` adoption (V3-1, including the Spark-written v3 fixture numbers),
   and the registry sections that govern each. **MW-6** added "Compacting manifests"
-  (`rewrite_manifests`: the current-spec default, the `spec_id` refusal, and the delete manifests
-  Spark rewrites and this engine does not). **MW-8 (2026-08-24)** added "The maintenance
-  runbook" — the seven-step Airflow-shaped cycle, the `expire_snapshots` cutoff and what it
-  costs in time travel, the cadence, the load-bearing order, the day of latency on the orphan
-  net, how to retry a step (the S3 Tables conflict and step 4's idle-cycle refusal), the six
-  edits a migrating Spark DAG needs, and the limit the cycle cannot cross (registry `RDF-1` —
+  (`rewrite_manifests`: the current-spec default, `spec_id`, and the delete-manifest leg —
+  **ICE-RM-DELETES-1 (2026-09-20)** rewrote all three: `spec_id` selects the spec, both legs
+  compact in one commit, and the idle cycle answers zeros). **MW-8 (2026-08-24)** added "The
+  maintenance runbook" — the seven-step Airflow-shaped cycle, the `expire_snapshots` cutoff
+  and what it costs in time travel, the cadence, the load-bearing order, the day of latency
+  on the orphan net, how to retry a step (the S3 Tables conflict and step 4's idle-cycle
+  zeros), the four edits a migrating Spark DAG needs, and the limit the cycle cannot cross
+  (registry `RDF-1` —
   rewritten 2026-09-02: the cycle now reclaims a delete-laden file whose delete file names it
   alone; a delete file naming several data files is the residue).
   **MW-10** adds the S3 Tables paragraph: automatic snapshot management stays on for scratch

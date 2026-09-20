@@ -470,7 +470,8 @@ def test_rewrite_manifests_spec_id_selects_and_use_caching_is_accepted(
     Spark takes ``table``, ``use_caching`` and ``spec_id``. ``use_caching`` caches Spark's own
     manifest DataFrame and changed no count on the oracle, so this engine accepts it and does
     nothing with it. ``spec_id`` selects which partition spec to rewrite; the current id runs
-    like the default call and an unknown id raises ``IllegalArgumentException``.
+    like the default call and an unknown id raises ``IllegalArgumentException``
+    (``Invalid spec id``, Spark's own text).
 
     pins: ice-rm-deletes-1/C-003, C-004
     """
@@ -495,6 +496,6 @@ def test_rewrite_manifests_spec_id_selects_and_use_caching_is_accepted(
 
     with pytest.raises(
         IllegalArgumentException,
-        match=r"reference to this spec-id",
+        match=r"Invalid spec id 99",
     ):
         spark.sql("CALL mem.system.rewrite_manifests(table => 'ns.args', spec_id => 99)")

@@ -773,9 +773,7 @@ async fn rm_deletes_unknown_spec_id_refuses() {
     .await
     .expect_err("an unknown spec id must refuse");
     assert!(
-        error
-            .to_string()
-            .contains("does not contain a reference to this spec-id"),
+        error.to_string().contains("Invalid spec id 99"),
         "the refusal must name the unknown spec, got: {error}"
     );
 }

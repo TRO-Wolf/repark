@@ -345,7 +345,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   partitioned cells pinned on Spark's two-leg semantics over RePark's before-state
   (RePark's DELETE writes position deletes where Spark's cells show copy-on-write),
   the evolved default answering zeros with no new snapshot, a non-current `spec_id`
-  rewriting that spec, and the unknown-`spec_id` refusal text. The v3 `part_mor_real`
+  rewriting that spec, and the unknown-`spec_id` refusal (`Invalid spec id`, Spark's
+  recorded text). The v3 `part_mor_real`
   replay carries one empty delete manifest (as Spark's recorded before does) and still
   answers `(7, 2)` with a two-file delete manifest after.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
