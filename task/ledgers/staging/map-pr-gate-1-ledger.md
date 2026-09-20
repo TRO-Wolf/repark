@@ -60,7 +60,7 @@ change, no sorting, no generator (step 2 owns map migration); no Rust or package
 
 ## Gates
 
-- `python3 -m pytest python/repark-parity/tests/test_map_pr_gate_1.py` — 9 passed (uv-provisioned
+- `python3 -m pytest python/repark-parity/tests/test_map_pr_gate_1.py` — 15 passed (uv-provisioned
   pytest; system python carries none).
 - `make check-map-md check-map-sync check-docs-links check-manifest` — green on this branch.
 - `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xb-map origin/main HEAD` — clean.
@@ -74,8 +74,9 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Every work-order clause is pinned by a fixture test that exercises the exact
-        wording — branch diff semantics, warn-only staged mode, the duplicate-row rule.
+      evidence: C-001–C-008 are pinned by fixture tests that exercise the exact wording;
+        C-009–C-011 are pinned by file-content pins; C-012 is proven from the ledger and
+        diff, not test-pinned.
       artifacts: [python/repark-parity/tests/test_map_pr_gate_1.py]
     - id: AT-2
       status: ATTACKED
