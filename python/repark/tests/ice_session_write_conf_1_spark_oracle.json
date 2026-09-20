@@ -1963,6 +1963,18 @@
       "c",
       "z"
      ]
+    ],
+    "stamped": [
+     [
+      "append",
+      false,
+      null
+     ],
+     [
+      "append",
+      true,
+      "a"
+     ]
     ]
    }
   },
@@ -2027,6 +2039,18 @@
       3,
       "c",
       "z"
+     ]
+    ],
+    "stamped": [
+     [
+      "append",
+      false,
+      null
+     ],
+     [
+      "append",
+      true,
+      "a"
      ]
     ]
    }
@@ -2105,6 +2129,18 @@
       "c",
       "z"
      ]
+    ],
+    "stamped": [
+     [
+      "append",
+      false,
+      null
+     ],
+     [
+      "delete",
+      true,
+      "a"
+     ]
     ]
    }
   },
@@ -2155,7 +2191,19 @@
       "0"
      ]
     ],
-    "data": []
+    "data": [],
+    "stamped": [
+     [
+      "append",
+      false,
+      null
+     ],
+     [
+      "delete",
+      false,
+      null
+     ]
+    ]
    }
   },
   "QR-DELETE-META-ADDED-RECORDS": {
@@ -2189,7 +2237,19 @@
       "0"
      ]
     ],
-    "data": []
+    "data": [],
+    "stamped": [
+     [
+      "append",
+      false,
+      null
+     ],
+     [
+      "delete",
+      false,
+      null
+     ]
+    ]
    }
   },
   "QR-MERGE-ADDED-RECORDS": {
@@ -2287,7 +2347,19 @@
       "0"
      ]
     ],
-    "data": []
+    "data": [],
+    "stamped": [
+     [
+      "append",
+      false,
+      null
+     ],
+     [
+      "delete",
+      false,
+      null
+     ]
+    ]
    }
   },
   "QR-ENGINE-NAME": {
@@ -2367,6 +2439,18 @@
       3,
       "c",
       "z"
+     ]
+    ],
+    "stamped": [
+     [
+      "append",
+      false,
+      null
+     ],
+     [
+      "append",
+      true,
+      "a"
      ]
     ]
    }

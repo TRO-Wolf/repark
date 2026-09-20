@@ -40,6 +40,7 @@ from _record_ice_session_write_conf_1_paths import (
     SEED_INSERT,
     SUMMARY_KEYS,
     cell_conf,
+    stamped_rows,
 )
 
 from repark import ReparkSession
@@ -257,7 +258,7 @@ def _assert_collision_message(spark_message: str, repark_message: str) -> None:
 @pytest.mark.parametrize("case", RESERVED_CELLS, ids=_RESERVED_IDS)
 def test_summary_key_collision_matches_spark(spark: Any, case: tuple[Any, ...]) -> None:
     """A colliding key refuses, a free key stamps. pins: ice-session-write-conf-1/C-041"""
-    cell_id, _key, _value, statements, extra = case
+    cell_id, key, value, statements, extra = case
     cell = _cell(cell_id)
     table = _table(cell_id, "sc")
     conf = cell_conf(cell_id)
@@ -275,6 +276,7 @@ def test_summary_key_collision_matches_spark(spark: Any, case: tuple[Any, ...]) 
         for statement in statements:
             spark.sql(statement.format(table=table)).collect()
         assert _snapshot_rows(spark, table) == cell["obs"]["summaries"]
+        assert stamped_rows(spark, table, key, value) == cell["obs"]["stamped"]
         assert _data_rows(spark, f"SELECT * FROM {table}") == cell["obs"]["data"]
     finally:
         _release(spark, conf, table)

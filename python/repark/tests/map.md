@@ -774,7 +774,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c):** the 38 path cells added to the
   unit fixture from the orchestrator recording `spark-qc1.json` (source SHA-256
   `f854793685590d4d2210c4bf0409150061d4a520eef529f576ab29b7490b0034`, fixture SHA-256
-  `a78b6afe8ec591ce4d8158de0b870cc0fe2c8be7cdedccd735e393aa9c7951f8`): `QS-*` branch writes
+  `181a56c82a86892c8eab8fa32a33f881d85f3bc826964a4d16eeaccea1ea6db3` since round 3): `QS-*` branch writes
   (SQL INSERT, DataFrame append, DELETE / UPDATE / MERGE in CoW and MoR), TRUNCATE and the
   metadata-only DELETE Spark does NOT stamp, MoR UPDATE / MERGE and the v3 twin; `QZ-*` the
   position-delete codec (session conf over `write.delete.parquet.compression-codec` over
@@ -792,6 +792,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   alone. `_run_branch_df_append_cell` derives it the way the pin drives it; the recorder
   `check` is clean at 63 cells on PySpark 4.1.2.
   pins: ice-session-write-conf-1/C-037
+  **Round 3 (2026-09-19):** the critic's `P3-QR-SPARK-APP-ID-HOLLOW` — `SUMMARY_KEYS` is a
+  fixed tuple, so a `QR-*` cell whose property is not in it (`spark.app.id`,
+  `changed-partition-count`, `engine-name`) could not see whether the extra landed, and
+  `QR-SPARK-APP-ID` would have passed against a RePark that dropped it. `stamped_rows`
+  observes, per snapshot, the cell's OWN key and `team`. It records the key as a
+  COMPARISON against the cell's configured value, not as the value, because Spark's own
+  writer puts a per-run `spark.app.id` on every snapshot it commits — the raw value could
+  never be pinned. Re-recorded on live PySpark 4.1.2: the only delta against the committed
+  fixture is this observation on the seven `QR-*` cells that commit a snapshot; the other
+  fifty-six are byte-identical. Spark's answer for `QR-SPARK-APP-ID` is
+  `[["append", false, null], ["append", true, "a"]]` — the session property overrides
+  Spark's own `spark.app.id` rather than colliding with it, because the writer carries it
+  as extra snapshot metadata, not as an `ImmutableMap` engine metric.
+  pins: ice-session-write-conf-1/C-053
 - [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
   UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
   `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).

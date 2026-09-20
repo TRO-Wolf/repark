@@ -61,6 +61,24 @@ def snapshot_rows(spark: Any, table: str) -> list[list[Any]]:
     ]
 
 
+def stamped_rows(spark: Any, table: str, key: str, value: str) -> list[list[Any]]:
+    """Read operation, whether this cell's OWN property landed, and ``team``.
+
+    ``snapshot_rows`` observes a fixed key tuple, so a cell whose property is not
+    in it — ``spark.app.id``, ``changed-partition-count``, ``engine-name`` — could
+    not see whether the extra landed at all. The landing is recorded as a
+    comparison rather than a value because Spark's own writer puts a per-run
+    ``spark.app.id`` on every snapshot it commits.
+    """
+    rows = spark.sql(
+        f"SELECT operation, summary FROM {table}.snapshots ORDER BY committed_at, snapshot_id"
+    ).collect()
+    return [
+        [row["operation"], dict(row["summary"]).get(key) == value, dict(row["summary"]).get("team")]
+        for row in rows
+    ]
+
+
 def ref_rows(spark: Any, table: str) -> list[list[Any]]:
     """Read each ref with the ordinal of the snapshot it points at."""
     ordered = spark.sql(
@@ -226,7 +244,7 @@ def _run_codec_cell(spark: Any, case: tuple[Any, ...]) -> dict[str, Any]:
 
 def _run_reserved_cell(spark: Any, case: tuple[Any, ...]) -> dict[str, Any]:
     """Run one QR reserved-key cell and record its Spark answer."""
-    cell_id, _key, _value, statements, extra = case
+    cell_id, key, value, statements, extra = case
     table = _table_name(cell_id, "sc")
     record: dict[str, Any] = {"id": cell_id}
     applied: list[str] = []
@@ -238,6 +256,7 @@ def _run_reserved_cell(spark: Any, case: tuple[Any, ...]) -> dict[str, Any]:
         record["status"] = "ok"
         record["obs"] = {
             "summaries": snapshot_rows(spark, table),
+            "stamped": stamped_rows(spark, table, key, value),
             "data": data_rows(spark, f"SELECT * FROM {table}"),
         }
     except Exception as error:
