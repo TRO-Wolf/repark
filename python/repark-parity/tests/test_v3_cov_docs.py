@@ -34,9 +34,9 @@ _CITED = ("DML-1", "G3-E8")
 _TOTALS = {
     "Statement programs measured": 81,
     "Comparison cells (statements + probes)": 267,
-    "**EQUAL** — repark and Spark agree on every cell": 73,
+    "**EQUAL** — repark and Spark agree on every cell": 74,
     "**REFUSED** — both engines refuse the statement": 1,
-    "**DIVERGES** — a registry row": 7,
+    "**DIVERGES** — a registry row": 6,
 }
 
 
