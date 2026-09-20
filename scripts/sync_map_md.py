@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Keep every `map.md` honest about the tree it navigates.
 
-The repo's hard rule is "`map.md` in every directory, updated in the same change" (AGENTS.md).
-`scripts/check_map_md.sh` holds the *lockstep* half: staged code forces a staged map. This
+The repo's hard rule is "`map.md` in every directory, updated in the same pull request"
+(AGENTS.md). `scripts/check_map_md.sh` holds the *lockstep* half: CI diffs the branch
+(`--base <ref>`) on every pull request, and the local hook's staged mode only warns. This
 script holds the *content* half — a touched map can still point at a file that moved and stay
 silent about a file that arrived.
 

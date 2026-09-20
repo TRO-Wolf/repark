@@ -885,8 +885,9 @@ repark-parity slice.
   `make install-hooks`; branch mode is invoked by `make check-map-md` (`BASE ?= origin/main`)
   and ci.yml's `map.md guard` step on pull requests.
   pins: map-pr-gate-1/C-009, C-010, C-011, C-012
-- `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one forces
-  a map to be TOUCHED; this one checks what the map actually says) and the SSOT for its rules.
+- `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one
+  requires the map to change in the same pull request; this one checks what the map actually
+  says) and the SSOT for its rules.
   Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
   (1) **link validity** — every relative markdown link resolves to an existing file or directory
   (`http(s)`/`mailto` links and bare `#anchors` are out of scope, nothing local can check them;
