@@ -7,7 +7,7 @@ use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, Ex
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
-use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::table::Table;
 use iceberg_datafusion::IcebergStaticTableProvider;
 use repark_core::CatalogRegistry;
@@ -209,20 +209,32 @@ pub(crate) async fn apply_wap_read_redirect(
             .await
             .map_err(iceberg_err)?;
         let temp_name = next_temp_view_name();
-        let _ = ctx.deregister_table(temp_name.as_str());
-        pinned.record(temp_name.clone());
-        ctx.register_table(temp_name.as_str(), Arc::new(provider))
+        let home_catalog = "datafusion".to_string();
+        let home_schema = "public".to_string();
+        let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
+            DataFusionError::Plan(format!(
+                "no session catalog `{home_catalog}` for wap-branch temp view (have {:?})",
+                ctx.catalog_names()
+            ))
+        })?;
+        let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
+            DataFusionError::Plan(format!(
+                "no schema `{home_catalog}.{home_schema}` for wap-branch temp view"
+            ))
+        })?;
+        let _ = schema.deregister_table(&temp_name);
+        pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
+        schema
+            .register_table(temp_name.clone(), Arc::new(provider))
             .map_err(|error| {
                 DataFusionError::Plan(format!(
-                    "failed to register wap-branch temp view {temp_name}: {error}"
+                    "failed to register wap-branch temp view \
+                     {home_catalog}.{home_schema}.{temp_name}: {error}"
                 ))
             })?;
-        let replacement = Token::Word(Word {
-            value: temp_name,
-            quote_style: None,
-            keyword: datafusion::sql::sqlparser::keywords::Keyword::NoKeyword,
-        });
-        tokens.splice(relation.start..relation.end, std::iter::once(replacement));
+        let replacement =
+            crate::write_to_branch::dotted_name_tokens(&[home_catalog, home_schema, temp_name]);
+        tokens.splice(relation.start..relation.end, replacement);
         rewrote = true;
     }
     if !rewrote {

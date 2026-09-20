@@ -6,11 +6,11 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use iceberg::Catalog;
 use iceberg::table::Table;
-use uuid::Uuid;
 
 use super::lineage::{rewrite_column_names, survivor_sql};
 use super::{register_affected_rewrite_target, register_identity_table};
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
+use crate::write::merge::cow_scratch::quote_scratch_name;
 use crate::write::merge::row_lineage::table_carries_merge_lineage;
 use crate::write::merge::session_staging::write_new_data_files_from_stream_with;
 use crate::write::merge::{
@@ -52,7 +52,7 @@ pub(super) async fn commit_identity_update_cow(
     let rewrite_sql = format!(
         "{survivors} UNION ALL SELECT {columns} FROM {newvals}",
         survivors = survivor_sql(write_schema, &rewrite_name, &ident_table, carry_lineage),
-        newvals = quote_ident(&new_table),
+        newvals = quote_scratch_name(&new_table),
     );
     let rewrite_result = async {
         let stream = ctx.sql(&rewrite_sql).await?.execute_stream().await?;
@@ -87,7 +87,6 @@ pub(super) async fn commit_identity_update_cow(
 }
 
 fn register_update_values_table(ctx: &SessionContext, batches: Vec<RecordBatch>) -> Result<String> {
-    let name = format!("__repark_pred_upd_{}", Uuid::new_v4().simple());
     if batches.is_empty() {
         return Err(DataFusionError::Internal(
             "identity UPDATE COW rewrite has no new-value batches".to_string(),
@@ -95,8 +94,7 @@ fn register_update_values_table(ctx: &SessionContext, batches: Vec<RecordBatch>)
     }
     let schema = batches[0].schema();
     let provider = MemTable::try_new(schema, vec![batches])?;
-    ctx.register_table(name.as_str(), Arc::new(provider))?;
-    Ok(name)
+    crate::write::merge::cow_scratch::register_scratch_provider(ctx, Arc::new(provider), "pred_upd")
 }
 
 #[allow(clippy::too_many_arguments)]

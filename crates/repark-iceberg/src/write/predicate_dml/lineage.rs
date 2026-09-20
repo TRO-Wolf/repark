@@ -33,7 +33,7 @@ pub(super) fn survivor_sql(
         "SELECT {columns} FROM {rewrite} AS t WHERE NOT EXISTS (\
          SELECT 1 FROM {idents} AS i WHERE i.{file} = t.{file} AND i.{pos} = t.{pos})",
         rewrite = crate::write::merge::cow_scratch::quote_scratch_name(rewrite_name),
-        idents = quote_ident(ident_table),
+        idents = crate::write::merge::cow_scratch::quote_scratch_name(ident_table),
         file = quote_ident(FILE_PATH_COL),
         pos = quote_ident(POS_COL),
     )

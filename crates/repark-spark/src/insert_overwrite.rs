@@ -511,11 +511,26 @@ pub(crate) async fn insert_overwrite_from_materialized_source_fallback(
         let sequence = OW_MATERIALIZE_SEQ.fetch_add(1, Ordering::Relaxed);
         format!("__repark_ow_mat_{sequence}")
     };
-    let _ = ctx.deregister_table(temp_name.as_str());
-    ctx.register_table(temp_name.as_str(), Arc::new(mem_table))
+    let home_catalog = "datafusion".to_string();
+    let home_schema = "public".to_string();
+    let qualified = format!("{home_catalog}.{home_schema}.{temp_name}");
+    let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no session catalog `{home_catalog}` for INSERT OVERWRITE materialize view (have {:?})",
+            ctx.catalog_names()
+        ))
+    })?;
+    let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no schema `{home_catalog}.{home_schema}` for INSERT OVERWRITE materialize view"
+        ))
+    })?;
+    let _ = schema.deregister_table(&temp_name);
+    schema
+        .register_table(temp_name.clone(), Arc::new(mem_table))
         .map_err(|error| {
             DataFusionError::Plan(format!(
-                "failed to register INSERT OVERWRITE materialize view {temp_name}: {error}"
+                "failed to register INSERT OVERWRITE materialize view {qualified}: {error}"
             ))
         })?;
 
@@ -525,9 +540,9 @@ pub(crate) async fn insert_overwrite_from_materialized_source_fallback(
         let names: Vec<String> = columns.iter().map(object_name_last).collect();
         format!(" ({})", names.join(", "))
     };
-    let insert_sql = format!("INSERT OVERWRITE {table_sql}{column_list} SELECT * FROM {temp_name}");
+    let insert_sql = format!("INSERT OVERWRITE {table_sql}{column_list} SELECT * FROM {qualified}");
     let result = spark_ast::execute_passthrough(ctx, catalogs, &insert_sql).await;
-    let _ = ctx.deregister_table(temp_name.as_str());
+    let _ = ctx.deregister_table(qualified.as_str());
     result
 }
 

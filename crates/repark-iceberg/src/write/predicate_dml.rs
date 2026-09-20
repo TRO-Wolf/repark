@@ -19,7 +19,6 @@ use iceberg::spec::{DataFileFormat, FormatVersion};
 use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use std::str::FromStr;
-use uuid::Uuid;
 
 use crate::write::conflict_filter::for_identity_dml;
 use crate::write::file_scoped_rewrite::allowlist_from_paths;
@@ -446,7 +445,6 @@ pub(super) fn register_identity_table(
     ctx: &SessionContext,
     pairs: &[PositionDeletePair],
 ) -> Result<String> {
-    let name = format!("__repark_pred_ident_{}", Uuid::new_v4().simple());
     let schema = Arc::new(ArrowSchema::new(vec![
         Field::new(FILE_PATH_COL, DataType::Utf8, false),
         Field::new(POS_COL, DataType::Int64, false),
@@ -461,8 +459,11 @@ pub(super) fn register_identity_table(
         ],
     )?;
     let provider = MemTable::try_new(schema, vec![vec![batch]])?;
-    ctx.register_table(name.as_str(), Arc::new(provider))?;
-    Ok(name)
+    crate::write::merge::cow_scratch::register_scratch_provider(
+        ctx,
+        Arc::new(provider),
+        "pred_ident",
+    )
 }
 
 pub(super) fn register_affected_rewrite_target(

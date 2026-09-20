@@ -106,12 +106,22 @@ pub async fn prepare_lineage_sql(
     let user_names = user_field_names(&table);
     let provider = LineageColumnsTableProvider::try_new(table)?;
     let temp_name = next_temp_view_name();
-    let _ = ctx.deregister_table(temp_name.as_str());
-    pinned.push(temp_name.clone());
-    ctx.register_table(temp_name.as_str(), Arc::new(provider))
+    let catalog = ctx.catalog("datafusion").ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no session catalog `datafusion` for lineage temp view (have {:?})",
+            ctx.catalog_names()
+        ))
+    })?;
+    let schema = catalog.schema("public").ok_or_else(|| {
+        DataFusionError::Plan("no schema `datafusion.public` for lineage temp view".to_string())
+    })?;
+    let _ = schema.deregister_table(&temp_name);
+    pinned.push(format!("datafusion.public.{temp_name}"));
+    schema
+        .register_table(temp_name.clone(), Arc::new(provider))
         .map_err(|error| {
             DataFusionError::Plan(format!(
-                "failed to register lineage temp view {temp_name}: {error}"
+                "failed to register lineage temp view datafusion.public.{temp_name}: {error}"
             ))
         })?;
 
@@ -120,7 +130,11 @@ pub async fn prepare_lineage_sql(
     });
     let mut visitor = RewriteLineage {
         original: target.name,
-        replacement: ObjectName::from(vec![Ident::new(temp_name)]),
+        replacement: ObjectName::from(vec![
+            Ident::new("datafusion"),
+            Ident::new("public"),
+            Ident::new(temp_name),
+        ]),
         alias,
         user_names,
     };

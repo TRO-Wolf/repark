@@ -5,7 +5,7 @@ use std::sync::Arc;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
-use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
 use repark_core::time_travel::{
@@ -132,28 +132,33 @@ pub async fn prepare_time_travel_sql(
         let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
             .await
             .map_err(iceberg_err)?;
-        // The SHARED minter in repark-core.
         let temp_name = next_temp_view_name();
-        // KEPT after the unification, and not dead.
-        let _ = ctx.deregister_table(temp_name.as_str());
-        // Recorded BEFORE the registration attempt.
-        pinned.names.push(temp_name.clone());
-        ctx.register_table(temp_name.as_str(), Arc::new(provider))
+        let home_catalog = "datafusion".to_string();
+        let home_schema = "public".to_string();
+        let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
+            DataFusionError::Plan(format!(
+                "no session catalog `{home_catalog}` for time-travel temp view (have {:?})",
+                ctx.catalog_names()
+            ))
+        })?;
+        let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
+            DataFusionError::Plan(format!(
+                "no schema `{home_catalog}.{home_schema}` for time-travel temp view"
+            ))
+        })?;
+        let _ = schema.deregister_table(&temp_name);
+        pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
+        schema
+            .register_table(temp_name.clone(), Arc::new(provider))
             .map_err(|error| {
                 DataFusionError::Plan(format!(
-                    "failed to register time-travel temp view {temp_name}: {error}"
+                    "failed to register time-travel temp view \
+                     {home_catalog}.{home_schema}.{temp_name}: {error}"
                 ))
             })?;
-        // Splice: table name + AS OF clause → single temp-view identifier.
-        let replacement = Token::Word(Word {
-            value: temp_name,
-            quote_style: None,
-            keyword: datafusion::sql::sqlparser::keywords::Keyword::NoKeyword,
-        });
-        tokens.splice(
-            span.table_start..span.clause_end,
-            std::iter::once(replacement),
-        );
+        let replacement =
+            crate::write_to_branch::dotted_name_tokens(&[home_catalog, home_schema, temp_name]);
+        tokens.splice(span.table_start..span.clause_end, replacement);
     }
 
     Ok(Some(tokens_to_sql(&tokens)))

@@ -57,7 +57,7 @@ pub(crate) fn quote_scratch_name(name: &str) -> String {
         .join(".")
 }
 
-pub(super) fn register_scratch_provider(
+pub(crate) fn register_scratch_provider(
     ctx: &SessionContext,
     provider: Arc<dyn TableProvider>,
     kind: &str,
