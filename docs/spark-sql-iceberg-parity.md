@@ -3305,52 +3305,130 @@ the pin rather than obeying it.
   merges it into the statement options; the router folds it into every write
   arm); Python forwards the key strings only. An unknown codec refuses before
   any file is written, naming the codec. Before: both confs silently ignored
-  (measured 2026-09-19: 26 of 30 pins red on the base). After: the pin file is
-  green with three strict xfails, all fork asks under `F-RDF-SESSION-CONF-1`:
-  `rewrite_data_files` (codec and snapshot property) and the fork-committed
-  `UPDATE` (snapshot property).
-  **Open (verification critic 2026-09-19, for the next run):** the session confs do not yet
-  reach branch writes (`INSERT INTO t.branch_b`, DELETE/UPDATE on a branch), the native
-  `repark.sql` door's INSERT / CTAS / TRUNCATE, or the codec of v2 position-delete files. On
-  MERGE and the DML paths a snapshot property that names a summary metric (`added-records`)
-  replaces the engine's value after the fork's collector, where Spark refuses the write
-  (`Multiple entries with same key: added-records=2 and added-records=999`, measured on
-  INSERT, MERGE and merge-on-read DELETE); the INSERT path already refuses through
-  `EngineSummary`, and the DML fix must refuse only on an actual collision (the recorded
-  `COLL-*` cells of ICE-WRITE-OPTIONS-1 pin that).
+  (measured 2026-09-19: 26 of 30 pins red on the base). After: the pin files are
+  green with two strict xfails, both fork asks under `F-RDF-SESSION-CONF-1`
+  (`rewrite_data_files`, codec and snapshot property), and one dated xfail under
+  `IPI-08` (`QS-DELETE-PART-META`). The plain `UPDATE` residue is CLOSED: when the
+  session write conf is set that statement is an owned identity write
+  (`repark-spark` `spark_ast.rs` `plain_identity_or_update`), so `SP-UPDATE` is a pin.
+  **Verification critic 2026-09-19 (four P1s, two P2s) — all CLOSED, round 1 + round 2.**
+  The 38 `QS-*` / `QZ-*` / `QR-*` cells recorded on Spark 4.1.2 (run 25c) join the unit's
+  oracle and pin each closure:
+  - **P1-1 branch writes.** `INSERT INTO t.branch_b`, `writeTo("t.branch_b").append()` and
+    DELETE / UPDATE / MERGE on a branch in copy-on-write and merge-on-read stamp every branch
+    snapshot and take the session codec. With the conf set the statement keeps its
+    ref-qualified name instead of being rewritten onto the fork temp provider (which carries
+    neither), the identity DML scans the ref's snapshot and commits `to_branch`, and the
+    DataFrame writer probes the table a ref hangs off. Pins: `QS-BRANCH-*` and `QZ-BRANCH-*`
+    through `test_session_property_path_matches_spark` /
+    `test_branch_dataframe_append_stamps_session_team` /
+    `test_session_codec_path_matches_spark`.
+  - **P1-2 the native `repark.sql` door.** Its plain INSERT and CTAS reached the fork's
+    DataFusion `insert_into` / the staged transaction, so the native door answered differently
+    from the facade door on the same session conf. Both now resolve the session write and
+    commit through the shared Rust carrier; a `CREATE TABLE` with no query resolves nothing, so
+    a bogus codec still refuses at the first write and not at DDL. Pins:
+    `crates/repark-sql/src/session_write_conf.rs`, 8 tests (INSERT / CTAS / MERGE / DELETE /
+    merge-on-read DELETE stamping, the collision refusal, the free-key totals, the codec
+    refusal) — the native session carries its own `ConfigOptions`, which the Python facade
+    cannot reach, so these pins can only live in Rust.
+  - **P1-3 position-delete codecs.** `position_delete_writer_properties_for` read the DATA-file
+    property only, so the session conf and Iceberg's own
+    `write.delete.parquet.compression-codec` were both silently ignored on every
+    merge-on-read delete file. It now resolves in `SparkWriteConf` order — writer option
+    (already merged over the session conf) > delete-codec property > data-codec property >
+    default — with the resolved staging threaded from the commit site into the row-delta
+    preparation. A v3 deletion vector is puffin and takes no codec, as Spark measures. Pins:
+    `QZ-POSDEL-*`, `QZ-BRANCH-DELETE-MOR`.
+  - **P1-6 the summary-key collision rule.** Every owned commit site now builds the engine
+    summary the fork's producer would build and refuses an ACTUAL collision instead of
+    silently replacing the engine value; a key the engine did not produce is stamped and feeds
+    the totals as Java does. The refusal is `IllegalArgumentException`-class with Spark's
+    message verbatim. A blanket refusal of every metric key is the wrong rule and was reverted
+    (`549074ce`): it broke ICE-WRITE-OPTIONS-1's recorded `COLL-*` cells. Pins: `QR-*` through
+    `test_summary_key_collision_matches_spark`, and the `RV-*` cells replay equal 3 of 3.
+  - **P2-4 mutation-proof Rust pins.** Replacing `summary_extra` with `&[]` at both
+    `merge/snapshot_commit.rs` commit sites reds `session_team_stamps_cow_delete_overwrite`
+    (repark-spark) and `native_merge_*` / `native_delete_*` (repark-sql); round 2 measured that
+    the row-delta arm ALONE reddened nothing and added
+    `native_merge_on_read_delete_stamps_the_session_snapshot_property`, which the same mutation
+    now reds.
+  - **P2-5 TRUNCATE and metadata-only DELETE** — resolved by measurement, not by code: Spark
+    does NOT apply the session snapshot property to a `TRUNCATE` or a metadata-only delete, and
+    does not refuse a colliding key there either. RePark matches on `QS-TRUNCATE`,
+    `QS-TRUNCATE-V3`, `QS-DELETE-ALL-META`, `QZ-TRUNCATE-NOFILES`, `QR-TRUNCATE-DELETED-RECORDS`
+    and `QR-DELETE-META-*`.
 - **Apache Spark** — the recorded cells in
   `python/repark/tests/ice_session_write_conf_1_spark_oracle.json` (live
-  PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-18, 16 SP + 9 CZ cells): `team=a`
+  PySpark 4.1.2 + Iceberg 1.11.0: 16 SP + 9 CZ cells 2026-09-18, plus 38
+  `QS-*` / `QZ-*` / `QR-*` path cells 2026-09-19 run 25c — 63 in all): `team=a`
   stamped on every committed snapshot, two keys at once, empty value stamps
   `""`, writer option wins over conf wins over table property,
   `snapshot-property.operation` never overrides `operation`,
   `rollback_to_snapshot` makes no snapshot, `gzip`/`snappy`/upper-case `GZIP`
   set every written file's codec including a COW DELETE's rewritten file, and
-  `bogus` fails the write (`Unsupported compression codec: bogus`).
+  `bogus` fails the write (`Unsupported compression codec: bogus`). The path cells
+  add: every branch snapshot stamped and every branch file taking the session codec;
+  merge-on-read UPDATE / MERGE stamped; v2 position-delete files taking the session
+  codec OVER both delete-codec and data-codec table properties while a v3 deletion
+  vector (puffin) takes none; a `TRUNCATE` and a metadata-only delete stamped by
+  NEITHER engine; and `SnapshotProducer`'s `ImmutableMap` builder failing the write
+  with `IllegalArgumentException: Multiple entries with same key: <k>=<engine> and
+  <k>=<property>` on an actual collision while a free key is stamped and feeds the
+  totals (`deleted-records=5` takes `total-records` to 3+3-5=1).
 - **Pin** — `python/repark/tests/test_ice_session_write_conf_1.py` (one pin
-  per cell on the facade SQL / DataFrame doors, v2 and v3 twins; the live tier
-  re-derives the fixture under `REPARK_PARITY_LIVE=1`);
+  per SP / CZ cell on the facade SQL / DataFrame doors, v2 and v3 twins; the live tier
+  re-derives the whole 63-cell fixture under `REPARK_PARITY_LIVE=1`);
+  `python/repark/tests/test_ice_session_write_conf_1_paths.py` (the 38 path cells, driven
+  from the same statement tuples the recorder uses so pin and re-recording cannot drift);
   `crates/repark-iceberg/src/tests/session_write_conf.rs` (resolver precedence
-  carrier, 11 tests) and `crates/repark-spark/src/tests/session_write_conf.rs`
-  (Spark-door stamping, 4 tests).
+  carrier, 11 tests), `crates/repark-spark/src/tests/session_write_conf.rs`
+  (Spark-door stamping, 4 tests) and `crates/repark-sql/src/session_write_conf.rs`
+  (native-door stamping, collision and codec, 8 tests).
   pins: ice-session-write-conf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: ice-session-write-conf-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
   pins: ice-session-write-conf-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
   pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
-  pins: ice-session-write-conf-1/C-033, C-034
-- **Rationale** — FIXED for the measured doors. One residue stays named here,
-  not pinned as parity: **F-RDF-SESSION-CONF-1 (2026-09-19)** — the fork's
-  `RewriteDataFiles` takes no writer-property / snapshot-property hook, so the
-  `rewrite_data_files` `replace` commit and its output files ignore both
-  confs. `SP-CALL-RDF` and `CZ-CONF-RDF` are strict xfails with that dated
-  reason; the suite reds if the fork ever honours them there. No
-  table-property overlay was added.
+  pins: ice-session-write-conf-1/C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040
+  pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044
+- **Rationale** — FIXED for the measured doors. Three residues stay named here,
+  none of them pinned as parity:
+  - **F-RDF-SESSION-CONF-1 (2026-09-19)** — the fork's `RewriteDataFiles` takes no
+    writer-property / snapshot-property hook, so the `rewrite_data_files` `replace`
+    commit and its output files ignore both confs. `SP-CALL-RDF` and `CZ-CONF-RDF` are
+    strict xfails with that dated reason; the suite reds if the fork ever honours them
+    there. No table-property overlay was added. **Fork ask:** give
+    `RewriteDataFiles` the `snapshot_properties` / writer-property hooks Java's
+    `RewriteDataFilesSparkAction` has, so the `replace` commit and the rewritten files
+    take the resolved session write like every other commit site.
+  - **IPI-08 (2026-09-19)** — RePark's whole-partition `DELETE` rewrites data files where
+    Spark commits a metadata-only delete, so the session snapshot property IS stamped
+    where Spark stamps nothing. That is a DELETE-routing divergence, not a conf one:
+    `QS-DELETE-PART-META` is a dated xfail naming IPI-08 and flips to a pin the day the
+    routing matches. Every other metadata-only cell already matches.
+  - **`engine-name` / `engine-version` (2026-09-19)** — RePark's summaries carry no JVM
+    engine identity, so `QR-ENGINE-NAME` refuses with
+    `engine-name=<engine-reserved> and engine-name=fake` where Spark names its own
+    `engine-name=spark`. Same class, same shape, same refusal; only the engine's own
+    value differs, and the pin asserts that reading — the same one ICE-WRITE-OPTIONS-1's
+    `COLL-01` / `COLL-02` cells take.
 - **Round 1 fix (Q-24c-5, 2026-09-19).** The session-conf reroute first sent
   option-less plain INSERT through the by-name append, which refused positional
   `VALUES`. An option-less list-free INSERT now stages positionally
   (`stage_overwrite_files_with` with an empty column list — empty means
   positional over all columns, Spark's semantics); the by-name arm stays for
   the option-carrying form. Pin: `session_team_stamps_plain_insert`.
+- **Round 2 note, OUT OF SCOPE of this row (measured 2026-09-19).** Replaying the
+  original `SP-*` cells surfaced a divergence that has nothing to do with the session
+  confs: after a copy-on-write `DELETE`, RePark's table metadata JSON lists the
+  `snapshots` array out of creation order (the `overwrite` entry before the `append`),
+  where Java appends and keeps creation order. RePark's `snapshot-log` IS ordered and the
+  `<table>.snapshots` metadata table reads correctly ordered by `committed_at`, so no pin
+  in this unit sees it — only a consumer reading the raw array positionally would.
+  Reproduce: session conf set, `INSERT` three rows then `DELETE FROM t WHERE id = 1`, read
+  `snapshots[*].timestamp-ms` from the newest metadata file. It belongs to the fork's
+  `TableMetadata` builder and wants its own row and fork ask; it is recorded here because
+  this is where it was measured.
 
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 
