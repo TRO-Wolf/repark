@@ -23,7 +23,9 @@ pub(crate) async fn plan_purge(
             iceberg_err(error)
         }
     })?;
-    let _ = gc_enabled(&loaded);
+    if !gc_enabled(&loaded) {
+        return Err(DataFusionError::Plan(GC_DISABLED_REFUSAL.to_string()));
+    }
     let location = loaded
         .metadata_location_result()
         .map_err(iceberg_err)?
