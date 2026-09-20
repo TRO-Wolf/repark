@@ -5708,6 +5708,41 @@ the pin rather than obeying it.
   non-match.
 - **Controls** — FN-FIX-2-CTRL-1 (2026-09-04): the escape-at-end refusal holds under ANSI off too, on both engines, for the API, SQL, and explicit-`ESCAPE` spellings.
 
+### FN-SYSFN-1 — the Iceberg `<catalog>.system.*` SQL functions — **FIXED 2026-09-20 (ICE-SYSTEM-FUNCTIONS-1)**
+
+- **repark** — `<cat>.system.<fn>` resolves for all seven Iceberg system
+  functions (`bucket`, `truncate`, `years`, `months`, `days`, `hours`,
+  `iceberg_version`) on every registered Iceberg catalog: the Spark door
+  rewrites the qualified call pre-parse to a reserved internal UDF that wraps
+  the fork's `create_transform_function`, so late-registered catalogs resolve
+  with no re-registration. `SHOW [USER] FUNCTIONS IN <cat>.system` answers the
+  seven catalog-qualified names, sorted, in one `function` column. No bare
+  names are registered: unqualified `truncate` stays `UNRESOLVED_ROUTINE` on
+  the SQL door at both arities, and `SHOW FUNCTIONS` / `SHOW USER FUNCTIONS` /
+  `SHOW SYSTEM FUNCTIONS` without `IN` keep their previous behavior. Declared
+  boundaries: two-part `system.<fn>` stays `UNRESOLVED_ROUTINE`; quoted
+  three-part spellings are not rewritten; `SHOW … IN <cat>.system` for an
+  unregistered catalog keeps DataFusion's error; transform pushdown into scans
+  is not implemented (identical answers, no partition pruning); the
+  `iceberg_version()` text is unpinned by design.
+- **Apache Spark** — the same seven calls resolve per Iceberg catalog with
+  identical values, and `SHOW USER FUNCTIONS IN <cat>.system` lists the seven
+  qualified names. *(oracle: recorded — the IPI-29 inventory cells
+  (`F-BUCKET-*`, `F-TRUNCATE-*`, `F-YEARS`, `F-MONTHS`, `F-DAYS`, `F-HOURS`,
+  `F-ICEBERG-VERSION`, `F-BUCKET-IN-WHERE`, `F-SHOW-FUNCTIONS`) over the
+  shared `cells_misc.py` fixture, live Spark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0.)*
+- **Pin** — `python/repark/tests/test_ice_system_functions_1.py` (value pins
+  C-001..C-008, C-012..C-016; NULL C-009/C-017; refusals C-010/C-021; mechanics
+  C-011/C-018/C-025; predicate C-019; SHOW C-020/C-023; catalogs C-022) plus
+  `crates/repark-spark/src/describe_show/tests.rs` (rewrite and SHOW-parser
+  unit pins).
+- **Rationale** — FIXED. Filed and retired in the same unit: before it all 15
+  cells refused (`UNRESOLVED_ROUTINE` on every call, DataFusion's
+  `information_schema` error on SHOW); after it all 15 replay EQUAL. The
+  boundaries in the repark half are deliberate scope fences (packet H-10, D-3,
+  D-5), not gaps.
+
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
 > **CLOSED 2026-08-15.** `CAST`/`TRY_CAST` between `DATE` and any signed integer width now
