@@ -9,6 +9,7 @@ ICE-RDF-SORT-PARSE-1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-sp
 ICE-RDF-SORT-PARSE-1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/tests/call.rs` 1303 → 1287 (`call_rewrite_sort_strategy_refuses_loud` becomes `call_rewrite_positional_strategy_routes_to_the_rewriter` — the R135 wording it pinned no longer exists, and the replacement asserts the fork's unsorted-table refusal through both the named and the positional door), shrink-only. pins: ice-rdf-sort-parse-1/C-004
 IPI-51 PR4 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1449 → 1446 (the Hive `ADD PARTITION` residual answers through `catalog_ops::partition_management_unsupported`), shrink-only, with the CAP-1 mirror. pins: ice-error-conditions-1/C-011
 ICE-CATALOG-SESSION-1 S7 (2026-09-20): `check_rust_file_size.py` ratchets `repark-core/src/catalog_config.rs` 1028 → 1007 (the kind-fn extraction); `check_lib_rs.py` gains the `repark-core` 151 row for `mod catalog_kind;`.
+ICE-CATALOG-SESSION-1 S7 (2026-09-20): `check_rust_file_size.py` ratchets `repark-core/src/catalog_config.rs` 1028 → 1007 (the kind-fn extraction); `check_lib_rs.py` gains the `repark-core` 151 row for `mod catalog_kind;` (no trailing measured-note: the ban counts it).
 
 ICE-CATALOG-SESSION-1 S6 (2026-09-20): `check_lib_py.py` moves `spark/session/session_core.py` 2335 → 2345 (the USE/SET engine-sync after `inner.sql` plus `_sync_catalog_state_from_engine`) — exact-baseline hold, not a ratchet.
 
