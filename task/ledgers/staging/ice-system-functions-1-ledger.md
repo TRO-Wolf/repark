@@ -143,7 +143,8 @@ OPEN. Touched files per clause: C-001..C-010
 C-011 `crates/repark-functions/src/lib.rs` + `crates/repark-functions/Cargo.toml`
 + `crates/repark-functions/map.md` + `crates/repark-functions/src/map.md` plus
 this ledger's own entry in `task/ledgers/staging/map.md`.
-`Cargo.lock` / `.github/` / `session.rs` / `router.rs` / `repark-spark` /
-`STATUS.md`: untouched. Whole-workspace `cargo test`, `make verify`, the facade
-suite and the parity harness not run per the brief's machine rule; the lane gate
-is the proof.
+`Cargo.lock` gains the one-line `repark-functions → iceberg` edge (committed
+separately after the gate). `.github/` / `session.rs` / `router.rs` /
+`repark-spark` / `STATUS.md`: untouched. Whole-workspace `cargo test`,
+`make verify`, the facade suite and the parity harness not run per the brief's
+machine rule; the lane gate is the proof.
