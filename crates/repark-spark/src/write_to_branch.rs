@@ -125,7 +125,11 @@ struct TargetSpan {
     end: usize,
 }
 
-fn find_target_span(tokens: &[Token]) -> Option<TargetSpan> {
+pub(crate) fn find_write_target_range(tokens: &[Token]) -> Option<(usize, usize)> {
+    find_target_span(tokens, 1).map(|span| (span.start, span.end))
+}
+
+fn find_target_span(tokens: &[Token], min_parts: usize) -> Option<TargetSpan> {
     let significant: Vec<(usize, &Token)> = tokens
         .iter()
         .enumerate()
@@ -136,7 +140,7 @@ fn find_target_span(tokens: &[Token]) -> Option<TargetSpan> {
     }
     let start = write_target_start(&significant)?;
     let (parts, end_sig) = collect_parts(&significant, start)?;
-    if parts.len() < 2 {
+    if parts.len() < min_parts {
         return None;
     }
     let last = parts.last()?;
@@ -299,96 +303,176 @@ fn dotted_name_tokens(parts: &[String]) -> Vec<Token> {
     tokens
 }
 
+struct BranchTarget {
+    table_parts: Vec<String>,
+    branch: String,
+    selector_segment: String,
+    keep_existing_selector: bool,
+    require_existing_branch: bool,
+}
+
+async fn wap_branch_target(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    wap: &crate::wap::WapSessionConfig,
+    parts: &[String],
+) -> Result<Option<BranchTarget>> {
+    if wap.branch.is_none() {
+        return Ok(None);
+    }
+    let qualified = qualify_table_parts(ctx, parts.to_vec());
+    let Ok((_catalog_name, ident, catalog)) = load_target_table(catalogs, &qualified) else {
+        return Ok(None);
+    };
+    let Ok(table) = catalog.load_table(&ident).await else {
+        return Ok(None);
+    };
+    let Some(branch) = crate::wap::wap_branch_for_table(wap, &table)? else {
+        return Ok(None);
+    };
+    Ok(Some(BranchTarget {
+        table_parts: parts.to_vec(),
+        selector_segment: format!("branch_{branch}"),
+        branch,
+        keep_existing_selector: false,
+        require_existing_branch: false,
+    }))
+}
+
 pub(crate) async fn apply_write_to_branch<'a>(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &'a str,
     pinned: &mut PinnedViews,
 ) -> Result<Cow<'a, str>> {
-    let Some(sniff) = sniff_write_to_branch(sql) else {
-        return Ok(Cow::Borrowed(sql));
-    };
-    if !sniff_applies(ctx, &sniff) {
+    let wap = crate::wap::session_wap(ctx);
+    let explicit = sniff_write_to_branch(sql).is_some_and(|sniff| sniff_applies(ctx, &sniff));
+    if !explicit && wap.branch.is_none() {
         return Ok(Cow::Borrowed(sql));
     }
     let dialect = DatabricksDialect {};
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
         return Ok(Cow::Borrowed(sql));
     };
-    let Some(span) = find_target_span(&tokens) else {
+    let Some(span) = find_target_span(&tokens, if explicit { 2 } else { 1 }) else {
         return Ok(Cow::Borrowed(sql));
     };
-    let Some((table_parts, selector)) = split_write_ref_parts(&span.parts) else {
-        return Ok(Cow::Borrowed(sql));
+    let selector = explicit
+        .then(|| split_write_ref_parts(&span.parts))
+        .flatten();
+    let target = match selector {
+        Some((_, RefSelectorKind::Tag)) => return Err(tag_write_error(sql)),
+        Some((table_parts, RefSelectorKind::Branch(branch))) => BranchTarget {
+            table_parts,
+            selector_segment: span
+                .parts
+                .last()
+                .cloned()
+                .unwrap_or_else(|| format!("branch_{branch}")),
+            branch,
+            keep_existing_selector: span.parts.len() >= 4,
+            require_existing_branch: true,
+        },
+        None => match wap_branch_target(ctx, catalogs, &wap, &span.parts).await? {
+            Some(target) => target,
+            None => return Ok(Cow::Borrowed(sql)),
+        },
     };
-    match selector {
-        RefSelectorKind::Tag => Err(tag_write_error(sql)),
-        RefSelectorKind::Branch(branch) => {
-            let qualified = qualify_table_parts(ctx, table_parts);
-            let (_catalog_name, ident, catalog) = load_target_table(catalogs, &qualified)?;
-            let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-            if table.metadata().snapshot_for_ref(&branch).is_none() {
-                return Err(missing_branch_error(&branch));
-            }
-            if let Some(kind) = write_dml_kind(sql) {
-                repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
-                    catalog.as_ref(),
-                    &ident,
-                    &ident.to_string(),
-                    kind,
-                )
-                .await?;
-            }
-            if is_owned_write_head(sql) {
-                if span.parts.len() >= 4 {
-                    return Ok(Cow::Borrowed(sql));
-                }
-                let mut rewritten = qualified;
-                rewritten.push(
-                    span.parts
-                        .last()
-                        .cloned()
-                        .unwrap_or_else(|| format!("branch_{branch}")),
-                );
-                let mut tokens = tokens;
-                tokens.splice(span.start..span.end, dotted_name_tokens(&rewritten));
-                return Ok(Cow::Owned(tokens_to_sql(&tokens)));
-            }
-            let provider = IcebergTableProvider::try_new(
-                catalog,
-                ident.namespace().clone(),
-                ident.name().to_string(),
-            )
+    commit_write_on_branch(ctx, catalogs, sql, pinned, &tokens, &span, target).await
+}
+
+async fn create_wap_branch_from_main(
+    catalog: &dyn iceberg::Catalog,
+    ident: &TableIdent,
+    table: &iceberg::table::Table,
+    branch: &str,
+) -> Result<()> {
+    if table.metadata().snapshot_for_ref(branch).is_some() {
+        return Ok(());
+    }
+    let Some(snapshot_id) = table.metadata().current_snapshot_id() else {
+        return Ok(());
+    };
+    repark_iceberg::write::create_snapshot_ref(
+        catalog,
+        ident,
+        repark_iceberg::write::SnapshotRefKind::Branch,
+        branch,
+        snapshot_id,
+    )
+    .await
+    .map_err(iceberg_err)
+}
+
+async fn commit_write_on_branch<'a>(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &'a str,
+    pinned: &mut PinnedViews,
+    tokens: &[Token],
+    span: &TargetSpan,
+    target: BranchTarget,
+) -> Result<Cow<'a, str>> {
+    let qualified = qualify_table_parts(ctx, target.table_parts);
+    let (_catalog_name, ident, catalog) = load_target_table(catalogs, &qualified)?;
+    let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    if target.require_existing_branch {
+        if table.metadata().snapshot_for_ref(&target.branch).is_none() {
+            return Err(missing_branch_error(&target.branch));
+        }
+    } else {
+        create_wap_branch_from_main(catalog.as_ref(), &ident, &table, &target.branch).await?;
+    }
+    if let Some(kind) = write_dml_kind(sql) {
+        repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
+            catalog.as_ref(),
+            &ident,
+            &ident.to_string(),
+            kind,
+        )
+        .await?;
+    }
+    if is_owned_write_head(sql) {
+        if target.keep_existing_selector {
+            return Ok(Cow::Borrowed(sql));
+        }
+        let mut rewritten = qualified;
+        rewritten.push(target.selector_segment);
+        let mut tokens = tokens.to_vec();
+        tokens.splice(span.start..span.end, dotted_name_tokens(&rewritten));
+        return Ok(Cow::Owned(tokens_to_sql(&tokens)));
+    }
+    let provider =
+        IcebergTableProvider::try_new(catalog, ident.namespace().clone(), ident.name().to_string())
             .await
             .map_err(iceberg_err)?
-            .with_commit_branch(branch);
-            let temp_name = next_temp_view_name();
-            let home_catalog = "datafusion".to_string();
-            let home_schema = "public".to_string();
-            let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "no session catalog `{home_catalog}` for branch-commit temp view (have {:?})",
-                    ctx.catalog_names()
-                ))
-            })?;
-            let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "no schema `{home_catalog}.{home_schema}` for branch-commit temp view"
-                ))
-            })?;
-            let _ = schema.deregister_table(&temp_name);
-            schema
-                .register_table(temp_name.clone(), Arc::new(provider))
-                .map_err(|error| {
-                    DataFusionError::Plan(format!(
-                        "failed to register branch-commit temp view {home_catalog}.{home_schema}.{temp_name}: {error}"
-                    ))
-                })?;
-            pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
-            let temp_parts = vec![home_catalog, home_schema, temp_name];
-            let mut tokens = tokens;
-            tokens.splice(span.start..span.end, dotted_name_tokens(&temp_parts));
-            Ok(Cow::Owned(tokens_to_sql(&tokens)))
-        }
-    }
+            .with_commit_branch(target.branch);
+    let temp_name = next_temp_view_name();
+    let home_catalog = "datafusion".to_string();
+    let home_schema = "public".to_string();
+    let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no session catalog `{home_catalog}` for branch-commit temp view (have {:?})",
+            ctx.catalog_names()
+        ))
+    })?;
+    let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no schema `{home_catalog}.{home_schema}` for branch-commit temp view"
+        ))
+    })?;
+    let _ = schema.deregister_table(&temp_name);
+    schema
+        .register_table(temp_name.clone(), Arc::new(provider))
+        .map_err(|error| {
+            DataFusionError::Plan(format!(
+                "failed to register branch-commit temp view \
+                 {home_catalog}.{home_schema}.{temp_name}: {error}"
+            ))
+        })?;
+    pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
+    let temp_parts = vec![home_catalog, home_schema, temp_name];
+    let mut tokens = tokens.to_vec();
+    tokens.splice(span.start..span.end, dotted_name_tokens(&temp_parts));
+    Ok(Cow::Owned(tokens_to_sql(&tokens)))
 }

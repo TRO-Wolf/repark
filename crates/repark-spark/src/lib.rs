@@ -44,6 +44,7 @@ mod time_travel;
 mod time_window;
 mod truncate;
 pub mod type_table;
+pub mod wap;
 mod window_range;
 pub(crate) mod write_options;
 mod write_to_branch;
@@ -83,14 +84,13 @@ pub use dialect::SparkDialect;
 pub use repark_functions::integer_spark::install_integer_overflow;
 
 // --- Crate-root public surface.
-pub use catalog_ops::postgres_read_only_dml_message;
+pub use catalog_ops::{postgres_read_only_dml_message, reregister_catalog_provider};
 pub use metadata_tables::{
     canonical_metadata_table_name, is_metadata_table_name, sql_may_have_metadata_table_path,
 };
 
 // Domain-module re-exports keep sibling paths stable.
 pub(crate) use append_with_options::execute_append_with_options;
-pub use catalog_ops::reregister_catalog_provider;
 pub(crate) use catalog_ops::{
     catalog_handle, iceberg_err, name_parts, namespace_schema_name, passthrough_after_p11,
     refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, reject_path_escape_ident,

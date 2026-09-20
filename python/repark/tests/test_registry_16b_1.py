@@ -55,11 +55,12 @@ def test_conf_wap_keys_store_and_report_modifiable() -> None:
     spark.stop()
 
 
-def test_sql_set_wap_branch_raises() -> None:
-    """SQL SET of a WAP key raises instead of the pair row. pins: registry-16b-1/C-002"""
+def test_sql_set_wap_branch_answers_the_pair_row() -> None:
+    """SQL SET of a WAP key answers Spark's pair row. pins: registry-16b-1/C-002"""
     spark = _session("registry-16b-1-wap-sql-set")
-    with pytest.raises(Exception, match="spark"):
-        spark.sql("SET spark.wap.branch=b2")
+    answer = spark.sql("SET spark.wap.branch=b2").to_arrow()
+    assert answer.to_pylist() == [{"key": "spark.wap.branch", "value": "b2"}]
+    assert spark.conf.get("spark.wap.branch") == "b2"
     spark.stop()
 
 

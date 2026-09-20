@@ -277,14 +277,19 @@ Supported surface, for reference:
   and an ignored `IF EXISTS` turns a tolerated miss into one. Refusing keeps the statement's meaning
   honest until the idempotent forms are implemented; the pin reds on purpose when they are.
 
-#### REF-3 — write-audit-publish (WAP)
+#### REF-3 — write-audit-publish (WAP) — the `spark.wap.id` staged half
 
-- **repark** — there is no WAP surface, and every door into one is fail-closed. The publish
-  procedure `CALL <cat>.system.publish_changes` refuses
-  loud, listing the procedures that do exist (fourteen since 2026-09-17, REF-5–REF-8 included). The `spark.wap.branch` and `spark.wap.id`
-  session confs cannot be set at all (`Invalid or Unsupported Configuration: Could not find
-  config namespace "spark"`), so no write is silently redirected: a refused conf leaves both
-  `main` and the branch where they were.
+**The `spark.wap.branch` half is FIXED (2026-09-19, ICE-WAP-BRANCH-1 below).** This row now
+covers only what is still open: the staged-snapshot flow behind `spark.wap.id`.
+
+- **repark** — `spark.wap.id` stores and reads back (through `spark.conf.set` and through SQL
+  `SET`, since ICE-WAP-BRANCH-1 routes both WAP keys into the Rust carrier) but nothing stages
+  a snapshot for it: a write with `spark.wap.id` set and no `spark.wap.branch` lands on `main`
+  where Spark leaves it unreferenced. The publish procedure
+  `CALL <cat>.system.publish_changes` refuses loud, listing the procedures that do exist
+  (fourteen since 2026-09-17, REF-5–REF-8 included). Setting `spark.wap.id` **and**
+  `spark.wap.branch` together refuses with Java's text before any file is written
+  (ICE-WAP-BRANCH-1).
 - **Apache Spark** — the full flow works. With `write.wap.enabled=true` on the table and
   `spark.wap.branch` set, a plain `INSERT INTO t` stages onto that branch and a plain `SELECT`
   in the same session reads the branch, while `main` stays put until publish;
@@ -302,12 +307,69 @@ Supported surface, for reference:
 - **Rationale** — BACKLOG (2026-09-01, RP-5; narrowed 2026-09-17, ICE-BRANCH-OPS-1:
   `fast_forward` and `cherrypick_snapshot` are ordinary branch procedures now, REF-5/REF-6;
   round 2: cherry-picking a Spark-staged WAP snapshot publishes it with `published-wap-id`
-  and refuses the duplicate, pinned live against the recorded oracle).
-  The remaining gap is the WAP publish procedure and the `spark.wap.*` session confs. Do not
-  half-build WAP: a staged write that quietly lands on `main` is the failure mode this row
-  keeps impossible.
+  and refuses the duplicate, pinned live against the recorded oracle; narrowed again
+  2026-09-19, ICE-WAP-BRANCH-1: the `spark.wap.branch` half is implemented and pinned).
+  The remaining gap is the staged-snapshot producer behind `spark.wap.id` and the publish
+  procedure that reads it — **fork ask F-STAGE-ONLY-1**: RePark never patches Iceberg
+  table-format semantics locally, and `SnapshotProducer::with_stage_only` is the fork's.
+  **Known residue, stated plainly (2026-09-19):** with `spark.wap.id` set alone on a
+  `write.wap.enabled=true` table, the write lands on `main` where Spark stages it — a silent
+  divergence, now reachable through the SQL `SET` spelling as well as `spark.conf.set`.
+  ICE-WAP-BRANCH-1 left it exactly as it was on main (brief boundary); closing it is either
+  the fork ask or a declared refusal on that one shape.
   pins: ref-branch-tag-wap/C-005
   pins: ice-branch-ops-1/C-013
+  pins: ice-wap-branch-1/C-010
+
+#### ICE-WAP-BRANCH-1 — `spark.wap.branch` redirects writes and reads — **FIXED 2026-09-19** (round 2, 2026-09-20)
+
+- **repark** — with `write.wap.enabled=true` on the table and `spark.wap.branch` set, every
+  write commits on that branch and `main` is unchanged: SQL `INSERT`, `writeTo().append()`,
+  `saveAsTable(append)`, CoW and MoR `DELETE`, `UPDATE`, `MERGE`, `INSERT OVERWRITE`, and two
+  stacked appends. The session's plain reads of that table follow the branch while the conf is
+  set and answer `main` again once it is unset. A branch that does not exist is created by the
+  write from `main`. Without `write.wap.enabled=true` the conf is ignored entirely. An explicit
+  `t.branch_other` write target outranks the conf, and an explicit `VERSION AS OF 'main'`
+  outranks it on the read side; metadata tables and a CTAS into a new table are unaffected. SQL
+  `SET spark.wap.branch = audit` has the same effect as `spark.conf.set`. `spark.wap.branch`
+  with `spark.wap.id` refuses `IllegalArgumentException: Cannot set both WAP ID and branch, but
+  got ID [w1] and branch [audit]` before anything is written.
+- **Before (measured 2026-09-19, run 25c on `4049164d`)** — the conf was ignored: the write
+  landed on `main` (a silent wrong answer — an audit write published straight into the table)
+  and the session's reads stayed on `main`. 5 of the 19 recorded Spark cells matched; the 14
+  that did not are the ones listed above, plus SQL `SET spark.wap.branch` failing with the
+  engine's `Could not find config namespace "spark"` and `fast_forward('main','audit')`
+  refusing because `main` was not an ancestor of `audit`.
+- **After (measured 2026-09-19; round 2, 2026-09-20)** — 19 of 19 recorded Spark cells match,
+  and 27 of 27 after round 2 added eight. Round 2 closed three verification findings: a comma
+  FROM-list mixed the audit branch with `main` (only the first name after FROM/JOIN/USING was
+  redirected, so `FROM t a, t b` read the branch for `a` and `main` for `b` — a silent wrong
+  answer, now a parenthesis-depth walker that visits every relation, comma lists, subqueries,
+  CTE bodies and set-operation arms included); `DELETE` and `UPDATE` naming a branch that does
+  not exist refused `snapshot ref 'audit' not found` where Spark creates it from `main` (all
+  four DML families measured and matched); and the two read-only cells were mutation-blind
+  because branch and `main` held the same rows (four cells now diverge the two snapshots
+  first).
+- **Apache Spark** — as above. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:
+  1.11.0, recorded 2026-09-19 into `python/repark/tests/ice_wap_branch_1_spark_oracle.json`
+  by `python/repark/tests/_record_ice_wap_branch_1_oracle.py`, re-recorded whole 2026-09-20;
+  the 27 cells reproduce the orchestrator's run-25c measurement observation for observation,
+  and the 19 round-1 cells came back byte-identical in that re-recording.)*
+- **Pin** — `python/repark/tests/test_ice_wap_branch_1.py` (one parametrized pin per recorded
+  cell, plus the refusal, the Arrow-type rider, the SQL `SET` row and the native-door row);
+  `crates/repark-spark/src/tests/wap_branch.rs` (the resolver's decision table on the Rust
+  door); facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`.
+- **Rationale** — FIXED 2026-09-19 (ICE-WAP-BRANCH-1). One resolver owns the decision:
+  explicit selector > the session conf when the table property is on > `main`. The read half
+  pins the branch's snapshot before the time-travel pass; the write half reuses the
+  write-to-branch machinery. The ANSI door carries no `spark.wap.*` conf, so no native-door
+  write can be redirected — `repark.sql("SET spark.wap.branch = …")` refuses.
+  **Residue, stated plainly (round 2):** the wap branch is created by its own commit and then
+  the write commits onto it, where Spark creates the ref inside the write's own commit. Same
+  refs and same rows when the write succeeds; a failed write leaves an `audit` ref pinned at
+  `main` where Spark would leave none. Loud, never a wrong answer.
+  pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-011, C-012, C-013
 
 #### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
 
@@ -1725,22 +1787,25 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   reds when it lands.
   pins: registry-16b-1/C-001
 
-### CONF-WAP-1 — `spark.wap.*` through `spark.conf.set` stores silently and reports modifiable; SQL `SET` of the key fails in the engine — **BACKLOG 2026-09-15**
+### CONF-WAP-1 — `spark.conf.isModifiable("spark.wap.branch")` answers `True` where Spark answers `False` — **BACKLOG 2026-09-15, narrowed 2026-09-19**
 
-- **repark** — `spark.conf.set("spark.wap.branch", "b1")` and `spark.wap.id` store and read back, but nothing honours
-  them, so a write meant for a WAP branch lands on the table's current branch; `spark.conf.isModifiable("spark.wap.branch")`
-  answers `True`; SQL `SET spark.wap.branch=b2` fails with the engine's `Could not find config namespace "spark"` rather
-  than a named refusal.
-- **Apache Spark** — both keys store and read back; `isModifiable` answers `False` (not a registered SQL conf); SQL
-  `SET spark.wap.branch=b2` answers the `(key, value)` row; with `write.wap.enabled=true` on an Iceberg table the key
-  redirects writes (REF-3 above). *(oracle: live PySpark 4.1.2, 2026-09-15, run 16b probe cells `wap_branch_set_get`,
+**Two of the three halves of this row are FIXED** (2026-09-19, ICE-WAP-BRANCH-1): the keys are
+honoured now, and SQL `SET spark.wap.branch=b2` answers Spark's `(key, value)` row. What is
+still open is `isModifiable`.
+
+- **repark** — `spark.conf.isModifiable("spark.wap.branch")` answers `True`.
+- **Apache Spark** — `isModifiable` answers `False` (neither WAP key is a registered SQL conf),
+  while both keys still store and read back and SQL `SET` still answers the pair row.
+  *(oracle: live PySpark 4.1.2, 2026-09-15, run 16b probe cells `wap_branch_set_get`,
   `wap_id_set_get`, `wap_is_modifiable`, `wap_sql_set`.)*
 - **Pin** — `python/repark/tests/test_registry_16b_1.py::test_conf_wap_keys_store_and_report_modifiable`,
-  `python/repark/tests/test_registry_16b_1.py::test_sql_set_wap_branch_raises`
-- **Rationale** — BACKLOG, filed by REGISTRY-16B-1 (run 16b). REF-3's fail-closed rule should cover the `conf.set`
-  spelling (a loud refusal until the publish procedures exist), and `isModifiable` should answer Spark's `False`; both
-  pins red when that lands.
+  `python/repark/tests/test_registry_16b_1.py::test_sql_set_wap_branch_answers_the_pair_row`
+- **Rationale** — BACKLOG, filed by REGISTRY-16B-1 (run 16b). The `isModifiable` answer comes
+  from the facade's static-conf set, which has no registered-key table to consult; a fix needs
+  that table, not a WAP special case, so it stays here. The write-redirect half moved to
+  ICE-WAP-BRANCH-1 (§2.2, FIXED) and the staged-snapshot half to REF-3.
   pins: registry-16b-1/C-002
+  pins: ice-wap-branch-1/C-007
 
 ### F-V4-2 — timestamptz Arrow annotation after Iceberg read
 

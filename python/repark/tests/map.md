@@ -1624,6 +1624,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   naming it and does not create the branch.
   pins: ref-branch-tag-wap/C-002, C-003, C-004, C-005, C-007
   pins: rp-5-fork-repin/C-004
+  **ICE-WAP-BRANCH-1 (2026-09-19):** the two `spark.wap.*` fail-closed rows are re-pointed at
+  the new truth — both keys store through the SQL `SET` door and read back, `spark.wap.branch`
+  is inert on a table without `write.wap.enabled=true`, and `spark.wap.id` on its own still
+  lands the write on `main` (the staged half is fork ask F-STAGE-ONLY-1, registry REF-3).
+  pins: ice-wap-branch-1/C-004, C-007, C-010
 - [test_ice_merge_append_1.py](test_ice_merge_append_1.py) +
   [ice_merge_append_1_truth.json](ice_merge_append_1_truth.json) — **ICE-MERGE-APPEND-1
   (2026-09-19):** the recorded-oracle pins for merge-on-commit (IPI-11). The truth JSON holds
@@ -3517,6 +3522,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   door (CONF-WAP-1), and `format("jdbc")` reaches the PostgreSQL path where `spark.read.jdbc` refuses a
   non-PostgreSQL URL (IO-JDBC-FORMAT-1). Each pin holds today's answer and reds when its row's fix lands.
   pins: registry-16b-1/C-001, C-002, C-003
+  **ICE-WAP-BRANCH-1 (2026-09-19):** the SQL-`SET` half of CONF-WAP-1 landed, so that pin
+  redded as designed and now asserts Spark's answer — `SET spark.wap.branch=b2` returns the
+  `(key, value)` row and the value reads back. The `isModifiable` half of the row stays open
+  (repark still answers `True` where Spark answers `False`).
+  pins: ice-wap-branch-1/C-007
 - `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
   second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
   clearCache real drop (live + hand-registered `__repark_cache_*` prefix sweep + leaves
@@ -3575,6 +3585,40 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
   UPDATE on an unpartitioned target; partial INSERT NULL-fills omitted nullable columns.
   Arrow path, value + type.
+- `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
+  `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
+  session conf `spark.wap.branch` redirects writes and the session's plain reads to
+  an audit branch, as Spark does. Oracle: live PySpark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0, recorded 2026-09-19 by the generator beside
+  it, re-recorded whole 2026-09-20, SHA-256 `586d5e403b2b53ff5eb348667148f675a1f310d662bd641b74d3637ecd9c6f53`; its
+  27 cells reproduce the orchestrator's run-25c measurement (harness cells qc5 and
+  qc13, cells `QW-*`) observation for observation — the 19 round-1 cells came back
+  byte-identical when the 8 round-2 cells were added. One parametrized pin per cell asserts every recorded observation —
+  `refs` (name, type, snapshot position), the branch rows, the main rows, the
+  session read while the conf is set and the plain read after it is unset — over
+  SQL INSERT, `writeTo().append()`, `saveAsTable(append)`, CoW and MoR DELETE,
+  UPDATE, MERGE, INSERT OVERWRITE, two stacked INSERT statements, `SET spark.wap.branch`,
+  `fast_forward` publish, and the five negative controls (no `write.wap.enabled`,
+  read-only, explicit `t.branch_other`, explicit `VERSION AS OF 'main'`, CTAS into a
+  new table). **Round 2 (2026-09-20)** adds eight recorded cells: `QW-COMMA-JOIN`
+  observes ten read shapes (a comma self-join, its count, the explicit JOIN control, an
+  IN and an EXISTS subquery, UNION ALL, a comma relation after a subquery, a CTE body
+  beside a comma relation, and a three-way comma list) on a branch that is ahead of main,
+  so a missed redirect changes the rows (WAP-001); `QW-DELETE-NO-BRANCH`,
+  `QW-UPDATE-NO-BRANCH`, `QW-DELETE-MOR-NO-BRANCH` and `QW-MERGE-NO-BRANCH` record that
+  Spark creates the named branch from main for every DML family (WAP-002); and
+  `QW-READ-MAIN-AHEAD`, `QW-READ-BRANCH-AHEAD` and `QW-VERSION-AS-OF-MAIN-DIVERGED`
+  diverge the two snapshots before the observation, so the read cells can fail
+  (WAP-003 — main ahead of the branch is the shape where a dropped redirect shows up as
+  extra rows). The refusal cell pins Java's
+  `Cannot set both WAP ID and branch, but got ID [w1] and branch [audit]` with the
+  `IllegalArgumentException` class. Arrow path (`to_arrow`), value AND type. The
+  native-door row is the negative one: the ANSI door carries no `spark.wap.*` conf,
+  so `repark.sql("SET spark.wap.branch = …")` refuses and no ANSI write redirects.
+  The live cell (`test_live_oracle_fixture_reproduces`) replays the generator in
+  `check` mode and skips without `REPARK_PARITY_LIVE=1`.
+  pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-011, C-012, C-013
 - `test_ice_procs_route_1.py` + `ice_procs_route_1_spark_oracle.json` +
   `_record_ice_procs_route_1_oracle.py` — **ICE-PROCS-ROUTE-1 (2026-09-19):**
   `ancestors_of`, `compute_table_stats`, `compute_partition_stats`,
