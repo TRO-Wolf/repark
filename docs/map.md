@@ -162,6 +162,10 @@ repo.
   re-measured on merged main — nine verify unchanged, three tighten with a
   measured clause (ORC/Avro table-property refusal, ENC-1 cleartext bytes,
   north-star C-2 FIXED citation); V3-05 stays rowless pending PR #700.
+  **ICE-RDF-SORT-PARSE-1 round 3 (2026-09-20, V-004):** `RDF-SORT-1` FIXED —
+  `strategy` / `sort_order` route onto the fork, the deleted refusal pins are
+  replaced by the unit's pins — and new DECLARED `RDF-SORT-TRANSFORM-1` files the
+  CALL-door transform-term refusal.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

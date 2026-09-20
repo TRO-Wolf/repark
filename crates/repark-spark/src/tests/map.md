@@ -470,9 +470,30 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   data-only-key refuses plus the four unwired-key `UnsupportedOperationException` refuses
   and the IAE-before-refusal order pins.
   pins: ice-rdf-options-1/C-001, C-002, C-004, C-005
+- `call_rdf_sort.rs` — **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the CALL door's strategy router.
+  The load-bearing pin is `call_rdf_sort_explicit_order_writes_descending_ids`, which reads the
+  rewritten parquet file back **in file order** and asserts the ids descend. The three inventory
+  cells this unit closes (`P-RDF-SORT`, `P-RDF-SORT-TABLE-ORDER`, `P-RDF-ZORDER`) record the same
+  output row, the same `files_after` and the same rows on Spark, so a rewriter that ignored
+  `strategy` and `sort_order` and bin-packed would make all three EQUAL while doing nothing —
+  the harness cannot see inside a file, so these pins must. The rest hold the routing table
+  decoded from `RewriteDataFilesProcedure.checkAndApplyStrategy`: an omitted `strategy` still
+  consults `sort_order`; `strategy => 'sort'` with none falls back to the table order;
+  `binpack` plus any `sort_order` is Java's `Cannot set rewrite mode…`, raised before options
+  are validated; and every z-order refusal is the fork's, surfaced unchanged rather than
+  re-authored. `md.sort-order` is asserted unchanged because the procedure's order is a
+  one-shot rewrite instruction, not a table property.
+  `call.rs`'s `call_rewrite_positional_strategy_routes_to_the_rewriter` is the same pin
+  through the positional door (C1-L-001): `strategy` is read from positional slot 1 and
+  routed, so `('sales.t', 'sort')` reaches the SORT rewriter and refuses on an unsorted
+  table rather than silently bin-packing. Round 3 (2026-09-20, V-001): every fork-refusal
+  pin asserts the full rendered message by equality, table identifier and struct suffix
+  included, so a reintroduced kind prefix reds the pin.
+  pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009
 - `call_rewrite_options.rs` — **rewrite_data_files options:** `where => 'part = 0'` (and `IN (0)`)
   keeps the **part=1** pre-image paths byte-identical and rewrites part=0 away; unknown strategy
-  and bad where use Spark's text; `sort_order` refuses without compacting; named `BINPACK` still
+  and bad where use Spark's text; `sort_order` sorts and compacts (ICE-RDF-SORT-PARSE-1,
+  2026-09-20 — it used to refuse); named `BINPACK` still
   compacts v2. **MAINT-POLICY-1 step 4 (2026-09-10):** a missing table plus a malformed
   `remove-dangling-deletes` value reports the table, never the flag. The standing
   `where` byte-identity pins above are the single-load regression guard.
@@ -1044,6 +1065,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 The test modules follow production ownership. Archived ledgers remain available from the pointers
 above.
 
+- `sort_order_parse.rs` — **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the grammar battery on the
+  shared parser, at the level where a divergence is cheapest to catch. The direction-tied
+  `NULLS` defaults get their own pin (bare `ASC` → `FIRST`, bare `DESC` → `LAST`) because that
+  is the one rule a second copy of this parser would have been free to get wrong, and the
+  wrongness would only surface as a differently ordered customer table read back through the
+  other door. The refusal pins assert `OrderParseError` variants rather than rendered strings,
+  so the two doors stay free to word themselves differently — ALTER keeps its own text,
+  CALL renders Java's `Unable to parse sortOrder`. `ZOrderScan` is pinned on all three
+  answers, including `zorder()`: an empty column list is forwarded to the fork so that
+  `Cannot ZOrder when no columns are specified` comes from one place.
+  pins: ice-rdf-sort-parse-1/C-001, C-002, C-003
 - `run_maintenance.rs` — **MAINT-POLICY-1 steps 2–3 (2026-09-10):** the dry-run door pins on a
   memory-catalog table with 20 small files and 3 snapshots (plus a merge-on-read table with
   live delete files for the gate): the five-step planned frame shape, the `dry_run` default,

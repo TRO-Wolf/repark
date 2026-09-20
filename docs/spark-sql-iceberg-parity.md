@@ -7176,7 +7176,8 @@ the pin rather than obeying it.
   five-form behavior is pinned in `python/repark/tests/test_write_order_dist_1.py`
 - **Rationale** — FIXED, not declared. Sort-order evolution was scoped out of I7, which delivered
   partition-spec DDL only; this unit builds it on the fork's `replace_sort_order`, which the
-  pinned rev exposes. `RDF-SORT-1` stays open beside it: that row is the maintenance-procedure
+  pinned rev exposes. `RDF-SORT-1` stayed open beside it until 2026-09-20 (retired by
+  ICE-RDF-SORT-PARSE-1): that row is the maintenance-procedure
   sort (`rewrite_data_files`), a different surface from the table write order fixed here.
 
 ### V3-COV-7 — `CREATE TABLE` stamps Spark's parquet-codec default; RePark stamps only the DDL
@@ -7339,26 +7340,57 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   already existed. `unix_timestamp` was `R-FN-BATCH1` / `B-TZ-1` and is registered on the
   SQL door and the facade (zero-arg and one-arg; the format argument stays unsupported).
 
-### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite
+### RDF-SORT-1 — `rewrite_data_files` refuses `sort` / `sort_order`; Spark runs a sort rewrite — **FIXED 2026-09-20 (ICE-RDF-SORT-PARSE-1)**
 
-- **repark** — `CALL … rewrite_data_files(strategy => 'sort')` and a named `sort_order` refuse
-  loud. The fork at `d408da42` ports bin-pack only (GAP_MATRIX R135: sort and z-order deferred).
-  A requested option that cannot be honored is never a silent binpack.
+- **repark** — **FIXED 2026-09-20 (ICE-RDF-SORT-PARSE-1, IPI-43).** `strategy => 'sort'` with or
+  without `sort_order`, a bare `sort_order` with no `strategy`, and `zorder(…)` terms all route
+  onto the pinned fork's `RewriteStrategy::{SortByTableOrder, Sort, ZOrder}`. An omitted
+  `strategy` with a `sort_order` sorts rather than bin-packing; `strategy => 'sort'` with no
+  `sort_order` falls back to the table's own order; `binpack` with any `sort_order` is Java's
+  `Cannot set rewrite mode, it has already been set to BIN-PACK`; mixed identity and z-order
+  terms are Java's `Cannot mix identity sort columns and a Zorder sort expression`. The
+  procedure's order is a one-shot rewrite instruction and is never recorded on the table.
+  Fork validation refusals (unsorted table, empty z-order, unknown z-order column) are the
+  fork's messages re-raised verbatim as `IllegalArgumentException`. Non-`zorder` transform
+  terms stay refused on the CALL door (`RDF-SORT-TRANSFORM-1`).
 - **Apache Spark** — `strategy => 'sort'` with `sort_order => 'id ASC'` rewrites; a six-file v2
   table compacted to one with id min/max `{1..6}`. `sort_order` without `strategy` still
   binpacks (warns that rewritten files are not marked sorted). Missing sort column is
   `ValidationException: Cannot find field '…' in struct`. Unknown strategy is
   `unsupported strategy: {name}. Only binpack or sort is supported`.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, 2026-08-31.)*
+- **Pin** — `crates/repark-spark/src/tests/call_rdf_sort.rs` (the routing table and every
+  refusal) and `python/repark/tests/test_ice_rdf_sort_parse_1.py` (the three cells against
+  the recorded Spark oracle), plus the re-pinned facade rows
+  `python/repark/tests/test_rewrite_data_files_options.py::test_rewrite_sort_order_refuses_loud`
+  and `…::test_rewrite_sort_strategy_refuses_loud`.
+- **Rationale** — FIXED, not declared. 2026-09-06 (WRITE-ORDER-DIST-1): the table write order
+  fixed there sorts the files a write commits, but `rewrite_data_files` still took no `sort` /
+  `sort_order`, so this row stayed open. 2026-09-20 (ICE-RDF-SORT-PARSE-1, IPI-43): the pinned
+  fork rev ports sort and z-order rewrite, so `strategy` / `sort_order` route onto it and the
+  DECLARED ceiling is gone. The two refusal pins this row cited are deleted; the surface is
+  now held by the pins above. `where` and `binpack` were never this row. Transform sort terms
+  stay declared under `RDF-SORT-TRANSFORM-1`.
+  pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+
+### RDF-SORT-TRANSFORM-1 — `rewrite_data_files` refuses non-`zorder` transform sort terms
+
+- **repark** — `CALL … rewrite_data_files(sort_order => 'bucket(4, id)')` refuses with
+  `UnsupportedOperationException`: ``CALL rewrite_data_files sort_order transform `bucket(…)` is
+  not supported yet — only identity sort columns and zorder(…) are ported``. Identity terms
+  and `zorder(…)` route onto the fork; any other transform-shaped term refuses on the CALL
+  door rather than reaching Java's `Unable to parse sortOrder`.
+- **Apache Spark** — accepts transform sort terms in `sort_order`
+  (`ExtendedParser.parseSortOrder`).
+  *(oracle: documented — the claim here is the refusal, not a value.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call.rs::call_rewrite_sort_strategy_refuses_loud`
-  and
-  `crates/repark-spark/src/tests/call_rewrite_options.rs::call_rewrite_sort_order_refuses_and_does_not_compact`
-- **Rationale** — DECLARED fork ceiling until a later iceberg-rust rev ports sort rewrite.
-  `where` and `binpack` are honerable on this rev and are not this row. 2026-09-06
-  (WRITE-ORDER-DIST-1): the table write order fixed in `WRITE-ORDER-DIST-1` does not move this
-  row — a declared default order sorts the files a write commits, but `rewrite_data_files`
-  still takes no `sort` / `sort_order`, which is what this row claims.
+  `python/repark/tests/test_ice_rdf_sort_parse_1.py::test_rdf_sort_order_transform_is_a_declared_refusal`
+  and the `bucket(4, id)` arm of
+  `crates/repark-spark/src/tests/call_rdf_sort.rs::call_rdf_sort_order_parse_refusals_match_java`.
+- **Rationale** — DECLARED. The fork's sort writer takes identity orders and z-order only; a
+  transform term silently dropped or mis-sorted would be worse than a refusal. Revisit when
+  the fork ports transform sort terms.
+  pins: ice-rdf-sort-parse-1/C-009
 
 ### ICE-RDF-OPTIONS-1 — `rewrite_data_files` / `rewrite_position_delete_files` options map — **FIXED 2026-09-17**
 

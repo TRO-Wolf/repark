@@ -7,15 +7,21 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::expr::Predicate;
-use iceberg::maintenance::RewriteDataFiles;
-use iceberg::{Catalog, TableIdent, table::Table};
+use iceberg::maintenance::{RewriteDataFiles, RewriteStrategy, ZOrderSpec};
+use iceberg::spec::{SortField, SortOrder, Transform, Type};
+use iceberg::{Catalog, Error, TableIdent, table::Table};
+use repark_core::illegal_argument_error;
 
+use super::compute_table_stats::spark_type_name;
 use super::rewrite_options::{
     RewriteOptions, extract_option_pairs, has_option_key, parse_rdf_options,
 };
 use super::rewrite_where::parse_rewrite_where;
 use super::{CallArgs, bytes_as_i64, count_as_i32, resolve_table_ident};
 use crate::call_args::expr_as_string;
+use crate::sort_order_parse::{
+    OrderParseError, WriteOrderField, ZOrderScan, parse_identity_sort_order, parse_zorder_columns,
+};
 use crate::{iceberg_err, reregister};
 
 /// Execute `CALL <catalog>.system.rewrite_data_files(table => …)`.
@@ -37,19 +43,14 @@ pub(super) async fn execute_rewrite_data_files(
         "remove-dangling-deletes",
     ])?;
     args.reject_excess_positional(2)?;
-    refuse_unsupported_strategy(args)?;
-    if args.has_named("sort_order") {
-        return Err(DataFusionError::NotImplemented(
-            "CALL rewrite_data_files sort_order is not supported — fork R135 deferred \
-             (sort / zOrder strategies); only default binpack is available"
-                .to_string(),
-        ));
-    }
+    let strategy_arg = strategy_argument(args)?;
+    let sort_order_arg = args.optional_string("sort_order")?;
     let table_arg = args.require_string("table", 0)?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    let strategy = resolve_strategy(strategy_arg.as_deref(), sort_order_arg.as_deref(), &table)?;
     let pairs = extract_option_pairs(args, "rewrite_data_files")?;
-    let mut options = parse_rdf_options(&pairs, &table)?;
+    let mut options = parse_rdf_options(&pairs, &table, strategy)?;
     if !has_option_key(&pairs, "remove-dangling-deletes") {
         options.remove_dangling_deletes = args.optional_bool("remove-dangling-deletes", None)?;
     }
@@ -83,7 +84,15 @@ pub(super) async fn run_rewrite(
     options: RewriteOptions,
 ) -> Result<DataFrame> {
     let remove_dangling = options.remove_dangling_deletes.unwrap_or(false);
-    let mut action = RewriteDataFiles::new(table).remove_dangling_deletes(remove_dangling);
+    let mut action = RewriteDataFiles::new(table)
+        .remove_dangling_deletes(remove_dangling)
+        .strategy(options.strategy.clone());
+    if let Some(count) = options.shuffle_partitions_per_file {
+        action = action.shuffle_partitions_per_file(count);
+    }
+    if let Some(factor) = options.compression_factor {
+        action = action.compression_factor(factor);
+    }
     if let Some(predicate) = where_predicate {
         action = action.filter(predicate);
     }
@@ -129,39 +138,117 @@ pub(super) async fn run_rewrite(
     {
         action = action.max_concurrent_file_group_rewrites(limit);
     }
-    let result = Box::pin(action.execute(catalog.as_ref()))
-        .await
-        .map_err(iceberg_err)?;
+    let result = match Box::pin(action.execute(catalog.as_ref())).await {
+        Err(error) if is_fork_validation_refusal(&error) => {
+            return Err(illegal_argument_error(error.message().to_string()));
+        }
+        result => result.map_err(iceberg_err)?,
+    };
 
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
     rewrite_result_dataframe(ctx, &result)
 }
 
-fn refuse_unsupported_strategy(args: &CallArgs) -> Result<()> {
-    let strategy = if let Some(named) = args.optional_string("strategy")? {
-        Some(named)
-    } else if args.positional.len() > 1 {
-        Some(expr_as_string(&args.positional[1], "strategy")?)
-    } else {
-        None
-    };
-    let Some(strategy) = strategy else {
-        return Ok(());
-    };
-    let normalized = strategy.trim().to_ascii_lowercase();
-    if normalized == "binpack" {
-        return Ok(());
+fn is_fork_validation_refusal(error: &Error) -> bool {
+    const NEEDLES: [&str; 3] = [
+        "Cannot sort data without a valid sort order",
+        "Cannot ZOrder when no columns are specified",
+        "Cannot find column '",
+    ];
+    let message = error.to_string();
+    NEEDLES.iter().any(|needle| message.contains(needle))
+}
+
+fn strategy_argument(args: &CallArgs) -> Result<Option<String>> {
+    if let Some(named) = args.optional_string("strategy")? {
+        return Ok(Some(named));
     }
-    if normalized == "sort" {
-        return Err(DataFusionError::NotImplemented(format!(
-            "CALL rewrite_data_files strategy `{strategy}` is not supported — only \
-             binpack is ported (fork R135 deferred: sort / zOrder strategies)"
-        )));
+    if args.positional.len() > 1 {
+        return Ok(Some(expr_as_string(&args.positional[1], "strategy")?));
     }
-    Err(DataFusionError::Plan(format!(
-        "unsupported strategy: {strategy}. Only binpack or sort is supported"
-    )))
+    Ok(None)
+}
+
+enum SortTerms {
+    Absent,
+    Identity(Vec<WriteOrderField>),
+    ZOrder(Vec<String>),
+}
+
+fn resolve_strategy(
+    strategy: Option<&str>,
+    sort_order: Option<&str>,
+    table: &Table,
+) -> Result<RewriteStrategy> {
+    if strategy.is_none() && sort_order.is_none() {
+        return Ok(RewriteStrategy::BinPack);
+    }
+    let terms = match sort_order {
+        None => SortTerms::Absent,
+        Some(text) => match parse_zorder_columns(text) {
+            ZOrderScan::Mixed => {
+                return Err(illegal_argument_error(format!(
+                    "Cannot mix identity sort columns and a Zorder sort expression: {text}"
+                )));
+            }
+            ZOrderScan::Columns(columns) => SortTerms::ZOrder(columns),
+            ZOrderScan::Absent => SortTerms::Identity(
+                parse_identity_sort_order(text).map_err(|error| call_order_error(error, text))?,
+            ),
+        },
+    };
+    let normalized = strategy.map(|raw| raw.trim().to_ascii_lowercase());
+    match normalized.as_deref() {
+        None | Some("sort") => match terms {
+            SortTerms::ZOrder(columns) => Ok(RewriteStrategy::ZOrder(ZOrderSpec::new(columns))),
+            SortTerms::Identity(fields) => {
+                Ok(RewriteStrategy::Sort(call_sort_order(&fields, table)?))
+            }
+            SortTerms::Absent => Ok(RewriteStrategy::SortByTableOrder),
+        },
+        Some("binpack") if sort_order.is_some() => Err(illegal_argument_error(
+            "Cannot set rewrite mode, it has already been set to BIN-PACK".to_string(),
+        )),
+        Some("binpack") => Ok(RewriteStrategy::BinPack),
+        _ => Err(DataFusionError::Plan(format!(
+            "unsupported strategy: {}. Only binpack or sort is supported",
+            strategy.unwrap_or_default()
+        ))),
+    }
+}
+
+fn call_order_error(error: OrderParseError, text: &str) -> DataFusionError {
+    match error {
+        OrderParseError::Transform { name } => DataFusionError::NotImplemented(format!(
+            "CALL rewrite_data_files sort_order transform `{name}(…)` is not supported yet — \
+             only identity sort columns and zorder(…) are ported"
+        )),
+        _ => illegal_argument_error(format!("Unable to parse sortOrder: {text}")),
+    }
+}
+
+fn call_sort_order(fields: &[WriteOrderField], table: &Table) -> Result<SortOrder> {
+    let schema = table.metadata().current_schema();
+    let mut builder = SortOrder::builder();
+    for field in fields {
+        let Some(source_id) = schema.field_id_by_name(&field.name) else {
+            return Err(illegal_argument_error(format!(
+                "Cannot find field '{}' in struct: {}",
+                field.name,
+                spark_type_name(&Type::Struct(schema.as_struct().clone()))
+            )));
+        };
+        builder.with_sort_field(
+            SortField::builder()
+                .source_id(source_id)
+                .transform(Transform::Identity)
+                .direction(field.direction)
+                .null_order(field.null_order)
+                .build(),
+        );
+    }
+    builder.build(schema).map_err(iceberg_err)
 }
 
 fn rewrite_result_dataframe(

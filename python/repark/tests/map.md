@@ -2087,9 +2087,49 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`UNKNOWN` refuses at CREATE, no table left). pins: v3-6-v3-types/C-003, C-004
 - [test_rewrite_data_files_options.py](test_rewrite_data_files_options.py) —
   **rewrite_data_files options:** facade `where` keeps the **part=1** pre-image byte-identical
-  and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
-  `sort_order` refuse.
+  and rewrites part=0 away; unknown strategy and bad where use Spark's text. Round 3
+  (2026-09-20, V-002): a bare `sort_order` sorts — the CALL succeeds with Spark's recorded
+  all-zero row and file order — and `strategy => 'sort'` on an unsorted table raises the
+  fork's `IllegalArgumentException`, its message pinned by equality.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
+- [test_ice_rdf_sort_parse_1.py](test_ice_rdf_sort_parse_1.py) —
+  **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the pins that stand between IPI-43 and a green
+  gate over a no-op. `P-RDF-SORT`, `P-RDF-SORT-TABLE-ORDER` and `P-RDF-ZORDER` record the
+  *same* output row, the same `files_after`, the same eight rows and the same metadata on
+  Spark — every observable the inventory harness captures is identical for all three — so a
+  rewriter that ignored `strategy` and `sort_order` and bin-packed would turn all three
+  cells EQUAL while doing nothing. These pins read each rewritten data file straight out of
+  parquet with pyarrow and assert the row order *inside* it, against sequences measured on
+  live Spark by [_record_ice_rdf_sort_parse_1_oracle.py](_record_ice_rdf_sort_parse_1_oracle.py)
+  into [ice_rdf_sort_parse_1_spark_oracle.json](ice_rdf_sort_parse_1_spark_oracle.json).
+  Reading the rows back through `SELECT` would not have worked: the harness's own `rows()`
+  sorts by `repr` unless asked not to, which is why `P-RDF-SORT`'s recorded `data` is
+  *ascending* after a `DESC` rewrite.
+  Two facts here were measured rather than assumed. A BIGINT `id` beside a
+  single-character STRING does **not** discriminate `zorder(id, data)` from
+  `zorder(data, id)` — a long's leading bytes are constant across small values while the
+  string's first byte varies, so the string dominates the interleave and swapping the pair
+  changes nothing; the discriminating fixture z-orders two single-character STRING columns
+  instead, and Spark then lands `zorder(p, q)`, `zorder(q, p)` and `id DESC` in three
+  different orders. And a bare `id DESC` with no `NULLS` clause puts the NULL last on live
+  Spark, pinning the direction-tied default at runtime and not only in the parser's unit
+  tests. `test_rdf_binpack_unchanged` is the regression pin for the untouched bin-pack path.
+  The file reads data files through two helpers: `_file_ids` for the partitioned cells
+  (which need the `$files.partition` column) and `_file_ids_flat` for the unpartitioned
+  fixtures, whose `$files` has no `partition` column until IPI-20 lands.
+  pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  Round 2 (2026-09-20): lint-only rewrap of this file and its recorder (the
+  101-column line, the RUF017 list flattening with the same asserted values, the
+  over-split zip call); no pin text changed. Round 3 (2026-09-20, V-001): the
+  unsorted-table and z-order refusal pins assert the full fork message by equality
+  against `str(exc)`, so a reintroduced `DataInvalid => ` prefix reds the pin. V-005:
+  `_assert_cell` also pins the recorded post-rewrite sort state (`sort-orders` plus
+  default id, both sides sorted by order id — the fork lists the default first,
+  Java lists id-ascending) and the current snapshot's `replace` operation, resolved
+  by `current-snapshot-id` on both sides (the fork serializes `snapshots` in hash
+  order, so an array position is not the head); the recorder carries all three
+  per cell and the tableorder pin keeps its id-DESC-NULLS-LAST shape check on
+  the oracle itself.
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —
   **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** offline pins over the recorded 49-cell
   Spark 4.1.2 oracle ([ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json),
@@ -6290,9 +6330,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 | Add a `DESCRIBE NAMESPACE` / namespace-metadata-readback test | `test_describe_namespace.py` |
 | Add a `SHOW NAMESPACES` / namespace-listing / `LIKE`-pattern test | `test_show_namespaces.py` |
 | Add a bare-`spark.sql` eager-DML (INSERT/DELETE/UPDATE/empty OW wipe/CALL refuse) test | `test_sql_dml_eager.py` (C3-Q-002 empty OW facade pin; C3-L-001 residual unknown-CALL refuse; C5-Q-001 incompatible empty OW must not wipe; r25 T2 CREATE OR REPLACE / REPLACE BRANCH|TAG round-trip pin) |
-| Pin rewrite_data_files `where` / strategy / sort_order | `test_rewrite_data_files_options.py` — filtered rewrite byte-identity, Spark unknown-strategy and bad-where text, `sort_order` refuse (`RDF-SORT-1`) |
+| Pin rewrite_data_files `where` / strategy / sort_order | `test_rewrite_data_files_options.py` — filtered rewrite byte-identity, Spark unknown-strategy and bad-where text, bare `sort_order` sorts with Spark's recorded row (round 3 V-002) |
 | Pin rewrite `options` maps against the recorded oracle | `test_ice_rdf_options_1.py` — 42 offline pins over `ice_rdf_options_1_spark_oracle.json` (recorded by `_record_rdf_options_1_oracle.py`), fork cells `xfail(strict)` (`BLOCKED-ON-FORK F-RDF-OPTIONS-1`), live tier re-runs the generator (`ICE-RDF-OPTIONS-1`, `RDF-DANGLING-1`) |
-| Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and no options map is passed, so the zero is a real count (the map itself is accepted since **ICE-RDF-OPTIONS-1 round 1**). *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `use_caching` is accepted and changes nothing (`MANIFEST-2`). **ICE-RM-DELETES-1 (2026-09-20):** the current `spec_id` runs like the default call and an unknown id raises `IllegalArgumentException` |
+| Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + named/positional strategy-sort on unsorted is the fork IAE with its message by equality (round 3 V-003) + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and no options map is passed, so the zero is a real count (the map itself is accepted since **ICE-RDF-OPTIONS-1 round 1**). *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `use_caching` is accepted and changes nothing (`MANIFEST-2`). **ICE-RM-DELETES-1 (2026-09-20):** the current `spec_id` runs like the default call and an unknown id raises `IllegalArgumentException` |
 | Pin `rewrite_manifests` delete-manifest and `spec_id` behavior against the recorded oracle | `test_ice_rm_deletes_1.py` — the 14 recorded Spark 4.1.2 cells replayed (`ice_rm_deletes_1_spark_oracle.json`, `ice_rm_deletes_1_spark_oracle2.json`): literal layout/count/row/op pins for the unpartitioned, data-only and whole-file-DELETE partitioned cells (**ICE-META-DELETE-1 round 2, 2026-09-19** — the metadata-delete routing gives RePark Spark's own before-state there), RePark-measured layout pins for `evolved_spec` (registry MANIFEST-4) and `part_mor_real`, the evolved zeros-with-no-snapshot pin, current/positional/unknown `spec_id` pins, the `use_caching` no-effect pin. pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005; ice-meta-delete-1/C-009 |
 | Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
 | Pin the W-0 window-shape bench at gate scale | `test_w0_window_bench_smoke.py` — Iceberg lead/lag cell, memory_limit outcome class, the sliding-refuse set (**EMPTY since WIN-SLIDE-1, 2026-09-04** — the same pin, now the guard against a refusal returning), remaining absents fail at planning. pins: w-0-window-bench/C-002, C-005, C-006, C-009; win-slide-1/C-008 |

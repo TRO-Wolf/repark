@@ -117,6 +117,58 @@ async fn seed_two_partition_groups(ctx: &SessionContext, catalogs: &CatalogRegis
     }
 }
 
+async fn seed_scrambled_two_partitions(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} (id INT, part INT) USING iceberg PARTITIONED BY (part)"
+        ),
+    )
+    .await;
+    for index in [3, 1, 5, 2, 4] {
+        run(
+            ctx,
+            catalogs,
+            &format!("INSERT INTO ice.sales.{table} VALUES ({index}, 0)"),
+        )
+        .await;
+    }
+    for index in [103, 101, 105, 102, 104] {
+        run(
+            ctx,
+            catalogs,
+            &format!("INSERT INTO ice.sales.{table} VALUES ({index}, 1)"),
+        )
+        .await;
+    }
+}
+
+fn ids_i32_in_file_order(uri: &str) -> Vec<i32> {
+    use datafusion::arrow::array::AsArray;
+    use datafusion::arrow::datatypes::Int32Type;
+    use datafusion::parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+    let file = std::fs::File::open(local_file_path(uri)).expect("open rewritten data file");
+    let reader = ParquetRecordBatchReaderBuilder::try_new(file)
+        .expect("parquet reader")
+        .build()
+        .expect("build reader");
+    let mut ids = Vec::new();
+    for batch in reader {
+        let batch = batch.expect("batch");
+        let column = batch
+            .column_by_name("id")
+            .expect("id column")
+            .as_primitive::<Int32Type>();
+        ids.extend(column.iter().map(|value| value.expect("non-null id")));
+    }
+    ids
+}
+
 #[tokio::test]
 async fn call_rewrite_where_keeps_out_of_scope_files_byte_identical() {
     let warehouse = TempDir::new().unwrap();
@@ -225,26 +277,45 @@ async fn call_rewrite_unknown_strategy_matches_spark_message() {
 }
 
 #[tokio::test]
-async fn call_rewrite_sort_order_refuses_and_does_not_compact() {
+async fn call_rewrite_sort_order_sorts_and_does_compact() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
-    seed_two_partition_groups(&ctx, &catalogs, "so").await;
+    seed_scrambled_two_partitions(&ctx, &catalogs, "so").await;
     let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "so".into());
     let files_before = count_planned_data_files(catalogs["ice"].as_ref(), &ident).await;
-    let error = execute(
+    execute(
         &ctx,
         &catalogs,
-        "CALL ice.system.rewrite_data_files(table => 'sales.so', sort_order => 'id ASC')",
+        "CALL ice.system.rewrite_data_files(table => 'sales.so', sort_order => 'id ASC', \
+         options => map('rewrite-all', 'true'))",
     )
     .await
-    .expect_err("sort_order must refuse");
-    let message = error.to_string();
-    assert!(
-        message.contains("sort_order") && message.contains("not supported"),
-        "got: {message}"
-    );
+    .expect("sort_order must be accepted")
+    .collect()
+    .await
+    .expect("collect");
     let files_after = count_planned_data_files(catalogs["ice"].as_ref(), &ident).await;
-    assert_eq!(files_after, files_before, "a refused CALL must not compact");
+    assert!(
+        files_after < files_before,
+        "an accepted sort rewrite compacts ({files_after} < {files_before})"
+    );
+    let mut ids_by_part: HashMap<i32, Vec<i32>> = HashMap::new();
+    for task in planned_data_files(catalogs["ice"].as_ref(), &ident).await {
+        ids_by_part
+            .entry(identity_partition_int(&task))
+            .or_default()
+            .extend(ids_i32_in_file_order(task.data_file_path.as_ref()));
+    }
+    assert_eq!(
+        ids_by_part.get(&0),
+        Some(&vec![1, 2, 3, 4, 5]),
+        "a bin-pack rewrite would keep the scrambled insertion order"
+    );
+    assert_eq!(
+        ids_by_part.get(&1),
+        Some(&vec![101, 102, 103, 104, 105]),
+        "a bin-pack rewrite would keep the scrambled insertion order"
+    );
 }
 
 #[tokio::test]

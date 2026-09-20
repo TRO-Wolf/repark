@@ -359,9 +359,8 @@ async fn call_rewrite_data_files_preserves_rows_and_reduces_files() {
     );
 }
 
-/// rewrite `strategy` / `sort_order` other than binpack → loud unsupported (R135 deferred).
 #[tokio::test]
-async fn call_rewrite_sort_strategy_refuses_loud() {
+async fn call_rewrite_positional_strategy_routes_to_the_rewriter() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -370,36 +369,21 @@ async fn call_rewrite_sort_strategy_refuses_loud() {
         "CREATE TABLE ice.sales.t AS SELECT * FROM src",
     )
     .await;
-    let error = execute(
-        &ctx,
-        &catalogs,
-        "CALL ice.system.rewrite_data_files(table => 'sales.t', strategy => 'sort')",
-    )
-    .await
-    .expect_err("sort strategy must refuse");
-    let message = error.to_string();
-    assert!(
-        message.contains("sort") && message.contains("not supported"),
-        "got: {message}"
-    );
-    assert!(
-        message.contains("R135") || message.contains("binpack") || message.contains("zOrder"),
-        "must name R135 deferred list, got: {message}"
-    );
 
-    // C1-L-001: positional strategy must refuse the same way — never silent binpack.
-    let error = execute(
-        &ctx,
-        &catalogs,
+    for sql in [
+        "CALL ice.system.rewrite_data_files(table => 'sales.t', strategy => 'sort')",
         "CALL ice.system.rewrite_data_files('sales.t', 'sort')",
-    )
-    .await
-    .expect_err("positional sort strategy must refuse (not binpack)");
-    let message = error.to_string();
-    assert!(
-        message.contains("sort") && message.contains("not supported"),
-        "positional sort must refuse loud, got: {message}"
-    );
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("sort on an unsorted table must refuse");
+        let message = error.to_string();
+        let expected = concat!(
+            "External error: Cannot sort data without a valid sort order, ",
+            "table 'sales.t' is unsorted and no sort order is provided"
+        );
+        assert_eq!(message, expected);
+    }
 
     // C2-Q-003: positional binpack is accepted (not a blanket positional refuse).
     execute(

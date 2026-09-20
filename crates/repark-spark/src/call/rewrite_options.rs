@@ -4,6 +4,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{
     Expr, FunctionArg, FunctionArgExpr, FunctionArguments, Value, ValueWithSpan,
 };
+use iceberg::maintenance::RewriteStrategy;
 use iceberg::spec::TableProperties;
 use iceberg::table::Table;
 use repark_core::illegal_argument_error;
@@ -68,6 +69,9 @@ impl From<RewriteJobOrder> for iceberg::maintenance::RewriteJobOrder {
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct RewriteOptions {
+    pub(crate) strategy: RewriteStrategy,
+    pub(crate) shuffle_partitions_per_file: Option<usize>,
+    pub(crate) compression_factor: Option<f64>,
     pub(crate) target_file_size_bytes: Option<u64>,
     pub(crate) min_file_size_bytes: Option<i64>,
     pub(crate) max_file_size_bytes: Option<i64>,
@@ -200,6 +204,7 @@ fn parse_java_double(raw: &str) -> std::result::Result<f64, DataFusionError> {
 struct TypedValues {
     longs: HashMap<String, i64>,
     ratio: Option<f64>,
+    compression_factor: Option<f64>,
     job_order: Option<String>,
     spec_id: Option<i64>,
 }
@@ -207,12 +212,14 @@ struct TypedValues {
 fn typed_values(pairs: &[(String, Option<String>)]) -> Result<TypedValues> {
     let mut longs = HashMap::with_capacity(pairs.len());
     let mut ratio = None;
+    let mut compression_factor = None;
     let mut job_order = None;
     let mut spec_id = None;
     for (key, value) in pairs {
         let Some(raw) = value else { continue };
         match key.as_str() {
             "delete-ratio-threshold" => ratio = Some(parse_java_double(raw)?),
+            "compression-factor" => compression_factor = Some(parse_java_double(raw)?),
             "rewrite-job-order" => job_order = Some(raw.clone()),
             "output-spec-id" => spec_id = Some(parse_java_long(raw)?),
             "rewrite-all"
@@ -227,6 +234,7 @@ fn typed_values(pairs: &[(String, Option<String>)]) -> Result<TypedValues> {
     Ok(TypedValues {
         longs,
         ratio,
+        compression_factor,
         job_order,
         spec_id,
     })
@@ -246,6 +254,14 @@ pub(crate) fn has_option_key(pairs: &[(String, Option<String>)], key: &str) -> b
 }
 
 fn reject_unknown(pairs: &[(String, Option<String>)], accepted: &[&str]) -> Result<()> {
+    reject_unknown_for(pairs, accepted, "BIN-PACK")
+}
+
+fn reject_unknown_for(
+    pairs: &[(String, Option<String>)],
+    accepted: &[&str],
+    rewriter: &str,
+) -> Result<()> {
     let unknown: Vec<&str> = pairs
         .iter()
         .map(|(key, _)| key.as_str())
@@ -255,9 +271,44 @@ fn reject_unknown(pairs: &[(String, Option<String>)], accepted: &[&str]) -> Resu
         return Ok(());
     }
     Err(illegal_argument(format!(
-        "Cannot use options [{}], they are not supported by the action or the rewriter BIN-PACK",
+        "Cannot use options [{}], they are not supported by the action or the rewriter {rewriter}",
         unknown.join(", ")
     )))
+}
+
+fn layout_int(values: &TypedValues, key: &str, out_of_range: &str) -> Result<Option<u32>> {
+    let Some(value) = long_value(values, key) else {
+        return Ok(None);
+    };
+    match u32::try_from(value) {
+        Ok(fits) if value <= i64::from(i32::MAX) => Ok(Some(fits)),
+        _ => Err(illegal_argument(
+            out_of_range.replace("{value}", &value.to_string()),
+        )),
+    }
+}
+
+fn layout_strategy(strategy: RewriteStrategy, values: &TypedValues) -> Result<RewriteStrategy> {
+    let RewriteStrategy::ZOrder(mut spec) = strategy else {
+        return Ok(strategy);
+    };
+    if let Some(bytes) = layout_int(
+        values,
+        "var-length-contribution",
+        "Cannot use less than 1 byte for variable length types with ZOrder, \
+         'var-length-contribution' was set to {value}",
+    )? {
+        spec = spec.var_length_contribution(bytes);
+    }
+    if let Some(bytes) = layout_int(
+        values,
+        "max-output-size",
+        "Cannot have the interleaved ZOrder value use less than 1 byte, 'max-output-size' \
+         was set to {value}",
+    )? {
+        spec = spec.max_output_size(bytes);
+    }
+    Ok(RewriteStrategy::ZOrder(spec))
 }
 
 fn job_order_from(raw: &str) -> Result<RewriteJobOrder> {
@@ -330,10 +381,23 @@ fn delete_target_default(properties: &HashMap<String, String>) -> Result<u64> {
 pub(crate) fn parse_rdf_options(
     pairs: &[(String, Option<String>)],
     table: &Table,
+    strategy: RewriteStrategy,
 ) -> Result<RewriteOptions> {
-    reject_unknown(pairs, RDF_ACCEPTED)?;
+    let mut accepted: Vec<&str> = RDF_ACCEPTED.to_vec();
+    accepted.extend_from_slice(strategy.valid_option_names());
+    reject_unknown_for(pairs, &accepted, strategy.description())?;
     let values = typed_values(pairs)?;
-    let mut options = RewriteOptions::default();
+    let mut options = RewriteOptions {
+        strategy: layout_strategy(strategy, &values)?,
+        shuffle_partitions_per_file: layout_int(
+            &values,
+            "shuffle-partitions-per-file",
+            "'shuffle-partitions-per-file' is set to {value} but must be > 0",
+        )?
+        .map(|count| count as usize),
+        compression_factor: values.compression_factor,
+        ..Default::default()
+    };
     if let Some(raw) = &values.job_order {
         options.rewrite_job_order = job_order_from(raw)?;
     }

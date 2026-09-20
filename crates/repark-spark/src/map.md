@@ -819,6 +819,33 @@ pins: rp-4-fork-repin/C-005, C-006
   `tracing::warn` naming the table and the count — and the `DROP` still succeeds (Java's
   log-only suppression, owner ruling 2026-09-20).
   pins: ipi-21-25-42-small-parser/C-008, C-009, C-010
+- `sort_order_parse.rs` — **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the single home of the
+  identity sort-order grammar. `alter_write_order.rs` owned the only sort-order parser in the
+  tree; `CALL rewrite_data_files(sort_order => …)` needs the same grammar, so the tokenizer
+  (`Sig`, `tokenize_significant`), the segment splitter and `parse_order_list` /
+  `parse_order_segment` were lifted here rather than copied. A second copy would have been free
+  to drift on the direction-tied `NULLS` defaults (bare `ASC` → `NULLS FIRST`, bare `DESC` →
+  `NULLS LAST`), and a table sorted differently through two doors is invisible until a customer
+  reads it back. The parser is now door-neutral: it returns `OrderParseError` variants and each
+  door renders its own text — `alter_write_order.rs::alter_order_error` keeps every
+  `ALTER TABLE WRITE ORDERED BY …` string byte-for-byte, and the CALL door renders Java's
+  `Unable to parse sortOrder: {s}`. `parse_zorder_columns` is the CALL door's alone: it
+  classifies every top-level term as a `zorder(…)` term or an identity term, so
+  `WRITE ORDERED BY zorder(id)` still hits the ALTER transform refusal (a Z-order is not a
+  storable sort order — `P-RDF-ZORDER` measures `md.sort-order` staying `[]`), while the CALL
+  door reaches the fork's `RewriteStrategy::ZOrder`. Mixed terms are Java's
+  `Cannot mix identity sort columns and a Zorder sort expression`, checked before the strategy
+  dispatch because that is where `RewriteDataFilesProcedure.checkAndApplyStrategy` checks it.
+  A non-`zorder` transform term (`bucket(4, id)`) is a *registered* refusal on the CALL door,
+  not a parse failure: Spark's `ExtendedParser.parseSortOrder` accepts transform sort terms, so
+  refusing one is a divergence that has to be declared rather than hidden behind Java's
+  `Unable to parse sortOrder`. It gets its own message and its own registry row
+  (`RDF-SORT-TRANSFORM-1`); reusing the ALTER door's wording would have mis-stated which door
+  refused. The ALTER half of the split — `WRITE ORDERED BY (zorder(id))` refusing with no
+  commit — is pinned by
+  `tests/alter_write_order.rs::write_order_zorder_term_refuses_and_commits_nothing`.
+  pins: ice-rdf-sort-parse-1/C-001, C-002, C-003,
+  tests/alter_write_order.rs::write_order_zorder_term_refuses_and_commits_nothing
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:
   matching/no-location requests stay idempotent; contradictory `LOCATION` fails loud naming both
