@@ -495,15 +495,7 @@ REPARK: dict[str, Any] = {
     "meta-partitions": {"statements": [["OK", None]], "probes": [["OK", [[2, 1, 0], [2, 1, 1]]]]},
     "meta-entries": {"statements": [["OK", None]], "probes": [["OK", [[1], [1]]]]},
     "meta-all-data-files": {"statements": [["OK", None]], "probes": [["OK", [[0, 4]]]]},
-    "meta-position-deletes": {
-        "statements": [["OK", None]],
-        "probes": [
-            [
-                "ERROR",
-                "External error: FeatureUnsupported => position_deletes metadata table scan i",
-            ]
-        ],
-    },
+    "meta-position-deletes": {"statements": [["OK", None]], "probes": [["OK", [[1]]]]},
     "lineage-projection": {
         "statements": [["OK", None]],
         "probes": [
