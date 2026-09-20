@@ -295,6 +295,13 @@ pins: rp-4-fork-repin/C-005, C-006
   in `finish_ctas_staged_commit` so `execute_ctas` keeps the function
   length ceiling. Round 3 withdrew the empty-publish-then-append double commit.
   pins: ice-write-options-1/C-001, C-003
+  **ICE-MERGE-APPEND-1 (2026-09-19):** the staged-table append commits through
+  `merge_append()`, not `fast_append()`. Spark's CTAS writes through `StagedSparkTable`,
+  whose table is a `BaseTransaction$TransactionTable`; its `newAppend()` forwards to
+  `BaseTransaction.newAppend()`, which the 1.11.0 bytecode shows constructing
+  `org.apache.iceberg.MergeAppend` — a CTAS append is a merging append too. The
+  `replace_write` arm keeps `overwrite_files` (Java `newOverwrite`).
+  pins: ice-merge-append-1/C-001
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the service-managed abort arm skips `drop_table`
   and returns the original error unwrapped when `is_commit_state_unknown` fires — a
   possibly-landed create is never abort-dropped, and the class + `operation_id` reach the
