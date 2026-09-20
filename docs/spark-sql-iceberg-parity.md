@@ -7081,13 +7081,14 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 `ancestors_of`, `compute_table_stats`, `compute_partition_stats`, and
 `rewrite_table_path` refused before this row (`CALL … is not supported`);
 they now answer with Spark's schemas and rows over the owned fork's
-maintenance actions. Measured before/after on the 27-cell PySpark-4.1.2 +
+maintenance actions. Measured before/after on the 31-cell PySpark-4.1.2 +
 Iceberg-1.11.0 oracle (`python/repark/tests/ice_procs_route_1_spark_oracle.json`,
 re-derived by `python/repark/tests/_record_ice_procs_route_1_oracle.py`):
-before, every facade cell failed with the not-supported refusal; after, 25
+before, every facade cell failed with the not-supported refusal; after, 28
 cells pass on the facade door with the recorded columns, rows, metadata
-entries, and file contents, the 2 incremental version-range cells stay
-`xfail(strict)`, and the live tier re-derives the oracle on live Spark.
+entries, and file contents, the 2 incremental version-range cells plus the
+nested-column cell stay `xfail(strict)`, and the live tier re-derives the
+oracle on live Spark.
 
 - **RePark** (`CALL <catalog>.system.ancestors_of(table [, snapshot_id])`):
   walks the snapshot parent chain newest-first, answering
@@ -7099,9 +7100,14 @@ entries, and file contents, the 2 incremental version-range cells stay
   [, columns])`): one `statistics_file` string row with the registered puffin
   path; the metadata gains one `apache-datasketches-theta-v1` blob per column
   with exact ndv at this size. The default covers every primitive top-level
-  column (`struct` fields skipped); `columns` keeps the listed ones in schema
-  order. An unknown column refuses `Can't find column <name> in table
-  <schema>`; an empty table answers zero rows and commits nothing.
+  column (`struct` fields skipped); `columns` keeps the listed ones in caller
+  order after dedup. An unknown column refuses `Can't find column <name> in
+  table <schema>`; an empty `columns` array refuses `Columns cannot be
+  null/empty`; a non-primitive column refuses `Can't compute stats on
+  non-primitive type column: <name> (<type>)`; a nested name passes through
+  to the fork, which has no nested scan projection yet, so it stays
+  `xfail(strict)` instead of answering Spark's nested blob. An empty table
+  answers zero rows and commits nothing.
 - **RePark** (`CALL <catalog>.system.compute_partition_stats(table [,
   snapshot_id])`): one `partition_statistics_file` string row with
   per-partition counts (`dv_count` on v3). An unpartitioned table refuses
@@ -7113,12 +7119,18 @@ entries, and file contents, the 2 incremental version-range cells stay
   `src,target` lines (`N/A` when `create_file_list => false`); the manifest
   count is the covered snapshots; the delete count is the staged parquet
   position-delete files (1 on the MoR cell). Default staging sits under
-  `<table>/metadata/copy-table-staging-<…>/`. A wrong prefix refuses
-  `Path …/ does not start with …/`; `start_version` / `end_version` refuse
-  naming the fork's missing incremental range.
+  `<table>/metadata/copy-table-staging-<…>/`. The file-list line shapes and
+  the staged metadata location match the oracle with the single-file
+  residue below; `latest_version` keeps the memory-catalog basename
+  (`NNNNN-<uuid>.metadata.json`, not the oracle Hadoop `vN` names). A wrong
+  prefix refuses `Path …/ does not start with …/` from the router-owned
+  guard; `start_version` / `end_version` refuse naming the fork's missing
+  incremental range.
 - **Apache Spark**: identical columns, rows, metadata entries, and refusal
-  texts per the 27 measured cells, except the two incremental version-range
-  cells, which only Spark answers (the fork stages a full rewrite).
+  texts per the 31 measured cells, except the two incremental version-range
+  cells, which only Spark answers (the fork stages a full rewrite), and the
+  nested-column stats cell, which only Spark answers (the fork scan has no
+  nested projection).
 - **Pin**: `python/repark/tests/test_ice_procs_route_1.py` (facade cells plus
   the native-door CALL refusal each) and
   `crates/repark-spark/src/tests/call_procs_route_1.rs` (schemas, rows, and
@@ -7126,10 +7138,12 @@ entries, and file contents, the 2 incremental version-range cells stay
 - **Rationale**: routing, not table-format work — the fork already implements
   the three actions, and the router only shapes Spark's surface around them.
   Residue: the version-range `xfail(strict)` pair with the fork ask in the
-  ledger; the fork stages one rewritten metadata file where Spark stages every
-  version (the file list carries the staged file either way); default staging
-  names use wall-clock nanos plus pid because this crate carries no `uuid`
-  dependency; output columns are non-nullable by the rewrite-family precedent
+  ledger; the nested-column `xfail(strict)` with its fork ask; the fork stages
+  one rewritten metadata file where Spark stages every version (the file list
+  carries the staged file either way); default staging names use wall-clock
+  nanos plus pid because this crate carries no `uuid` dependency; the memory
+  catalog's metadata basenames diverge from Hadoop `vN` names (pinned by
+  shape); output columns are non-nullable by the rewrite-family precedent
   (the fixture records no nullability).
 
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**

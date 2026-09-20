@@ -41,16 +41,16 @@ range), the clause stops, pins what is equal, and records the fork ask below.
 | C-003 | The live tier re-runs the recorder against the fixture | PROVEN | `test_live_oracle_matches_recorded` (`REPARK_PARITY_LIVE=1`); round 2 normalizes every run-varying token at record time to its exact writer shape, so two fresh-warehouse derivations are byte-identical and `check` compares minus `secs` with no second pass |
 | C-004 | `ancestors_of` answers Spark's columns, newest-first chains, and timestamps | PROVEN | `crates/repark-spark/src/call/ancestors_of.rs`; facade pins default/id/rollback/branch/positional; Rust `call_ancestors_of_walks_newest_first_with_snapshot_timestamps` |
 | C-005 | `ancestors_of` refusals carry Spark's class and text | PROVEN | `Cannot find snapshot: -1` / `Cannot find snapshot: 12345` as `IllegalArgumentException`; facade `test_ancestors_empty`, `test_ancestors_missing_id`; Rust `call_ancestors_of_names_missing_snapshots_like_spark` |
-| C-006 | `compute_table_stats` default/snapshot/twice register exact ndv blobs | PROVEN | `crates/repark-spark/src/call/compute_table_stats.rs` over fork `ComputeTableStats`; facade `test_table_stats_default`, `test_table_stats_snapshot`, `test_table_stats_twice` assert the registered path and the full statistics entries |
-| C-007 | `compute_table_stats columns` keeps schema order | PROVEN | Router resolves the requested names and registers them in schema position (reversed input still yields `[id]` before `[data]`); facade `test_table_stats_columns`, `test_table_stats_columns_two`; Rust `call_compute_table_stats_registers_one_blob_per_column_in_schema_order` |
-| C-008 | Unknown `columns` entry refuses Spark's text | PROVEN | `Can't find column nope in table <schema>` as `IllegalArgumentException`; facade `test_table_stats_unknown_column`; Rust refusal case |
+| C-006 | `compute_table_stats` default/snapshot/twice register exact ndv blobs | PROVEN | `crates/repark-spark/src/call/compute_table_stats.rs` over fork `ComputeTableStats`; facade `test_table_stats_default`, `test_table_stats_snapshot`, `test_table_stats_twice` assert the registered path tokens against `out-rel` and the FULL statistics list (the twice cell keeps exactly one entry after two runs on one snapshot) |
+| C-007 | `compute_table_stats columns` keeps caller order after dedup | PROVEN | Round 3 measured Spark keeping input order (`array('data','id')` stores `[[2],[1]]`); the router passes caller names through deduped. Facade `test_table_stats_columns`, `test_table_stats_columns_two`, `test_table_stats_duplicate` assert stored order unsorted plus path tokens; the nested name `st.a` stays `xfail(strict)` (fork ask R-005); Rust `call_compute_table_stats_registers_blobs_in_caller_order` plus the nested pass-through and dedup pins |
+| C-008 | Bad `columns` entries refuse Spark's class and text | PROVEN | Unknown (`Can't find column nope in table <schema>`), empty array (`Columns cannot be null/empty`, registers nothing), and struct (`Can't compute stats on non-primitive type column: st (struct<3: a: optional int, 4: b: optional string>)`) — all as `IllegalArgumentException`; facade `test_table_stats_unknown_column`, `test_table_stats_empty_array`, `test_table_stats_struct_arg`; Rust refusal cases asserting class and text |
 | C-009 | Every-primitive-type and struct-default cells match with exact ndv | PROVEN | Facade `test_table_stats_types` (8 columns incl. decimal/date/timestamp) and `test_table_stats_nested` (only `id` registered); fork theta sketches agree with Spark exactly at this size |
 | C-010 | `compute_table_stats` on an empty table answers zero rows | PROVEN | Router returns the empty single-column frame and commits nothing when there is no current snapshot and no `snapshot_id`; facade `test_table_stats_empty`; Rust empty case |
 | C-011 | `compute_partition_stats` registers per-partition counts incl. v3 `dv_count` | PROVEN | `crates/repark-spark/src/call/compute_partition_stats.rs` over fork `ComputePartitionStats`; facade default/snapshot/v3 pins assert the registered path, the entry, and the parquet contents minus volatile columns; Rust registration case |
 | C-012 | Unpartitioned table refuses `Table must be partitioned` | PROVEN | Router checks the default spec before the fork runs; facade `test_partition_stats_unpartitioned`; Rust refusal case |
-| C-013 | `rewrite_table_path` full rewrite stages, counts, and lists like Spark | PROVEN | `crates/repark-spark/src/call/rewrite_table_path.rs` over fork `RewriteTablePath` plus `repark_iceberg::catalog::write_text_file` for the `file-list` CSV; facade default/staging/MoR pins assert latest version, file list, staged metadata location, and counts (3,0 / 2,0 / 4,1); Rust `call_rewrite_table_path_stages_manifests_lists_and_answers_sparks_counts` |
+| C-013 | `rewrite_table_path` full rewrite stages, counts, and lists like Spark | PROVEN | `crates/repark-spark/src/call/rewrite_table_path.rs` over fork `RewriteTablePath` plus `repark_iceberg::catalog::write_text_file` for the `file-list` CSV; facade default/staging/MoR pins assert counts (3,0 / 3,0 / 4,1) plus the file-list line shapes and staged metadata location against the oracle with the single-file R-002 delta; `latest_version` keeps the live basename with its memory-catalog shape pinned (R-006); Rust `call_rewrite_table_path_stages_manifests_lists_and_answers_sparks_counts` |
 | C-014 | `create_file_list => false` answers `N/A` | PROVEN | Router skips the list write; facade `test_rewrite_path_no_file_list`; Rust `N/A` case |
-| C-015 | Wrong `source_prefix` refuses Spark's text | PROVEN | `Path …/ does not start with …/` as `IllegalArgumentException`; facade `test_rewrite_path_missing_prefix`; Rust prefix case |
+| C-015 | Wrong `source_prefix` refuses Spark's text | PROVEN | `Path …/ does not start with …/` as `IllegalArgumentException` from the router-owned guard (exact text and class pinned; red under guard-removal mutation, so the fork relativize error cannot satisfy it); facade `test_rewrite_path_missing_prefix`; Rust prefix case |
 | C-016 | `start_version` / `end_version` refuse loudly and stay strict-xfail | PROVEN | Router returns `NotImplemented` naming the fork's missing incremental range; facade `test_rewrite_path_end_version`, `test_rewrite_path_start_version` are `xfail(strict)`; Rust `call_rewrite_table_path_version_range_refuses_naming_the_fork_gap`; fork ask R-001 |
 
 ## Evidence
@@ -98,7 +98,7 @@ not-supported refusal, 1 skipped (live), 2 xfailed (version range). Seeds,
 rollback, branch DDL, and the setup paths all worked before routing, so the
 red was exactly the four missing procedures.
 
-### E-005 — gates (measured 2026-09-19)
+### E-005 — gates (measured 2026-09-19; round 3 re-measured 2026-09-19)
 
 - New Python file offline `-n 4`: 25 passed, 1 skipped, 2 xfailed.
 - Live leg (`REPARK_PARITY_LIVE=1`, zulu-17, pinned 1.11.0 runtime from the
@@ -106,6 +106,10 @@ red was exactly the four missing procedures.
 - New Rust battery `cargo test -p repark-spark --lib call_procs_route_1`:
   8 passed. Full `call` filter: 175 passed. `repark-iceberg --lib catalog::`:
   102 passed.
+- Round 3: Python file offline `-n 4`: 28 passed, 1 skipped, 3 xfailed
+  (nested name plus the two version-range cells); live leg: 29 passed
+  (28 plus the re-derivation), 3 xfailed. Rust battery: 10 passed. The
+  guard-removal mutation goes red on the strengthened prefix pin.
 - `cargo fmt --all --check` clean; `cargo clippy` on the touched crates with
   the Makefile's flag pair (`-D warnings -A clippy::disallowed_methods`):
   zero errors. (The brief's bare clippy line omits the Makefile's `-A` flag
@@ -140,6 +144,48 @@ red was exactly the four missing procedures.
 - R-004 (assumption): output columns are non-nullable by the rewrite-family
   precedent; the fixture records no nullability. If live Spark ever shows a
   nullable procedure column, adjust the schema constructors.
+- R-005 (fork ask, 2026-09-19): `ComputeTableStats` cannot stat nested
+  columns. The router passes `st.a` through (no silent drop), but the fork
+  resolves the leaf name and its scan refuses nested fields (`Column ... is
+  not a direct child of schema but a nested field, which is not supported
+  now`). Spark answers one blob on the nested field id with exact ndv
+  (measured cell QP-CTS-NESTED-NAME). Ask: a fork `ComputeTableStats` that
+  projects nested selections and emits blobs with nested field ids. Until
+  then the facade cell stays `xfail(strict)` and the Rust pin asserts the
+  pass-through with no silent commit.
+- R-006 (observed, not pinned, 2026-09-19): the memory catalog names metadata
+  files `NNNNN-<uuid>.metadata.json` (measured `00005-…`) where the oracle
+  Hadoop door names them `vN.metadata.json` (measured `v6` on the MoR cell —
+  the counters also differ). `latest_version` therefore pins the live
+  basename plus its memory-catalog shape, never the oracle token. Only the
+  rewrite door is affected; stats paths match Spark's shape on both doors.
+
+## Round 3 (2026-09-19, run 25c, IPI-30) — verification-critic findings
+
+Two P1s and six P2s, each measured first on live Spark 4.1.2 + Iceberg
+1.11.0 (`cells_qc8.py`: the brief's `cells_qc6.py` name was taken by another
+lane, so the six shapes ran as `qc8`) and closed with its pin:
+
+- F-001: empty `columns` refused `Columns cannot be null/empty` on Spark;
+  the router refuses with that class and text and registers nothing.
+- F-002: nested `st.a` answers one blob on field 3 with exact ndv on Spark;
+  the router passes the name through (the silent-drop collapse is gone) but
+  the fork scan has no nested projection, so the cell stays `xfail(strict)`
+  with fork ask R-005 — the unit's R-001 precedent for a fork gap.
+- F-008: struct `st` refused as non-primitive with Spark's class and struct
+  rendering; list/map/variant use the same Java rendering rule (unmeasured).
+- F-005: Spark stores blobs in caller order (`[[2],[1]]` measured unsorted),
+  so the schema-order claim is dropped; the router keeps caller order after
+  dedup and the pins assert stored order unsorted.
+- F-006: the twice pin asserts the FULL statistics list (one entry after two
+  runs, measured `n-statistics == 1`).
+- F-007: the registered `statistics_file` / `partition_statistics_file`
+  tokens are asserted against the oracle `out-rel` shapes.
+- F-004: the rewrite file-list shapes and staged location are asserted
+  against the oracle with the single-file R-002 delta; `latest_version`
+  keeps the live basename with the R-006 shape pin.
+- F-003: the prefix pin asserts the router-owned class and exact text and
+  the absence of the fork shape; the guard-removal mutation goes red.
 
 ## Coverage attestation
 
