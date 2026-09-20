@@ -11,6 +11,7 @@ use arrow::datatypes::{DataType, Field};
 use datafusion::common::{DFSchema, DFSchemaRef, Result as DataFusionResult, plan_err};
 use datafusion::logical_expr::{Extension, LogicalPlan, UserDefinedLogicalNodeCore};
 use datafusion::prelude::{DataFrame, SessionContext};
+use repark_common::spark_error;
 
 use crate::{Error, Result, engine_err};
 
@@ -69,17 +70,16 @@ pub struct StackLabels {
 
 pub(crate) fn parse_stack_n(n: i64) -> Result<usize> {
     if n <= 0 || n > i64::from(i32::MAX) {
-        return Err(Error::Analysis(format!(
-            "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve stack due to data type \
-             mismatch: The `n` must be between (0, 2147483647] (current value = {n}). \
-             SQLSTATE: 42K09"
-        )));
+        let clause = format!(" (current value = {n})");
+        return Err(spark_error::analysis(
+            spark_error::DATATYPE_MISMATCH_VALUE_OUT_OF_RANGE,
+            &[("valueClause", clause.as_str())],
+        ));
     }
     usize::try_from(n).map_err(|_| {
-        Error::Analysis(
-            "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve stack due to data type \
-             mismatch: The `n` must be between (0, 2147483647]. SQLSTATE: 42K09"
-                .to_string(),
+        spark_error::analysis(
+            spark_error::DATATYPE_MISMATCH_VALUE_OUT_OF_RANGE,
+            &[("valueClause", "")],
         )
     })
 }
@@ -98,11 +98,16 @@ pub(crate) fn unify_stack_type(left: &DataType, right: &DataType) -> DataFusionR
     if matches!(right, DataType::Null) {
         return Ok(left.clone());
     }
-    plan_err!(
-        "[DATATYPE_MISMATCH.STACK_COLUMN_DIFF_TYPES] Cannot resolve stack due to data type \
-         mismatch: The data type of the column do not have the same type: \"{left}\" <> \
-         \"{right}\". SQLSTATE: 42K09"
-    )
+    let left_text = left.to_string();
+    let right_text = right.to_string();
+    let rendered = spark_error::message(
+        spark_error::DATATYPE_MISMATCH_STACK_COLUMN_DIFF_TYPES,
+        &[
+            ("leftType", left_text.as_str()),
+            ("rightType", right_text.as_str()),
+        ],
+    );
+    plan_err!("{rendered}")
 }
 
 #[derive(Debug, Clone, Eq)]
@@ -123,11 +128,11 @@ impl UnpivotNode {
         output_names: Option<&[String]>,
     ) -> DataFusionResult<Self> {
         if n == 0 {
-            return plan_err!(
-                "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve stack due to data type \
-                 mismatch: The `n` must be between (0, 2147483647] (current value = 0). \
-                 SQLSTATE: 42K09"
+            let rendered = spark_error::message(
+                spark_error::DATATYPE_MISMATCH_VALUE_OUT_OF_RANGE,
+                &[("valueClause", " (current value = 0)")],
             );
+            return plan_err!("{rendered}");
         }
         let input_fields = input.schema().fields();
         if passthrough_count > input_fields.len() {
@@ -183,11 +188,11 @@ impl UnpivotNode {
     ) -> DataFusionResult<Self> {
         let n = labels.names.len();
         if n == 0 {
-            return plan_err!(
-                "[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE] Cannot resolve stack due to data type \
-                 mismatch: The `n` must be between (0, 2147483647] (current value = 0). \
-                 SQLSTATE: 42K09"
+            let rendered = spark_error::message(
+                spark_error::DATATYPE_MISMATCH_VALUE_OUT_OF_RANGE,
+                &[("valueClause", " (current value = 0)")],
             );
+            return plan_err!("{rendered}");
         }
         if !labels.cells.len().is_multiple_of(n) {
             return plan_err!(

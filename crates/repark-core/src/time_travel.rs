@@ -6,7 +6,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::TableMetadata;
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
-use repark_common::Error;
+use repark_common::{Error, spark_error};
 
 use crate::SessionTimeZone;
 use crate::catalog_state::CatalogRegistry;
@@ -132,9 +132,10 @@ pub async fn resolve_reader_spec(
     let version = opts.version_as_of.as_deref().map(str::trim);
     let timestamp = opts.timestamp_as_of.as_deref().map(str::trim);
     if version.is_some() && timestamp.is_some() {
-        return Err(DataFusionError::Plan(
-            "[INVALID_TIME_TRAVEL_SPEC] Cannot specify both version and timestamp when time travelling the table. SQLSTATE: 42K0E".to_string(),
-        ));
+        return Err(DataFusionError::Plan(spark_error::message(
+            spark_error::INVALID_TIME_TRAVEL_SPEC,
+            &[],
+        )));
     }
     if opts.snapshot_id.is_some() && (version.is_some() || timestamp.is_some()) {
         return Err(illegal_argument_error(
@@ -236,15 +237,17 @@ pub fn snapshot_id_as_of_time(metadata: &TableMetadata, as_of_ms: i64) -> Option
 
 #[must_use]
 pub fn invalid_timestamp_input(display: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.INPUT] The time travel timestamp expression \"{display}\" is invalid. Cannot be casted to the \"TIMESTAMP\" type. SQLSTATE: 42K0E"
+    DataFusionError::Plan(spark_error::message(
+        spark_error::INVALID_TIME_TRAVEL_TIMESTAMP_EXPR_INPUT,
+        &[("display", display)],
     ))
 }
 
 #[must_use]
 pub fn nondeterministic_timestamp_expr(display: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "[INVALID_TIME_TRAVEL_TIMESTAMP_EXPR.NON_DETERMINISTIC] The time travel timestamp expression \"{display}\" is invalid. Must be deterministic. SQLSTATE: 42K0E"
+    DataFusionError::Plan(spark_error::message(
+        spark_error::INVALID_TIME_TRAVEL_TIMESTAMP_EXPR_NON_DETERMINISTIC,
+        &[("display", display)],
     ))
 }
 

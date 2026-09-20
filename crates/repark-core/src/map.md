@@ -311,6 +311,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   texts before classification (never for `Parse`), so `sql_with` answers Spark's shape
   on every dialect. pins: unresolved-routine-1/C-001
   (ORCH-001 remediation: the constructor sits above `engine_err`'s doc comment.)
+  **IPI-51 PR2 (2026-09-20):** the hand-formatted `[CONDITION]` strings in
+  `text_scan.rs`, `orc_scan.rs`, `time_travel.rs`, `column_resolution.rs`,
+  `stack.rs` (+ `stack/udf.rs`), and `session_time_zone.rs` render through
+  `repark_common::spark_error`, byte-identical.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see

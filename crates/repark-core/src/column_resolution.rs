@@ -11,6 +11,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     AccessExpr, Expr as SqlExpr, Ident, ObjectNamePart, Statement, Value, VisitMut, VisitorMut,
 };
+use repark_common::spark_error;
 
 #[allow(clippy::missing_errors_doc)]
 pub async fn plan_statement_with_column_repair(
@@ -469,8 +470,9 @@ fn ambiguous_message(qualifier: Option<&str>, requested: &str, scopes: &[Vec<Str
         .map(|scope| quoted(scope, requested))
         .collect::<Vec<_>>()
         .join(", ");
-    format!(
-        "[AMBIGUOUS_REFERENCE] Reference {reference} is ambiguous, could be: [{options}]. SQLSTATE: 42704"
+    spark_error::message(
+        spark_error::AMBIGUOUS_REFERENCE,
+        &[("reference", &reference), ("options", &options)],
     )
 }
 

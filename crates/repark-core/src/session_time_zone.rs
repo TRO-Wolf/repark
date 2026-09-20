@@ -5,7 +5,7 @@ use std::hash::BuildHasher;
 use std::str::FromStr;
 
 use arrow::array::timezone::Tz;
-use repark_common::{Error, Result};
+use repark_common::{Error, Result, spark_error};
 
 /// The ONE conf key the engine reads for the session timezone.
 pub const SESSION_TIME_ZONE_KEY: &str = "spark.sql.session.timeZone";
@@ -99,11 +99,10 @@ pub fn parse_runtime_session_zone_value(raw: &str) -> Result<SessionTimeZone> {
 }
 
 fn invalid_runtime_zone(raw: &str) -> Error {
-    Error::IllegalArgument(format!(
-        "[INVALID_CONF_VALUE.TIME_ZONE] The value '{raw}' in the config \
-         \"{SESSION_TIME_ZONE_KEY}\" is invalid. Cannot resolve the given timezone. \
-         SQLSTATE: 22022"
-    ))
+    spark_error::illegal_argument(
+        spark_error::INVALID_CONF_VALUE_TIME_ZONE,
+        &[("value", raw), ("configKey", SESSION_TIME_ZONE_KEY)],
+    )
 }
 
 fn is_java_offset_zone(value: &str) -> bool {

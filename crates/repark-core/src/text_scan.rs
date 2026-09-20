@@ -20,6 +20,7 @@ use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
 use datafusion::physical_plan::{ExecutionPlan, RecordBatchStream, SendableRecordBatchStream};
 use datafusion::prelude::DataFrame;
 use futures::Stream;
+use repark_common::spark_error;
 
 use crate::text_schema::apply_user_text_schema;
 use crate::{Error, Result, engine_err};
@@ -84,9 +85,7 @@ fn push_text_dir(dir: &Path, display: &str, out: &mut Vec<PathBuf>) -> Result<()
 }
 
 fn missing_text_path(path: &str) -> Error {
-    Error::Analysis(format!(
-        "[PATH_NOT_FOUND] Path does not exist: file:{path}. SQLSTATE: 42K03"
-    ))
+    spark_error::analysis(spark_error::PATH_NOT_FOUND, &[("path", path)])
 }
 
 fn keep_partitioned_only(root: &Path, files: Vec<PathBuf>) -> Vec<PathBuf> {
