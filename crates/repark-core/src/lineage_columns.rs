@@ -71,7 +71,7 @@ pub async fn prepare_lineage_sql(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-    dialect: &dyn Dialect,
+    dialect: &(dyn Dialect + Sync),
     pinned: &mut LineagePins,
 ) -> Result<Option<String>> {
     if !sql_mentions_lineage_columns(sql, dialect) {

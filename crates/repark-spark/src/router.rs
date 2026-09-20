@@ -86,10 +86,67 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());
+    execute_calibrated(ctx, &catalogs, canonical_sql, Some(sql), write_options).await
+}
+
+pub(crate) async fn execute_view_body_query(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Result<DataFrame> {
+    crate::view_ddl::read::ensure_view_wrappers(ctx, catalogs)?;
+    let rewritten_sql = rewrite_sql_for_execute(sql, catalogs);
+    let sql = rewritten_sql.as_str();
+    refuse_multi_statement_sql(sql)?;
+    let sql_after_meta: std::borrow::Cow<'_, str> =
+        if metadata_tables::sql_may_have_metadata_table_path(sql) {
+            match metadata_tables::prepare_metadata_table_sql(catalogs, sql).await? {
+                Some(rewritten) => std::borrow::Cow::Owned(rewritten),
+                None => std::borrow::Cow::Borrowed(sql),
+            }
+        } else {
+            std::borrow::Cow::Borrowed(sql)
+        };
+    let mut pinned = time_travel::PinnedViews::default();
+    let sql_after_branch =
+        write_to_branch::apply_write_to_branch(ctx, catalogs, sql_after_meta.as_ref(), &mut pinned)
+            .await?;
+    let sql_after_wap =
+        wap::apply_wap_read_redirect(ctx, catalogs, sql_after_branch.as_ref(), &mut pinned).await?;
+    let routed_sql = sql_after_wap
+        .as_deref()
+        .unwrap_or_else(|| sql_after_branch.as_ref());
+    let dialect = datafusion::sql::sqlparser::dialect::DatabricksDialect {};
+    let mut lineage_pins = repark_core::LineagePins::default();
+    let sql_storage: std::borrow::Cow<'_, str> = match repark_core::prepare_lineage_sql(
+        ctx,
+        catalogs,
+        routed_sql,
+        &dialect,
+        &mut lineage_pins,
+    )
+    .await?
+    {
+        Some(rewritten) => std::borrow::Cow::Owned(rewritten),
+        None => std::borrow::Cow::Borrowed(routed_sql),
+    };
+    let result = spark_ast::execute_passthrough(ctx, catalogs, sql_storage.as_ref()).await;
+    lineage_pins.release(ctx);
+    pinned.release(ctx);
+    result
+}
+
+async fn execute_calibrated(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    canonical_sql: &str,
+    original_sql: Option<&str>,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Result<DataFrame> {
     // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
     let sql_after_meta: std::borrow::Cow<'_, str> =
         if metadata_tables::sql_may_have_metadata_table_path(canonical_sql) {
-            match metadata_tables::prepare_metadata_table_sql(&catalogs, canonical_sql).await? {
+            match metadata_tables::prepare_metadata_table_sql(catalogs, canonical_sql).await? {
                 Some(rewritten) => std::borrow::Cow::Owned(rewritten),
                 None => std::borrow::Cow::Borrowed(canonical_sql),
             }
@@ -102,7 +159,7 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
         if time_travel::changes::sql_may_have_changes_relation(sql_after_meta.as_ref()) {
             match time_travel::changes::prepare_changes_sql(
                 ctx,
-                &catalogs,
+                catalogs,
                 sql_after_meta.as_ref(),
                 &mut pinned,
             )
@@ -116,24 +173,26 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
         };
     let sql_after_branch = write_to_branch::apply_write_to_branch(
         ctx,
-        &catalogs,
+        catalogs,
         sql_after_changes.as_ref(),
         &mut pinned,
         !write_options.is_empty(),
     )
     .await?;
     let sql_after_wap_read =
-        wap::apply_wap_read_redirect(ctx, &catalogs, sql_after_branch.as_ref(), &mut pinned)
-            .await?;
+        wap::apply_wap_read_redirect(ctx, catalogs, sql_after_branch.as_ref(), &mut pinned).await?;
+    let sql_after_wap_read =
+        wap::apply_wap_read_redirect(ctx, catalogs, sql_after_branch.as_ref(), &mut pinned).await?;
     let routed_sql = sql_after_wap_read
         .as_deref()
         .unwrap_or_else(|| sql_after_branch.as_ref());
     let mut lineage_pins = repark_core::LineagePins::default();
     let mut metadata_column_pins = repark_core::MetadataColumnPins::default();
-    let original_for_locations = original_sql_for_locations(sql, canonical_sql, routed_sql);
+    let original_for_locations =
+        original_sql.and_then(|sql| original_sql_for_locations(sql, canonical_sql, routed_sql));
     let result = Box::pin(execute_time_travelled(
         ctx,
-        &catalogs,
+        catalogs,
         routed_sql,
         original_for_locations,
         &mut pinned,
@@ -265,6 +324,7 @@ async fn execute_inner(
     sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    crate::view_ddl::read::ensure_view_wrappers(ctx, catalogs)?;
     let rewritten_sql = rewrite_sql_for_execute(sql, catalogs);
     let sql = rewritten_sql.as_str();
     let evolving = merge::schema_evolution::strip_schema_evolution(sql);
@@ -326,6 +386,13 @@ async fn execute_inner(
             ..
         } => execute_drop_table(ctx, catalogs, names, *if_exists, *purge).await,
         Statement::Drop {
+            object_type: ObjectType::View,
+            names,
+            if_exists,
+            temporary: false,
+            ..
+        } => crate::view_ddl::execute::execute_drop_view(ctx, catalogs, names, *if_exists).await,
+        Statement::Drop {
             object_type: ObjectType::Schema | ObjectType::Database,
             names,
             if_exists,
@@ -338,8 +405,13 @@ async fn execute_inner(
         Statement::Merge(merge) => {
             execute_merge_statement(ctx, catalogs, merge, schema_evolution).await
         }
+        Statement::Insert(insert) if insert.overwrite => {
+            refuse_insert_into_view(ctx, catalogs, insert).await?;
+            execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await
+        }
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {
+            refuse_insert_into_view(ctx, catalogs, insert).await?;
             execute_insert_routed(ctx, catalogs, sql, insert, write_options).await
         }
         // DELETE/UPDATE.
@@ -415,6 +487,17 @@ fn refuse_options_on_non_write(
     write_options.refuse_if_non_empty(context)
 }
 
+async fn refuse_insert_into_view(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    insert: &datafusion::sql::sqlparser::ast::Insert,
+) -> Result<()> {
+    if let datafusion::sql::sqlparser::ast::TableObject::TableName(name) = &insert.table {
+        crate::view_ddl::execute::refuse_view_write_target(ctx, catalogs, name).await?;
+    }
+    Ok(())
+}
+
 /// `DELETE FROM …` applies the write-safety valves before provider execution.
 async fn execute_delete(
     ctx: &SessionContext,
@@ -424,6 +507,9 @@ async fn execute_delete(
 ) -> Result<DataFrame> {
     if let Some(message) = refuse_read_only_dml_from_delete(catalogs, delete) {
         return Err(DataFusionError::Plan(message));
+    }
+    if let Some(name) = delete_target_object_name(delete) {
+        crate::view_ddl::execute::refuse_view_write_target(ctx, catalogs, name).await?;
     }
     // ObjectName only — never TableWithJoins Display (aliases would under-refuse BUG-001).
     let object_name = delete_target_object_name(delete);
@@ -473,6 +559,9 @@ async fn execute_update(
     let table_sql = object_name.map_or_else(|| update.table.to_string(), ToString::to_string);
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
+    }
+    if let Some(name) = object_name {
+        crate::view_ddl::execute::refuse_view_write_target(ctx, catalogs, name).await?;
     }
     {
         let as_statement = datafusion::sql::sqlparser::ast::Statement::Update(update.clone());
@@ -780,6 +869,7 @@ async fn try_alter_intercepts(
     None
 }
 
+#[allow(clippy::too_many_lines)]
 async fn try_preparse_intercepts(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -787,6 +877,23 @@ async fn try_preparse_intercepts(
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Option<Result<DataFrame>> {
     let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
+    if let Some(parsed) = crate::view_ddl::parse::try_parse_create_view(sql) {
+        let statement = match parsed.and_then(|create| parsed_ddl("CREATE VIEW").map(|()| create)) {
+            Ok(statement) => statement,
+            Err(error) => return Some(Err(error)),
+        };
+        return Some(crate::view_ddl::execute::execute_create_view(ctx, catalogs, statement).await);
+    }
+    if let Some(error) = crate::view_ddl::parse::try_parse_alter_view_as(sql) {
+        return Some(Err(error));
+    }
+    if let Some(parsed) = crate::view_ddl::parse::try_parse_show_views(sql) {
+        let statement = match parsed {
+            Ok(statement) => statement,
+            Err(error) => return Some(Err(error)),
+        };
+        return Some(crate::view_ddl::execute::execute_show_views(ctx, catalogs, statement).await);
+    }
     if let Some(outcome) = try_alter_intercepts(ctx, catalogs, sql, write_options).await {
         return Some(outcome);
     }

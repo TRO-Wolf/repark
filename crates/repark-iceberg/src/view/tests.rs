@@ -230,9 +230,11 @@ async fn create_or_replace_adds_a_version_and_moves_current() {
         namespace_name: "ns",
         view_name: "v1",
     };
-    create_or_replace_view(&target, false, false, definition(&warehouse, SQL))
+    let created = create_or_replace_view(&target, false, false, definition(&warehouse, SQL))
         .await
-        .unwrap_or_else(|error| panic!("view must create: {error}"));
+        .unwrap_or_else(|error| panic!("view must create: {error}"))
+        .unwrap_or_else(|| panic!("create must return the view"));
+    let created_current = created.metadata().current_version_id();
     let replaced = create_or_replace_view(
         &target,
         true,
@@ -244,13 +246,9 @@ async fn create_or_replace_adds_a_version_and_moves_current() {
     .unwrap_or_else(|| panic!("replace must return the view"));
     let metadata = replaced.metadata();
     assert_eq!(metadata.versions().len(), 2, "pins: ice-views-1/C-002");
-    let ids = metadata
-        .versions()
-        .map(|version| version.version_id())
-        .collect::<Vec<_>>();
-    assert_eq!(
+    assert_ne!(
         metadata.current_version_id(),
-        ids[1],
+        created_current,
         "pins: ice-views-1/C-002"
     );
     assert_eq!(
@@ -347,6 +345,66 @@ async fn drop_view_reports_view_not_found_for_a_table_name() {
             .await
             .unwrap_or_else(|error| panic!("table check must run: {error}")),
         "pins: ice-views-1/C-010"
+    );
+}
+
+#[tokio::test]
+async fn drop_view_if_exists_still_refuses_a_table_name() {
+    let warehouse = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let catalog = catalog_with_namespace(&warehouse, "ns").await;
+    let namespace = NamespaceIdent::new("ns".to_string());
+    let creation = iceberg::TableCreation::builder()
+        .name("t".to_string())
+        .location(format!(
+            "{}/t",
+            warehouse.path().to_str().unwrap_or_else(|| {
+                panic!("warehouse path must be utf8");
+            })
+        ))
+        .schema(int_string_schema())
+        .properties(HashMap::new())
+        .build();
+    catalog
+        .create_table(&namespace, creation)
+        .await
+        .unwrap_or_else(|error| panic!("table must create: {error}"));
+    let target = ViewTarget {
+        catalog_name: "sc",
+        catalog: catalog.as_ref(),
+        namespace: &namespace,
+        namespace_name: "ns",
+        view_name: "t",
+    };
+    let error = drop_catalog_view(&target, true)
+        .await
+        .expect_err("if-exists tolerates absence, not a present table");
+    assert!(
+        error.to_string().contains("[VIEW_NOT_FOUND]"),
+        "pins: ice-views-1/C-010, got: {error}"
+    );
+}
+
+#[tokio::test]
+async fn drop_view_if_exists_tolerates_a_missing_namespace() {
+    let warehouse = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let catalog = catalog_with_namespace(&warehouse, "ns").await;
+    let namespace = NamespaceIdent::new("missing".to_string());
+    let target = ViewTarget {
+        catalog_name: "sc",
+        catalog: catalog.as_ref(),
+        namespace: &namespace,
+        namespace_name: "missing",
+        view_name: "v",
+    };
+    drop_catalog_view(&target, true)
+        .await
+        .unwrap_or_else(|error| panic!("if-exists drop must pass: {error}"));
+    let error = drop_catalog_view(&target, false)
+        .await
+        .expect_err("a bare missing drop must fail");
+    assert!(
+        error.to_string().contains("[VIEW_NOT_FOUND]"),
+        "pins: ice-views-1/C-010, got: {error}"
     );
 }
 

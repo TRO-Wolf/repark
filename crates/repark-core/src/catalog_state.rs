@@ -2,8 +2,10 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, PoisonError, RwLock};
 
+use datafusion::catalog::SchemaProvider;
 use iceberg::Catalog;
 use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
 
@@ -92,6 +94,8 @@ fn merge_table_creation_properties(
     merged
 }
 
+type ViewWrappedSchemas = HashMap<(String, String), Arc<dyn SchemaProvider>>;
+
 /// Iceberg catalog handles keyed by DataFusion catalog name, each tagged with a location policy.
 #[derive(Clone)]
 pub struct CatalogRegistry {
@@ -104,6 +108,8 @@ pub struct CatalogRegistry {
     iceberg_caches: Arc<CatalogCaches>,
     maintenance_policy: Option<(String, Option<MaintenancePolicy>)>,
     session_defaults: Arc<RwLock<(String, String)>>,
+    view_wrapped_schemas: Arc<std::sync::Mutex<ViewWrappedSchemas>>,
+    view_expansion_depth: Arc<AtomicUsize>,
 }
 
 impl Default for CatalogRegistry {
@@ -119,7 +125,27 @@ impl Default for CatalogRegistry {
                 "spark_catalog".to_string(),
                 "default".to_string(),
             ))),
+            view_wrapped_schemas: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            view_expansion_depth: Arc::new(AtomicUsize::new(0)),
         }
+    }
+}
+
+pub struct ViewExpansionGuard {
+    depth: Arc<AtomicUsize>,
+    level: usize,
+}
+
+impl ViewExpansionGuard {
+    #[must_use]
+    pub fn level(&self) -> usize {
+        self.level
+    }
+}
+
+impl Drop for ViewExpansionGuard {
+    fn drop(&mut self) {
+        self.depth.fetch_sub(1, Ordering::SeqCst);
     }
 }
 
@@ -275,6 +301,43 @@ impl CatalogRegistry {
     pub fn set_defaults(&self, catalog: &str, namespace: &str) {
         *RwLock::write(&self.session_defaults).unwrap_or_else(PoisonError::into_inner) =
             (catalog.to_string(), namespace.to_string());
+    }
+
+    #[must_use]
+    pub fn registered_catalog_names(&self) -> Vec<String> {
+        self.entries.keys().cloned().collect()
+    }
+
+    pub async fn is_view(&self, catalog: &str, view: &iceberg::TableIdent) -> bool {
+        match self.get(catalog) {
+            Some(handle) => handle.view_exists(view).await.unwrap_or(false),
+            None => false,
+        }
+    }
+
+    #[must_use]
+    pub fn view_wrapper_for(&self, catalog: &str, schema: &str) -> Option<Arc<dyn SchemaProvider>> {
+        self.view_wrapped_schemas
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .get(&(catalog.to_string(), schema.to_string()))
+            .cloned()
+    }
+
+    pub fn note_view_wrapper(&self, catalog: &str, schema: &str, wrapped: Arc<dyn SchemaProvider>) {
+        self.view_wrapped_schemas
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .insert((catalog.to_string(), schema.to_string()), wrapped);
+    }
+
+    #[must_use]
+    pub fn view_expansion_guard(&self) -> ViewExpansionGuard {
+        let level = self.view_expansion_depth.fetch_add(1, Ordering::SeqCst) + 1;
+        ViewExpansionGuard {
+            depth: Arc::clone(&self.view_expansion_depth),
+            level,
+        }
     }
 }
 

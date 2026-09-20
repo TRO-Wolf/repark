@@ -850,6 +850,10 @@ struct SpannedStatement {
     ends: Vec<usize>,
 }
 
+pub(crate) fn tokenize_with_spans(sql: &str) -> Option<(Vec<Token>, Vec<usize>, Vec<usize>)> {
+    SpannedStatement::new(sql).map(|lexed| (lexed.tokens, lexed.starts, lexed.ends))
+}
+
 fn byte_offset(line_starts: &[usize], char_bytes: &[usize], at: Location) -> Option<usize> {
     let line = usize::try_from(at.line).ok()?.checked_sub(1)?;
     let column = usize::try_from(at.column).ok()?.checked_sub(1)?;

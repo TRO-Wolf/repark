@@ -279,7 +279,17 @@ pub async fn drop_catalog_view(target: &ViewTarget<'_>, if_exists: bool) -> Resu
         Err(error) => return Err(iceberg_to_datafusion(error)),
     };
     if !view_exists {
-        if if_exists {
+        let table_exists = match target.catalog.table_exists(&ident).await {
+            Ok(exists) => exists,
+            Err(error)
+                if error.kind() == ErrorKind::NamespaceNotFound
+                    || error.kind() == ErrorKind::FeatureUnsupported =>
+            {
+                false
+            }
+            Err(error) => return Err(iceberg_to_datafusion(error)),
+        };
+        if if_exists && !table_exists {
             return Ok(());
         }
         return Err(view_not_found(target.namespace_name, target.view_name));

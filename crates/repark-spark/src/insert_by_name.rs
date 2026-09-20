@@ -62,6 +62,7 @@ pub(crate) async fn execute_insert_by_name(
             )));
         }
     };
+    crate::view_ddl::execute::refuse_view_write_target(ctx, catalogs, &table_name).await?;
     let source = insert.source.as_ref().ok_or_else(|| {
         DataFusionError::Plan("INSERT INTO … BY NAME needs a SELECT or VALUES source".to_string())
     })?;
