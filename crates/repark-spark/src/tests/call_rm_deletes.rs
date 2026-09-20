@@ -331,15 +331,9 @@ async fn rm_deletes_part_mor_v2() {
     .await;
     assert_eq!(
         layout(&catalogs, "rm_p2").await,
-        vec![
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (1, 0, 0, 1),
-            (1, 0, 0, 1),
-            (1, 0, 0, 1)
-        ]
+        vec![(0, 0, 1, 0), (0, 0, 1, 0), (0, 0, 1, 0)]
     );
+    assert_eq!(live_ids(&ctx, &catalogs, "rm_p2").await, vec![2, 3, 6]);
     assert_eq!(
         call_counts(
             &ctx,
@@ -347,16 +341,13 @@ async fn rm_deletes_part_mor_v2() {
             "CALL ice.system.rewrite_manifests(table => 'sales.rm_p2')"
         )
         .await,
-        (6, 2)
+        (3, 1)
     );
-    assert_eq!(
-        layout(&catalogs, "rm_p2").await,
-        vec![(0, 0, 6, 0), (1, 0, 0, 3)]
-    );
+    assert_eq!(layout(&catalogs, "rm_p2").await, vec![(0, 0, 3, 0)]);
     assert_eq!(live_ids(&ctx, &catalogs, "rm_p2").await, vec![2, 3, 6]);
     assert_eq!(
         current_summary(&catalogs, "rm_p2").await,
-        (Operation::Replace, 2, 0, 6)
+        (Operation::Replace, 1, 0, 3)
     );
 }
 
@@ -375,15 +366,9 @@ async fn rm_deletes_part_mor_v3() {
     .await;
     assert_eq!(
         layout(&catalogs, "rm_p3").await,
-        vec![
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (1, 0, 0, 1),
-            (1, 0, 0, 1),
-            (1, 0, 0, 1)
-        ]
+        vec![(0, 0, 1, 0), (0, 0, 1, 0), (0, 0, 1, 0)]
     );
+    assert_eq!(live_ids(&ctx, &catalogs, "rm_p3").await, vec![2, 3, 6]);
     assert_eq!(
         call_counts(
             &ctx,
@@ -391,16 +376,13 @@ async fn rm_deletes_part_mor_v3() {
             "CALL ice.system.rewrite_manifests(table => 'sales.rm_p3')"
         )
         .await,
-        (6, 2)
+        (3, 1)
     );
-    assert_eq!(
-        layout(&catalogs, "rm_p3").await,
-        vec![(0, 0, 6, 0), (1, 0, 0, 3)]
-    );
+    assert_eq!(layout(&catalogs, "rm_p3").await, vec![(0, 0, 3, 0)]);
     assert_eq!(live_ids(&ctx, &catalogs, "rm_p3").await, vec![2, 3, 6]);
     assert_eq!(
         current_summary(&catalogs, "rm_p3").await,
-        (Operation::Replace, 2, 0, 6)
+        (Operation::Replace, 1, 0, 3)
     );
 }
 
@@ -411,14 +393,9 @@ async fn rm_deletes_part_mor_spec_v2() {
     replay(&ctx, &catalogs, "rm_s2", PART, "2", &[DELETE_1, DELETE_4]).await;
     assert_eq!(
         layout(&catalogs, "rm_s2").await,
-        vec![
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (1, 0, 0, 1),
-            (1, 0, 0, 1)
-        ]
+        vec![(0, 0, 1, 0), (0, 0, 1, 0), (0, 0, 2, 0)]
     );
+    assert_eq!(live_ids(&ctx, &catalogs, "rm_s2").await, vec![2, 3, 5, 6]);
     assert_eq!(
         call_counts(
             &ctx,
@@ -426,16 +403,13 @@ async fn rm_deletes_part_mor_spec_v2() {
             "CALL ice.system.rewrite_manifests(table => 'sales.rm_s2', spec_id => 0)"
         )
         .await,
-        (5, 2)
+        (3, 1)
     );
-    assert_eq!(
-        layout(&catalogs, "rm_s2").await,
-        vec![(0, 0, 6, 0), (1, 0, 0, 2)]
-    );
+    assert_eq!(layout(&catalogs, "rm_s2").await, vec![(0, 0, 4, 0)]);
     assert_eq!(live_ids(&ctx, &catalogs, "rm_s2").await, vec![2, 3, 5, 6]);
     assert_eq!(
         current_summary(&catalogs, "rm_s2").await,
-        (Operation::Replace, 2, 0, 5)
+        (Operation::Replace, 1, 0, 3)
     );
 }
 
@@ -446,14 +420,9 @@ async fn rm_deletes_part_mor_spec_v3() {
     replay(&ctx, &catalogs, "rm_s3", PART, "3", &[DELETE_1, DELETE_4]).await;
     assert_eq!(
         layout(&catalogs, "rm_s3").await,
-        vec![
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (1, 0, 0, 1),
-            (1, 0, 0, 1)
-        ]
+        vec![(0, 0, 1, 0), (0, 0, 1, 0), (0, 0, 2, 0)]
     );
+    assert_eq!(live_ids(&ctx, &catalogs, "rm_s3").await, vec![2, 3, 5, 6]);
     assert_eq!(
         call_counts(
             &ctx,
@@ -461,16 +430,13 @@ async fn rm_deletes_part_mor_spec_v3() {
             "CALL ice.system.rewrite_manifests(table => 'sales.rm_s3', spec_id => 0)"
         )
         .await,
-        (5, 2)
+        (3, 1)
     );
-    assert_eq!(
-        layout(&catalogs, "rm_s3").await,
-        vec![(0, 0, 6, 0), (1, 0, 0, 2)]
-    );
+    assert_eq!(layout(&catalogs, "rm_s3").await, vec![(0, 0, 4, 0)]);
     assert_eq!(live_ids(&ctx, &catalogs, "rm_s3").await, vec![2, 3, 5, 6]);
     assert_eq!(
         current_summary(&catalogs, "rm_s3").await,
-        (Operation::Replace, 2, 0, 5)
+        (Operation::Replace, 1, 0, 3)
     );
 }
 
@@ -480,22 +446,24 @@ async fn rm_deletes_part_mor_nocache_v2() {
     let (ctx, catalogs) = setup_version(&wh, "2").await;
     replay(&ctx, &catalogs, "rm_c2", PART, "2", &[DELETE_1, DELETE_4]).await;
     assert_eq!(
+        layout(&catalogs, "rm_c2").await,
+        vec![(0, 0, 1, 0), (0, 0, 1, 0), (0, 0, 2, 0)]
+    );
+    assert_eq!(live_ids(&ctx, &catalogs, "rm_c2").await, vec![2, 3, 5, 6]);
+    assert_eq!(
         call_counts(
             &ctx,
             &catalogs,
             "CALL ice.system.rewrite_manifests(table => 'sales.rm_c2', use_caching => false)"
         )
         .await,
-        (5, 2)
+        (3, 1)
     );
-    assert_eq!(
-        layout(&catalogs, "rm_c2").await,
-        vec![(0, 0, 6, 0), (1, 0, 0, 2)]
-    );
+    assert_eq!(layout(&catalogs, "rm_c2").await, vec![(0, 0, 4, 0)]);
     assert_eq!(live_ids(&ctx, &catalogs, "rm_c2").await, vec![2, 3, 5, 6]);
     assert_eq!(
         current_summary(&catalogs, "rm_c2").await,
-        (Operation::Replace, 2, 0, 5)
+        (Operation::Replace, 1, 0, 3)
     );
 }
 
@@ -505,22 +473,24 @@ async fn rm_deletes_part_mor_nocache_v3() {
     let (ctx, catalogs) = setup_version(&wh, "3").await;
     replay(&ctx, &catalogs, "rm_c3", PART, "3", &[DELETE_1, DELETE_4]).await;
     assert_eq!(
+        layout(&catalogs, "rm_c3").await,
+        vec![(0, 0, 1, 0), (0, 0, 1, 0), (0, 0, 2, 0)]
+    );
+    assert_eq!(live_ids(&ctx, &catalogs, "rm_c3").await, vec![2, 3, 5, 6]);
+    assert_eq!(
         call_counts(
             &ctx,
             &catalogs,
             "CALL ice.system.rewrite_manifests(table => 'sales.rm_c3', use_caching => false)"
         )
         .await,
-        (5, 2)
+        (3, 1)
     );
-    assert_eq!(
-        layout(&catalogs, "rm_c3").await,
-        vec![(0, 0, 6, 0), (1, 0, 0, 2)]
-    );
+    assert_eq!(layout(&catalogs, "rm_c3").await, vec![(0, 0, 4, 0)]);
     assert_eq!(live_ids(&ctx, &catalogs, "rm_c3").await, vec![2, 3, 5, 6]);
     assert_eq!(
         current_summary(&catalogs, "rm_c3").await,
-        (Operation::Replace, 2, 0, 5)
+        (Operation::Replace, 1, 0, 3)
     );
 }
 
@@ -635,14 +605,11 @@ async fn rm_deletes_evolved_spec_v2() {
     .await;
     assert_eq!(
         layout(&catalogs, "rm_e2").await,
-        vec![
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 1, 1, 0),
-            (1, 0, 0, 1),
-            (1, 1, 0, 1)
-        ]
+        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
+    );
+    assert_eq!(
+        live_ids(&ctx, &catalogs, "rm_e2").await,
+        vec![2, 3, 4, 5, 6]
     );
     let snapshots_before = snapshot_total(&catalogs, "rm_e2").await;
     assert_eq!(
@@ -657,14 +624,7 @@ async fn rm_deletes_evolved_spec_v2() {
     assert_eq!(snapshot_total(&catalogs, "rm_e2").await, snapshots_before);
     assert_eq!(
         layout(&catalogs, "rm_e2").await,
-        vec![
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 1, 1, 0),
-            (1, 0, 0, 1),
-            (1, 1, 0, 1)
-        ]
+        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
     );
     assert_eq!(
         live_ids(&ctx, &catalogs, "rm_e2").await,
@@ -687,14 +647,11 @@ async fn rm_deletes_evolved_spec_v3() {
     .await;
     assert_eq!(
         layout(&catalogs, "rm_e3").await,
-        vec![
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 1, 1, 0),
-            (1, 0, 0, 1),
-            (1, 1, 0, 1)
-        ]
+        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
+    );
+    assert_eq!(
+        live_ids(&ctx, &catalogs, "rm_e3").await,
+        vec![2, 3, 4, 5, 6]
     );
     let snapshots_before = snapshot_total(&catalogs, "rm_e3").await;
     assert_eq!(
@@ -709,14 +666,7 @@ async fn rm_deletes_evolved_spec_v3() {
     assert_eq!(snapshot_total(&catalogs, "rm_e3").await, snapshots_before);
     assert_eq!(
         layout(&catalogs, "rm_e3").await,
-        vec![
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 0, 2, 0),
-            (0, 1, 1, 0),
-            (1, 0, 0, 1),
-            (1, 1, 0, 1)
-        ]
+        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
     );
     assert_eq!(
         live_ids(&ctx, &catalogs, "rm_e3").await,
@@ -738,6 +688,14 @@ async fn rm_deletes_non_current_spec_rewrites_that_spec() {
     )
     .await;
     assert_eq!(
+        layout(&catalogs, "rm_o2").await,
+        vec![(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)]
+    );
+    assert_eq!(
+        live_ids(&ctx, &catalogs, "rm_o2").await,
+        vec![2, 3, 4, 5, 6]
+    );
+    assert_eq!(
         call_counts(
             &ctx,
             &catalogs,
@@ -748,7 +706,7 @@ async fn rm_deletes_non_current_spec_rewrites_that_spec() {
     );
     assert_eq!(
         layout(&catalogs, "rm_o2").await,
-        vec![(0, 0, 6, 0), (0, 1, 1, 0), (1, 0, 0, 1), (1, 1, 0, 1)]
+        vec![(0, 0, 5, 0), (0, 1, 0, 0)]
     );
     assert_eq!(
         live_ids(&ctx, &catalogs, "rm_o2").await,
@@ -756,7 +714,7 @@ async fn rm_deletes_non_current_spec_rewrites_that_spec() {
     );
     assert_eq!(
         current_summary(&catalogs, "rm_o2").await,
-        (Operation::Replace, 1, 3, 3)
+        (Operation::Replace, 1, 1, 3)
     );
 }
 

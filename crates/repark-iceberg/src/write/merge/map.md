@@ -203,6 +203,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   lineage columns, rewrite SQL that keeps `_row_id` and nulls last-updated on UPDATE,
   and partitioned fanout that prefixes user columns for the partition calculator.
   pins: v3-7-merge-lineage/C-001
+  **ICE-WRITER-METRICS-1 (2026-09-20):** the partitioned rewrite builder applies
+  `MetricsConfig::for_table` (detail in [../map.md](../map.md)).
   V3-11: `write_partitioned_lineage_files` passes the fanout writer's close result through
   `crate::write::file_order::ascending_partition_order`, because the fork's `FanoutWriter` drains a
   `HashMap` and a MoR MERGE that updates one partition and inserts into another produced two

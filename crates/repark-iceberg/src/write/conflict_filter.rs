@@ -281,7 +281,7 @@ fn primitive_type_of(schema: &Schema, name: &str) -> Option<PrimitiveType> {
     }
 }
 
-fn literal_datum(expr: &Expr, field_type: &PrimitiveType) -> Option<Datum> {
+pub(crate) fn literal_datum(expr: &Expr, field_type: &PrimitiveType) -> Option<Datum> {
     match expr {
         Expr::Nested(inner) => literal_datum(inner, field_type),
         Expr::Value(ValueWithSpan { value, .. }) => value_datum(value, field_type),

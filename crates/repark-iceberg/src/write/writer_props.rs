@@ -1,8 +1,11 @@
 //! Parquet [`WriterProperties`] from Iceberg table properties.
 
 use datafusion::error::{DataFusionError, Result};
+use iceberg::arrow::FieldMatchMode;
+use iceberg::spec::MetricsConfig;
 use iceberg::table::Table;
-use iceberg::writer::base_writer::position_delete_writer::position_delete_writer_properties;
+use iceberg::writer::base_writer::position_delete_writer::position_delete_writer_properties_for as fork_position_delete_writer_properties_for;
+use iceberg::writer::file_writer::ParquetWriterBuilder;
 use parquet::basic::{Compression, GzipLevel, ZstdLevel};
 use parquet::file::properties::WriterProperties;
 
@@ -86,42 +89,60 @@ pub fn parse_target_file_size(raw: &str) -> Result<u64> {
     })
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn metrics_config_for(table: &Table) -> Result<MetricsConfig> {
+    MetricsConfig::for_table(table.metadata()).map_err(crate::catalog::iceberg_to_datafusion)
+}
+
+pub(crate) fn name_matched_parquet_builder(
+    table: &Table,
+    staging: &crate::write::write_options::WriterStagingOverrides,
+) -> Result<ParquetWriterBuilder> {
+    Ok(ParquetWriterBuilder::new_with_match_mode(
+        writer_properties_with(table, staging.codec.as_deref(), staging.level.as_deref())?,
+        crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
+        FieldMatchMode::Name,
+    )
+    .with_metrics_config(metrics_config_for(table)?))
+}
+
 pub(crate) fn position_delete_writer_properties_for(
     table: &Table,
     staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<WriterProperties> {
+    let fork = fork_position_delete_writer_properties_for(table.metadata().properties())
+        .map_err(crate::catalog::iceberg_to_datafusion)?;
+    let Some(compression) = delete_compression_with(table, staging)? else {
+        return Ok(fork);
+    };
     Ok(WriterProperties::builder()
-        .set_compression(delete_compression_with(table, staging)?)
-        .set_statistics_truncate_length(
-            position_delete_writer_properties().statistics_truncate_length(),
-        )
+        .set_compression(compression)
+        .set_statistics_truncate_length(fork.statistics_truncate_length())
+        .set_key_value_metadata(fork.key_value_metadata().cloned())
         .build())
 }
 
 fn delete_compression_with(
     table: &Table,
     staging: &crate::write::write_options::WriterStagingOverrides,
-) -> Result<Compression> {
+) -> Result<Option<Compression>> {
     let properties = table.metadata().properties();
-    let codec = staging
-        .codec
-        .as_deref()
-        .or_else(|| {
-            properties
-                .get(DELETE_COMPRESSION_CODEC_PROP)
-                .map(String::as_str)
-        })
-        .or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str));
-    let level = staging
-        .level
-        .as_deref()
-        .or_else(|| {
-            properties
-                .get(DELETE_COMPRESSION_LEVEL_PROP)
-                .map(String::as_str)
-        })
-        .or_else(|| properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str));
-    parse_compression(codec, level)
+    let delete_codec = staging.codec.as_deref().or_else(|| {
+        properties
+            .get(DELETE_COMPRESSION_CODEC_PROP)
+            .map(String::as_str)
+    });
+    let delete_level = staging.level.as_deref().or_else(|| {
+        properties
+            .get(DELETE_COMPRESSION_LEVEL_PROP)
+            .map(String::as_str)
+    });
+    if delete_codec.is_none() && delete_level.is_none() {
+        return Ok(None);
+    }
+    let codec = delete_codec.or_else(|| properties.get(COMPRESSION_CODEC_PROP).map(String::as_str));
+    let level = delete_level.or_else(|| properties.get(COMPRESSION_LEVEL_PROP).map(String::as_str));
+    parse_compression(codec, level).map(Some)
 }
 
 fn compression_with(

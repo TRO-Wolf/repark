@@ -161,14 +161,14 @@ def test_rewrite_v3_deletion_vectors_after_evolution_matches_spark(spark_v3: Rep
         "CREATE TABLE mem.ns.v3dv (id INT, v BIGINT) USING iceberg "
         "TBLPROPERTIES ('format-version' = '3', 'write.delete.mode' = 'merge-on-read')"
     )
-    for i in range(6):
-        spark_v3.sql(f"INSERT INTO mem.ns.v3dv VALUES ({i}, {100 + i})")
+    for i in range(0, 6, 2):
+        spark_v3.sql(f"INSERT INTO mem.ns.v3dv VALUES ({i}, {100 + i}), ({i + 1}, {101 + i})")
     spark_v3.sql("DELETE FROM mem.ns.v3dv WHERE id = 1")
     assert spark_v3.sql("SELECT * FROM mem.ns.v3dv.delete_files").to_arrow().num_rows == 1
     spark_v3.sql("ALTER TABLE mem.ns.v3dv ADD COLUMN note STRING")
     spark_v3.sql("ALTER TABLE mem.ns.v3dv ADD PARTITION FIELD bucket(4, id)")
     result = spark_v3.sql("CALL mem.system.rewrite_data_files(table => 'ns.v3dv')").to_arrow()
-    assert result.column("rewritten_data_files_count")[0].as_py() == 6
+    assert result.column("rewritten_data_files_count")[0].as_py() == 3
     assert result.column("added_data_files_count")[0].as_py() == 3
     assert result.column("removed_delete_files_count")[0].as_py() == 1
     after = spark_v3.sql("SELECT id, v, note FROM mem.ns.v3dv ORDER BY id").to_arrow()

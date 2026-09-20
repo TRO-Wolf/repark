@@ -23,6 +23,7 @@ pub mod insert_defaults;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
 pub mod insert_gate;
 pub mod merge;
+pub mod meta_delete;
 mod name_resolution;
 pub mod nested_column;
 pub mod nested_type_sql;

@@ -177,6 +177,23 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   pins: ice-commit-unknown-1/C-003, C-007
 - `streaming_scan.rs` — streaming target-scan pins + PERF-04 residual-push + MG-1.
 - `streaming.rs` — stream write interleaving pins.
+- `writer_metrics.rs` + `writer_metrics_truth.json` — **ICE-WRITER-METRICS-1 (2026-09-20):**
+  the twelve recorded Spark 4.1.2 metrics cells (`default`, `none`, `counts`, `truncate4`,
+  `full`, `col_none`, `col_nested`, `max_inferred_2`, `max_inferred_2_default_set`,
+  `sorted_none`, `sorted_counts`, `bad_mode`) replayed through `append` against the
+  `metrics` key of the copied oracle fixture, plus one `none`-config pin per writer path
+  (INSERT stage, fan-out append, CoW rewrite, lineage rewrite), the
+  `for_position_delete_table` resolution pin and the delete-type/full-bounds pin, and
+  `a_metrics_none_table_keeps_the_delete_files_path_bounds`: on a `metrics.default=none`
+  table the DATA file carries no bounds while the position-delete file keeps its exact
+  `file_path` bounds, which is what the v2 delete reader routes on. The
+  path pins cover `write_options.rs`, `append_fanout_serial.rs`, `merge/mod.rs` and
+  `merge/row_lineage.rs` builders respectively.
+  pins: ice-writer-metrics-1/C-001
+  pins: ice-writer-metrics-1/C-002
+  pins: ice-writer-metrics-1/C-003
+  pins: ice-writer-metrics-1/C-004
+  pins: ice-writer-metrics-1/C-005
 
 ## Pointers
 

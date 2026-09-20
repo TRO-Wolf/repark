@@ -139,6 +139,18 @@ def _cell(name: str, version: str) -> dict[str, Any]:
     return cell
 
 
+def _oracle_layout(name: str, version: str, phase: str) -> list[tuple[int, int, int, int]]:
+    """Return one recorded Spark cell's manifest layout for `phase`, ordered."""
+    rows = _cell(name, version)[phase]
+    return sorted((int(row[0]), int(row[1]), int(row[2]), int(row[3])) for row in rows)
+
+
+def _check_layout(name: str, version: str, session: ReparkSession, table: str, phase: str) -> None:
+    """Assert the manifest layout equals the recorded Spark cell's `phase` layout."""
+    got = _layout(session, table)
+    assert got == _oracle_layout(name, version, phase), f"{name}_v{version} {phase}: {got}"
+
+
 def _check_rows(name: str, version: str, table: str, session: ReparkSession) -> None:
     """Assert the surviving rows equal the recorded Spark rows."""
     want = [row[0] for row in _cell(name, version)["rows"]]
@@ -187,67 +199,78 @@ def test_no_deletes_matches_spark_end_to_end(tmp_path: Path, version: str) -> No
 
 
 @pytest.mark.parametrize("version", ["2", "3"])
-def test_part_mor_rewrites_both_legs(tmp_path: Path, version: str) -> None:
-    """The partitioned cells merge both legs; rows follow the recorded cells."""
+def test_part_mor_matches_spark_end_to_end(tmp_path: Path, version: str) -> None:
+    """The partitioned MoR cells match Spark exactly: layout, counts, rows, op.
+
+    The three DELETE statements each cover a whole data file, so ICE-META-DELETE-1
+    answers them from metadata and the before-state is data-only, as Spark's cell is.
+    """
     session = _session(tmp_path)
     table = f"mem.ns.part_mor_v{version}"
     _replay(session, table, _BUILDS["part_mor"], version)
-    before = _layout(session, table)
-    assert len(before) == 6, f"part_mor_v{version} before: {before}"
-    got = _result_row(session, f"CALL mem.system.rewrite_manifests(table => '{_ref(table)}')")
-    assert got == (6, 2), f"part_mor_v{version} result: {got}"
-    after = _layout(session, table)
-    assert len(after) == 2, f"part_mor_v{version} after: {after}"
-    assert [entry[0] for entry in after] == [0, 1]
+    _check_layout("part_mor", version, session, table, "before")
+    before_rows = _live_ids(session, table)
+    _check_result("part_mor", version, session, table)
+    _check_layout("part_mor", version, session, table, "after")
     _check_rows("part_mor", version, table, session)
-    assert _last_op(session, table)[1] == "replace"
+    assert _live_ids(session, table) == before_rows
+    assert _last_op(session, table)[1] == _cell("part_mor", version)["op"]
     session.stop()
 
 
 @pytest.mark.parametrize("version", ["2", "3"])
 def test_part_mor_spec_honours_spec_id(tmp_path: Path, version: str) -> None:
-    """An explicit current spec id rewrites like the default call."""
+    """An explicit current spec id answers the recorded Spark cell end to end."""
     session = _session(tmp_path)
     table = f"mem.ns.part_mor_spec_v{version}"
     _replay(session, table, _BUILDS["part_mor_spec"], version)
-    got = _result_row(
-        session, f"CALL mem.system.rewrite_manifests(table => '{_ref(table)}', spec_id => 0)"
-    )
-    assert got == (5, 2), f"part_mor_spec_v{version} result: {got}"
-    assert _layout(session, table) == [(0, 0, 6, 0), (1, 0, 0, 2)]
+    _check_layout("part_mor_spec", version, session, table, "before")
+    before_rows = _live_ids(session, table)
+    _check_result("part_mor_spec", version, session, table)
+    _check_layout("part_mor_spec", version, session, table, "after")
     _check_rows("part_mor_spec", version, table, session)
-    assert _last_op(session, table)[1] == "replace"
+    assert _live_ids(session, table) == before_rows
+    assert _last_op(session, table)[1] == _cell("part_mor_spec", version)["op"]
     session.stop()
 
 
 @pytest.mark.parametrize("version", ["2", "3"])
 def test_part_mor_nocache_matches_cached(tmp_path: Path, version: str) -> None:
-    """`use_caching => false` answers like the default call on the same shape."""
+    """`use_caching => false` answers the recorded Spark cell, like the default call."""
     session = _session(tmp_path)
     table = f"mem.ns.part_mor_nocache_v{version}"
     _replay(session, table, _BUILDS["part_mor_nocache"], version)
-    call = f"CALL mem.system.rewrite_manifests(table => '{_ref(table)}', use_caching => false)"
-    got = _result_row(session, call)
-    assert got == (5, 2), f"part_mor_nocache_v{version} result: {got}"
-    assert _layout(session, table) == [(0, 0, 6, 0), (1, 0, 0, 2)]
+    _check_layout("part_mor_nocache", version, session, table, "before")
+    before_rows = _live_ids(session, table)
+    _check_result("part_mor_nocache", version, session, table)
+    _check_layout("part_mor_nocache", version, session, table, "after")
     _check_rows("part_mor_nocache", version, table, session)
-    assert _last_op(session, table)[1] == "replace"
+    assert _live_ids(session, table) == before_rows
+    assert _last_op(session, table)[1] == _cell("part_mor_nocache", version)["op"]
     session.stop()
 
 
 @pytest.mark.parametrize("version", ["2", "3"])
 def test_evolved_spec_default_is_a_no_op(tmp_path: Path, version: str) -> None:
-    """The default call on the evolved table answers zeros and commits nothing."""
+    """The default call on the evolved table answers zeros and commits nothing.
+
+    The layout is RePark's own, not Spark's: Spark's recorded before-state holds the five
+    live spec-0 data files in ONE manifest, RePark holds them in the three append manifests
+    its metadata delete rewrote in place. Registry row MANIFEST-4 carries the difference.
+    """
     session = _session(tmp_path)
     table = f"mem.ns.evolved_spec_v{version}"
     _replay(session, table, _BUILDS["evolved_spec"], version)
     before = _layout(session, table)
+    assert before == [(0, 0, 1, 0), (0, 0, 2, 0), (0, 0, 2, 0), (0, 1, 0, 0)], f"before: {before}"
+    before_rows = _live_ids(session, table)
     snapshots_before = _last_op(session, table)[0]
     got = _result_row(session, f"CALL mem.system.rewrite_manifests(table => '{_ref(table)}')")
     assert got == (0, 0), f"evolved_spec_v{version} result: {got}"
     assert _last_op(session, table) == (snapshots_before, "delete")
     assert _layout(session, table) == before
     _check_rows("evolved_spec", version, table, session)
+    assert _live_ids(session, table) == before_rows
     session.stop()
 
 
@@ -285,5 +308,5 @@ def test_positional_spec_id_runs(tmp_path: Path) -> None:
     table = "mem.ns.positional_spec"
     _replay(session, table, _BUILDS["part_mor_spec"], "2")
     got = _result_row(session, f"CALL mem.system.rewrite_manifests('{_ref(table)}', true, 0)")
-    assert got == (5, 2), f"positional spec result: {got}"
+    assert got == (3, 1), f"positional spec result: {got}"
     session.stop()
