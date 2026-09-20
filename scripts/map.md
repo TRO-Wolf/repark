@@ -871,10 +871,19 @@ repark-parity slice.
   `rev` lines + `Cargo.lock` together (single-writer-per-pin invariant-checked), prints the
   fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
   contract in [../docs/fork-sync.md](../docs/fork-sync.md).
-- `check_map_md.sh` — the map.md lockstep guard: fails a commit if a staged `.rs`/`.py`/
-  `Cargo.toml`/`pyproject.toml` file's directory has no same-change `map.md` update (lockfiles
-  excluded; root-level manifests map to `map.md`, not `./map.md`). Invoked by
-  `.pre-commit-config.yaml`, `make check-map-md`, and the hook installed by `make install-hooks`.
+- `check_map_md.sh` — the map.md lockstep guard. MAP-PR-GATE-1 (2026-09-20): the unit of
+  "same change" is now the pull request, not the commit. `--base <ref>` is the branch mode the
+  gate runs: the code list is `git diff --name-only --diff-filter=d <ref>...HEAD` and the map
+  list is `git diff --name-only <ref>...HEAD`, so a map that lands in ANY commit of the branch
+  satisfies it, and it exits 1 on a violation. Bare (staged) mode keeps reading
+  `git diff --cached` but downgrades every finding to a `WARNING:` line and exits 0, followed
+  by one line naming ci.yml's `map.md guard` step as the check that holds the rule — a local
+  commit can no longer be blocked mid-rebase, and the PR still cannot merge a missing map.
+  Same rule in both modes: `.rs`/`.py`/`Cargo.toml`/`pyproject.toml` changes (lockfiles
+  excluded; root-level manifests map to `map.md`, not `./map.md`) require the directory's
+  `map.md`. Bare mode is invoked by `.pre-commit-config.yaml` and the hook installed by
+  `make install-hooks`; branch mode is invoked by `make check-map-md` (`BASE ?= origin/main`)
+  and ci.yml's `map.md guard` step on pull requests.
 - `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one forces
   a map to be TOUCHED; this one checks what the map actually says) and the SSOT for both rules.
   Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
