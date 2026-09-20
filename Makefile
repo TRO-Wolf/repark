@@ -26,6 +26,7 @@ MATURIN := uvx maturin@1.14.1
 RUFF   := uvx ruff@0.15.22
 PYTHON ?= python
 TORTURE_TIER ?= ci
+BASE ?= origin/main
 TAPLO  := uvx taplo@0.9.3
 TYPOS  := uvx typos@1.47.2
 ZIZMOR := uvx zizmor@1.26.1
@@ -346,8 +347,8 @@ check-manifest: ## Structural-manifest guard (repo-manifest.toml vs workspace, d
 	@./scripts/check_manifest.sh
 
 .PHONY: check-map-md
-check-map-md: ## map.md lockstep guard over staged changes (also wired into the pre-commit hook)
-	bash scripts/check_map_md.sh
+check-map-md: ## map.md lockstep guard over this branch vs BASE (the pull request is the unit; the pre-commit hook's staged mode only warns)
+	bash scripts/check_map_md.sh --base "$(BASE)"
 
 .PHONY: check-ledgers
 check-ledgers: ## Ledger lifecycle guard: bins, archive names, every ledger link, frozen bins (DL-1)
