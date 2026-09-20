@@ -25,7 +25,7 @@ down only), `temp_view.rs` home moves, postgres registration refusal changes, AW
 (`/tmp/oc-worker/qe/probe/p3.json`), and three live Spark 4.1.2 probes run 2026-09-20 for
 the semantics the packet left open (USE order, USE CATALOG, LIKE shape, SHOW schemas,
 setCurrentCatalog, USE DEFAULT). Committed verbatim as
-`python/repark/tests/ice_catalog_session_1_spark_oracle.json`.
+`python/repark/tests/ice_catalog_session_1_oracle.json`.
 
 **Probe corrections to the packet (all measured on live Spark 4.1.2, all pinned):**
 
