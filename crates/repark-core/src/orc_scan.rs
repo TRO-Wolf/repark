@@ -25,6 +25,7 @@ use futures::Stream;
 use orc_rust::projection::ProjectionMask;
 use orc_rust::schema::TimestampPrecision;
 use orc_rust::{ArrowReader, ArrowReaderBuilder};
+use repark_common::spark_error;
 
 use crate::orc_footer::file_writer_tz;
 use crate::orc_schema::{apply_user_orc_schema, infer_orc_schema, orc_types_equal};
@@ -54,28 +55,32 @@ pub struct OrcReadOptions {
 }
 
 fn missing_orc_path(path: &str) -> Error {
-    Error::Analysis(format!(
-        "[PATH_NOT_FOUND] Path does not exist: file:{path}. SQLSTATE: 42K03"
-    ))
+    spark_error::analysis(spark_error::PATH_NOT_FOUND, &[("path", path)])
 }
 
 pub(crate) fn orc_schema_error() -> Error {
-    Error::Analysis(
-        "[UNABLE_TO_INFER_SCHEMA] Unable to infer schema for ORC. It must be specified manually. SQLSTATE: 42KD9".to_string(),
-    )
+    spark_error::analysis(spark_error::UNABLE_TO_INFER_SCHEMA, &[])
 }
 
 pub(crate) fn orc_footer_error(path: &Path, detail: &str) -> Error {
-    Error::Analysis(format!(
-        "[FAILED_READ_FILE.CANNOT_READ_FILE_FOOTER] Encountered error while reading file file:{}. Could not read footer. {detail} SQLSTATE: KD001",
-        path.display()
-    ))
+    let shown = path.display().to_string();
+    spark_error::analysis(
+        spark_error::FAILED_READ_FILE_CANNOT_READ_FILE_FOOTER,
+        &[("path", shown.as_str()), ("detail", detail)],
+    )
 }
 
 pub(crate) fn orc_merge_error(name: &str, first: &DataType, next: &DataType) -> Error {
-    Error::Analysis(format!(
-        "[CANNOT_MERGE_SCHEMAS] Failed to merge ORC schemas: column `{name}` has conflicting types ({first} and {next})"
-    ))
+    let first_text = first.to_string();
+    let next_text = next.to_string();
+    spark_error::analysis(
+        spark_error::CANNOT_MERGE_SCHEMAS,
+        &[
+            ("columnName", name),
+            ("firstType", first_text.as_str()),
+            ("secondType", next_text.as_str()),
+        ],
+    )
 }
 
 fn is_remote_path(path: &str) -> bool {

@@ -1,5 +1,6 @@
 //! Shared domain types and the crate-wide error type for the repark engine.
 
+pub mod spark_error;
 pub mod surfaces;
 
 use thiserror::Error;

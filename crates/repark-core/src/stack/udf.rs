@@ -6,6 +6,7 @@ use datafusion::common::{Result, exec_err, plan_err};
 use datafusion::logical_expr::{
     ColumnarValue, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
+use repark_common::spark_error;
 
 #[must_use]
 pub fn stack_udf() -> Arc<ScalarUDF> {
@@ -59,11 +60,12 @@ impl ScalarUDFImpl for StackUdf {
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         if arg_types.len() < 2 {
-            return plan_err!(
-                "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `stack` requires > 1 parameters but \
-                 the actual number is {}. SQLSTATE: 42605",
-                arg_types.len()
+            let count = arg_types.len().to_string();
+            let rendered = spark_error::message(
+                spark_error::WRONG_NUM_ARGS_WITHOUT_SUGGESTION,
+                &[("actualNumber", count.as_str())],
             );
+            return plan_err!("{rendered}");
         }
         match &arg_types[0] {
             DataType::Int8
@@ -74,11 +76,14 @@ impl ScalarUDFImpl for StackUdf {
             | DataType::UInt16
             | DataType::UInt32
             | DataType::UInt64 => Ok(arg_types.to_vec()),
-            other => plan_err!(
-                "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve stack due to data \
-                 type mismatch: The first parameter requires the \"INT\" type, however the \
-                 argument has the type \"{other}\". SQLSTATE: 42K09"
-            ),
+            other => {
+                let actual = other.to_string();
+                let rendered = spark_error::message(
+                    spark_error::DATATYPE_MISMATCH_UNEXPECTED_INPUT_TYPE,
+                    &[("actualType", actual.as_str())],
+                );
+                plan_err!("{rendered}")
+            }
         }
     }
 }
