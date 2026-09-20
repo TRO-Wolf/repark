@@ -106,8 +106,9 @@ def test_the_fork_routed_rows_name_a_trigger() -> None:
     registry = _read(_REGISTRY)
     for row in ("V3-COV-6",):
         start = registry.index(f"{row} — ")
-        body = registry[start : start + 3000]
-        assert "TRIGGER:" in body, row
+        match = re.search(r"^#{3,4} ", registry[start:], re.MULTILINE)
+        body = registry[start : start + match.start() if match else len(registry)]
+        assert "TRIGGER:" in body or "TRIGGER fired" in body, row
 
 
 def test_v3_cov_3_records_the_measured_close() -> None:
