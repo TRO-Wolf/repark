@@ -189,6 +189,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435 (the identity spec builder becomes
   `PredicateDmlSpec::identity`).
   pins: ice-session-write-conf-1/C-040
+  **Round 2 (2026-09-19):** dropping that exception row also drops the Rust exception
+  COUNT, 38 → 37, which round 1 left at its old literal — the gate itself reported 37 and
+  only this mirror still said 38, so `test_cap_1_exception_tables_equal_the_measured_debt`
+  was red. The count now matches the gate.
+  pins: ice-session-write-conf-1/C-040
 - `test_cap_1_source_file_line_cap.py` — **ICE-TT-RESOLVE-1 (2026-09-19, run 24c):**
   mirror rows ratchet `repark-python/src/session.rs` 1126 → 1122 and `session_core.py`
   2290 → 2287 with `scripts/check_rust_file_size.py` and `scripts/check_lib_py.py`.
