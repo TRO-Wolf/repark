@@ -47,8 +47,6 @@ impl ReparkSession {
         Ok((added, skipped))
     }
 
-    /// Fold one catalog config block's `table-default.*` / `table-override.*` / `warehouse`
-    /// keys into the registry side map (missing catalog ignored).
     pub(super) fn note_catalog_table_props(&self, name: &str, props: &HashMap<String, String>) {
         self.catalogs
             .write()
@@ -66,14 +64,7 @@ impl ReparkSession {
             .contains(name)
     }
 
-    /// Register one runtime `spark.sql.catalog.<name>` block, tolerantly.
-    ///
-    /// A block that fails to parse, or is incomplete, is silently ignored (keys accumulate
-    /// one at a time); a block for an already-registered name only updates the side map.
-    /// Returns whether the call newly registered the catalog.
-    /// # Errors
-    /// A complete block that fails to build or register (including the phase-1 postgres
-    /// refusal) propagates.
+    #[allow(clippy::missing_errors_doc)]
     pub async fn register_late_catalog_block(
         &self,
         config: &HashMap<String, String>,

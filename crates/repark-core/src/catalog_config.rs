@@ -174,23 +174,26 @@ fn is_s3tables_arn_shape(value: &str) -> bool {
 fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<()> {
     match prop {
         "catalog-impl" => {
-            block.kind_from_impl = Some(kind_from_catalog_impl(value).ok_or_else(|| {
-                Error::Config(format!(
-                    "{} has an unrecognized value '{value}' \
-                     (expected a class ending in 'GlueCatalog', 'S3TablesCatalog', or \
-                     'JDBCTableCatalog')",
-                    dual_catalog_key(name, "catalog-impl")
-                ))
-            })?);
+            block.kind_from_impl = Some(
+                crate::catalog_kind::kind_from_catalog_impl(value).ok_or_else(|| {
+                    Error::Config(format!(
+                        "{} has an unrecognized value '{value}' \
+                     (expected a class ending in 'GlueCatalog', 'S3TablesCatalog', \
+                     'JDBCTableCatalog', or 'InMemoryCatalog')",
+                        dual_catalog_key(name, "catalog-impl")
+                    ))
+                })?,
+            );
         }
         "type" => {
-            block.kind_from_type = Some(kind_from_type(value).ok_or_else(|| {
-                Error::Config(format!(
-                    "{} has an unrecognized value '{value}' \
-                     (expected 'glue', 's3tables', 'memory', 'postgres', or 'jdbc')",
-                    dual_catalog_key(name, "type")
-                ))
-            })?);
+            block.kind_from_type =
+                Some(crate::catalog_kind::kind_from_type(value).ok_or_else(|| {
+                    Error::Config(format!(
+                        "{} has an unrecognized value '{value}' \
+                     (expected 'glue', 's3tables', 'memory', 'hadoop', 'postgres', or 'jdbc')",
+                        dual_catalog_key(name, "type")
+                    ))
+                })?);
         }
         "io-impl" => {}
         _ => {
@@ -200,34 +203,10 @@ fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<
     Ok(())
 }
 
-/// Resolve a `catalog-impl` Java class name to a [`CatalogKind`] by its suffix.
-fn kind_from_catalog_impl(value: &str) -> Option<CatalogKind> {
-    let value = value.trim();
-    if value.ends_with("GlueCatalog") {
-        Some(CatalogKind::Glue)
-    } else if value.ends_with("S3TablesCatalog") {
-        Some(CatalogKind::S3Tables)
-    } else if value.ends_with("JDBCTableCatalog") {
-        Some(CatalogKind::Postgres)
-    } else {
-        None
-    }
-}
-
-/// Resolve Spark's short-form `type` value to a [`CatalogKind`].
-fn kind_from_type(value: &str) -> Option<CatalogKind> {
-    match value.trim().to_ascii_lowercase().as_str() {
-        "glue" => Some(CatalogKind::Glue),
-        "s3tables" => Some(CatalogKind::S3Tables),
-        "memory" => Some(CatalogKind::Memory),
-        "postgres" | "postgresql" | "jdbc" => Some(CatalogKind::Postgres),
-        _ => None,
-    }
-}
-
 /// Bare `spark.sql.catalog.<name> = <value>` kind resolution (jdbc/postgres class spellings).
 fn kind_from_bare_catalog_value(value: &str) -> Option<CatalogKind> {
-    kind_from_type(value).or_else(|| kind_from_catalog_impl(value))
+    crate::catalog_kind::kind_from_type(value)
+        .or_else(|| crate::catalog_kind::kind_from_catalog_impl(value))
 }
 
 impl Block {
@@ -247,7 +226,7 @@ impl Block {
                 return Err(Error::Config(format!(
                     "catalog '{name}' has no kind — set {} \
                      (e.g. org.apache.iceberg.aws.glue.GlueCatalog) or {} \
-                     (glue / s3tables / memory)",
+                     (glue / s3tables / memory / hadoop)",
                     dual_catalog_key(&name, "catalog-impl"),
                     dual_catalog_key(&name, "type"),
                 )));

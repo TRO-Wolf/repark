@@ -69,10 +69,8 @@ struct CatalogEntry {
     table_props: HashMap<String, String>,
 }
 
-/// `spark.sql.catalog.<name>.table-default.<k>` — the lowest CREATE-time precedence leg.
 const TABLE_DEFAULT_PREFIX: &str = "table-default.";
 
-/// `spark.sql.catalog.<name>.table-override.<k>` — beats user `TBLPROPERTIES` at CREATE.
 const TABLE_OVERRIDE_PREFIX: &str = "table-override.";
 
 fn merge_table_creation_properties(
@@ -139,8 +137,6 @@ impl CatalogRegistry {
         );
     }
 
-    /// Merge a catalog config block's `table-default.*` / `table-override.*` / `warehouse`
-    /// keys into the entry's side map (later `conf.set` wins per key; missing entry ignored).
     pub fn merge_table_props(&mut self, name: &str, props: &HashMap<String, String>) {
         let Some(entry) = self.entries.get_mut(name) else {
             return;
@@ -155,8 +151,6 @@ impl CatalogRegistry {
         }
     }
 
-    /// User `TBLPROPERTIES` merged under the catalog's `table-override.*` and over its
-    /// `table-default.*` (override > user > default; unknown catalogs pass through).
     #[must_use]
     pub fn table_creation_properties(
         &self,

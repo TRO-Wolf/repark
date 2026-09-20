@@ -38,7 +38,9 @@ landed `sources.rs` and `redact.rs`. The stages, in the order the ruled design r
   `type` spellings and every kind/prop refusal behave exactly as the equivalent `.config()`
   calls — the specs compare byte-identical to the flat path's, pinned against the measured
   Glue block. A `type = "rest"` value refuses loud with the engine's unrecognized-value error
-  until `CatalogKind::Rest` arrives (the REST-catalog card owns that variant). The database
+  until `CatalogKind::Rest` arrives (the REST-catalog card owns that variant).
+  **ICE-CATALOG-SESSION-1 S7 (2026-09-20):** the empty-block hint names the `hadoop` spelling too.
+  The database
   family parses `[<profile>.database.<kind>.<name>]` into the crate-private `SourceSpec`
   (`postgres | sqlserver | trino` exact spellings, `BTreeMap<String, String>` props, a manual
   `Debug` that masks through `redact_value`). Names must be unique per profile across both

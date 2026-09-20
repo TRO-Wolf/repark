@@ -79,9 +79,6 @@ pub fn session_defaults(session: &PyReparkSession) -> PyResult<(String, String)>
     })
 }
 
-/// Register one runtime `spark.sql.catalog.<name>` block, tolerantly.
-/// # Errors
-/// A complete block that fails to build or register raises.
 #[pyfunction]
 pub fn register_late_catalog_block(
     py: Python<'_>,

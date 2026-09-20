@@ -190,3 +190,34 @@ def test_set_datafusion_catalog_keys_updates_facade_state(spark: ReparkSession) 
     assert spark.catalog.currentCatalog() == "sc"
     spark.conf.set("datafusion.catalog.default_schema", "ns")
     assert spark.catalog.currentDatabase() == "ns"
+
+
+def test_hadoop_type_registers_memory_catalog(
+    runtime_catalog: ReparkSession, tmp_path: Path
+) -> None:
+    """C-025 mechanism: ``type=hadoop`` aliases to a memory catalog (INDEX 25)."""
+    spark = runtime_catalog
+    spark.conf.set("spark.sql.catalog.hd", "org.apache.iceberg.spark.SparkCatalog")
+    spark.conf.set("spark.sql.catalog.hd.type", "hadoop")
+    spark.conf.set("spark.sql.catalog.hd.warehouse", str(tmp_path / "hdwh"))
+    assert "hd" in _catalog_names(spark)
+    spark.sql("CREATE NAMESPACE hd.ns").to_arrow()
+    spark.sql("CREATE TABLE hd.ns.t (a INT) USING iceberg").to_arrow()
+    spark.sql("INSERT INTO hd.ns.t VALUES (1)").to_arrow()
+    assert spark.sql("SELECT * FROM hd.ns.t").to_arrow().to_pylist() == [{"a": 1}]
+
+
+def test_inmemory_catalog_impl_registers_memory_catalog(
+    runtime_catalog: ReparkSession, tmp_path: Path
+) -> None:
+    """C-026 mechanism: an ``InMemoryCatalog`` class aliases to a memory catalog."""
+    spark = runtime_catalog
+    spark.conf.set(
+        "spark.sql.catalog.im.catalog-impl",
+        "org.apache.iceberg.memory.InMemoryCatalog",
+    )
+    spark.conf.set("spark.sql.catalog.im.warehouse", str(tmp_path / "imwh"))
+    assert "im" in _catalog_names(spark)
+    spark.sql("CREATE NAMESPACE im.ns").to_arrow()
+    spark.sql("CREATE TABLE im.ns.t (a INT) USING iceberg").to_arrow()
+    assert spark.sql("SELECT * FROM im.ns.t").to_arrow().num_rows == 0

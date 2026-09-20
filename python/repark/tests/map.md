@@ -73,9 +73,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   cache-then-write-then-read, `isCached` agreement both ways, `IF EXISTS`
   tolerance, AS SELECT refusal). S6 adds the runtime-registration pins (first
   complete block registers, late `table-default` lands, the three N-12 precedence
-  legs) and the three C-028 agreement pins. The oracle JSON and the eleven cell
-  replays land in S8.
-  pins: ice-catalog-session-1/C-019, C-020, C-021, C-024, C-027, C-028
+  legs) and the three C-028 agreement pins. S7 adds the `hadoop` / `InMemoryCatalog`
+  registration pins. The oracle JSON and the eleven cell replays land in S8.
+  pins: ice-catalog-session-1/C-019, C-020, C-021, C-024, C-025, C-026, C-027, C-028
 
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
   [ice_meta_delete_1_spark_oracle.json](ice_meta_delete_1_spark_oracle.json) +

@@ -109,7 +109,7 @@ fn catalog_specs(profile_name: &str, catalog: &toml::Table) -> Result<Vec<Catalo
         if props.is_empty() {
             return Err(Error::Config(format!(
                 "catalog `{name}` at `{profile_name}.catalog.{name}` carries no properties — \
-                 set `type` (glue / s3tables / memory) or `catalog-impl`"
+                 set `type` (glue / s3tables / memory / hadoop) or `catalog-impl`"
             )));
         }
         for (prop, value) in props {

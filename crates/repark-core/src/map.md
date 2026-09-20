@@ -366,12 +366,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   props }>` parser (`parse_catalog_specs`, pure/AWS-free). Both prefixes share one keyspace
   (cross-spelling duplicates collapse when identical, fail loud otherwise). Rules: bare
   `…catalog.<name>` = the Spark catalog class or a short kind; `<name>.catalog-impl` ending
-  `GlueCatalog`→`Glue` / `S3TablesCatalog`→`S3Tables`; `<name>.type` = `glue`/`s3tables`/
-  `memory` (`memory` requires `warehouse`); `<name>.io-impl` dropped; every other prop passes
+  `GlueCatalog`→`Glue` / `S3TablesCatalog`→`S3Tables` / `InMemoryCatalog`→`Memory`;
+  `<name>.type` = `glue`/`s3tables`/`memory`/`hadoop` (`memory` requires `warehouse`,
+  `hadoop` aliases to it per INDEX 25); `<name>.io-impl` dropped; every other prop passes
   through verbatim (an S3 Tables `warehouse` ARN is carried into `table_bucket_arn` when the
   latter is absent). Fail-loud `Error::Config` naming the exact key. Registration policy: Glue
   `RequireExplicitLocation`; S3 Tables `ServiceManagedLocation`; memory keeps the temp
   fallback. `CatalogSpec` hand-written `Debug` redacts secret-like prop values.
+  **ICE-CATALOG-SESSION-1 S7 (2026-09-20):** `kind_from_type` + `kind_from_catalog_impl`
+  move to `catalog_kind.rs` (1028 → 1007, ratcheted); the accepted sets gain `hadoop` and
+  `InMemoryCatalog` (both → `Memory`), with the refusal texts updated.
+  pins: ice-catalog-session-1/C-025, C-026
   **REVIEW-FIX-5 (2026-09-10):** `prop_key_is_secret` is `pub` (re-exported at the crate
   root) so `DESCRIBE TABLE EXTENDED` redacts through the same predicate; no second
   predicate exists. pins: review-fix-5/C-004
@@ -749,6 +754,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **FNP-8 (2026-09-07):** the analyzer hook receives the core-owned guarded rule list and returns
   it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
   first default type-coercion pass. pins: fnp-8/C-003, C-004
+- `catalog_kind.rs` — **ICE-CATALOG-SESSION-1 S7 (2026-09-20):** short-form kind
+  resolution, moved out of `catalog_config.rs` (`kind_from_type` with the `hadoop` →
+  `Memory` arm, `kind_from_catalog_impl` with the `InMemoryCatalog` → `Memory` arm,
+  plus the two alias unit pins).
+  pins: ice-catalog-session-1/C-025, C-026
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once
