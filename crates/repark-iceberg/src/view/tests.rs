@@ -1,7 +1,12 @@
 use super::*;
 use crate::catalog::memory_catalog;
+use async_trait::async_trait;
 use datafusion::arrow::datatypes::{DataType, Field as ArrowField};
+use iceberg::io::LocalFsStorageFactory;
+use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
 use iceberg::spec::{NestedField, PrimitiveType, Type};
+use iceberg::table::Table;
+use iceberg::{CatalogBuilder, MemoryCatalog, Namespace, TableCommit, TableCreation};
 use tempfile::TempDir;
 
 const SQL: &str = "SELECT id, data FROM t WHERE id > 0";
@@ -586,5 +591,188 @@ async fn view_read_spec_reports_sql_defaults_and_columns() {
     assert_eq!(
         spec.column_names,
         vec!["id".to_string(), "data".to_string()]
+    );
+}
+
+#[derive(Debug)]
+struct ViewlessCatalog {
+    inner: MemoryCatalog,
+}
+
+impl ViewlessCatalog {
+    async fn with_namespace(warehouse: &TempDir, namespace: &str) -> Self {
+        let path = warehouse
+            .path()
+            .to_str()
+            .unwrap_or_else(|| panic!("warehouse path must be utf8"))
+            .to_string();
+        let inner = MemoryCatalogBuilder::default()
+            .with_storage_factory(std::sync::Arc::new(LocalFsStorageFactory))
+            .load(
+                "viewless",
+                HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), path)]),
+            )
+            .await
+            .unwrap_or_else(|error| panic!("viewless catalog must build: {error}"));
+        inner
+            .create_namespace(&NamespaceIdent::new(namespace.to_string()), HashMap::new())
+            .await
+            .unwrap_or_else(|error| panic!("namespace must create: {error}"));
+        Self { inner }
+    }
+}
+
+#[async_trait]
+impl Catalog for ViewlessCatalog {
+    async fn list_namespaces(
+        &self,
+        parent: Option<&NamespaceIdent>,
+    ) -> iceberg::Result<Vec<NamespaceIdent>> {
+        self.inner.list_namespaces(parent).await
+    }
+
+    async fn create_namespace(
+        &self,
+        namespace: &NamespaceIdent,
+        properties: HashMap<String, String>,
+    ) -> iceberg::Result<Namespace> {
+        self.inner.create_namespace(namespace, properties).await
+    }
+
+    async fn get_namespace(&self, namespace: &NamespaceIdent) -> iceberg::Result<Namespace> {
+        self.inner.get_namespace(namespace).await
+    }
+
+    async fn namespace_exists(&self, namespace: &NamespaceIdent) -> iceberg::Result<bool> {
+        self.inner.namespace_exists(namespace).await
+    }
+
+    async fn update_namespace(
+        &self,
+        namespace: &NamespaceIdent,
+        properties: HashMap<String, String>,
+    ) -> iceberg::Result<()> {
+        self.inner.update_namespace(namespace, properties).await
+    }
+
+    async fn drop_namespace(&self, namespace: &NamespaceIdent) -> iceberg::Result<()> {
+        self.inner.drop_namespace(namespace).await
+    }
+
+    async fn list_tables(&self, namespace: &NamespaceIdent) -> iceberg::Result<Vec<TableIdent>> {
+        self.inner.list_tables(namespace).await
+    }
+
+    async fn create_table(
+        &self,
+        namespace: &NamespaceIdent,
+        creation: TableCreation,
+    ) -> iceberg::Result<Table> {
+        self.inner.create_table(namespace, creation).await
+    }
+
+    async fn load_table(&self, table: &TableIdent) -> iceberg::Result<Table> {
+        self.inner.load_table(table).await
+    }
+
+    async fn drop_table(&self, table: &TableIdent) -> iceberg::Result<()> {
+        self.inner.drop_table(table).await
+    }
+
+    async fn table_exists(&self, table: &TableIdent) -> iceberg::Result<bool> {
+        self.inner.table_exists(table).await
+    }
+
+    async fn rename_table(&self, src: &TableIdent, dest: &TableIdent) -> iceberg::Result<()> {
+        self.inner.rename_table(src, dest).await
+    }
+
+    async fn register_table(
+        &self,
+        table: &TableIdent,
+        metadata_location: String,
+    ) -> iceberg::Result<Table> {
+        self.inner.register_table(table, metadata_location).await
+    }
+
+    async fn update_table(&self, commit: TableCommit) -> iceberg::Result<Table> {
+        self.inner.update_table(commit).await
+    }
+}
+
+#[tokio::test]
+async fn create_view_on_a_viewless_catalog_reports_creating_unsupported() {
+    let warehouse = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let catalog = ViewlessCatalog::with_namespace(&warehouse, "ns").await;
+    let namespace = NamespaceIdent::new("ns".to_string());
+    let target = ViewTarget {
+        catalog_name: "glue",
+        catalog: &catalog,
+        namespace: &namespace,
+        namespace_name: "ns",
+        view_name: "v1",
+    };
+    let error = create_or_replace_view(&target, false, false, definition(&warehouse, SQL))
+        .await
+        .expect_err("a create on a viewless catalog must fail");
+    let message = error.to_string();
+    assert!(
+        message.contains("Creating a view is not supported by catalog: glue"),
+        "pins: ice-views-1/C-005, got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn replace_view_on_a_viewless_catalog_reports_replacing_unsupported() {
+    let warehouse = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let catalog = ViewlessCatalog::with_namespace(&warehouse, "ns").await;
+    let namespace = NamespaceIdent::new("ns".to_string());
+    let target = ViewTarget {
+        catalog_name: "glue",
+        catalog: &catalog,
+        namespace: &namespace,
+        namespace_name: "ns",
+        view_name: "v1",
+    };
+    let error = create_or_replace_view(&target, true, false, definition(&warehouse, SQL))
+        .await
+        .expect_err("a replace on a viewless catalog must fail");
+    let message = error.to_string();
+    assert!(
+        message.contains("Replacing a view is not supported by catalog: glue"),
+        "pins: ice-views-1/C-005, got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn list_views_on_a_viewless_catalog_returns_empty() {
+    let warehouse = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let catalog = ViewlessCatalog::with_namespace(&warehouse, "ns").await;
+    let namespace = NamespaceIdent::new("ns".to_string());
+    let views = list_catalog_views("glue", &catalog, &namespace, "ns")
+        .await
+        .unwrap_or_else(|error| panic!("list on a viewless catalog must succeed: {error}"));
+    assert!(views.is_empty(), "pins: ice-views-1/C-005");
+}
+
+#[tokio::test]
+async fn drop_view_on_a_viewless_catalog_reports_view_not_found() {
+    let warehouse = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let catalog = ViewlessCatalog::with_namespace(&warehouse, "ns").await;
+    let namespace = NamespaceIdent::new("ns".to_string());
+    let target = ViewTarget {
+        catalog_name: "glue",
+        catalog: &catalog,
+        namespace: &namespace,
+        namespace_name: "ns",
+        view_name: "v1",
+    };
+    let error = drop_catalog_view(&target, false)
+        .await
+        .expect_err("a drop on a viewless catalog must fail");
+    let message = error.to_string();
+    assert!(
+        message.contains("[VIEW_NOT_FOUND]"),
+        "pins: ice-views-1/C-005, got: {message}"
     );
 }
