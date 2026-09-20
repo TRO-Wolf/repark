@@ -156,12 +156,66 @@ def _file_ids_flat(engine: ReparkSession, table: str) -> list[dict[str, Any]]:
     return sorted(out, key=lambda entry: str(entry["ids"]))
 
 
+def _current_meta(meta_dir: Path) -> dict[str, Any]:
+    """The newest metadata.json, resolved by version number."""
+    hint = meta_dir / "version-hint.text"
+    if hint.exists():
+        pointed = meta_dir / f"v{hint.read_text().strip()}.metadata.json"
+        if pointed.exists():
+            return json.loads(pointed.read_text())
+    numbered = {}
+    for path in meta_dir.glob("v*.metadata.json"):
+        try:
+            numbered[int(path.name[1:].removesuffix(".metadata.json"))] = path
+        except ValueError:
+            continue
+    if numbered:
+        return json.loads(numbered[max(numbered)].read_text())
+    metas = sorted(meta_dir.glob("*.metadata.json"))
+    return json.loads(metas[-1].read_text())
+
+
+def _table_meta(engine: ReparkSession, table: str) -> dict[str, Any]:
+    """The sort state and the newest snapshot's operation from metadata.json."""
+    arrow = engine.sql(f"SELECT file_path FROM {table}.files").to_arrow()
+    path = arrow.column("file_path")[0].as_py()
+    local = path[len("file:") :] if path.startswith("file:") else path
+    directory = Path(local).parent
+    while not (directory / "metadata").is_dir():
+        directory = directory.parent
+    meta = _current_meta(directory / "metadata")
+    return {
+        "sort_orders": sorted(meta["sort-orders"], key=lambda order: order["order-id"]),
+        "default_sort_order_id": meta["default-sort-order-id"],
+        "operation": meta["snapshots"][-1]["summary"]["operation"],
+    }
+
+
 def _assert_cell(engine: ReparkSession, table: str, key: str) -> None:
-    """The cell's output row, its files and their in-file row order, all Spark's."""
+    """The cell's files, rows, sort state and snapshot operation, all Spark's."""
     expected = _ORACLE[key]
     assert _file_ids(engine, table) == expected["files"], key
     rows = engine.sql(f"SELECT id, data, cat FROM {table} ORDER BY id").to_arrow()
     assert rows.num_rows == 8, key
+    meta = _table_meta(engine, table)
+    recorded = sorted(expected["sort_orders"], key=lambda order: order["order-id"])
+    assert meta["sort_orders"] == recorded, key
+    assert meta["default_sort_order_id"] == expected["default_sort_order_id"], key
+    assert meta["operation"] == expected["operation"], key
+    if key == "tableorder":
+        default = next(
+            order
+            for order in expected["sort_orders"]
+            if order["order-id"] == expected["default_sort_order_id"]
+        )
+        assert default["fields"] == [
+            {
+                "transform": "identity",
+                "source-id": 1,
+                "direction": "desc",
+                "null-order": "nulls-last",
+            }
+        ]
 
 
 def test_rdf_sort_explicit_order(engine: ReparkSession) -> None:

@@ -35,6 +35,10 @@ Five fixtures:
     direction-tied default (DESC → NULLS LAST) is measured at runtime and not only in the
     parser's unit tests.
 
+Every cell also records its post-rewrite table metadata: the ``sort-orders`` array, the
+``default-sort-order-id`` (the rewrite is a one-shot instruction and must not move them),
+and the newest snapshot's ``operation``.
+
 Run it (one JVM at a time)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
@@ -156,6 +160,35 @@ def _out_row(spark: Any, call: str) -> list[Any]:
     return values
 
 
+def _current_meta(meta_dir: Path) -> dict[str, Any]:
+    """The newest metadata.json, resolved by version number."""
+    hint = meta_dir / "version-hint.text"
+    if hint.exists():
+        pointed = meta_dir / f"v{hint.read_text().strip()}.metadata.json"
+        if pointed.exists():
+            return json.loads(pointed.read_text())
+    numbered = {}
+    for path in meta_dir.glob("v*.metadata.json"):
+        try:
+            numbered[int(path.name[1:].removesuffix(".metadata.json"))] = path
+        except ValueError:
+            continue
+    if numbered:
+        return json.loads(numbered[max(numbered)].read_text())
+    metas = sorted(meta_dir.glob("*.metadata.json"))
+    return json.loads(metas[-1].read_text())
+
+
+def _table_meta(table: str) -> dict[str, Any]:
+    """The sort state and the newest snapshot's operation from metadata.json."""
+    meta = _current_meta(_WAREHOUSE / table.split(".", 1)[1].replace(".", "/") / "metadata")
+    return {
+        "sort_orders": meta["sort-orders"],
+        "default_sort_order_id": meta["default-sort-order-id"],
+        "operation": meta["snapshots"][-1]["summary"]["operation"],
+    }
+
+
 def _cell_table(spark: Any, name: str, order_ddl: str | None) -> str:
     """The cells' fixture: cat-partitioned, three appends, 8 rows."""
     table = f"{_CATALOG}.ns.{name}"
@@ -201,18 +234,21 @@ def _record(spark: Any) -> dict[str, Any]:
     truth["sort"] = {
         "out": _rewrite(spark, table, "id DESC NULLS LAST", "sort"),
         "files": _file_ids(spark, table),
+        **_table_meta(table),
     }
 
     table = _cell_table(spark, "tableorder", "WRITE ORDERED BY (id DESC NULLS LAST)")
     truth["tableorder"] = {
         "out": _rewrite(spark, table, None, "sort"),
         "files": _file_ids(spark, table),
+        **_table_meta(table),
     }
 
     table = _cell_table(spark, "zorder", None)
     truth["zorder"] = {
         "out": _rewrite(spark, table, "zorder(id, data)", "sort"),
         "files": _file_ids(spark, table),
+        **_table_meta(table),
     }
 
     for key, order in (
@@ -224,12 +260,14 @@ def _record(spark: Any) -> dict[str, Any]:
         truth[key] = {
             "out": _rewrite(spark, table, order, "sort"),
             "files": _file_ids(spark, table),
+            **_table_meta(table),
         }
 
     table = _flat_table(spark, "nulls", NULL_ROWS)
     truth["nulls"] = {
         "out": _rewrite(spark, table, "id DESC", "sort"),
         "files": _file_ids(spark, table),
+        **_table_meta(table),
     }
     return truth
 
