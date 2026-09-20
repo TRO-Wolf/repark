@@ -16,6 +16,7 @@ the native exception macro cannot express.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from repark._native import (
@@ -27,11 +28,46 @@ from repark._native import (
     UnsupportedOperationException,
 )
 
-
 # Provide the structured error methods expected by Spark error-checking helpers.
-def _native_get_condition(self: object) -> None:
-    """Return no condition for a native engine exception."""
-    return None
+_NATIVE_MESSAGE_PREFIXES = (
+    "Error during planning: ",
+    "datafusion engine error: ",
+    "SQL error: ",
+)
+
+_NATIVE_CONDITION_PATTERN = re.compile(r"[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*")
+
+_NATIVE_SQLSTATE_PATTERN = re.compile(r"SQLSTATE:\s*([A-Z0-9]{5})")
+
+
+def _native_message_text(error: object) -> str:
+    """Return the exception's rendered message text."""
+    arguments = getattr(error, "args", ())
+    return str(arguments[0]) if arguments else str(error)
+
+
+def _native_get_condition(self: object) -> str | None:
+    """Parse the Spark error condition out of a well-formed native message."""
+    message = _native_message_text(self)
+    for prefix in _NATIVE_MESSAGE_PREFIXES:
+        if message.startswith(prefix):
+            message = message[len(prefix) :]
+            break
+    if not message.startswith("["):
+        return None
+    closing = message.find("]")
+    if closing < 0:
+        return None
+    candidate = message[1:closing]
+    if _NATIVE_CONDITION_PATTERN.fullmatch(candidate) is None:
+        return None
+    return candidate
+
+
+def _native_get_sql_state(self: object) -> str | None:
+    """Return the last ``SQLSTATE: XXXXX`` token a native message carries."""
+    matches = _NATIVE_SQLSTATE_PATTERN.findall(_native_message_text(self))
+    return str(matches[-1]) if matches else None
 
 
 def _native_get_message_parameters(self: object) -> None:
@@ -56,6 +92,8 @@ for _native_exception_type in (
         _native_exception_type.getCondition = _native_get_condition  # type: ignore[attr-defined]
     if not hasattr(_native_exception_type, "getErrorClass"):
         _native_exception_type.getErrorClass = _native_get_condition  # type: ignore[attr-defined]
+    if not hasattr(_native_exception_type, "getSqlState"):
+        _native_exception_type.getSqlState = _native_get_sql_state  # type: ignore[attr-defined]
     if not hasattr(_native_exception_type, "getMessageParameters"):
         _native_exception_type.getMessageParameters = (  # type: ignore[attr-defined]
             _native_get_message_parameters

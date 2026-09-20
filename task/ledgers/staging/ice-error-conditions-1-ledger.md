@@ -1,0 +1,63 @@
+# Unit ledger — ICE-ERROR-CONDITIONS-1 · native error-condition parser (IPI-51 PR1)
+
+**Date:** 2026-09-20 · **Branch:** `fix/ipi-51-error-conditions` · **Base:** `6d029ab8` (`origin/main`)
+**Model:** swe-2-high · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.**
+
+**Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
+
+**Why now.** Of the 126 both-refuse inventory cells, Spark names a condition on 45 where RePark
+exposed none — every native exception reported `getCondition() is None` because
+`_native_get_condition` returned `None` unconditionally. RePark's Rust already renders several
+refusals in Spark's exact `[CONDITION] message SQLSTATE: XXXXX` shape
+(`W-DF-V2-REPLACE-MISSING-ERR`, `W-DF-V2-CREATE-EXISTS-ERR`, `D-TRUNCATE-PARTITION`), so the
+mechanism alone — parsing the already-rendered message — reports those conditions with no
+raise-site re-plumbing.
+
+**What it is.** `_native_get_condition` in `python/repark/src/repark/errors.py` reads the
+exception's message: it strips at most one known leading prefix (`Error during planning: `,
+`datafusion engine error: `, `SQL error: `, first match wins), then requires a bracketed token
+at column 0 of what remains matching `^[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*$`. A new
+`_native_get_sql_state` returns the last `SQLSTATE:\s*([A-Z0-9]{5})` match anywhere in the
+original message. Both are bound on every native exception class in the existing for-loop;
+`getErrorClass` stays the same function as `getCondition` (the deprecated alias, T-7);
+`getMessageParameters` stays `None`; `attach_error_condition` instance binds keep winning (A-4).
+
+**Not in this unit:** the `repark-common` condition catalogue and the raise-site sweep (PR2+),
+the four `PySparkException` class misses (A-8), the `== SQL ==` caret formatter (D-2.3), the
+registry row for the Py4J 20 and the `_LEGACY_ERROR_TEMP_*` mapping, `exceptions.rs`, every
+`Cargo.toml`, `STATUS.md`.
+
+**Writable paths:** `python/repark/src/repark/errors.py`, `python/repark/tests/` (the new
+constructor pins and the one permitted `getSqlState` pin in `test_e1_errorclass.py`), the two
+map.md files beside them, this ledger and `task/ledgers/staging/map.md`.
+
+## Measured
+
+Constructor pins only — `AnalysisException("<recorded or shaped message>")` and friends, no
+session, no catalog. Red on `f5f3793f`'s parent: 20 failed, 5 passed (the negatives already
+return `None`); green at `018edc7f`: 25 passed. The three recorded already-shaped messages
+(`W-DF-V2-REPLACE-MISSING-ERR`, `W-DF-V2-CREATE-EXISTS-ERR`, `D-TRUNCATE-PARTITION`) parse
+exactly as `include-defer.md` predicted — the mechanism alone flips getCondition on those
+three cells and nothing more.
+
+## PROPOSITION LEDGER — ICE-ERROR-CONDITIONS-1 — 2026-09-20
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-001 | The condition parses at column 0 after at most one known leading prefix (`Error during planning: `, `datafusion engine error: `, `SQL error: `); a second prefix is never stripped and a bracket is never searched for mid-message. | `test_condition_parser_strips_planning_prefix`, `test_condition_parser_strips_each_known_prefix` (all three prefixes), `test_condition_parser_strips_only_one_prefix`, `test_condition_parser_does_not_search_for_a_bracket`. | **PROVEN** | 25/25 pins green at `018edc7f`; the recorded `D-TRUNCATE-PARTITION` text yields `INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED` / `42601`. pins: ice-error-conditions-1/C-001 |
+| C-002 | Negatives hold: lowercase tag, mid-message bracket, user text in brackets, and a leading-underscore `_LEGACY_ERROR_TEMP_*` id all report `getCondition() is None`. | `test_condition_parser_rejects_lowercase_bracket`, `test_condition_parser_rejects_mid_message_bracket`, `test_condition_parser_rejects_non_condition_bracket`, `test_condition_parser_rejects_legacy_underscore`. | **PROVEN** | All four negatives green; the regex was not widened for `_LEGACY_*` (A-9). pins: ice-error-conditions-1/C-002 |
+| C-003 | A dotted sub-condition `A.B` parses whole, not truncated to either segment. | `test_condition_parser_accepts_sub_condition` (`UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703`). | **PROVEN** | Full dotted token returned. pins: ice-error-conditions-1/C-003 |
+| C-004 | SQLSTATE is the last `SQLSTATE:\s*([A-Z0-9]{5})` match anywhere in the message — a trailing `; line 1 pos 0;` or a `== SQL ==` caret block does not hide it. | `test_sqlstate_parser_takes_last_occurrence_not_the_tail`, `test_sqlstate_parser_survives_caret_block`. | **PROVEN** | Both shapes return `0A000` / `42601` (A-5). pins: ice-error-conditions-1/C-004 |
+| C-005 | A malformed SQLSTATE (not five `[A-Z0-9]`) yields `getSqlState() is None` while the condition still parses. | `test_sqlstate_parser_requires_five_chars` (`SQLSTATE: 42K0` → condition `A.B`, sqlstate `None`). | **PROVEN** | Green. pins: ice-error-conditions-1/C-005 |
+| C-006 | `getErrorClass` is the deprecated alias of `getCondition` — the same bound function on every native class. | `test_get_error_class_alias_matches_get_condition` on a shaped and a plain message; both also asserted inside `test_condition_parser_binds_on_every_native_class`. | **PROVEN** | Same object bound for both names (T-7). pins: ice-error-conditions-1/C-006 |
+| C-007 | `attach_error_condition` instance binds keep winning over the class-level parser, including `getMessageParameters`. | `test_attach_error_condition_wins_over_class_parser`: `[WRONG_CLASS]` message reports `PATH_NOT_FOUND` / `42K03` / `{"path": "file:/x"}` after the attach. | **PROVEN** | Instance `MethodType` binds shadow the class parser (A-4, mutation 12). pins: ice-error-conditions-1/C-007 |
+| C-008 | `getSqlState` is bound on every native exception class in the same for-loop as `getCondition` — not Analysis-only, and no second bind on the mixin. | `test_condition_parser_binds_on_every_native_class` parametrized over all six native classes asserting `getSqlState`; `test_native_exception_surface_shim_methods` in `test_e1_errorclass.py` pins `getSqlState() is None` on an unshaped message. | **PROVEN** | All six classes report `42P01` on a shaped message. pins: ice-error-conditions-1/C-008 |
+| C-009 | A message with no bracket reports `None` for condition, alias and SQLSTATE, and `str(e)` is unchanged. | `test_message_without_bracket_is_unchanged`; the col-0 recorded `W-DF-V2-*` texts report their condition with `getSqlState() is None` (no SQLSTATE in the text). | **PROVEN** | Green; `test_errors.py` untouched and still green (78 passed in the gate set). pins: ice-error-conditions-1/C-009 |
+| C-010 | The `(condition, sqlstate, template)` catalogue lives in `crates/repark-common` beside `Error` (A-3), and the existing hand-formatted strings move into it. | PR2: the module plus the moved strings. | **OPEN** | Deferred to PR2 — no Rust module this PR. |
+| C-011 | The TAKE-family sweep stamps conditions at the raise sites `include-defer.md` lists (TABLE_OR_VIEW_NOT_FOUND, TABLE_OR_VIEW_ALREADY_EXISTS, NOT_SUPPORTED_COMMAND_FOR_V2_TABLE, UNRESOLVED_COLUMN.WITH_SUGGESTION, …). | One commit per condition family in a later PR. | **OPEN** | Cell list: `/tmp/oc-worker/run27/ipi-51/include-defer.md` TAKE table. |
+| C-012 | The four `PySparkException` class misses (A-8) — `D-CREATE-NOT-NULL-VIOLATE`, `D-ALTER-TYPE-NARROW-ERR`, `W-UPDATE-TYPE-ERR`, `W-MERGE-DUP-SOURCE-ERR` — land in Spark's class with the A-6 substitutions ledgered. | Raise-site class mapping in a later PR. | **OPEN** | `exceptions.rs` read-only this unit. |
+| C-013 | `EngineErrorKind::Parse` renders Spark's `== SQL ==` caret block (D-2.3, A-11). | Formatter rewrite plus its pin in a later PR. | **OPEN** | Message-shape fix owned by a later PR. |
+| C-014 | The registry row records the Py4J 20 residue and the `_LEGACY_ERROR_TEMP_*` → real-condition mapping (INDEX decisions 16–17). | `docs/spark-sql-iceberg-parity.md` row in a later PR. | **OPEN** | Doc row deferred with the sweep. |
+
+No `COVERAGE_ATTESTATION` is filed while C-010 through C-014 are OPEN.
