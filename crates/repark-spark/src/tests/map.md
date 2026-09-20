@@ -20,6 +20,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Spark-door session-conf pins (snapshot properties and codec on append,
   overwrite, CTAS, by-name and plain INSERT, plus the writer-option precedence
   cells; comment-free per the owner ban).
+  **Round 3 (2026-09-19):** the layout-invariance battery
+  (`a_session_conf_keeps_a_plain_{update,insert,delete}_layout`), the answer to the
+  second verification critic's `P1-OWNERSHIP-FILE-COUNT`. Each runs the statement twice
+  over two warehouses — once with no session conf, once with a `snapshot-property`-only
+  conf and once with a `compression-codec`-only one — and compares the live data-file
+  count, every live file's record count, and every snapshot's operation and full summary.
+  The property run drops only `team`, the codec run only the three file-size keys, and
+  both drop `engine.operation-id`, which is a fresh UUID per commit and so can never
+  compare equal. Restoring the conf gate on `plain_identity_or_update` reds the UPDATE
+  pin.
+  pins: ice-session-write-conf-1/C-045
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
   pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`

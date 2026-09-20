@@ -106,3 +106,151 @@ async fn unset_session_conf_restores_unstamped_writes() {
     let table = load_sales_table(&catalogs, "suns").await;
     assert_eq!(team_of(&table), None);
 }
+
+const NONCE_KEY: &str = "engine.operation-id";
+const SIZE_KEYS: [&str; 3] = ["added-files-size", "total-files-size", "removed-files-size"];
+
+type Layout = (usize, Vec<u64>, Vec<(String, Vec<(String, String)>)>);
+
+async fn live_data_files(table: &iceberg::table::Table) -> (usize, Vec<u64>) {
+    let Some(snapshot) = table.metadata().current_snapshot() else {
+        return (0, Vec::new());
+    };
+    let manifest_list = snapshot
+        .load_manifest_list(table.file_io(), table.metadata())
+        .await
+        .expect("manifest list");
+    let mut counts = Vec::new();
+    for entry in manifest_list.entries() {
+        if entry.content != iceberg::spec::ManifestContentType::Data {
+            continue;
+        }
+        let manifest = entry
+            .load_manifest(table.file_io())
+            .await
+            .expect("manifest");
+        for alive in manifest.entries().iter().filter(|entry| entry.is_alive()) {
+            counts.push(alive.data_file().record_count());
+        }
+    }
+    counts.sort_unstable();
+    (counts.len(), counts)
+}
+
+fn summaries_of(
+    table: &iceberg::table::Table,
+    drop: &[&str],
+) -> Vec<(String, Vec<(String, String)>)> {
+    let mut rows: Vec<(i64, String, Vec<(String, String)>)> = table
+        .metadata()
+        .snapshots()
+        .map(|snapshot| {
+            let summary = snapshot.summary();
+            let mut pairs: Vec<(String, String)> = summary
+                .additional_properties
+                .iter()
+                .filter(|(key, _)| !drop.contains(&key.as_str()))
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect();
+            pairs.sort();
+            (
+                snapshot.timestamp_ms(),
+                format!("{:?}", summary.operation),
+                pairs,
+            )
+        })
+        .collect();
+    rows.sort_by_key(|(stamp, _, _)| *stamp);
+    rows.into_iter()
+        .map(|(_, operation, pairs)| (operation, pairs))
+        .collect()
+}
+
+async fn layout_under(
+    table_name: &str,
+    statement: &str,
+    conf: Option<(&str, &str)>,
+    drop: &[&str],
+) -> Layout {
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("CREATE TABLE ice.sales.{table_name} (id BIGINT, data STRING) USING iceberg"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.{table_name} VALUES (1,'a'),(2,'b'),(3,'c')"),
+    )
+    .await;
+    if let Some((key, value)) = conf {
+        set_session_conf(&ctx, key, value);
+    }
+    run(&ctx, &catalogs, &statement.replace("{t}", table_name)).await;
+    let table = load_sales_table(&catalogs, table_name).await;
+    let (count, records) = live_data_files(&table).await;
+    (count, records, summaries_of(&table, drop))
+}
+
+async fn assert_session_conf_keeps_the_layout(tag: &str, statement: &str) {
+    let base_for_property = layout_under(&format!("{tag}pb"), statement, None, &[NONCE_KEY]).await;
+    let under_property = layout_under(
+        &format!("{tag}pp"),
+        statement,
+        Some(("spark.sql.iceberg.snapshot-property.team", "a")),
+        &[NONCE_KEY, "team"],
+    )
+    .await;
+    assert_eq!(
+        base_for_property, under_property,
+        "a snapshot-property-only session conf changed more than the stamp on {statement}"
+    );
+
+    let mut codec_drop = vec![NONCE_KEY];
+    codec_drop.extend_from_slice(&SIZE_KEYS);
+    let base_for_codec = layout_under(&format!("{tag}cb"), statement, None, &codec_drop).await;
+    let under_codec = layout_under(
+        &format!("{tag}cc"),
+        statement,
+        Some(("spark.sql.iceberg.compression-codec", "gzip")),
+        &codec_drop,
+    )
+    .await;
+    assert_eq!(
+        base_for_codec, under_codec,
+        "a codec-only session conf changed more than the written bytes on {statement}"
+    );
+}
+
+#[tokio::test]
+async fn a_session_conf_keeps_a_plain_update_layout() {
+    let _: &str = "pins: ice-session-write-conf-1/C-045";
+    Box::pin(assert_session_conf_keeps_the_layout(
+        "u",
+        "UPDATE ice.sales.{t} SET data = 'z' WHERE id = 1",
+    ))
+    .await;
+}
+
+#[tokio::test]
+async fn a_session_conf_keeps_a_plain_insert_layout() {
+    let _: &str = "pins: ice-session-write-conf-1/C-045";
+    Box::pin(assert_session_conf_keeps_the_layout(
+        "i",
+        "INSERT INTO ice.sales.{t} VALUES (9,'i')",
+    ))
+    .await;
+}
+
+#[tokio::test]
+async fn a_session_conf_keeps_a_plain_delete_layout() {
+    let _: &str = "pins: ice-session-write-conf-1/C-045";
+    Box::pin(assert_session_conf_keeps_the_layout(
+        "d",
+        "DELETE FROM ice.sales.{t} WHERE id = 2",
+    ))
+    .await;
+}
