@@ -290,3 +290,40 @@ is owed: both bench dispatches stopped before any write on the missing
   cold 804 → 920 ms) — fork F-PAGE-PRUNE-2 (#319); `count(*)` still reads footers cold (ICE-COUNT-FOLD-1,
   #721, waits on fork #317).
 
+
+## The AWS half of the re-measure gate (2026-09-20)
+
+Two dispatches of the `ice-read-perf-bench` leg on one head, main `40b7fc13` (fork pin `882f1300`), from a
+GitHub-hosted runner against `us-east-2`: run 35498368567 with `baseline=true` (page selection off; footer, manifest
+and metadata caches off) and run 35498376542 with everything on. `BENCH_REPEAT=1`, so every timing is ONE sample —
+requests and bytes are the load-independent reference. Both beds are 200 files, 1,428,856,966 B per table; the R-3
+size flag (3 GiB) was checked after the write and before every mode and never raised; I/O was identical across
+samples in all sixteen mode files. The head already carries the two wins that are not knobs (`count(*)` folds, zoned
+timestamp literals reach the scan), so the cold "before" is already cheap; the pre-wave numbers are the local table
+above.
+
+| warm query | S3 Tables ms | Glue ms | requests | bytes |
+|---|---|---|---|---|
+| Q1 `count(*)` | 2,121 → 27 | 1,940 → 36 | 202 → 0 | 1.0 MB → 0 |
+| Q2 one-column aggregate | 6,875 → 2,231 | 6,799 → 2,219 | 602 → 200 | 128.0 → 22.2 MB |
+| Q3 1 % time window | 2,246 → 117 | 2,237 → 141 | 211 → 4 | 4.6 → 1.0 MB |
+| Q4 point lookup | 2,268 → 118 | 2,147 → 111 | 208 → 2 | 10.2 → 1.0 MB |
+| Q5 50,000-row projection | 6,681 → 2,842 | 7,194 → 2,490 | 602 → 200 | 171.3 → 65.5 MB |
+| Q6 full projection, nothing prunable | 12,159 → 8,944 | 12,131 → 8,016 | 802 → 400 | 1,534.1 → 1,428.3 MB |
+| Q7 selective filter, wide rows | 2,272 → 124 | 2,083 → 127 | 211 → 4 | 3.9 → 0.3 MB |
+| planning, every query | ≈ 2,000 → ≈ 30 | ≈ 2,000 → 33–57 | — | — |
+
+| concurrent group (four queries) | S3 Tables | Glue |
+|---|---|---|
+| warm, total ms | 12,588 → 9,452 | 12,166 → 9,091 |
+| warm, requests / bytes | 2,217 → 804 / 1.84 → 1.52 GB | 2,217 → 804 / 1.84 → 1.52 GB |
+| cold, total ms | 12,787 → 13,149 | 12,182 → 12,643 |
+| cold, requests / bytes | 2,217 → 1,404 / 1.84 → 1.62 GB | 2,217 → 1,404 / 1.84 → 1.62 GB |
+
+Cold single queries are flat within one-sample noise (the first touch of a table pays the metadata once, by design);
+the one cold sample that moved the wrong way is Q6 on S3 Tables, 12.4 → 14.2 s, the non-prunable shape fork #319
+(F-PAGE-PRUNE-2, merged in the fork, not yet on this pin) addresses. The catalog cache shows here and not on the
+local bed: about two seconds of per-query metadata work on a remote catalog becomes about thirty milliseconds.
+
+Spend under ruling R-3: three data dispatches (the first on `22b586c7`, then this pair), 57.2 GiB read in total,
+about $5 at list transfer price against the $25 cap; three earlier dispatches stopped safe before any write or read.
