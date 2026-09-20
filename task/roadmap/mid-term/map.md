@@ -6,6 +6,18 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [night-report-2026-09-20-25a.md](night-report-2026-09-20-25a.md) — **run 25a (every bump, the perf remainder, the
+  RePark halves):** RP-39 and RP-40, the `count(*)` fold, the bench baseline switch, metadata-only DELETE, delete-manifest
+  rewrite, writer metrics config on main; the AWS pair and the first gate scoreboard in the orchestrating note.
+- [night-report-2026-09-20-25b.md](night-report-2026-09-20-25b.md) — **run 25b (fork lane one):** the wrong `replace`
+  snapshot summary fixed, F-PAGE-PRUNE-2, branch-read schema merged; output-spec-id ready; WAP stage-only a draft.
+- [night-report-2026-09-20-25c.md](night-report-2026-09-20-25c.md) — **run 25c (parity, RePark side):** `REPLACE
+  COLUMNS`, four routed procedures and `spark.wap.branch` on main; #733 session write confs ready and unmerged.
+- [night-report-2026-09-20-25d.md](night-report-2026-09-20-25d.md) — **run 25d (fork lane two):** rewrite sort and
+  zorder, transform sort orders, `add_files`, location providers merged; a nested residual rename that silently lost
+  rows found and fixed; container accessors a draft hand-over.
+- [night-report-2026-09-20-25e.md](night-report-2026-09-20-25e.md) — **run 25e (the plan packets):** thirteen
+  execution packets for the large parity units, 222 cells; four units found to need no fork work.
 - [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1):**
   structured streaming read and write of Iceberg tables leaves the v1.5.0 parity gate (3 inventory cells, IPI-47) and
   is scheduled with the connectors minor; step 0 is a recorded Spark oracle, then six design questions to rule.
