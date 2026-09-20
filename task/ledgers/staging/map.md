@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
+  **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
+  binder, parser first (IPI-31 D-1) — one parameter table transcribed from the
+  jar plus `bind` in `call_args.rs`; the mixed-args refusal is deleted and the
+  RDF and RPD handlers bind against the declared lists, closing `P-POS-RDF`,
+  `P-POS-RPD` and `P-CALL-MIXED-ARGS` with nothing else changing product
+  behaviour. `risk_tier: standard`. Branch `fix/ipi-30-31-procedures`.
+  pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011
 - [ice-error-conditions-1-ledger.md](ice-error-conditions-1-ledger.md) —
   **ICE-ERROR-CONDITIONS-1 (2026-09-20), in flight:** IPI-51 PR1 — the native
   error-condition parser only: PyO3 exceptions report `getCondition`/`getErrorClass`/
