@@ -12,7 +12,9 @@ and exits non-zero naming the first mismatch against the committed
 plus a stable message needle (Spark stage and task ids vary per run); the
 ``QR-*`` collision cells compare by their whole first message line. The QS / QZ
 / QR path cells are derived by
-:mod:`_record_ice_session_write_conf_1_paths`. The
+:mod:`_record_ice_session_write_conf_1_paths`, and the round-3 / round-4 QK /
+QM / QP / QO / QC / QU cells by
+:mod:`_record_ice_session_write_conf_1_rounds`. The
 Iceberg runtime GAV comes from :mod:`_oracle_pins` (CP-8: never restate a
 version literal).
 
@@ -36,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 from _record_ice_session_write_conf_1_paths import derive_path_cells
+from _record_ice_session_write_conf_1_rounds import derive_round_cells
 
 FIXTURE = Path(__file__).with_name("ice_session_write_conf_1_spark_oracle.json")
 ICEBERG_SPARK_EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
@@ -415,6 +418,7 @@ def _derive(spark: Any) -> list[dict[str, Any]]:
         ),
     ]
     cells.extend(derive_path_cells(spark))
+    cells.extend(derive_round_cells(spark))
     return cells
 
 
@@ -427,7 +431,7 @@ def _sorted_data(obs: dict[str, Any]) -> dict[str, Any]:
 
 def _needle(cell_id: str, cell: dict[str, Any]) -> str:
     """The stable message needle one error cell is compared by."""
-    if cell_id.startswith("QR-"):
+    if cell_id.startswith(("QR-", "QP-", "QO-", "QC-")):
         return cell["error"]["msg"].split("\n")[0]
     return BOGUS_CODEC_NEEDLE if cell_id == "CZ-CONF-BOGUS" else SET_SYNTAX_NEEDLE
 

@@ -769,12 +769,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-session-write-conf-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
   pins: ice-session-write-conf-1/C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026
   pins: ice-session-write-conf-1/C-027, C-028, C-029, C-030, C-031, C-032
+- [_record_ice_session_write_conf_1_rounds.py](_record_ice_session_write_conf_1_rounds.py) —
+  **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20, run 25c):** the third critic's
+  `P2-ROUND3-CELLS-ABSENT-FROM-FIXTURE`. Rounds 3 and 4 measured six families on live Spark
+  but left them in the orchestrator recordings, so the ledger's claim that they had entered
+  the unit fixture was false and the live recorder could not re-derive them. This module
+  derives all 32 — `QK-*` conf-key case (the prefix is case-sensitive, the snapshot-property
+  suffix verbatim), `QM-*` the maintenance CALLs, `QP-*` dynamic `overwritePartitions`,
+  `QO-*` static `INSERT OVERWRITE … PARTITION`, `QC-*` a summary-metric name in another case,
+  `QU-*` the copy-on-write layout — and `_record_ice_session_write_conf_1_oracle` appends them,
+  so one `check` run re-derives the whole 95-cell fixture (clean on PySpark 4.1.2). The six
+  error cells among them compare by their whole first message line, the `QR-*` rule. What
+  RePark must answer for each is pinned in Rust, per the owner's Rust-first ruling; the
+  fixture is the Spark side of those pins.
+  pins: ice-session-write-conf-1/C-047, C-048, C-049, C-054, C-056
 - [_record_ice_session_write_conf_1_paths.py](_record_ice_session_write_conf_1_paths.py) +
   [test_ice_session_write_conf_1_paths.py](test_ice_session_write_conf_1_paths.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c):** the 38 path cells added to the
   unit fixture from the orchestrator recording `spark-qc1.json` (source SHA-256
   `f854793685590d4d2210c4bf0409150061d4a520eef529f576ab29b7490b0034`, fixture SHA-256
-  `181a56c82a86892c8eab8fa32a33f881d85f3bc826964a4d16eeaccea1ea6db3` since round 3): `QS-*` branch writes
+  `b32404c71f9c964ad31206317d0823b87a2bdbca7f5718aa75051ae30f0522b6` since round 4): `QS-*` branch writes
   (SQL INSERT, DataFrame append, DELETE / UPDATE / MERGE in CoW and MoR), TRUNCATE and the
   metadata-only DELETE Spark does NOT stamp, MoR UPDATE / MERGE and the v3 twin; `QZ-*` the
   position-delete codec (session conf over `write.delete.parquet.compression-codec` over
