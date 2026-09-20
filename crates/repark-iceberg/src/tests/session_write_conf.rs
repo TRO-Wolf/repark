@@ -46,22 +46,43 @@ fn codec_and_level_store_verbatim() {
 }
 
 #[test]
-fn snapshot_suffix_folds_case_and_last_write_wins() {
-    let _: &str = "pins: ice-session-write-conf-1/C-033";
+fn snapshot_suffix_keeps_its_case_and_last_write_wins() {
+    let _: &str = "pins: ice-session-write-conf-1/C-033, C-048";
     let mut options = ConfigOptions::new();
-    assert!(apply_session_write_key(
-        &mut options,
-        "spark.sql.iceberg.snapshot-property.Team",
-        "a"
-    ));
-    assert!(apply_session_write_key(
-        &mut options,
-        "spark.sql.iceberg.snapshot-property.team",
-        "b"
-    ));
+    for (key, value) in [
+        ("spark.sql.iceberg.snapshot-property.Team", "a"),
+        ("spark.sql.iceberg.snapshot-property.team", "b"),
+        ("spark.sql.iceberg.snapshot-property.Team", "c"),
+    ] {
+        assert!(apply_session_write_key(&mut options, key, value));
+    }
     let view = session_write_conf_from_options(&options);
-    let merged = view.merged_snapshot_extra(&[]);
-    assert_eq!(merged, vec![("team".to_string(), "b".to_string())]);
+    assert_eq!(
+        view.merged_snapshot_extra(&[]),
+        vec![
+            ("Team".to_string(), "c".to_string()),
+            ("team".to_string(), "b".to_string())
+        ]
+    );
+}
+
+#[test]
+fn a_mixed_case_prefix_is_not_a_session_write_key() {
+    let _: &str = "pins: ice-session-write-conf-1/C-048";
+    let mut options = ConfigOptions::new();
+    for key in [
+        "Spark.sql.iceberg.snapshot-property.team",
+        "SPARK.SQL.ICEBERG.SNAPSHOT-PROPERTY.team",
+        "Spark.SQL.Iceberg.Compression-Codec",
+        "SPARK.SQL.ICEBERG.COMPRESSION-LEVEL",
+    ] {
+        assert!(
+            !apply_session_write_key(&mut options, key, "a"),
+            "{key} must not be claimed"
+        );
+        assert!(!unset_session_write_key(&mut options, key), "{key}");
+    }
+    assert!(session_write_conf_from_options(&options).is_empty());
 }
 
 #[test]

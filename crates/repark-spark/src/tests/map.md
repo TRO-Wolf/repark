@@ -39,6 +39,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   existing-partition one must refuse with Spark's `deleted-records=2`. Reverting
   `commit_replace_partitions_with_summary` to `EngineSummary::for_overwrite` reds both.
   pins: ice-session-write-conf-1/C-047
+  And `rewrite_manifests_does_not_{stamp_the_session_snapshot_property,refuse_a_colliding_session_key}`,
+  the critic's `P2-REWRITE-MANIFESTS-UNPINNED`. Measured first (cells `QM-*`, run 25c):
+  Spark's `rewrite_manifests` replace snapshot carries NO session property and refuses no
+  colliding key — it commits the engine's own `total-records`. RePark already answered that;
+  the pins stop it drifting. The same run's `QM-REWRITE-DATA-FILES` narrows the declared
+  residue F-RDF-SESSION-CONF-1: Spark does not stamp that replace snapshot either, so only
+  the CODEC half of it is a gap.
+  pins: ice-session-write-conf-1/C-049
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
   pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`

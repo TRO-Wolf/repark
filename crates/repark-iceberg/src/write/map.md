@@ -44,6 +44,18 @@ repark-core's error map.
   `spark.sql.iceberg.snapshot-property.*` map) and `resolve_write_for_session`,
   which folds writer option over session conf over table property at every owned
   commit; a bogus codec refuses naming the codec (comment-free per the owner ban).
+  **Round 3 (2026-09-19):** the `snapshot-property.` SUFFIX is now stored VERBATIM, not
+  lowercased. Measured Spark 4.1.2 (cells `QK-*`, run 25c): the key's PREFIX is
+  case-SENSITIVE — `Spark.sql.iceberg.snapshot-property.team` and
+  `Spark.SQL.Iceberg.Compression-Codec` are silently ignored, which refutes the second
+  verification critic's `P2-CONF-KEY-CASE` premise that SQLConf folds them — while
+  `spark.sql.iceberg.snapshot-property.TEAM` stamps `TEAM`, the suffix untouched. The
+  writer-option suffix still lowercases, which is a different measured rule
+  (ICE-WRITE-OPTIONS-1's `suffix_lower_cases_like_spark`): Spark reaches a writer option
+  through a case-insensitive option map and a session conf through SQLConf's verbatim
+  settings map. Two suffixes that differ only in case are two properties, as they are in
+  Spark, so `unset` clears the exact spelling.
+  pins: ice-session-write-conf-1/C-048
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).

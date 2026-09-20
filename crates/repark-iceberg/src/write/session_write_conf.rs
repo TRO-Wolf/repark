@@ -45,11 +45,10 @@ impl IcebergSessionWriteConf {
             return true;
         }
         if let Some(suffix) = key.strip_prefix(SESSION_SNAPSHOT_PREFIX) {
-            let folded = suffix.to_ascii_lowercase();
-            if let Some(position) = self.snapshot.iter().position(|(prior, _)| *prior == folded) {
-                self.snapshot[position] = (folded, value.to_string());
+            if let Some(position) = self.snapshot.iter().position(|(prior, _)| prior == suffix) {
+                self.snapshot[position] = (suffix.to_string(), value.to_string());
             } else {
-                self.snapshot.push((folded, value.to_string()));
+                self.snapshot.push((suffix.to_string(), value.to_string()));
             }
             return true;
         }
@@ -66,8 +65,7 @@ impl IcebergSessionWriteConf {
             return true;
         }
         if let Some(suffix) = key.strip_prefix(SESSION_SNAPSHOT_PREFIX) {
-            let folded = suffix.to_ascii_lowercase();
-            self.snapshot.retain(|(prior, _)| *prior != folded);
+            self.snapshot.retain(|(prior, _)| prior != suffix);
             return true;
         }
         false

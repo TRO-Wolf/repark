@@ -325,3 +325,66 @@ async fn replace_partitions_into_an_existing_partition_names_the_engine_value() 
         "the refusal must name Spark's computed engine value, not `<resolved at commit>`"
     );
 }
+
+async fn rewrite_manifests_under(key: &str, value: &str, table_name: &str) -> Summaries {
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("CREATE TABLE ice.sales.{table_name} (id BIGINT) USING iceberg"),
+    )
+    .await;
+    for id in 1..=2 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.{table_name} VALUES ({id})"),
+        )
+        .await;
+    }
+    set_session_conf(&ctx, key, value);
+    run(
+        &ctx,
+        &catalogs,
+        &format!("CALL ice.system.rewrite_manifests(table => 'sales.{table_name}')"),
+    )
+    .await;
+    unset_session_conf(&ctx, key);
+    let table = load_sales_table(&catalogs, table_name).await;
+    summaries_of(&table, &[NONCE_KEY])
+}
+
+#[tokio::test]
+async fn rewrite_manifests_does_not_stamp_the_session_snapshot_property() {
+    let _: &str = "pins: ice-session-write-conf-1/C-049";
+    let summaries =
+        rewrite_manifests_under("spark.sql.iceberg.snapshot-property.team", "a", "rmteam").await;
+    let (operation, pairs) = summaries.last().expect("a replace snapshot");
+    assert_eq!(operation, "Replace");
+    assert!(
+        !pairs.iter().any(|(key, _)| key == "team"),
+        "Spark's rewrite_manifests replace snapshot carries no session property: {pairs:?}"
+    );
+}
+
+#[tokio::test]
+async fn rewrite_manifests_does_not_refuse_a_colliding_session_key() {
+    let _: &str = "pins: ice-session-write-conf-1/C-049";
+    let summaries = rewrite_manifests_under(
+        "spark.sql.iceberg.snapshot-property.total-records",
+        "77",
+        "rmcoll",
+    )
+    .await;
+    let (operation, pairs) = summaries.last().expect("a replace snapshot");
+    assert_eq!(operation, "Replace");
+    assert_eq!(
+        pairs
+            .iter()
+            .find(|(key, _)| key == "total-records")
+            .map(|(_, value)| value.as_str()),
+        Some("2"),
+        "Spark commits the engine total and refuses nothing here: {pairs:?}"
+    );
+}
