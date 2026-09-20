@@ -43,6 +43,25 @@ link was an incidental shared pointer (a sub-map, a baseline doc, `../map.md`) �
 linking each row's own subject or re-pointing file-named links at the real files. The tree is
 clean with the rule armed.
 
+**Main-merge dedupe (2026-09-20).** Merging `82952d40` (`origin/main` — #733's squash, the
+ice-session-write-conf-1 close-out) into this branch under `map.md merge=union` auto-resolved
+every map and kept both sides' rows; the duplicate-row rule then caught four first-link
+collisions on the merge preview. The work order rules them fixed in this pull request under
+newest-round-wins — a map keeps one navigation row per file, describing the current state —
+and the deleted round text remains in
+`task/ledgers/staging/ice-session-write-conf-1-ledger.md`. The four deleted rows:
+`crates/repark-sql/src/map.md`, first link `session_insert.rs` — kept the round-8 row,
+deleted the round-4 and round-1 rows; same map, first link `session_write_conf.rs` — kept the
+round-4 row, deleted the round-1 row (its Round-2/Round-3 continuations went with it);
+`python/repark/tests/map.md`, first link `_record_ice_session_write_conf_1_rounds.py` — kept
+the round-5 row, deleted the round-4 row. A pin is the file's, not the round's: two deleted
+rows were the only citations of `ice-session-write-conf-1/C-044` (pinned by the
+`native_merge_*` / `native_delete_*` battery in `crates/repark-sql/src/session_write_conf.rs`)
+and `C-058` (pinned by `_record_ice_session_write_conf_1_rounds::derive_round_cells`), so the
+kept rows absorb them — `pins:` …`C-044, C-054` and …`C-058, C-059, C-060, C-062` — and no
+other deleted pin was orphaned. `python3 scripts/sync_map_md.py --check` is clean on the
+merged tree (`map-sync: 310 maps clean`).
+
 **Not in this unit:** the GitHub server-side mergeability measurement above; no map format
 change, no sorting, no generator (step 2 owns map migration); no Rust or package source.
 

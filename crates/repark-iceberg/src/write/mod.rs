@@ -18,6 +18,7 @@ pub mod format_version;
 mod hadoop_stale_commit;
 /// Shared Spark/DF `quote_ident` + path-escape needles (CQ-006/007).
 pub mod idents;
+pub mod illegal_argument;
 pub mod insert_defaults;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
 pub mod insert_gate;
@@ -39,6 +40,7 @@ pub(crate) mod position_delete;
 pub mod predicate_dml;
 pub mod scan_concurrency;
 pub mod scan_prune;
+pub mod session_write_conf;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
 pub mod sort_order;
@@ -54,6 +56,7 @@ pub mod write_options;
 pub mod writer_props;
 
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
+pub use illegal_argument::{IllegalArgumentMarker, illegal_argument_error};
 pub use snapshot_refs::{
     SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref, create_snapshot_ref,
     create_snapshot_ref_with_retention, drop_snapshot_ref, list_snapshot_refs,
@@ -106,6 +109,13 @@ pub use partition_overwrite::{
 pub use partition_write::{WRITTEN_FILES_COL_NAME, write_data_files_from_plan};
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
+pub use session_write_conf::{
+    IcebergSessionWriteConf, SESSION_CODEC_KEY, SESSION_LEVEL_KEY, SESSION_SNAPSHOT_PREFIX,
+    SessionWriteView, apply_session_extras, apply_session_write_key, resolve_empty_session_write,
+    resolve_write_for_session, session_write_conf_from_config_map, session_write_conf_from_ctx,
+    session_write_conf_from_options, session_write_conf_is_set, unset_session_write_key,
+    with_session_write_conf,
+};
 pub use summary_collision::EngineSummary;
 pub use truncate::{commit_truncate, commit_truncate_to};
 pub use write_options::{

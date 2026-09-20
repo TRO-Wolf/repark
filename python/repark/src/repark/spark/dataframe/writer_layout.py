@@ -388,3 +388,20 @@ def _merge_path_write_tree(staging: Any, destination: Any) -> None:
         if target.exists():
             target = destination_path / f"part-append-{uuid.uuid4().hex[:12]}{item.suffix}"
         shutil.move(str(item), str(target))
+
+
+def table_of_ref_target(qualified: str) -> str:
+    """Strip a trailing ``branch_<name>`` / ``tag_<name>`` selector from a write target.
+
+    Spelling only: whether the ref may be written at all is the Rust router's decision (a tag
+    write is refused there), and this helper just names the table the selector hangs off so an
+    existence probe can see it.
+    """
+    parts = qualified.split(".")
+    if len(parts) != 4:
+        return qualified
+    last = parts[-1].lower()
+    for prefix in ("branch_", "tag_"):
+        if last.startswith(prefix) and len(last) > len(prefix):
+            return ".".join(parts[:-1])
+    return qualified

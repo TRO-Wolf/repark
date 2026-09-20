@@ -911,11 +911,11 @@ class DataFrameWriterV2:
         self._run_ctas(or_replace=True)
 
     def _existing_table_ref(self) -> tuple[Any, str]:
-        """Return session and quoted name after checking the target exists."""
+        """Return session and quoted name after checking the target (or its ref's table) exists."""
         self._dataframe._ensure_alive()
         session = self._dataframe._session
         qualified, table_ref = self._resolved_table()
-        if not session.table_exists(qualified):
+        if not session.table_exists(writer_layout.table_of_ref_target(qualified)):
             raise AnalysisException(
                 f"Cannot write to table {self._table!r} because it does not exist. "
                 "Use create() or createOrReplace() first."

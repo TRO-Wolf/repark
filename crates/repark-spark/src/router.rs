@@ -283,7 +283,19 @@ async fn execute_inner(
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {
             if !write_options.is_empty() {
-                return execute_append_with_options(ctx, catalogs, insert, write_options).await;
+                return execute_append_with_options(ctx, catalogs, sql, insert, write_options)
+                    .await;
+            }
+            if repark_iceberg::write::session_write_conf_is_set(ctx)
+                && let TableObject::TableName(name) = &insert.table
+                && crate::insert_overwrite::try_resolve_iceberg_overwrite_target(
+                    ctx, catalogs, name,
+                )
+                .await?
+                .is_some()
+            {
+                return execute_append_with_options(ctx, catalogs, sql, insert, write_options)
+                    .await;
             }
             let refusal = match &insert.table {
                 TableObject::TableName(name) => {

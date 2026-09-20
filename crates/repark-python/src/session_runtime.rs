@@ -36,9 +36,23 @@ pub fn restore_runtime_config(
     })
 }
 
+#[pyfunction]
+pub fn unset_runtime_config(session: PyRef<'_, PyReparkSession>, key: &str) -> PyResult<()> {
+    fenced_span!("py.session", "unset_runtime_config", {
+        if session.session.unset_iceberg_session_write_conf(key) {
+            Ok(())
+        } else {
+            Err(to_py_err(Error::IllegalArgument(format!(
+                "unset_runtime_config refuses unknown key {key:?}"
+            ))))
+        }
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(set_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(restore_runtime_config, module)?)?;
+    module.add_function(wrap_pyfunction!(unset_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(session_zone_canonical, module)?)?;
     Ok(())
 }
@@ -88,6 +102,9 @@ fn apply_runtime_config(
         let mode = repark_core::parse_partition_overwrite_mode(value)
             .map_err(|error| Error::IllegalArgument(configuration_message(error)))?;
         write_overwrite_mode(session, mode)?;
+        return Ok(());
+    }
+    if session.set_iceberg_session_write_conf(key, value) {
         return Ok(());
     }
     Err(Error::IllegalArgument(format!(

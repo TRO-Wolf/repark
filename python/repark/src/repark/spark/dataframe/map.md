@@ -1259,4 +1259,10 @@ that held the comment (pins: comment-core-1/C-003).
 EAGER-BUDGET-1 review round (2026-09-13): `eager.py::_cache_conf_lookup` matches cache budget keys
 case-insensitively, like the `repark.cache.retained_bytes` intercept: any spelling in the unset tomb disables the key,
 and when two spellings coexist the last one set wins (runtime layer over builder). pins: eager-budget-1/C-004
-- **FNP-4B (2026-09-15, run 15b cleared):** the aggregate rebind leaf matchers in `joins_columns.py` (simple / collect / first-last / binary forms) and `plan_collapse.py` (`_parse_count_distinct_simple_names`) accept a backtick or a double-quoted leaf, so `sum(`x`)` rebinds after internal SQL moved to backtick quoting. pins: `test_select_global_agg.py::test_select_case_preserved_sum_alias_and_alias_lit`, `::test_select_case_preserved_rebind_extended_afs`.
+- **FNP-4B (2026-09-15, run 15b cleared):** the aggregate rebind leaf matchers in `joins_columns.py` (simple / collect / first-last / binary forms) and `plan_collapse.py` (`_parse_count_distinct_simple_names`) accept a backtick or a double-quoted leaf, so `sum(`x`)` rebinds after internal SQL moved to backtick quoting. pins: `test_select_global_agg.py::test_select_case_preserved_sum_alias_and_alias_lit`, `::test_select_case_preserved_rebind_extended_afs`.- `writer_layout.py` / `writer_readwriter.py` — **ICE-SESSION-WRITE-CONF-1 round 1
+  (2026-09-19):** `table_of_ref_target` strips a trailing `branch_<name>` / `tag_<name>`
+  selector for the writer's existence probe (spelling only — the Rust router still decides
+  whether the ref may be written, and refuses a tag), so
+  `writeTo("t.branch_b").append()` reaches the engine instead of failing the probe.
+  pins: ice-session-write-conf-1/C-039
+

@@ -72,6 +72,10 @@ pins: rp-4-fork-repin/C-005, C-006
   runs heap-pinned (`Box::pin`) so the thread-through keeps test-task futures
   under the 16 KiB clippy ceiling.
   pins: ice-write-options-1/C-001, C-004
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** `execute_inner` merges the live
+  session write conf into every Iceberg write arm's statement options, so
+  `spark.sql.iceberg.snapshot-property.*` and the session codec reach the owned
+  commits with writer-option precedence.
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18, Q-22b-WO-1):** main's
   `execute_routed` folds into `execute_with_statement_options`; ICE-DYN-OVERWRITE-1's
   typed static flag rides as the typed field
@@ -94,6 +98,11 @@ pins: rp-4-fork-repin/C-005, C-006
   a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
   0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
   before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
+- `insert_overwrite.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the
+  `OverwritePlan::RowFilter` arm hands the whole `StaticPartitionOverwrite` to
+  `commit_overwrite_by_row_filter_with_summary`, so the commit resolves the files the
+  filter removes and the collision oracle answers as Spark's does.
+  pins: ice-session-write-conf-1/C-054
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
@@ -140,6 +149,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `stage_static_partition_overwrite_files_with` with the column list and `None` or the
   staging overrides.
   pins: ice-write-options-1/C-014, C-015
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the stage-then-swap overwrite arms
+  resolve the merged session write at their commits.
   pins: dml-b-insert-overwrite/C-001, C-002, C-004
   pins: rp-5-fork-repin/C-004
   pins: ice-dyn-overwrite-1/C-014, C-020
@@ -155,6 +166,22 @@ pins: rp-4-fork-repin/C-005, C-006
   every `execute` future stays under clippy's `large_futures` 16 KiB threshold (the
   round-1 inline awaits grew it to 16,384–16,544 bytes and tripped 135 test call sites).
   pins: ice-v3-write-default-1/C-024
+- `append_with_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the
+  no-write-options arm is the append that stands in for the fork's DataFusion insert exec, so
+  it alone sets `WriterStagingOverrides::fork_insert_dictionary_rule` and writes that exec's
+  Parquet layout; the option-carrying arm keeps Java's dictionary default.
+  pins: ice-session-write-conf-1/C-064
+- `append_with_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the owned
+  append plans the WHOLE insert, not a reconstructed `SELECT`. `spark_ast::execute_insert_source`
+  runs the passthrough pipeline (marker rewrite, eager analysis, `fill_insert_plan`, the
+  timestamp-ns passes) and executes the resulting `Dml` node's INPUT, so the owned route carries
+  the target-schema coercion the delegated route has: a VALUES list widens against the target
+  column, a compound NULL keeps its type, and `DEFAULT` in an outer select still refuses with
+  Spark's `UNRESOLVED_COLUMN … 42703`. The batch that reaches staging is already the table's
+  shape, so the column list is empty and `positional_map_overwrite_batch` only checks it. A
+  branch target is planned against the base table (`insert_sql_without_write_ref` drops the
+  write ref), because DataFusion cannot resolve a 4-part name — the commit still goes to the ref.
+  pins: ice-session-write-conf-1/C-055
 - `append_with_options.rs` — **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):**
   `execute_append_with_options` (option-carrying plain INSERT on the owned
   stage-then-commit path), moved verbatim out of `insert_overwrite.rs`, which the merge
@@ -167,6 +194,12 @@ pins: rp-4-fork-repin/C-005, C-006
   summary. A list-free append keeps `append_with_statement_options`. Table-function
   targets, `REPLACE INTO` and non-3-part names still refuse.
   pins: ice-write-options-1/C-014, C-018
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the option-carrying append resolves
+  the merged session write at its commit. **Round 1 fix (Q-24c-5):** an
+  option-less list-free INSERT stages positionally (`stage_overwrite_files_with`
+  with an empty column list) instead of the by-name append, so positional
+  `VALUES` resolve over all columns as Spark's do; the by-name arm stays for
+  the option-carrying form.
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
@@ -215,6 +248,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `insert_overwrite_from_staged_source`.
   pins: ice-write-options-1/C-015
   pins: ice-write-options-1/C-001, C-003
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the by-name append commit resolves
+  the merged session write.
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property
@@ -228,6 +263,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `force_static_overwrite`, the `saveAsTable` static pin, set by the dialect from
   `EngineContext`; it is not an option and never counts toward `is_empty`.
   pins: ice-write-options-1/C-014
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** `StatementWriteOptions` also merges
+  the live session write conf (session codec plus snapshot properties), which the
+  router folds into every Iceberg write arm.
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** the flag becomes `overwrite_intent`
   (`OverwriteIntent::Session` / `Static` / `Dynamic`), and the `overwrite-mode` key
   (lower-cased like every key) sets `overwrite_mode_dynamic` when its value is `dynamic` in
@@ -354,6 +392,8 @@ pins: rp-4-fork-repin/C-005, C-006
   in `finish_ctas_staged_commit` so `execute_ctas` keeps the function
   length ceiling. Round 3 withdrew the empty-publish-then-append double commit.
   pins: ice-write-options-1/C-001, C-003
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
+  merged session write, so CTAS stamps session snapshot properties.
   **ICE-MERGE-APPEND-1 (2026-09-19):** the staged-table append commits through
   `merge_append()`, not `fast_append()`. Spark's CTAS writes through `StagedSparkTable`,
   whose table is a `BaseTransaction$TransactionTable`; its `newAppend()` forwards to
@@ -408,6 +448,39 @@ pins: rp-4-fork-repin/C-005, C-006
   `fast_append`; the service-managed arm calls `commit_replace_write_with_summary`.
   Plain CTAS with options keeps the append summary.
   pins: ice-write-options-1/C-016
+- `write_to_branch.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** when the session
+  write conf is set, a plain `INSERT` / `DELETE` / `UPDATE` on `<table>.branch_<name>` counts
+  as an owned write head, so the statement keeps its ref-qualified name and reaches RePark's
+  own append / identity-DML path instead of the fork temp provider (which carries neither
+  snapshot properties nor a codec — `QS-BRANCH-*`, `QZ-BRANCH-*`).
+  pins: ice-session-write-conf-1/C-038, C-039, C-040
+- `time_travel.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the ref-selector scan
+  skips the `FROM` that names a `DELETE` target, so `DELETE FROM t.branch_b …` is a write to
+  the branch and not a read pinned to it (the pin turned the target into a read-only temp
+  view; every other `FROM`, including a subquery's, still pins).
+  pins: ice-session-write-conf-1/C-038
+- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
+  `canonicalize_identity_selection` canonicalises the selection and each SET *value* through
+  `rewrite_fragment_case` (a SQL fragment in, a SQL fragment out — the repair backticks a
+  stored spelling it had to change), and each SET *target* through
+  `canonical_assignment_target`, a bare name-to-name lookup. A target is a column name, not a
+  fragment: rendered as SQL it reached `validate_update_assignments` as `` `eventName` `` and
+  refused where Spark answers (MC-UPD-01/02). No unique case-insensitive match leaves the
+  requested spelling alone, so the ambiguity and missing-column refusals still fire there.
+  pins: ice-session-write-conf-1/C-063
+- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `execute_insert_source`
+  is `execute_passthrough` stopped one step short — same parse, same rewrites, same analysis,
+  but it executes the insert's INPUT instead of the insert. One pipeline answers both routes,
+  so an owned INSERT cannot drift from a delegated one.
+  pins: ice-session-write-conf-1/C-055
+- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `plain_identity_or_update` adds the plain `UPDATE … SET … WHERE <scalar comparison>` to the
+  owned identity-DML route when the session write conf is set. Without it the statement
+  commits through the fork's DataFusion DML, which takes no snapshot properties and no codec,
+  so Spark's stamp, its MoR delete-file codec and its summary-key refusal were all silently
+  lost (`QS-UPDATE-MOR`, `QZ-POSDEL-UPDATE`, `QR-UPDATE-COW-CHANGED-PARTITION`, `SP-UPDATE`).
+  The reroute is conf-scoped on purpose: making every plain UPDATE owned is a routing decision
+  of its own, tracked outside this unit. pins: ice-session-write-conf-1/C-038, C-040, C-041
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and

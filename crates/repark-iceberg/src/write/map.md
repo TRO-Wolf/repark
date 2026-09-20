@@ -37,7 +37,45 @@ repark-core's error map.
   `write_partitioned_data_files*` families (bounded-memory stream variants; K concurrent file
   writers, default 4, K=1 serial), `append`, the overwrite stage-then-swap surface, and the
   snapshot-ref helpers. `store_assign` is declared `pub(crate)` — an internal predicate, never
-  a public surface.
+  a public surface. **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** declares
+  `session_write_conf` and re-exports its resolver surface.
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
+  session write-conf carrier (`SessionWriteView`: session codec/level plus the
+  `spark.sql.iceberg.snapshot-property.*` map) and `resolve_write_for_session`,
+  which folds writer option over session conf over table property at every owned
+  commit; a bogus codec refuses naming the codec (comment-free per the owner ban).
+  **Round 3 (2026-09-19):** the `snapshot-property.` SUFFIX is now stored VERBATIM, not
+  lowercased. Measured Spark 4.1.2 (cells `QK-*`, run 25c): the key's PREFIX is
+  case-SENSITIVE — `Spark.sql.iceberg.snapshot-property.team` and
+  `Spark.SQL.Iceberg.Compression-Codec` are silently ignored, which refutes the second
+  verification critic's `P2-CONF-KEY-CASE` premise that SQLConf folds them — while
+  `spark.sql.iceberg.snapshot-property.TEAM` stamps `TEAM`, the suffix untouched. The
+  writer-option suffix still lowercases, which is a different measured rule
+  (ICE-WRITE-OPTIONS-1's `suffix_lower_cases_like_spark`): Spark reaches a writer option
+  through a case-insensitive option map and a session conf through SQLConf's verbatim
+  settings map. Two suffixes that differ only in case are two properties, as they are in
+  Spark, so `unset` clears the exact spelling.
+  pins: ice-session-write-conf-1/C-048
+- `writer_props.rs`, `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
+  `writer_properties_with` takes Java's `parquet.enable.dictionary` default — absent = ON
+  (`ParquetProperties.DEFAULT_IS_DICTIONARY_ENABLED = true`, measured by javap on the
+  Iceberg 1.11.0 Spark runtime and confirmed by dictionary pages in the checked-in
+  Spark-written fixtures) — and only an explicit `false` turns dictionary pages off. Round 3
+  had copied the fork insert exec's opposite rule into this shared function, which changed the
+  bytes of EVERY file RePark writes and moved the MW-7 / MW-8 bin-pack bands. That rule now
+  travels on `WriterStagingOverrides::fork_insert_dictionary_rule`, set only by the owned
+  append that stands in for the fork's insert exec, so the owned and unowned INSERT routes
+  still write one layout. `staged_writer_properties` is the single staging-to-properties
+  bridge the three writer builders call. pins: ice-session-write-conf-1/C-064
+- `writer_props.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
+  `position_delete_codec_resolves_over_the_data_file_property`, the critic's
+  `P2-POSDEL-CODEC-PYTHON-ONLY`. The round-1 footer pin set only
+  `write.parquet.compression-codec` and so stayed green on the OLD data-property-only
+  rule; this one walks three rows where the answer can only come from the resolved
+  order — a delete-codec property beating a data-codec property, a staging override
+  beating both, and an override beating a gzip data property — and reverting
+  `delete_compression_with` to the data property alone reds it in-crate.
+  pins: ice-session-write-conf-1/C-050
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
@@ -510,6 +548,14 @@ repark-core's error map.
   source is cast (`static_value.rs`) for both the row-filter datum and the injected column.
   A value that is not a plain literal (`TIMESTAMP '…'`) is kept as `refused_values` so the
   key is checked first. pins: ice-overwrite-mode-1/C-011, C-013, C-014
+- `static_value.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** `cast_datum` answers
+  an identity DECIMAL partition column. The arrow cast already lands the literal at the column's
+  own precision and scale, so `decimal_datum` hands that mantissa to `Datum::try_from_bytes` with
+  the column's `PrimitiveType` rather than re-deriving a precision — the datum the row filter and
+  the removed-set lookup both compare with. Spark takes `PARTITION (amt = '1.50')` on
+  `DECIMAL(10,2)` (`QD-TYPE-DECIMAL-*`); RePark used to refuse it `not assignable`, so the
+  removed-set resolver never ran there. DOUBLE and BOOLEAN already cast and are pinned beside it.
+  pins: ice-session-write-conf-1/C-060
 - `static_value.rs` — **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):** casts a static
   `PARTITION` value to its partition source type with Arrow's cast (`safe: false`), the
   cast the engine's `CAST` runs, so `PARTITION (d = '2024-01-01')` on a `DATE` column
@@ -725,6 +771,24 @@ repark-core's error map.
   `ambiguous_write_message` are its pieces. Twin targets only exist on non-fork schemas: the
   fork refuses to load a twin Iceberg schema (round 21b step 5 applies the requested spelling and
   42704 in `ambiguous_write_message`). pins: ice-mixed-case-1/C-004, C-016
+- `predicate_dml.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `PredicateDmlSpec`
+  carries the target `branch` (`Some(name)` when the statement named `<table>.branch_<name>`), and the executor scans that ref's snapshot and commits on it;
+  and its executor is comment-free per the ban (it plans the identity SELECT over the pinned
+  scratch, then COW-rewrites or writes MoR deletes; errors are planning, write or commit
+  failures, plus `NotImplemented` for non-Parquet or non-V2 MoR).
+  `try_allowed_plain_update` joins `plain::try_allowed_plain_identity` as an owned identity
+  route (see `predicate_dml/map.md`). pins: ice-session-write-conf-1/C-038
+- `position_delete.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `write_position_deletes` takes the resolved `WriterStagingOverrides`, so a
+  position-delete file takes the writer option / session codec its commit resolved.
+  pins: ice-session-write-conf-1/C-040
+- `writer_props.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `position_delete_writer_properties_for(table, staging)` resolves the delete-file codec
+  in Iceberg's `SparkWriteConf` order: writer option (already merged over the session conf)
+  > `write.delete.parquet.compression-codec` > `write.parquet.compression-codec` > default.
+  Before the round it read the data-file property only, so the delete-codec property was
+  silently ignored too; the resolver is comment-free per the owner ban, and this row is where
+  its order is written down. pins: ice-session-write-conf-1/C-040
 - `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
   WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending
@@ -770,6 +834,19 @@ repark-core's error map.
   `tooHighDeleteRatio`. The setting is read from the fork rather than restated, so a fork
   policy change carries. Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-002
+- `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
+  `commit_overwrite_by_row_filter_with_summary` takes the plan's `StaticPartitionOverwrite`
+  rather than its bare predicate, so `engine_summary_for_row_filter` can resolve the
+  removal set from the same equalities the filter was built from.
+  pins: ice-session-write-conf-1/C-054
+  **Round 4, the collision lookup (2026-09-20):** `summary_with_extras` asks
+  `refuse_collision` about the VERBATIM extra key — the spelling it is about to insert — not an
+  ascii-lowered copy. Spark 4.1.2 measured (cells `QC-*`, 2026-09-20): a session
+  `snapshot-property.Deleted-Records=5` on a CoW DELETE commits BOTH `Deleted-Records=5` and the
+  engine's own `deleted-records=3`, because the producer's `ImmutableMap` is case-sensitive; only
+  the exact spelling refuses. Folding stays the WRITER-OPTION rule, applied at
+  `StatementWriteOptions::validate`, so an option still arrives here already lower-cased.
+  pins: ice-session-write-conf-1/C-056
   **ICE-WRITER-METRICS-1 (2026-09-20):** every Parquet data-file builder applies
   `MetricsConfig::for_table` of the table it writes — `write_options.rs` (INSERT
   stage), `append_fanout_serial.rs` (fanout), `merge/mod.rs` (CoW rewrite),
@@ -785,6 +862,21 @@ repark-core's error map.
   pins: ice-writer-metrics-1/C-003
   pins: ice-writer-metrics-1/C-004
   pins: ice-writer-metrics-1/C-005
+  **ICE-SESSION-WRITE-CONF-1 round 6, the merge with ICE-WRITER-METRICS-1 (2026-09-20):**
+  the two rules compose in `writer_props::position_delete_writer_properties_for`. The
+  fork's `position_delete_writer_properties_for` is asked first and its answer is the
+  BASE — statistics-truncate length, the `delete-type=position` key/value and, when
+  nothing delete-specific is configured, its compression (so the unset-zstd default
+  stays the fork's level 3 that ICE-WRITER-METRICS-1 measured). `delete_compression_with`
+  now answers `None` in exactly that case and `Some` whenever a delete-specific input
+  exists — a writer option or session conf (`staging.codec` / `staging.level`) or
+  `write.delete.parquet.compression-{codec,level}` — and only then does RePark's
+  `parse_compression` decide, still falling back to `write.parquet.compression-*` for
+  the half the caller left unset. So the round-1 order (writer option > session conf >
+  delete property > data property) holds where the caller asked for it, and main's
+  fork-derived defaults hold where it did not.
+  pins: ice-session-write-conf-1/C-050
+  pins: ice-writer-metrics-1/C-002
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame
   write-option staging and commits. `WriterStagingOverrides` (codec/level/target-size,
   option over table property) feeds override-capable builders that mirror the
@@ -819,6 +911,63 @@ repark-core's error map.
   (which only exposes `static_injected_stream`), takes main's column list and an
   `Option` of the overrides, and hands `None` to the canonical untouched.
   pins: ice-write-options-1/C-014, C-016, C-017
+- `summary_collision.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `for_changes(table, added, removed, branch)` is the general shape — the fork's
+  collector over BOTH sides plus the fork's own total arithmetic
+  (`previous + added - removed`, dropped when it cannot resolve or goes negative) —
+  and `for_append` is its add-only case. The MERGE / DML commit sites build it from
+  the files they already hold, so the ONE rule (refuse an actual collision, stamp
+  otherwise) is now shared by the writer option and the session conf on every
+  owned commit site. `extras_need_removed_files` + `live_data_files` let a
+  whole-table overwrite resolve its removal set when an extra names a
+  removal-fed key, so the refusal names Spark's value instead of
+  `<resolved at commit>`. The refusal is raised through
+  `illegal_argument.rs`, so it reaches Python as `IllegalArgumentException`
+  carrying Spark's message verbatim — the class Spark 4.1.2 raises
+  (`QR-*`, and ICE-WRITE-OPTIONS-1's `COLL-*` cells record the same).
+  pins: ice-session-write-conf-1/C-041
+  **Round 5 (2026-09-20):** `live_files` is the one manifest walk and `live_delete_files` its
+  delete-manifest case, so `row_filter_removed_files` resolves BOTH sides of what a static
+  partition overwrite drops — the live data files whose partition tuple matches the PARTITION
+  equalities AND the position/equality delete files in that same tuple. Spark's own producer
+  counts them (`QD-MOR-*`), so a merge-on-read partition that already holds deletes refuses
+  `removed-delete-files`, `removed-position-deletes` and `total-delete-files` instead of
+  stamping the session extra beside the engine's own key.
+  pins: ice-session-write-conf-1/C-059
+  **Round 3 (2026-09-19):** `replaced_data_files` gives `replace_partitions` the same
+  resolution the whole-table arm already had. `for_overwrite` marks every removal key
+  `<resolved at commit>` the moment a previous snapshot exists, which is wrong for a
+  dynamic overwrite: Spark 4.1.2 measured (cells `QP-*`, recorded 2026-09-19 run 25c)
+  emits NO `deleted-records` when the overwrite lands only in partitions the table did
+  not have, so a `snapshot-property.deleted-records` there is a free key that stamps and
+  feeds the totals (`total-records` 3 + 1 - 5 is negative and is dropped, exactly as
+  `QR-INSERT-DELETED-RECORDS` records). Where the overwrite DOES replace a live
+  partition Spark refuses naming its computed value — `deleted-records=2`, not
+  `<resolved at commit>`. `replaced_data_files` filters the live files to those whose
+  partition value matches a staged file's, comparing by partition-field NAME so an
+  evolved spec still matches, and the commit site falls back to `for_changes` over that
+  set only when an extra names a removal-fed key. An empty dynamic overwrite still
+  commits nothing, which is what Spark does.
+  pins: ice-session-write-conf-1/C-047
+  **Round 4 (2026-09-20):** `row_filter_removed_files` does the same for the STATIC arm.
+  Spark 4.1.2 measured (cells `QO-*`, recorded 2026-09-20 run 25c) answers
+  `INSERT OVERWRITE t PARTITION (cat = 'x')` the same way it answers the dynamic
+  overwrite: overwriting the live partition refuses naming the engine value
+  (`deleted-records=2`, `deleted-data-files=1`, `total-records=2`), while overwriting a
+  never-written partition stamps `deleted-records=5` / `deleted-data-files=9` as free
+  keys and only the totals collide (`total-records=4`). The removed set here cannot come
+  from the staged files — an empty source stages nothing yet still clears the partition —
+  so it is resolved from the PARTITION equalities: the live files whose partition value
+  equals the equality literal, matched by partition-field name.
+  `partition_overwrite.rs`'s `equality_literal` is the one place a `PartitionLiteral`
+  becomes the `Literal` a data file carries, so the row filter and the removal set agree
+  on type coercion.
+  pins: ice-session-write-conf-1/C-054
+- `illegal_argument.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  `IllegalArgumentMarker` and `illegal_argument_error`, moved here from
+  repark-core's `error_map.rs` (which re-exports them unchanged) so a
+  repark-iceberg refusal can carry the `IllegalArgumentException` class with an
+  untouched message.
 - `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
   `EngineSummary`, the snapshot-summary keys the engine computes for the commit
   in hand, which a user `snapshot-property.<k>` may not collide with (Spark's

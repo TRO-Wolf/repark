@@ -56,6 +56,50 @@ works, so the attribute is gone rather than documented.
   selections stay on the identity path with no behaviour or performance change.
   pins: ice-list-null-2/C-001, C-003
 - [tests/](tests/map.md) — DELETE and identity UPDATE batteries.
+- `plain.rs` (branch) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `split_branch_parts`
+  reads a four-part `<catalog>.<ns>.<table>.branch_<name>` DML target into the table plus the
+  ref, which lands on `PredicateDmlSpec.branch`; the executor scans that ref's snapshot and
+  commits `to_branch`, so an owned identity DELETE / UPDATE can serve a branch.
+  pins: ice-session-write-conf-1/C-038
+- `plain.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the UPDATE allow-list moves
+  here from `predicate_dml.rs` (which re-exports both entry points, so no caller moves) and
+  (the moved bodies shed their doc comments per the owner ban and carry
+  `#[allow(clippy::missing_errors_doc)]`; the error contract is: a `DataFusionError::Plan`
+  when the target namespace is invalid, `Ok(None)` for any shape outside the allow-list).
+  `try_allowed_plain_update` is `try_allowed_update_in` with the plain scalar-comparison
+  predicate instead of the uncorrelated `IN` hole (`allowed_update_with` is the shared body),
+  so an owned identity UPDATE can serve a plain `UPDATE … WHERE col = v`.
+  pins: ice-session-write-conf-1/C-038
+- `plain.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
+  `try_allowed_plain_identity_or_update` is the ONE rule both doors ask — plain identity
+  DELETE first, then the plain UPDATE allow-list. It exists because the two doors had drifted:
+  the Spark door consulted the UPDATE arm only when a session write conf was set (so a
+  codec-only conf could change a plain UPDATE's committed file count), and the native door
+  never consulted it at all (so `repark.sql`'s UPDATE committed unstamped where the facade
+  stamped). Neither door reads the session conf to decide ownership now.
+  pins: ice-session-write-conf-1/C-045, C-046
+- `cow_commit.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
+  `commit_identity_update_cow` drives ONE rolling writer. Its rewrite stream is
+  `survivors UNION ALL new-values`, and the parallel driver opens a file per sink that
+  receives a batch, so the plan's batch count — not the data — was choosing the committed
+  layout: two data files where Spark and the unowned route both write one. The rolling writer
+  still splits on the target file size, so only the plan-shaped fan-out is gone.
+  pins: ice-session-write-conf-1/C-045
+- `mor_commit.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the merge-on-read
+  arms of the identity DELETE and UPDATE (`commit_identity_delete_mor` /
+  `commit_identity_update_mor`), split out of `predicate_dml.rs` along its declared seam
+  (operation-specific execution) when the round threaded the resolved staging to the
+  row-delta commit; the file-size baseline ratchets down with the split.
+  pins: ice-session-write-conf-1/C-040
+- `cow_commit.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):**
+  `commit_identity_cow` / `commit_identity_update_cow`, split out of
+  `predicate_dml.rs` so the parent stays under its exact size baseline; the COW
+  identity commits resolve the session write conf at the commit site
+  (comment-free per the owner ban).
+- `predicate_dml.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** identity
+  DELETE / UPDATE resolve the empty-overrides session write (`resolve_empty_session_write`)
+  and commit through `cow_commit`, so session snapshot properties and the session
+  codec reach the identity path.
 
 ## Pointers
 

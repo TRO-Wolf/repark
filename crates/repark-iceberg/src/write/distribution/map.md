@@ -33,6 +33,10 @@ holds the pieces split out of it.
   pins: write-distribution-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008
   pins: write-distribution-2/C-001, C-002, C-004, C-005, C-006, C-008
   pins: write-order-dist-1/C-007, C-008, C-010
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the MERGE-insert stream pin stages
+  through `merge::session_staging::write_new_data_files_from_stream_with` with an
+  empty `WriterStagingOverrides`, so the call keeps its layout while the session
+  conf travels on the new path.
 - `sort_order_tests.rs` — round-2 sort-order pins split out of `tests.rs` at the 1000-line
   ceiling: the dotted nested sort field sorts on the nested value (null structs sort as
   null), and a transform sort order refuses the write loud (the WRITE-ORDER-TRANSFORM-1

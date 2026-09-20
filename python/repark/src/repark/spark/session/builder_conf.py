@@ -22,6 +22,7 @@ from repark.spark.session.session_configuration import (
     _refuse_read_only_conf_key,
     _retained_cache_bytes_value,
     _sync_display_int_into_builder_config,
+    is_iceberg_session_write_key,
 )
 from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEY,
@@ -204,6 +205,8 @@ class RuntimeConfig:
                 refresh_session_zone_canonical(self._session)
         if key == PARTITION_OVERWRITE_MODE_KEY or key in WAP_SESSION_KEYS:
             _native.set_runtime_config(inner, key, text)
+        if is_iceberg_session_write_key(key):
+            _native.set_runtime_config(inner, key, text)
         if _looks_like_datafusion_conf_key(key):
             _forward_datafusion_conf(self._session, key, text)
         # conf.set("repark.display.style", …) must drive show() — not only the conf map.
@@ -373,6 +376,8 @@ class RuntimeConfig:
                 self._session._builder_config, canonical, fallback
             )
             return
+        if is_iceberg_session_write_key(key):
+            _native.unset_runtime_config(inner, key)
         self._store().pop(key, None)
         # Tombstone so get/getAll do not resurrect the builder snapshot value
         # (Spark SQLConf unset removes the entry entirely).

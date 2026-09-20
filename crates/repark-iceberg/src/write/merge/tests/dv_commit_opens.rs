@@ -315,6 +315,8 @@ async fn a_newest_file_identity_delete_commits_with_one_data_manifest() {
         WriteConcurrency::new(1).expect("K=1"),
         &delete_policy(),
         known,
+        &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await
     .expect("F-25 stops once the newest added DV key is found");
@@ -349,6 +351,8 @@ async fn hiding_the_newest_data_manifest_too_refuses_the_commit() {
         WriteConcurrency::new(1).expect("K=1"),
         &delete_policy(),
         known,
+        &[],
+        &crate::write::write_options::WriterStagingOverrides::none(),
     )
     .await;
     assert!(
@@ -373,6 +377,7 @@ async fn execute_predicate_dml_deletes_the_newest_id_on_a_192_manifest_table() {
             selection_sql: format!("id = {NEWEST_ID}"),
             assignments: None,
             case_insensitive: true,
+            branch: None,
         },
     )
     .await

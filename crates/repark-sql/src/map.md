@@ -22,6 +22,26 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
+- `router.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `delegate` is
+  `delegate_plan` plus execute, so the session-conf INSERT arm can take the delegated PLAN and
+  execute only its input. One planner, two endings.
+  pins: ice-session-write-conf-1/C-055
+- [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
+  the owned append sets `WriterStagingOverrides::fork_insert_dictionary_rule`, so the INSERT
+  a session conf owns writes the same Parquet layout the fork's insert exec writes without
+  one. Every other RePark write keeps Java's `parquet.enable.dictionary` default.
+  pins: ice-session-write-conf-1/C-064
+- [`session_write_conf.rs`](session_write_conf.rs) — **ICE-SESSION-WRITE-CONF-1 round 4
+  (2026-09-20):** `native_static_partition_overwrite_*` pins that the native door's
+  static `INSERT OVERWRITE … PARTITION` shares the Spark door's collision oracle — the
+  engine value where the filter removes files, a stamp where it removes none.
+  pins: ice-session-write-conf-1/C-044, C-054
+- [`create_table.rs`](create_table.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
+  CTAS stages its query with the resolved session codec and, when the session sets snapshot
+  properties, publishes through a transaction that carries the merged summary instead of the
+  staged transaction's unstamped commit. A `CREATE TABLE` with no query resolves nothing, so a
+  bogus session codec still refuses at the first write and not at DDL.
+  pins: ice-session-write-conf-1/C-042
 - `declared_refuse.rs` — FNP-15/16 ANSI-door parse valve (G15 dual-wire: Spark's copy lives in
   `repark-functions`). Sketches (32), CSV/XML/XPath (11), VARIANT (8), geospatial (5), and
   the XML pair `from_xml` / `schema_of_xml` (FNP-GEN-1 D-6, dated 2026-09-15, message names
@@ -42,6 +62,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `partitionOverwriteMode` (no writer options here): static-mode `PARTITION (k)` replaces the
   whole table (`commit_overwrite_replace_all`), mixed lists are accepted, a non-partition
   column refuses `NON_PARTITION_COLUMN`. pins: ice-overwrite-mode-1/C-009
+  ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19): the three commit arms take the
+  `*_with_summary` variants and the staging takes the resolved session overrides, so a session
+  snapshot property and the session codec reach `INSERT OVERWRITE … PARTITION` on the native
+  door exactly as they do on the Spark door's arm in `repark-spark/src/insert_overwrite.rs`.
+  Staging and commit moved into `stage_partition_overwrite` / `commit_partition_overwrite`
+  because the extra layering pushed `execute_partition_overwrite` past clippy's
+  `too_many_lines`; the split is along the same seam the Spark door already uses.
+  pins: ice-session-write-conf-1/C-046
   ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
   write-defaults through the shared `overwrite_source_with_defaults`; the dynamic arm
   no longer writes NULL for a defaulted column. pins: ice-v3-write-default-1/C-015
@@ -327,3 +355,4 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 | `SHOW TABLES` listed a `__repark_tt_*` relation (no `ansi`) | The core half of the pinned view leaked. Each `FOR … AS OF` composes this door's view over `repark_core::read_table_at`, which registers its own `__repark_tt_<n>`. `register_pinned_view` records both names; check that record. A leftover after no `FOR … AS OF` is the reader-options residual (`spark.read.option("snapshot-id"…)`), which remains registered by design |
 
 First checks: `cargo test -p repark-sql --lib`. Escalate to: [../map.md#debug](../map.md).
+

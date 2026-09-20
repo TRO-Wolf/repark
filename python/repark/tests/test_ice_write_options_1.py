@@ -20,7 +20,12 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession, _native
-from repark.errors import AnalysisException, ParseException, UnsupportedOperationException
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    ParseException,
+    UnsupportedOperationException,
+)
 
 CATALOG = "ice_write_options_1"
 NS = "ns"
@@ -624,7 +629,7 @@ def test_snapshot_property_added_records_refuses(spark: ReparkSession) -> None:
     _seed(spark, "snap_reserved")
     table = f"{CATALOG}.{NS}.snap_reserved"
     before = _snapshot_count(spark, table)
-    with pytest.raises(AnalysisException, match="Multiple entries with same key"):
+    with pytest.raises(IllegalArgumentException, match="Multiple entries with same key"):
         (_frame(spark).writeTo(table).option("snapshot-property.added-records", "999").append())
     assert _snapshot_count(spark, table) == before
 
@@ -773,7 +778,7 @@ def test_snapshot_property_collision_cells(spark: ReparkSession, cell_id: str) -
     assert _snapshot_count(spark, table) == cell["snapshots_before"]
     writer = spark.range(2, 4).toDF("id").writeTo(table).option(f"snapshot-property.{key}", value)
     if cell["error"] is not None:
-        with pytest.raises(AnalysisException) as refused:
+        with pytest.raises(IllegalArgumentException) as refused:
             writer.append()
         message = str(refused.value)
         if cell_id in _ENGINE_RESERVED_CELLS:

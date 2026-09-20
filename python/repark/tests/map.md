@@ -721,6 +721,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   drivers and checks the fixture.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-006, C-009
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
+  **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect
+  `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and
+  the one this file's own fixture records — after the shared refusal moved onto
+  `illegal_argument_error`. pins: ice-session-write-conf-1/C-041
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** the DataFrame write-option pins over the
   fixture above (snapshot properties on append / dynamic overwrite / CTAS / V1
   paths with Spark's strip-and-lowercase rule, write-format parquet honour plus
@@ -759,6 +763,89 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   render since ICE-V3-WRITE-DEFAULT-1 lands with the property. Imports the row helpers of
   `test_ice_dyn_overwrite_1.py` and the summary helpers of `test_ice_write_options_1.py`.
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
+- [ice_session_write_conf_1_spark_oracle.json](ice_session_write_conf_1_spark_oracle.json) +
+  [_record_ice_session_write_conf_1_oracle.py](_record_ice_session_write_conf_1_oracle.py) —
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the recorded Spark 4.1.2 + Iceberg
+  1.11.0 oracle (16 SP snapshot-property cells + 9 CZ compression-codec cells,
+  `local[1]`, InMemoryCatalog `sc`, HadoopCatalog `hc` for the footer cells,
+  copied from the orchestrator recording `spark-pc1.json` (source SHA-256
+  `f1e732caf0f71ec61b5cd3d38f8a1c5bfe7f559a54db449f8a1c5bfe7f559a54db449f8b5d792f8a613112`,
+  fixture SHA-256 `bf96b4b94687a528ef123e99340888b94a2dbb079559fa661b058ab7fdc65ff8`).
+  The recorder re-derives the cells on live Spark (`record` prints JSON,
+  `check` compares with stable needles for the two error cells); format-version
+  3 twins carry v3 expectations equal to the v2 Spark answers.
+  pins: ice-session-write-conf-1/C-001, C-002
+- [test_ice_session_write_conf_1.py](test_ice_session_write_conf_1.py) —
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** one pin per oracle cell on the
+  facade `spark.sql` / DataFrame doors, format v2 and v3 (INSERT, DataFrame and
+  DELETE twins): snapshot summaries per snapshot plus the operation list, and
+  parquet footer codecs per file; the bogus codec refuses naming the codec with
+  no snapshot committed; the live tier re-derives the fixture under
+  `REPARK_PARITY_LIVE=1`. Red on main where the session confs are ignored.
+  **Round 1 fix (2026-09-19, Q-24c-6):** `SP-CALL-RDF` and `CZ-CONF-RDF` are
+  strict xfails (`F-RDF-SESSION-CONF-1`: the fork's `rewrite_data_files` takes
+  no session writer/snapshot properties — declared residue, registry row names it).
+  **Orchestrator gate (2026-09-19):** `SP-UPDATE` was a third strict xfail under the same
+  ask; **round 1 (2026-09-19, run 25c)** turns it into a pin — a plain UPDATE is now owned when
+  the session conf is set, so it stamps like Spark. The recorder reads
+  `operation` from its own `snapshots` column, builds the DataFrame cells' frame and the
+  rdf cell's short name, and compares `data` in repr order; its live `check` re-derives
+  all 25 cells. pins: ice-session-write-conf-1/C-035
+  pins: ice-session-write-conf-1/C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  pins: ice-session-write-conf-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
+  pins: ice-session-write-conf-1/C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026
+  pins: ice-session-write-conf-1/C-027, C-028, C-029, C-030, C-031, C-032
+- [_record_ice_session_write_conf_1_rounds.py](_record_ice_session_write_conf_1_rounds.py) —
+  **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20, run 25c):** the `QD-*` family takes the fixture
+  to **106 cells**. `QD-MOR-*` (5) measure a merge-on-read `cat`-partitioned table whose target
+  partition already holds a position-delete file: the static `INSERT OVERWRITE … PARTITION`
+  commits `removed-delete-files=1`, `removed-position-deletes=1`, `total-delete-files=0` and
+  `deleted-records=2`, and a session snapshot property naming any of those three delete-side keys
+  REFUSES. `QD-TYPE-*` (6) record that an identity DECIMAL(10,2), DOUBLE or BOOLEAN partition
+  column takes its static string literal — a free key stamps, `deleted-records` refuses naming
+  `2`. The eleven were cross-checked cell for cell against the orchestrator recording
+  `spark-qc12.json` before they entered the fixture; the DECIMAL cells render their rows as
+  strings, the one thing a `Decimal` cannot round-trip through JSON.
+  pins: ice-session-write-conf-1/C-058, C-059, C-060, C-062
+- [_record_ice_session_write_conf_1_paths.py](_record_ice_session_write_conf_1_paths.py) +
+  [test_ice_session_write_conf_1_paths.py](test_ice_session_write_conf_1_paths.py) —
+  **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c; reformatted by ruff 0.15.22 at the queue):** the 38 path cells added to the
+  unit fixture from the orchestrator recording `spark-qc1.json` (source SHA-256
+  `f854793685590d4d2210c4bf0409150061d4a520eef529f576ab29b7490b0034`, fixture SHA-256
+  `56a2ca565dda8a43546f4142c6ec142ea741fd4b6e40ebd925443113c98502c4` since round 5): `QS-*` branch writes
+  (SQL INSERT, DataFrame append, DELETE / UPDATE / MERGE in CoW and MoR), TRUNCATE and the
+  metadata-only DELETE Spark does NOT stamp, MoR UPDATE / MERGE and the v3 twin; `QZ-*` the
+  position-delete codec (session conf over `write.delete.parquet.compression-codec` over
+  `write.parquet.compression-codec`, v3 DVs puffin) and the branch codec; `QR-*` the summary-key
+  family — an ACTUAL collision refuses with Spark's `Multiple entries with same key` text, a free
+  key stamps and feeds the totals. The recorder module holds the statement tuples the pins drive,
+  so the pin and the live re-recording cannot drift; the pins run the reserved family on BOTH SQL
+  doors. **Round 6 (2026-09-20):** `QS-DELETE-PART-META` was a dated xfail under IPI-08
+  (RePark's whole-partition DELETE rewrote where Spark commits metadata-only). #739 landed the
+  metadata-delete route, the cell was re-measured green on the merged build, and it is now one
+  of the parametrized pins — the `IPI_08` reason string is gone with it.
+  pins: ice-session-write-conf-1/C-036, C-037, C-038, C-039, C-040, C-041, C-042
+  **Round 2 (2026-09-19):** the live leg was red where round 1 left it:
+  `derive_path_cells` walks the three statement-tuple tables, and `QS-BRANCH-DF-APPEND`
+  is the one path cell with no SQL spelling (a DataFrame `writeTo("t.branch_b").append()`),
+  so the recorder re-derived 62 of the fixture's 63 cells and `check` failed on the count
+  alone. `_run_branch_df_append_cell` derives it the way the pin drives it; the recorder
+  `check` is clean at 63 cells on PySpark 4.1.2.
+  pins: ice-session-write-conf-1/C-037
+  **Round 3 (2026-09-19):** the critic's `P3-QR-SPARK-APP-ID-HOLLOW` — `SUMMARY_KEYS` is a
+  fixed tuple, so a `QR-*` cell whose property is not in it (`spark.app.id`,
+  `changed-partition-count`, `engine-name`) could not see whether the extra landed, and
+  `QR-SPARK-APP-ID` would have passed against a RePark that dropped it. `stamped_rows`
+  observes, per snapshot, the cell's OWN key and `team`. It records the key as a
+  COMPARISON against the cell's configured value, not as the value, because Spark's own
+  writer puts a per-run `spark.app.id` on every snapshot it commits — the raw value could
+  never be pinned. Re-recorded on live PySpark 4.1.2: the only delta against the committed
+  fixture is this observation on the seven `QR-*` cells that commit a snapshot; the other
+  fifty-six are byte-identical. Spark's answer for `QR-SPARK-APP-ID` is
+  `[["append", false, null], ["append", true, "a"]]` — the session property overrides
+  Spark's own `spark.app.id` rather than colliding with it, because the writer carries it
+  as extra snapshot metadata, not as an `ImmutableMap` engine metric.
+  pins: ice-session-write-conf-1/C-053
 - [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
   UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
   `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).

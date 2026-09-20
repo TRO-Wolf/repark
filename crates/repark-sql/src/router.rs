@@ -157,6 +157,18 @@ async fn execute_time_travelled(
         Statement::Insert(insert) if insert.overwrite => {
             crate::insert_overwrite::execute_insert_overwrite(cx, insert).await
         }
+        Statement::Insert(insert)
+            if let Some(frame) = crate::session_insert::try_execute_session_insert(
+                cx,
+                insert,
+                rewrite.rewritten.as_deref().unwrap_or(sql),
+                insert_columns.as_deref(),
+                rewrite.preloaded.clone(),
+            )
+            .await? =>
+        {
+            Ok(frame)
+        }
         Statement::Call(function) => Err(refusals::maintenance_call(&function.name.to_string())),
         Statement::Truncate(truncate) => truncate::execute_truncate(cx, truncate).await,
         // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves.
@@ -190,7 +202,9 @@ async fn execute_identity_or_delegate(
         return commit_identity_dml(cx, statement, allowed).await;
     }
     if let Some(allowed) =
-        repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity(statement)?
+        repark_iceberg::write::predicate_dml::plain::try_allowed_plain_identity_or_update(
+            statement,
+        )?
         && cx.catalogs.get(&allowed.catalog_name).is_some()
     {
         let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
@@ -247,7 +261,18 @@ async fn delegate(
     listed: Option<&[String]>,
     preloaded: Option<iceberg::table::Table>,
 ) -> Result<DataFrame> {
-    // Plan, apply SEC-02, then execute through the shared pre-execute belt.
+    let plan = delegate_plan(cx, sql, listed, preloaded).await?;
+    repark_core::PreExecute::from_engine_context(cx)
+        .execute(plan)
+        .await
+}
+
+pub(crate) async fn delegate_plan(
+    cx: &EngineContext<'_>,
+    sql: &str,
+    listed: Option<&[String]>,
+    preloaded: Option<iceberg::table::Table>,
+) -> Result<datafusion::logical_expr::LogicalPlan> {
     let belt = repark_core::PreExecute::from_engine_context(cx);
     let plan = match belt.plan(sql).await {
         Ok(plan) => plan,
@@ -264,7 +289,7 @@ async fn delegate(
     // Door-specific (SEC-02): the belt deliberately does not own the local-filesystem gate.
     guards::refuse_local_filesystem_plan(cx.ctx, cx.catalogs, &plan)?;
     belt.guard(&plan)?;
-    belt.execute(plan).await
+    Ok(plan)
 }
 
 /// Return the schema name, rejecting authorization forms that this engine cannot model.

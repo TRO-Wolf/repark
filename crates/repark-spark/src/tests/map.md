@@ -16,6 +16,120 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `parquet_dictionary.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the
+  `parquet.enable.dictionary` battery, read from the written footers: a table that names no
+  such property is dictionary-encoded on the owned CTAS route (Java's default), `false` turns
+  every dictionary page off, `TRUE` is read case-insensitively, and the owned plain INSERT
+  writes the fork insert exec's layout so no session conf decides the bytes.
+  Lint fix (2026-09-20): the `use super::super::*;` house line resolved nothing here —
+  only `super::common::*` and `super::session_write_conf` paths are used — so it is dropped
+  for `unused_imports` (repark#733 `Rust lint`).
+  pins: ice-session-write-conf-1/C-064
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
+  `an_owned_plain_update_resolves_a_mixed_case_set_target` and
+  `..._a_wrong_case_quoted_set_target` hold the owned plain-UPDATE route to Spark's
+  case-insensitive SET resolution, the regression the round-8 CI red found on MC-UPD-01/02.
+  pins: ice-session-write-conf-1/C-063
+- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** the
+  removal side of the static `INSERT OVERWRITE … PARTITION` oracle, the fourth critic's
+  `P1-MOR-ROW-FILTER-REMOVED-SET-OMITS-DELETE-FILES`. Cells `QD-MOR-*` (Spark 4.1.2, run 25c)
+  measure a merge-on-read table whose target partition already holds a position-delete file:
+  the overwrite removes that delete file too, so `removed-delete-files=1`,
+  `removed-position-deletes=1` and `total-delete-files=0` are ENGINE-produced there and refuse.
+  `deleted-records=2` stays the record count of the data file, which the position delete does
+  not lower. Taking the removed set from the live DATA files only reds these three delete-side
+  pins and nothing else.
+  pins: ice-session-write-conf-1/C-059
+- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** a
+  static `INSERT OVERWRITE … PARTITION (k = '<literal>')` on an identity DECIMAL, DOUBLE or
+  BOOLEAN column. Cells `QD-TYPE-*` record that Spark 4.1.2 takes all three — a free key stamps,
+  and `deleted-records` refuses naming `2`, the live rows of the partition cleared — so the
+  round-4 removed-set resolver has to RUN on those shapes. Dropping the `Decimal128` arm of
+  `cast_datum` reds the DECIMAL pin and nothing else; DOUBLE and BOOLEAN already cast.
+  pins: ice-session-write-conf-1/C-060
+- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):**
+  `an_empty_source_static_overwrite_names_the_partition_it_clears` is the discriminator the
+  round-4 `C-054` battery lacked. `INSERT OVERWRITE … PARTITION (cat = 'x') SELECT … WHERE <false>`
+  stages NO file and still clears the live partition, so a removed set taken from the staged files
+  resolves nothing and the session `deleted-records=5` stamps instead of refusing
+  `deleted-records=2`. Every other static pin stages a file in the named partition, which is why
+  they stayed green under that revert. The revert now reds this pin and the three `QD-MOR-*`
+  delete-side pins.
+  pins: ice-session-write-conf-1/C-061
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 6, the merge with
+  ICE-META-DELETE-1 (2026-09-20):** `session_team_stamps_cow_delete_overwrite` seeds TWO rows
+  and deletes one. On one row its `DELETE` covered the only data file, so after #739 (IPI-08)
+  it routes through the fork's `can_delete_using_metadata` and commits a metadata-only delete —
+  and Spark stamps NOTHING there (the recorded `QS-DELETE-PART-META` cell's `delete` summary
+  carries a null `team`), so the pin's `Some("a")` became the wrong expectation for the wrong
+  reason: it had stopped exercising the CoW overwrite arm it names. A partial delete keeps it
+  on that arm, where the session property IS stamped. The metadata route's no-stamp is pinned
+  on the Python side by `QS-DELETE-PART-META`, no longer an xfail.
+  pins: ice-session-write-conf-1/C-034
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4, the absolute layout
+  (2026-09-20):** the layout battery no longer compares conf against no-conf alone — both runs
+  assert Spark's OWN answer (cells `QU-*`): one live data file and `added-data-files=1` for the
+  CoW UPDATE and DELETE, two for the second INSERT. Restoring per-batch writers on the identity
+  UPDATE moves both sides together, so only the absolute assertion catches it; it reds.
+  `a_mixed_case_metric_suffix_is_a_different_key_and_stamps` and `the_exact_metric_suffix_still_refuses`
+  are the `QC-*` pair.
+  pins: ice-session-write-conf-1/C-056, C-057
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
+  `a_session_conf_keeps_the_values_list_typing`, `a_session_conf_keeps_a_compound_null_insert`
+  and `a_session_conf_keeps_the_default_keyword_refusal` are the three shapes the third critic
+  measured drifting when a conf reroutes an INSERT; they assert the same answers the no-conf
+  pins in `v3_timestamp_ns_door`, `list_null_compound` and `write_defaults` record. Planning the
+  bare source again reds these three and nothing else.
+  pins: ice-session-write-conf-1/C-055
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
+  `static_partition_overwrite_*` pins the static `INSERT OVERWRITE … PARTITION (cat = …)`
+  collision oracle against the `QO-*` Spark cells: a free removal key stamps on a
+  never-written partition, a live partition refuses naming `deleted-records=2`, and the
+  total always collides naming `total-records=4`. Restoring `EngineSummary::for_overwrite`
+  on that arm reds these three and nothing else.
+  pins: ice-session-write-conf-1/C-054
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
+  Spark-door session-conf pins (snapshot properties and codec on append,
+  overwrite, CTAS, by-name and plain INSERT, plus the writer-option precedence
+  cells; comment-free per the owner ban).
+  **Round 3 (2026-09-19):** the layout-invariance battery
+  (`a_session_conf_keeps_a_plain_{update,insert,delete}_layout`), the answer to the
+  second verification critic's `P1-OWNERSHIP-FILE-COUNT`. Each runs the statement twice
+  over two warehouses — once with no session conf, once with a `snapshot-property`-only
+  conf and once with a `compression-codec`-only one — and compares the live data-file
+  count, every live file's record count, and every snapshot's operation and full summary.
+  The property run drops only `team`, the codec run only the three file-size keys, and
+  both drop `engine.operation-id`, which is a fresh UUID per commit and so can never
+  compare equal. Restoring the conf gate on `plain_identity_or_update` reds the UPDATE
+  pin.
+  pins: ice-session-write-conf-1/C-045
+  Also `replace_partitions_into_a_new_partition_stamps_deleted_records` and
+  `replace_partitions_into_an_existing_partition_names_the_engine_value`, the critic's
+  `P1-REPLACE-PARTITIONS-COLLISION` and `P2-REPLACE-PARTITIONS-COLLISION-MESSAGE`. Both
+  drive a dynamic `INSERT OVERWRITE` over a `cat`-partitioned table with
+  `snapshot-property.deleted-records=5` set; the new-partition one must COMMIT and the
+  existing-partition one must refuse with Spark's `deleted-records=2`. Reverting
+  `commit_replace_partitions_with_summary` to `EngineSummary::for_overwrite` reds both.
+  pins: ice-session-write-conf-1/C-047
+  And `rewrite_manifests_does_not_{stamp_the_session_snapshot_property,refuse_a_colliding_session_key}`,
+  the critic's `P2-REWRITE-MANIFESTS-UNPINNED`. Measured first (cells `QM-*`, run 25c):
+  Spark's `rewrite_manifests` replace snapshot carries NO session property and refuses no
+  colliding key — it commits the engine's own `total-records`. RePark already answered that;
+  the pins stop it drifting. The same run's `QM-REWRITE-DATA-FILES` narrows the declared
+  residue F-RDF-SESSION-CONF-1: Spark does not stamp that replace snapshot either, so only
+  the CODEC half of it is a gap.
+  pins: ice-session-write-conf-1/C-049
+  And the three pins the critic's `P2-*-PYTHON-ONLY` findings ask for, each one red under
+  the mutation that named it and under nothing else:
+  `a_branch_{insert,delete}_stamps_the_session_snapshot_property` read the BRANCH head's
+  summary, so dropping the extras only where `branch.is_some()` — at
+  `commit_append_with_summary` and at `snapshot_commit`'s on-ref arms, which is mutation
+  (a) — reds exactly those two; the INSERT one also asserts `added-records=1`, so a reroute
+  off the append arm reds it too. `truncate_does_not_stamp_and_does_not_refuse_a_colliding_key`
+  sets BOTH `team` and a colliding `deleted-records=5` and asserts the delete snapshot
+  carries neither, so mutation (h) — routing TRUNCATE through
+  `commit_overwrite_replace_all_with_summary` — reds it on the refusal.
+  pins: ice-session-write-conf-1/C-051, C-052
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
   pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`
@@ -225,8 +339,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (RP-22, 2026-09-17: the `assert_created` / `assert_adopted` awaits are wrapped in `Box::pin` — the fork pin grew those futures past clippy's `large_futures` bound; `v3_lineage.rs`'s byte tripwire re-records this file's hash for that edit)
   on created and adopted v3 — `DELETE … IN` / `NOT IN` / `EXISTS` / `NOT EXISTS` and
   `UPDATE … IN`, each pinning rows, `(id,_row_id,seq)`, next-row-id / first-row-id /
-  added-rows and the live data-file count at the single-file seed. `F_V3_8_UPDATE_FILES` is
-  the named layout artefact: the UPDATE cell writes 2 data files where Spark writes 1.
+  added-rows and the live data-file count at the single-file seed. `V3_8_UPDATE_FILES` is 1
+  since **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19)**: the identity UPDATE copy-on-write
+  rewrite drives one rolling writer, so the `survivors UNION ALL new-values` plan's batch
+  count no longer decides the layout. It was `F_V3_8_UPDATE_FILES = 2`, the named artefact
+  where the UPDATE cell wrote 2 data files against Spark's 1.
   Also the correlated-to-target `DELETE` (served, created and adopted), its zero-row
   `s.id = tgt.id + 1` variant (`F-v3-8-empty-delete-snapshot`: the engine commits nothing
   where Spark commits an empty overwrite), and — since **V3-9 (2026-09-02)** — the

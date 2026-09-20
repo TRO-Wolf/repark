@@ -22,8 +22,9 @@ use super::*;
 use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::row_lineage::table_carries_merge_lineage;
-use crate::write::merge::write_new_data_files_from_stream;
+use crate::write::merge::session_staging::write_new_data_files_from_stream_with;
 use crate::write::partition_write::write_data_files_from_plan;
+use crate::write::write_options::WriterStagingOverrides;
 
 const PARTITION_VALUES: i64 = 8;
 const NULL_EVERY: i64 = 4;
@@ -628,11 +629,12 @@ async fn merge_inserts_into_a_partitioned_table_route_one_value_to_one_writer() 
         iceberg::arrow::schema_to_arrow_schema(table.metadata().current_schema())
             .expect("write schema"),
     );
-    let files = write_new_data_files_from_stream(
+    let files = write_new_data_files_from_stream_with(
         &table,
         &write_schema,
         futures::stream::iter(batches),
         WriteConcurrency::new(4).expect("concurrency"),
+        &WriterStagingOverrides::none(),
     )
     .await
     .expect("merge stream write succeeds");

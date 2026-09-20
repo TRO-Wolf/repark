@@ -352,6 +352,7 @@ async fn a_prior_position_delete_does_not_change_the_route() {
         selection_sql: "id = 1".to_string(),
         assignments: None,
         case_insensitive: false,
+        branch: None,
     };
     execute_predicate_dml(&context, &catalog, &spec)
         .await
