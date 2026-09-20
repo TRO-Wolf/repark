@@ -12,7 +12,8 @@ fixture: ``session-read`` (a plain read while the conf is set), ``refs``, ``main
 ``branch`` and ``plain-read-after-unset``. Reads go through the Arrow path
 (``to_arrow``), never ``show``.
 
-pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+C-011, C-012, C-013
 """
 
 from __future__ import annotations

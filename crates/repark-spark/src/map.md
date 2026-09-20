@@ -246,17 +246,35 @@ pins: rp-4-fork-repin/C-005, C-006
   does not exist is NOT pre-checked (`require_existing_branch` is false): the commit creates
   the ref from main, as Java's `SnapshotProducer` does. An explicit selector keeps the
   `Cannot use branch (does not exist)` refusal.
-  pins: ice-wap-branch-1/C-002, C-004, C-005
+  **Round 2 (2026-09-20, WAP-002):** an append created the missing ref, but `DELETE` and
+  `UPDATE` scan through the fork's `resolve_scan_snapshot_id`, which refuses
+  `snapshot ref 'audit' not found` before the commit. `create_wap_branch_from_main` now runs on
+  the wap path (and only there — `require_existing_branch` is false) whenever the conf named a
+  branch the table does not carry: it creates the ref at the table's current snapshot, so the
+  scan resolves and the write commits on the branch, which is what Spark answers for every DML
+  family (measured: `QW-DELETE-NO-BRANCH`, `QW-UPDATE-NO-BRANCH`, `QW-DELETE-MOR-NO-BRANCH`,
+  `QW-MERGE-NO-BRANCH`). An empty table with no current snapshot keeps the old path — there is
+  no snapshot to branch from and the append creates the ref itself.
+  pins: ice-wap-branch-1/C-002, C-004, C-005, C-012
 - `wap.rs` — **ICE-WAP-BRANCH-1 (2026-09-19):** the `spark.wap.*` session carrier and the
   read half of the resolver. `WapSessionConfig` is a DataFusion `ConfigExtension`
   (`repark.wap`) holding `spark.wap.branch` and `spark.wap.id`; the Spark extension installs
   it from the builder conf map and the binding's `set_runtime_config` writes the live one, so
   the decision is Rust's and Python only forwards the string (an empty value clears the key).
   `apply_wap_read_redirect` runs before the time-travel pass: with the conf set, every
-  FROM/JOIN/USING relation naming a `write.wap.enabled=true` table is pinned to the branch's
+  relation in the statement naming a `write.wap.enabled=true` table is pinned to the branch's
   snapshot (falling back to the table's current snapshot when the ref does not exist yet) and
   spliced to an ephemeral provider, so the session's plain reads follow the branch while the
-  conf is set. Skipped: a relation that carries its own `VERSION/TIMESTAMP AS OF` clause, a
+  conf is set. **Round 2 (2026-09-20, WAP-001):** *every* relation means every one —
+  `find_read_relations` is a parenthesis-depth state machine, not a scan for FROM/JOIN/USING.
+  Each parenthesis carries its own relation list, so a subquery, a CTE body, an IN/EXISTS body
+  and each arm of a set operation get their own; FROM/JOIN/USING opens the list at the current
+  depth, a comma continues it, and a list-ending keyword (`RELATION_LIST_ENDS` — WHERE, GROUP,
+  ORDER, SELECT, SET, WHEN, LATERAL, the set operators …) closes it, so a select-list, GROUP BY
+  or alias-list comma is never read as a relation. Before it, only the first name after
+  FROM/JOIN/USING was redirected and `FROM t a, t b` silently mixed the audit branch with
+  `main`. The skip rules below apply per relation, inside a comma list too. Skipped: a relation
+  that carries its own `VERSION/TIMESTAMP AS OF` clause, a
   `branch_`/`tag_` selector, a metadata-table path (including the `table$suffix` word the
   metadata rewrite emits, which re-tokenizes as a `$`-placeholder glued to the base name), and
   the statement's own write target. `both_wap_keys_message` carries Java's exact
@@ -265,7 +283,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `spark.wap.id` on its own stays inert — staged snapshots are fork ask F-STAGE-ONLY-1,
   registry row REF-3. `set_value` carries `#[allow(clippy::missing_errors_doc)]` — the
   sanctioned form for the pedantic lint under the comment ban.
-  pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010
+  pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010, C-011
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.

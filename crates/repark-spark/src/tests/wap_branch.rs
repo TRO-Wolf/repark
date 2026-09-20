@@ -312,3 +312,196 @@ fn the_carrier_refuses_a_key_it_does_not_serve() {
         .expect_err("only the two WAP keys are served");
     assert!(error.to_string().contains("spark.wap.branch"), "{error}");
 }
+
+async fn seed_two_rows_and_a_wap_write(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+) -> &'static str {
+    seed(ctx, catalogs, WAP_DDL).await;
+    run(ctx, catalogs, "ALTER TABLE ice.sales.t CREATE BRANCH audit").await;
+    set_wap(ctx, Some("audit"), None);
+    run(
+        ctx,
+        catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    "ice.sales.t"
+}
+
+#[tokio::test]
+async fn a_comma_from_list_redirects_every_relation() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_two_rows_and_a_wap_write(&ctx, &catalogs).await;
+
+    assert_eq!(
+        ids(
+            &ctx,
+            &catalogs,
+            "SELECT a.id FROM ice.sales.t a, ice.sales.t b"
+        )
+        .await,
+        vec![1, 1, 2, 2],
+        "the first comma relation reads the branch"
+    );
+    assert_eq!(
+        ids(
+            &ctx,
+            &catalogs,
+            "SELECT b.id FROM ice.sales.t a, ice.sales.t b"
+        )
+        .await,
+        vec![1, 1, 2, 2],
+        "the second comma relation reads the branch, not main"
+    );
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT a.id, b.id, c.id FROM ice.sales.t a, ice.sales.t b, ice.sales.t c"
+        )
+        .await,
+        8,
+        "a three-way comma list is 2x2x2 on the branch"
+    );
+    assert_eq!(
+        ids(
+            &ctx,
+            &catalogs,
+            "SELECT s.id FROM (SELECT id FROM ice.sales.t) s, ice.sales.t b"
+        )
+        .await,
+        vec![1, 1, 2, 2],
+        "a comma relation after a subquery is redirected too"
+    );
+    assert_eq!(
+        ids(
+            &ctx,
+            &catalogs,
+            "WITH c AS (SELECT id FROM ice.sales.t) SELECT c.id FROM c, ice.sales.t b"
+        )
+        .await,
+        vec![1, 1, 2, 2],
+        "a CTE body and the comma relation beside it both read the branch"
+    );
+    assert_eq!(
+        ids(
+            &ctx,
+            &catalogs,
+            "SELECT id FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.t WHERE id = 2)"
+        )
+        .await,
+        vec![2],
+        "an IN subquery reads the branch"
+    );
+    set_wap(&ctx, None, None);
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT a.id FROM ice.sales.t a, ice.sales.t b"
+        )
+        .await,
+        1,
+        "with the conf cleared every comma relation is back on main"
+    );
+}
+
+#[tokio::test]
+async fn a_comma_relation_keeps_the_explicit_selector_and_the_select_list() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_two_rows_and_a_wap_write(&ctx, &catalogs).await;
+
+    assert_eq!(
+        ids(
+            &ctx,
+            &catalogs,
+            "SELECT b.id FROM ice.sales.t.branch_main a, ice.sales.t b"
+        )
+        .await,
+        vec![1, 2],
+        "an explicit branch_main selector is left on main, the plain name follows the conf"
+    );
+    assert_eq!(
+        ids(
+            &ctx,
+            &catalogs,
+            "SELECT a.id FROM ice.sales.t.branch_main a, ice.sales.t b"
+        )
+        .await,
+        vec![1, 1],
+        "the explicit selector's rows are main's single row"
+    );
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT id, name FROM ice.sales.t GROUP BY id, name",
+        )
+        .await,
+        2,
+        "a GROUP BY comma list is not a relation list"
+    );
+    set_wap(&ctx, None, None);
+}
+
+#[tokio::test]
+async fn a_delete_creates_the_wap_branch_that_does_not_exist() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+
+    set_wap(&ctx, Some("audit"), None);
+    run(&ctx, &catalogs, "DELETE FROM ice.sales.t WHERE id = 1").await;
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![2],
+        "the delete landed on the branch the statement created"
+    );
+    set_wap(&ctx, None, None);
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2],
+        "main never moved"
+    );
+}
+
+#[tokio::test]
+async fn an_update_creates_the_wap_branch_that_does_not_exist() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+
+    set_wap(&ctx, Some("audit"), None);
+    run(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.t SET id = 7 WHERE id = 1",
+    )
+    .await;
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![2, 7],
+        "the update landed on the branch the statement created"
+    );
+    set_wap(&ctx, None, None);
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2],
+        "main never moved"
+    );
+}

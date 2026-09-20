@@ -18,7 +18,8 @@ observations: ``session-read`` (a plain read while the conf is set), ``refs`` (n
 and the snapshot's position in timestamp order), ``main``, ``branch``, and
 ``plain-read-after-unset``.
 
-pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+C-011, C-012, C-013
 """
 
 from __future__ import annotations
@@ -180,6 +181,103 @@ CELLS: tuple[dict[str, Any], ...] = (
         "after": [
             {"sql": "CALL " + CATALOG + ".system.fast_forward('{SHORT}', 'main', 'audit')"},
             {"observe": "main-after-ff", "sql": "SELECT * FROM {T} VERSION AS OF 'main'"},
+        ],
+    },
+    {
+        "id": "QW-DELETE-NO-BRANCH",
+        "title": "DELETE with wap.branch naming a branch that does not exist",
+        "conf": BRANCH_CONF,
+        "branch": None,
+        "steps": [{"sql": "DELETE FROM {T} WHERE id = 1"}],
+    },
+    {
+        "id": "QW-UPDATE-NO-BRANCH",
+        "title": "UPDATE with wap.branch naming a branch that does not exist",
+        "conf": BRANCH_CONF,
+        "branch": None,
+        "steps": [{"sql": "UPDATE {T} SET data = 'u' WHERE id = 1"}],
+    },
+    {
+        "id": "QW-DELETE-MOR-NO-BRANCH",
+        "title": "DELETE MoR with wap.branch naming a branch that does not exist",
+        "conf": BRANCH_CONF,
+        "properties": WAP_PROPERTY + MOR_PROPERTIES,
+        "branch": None,
+        "steps": [{"sql": "DELETE FROM {T} WHERE id = 1"}],
+    },
+    {
+        "id": "QW-MERGE-NO-BRANCH",
+        "title": "MERGE with wap.branch naming a branch that does not exist",
+        "conf": BRANCH_CONF,
+        "branch": None,
+        "steps": [
+            {
+                "sql": "MERGE INTO {T} t USING (SELECT 1 AS id, 'm' AS data, 'x' AS cat) s"
+                " ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+                " WHEN NOT MATCHED THEN INSERT *"
+            }
+        ],
+    },
+    {
+        "id": "QW-COMMA-JOIN",
+        "title": "comma FROM-list and nested relations while the branch is ahead of main",
+        "conf": BRANCH_CONF,
+        "steps": [
+            {"sql": INSERT_NINE},
+            {"observe": "comma-self-join", "sql": "SELECT a.id, b.id FROM {T} a, {T} b"},
+            {"observe": "comma-count", "sql": "SELECT count(*) FROM {T} a, {T} b"},
+            {"observe": "join-on", "sql": "SELECT a.id, b.id FROM {T} a JOIN {T} b ON a.id = b.id"},
+            {
+                "observe": "in-subquery",
+                "sql": "SELECT id FROM {T} WHERE id IN (SELECT id FROM {T})",
+            },
+            {
+                "observe": "exists-subquery",
+                "sql": "SELECT id FROM {T} a WHERE EXISTS"
+                " (SELECT 1 FROM {T} b WHERE b.id = a.id + 7)",
+            },
+            {"observe": "union-all", "sql": "SELECT id FROM {T} UNION ALL SELECT id FROM {T}"},
+            {
+                "observe": "comma-after-subquery",
+                "sql": "SELECT s.id, b.id FROM (SELECT id FROM {T}) s, {T} b",
+            },
+            {
+                "observe": "cte-comma",
+                "sql": "WITH c AS (SELECT id FROM {T}) SELECT c.id, b.id FROM c, {T} b",
+            },
+            {
+                "observe": "three-way-comma",
+                "sql": "SELECT a.id, b.id, c.id FROM {T} a, {T} b, {T} c"
+                " WHERE a.id = b.id AND b.id = c.id",
+            },
+        ],
+    },
+    {
+        "id": "QW-READ-MAIN-AHEAD",
+        "title": "wap.branch set for reads while main is ahead of the branch",
+        "conf": BRANCH_CONF,
+        "steps": [
+            {"sql": "INSERT INTO {T}.branch_main VALUES (7, 'm', 'q')"},
+            {"observe": "explicit-main", "sql": "SELECT * FROM {T} VERSION AS OF 'main'"},
+            {"observe": "explicit-branch", "sql": "SELECT * FROM {T} VERSION AS OF 'audit'"},
+        ],
+    },
+    {
+        "id": "QW-READ-BRANCH-AHEAD",
+        "title": "wap.branch set for reads while the branch is ahead of main",
+        "conf": BRANCH_CONF,
+        "steps": [
+            {"sql": "INSERT INTO {T}.branch_audit VALUES (9, 'z', 'q')"},
+            {"observe": "explicit-main", "sql": "SELECT * FROM {T} VERSION AS OF 'main'"},
+        ],
+    },
+    {
+        "id": "QW-VERSION-AS-OF-MAIN-DIVERGED",
+        "title": "explicit VERSION AS OF main after a wap.branch write",
+        "conf": BRANCH_CONF,
+        "steps": [
+            {"sql": INSERT_NINE},
+            {"observe": "explicit-main", "sql": "SELECT * FROM {T} VERSION AS OF 'main'"},
         ],
     },
     {
@@ -357,7 +455,7 @@ def record(spark: Any) -> dict[str, Any]:
             "session_tz": "UTC",
             "catalog": CATALOG,
             "seed": SEED_ROWS,
-            "source": "run 25c cells QW-* (/tmp/oc-worker/qc-meas/cells_qc5.py)",
+            "source": "run 25c cells QW-* (harness cells qc5 and qc13)",
         },
         "cells": {cell["id"]: record_cell(spark, cell) for cell in CELLS},
     }

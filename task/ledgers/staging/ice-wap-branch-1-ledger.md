@@ -1,4 +1,4 @@
-# Unit ledger — ICE-WAP-BRANCH-1 · `spark.wap.branch` redirects writes and reads (round 1)
+# Unit ledger — ICE-WAP-BRANCH-1 · `spark.wap.branch` redirects writes and reads (rounds 1-2)
 
 **Date:** 2026-09-19 · **Branch:** `fix/ice-wap-branch-1` · **Base:** `4049164d` (`origin/main`)
 **Model:** Claude Opus 5 (high) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
@@ -29,15 +29,17 @@ remaining half); `STATUS.md`; `Cargo.toml` / `Cargo.lock`; size ceilings.
 
 ## Measured
 
-Oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, 19 `QW-*` cells, recorded
-2026-09-19 by `python/repark/tests/_record_ice_wap_branch_1_oracle.py` into
-`python/repark/tests/ice_wap_branch_1_spark_oracle.json` (SHA-256
-`0fb43d0a55f33106d4987dbfd38f7e6f95aadc95eabf3d40d9372f9d8cd8d4f4`). The recording reproduces the
-orchestrator's run-25c measurement (`spark-qc5.json`, cells `QW-*`) **observation for
-observation**: 19 cells, zero differences over status, error type, error text and every `obs` key
-(cross-check script run 2026-09-19).
+Oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, **27** `QW-*` cells,
+recorded by `python/repark/tests/_record_ice_wap_branch_1_oracle.py` into
+`python/repark/tests/ice_wap_branch_1_spark_oracle.json` (re-recorded whole 2026-09-20, SHA-256
+`586d5e403b2b53ff5eb348667148f675a1f310d662bd641b74d3637ecd9c6f53`). The recording reproduces the
+orchestrator's run-25c measurement (harness cells qc5 and qc13, cells `QW-*`) **observation for
+observation**: zero differences over status, error type, error text and every `obs` key
+(cross-check script run 2026-09-19 for the first 19, 2026-09-20 for the 8 added in round 2 — and
+the 19 came back byte-identical in the same re-recording).
 
-Replay of the same 19 cells through the harness on RePark:
+Replay of the round-1 cells through the harness on RePark (the 8 round-2 cells are replayed
+by the unit's pytest file instead, which runs every recorded cell):
 
 | Head | Cells equal to Spark |
 |---|---|
@@ -70,7 +72,7 @@ outside the catalog registry, and a CTAS into a new table (no target to load).
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The committed oracle is the measurement: 19 recorded Spark cells, reproduced by a generator, and RePark answers every observation of every cell (`refs`, branch rows, main rows, the session read while the conf is set, the plain read after it is unset). | One parametrized pin per cell in `test_ice_wap_branch_1.py`. | PROVEN | 23 passed + 1 skipped on the release native; red-first 17 failed / 6 passed on `9256a491`. pins: ice-wap-branch-1/C-001 |
+| C-001 | The committed oracle is the measurement: 27 recorded Spark cells (19 in round 1, 8 in round 2), reproduced by a generator, and RePark answers every observation of every cell (`refs`, branch rows, main rows, the session read while the conf is set, the plain read after it is unset). | One parametrized pin per cell in `test_ice_wap_branch_1.py`. | PROVEN | Round 2: 31 passed + 1 skipped on the release native. Round 1: 23 passed + 1 skipped; red-first 17 failed / 6 passed on `9256a491`. pins: ice-wap-branch-1/C-001 |
 | C-002 | With `write.wap.enabled=true` and `spark.wap.branch` set, every write shape commits on the branch and `main` is unchanged: SQL INSERT, `writeTo().append()`, `saveAsTable(append)`, CoW DELETE, MoR DELETE, UPDATE, MERGE, INSERT OVERWRITE, two stacked appends. | The nine write cells + `wap_branch_redirects_the_write_and_the_session_read`. | PROVEN | Every cell's `main` observation is the seed pair and its `branch` observation carries the write. pins: ice-wap-branch-1/C-002 |
 | C-003 | The session's plain reads of that table follow the branch while the conf is set and answer `main` again once it is unset, with the table's Arrow types unchanged. | The `session-read` / `plain-read-after-unset` observations on all 18 ok cells + `test_wap_branch_read_keeps_the_arrow_types`. | PROVEN | The Arrow rider compares the branch read's full schema to main's. pins: ice-wap-branch-1/C-003 |
 | C-004 | Without `write.wap.enabled=true` the conf is ignored entirely — the write lands on `main` and reads stay on `main`. It is a table property, not a session conf. | `QW-INSERT-NOT-ENABLED`; `wap_branch_without_the_table_property_writes_main`; `test_wap_branch_leaves_a_table_without_the_property_on_main`. | PROVEN | Green on all three doors. pins: ice-wap-branch-1/C-004 |
@@ -79,6 +81,9 @@ outside the catalog registry, and a CTAS into a new table (no target to load).
 | C-007 | The conf reaches the Rust carrier through both spellings — `spark.conf.set` and SQL `SET spark.wap.branch = audit` (which answers Spark's `(key, value)` row) — and `unset` / `RESET` clears it. Python forwards the string; the parse, the validation and the resolution are Rust's. | `test_sql_set_wap_branch_answers_the_pair_row`, `QW-SET-SQL`, `test_wap_session_conf_stores_through_the_sql_set_door`, `test_sql_set_wap_branch_answers_the_pair_row` (registry 16b), `the_carrier_round_trips_through_the_config_map`. | PROVEN | The facade's `unset` forwards the empty string and the Rust carrier owns what that means. pins: ice-wap-branch-1/C-007 |
 | C-008 | The ANSI door carries no `spark.wap.*` conf, so no native-door write can be silently redirected: `repark.sql("SET spark.wap.branch = …")` refuses naming the rejected namespace. | `test_native_door_refuses_the_spark_wap_conf`. | PROVEN | The two-doors row. The native session does not share the facade's catalog registry, so the stronger "the ANSI write lands on main" shape is not reachable from a test; the refusal is the checkable half. pins: ice-wap-branch-1/C-008 |
 | C-009 | The generator re-derives the committed fixture on live Spark (`check` mode exits non-zero naming the first mismatch). | `test_live_oracle_fixture_reproduces` under `REPARK_PARITY_LIVE=1`. | PROVEN | Ran green on the live leg 2026-09-19 (see Gates). pins: ice-wap-branch-1/C-009 |
+| C-011 | Every relation in the statement follows the wap branch, not just the first name after FROM/JOIN/USING: a comma FROM-list, a self-join, a three-way comma list, a comma relation beside a subquery or a CTE body, an IN/EXISTS body and each arm of a set operation. The round-1 skip rules apply per relation inside a comma list — an explicit `branch_`/`tag_` selector or AS-OF clause on one relation leaves that relation alone while its neighbours follow the conf. | `QW-COMMA-JOIN` (ten read shapes on a branch ahead of main); `a_comma_from_list_redirects_every_relation`; `a_comma_relation_keeps_the_explicit_selector_and_the_select_list`. | PROVEN | Round 2, WAP-001 (P1, silent wrong answer): `FROM t a, t b` scanned the branch for `a` and `main` for `b`. Red-first on the round-1 walker: the comma self-join answers 2 rows where the branch answers 4. The walker is now a parenthesis-depth state machine and a select-list / GROUP BY / alias comma is never read as a relation. pins: ice-wap-branch-1/C-011 |
+| C-012 | With `spark.wap.branch` naming a branch the table does not carry, **every** DML family creates it from `main` and commits there, leaving `main` untouched — `DELETE` (CoW and MoR), `UPDATE`, `MERGE` and the appends. | `QW-DELETE-NO-BRANCH`, `QW-UPDATE-NO-BRANCH`, `QW-DELETE-MOR-NO-BRANCH`, `QW-MERGE-NO-BRANCH`, `QW-INSERT-NO-BRANCH`; `a_delete_creates_the_wap_branch_that_does_not_exist` and its UPDATE twin. | PROVEN | Round 2, WAP-002 (P2): `DELETE`/`UPDATE` refused `snapshot ref 'audit' not found` from the fork's `resolve_scan_snapshot_id`, where Spark creates the ref (measured: all four new cells are `ok` in Spark 4.1.2). `create_wap_branch_from_main` creates the ref at the table's current snapshot before the commit. pins: ice-wap-branch-1/C-012 |
+| C-013 | Every recorded read cell can fail: the branch and `main` hold different rows before the observation, so a dropped redirect changes the answer rather than hiding. | `QW-READ-MAIN-AHEAD` (main ahead — a dropped redirect shows up as an extra row), `QW-READ-BRANCH-AHEAD`, `QW-VERSION-AS-OF-MAIN-DIVERGED`, `QW-COMMA-JOIN`. | PROVEN | Round 2, WAP-003 (P3): `QW-READ-ONLY` and `QW-VERSION-AS-OF-MAIN` were mutation-blind because branch and main held the same two seed rows. The four diverging cells are recorded from live Spark, not derived. pins: ice-wap-branch-1/C-013 |
 | C-010 | `spark.wap.id` on its own is unchanged by this unit: the write still lands on `main` where Spark stages it, and this residue is written down in REF-3 as fork ask F-STAGE-ONLY-1. | `test_wap_id_alone_still_lands_on_main`; the REF-3 row. | PROVEN | Stated plainly rather than half-built: the brief's boundary is "leave `spark.wap.id` as it is". The residue is now reachable through SQL `SET` as well as `conf.set`, because both spellings route to one carrier — named in REF-3 and in the hand-back. pins: ice-wap-branch-1/C-010 |
 
 ## Measured observations (not clauses)
@@ -99,13 +104,28 @@ outside the catalog registry, and a CTAS into a new table (no target to load).
 
 - **`spark.wap.id` alone** (C-010): write lands on `main`, Spark stages. Fork ask
   F-STAGE-ONLY-1; recorded in REF-3.
-- **A wap-branch DELETE/UPDATE/MERGE onto a branch that does not exist yet** is unmeasured.
-  The plain-INSERT path creates the ref; the row-level paths scan through the fork's
-  `resolve_scan_snapshot_id`, which refuses a missing ref loudly (`snapshot ref 'a' not found`)
-  rather than falling back to `main`. Loud, never a wrong answer; no oracle cell covers it.
+- ~~**A wap-branch DELETE/UPDATE/MERGE onto a branch that does not exist yet** is
+  unmeasured.~~ **Closed in round 2** (C-012): measured in Spark and matched — four new cells.
+- **The ref creation is not atomic with the write** (round 2, C-012). Spark creates the branch
+  inside the write's own commit; RePark creates it first, then commits the write onto it. Same
+  refs and same rows when the write succeeds (pinned cell for cell); if the write then fails,
+  RePark leaves an `audit` ref pinned at `main` where Spark would leave none. Loud, never a
+  wrong answer, and a second `DELETE` finds the ref and behaves identically. Closing it needs
+  the fork's commit path to take a create-if-absent branch target.
 - **`spark.conf.isModifiable`** still answers `True` (CONF-WAP-1, unchanged by this unit).
 
-## Gates
+## Gates — round 2 (2026-09-20)
+
+- `cargo test -p repark-spark --lib` — 1256 passed, 0 failed, 5 ignored (the read pass touches
+  every SQL statement, so the whole lib runs).
+- `cargo test -p repark-spark --lib -- tests::wap_branch` — 13 passed; red-first on the round-1
+  walker, the two comma pins fail with 2 rows where the branch answers 4.
+- `pytest python/repark/tests/test_ice_wap_branch_1.py -q -n 4` — 31 passed, 1 skipped
+  (27 cells), and green live with `REPARK_PARITY_LIVE=1`.
+- `comment_ban.py` — `comment-ban hits=0`. `cargo fmt --all --check`, clippy, ruff, the size
+  scripts, `check_ledger_grammar.py`, `check_docs_links.py`, `sync_map_md.py --check` — clean.
+
+## Gates — round 1
 
 On `a5cb3d94`, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6`:
 
@@ -130,7 +150,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_wap_branch_1.py, python/repark/tests/ice_wap_branch_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
-      evidence: Red-first on the unfixed tree — 17 failed, 6 passed, 1 skipped. Every pin names an input where the branch changes the output; the metadata-table pin redded on a real defect (the table$suffix re-tokenization) and is green only because the fix landed.
+      evidence: Red-first on the unfixed tree — 17 failed, 6 passed, 1 skipped. Every pin names an input where the branch changes the output; the metadata-table pin redded on a real defect (the table$suffix re-tokenization) and is green only because the fix landed. Round 2 re-attacked mutation-blindness itself (C-013): four recorded cells now diverge branch and main before the observation, and the two round-2 comma pins are red-first on the round-1 walker.
       artifacts: [crates/repark-spark/src/tests/wap_branch.rs, python/repark/tests/test_ice_wap_branch_1.py]
     - id: AT-3
       status: ATTACKED

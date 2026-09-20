@@ -381,6 +381,29 @@ pub(crate) async fn apply_write_to_branch<'a>(
     commit_write_on_branch(ctx, catalogs, sql, pinned, &tokens, &span, target).await
 }
 
+async fn create_wap_branch_from_main(
+    catalog: &dyn iceberg::Catalog,
+    ident: &TableIdent,
+    table: &iceberg::table::Table,
+    branch: &str,
+) -> Result<()> {
+    if table.metadata().snapshot_for_ref(branch).is_some() {
+        return Ok(());
+    }
+    let Some(snapshot_id) = table.metadata().current_snapshot_id() else {
+        return Ok(());
+    };
+    repark_iceberg::write::create_snapshot_ref(
+        catalog,
+        ident,
+        repark_iceberg::write::SnapshotRefKind::Branch,
+        branch,
+        snapshot_id,
+    )
+    .await
+    .map_err(iceberg_err)
+}
+
 async fn commit_write_on_branch<'a>(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -393,9 +416,12 @@ async fn commit_write_on_branch<'a>(
     let qualified = qualify_table_parts(ctx, target.table_parts);
     let (_catalog_name, ident, catalog) = load_target_table(catalogs, &qualified)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-    if target.require_existing_branch && table.metadata().snapshot_for_ref(&target.branch).is_none()
-    {
-        return Err(missing_branch_error(&target.branch));
+    if target.require_existing_branch {
+        if table.metadata().snapshot_for_ref(&target.branch).is_none() {
+            return Err(missing_branch_error(&target.branch));
+        }
+    } else {
+        create_wap_branch_from_main(catalog.as_ref(), &ident, &table, &target.branch).await?;
     }
     if let Some(kind) = write_dml_kind(sql) {
         repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(

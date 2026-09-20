@@ -321,7 +321,7 @@ covers only what is still open: the staged-snapshot flow behind `spark.wap.id`.
   pins: ice-branch-ops-1/C-013
   pins: ice-wap-branch-1/C-010
 
-#### ICE-WAP-BRANCH-1 — `spark.wap.branch` redirects writes and reads — **FIXED 2026-09-19**
+#### ICE-WAP-BRANCH-1 — `spark.wap.branch` redirects writes and reads — **FIXED 2026-09-19** (round 2, 2026-09-20)
 
 - **repark** — with `write.wap.enabled=true` on the table and `spark.wap.branch` set, every
   write commits on that branch and `main` is unchanged: SQL `INSERT`, `writeTo().append()`,
@@ -340,11 +340,21 @@ covers only what is still open: the staged-snapshot flow behind `spark.wap.id`.
   that did not are the ones listed above, plus SQL `SET spark.wap.branch` failing with the
   engine's `Could not find config namespace "spark"` and `fast_forward('main','audit')`
   refusing because `main` was not an ancestor of `audit`.
-- **After (measured 2026-09-19)** — 19 of 19 recorded Spark cells match.
+- **After (measured 2026-09-19; round 2, 2026-09-20)** — 19 of 19 recorded Spark cells match,
+  and 27 of 27 after round 2 added eight. Round 2 closed three verification findings: a comma
+  FROM-list mixed the audit branch with `main` (only the first name after FROM/JOIN/USING was
+  redirected, so `FROM t a, t b` read the branch for `a` and `main` for `b` — a silent wrong
+  answer, now a parenthesis-depth walker that visits every relation, comma lists, subqueries,
+  CTE bodies and set-operation arms included); `DELETE` and `UPDATE` naming a branch that does
+  not exist refused `snapshot ref 'audit' not found` where Spark creates it from `main` (all
+  four DML families measured and matched); and the two read-only cells were mutation-blind
+  because branch and `main` held the same rows (four cells now diverge the two snapshots
+  first).
 - **Apache Spark** — as above. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:
   1.11.0, recorded 2026-09-19 into `python/repark/tests/ice_wap_branch_1_spark_oracle.json`
-  by `python/repark/tests/_record_ice_wap_branch_1_oracle.py`; the 19 cells reproduce the
-  orchestrator's run-25c measurement observation for observation.)*
+  by `python/repark/tests/_record_ice_wap_branch_1_oracle.py`, re-recorded whole 2026-09-20;
+  the 27 cells reproduce the orchestrator's run-25c measurement observation for observation,
+  and the 19 round-1 cells came back byte-identical in that re-recording.)*
 - **Pin** — `python/repark/tests/test_ice_wap_branch_1.py` (one parametrized pin per recorded
   cell, plus the refusal, the Arrow-type rider, the SQL `SET` row and the native-door row);
   `crates/repark-spark/src/tests/wap_branch.rs` (the resolver's decision table on the Rust
@@ -354,7 +364,12 @@ covers only what is still open: the staged-snapshot flow behind `spark.wap.id`.
   pins the branch's snapshot before the time-travel pass; the write half reuses the
   write-to-branch machinery. The ANSI door carries no `spark.wap.*` conf, so no native-door
   write can be redirected — `repark.sql("SET spark.wap.branch = …")` refuses.
-  pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **Residue, stated plainly (round 2):** the wap branch is created by its own commit and then
+  the write commits onto it, where Spark creates the ref inside the write's own commit. Same
+  refs and same rows when the write succeeds; a failed write leaves an `audit` ref pinned at
+  `main` where Spark would leave none. Loud, never a wrong answer.
+  pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-011, C-012, C-013
 
 #### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
 

@@ -271,9 +271,25 @@ fn find_read_relations(tokens: &[Token]) -> Vec<ReadRelation> {
         .collect();
     let write_target = crate::write_to_branch::find_write_target_range(tokens);
     let mut relations = Vec::new();
+    let mut open_lists = vec![false];
     let mut index = 0usize;
     while index < significant.len() {
-        if !opens_relation(&significant, index) {
+        match significant[index].1 {
+            Token::LParen => {
+                open_lists.push(false);
+                index += 1;
+                continue;
+            }
+            Token::RParen => {
+                if open_lists.len() > 1 {
+                    open_lists.pop();
+                }
+                index += 1;
+                continue;
+            }
+            _ => {}
+        }
+        if !opens_relation_name(&significant, index, &mut open_lists) {
             index += 1;
             continue;
         }
@@ -307,6 +323,64 @@ fn find_read_relations(tokens: &[Token]) -> Vec<ReadRelation> {
 
 fn glued_metadata_suffix(tokens: &[Token], last_name_token: usize) -> bool {
     matches!(tokens.get(last_name_token + 1), Some(Token::Placeholder(_)))
+}
+
+const RELATION_LIST_ENDS: [&str; 22] = [
+    "WHERE",
+    "GROUP",
+    "ORDER",
+    "HAVING",
+    "LIMIT",
+    "OFFSET",
+    "WINDOW",
+    "QUALIFY",
+    "UNION",
+    "INTERSECT",
+    "EXCEPT",
+    "MINUS",
+    "SELECT",
+    "VALUES",
+    "SET",
+    "WHEN",
+    "INTO",
+    "LATERAL",
+    "DISTRIBUTE",
+    "SORT",
+    "CLUSTER",
+    "RETURNING",
+];
+
+fn opens_relation_name(
+    significant: &[(usize, &Token)],
+    index: usize,
+    open_lists: &mut [bool],
+) -> bool {
+    if opens_relation(significant, index) {
+        if let Some(open) = open_lists.last_mut() {
+            *open = true;
+        }
+        return true;
+    }
+    if matches!(
+        significant.get(index).map(|(_, token)| *token),
+        Some(Token::Comma)
+    ) {
+        return open_lists.last().copied().unwrap_or(false);
+    }
+    if ends_relation_list(significant, index)
+        && let Some(open) = open_lists.last_mut()
+    {
+        *open = false;
+    }
+    false
+}
+
+fn ends_relation_list(significant: &[(usize, &Token)], index: usize) -> bool {
+    word_at(significant, index).is_some_and(|word| {
+        RELATION_LIST_ENDS
+            .iter()
+            .any(|keyword| word.eq_ignore_ascii_case(keyword))
+    })
 }
 
 fn opens_relation(significant: &[(usize, &Token)], index: usize) -> bool {
