@@ -188,7 +188,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `scripts/check_lib_py.py` without its mirror.
   The verification fix ratchets it again, 1093 → 1091. pins: ice-overwrite-mode-1/C-018
 - `test_cap_1_source_file_line_cap.py` — **ICE-RDF-SORT-PARSE-1 (2026-09-20, run 26a):**
-  mirror row ratchets `repark-spark/src/tests/call.rs` 1303 → 1289 with
+  mirror row ratchets `repark-spark/src/tests/call.rs` 1303 → 1287 with
   `scripts/check_rust_file_size.py`, shrink-only. pins: ice-rdf-sort-parse-1/C-004
 - `test_cap_1_source_file_line_cap.py` — **ICE-REPLACE-COLUMNS-1 (2026-09-19, run 25c):**
   mirror rows ratchet `repark-spark/src/alter.rs` 1813 → 1449 and

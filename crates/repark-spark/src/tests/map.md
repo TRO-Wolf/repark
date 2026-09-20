@@ -483,6 +483,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   are validated; and every z-order refusal is the fork's, surfaced unchanged rather than
   re-authored. `md.sort-order` is asserted unchanged because the procedure's order is a
   one-shot rewrite instruction, not a table property.
+  `call.rs`'s `call_rewrite_positional_strategy_routes_to_the_rewriter` is the same pin
+  through the positional door (C1-L-001): `strategy` is read from positional slot 1 and
+  routed, so `('sales.t', 'sort')` reaches the SORT rewriter and refuses on an unsorted
+  table rather than silently bin-packing.
   pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009
 - `call_rewrite_options.rs` — **rewrite_data_files options:** `where => 'part = 0'` (and `IN (0)`)
   keeps the **part=1** pre-image paths byte-identical and rewrites part=0 away; unknown strategy

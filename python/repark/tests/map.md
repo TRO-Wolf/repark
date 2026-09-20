@@ -2090,6 +2090,29 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and rewrites part=0 away; unknown strategy and bad where use Spark's text; `sort` and
   `sort_order` refuse.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
+- [test_ice_rdf_sort_parse_1.py](test_ice_rdf_sort_parse_1.py) —
+  **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the pins that stand between IPI-43 and a green
+  gate over a no-op. `P-RDF-SORT`, `P-RDF-SORT-TABLE-ORDER` and `P-RDF-ZORDER` record the
+  *same* output row, the same `files_after`, the same eight rows and the same metadata on
+  Spark — every observable the inventory harness captures is identical for all three — so a
+  rewriter that ignored `strategy` and `sort_order` and bin-packed would turn all three
+  cells EQUAL while doing nothing. These pins read each rewritten data file straight out of
+  parquet with pyarrow and assert the row order *inside* it, against sequences measured on
+  live Spark by [_record_ice_rdf_sort_parse_1_oracle.py](_record_ice_rdf_sort_parse_1_oracle.py)
+  into [ice_rdf_sort_parse_1_spark_oracle.json](ice_rdf_sort_parse_1_spark_oracle.json).
+  Reading the rows back through `SELECT` would not have worked: the harness's own `rows()`
+  sorts by `repr` unless asked not to, which is why `P-RDF-SORT`'s recorded `data` is
+  *ascending* after a `DESC` rewrite.
+  Two facts here were measured rather than assumed. A BIGINT `id` beside a
+  single-character STRING does **not** discriminate `zorder(id, data)` from
+  `zorder(data, id)` — a long's leading bytes are constant across small values while the
+  string's first byte varies, so the string dominates the interleave and swapping the pair
+  changes nothing; the discriminating fixture z-orders two single-character STRING columns
+  instead, and Spark then lands `zorder(p, q)`, `zorder(q, p)` and `id DESC` in three
+  different orders. And a bare `id DESC` with no `NULLS` clause puts the NULL last on live
+  Spark, pinning the direction-tied default at runtime and not only in the parser's unit
+  tests. `test_rdf_binpack_unchanged` is the regression pin for the untouched bin-pack path.
+  pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —
   **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** offline pins over the recorded 49-cell
   Spark 4.1.2 oracle ([ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json),

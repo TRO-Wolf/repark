@@ -359,7 +359,6 @@ async fn call_rewrite_data_files_preserves_rows_and_reduces_files() {
     );
 }
 
-/// rewrite `strategy` is read from the positional slot and routed, never silently binpacked.
 #[tokio::test]
 async fn call_rewrite_positional_strategy_routes_to_the_rewriter() {
     let wh = TempDir::new().unwrap();
@@ -371,7 +370,6 @@ async fn call_rewrite_positional_strategy_routes_to_the_rewriter() {
     )
     .await;
 
-    // C1-L-001: `sort` on an unsorted table refuses through both doors — never silent binpack.
     for sql in [
         "CALL ice.system.rewrite_data_files(table => 'sales.t', strategy => 'sort')",
         "CALL ice.system.rewrite_data_files('sales.t', 'sort')",

@@ -147,7 +147,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split property operations from schema-evolution operations.",
     ),
     "crates/repark-spark/src/tests/call.rs": (
-        1289,
+        1287,
         "Spark CALL procedure cases share one test module.",
         "Split parsing failures from procedure execution scenarios.",
     ),
