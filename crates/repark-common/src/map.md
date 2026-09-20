@@ -25,7 +25,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   closed `Condition` enum plus one screaming-cap constant per row, `message()`
   rendering `[CONDITION] … SQLSTATE: XXXXX`, and the `analysis` / `parse` /
   `unsupported` / `illegal_argument` constructors returning `Error`. Unit tests
-  at the bottom of the module pin every row's name, SQLSTATE, and template. pins: ice-error-conditions-1/C-010
+  at the bottom of the module pin every row's name, SQLSTATE, and template. Clippy-clean sqlstate() match (merged same-SQLSTATE arms), if-let in substitute, and a test-module Row alias. pins: ice-error-conditions-1/C-010
 
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
   unsupported-feature class (U4: no longer a scaffolding placeholder; `engine_err` folds

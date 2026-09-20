@@ -125,30 +125,30 @@ impl Condition {
         match self {
             Self::TableOrViewNotFound => Some("42P01"),
             Self::TableOrViewAlreadyExists => Some("42P07"),
-            Self::NotSupportedCommandForV2Table => Some("0A000"),
+            Self::NotSupportedCommandForV2Table
+            | Self::UnsupportedFeatureTableOperation
+            | Self::NotSupportedChangeColumn
+            | Self::UnsupportedFeatureGeospatialDisabled => Some("0A000"),
             Self::UnresolvedColumnWithSuggestion => Some("42703"),
-            Self::UnsupportedFeatureTableOperation => Some("0A000"),
-            Self::InvalidPartitionOperationPartitionManagementIsUnsupported => Some("42601"),
-            Self::ParseSyntaxError => Some("42601"),
+            Self::InvalidPartitionOperationPartitionManagementIsUnsupported
+            | Self::ParseSyntaxError => Some("42601"),
             Self::IncompatibleDataForTableCannotSafelyCast => Some("KD000"),
             Self::InsertColumnArityMismatchNotEnoughDataColumns => Some("21S01"),
             Self::NotNullAssertViolation => Some("42000"),
-            Self::NotSupportedChangeColumn => Some("0A000"),
             Self::FailedToLoadRoutine => Some("38000"),
             Self::CastInvalidInput => Some("22018"),
             Self::RequiresSinglePartNamespace => Some("42K05"),
-            Self::UnsupportedFeatureGeospatialDisabled => Some("0A000"),
             Self::MergeCardinalityViolation => Some("23K01"),
             Self::PathNotFound => Some("42K03"),
             Self::UnableToInferSchema => Some("42KD9"),
             Self::FailedReadFileCannotReadFileFooter => Some("KD001"),
-            Self::InvalidTimeTravelSpec => Some("42K0E"),
-            Self::InvalidTimeTravelTimestampExprInput => Some("42K0E"),
-            Self::InvalidTimeTravelTimestampExprNonDeterministic => Some("42K0E"),
+            Self::InvalidTimeTravelSpec
+            | Self::InvalidTimeTravelTimestampExprInput
+            | Self::InvalidTimeTravelTimestampExprNonDeterministic => Some("42K0E"),
             Self::AmbiguousReference => Some("42704"),
-            Self::DatatypeMismatchValueOutOfRange => Some("42K09"),
-            Self::DatatypeMismatchStackColumnDiffTypes => Some("42K09"),
-            Self::DatatypeMismatchUnexpectedInputType => Some("42K09"),
+            Self::DatatypeMismatchValueOutOfRange
+            | Self::DatatypeMismatchStackColumnDiffTypes
+            | Self::DatatypeMismatchUnexpectedInputType => Some("42K09"),
             Self::WrongNumArgsWithoutSuggestion => Some("42605"),
             Self::InvalidConfValueTimeZone => Some("22022"),
             Self::CannotMergeSchemas => None,
@@ -251,13 +251,12 @@ fn substitute(template: &str, params: &[(&str, &str)]) -> String {
             break;
         };
         let key = &after[..close];
-        match params.iter().find(|(name, _)| *name == key) {
-            Some((_, value)) => rendered.push_str(value),
-            None => {
-                rendered.push('{');
-                rendered.push_str(key);
-                rendered.push('}');
-            }
+        if let Some((_, value)) = params.iter().find(|(name, _)| *name == key) {
+            rendered.push_str(value);
+        } else {
+            rendered.push('{');
+            rendered.push_str(key);
+            rendered.push('}');
         }
         rest = &after[close + 1..];
     }
@@ -298,6 +297,8 @@ pub fn illegal_argument(condition: Condition, params: &[(&str, &str)]) -> Error 
 mod tests {
     use super::*;
     use crate::ErrorClass;
+
+    type Row<'a> = (Condition, &'a [(&'a str, &'a str)], &'a str);
 
     const ALL_PARAMS: &[(&str, &str)] = &[
         ("relationName", "`sc`.`ns`.`t`"),
@@ -391,7 +392,7 @@ mod tests {
 
     #[test]
     fn take_conditions_carry_the_recorded_sqlstates() {
-        let rows: [(Condition, &[(&str, &str)], &str); 16] = [
+        let rows: [Row<'_>; 16] = [
             (
                 TABLE_OR_VIEW_NOT_FOUND,
                 &[("relationName", "`ns`.`t`")],
