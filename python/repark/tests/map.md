@@ -1111,6 +1111,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`FN-APPROXPCT-ACC-TYPE-1`, red-when-fixed);
   `test_run_cells_help_exits_zero` pins argparse `--help`.
   pins: perf-approxpct-1/C-002
+  **ICE-ERROR-CONDITIONS-1 (2026-09-20):** the native message parser flips the
+  getErrorClass half — it now answers `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`;
+  `getMessageParameters` stays None until the catalogue PR.
+  pins: ice-error-conditions-1/C-001
 - [test_win_slide_1.py](test_win_slide_1.py) — **WIN-SLIDE-1 (2026-09-04):** the sliding-frame
   corpus. One eight-row typed seed (`id` INT so the `range_frame` shape also pins `WIN-RANGE-DF-1`,
   `g` for the partition boundary, NULLs in `v` / `v2` / `vi` / `b`, all-NULL `vn` / `vin` / `bn`,

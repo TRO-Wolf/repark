@@ -371,7 +371,7 @@ def test_sql_non_integral_accuracy_is_analysis_without_spark_params(
 ) -> None:
     """C-1 / FN-APPROXPCT-ACC-TYPE-1: SQL door is AnalysisException; params stay None.
 
-    Red-when-fixed: getErrorClass/getMessageParameters become Spark's structured
+    Red-when-fixed: getMessageParameters becomes Spark's structured
     payload (sqlExpr, paramIndex, inputSql, inputType, requiredType).
     """
     with pytest.raises(AnalysisException) as caught:
@@ -382,7 +382,7 @@ def test_sql_non_integral_accuracy_is_analysis_without_spark_params(
     assert "INTEGRAL" in message
     assert spark_type in message
     assert "SQLSTATE: 42K09" in message
-    assert caught.value.getErrorClass() is None
+    assert caught.value.getErrorClass() == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
     assert caught.value.getMessageParameters() is None
 
 
