@@ -1,6 +1,7 @@
 //! repark-iceberg — the Iceberg surface: catalog wiring + the Spark-semantics write adapter.
 
 pub mod catalog;
+pub mod view;
 pub mod write;
 
 #[cfg(test)]

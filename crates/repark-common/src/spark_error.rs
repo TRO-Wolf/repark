@@ -141,8 +141,8 @@ impl Condition {
     #[must_use]
     pub fn sqlstate(self) -> Option<&'static str> {
         match self {
-            Self::TableOrViewNotFound => Some("42P01"),
-            Self::TableOrViewAlreadyExists => Some("42P07"),
+            Self::TableOrViewNotFound | Self::ViewNotFound => Some("42P01"),
+            Self::TableOrViewAlreadyExists | Self::ViewAlreadyExists => Some("42P07"),
             Self::NotSupportedCommandForV2Table
             | Self::UnsupportedFeatureTableOperation
             | Self::NotSupportedChangeColumn
@@ -151,7 +151,9 @@ impl Condition {
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported
             | Self::ParseSyntaxError => Some("42601"),
             Self::IncompatibleDataForTableCannotSafelyCast => Some("KD000"),
-            Self::InsertColumnArityMismatchNotEnoughDataColumns => Some("21S01"),
+            Self::InsertColumnArityMismatchNotEnoughDataColumns
+            | Self::CreateViewColumnArityMismatchNotEnoughDataColumns
+            | Self::CreateViewColumnArityMismatchTooManyDataColumns => Some("21S01"),
             Self::NotNullAssertViolation => Some("42000"),
             Self::FailedToLoadRoutine => Some("38000"),
             Self::CastInvalidInput => Some("22018"),
@@ -170,10 +172,6 @@ impl Condition {
             Self::WrongNumArgsWithoutSuggestion => Some("42605"),
             Self::InvalidConfValueTimeZone => Some("22022"),
             Self::CannotMergeSchemas => None,
-            Self::ViewAlreadyExists => Some("42P07"),
-            Self::ViewNotFound => Some("42P01"),
-            Self::CreateViewColumnArityMismatchNotEnoughDataColumns
-            | Self::CreateViewColumnArityMismatchTooManyDataColumns => Some("21S01"),
         }
     }
 
@@ -433,7 +431,7 @@ mod tests {
 
     #[test]
     fn take_conditions_carry_the_recorded_sqlstates() {
-        let rows: [Row<'_>; 20] = [
+        let rows: [Row<'_>; 16] = [
             (
                 TABLE_OR_VIEW_NOT_FOUND,
                 &[("relationName", "`ns`.`t`")],
@@ -516,26 +514,6 @@ mod tests {
             ),
             (UNSUPPORTED_FEATURE_GEOSPATIAL_DISABLED, &[], "0A000"),
             (MERGE_CARDINALITY_VIOLATION, &[], "23K01"),
-            (VIEW_ALREADY_EXISTS, &[("relationName", "ns.v1")], "42P07"),
-            (VIEW_NOT_FOUND, &[("relationName", "ns.v3")], "42P01"),
-            (
-                CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
-                &[
-                    ("viewName", "sc.ns.va"),
-                    ("viewColumns", "a, b"),
-                    ("dataColumns", "id"),
-                ],
-                "21S01",
-            ),
-            (
-                CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS,
-                &[
-                    ("viewName", "sc.ns.vaf"),
-                    ("viewColumns", "a"),
-                    ("dataColumns", "id, data"),
-                ],
-                "21S01",
-            ),
         ];
         for (condition, params, sqlstate) in rows {
             let text = message(condition, params);
@@ -650,17 +628,65 @@ mod tests {
     }
 
     #[test]
-    fn view_conditions_reproduce_the_live_probe_bytes() {
+    fn take_view_conditions_carry_the_recorded_sqlstates() {
+        let rows: [Row<'_>; 4] = [
+            (VIEW_ALREADY_EXISTS, &[("relationName", "ns.v1")], "42P07"),
+            (VIEW_NOT_FOUND, &[("relationName", "ns.v3")], "42P01"),
+            (
+                CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
+                &[
+                    ("viewName", "sc.ns.va"),
+                    ("viewColumns", "a, b"),
+                    ("dataColumns", "id"),
+                ],
+                "21S01",
+            ),
+            (
+                CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS,
+                &[
+                    ("viewName", "sc.ns.vaf"),
+                    ("viewColumns", "a"),
+                    ("dataColumns", "id, data"),
+                ],
+                "21S01",
+            ),
+        ];
+        for (condition, params, sqlstate) in rows {
+            assert_eq!(condition.sqlstate(), Some(sqlstate));
+            let rendered = message(condition, params);
+            let head = format!("[{}] ", condition.name());
+            assert!(rendered.starts_with(&head), "missing head: {rendered}");
+            for (_, value) in params {
+                assert!(rendered.contains(value), "missing {value}: {rendered}");
+            }
+            assert!(!rendered.contains('{'), "unrendered param: {rendered}");
+            assert!(
+                rendered.ends_with(&format!(" SQLSTATE: {sqlstate}")),
+                "missing clause: {rendered}"
+            );
+        }
+    }
+
+    #[test]
+    fn view_already_exists_reproduces_the_live_probe_bytes() {
         assert_eq!(
             message(VIEW_ALREADY_EXISTS, &[("relationName", "ns1.v1")]),
             "[VIEW_ALREADY_EXISTS] Cannot create view ns1.v1 because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
             "pins: ice-views-1/C-010"
         );
+    }
+
+    #[test]
+    fn view_not_found_reproduces_the_live_probe_bytes() {
         assert_eq!(
             message(VIEW_NOT_FOUND, &[("relationName", "ns1.missing")]),
             "[VIEW_NOT_FOUND] The view ns1.missing cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS. SQLSTATE: 42P01",
             "pins: ice-views-1/C-010"
         );
+    }
+
+    #[test]
+    fn view_arity_not_enough_reproduces_the_live_probe_bytes() {
         assert_eq!(
             message(
                 CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
@@ -673,6 +699,10 @@ mod tests {
             "[CREATE_VIEW_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot create view sc.ns1.va, the reason is not enough data columns:\nView columns: a, b.\nData columns: id. SQLSTATE: 21S01",
             "pins: ice-views-1/C-010"
         );
+    }
+
+    #[test]
+    fn view_arity_too_many_reproduces_the_live_probe_bytes() {
         assert_eq!(
             message(
                 CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS,
