@@ -618,13 +618,24 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `F-RDF-SESSION-CONF-1` (fork `rewrite_data_files`) on strict xfails, `IPI-08`
   (whole-partition DELETE routing) on a dated xfail, and the
   `engine-name` / `engine-version` reading; registry row FIXED.
+  Round 3 (2026-09-19) closes a SECOND verification critic's four P1s, six P2s and one
+  P3: no session conf decides a statement's route any more (a codec-only conf was
+  changing a plain UPDATE's committed file count), the native door answers a plain
+  UPDATE and `INSERT OVERWRITE … PARTITION`, a dynamic `overwritePartitions` builds its
+  collision oracle from the partitions it actually replaces, the property suffix is
+  carried verbatim as Spark carries it, and the three claims that lived only in the
+  Python pins have Rust pins. Two of the critic's premises were refuted by measurement
+  (Spark folds no conf-key prefix; Spark stamps no `rewrite_manifests` replace snapshot)
+  and a third measurement narrowed `F-RDF-SESSION-CONF-1` to its codec half. Fifteen new
+  Spark cells (`QP-*`, `QK-*`, `QM-*`); the fixture gains a per-cell `stamped` observation.
   `risk_tier: standard`. Branch `fix/ice-session-write-conf-1`.
   pins: ice-session-write-conf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: ice-session-write-conf-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
   pins: ice-session-write-conf-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
   pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
   pins: ice-session-write-conf-1/C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040
-  pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044
+  pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048
+  pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053
 
 ## Pointers
 - Up: [../map.md](../map.md)

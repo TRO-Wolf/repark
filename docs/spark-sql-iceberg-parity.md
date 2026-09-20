@@ -3358,6 +3358,75 @@ the pin rather than obeying it.
     does not refuse a colliding key there either. RePark matches on `QS-TRUNCATE`,
     `QS-TRUNCATE-V3`, `QS-DELETE-ALL-META`, `QZ-TRUNCATE-NOFILES`, `QR-TRUNCATE-DELETED-RECORDS`
     and `QR-DELETE-META-*`.
+
+  **Second verification critic 2026-09-19 (four P1s, six P2s, one P3) — all CLOSED,
+  round 3.** Fifteen more Spark 4.1.2 cells recorded for it (`QP-*` replace-partitions,
+  `QK-*` conf-key case, `QM-*` maintenance CALLs):
+  - **P1-OWNERSHIP-FILE-COUNT — the worst, and wider than filed.** Setting ANY session
+    write conf, a codec-only one included, rerouted a plain `UPDATE` onto the owned
+    identity path and changed the committed FILE COUNT, not just the stamp. Two fixes,
+    because either alone leaves a difference: ownership no longer reads the conf
+    (`plain_identity_or_update` lost its context argument), and the owned copy-on-write
+    rewrite drives ONE rolling writer, so the `survivors UNION ALL new-values` plan's
+    batch count stops choosing the layout. That second half also closes the artefact
+    V3-8 named and pinned on 2026-09-02: the UPDATE cell wrote 2 data files where Spark
+    writes 1, and now writes 1 (`F_V3_8_UPDATE_FILES = 2` → `V3_8_UPDATE_FILES = 1`).
+    Owned appends also take the fork insert exec's `parquet.enable.dictionary` rule, so
+    the owned and unowned INSERT routes write the same bytes. Pins:
+    `a_session_conf_keeps_a_plain_{update,insert,delete}_layout` — each runs its
+    statement twice over two warehouses and compares live file count, per-file record
+    counts and full summaries.
+  - **P1-NATIVE-UPDATE and P1-NATIVE-PARTITION-OVERWRITE.** The native `repark.sql` door
+    never tried the plain-UPDATE allow-list, and `execute_partition_overwrite` staged
+    with no overrides and committed through the three no-summary wrappers. Both doors
+    now ask one predicate, `plain::try_allowed_plain_identity_or_update`, and the native
+    partition overwrite takes the `*_with_summary` commits and the resolved staging.
+    Pins: `native_plain_update_stamps_the_session_snapshot_property`,
+    `native_partition_overwrite_stamps_the_session_snapshot_property`,
+    `native_partition_overwrite_takes_the_session_codec`.
+  - **P1-REPLACE-PARTITIONS-COLLISION and P2-REPLACE-PARTITIONS-COLLISION-MESSAGE.**
+    `EngineSummary::for_overwrite` marks every removal key `<resolved at commit>` the
+    moment a previous snapshot exists, so a dynamic `overwritePartitions` into a NEW
+    partition refused a key Spark stamps, and one into an EXISTING partition refused
+    without naming Spark's value. Measured (`QP-*`): into a new partition Spark COMMITS
+    and stamps `deleted-records=5`, dropping the now-negative `total-records`; into an
+    existing one it refuses `Multiple entries with same key: deleted-records=2 and
+    deleted-records=5`; an empty overwrite commits nothing either way.
+    `summary_collision::replaced_data_files` resolves the live files whose partition
+    value matches a staged file's, by partition-field NAME so an evolved spec still
+    matches. Replay equal 5 of 6 — the sixth differs only in `removed-files-size`
+    (906 against 843, two writers' bytes). Pins:
+    `replace_partitions_into_a_new_partition_stamps_deleted_records`,
+    `replace_partitions_into_an_existing_partition_names_the_engine_value`.
+  - **P2-CONF-KEY-CASE — the premise is refuted, and the divergence beside it is fixed.**
+    Measured (`QK-*`): Spark SILENTLY IGNORES `Spark.sql.iceberg.snapshot-property.team`,
+    `SPARK.SQL.ICEBERG.SNAPSHOT-PROPERTY.team` and `Spark.SQL.Iceberg.Compression-Codec` —
+    the key's PREFIX is case-sensitive, so RePark's exact match was already right and the
+    Python predicate still forwards nothing else. But
+    `spark.sql.iceberg.snapshot-property.TEAM` stamps `TEAM`, and RePark was lowering the
+    suffix to `team`; the carrier now carries it verbatim. The WRITER OPTION suffix still
+    lowercases — a different rule Spark reaches through a case-insensitive option map,
+    measured separately by ICE-WRITE-OPTIONS-1.
+  - **P2-REWRITE-MANIFESTS-UNPINNED — measured and equal, no code.** Spark's
+    `rewrite_manifests` replace snapshot carries no session property, and a colliding
+    `total-records=77` does not refuse it: the snapshot commits the engine's own `2`.
+    RePark already answered that. Pins: `rewrite_manifests_does_not_stamp_the_session_snapshot_property`,
+    `rewrite_manifests_does_not_refuse_a_colliding_session_key`.
+  - **P2-BRANCH-EXTRAS / POSDEL-CODEC / TRUNCATE-STAMP-PYTHON-ONLY.** Three claims that
+    lived only in the Python pins now have Rust pins, each written against the mutation
+    that named it and confirmed to red under it and under nothing else:
+    `a_branch_{insert,delete}_stamps_the_session_snapshot_property` (they read the BRANCH
+    head's summary, so the mutation narrowed to `branch.is_some()` reds exactly those
+    two), `position_delete_codec_resolves_over_the_data_file_property` (three rows where
+    only the resolved order answers), and
+    `truncate_does_not_stamp_and_does_not_refuse_a_colliding_key` (it sets `team` AND a
+    colliding `deleted-records=5`).
+  - **P3-QR-SPARK-APP-ID-HOLLOW.** `SUMMARY_KEYS` is a fixed tuple, so a `QR-*` cell whose
+    property is not in it could not see whether the extra landed. `stamped_rows` observes
+    the cell's OWN key per snapshot, recorded as a COMPARISON against the configured value
+    because Spark's own writer puts a per-run `spark.app.id` on every snapshot it commits.
+    Re-recorded on live Spark: the only delta is this observation on the seven `QR-*` cells
+    that commit a snapshot.
 - **Apache Spark** — the recorded cells in
   `python/repark/tests/ice_session_write_conf_1_spark_oracle.json` (live
   PySpark 4.1.2 + Iceberg 1.11.0: 16 SP + 9 CZ cells 2026-09-18, plus 38
@@ -3390,14 +3459,19 @@ the pin rather than obeying it.
   pins: ice-session-write-conf-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024
   pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
   pins: ice-session-write-conf-1/C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040
-  pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044
+  pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048
+  pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053
 - **Rationale** — FIXED for the measured doors. Three residues stay named here,
   none of them pinned as parity:
   - **F-RDF-SESSION-CONF-1 (2026-09-19)** — the fork's `RewriteDataFiles` takes no
     writer-property / snapshot-property hook, so the `rewrite_data_files` `replace`
     commit and its output files ignore both confs. `SP-CALL-RDF` and `CZ-CONF-RDF` are
     strict xfails with that dated reason; the suite reds if the fork ever honours them
-    there. No table-property overlay was added. **Fork ask:** give
+    there. No table-property overlay was added. **Narrowed round 3 (2026-09-19):** the
+    `QM-REWRITE-DATA-FILES` cell shows Spark does NOT stamp the `rewrite_data_files`
+    replace snapshot either, so only the CODEC half of this residue is a gap;
+    `SP-CALL-RDF`, the cell the property half leaned on, records a run where the rewrite
+    was a no-op and committed no replace snapshot at all. **Fork ask:** give
     `RewriteDataFiles` the `snapshot_properties` / writer-property hooks Java's
     `RewriteDataFilesSparkAction` has, so the `replace` commit and the rewritten files
     take the resolved session write like every other commit site.
@@ -3429,6 +3503,23 @@ the pin rather than obeying it.
   `snapshots[*].timestamp-ms` from the newest metadata file. It belongs to the fork's
   `TableMetadata` builder and wants its own row and fork ask; it is recorded here because
   this is where it was measured.
+- **Round 3 note, OPEN and reported (measured 2026-09-19).** RePark's owned data-file
+  writers name files with a random UUID v4 (`DefaultFileNameGenerator::new(Uuid::new_v4()…)`
+  at five sites) where the fork's insert exec uses a time-ordered `Uuid::now_v7()`, so the
+  scan order of a multi-file table is not stable run to run on the owned route while it is
+  on the delegated one. Reproduce: session property set, `INSERT` three rows, `INSERT` one
+  more, `SELECT * FROM t` — the two files come back in either order. No pin in this unit
+  compares row order in list order across two runs (the unit's `_data_rows` sorts), and the
+  one-line fix wants `uuid`'s `v7` feature declared in the workspace manifest, which the
+  round's brief forbids editing.
+- **Round 3 note, an approach that does NOT work (measured 2026-09-19).** Routing every
+  Iceberg plain INSERT through the owned append — the other way to make the session conf
+  irrelevant to the route — reds five pinned Spark-visible typing answers
+  (`v3_timestamp_ns_door`'s VALUES widening ×2, `list_null_compound`'s map-value widening
+  ×2, `write_defaults`' unresolved-DEFAULT error class). The owned append's materialisation
+  does not carry the target-schema coercion the delegated path has. The INSERT arm of
+  P1-OWNERSHIP-FILE-COUNT is closed the other way, by making the owned append write the
+  same bytes; anyone unifying these two routes later must carry that coercion first.
 
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 
