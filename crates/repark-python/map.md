@@ -73,5 +73,5 @@ Rust tests.
 ## Pointers
 
 - Up: [crates map](../map.md)
-- Column navigation: [src/column/map.md](src/column/map.md)
-- Test navigation: [tests/map.md](tests/map.md)
+- Column navigation: `src/column/map.md`
+- Test navigation: `tests/map.md`

@@ -8,7 +8,7 @@ wrapped optimizer rule) and declares this directory.
 
 ## Contents
 
-- `window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
+- [window_rescan.rs](window_rescan.rs) — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
   Its design note, the DataFusion contracts it reads, and the routes it does not take are in
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and
   `python/repark/tests/test_win_slide_1.py`.

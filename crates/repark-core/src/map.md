@@ -208,7 +208,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   and map refuse at plan time with `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`; all
   other non-float types answer false.
   pins: column-parity-1/C-008, C-009
-- `dynamic_flatten.rs` (+ `dynamic_flatten/`) — **DF1 native `dynamic_flatten`:** free
+- [dynamic_flatten.rs](dynamic_flatten.rs) (+ `dynamic_flatten/`) — **DF1 native `dynamic_flatten`:** free
   function over a DataFusion `DataFrame` (no frame newtype). Structs first (null-safe
   `get_field` Project, never DF struct `unnest_columns`), then lists one-at-a-time in
   schema order via preserve-null `unnest_columns_with_options` + `Column::new_unqualified`;
@@ -308,7 +308,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   texts before classification (never for `Parse`), so `sql_with` answers Spark's shape
   on every dialect. pins: unresolved-routine-1/C-001
   (ORCH-001 remediation: the constructor sits above `engine_err`'s doc comment.)
-- `unknown_routine.rs` — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
+- [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see
   [../map.md](../map.md)). pins: unresolved-routine-1/C-001, C-002

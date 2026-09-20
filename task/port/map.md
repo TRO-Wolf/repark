@@ -42,7 +42,7 @@ across phases (as opposed to the plan itself, which lives in
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: per-unit ledgers live in [../](../map.md) (one `<unit>-ledger.md` per delivered unit).
+- Related: per-unit ledgers live in `../` (one `<unit>-ledger.md` per delivered unit).
 
 ## Debug
 
@@ -53,5 +53,5 @@ across phases (as opposed to the plan itself, which lives in
   name a real v1 node (a typo, or a node id from a different rootdir) — the subtraction would
   remove nothing.
 - Manifest and `cargo test --workspace -- --list` disagree: the reconciliation rule in
-  [deferred-tests.md](deferred-tests.md) is the gate — fix the manifest or the port, never the
-  rule. Escalate to: [../map.md#debug](../map.md).
+  `deferred-tests.md` is the gate — fix the manifest or the port, never the
+  rule. Escalate to: [../map.md#debug](../map.md#debug).
