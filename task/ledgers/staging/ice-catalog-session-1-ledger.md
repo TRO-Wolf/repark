@@ -64,6 +64,15 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
   config between the two, and a `spark_catalog` / `default` home breaks every temp-view
   write (the facade registers `spark_catalog` over it). Diagnosis: `q14` errored on the
   fixture's `createOrReplaceTempView` until the move; green after.
+- T-3 (recorded-cell proof, H-04 deviation): `RENAME TO` resolves against the SOURCE
+  table's catalog/namespace, not the session. D-1/H-04 route source AND dest through
+  the session completer, but D-RENAME-TABLE-SHORT records Spark `ok` with the session
+  current at `spark_catalog` while source and dest live in `sc` — a session-relative
+  dest would cross catalogs and refuse. `rename_dest` in `use_ddl.rs` anchors 1/2-part
+  dests on the source; the ALTER token pre-parsers' premature 3-part gates (which fired
+  before form detection, claiming even RENAME) are removed so short names reach the AST
+  path, and token forms complete at execute. `alter.rs` 1449 → 1444, row ratcheted.
+  pins: ice-catalog-session-1/C-022
 
 ## Proposition ledger
 
@@ -90,8 +99,8 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
 | C-019 | `CAT-REFRESH-TABLE` replays EQUAL; a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`. | `test_refresh_table_cell` + `test_refresh_missing_table_raises_table_not_found`. | OPEN | S8. |
 | C-020 | `CAT-CACHE-TABLE` replays EQUAL; SQL `CACHE TABLE` sets `isCached` and a write invalidates. | `test_cache_table_cell` + `test_cache_table_then_write_then_read_sees_the_write`. | OPEN | S8. |
 | C-021 | `UNCACHE TABLE` on a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`; `IF EXISTS` answers ok. | `test_uncache_missing_table` + `test_uncache_if_exists_missing_is_ok`. | OPEN | S8. |
-| C-022 | `D-RENAME-TABLE-SHORT` replays EQUAL; cross-catalog `RENAME TO` still refuses. | `test_rename_to_two_part_cell` + `test_rename_across_catalogs_still_refuses`. | OPEN | S8. |
-| C-023 | `P-CALL-NO-CATALOG` replays EQUAL: two-part `system.<proc>` uses the current catalog. | `test_call_no_catalog_cell`. | OPEN | S8. |
+| C-022 | `D-RENAME-TABLE-SHORT` replays EQUAL; cross-catalog `RENAME TO` still refuses. | `test_rename_to_two_part_cell` + `test_rename_across_catalogs_still_refuses` + `rename_two_part_dest_anchors_on_the_source_catalog` + `rename_three_part_dest_across_catalogs_still_refuses` + `alter_source_and_rename_dest_complete_short_names`. | OPEN | Mechanism pinned S3; cell pins S8. |
+| C-023 | `P-CALL-NO-CATALOG` replays EQUAL: two-part `system.<proc>` uses the current catalog. | `test_call_no_catalog_cell` + `call_two_part_resolves_current_catalog` + `resolve_call_target_two_part_uses_current_catalog`. | OPEN | Mechanism pinned S3; cell pins S8. |
 | C-024 | Runtime `conf.set` of `spark.sql.catalog.*` accumulates; first complete block registers, later sets update the side map without re-registering. | `test_runtime_catalog_registration_then_create` + `test_late_table_default_key_lands_on_create`. | OPEN | S8. |
 | C-025 | `CAT-TYPE-HADOOP` replays EQUAL (`hadoop` aliased to `Memory`; UUID metadata names, not `vN`). | `test_hadoop_type_cell` + `kind_from_type` unit pins. | OPEN | S8. |
 | C-026 | `CAT-CATALOG-IMPL-INMEMORY` replays EQUAL. | `test_catalog_impl_inmemory_cell` + `kind_from_catalog_impl` unit pins. | OPEN | S8. |

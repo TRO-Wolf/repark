@@ -239,6 +239,98 @@ async fn use_returns_no_rows() {
     assert!(batches.iter().all(|batch| batch.num_rows() == 0));
 }
 
+async fn table_exists(
+    catalogs: &CatalogRegistry,
+    catalog: &str,
+    namespace: &str,
+    table: &str,
+) -> bool {
+    let handle = catalogs.get(catalog).unwrap();
+    handle
+        .table_exists(&iceberg::TableIdent::new(
+            NamespaceIdent::new(namespace.to_string()),
+            table.to_string(),
+        ))
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn alter_source_and_rename_dest_complete_short_names() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    run(&ctx, &catalogs, "ALTER TABLE t RENAME TO t2").await;
+    assert!(!table_exists(&catalogs, "ice", "sales", "t").await);
+    assert!(table_exists(&catalogs, "ice", "sales", "t2").await);
+}
+
+#[tokio::test]
+async fn rename_two_part_dest_anchors_on_the_source_catalog() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    run(&ctx, &catalogs, "CREATE NAMESPACE ice.ns2").await;
+    run(&ctx, &catalogs, "ALTER TABLE ice.sales.t RENAME TO ns2.t2").await;
+    assert!(table_exists(&catalogs, "ice", "ns2", "t2").await);
+}
+
+#[tokio::test]
+async fn rename_three_part_dest_across_catalogs_still_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = two_catalog_setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.t RENAME TO duo.other.t2",
+    )
+    .await
+    .expect_err("cross-catalog RENAME must refuse");
+    assert!(
+        error.to_string().contains("cannot move across catalogs"),
+        "got: {error}"
+    );
+}
+
+#[tokio::test]
+async fn create_and_drop_complete_short_names() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    run(&ctx, &catalogs, "CREATE TABLE t (id BIGINT)").await;
+    assert!(table_exists(&catalogs, "ice", "sales", "t").await);
+    run(&ctx, &catalogs, "DROP TABLE t").await;
+    assert!(!table_exists(&catalogs, "ice", "sales", "t").await);
+}
+
+#[tokio::test]
+async fn ctas_completes_short_names() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    run(&ctx, &catalogs, "CREATE TABLE t AS SELECT 1 AS id").await;
+    assert!(table_exists(&catalogs, "ice", "sales", "t").await);
+}
+
+#[tokio::test]
+async fn call_two_part_resolves_current_catalog() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    let error = execute(&ctx, &catalogs, "CALL system.nosuchproc('sales.t')")
+        .await
+        .expect_err("unknown procedure must refuse");
+    assert!(
+        error
+            .to_string()
+            .contains("CALL system.nosuchproc is not supported"),
+        "got: {error}"
+    );
+}
+
 #[test]
 fn complete_name_expands_one_and_two_part_names() {
     let ctx = SessionContext::new();

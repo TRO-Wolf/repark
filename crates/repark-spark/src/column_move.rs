@@ -39,12 +39,6 @@ pub(crate) fn try_parse_column_move_ddl(sql: &str) -> Option<Result<ColumnMoveDd
         index += 2;
     }
     let table_parts = collect_name_parts(&significant, table_start, index)?;
-    if table_parts.len() != 3 {
-        return Some(Err(DataFusionError::Plan(format!(
-            "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{}`",
-            table_parts.join(".")
-        ))));
-    }
     if !(word_eq(&significant, index, "ALTER") && word_eq(&significant, index + 1, "COLUMN")) {
         return None;
     }
@@ -105,7 +99,7 @@ pub(crate) async fn execute_column_move_ddl(
     catalogs: &CatalogRegistry,
     ddl: ColumnMoveDdl,
 ) -> Result<DataFrame> {
-    let (catalog_name, ident) = table_parts_to_ident(&ddl.table_parts)?;
+    let (catalog_name, ident) = table_parts_to_ident(ctx, &ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let table = handle.load_table(&ident).await.map_err(iceberg_err)?;
     let (mover, at) = resolve_move_names(

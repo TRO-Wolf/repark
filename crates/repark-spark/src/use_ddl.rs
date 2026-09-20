@@ -5,9 +5,9 @@ use datafusion::arrow::array::RecordBatchOptions;
 use datafusion::arrow::datatypes::Schema;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::Use;
+use datafusion::sql::sqlparser::ast::{ObjectName, Use};
 use datafusion::sql::sqlparser::parser::ParserError;
-use iceberg::NamespaceIdent;
+use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 
 use crate::{iceberg_err, name_parts};
@@ -74,6 +74,32 @@ pub(crate) fn complete_name(ctx: &SessionContext, parts: &[String]) -> Result<Ve
         }
         [namespace, table] => Ok(vec![default_catalog, namespace.clone(), table.clone()]),
         _ => Ok(parts.to_vec()),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn rename_dest(
+    src_catalog: &str,
+    src_namespace: &NamespaceIdent,
+    dest: &ObjectName,
+) -> Result<(String, TableIdent)> {
+    let parts = name_parts(dest);
+    match parts.as_slice() {
+        [table] => Ok((
+            src_catalog.to_string(),
+            TableIdent::new(src_namespace.clone(), table.clone()),
+        )),
+        [namespace, table] => Ok((
+            src_catalog.to_string(),
+            TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone()),
+        )),
+        [catalog, namespace, table] => Ok((
+            catalog.clone(),
+            TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone()),
+        )),
+        _ => Err(DataFusionError::Plan(format!(
+            "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{dest}`"
+        ))),
     }
 }
 

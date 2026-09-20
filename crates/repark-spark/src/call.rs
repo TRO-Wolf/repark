@@ -70,7 +70,7 @@ pub async fn execute_call(
     catalogs: &CatalogRegistry,
     function: &Function,
 ) -> Result<DataFrame> {
-    let (catalog_name, procedure) = resolve_call_target(&function.name)?;
+    let (catalog_name, procedure) = resolve_call_target(ctx, &function.name)?;
     let catalog = Arc::clone(catalog_handle(catalogs, &catalog_name)?);
     let args = CallArgs::parse(&function.args)?;
 
@@ -164,8 +164,8 @@ pub async fn execute_call(
     }
 }
 
-/// `catalog.system.procedure` (exactly three parts; middle must be `system`).
 fn resolve_call_target(
+    ctx: &SessionContext,
     name: &datafusion::sql::sqlparser::ast::ObjectName,
 ) -> Result<(String, String)> {
     let parts = name_parts(name);
@@ -175,8 +175,13 @@ fn resolve_call_target(
         {
             Ok((catalog.clone(), procedure.to_ascii_lowercase()))
         }
+        [system, procedure] if system.eq_ignore_ascii_case("system") && !procedure.is_empty() => {
+            let (default_catalog, _) = crate::use_ddl::session_defaults(ctx);
+            Ok((default_catalog, procedure.to_ascii_lowercase()))
+        }
         _ => Err(DataFusionError::Plan(format!(
-            "CALL expects `catalog.system.<procedure>(…)`, got `{name}`"
+            "CALL expects `catalog.system.<procedure>(…)` or `system.<procedure>(…)` against \
+             the current catalog, got `{name}`"
         ))),
     }
 }
@@ -767,11 +772,27 @@ mod tests {
 
     #[test]
     fn resolve_call_target_requires_system_middle() {
-        let ok = resolve_call_target(&object_name(&["ice", "system", "expire_snapshots"])).unwrap();
+        let ctx = SessionContext::new();
+        let ok = resolve_call_target(&ctx, &object_name(&["ice", "system", "expire_snapshots"]))
+            .unwrap();
         assert_eq!(ok.0, "ice");
         assert_eq!(ok.1, "expire_snapshots");
-        assert!(resolve_call_target(&object_name(&["ice", "expire_snapshots"])).is_err());
-        assert!(resolve_call_target(&object_name(&["ice", "sys", "expire_snapshots"])).is_err());
+        assert!(resolve_call_target(&ctx, &object_name(&["ice", "expire_snapshots"])).is_err());
+        assert!(
+            resolve_call_target(&ctx, &object_name(&["ice", "sys", "expire_snapshots"])).is_err()
+        );
+    }
+
+    #[test]
+    fn resolve_call_target_two_part_uses_current_catalog() {
+        let ctx = SessionContext::new();
+        crate::use_ddl::set_session_defaults(&ctx, "ice", "sales");
+        let ok = resolve_call_target(&ctx, &object_name(&["system", "expire_snapshots"])).unwrap();
+        assert_eq!(ok.0, "ice");
+        assert_eq!(ok.1, "expire_snapshots");
+        let ok = resolve_call_target(&ctx, &object_name(&["SYSTEM", "Expire_Snapshots"])).unwrap();
+        assert_eq!(ok.0, "ice");
+        assert_eq!(ok.1, "expire_snapshots");
     }
 
     #[test]

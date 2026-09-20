@@ -299,7 +299,7 @@ async fn execute_inner(
             execute_ctas(
                 ctx,
                 catalogs,
-                build_ctas(create, &partitioning, &clauses)?,
+                build_ctas(ctx, create, &partitioning, &clauses)?,
                 write_options,
             )
             .await

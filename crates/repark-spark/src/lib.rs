@@ -122,6 +122,7 @@ pub(crate) use normalize::{
 };
 pub use spark_type_names::{spark_ddl_type_name, spark_ddl_type_name_at_depth};
 pub(crate) use truncate::execute_truncate;
+pub(crate) use use_ddl::rename_dest;
 
 mod extension;
 pub use extension::SparkExtension;

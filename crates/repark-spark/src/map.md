@@ -1218,7 +1218,9 @@ pins: rp-4-fork-repin/C-005, C-006
   refusal, `USE DEFAULT` pre-parse). `SparkDialect::on_session_built` seeds
   `spark_catalog` / `default` unless the keys already left their DataFusion builtins
   (H-01; after the temp-view home capture, so the home stays `datafusion.public`).
-  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  `rename_dest` anchors short `RENAME TO` targets on the source table (T-3); the
+  ALTER / CALL / CREATE / CTAS / DROP call sites complete through `complete_name`.
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-022, C-023
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
   cross-door evidence in `crates/repark-sql/tests/cross_door.rs`.

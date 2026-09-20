@@ -29,7 +29,7 @@ pub(crate) async fn execute_drop_table(
     purge: bool,
 ) -> Result<DataFrame> {
     for name in names {
-        let parts = name_parts(name);
+        let parts = crate::use_ddl::complete_name(ctx, &name_parts(name))?;
         let [catalog, namespace, table] = parts.as_slice() else {
             return Err(DataFusionError::Plan(format!(
                 "DROP TABLE expects a three-part `catalog.namespace.table` name, got `{name}`"

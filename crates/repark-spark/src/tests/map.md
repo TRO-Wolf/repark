@@ -1135,8 +1135,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only
   `DATABASE`/`SCHEMA`, `USE CATALOG` parse refusal, zero-row answer, `USE DEFAULT`
   arm reachability, the completer legs, and the `SHOW`/`CACHE`/`CALL` statement-variant
-  parse pins.
-  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  parse pins. S3 adds the short-name mechanism pins: ALTER source + RENAME dest
+  (source-anchored, T-3), cross-catalog RENAME refusal, CREATE / CTAS / DROP
+  completion, and two-part CALL catalog resolution.
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-022, C-023
 
 - [ice_ddl_clauses_1.rs](ice_ddl_clauses_1.rs) — **IPI-26/27 round 1 (2026-09-20):**
   the pre-parse rewrite pins. `add_columns_plural_splitter_tracks_angle_brackets_at_depth_zero`
