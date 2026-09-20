@@ -1,0 +1,1495 @@
+{
+ "provenance": {
+  "unit": "ICE-REPLACE-COLUMNS-1",
+  "recorded": "2026-09-19",
+  "engine": "Apache Spark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0",
+  "mode": "local[1], Iceberg InMemoryCatalog `sc`, session time zone UTC",
+  "source": "PC-1 inventory cells RC-* (group DDL), catalog `sc`, namespace `ns`",
+  "seed_schema": "(id BIGINT, data STRING, cat STRING) with rows (1, 'a', 'x'), (2, 'b', 'y')",
+  "recorder": "_record_ice_replace_columns_1_oracle.py"
+ },
+ "cells": {
+  "RC-BASIC-V2": {
+   "title": "REPLACE COLUMNS BASIC v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_basic_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_basic_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_basic_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_basic_v2 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-BASIC-V3": {
+   "title": "REPLACE COLUMNS BASIC v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_basic_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_basic_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_basic_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_basic_v3 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-SAME-V2": {
+   "title": "REPLACE COLUMNS SAME v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_same_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_same_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_same_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_same_v2 REPLACE COLUMNS (id BIGINT, data STRING, cat STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ],
+     [
+      "cat",
+      6,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 6,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ],
+     [
+      "cat",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-SAME-V3": {
+   "title": "REPLACE COLUMNS SAME v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_same_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_same_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_same_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_same_v3 REPLACE COLUMNS (id BIGINT, data STRING, cat STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ],
+     [
+      "cat",
+      6,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 6,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ],
+     [
+      "cat",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null,
+      null
+     ],
+     [
+      null,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-RENAME-V2": {
+   "title": "REPLACE COLUMNS RENAME v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_rename_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_rename_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_rename_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_rename_v2 REPLACE COLUMNS (k BIGINT, v STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "k",
+      4,
+      false
+     ],
+     [
+      "v",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "k",
+      "long",
+      false,
+      null
+     ],
+     [
+      "v",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-RENAME-V3": {
+   "title": "REPLACE COLUMNS RENAME v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_rename_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_rename_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_rename_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_rename_v3 REPLACE COLUMNS (k BIGINT, v STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "k",
+      4,
+      false
+     ],
+     [
+      "v",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "k",
+      "long",
+      false,
+      null
+     ],
+     [
+      "v",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-TYPE-V2": {
+   "title": "REPLACE COLUMNS TYPE v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_type_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_type_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_type_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_type_v2 REPLACE COLUMNS (id INT, data BINARY)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "int",
+      false,
+      null
+     ],
+     [
+      "data",
+      "binary",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-TYPE-V3": {
+   "title": "REPLACE COLUMNS TYPE v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_type_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_type_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_type_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_type_v3 REPLACE COLUMNS (id INT, data BINARY)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "int",
+      false,
+      null
+     ],
+     [
+      "data",
+      "binary",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-ONE-V2": {
+   "title": "REPLACE COLUMNS ONE v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_one_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_one_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_one_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_one_v2 REPLACE COLUMNS (id BIGINT)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 4,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ]
+   }
+  },
+  "RC-ONE-V3": {
+   "title": "REPLACE COLUMNS ONE v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_one_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_one_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_one_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_one_v3 REPLACE COLUMNS (id BIGINT)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 4,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ]
+   }
+  },
+  "RC-NOT-NULL-V2": {
+   "title": "REPLACE COLUMNS NOT-NULL v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_not_null_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_not_null_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_not_null_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_not_null_v2 REPLACE COLUMNS (id BIGINT NOT NULL, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "ParseException",
+    "condition": "_LEGACY_ERROR_TEMP_0034",
+    "message": "NOT NULL is not supported in Hive-style REPLACE COLUMNS.\n== SQL (line 1, position 1) ==\nALTER TABLE sc.ns.t_rc_not_null_v2 REPLACE COLUMNS (id BIGINT NOT NULL, data STRING)\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_not_null_v2 REPLACE COLUMNS (id BIGINT NOT NULL, data STRING)"
+   }
+  },
+  "RC-NOT-NULL-V3": {
+   "title": "REPLACE COLUMNS NOT-NULL v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_not_null_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_not_null_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_not_null_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_not_null_v3 REPLACE COLUMNS (id BIGINT NOT NULL, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "ParseException",
+    "condition": "_LEGACY_ERROR_TEMP_0034",
+    "message": "NOT NULL is not supported in Hive-style REPLACE COLUMNS.\n== SQL (line 1, position 1) ==\nALTER TABLE sc.ns.t_rc_not_null_v3 REPLACE COLUMNS (id BIGINT NOT NULL, data STRING)\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_not_null_v3 REPLACE COLUMNS (id BIGINT NOT NULL, data STRING)"
+   }
+  },
+  "RC-COMMENT-V2": {
+   "title": "REPLACE COLUMNS COMMENT v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_comment_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_comment_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_comment_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_comment_v2 REPLACE COLUMNS (id BIGINT COMMENT 'c1', data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      "c1"
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-COMMENT-V3": {
+   "title": "REPLACE COLUMNS COMMENT v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_comment_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_comment_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_comment_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_comment_v3 REPLACE COLUMNS (id BIGINT COMMENT 'c1', data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      "c1"
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-STRUCT-V2": {
+   "title": "REPLACE COLUMNS STRUCT v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_struct_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_struct_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_struct_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_struct_v2 REPLACE COLUMNS (id BIGINT, s STRUCT<a: INT, b: STRING>)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "s",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 7,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "s",
+      "struct<a:int,b:string>",
+      false,
+      null
+     ],
+     [
+      "s.a",
+      "int",
+      false,
+      null
+     ],
+     [
+      "s.b",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-STRUCT-V3": {
+   "title": "REPLACE COLUMNS STRUCT v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_struct_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_struct_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_struct_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_struct_v3 REPLACE COLUMNS (id BIGINT, s STRUCT<a: INT, b: STRING>)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "s",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 7,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "s",
+      "struct<a:int,b:string>",
+      false,
+      null
+     ],
+     [
+      "s.a",
+      "int",
+      false,
+      null
+     ],
+     [
+      "s.b",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-THEN-INSERT-V2": {
+   "title": "REPLACE COLUMNS THEN-INSERT v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_then_insert_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_then_insert_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_then_insert_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_then_insert_v2 REPLACE COLUMNS (id BIGINT, data STRING)",
+    "INSERT INTO sc.ns.t_rc_then_insert_v2 VALUES (3, 'c')"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      3,
+      "c"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-THEN-INSERT-V3": {
+   "title": "REPLACE COLUMNS THEN-INSERT v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_then_insert_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_then_insert_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_then_insert_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_then_insert_v3 REPLACE COLUMNS (id BIGINT, data STRING)",
+    "INSERT INTO sc.ns.t_rc_then_insert_v3 VALUES (3, 'c')"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      3,
+      "c"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-TWICE-V2": {
+   "title": "REPLACE COLUMNS TWICE v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_twice_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_twice_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_twice_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_twice_v2 REPLACE COLUMNS (id BIGINT, data STRING)",
+    "INSERT INTO sc.ns.t_rc_twice_v2 VALUES (3, 'c')",
+    "ALTER TABLE sc.ns.t_rc_twice_v2 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      6,
+      false
+     ],
+     [
+      "data",
+      7,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 7,
+    "schema-count": 3,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-TWICE-V3": {
+   "title": "REPLACE COLUMNS TWICE v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_twice_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_twice_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_twice_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_twice_v3 REPLACE COLUMNS (id BIGINT, data STRING)",
+    "INSERT INTO sc.ns.t_rc_twice_v3 VALUES (3, 'c')",
+    "ALTER TABLE sc.ns.t_rc_twice_v3 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      6,
+      false
+     ],
+     [
+      "data",
+      7,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 7,
+    "schema-count": 3,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  "RC-PART-DROP-SOURCE-V2": {
+   "title": "REPLACE COLUMNS PART-DROP-SOURCE v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_part_drop_source_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_part_drop_source_v2 (id BIGINT, data STRING, cat STRING) USING iceberg PARTITIONED BY (cat) TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_part_drop_source_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_part_drop_source_v2 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "Py4JJavaError",
+    "condition": null,
+    "message": "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.ValidationException: Cannot find source column for partition field: 1000: cat: identity(3)",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_part_drop_source_v2 REPLACE COLUMNS (id BIGINT, data STRING)"
+   }
+  },
+  "RC-PART-DROP-SOURCE-V3": {
+   "title": "REPLACE COLUMNS PART-DROP-SOURCE v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_part_drop_source_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_part_drop_source_v3 (id BIGINT, data STRING, cat STRING) USING iceberg PARTITIONED BY (cat) TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_part_drop_source_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_part_drop_source_v3 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "Py4JJavaError",
+    "condition": null,
+    "message": "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.ValidationException: Cannot find source column for partition field: 1000: cat: identity(3)",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_part_drop_source_v3 REPLACE COLUMNS (id BIGINT, data STRING)"
+   }
+  },
+  "RC-PART-KEEP-NAME-V2": {
+   "title": "REPLACE COLUMNS PART-KEEP-NAME v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_part_keep_name_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_part_keep_name_v2 (id BIGINT, data STRING, cat STRING) USING iceberg PARTITIONED BY (cat) TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_part_keep_name_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_part_keep_name_v2 REPLACE COLUMNS (id BIGINT, data STRING, cat STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "Py4JJavaError",
+    "condition": null,
+    "message": "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.ValidationException: Cannot find source column for partition field: 1000: cat: identity(3)",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_part_keep_name_v2 REPLACE COLUMNS (id BIGINT, data STRING, cat STRING)"
+   }
+  },
+  "RC-PART-KEEP-NAME-V3": {
+   "title": "REPLACE COLUMNS PART-KEEP-NAME v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_part_keep_name_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_part_keep_name_v3 (id BIGINT, data STRING, cat STRING) USING iceberg PARTITIONED BY (cat) TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_part_keep_name_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_part_keep_name_v3 REPLACE COLUMNS (id BIGINT, data STRING, cat STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "Py4JJavaError",
+    "condition": null,
+    "message": "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.ValidationException: Cannot find source column for partition field: 1000: cat: identity(3)",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_part_keep_name_v3 REPLACE COLUMNS (id BIGINT, data STRING, cat STRING)"
+   }
+  },
+  "RC-SORTED-V2": {
+   "title": "REPLACE COLUMNS SORTED v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_sorted_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_sorted_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_sorted_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_sorted_v2 WRITE ORDERED BY id",
+    "ALTER TABLE sc.ns.t_rc_sorted_v2 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "Py4JJavaError",
+    "condition": null,
+    "message": "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.ValidationException: Cannot find source column for sort field: identity(1) ASC NULLS FIRST",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_sorted_v2 REPLACE COLUMNS (id BIGINT, data STRING)"
+   }
+  },
+  "RC-SORTED-V3": {
+   "title": "REPLACE COLUMNS SORTED v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_sorted_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_sorted_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_sorted_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_sorted_v3 WRITE ORDERED BY id",
+    "ALTER TABLE sc.ns.t_rc_sorted_v3 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "Py4JJavaError",
+    "condition": null,
+    "message": "An error occurred while calling o55.sql.\n: org.apache.iceberg.exceptions.ValidationException: Cannot find source column for sort field: identity(1) ASC NULLS FIRST",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_sorted_v3 REPLACE COLUMNS (id BIGINT, data STRING)"
+   }
+  },
+  "RC-IDENTIFIER-V2": {
+   "title": "REPLACE COLUMNS IDENTIFIER v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_identifier_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_identifier_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_identifier_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_identifier_v2 ALTER COLUMN id SET NOT NULL",
+    "ALTER TABLE sc.ns.t_rc_identifier_v2 SET IDENTIFIER FIELDS id",
+    "ALTER TABLE sc.ns.t_rc_identifier_v2 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_2330",
+    "message": "Cannot change nullable column to non-nullable: id.; line 1 pos 0;\nAlterColumns [altercolumnspec(resolvedfieldname(StructField(id,LongType,true)), None, Some(false), None, None, None, false)]\n+- ResolvedTable org.apache.iceberg.spark.SparkCatalog@69a5dee, ns.t_rc_identifier_v2, sc.ns.t_rc_identifier_v2, [id#604L, data#605, cat#606]",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_identifier_v2 ALTER COLUMN id SET NOT NULL"
+   }
+  },
+  "RC-IDENTIFIER-V3": {
+   "title": "REPLACE COLUMNS IDENTIFIER v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_identifier_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_identifier_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_identifier_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_identifier_v3 ALTER COLUMN id SET NOT NULL",
+    "ALTER TABLE sc.ns.t_rc_identifier_v3 SET IDENTIFIER FIELDS id",
+    "ALTER TABLE sc.ns.t_rc_identifier_v3 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_2330",
+    "message": "Cannot change nullable column to non-nullable: id.; line 1 pos 0;\nAlterColumns [altercolumnspec(resolvedfieldname(StructField(id,LongType,true)), None, Some(false), None, None, None, false)]\n+- ResolvedTable org.apache.iceberg.spark.SparkCatalog@69a5dee, ns.t_rc_identifier_v3, sc.ns.t_rc_identifier_v3, [id#619L, data#620, cat#621]",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_identifier_v3 ALTER COLUMN id SET NOT NULL"
+   }
+  },
+  "RC-EMPTY-TABLE-V2": {
+   "title": "REPLACE COLUMNS EMPTY-TABLE v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_empty_table_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_empty_table_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_empty_table_v2 REPLACE COLUMNS (k BIGINT)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "k",
+      4,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 4,
+    "schema-count": 2,
+    "schema": [
+     [
+      "k",
+      "long",
+      false,
+      null
+     ]
+    ],
+    "data": []
+   }
+  },
+  "RC-EMPTY-TABLE-V3": {
+   "title": "REPLACE COLUMNS EMPTY-TABLE v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_empty_table_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_empty_table_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_empty_table_v3 REPLACE COLUMNS (k BIGINT)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "k",
+      4,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 4,
+    "schema-count": 2,
+    "schema": [
+     [
+      "k",
+      "long",
+      false,
+      null
+     ]
+    ],
+    "data": []
+   }
+  },
+  "RC-TT-OLD-V2": {
+   "title": "REPLACE COLUMNS TT-OLD v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_tt_old_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_tt_old_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_tt_old_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_tt_old_v2 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": true,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "time-travel-rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "RC-TT-OLD-V3": {
+   "title": "REPLACE COLUMNS TT-OLD v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_tt_old_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_tt_old_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_tt_old_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_tt_old_v3 REPLACE COLUMNS (id BIGINT, data STRING)"
+   ],
+   "time_travel_first_snapshot": true,
+   "status": "ok",
+   "obs": {
+    "field-ids": [
+     [
+      "id",
+      4,
+      false
+     ],
+     [
+      "data",
+      5,
+      false
+     ]
+    ],
+    "identifier-field-ids": [],
+    "last-column-id": 5,
+    "schema-count": 2,
+    "schema": [
+     [
+      "id",
+      "long",
+      false,
+      null
+     ],
+     [
+      "data",
+      "string",
+      false,
+      null
+     ]
+    ],
+    "data": [
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "time-travel-rows": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "RC-DUP-V2": {
+   "title": "REPLACE COLUMNS DUP v2",
+   "format_version": 2,
+   "table": "sc.ns.t_rc_dup_v2",
+   "create": "CREATE TABLE sc.ns.t_rc_dup_v2 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='2')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_dup_v2 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_dup_v2 REPLACE COLUMNS (id BIGINT, id STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "condition": "COLUMN_ALREADY_EXISTS",
+    "message": "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711;\nReplaceColumns [qualifiedcoltype(None, id, LongType, true, None, None, None), qualifiedcoltype(None, id, StringType, true, None, None, None)]\n+- ResolvedTable org.apache.iceberg.spark.SparkCatalog@69a5dee, ns.t_rc_dup_v2, sc.ns.t_rc_dup_v2, [id#762L, data#763, cat#764]",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_dup_v2 REPLACE COLUMNS (id BIGINT, id STRING)"
+   }
+  },
+  "RC-DUP-V3": {
+   "title": "REPLACE COLUMNS DUP v3",
+   "format_version": 3,
+   "table": "sc.ns.t_rc_dup_v3",
+   "create": "CREATE TABLE sc.ns.t_rc_dup_v3 (id BIGINT, data STRING, cat STRING) USING iceberg  TBLPROPERTIES ('format-version'='3')",
+   "seed": [
+    "INSERT INTO sc.ns.t_rc_dup_v3 VALUES (1, 'a', 'x'), (2, 'b', 'y')"
+   ],
+   "statements": [
+    "ALTER TABLE sc.ns.t_rc_dup_v3 REPLACE COLUMNS (id BIGINT, id STRING)"
+   ],
+   "time_travel_first_snapshot": false,
+   "status": "error",
+   "error": {
+    "type": "AnalysisException",
+    "condition": "COLUMN_ALREADY_EXISTS",
+    "message": "[COLUMN_ALREADY_EXISTS] The column `id` already exists. Choose another name or rename the existing column. SQLSTATE: 42711;\nReplaceColumns [qualifiedcoltype(None, id, LongType, true, None, None, None), qualifiedcoltype(None, id, StringType, true, None, None, None)]\n+- ResolvedTable org.apache.iceberg.spark.SparkCatalog@69a5dee, ns.t_rc_dup_v3, sc.ns.t_rc_dup_v3, [id#777L, data#778, cat#779]",
+    "failing_statement": "ALTER TABLE sc.ns.t_rc_dup_v3 REPLACE COLUMNS (id BIGINT, id STRING)"
+   }
+  }
+ }
+}

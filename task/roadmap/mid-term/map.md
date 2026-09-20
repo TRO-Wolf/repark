@@ -6,6 +6,19 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1):**
+  structured streaming read and write of Iceberg tables leaves the v1.5.0 parity gate (3 inventory cells, IPI-47) and
+  is scheduled with the connectors minor; step 0 is a recorded Spark oracle, then six design questions to rule.
+- [day-report-2026-09-19-24a.md](day-report-2026-09-19-24a.md) — **run 24a (read-performance unit 0, the RePark
+  halves, the perf bumps):** the bench bed with counted I/O and the R-3 size flag, page pruning, the catalog cache and
+  the footer cache on main (RP-36 → RP-38); the local re-measure gate table; `count(*)` fold held as a draft; the AWS
+  leg blocked on an IAM grant after three safe stops.
+- [day-report-2026-09-19-24b.md](day-report-2026-09-19-24b.md) — **run 24b (the read-performance fork lane):** fork
+  #310, #311, #312, #316, #317 merged; a pre-existing silent wrong answer on `_pos` / `_row_id` projections fixed.
+- [day-report-2026-09-19-24c.md](day-report-2026-09-19-24c.md) — **run 24c (parity, RePark side):** time travel,
+  `DROP NAMESPACE`, overwrite partition sets and string-to-timestamp casts answer Spark on main; RP-34 and RP-35.
+- [day-report-2026-09-19-24d.md](day-report-2026-09-19-24d.md) — **run 24d (parity, fork side):** fork #308, #309,
+  #313, #315, #318, #320 merged; a strict-metrics decimal-scale defect found and fixed.
 - [night-report-2026-09-19-23a.md](night-report-2026-09-19-23a.md) — **run 23a (2026-09-18 → 19 night, the fork
   residue lane):** nine fork PRs merged (#297 relocated comments shed, #298, #299, #300 row-id order, #301 + sequence
   GC, #302, #304, #305, #306 parquet footer); #303 Glue fault seam held for the owner (Cargo.toml feature line).

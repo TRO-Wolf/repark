@@ -2600,7 +2600,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_alter_table.py` — I6 / R-ALTER-TABLE: ADD/DROP/RENAME COLUMN schema-eq + read-after
   (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE widen + narrow-refuse twin
   (int→long + float→double + decimal — octo C3), case-insensitive DROP (octo C5), DROP NOT NULL,
-  loud refuse REPLACE COLUMNS / partition evolution / ADD NOT NULL, and **V3-6 C-005**
+  loud refuse partition evolution / ADD NOT NULL, and **V3-6 C-005**
   Spark-equal DEFAULT DDL refuse (CREATE / ADD COLUMN / SET DEFAULT)
   (pins: v3-6-v3-types/C-005). FQ `mem.ns.table` only (no
   bare-name dependency).
@@ -2609,7 +2609,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   widen + narrow-refuse twin (int→long + float→double + decimal — octo C3), case-insensitive
   DROP (octo C5), DROP NOT NULL; I7 ADD/DROP PARTITION FIELD + write-after-evo + VERSION AS OF
   pre-evo pin (octo I7-C5) + case-insensitive DROP name, REPLACE PARTITION FIELD, REPLACE
-  COLUMNS promote + identity-trap twin; residual refuse ADD NOT NULL.
+  COLUMNS drop-and-re-add (**ICE-REPLACE-COLUMNS-1, 2026-09-19** — the identity-trap twin is
+  gone: a same-named column gets a fresh id and reads NULL, and a re-typed name is answered,
+  not refused; the measured cells are in `test_ice_replace_columns_1.py`); residual refuse
+  ADD NOT NULL.
   FQ `mem.ns.table` only (no bare-name dependency).
 - `test_ml_feature_oracle.py` — **U2:** NaN-mix SQL fixtures CAST float literals to DOUBLE;
   CountVectorizer `1.0` SQL now yields decimal128 vectors (values still sum). R-ML-FEATURE (M2) + Q1 R-ML-QUANTILE: VectorAssembler, StringIndexer/IndexToString,
@@ -4108,6 +4111,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and `_pos` never-split halves live fork-side (`parallel_small_scan.rs`,
   `expand_skips_*_projection`): EXPLAIN cannot plan `_row_id` (pre-existing) and `_pos`
   is not SQL-visible in RePark.
+  **ICE-COUNT-FOLD-1 (2026-09-19):** the probe was red for a RePark reason, not the fork's —
+  literal narrowing hid `count(*)`'s `Int64(1)` from the statistics fold — so the six F-27
+  pins skipped on every pinned fork. They run and pass since the fix.
+  pins: ice-count-fold-1/C-003
   Live (`REPARK_PARITY_LIVE=1`): the partitioned bed, the post-DELETE row set and the DV
   count against Spark on the same seeds. Numbers and commands:
   [docs/perf/iceberg-scan-baseline.md](../../../docs/perf/iceberg-scan-baseline.md).
@@ -6885,6 +6892,15 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1` with pyspark 4.1.2
   on the path.
   pins: ice-list-null-1/C-002
+- [test_ice_count_fold_1.py](test_ice_count_fold_1.py) — **ICE-COUNT-FOLD-1
+  (2026-09-19):** offline, per-test four-file Iceberg bed. Names, LongType and values are
+  main's, asserted unchanged: SQL `count(*)` → `count(*)`, `count(1)` → `count(Int64(1))`,
+  `count(5)` → `count(Int64(5))` (Spark 4.1.2 names these `count(1)`, `count(1)`,
+  `count(5)`; the name gap predates this unit), `groupBy().count()` → `count`,
+  `agg(F.count('*'))` → `count(1)`, `df.count()` → a Python `int`. The fold is measured
+  through EXPLAIN text on the SQL door and `DataFrame.explain()` on the DataFrame door; a
+  `WHERE` residual still scans.
+  pins: ice-count-fold-1/C-003, C-004, C-006
 - [test_ice_list_null_1.py](test_ice_list_null_1.py) —
   **ICE-LIST-NULL-1 (2026-09-18, RP-31):** DELETE and UPDATE with IS NULL on nested
   columns answer Spark 4.1.2 — one pin per recorded cell (128: four shapes by four
@@ -6946,3 +6962,28 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   where that door is reachable — the Python `repark.sql` callable plans
   catalog DDL through plain DataFusion and never reaches the native router.
   pins: ice-drop-ns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-009, C-010
+- [test_ice_replace_columns_1.py](test_ice_replace_columns_1.py) +
+  [ice_replace_columns_1_spark_oracle.json](ice_replace_columns_1_spark_oracle.json) +
+  [_record_ice_replace_columns_1_oracle.py](_record_ice_replace_columns_1_oracle.py) —
+  **ICE-REPLACE-COLUMNS-1 (2026-09-19):** `ALTER TABLE … REPLACE COLUMNS` drops
+  every current top-level column and adds the listed ones with **fresh** field
+  ids, as Spark's Hive-style form does, so existing rows read NULL through the
+  new ids. The 34-cell oracle (PC-1 inventory cells `RC-*`, live Spark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0 on `local[1]` over an InMemory catalog,
+  SHA-256 `e5fa53727f8d10359a0bcda7733ff2c15bb0f591fd4b77989db67896b946b89a`)
+  pins, for format-version 2 and 3 each: the fresh ids and `last-column-id`, the
+  new schema count, the all-NULL read-back (BASIC, SAME, RENAME, TYPE, ONE,
+  COMMENT, STRUCT), the insert-after-replace row, the twice-replaced ids, the
+  time-travel read of the first snapshot under the **old** schema, the empty
+  table, and the four refusals — `NOT NULL` (`ParseException`, Hive-style),
+  duplicate name (`[COLUMN_ALREADY_EXISTS]`), and the partition-field /
+  sort-field source loss (`Cannot find source column for …`, table unchanged).
+  The recorder re-derives every cell on live Spark (`record` / `check`, GAV from
+  `_oracle_pins`, run-stamped plan ids normalized); the live tier
+  (`test_live_oracle_fixture_reproduces`) skips without a `/tmp/sparkenv`
+  interpreter. The native ANSI door has no Hive-style REPLACE COLUMNS and is
+  pinned at its registered parse refusal. A bare `TIMESTAMP` in the list follows
+  the session `spark.sql.timestampType` (the shared CREATE TABLE / ADD COLUMNS
+  type path): both settings are pinned by
+  `test_bare_timestamp_in_the_list_follows_the_session_timestamp_type`.
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

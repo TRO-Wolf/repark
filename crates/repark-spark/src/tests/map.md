@@ -77,6 +77,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter.rs::alter_unsupported_forms_refuse_loud` in the same unit (`tests/alter.rs`
   1436→1397) — the forms execute now, so the refusal pin would fail.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
+  `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
+  level-order struct ids (`s` 5, `s.a` 6, `s.b` 7, `last-column-id` 7), the kept `COMMENT`, the
+  replace-insert-replace sequence that NULLs the row written in between, and the five refusals
+  with Spark's text (`NOT NULL` as a parse error, `[COLUMN_ALREADY_EXISTS]`, the partition-field
+  and sort-field source loss, the column position and the nested name) — each refusal asserting
+  the table's ids and rows are untouched. The two identity-trap tests in `alter.rs`
+  (`alter_replace_columns_promote_and_identity_trap`,
+  `alter_replace_columns_float_decimal_promote_and_traps`) and the REPLACE block in
+  `alter_unsupported_forms_refuse_loud` encoded the opposite design and are gone. Each test
+  names its measured cell in this map rather than in a comment (owner ruling): `rc_basic` is
+  RC-BASIC, `rc_same` RC-SAME, `rc_type` RC-TYPE, `rc_struct` RC-STRUCT, `rc_comment`
+  RC-COMMENT, `rc_twice` RC-THEN-INSERT + RC-TWICE, `rc_not_null` RC-NOT-NULL, `rc_dup`
+  RC-DUP, `rc_part` RC-PART-DROP-SOURCE + RC-PART-KEEP-NAME, `rc_sorted` RC-SORTED, and
+  `rc_shape` the two unmeasured Hive-style shapes (a column position, a nested name).
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
   counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
   upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the
@@ -561,6 +577,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
   pins: ice-column-reorder-1/C-001, C-002
+- [count_fold.rs](count_fold.rs) — **ICE-COUNT-FOLD-1 (2026-09-19):** the `count(*)`
+  statistics fold over a four-file, twelve-row table on the production session
+  (`ReparkSession` with `SparkExtension` + `SparkDialect`, so `SparkIntegralLiteral` runs —
+  `common::setup` installs the late `SparkIntegerLiteral` instead and would miss the
+  door's own narrowing). Folded (no `IcebergTableScan` in the physical plan) and correct:
+  `count(*)`, `count(1)`, `count(*) … LIMIT 1`, the DataFrame `count_all()` aggregate and
+  the `count(lit(1_i32))` shape the Python door builds (name `count(Int32(1))` kept), after a copy-on-write DELETE, and
+  `VERSION AS OF` an older snapshot (the older snapshot's count). Scanned and correct: a
+  `WHERE id < 5` residual, a `LIMIT 5` subquery, a v2 merge-on-read position delete, a v3
+  deletion vector. An empty table answers 0. RePark writes no equality deletes, so no
+  equality-delete pin exists here.
+  pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
