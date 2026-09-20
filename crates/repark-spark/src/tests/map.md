@@ -26,6 +26,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   not lower. Taking the removed set from the live DATA files only reds these three delete-side
   pins and nothing else.
   pins: ice-session-write-conf-1/C-059
+- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** a
+  static `INSERT OVERWRITE … PARTITION (k = '<literal>')` on an identity DECIMAL, DOUBLE or
+  BOOLEAN column. Cells `QD-TYPE-*` record that Spark 4.1.2 takes all three — a free key stamps,
+  and `deleted-records` refuses naming `2`, the live rows of the partition cleared — so the
+  round-4 removed-set resolver has to RUN on those shapes. Dropping the `Decimal128` arm of
+  `cast_datum` reds the DECIMAL pin and nothing else; DOUBLE and BOOLEAN already cast.
+  pins: ice-session-write-conf-1/C-060
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4, the absolute layout
   (2026-09-20):** the layout battery no longer compares conf against no-conf alone — both runs
   assert Spark's OWN answer (cells `QU-*`): one live data file and `added-data-files=1` for the

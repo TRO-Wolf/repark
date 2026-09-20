@@ -497,6 +497,14 @@ repark-core's error map.
   source is cast (`static_value.rs`) for both the row-filter datum and the injected column.
   A value that is not a plain literal (`TIMESTAMP '…'`) is kept as `refused_values` so the
   key is checked first. pins: ice-overwrite-mode-1/C-011, C-013, C-014
+- `static_value.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** `cast_datum` answers
+  an identity DECIMAL partition column. The arrow cast already lands the literal at the column's
+  own precision and scale, so `decimal_datum` hands that mantissa to `Datum::try_from_bytes` with
+  the column's `PrimitiveType` rather than re-deriving a precision — the datum the row filter and
+  the removed-set lookup both compare with. Spark takes `PARTITION (amt = '1.50')` on
+  `DECIMAL(10,2)` (`QD-TYPE-DECIMAL-*`); RePark used to refuse it `not assignable`, so the
+  removed-set resolver never ran there. DOUBLE and BOOLEAN already cast and are pinned beside it.
+  pins: ice-session-write-conf-1/C-060
 - `static_value.rs` — **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):** casts a static
   `PARTITION` value to its partition source type with Arrow's cast (`safe: false`), the
   cast the engine's `CAST` runs, so `PARTITION (d = '2024-01-01')` on a `DATE` column

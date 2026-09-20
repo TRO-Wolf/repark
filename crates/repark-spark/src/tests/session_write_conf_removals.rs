@@ -1,4 +1,6 @@
 use super::super::*;
+
+const DELETED_RECORDS: &str = "spark.sql.iceberg.snapshot-property.deleted-records";
 use super::common::*;
 use super::session_write_conf::{set_session_conf, unset_session_conf};
 
@@ -84,4 +86,69 @@ async fn a_merge_on_read_overwrite_names_the_records_of_the_data_file_it_removes
          deleted-records=5",
         "the data file still holds both rows; the position delete does not lower its record count"
     );
+}
+
+async fn identity_partition_refusal(
+    table_name: &str,
+    column_type: &str,
+    values: &str,
+    literal: &str,
+) -> String {
+    let seed = vec![
+        format!(
+            "CREATE TABLE ice.sales.{table_name} (id BIGINT, k {column_type}) USING iceberg \
+             PARTITIONED BY (k)"
+        ),
+        format!("INSERT INTO ice.sales.{table_name} VALUES {values}"),
+    ];
+    overwrite_refusal(
+        &seed,
+        DELETED_RECORDS,
+        "5",
+        &format!("INSERT OVERWRITE ice.sales.{table_name} PARTITION (k = '{literal}') VALUES (9)"),
+    )
+    .await
+}
+
+fn names_two_live_rows(error: &str, column_type: &str) {
+    assert_eq!(
+        error,
+        "External error: Multiple entries with same key: deleted-records=2 and \
+         deleted-records=5",
+        "the {column_type} equality must resolve the partition it clears"
+    );
+}
+
+#[tokio::test]
+async fn an_identity_decimal_partition_overwrite_names_the_engine_value() {
+    let _: &str = "pins: ice-session-write-conf-1/C-060";
+    let error = identity_partition_refusal(
+        "sodec",
+        "DECIMAL(10,2)",
+        "(1, 1.50),(2, 1.50),(3, 2.00)",
+        "1.50",
+    )
+    .await;
+    names_two_live_rows(&error, "DECIMAL(10,2)");
+}
+
+#[tokio::test]
+async fn an_identity_double_partition_overwrite_names_the_engine_value() {
+    let _: &str = "pins: ice-session-write-conf-1/C-060";
+    let error =
+        identity_partition_refusal("sodbl", "DOUBLE", "(1, 1.5),(2, 1.5),(3, 2.0)", "1.5").await;
+    names_two_live_rows(&error, "DOUBLE");
+}
+
+#[tokio::test]
+async fn an_identity_boolean_partition_overwrite_names_the_engine_value() {
+    let _: &str = "pins: ice-session-write-conf-1/C-060";
+    let error = identity_partition_refusal(
+        "sobool",
+        "BOOLEAN",
+        "(1, true),(2, true),(3, false)",
+        "true",
+    )
+    .await;
+    names_two_live_rows(&error, "BOOLEAN");
 }

@@ -65,6 +65,7 @@ pub(crate) fn cast_datum(
         ScalarValue::TimestampMicrosecond(Some(micros), Some(_)) => {
             Some(Datum::timestamptz_micros(micros))
         }
+        ScalarValue::Decimal128(Some(mantissa), _, _) => decimal_datum(mantissa, primitive),
         _ => None,
     };
     datum.ok_or_else(|| {
@@ -73,4 +74,11 @@ pub(crate) fn cast_datum(
              ({primitive})"
         ))
     })
+}
+
+fn decimal_datum(mantissa: i128, primitive: &PrimitiveType) -> Option<Datum> {
+    if !matches!(primitive, PrimitiveType::Decimal { .. }) {
+        return None;
+    }
+    Datum::try_from_bytes(&mantissa.to_be_bytes(), primitive.clone()).ok()
 }
