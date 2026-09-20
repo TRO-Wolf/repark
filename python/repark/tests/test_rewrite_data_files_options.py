@@ -8,10 +8,15 @@ from __future__ import annotations
 from pathlib import Path
 
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from repark import ReparkSession
-from repark.errors import PySparkException, UnsupportedOperationException
+from repark.errors import (
+    IllegalArgumentException,
+    PySparkException,
+    UnsupportedOperationException,
+)
 
 COW = """
     'format-version' = '2',
@@ -103,25 +108,36 @@ def test_rewrite_unknown_strategy_matches_spark_message(spark: ReparkSession) ->
 
 
 def test_rewrite_sort_order_refuses_loud(spark: ReparkSession) -> None:
-    """Named sort_order refuses; it is never a silent binpack."""
+    """A bare sort_order sorts; the pre-unit refusal is retired (ICE-RDF-SORT-PARSE-1).
+
+    Spark 4.1.2 leaves the single small file alone (no rewrite-all): the CALL
+    succeeds with an all-zero row, the one file keeps id 1, and no snapshot is
+    added. Recorded 2026-09-20; the engine answers the same row and file.
+    """
     spark.sql(f"CREATE TABLE mem.ns.events USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id")
-    with pytest.raises(
-        (UnsupportedOperationException, PySparkException),
-        match=r"sort_order.*not supported",
-    ):
-        spark.sql(
-            "CALL mem.system.rewrite_data_files(table => 'ns.events', sort_order => 'id ASC')"
-        )
+    before = _file_paths(spark, "mem.ns.events")
+    result = spark.sql(
+        "CALL mem.system.rewrite_data_files(table => 'ns.events', sort_order => 'id ASC')"
+    ).to_arrow()
+    assert [result.column(name)[0].as_py() for name in result.column_names] == [0, 0, 0, 0, 0]
+    after = _file_paths(spark, "mem.ns.events")
+    assert after == before
+    assert len(after) == 1
+    local = after[0].removeprefix("file://").removeprefix("file:")
+    assert pq.read_table(local, columns=["id"]).column("id").to_pylist() == [1]
+    snapshots = spark.sql("SELECT snapshot_id FROM mem.ns.events.snapshots").to_arrow()
+    assert snapshots.num_rows == 1
 
 
 def test_rewrite_sort_strategy_refuses_loud(spark: ReparkSession) -> None:
-    """Named strategy sort refuses; it is never a silent binpack."""
+    """Strategy sort on an unsorted table is the fork's refusal, not the old text."""
     spark.sql(f"CREATE TABLE mem.ns.events USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id")
-    with pytest.raises(
-        (UnsupportedOperationException, PySparkException),
-        match=r"sort.*not supported",
-    ):
+    with pytest.raises(IllegalArgumentException) as caught:
         spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.events', strategy => 'sort')")
+    assert str(caught.value) == (
+        "Cannot sort data without a valid sort order, "
+        "table 'ns.events' is unsorted and no sort order is provided"
+    )
 
 
 def test_rewrite_bad_where_matches_spark_message(spark: ReparkSession) -> None:
