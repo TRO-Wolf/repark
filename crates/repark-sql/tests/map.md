@@ -19,6 +19,8 @@ holds behavior observed from outside the crate.
   predicate empties the table; and the case pins hold the door's own rule — an UNQUOTED
   wrong-cased column folds (its planner lower-cases it), a QUOTED one keeps the door's
   refusal and touches no file.
+  Its `ident` helper is an associated function, not a method: clippy's `unused_self` fires on it
+  as a `--all-targets` test target (2026-09-20).
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-006
   **ICE-META-DELETE-1 (2026-09-19, step 6):** the clause citations of this unit's pins live in this map, not in the source — the owner's comment ban covers doc comments too.
 - `ansi_nested_ddl_oracle.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI

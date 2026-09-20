@@ -40,14 +40,14 @@ impl Door {
         }
     }
 
-    fn ident(&self, name: &str) -> TableIdent {
+    fn ident(name: &str) -> TableIdent {
         TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string())
     }
 
     async fn snapshots(&self, name: &str) -> Vec<(String, HashMap<String, String>)> {
         let table = self
             .catalog
-            .load_table(&self.ident(name))
+            .load_table(&Self::ident(name))
             .await
             .expect("load table");
         let mut ordered: Vec<_> = table.metadata().snapshots().collect();
