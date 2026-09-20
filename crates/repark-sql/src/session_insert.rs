@@ -8,6 +8,9 @@ use crate::schema_ddl::catalog_handle;
 pub(crate) async fn try_execute_session_insert(
     cx: &EngineContext<'_>,
     insert: &Insert,
+    sql: &str,
+    listed: Option<&[String]>,
+    preloaded: Option<iceberg::table::Table>,
 ) -> Result<Option<DataFrame>> {
     if insert.overwrite
         || insert.replace_into
@@ -32,36 +35,20 @@ pub(crate) async fn try_execute_session_insert(
     let Ok(table) = handle.load_table(&ident).await else {
         return Ok(None);
     };
-    let Some(source) = insert.source.as_ref() else {
+    if insert.source.is_none() {
         return Ok(None);
-    };
-    let listed: Vec<String> = insert
-        .columns
-        .iter()
-        .filter_map(|name| {
-            name.0
-                .last()
-                .and_then(|part| part.as_ident())
-                .map(|ident| ident.value.clone())
-        })
-        .collect();
-    let filled = repark_iceberg::write::insert_defaults::overwrite_source_with_defaults(
-        table.metadata().current_schema(),
-        &listed,
-        &[],
-        source,
-    )?;
-    let belt = repark_core::PreExecute::new(cx.ctx, cx.catalogs);
-    let plan = belt.plan(&filled.sql).await?;
-    belt.guard(&plan)?;
-    let source_df = belt.execute(plan).await?;
+    }
+    let plan = crate::router::delegate_plan(cx, sql, listed, preloaded).await?;
+    let source_df = repark_core::PreExecute::from_engine_context(cx)
+        .execute(insert_input(&plan)?)
+        .await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(cx.ctx);
     let (snapshot_extra, staging) = repark_iceberg::write::resolve_empty_session_write(cx.ctx)?;
     let staged = repark_iceberg::write::stage_overwrite_files_with(
         &table,
         stream,
-        filled.columns,
+        Vec::new(),
         concurrency,
         &staging,
     )
@@ -87,4 +74,20 @@ pub(crate) async fn try_execute_session_insert(
     )
     .await?;
     cx.ctx.read_empty().map(Some)
+}
+
+fn insert_input(
+    plan: &datafusion::logical_expr::LogicalPlan,
+) -> Result<datafusion::logical_expr::LogicalPlan> {
+    match plan {
+        datafusion::logical_expr::LogicalPlan::Dml(dml)
+            if matches!(dml.op, datafusion::logical_expr::WriteOp::Insert(_)) =>
+        {
+            Ok(dml.input.as_ref().clone())
+        }
+        other => Err(DataFusionError::Plan(format!(
+            "session-conf INSERT planned a `{}`, not an insert",
+            other.display()
+        ))),
+    }
 }

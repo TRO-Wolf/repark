@@ -242,6 +242,29 @@ async fn native_insert_stamps_a_free_summary_key() {
 }
 
 #[tokio::test]
+async fn native_insert_values_type_against_the_target_column() {
+    let door = door_with_conf(&[("spark.sql.iceberg.snapshot-property.team", "a")]).await;
+    door.ok("CREATE TABLE ice.sales.t (id BIGINT, ts TIMESTAMP(6))")
+        .await;
+    door.ok(
+        "INSERT INTO ice.sales.t VALUES (1, TIMESTAMP '2026-01-03 23:59:59'), \
+         (2, '2026-01-04 00:00:00')",
+    )
+    .await;
+    let rows = door.ok("SELECT id, ts FROM ice.sales.t ORDER BY id").await;
+    assert_eq!(
+        rows.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        2,
+        "a VALUES list mixing a TIMESTAMP literal and a string types against the target \
+         column, session conf or none"
+    );
+    assert_eq!(
+        ConfDoor::team_stamps(&door.summaries("t").await),
+        vec![Some("a".to_string())]
+    );
+}
+
+#[tokio::test]
 async fn native_bogus_session_codec_refuses_naming_the_codec() {
     let door = door_with_conf(&[("spark.sql.iceberg.compression-codec", "bogus")]).await;
     door.ok("CREATE TABLE ice.sales.t (id BIGINT, name VARCHAR)")

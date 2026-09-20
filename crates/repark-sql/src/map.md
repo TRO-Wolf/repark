@@ -22,6 +22,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
+- [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
+  the owned native INSERT plans through `router::delegate_plan` — the delegated path's own
+  planner, `fill_insert_plan` and SEC-02 guards — and executes the `Dml` node's INPUT. The
+  session conf therefore changes what the commit STAMPS, never how the source types.
+  pins: ice-session-write-conf-1/C-055
 - [`session_insert.rs`](session_insert.rs) — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   the native door's plain `INSERT INTO` arm when the session write conf is set. Without it the
   statement reaches the fork's DataFusion `insert_into`, which takes neither snapshot properties

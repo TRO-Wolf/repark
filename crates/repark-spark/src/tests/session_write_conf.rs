@@ -326,6 +326,159 @@ async fn replace_partitions_into_an_existing_partition_names_the_engine_value() 
     );
 }
 
+async fn ns_ticks(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Vec<i64> {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"));
+    let mut ticks = Vec::new();
+    for batch in &batches {
+        for column in 1..batch.num_columns() {
+            let values = datafusion::arrow::compute::cast(
+                batch.column(column),
+                &datafusion::arrow::datatypes::DataType::Int64,
+            )
+            .expect("ticks as int64");
+            let values = datafusion::arrow::array::AsArray::as_primitive::<
+                datafusion::arrow::datatypes::Int64Type,
+            >(&values)
+            .iter()
+            .flatten()
+            .collect::<Vec<_>>();
+            ticks.extend(values);
+        }
+    }
+    ticks
+}
+
+#[tokio::test]
+async fn a_session_conf_keeps_the_values_list_typing() {
+    let _: &str = "pins: ice-session-write-conf-1/C-055";
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    for zoned in [false, true] {
+        ctx.register_udf(
+            repark_functions::timestamp_ns_cast::timestamp_ns_cast_udf(zoned)
+                .as_ref()
+                .clone(),
+        );
+    }
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.tsns (id INT, ts timestamp_ns, tz timestamptz_ns) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team", "a");
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.tsns VALUES \
+         (1, TIMESTAMP '2026-01-03 23:59:59.999999', TIMESTAMP '2026-01-03 23:59:59.999999'), \
+         (2, '2026-01-04 00:00:00.000000001', '2026-01-04 00:00:00.000000001'), \
+         (3, CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns), \
+             CAST('2026-01-02 03:04:05.123456789' AS timestamp_ns))",
+    )
+    .await;
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team");
+    let ticks = ns_ticks(
+        &ctx,
+        &catalogs,
+        "SELECT id, ts, tz FROM ice.sales.tsns ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        ticks,
+        vec![
+            1_767_484_799_999_999_000,
+            1_767_484_800_000_000_001,
+            1_767_323_045_123_456_789,
+            1_767_484_799_999_999_000,
+            1_767_484_800_000_000_001,
+            1_767_323_045_123_456_789,
+        ],
+        "the VALUES list must widen against the target column type with a session conf set, \
+         exactly as `insert_values_widens_timestamp_literals_and_strings` records it without one"
+    );
+    let table = load_sales_table(&catalogs, "tsns").await;
+    assert_eq!(team_of(&table).as_deref(), Some("a"));
+}
+
+#[tokio::test]
+async fn a_session_conf_keeps_a_compound_null_insert() {
+    let _: &str = "pins: ice-session-write-conf-1/C-055";
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.mapnull (id INT, xs MAP<STRING, INT>) USING iceberg \
+         TBLPROPERTIES('write.delete.mode' = 'copy-on-write')",
+    )
+    .await;
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team", "a");
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.mapnull VALUES (1, map(['k'], [1])), (2, NULL), \
+         (3, map(['a'], [3])), (4, map(['b'], [4]))",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.mapnull WHERE id > 1 AND xs IS NULL",
+    )
+    .await;
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team");
+    let ids = ns_ticks(
+        &ctx,
+        &catalogs,
+        "SELECT 0 AS pad, id FROM ice.sales.mapnull ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        ids,
+        vec![1, 3, 4],
+        "a NULL map entry in the VALUES list keeps its type with a session conf set"
+    );
+}
+
+#[tokio::test]
+async fn a_session_conf_keeps_the_default_keyword_refusal() {
+    let _: &str = "pins: ice-session-write-conf-1/C-055";
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.dflt (id INT, name STRING, c INT) USING iceberg",
+    )
+    .await;
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team", "a");
+    let outcome = execute(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.dflt WITH x AS (SELECT 20 AS id, 'z' AS name) \
+         SELECT id, name, DEFAULT FROM x",
+    )
+    .await
+    .map(|_| ());
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team");
+    let message = outcome
+        .expect_err("DEFAULT in an outer select is unresolved, conf or no conf")
+        .to_string();
+    assert!(
+        message.contains("UNRESOLVED_COLUMN")
+            && message.contains("`DEFAULT`")
+            && message.contains("42703"),
+        "the session conf must not cost the Spark-shaped refusal: {message}"
+    );
+}
+
 async fn static_partition_overwrite_under(
     table_name: &str,
     key: &str,

@@ -17,6 +17,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
+  `a_session_conf_keeps_the_values_list_typing`, `a_session_conf_keeps_a_compound_null_insert`
+  and `a_session_conf_keeps_the_default_keyword_refusal` are the three shapes the third critic
+  measured drifting when a conf reroutes an INSERT; they assert the same answers the no-conf
+  pins in `v3_timestamp_ns_door`, `list_null_compound` and `write_defaults` record. Planning the
+  bare source again reds these three and nothing else.
+  pins: ice-session-write-conf-1/C-055
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
   `static_partition_overwrite_*` pins the static `INSERT OVERWRITE … PARTITION (cat = …)`
   collision oracle against the `QO-*` Spark cells: a free removal key stamps on a
   never-written partition, a live partition refuses naming `deleted-records=2`, and the

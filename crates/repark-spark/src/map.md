@@ -158,6 +158,17 @@ pins: rp-4-fork-repin/C-005, C-006
   every `execute` future stays under clippy's `large_futures` 16 KiB threshold (the
   round-1 inline awaits grew it to 16,384–16,544 bytes and tripped 135 test call sites).
   pins: ice-v3-write-default-1/C-024
+- `append_with_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the owned
+  append plans the WHOLE insert, not a reconstructed `SELECT`. `spark_ast::execute_insert_source`
+  runs the passthrough pipeline (marker rewrite, eager analysis, `fill_insert_plan`, the
+  timestamp-ns passes) and executes the resulting `Dml` node's INPUT, so the owned route carries
+  the target-schema coercion the delegated route has: a VALUES list widens against the target
+  column, a compound NULL keeps its type, and `DEFAULT` in an outer select still refuses with
+  Spark's `UNRESOLVED_COLUMN … 42703`. The batch that reaches staging is already the table's
+  shape, so the column list is empty and `positional_map_overwrite_batch` only checks it. A
+  branch target is planned against the base table (`insert_sql_without_write_ref` drops the
+  write ref), because DataFusion cannot resolve a 4-part name — the commit still goes to the ref.
+  pins: ice-session-write-conf-1/C-055
 - `append_with_options.rs` — **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):**
   `execute_append_with_options` (option-carrying plain INSERT on the owned
   stage-then-commit path), moved verbatim out of `insert_overwrite.rs`, which the merge
@@ -377,6 +388,11 @@ pins: rp-4-fork-repin/C-005, C-006
   the branch and not a read pinned to it (the pin turned the target into a read-only temp
   view; every other `FROM`, including a subquery's, still pins).
   pins: ice-session-write-conf-1/C-038
+- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `execute_insert_source`
+  is `execute_passthrough` stopped one step short — same parse, same rewrites, same analysis,
+  but it executes the insert's INPUT instead of the insert. One pipeline answers both routes,
+  so an owned INSERT cannot drift from a delegated one.
+  pins: ice-session-write-conf-1/C-055
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   `plain_identity_or_update` adds the plain `UPDATE … SET … WHERE <scalar comparison>` to the
   owned identity-DML route when the session write conf is set. Without it the statement

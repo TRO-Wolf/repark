@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType as ArrowDataType;
 use datafusion::config::Dialect;
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp};
@@ -28,7 +28,17 @@ pub(crate) async fn execute_passthrough(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Result<DataFrame> {
-    execute_passthrough_inner(ctx, catalogs, sql)
+    execute_passthrough_inner(ctx, catalogs, sql, false)
+        .await
+        .map_err(crate::keyword_lower::map_door_keyword_errors)
+}
+
+pub(crate) async fn execute_insert_source(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Result<DataFrame> {
+    execute_passthrough_inner(ctx, catalogs, sql, true)
         .await
         .map_err(crate::keyword_lower::map_door_keyword_errors)
 }
@@ -37,6 +47,7 @@ async fn execute_passthrough_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    insert_source: bool,
 ) -> Result<DataFrame> {
     let state = ctx.state();
     let session_dialect = state.config().options().sql_parser.dialect;
@@ -131,6 +142,9 @@ async fn execute_passthrough_inner(
         None => plan,
     };
     let plan = crate::insert_timestamp_ns::after_analysis(plan)?;
+    if insert_source {
+        return ctx.execute_logical_plan(insert_input(&plan)?).await;
+    }
     let dataframe = ctx.execute_logical_plan(plan).await?;
     if !is_eager_command {
         return Ok(dataframe);
@@ -195,6 +209,18 @@ async fn conform_insert_narrowed_ints(
         input: Arc::new(conformed),
         ..dml
     }))
+}
+
+fn insert_input(plan: &LogicalPlan) -> Result<LogicalPlan> {
+    match plan {
+        LogicalPlan::Dml(dml) if matches!(dml.op, WriteOp::Insert(_)) => {
+            Ok(dml.input.as_ref().clone())
+        }
+        other => Err(DataFusionError::Plan(format!(
+            "INSERT with write options planned a `{}`, not an insert",
+            other.display()
+        ))),
+    }
 }
 
 async fn try_execute_identity_dml(
