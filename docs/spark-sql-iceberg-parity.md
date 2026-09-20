@@ -5721,7 +5721,9 @@ the pin rather than obeying it.
   the SQL door at both arities, and `SHOW FUNCTIONS` / `SHOW USER FUNCTIONS` /
   `SHOW SYSTEM FUNCTIONS` without `IN` keep their previous behavior. Declared
   boundaries: two-part `system.<fn>` stays `UNRESOLVED_ROUTINE`; quoted
-  three-part spellings are not rewritten; `SHOW … IN <cat>.system` for an
+  three-part spellings are not rewritten; the `<cat>` match is exact for
+  unquoted catalog names, so `SC.system.bucket` stays `UNRESOLVED_ROUTINE`
+  when the catalog is registered as `sc`; `SHOW … IN <cat>.system` for an
   unregistered catalog keeps DataFusion's error; transform pushdown into scans
   is not implemented (identical answers, no partition pruning); the
   `iceberg_version()` text is unpinned by design.
