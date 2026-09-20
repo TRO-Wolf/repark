@@ -3220,22 +3220,23 @@ the pin rather than obeying it.
   `ICE-MERGE-APPEND-SUMMARY-1` and `ICE-MERGE-APPEND-INSERT-1`.
   pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005
 
-### ICE-MERGE-APPEND-SUMMARY-1 — a merging append stamps no `manifests-*` summary keys — **BACKLOG 2026-09-19**
+### ICE-MERGE-APPEND-SUMMARY-1 — a merging append stamps no `manifests-*` summary keys — **FIXED 2026-09-20 (RP-40, fork #322)**
 
-- **repark** — an append snapshot's summary carries no `manifests-created`, `manifests-kept` or
-  `manifests-replaced` key, in every variant and at every append — including the commit that
-  actually replaced 99 manifests with 1. The manifest COUNTS are Spark-equal and observable from
-  `<table>.manifests`; only the summary keys are missing.
+- **repark** — **FIXED 2026-09-20 at RP-40** (fork #322, F-RDF-SUMMARY-1, which extended Java's
+  manifest counts to every operation). An append snapshot's summary now carries
+  `manifests-created`, `manifests-kept` and `manifests-replaced`, and the pin that was a strict
+  xfail is a plain assertion: five appends at `min-count-to-merge=5` stamp `1 / 0 / 4`. Before the
+  bump no variant carried any of the three, not even the commit that replaced 99 manifests with 1;
+  the manifest COUNTS were already Spark-equal and observable from `<table>.manifests`.
 - **Apache Spark** — EVERY append snapshot carries all three, and they describe the merge:
   at the hundredth default append `manifests-created=1, manifests-kept=0, manifests-replaced=99`;
   at the hundred-and-first `1 / 1 / 0`. *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0,
   2026-09-19, `ice_merge_append_1_truth.json`.)*
 - **Pin** — `python/repark/tests/test_ice_merge_append_1.py::test_merging_commit_stamps_the_manifests_summary_keys`
   (strict xfail: it flips to a failure the moment the fork lands the keys)
-- **Rationale** — BACKLOG, fork-routed. TRIGGER: **fork #322**, extending
-  `MergeAppendAction`'s summary — the fork's own named deviation is "extra summary keys — same
-  shape as fast_append". Do NOT synthesise the three keys in RePark: a hand-rolled count that
-  drifts from what the fork's merge actually did would be worse than their absence.
+- **Rationale** — FIXED by the fork, as routed. The keys were never synthesised in RePark: a
+  hand-rolled count that drifted from what the fork's merge actually did would have been worse
+  than their absence, so the row waited for #322 and the pin flipped at the bump that carries it.
   pins: ice-merge-append-1/C-006
 
 ### ICE-MERGE-APPEND-INSERT-1 — a bare `INSERT INTO` still commits through `fast_append` — **BACKLOG 2026-09-19**
