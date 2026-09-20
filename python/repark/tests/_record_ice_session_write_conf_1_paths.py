@@ -163,6 +163,35 @@ def _run_property_cell(spark: Any, case: tuple[Any, ...]) -> dict[str, Any]:
     return record
 
 
+def _run_branch_df_append_cell(spark: Any) -> dict[str, Any]:
+    """Run the branch DataFrame-append cell, the one path with no SQL spelling."""
+    cell_id = "QS-BRANCH-DF-APPEND"
+    table = _table_name(cell_id, "sc")
+    record: dict[str, Any] = {"id": cell_id}
+    applied: list[str] = []
+    try:
+        _seed_property_table(spark, table, "", "2", "")
+        spark.sql(f"ALTER TABLE {table} CREATE BRANCH b")
+        applied = _apply_conf(spark, cell_conf(cell_id))
+        spark.createDataFrame([(4, "d", "x")], "id BIGINT, data STRING, cat STRING").writeTo(
+            f"{table}.branch_b"
+        ).append()
+        record["status"] = "ok"
+        record["obs"] = {
+            "summaries": snapshot_rows(spark, table),
+            "refs": ref_rows(spark, table),
+            "data": data_rows(spark, f"SELECT * FROM {table}"),
+            "branch-data": data_rows(spark, f"SELECT * FROM {table} VERSION AS OF 'b'"),
+        }
+    except Exception as error:
+        record["status"] = "error"
+        record["error"] = _error_info(error)
+        record["obs"] = {}
+    finally:
+        _release_conf(spark, applied, table)
+    return record
+
+
 def _run_codec_cell(spark: Any, case: tuple[Any, ...]) -> dict[str, Any]:
     """Run one QZ codec cell and record its Spark answer."""
     cell_id, statements, extra, version, branch, delete_query = case
@@ -429,6 +458,7 @@ def cell_conf(cell_id: str) -> dict[str, str]:
 def derive_path_cells(spark: Any) -> list[dict[str, Any]]:
     """Derive every QS / QZ / QR path cell on the live session."""
     cells = [_run_property_cell(spark, case) for case in PROPERTY_CELLS]
+    cells.append(_run_branch_df_append_cell(spark))
     cells.extend(_run_codec_cell(spark, case) for case in CODEC_CELLS)
     cells.extend(_run_reserved_cell(spark, case) for case in RESERVED_CELLS)
     return cells

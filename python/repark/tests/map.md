@@ -785,6 +785,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   doors. `QS-DELETE-PART-META` is a dated xfail under IPI-08 (RePark's whole-partition DELETE
   rewrites where Spark commits metadata-only).
   pins: ice-session-write-conf-1/C-036, C-037, C-038, C-039, C-040, C-041, C-042
+  **Round 2 (2026-09-19):** the live leg was red where round 1 left it:
+  `derive_path_cells` walks the three statement-tuple tables, and `QS-BRANCH-DF-APPEND`
+  is the one path cell with no SQL spelling (a DataFrame `writeTo("t.branch_b").append()`),
+  so the recorder re-derived 62 of the fixture's 63 cells and `check` failed on the count
+  alone. `_run_branch_df_append_cell` derives it the way the pin drives it; the recorder
+  `check` is clean at 63 cells on PySpark 4.1.2.
+  pins: ice-session-write-conf-1/C-037
 - [test_ice_evo_dml_1.py](test_ice_evo_dml_1.py) — **ICE-EVO-DML-1 (2026-09-17):** MERGE,
   UPDATE, DELETE, INSERT and INSERT OVERWRITE on a table evolved by `ADD COLUMN` /
   `RENAME COLUMN` with no write since answer Spark 4.1.2 row for row (run-19a V2-10e, V3-11).
