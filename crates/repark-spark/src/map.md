@@ -1097,7 +1097,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `namespace_ddl/purge.rs` and `namespace_ddl.rs` DROP all answer through it, so they cannot
   drift apart. **IPI-51 (2026-09-20):** `table_or_view_already_exists` is the sibling home of
   Spark's `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`SQLSTATE: 42P07` text; the `create_table.rs` and
-  `ctas.rs` already-exists arms answer through it.
+  `ctas.rs` already-exists arms answer through it. **IPI-51 PR4 (2026-09-20):**
+  `partition_management_unsupported` is the sibling home of Spark's
+  `[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]`/`SQLSTATE: 42601` text
+  over a caller-backticked table display (`quoted_table_display` backticks each name part);
+  the `truncate.rs` PARTITION arm answers through it.
   pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its

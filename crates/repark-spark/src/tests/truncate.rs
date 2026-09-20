@@ -256,6 +256,14 @@ async fn truncate_partition_form_refuses_without_wiping() {
         error.contains("INVALID_PARTITION_OPERATION"),
         "partition refuse must carry the Spark class token, got: {error}"
     );
+    assert!(
+        error.contains("SQLSTATE: 42601"),
+        "partition refuse must carry the Spark SQLSTATE, got: {error}"
+    );
+    assert!(
+        error.contains("`ice`.`sales`.`part`"),
+        "partition refuse must name the backticked target, got: {error}"
+    );
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.part").await,
         3,

@@ -154,6 +154,22 @@ pub(crate) fn table_or_view_already_exists(
     ))
 }
 
+pub(crate) fn partition_management_unsupported(table_display: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition \
+         command is invalid. Table {table_display} does not support partition management. \
+         SQLSTATE: 42601"
+    ))
+}
+
+pub(crate) fn quoted_table_display(parts: &[String]) -> String {
+    parts
+        .iter()
+        .map(|part| format!("`{part}`"))
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
 pub(crate) fn name_parts(name: &ObjectName) -> Vec<String> {
     name.0
         .iter()

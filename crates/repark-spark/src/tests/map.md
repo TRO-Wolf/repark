@@ -551,7 +551,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   ICE-DROP-NS-1: non-empty drop refuses on every spelling, empty drops, missing is
   SCHEMA_NOT_FOUND. pins: ice-drop-ns-1/C-002, C-004, C-008),
   `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
-  CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`.
+  CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`; IPI-51 PR4 (2026-09-20):
+  the `partition_management_unsupported` unit pin asserts the condition prefix, the table
+  display, and `SQLSTATE: 42601`.
   pins: ice-error-conditions-1/C-011), `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
@@ -594,7 +596,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ice-dyn-overwrite-1/C-014, C-015, C-016),
   `truncate` (DML-C: wipe summary keys, equal empty-overwrite keys, time travel,
   missing-table / view / `INVALID_PARTITION_OPERATION` / IF EXISTS parse refuse;
-  pins: dml-c-truncate/C-001, C-002, C-005, C-006, C-007),
+  pins: dml-c-truncate/C-001, C-002, C-005, C-006, C-007; IPI-51 PR4 (2026-09-20): the
+  partition pin also asserts `SQLSTATE: 42601` and the backticked target.
+  pins: ice-error-conditions-1/C-011),
   `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
   MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-004, C-005, C-006, C-007),

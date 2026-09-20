@@ -72,3 +72,18 @@ async fn create_table_existing_is_table_or_view_already_exists() {
         assert!(error.contains("SQLSTATE: 42P07"), "got: {error}");
     }
 }
+
+#[test]
+fn partition_management_unsupported_starts_with_condition_and_names_table() {
+    let DataFusionError::Plan(message) =
+        catalog_ops::partition_management_unsupported("`sc`.`ns`.`t`")
+    else {
+        panic!("partition_management_unsupported must be plan-class");
+    };
+    assert!(
+        message.starts_with("[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]"),
+        "got: {message}"
+    );
+    assert!(message.contains("`sc`.`ns`.`t`"), "got: {message}");
+    assert!(message.contains("SQLSTATE: 42601"), "got: {message}");
+}
