@@ -810,7 +810,9 @@ pins: rp-4-fork-repin/C-005, C-006
   [namespace_ddl/map.md](namespace_ddl/map.md). `purge.rs` holds the `DROP TABLE … PURGE`
   reachable-file sweep and the `gc.enabled` gate (**IPI-21**, 2026-09-20); `execute_drop_table`
   runs the sweep before `Catalog::drop_table` because the metadata location must still be
-  resolvable when the action reads it.
+  resolvable when the action reads it. A non-empty `delete_failures` logs once — one
+  `tracing::warn` naming the table and the count — and the `DROP` still succeeds (Java's
+  log-only suppression, owner ruling 2026-09-20).
   pins: ipi-21-25-42-small-parser/C-008, C-009, C-010
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:

@@ -41,9 +41,16 @@ pub(crate) async fn execute_drop_table(
             continue;
         }
         if purge {
-            let _swept =
+            let swept =
                 purge::purge_table_files(handle.as_ref(), &ident, [catalog, namespace, table])
                     .await?;
+            if !swept.delete_failures.is_empty() {
+                tracing::warn!(
+                    "DROP TABLE … PURGE on `{catalog}.{namespace}.{table}`: {} per-file deletes \
+                     failed (log-only, suppressed as Java does)",
+                    swept.delete_failures.len()
+                );
+            }
         }
         handle.drop_table(&ident).await.map_err(iceberg_err)?;
         reregister(ctx, handle.clone(), catalog, namespace).await?;
