@@ -277,7 +277,7 @@ class ReparkSession:
         if merge_match is not None:
             return self._expand_merge_into_sql(query, merge_match)
 
-        # CREATE VIEW / TEMP VIEW — leave the view name alone; expand the AS body only.
+        # CREATE VIEW — durable bodies pass through verbatim, TEMP bodies expand.
         # Durable CREATE TABLE handled below.
         view_expanded = self._try_expand_create_view_body_sql(query)
         if view_expanded is not None:
@@ -312,12 +312,12 @@ class ReparkSession:
         return query
 
     def _try_expand_create_view_body_sql(self, query: str) -> str | None:
-        """Expand FROM/JOIN inside ``CREATE [TEMP] VIEW … AS <query>`` bodies.
+        """Expand FROM/JOIN inside ``CREATE TEMP VIEW … AS <query>`` bodies.
 
-        View *names* stay as written (temp views are session-local; durable view catalog
-        qualification is residual). Returns ``None`` when not a CREATE VIEW shape.
+        Durable bodies pass through verbatim for engine stored-name resolution.
+        View *names* stay as written. Returns ``None`` unless a TEMP VIEW shape.
         """
-        if _CREATE_VIEW_SQL_RE.match(query) is None:
+        if _CREATE_TEMP_VIEW_SQL_RE.match(query) is None:
             return None
         # Find the AS that introduces the view query (last structural AS before SELECT/WITH).
         match = re.search(r"(?is)\bAS\b", query)

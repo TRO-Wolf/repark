@@ -67,10 +67,20 @@ def test_create_view_name_not_qualified(spark: ReparkSession) -> None:
     assert spark._expand_bare_table_names_in_sql(sql) == sql
 
 
-def test_create_view_body_from_expands(spark: ReparkSession) -> None:
-    """CREATE VIEW AS SELECT … FROM bare expands the body only."""
-    expanded = spark._expand_bare_table_names_in_sql("CREATE VIEW bare_v AS SELECT * FROM bare_t")
-    assert expanded == ("CREATE VIEW bare_v AS SELECT * FROM `glue_catalog`.`default`.`bare_t`")
+def test_create_view_body_stays_verbatim(spark: ReparkSession) -> None:
+    """Durable CREATE VIEW bodies pass through; the engine qualifies stored names."""
+    sql = "CREATE VIEW bare_v AS SELECT * FROM bare_t WHERE id > 0"
+    assert spark._expand_bare_table_names_in_sql(sql) == sql
+
+
+def test_create_temp_view_body_from_expands(spark: ReparkSession) -> None:
+    """TEMPORARY VIEW bodies still expand against session defaults (PR3 owns temp)."""
+    expanded = spark._expand_bare_table_names_in_sql(
+        "CREATE TEMPORARY VIEW tv AS SELECT * FROM bare_t"
+    )
+    assert expanded == (
+        "CREATE TEMPORARY VIEW tv AS SELECT * FROM `glue_catalog`.`default`.`bare_t`"
+    )
 
 
 def test_create_temp_table_not_rewritten(spark: ReparkSession) -> None:

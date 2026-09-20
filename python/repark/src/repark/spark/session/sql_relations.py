@@ -36,6 +36,11 @@ _CREATE_VIEW_SQL_RE = re.compile(
 )
 
 
+_CREATE_TEMP_VIEW_SQL_RE = re.compile(
+    r"(?is)^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:TEMPORARY|TEMP)\s+VIEW\b"
+)
+
+
 _CREATE_TEMP_TABLE_SQL_RE = re.compile(
     r"(?is)^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:TEMPORARY|TEMP)\s+TABLE\b"
 )

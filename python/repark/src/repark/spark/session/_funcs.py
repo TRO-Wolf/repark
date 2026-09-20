@@ -467,6 +467,7 @@ from repark.spark.session.sql_udf_materialization import (
 from repark.spark.session.sql_relations import (
     _CREATE_TABLE_PREFIX_RE,
     _CREATE_TEMP_TABLE_SQL_RE,
+    _CREATE_TEMP_VIEW_SQL_RE,
     _CREATE_VIEW_SQL_RE,
     _DELETE_FROM_PREFIX_RE,
     _DESCRIBE_TABLE_PREFIX_RE,
