@@ -49,7 +49,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **IPI-51 PR3 (2026-09-20):** six stamped-message constructor pins assert type +
   `getCondition` + `getSqlState` on the new TABLE_OR_VIEW texts — the DROP/CREATE catalogue
   shapes and the four stamped `writer_readwriter.py` strings; the historical col-0
-  no-SQLSTATE pins stay.
+  no-SQLSTATE pins stay. The module pin citation wraps at column 100 (ruff E501);
+  the C-011 token is unchanged.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
