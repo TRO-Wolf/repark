@@ -33,7 +33,7 @@ pub(crate) async fn execute_alter_table(
     name: &ObjectName,
     operations: &[AlterTableOperation],
 ) -> Result<DataFrame> {
-    let (catalog_name, mut ident) = resolve_table(ctx, name)?;
+    let (catalog_name, mut ident) = resolve_table(catalogs, name)?;
     let table_display = crate::catalog_ops::quoted_table_display(&name_parts(name));
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
@@ -355,8 +355,8 @@ fn partition_tblproperties(
     (sets, unsets)
 }
 
-fn resolve_table(ctx: &SessionContext, name: &ObjectName) -> Result<(String, TableIdent)> {
-    let parts = crate::use_ddl::complete_name(ctx, &name_parts(name))?;
+fn resolve_table(catalogs: &CatalogRegistry, name: &ObjectName) -> Result<(String, TableIdent)> {
+    let parts = crate::use_ddl::complete_name(catalogs, &name_parts(name))?;
     let [catalog, namespace, table] = parts.as_slice() else {
         return Err(DataFusionError::Plan(format!(
             "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{name}`"
@@ -823,7 +823,7 @@ pub(crate) async fn execute_iceberg_alter_ddl(
             table_parts,
             changes,
         } => {
-            let (catalog_name, ident) = table_parts_to_ident(ctx, &table_parts)?;
+            let (catalog_name, ident) = table_parts_to_ident(catalogs, &table_parts)?;
             let handle = catalog_handle(catalogs, &catalog_name)?;
             repark_iceberg::write::alter::apply_partition_spec_changes(
                 handle.as_ref(),
@@ -840,7 +840,7 @@ pub(crate) async fn execute_iceberg_alter_ddl(
             table_parts,
             columns,
         } => {
-            let (catalog_name, ident) = table_parts_to_ident(ctx, &table_parts)?;
+            let (catalog_name, ident) = table_parts_to_ident(catalogs, &table_parts)?;
             let handle = catalog_handle(catalogs, &catalog_name)?;
             let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
             let schema_changes =
@@ -861,10 +861,10 @@ pub(crate) async fn execute_iceberg_alter_ddl(
 }
 
 pub(crate) fn table_parts_to_ident(
-    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
     parts: &[String],
 ) -> Result<(String, TableIdent)> {
-    let completed = crate::use_ddl::complete_name(ctx, parts)?;
+    let completed = crate::use_ddl::complete_name(catalogs, parts)?;
     let [catalog, namespace, table] = completed.as_slice() else {
         return Err(DataFusionError::Plan(format!(
             "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{}`",

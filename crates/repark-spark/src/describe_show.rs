@@ -575,7 +575,7 @@ pub(crate) async fn execute_show_namespaces(
     let catalog = if let Some(named) = &show.catalog {
         named
     } else {
-        current = crate::use_ddl::session_defaults(ctx).0;
+        current = crate::use_ddl::session_defaults(catalogs).0;
         &current
     };
     let handle = catalog_handle(catalogs, catalog)?;

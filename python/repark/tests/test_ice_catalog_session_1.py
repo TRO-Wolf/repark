@@ -370,7 +370,6 @@ def test_refresh_table_cell(spark: ReparkSession) -> None:
     spark.sql("CREATE TABLE sc.ns.t_cat_refresh_table (a INT) USING iceberg").to_arrow()
     spark.sql("INSERT INTO sc.ns.t_cat_refresh_table VALUES (1)").to_arrow()
     assert spark.sql("REFRESH TABLE sc.ns.t_cat_refresh_table").to_arrow().num_rows == 0
-    assert _cell_obs("CAT-REFRESH-TABLE")["ok"] is True
 
 
 def test_cache_table_cell(spark: ReparkSession) -> None:

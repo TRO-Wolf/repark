@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, PoisonError, RwLock};
 
 use iceberg::Catalog;
 use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
@@ -93,7 +93,7 @@ fn merge_table_creation_properties(
 }
 
 /// Iceberg catalog handles keyed by DataFusion catalog name, each tagged with a location policy.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct CatalogRegistry {
     entries: HashMap<String, CatalogEntry>,
     database_sources: HashMap<String, Arc<SourceSpec>>,
@@ -103,6 +103,24 @@ pub struct CatalogRegistry {
     local_warehouse_roots: Vec<String>,
     iceberg_caches: Arc<CatalogCaches>,
     maintenance_policy: Option<(String, Option<MaintenancePolicy>)>,
+    session_defaults: Arc<RwLock<(String, String)>>,
+}
+
+impl Default for CatalogRegistry {
+    fn default() -> Self {
+        Self {
+            entries: HashMap::new(),
+            database_sources: HashMap::new(),
+            read_only_catalogs: std::collections::HashSet::new(),
+            local_warehouse_roots: Vec::new(),
+            iceberg_caches: Arc::new(CatalogCaches::new(IcebergCacheSettings::default())),
+            maintenance_policy: None,
+            session_defaults: Arc::new(RwLock::new((
+                "spark_catalog".to_string(),
+                "default".to_string(),
+            ))),
+        }
+    }
 }
 
 impl CatalogRegistry {
@@ -245,6 +263,18 @@ impl CatalogRegistry {
         self.entries
             .get(name)
             .map(|entry| entry.location_policy.clone())
+    }
+
+    #[must_use]
+    pub fn current_defaults(&self) -> (String, String) {
+        RwLock::read(&self.session_defaults)
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    pub fn set_defaults(&self, catalog: &str, namespace: &str) {
+        *RwLock::write(&self.session_defaults).unwrap_or_else(PoisonError::into_inner) =
+            (catalog.to_string(), namespace.to_string());
     }
 }
 

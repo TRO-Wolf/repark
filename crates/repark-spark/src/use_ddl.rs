@@ -15,23 +15,36 @@ use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
+use repark_functions::session_names::SessionDefaults;
 
 use crate::describe_show::filter_pattern_matches;
 use crate::{catalog_handle, iceberg_err, name_parts};
 
 #[allow(clippy::missing_errors_doc)]
-pub(crate) fn session_defaults(ctx: &SessionContext) -> (String, String) {
-    let catalog = ctx.copied_config().options().catalog.clone();
-    (catalog.default_catalog, catalog.default_schema)
+pub(crate) fn session_defaults(catalogs: &CatalogRegistry) -> (String, String) {
+    catalogs.current_defaults()
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub(crate) fn set_session_defaults(ctx: &SessionContext, catalog: &str, namespace: &str) {
+pub(crate) fn set_session_defaults(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    catalog: &str,
+    namespace: &str,
+) {
+    catalogs.set_defaults(catalog, namespace);
     let state = ctx.state_ref();
     let mut guard = state.write();
     let options = guard.config_mut().options_mut();
-    options.catalog.default_catalog = catalog.to_string();
-    options.catalog.default_schema = namespace.to_string();
+    if let Some(carrier) = options.extensions.get_mut::<SessionDefaults>() {
+        carrier.catalog = catalog.to_string();
+        carrier.namespace = namespace.to_string();
+    } else {
+        options.extensions.insert(SessionDefaults {
+            catalog: catalog.to_string(),
+            namespace: namespace.to_string(),
+        });
+    }
 }
 
 #[must_use]
@@ -41,17 +54,6 @@ pub(crate) fn default_namespace_for_catalog(catalog: &str) -> &str {
     } else {
         ""
     }
-}
-
-#[allow(clippy::missing_errors_doc)]
-pub(crate) fn table_or_view_not_found(name: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `{name}` cannot be found. Verify the \
-         spelling and correctness of the schema and catalog. If you did not qualify the name \
-         with a schema, verify the current_schema() output, or qualify the name with the \
-         correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or \
-         DROP TABLE IF EXISTS. SQLSTATE: 42P01"
-    ))
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -70,12 +72,16 @@ pub(crate) fn schema_not_found(parts: &[&str]) -> DataFusionError {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub(crate) fn complete_name(ctx: &SessionContext, parts: &[String]) -> Result<Vec<String>> {
-    let (default_catalog, default_schema) = session_defaults(ctx);
+pub(crate) fn complete_name(catalogs: &CatalogRegistry, parts: &[String]) -> Result<Vec<String>> {
+    let (default_catalog, default_schema) = session_defaults(catalogs);
     match parts {
         [table] => {
             if default_schema.is_empty() {
-                return Err(table_or_view_not_found(table));
+                return Err(crate::catalog_ops::table_or_view_not_found(
+                    &default_catalog,
+                    &default_schema,
+                    table,
+                ));
             }
             Ok(vec![default_catalog, default_schema, table.clone()])
         }
@@ -135,6 +141,7 @@ pub(crate) fn use_empty_frame(ctx: &SessionContext) -> Result<DataFrame> {
 #[allow(clippy::missing_errors_doc)]
 fn switch_catalog(
     ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
     catalog: &str,
     current_catalog: &str,
     current_namespace: &str,
@@ -144,7 +151,7 @@ fn switch_catalog(
     } else {
         default_namespace_for_catalog(catalog).to_string()
     };
-    set_session_defaults(ctx, catalog, &namespace);
+    set_session_defaults(ctx, catalogs, catalog, &namespace);
     use_empty_frame(ctx)
 }
 
@@ -155,14 +162,14 @@ async fn execute_use_object(
     parts: &[String],
     namespace_only: bool,
 ) -> Result<DataFrame> {
-    let (current_catalog, current_namespace) = session_defaults(ctx);
+    let (current_catalog, current_namespace) = session_defaults(catalogs);
     if !namespace_only {
         if let [one] = parts {
             if catalogs.is_registered(one) {
-                return switch_catalog(ctx, one, &current_catalog, &current_namespace);
+                return switch_catalog(ctx, catalogs, one, &current_catalog, &current_namespace);
             }
             if namespace_exists(catalogs, &current_catalog, one).await? {
-                set_session_defaults(ctx, &current_catalog, one);
+                set_session_defaults(ctx, catalogs, &current_catalog, one);
                 return use_empty_frame(ctx);
             }
             return Err(schema_not_found(&[&current_catalog, one]));
@@ -170,7 +177,7 @@ async fn execute_use_object(
         if let [first, second] = parts {
             if catalogs.is_registered(first) {
                 if namespace_exists(catalogs, first, second).await? {
-                    set_session_defaults(ctx, first, second);
+                    set_session_defaults(ctx, catalogs, first, second);
                     return use_empty_frame(ctx);
                 }
                 return Err(schema_not_found(&[first, second]));
@@ -192,7 +199,7 @@ async fn execute_use_object(
     }
     if let [one] = parts {
         if namespace_exists(catalogs, &current_catalog, one).await? {
-            set_session_defaults(ctx, &current_catalog, one);
+            set_session_defaults(ctx, catalogs, &current_catalog, one);
             return use_empty_frame(ctx);
         }
         return Err(schema_not_found(&[&current_catalog, one]));
@@ -304,11 +311,10 @@ fn show_tables_batch(rows: Vec<(String, String)>) -> Result<RecordBatch> {
 
 #[allow(clippy::missing_errors_doc)]
 async fn resolve_show_tables_scope(
-    ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     scope: Option<Vec<String>>,
 ) -> Result<((String, String), bool)> {
-    let (current_catalog, current_namespace) = session_defaults(ctx);
+    let (current_catalog, current_namespace) = session_defaults(catalogs);
     let Some(parts) = scope else {
         return Ok(((current_catalog, current_namespace), true));
     };
@@ -353,7 +359,7 @@ pub(crate) async fn execute_show_tables(
 ) -> Result<DataFrame> {
     let pattern = suffix_like_pattern("SHOW TABLES", options)?;
     let scope = show_in_parts(options.show_in.as_ref())?;
-    let ((catalog, namespace), ambient) = resolve_show_tables_scope(ctx, catalogs, scope).await?;
+    let ((catalog, namespace), ambient) = resolve_show_tables_scope(catalogs, scope).await?;
     let empty = show_tables_batch(Vec::new())?;
     let Some(handle) = catalogs.get(&catalog) else {
         return ctx.read_batch(empty);
@@ -410,16 +416,19 @@ pub(crate) async fn execute_show_columns(
     let Some(name) = &scope.parent_name else {
         return Err(show_parse_refusal("SHOW COLUMNS"));
     };
-    let completed = complete_name(ctx, &name_parts(name))?;
+    let completed = complete_name(catalogs, &name_parts(name))?;
     let [catalog, namespace, table] = completed.as_slice() else {
-        return Err(table_or_view_not_found(&name.to_string()));
+        return Err(DataFusionError::Plan(format!(
+            "SHOW COLUMNS expects a `table`, `namespace.table`, or `catalog.namespace.table` \
+             name, got `{name}`"
+        )));
     };
     let handle = catalog_handle(catalogs, catalog)?;
     let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
     if !handle.table_exists(&ident).await.map_err(iceberg_err)? {
-        return Err(table_or_view_not_found(&format!(
-            "{catalog}.{namespace}.{table}"
-        )));
+        return Err(crate::catalog_ops::table_or_view_not_found(
+            catalog, namespace, table,
+        ));
     }
     let table = handle.load_table(&ident).await.map_err(iceberg_err)?;
     let columns: Vec<String> = table
@@ -536,16 +545,20 @@ pub(crate) async fn execute_refresh(
     {
         return use_empty_frame(ctx);
     }
-    let completed = complete_name(ctx, &parts)?;
+    let completed = complete_name(catalogs, &parts)?;
     let [catalog, namespace, table] = completed.as_slice() else {
-        return Err(table_or_view_not_found(&parts.join(".")));
+        return Err(DataFusionError::Plan(format!(
+            "REFRESH expects a `table`, `namespace.table`, or `catalog.namespace.table` name, \
+             got `{}`",
+            parts.join(".")
+        )));
     };
     let handle = catalog_handle(catalogs, catalog)?;
     let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
     if !handle.table_exists(&ident).await.map_err(iceberg_err)? {
-        return Err(table_or_view_not_found(&format!(
-            "{catalog}.{namespace}.{table}"
-        )));
+        return Err(crate::catalog_ops::table_or_view_not_found(
+            catalog, namespace, table,
+        ));
     }
     crate::reregister_catalog_provider(ctx, handle.clone(), catalog).await?;
     use_empty_frame(ctx)

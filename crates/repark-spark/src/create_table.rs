@@ -55,14 +55,14 @@ pub(crate) async fn execute_create_table(
     clauses: &CreateClauses,
 ) -> Result<DataFrame> {
     let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
-    let schema_create = build_schema_create(ctx, create, partitioning, timestamp_type, clauses)?;
+    let schema_create = build_schema_create(catalogs, create, partitioning, timestamp_type, clauses)?;
     execute_schema_create(ctx, catalogs, schema_create).await
 }
 
 #[allow(clippy::too_many_lines)] // one clause-by-clause walk of the CREATE TABLE AST — splitting would scatter the refuse rules
 /// Extract a [`SchemaCreate`] from a non-CTAS `CREATE TABLE` AST + token-extracted partitioning.
 fn build_schema_create(
-    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
     timestamp_type: SparkTimestampType,
@@ -138,7 +138,7 @@ fn build_schema_create(
         }
     }
 
-    let parts = crate::use_ddl::complete_name(ctx, &name_parts(&create.name))?;
+    let parts = crate::use_ddl::complete_name(catalogs, &name_parts(&create.name))?;
     let [catalog, namespace, table] = parts.as_slice() else {
         return Err(DataFusionError::Plan(format!(
             "CREATE TABLE target must be a three-part `catalog.namespace.table` name, got `{}`",

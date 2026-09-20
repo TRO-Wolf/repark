@@ -532,9 +532,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   zero-seconds to `±HH:MM`) and asserts the same shared table. pins: set-ansi-runtime-1/C-002
 - `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
   `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one
-  `SessionName` impl reading `default_catalog` / `default_schema` from the invoke-time
-  `ConfigOptions`, non-nullable Utf8, `Stable`. `current_database` shares the namespace
-  source. Registers through one `register(ctx)` line (crate root 181/182).
+  `SessionName` impl, non-nullable Utf8, `Stable`. `current_database` shares the
+  namespace source. Registers through one `register(ctx)` line (crate root 181/182).
+  **R6 (2026-09-20):** the impl reads the `SessionDefaults` carrier
+  (`SparkExtension::configure` installs it seeded `spark_catalog` / `default`; `USE`
+  mirrors it), falling back to planner `default_catalog` / `default_schema` on
+  carrier-less contexts.
   pins: ice-catalog-session-1/C-012, C-013, C-029
 - `datetime.rs` — session-zone semantics are type-driven (`coerce_date_arg` /
   `coerce_to_timestamp_micros` /

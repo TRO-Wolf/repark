@@ -68,14 +68,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyfunction]
 pub fn session_defaults(session: &PyReparkSession) -> PyResult<(String, String)> {
     fenced_span!("py.session", "session_defaults", {
-        let catalog = session
-            .session
-            .context()
-            .copied_config()
-            .options()
-            .catalog
-            .clone();
-        Ok((catalog.default_catalog, catalog.default_schema))
+        Ok(session.session.catalogs_snapshot().current_defaults())
     })
 }
 

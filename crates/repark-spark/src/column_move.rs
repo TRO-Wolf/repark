@@ -99,7 +99,7 @@ pub(crate) async fn execute_column_move_ddl(
     catalogs: &CatalogRegistry,
     ddl: ColumnMoveDdl,
 ) -> Result<DataFrame> {
-    let (catalog_name, ident) = table_parts_to_ident(ctx, &ddl.table_parts)?;
+    let (catalog_name, ident) = table_parts_to_ident(catalogs, &ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let table = handle.load_table(&ident).await.map_err(iceberg_err)?;
     let (mover, at) = resolve_move_names(

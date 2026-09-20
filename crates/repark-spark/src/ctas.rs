@@ -48,7 +48,7 @@ pub(crate) struct Ctas {
 
 /// Build a [`Ctas`] from a parsed statement and token-extracted partitioning.
 pub(crate) fn build_ctas(
-    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
     clauses: &CreateClauses,
@@ -111,7 +111,7 @@ pub(crate) fn build_ctas(
             }
         }
     }
-    let parts = crate::use_ddl::complete_name(ctx, &name_parts(&create.name))?;
+    let parts = crate::use_ddl::complete_name(catalogs, &name_parts(&create.name))?;
     let [catalog, namespace, table] = parts.as_slice() else {
         return Err(DataFusionError::Plan(format!(
             "CTAS target must be a three-part `catalog.namespace.table` name, got `{}`",

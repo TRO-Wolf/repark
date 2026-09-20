@@ -1,14 +1,16 @@
+use std::any::Any;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::ScalarValue;
-use datafusion::error::Result;
+use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
+use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
-use datafusion::prelude::SessionContext;
+use datafusion::prelude::{SessionConfig, SessionContext};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SessionNameSource {
@@ -33,10 +35,16 @@ impl SessionName {
     }
 
     fn value(&self, args: &ScalarFunctionArgs) -> String {
-        let catalog = &args.config_options.catalog;
+        let options = &args.config_options;
+        let (catalog, namespace) = session_defaults_from_options(options).unwrap_or_else(|| {
+            (
+                options.catalog.default_catalog.clone(),
+                options.catalog.default_schema.clone(),
+            )
+        });
         match self.source {
-            SessionNameSource::Catalog => catalog.default_catalog.clone(),
-            SessionNameSource::Namespace => catalog.default_schema.clone(),
+            SessionNameSource::Catalog => catalog,
+            SessionNameSource::Namespace => namespace,
         }
     }
 }
@@ -77,6 +85,63 @@ impl ScalarUDFImpl for SessionName {
             self.value(&args),
         ))))
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionDefaults {
+    pub catalog: String,
+    pub namespace: String,
+}
+
+impl Default for SessionDefaults {
+    fn default() -> Self {
+        Self {
+            catalog: "spark_catalog".to_string(),
+            namespace: "default".to_string(),
+        }
+    }
+}
+
+impl ConfigExtension for SessionDefaults {
+    const PREFIX: &'static str = "repark.session-defaults";
+}
+
+impl ExtensionOptions for SessionDefaults {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn cloned(&self) -> Box<dyn ExtensionOptions> {
+        Box::new(self.clone())
+    }
+
+    fn set(&mut self, key: &str, _value: &str) -> datafusion::common::Result<()> {
+        Err(DataFusionError::Configuration(format!(
+            "`{}.{key}` is not a settable option: the session default moves with `USE`",
+            Self::PREFIX
+        )))
+    }
+
+    fn entries(&self) -> Vec<ConfigEntry> {
+        Vec::new()
+    }
+}
+
+#[must_use]
+pub fn with_session_defaults(config: SessionConfig) -> SessionConfig {
+    config.with_option_extension(SessionDefaults::default())
+}
+
+#[must_use]
+pub fn session_defaults_from_options(options: &ConfigOptions) -> Option<(String, String)> {
+    options
+        .extensions
+        .get::<SessionDefaults>()
+        .map(|extension| (extension.catalog.clone(), extension.namespace.clone()))
 }
 
 #[must_use]

@@ -1298,7 +1298,7 @@ fn build_ctas_rejects_missing_query_without_panicking() {
     assert!(create.query.is_none(), "fixture must be a non-CTAS create");
 
     let clauses = crate::normalize::create_clauses::CreateClauses::default();
-    let Err(error) = build_ctas(&SessionContext::new(), create, &[], &clauses) else {
+    let Err(error) = build_ctas(&CatalogRegistry::new(), create, &[], &clauses) else {
         panic!("build_ctas must reject a query-less CREATE TABLE");
     };
     assert!(

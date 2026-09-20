@@ -300,7 +300,7 @@ async fn execute_inner(
             execute_ctas(
                 ctx,
                 catalogs,
-                build_ctas(ctx, create, &partitioning, &clauses)?,
+                build_ctas(catalogs, create, &partitioning, &clauses)?,
                 write_options,
             )
             .await
@@ -606,6 +606,104 @@ async fn try_refresh_intercept(
     Some(crate::use_ddl::execute_refresh(ctx, catalogs, target).await)
 }
 
+#[derive(Clone, Copy)]
+enum PlannerDefaultSide {
+    Catalog,
+    Namespace,
+}
+
+fn planner_default_set_side(sql: &str) -> Option<PlannerDefaultSide> {
+    let mut body = sql.trim_start();
+    loop {
+        if let Some(rest) = body.strip_prefix("--") {
+            let end = rest.find('\n').map_or(rest.len(), |index| index + 1);
+            body = rest[end..].trim_start();
+        } else if let Some(after_open) = body.strip_prefix("/*") {
+            let end = after_open.find("*/")?;
+            body = after_open[end + 2..].trim_start();
+        } else {
+            break;
+        }
+    }
+    let head = body.get(..3)?;
+    if !head.eq_ignore_ascii_case("set") {
+        return None;
+    }
+    let after_keyword = body[3..].strip_prefix(|char: char| char.is_whitespace())?;
+    let after_keyword = after_keyword.trim_start();
+    for (key, side) in [
+        (
+            "datafusion.catalog.default_catalog",
+            PlannerDefaultSide::Catalog,
+        ),
+        (
+            "datafusion.catalog.default_schema",
+            PlannerDefaultSide::Namespace,
+        ),
+    ] {
+        if let Some(tail) = after_keyword.get(key.len()..)
+            && after_keyword
+                .get(..key.len())
+                .is_some_and(|head| head.eq_ignore_ascii_case(key))
+            && tail.trim_start().starts_with('=')
+        {
+            return Some(side);
+        }
+    }
+    None
+}
+
+async fn try_use_default_intercept(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Option<Result<DataFrame>> {
+    if !crate::use_ddl::is_use_default(sql) {
+        return None;
+    }
+    Some(
+        crate::use_ddl::execute_use(
+            ctx,
+            catalogs,
+            &datafusion::sql::sqlparser::ast::Use::Default,
+        )
+        .await,
+    )
+}
+
+async fn try_planner_default_set_mirror(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let side = planner_default_set_side(sql)?;
+    if let Err(error) = write_options.refuse_if_non_empty("SET") {
+        return Some(Err(error));
+    }
+    let frame = match spark_ast::execute_passthrough(ctx, catalogs, sql).await {
+        Ok(frame) => frame,
+        Err(error) => return Some(Err(error)),
+    };
+    let planner = ctx.copied_config().options().catalog.clone();
+    let (current_catalog, current_namespace) = crate::use_ddl::session_defaults(catalogs);
+    match side {
+        PlannerDefaultSide::Catalog => crate::use_ddl::set_session_defaults(
+            ctx,
+            catalogs,
+            &planner.default_catalog,
+            &current_namespace,
+        ),
+        PlannerDefaultSide::Namespace => crate::use_ddl::set_session_defaults(
+            ctx,
+            catalogs,
+            &current_catalog,
+            &planner.default_schema,
+        ),
+    }
+    Some(Ok(frame))
+}
+
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_alter_intercepts(
     ctx: &SessionContext,
@@ -713,15 +811,11 @@ async fn try_preparse_intercepts(
     if let Some(outcome) = v2_tail_preparse(sql, parsed_ddl) {
         return Some(outcome);
     }
-    if crate::use_ddl::is_use_default(sql) {
-        return Some(
-            crate::use_ddl::execute_use(
-                ctx,
-                catalogs,
-                &datafusion::sql::sqlparser::ast::Use::Default,
-            )
-            .await,
-        );
+    if let Some(result) = try_use_default_intercept(ctx, catalogs, sql).await {
+        return Some(result);
+    }
+    if let Some(result) = try_planner_default_set_mirror(ctx, catalogs, sql, write_options).await {
+        return Some(result);
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {

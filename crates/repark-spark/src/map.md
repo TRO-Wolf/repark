@@ -946,10 +946,10 @@ pins: rp-4-fork-repin/C-005, C-006
   options (ICE-WRITE-OPTIONS-1 run 22b, 2026-09-18). pins: ice-write-options-1/C-014
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** it copies `cx.overwrite_intent`; `execute` routes a
   non-`Session` intent through `execute_with_statement_options`. pins: ice-overwrite-mode-1/C-007
-  **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** `on_session_built` installs an engine-level
-  `spark_catalog` whose default schema aliases the temp-view home provider when none is
-  configured, so the H-01 defaults resolve on catalog-less sessions and bare SQL keeps
-  reading temp views (registry doors unchanged; a real registration overwrites it).
+  **ICE-CATALOG-SESSION-1 R6 (2026-09-20):** the S9 `on_session_built` flip and the
+  temp-view-home placeholder are deleted: planner `default_catalog` / `default_schema`
+  stay at the DataFusion builtins in every session, and the auto memory catalog owns
+  the real `spark_catalog`.
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
   `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
@@ -1232,15 +1232,16 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ipi-21-25-42-small-parser/C-007, C-008
   `reregister*` provider invalidation.
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the session-defaults seam:
-  `session_defaults` / `set_session_defaults` over DataFusion's
-  `default_catalog` / `default_schema`, the one `complete_name` 1/2/3-part resolver every
-  short-name call site shares, and `execute_use` (catalog-first one-part rule per live-Spark
-  probe P-1, per-type default namespace, `SCHEMA_NOT_FOUND` texts, `USE CATALOG` parse
-  refusal, `USE DEFAULT` pre-parse). `SparkDialect::on_session_built` seeds
-  `spark_catalog` / `default` unless the keys already left their DataFusion builtins
-  (H-01; after the temp-view home capture, so the home stays `datafusion.public`).
-  `rename_dest` anchors short `RENAME TO` targets on the source table (T-3); the
-  ALTER / CALL / CREATE / CTAS / DROP call sites complete through `complete_name`.
+  `session_defaults` / `set_session_defaults` over the registry box
+  (`CatalogRegistry::current_defaults` / `set_defaults`, seeded `spark_catalog` /
+  `default`; `set` also mirrors the `SessionDefaults` carrier `current_catalog()` reads),
+  the one `complete_name` 1/2/3-part resolver every short-name call site shares, and
+  `execute_use` (catalog-first one-part rule per live-Spark probe P-1, per-type default
+  namespace, `SCHEMA_NOT_FOUND` texts, `USE CATALOG` parse refusal, `USE DEFAULT`
+  pre-parse). Planner `default_catalog` / `default_schema` stay at the DataFusion
+  builtins; a raw `SET` of either key still lands there and mirrors that side into the
+  box (R6). `rename_dest` anchors short `RENAME TO` targets on the source table (T-3);
+  the ALTER / CALL / CREATE / CTAS / DROP call sites complete through `complete_name`.
   S4 adds the `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` executors (sorted
   names, ambient scope from the session defaults, `LIKE`-glob suffix, `TERSE` /
   `EXTENDED` / `FULL` parse refusals) and the `SHOW TABLES IN` scope resolver

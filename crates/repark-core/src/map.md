@@ -778,6 +778,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   populated at register and by later runtime sets); `table_creation_properties`
   merges override > user > default at CREATE.
   pins: ice-catalog-session-1/C-024, C-027
+  **ICE-CATALOG-SESSION-1 R6 (2026-09-20):** the registry carries the
+  session-defaults box (`current_defaults` / `set_defaults`, `Arc`-shared across the
+  per-statement clones, seeded `spark_catalog` / `default`): the Spark door's `USE` /
+  `SHOW` / short-name completion reads it while planner `default_catalog` /
+  `default_schema` stay at the DataFusion builtins.
   **MAINT-POLICY-1 step 2 (2026-09-10):** the registry also carries the stamped
   `[<profile>.maintenance]` policy (`set_maintenance_policy` / `maintenance_policy`, profile
   name plus optional typed policy), the per-execute channel the `run_maintenance` dry run

@@ -35,8 +35,8 @@ async fn two_catalog_setup(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
     (ctx, catalogs)
 }
 
-fn current_of(ctx: &SessionContext) -> (String, String) {
-    session_defaults(ctx)
+fn current_of(catalogs: &CatalogRegistry) -> (String, String) {
+    session_defaults(catalogs)
 }
 
 async fn run(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) {
@@ -53,7 +53,10 @@ async fn use_two_part_sets_catalog_and_namespace() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(&ctx, &catalogs, "USE ice.sales").await;
-    assert_eq!(current_of(&ctx), ("ice".to_string(), "sales".to_string()));
+    assert_eq!(
+        current_of(&catalogs),
+        ("ice".to_string(), "sales".to_string())
+    );
 }
 
 #[tokio::test]
@@ -62,7 +65,7 @@ async fn use_catalog_only_clears_v2_namespace_to_empty() {
     let (ctx, catalogs) = two_catalog_setup(&wh).await;
     run(&ctx, &catalogs, "USE ice.sales").await;
     run(&ctx, &catalogs, "USE duo").await;
-    assert_eq!(current_of(&ctx), ("duo".to_string(), String::new()));
+    assert_eq!(current_of(&catalogs), ("duo".to_string(), String::new()));
 }
 
 #[tokio::test]
@@ -94,7 +97,7 @@ async fn use_catalog_onto_session_catalog_restores_default() {
     run(&ctx, &catalogs, "USE ice.sales").await;
     run(&ctx, &catalogs, "USE spark_catalog").await;
     assert_eq!(
-        current_of(&ctx),
+        current_of(&catalogs),
         ("spark_catalog".to_string(), "default".to_string())
     );
     assert_eq!(default_namespace_for_catalog("spark_catalog"), "default");
@@ -110,7 +113,7 @@ async fn use_one_part_prefers_catalog_over_namespace() {
         .unwrap();
     run(&ctx, &catalogs, "USE ice.sales").await;
     run(&ctx, &catalogs, "USE duo").await;
-    assert_eq!(current_of(&ctx), ("duo".to_string(), String::new()));
+    assert_eq!(current_of(&catalogs), ("duo".to_string(), String::new()));
 }
 
 #[tokio::test]
@@ -122,7 +125,10 @@ async fn use_one_part_namespace_in_current_catalog() {
         .await
         .unwrap();
     run(&ctx, &catalogs, "USE second").await;
-    assert_eq!(current_of(&ctx), ("ice".to_string(), "second".to_string()));
+    assert_eq!(
+        current_of(&catalogs),
+        ("ice".to_string(), "second".to_string())
+    );
 }
 
 #[tokio::test]
@@ -131,7 +137,10 @@ async fn use_self_catalog_keeps_namespace() {
     let (ctx, catalogs) = setup(&wh).await;
     run(&ctx, &catalogs, "USE ice.sales").await;
     run(&ctx, &catalogs, "USE ice").await;
-    assert_eq!(current_of(&ctx), ("ice".to_string(), "sales".to_string()));
+    assert_eq!(
+        current_of(&catalogs),
+        ("ice".to_string(), "sales".to_string())
+    );
 }
 
 #[tokio::test]
@@ -147,7 +156,10 @@ async fn use_missing_one_part_names_current_catalog_and_part() {
         text.contains("[SCHEMA_NOT_FOUND]") && text.contains("`ice`.`nosuch`"),
         "got: {text}"
     );
-    assert_eq!(current_of(&ctx), ("ice".to_string(), "sales".to_string()));
+    assert_eq!(
+        current_of(&catalogs),
+        ("ice".to_string(), "sales".to_string())
+    );
 }
 
 #[tokio::test]
@@ -196,7 +208,10 @@ async fn use_database_spelling_is_namespace_only() {
         .await
         .unwrap();
     run(&ctx, &catalogs, "USE SCHEMA second").await;
-    assert_eq!(current_of(&ctx), ("ice".to_string(), "second".to_string()));
+    assert_eq!(
+        current_of(&catalogs),
+        ("ice".to_string(), "second".to_string())
+    );
 }
 
 #[tokio::test]
@@ -518,9 +533,12 @@ async fn show_columns_missing_table_is_not_found() {
     let error = execute(&ctx, &catalogs, "SHOW COLUMNS IN ice.sales.nothere")
         .await
         .expect_err("missing table must refuse");
+    let text = error.to_string();
     assert!(
-        error.to_string().contains("[TABLE_OR_VIEW_NOT_FOUND]"),
-        "got: {error}"
+        text.contains("[TABLE_OR_VIEW_NOT_FOUND]")
+            && text.contains("`ice`.`sales`.`nothere`")
+            && text.contains("SQLSTATE: 42P01"),
+        "got: {text}"
     );
 }
 
@@ -551,34 +569,38 @@ async fn show_namespaces_bare_lists_current_catalog() {
 
 #[test]
 fn complete_name_expands_one_and_two_part_names() {
-    let ctx = SessionContext::new();
-    crate::use_ddl::set_session_defaults(&ctx, "ice", "sales");
+    let catalogs = CatalogRegistry::new();
+    catalogs.set_defaults("ice", "sales");
     assert_eq!(
-        complete_name(&ctx, &["t".to_string()]).unwrap(),
+        complete_name(&catalogs, &["t".to_string()]).unwrap(),
         vec!["ice", "sales", "t"]
     );
     assert_eq!(
-        complete_name(&ctx, &["ns".to_string(), "t".to_string()]).unwrap(),
+        complete_name(&catalogs, &["ns".to_string(), "t".to_string()]).unwrap(),
         vec!["ice", "ns", "t"]
     );
     assert_eq!(
-        complete_name(&ctx, &["c".to_string(), "n".to_string(), "t".to_string()]).unwrap(),
+        complete_name(
+            &catalogs,
+            &["c".to_string(), "n".to_string(), "t".to_string()]
+        )
+        .unwrap(),
         vec!["c", "n", "t"]
     );
 }
 
 #[test]
 fn complete_name_bare_table_under_empty_namespace_is_not_found() {
-    let ctx = SessionContext::new();
-    crate::use_ddl::set_session_defaults(&ctx, "ice", "");
-    let error = complete_name(&ctx, &["t".to_string()]).unwrap_err();
+    let catalogs = CatalogRegistry::new();
+    catalogs.set_defaults("ice", "");
+    let error = complete_name(&catalogs, &["t".to_string()]).unwrap_err();
     let text = error.to_string();
     assert!(
-        text.contains("[TABLE_OR_VIEW_NOT_FOUND]") && text.contains("`t`"),
+        text.contains("[TABLE_OR_VIEW_NOT_FOUND]") && text.contains("`ice`.``.`t`"),
         "got: {text}"
     );
     assert_eq!(
-        complete_name(&ctx, &["ns".to_string(), "t".to_string()]).unwrap(),
+        complete_name(&catalogs, &["ns".to_string(), "t".to_string()]).unwrap(),
         vec!["ice", "ns", "t"]
     );
 }
@@ -630,17 +652,51 @@ fn show_and_cache_statement_variants_parse_as_expected() {
 
 #[tokio::test]
 async fn refresh_table_rebuilds_provider_and_answers_empty() {
+    use iceberg::spec::{NestedField, PrimitiveType, Schema as IcebergSchema, Type};
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
-    let batches = execute(&ctx, &catalogs, "REFRESH TABLE ice.sales.t")
+    let schema = IcebergSchema::builder()
+        .with_fields(vec![
+            NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+        ])
+        .build()
+        .unwrap();
+    catalogs["ice"]
+        .create_table(
+            &NamespaceIdent::new("sales".to_string()),
+            TableCreation::builder()
+                .name("oob".to_string())
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .unwrap();
+    let names = ctx
+        .catalog("ice")
+        .unwrap()
+        .schema("sales")
+        .unwrap()
+        .table_names();
+    assert!(!names.iter().any(|name| name == "oob"));
+    execute(&ctx, &catalogs, "SELECT * FROM ice.sales.oob")
+        .await
+        .expect_err("the stale provider must miss the out-of-band table");
+    let batches = execute(&ctx, &catalogs, "REFRESH TABLE ice.sales.oob")
         .await
         .unwrap()
         .collect()
         .await
         .unwrap();
     assert!(batches.iter().all(|batch| batch.num_rows() == 0));
-    let rows = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.t")
+    let names = ctx
+        .catalog("ice")
+        .unwrap()
+        .schema("sales")
+        .unwrap()
+        .table_names();
+    assert!(names.iter().any(|name| name == "oob"));
+    let rows = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.oob")
         .await
         .unwrap()
         .collect()
@@ -664,7 +720,13 @@ async fn refresh_missing_table_is_not_found() {
     let error = execute(&ctx, &catalogs, "REFRESH TABLE ice.sales.nothere")
         .await
         .unwrap_err();
-    assert!(error.to_string().contains("TABLE_OR_VIEW_NOT_FOUND"));
+    let text = error.to_string();
+    assert!(
+        text.contains("[TABLE_OR_VIEW_NOT_FOUND]")
+            && text.contains("`ice`.`sales`.`nothere`")
+            && text.contains("SQLSTATE: 42P01"),
+        "got: {text}"
+    );
 }
 
 #[tokio::test]

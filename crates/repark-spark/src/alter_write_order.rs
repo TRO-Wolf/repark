@@ -73,7 +73,7 @@ pub(crate) async fn execute_write_order_ddl(
     catalogs: &CatalogRegistry,
     ddl: WriteOrderDdl,
 ) -> Result<DataFrame> {
-    let (catalog_name, ident) = table_parts_to_ident(ctx, &ddl.table_parts)?;
+    let (catalog_name, ident) = table_parts_to_ident(catalogs, &ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let fields = ddl
         .fields
@@ -97,8 +97,11 @@ pub(crate) async fn execute_write_order_ddl(
     ctx.read_empty()
 }
 
-fn table_parts_to_ident(ctx: &SessionContext, parts: &[String]) -> Result<(String, TableIdent)> {
-    let completed = crate::use_ddl::complete_name(ctx, parts)?;
+fn table_parts_to_ident(
+    catalogs: &CatalogRegistry,
+    parts: &[String],
+) -> Result<(String, TableIdent)> {
+    let completed = crate::use_ddl::complete_name(catalogs, parts)?;
     let [catalog, namespace, table] = completed.as_slice() else {
         return Err(DataFusionError::Plan(format!(
             "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{}`",
