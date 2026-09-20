@@ -946,9 +946,10 @@ pins: rp-4-fork-repin/C-005, C-006
   options (ICE-WRITE-OPTIONS-1 run 22b, 2026-09-18). pins: ice-write-options-1/C-014
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** it copies `cx.overwrite_intent`; `execute` routes a
   non-`Session` intent through `execute_with_statement_options`. pins: ice-overwrite-mode-1/C-007
-  **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** `on_session_built` installs an empty engine-level
-  `spark_catalog` plus the default schema when none is configured, so the H-01 defaults resolve
-  on catalog-less sessions (registry doors unchanged; a real registration overwrites it).
+  **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** `on_session_built` installs an engine-level
+  `spark_catalog` whose default schema aliases the temp-view home provider when none is
+  configured, so the H-01 defaults resolve on catalog-less sessions and bare SQL keeps
+  reading temp views (registry doors unchanged; a real registration overwrites it).
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
   `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
