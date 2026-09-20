@@ -289,7 +289,12 @@ def test_merge_with_schema_evolution_no_new_column(spark: ReparkSession) -> None
 def test_merge_with_schema_evolution_needs_no_property(spark: ReparkSession) -> None:
     """pins: ipi-19-56-37-schema-evolution-write/C-006"""
     table = _merge_fixture(spark, "mse_plain", BIGINT_SOURCE)
-    assert ACCEPT_ANY not in str(spark.sql(f"SHOW TBLPROPERTIES {table}").to_arrow().to_pylist())
+    frame = spark.createDataFrame([(9, "i", "z")], "id BIGINT, data STRING, cat STRING")
+    with pytest.raises(AnalysisException) as without_property:
+        frame.withColumn("extra", frame.id).write.format("iceberg").option(
+            "mergeSchema", "true"
+        ).mode("append").saveAsTable(table)
+    assert "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]" in str(without_property.value)
     spark.sql(MERGE_STMT.format(t=table, v="v_mse_plain"))
     assert _schema(spark, table) == EVOLVED_INT
 

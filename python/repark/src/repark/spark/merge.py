@@ -14,12 +14,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from repark.errors import (
-    AnalysisException,
-    PySparkTypeError,
-    PySparkValueError,
-    UnsupportedOperationException,
-)
+from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
 from repark.spark._idents import is_plain_ident
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._idents import quote_ident_if_needed as _quote_assign_target
@@ -141,11 +136,9 @@ class MergeIntoWriter:
         return MergeIntoWriter.WhenNotMatchedBySource(self, condition)
 
     def withSchemaEvolution(self) -> MergeIntoWriter:  # noqa: N802 — PySpark method name
-        """Schema evolution is not supported on repark's MERGE path."""
-        raise UnsupportedOperationException(
-            "MergeIntoWriter.withSchemaEvolution() is not supported yet "
-            "(repark MERGE SQL path has no schema-evolution flag; refuse rather than silent no-op)"
-        )
+        """Merge the source's schema into the table's (``MERGE WITH SCHEMA EVOLUTION``)."""
+        self._schema_evolution = True
+        return self
 
     # ---- execution -----------------------------------------------------------------------
 
@@ -175,8 +168,9 @@ class MergeIntoWriter:
         _qualified, table_ref = _resolve_writer_table(self._dataframe, self._table_name)
         target_alias, source_alias = resolve_aliases(self._table_name, self._alias_fragments())
         on_sql = _on_sql(self._condition, target_alias, source_alias)
+        head = "MERGE WITH SCHEMA EVOLUTION" if self._schema_evolution else "MERGE"
         parts = [
-            f"MERGE INTO {table_ref} AS {_quote_assign_target(target_alias)} "
+            f"{head} INTO {table_ref} AS {_quote_assign_target(target_alias)} "
             f"USING {source_view} AS {_quote_assign_target(source_alias)} ON {on_sql}"
         ]
         for clause in self._clauses:

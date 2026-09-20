@@ -252,14 +252,22 @@ def test_merge_into_type_errors(spark: ReparkSession) -> None:
         df.mergeInto(FQ, "id").whenMatched().update({})
 
 
-def test_merge_into_with_schema_evolution_fails_loud(spark: ReparkSession) -> None:
-    """Schema evolution is unsupported — refuse rather than silent no-op."""
-    from repark.errors import UnsupportedOperationException
+def test_merge_into_with_schema_evolution_adds_the_source_column(spark: ReparkSession) -> None:
+    """withSchemaEvolution() lowers to MERGE WITH SCHEMA EVOLUTION and adds the column.
 
-    df = spark.sql("SELECT 1 AS id, 'a' AS name")
-    writer = df.mergeInto(FQ, "id")
-    with pytest.raises(UnsupportedOperationException, match="withSchemaEvolution"):
-        writer.withSchemaEvolution()
+    pins: ipi-19-56-37-schema-evolution-write/C-009
+    """
+    _seed(spark)
+    source = spark.sql("SELECT 2 AS id, 'bee' AS name, 7 AS extra")
+    writer = source.mergeInto(FQ, "id")
+    assert writer.withSchemaEvolution() is writer
+    writer.whenMatched().updateAll().whenNotMatched().insertAll().merge()
+    table = spark.sql(f"SELECT * FROM {FQ} ORDER BY id").to_arrow()
+    assert table.schema.names == ["id", "name", "extra"]
+    assert table.to_pylist() == [
+        {"id": 1, "name": "a", "extra": None},
+        {"id": 2, "name": "bee", "extra": 7},
+    ]
 
 
 def test_merge_into_render_sql_shape() -> None:

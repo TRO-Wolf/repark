@@ -98,6 +98,11 @@ pub async fn execute_merge(
         .await
         .map_err(iceberg_err)?;
     let mode = resolve_merge_mode(&table)?;
+    let table = if spec.schema_evolution {
+        union_source_schema(ctx, catalog, &table, spec).await?
+    } else {
+        table
+    };
 
     let write_schema =
         Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
@@ -379,6 +384,21 @@ async fn expand_star_clauses<'a>(
 }
 
 /// Source column names in schema order, from planning `SELECT * FROM <source> LIMIT 0`.
+async fn union_source_schema(
+    ctx: &SessionContext,
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    spec: &MergeSpec,
+) -> Result<Table> {
+    let probe = format!(
+        "SELECT * FROM {} AS {} LIMIT 0",
+        spec.source_from_sql, spec.source_alias
+    );
+    let arrow = ctx.sql(&probe).await?.schema().as_arrow().clone();
+    let incoming = crate::write::schema_evolution::incoming_schema(&arrow)?;
+    crate::write::schema_evolution::evolve_schema(catalog, table, incoming).await
+}
+
 async fn source_column_names(ctx: &SessionContext, spec: &MergeSpec) -> Result<Vec<String>> {
     let probe = format!(
         "SELECT * FROM {} AS {} LIMIT 0",
