@@ -313,6 +313,21 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3://`/`s3a://` → the fork's OpenDAL S3 factory; `file://`/bare **absolute** path → LocalFs;
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
+- `changelog.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `ChangelogTableProvider` serves the
+  `t.changes` relation on both doors. It calls the fork's `Table::incremental_changelog_scan`
+  plus the fork's new `ChangelogReader`, so the three reserved columns come from ONE definition
+  (`iceberg::arrow::changelog_arrow_schema`) and RePark never re-declares a field id. The rows
+  are RAW INSERT/DELETE: carryover removal, update images and net changes belong to
+  `create_changelog_view`, never to the relation (Java's `SparkChangelogTable` is the same
+  shape). `ChangelogWindow.empty` carries Java's two empty-scan short-circuits
+  (`noSnapshotsAfter` / `noSnapshotsBetween`). A range holding delete manifests is refused by
+  the planner, not here. pins: ice-changelog-1/C-009, C-010, C-015
+- `changelog_view.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `ChangelogViewProvider`, the LAZY view
+  `create_changelog_view` registers: it scans its source provider unprojected, applies one
+  row transform (passed in as `ChangelogRowTransform` so the Spark-engine semantics stay in
+  `repark-spark`), then projects. Lazy because Spark's view is: `QC-MOR` records the CALL
+  returning the view name and the delete-file refusal arriving only when the view is READ.
+  pins: ice-changelog-1/C-014, C-015
 - `incremental_append.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `IncrementalAppendTableProvider`
   serves `format('iceberg').option('start-snapshot-id', …).load(t)`. It calls the fork's
   `Table::incremental_append_scan` directly (never `iceberg-datafusion`), mirroring

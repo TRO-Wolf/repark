@@ -7406,5 +7406,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   with no start) instead of the retired "future seed" facade refusal, and
   `test_facade_polish.py`'s semantic-gate row expects `start-snapshot-id` on an unregistered
   catalog to reach the catalog refusal. The window options stay loud on a non-Iceberg format, so
-  the parametrized denylist row is unchanged.
-  pins: ice-changelog-1/C-001, C-004, C-007
+  the parametrized denylist row is unchanged. `test_ice_changelog_1.py` carries one pin per
+  recorded cell of `ice_changelog_1_spark_oracle.json` — 36 cells recorded on live PySpark 4.1.2
+  + iceberg-spark-runtime-4.1_2.13:1.11.0 (`local[1]`, InMemoryCatalog `sc`) by the
+  orchestrator's run-25c measurement (harness `nc-inventory/harness.py`, cells `cells_qc4.py`),
+  committed verbatim, SHA-256
+  `c2002461483cd468541f52b953d619551e34153bbad9611b4e27271adcbb76fc`. Each test rebuilds the
+  recorded fixture (three append snapshots over `(id, data, cat)`) and compares the recorded
+  observations: column names with Spark's type spelling, rows sorted by `repr` as the recorder
+  sorted them, and for a refusal the exception class plus Spark's message with the per-run
+  snapshot ids blanked.
+  pins: ice-changelog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015

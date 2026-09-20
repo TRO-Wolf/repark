@@ -8,7 +8,9 @@ use iceberg::spec::TableMetadata;
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
 use repark_common::{Error, spark_error};
-use repark_iceberg::catalog::{AppendWindow, IncrementalAppendTableProvider};
+use repark_iceberg::catalog::{
+    AppendWindow, ChangelogTableProvider, IncrementalAppendTableProvider,
+};
 
 use crate::SessionTimeZone;
 use crate::catalog_state::CatalogRegistry;
@@ -37,6 +39,7 @@ pub enum TimeTravelSpec {
     VersionRef(String),
     TimestampMs(i64),
     Incremental { from: Option<i64>, to: Option<i64> },
+    Changelog(incremental::IncrementalWindow),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -225,9 +228,11 @@ pub fn resolve_snapshot_id(
                 ))
             })
         }
-        TimeTravelSpec::Incremental { .. } => Err(DataFusionError::Internal(
-            "an incremental window has no single snapshot to resolve".to_string(),
-        )),
+        TimeTravelSpec::Incremental { .. } | TimeTravelSpec::Changelog(_) => {
+            Err(DataFusionError::Internal(
+                "an incremental window has no single snapshot to resolve".to_string(),
+            ))
+        }
     }
 }
 
@@ -314,6 +319,10 @@ pub async fn read_table_at(
                     to_inclusive: *to,
                 },
             )?)
+        }
+        TimeTravelSpec::Changelog(window) => {
+            let bounds = window.changelog_bounds(table.metadata())?;
+            Arc::new(ChangelogTableProvider::try_new(table, bounds)?)
         }
         pinned => {
             let snapshot_id = resolve_snapshot_id(table.metadata(), pinned, zone)?;

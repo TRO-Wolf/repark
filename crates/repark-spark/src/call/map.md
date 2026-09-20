@@ -41,6 +41,12 @@ and measured-parity contract would grow `call.rs` beyond its exact
   found; when absent the lookup stays at target 1 and a miss tells the caller to pass
   the planning target. Guide: `docs/guide/maintenance-policy.md`.
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `create_changelog_view.rs` — **ICE-CHANGELOG-1 (2026-09-20):** the procedure. Java's
+  parameter list verbatim (`table`, `changelog_view`, `options`, `compute_updates`,
+  `identifier_columns`, `net_changes`) — `remove_carryovers` is NOT an argument in Iceberg
+  1.11, so it is behaviour here and not an argument either. The default view name is
+  `` `<table>_changes` `` WITH backticks in the returned row and without them in the registered
+  name, which is what `QC-DEFAULT-NAME` records. pins: ice-changelog-1/C-014
 - `changelog.rs` (+ `changelog/`) — **ICE-CHANGELOG-1 (2026-09-20):** the row transforms
   `create_changelog_view` applies to the raw changelog relation, ported from Iceberg 1.11's
   `ChangelogIterator` family (read off the runtime jar's bytecode, not from docs) and held here

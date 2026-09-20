@@ -363,6 +363,22 @@ pins: rp-4-fork-repin/C-005, C-006
   `REF-3` BACKLOG, `REF-4` FIXED.
   pins: ref-branch-tag-wap/C-003, C-004, C-006, C-007
   pins: rp-5-fork-repin/C-004
+- **ICE-CHANGELOG-1 (2026-09-20):** `time_travel.rs` declares `pub mod changes;` —
+  `time_travel/changes.rs` rewrites `FROM <cat>.<ns>.<t>.changes` onto a
+  `ChangelogTableProvider` temp view, hooked in `router.rs` right after the metadata-table
+  rewrite and before the branch/WAP redirects, releasing through the same `PinnedViews`.
+  `changes` is deliberately NOT a metadata table: a metadata table is snapshot-scoped table
+  METADATA reached through the fork's `table$suffix` spelling, while `t.changes` is table DATA
+  over a snapshot RANGE. `metadata_tables.rs` is untouched (it holds an exact 1062-line
+  baseline). pins: ice-changelog-1/C-009
+- **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` gains `create_changelog_view` in
+  `SUPPORTED_PROCEDURES` and the dispatch; `call/create_changelog_view.rs` parses the six Java
+  parameters (`identifier_columns => array(…)` through the new `CallArgs::optional_string_array`),
+  applies Java's `shouldComputeUpdateImages` default (an identifier list with no
+  `compute_updates` still pairs), refuses `net_changes` beside update images with Java's exact
+  text, falls back to the table's identifier fields, and registers the LAZY
+  `ChangelogViewProvider` under the view name — returning the name Java returns, backticked when
+  defaulted. pins: ice-changelog-1/C-013, C-014
 - **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` declares `mod changelog;` — the changelog row
   transforms live under `call/` because they are `create_changelog_view`'s, and because
   `src/lib.rs` holds a 150-line ceiling. pins: ice-changelog-1/C-011, C-012, C-013

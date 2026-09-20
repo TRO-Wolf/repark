@@ -21,7 +21,12 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   `read_incremental` rules a time-travel pin beside a window before handing the spec to
   `read_table_at`. The module carries no doc comments (the owner's comment ban); its public
   entry points take `#[allow(clippy::missing_errors_doc)]` instead, as `text_io.rs` does.
-  pins: ice-changelog-1/C-001, C-004, C-005, C-006
+  `changelog_bounds` is the changelog half: Java's three `checkArgument`s from
+  `SparkChangelogScanBuilder.buildChangelogScan`, then `oldestAncestorAfter` for the start
+  timestamp (the snapshot's own id on an exact match, its parent otherwise) and the newest
+  ancestor at or before the end timestamp, with `noSnapshotsAfter` / `noSnapshotsBetween` as the
+  two empty-scan short-circuits.
+  pins: ice-changelog-1/C-001, C-004, C-005, C-006, C-010
 - `tests.rs` — parser + resolution pins (`#[cfg(test)] mod tests;` in `../time_travel.rs`).
 - `sql_text.rs` — SQL-text timestamp parsing, zone math, token extraction (re-exported at
   `../time_travel.rs`). pins: ice-tt-resolve-1/C-010

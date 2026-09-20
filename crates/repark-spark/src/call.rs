@@ -25,6 +25,7 @@ mod branch_ops;
 mod changelog;
 mod compute_partition_stats;
 mod compute_table_stats;
+mod create_changelog_view;
 mod plan_partitioning;
 mod plan_partitioning_bytes;
 mod plan_partitioning_score;
@@ -42,6 +43,7 @@ const SUPPORTED_PROCEDURES: &[&str] = &[
     "cherrypick_snapshot",
     "compute_partition_stats",
     "compute_table_stats",
+    "create_changelog_view",
     "expire_snapshots",
     "fast_forward",
     "plan_partitioning",
@@ -85,6 +87,10 @@ pub async fn execute_call(
                 &args,
             )
             .await
+        }
+        "create_changelog_view" => {
+            create_changelog_view::execute_create_changelog_view(ctx, catalog, &catalog_name, &args)
+                .await
         }
         "rewrite_table_path" => {
             rewrite_table_path::execute_rewrite_table_path(ctx, catalog, &catalog_name, &args).await

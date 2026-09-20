@@ -803,7 +803,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   incremental scan`, Java `SparkScanBuilder`; a legacy `snapshot-id` keeps Spark's
   "no longer supported" message, raised after the boundary checks as Java orders them) and
   hands `TimeTravelSpec::Incremental { from, to }` to `time_travel::read_table_at`.
-  pins: ice-changelog-1/C-001, C-002, C-004, C-005, C-006
+  **Phase 4:** `TimeTravelSpec::Changelog(IncrementalWindow)` carries the raw window for a
+  `t.changes` read, resolved against the table's metadata at provider-build time because Java's
+  timestamp rule needs the ancestry (`oldestAncestorAfter`), and `read_incremental` routes an
+  identifier whose last part is `changes` onto it.
+  pins: ice-changelog-1/C-001, C-002, C-004, C-005, C-006, C-009, C-010
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,

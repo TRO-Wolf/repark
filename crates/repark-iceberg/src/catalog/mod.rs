@@ -12,6 +12,8 @@ mod builders;
 mod cache_wiring;
 mod caches;
 mod catalog_ops;
+mod changelog;
+mod changelog_view;
 mod counting_storage;
 mod files;
 mod incremental_append;
@@ -39,6 +41,8 @@ pub use caches::{
     METADATA_CACHE_KEY_ALT,
 };
 pub use catalog_ops::reregister_catalog_provider;
+pub use changelog::{ChangelogTableProvider, ChangelogWindow};
+pub use changelog_view::{ChangelogRowTransform, ChangelogViewProvider};
 pub use counting_storage::{
     CountingStorage, CountingStorageFactory, GLUE_DEFAULT_CONFIGURED_SCHEME,
     S3TABLES_DEFAULT_CONFIGURED_SCHEME, glue_default_storage_factory,

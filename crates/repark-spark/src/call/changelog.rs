@@ -337,5 +337,20 @@ fn rebuilt_change_types(
     Ok(Arc::new(StringArray::from(values)))
 }
 
+#[derive(Debug, Clone)]
+pub(crate) enum ChangelogTransform {
+    Carryovers { net_changes: bool },
+    UpdateImages { identifier_columns: Vec<String> },
+}
+
+impl ChangelogTransform {
+    pub(crate) fn apply(&self, batch: &RecordBatch) -> Result<RecordBatch> {
+        match self {
+            Self::Carryovers { net_changes } => remove_carryovers(batch, *net_changes),
+            Self::UpdateImages { identifier_columns } => compute_updates(batch, identifier_columns),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;
