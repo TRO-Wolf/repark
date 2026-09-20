@@ -418,12 +418,7 @@ async fn sequence_numbers_and_file_provenance_survive_a_merge() {
     }
     measured.sort();
     let expected: Vec<(String, i64)> = (1..=100)
-        .map(|step| {
-            (
-                format!("series/step-{step}.parquet"),
-                i64::try_from(step).expect("i64"),
-            )
-        })
+        .map(|step| (format!("series/step-{step}.parquet"), i64::from(step)))
         .collect();
     let mut expected_sorted = expected;
     expected_sorted.sort();

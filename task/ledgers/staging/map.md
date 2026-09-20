@@ -12,16 +12,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   plus red-first replay pins; registry MANIFEST-1 FIXED, MANIFEST-2 spec half FIXED.
   `risk_tier: standard`. Branch `fix/ice-rm-deletes-1`.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [ice-merge-append-1-ledger.md](ice-merge-append-1-ledger.md) —
-  **ICE-MERGE-APPEND-1 (2026-09-19), in flight:** an INSERT commits through
-  `merge_append`, as Spark's `newAppend()` does (IPI-11, merge-on-commit) — every
-  RePark append commit site routed to the fork's `MergeAppendAction` so the three
-  `commit.manifest*` table properties take effect, the recorded Spark 4.1.2 series
-  pinned at nine probe points over 120 sequential appends in three property variants,
-  the `manifests-*` summary keys and the fork-side bare-`INSERT INTO` commit path both
-  DECLARED with fork asks. `risk_tier: standard`. Branch `fix/ice-merge-append-1`.
-  pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010
 - [ice-overwrite-mode-1-ledger.md](ice-overwrite-mode-1-ledger.md) —
   **ICE-OVERWRITE-MODE-1 (2026-09-19), in flight:** Spark's overwrite partition set on
   every overwrite door (IPI-03) — one Rust decision over the session

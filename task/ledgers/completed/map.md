@@ -595,6 +595,16 @@ else. The next pickup's `make ledger-archive` files everything here under
   the `dbt gold acceptance` step in `aws-acceptance.yml` after the silver module.
   `risk_tier: standard`. Branch `chore/repin-rp-20`.
   pins: ice-gold-twice-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [ice-merge-append-1-ledger.md](ice-merge-append-1-ledger.md) —
+  **ICE-MERGE-APPEND-1 (2026-09-19), in flight:** an INSERT commits through
+  `merge_append`, as Spark's `newAppend()` does (IPI-11, merge-on-commit) — every
+  RePark append commit site routed to the fork's `MergeAppendAction` so the three
+  `commit.manifest*` table properties take effect, the recorded Spark 4.1.2 series
+  pinned at nine probe points over 120 sequential appends in three property variants,
+  the `manifests-*` summary keys and the fork-side bare-`INSERT INTO` commit path both
+  DECLARED with fork asks. `risk_tier: standard`. Branch `fix/ice-merge-append-1`.
+  pins: ice-merge-append-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - [ice-spark-table-1-ledger.md](ice-spark-table-1-ledger.md) —
   **ICE-SPARK-TABLE-1 (2026-09-14), in flight:** evidence unit — RePark writes into a
   **Spark-created** Iceberg v2 copy-on-write table (inventory §8 ruling 6, G-3 / the

@@ -31,6 +31,7 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   battery a merging commit could break: a two-spec table (Java never merges across spec ids),
   a MoR table whose delete manifests must carry forward, row lineage and sequence numbers
   across a merge, and a branch-targeted merging append.
+  Mutations M1/M2/M3 each red their named subset of these pins and nothing else (ledger §3).
   All seven pins green after the routing change; the branch leg merges at the hundredth
   manifest on the branch (the carried seed plus 99 branch appends), not the hundredth branch
   append, and main's pointer never moves.
