@@ -36,6 +36,7 @@ impl WapSessionConfig {
         }
     }
 
+    #[allow(clippy::missing_errors_doc)]
     pub fn set_value(&mut self, key: &str, value: Option<String>) -> Result<()> {
         match key {
             WAP_BRANCH_KEY => self.branch = value,

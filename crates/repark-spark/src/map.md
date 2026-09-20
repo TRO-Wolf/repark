@@ -263,7 +263,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `Cannot set both WAP ID and branch, but got ID [id] and branch [branch]`, raised as an
   `IllegalArgumentException` through `repark_core::illegal_argument_error`.
   `spark.wap.id` on its own stays inert — staged snapshots are fork ask F-STAGE-ONLY-1,
-  registry row REF-3.
+  registry row REF-3. `set_value` carries `#[allow(clippy::missing_errors_doc)]` — the
+  sanctioned form for the pedantic lint under the comment ban.
   pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. Its 14 in-module tests are file-backed in
