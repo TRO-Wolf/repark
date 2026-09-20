@@ -13,6 +13,7 @@ mod freq_items;
 mod idents;
 mod isnan;
 mod lineage_columns;
+mod metadata_columns;
 mod na_fill;
 mod named_sources;
 mod namespace_create;
@@ -97,6 +98,9 @@ pub use time_travel::{
 };
 
 pub use lineage_columns::{LineagePins, prepare_lineage_sql, sql_mentions_lineage_columns};
+pub use metadata_columns::{
+    MetadataColumnPins, prepare_metadata_column_sql, sql_mentions_metadata_columns,
+};
 
 // --- Error surface: the classifier fold + the seed re-export (bindings import one crate).
 pub use error_map::{

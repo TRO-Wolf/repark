@@ -44,6 +44,7 @@ mod list_null_compound;
 mod local_fs_ddl;
 mod merge;
 mod merge_nmbs;
+mod metadata_columns;
 mod metadata_tables;
 mod namespace_ddl;
 mod nan_pushdown;

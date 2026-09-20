@@ -18,8 +18,9 @@ mod counting_storage;
 mod files;
 mod incremental_append;
 mod io_stats;
-mod lineage_columns;
+pub(crate) mod lineage_columns;
 mod location;
+mod metadata_columns;
 mod provider;
 mod scan_batches;
 
@@ -62,6 +63,10 @@ pub use lineage_columns::{
 pub use location::{
     NAMESPACE_LOCATION_PROPERTY, NAMESPACE_LOCATION_URI_PROPERTY, file_io_for_location,
     mirror_namespace_location_keys, resolve_namespace_location, storage_factory_for_location,
+};
+pub use metadata_columns::{
+    METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, UNSERVED_METADATA_COLUMN_NAMES,
+    is_served_metadata_column, metadata_columns_user_field_names,
 };
 // Crate-private helpers used by listing/register still in this root and by sibling modules.
 
