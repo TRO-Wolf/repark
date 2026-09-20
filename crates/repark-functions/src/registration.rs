@@ -2,6 +2,16 @@ use std::sync::Arc;
 
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
+use datafusion::prelude::SessionContext;
+
+pub fn register_udf_families(ctx: &SessionContext) {
+    crate::iceberg_system::register(ctx);
+    crate::validate::register(ctx);
+    crate::session_names::register(ctx);
+    crate::try_invert::register(ctx);
+    crate::temporal_ctor::register(ctx);
+    crate::higher_order::register(ctx);
+}
 
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {

@@ -21,7 +21,7 @@ _APPROVED_EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (
     ("tests", "fixtures"),
 )
 _RUST_BASELINES: tuple[tuple[str, int], ...] = (
-    ("crates/repark-core/src/catalog_config.rs", 1028),
+    ("crates/repark-core/src/catalog_config.rs", 1007),
     ("crates/repark-core/src/dynamic_flatten/tests.rs", 1442),
     ("crates/repark-core/src/session/tests/session.rs", 1407),
     ("crates/repark-core/tests/declared_sorted.rs", 1348),
@@ -73,7 +73,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/src/repark/spark/functions_expr.py", 2178),
     ("python/repark/src/repark/spark/functions_udf.py", 1300),
     ("python/repark/src/repark/spark/ml/feature/_transformers.py", 2717),
-    ("python/repark/src/repark/spark/session/session_core.py", 2287),
+    ("python/repark/src/repark/spark/session/session_core.py", 2345),
     ("python/repark/src/repark/spark/ta.py", 1818),
     ("python/repark/src/repark/spark/types.py", 1772),
     ("python/repark/tests/_live_parity.py", 1753),

@@ -161,12 +161,7 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in spark_session_window::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
-    iceberg_system::register(ctx);
-    validate::register(ctx);
-    session_names::register(ctx);
-    try_invert::register(ctx);
-    temporal_ctor::register(ctx);
-    higher_order::register(ctx);
+    registration::register_udf_families(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
 }
