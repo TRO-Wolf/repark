@@ -79,7 +79,7 @@ pin moves (rule: pin moves only via their own PR).
 | C-035 | (orchestrator local gate, 2026-09-19) The live recorder re-derives all 25 cells, and the fork-committed `UPDATE` is a registered strict xfail. | `_record_ice_session_write_conf_1_oracle.py check` clean on PySpark 4.1.2; `test_sp_update_stamps_overwrite` `xfail(strict)` under `F-RDF-SESSION-CONF-1`. | PROVEN | The gate found the recorder reading `operation` from the summary map (Spark keeps it in its own column), a `_df_one_row` arity bug, an empty rdf short name and order-sensitive `data`; all fixed. `SP-UPDATE` failed offline: a plain UPDATE commits through the fork's DataFusion DML without session properties. |
 | C-036 | The 38 `QS-*` / `QZ-*` / `QR-*` path cells recorded on Spark 4.1.2 + Iceberg 1.11.0 (run 25c, 2026-09-19) join the unit fixture with provenance and SHA-256, so the fixture is 63 cells. | Fixture file + the recorder module that holds the statement tuples. | PROVEN | `ice_session_write_conf_1_spark_oracle.json` (63 cells; provenance and SHA-256 in `python/repark/tests/map.md`); statements in `_record_ice_session_write_conf_1_paths.py`, which both the recorder and the pins import, so a pin and its re-recording cannot drift. |
 | C-037 | The live recorder re-derives ALL 63 cells, including the one path cell that has no SQL spelling. | `check` rc 0 naming the cell count. | PROVEN | `_record_ice_session_write_conf_1_oracle.py … check` prints `ice-session-write-conf-1 oracle check clean (63 cells)` on PySpark 4.1.2. Round 1 left `QS-BRANCH-DF-APPEND` (a DataFrame `writeTo("t.branch_b").append()`) out of `derive_path_cells`, so `check` failed 62 vs 63 before comparing anything; round 2's `_run_branch_df_append_cell` derives it as the pin drives it. `test_live_oracle_fixture_reproduces` green live. |
-| C-038 | Critic P1-1 and the plain-`UPDATE` residue: with the session conf set every remaining snapshot-property write head is owned and stamps like Spark — branch `INSERT` / `DELETE` / `UPDATE` / `MERGE` in copy-on-write and merge-on-read, merge-on-read `UPDATE` / `MERGE`, and a plain `UPDATE … SET … WHERE <scalar comparison>`. | Each `QS-*` cell vs the fixture, plus `SP-UPDATE`. | PROVEN | `test_session_property_path_matches_spark` over every `QS-*` id (`QS-DELETE-PART-META` a dated IPI-08 xfail, named in the registry rationale); `test_sp_update_stamps_overwrite` is a pin again, not the round-1 xfail. Routing: `write_to_branch.rs` keeps the ref-qualified name, `PredicateDmlSpec` carries the branch, `spark_ast.rs::plain_identity_or_update` claims the plain UPDATE. |
+| C-038 | Critic P1-1 and the plain-`UPDATE` residue: with the session conf set every remaining snapshot-property write head is owned and stamps like Spark — branch `INSERT` / `DELETE` / `UPDATE` / `MERGE` in copy-on-write and merge-on-read, merge-on-read `UPDATE` / `MERGE`, and a plain `UPDATE … SET … WHERE <scalar comparison>`. | Each `QS-*` cell vs the fixture, plus `SP-UPDATE`. | PROVEN | `test_session_property_path_matches_spark` over every `QS-*` id (`QS-DELETE-PART-META` was a dated IPI-08 xfail; #739 landed the metadata-delete route and round 6 re-measured it green, so it is a pin); `test_sp_update_stamps_overwrite` is a pin again, not the round-1 xfail. Routing: `write_to_branch.rs` keeps the ref-qualified name, `PredicateDmlSpec` carries the branch, `spark_ast.rs::plain_identity_or_update` claims the plain UPDATE. |
 | C-039 | A DataFrame `writeTo("<table>.branch_b").append()` reaches the engine and stamps the conf on the branch head. | `QS-BRANCH-DF-APPEND` pin vs the fixture. | PROVEN | `test_branch_dataframe_append_stamps_session_team` — both snapshots, both refs, main data and branch data equal the Spark cell. `writer_layout.table_of_ref_target` strips the selector for the writer's existence probe (spelling only; the Rust router still decides, and refuses a tag). |
 | C-040 | Critic P1-3: a v2 position-delete file takes its codec in Iceberg's `SparkWriteConf` order — writer option > session conf > `write.delete.parquet.compression-codec` > `write.parquet.compression-codec` > default — and a v3 deletion vector is puffin and takes no codec. | Each `QZ-*` cell vs the fixture. | PROVEN | `test_session_codec_path_matches_spark` over every `QZ-*` id (`QZ-POSDEL-*`, `QZ-BRANCH-*`, `QZ-TRUNCATE-NOFILES`), comparing delete-file codecs, all-file codecs and summaries. Before the round `position_delete_writer_properties_for` read the DATA-file property only, so the delete-codec property was silently ignored too. |
 | C-041 | Critic P1-6: every owned commit site builds the engine summary the fork's producer would build, refuses an ACTUAL collision with Spark's `IllegalArgumentException` text, and stamps a key the engine did not produce — feeding the totals as Java's producer does. | `QR-*` cells plus the `RV-*` replay. | PROVEN | `test_summary_key_collision_matches_spark` over every `QR-*` id; harness replay of `cells_pc4.py` (`RV-INSERT`, `RV-MERGE`, `RV-DELETE-MOR`) equal 3 of 3. The blanket metric-key refusal is the WRONG rule and stays reverted (`549074ce`): it broke ICE-WRITE-OPTIONS-1's recorded `COLL-*` cells. |
@@ -207,9 +207,16 @@ recorded on Spark 4.1.2 (run 25c) pin each closure (C-036 … C-042, C-044).
   `UPDATE` is owned when the conf is set. `SP-UPDATE` stops being an xfail. C-038.
 - **P2-5 TRUNCATE / metadata-only delete** — resolved by MEASUREMENT, not code:
   Spark stamps neither and refuses a colliding key at neither, and RePark already
-  matched. The one exception is `QS-DELETE-PART-META`, where RePark's
-  whole-partition `DELETE` rewrites data files and therefore stamps: a
+  matched. The one exception was `QS-DELETE-PART-META`, where RePark's
+  whole-partition `DELETE` rewrote data files and therefore stamped: a
   DELETE-routing divergence owned by IPI-08, carried as a dated xfail.
+  **Round 6 (2026-09-20) — the xfail is now a PIN.** #739 (ICE-META-DELETE-1)
+  landed the metadata-delete route, so the whole-partition `DELETE` removes files
+  instead of rewriting them and commits the metadata-only delete Spark commits.
+  Re-measured on the merged build against the recorded Spark 4.1.2 cell: the two
+  snapshot summaries, the single `main` ref and the two surviving rows all match,
+  so `pytest.xfail(IPI_08)` and the `IPI_08` reason are deleted and the cell runs
+  as one of the parametrized pins. C-038.
 
 ## 6. Round 2 — finish the unit (2026-09-19)
 
@@ -374,8 +381,10 @@ brief forbids.
 
 Row `ICE-SESSION-WRITE-CONF-1` in `docs/spark-sql-iceberg-parity.md`, beside
 ICE-WRITE-OPTIONS-1: **FIXED 2026-09-19, rounds 4 and 5 2026-09-20**, with every critic
-P1 and P2 of all four rounds recorded closed and three named residues
-(`F-RDF-SESSION-CONF-1`, `IPI-08`, the `engine-name` / `engine-version` reading).
+P1 and P2 of all four rounds recorded closed and, after round 6 (2026-09-20), two named
+residues: `F-RDF-SESSION-CONF-1` and the `engine-name` / `engine-version` reading. The
+third, `IPI-08`, is CLOSED — #739 landed the metadata-delete route and
+`QS-DELETE-PART-META` re-measured green on the merged build, so it is a pin.
 No correction to ICE-WRITE-OPTIONS-1 was needed (R-24c-2).
 
 ## Coverage attestation
@@ -411,8 +420,10 @@ COVERAGE_ATTESTATION:
         snapshot committed, on both SQL doors. A colliding summary key refuses
         with Spark's message and commits NO snapshot. The two RDF cells are
         strict xfails, so the suite reds if the fork ever honours the confs
-        there, and QS-DELETE-PART-META is a dated IPI-08 xfail that flips to a
-        pin the day RePark's whole-partition DELETE routes as Spark's does.
+        there. QS-DELETE-PART-META was a dated IPI-08 xfail that would flip to a
+        pin the day RePark's whole-partition DELETE routed as Spark's does; #739
+        landed that route, the cell was re-measured green on the merged build
+        (round 6, 2026-09-20), and it is a pin.
       artifacts: [python/repark/tests/test_ice_session_write_conf_1.py, python/repark/tests/test_ice_session_write_conf_1_paths.py, crates/repark-sql/src/session_write_conf.rs]
     - id: AT-4
       status: ATTACKED

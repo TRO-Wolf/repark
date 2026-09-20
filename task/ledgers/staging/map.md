@@ -651,7 +651,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   measured no-stamp on TRUNCATE / metadata-only delete. Three named residues —
   `F-RDF-SESSION-CONF-1` (fork `rewrite_data_files`) on strict xfails, `IPI-08`
   (whole-partition DELETE routing) on a dated xfail, and the
-  `engine-name` / `engine-version` reading; registry row FIXED.
+  `engine-name` / `engine-version` reading; registry row FIXED. Round 6 (2026-09-20)
+  CLOSES the `IPI-08` residue: #739 landed the metadata-delete route, the dated xfail
+  re-measured green on the merged build, and `QS-DELETE-PART-META` is a pin.
   Round 3 (2026-09-19) closes a SECOND verification critic's four P1s, six P2s and one
   P3: no session conf decides a statement's route any more (a codec-only conf was
   changing a plain UPDATE's committed file count), the native door answers a plain

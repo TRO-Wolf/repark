@@ -56,13 +56,6 @@ FIXTURE: dict[str, Any] = json.loads(
 
 _ENGINE_RESERVED_KEYS = {"engine-name", "engine-version"}
 
-IPI_08 = (
-    "IPI-08 (2026-09-19): RePark's whole-partition DELETE rewrites data files where Spark "
-    "commits a metadata-only delete, so the session snapshot property is stamped where Spark "
-    "stamps nothing. Routing is owned by IPI-08, not by this unit."
-)
-
-
 @pytest.fixture
 def spark(tmp_path: Path) -> Any:
     """A session with the two memory catalogs the cells use."""
@@ -175,8 +168,6 @@ _RESERVED_IDS = [cell[0] for cell in RESERVED_CELLS]
 def test_session_property_path_matches_spark(spark: Any, case: tuple[Any, ...]) -> None:
     """Every snapshot-property path answers Spark. pins: ice-session-write-conf-1/C-038"""
     cell_id, statements, extra, version, part, branch = case
-    if cell_id == "QS-DELETE-PART-META":
-        pytest.xfail(IPI_08)
     cell = _cell(cell_id)
     table = _table(cell_id, "sc")
     conf = cell_conf(cell_id)

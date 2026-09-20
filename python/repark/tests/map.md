@@ -824,8 +824,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   family — an ACTUAL collision refuses with Spark's `Multiple entries with same key` text, a free
   key stamps and feeds the totals. The recorder module holds the statement tuples the pins drive,
   so the pin and the live re-recording cannot drift; the pins run the reserved family on BOTH SQL
-  doors. `QS-DELETE-PART-META` is a dated xfail under IPI-08 (RePark's whole-partition DELETE
-  rewrites where Spark commits metadata-only).
+  doors. **Round 6 (2026-09-20):** `QS-DELETE-PART-META` was a dated xfail under IPI-08
+  (RePark's whole-partition DELETE rewrote where Spark commits metadata-only). #739 landed the
+  metadata-delete route, the cell was re-measured green on the merged build, and it is now one
+  of the parametrized pins — the `IPI_08` reason string is gone with it.
   pins: ice-session-write-conf-1/C-036, C-037, C-038, C-039, C-040, C-041, C-042
   **Round 2 (2026-09-19):** the live leg was red where round 1 left it:
   `derive_path_cells` walks the three statement-tuple tables, and `QS-BRANCH-DF-APPEND`

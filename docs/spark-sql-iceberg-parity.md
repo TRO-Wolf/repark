@@ -3436,8 +3436,10 @@ the pin rather than obeying it.
   any file is written, naming the codec. Before: both confs silently ignored
   (measured 2026-09-19: 26 of 30 pins red on the base). After: the pin files are
   green with two strict xfails, both fork asks under `F-RDF-SESSION-CONF-1`
-  (`rewrite_data_files`, codec and snapshot property), and one dated xfail under
-  `IPI-08` (`QS-DELETE-PART-META`). The plain `UPDATE` residue is CLOSED: when the
+  (`rewrite_data_files`, codec and snapshot property). The `IPI-08` dated xfail
+  (`QS-DELETE-PART-META`) is CLOSED: #739 landed the metadata-delete route and the
+  cell was re-measured green on the merged build (2026-09-20), so it is a pin.
+  The plain `UPDATE` residue is CLOSED: when the
   session write conf is set that statement is an owned identity write
   (`repark-spark` `spark_ast.rs` `plain_identity_or_update`), so `SP-UPDATE` is a pin.
   **Verification critic 2026-09-19 (four P1s, two P2s) — all CLOSED, round 1 + round 2.**
@@ -3605,11 +3607,15 @@ the pin rather than obeying it.
     `RewriteDataFiles` the `snapshot_properties` / writer-property hooks Java's
     `RewriteDataFilesSparkAction` has, so the `replace` commit and the rewritten files
     take the resolved session write like every other commit site.
-  - **IPI-08 (2026-09-19)** — RePark's whole-partition `DELETE` rewrites data files where
-    Spark commits a metadata-only delete, so the session snapshot property IS stamped
-    where Spark stamps nothing. That is a DELETE-routing divergence, not a conf one:
-    `QS-DELETE-PART-META` is a dated xfail naming IPI-08 and flips to a pin the day the
-    routing matches. Every other metadata-only cell already matches.
+  - **IPI-08 (2026-09-19, CLOSED 2026-09-20)** — RePark's whole-partition `DELETE` rewrote
+    data files where Spark commits a metadata-only delete, so the session snapshot property
+    WAS stamped where Spark stamps nothing. That was a DELETE-routing divergence, not a conf
+    one, and `QS-DELETE-PART-META` carried it as a dated xfail naming IPI-08. #739
+    (ICE-META-DELETE-1) landed the route: a whole-file or whole-partition DELETE now goes
+    through the fork's `can_delete_using_metadata` and REMOVES files. Re-measured on the
+    merged build 2026-09-20 — summaries, refs and surviving rows all match the recorded
+    Spark 4.1.2 cell — so the xfail is deleted and the cell is a pin. Every other
+    metadata-only cell already matched.
   - **`engine-name` / `engine-version` (2026-09-19)** — RePark's summaries carry no JVM
     engine identity, so `QR-ENGINE-NAME` refuses with
     `engine-name=<engine-reserved> and engine-name=fake` where Spark names its own
