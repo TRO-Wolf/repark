@@ -125,3 +125,9 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_merge_schema_1.py, python/repark/tests/test_merge_into.py, crates/repark-spark/src/merge/schema_evolution/tests.rs]
   complete: true
 ```
+
+## Residues
+
+| # | Residue |
+|---|---|
+| R-1 | CI-1 round (2026-09-20): the `saveAsTable` by-name append refuses an extra column with the arity-mismatch code because the lowering is a named `INSERT INTO … BY NAME SELECT`, while the `writeTo(...).append()` surface is oracle-recorded as `EXTRA_COLUMNS`; whether real Spark's `saveAsTable` byName path prints the same code as `writeTo` is UNMEASURED and needs a live-Spark cell. The replaced pin carried an unmeasured oracle claim ("column number ... doesn't match the data schema"); no record for the saveAsTable surface exists in `python/repark/tests/*_spark_oracle.json` or `python/repark-parity/fixtures/**` (the `ice_rtas_byname_1` codes are SQL-surface-specific and cannot be borrowed), and no COMMON.md recorder was available in this lane, so `test_save_as_table_append_extra_column_raises` pins RePark's current `INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS` emission until that cell is measured. |
