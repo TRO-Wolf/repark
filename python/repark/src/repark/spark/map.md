@@ -466,6 +466,19 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - `merge.py` — `mergeInto` builder and SQL MERGE source registration. DML-A:
   `whenNotMatchedBySource` DELETE/UPDATE execute.
   pins: dml-a-merge-not-matched-by-source/C-002, C-003
+- `merge_aliases.py` — **IPI-56 (2026-09-20):** which `(target, source)` aliases
+  the rendered `MERGE INTO` declares. Spark's own condition form qualifies the
+  target by its **short table name** and the source by the frame's alias, so a
+  hardcoded `AS target` / `AS source` pair answered `No field named <table>.id`
+  on five inventory cells. A SQL relation carries exactly one alias, so the pair
+  is read off the qualifiers the user's own expressions reference: the short
+  table name when they name it, the legacy `target` when they name that instead,
+  and whichever single other qualifier they use for the source. That keeps
+  RePark's `target.` / `source.` spellings and the bare-key sugar working beside
+  Spark's form — owner decision 22 narrows registry row `EX-DF-9` rather than
+  retiring it. String literals are removed before the scan so a `'target.x'`
+  literal cannot pick an alias.
+  pins: ipi-19-56-37-schema-evolution-write/C-008, C-010
 - `polars.py` — optional Polars-style facade. Imports Polars lazily and keeps join,
   sort, and null-placement semantics explicit. TYPES-1 round 4: `with_row_index` casts
   `row_number` to BIGINT (pins: types-1/C-005). DF-EAGER-1 step 2 (2026-09-09):

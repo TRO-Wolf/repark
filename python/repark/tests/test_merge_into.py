@@ -269,8 +269,8 @@ def test_merge_into_render_sql_shape() -> None:
     from repark.spark.functions import col, lit
     from repark.spark.merge import _column_sql, _on_sql, _quote_assign_target
 
-    assert _on_sql("id") == "target.`id` = source.`id`"
-    assert _on_sql("  name  ") == "target.`name` = source.`name`"
+    assert _on_sql("id", "entity", "source") == "entity.`id` = source.`id`"
+    assert _on_sql("  name  ", "target", "s") == "target.`name` = s.`name`"
     assert _quote_assign_target("name") == "name"
     assert _quote_assign_target("weird-name") == "`weird-name`"
     # != / CASE / coalesce must quote string literals for MERGE embed.

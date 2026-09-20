@@ -177,9 +177,9 @@ def test_df_merge_schema_from_the_session_conf(spark: ReparkSession) -> None:
     spark.conf.set(MERGE_SCHEMA_CONF, "true")
     try:
         frame = _frame(spark)
-        frame.withColumn("extra", frame.id * 2).write.format("iceberg").mode(
-            "append"
-        ).saveAsTable(table)
+        frame.withColumn("extra", frame.id * 2).write.format("iceberg").mode("append").saveAsTable(
+            table
+        )
     finally:
         spark.conf.unset(MERGE_SCHEMA_CONF)
     assert _schema(spark, table) == EVOLVED_LONG
@@ -194,9 +194,9 @@ def test_extra_column_without_merge_schema_keeps_the_python_refusal(
     _seed_named(spark, table)
     frame = _frame(spark)
     with pytest.raises(AnalysisException, match="extra in the DataFrame"):
-        frame.withColumn("extra", frame.id * 2).write.format("iceberg").mode(
-            "append"
-        ).saveAsTable(table)
+        frame.withColumn("extra", frame.id * 2).write.format("iceberg").mode("append").saveAsTable(
+            table
+        )
     assert _schema(spark, table) == BASE_SCHEMA
 
 
@@ -214,7 +214,9 @@ NO_NEW_SOURCE = (
 )
 
 
-def _merge_fixture(spark: ReparkSession, name: str, source: str, *, accept_any: bool = False) -> str:
+def _merge_fixture(
+    spark: ReparkSession, name: str, source: str, *, accept_any: bool = False
+) -> str:
     table = _create(spark, name, accept_any=accept_any)
     _seed_named(spark, table)
     view = f"v_{name}"
@@ -311,7 +313,14 @@ def _dfmerge_fixture(spark: ReparkSession, name: str) -> tuple[str, Any]:
 def test_df_merge_into_upsert_with_the_spark_qualifier(spark: ReparkSession) -> None:
     """pins: ipi-19-56-37-schema-evolution-write/C-008"""
     table, source = _dfmerge_fixture(spark, "dfm_upsert")
-    source.mergeInto(table, expr("dfm_upsert.id = s.id")).whenMatched().updateAll().whenNotMatched().insertAll().merge()
+    (
+        source.mergeInto(table, expr("dfm_upsert.id = s.id"))
+        .whenMatched()
+        .updateAll()
+        .whenNotMatched()
+        .insertAll()
+        .merge()
+    )
     assert _rows(spark, table) == [[1, "a", "x"], [2, "B", "y"], [3, "c", "x"], [4, "D", "z"]]
 
 
