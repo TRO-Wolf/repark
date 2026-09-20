@@ -64,8 +64,7 @@ def _create(session: Any, name: str, properties: str = "") -> str:
     table = f"{CATALOG}.{NAMESPACE}.{name}"
     tail = f", {properties}" if properties else ""
     session.sql(
-        f"CREATE TABLE {table} {SEED_DDL} USING iceberg "
-        f"TBLPROPERTIES ('format-version'='2'{tail})"
+        f"CREATE TABLE {table} {SEED_DDL} USING iceberg TBLPROPERTIES ('format-version'='2'{tail})"
     )
     return table
 
@@ -258,9 +257,7 @@ def test_unknown_trailing_clause_still_refuses(spark: Any) -> None:
     first = _snapshot_ids(spark, table)[0]
 
     with pytest.raises(Exception) as caught:
-        spark.sql(
-            f"ALTER TABLE {table} CREATE TAG t9 AS OF VERSION {first} RETAIN 7 DAYS EXTRA"
-        )
+        spark.sql(f"ALTER TABLE {table} CREATE TAG t9 AS OF VERSION {first} RETAIN 7 DAYS EXTRA")
 
     message = str(caught.value)
     assert "trailing clause after the supported form" in message

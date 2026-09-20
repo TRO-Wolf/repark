@@ -1075,6 +1075,18 @@ above.
   **D-8 (2026-09-11):** a two-field candidate planned at 1024 is found when the same
   `target_file_size_bytes` is passed, and refuses naming that key when it is omitted.
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `purge.rs` — **IPI-21 (2026-09-20):** `DROP TABLE … PURGE`. The two arms of the purge branch
+  in one pin (a purged table's files are gone, a plain-dropped table's files are still there), the
+  `gc.enabled=false` refusal that sweeps nothing and drops nothing, the composition with
+  `IF EXISTS` and the `[TABLE_OR_VIEW_NOT_FOUND]` / `42P01` answer on a missing target, and the
+  failure posture: a sweep whose every per-file delete fails returns those failures in
+  `DeleteReachableFilesResult::delete_failures` rather than raising, and the `DROP` still runs.
+  The four functions are
+  `drop_table_purge_deletes_reachable_files_and_plain_drop_keeps_them`,
+  `purge_refuses_when_gc_is_disabled_and_sweeps_nothing`,
+  `purge_collects_delete_failures_and_the_drop_still_runs` and
+  `purge_composes_with_if_exists_and_names_a_missing_table_the_spark_way`.
+  pins: ipi-21-25-42-small-parser/C-008, C-009, C-010
 - `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** the plan door pins on memory-catalog
   fixtures: a 90-day `ts` table in 9 ten-day files at a target of the footer-uncompressed
   sum/90 (`days(ts)` first at 0.0

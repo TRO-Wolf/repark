@@ -215,9 +215,8 @@ async fn write_to_branch_refuses_loud_naming_fork_gap() {
     );
 }
 
-/// DECLARED-DIVERGENCE pin for **`docs/spark-sql-iceberg-parity.md` §2.2 row REF-2**.
 #[tokio::test]
-async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
+async fn ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -227,19 +226,28 @@ async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
     )
     .await;
 
-    // The ALTER TABLE forms reach the ref-DDL parser's trailing-token rejection.
+    for sql in [
+        "ALTER TABLE ice.sales.refdecl CREATE BRANCH IF NOT EXISTS b1",
+        "ALTER TABLE ice.sales.refdecl CREATE BRANCH IF NOT EXISTS b1",
+        "ALTER TABLE ice.sales.refdecl DROP BRANCH IF EXISTS b1",
+        "ALTER TABLE ice.sales.refdecl DROP BRANCH IF EXISTS b1",
+        "CREATE BRANCH IF NOT EXISTS b2 IN ice.sales.refdecl",
+        "DROP TAG IF EXISTS t2 IN ice.sales.refdecl",
+        "DROP BRANCH IF EXISTS b2 IN ice.sales.refdecl",
+    ] {
+        execute(&ctx, &catalogs, sql)
+            .await
+            .unwrap_or_else(|error| panic!("the guarded spelling must run ({sql}): {error}"));
+    }
+
     for (sql, leftover) in [
-        (
-            "ALTER TABLE ice.sales.refdecl CREATE BRANCH IF NOT EXISTS b1",
-            "NOT",
-        ),
-        (
-            "ALTER TABLE ice.sales.refdecl DROP BRANCH IF EXISTS b1",
-            "EXISTS",
-        ),
         (
             "ALTER TABLE ice.sales.refdecl CREATE TAG t1 AS OF VERSION 1 RETAIN 7 DAYS EXTRA",
             "EXTRA",
+        ),
+        (
+            "ALTER TABLE ice.sales.refdecl CREATE BRANCH b9 IF NOT EXISTS",
+            "IF",
         ),
     ] {
         let error = execute(&ctx, &catalogs, sql)
@@ -257,38 +265,21 @@ async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
              {rendered_leftover} ({sql}): {error}"
         );
         assert!(
-            error.contains("IF EXISTS / IF NOT EXISTS stay out"),
-            "the refusal must name the known-but-unsupported spellings ({sql}): {error}"
-        );
-        assert!(
-            error.contains("docs/spark-sql-iceberg-parity.md §2.2"),
-            "the refusal must cite the registry row it defends ({sql}): {error}"
+            error.contains("IF NOT EXISTS|IF EXISTS"),
+            "the refusal must list the grammar it now accepts ({sql}): {error}"
         );
     }
 
-    // The top-level `… IN t` spellings break on the same clause earlier, in the `IN` requirement.
-    for sql in [
-        "CREATE BRANCH IF NOT EXISTS b2 IN ice.sales.refdecl",
-        "DROP TAG IF EXISTS t2 IN ice.sales.refdecl",
-    ] {
-        let error = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("the top-level IF-EXISTS spellings must refuse too")
-            .to_string();
-        assert!(
-            error.contains("IN catalog.namespace.table"),
-            "the refusal must name the supported shape ({sql}): {error}"
-        );
-    }
-
-    // …and nothing was created or dropped by any of the refused statements.
     let refs = rows(
         &ctx,
         &catalogs,
         "SELECT * FROM ice.sales.refdecl.refs WHERE name <> 'main'",
     )
     .await;
-    assert_eq!(refs, 0, "a refused ref DDL must not create or drop a ref");
+    assert_eq!(
+        refs, 0,
+        "every guarded drop ran and no refused DDL created a ref"
+    );
 }
 
 /// A real two-part table literally named `branch_*` must not false-refuse as write-to-branch.

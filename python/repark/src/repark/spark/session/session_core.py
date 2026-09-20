@@ -240,7 +240,7 @@ class ReparkSession:
         # DROP TABLE [IF EXISTS] — sqlutils.table() context manager path.
         drop_match = _DROP_TABLE_SQL_RE.match(query)
         if drop_match is not None:
-            if_exists = drop_match.group(1) or ""
+            if_exists, purge = drop_match.group(1) or "", " PURGE" if drop_match.group(3) else ""
             names_blob = drop_match.group(2).strip().rstrip(";").strip()
             if not names_blob:
                 return query
@@ -250,7 +250,7 @@ class ReparkSession:
                 # Temp views use dropTempView, not DROP TABLE.
                 resolved = self.resolve_table_name(raw_name, prefer_temp_view=False)
                 qualified.append(_sql_table_ref(resolved))
-            return f"DROP TABLE {if_exists}{', '.join(qualified)}"
+            return f"DROP TABLE {if_exists}{', '.join(qualified)}{purge}"
 
         # MERGE INTO — target + source.
         merge_match = _MERGE_INTO_SQL_RE.match(query)

@@ -3707,7 +3707,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   create-a-missing-ref and drop-a-present-ref branches the four recorded cells never take.
   `test_drop_table_without_purge_keeps_data_files` is the regression pin a purge-by-default
   bug reds, and `test_drop_table_purge_gc_disabled_refuses` is the guard that keeps RePark
-  from deleting files Spark keeps.
+  from deleting files Spark keeps. `test_drop_expander_emits_purge` pins the facade `DROP`
+  rewrite byte-exact on all four spellings, because the cell dies in Python before any Rust
+  fix is reachable.
   pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
