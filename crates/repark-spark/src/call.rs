@@ -22,6 +22,7 @@ use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, r
 mod ancestors_of;
 mod apply_partitioning;
 mod branch_ops;
+mod changelog;
 mod compute_partition_stats;
 mod compute_table_stats;
 mod plan_partitioning;

@@ -363,6 +363,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `REF-3` BACKLOG, `REF-4` FIXED.
   pins: ref-branch-tag-wap/C-003, C-004, C-006, C-007
   pins: rp-5-fork-repin/C-004
+- **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` declares `mod changelog;` — the changelog row
+  transforms live under `call/` because they are `create_changelog_view`'s, and because
+  `src/lib.rs` holds a 150-line ceiling. pins: ice-changelog-1/C-011, C-012, C-013
 - `call.rs` — eighteen maintenance procedures: seventeen maintenance calls plus `register_table`
   (**ICE-PROCS-ROUTE-1 (2026-09-19):** `ancestors_of`, `compute_table_stats`,
   `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the
