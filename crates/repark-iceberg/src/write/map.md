@@ -797,6 +797,21 @@ repark-core's error map.
   carrying Spark's message verbatim — the class Spark 4.1.2 raises
   (`QR-*`, and ICE-WRITE-OPTIONS-1's `COLL-*` cells record the same).
   pins: ice-session-write-conf-1/C-041
+  **Round 3 (2026-09-19):** `replaced_data_files` gives `replace_partitions` the same
+  resolution the whole-table arm already had. `for_overwrite` marks every removal key
+  `<resolved at commit>` the moment a previous snapshot exists, which is wrong for a
+  dynamic overwrite: Spark 4.1.2 measured (cells `QP-*`, recorded 2026-09-19 run 25c)
+  emits NO `deleted-records` when the overwrite lands only in partitions the table did
+  not have, so a `snapshot-property.deleted-records` there is a free key that stamps and
+  feeds the totals (`total-records` 3 + 1 - 5 is negative and is dropped, exactly as
+  `QR-INSERT-DELETED-RECORDS` records). Where the overwrite DOES replace a live
+  partition Spark refuses naming its computed value — `deleted-records=2`, not
+  `<resolved at commit>`. `replaced_data_files` filters the live files to those whose
+  partition value matches a staged file's, comparing by partition-field NAME so an
+  evolved spec still matches, and the commit site falls back to `for_changes` over that
+  set only when an extra names a removal-fed key. An empty dynamic overwrite still
+  commits nothing, which is what Spark does.
+  pins: ice-session-write-conf-1/C-047
 - `illegal_argument.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   `IllegalArgumentMarker` and `illegal_argument_error`, moved here from
   repark-core's `error_map.rs` (which re-exports them unchanged) so a

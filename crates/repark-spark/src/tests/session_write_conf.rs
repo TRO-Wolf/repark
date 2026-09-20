@@ -110,7 +110,10 @@ async fn unset_session_conf_restores_unstamped_writes() {
 const NONCE_KEY: &str = "engine.operation-id";
 const SIZE_KEYS: [&str; 3] = ["added-files-size", "total-files-size", "removed-files-size"];
 
-type Layout = (usize, Vec<u64>, Vec<(String, Vec<(String, String)>)>);
+type SummaryPairs = Vec<(String, String)>;
+type Summaries = Vec<(String, SummaryPairs)>;
+type StampedSummary = (i64, String, SummaryPairs);
+type Layout = (usize, Vec<u64>, Summaries);
 
 async fn live_data_files(table: &iceberg::table::Table) -> (usize, Vec<u64>) {
     let Some(snapshot) = table.metadata().current_snapshot() else {
@@ -137,16 +140,13 @@ async fn live_data_files(table: &iceberg::table::Table) -> (usize, Vec<u64>) {
     (counts.len(), counts)
 }
 
-fn summaries_of(
-    table: &iceberg::table::Table,
-    drop: &[&str],
-) -> Vec<(String, Vec<(String, String)>)> {
-    let mut rows: Vec<(i64, String, Vec<(String, String)>)> = table
+fn summaries_of(table: &iceberg::table::Table, drop: &[&str]) -> Summaries {
+    let mut rows: Vec<StampedSummary> = table
         .metadata()
         .snapshots()
         .map(|snapshot| {
             let summary = snapshot.summary();
-            let mut pairs: Vec<(String, String)> = summary
+            let mut pairs: SummaryPairs = summary
                 .additional_properties
                 .iter()
                 .filter(|(key, _)| !drop.contains(&key.as_str()))
@@ -253,4 +253,75 @@ async fn a_session_conf_keeps_a_plain_delete_layout() {
         "DELETE FROM ice.sales.{t} WHERE id = 2",
     ))
     .await;
+}
+
+fn set_dynamic_overwrite(ctx: &SessionContext) {
+    let state = ctx.state_ref();
+    let mut guard = state.write();
+    let config = guard.config_mut();
+    let updated = repark_core::with_partition_overwrite_mode(
+        config.clone(),
+        repark_core::PartitionOverwriteMode::Dynamic,
+    );
+    *config = updated;
+}
+
+async fn replace_partitions_with_deleted_records(
+    table_name: &str,
+    overwrite: &str,
+) -> Result<(), DataFusionError> {
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    set_dynamic_overwrite(&ctx);
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table_name} (id BIGINT, cat STRING) USING iceberg \
+             PARTITIONED BY (cat)"
+        ),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.{table_name} VALUES (1,'x'),(2,'x'),(3,'y')"),
+    )
+    .await;
+    set_session_conf(
+        &ctx,
+        "spark.sql.iceberg.snapshot-property.deleted-records",
+        "5",
+    );
+    let outcome = execute(&ctx, &catalogs, overwrite).await.map(|_| ());
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.deleted-records");
+    outcome
+}
+
+#[tokio::test]
+async fn replace_partitions_into_a_new_partition_stamps_deleted_records() {
+    let _: &str = "pins: ice-session-write-conf-1/C-047";
+    replace_partitions_with_deleted_records(
+        "rpnew",
+        "INSERT OVERWRITE ice.sales.rpnew SELECT 9, 'w'",
+    )
+    .await
+    .expect("a partition the overwrite does not replace produces no deleted-records to collide");
+}
+
+#[tokio::test]
+async fn replace_partitions_into_an_existing_partition_names_the_engine_value() {
+    let _: &str = "pins: ice-session-write-conf-1/C-047";
+    let error = replace_partitions_with_deleted_records(
+        "rpold",
+        "INSERT OVERWRITE ice.sales.rpold SELECT 9, 'x'",
+    )
+    .await
+    .expect_err("replacing a live partition collides on deleted-records");
+    assert_eq!(
+        error.strip_backtrace(),
+        "External error: Multiple entries with same key: deleted-records=2 and \
+         deleted-records=5",
+        "the refusal must name Spark's computed engine value, not `<resolved at commit>`"
+    );
 }

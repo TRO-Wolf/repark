@@ -147,6 +147,34 @@ pub async fn live_data_files(table: &Table, branch: Option<&str>) -> Result<Vec<
     Ok(files)
 }
 
+#[allow(clippy::missing_errors_doc)]
+pub async fn replaced_data_files(
+    table: &Table,
+    branch: Option<&str>,
+    staged: &[DataFile],
+) -> Result<Vec<DataFile>> {
+    let replaced: Vec<PartitionKey> = staged
+        .iter()
+        .map(|file| partition_key_of(table, file))
+        .collect();
+    let live = live_data_files(table, branch).await?;
+    Ok(live
+        .into_iter()
+        .filter(|file| replaced.contains(&partition_key_of(table, file)))
+        .collect())
+}
+
+type PartitionKey = Vec<(String, Option<iceberg::spec::Literal>)>;
+
+fn partition_key_of(table: &Table, file: &DataFile) -> PartitionKey {
+    spec_of(table, file)
+        .fields()
+        .iter()
+        .zip(file.partition().fields())
+        .map(|(field, value)| (field.name.clone(), value.clone()))
+        .collect()
+}
+
 fn updated_total(
     computed: &HashMap<String, String>,
     previous: Option<&HashMap<String, String>>,

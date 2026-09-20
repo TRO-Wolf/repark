@@ -430,6 +430,25 @@ pub async fn commit_overwrite_by_row_filter_with_summary(
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
 
+async fn engine_summary_for_replace_partitions(
+    table: &Table,
+    staged_files: &[DataFile],
+    branch: Option<&str>,
+    summary_extra: &[(String, String)],
+) -> Result<EngineSummary> {
+    if !crate::write::summary_collision::extras_need_removed_files(summary_extra) {
+        return Ok(EngineSummary::for_overwrite(table, staged_files, branch));
+    }
+    let removed =
+        crate::write::summary_collision::replaced_data_files(table, branch, staged_files).await?;
+    Ok(EngineSummary::for_changes(
+        table,
+        staged_files,
+        &removed,
+        branch,
+    ))
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub async fn commit_replace_partitions_with_summary(
     catalog: &Arc<dyn Catalog>,
@@ -443,7 +462,8 @@ pub async fn commit_replace_partitions_with_summary(
         return Ok(table.clone());
     }
     let isolation = isolation_with_override(table, isolation_override)?;
-    let engine = EngineSummary::for_overwrite(table, &staged_files, branch);
+    let engine =
+        engine_summary_for_replace_partitions(table, &staged_files, branch, summary_extra).await?;
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
     let mut action = tx

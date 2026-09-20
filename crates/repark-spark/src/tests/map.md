@@ -31,6 +31,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   compare equal. Restoring the conf gate on `plain_identity_or_update` reds the UPDATE
   pin.
   pins: ice-session-write-conf-1/C-045
+  Also `replace_partitions_into_a_new_partition_stamps_deleted_records` and
+  `replace_partitions_into_an_existing_partition_names_the_engine_value`, the critic's
+  `P1-REPLACE-PARTITIONS-COLLISION` and `P2-REPLACE-PARTITIONS-COLLISION-MESSAGE`. Both
+  drive a dynamic `INSERT OVERWRITE` over a `cat`-partitioned table with
+  `snapshot-property.deleted-records=5` set; the new-partition one must COMMIT and the
+  existing-partition one must refuse with Spark's `deleted-records=2`. Reverting
+  `commit_replace_partitions_with_summary` to `EngineSummary::for_overwrite` reds both.
+  pins: ice-session-write-conf-1/C-047
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
   pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`
