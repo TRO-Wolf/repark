@@ -7270,13 +7270,12 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   `test_bare_timestamp_in_the_list_follows_the_session_timestamp_type`.
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [test_ice_system_functions_1.py](test_ice_system_functions_1.py) —
-  **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), rounds 1-2 of 3:** the Iceberg
+  **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), rounds 1-3 of 3:** the Iceberg
   `bucket(n, col)` and `truncate(w, col)` system functions as DataFusion scalar
-  UDFs under reserved internal names (`__iceberg_system_bucket`,
-  `__iceberg_system_truncate`), called directly until WO-3 lands the
-  `<cat>.system.<fn>` rewrite. Eight pins replay the inventory fixture on a
-  module-private memory catalog in UTC and assert the exact recorded Spark
-  values on the Arrow path, value AND type: `F-BUCKET-LONG`,
+  UDFs under reserved internal names, called as `sc.system.<fn>` since round 3
+  landed the `<cat>.system.<fn>` rewrite. Eight pins replay the inventory
+  fixture on module-private memory catalogs in UTC and assert the exact
+  recorded Spark values on the Arrow path, value AND type: `F-BUCKET-LONG`,
   `F-BUCKET-STRING`, `F-BUCKET-DATE`, `F-BUCKET-DECIMAL-BINARY`,
   `F-TRUNCATE-STRING` (`"z"` shorter than the width returns whole),
   `F-TRUNCATE-LONG` (`-10` floors down), `F-TRUNCATE-DECIMAL` (schema
@@ -7290,6 +7289,10 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   plus `date32` / `DateType()` — `days()` is DATE, never int), `F-HOURS`, and
   `F-ICEBERG-VERSION` (`IS NOT NULL` per row; the version text itself stays
   unpinned, only its stability and its string schema). The NULL pin grows to
-  all six value-taking functions. Catalog-qualified registration and SHOW
-  arrive in WO-3.
-  pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
+  all six value-taking functions. **Round 3** re-points every call at
+  `sc.system.<fn>`, keeps one direct internal-name test, and adds
+  `F-BUCKET-IN-WHERE`, the order-preserved `F-SHOW-FUNCTIONS` roster (USER and
+  bare spellings), the `hc` catalog twin, the bare-`truncate` non-claim pin
+  (both arities stay `UNRESOLVED_ROUTINE` — the SQL door has no bare
+  `truncate` builtin on this tree), and the untouched-SHOW-forms fence.
+  pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025

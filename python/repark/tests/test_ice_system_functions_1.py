@@ -1,15 +1,18 @@
-"""IPI-29 system functions rounds 1-2 — bucket/truncate/temporal/version UDF pins.
+"""IPI-29 system functions rounds 1-3 — the catalog-qualified system-function pins.
 
 Round 1 of 3 on lane xb-sysfn: the Iceberg ``bucket(n, col)`` and
 ``truncate(w, col)`` system functions as DataFusion scalar UDFs under reserved
 internal names. Round 2 adds the temporal functions (``years``, ``months``,
-``days``, ``hours``) and ``iceberg_version``. Catalog-qualified registration
-and SHOW arrive in round 3. Every value pin replays the inventory fixture from
-cells_misc.py against a module-private memory catalog and asserts the exact
-recorded Spark answer on the Arrow path, value AND type.
+``days``, ``hours``) and ``iceberg_version``. Round 3 resolves the
+catalog-qualified ``<cat>.system.<fn>`` spellings through a pre-parse rewrite
+and intercepts ``SHOW [USER] FUNCTIONS IN <cat>.system``. Every value pin
+replays the inventory fixture from cells_misc.py against module-private memory
+catalogs and asserts the exact recorded Spark answer on the Arrow path, value
+AND type.
 
 pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
+C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020,
+C-021, C-022, C-023, C-024, C-025
 """
 
 from __future__ import annotations
@@ -24,41 +27,48 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import PySparkException
+from repark.errors import AnalysisException, PySparkException
 
-CATALOG = "sysfn1"
+CATALOG = "sc"
 TABLE = f"{CATALOG}.w.t"
-BUCKET = "__iceberg_system_bucket"
-TRUNCATE = "__iceberg_system_truncate"
-YEARS = "__iceberg_system_years"
-MONTHS = "__iceberg_system_months"
-DAYS = "__iceberg_system_days"
-HOURS = "__iceberg_system_hours"
-ICEBERG_VERSION = "__iceberg_system_iceberg_version"
+BUCKET = "sc.system.bucket"
+TRUNCATE = "sc.system.truncate"
+YEARS = "sc.system.years"
+MONTHS = "sc.system.months"
+DAYS = "sc.system.days"
+HOURS = "sc.system.hours"
+ICEBERG_VERSION = "sc.system.iceberg_version"
+INTERNAL_BUCKET = "__iceberg_system_bucket"
+
+
+def _register_fixture_catalog(session: ReparkSession, warehouse: Path, catalog: str) -> str:
+    """Register a catalog carrying the IPI-29 fixture table; return the table name."""
+    session.register_memory_catalog(catalog, warehouse)
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.w")
+    table = f"{catalog}.w.t"
+    session.sql(
+        f"CREATE TABLE {table} "
+        "(id BIGINT, data STRING, ts TIMESTAMP, d DATE, dec DECIMAL(10,2), b BINARY) "
+        "USING iceberg"
+    ).collect()
+    session.sql(
+        f"INSERT INTO {table} VALUES "
+        "(1, 'abcdef', TIMESTAMP'2024-03-05 10:11:12', DATE'2024-03-05', 12.34, X'0102'), "
+        "(-7, 'z', TIMESTAMP'1969-12-31 23:00:00', DATE'1969-12-31', -5.55, X'FF'), "
+        "(NULL, NULL, NULL, NULL, NULL, NULL)"
+    ).collect()
+    return table
 
 
 @pytest.fixture()
 def engine(tmp_path: Path) -> Iterator[ReparkSession]:
-    """Session with the IPI-29 fixture table on a module-private catalog in UTC."""
-    warehouse = tmp_path / "wh"
+    """Session with the IPI-29 fixture table on catalog sc in UTC."""
     session = (
         ReparkSession.builder.appName("pytest-ice-system-functions-1")
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
-    session.register_memory_catalog(CATALOG, warehouse)
-    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.w")
-    session.sql(
-        f"CREATE TABLE {TABLE} "
-        "(id BIGINT, data STRING, ts TIMESTAMP, d DATE, dec DECIMAL(10,2), b BINARY) "
-        "USING iceberg"
-    ).collect()
-    session.sql(
-        f"INSERT INTO {TABLE} VALUES "
-        "(1, 'abcdef', TIMESTAMP'2024-03-05 10:11:12', DATE'2024-03-05', 12.34, X'0102'), "
-        "(-7, 'z', TIMESTAMP'1969-12-31 23:00:00', DATE'1969-12-31', -5.55, X'FF'), "
-        "(NULL, NULL, NULL, NULL, NULL, NULL)"
-    ).collect()
+    _register_fixture_catalog(session, tmp_path / "wh-sc", CATALOG)
     yield session
     session.stop()
 
@@ -238,3 +248,73 @@ def test_years_pre_epoch_is_negative(engine: ReparkSession) -> None:
     ).to_arrow()
     assert table.column("a").to_pylist() == [-1]
     assert table.column("b").to_pylist() == [-1]
+
+
+def test_bucket_in_where_pins_recorded_count(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-019 — F-BUCKET-IN-WHERE counts 1 row in a filter."""
+    table = engine.sql(
+        f"SELECT count(*) FILTER (WHERE {BUCKET}(4, id) = 1) AS v FROM {TABLE}"
+    ).to_arrow()
+    assert table.column("v").to_pylist() == [1]
+
+
+def test_show_user_functions_in_system_pins_roster(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-020 — F-SHOW-FUNCTIONS lists 7 qualified names sorted."""
+    frame = engine.sql("SHOW USER FUNCTIONS IN sc.system")
+    table = frame.to_arrow()
+    assert table.schema.field("function").type == pa.string()
+    assert table.column("function").to_pylist() == [
+        "sc.system.bucket",
+        "sc.system.days",
+        "sc.system.hours",
+        "sc.system.iceberg_version",
+        "sc.system.months",
+        "sc.system.truncate",
+        "sc.system.years",
+    ]
+    bare = engine.sql("SHOW FUNCTIONS IN sc.system").to_arrow()
+    assert bare.column("function").to_pylist() == table.column("function").to_pylist()
+
+
+def test_bare_truncate_still_resolves_to_the_builtin(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-021 — unqualified truncate never becomes Iceberg."""
+    with pytest.raises(AnalysisException, match=r"UNRESOLVED_ROUTINE.*`truncate`"):
+        engine.sql("SELECT truncate(1.9) AS v").to_arrow()
+    with pytest.raises(AnalysisException, match=r"UNRESOLVED_ROUTINE.*`truncate`"):
+        engine.sql(f"SELECT truncate(2, data) AS v FROM {TABLE}").to_arrow()
+
+
+def test_functions_resolve_under_every_configured_catalog(
+    engine: ReparkSession, tmp_path: Path
+) -> None:
+    """pins: ice-system-functions-1/C-022 — hc resolves calls and SHOW like sc does."""
+    table = _register_fixture_catalog(engine, tmp_path / "wh-hc", "hc")
+    values = engine.sql(f"SELECT hc.system.bucket(16, id) AS v FROM {table}").to_arrow()
+    assert _sorted_rows(values) == [[4], [5], [None]]
+    roster = engine.sql("SHOW USER FUNCTIONS IN hc.system").to_arrow()
+    assert roster.column("function").to_pylist() == [
+        "hc.system.bucket",
+        "hc.system.days",
+        "hc.system.hours",
+        "hc.system.iceberg_version",
+        "hc.system.months",
+        "hc.system.truncate",
+        "hc.system.years",
+    ]
+
+
+def test_show_functions_without_in_is_unchanged(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-023 — SHOW forms without IN keep today's behavior."""
+    with pytest.raises(AnalysisException, match=r"information_schema\.parameters"):
+        engine.sql("SHOW FUNCTIONS").to_arrow()
+    with pytest.raises(AnalysisException, match=r"SHOW \[VARIABLE\] is not supported"):
+        engine.sql("SHOW USER FUNCTIONS").to_arrow()
+    with pytest.raises(AnalysisException, match=r"SHOW \[VARIABLE\] is not supported"):
+        engine.sql("SHOW SYSTEM FUNCTIONS").to_arrow()
+
+
+def test_internal_bucket_name_still_resolves(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-025 — the internal UDF name answers directly."""
+    table = engine.sql(f"SELECT {INTERNAL_BUCKET}(16, id) AS v FROM {TABLE}").to_arrow()
+    assert table.schema.field("v").type == pa.int32()
+    assert _sorted_rows(table) == [[4], [5], [None]]
