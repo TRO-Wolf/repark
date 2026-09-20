@@ -3554,6 +3554,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 1 routing (2026-09-19): the facade pins go green against the release
   native (25 passed, 2 strict xfails for the version range), and the live
   re-derivation passes on fresh randomness (canonicalized run-stamped tails).
+  Round 2 (2026-09-19, run 25c): the recorder normalizes every run-varying
+  token at record time to its exact writer shape (canonical uuids, snap
+  manifest names, data-file stems with stable ordinals, staging directories,
+  wall paths), replacing the fixed-width hex windows whose misaligned tails
+  failed the live re-derivation intermittently; `check` compares minus `secs`.
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells

@@ -11,10 +11,12 @@ Usage (PySpark interpreter with the Iceberg runtime on ``spark.jars.packages``):
 
 ``record`` prints the fixture JSON to stdout; ``check`` re-derives every cell
 and exits non-zero naming the first mismatch against the committed
-``ice_procs_route_1_spark_oracle.json`` after canonicalizing the two
-run-stamped volatile tails (uuids, snapshot ids, wall paths, ``secs``). The
-Iceberg runtime GAV comes from :mod:`_oracle_pins`. Seed and normalization
-mirror the measured ``cells_qc3.py`` shapes cell for cell.
+``ice_procs_route_1_spark_oracle.json`` (``secs`` excluded). Every run-varying
+token is normalized at record time to its writer shape (canonical uuids, snap
+manifest names, data-file stems, staging directories, wall paths), so two
+derivations compare equal with no second pass. The Iceberg runtime GAV comes
+from :mod:`_oracle_pins`. Seed and normalization mirror the measured
+``cells_qc3.py`` shapes cell for cell.
 
 pins: ice-procs-route-1/C-001, C-002, C-003
 """
@@ -38,15 +40,13 @@ from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
 FIXTURE = Path(__file__).with_name("ice_procs_route_1_spark_oracle.json")
 ICEBERG_SPARK_EXTENSIONS = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
 IN_MEMORY_IMPL = "org.apache.iceberg.inmemory.InMemoryCatalog"
-UUID_TAIL = re.compile(r"[0-9a-f-]{36}")
-HEX_RUN = re.compile(r"[0-9a-f]{5,}(?:-[0-9a-f]+)+")
-STAGING_RUN = re.compile(r"copy-table-staging-[0-9a-f-]+")
-UUID_LEFTOVER = re.compile(r"<uuid>[0-9a-f-]{1,30}")
-ID_LEFTOVER = re.compile(r"<id>[0-9a-f]")
-HEXBIT = re.compile(r"[0-9a-f]{4,}")
-ID_RUN = re.compile(r"(?:<id>){2,}")
-ID_MERGE = re.compile(r"<id>(?:[0-9a-f-]*<id>)+")
-RTP_TABLE_PATH = re.compile(r"Path \S+/metadata/(v\d+\.metadata\.json)/")
+CANON_UUID = r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}"
+STAGING_DIR = re.compile(r"copy-table-staging-" + CANON_UUID)
+DATA_BASENAME = re.compile(r"[0-9]+-[0-9]+-" + CANON_UUID + r"-([0-9]+)-([0-9]+)\.parquet")
+DELETES_BASENAME = re.compile(r"[0-9]+-[0-9]+-" + CANON_UUID + r"-([0-9]+)-deletes\.parquet")
+SNAP_BASENAME = re.compile(r"snap-([0-9]+)-([0-9]+)-" + CANON_UUID + r"\.avro")
+MANIFEST_BASENAME = re.compile(CANON_UUID + r"-m0\.avro")
+VERSION_BASENAME = re.compile(r"v[0-9]+\.metadata\.json")
 
 
 def live_session(warehouse: Path) -> Any:
@@ -261,7 +261,7 @@ def stats_path_label(path: str, metadata: dict[str, Any]) -> str:
     out = re.sub(r"^.*/metadata/", "metadata/", path)
     out = out.replace(str(metadata["snapshots"][0]["snapshot-id"]), "<s0>")
     out = out.replace(str(metadata.get("current-snapshot-id")), "<cur>")
-    return re.sub(r"[0-9a-f-]{36}", "<uuid>", out)
+    return re.sub(CANON_UUID, "<uuid>", out)
 
 
 def table_stats_cell(context: OracleContext, extra: str) -> None:
@@ -363,7 +363,7 @@ def partition_path_label(path: Any, metadata: dict[str, Any], first_id: int) -> 
     if path is None:
         return None
     out = re.sub(r"^.*/metadata/", "metadata/", str(path))
-    out = re.sub(r"[0-9a-f-]{36}", "<uuid>", out)
+    out = re.sub(CANON_UUID, "<uuid>", out)
     out = out.replace(str(metadata.get("current-snapshot-id")), "<cur>")
     return out.replace(str(first_id), "<s0>")
 
@@ -401,13 +401,61 @@ def record_partition_stats(context: OracleContext, kind: str) -> None:
 
 
 def relative_path(value: Any, source: str, target: str, staging: str, warehouse: Path) -> Any:
-    """Replace run-stamped path prefixes with stable markers."""
+    """Replace run-stamped path prefixes and staging uuids with stable markers."""
     if not isinstance(value, str):
         return value
     out = value.replace(source, "<src>")
     out = out.replace(target, "<dst>")
     out = out.replace(staging, "<stg>")
-    return out.replace(str(warehouse), "<wh>")
+    out = out.replace(str(warehouse), "<wh>")
+    return STAGING_DIR.sub("copy-table-staging-<uuid>", out)
+
+
+def normalize_staged_basename(name: str) -> str:
+    """Map one staged file basename to its stable form with a file placeholder."""
+    match = DATA_BASENAME.fullmatch(name)
+    if match is not None:
+        return "<file>-" + match.group(1) + "-" + match.group(2) + ".parquet"
+    match = DELETES_BASENAME.fullmatch(name)
+    if match is not None:
+        return "<file>-" + match.group(1) + "-deletes.parquet"
+    match = SNAP_BASENAME.fullmatch(name)
+    if match is not None:
+        return "snap-<snap>-" + match.group(2) + "-<file>.avro"
+    if MANIFEST_BASENAME.fullmatch(name) is not None:
+        return "<file>-m0.avro"
+    if VERSION_BASENAME.fullmatch(name) is not None:
+        return name
+    raise AssertionError(f"unknown rewrite file-list basename {name!r}")
+
+
+def normalize_file_list_line(
+    line: str, source: str, target: str, staging: str, warehouse: Path
+) -> str:
+    """Replace both sides of one file-list line with stable markers."""
+    marked = relative_path(line, source, target, staging, warehouse)
+    assert isinstance(marked, str)
+    sides = marked.split(",")
+    assert len(sides) == 2, f"file-list line has no src,target pair: {line!r}"
+    fixed = []
+    for side in sides:
+        head, sep, base = side.rpartition("/")
+        fixed.append(head + sep + normalize_staged_basename(base))
+    return ",".join(fixed)
+
+
+def number_file_placeholders(lines: list[str]) -> list[str]:
+    """Number each file placeholder with its stable ordinal within identical lines."""
+    out: list[str] = []
+    pos = 0
+    while pos < len(lines):
+        end = pos + 1
+        while end < len(lines) and lines[end] == lines[pos]:
+            end += 1
+        for slot in range(end - pos):
+            out.append(lines[pos].replace("<file>", f"<file#{slot}>"))
+        pos = end
+    return out
 
 
 def file_list_observation(
@@ -417,19 +465,15 @@ def file_list_observation(
     path = Path(listed.replace("file:", ""))
     if not path.exists():
         return
-    lines = path.read_text(encoding="utf-8").splitlines()
-    context.observe(
-        "file-list",
-        sorted(
-            re.sub(
-                r"[0-9a-f-]{36}|snap-[0-9-]+|[0-9]{5}-[0-9]+-",
-                "<id>",
-                str(relative_path(line, source, target, staging, context.warehouse)),
-            )
-            for line in lines
-        ),
+    raw_lines = path.read_text(encoding="utf-8").splitlines()
+    normalized = sorted(
+        normalize_file_list_line(line, source, target, staging, context.warehouse)
+        for line in raw_lines
     )
-    staged = [line.split(",")[0] for line in lines if line.split(",")[0].endswith(".metadata.json")]
+    context.observe("file-list", number_file_placeholders(normalized))
+    staged = [
+        line.split(",")[0] for line in raw_lines if line.split(",")[0].endswith(".metadata.json")
+    ]
     if staged:
         staged_doc = json.loads(Path(staged[-1].replace("file:", "")).read_text(encoding="utf-8"))
         context.observe(
@@ -456,6 +500,15 @@ def rewrite_path_cell(context: OracleContext, extra: str, target: str, staging: 
             file_list_observation(context, listed, target, staging, source)
 
 
+def rewrite_path_prefixes(context: OracleContext) -> tuple[str, str, str]:
+    """Return the source, target, and staging prefixes for one rewrite cell."""
+    return (
+        context.location(),
+        "/tmp/qc-rtp-target/" + context.tname,
+        str(context.warehouse / "qc-rtp-staging" / context.tname),
+    )
+
+
 def record_rewrite_path(context: OracleContext, kind: str) -> None:
     """Replay one rewrite_table_path cell by kind against the live session."""
     seed_three(context)
@@ -464,9 +517,7 @@ def record_rewrite_path(context: OracleContext, kind: str) -> None:
             f"ALTER TABLE {context.table} SET TBLPROPERTIES ('write.delete.mode'='merge-on-read')"
         )
         context.run(f"DELETE FROM {context.table} WHERE id = 1")
-    source = context.location()
-    target = "/tmp/qc-rtp-target/" + context.tname
-    staging = str(context.warehouse / "qc-rtp-staging" / context.tname)
+    source, target, staging = rewrite_path_prefixes(context)
     args = {
         "RTP-DEFAULT": f", source_prefix => '{source}', target_prefix => '{target}'",
         "RTP-STAGING": (
@@ -611,6 +662,11 @@ def record_cell(
         }
     except Exception as exc:
         entry = error_record(kind, exc, context.step)
+        if family == "rewrite-path":
+            source, target, staging = rewrite_path_prefixes(context)
+            entry["error"]["msg"] = relative_path(
+                entry["error"]["msg"], source, target, staging, context.warehouse
+            )
         return {
             "id": cell_id,
             "group": "QPROC",
@@ -638,40 +694,15 @@ def record_oracle(warehouse: Path) -> list[dict[str, Any]]:
         session.stop()
 
 
-def canonical_value(value: Any, warehouse: Path) -> Any:
-    """Replace uuids, staging runs, hex runs, and wall paths stably."""
-    if isinstance(value, list):
-        return [canonical_value(v, warehouse) for v in value]
-    if isinstance(value, dict):
-        return {k: canonical_value(v, warehouse) for k, v in value.items()}
-    if isinstance(value, str):
-        out = RTP_TABLE_PATH.sub(r"Path <table>/metadata/\1/", value)
-        out = out.replace(str(warehouse), "<wh>")
-        out = STAGING_RUN.sub("copy-table-staging-<uuid>", out)
-        out = UUID_TAIL.sub("<uuid>", out)
-        out = UUID_LEFTOVER.sub("<uuid>", out)
-        out = HEX_RUN.sub("<id>", out)
-        out = ID_LEFTOVER.sub("<id>", out)
-        out = HEXBIT.sub("<id>", out)
-        out = ID_RUN.sub("<id>", out)
-        return ID_MERGE.sub("<id>", out)
-    return value
-
-
-def canonicalize(records: list[dict[str, Any]], warehouse: Path) -> list[dict[str, Any]]:
-    """Collapse run-stamped volatile tails so two derivations compare equal."""
-    out: list[dict[str, Any]] = []
-    for record in records:
-        cleaned = canonical_value(record, warehouse)
-        assert isinstance(cleaned, dict)
-        out.append({k: v for k, v in cleaned.items() if k != "secs"})
-    return out
+def drop_secs(record: dict[str, Any]) -> dict[str, Any]:
+    """Return one oracle record without its measured timing."""
+    return {key: value for key, value in record.items() if key != "secs"}
 
 
 def check_oracle(warehouse: Path, fixture: list[dict[str, Any]]) -> None:
     """Re-derive the oracle on live Spark and fail naming the first mismatch."""
-    recorded = canonicalize(record_oracle(warehouse), warehouse)
-    expected = canonicalize(fixture, warehouse)
+    recorded = [drop_secs(record) for record in record_oracle(warehouse)]
+    expected = [drop_secs(record) for record in fixture]
     want = {r["id"]: r for r in expected}
     for record in recorded:
         cell_id = str(record["id"])
