@@ -128,13 +128,18 @@ row-level path — by inserting, as its first statement:
 
 | Command | Last line |
 |---|---|
-| `cargo test -p repark-iceberg` | `test result: ok. 581 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out` (step 4 tree; the 8 `meta_delete` pins raise it to 589 on the final tree) |
-| `cargo test -p repark-spark` | `test result: ok. 1207 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out` |
-| `cargo test -p repark-sql` | `test result: ok. 369 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out` (plus the six `ansi_meta_delete` integration pins) |
-| `pytest python/repark/tests/test_ice_meta_delete_1.py` | `72 passed, 1 skipped, 1 xfailed` |
-| `pytest <the 27 facade files that issue a DELETE>` | `841 passed, 145 skipped, 5 xfailed` (after the two retired premises) |
-| `cargo fmt --all` / `cargo clippy -p repark-iceberg --all-targets -- -D warnings` | step 6 |
-| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/qa-build origin/main` | step 6 |
+| `cargo test -p repark-iceberg` | `test result: ok. 589 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.33s` |
+| `cargo test -p repark-sql` | `test result: ok. 369 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out` (lib) — 23 result lines, all `ok`, including the six `ansi_meta_delete` integration pins |
+| `cargo test -p repark-spark` | `test result: ok. 1207 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 186.15s` |
+| `pytest python/repark/tests/test_ice_meta_delete_1.py -q -p no:cacheprovider` | `72 passed, 1 skipped, 1 xfailed` |
+| `pytest <the 27 facade files that issue a DELETE>` | `841 passed, 145 skipped, 5 xfailed` (step 4 tree, after the two retired premises) |
+| `cargo fmt --all` | clean (no output) |
+| `cargo clippy -p repark-iceberg --all-targets -- -D warnings -A clippy::disallowed_methods` | `Finished \`dev\` profile [unoptimized + debuginfo] target(s)` — the repo's own `rust-clippy` spelling; `--all-targets` without the `-A` reports the pre-existing `expect` in every test module, which `make rust-panic-ban` covers on `--lib` only |
+| `cargo clippy -p repark-iceberg -p repark-sql -p repark-spark --lib -- -D warnings -D clippy::disallowed_methods` | `Finished \`dev\` profile [unoptimized + debuginfo] target(s)` (the panic-ban leg, live `disallowed-methods`) |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/qa-build origin/main` | `comment-ban hits=0` |
+| `python3 scripts/check_ledger_grammar.py` | `ledger-grammar: 224 live ledgers clean (1922 clauses, 2499 pinned clause ids, 2 exception rows)` |
+| `python3 scripts/check_docs_links.py` | `docs-links: 1027 files, 6117 links checked — clean` |
+| pre-commit (every commit) | `map-sync: 310 maps clean`, `rust-file-size: 707 files clean`, `manifest: 18 components … agree` |
 
 ## Retired premises
 
