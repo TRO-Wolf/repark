@@ -247,6 +247,8 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   register on `datafusion.public` so a session default Iceberg catalog cannot
   refuse a MemTable with rows (two-part `t.branch_b` MERGE).
   pins: rp-5-fork-repin/C-004
+  **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** `quote_scratch_name` is `pub(crate)` so
+  predicate DML quotes 3-part scratch names per segment like the MERGE SQL builders.
 - `insert.rs` — NOT MATCHED INSERT machinery: `insert_projection` (clause→projection lowering,
   moved from `mod.rs` 2026-08-15), the source-only execution seam (`insert_stream_checked`),
   and the ANSI store-assignment gate (audit M4/M9). **BL-4 (2026-08-15):**

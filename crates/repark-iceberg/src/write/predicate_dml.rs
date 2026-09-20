@@ -369,7 +369,7 @@ async fn collect_identity_pairs(
         "SELECT {file}, {pos} FROM {scratch} AS {alias} WHERE {selection}",
         file = quote_ident(FILE_PATH_COL),
         pos = quote_ident(POS_COL),
-        scratch = quote_ident(target_name),
+        scratch = crate::write::merge::cow_scratch::quote_scratch_name(target_name),
         alias = quote_ident(&spec.target_alias),
         selection = spec.selection_sql,
     );
@@ -398,7 +398,7 @@ async fn collect_identity_update_rows(
         "SELECT {file}, {pos}, {projections} FROM {scratch} AS {alias} WHERE {selection}",
         file = quote_ident(FILE_PATH_COL),
         pos = quote_ident(POS_COL),
-        scratch = quote_ident(target_name),
+        scratch = crate::write::merge::cow_scratch::quote_scratch_name(target_name),
         alias = quote_ident(&spec.target_alias),
         selection = spec.selection_sql,
     );

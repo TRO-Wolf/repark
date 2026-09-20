@@ -50,7 +50,7 @@ impl Drop for MergeScratchGuard<'_> {
 const SCRATCH_CATALOG: &str = "datafusion";
 const SCRATCH_SCHEMA: &str = "public";
 
-pub(super) fn quote_scratch_name(name: &str) -> String {
+pub(crate) fn quote_scratch_name(name: &str) -> String {
     name.split('.')
         .map(crate::write::idents::quote_ident_spark)
         .collect::<Vec<_>>()

@@ -38,7 +38,7 @@ use tracing::Instrument;
 use uuid::Uuid;
 
 mod abort;
-mod cow_scratch;
+pub(crate) mod cow_scratch;
 mod dv_close;
 mod insert;
 mod not_matched_by_source;
