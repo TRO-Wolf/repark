@@ -66,6 +66,32 @@ fn strip_ascii_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
 struct CatalogEntry {
     catalog: Arc<dyn Catalog>,
     location_policy: LocationPolicy,
+    table_props: HashMap<String, String>,
+}
+
+/// `spark.sql.catalog.<name>.table-default.<k>` — the lowest CREATE-time precedence leg.
+const TABLE_DEFAULT_PREFIX: &str = "table-default.";
+
+/// `spark.sql.catalog.<name>.table-override.<k>` — beats user `TBLPROPERTIES` at CREATE.
+const TABLE_OVERRIDE_PREFIX: &str = "table-override.";
+
+fn merge_table_creation_properties(
+    side: &HashMap<String, String>,
+    user: &HashMap<String, String>,
+) -> HashMap<String, String> {
+    let mut merged = HashMap::with_capacity(user.len() + side.len());
+    for (key, value) in side {
+        if let Some(stripped) = key.strip_prefix(TABLE_DEFAULT_PREFIX) {
+            merged.insert(stripped.to_string(), value.clone());
+        }
+    }
+    merged.extend(user.iter().map(|(key, value)| (key.clone(), value.clone())));
+    for (key, value) in side {
+        if let Some(stripped) = key.strip_prefix(TABLE_OVERRIDE_PREFIX) {
+            merged.insert(stripped.to_string(), value.clone());
+        }
+    }
+    merged
 }
 
 /// Iceberg catalog handles keyed by DataFusion catalog name, each tagged with a location policy.
@@ -108,8 +134,39 @@ impl CatalogRegistry {
             CatalogEntry {
                 catalog,
                 location_policy: policy,
+                table_props: HashMap::new(),
             },
         );
+    }
+
+    /// Merge a catalog config block's `table-default.*` / `table-override.*` / `warehouse`
+    /// keys into the entry's side map (later `conf.set` wins per key; missing entry ignored).
+    pub fn merge_table_props(&mut self, name: &str, props: &HashMap<String, String>) {
+        let Some(entry) = self.entries.get_mut(name) else {
+            return;
+        };
+        for (key, value) in props {
+            if key.starts_with(TABLE_DEFAULT_PREFIX)
+                || key.starts_with(TABLE_OVERRIDE_PREFIX)
+                || key == crate::catalog_config::WAREHOUSE_PROP
+            {
+                entry.table_props.insert(key.clone(), value.clone());
+            }
+        }
+    }
+
+    /// User `TBLPROPERTIES` merged under the catalog's `table-override.*` and over its
+    /// `table-default.*` (override > user > default; unknown catalogs pass through).
+    #[must_use]
+    pub fn table_creation_properties(
+        &self,
+        name: &str,
+        user: &HashMap<String, String>,
+    ) -> HashMap<String, String> {
+        let Some(entry) = self.entries.get(name) else {
+            return user.clone();
+        };
+        merge_table_creation_properties(&entry.table_props, user)
     }
 
     /// Record a local warehouse root for SEC-02 grandfather.
@@ -267,5 +324,28 @@ mod tests {
     fn memory_warehouse_fallback_root_does_not_panic_on_utf8_after_file_colon() {
         let root = memory_warehouse_fallback_root("file:/ü/scratch/repark-wh");
         assert_eq!(root, PathBuf::from("/ü/scratch/repark-wh"));
+    }
+
+    #[test]
+    fn table_creation_properties_merge_override_user_default() {
+        let side = HashMap::from([
+            ("table-default.k1".to_string(), "d1".to_string()),
+            ("table-default.k2".to_string(), "d2".to_string()),
+            ("table-override.k2".to_string(), "o2".to_string()),
+            ("warehouse".to_string(), "/tmp/wh".to_string()),
+        ]);
+        let merged = merge_table_creation_properties(
+            &side,
+            &HashMap::from([("k1".to_string(), "user".to_string())]),
+        );
+        assert_eq!(merged.get("k1").map(String::as_str), Some("user"));
+        assert_eq!(merged.get("k2").map(String::as_str), Some("o2"));
+        assert!(!merged.contains_key("warehouse"));
+        let registry = CatalogRegistry::new();
+        let passthrough = registry.table_creation_properties(
+            "missing",
+            &HashMap::from([("k".to_string(), "v".to_string())]),
+        );
+        assert_eq!(passthrough.len(), 1);
     }
 }

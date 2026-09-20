@@ -110,6 +110,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   unchanged registry `unpersist` loop and the `__repark_cache_*` prefix sweep —
   idempotent, checkpoint views untouched.
   pins: eager-own-1/C-006, C-011
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `setCurrentCatalog` / `setCurrentDatabase`
+  keep their pre-checks, then run engine `USE` / `USE DATABASE` so the engine and the
+  facade box agree (C-028).
+  pins: ice-catalog-session-1/C-028
   **CFG-2 step 2 (2026-09-13):** `SourceMetadata` (the `name` / `kind` / `key_path` /
   `auto_register` / `properties` namedtuple) lives beside `CatalogMetadata` — the
   `listCatalogs` idiom — for `ReparkSession.sources()` rows. pins: cfg-2/C-013

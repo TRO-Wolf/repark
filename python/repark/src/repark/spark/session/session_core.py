@@ -194,7 +194,17 @@ class ReparkSession:
         if (udf_frame := self._sql_with_registered_udfs(query)) is not None:
             return udf_frame
         expanded = self._expand_bare_table_names_in_sql(query)
-        return DataFrame(inner.sql(expanded), inner, self._alive_token)
+        frame = DataFrame(inner.sql(expanded), inner, self._alive_token)
+        if _is_catalog_state_statement(query):
+            self._sync_catalog_state_from_engine()
+        return frame
+
+    def _sync_catalog_state_from_engine(self) -> None:
+        """Copy the engine session defaults into the facade current-catalog box."""
+        catalog, namespace = _native.session_defaults(self._ensure_alive())
+        state = self._catalog_state()
+        state["current_catalog"] = catalog
+        state["current_database"] = namespace
 
     def resolve_table_name(self, table_name: str, *, prefer_temp_view: bool = False) -> str:
         """Qualify ``table_name`` under current catalog/database (shared resolution).

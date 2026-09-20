@@ -459,6 +459,7 @@ impl ReparkSession {
         self.resolve_aws_sdk_config_if(self.aws_signaled).await;
         for spec in self.catalog_specs.iter() {
             self.register_catalog_spec(spec).await?;
+            self.note_catalog_table_props(&spec.name, &spec.props);
         }
         Ok(())
     }

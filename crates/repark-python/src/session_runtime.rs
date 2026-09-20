@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
 use repark_core::{Error, ReparkSession, Result, SESSION_TIME_ZONE_KEY};
@@ -58,7 +60,42 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(restore_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(unset_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(session_zone_canonical, module)?)?;
+    module.add_function(wrap_pyfunction!(session_defaults, module)?)?;
+    module.add_function(wrap_pyfunction!(register_late_catalog_block, module)?)?;
     Ok(())
+}
+
+#[pyfunction]
+pub fn session_defaults(session: &PyReparkSession) -> PyResult<(String, String)> {
+    fenced_span!("py.session", "session_defaults", {
+        let catalog = session
+            .session
+            .context()
+            .copied_config()
+            .options()
+            .catalog
+            .clone();
+        Ok((catalog.default_catalog, catalog.default_schema))
+    })
+}
+
+/// Register one runtime `spark.sql.catalog.<name>` block, tolerantly.
+/// # Errors
+/// A complete block that fails to build or register raises.
+#[pyfunction]
+pub fn register_late_catalog_block(
+    py: Python<'_>,
+    session: &PyReparkSession,
+    config: HashMap<String, String>,
+) -> PyResult<bool> {
+    fenced_span!("py.catalog", "register_late_catalog_block", {
+        py.detach(|| {
+            session
+                .runtime
+                .block_on(session.session.register_late_catalog_block(&config))
+        })
+        .map_err(to_py_err)
+    })
 }
 
 #[pyfunction]

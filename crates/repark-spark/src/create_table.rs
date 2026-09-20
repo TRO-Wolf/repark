@@ -436,7 +436,8 @@ async fn execute_schema_create(
             .load_table(&table_ident)
             .await
             .map_err(iceberg_err)?;
-        let mut properties = create.properties.clone();
+        let mut properties =
+            catalogs.table_creation_properties(&create.catalog, &create.properties);
         stamp_requested_format_version(
             &mut properties,
             create.format_version.as_deref(),
@@ -466,7 +467,7 @@ async fn execute_schema_create(
             .schema(create.schema)
             .partition_spec_opt(partition_spec)
             .format_version(format_version)
-            .properties(create.properties.clone())
+            .properties(catalogs.table_creation_properties(&create.catalog, &create.properties))
             .build();
         catalog
             .create_table(&create.namespace, creation)
@@ -490,7 +491,7 @@ async fn execute_schema_create(
             &create.table,
             create.schema,
             partition_spec,
-            create.properties.clone(),
+            catalogs.table_creation_properties(&create.catalog, &create.properties),
             format_version,
         )
         .await?;

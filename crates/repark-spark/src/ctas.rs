@@ -215,6 +215,7 @@ pub(crate) async fn execute_ctas(
     if matches!(mode, CtasMode::ServiceManagedCreate) {
         return execute_ctas_service_managed(
             ctx,
+            catalogs,
             catalog,
             &ctas,
             table_ident,
@@ -234,7 +235,7 @@ pub(crate) async fn execute_ctas(
             .schema(iceberg_schema)
             .partition_spec_opt(partition_spec)
             .format_version(format_version)
-            .properties(ctas.properties.clone())
+            .properties(catalogs.table_creation_properties(&ctas.catalog, &ctas.properties))
             .build();
         let staged =
             StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
@@ -249,7 +250,7 @@ pub(crate) async fn execute_ctas(
             .await
             .map_err(iceberg_err)?;
         let replace_base = existing.metadata_location().map(str::to_string);
-        let mut properties = ctas.properties.clone();
+        let mut properties = catalogs.table_creation_properties(&ctas.catalog, &ctas.properties);
         crate::create_table::stamp_requested_format_version(
             &mut properties,
             ctas.format_version.as_deref(),
@@ -572,6 +573,7 @@ pub(crate) async fn validate_service_managed_target(
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn execute_ctas_service_managed(
     ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
     catalog: &Arc<dyn Catalog>,
     ctas: &Ctas,
     table_ident: TableIdent,
@@ -587,7 +589,7 @@ pub(crate) async fn execute_ctas_service_managed(
         .schema(iceberg_schema)
         .partition_spec_opt(partition_spec)
         .format_version(format_version)
-        .properties(ctas.properties.clone())
+        .properties(catalogs.table_creation_properties(&ctas.catalog, &ctas.properties))
         .build();
     let table = catalog
         .create_table(&ctas.namespace, creation)

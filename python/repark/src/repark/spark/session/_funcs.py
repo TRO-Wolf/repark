@@ -480,6 +480,7 @@ from repark.spark.session.sql_relations import (
     _UPDATE_PREFIX_RE,
     _collect_cte_names,
     _find_matching_paren,
+    _is_catalog_state_statement,
     _match_from_or_join_keyword,
     _parse_table_identifier_segments,
     _scan_sql_table_identifier_end,

@@ -58,6 +58,17 @@ _DESCRIBE_TABLE_PREFIX_RE = re.compile(
 _SELECT_OR_WITH_HEAD_RE = re.compile(r"(?is)^\s*(?:WITH\b|SELECT\b)")
 
 
+_CATALOG_STATE_STATEMENT_RE = re.compile(
+    r"(?is)^\s*(?:USE\b|SET\s+datafusion\.catalog\.default_(?:catalog|schema)\s*=)"
+)
+
+
+def _is_catalog_state_statement(query: str) -> bool:
+    """Whether the statement moves the engine session defaults (``USE`` / ``SET`` of them)."""
+    _, body = _split_leading_sql_trivia(query)
+    return _CATALOG_STATE_STATEMENT_RE.match(body) is not None
+
+
 _FROM_JOIN_NON_TABLE = frozenset(
     {
         "LATERAL",

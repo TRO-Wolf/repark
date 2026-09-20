@@ -464,6 +464,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `publish_create_table` / `publish_replace_table`; one snapshot); the tail lives
   in `finish_ctas_staged_commit` so `execute_ctas` keeps the function
   length ceiling. Round 3 withdrew the empty-publish-then-append double commit.
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** all three creation sites merge user
+  properties through the catalog side map (the service-managed site takes
+  `catalogs` for it).
+  pins: ice-catalog-session-1/C-027
   pins: ice-write-options-1/C-001, C-003
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
   merged session write, so CTAS stamps session snapshot properties.
@@ -759,6 +763,9 @@ pins: rp-4-fork-repin/C-005, C-006
   primitives behind the same opt-in (pins: v3-6-v3-types/C-003); v2 CREATE refuses via
   the fork's `check_compatibility`.
   4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `execute_schema_create` merges user
+  `TBLPROPERTIES` through the catalog side map (override > user > default).
+  pins: ice-catalog-session-1/C-027
   **FNP-4B round 7 (2026-09-15):** angle-bracket `ARRAY<T>` maps to an Iceberg
   list with nullable `element` fields and table-unique ids from a checked
   allocator (R-16b-21 grant); bare/square-bracket forms still refuse.

@@ -763,6 +763,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   name (entries + database sources + read-only catalogs, sorted, deduped) for
   `SHOW CATALOGS`.
   pins: ice-catalog-session-1/C-015
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** entries carry the `table-default.*` /
+  `table-override.*` / `warehouse` side map (`merge_table_props`,
+  populated at register and by later runtime sets); `table_creation_properties`
+  merges override > user > default at CREATE.
+  pins: ice-catalog-session-1/C-024, C-027
   **MAINT-POLICY-1 step 2 (2026-09-10):** the registry also carries the stamped
   `[<profile>.maintenance]` policy (`set_maintenance_policy` / `maintenance_policy`, profile
   name plus optional typed policy), the per-execute channel the `run_maintenance` dry run

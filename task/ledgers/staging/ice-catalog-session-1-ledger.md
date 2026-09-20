@@ -85,6 +85,12 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
   `Unsupported SQL statement` refusal (Python door only: the cache dict is unreachable
   without a PyO3 bridge, and H-05 forbids a second cache); the residue is recorded in the
   S8 registry row.
+- T-6 (tree measurement): runtime `conf.set` of a `spark.sql.catalog.*` block that never
+  completes (or carries an invalid kind) stays silent — first use then refuses
+  `unknown catalog`, which gets its own sentence in the S8 registry row. Complete blocks
+  that cannot build (including postgres S-6) raise from `conf.set`. `RESET` of the two
+  `datafusion.catalog.default_*` keys is not synced back to the facade (C-028 names `SET`
+  only); the engine answers its builtin default there.
 
 ## Proposition ledger
 
@@ -113,11 +119,11 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
 | C-021 | `UNCACHE TABLE` on a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`; `IF EXISTS` answers ok. | `test_uncache_missing_table` + `test_uncache_if_exists_missing_is_ok` + `test_uncache_table_clears_is_cached` + `test_uncache_missing_table_raises_table_not_found` + `test_cache_as_select_stays_not_implemented`. | OPEN | Mechanism pinned S5; cell pins S8. |
 | C-022 | `D-RENAME-TABLE-SHORT` replays EQUAL; cross-catalog `RENAME TO` still refuses. | `test_rename_to_two_part_cell` + `test_rename_across_catalogs_still_refuses` + `rename_two_part_dest_anchors_on_the_source_catalog` + `rename_three_part_dest_across_catalogs_still_refuses` + `alter_source_and_rename_dest_complete_short_names`. | OPEN | Mechanism pinned S3; cell pins S8. |
 | C-023 | `P-CALL-NO-CATALOG` replays EQUAL: two-part `system.<proc>` uses the current catalog. | `test_call_no_catalog_cell` + `call_two_part_resolves_current_catalog` + `resolve_call_target_two_part_uses_current_catalog`. | OPEN | Mechanism pinned S3; cell pins S8. |
-| C-024 | Runtime `conf.set` of `spark.sql.catalog.*` accumulates; first complete block registers, later sets update the side map without re-registering. | `test_runtime_catalog_registration_then_create` + `test_late_table_default_key_lands_on_create`. | OPEN | S8. |
+| C-024 | Runtime `conf.set` of `spark.sql.catalog.*` accumulates; first complete block registers, later sets update the side map without re-registering. | `test_runtime_catalog_registration_then_create` + `test_late_table_default_key_lands_on_create`. | OPEN | Mechanism pinned S6; cell pins S8. |
 | C-025 | `CAT-TYPE-HADOOP` replays EQUAL (`hadoop` aliased to `Memory`; UUID metadata names, not `vN`). | `test_hadoop_type_cell` + `kind_from_type` unit pins. | OPEN | S8. |
 | C-026 | `CAT-CATALOG-IMPL-INMEMORY` replays EQUAL. | `test_catalog_impl_inmemory_cell` + `kind_from_catalog_impl` unit pins. | OPEN | S8. |
-| C-027 | `CAT-TABLE-DEFAULT-OVERRIDE` replays EQUAL with override > user > default precedence on all three legs. | `test_table_default_override_cell` + `test_table_override_beats_user_property` + `test_user_property_beats_table_default` + `test_both_default_and_override_resolves_to_override`. | OPEN | S8. |
-| C-028 | Facade `_catalog_state` agrees with the engine after `USE`, `setCurrentCatalog` / `setCurrentDatabase`, and `SET datafusion.catalog.*`. | `test_use_updates_facade_state`, `test_set_current_catalog_updates_engine_state`, `test_set_datafusion_catalog_keys_updates_facade_state`. | OPEN | S8. |
+| C-027 | `CAT-TABLE-DEFAULT-OVERRIDE` replays EQUAL with override > user > default precedence on all three legs. | `test_table_default_override_cell` + `test_table_override_beats_user_property` + `test_user_property_beats_table_default` + `test_both_default_and_override_resolves_to_override`. | OPEN | Mechanism pinned S6 (memory kind); hadoop-kind cell pins S8. |
+| C-028 | Facade `_catalog_state` agrees with the engine after `USE`, `setCurrentCatalog` / `setCurrentDatabase`, and `SET datafusion.catalog.*`. | `test_use_updates_facade_state`, `test_set_current_catalog_updates_engine_state`, `test_set_datafusion_catalog_keys_updates_facade_state`. | OPEN | Mechanism pinned S6; cell pins S8. |
 | C-029 | `current_catalog` / `current_schema` / `current_database` leave `bare_nullary.rs` `REFUSING`; the q14 pins assert answers. | Rewritten `test_q14_session_names_sql_divergence` + `test_q14_session_names_sql_answer` + `parenthesised_current_catalog_survives_demotion` + `bare_current_catalog_column_error_stays_mapped`. | **PROVEN** | q14 green; `bare_nullary` 11/11; UDF 3/3. H-06 drop declined per T-1. pins: ice-catalog-session-1/C-029 |
 | C-030 | `catalog_config.rs` extraction ratchets down with `hadoop` / `InMemoryCatalog` arms and updated refusal texts. | `scripts/check_rust_file_size.py` green + `type_short_forms_resolve_each_kind` siblings. | OPEN | S7. |
 

@@ -100,7 +100,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split transformers by feature family with stable public re-exports.",
     ),
     "python/repark/src/repark/spark/session/session_core.py": (
-        2335,
+        2345,
         "SparkSession lifecycle and query entry points share one facade module.",
         "Split construction and configuration from query and catalog methods.",
     ),

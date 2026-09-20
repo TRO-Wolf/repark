@@ -300,7 +300,7 @@ class Catalog:
                 f"[CATALOG_NOT_FOUND] The catalog `{name}` not found. Consider to set the SQL "
                 f'config "spark.sql.catalog.{name}" to a catalog plugin.'
             )
-        self._session._catalog_state()["current_catalog"] = name
+        self._session.sql(f"USE {_quote_ident(name)}")
 
     setCurrentCatalog = set_current_catalog  # noqa: N815
 
@@ -324,7 +324,7 @@ class Catalog:
                 f"[SCHEMA_NOT_FOUND] The schema `{catalog}`.`{name}` cannot be found. Verify "
                 f"the spelling and correctness of the schema and catalog."
             )
-        self._session._catalog_state()["current_database"] = name
+        self._session.sql(f"USE DATABASE {_quote_ident(name)}")
 
     setCurrentDatabase = set_current_database  # noqa: N815
 
