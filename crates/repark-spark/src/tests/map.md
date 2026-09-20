@@ -42,6 +42,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   they stayed green under that revert. The revert now reds this pin and the three `QD-MOR-*`
   delete-side pins.
   pins: ice-session-write-conf-1/C-061
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 6, the merge with
+  ICE-META-DELETE-1 (2026-09-20):** `session_team_stamps_cow_delete_overwrite` seeds TWO rows
+  and deletes one. On one row its `DELETE` covered the only data file, so after #739 (IPI-08)
+  it routes through the fork's `can_delete_using_metadata` and commits a metadata-only delete —
+  and Spark stamps NOTHING there (the recorded `QS-DELETE-PART-META` cell's `delete` summary
+  carries a null `team`), so the pin's `Some("a")` became the wrong expectation for the wrong
+  reason: it had stopped exercising the CoW overwrite arm it names. A partial delete keeps it
+  on that arm, where the session property IS stamped. The metadata route's no-stamp is pinned
+  on the Python side by `QS-DELETE-PART-META`, no longer an xfail.
+  pins: ice-session-write-conf-1/C-034
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4, the absolute layout
   (2026-09-20):** the layout battery no longer compares conf against no-conf alone — both runs
   assert Spark's OWN answer (cells `QU-*`): one live data file and `added-data-files=1` for the

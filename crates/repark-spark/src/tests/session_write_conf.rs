@@ -60,7 +60,12 @@ async fn session_team_stamps_cow_delete_overwrite() {
         "CREATE TABLE ice.sales.sdel (id INT) USING iceberg",
     )
     .await;
-    run(&ctx, &catalogs, "INSERT INTO ice.sales.sdel VALUES (1)").await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.sdel VALUES (1), (2)",
+    )
+    .await;
     set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team", "a");
     run(&ctx, &catalogs, "DELETE FROM ice.sales.sdel WHERE id = 1").await;
     unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team");
