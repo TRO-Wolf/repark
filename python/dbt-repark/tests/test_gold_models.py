@@ -346,22 +346,29 @@ def test_full_refresh_rebuilds_both_models(project: tuple[Path, Path]) -> None:
     assert fact == FCT_ROWS
 
 
-def test_relation_documentation_refuses(project: tuple[Path, Path]) -> None:
-    """``persist_docs.relation`` refuses: RePark has no CREATE TABLE ... COMMENT on a CTAS.
-
-    Without the override the emitted CTAS reaches the parser, which reports the failure at
-    ``using`` rather than at the comment clause (registry DBT-RELCOMMENT-1). The compile-time
-    refusal is what keeps that misleading diagnostic away from the user.
-    """
-    root, _ = project
+def test_relation_documentation_sets_the_table_comment(
+    project: tuple[Path, Path],
+) -> None:
+    """``persist_docs.relation`` lands as the ``comment`` property on the built table."""
+    root, warehouse = project
     _prepend_config(root, "gold_fct", "config(persist_docs={'relation': true})")
     schema_path = root / "models" / "schema.yml"
     document = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
     document["models"][0]["description"] = "gold fact, one row per survey"
     schema_path.write_text(yaml.safe_dump(document), encoding="utf-8")
     built = _invoke(["run", "--select", "gold_fct"], root)
-    assert not built.success
-    assert "DBT-RELCOMMENT-1" in _failures(built)
+    assert built.success, _failures(built)
+
+    pointers = sorted(warehouse.glob("*/gold_fct/metadata/*.metadata.json"))
+    assert pointers, "gold_fct has no Iceberg metadata"
+    document = json.loads(pointers[-1].read_text(encoding="utf-8"))
+    assert document["properties"]["comment"] == "gold fact, one row per survey"
+    fact = _read(
+        warehouse,
+        f"select survey_id, clinic_id, wait_time_minutes "
+        f"from {CATALOG}.{NAMESPACE}.gold_fct order by survey_id",
+    )
+    assert fact == FCT_ROWS
 
 
 def test_a_missing_namespace_is_created(project: tuple[Path, Path]) -> None:
@@ -402,7 +409,6 @@ def test_partition_by_builds(project: tuple[Path, Path]) -> None:
 @pytest.mark.parametrize(
     ("setting", "row"),
     [
-        ("config(location_root='/tmp/elsewhere')", "DBT-CTASCLAUSE-1"),
         ("config(options={'compression': 'zstd'})", "DBT-CTASCLAUSE-1"),
         ("config(clustered_by='clinic_id', buckets=4)", "DBT-CTASCLAUSE-1"),
     ],
@@ -420,6 +426,26 @@ def test_unsupported_ctas_clauses_refuse(
     built = _invoke(["run", "--select", "gold_fct"], root)
     assert not built.success
     assert row in _failures(built)
+
+
+def test_location_root_builds_under_the_given_path(project: tuple[Path, Path]) -> None:
+    """``location_root`` lands the table under the given path, with its rows readable."""
+    root, warehouse = project
+    outside = root / "elsewhere"
+    _prepend_config(root, "gold_fct", f"config(location_root='{outside}')")
+    built = _invoke(["run", "--select", "gold_fct"], root)
+    assert built.success, _failures(built)
+
+    pointers = sorted(outside.glob("gold_fct/metadata/*.metadata.json"))
+    assert pointers, "gold_fct has no Iceberg metadata under location_root"
+    document = json.loads(pointers[-1].read_text(encoding="utf-8"))
+    assert document["location"] == str(outside / "gold_fct")
+    fact = _read(
+        warehouse,
+        f"select survey_id, clinic_id, wait_time_minutes "
+        f"from {CATALOG}.{NAMESPACE}.gold_fct order by survey_id",
+    )
+    assert fact == FCT_ROWS
 
 
 def _prepend_config(root: Path, model: str, setting: str) -> None:

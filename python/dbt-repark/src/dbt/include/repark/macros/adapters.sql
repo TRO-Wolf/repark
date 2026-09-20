@@ -61,29 +61,6 @@
 {% endmacro %}
 
 
-{% macro repark__comment_clause() %}
-  {%- set raw_persist_docs = config.get('persist_docs', {}) -%}
-  {%- if raw_persist_docs is mapping and raw_persist_docs.get('relation', false) -%}
-    {{ exceptions.raise_compiler_error(
-      "dbt-repark cannot persist a relation description: RePark refuses CREATE TABLE ...
-       COMMENT on an Iceberg CTAS (divergence registry DBT-RELCOMMENT-1). Remove
-       persist_docs.relation, or carry the description in tblproperties."
-    ) }}
-  {%- endif %}
-{%- endmacro %}
-
-
-{% macro repark__location_clause() %}
-  {%- if config.get('location_root') is not none -%}
-    {{ exceptions.raise_compiler_error(
-      "dbt-repark cannot set location_root: RePark refuses CREATE TABLE ... LOCATION on an
-       Iceberg CTAS and derives the table location from the namespace warehouse (divergence
-       registry DBT-CTASCLAUSE-1)."
-    ) }}
-  {%- endif %}
-{%- endmacro %}
-
-
 {% macro repark__options_clause() -%}
   {%- if config.get('options') is not none -%}
     {{ exceptions.raise_compiler_error(
