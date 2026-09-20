@@ -1,4 +1,5 @@
-"""pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009"""
+"""pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
+C-008, C-009, C-011"""
 
 from __future__ import annotations
 
@@ -148,6 +149,79 @@ def test_col0_table_or_view_already_exists_without_sqlstate() -> None:
     )
     assert error.getCondition() == "TABLE_OR_VIEW_ALREADY_EXISTS"
     assert error.getSqlState() is None
+
+
+def test_drop_table_missing_stamped_message_parses() -> None:
+    """The D-DROP-TABLE-MISSING-ERR stamp parses through the planning prefix."""
+    error = AnalysisException(
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        "`ice`.`sales`.`never_there` cannot be found. Verify the spelling and correctness "
+        "of the schema and catalog. If you did not qualify the name with a schema, verify "
+        "the current_schema() output, or qualify the name with the correct schema and "
+        "catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF "
+        "EXISTS. SQLSTATE: 42P01"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert error.getSqlState() == "42P01"
+
+
+def test_create_table_existing_stamped_message_parses() -> None:
+    """The D-CREATE-EXISTS-ERR/D-CTAS-EXISTS-ERR stamp parses its condition and SQLSTATE."""
+    error = AnalysisException(
+        "Error during planning: [TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or "
+        "view `ice`.`sales`.`dup` because it already exists. Choose a different name, "
+        "drop or replace the existing object, or add the IF NOT EXISTS clause to "
+        "tolerate pre-existing objects. SQLSTATE: 42P07"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "TABLE_OR_VIEW_ALREADY_EXISTS"
+    assert error.getSqlState() == "42P07"
+
+
+def test_save_as_table_errorifexists_stamped_message_parses() -> None:
+    """The W-DF-SAVEASTABLE-ERRORIFEXISTS stamp parses its condition and SQLSTATE."""
+    error = AnalysisException(
+        "[TABLE_OR_VIEW_ALREADY_EXISTS] table 'cat.ns.t' already exists; use mode("
+        "'append'|'overwrite'|'ignore') to write into an existing table. SQLSTATE: 42P07"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "TABLE_OR_VIEW_ALREADY_EXISTS"
+    assert error.getSqlState() == "42P07"
+
+
+def test_writer_v2_create_stamped_message_parses() -> None:
+    """The W-DF-V2-CREATE-EXISTS-ERR stamp now reports its SQLSTATE."""
+    error = AnalysisException(
+        "[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view 'cat.ns.t' because "
+        "it already exists. Choose a different name, drop or replace the existing "
+        "object, or use createOrReplace(). SQLSTATE: 42P07"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "TABLE_OR_VIEW_ALREADY_EXISTS"
+    assert error.getSqlState() == "42P07"
+
+
+def test_writer_v2_replace_stamped_message_parses() -> None:
+    """The W-DF-V2-REPLACE-MISSING-ERR stamp now reports its SQLSTATE."""
+    error = AnalysisException(
+        "[TABLE_OR_VIEW_NOT_FOUND] Cannot replace table 'cat.ns.t' because it does "
+        "not exist. Use create() or createOrReplace() to create it. SQLSTATE: 42P01"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert error.getSqlState() == "42P01"
+
+
+def test_writer_v2_append_missing_stamped_message_parses() -> None:
+    """The W-DF-V2-APPEND-MISSING-ERR stamp parses its condition and SQLSTATE."""
+    error = AnalysisException(
+        "[TABLE_OR_VIEW_NOT_FOUND] Cannot write to table 'cat.ns.t' because it "
+        "does not exist. Use create() or createOrReplace() first. SQLSTATE: 42P01"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert error.getSqlState() == "42P01"
 
 
 def test_attach_error_condition_wins_over_class_parser() -> None:

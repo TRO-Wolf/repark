@@ -218,8 +218,8 @@ class DataFrameWriter:
             return
         if normalized_mode == "error":
             raise AnalysisException(
-                f"table {name!r} already exists; use mode('append'|'overwrite'|'ignore') to write "
-                "into an existing table"
+                f"[TABLE_OR_VIEW_ALREADY_EXISTS] table {name!r} already exists; use mode("
+                "'append'|'overwrite'|'ignore') to write into an existing table. SQLSTATE: 42P07"
             )
         if normalized_mode == "ignore":
             return
@@ -880,7 +880,7 @@ class DataFrameWriterV2:
             raise AnalysisException(
                 f"[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view {self._table!r} "
                 "because it already exists. Choose a different name, drop or replace the existing "
-                "object, or use createOrReplace()."
+                "object, or use createOrReplace(). SQLSTATE: 42P07"
             )
         self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=False)
@@ -905,7 +905,7 @@ class DataFrameWriterV2:
         if not session.table_exists(qualified):
             raise AnalysisException(
                 f"[TABLE_OR_VIEW_NOT_FOUND] Cannot replace table {self._table!r} because it does "
-                "not exist. Use create() or createOrReplace() to create it."
+                "not exist. Use create() or createOrReplace() to create it. SQLSTATE: 42P01"
             )
         self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=True)
@@ -917,8 +917,8 @@ class DataFrameWriterV2:
         qualified, table_ref = self._resolved_table()
         if not session.table_exists(writer_layout.table_of_ref_target(qualified)):
             raise AnalysisException(
-                f"Cannot write to table {self._table!r} because it does not exist. "
-                "Use create() or createOrReplace() first."
+                f"[TABLE_OR_VIEW_NOT_FOUND] Cannot write to table {self._table!r} because it "
+                "does not exist. Use create() or createOrReplace() first. SQLSTATE: 42P01"
             )
         return session, table_ref
 

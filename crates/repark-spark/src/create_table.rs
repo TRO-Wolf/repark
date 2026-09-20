@@ -20,6 +20,7 @@ use repark_core::{CatalogRegistry, LocationPolicy};
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 use repark_iceberg::write::nested_type_sql::struct_field_required;
 
+use crate::catalog_ops::table_or_view_already_exists;
 use crate::{
     CreatePlan, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
     build_transform_field, catalog_handle, iceberg_err, name_parts, namespace_schema_name,
@@ -401,10 +402,11 @@ async fn execute_schema_create(
         if create.if_not_exists {
             return ctx.read_empty();
         } else if !create.or_replace {
-            return Err(DataFusionError::Plan(format!(
-                "table `{}` already exists",
-                create.full_name
-            )));
+            return Err(table_or_view_already_exists(
+                &create.catalog,
+                create.namespace.to_string().as_str(),
+                &create.table,
+            ));
         }
     }
 

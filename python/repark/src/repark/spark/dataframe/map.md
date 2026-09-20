@@ -675,6 +675,11 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   both `_run_through_temp_view` bodies share `writer_layout.run_through_temp_view`
   and `writer_readwriter.py` holds its exact 1093 baseline.
   pins: ice-write-options-1/C-001, C-005
+  IPI-51 (2026-09-20): the four TAKE writer raises now carry Spark's stamped
+  text — `saveAsTable` error-mode and V2 `create` get `[TABLE_OR_VIEW_ALREADY_EXISTS]`/
+  `SQLSTATE: 42P07`, V2 `replace` and `_existing_table_ref` (append-missing) get
+  `[TABLE_OR_VIEW_NOT_FOUND]`/`SQLSTATE: 42P01`; in-place appends keep the wording and the
+  1091 baseline. pins: ice-error-conditions-1/C-011
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —
