@@ -41,6 +41,12 @@ IN_MEMORY_IMPL = "org.apache.iceberg.inmemory.InMemoryCatalog"
 UUID_TAIL = re.compile(r"[0-9a-f-]{36}")
 HEX_RUN = re.compile(r"[0-9a-f]{5,}(?:-[0-9a-f]+)+")
 STAGING_RUN = re.compile(r"copy-table-staging-[0-9a-f-]+")
+UUID_LEFTOVER = re.compile(r"<uuid>[0-9a-f-]{1,30}")
+ID_LEFTOVER = re.compile(r"<id>[0-9a-f]")
+HEXBIT = re.compile(r"[0-9a-f]{4,}")
+ID_RUN = re.compile(r"(?:<id>){2,}")
+ID_MERGE = re.compile(r"<id>(?:[0-9a-f-]*<id>)+")
+RTP_TABLE_PATH = re.compile(r"Path \S+/metadata/(v\d+\.metadata\.json)/")
 
 
 def live_session(warehouse: Path) -> Any:
@@ -132,33 +138,42 @@ def snapshot_order(metadata: dict[str, Any]) -> dict[int, int]:
 
 def blob_row(order: dict[int, int], blob: dict[str, Any]) -> list[Any]:
     """Normalize one statistics blob with snapshot positions like the oracle."""
+    props = blob.get("properties") or {}
     return [
         blob.get("type"),
         blob.get("fields", []),
         order.get(blob.get("snapshot-id")),
         blob.get("sequence-number"),
-        sorted((blob.get("properties") or {}).items()),
+        [[key, value] for key, value in sorted(props.items())],
     ]
 
 
-def statistics_observation(context: OracleContext) -> list[dict[str, Any]]:
+def norm_struct(value: Any) -> Any:
+    """Normalize nested structs to sorted pair lists like the harness."""
+    if isinstance(value, dict):
+        return sorted([[key, norm_struct(item)] for key, item in value.items()], key=repr)
+    if isinstance(value, list):
+        return [norm_struct(item) for item in value]
+    return value
+
+
+def statistics_observation(context: OracleContext) -> list[list[list[Any]]]:
     """Normalize the statistics entries of current table metadata."""
     metadata = context.metadata()
     order = snapshot_order(metadata)
     out = []
     for entry in metadata.get("statistics", []):
-        out.append(
-            {
-                "snapshot": order.get(entry.get("snapshot-id")),
-                "blobs": sorted(
-                    [blob_row(order, b) for b in entry.get("blob-metadata", [])],
-                    key=repr,
-                ),
-                "size>0": entry.get("file-size-in-bytes", 0) > 0,
-                "footer>0": entry.get("file-footer-size-in-bytes", 0) > 0,
-            }
-        )
-    return sorted(out, key=lambda d: repr(d["snapshot"]))
+        fields = {
+            "snapshot": order.get(entry.get("snapshot-id")),
+            "blobs": sorted(
+                [blob_row(order, b) for b in entry.get("blob-metadata", [])],
+                key=repr,
+            ),
+            "size>0": entry.get("file-size-in-bytes", 0) > 0,
+            "footer>0": entry.get("file-footer-size-in-bytes", 0) > 0,
+        }
+        out.append([[key, fields[key]] for key, _ in sorted(fields.items(), key=repr)])
+    return sorted(out, key=lambda pairs: repr(dict(pairs).get("snapshot")))
 
 
 def seed_three(
@@ -186,7 +201,7 @@ def ancestors_cell(context: OracleContext, sql: str) -> None:
     """Run one ancestors_of CALL and record its columns and symbolic rows."""
     stamps = {s["snapshot-id"]: s["timestamp-ms"] for s in context.metadata().get("snapshots", [])}
     frame = context.session.sql(sql)
-    context.observe("cols", [(f.name, f.dataType.simpleString()) for f in frame.schema.fields])
+    context.observe("cols", [[f.name, f.dataType.simpleString()] for f in frame.schema.fields])
     rows = [list(r) for r in frame.collect()]
     context.snaps()
     context.observe(
@@ -254,7 +269,7 @@ def table_stats_cell(context: OracleContext, extra: str) -> None:
     frame = context.session.sql(
         f"CALL {context.catalog}.system.compute_table_stats(table => '{context.short}'{extra})"
     )
-    cols = [(f.name, f.dataType.simpleString()) for f in frame.schema.fields]
+    cols = [[f.name, f.dataType.simpleString()] for f in frame.schema.fields]
     rows = [list(r) for r in frame.collect()]
     metadata = context.metadata()
     context.observe("cols", cols)
@@ -321,7 +336,7 @@ def partition_stats_cell(context: OracleContext, extra: str, first_id: int) -> N
     frame = context.session.sql(
         f"CALL {context.catalog}.system.compute_partition_stats(table => '{context.short}'{extra})"
     )
-    cols = [(f.name, f.dataType.simpleString()) for f in frame.schema.fields]
+    cols = [[f.name, f.dataType.simpleString()] for f in frame.schema.fields]
     rows = [list(r) for r in frame.collect()]
     metadata = context.metadata()
     context.observe("cols", cols)
@@ -359,16 +374,11 @@ def partition_stats_contents(metadata: dict[str, Any]) -> list[Any]:
     contents = []
     for entry in metadata.get("partition-statistics", []):
         table = parquet.read_table(entry["statistics-path"].replace("file:", ""))
-        data = table.to_pylist()
-        contents.append(
-            [
-                table.schema.names,
-                sorted(
-                    [{k: v for k, v in r.items() if k not in drop} for r in data],
-                    key=repr,
-                ),
-            ]
+        dicts = sorted(
+            [{k: v for k, v in r.items() if k not in drop} for r in table.to_pylist()],
+            key=repr,
         )
+        contents.append([table.schema.names, [norm_struct(d) for d in dicts]])
     return contents
 
 
@@ -433,7 +443,7 @@ def rewrite_path_cell(context: OracleContext, extra: str, target: str, staging: 
     frame = context.session.sql(
         f"CALL {context.catalog}.system.rewrite_table_path(table => '{context.short}'{extra})"
     )
-    context.observe("cols", [(f.name, f.dataType.simpleString()) for f in frame.schema.fields])
+    context.observe("cols", [[f.name, f.dataType.simpleString()] for f in frame.schema.fields])
     rows = [list(r) for r in frame.collect()]
     source = context.location()
     context.observe(
@@ -618,6 +628,8 @@ def record_cell(
 def record_oracle(warehouse: Path) -> list[dict[str, Any]]:
     """Derive all 27 oracle cells on live Spark and return the records."""
     session = live_session(warehouse)
+    for catalog in ("sc", "hc"):
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.ns").collect()
     try:
         return [
             record_cell(session, warehouse, cell, family, kind) for cell, family, kind in CELL_KINDS
@@ -633,10 +645,16 @@ def canonical_value(value: Any, warehouse: Path) -> Any:
     if isinstance(value, dict):
         return {k: canonical_value(v, warehouse) for k, v in value.items()}
     if isinstance(value, str):
-        out = value.replace(str(warehouse), "<wh>")
+        out = RTP_TABLE_PATH.sub(r"Path <table>/metadata/\1/", value)
+        out = out.replace(str(warehouse), "<wh>")
         out = STAGING_RUN.sub("copy-table-staging-<uuid>", out)
         out = UUID_TAIL.sub("<uuid>", out)
-        return HEX_RUN.sub("<id>", out)
+        out = UUID_LEFTOVER.sub("<uuid>", out)
+        out = HEX_RUN.sub("<id>", out)
+        out = ID_LEFTOVER.sub("<id>", out)
+        out = HEXBIT.sub("<id>", out)
+        out = ID_RUN.sub("<id>", out)
+        return ID_MERGE.sub("<id>", out)
     return value
 
 

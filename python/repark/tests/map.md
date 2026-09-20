@@ -3552,8 +3552,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-procs-route-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
   Round 1 routing (2026-09-19): the facade pins go green against the release
-  native (25 passed, 2 strict xfails for the version range, live tier skipped
-  without a JVM).
+  native (25 passed, 2 strict xfails for the version range), and the live
+  re-derivation passes on fresh randomness (canonicalized run-stamped tails).
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells

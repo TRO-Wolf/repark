@@ -1,6 +1,3 @@
-//! Pins `CALL <catalog>.system.ancestors_of / compute_table_stats /
-//! compute_partition_stats / rewrite_table_path` result schemas, rows, and guards.
-
 use super::super::*;
 use super::common::*;
 
@@ -99,7 +96,6 @@ fn schema_names(batch: &RecordBatch) -> Vec<String> {
         .collect()
 }
 
-/// pins: ice-procs-route-1/C-004
 #[tokio::test]
 async fn call_ancestors_of_walks_newest_first_with_snapshot_timestamps() {
     let wh = TempDir::new().unwrap();
@@ -150,7 +146,6 @@ async fn call_ancestors_of_walks_newest_first_with_snapshot_timestamps() {
     }
 }
 
-/// pins: ice-procs-route-1/C-005
 #[tokio::test]
 async fn call_ancestors_of_names_missing_snapshots_like_spark() {
     let wh = TempDir::new().unwrap();
@@ -187,7 +182,6 @@ async fn call_ancestors_of_names_missing_snapshots_like_spark() {
     );
 }
 
-/// pins: ice-procs-route-1/C-006, C-007
 #[tokio::test]
 async fn call_compute_table_stats_registers_one_blob_per_column_in_schema_order() {
     let wh = TempDir::new().unwrap();
@@ -232,7 +226,6 @@ async fn call_compute_table_stats_registers_one_blob_per_column_in_schema_order(
     }
 }
 
-/// pins: ice-procs-route-1/C-008, C-010
 #[tokio::test]
 async fn call_compute_table_stats_refuses_unknown_column_and_empty_answers_zero_rows() {
     let wh = TempDir::new().unwrap();
@@ -276,7 +269,6 @@ async fn call_compute_table_stats_refuses_unknown_column_and_empty_answers_zero_
     );
 }
 
-/// pins: ice-procs-route-1/C-011, C-012
 #[tokio::test]
 async fn call_compute_partition_stats_registers_entry_and_refuses_unpartitioned() {
     let wh = TempDir::new().unwrap();
@@ -325,7 +317,6 @@ async fn call_compute_partition_stats_registers_entry_and_refuses_unpartitioned(
     );
 }
 
-/// pins: ice-procs-route-1/C-013, C-014, C-015
 #[tokio::test]
 async fn call_rewrite_table_path_stages_manifests_lists_and_answers_sparks_counts() {
     let wh = TempDir::new().unwrap();
@@ -433,7 +424,6 @@ async fn call_rewrite_table_path_stages_manifests_lists_and_answers_sparks_count
     );
 }
 
-/// pins: ice-procs-route-1/C-016
 #[tokio::test]
 async fn call_rewrite_table_path_version_range_refuses_naming_the_fork_gap() {
     let wh = TempDir::new().unwrap();
@@ -460,7 +450,6 @@ async fn call_rewrite_table_path_version_range_refuses_naming_the_fork_gap() {
     );
 }
 
-/// pins: ice-procs-route-1/C-004
 #[tokio::test]
 async fn call_unknown_procedure_lists_the_four_new_names() {
     let wh = TempDir::new().unwrap();

@@ -7076,6 +7076,62 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   engine reports is an honest count of what it wrote. Closing the row means giving the fork Java's
   `ceil(total / target)` sizing, which is fork work.
 
+### ICE-PROCS-ROUTE-1 — four maintenance procedures — **FIXED 2026-09-19**
+
+`ancestors_of`, `compute_table_stats`, `compute_partition_stats`, and
+`rewrite_table_path` refused before this row (`CALL … is not supported`);
+they now answer with Spark's schemas and rows over the owned fork's
+maintenance actions. Measured before/after on the 27-cell PySpark-4.1.2 +
+Iceberg-1.11.0 oracle (`python/repark/tests/ice_procs_route_1_spark_oracle.json`,
+re-derived by `python/repark/tests/_record_ice_procs_route_1_oracle.py`):
+before, every facade cell failed with the not-supported refusal; after, 25
+cells pass on the facade door with the recorded columns, rows, metadata
+entries, and file contents, the 2 incremental version-range cells stay
+`xfail(strict)`, and the live tier re-derives the oracle on live Spark.
+
+- **RePark** (`CALL <catalog>.system.ancestors_of(table [, snapshot_id])`):
+  walks the snapshot parent chain newest-first, answering
+  `snapshot_id bigint, timestamp bigint` with the snapshot's own
+  timestamp-ms. No current snapshot refuses `Cannot find snapshot: -1`; an
+  unknown id refuses `Cannot find snapshot: <id>` — both as
+  `IllegalArgumentException`, Spark's procedure-layer class.
+- **RePark** (`CALL <catalog>.system.compute_table_stats(table [, snapshot_id]
+  [, columns])`): one `statistics_file` string row with the registered puffin
+  path; the metadata gains one `apache-datasketches-theta-v1` blob per column
+  with exact ndv at this size. The default covers every primitive top-level
+  column (`struct` fields skipped); `columns` keeps the listed ones in schema
+  order. An unknown column refuses `Can't find column <name> in table
+  <schema>`; an empty table answers zero rows and commits nothing.
+- **RePark** (`CALL <catalog>.system.compute_partition_stats(table [,
+  snapshot_id])`): one `partition_statistics_file` string row with
+  per-partition counts (`dv_count` on v3). An unpartitioned table refuses
+  `Table must be partitioned`.
+- **RePark** (`CALL <catalog>.system.rewrite_table_path(table, source_prefix,
+  target_prefix [, staging_location] [, create_file_list] [, start_version]
+  [, end_version])`): Spark's four columns — `latest_version` names the
+  current metadata file; `file_list_location` is the staged `file-list` CSV of
+  `src,target` lines (`N/A` when `create_file_list => false`); the manifest
+  count is the covered snapshots; the delete count is the staged parquet
+  position-delete files (1 on the MoR cell). Default staging sits under
+  `<table>/metadata/copy-table-staging-<…>/`. A wrong prefix refuses
+  `Path …/ does not start with …/`; `start_version` / `end_version` refuse
+  naming the fork's missing incremental range.
+- **Apache Spark**: identical columns, rows, metadata entries, and refusal
+  texts per the 27 measured cells, except the two incremental version-range
+  cells, which only Spark answers (the fork stages a full rewrite).
+- **Pin**: `python/repark/tests/test_ice_procs_route_1.py` (facade cells plus
+  the native-door CALL refusal each) and
+  `crates/repark-spark/src/tests/call_procs_route_1.rs` (schemas, rows, and
+  every refusal).
+- **Rationale**: routing, not table-format work — the fork already implements
+  the three actions, and the router only shapes Spark's surface around them.
+  Residue: the version-range `xfail(strict)` pair with the fork ask in the
+  ledger; the fork stages one rewritten metadata file where Spark stages every
+  version (the file list carries the staged file either way); default staging
+  names use wall-clock nanos plus pid because this crate carries no `uuid`
+  dependency; output columns are non-nullable by the rewrite-family precedent
+  (the fixture records no nullability).
+
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**
 
 - **repark** — both doors return a session-zone STRING (`'1970-01-01 00:00:00'` at UTC): the
