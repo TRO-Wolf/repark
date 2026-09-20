@@ -130,7 +130,10 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: map.md guard
-        run: bash scripts/check_map_md.sh
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+          bash scripts/check_map_md.sh --base "origin/${{ github.base_ref }}"
       # Mirror `make check-crate-dag`; scripts/check_crate_dag.py owns tiers, roles, and allowed
       # dependency kinds.
       - name: crate-DAG layering guard
