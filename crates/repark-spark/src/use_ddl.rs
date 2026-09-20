@@ -1,16 +1,19 @@
 use std::sync::Arc;
 
-use datafusion::arrow::array::RecordBatch;
-use datafusion::arrow::array::RecordBatchOptions;
-use datafusion::arrow::datatypes::Schema;
+use datafusion::arrow::array::{BooleanArray, RecordBatch, RecordBatchOptions, StringArray};
+use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{ObjectName, Use};
+use datafusion::sql::sqlparser::ast::{
+    ObjectName, ShowStatementFilter, ShowStatementFilterPosition, ShowStatementIn,
+    ShowStatementOptions, Use,
+};
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 
-use crate::{iceberg_err, name_parts};
+use crate::describe_show::filter_pattern_matches;
+use crate::{catalog_handle, iceberg_err, name_parts};
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) fn session_defaults(ctx: &SessionContext) -> (String, String) {
@@ -126,7 +129,7 @@ pub(crate) fn use_empty_frame(ctx: &SessionContext) -> Result<DataFrame> {
 }
 
 #[allow(clippy::missing_errors_doc)]
-async fn switch_catalog(
+fn switch_catalog(
     ctx: &SessionContext,
     catalog: &str,
     current_catalog: &str,
@@ -152,7 +155,7 @@ async fn execute_use_object(
     if !namespace_only {
         if let [one] = parts {
             if catalogs.is_registered(one) {
-                return switch_catalog(ctx, one, &current_catalog, &current_namespace).await;
+                return switch_catalog(ctx, one, &current_catalog, &current_namespace);
             }
             if namespace_exists(catalogs, &current_catalog, one).await? {
                 set_session_defaults(ctx, &current_catalog, one);
@@ -197,6 +200,233 @@ async fn execute_use_object(
     rendered.push(current_catalog.as_str());
     rendered.extend(parts.iter().map(String::as_str));
     Err(schema_not_found(&rendered))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn show_parse_refusal(statement: &str) -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(format!(
+            "Syntax error in `{statement}`: this option is not part of the Spark SHOW grammar"
+        ))),
+        None,
+    )
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn suffix_like_pattern(statement: &str, options: &ShowStatementOptions) -> Result<Option<String>> {
+    if options.starts_with.is_some() || options.limit.is_some() || options.limit_from.is_some() {
+        return Err(show_parse_refusal(statement));
+    }
+    match &options.filter_position {
+        None => Ok(None),
+        Some(ShowStatementFilterPosition::Suffix(ShowStatementFilter::Like(pattern))) => {
+            Ok(Some(pattern.clone()))
+        }
+        Some(_) => Err(show_parse_refusal(statement)),
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn show_in_parts(show_in: Option<&ShowStatementIn>) -> Result<Option<Vec<String>>> {
+    let Some(scope) = show_in else {
+        return Ok(None);
+    };
+    if scope.parent_type.is_some() {
+        return Err(show_parse_refusal("SHOW ... IN"));
+    }
+    let Some(name) = &scope.parent_name else {
+        return Err(show_parse_refusal("SHOW ... IN"));
+    };
+    Ok(Some(name_parts(name)))
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn show_catalogs_batch(names: Vec<String>) -> Result<RecordBatch> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "catalog",
+        DataType::Utf8,
+        false,
+    )]));
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![Arc::new(StringArray::from(names))],
+    )?)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn execute_show_catalogs(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    options: &ShowStatementOptions,
+) -> Result<DataFrame> {
+    if options.show_in.is_some() {
+        return Err(show_parse_refusal("SHOW CATALOGS"));
+    }
+    let pattern = suffix_like_pattern("SHOW CATALOGS", options)?;
+    let mut names = catalogs.catalog_names();
+    if !names.iter().any(|name| name == "spark_catalog") {
+        names.push("spark_catalog".to_string());
+    }
+    names.sort();
+    let rows: Vec<String> = names
+        .into_iter()
+        .filter(|name| {
+            pattern
+                .as_deref()
+                .is_none_or(|pattern| filter_pattern_matches(name, pattern))
+        })
+        .collect();
+    ctx.read_batch(show_catalogs_batch(rows)?)
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn show_tables_batch(rows: Vec<(String, String)>) -> Result<RecordBatch> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("namespace", DataType::Utf8, false),
+        Field::new("tableName", DataType::Utf8, false),
+        Field::new("isTemporary", DataType::Boolean, false),
+    ]));
+    let (namespaces, tables): (Vec<String>, Vec<String>) = rows.into_iter().unzip();
+    let temporary = BooleanArray::from(vec![false; tables.len()]);
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(StringArray::from(namespaces)),
+            Arc::new(StringArray::from(tables)),
+            Arc::new(temporary),
+        ],
+    )?)
+}
+
+#[allow(clippy::missing_errors_doc)]
+async fn resolve_show_tables_scope(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    scope: Option<Vec<String>>,
+) -> Result<((String, String), bool)> {
+    let (current_catalog, current_namespace) = session_defaults(ctx);
+    let Some(parts) = scope else {
+        return Ok(((current_catalog, current_namespace), true));
+    };
+    match parts.as_slice() {
+        [one] => {
+            if catalogs.is_registered(one) {
+                return Ok(((one.clone(), current_namespace), true));
+            }
+            if namespace_exists(catalogs, &current_catalog, one).await? {
+                return Ok(((current_catalog, one.clone()), false));
+            }
+            Err(schema_not_found(&[&current_catalog, one]))
+        }
+        [first, second] => {
+            if catalogs.is_registered(first) {
+                if namespace_exists(catalogs, first, second).await? {
+                    return Ok(((first.clone(), second.clone()), false));
+                }
+                return Err(schema_not_found(&[first, second]));
+            }
+            Err(schema_not_found(&[&current_catalog, first, second]))
+        }
+        _ => {
+            let mut rendered: Vec<&str> = Vec::with_capacity(parts.len() + 1);
+            let first_is_catalog = parts
+                .first()
+                .is_some_and(|first| catalogs.is_registered(first));
+            if !first_is_catalog {
+                rendered.push(current_catalog.as_str());
+            }
+            rendered.extend(parts.iter().map(String::as_str));
+            Err(schema_not_found(&rendered))
+        }
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_show_tables(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    options: &ShowStatementOptions,
+) -> Result<DataFrame> {
+    let pattern = suffix_like_pattern("SHOW TABLES", options)?;
+    let scope = show_in_parts(options.show_in.as_ref())?;
+    let ((catalog, namespace), ambient) = resolve_show_tables_scope(ctx, catalogs, scope).await?;
+    let empty = show_tables_batch(Vec::new())?;
+    let Some(handle) = catalogs.get(&catalog) else {
+        return ctx.read_batch(empty);
+    };
+    if ambient
+        && (namespace.is_empty() || !namespace_exists(catalogs, &catalog, &namespace).await?)
+    {
+        return ctx.read_batch(empty);
+    }
+    let mut tables = repark_iceberg::catalog::list_table_names(handle.as_ref(), &namespace).await?;
+    tables.sort();
+    let rows: Vec<(String, String)> = tables
+        .into_iter()
+        .filter(|table| {
+            pattern
+                .as_deref()
+                .is_none_or(|pattern| filter_pattern_matches(table, pattern))
+        })
+        .map(|table| (namespace.clone(), table))
+        .collect();
+    ctx.read_batch(show_tables_batch(rows)?)
+}
+
+#[allow(clippy::missing_errors_doc)]
+fn show_columns_batch(columns: Vec<String>) -> Result<RecordBatch> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "col_name",
+        DataType::Utf8,
+        false,
+    )]));
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![Arc::new(StringArray::from(columns))],
+    )?)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_show_columns(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    options: &ShowStatementOptions,
+) -> Result<DataFrame> {
+    let Some(scope) = &options.show_in else {
+        return Err(show_parse_refusal("SHOW COLUMNS"));
+    };
+    if scope.parent_type.is_some()
+        || options.starts_with.is_some()
+        || options.limit.is_some()
+        || options.limit_from.is_some()
+        || options.filter_position.is_some()
+    {
+        return Err(show_parse_refusal("SHOW COLUMNS"));
+    }
+    let Some(name) = &scope.parent_name else {
+        return Err(show_parse_refusal("SHOW COLUMNS"));
+    };
+    let completed = complete_name(ctx, &name_parts(name))?;
+    let [catalog, namespace, table] = completed.as_slice() else {
+        return Err(table_or_view_not_found(&name.to_string()));
+    };
+    let handle = catalog_handle(catalogs, catalog)?;
+    let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
+    if !handle.table_exists(&ident).await.map_err(iceberg_err)? {
+        return Err(table_or_view_not_found(&format!(
+            "{catalog}.{namespace}.{table}"
+        )));
+    }
+    let table = handle.load_table(&ident).await.map_err(iceberg_err)?;
+    let columns: Vec<String> = table
+        .metadata()
+        .current_schema()
+        .as_struct()
+        .fields()
+        .iter()
+        .map(|field| field.name.clone())
+        .collect();
+    ctx.read_batch(show_columns_batch(columns)?)
 }
 
 #[must_use]

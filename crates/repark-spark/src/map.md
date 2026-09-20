@@ -39,6 +39,10 @@ pins: rp-4-fork-repin/C-005, C-006
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `execute_merge_statement` (OUTPUT refusal, timestamp_ns cast lowering) so `execute_inner` stays under clippy's 100-line cap (run 22b).
+  **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `Statement::{ShowCatalogs, ShowTables,
+  ShowColumns}` arms route to `use_ddl`; the `DESCRIBE TABLE` intercept skips the Iceberg
+  path when a bare name resolves as a session table, so temp views keep winning.
+  pins: ice-catalog-session-1/C-015, C-016, C-017
   **CAST-MAP-SPELL-1 (2026-09-19):** `execute_inner` first runs
   `repark_functions::cast_map::rewrite_map_casts`, so a `CAST` / `TRY_CAST` naming `MAP<…>`
   reaches every intercept and the parser as the shared cast UDF call.
@@ -1122,6 +1126,9 @@ pins: rp-4-fork-repin/C-005, C-006
   flag; rows come from `table.metadata()` (Iceberg schema via `schema_to_arrow_schema`,
   default partition spec, location, properties plus a live `current-snapshot-id`, snapshot
   summary for `Statistics`, the session-built `Owner` below).
+  **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `ShowNamespaces.catalog` is `Option` —
+  the bare form lists the session's current catalog (NS-1 FIXED).
+  pins: ice-catalog-session-1/C-018
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
   **REVIEW-FIX-5 (2026-09-10):** the table parser takes one-, two-, and three-part names and
   never filters the table segment of a three-part name, so `cat.ns.files` describes while a
@@ -1220,7 +1227,11 @@ pins: rp-4-fork-repin/C-005, C-006
   (H-01; after the temp-view home capture, so the home stays `datafusion.public`).
   `rename_dest` anchors short `RENAME TO` targets on the source table (T-3); the
   ALTER / CALL / CREATE / CTAS / DROP call sites complete through `complete_name`.
-  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-022, C-023
+  S4 adds the `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` executors (sorted
+  names, ambient scope from the session defaults, `LIKE`-glob suffix, `TERSE` /
+  `EXTENDED` / `FULL` parse refusals) and the `SHOW TABLES IN` scope resolver
+  (catalog-first, like `USE`).
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-015, C-016, C-017, C-018, C-022, C-023
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
   cross-door evidence in `crates/repark-sql/tests/cross_door.rs`.

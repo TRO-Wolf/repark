@@ -2,6 +2,7 @@
 
 use std::collections::HashSet;
 
+use datafusion::common::TableReference;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{ObjectType, Statement, TableObject};
@@ -370,6 +371,21 @@ async fn execute_inner(
         Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
         Statement::Truncate(truncate) => execute_truncate(ctx, catalogs, truncate).await,
         Statement::Use(target) => crate::use_ddl::execute_use(ctx, catalogs, target).await,
+        Statement::ShowCatalogs { terse: true, .. }
+        | Statement::ShowTables { terse: true, .. }
+        | Statement::ShowColumns { extended: true, .. }
+        | Statement::ShowColumns { full: true, .. } => {
+            Err(crate::use_ddl::show_parse_refusal("SHOW ..."))
+        }
+        Statement::ShowCatalogs { show_options, .. } => {
+            crate::use_ddl::execute_show_catalogs(ctx, catalogs, show_options)
+        }
+        Statement::ShowTables { show_options, .. } => {
+            crate::use_ddl::execute_show_tables(ctx, catalogs, show_options).await
+        }
+        Statement::ShowColumns { show_options, .. } => {
+            crate::use_ddl::execute_show_columns(ctx, catalogs, show_options).await
+        }
         _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
     }
 }
@@ -536,6 +552,39 @@ async fn describe_namespace_preparse(
     )
 }
 
+async fn describe_table_resolves_in_session(ctx: &SessionContext, table: &str) -> bool {
+    ctx.table_provider(TableReference::Bare {
+        table: table.into(),
+    })
+    .await
+    .is_ok()
+}
+
+async fn try_describe_table_intercept(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let parsed = describe_show::try_parse_describe_table(sql)?;
+    let mut describe_table = match parsed.and_then(|ddl| {
+        write_options
+            .refuse_if_non_empty("DESCRIBE TABLE")
+            .map(|()| ddl)
+    }) {
+        Ok(describe_table) => describe_table,
+        Err(error) => return Some(Err(error)),
+    };
+    let shadowed = describe_table.catalog.is_empty()
+        && describe_table.namespace.is_empty()
+        && describe_table_resolves_in_session(ctx, &describe_table.table).await;
+    describe_table.complete_from_session(ctx);
+    if shadowed || catalogs.get(&describe_table.catalog).is_none() {
+        return None;
+    }
+    Some(describe_show::execute_describe_table(ctx, catalogs, describe_table).await)
+}
+
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_alter_intercepts(
     ctx: &SessionContext,
@@ -614,18 +663,8 @@ async fn try_preparse_intercepts(
     if let Some(outcome) = v2_json_preparse(sql, parsed_ddl) {
         return Some(outcome);
     }
-    if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
-        match parsed.and_then(|ddl| parsed_ddl("DESCRIBE TABLE").map(|()| ddl)) {
-            Ok(mut describe_table) => {
-                describe_table.complete_from_session(ctx);
-                if catalogs.get(&describe_table.catalog).is_some() {
-                    return Some(
-                        describe_show::execute_describe_table(ctx, catalogs, describe_table).await,
-                    );
-                }
-            }
-            Err(error) => return Some(Err(error)),
-        }
+    if let Some(result) = try_describe_table_intercept(ctx, catalogs, sql, write_options).await {
+        return Some(result);
     }
     // `SHOW {NAMESPACES|SCHEMAS|DATABASES}` (Group AB).
     if let Some(parsed) = describe_show::try_parse_show_namespaces(sql) {

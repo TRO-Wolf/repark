@@ -50,6 +50,11 @@ _UPDATE_PREFIX_RE = re.compile(r"(?is)^\s*(UPDATE\s+)")
 _DELETE_FROM_PREFIX_RE = re.compile(r"(?is)^\s*(DELETE\s+FROM\s+)")
 
 
+_DESCRIBE_TABLE_PREFIX_RE = re.compile(
+    r"(?is)^\s*((?:DESCRIBE|DESC)\s+(?:TABLE\s+)?(?:(?:EXTENDED|FORMATTED)\s+)?)"
+)
+
+
 _SELECT_OR_WITH_HEAD_RE = re.compile(r"(?is)^\s*(?:WITH\b|SELECT\b)")
 
 

@@ -4485,12 +4485,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `LIKE` is Spark's `StringUtils.filterPattern` and NOT SQL `LIKE` (full match not substring,
   case-insensitive, `|` alternation, `%`/`_` literal, the `LIKE` keyword optional, the pattern
   matched against the QUOTED row), `.show()` rendering, the unknown-catalog `AnalysisException`
-  **class identity** (live pyspark 4.0.0 `SCHEMA_NOT_FOUND` / 42704), the two registry-rowed
-  refusals
-  ([NS-1](../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog) /
-  [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
+  **class identity** (live pyspark 4.0.0 `SCHEMA_NOT_FOUND` / 42704), the bare form
+  listing the current catalog (NS-1 FIXED 2026-09-20, `USE <catalog>` first or the
+  `spark_catalog` build default) and the one remaining registry-rowed refusal
+  ([NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
   failing LOUD, and that a
   relation named `namespaces`/`schemas` is not shadowed (Spark has no `SHOW <relation>` form).
+  pins: ice-catalog-session-1/C-018
 - `test_perf_facade_collect_rows.py` — **PERF-FACADE-COLLECT-1** (2026-09-04): the binding row
   fast path against the pre-existing Python converter, kept callable as
   `rows_export.rows_from_arrow_table_python`. Both converters run on the same batch and every
@@ -4830,10 +4831,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   missing-namespace `SCHEMA_NOT_FOUND` **equals DESCRIBE sibling** (no SHOW precheck;
   AST forbids `_namespace_exists` on `get_database`), `locationUri` equals
   `probe_namespace_location_via_describe` on one memory session, FA-2 `listDatabases`
-  still None.
-  Remaining divergences rowed as
-  [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
+  still None. **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `SHOW TABLES [IN|FROM]
+  [LIKE]` is implemented SQL (ST-1 FIXED); the remaining divergence is
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
+  pins: ice-catalog-session-1/C-016
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_parity3.py` — **R-PARITY3**: `createDataFrame(schema=StructType|DDL)` preserves int32;
   `show(vertical=True)` real `-RECORD` layout + only-showing-top-n. Row factory/pickle pins in

@@ -1,3 +1,5 @@
+use datafusion::arrow::array::BooleanArray;
+
 use super::super::*;
 use super::common::*;
 use crate::use_ddl::{complete_name, default_namespace_for_catalog, session_defaults};
@@ -329,6 +331,222 @@ async fn call_two_part_resolves_current_catalog() {
             .contains("CALL system.nosuchproc is not supported"),
         "got: {error}"
     );
+}
+
+async fn string_column(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    column: usize,
+) -> (Vec<String>, String, bool) {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let mut values = Vec::new();
+    let mut name = String::new();
+    let mut nullable = true;
+    for batch in &batches {
+        let field = batch.schema().field(column).clone();
+        name = field.name().clone();
+        nullable = field.is_nullable();
+        let array = batch
+            .column(column)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        for row in 0..batch.num_rows() {
+            values.push(array.value(row).to_string());
+        }
+    }
+    (values, name, nullable)
+}
+
+async fn show_tables_rows(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Vec<(String, String, bool)> {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let namespaces = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        let tables = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        let temporary = batch
+            .column(2)
+            .as_any()
+            .downcast_ref::<BooleanArray>()
+            .unwrap();
+        for row in 0..batch.num_rows() {
+            rows.push((
+                namespaces.value(row).to_string(),
+                tables.value(row).to_string(),
+                temporary.value(row),
+            ));
+        }
+    }
+    rows
+}
+
+#[tokio::test]
+async fn show_catalogs_lists_registered_sorted_with_session_catalog() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = two_catalog_setup(&wh).await;
+    let (values, name, nullable) = string_column(&ctx, &catalogs, "SHOW CATALOGS", 0).await;
+    assert_eq!(values, vec!["duo", "ice", "spark_catalog"]);
+    assert_eq!(name, "catalog");
+    assert!(!nullable);
+}
+
+#[tokio::test]
+async fn show_catalogs_like_filters() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = two_catalog_setup(&wh).await;
+    let (values, _, _) = string_column(&ctx, &catalogs, "SHOW CATALOGS LIKE 'i*'", 0).await;
+    assert_eq!(values, vec!["ice"]);
+}
+
+#[tokio::test]
+async fn show_tables_lists_current_namespace_after_use() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    let rows = show_tables_rows(&ctx, &catalogs, "SHOW TABLES").await;
+    assert_eq!(rows, vec![("sales".to_string(), "t".to_string(), false)]);
+    let batches = execute(&ctx, &catalogs, "SHOW TABLES")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let schema = batches[0].schema();
+    assert_eq!(schema.field(0).name(), "namespace");
+    assert_eq!(schema.field(1).name(), "tableName");
+    assert_eq!(schema.field(2).name(), "isTemporary");
+    assert!(!schema.field(2).is_nullable());
+}
+
+#[tokio::test]
+async fn show_tables_like_and_in_forms() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t2 (id INT)").await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    let rows = show_tables_rows(&ctx, &catalogs, "SHOW TABLES LIKE 't*'").await;
+    assert_eq!(rows.len(), 2);
+    let rows = show_tables_rows(&ctx, &catalogs, "SHOW TABLES IN ice.sales").await;
+    assert_eq!(rows.len(), 2);
+    let rows = show_tables_rows(&ctx, &catalogs, "SHOW TABLES FROM sales").await;
+    assert_eq!(rows.len(), 2);
+    let rows = show_tables_rows(&ctx, &catalogs, "SHOW TABLES LIKE 't2'").await;
+    assert_eq!(rows, vec![("sales".to_string(), "t2".to_string(), false)]);
+}
+
+#[tokio::test]
+async fn show_tables_missing_explicit_namespace_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    let error = execute(&ctx, &catalogs, "SHOW TABLES IN nosuch")
+        .await
+        .expect_err("explicit missing namespace must refuse");
+    assert!(
+        error.to_string().contains("[SCHEMA_NOT_FOUND]"),
+        "got: {error}"
+    );
+}
+
+#[tokio::test]
+async fn show_tables_empty_ambient_scope_is_empty() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = two_catalog_setup(&wh).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    run(&ctx, &catalogs, "USE duo").await;
+    let rows = show_tables_rows(&ctx, &catalogs, "SHOW TABLES").await;
+    assert!(rows.is_empty());
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    let rows = show_tables_rows(&ctx, &catalogs, "SHOW TABLES IN duo").await;
+    assert!(rows.is_empty());
+}
+
+#[tokio::test]
+async fn show_columns_answers_declaration_order() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (z INT, a STRING, m BIGINT)",
+    )
+    .await;
+    let expected = vec!["z".to_string(), "a".to_string(), "m".to_string()];
+    let (values, name, nullable) =
+        string_column(&ctx, &catalogs, "SHOW COLUMNS IN ice.sales.t", 0).await;
+    assert_eq!(values, expected);
+    assert_eq!(name, "col_name");
+    assert!(!nullable);
+    let (values, _, _) = string_column(&ctx, &catalogs, "SHOW COLUMNS FROM ice.sales.t", 0).await;
+    assert_eq!(values, expected);
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    let (values, _, _) = string_column(&ctx, &catalogs, "SHOW COLUMNS IN t", 0).await;
+    assert_eq!(values, expected);
+    let (values, _, _) = string_column(&ctx, &catalogs, "SHOW COLUMNS IN sales.t", 0).await;
+    assert_eq!(values, expected);
+}
+
+#[tokio::test]
+async fn show_columns_missing_table_is_not_found() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let error = execute(&ctx, &catalogs, "SHOW COLUMNS IN ice.sales.nothere")
+        .await
+        .expect_err("missing table must refuse");
+    assert!(
+        error.to_string().contains("[TABLE_OR_VIEW_NOT_FOUND]"),
+        "got: {error}"
+    );
+}
+
+#[tokio::test]
+async fn show_columns_like_is_a_parse_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    let error = execute(&ctx, &catalogs, "SHOW COLUMNS IN ice.sales.t LIKE 'i%'")
+        .await
+        .expect_err("SHOW COLUMNS LIKE must refuse like Spark");
+    assert!(matches!(error, DataFusionError::SQL(_, _)), "got: {error}");
+}
+
+#[tokio::test]
+async fn show_namespaces_bare_lists_current_catalog() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = two_catalog_setup(&wh).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    let (values, _, _) = string_column(&ctx, &catalogs, "SHOW NAMESPACES", 0).await;
+    assert_eq!(values, vec!["sales".to_string()]);
+    let (values, _, _) = string_column(&ctx, &catalogs, "SHOW SCHEMAS", 0).await;
+    assert_eq!(values, vec!["sales".to_string()]);
+    run(&ctx, &catalogs, "USE duo.other").await;
+    let (values, _, _) = string_column(&ctx, &catalogs, "SHOW DATABASES", 0).await;
+    assert_eq!(values, vec!["other".to_string()]);
 }
 
 #[test]

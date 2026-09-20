@@ -73,6 +73,11 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
   before form detection, claiming even RENAME) are removed so short names reach the AST
   path, and token forms complete at execute. `alter.rs` 1449 → 1444, row ratcheted.
   pins: ice-catalog-session-1/C-022
+- T-4 (tree measurement): H-01's `spark_catalog` / `default` build defaults land on the
+  native door too (shared `SparkDialect::on_session_built`), so bare `SHOW NAMESPACES` lists
+  the current catalog there and two-part `DESCRIBE` resolves like `SELECT` through the same
+  read path. `R-SHOW-DATABASES` / `R-DESCRIBE-TWO-PART` move to served; `R-SHOW-TABLES` /
+  `R-RENAME-TWO-PART` keep refusing with their new texts (DBT-QUALIFY-1 FIXED).
 
 ## Proposition ledger
 
@@ -92,10 +97,10 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
 | C-012 | `CAT-CURRENT-CATALOG` replays EQUAL: `SELECT current_catalog()` answers `spark_catalog` at session start. | `test_current_catalog_answers_spark_catalog` in `python/repark/tests/test_ice_catalog_session_1.py`. | OPEN | S8. |
 | C-013 | `current_schema()` / `current_database()` track `USE`, including `""` after catalog-only `USE`. | `test_use_catalog_leaves_namespace_empty`, `test_current_database_alias`. | OPEN | S8. |
 | C-014 | `CAT-USE-CATALOG-NS` replays EQUAL. | `test_use_catalog_ns_cell` + `test_two_part_name_resolves_against_current_catalog`. | OPEN | S8. |
-| C-015 | `CAT-SHOW-CATALOGS` replays EQUAL (sorted, `spark_catalog` included; eager listing is a lenient divergence). | `test_show_catalogs_lists_registered` + `test_show_catalogs_like_filters`. | OPEN | S8. |
-| C-016 | `SHOW TABLES` answers Spark's `(namespace, tableName, isTemporary)` shape with `IN` / `FROM` / `LIKE`-glob. | `test_show_tables_after_use_lists_current_namespace`. | OPEN | S8. |
-| C-017 | `D-SHOW-COLUMNS` replays EQUAL in declaration order (not the harness sort), all three spellings, winning over `information_schema`. | `test_show_columns_is_declaration_order` + `test_show_columns_beats_information_schema`. | OPEN | S8. |
-| C-018 | Bare `SHOW NAMESPACES` / `SCHEMAS` / `DATABASES` list the current catalog (NS-1 retired). | `test_show_namespaces_bare_uses_current_catalog` + rewritten `describe_show.rs` pins. | OPEN | S8. |
+| C-015 | `CAT-SHOW-CATALOGS` replays EQUAL (sorted, `spark_catalog` included; eager listing is a lenient divergence). | `test_show_catalogs_lists_registered` + `test_show_catalogs_like_filters` + `show_catalogs_lists_registered_sorted_with_session_catalog` + `show_catalogs_like_filters`. | OPEN | Mechanism pinned S4; cell pins S8. |
+| C-016 | `SHOW TABLES` answers Spark's `(namespace, tableName, isTemporary)` shape with `IN` / `FROM` / `LIKE`-glob. | `test_show_tables_after_use_lists_current_namespace` + `show_tables_lists_current_namespace_after_use` + `show_tables_like_and_in_forms` + `show_tables_missing_explicit_namespace_refuses` + `show_tables_empty_ambient_scope_is_empty`. | OPEN | Mechanism pinned S4; cell pins S8. |
+| C-017 | `D-SHOW-COLUMNS` replays EQUAL in declaration order (not the harness sort), all three spellings, winning over `information_schema`. | `test_show_columns_is_declaration_order` + `test_show_columns_beats_information_schema` + `show_columns_answers_declaration_order` + `show_columns_missing_table_is_not_found` + `show_columns_like_is_a_parse_refusal`. | OPEN | Mechanism pinned S4; cell pins S8. |
+| C-018 | Bare `SHOW NAMESPACES` / `SCHEMAS` / `DATABASES` list the current catalog (NS-1 retired). | `test_show_namespaces_bare_uses_current_catalog` + `show_namespaces_bare_lists_current_catalog` + `show_namespaces_bare_lists_current_catalog_nested_still_fails_loud`. | OPEN | Mechanism pinned S4; cell pins S8. |
 | C-019 | `CAT-REFRESH-TABLE` replays EQUAL; a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`. | `test_refresh_table_cell` + `test_refresh_missing_table_raises_table_not_found`. | OPEN | S8. |
 | C-020 | `CAT-CACHE-TABLE` replays EQUAL; SQL `CACHE TABLE` sets `isCached` and a write invalidates. | `test_cache_table_cell` + `test_cache_table_then_write_then_read_sees_the_write`. | OPEN | S8. |
 | C-021 | `UNCACHE TABLE` on a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`; `IF EXISTS` answers ok. | `test_uncache_missing_table` + `test_uncache_if_exists_missing_is_ok`. | OPEN | S8. |

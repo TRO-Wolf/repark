@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkTypeError, UnsupportedOperationException
+from repark.errors import AnalysisException, PySparkTypeError
 from repark.spark.catalog import Catalog, CatalogMetadata, Database, Table
 
 
@@ -434,10 +434,16 @@ def test_default_catalog_from_builder_config(tmp_path: Path) -> None:
 # Remaining disclosed divergences
 
 
-def test_show_tables_in_not_implemented_divergence(spark: ReparkSession) -> None:
-    """Pin for registry row ST-1 (docs/spark-sql-iceberg-parity.md §2.4) — semantics live there."""
-    with pytest.raises(UnsupportedOperationException, match="SHOW TABLES"):
-        spark.sql("SHOW TABLES IN glue_catalog.ns1")
+def test_show_tables_in_lists_namespace_tables(spark: ReparkSession) -> None:
+    """ST-1 retired by ICE-CATALOG-SESSION-1: SHOW TABLES IN answers Spark's shape.
+
+    pins: ice-catalog-session-1/C-016
+    """
+    table = spark.sql("SHOW TABLES IN glue_catalog.ns1").to_arrow()
+    assert table.schema.names == ["namespace", "tableName", "isTemporary"]
+    assert table.column("namespace").to_pylist() == ["ns1"]
+    assert table.column("tableName").to_pylist() == ["entity"]
+    assert table.column("isTemporary").to_pylist() == [False]
 
 
 def test_list_databases_location_uri_none_divergence(spark: ReparkSession) -> None:

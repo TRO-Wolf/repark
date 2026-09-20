@@ -482,8 +482,7 @@ fn describe_table_statistics(metadata: &TableMetadata) -> String {
 
 /// A parsed Spark `SHOW {NAMESPACES|SCHEMAS|DATABASES} [{IN|FROM} catalog] [LIKE] ['pattern']`.
 pub(crate) struct ShowNamespaces {
-    /// The catalog named by `IN`/`FROM`.
-    catalog: String,
+    catalog: Option<String>,
     /// The `LIKE` pattern, unevaluated.
     pattern: Option<String>,
 }
@@ -539,13 +538,11 @@ pub(crate) fn parse_show_namespaces_tail(parser: &mut Parser) -> Result<ShowName
             parser.peek_token()
         )));
     }
-    // Spark resolves a missing `IN` against the CURRENT catalog.
     let Some(name) = scope else {
-        return Err(DataFusionError::Plan(
-            "SHOW NAMESPACES requires an explicit catalog — `SHOW NAMESPACES IN <catalog>` \
-             (RePark has no current-catalog concept, so there is no default to resolve against)"
-                .to_string(),
-        ));
+        return Ok(ShowNamespaces {
+            catalog: None,
+            pattern,
+        });
     };
     let parts = name_parts(&name);
     let [catalog] = parts.as_slice() else {
@@ -555,7 +552,7 @@ pub(crate) fn parse_show_namespaces_tail(parser: &mut Parser) -> Result<ShowName
         )));
     };
     Ok(ShowNamespaces {
-        catalog: catalog.clone(),
+        catalog: Some(catalog.clone()),
         pattern,
     })
 }
@@ -574,7 +571,14 @@ pub(crate) async fn execute_show_namespaces(
     catalogs: &CatalogRegistry,
     show: ShowNamespaces,
 ) -> Result<DataFrame> {
-    let handle = catalog_handle(catalogs, &show.catalog)?;
+    let current;
+    let catalog = if let Some(named) = &show.catalog {
+        named
+    } else {
+        current = crate::use_ddl::session_defaults(ctx).0;
+        &current
+    };
+    let handle = catalog_handle(catalogs, catalog)?;
     let namespaces = handle.list_namespaces(None).await.map_err(iceberg_err)?;
     let rows = show_namespace_rows(&namespaces, show.pattern.as_deref());
     ctx.read_batch(show_namespaces_batch(rows)?)

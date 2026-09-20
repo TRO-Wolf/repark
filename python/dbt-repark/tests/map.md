@@ -31,6 +31,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform; the `LOCATION`,
   table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served under IPI-26/27
   round 2, 2026-09-20),
+  2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform),
+  `repark.sql()` on a memory catalog. Fifteen served, thirteen refused with the exact message
+  (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15),
   plus
   the facade-schema probe (the column source the adapter uses) and the `describe extended`
   probe (Spark shape since SQL-DESCRIBE-1, 2026-09-09 — the old Arrow-spellings premise reds on
@@ -40,6 +43,12 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   red-first evidence lives in the two files below.
   pins: dbt-1-adapter/C-001
   pins: sql-set-door-1/C-005
+  **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** fifteen served, thirteen refused —
+  `R-SHOW-DATABASES` and `R-DESCRIBE-TWO-PART` move to served (the native door shares the
+  H-01 `spark_catalog` / `default` build defaults, so bare `SHOW NAMESPACES` lists the
+  current catalog and two-part `DESCRIBE` resolves like `SELECT`); `R-SHOW-TABLES` keeps
+  refusing with the new `SCHEMA_NOT_FOUND spark_catalog.gold` text and `R-RENAME-TWO-PART`
+  with the missing-namespace text (DBT-QUALIFY-1 FIXED).
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row

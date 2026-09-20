@@ -174,6 +174,16 @@ impl CatalogRegistry {
         self.entries.contains_key(name) || self.database_sources.contains_key(name)
     }
 
+    #[must_use]
+    pub fn catalog_names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self.entries.keys().cloned().collect();
+        names.extend(self.database_sources.keys().cloned());
+        names.extend(self.read_only_catalogs.iter().cloned());
+        names.sort();
+        names.dedup();
+        names
+    }
+
     pub(crate) fn database_source(&self, name: &str) -> Option<&Arc<SourceSpec>> {
         self.database_sources.get(name)
     }

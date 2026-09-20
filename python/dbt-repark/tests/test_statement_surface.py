@@ -68,6 +68,7 @@ def _served() -> tuple[Shape, ...]:
             None,
         ),
         Shape("S-SHOW-NS", "repark__list_schemas", f"show namespaces in {CATALOG}", None),
+        Shape("S-SHOW-DATABASES", "spark__list_schemas", "show databases", None),
         Shape(
             "S-SET-CONF",
             "server_side_parameters",
@@ -175,6 +176,12 @@ def _served() -> tuple[Shape, ...]:
             f"drop schema if exists {CATALOG}.disposable cascade",
             None,
         ),
+        Shape(
+            "S-DESCRIBE-TWO-PART",
+            "describe_table_extended_without_caching",
+            f"describe extended {NAMESPACE}.{STEM}_survey",
+            None,
+        ),
     )
 
 
@@ -182,12 +189,6 @@ def _refused() -> tuple[Shape, ...]:
     """Statement shapes the SQL door refuses, with the message it refuses with."""
     fact = f"{CATALOG}.{NAMESPACE}.{STEM}_survey"
     return (
-        Shape(
-            "R-SHOW-DATABASES",
-            "spark__list_schemas",
-            "show databases",
-            "SHOW NAMESPACES requires an explicit catalog",
-        ),
         Shape(
             "R-CREATE-SCHEMA-ONE-PART",
             "spark__create_schema",
@@ -204,13 +205,7 @@ def _refused() -> tuple[Shape, ...]:
             "R-SHOW-TABLES",
             "list_relations_show_tables_without_caching",
             f"show tables in {NAMESPACE} like '*'",
-            "SHOW TABLES IN not supported",
-        ),
-        Shape(
-            "R-DESCRIBE-TWO-PART",
-            "describe_table_extended_without_caching",
-            f"describe extended {NAMESPACE}.{STEM}_survey",
-            f"table 'datafusion.{NAMESPACE}.{STEM}_survey' not found",
+            "The schema `spark_catalog`.`gold` cannot be found",
         ),
         Shape(
             "R-SHOW-TBLPROPERTIES",
@@ -234,7 +229,7 @@ def _refused() -> tuple[Shape, ...]:
             "R-RENAME-TWO-PART",
             "spark__rename_relation",
             f"alter table {NAMESPACE}.{STEM}_survey rename to {NAMESPACE}.renamed",
-            "ALTER TABLE expects a three-part `catalog.namespace.table` name",
+            "No such namespace",
         ),
         Shape(
             "R-CTAS-OPTIONS",

@@ -158,9 +158,10 @@ class ReparkSession:
 
         Bare / two-part table names in load-bearing free-SQL forms (``DROP TABLE``,
         ``INSERT``, ``CREATE TABLE``, ``MERGE INTO``, ``UPDATE``, ``DELETE FROM``,
-        ``SELECT``/``WITH`` FROM/JOIN) expand under the session default catalog +
-        namespace at this entry point via :meth:`resolve_table_name` — not by call-site
-        string surgery. Auto-memory-catalog sticky alias semantics apply unchanged.
+        ``DESCRIBE``, ``SELECT``/``WITH`` FROM/JOIN) expand under the session default
+        catalog + namespace at this entry point via :meth:`resolve_table_name` — not by
+        call-site string surgery. Auto-memory-catalog sticky alias semantics apply
+        unchanged.
 
         Only registered Python UDFs (via :meth:`spark.udf.register`) are considered —
         never a generic ``ident(`` scan. SELECT-list forms (simple, expression-wrapped,
@@ -224,6 +225,7 @@ class ReparkSession:
         * ``MERGE INTO target [AS a] USING source [AS b] ON …`` (target + source)
         * ``UPDATE name [alias] SET … [WHERE …]`` (target; SET body never regexed)
         * ``DELETE FROM name [alias] [WHERE …]`` (target; WHERE-subquery FROM via walker)
+        * ``DESCRIBE [TABLE] [EXTENDED|FORMATTED] name`` (target; temp view = its HOME)
         * ``SELECT`` / ``WITH`` … (FROM/JOIN/comma refs; a one-part temp view = its HOME)
 
         Does **not** rewrite multi-statement scripts. Leading SQL comments / whitespace are
@@ -280,6 +282,10 @@ class ReparkSession:
         delete_expanded = self._try_expand_delete_sql(query)
         if delete_expanded is not None:
             return delete_expanded
+
+        describe_expanded = self._try_expand_describe_sql(query)
+        if describe_expanded is not None:
+            return describe_expanded
 
         # SELECT / WITH — structural FROM/JOIN expansion (prefer temp views).
         if _SELECT_OR_WITH_HEAD_RE.match(query) is not None:
@@ -426,6 +432,40 @@ class ReparkSession:
             return query
         rest_expanded = self._expand_from_join_table_refs_in_sql(rest)
         return f"{prefix}{qualified}{rest_expanded}"
+
+    def _try_expand_describe_sql(self, query: str) -> str | None:
+        """Rewrite ``DESCRIBE [TABLE] [EXTENDED|FORMATTED] name`` target to qualified form.
+
+        Returns ``None`` when not a DESCRIBE-table shape (a namespace-head first
+        segment stays on the namespace door unless a temp view owns the bare name;
+        ``FUNCTION`` / ``QUERY`` tails never parse as a lone name). A one-part temp
+        view resolves to its HOME, like SELECT FROM refs; other names qualify under
+        the session default catalog + namespace.
+        """
+        prefix_match = _DESCRIBE_TABLE_PREFIX_RE.match(query)
+        if prefix_match is None:
+            return None
+        prefix = prefix_match.group(1)
+        name_start = prefix_match.end()
+        while name_start < len(query) and query[name_start].isspace():
+            name_start += 1
+        name_end = _scan_sql_table_identifier_end(query, name_start)
+        if name_end is None or name_end == name_start:
+            return None
+        raw_table = query[name_start:name_end]
+        rest = query[name_end:]
+        if rest.strip().rstrip(";").strip():
+            return None
+        head = raw_table.split(".", 1)[0].strip()
+        if head.upper() in {"NAMESPACE", "DATABASE", "SCHEMA"} and (
+            "." in raw_table or _temp_view_home_ref(self._ensure_alive(), head) is None
+        ):
+            return None
+        try:
+            qualified = self._qualify_sql_table_ref(raw_table, prefer_temp_view=True)
+        except Exception:
+            return query
+        return f"{prefix}{qualified}{rest}"
 
     def _expand_merge_into_sql(self, query: str, match: re.Match[str]) -> str:
         """Rewrite ``MERGE INTO target … USING source … ON …`` table refs.
