@@ -89,6 +89,24 @@ list element `8`.
   MERGE executor now asks for a configured builder rather than assembling one. `merge/mod.rs` is
   1,756 lines — five BELOW its old baseline — and the exception row is ratcheted down to 1756.
 
+### Verification critic residues (2026-09-20, both P3, both answered here)
+
+- **V-001 — `column_sizes`.** The twelve cells are equal on every metric the clause asserts
+  (value counts, null counts, NaN counts, lower and upper bounds). `column_sizes` differs from
+  Spark on every cell that records it, and the clause does not assert it: the number is the
+  compressed byte size a writer happened to produce, so parquet-rs and parquet-mr disagree on it
+  by construction, exactly as the RPD target-size residue does. It is recorded here rather than
+  pinned, and it is not a metrics-config question.
+- **V-002 — the position-delete config was not mutation-bound.** Swapping
+  `MetricsConfig::for_position_delete_table` for the fixed `for_position_delete` left both delete
+  pins green, so the clause rested on reading the code. Measured instead, and now pinned
+  (`a_metrics_none_table_keeps_the_delete_files_path_bounds`): on a table with
+  `write.metadata.metrics.default=none`, the DATA file carries no bounds at all while the
+  position-delete file keeps its exact, untruncated `file_path` lower and upper bounds. That is
+  the behaviour that matters — a v2 parquet delete carries no `referenced_data_file`, so the
+  reader routes on those bounds, and a metrics config that stripped them would silently stop
+  applying deletes. The pin fails if the delete writer ever takes the table's data-file config.
+
 ## Coverage attestation
 
 ```yaml

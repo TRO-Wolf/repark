@@ -166,7 +166,10 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `sorted_none`, `sorted_counts`, `bad_mode`) replayed through `append` against the
   `metrics` key of the copied oracle fixture, plus one `none`-config pin per writer path
   (INSERT stage, fan-out append, CoW rewrite, lineage rewrite), the
-  `for_position_delete_table` resolution pin and the delete-type/full-bounds pin. The
+  `for_position_delete_table` resolution pin and the delete-type/full-bounds pin, and
+  `a_metrics_none_table_keeps_the_delete_files_path_bounds`: on a `metrics.default=none`
+  table the DATA file carries no bounds while the position-delete file keeps its exact
+  `file_path` bounds, which is what the v2 delete reader routes on. The
   path pins cover `write_options.rs`, `append_fanout_serial.rs`, `merge/mod.rs` and
   `merge/row_lineage.rs` builders respectively.
   pins: ice-writer-metrics-1/C-001

@@ -655,3 +655,44 @@ async fn position_delete_files_carry_delete_type_and_full_path_bounds() {
         "footer carries the delete-type position marker"
     );
 }
+
+#[tokio::test]
+async fn a_metrics_none_table_keeps_the_delete_files_path_bounds() {
+    let warehouse = TempDir::new().expect("warehouse");
+    let catalog = metrics_catalog(&warehouse).await;
+    let ident = create_metrics_table(&catalog, "delete_none", "none").await;
+    append(&catalog, &ident, vec![metrics_batch()])
+        .await
+        .expect("append two oracle rows");
+    let data = live_single_data_file(&catalog, &ident).await;
+    let table = catalog.load_table(&ident).await.expect("load table");
+    let pairs = vec![(Arc::from(data.file_path()), 0)];
+    let files = write_position_deletes(
+        &table,
+        &pairs,
+        WriteConcurrency::new(1).expect("concurrency builds"),
+    )
+    .await
+    .expect("write position deletes");
+    let delete = &files[0];
+    let expected = Datum::string(data.file_path());
+    assert_eq!(
+        delete
+            .lower_bounds()
+            .get(&RESERVED_FIELD_ID_DELETE_FILE_PATH),
+        Some(&expected),
+        "write.metadata.metrics.default=none must not strip the delete file's path bounds: v2 \
+         parquet deletes carry no referenced_data_file, so routing reads these bounds"
+    );
+    assert_eq!(
+        delete
+            .upper_bounds()
+            .get(&RESERVED_FIELD_ID_DELETE_FILE_PATH),
+        Some(&expected),
+        "the upper bound survives a none metrics config too"
+    );
+    assert!(
+        data.lower_bounds().is_empty() && data.upper_bounds().is_empty(),
+        "the same table's DATA file carries no bounds, so the config is live"
+    );
+}
