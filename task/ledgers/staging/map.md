@@ -20,7 +20,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   missing-table refusal Spark's spelling requires, and `DROP TABLE … PURGE` threaded from the
   Python expander through `Statement::Drop.purge` to the fork's `DeleteReachableFiles`, gated on
   `gc.enabled`. Nine inventory cells plus the run-25e `p3.json` probe; registry `REF-2` retired,
-  `RTAS-OPS-1` widened, `DROP-PURGE-1` filed. `risk_tier: standard`.
+  `RTAS-OPS-1` widened, `ICE-DROP-PURGE-1` filed. `risk_tier: standard`.
   Branch `fix/ipi-21-25-42-small-parser`.
   pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [ice-wap-branch-1-ledger.md](ice-wap-branch-1-ledger.md) —
