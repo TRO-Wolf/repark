@@ -129,7 +129,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   sets BOTH `team` and a colliding `deleted-records=5` and asserts the delete snapshot
   carries neither, so mutation (h) — routing TRUNCATE through
   `commit_overwrite_replace_all_with_summary` — reds it on the refusal.
-  pins: ice-session-write-conf-1/C-064, C-052
+  pins: ice-session-write-conf-1/C-051, C-052
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
   pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`
