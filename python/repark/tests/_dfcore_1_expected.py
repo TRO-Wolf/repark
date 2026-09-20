@@ -698,6 +698,7 @@ EXPECTED_NEW_PACKAGE_SUBMODULES: set[str] = {
     "udf_schema",
     "udf_window_projection",
     "writer_layout",
+    "writer_schema",
     "writer_text",
 }
 
