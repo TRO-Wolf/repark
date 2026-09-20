@@ -70,3 +70,49 @@ On `001ad6d9` / `c289f527`, `CARGO_BUILD_JOBS=6 RUST_TEST_THREADS=6`:
 - `cargo fmt --all` — clean (one reflow applied to the new parser pin before its commit).
 - `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/qa-bs origin/main` — hits=0.
 - Pre-commit hook gates observed green on every commit: map-sync, crate-dag, lib-rs, rust-file-size (704 files; `pins.rs` held at its ceiling), lib-py, docstring-presence, docs-compaction, manifest; `scripts/check_workflows_parse.py` — 13 workflows parse.
+
+## Attestation
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: ice-bench-baseline-1
+  categories:
+    - id: AT-1
+      status: N/A
+      justification: No Spark-visible answer changes. The switch lives entirely in the read bench; without --baseline every default is exactly main's.
+    - id: AT-2
+      status: ATTACKED
+      evidence: Every pin was red under the mutation that removes its behaviour — the IcebergScanOptions insertion, the three cache configs, a parsing-but-inert flag, the JSON header field, the workflow env threading, the markdown header.
+      artifacts: [crates/repark-spark/benches/ice_read_perf/pins_report.rs, python/repark-parity/tests/test_ice_read_perf_bench_workflow.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Warm and cold, local and remote catalogs, all four run modes through the single open_session funnel; the page pin grows the bed until pages exist so the comparison is not vacuous.
+      artifacts: [crates/repark-spark/benches/ice_read_perf/pins_report.rs]
+    - id: AT-4
+      status: N/A
+      justification: The bench runs its modes in one process under its own orchestration; the switch adds no shared state, only per-session configuration.
+    - id: AT-5
+      status: N/A
+      justification: No credential, no catalog identity and no AWS call is involved; the baseline only removes caches and page selection.
+    - id: AT-6
+      status: ATTACKED
+      evidence: The ledger records what the baseline cannot switch off — the timestamp-predicate pushdown of fork #312 and the count(*) fold — so a baseline number is never read as pre-campaign main.
+      artifacts: [task/ledgers/staging/ice-bench-baseline-1-ledger.md]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The measured page-byte pair at equal rows (92,890 by default against 161,729 with page selection off) and the footer pair (0 against one per file) are the unit's own numbers.
+      artifacts: [crates/repark-spark/benches/ice_read_perf/pins_report.rs]
+    - id: AT-8
+      status: ATTACKED
+      evidence: No dependency, no Cargo feature and no product code changed; the dispatch input is documented in docs/tier2-aws.md and defaults to false.
+      artifacts: [docs/tier2-aws.md, .github/workflows/aws-acceptance.yml]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The bench map, the parity-tests map and the staging map carry the change with pins citations.
+      artifacts: [crates/repark-spark/benches/ice_read_perf/map.md, python/repark-parity/tests/map.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The bench pin target and the workflow pin file both run green at the unit's head; CI runs the rest.
+      artifacts: [crates/repark-spark/benches/ice_read_perf/pins_report.rs]
+  complete: true
+```

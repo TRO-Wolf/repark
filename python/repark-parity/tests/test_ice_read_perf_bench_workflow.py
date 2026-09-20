@@ -1,6 +1,7 @@
 """ICE-READ-PERF-0 pins over the dispatch-only bench job of ``aws-acceptance.yml``.
 
-pins: ice-read-perf-0/C-018, C-019; ice-bench-baseline-1/C-004
+pins: ice-read-perf-0/C-018, C-019
+pins: ice-bench-baseline-1/C-004
 """
 
 from __future__ import annotations

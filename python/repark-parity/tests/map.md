@@ -160,7 +160,8 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   zero arguments under `set -u`, verified on bash 5.2.21), and the summary header names
   `baseline=<value>` beside the purpose. Three pins hold the input, the threading and the
   summary line.
-  pins: ice-read-perf-0/C-018, C-019; ice-bench-baseline-1/C-004
+  pins: ice-read-perf-0/C-018, C-019
+  pins: ice-bench-baseline-1/C-004
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
