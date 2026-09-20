@@ -23,6 +23,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `chore/map-pr-gate-1`.
   pins: map-pr-gate-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012
+- [ipi-21-25-42-small-parser-ledger.md](ipi-21-25-42-small-parser-ledger.md) —
+  **IPI-21 + IPI-25 + IPI-42 (2026-09-20), in flight:** the three small parser shapes over
+  behaviour that already worked — `IF [NOT] EXISTS` as an optional infix on snapshot-ref DDL,
+  `REPLACE TABLE [AS SELECT]` as the first token rewrite of `parse_single_normalized` with the
+  missing-table refusal Spark's spelling requires, and `DROP TABLE … PURGE` threaded from the
+  Python expander through `Statement::Drop.purge` to the fork's `DeleteReachableFiles`, gated on
+  `gc.enabled`. Nine inventory cells plus the run-25e `p3.json` probe; registry `REF-2` retired,
+  `RTAS-OPS-1` widened, `ICE-DROP-PURGE-1` filed. `risk_tier: standard`.
+  Branch `fix/ipi-21-25-42-small-parser`.
+  pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [ice-wap-branch-1-ledger.md](ice-wap-branch-1-ledger.md) —
   **ICE-WAP-BRANCH-1 (2026-09-19), in flight:** the session conf `spark.wap.branch` redirects
   writes and the session's plain reads to an audit branch, as Spark does (IPI-05, RePark

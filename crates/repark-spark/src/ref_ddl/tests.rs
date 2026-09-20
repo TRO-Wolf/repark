@@ -13,6 +13,7 @@ fn parses_alter_create_branch_as_of() {
             ref name,
             as_of_version: Some(42),
             or_replace: false,
+            if_not_exists: false,
             retention,
         } if name == "audit" && retention.is_empty()
     ));
@@ -247,4 +248,91 @@ fn write_to_branch_sniff_kinds() {
     );
     // Two-part without the `branch_` prefix is not sniffed at all.
     assert_eq!(sniff_write_to_branch("INSERT INTO ns.daily SELECT 1"), None);
+}
+
+#[test]
+fn parses_if_not_exists_infix_on_create() {
+    for (sql, expected) in [
+        (
+            "ALTER TABLE ice.sales.t CREATE BRANCH IF NOT EXISTS b1",
+            true,
+        ),
+        ("ALTER TABLE ice.sales.t CREATE BRANCH b1", false),
+        ("CREATE TAG IF NOT EXISTS t1 IN ice.sales.t", true),
+    ] {
+        let ddl = try_parse_ref_ddl(sql).expect("recognized").expect("ok");
+        assert_eq!(ddl.table_parts, ["ice", "sales", "t"]);
+        match ddl.op {
+            RefOp::Create {
+                ref name,
+                if_not_exists,
+                ..
+            } => {
+                assert!(name == "b1" || name == "t1", "{sql}: name {name}");
+                assert_eq!(if_not_exists, expected, "{sql}");
+            }
+            other => panic!("{sql}: expected Create, got {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn postfix_if_not_exists_still_refuses() {
+    let error = try_parse_ref_ddl("ALTER TABLE ice.sales.t CREATE BRANCH b1 IF NOT EXISTS")
+        .expect("recognized")
+        .expect_err("postfix is not the Spark spelling")
+        .to_string();
+    assert!(
+        error.contains("trailing clause after the supported form"),
+        "got: {error}"
+    );
+}
+
+#[test]
+fn parses_if_exists_infix_on_drop() {
+    for (sql, expected, ref_name) in [
+        (
+            "ALTER TABLE ice.sales.t DROP BRANCH IF EXISTS b1",
+            true,
+            "b1",
+        ),
+        ("ALTER TABLE ice.sales.t DROP TAG t1", false, "t1"),
+        ("DROP TAG IF EXISTS t2 IN ice.sales.t", true, "t2"),
+    ] {
+        let ddl = try_parse_ref_ddl(sql).expect("recognized").expect("ok");
+        assert_eq!(ddl.table_parts, ["ice", "sales", "t"]);
+        match ddl.op {
+            RefOp::Drop {
+                ref name,
+                if_exists,
+                ..
+            } => {
+                assert_eq!(name, ref_name, "{sql}");
+                assert_eq!(if_exists, expected, "{sql}");
+            }
+            other => panic!("{sql}: expected Drop, got {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn or_replace_with_if_not_exists_refuses_parse_class() {
+    for sql in [
+        "ALTER TABLE ice.sales.t CREATE OR REPLACE BRANCH IF NOT EXISTS b1",
+        "ALTER TABLE ice.sales.t REPLACE BRANCH IF NOT EXISTS b1",
+        "ALTER TABLE ice.sales.t CREATE OR REPLACE TAG IF NOT EXISTS t1",
+        "CREATE OR REPLACE BRANCH IF NOT EXISTS b1 IN ice.sales.t",
+    ] {
+        let error = try_parse_ref_ddl(sql)
+            .expect("recognized")
+            .expect_err("the combination is not grammatical");
+        assert!(
+            matches!(error, DataFusionError::SQL(_, _)),
+            "{sql} must refuse parse-class, got {error:?}"
+        );
+        assert!(
+            error.to_string().contains("IF NOT EXISTS"),
+            "{sql}: {error}"
+        );
+    }
 }

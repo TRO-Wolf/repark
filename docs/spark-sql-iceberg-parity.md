@@ -264,18 +264,47 @@ Supported surface, for reference:
   plumbed unless `writeTo` already funnels into this SQL path; BACKLOG if still missing.
   pins: rp-5-fork-repin/C-004
 
-#### REF-2 — `IF EXISTS` / `IF NOT EXISTS`, and any other trailing clause
+#### REF-2 — `IF EXISTS` / `IF NOT EXISTS` on ref DDL — **FIXED 2026-09-20, IPI-42**
 
-- **repark** — every ref-DDL form is parsed to its exact supported shape; a significant token left
-  over refuses loud, naming the leftover token and the supported grammar.
-  `IF EXISTS` / `IF NOT EXISTS` are the named, known-but-unsupported spellings and stay out.
+- **repark** — `IF NOT EXISTS` is an optional **infix** between `CREATE BRANCH|TAG` and the ref
+  name, `IF EXISTS` the same after `DROP BRANCH|TAG`, on both the `ALTER TABLE …` and the
+  `… IN catalog.namespace.table` spellings. Both guards are conditional: `CREATE … IF NOT EXISTS`
+  creates a missing ref and leaves a present one **exactly where it is** (an `AS OF VERSION` on
+  the guarded form is ignored, never applied as a replace); `DROP … IF EXISTS` drops a present
+  ref and is a silent no-op on a missing one. The unguarded forms still refuse
+  (`Ref <name> already exists` / `Ref <name> does not exist`). `CREATE OR REPLACE … IF NOT EXISTS`
+  and `REPLACE … IF NOT EXISTS` refuse **parse-class**, because Spark's grammar does not admit
+  them. Every other leftover significant token still refuses loud, naming the leftover token and
+  the supported grammar — that guard is what this row used to be, and it survives the fix.
 - **Apache Spark** — accepts `IF NOT EXISTS` on `CREATE BRANCH|TAG` and `IF EXISTS` on
-  `DROP BRANCH|TAG`. *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud`
-- **Rationale** — DECLARED for now. Silently dropping a trailing clause is the fail-open class
-  this door was built to avoid — an ignored `IF NOT EXISTS` turns a no-op into a hard failure,
-  and an ignored `IF EXISTS` turns a tolerated miss into one. Refusing keeps the statement's meaning
-  honest until the idempotent forms are implemented; the pin reds on purpose when they are.
+  `DROP BRANCH|TAG`, in that infix position; `CREATE BRANCH IF NOT EXISTS b1` on an existing `b1`
+  is a no-op that does not move the ref, and `CREATE TAG IF NOT EXISTS t1 AS OF VERSION <id>` on
+  an existing `t1` ignores the version. `CREATE OR REPLACE BRANCH IF NOT EXISTS b1` and
+  `REPLACE BRANCH IF NOT EXISTS b1` are parse errors
+  (`mismatched input 'NOT' expecting {<EOF>, 'AS', 'RETAIN', 'WITH'}`). *(oracle: live PySpark
+  4.1.2 + Iceberg 1.11.0, 2026-09-19/20 — inventory cells `D-REF-CREATE-BRANCH-IF-NOT-EXISTS`,
+  `D-REF-TAG-IF-NOT-EXISTS`, `D-REF-DROP-BRANCH-IF-EXISTS`, `D-REF-DROP-TAG-IF-EXISTS` and probe
+  `p3.json` keys `E.create_branch_if_not_exists_missing`, `E.drop_branch_if_exists_present`,
+  `E.create_branch_existing_no_if`, `E.drop_branch_missing_no_if`,
+  `E.create_or_replace_branch_if_not_exists`, `E.replace_branch_if_not_exists`.)*
+- **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse`
+  (the guarded spellings run, an unknown trailing clause still refuses),
+  `crates/repark-spark/src/ref_ddl/tests.rs::{parses_if_not_exists_infix_on_create,parses_if_exists_infix_on_drop,postfix_if_not_exists_still_refuses,or_replace_with_if_not_exists_refuses_parse_class}`,
+  and `python/repark/tests/test_ice_small_parser_1.py` (the four recorded cells plus the
+  conditional arms they do not reach).
+  pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004
+- **Rationale** — FIXED (2026-09-20, IPI-42). The old row declared the refusal because silently
+  dropping a trailing clause is the fail-open class this door exists to avoid. That reasoning was
+  never about the guards themselves, and the four inventory cells made the difference measurable:
+  Spark answers all four, so a refusal was a DIFFERENT verdict on the v1.5.0 slate. Two
+  vacuity traps shaped the pins rather than the code: the four recorded cells all exercise the
+  *no-op* branch (so the conditional arms are pinned separately, on both `BRANCH` and `TAG`), and
+  the recorded `CREATE BRANCH IF NOT EXISTS` cell pins its ref at the table's current snapshot
+  (so the pin here pins the branch at an **older** snapshot first, and a replace-if-different
+  implementation moves it and reds). The *residual* divergence is text and class, not behaviour:
+  the unguarded `DROP BRANCH nope` answers the fork's `Ref nope does not exist` where Spark
+  answers `IllegalArgumentException: Branch does not exist: nope`, and RePark's parse-class
+  refusal carries no `== SQL ==` caret block — both are IPI-51's.
 
 #### REF-3 — write-audit-publish (WAP) — the `spark.wap.id` staged half
 
@@ -985,9 +1014,17 @@ perfectly good read.
   `PARQUET:field_id` (fork ask F-DML-FIELD-ID-1), so the surface never routes
   through it.
 
-#### RTAS-OPS-1 — `CREATE OR REPLACE TABLE … AS SELECT` snapshot operation stamps
+#### RTAS-OPS-1 — `[CREATE OR ]REPLACE TABLE [… AS SELECT]` snapshot operation stamps
 
-- **repark** — CTAS then RTAS over the same table records `[append, overwrite]`;
+- **repark** — **both spellings reach the same paths (IPI-25, 2026-09-20):** `REPLACE TABLE …`
+  is rewritten to `CREATE OR REPLACE TABLE …` as the first token rewrite of
+  `normalize::parse_single_normalized` (`normalize/replace_table.rs`), before the `USING`,
+  `PARTITIONED BY` and column-type rewrites that `is_create_table` gates, so the column-def form
+  lands on `create_table.rs::execute_schema_create`'s `begin_replace` arm and the `AS SELECT`
+  form on `ctas.rs::execute_ctas`. The one difference the rewrite must not erase is existence:
+  `REPLACE TABLE` on a **missing** table refuses `[TABLE_OR_VIEW_NOT_FOUND]` /
+  SQLSTATE `42P01` and creates nothing, where `CREATE OR REPLACE TABLE` creates it.
+  CTAS then RTAS over the same table records `[append, overwrite]`;
   RTAS creating the table records `[overwrite]`; an empty RTAS records `[delete]`
   (twice: `[delete, delete]`) — on **both SQL doors** (ADR-0002 §3). The Spark door
   (`crates/repark-spark/src/ctas.rs::execute_ctas`) and the native ANSI door
@@ -1017,7 +1054,10 @@ perfectly good read.
   added keys. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-16, fixture
   `rtas_ops` cells `ctas_then_rtas` / `rtas_new_table` / `rtas_empty_new` /
   `rtas_empty_twice`.)*
-- **Pin** — `python/repark/tests/test_ice_rtas_byname_1.py::test_rtas_replace_records_overwrite`,
+- **Pin** — the `REPLACE TABLE` spelling:
+  `python/repark/tests/test_ice_small_parser_1.py::{test_replace_table_column_list,test_replace_table_as_select,test_replace_table_preserves_time_travel,test_replace_table_missing_raises_table_not_found,test_create_or_replace_table_unchanged}`
+  (pins: ipi-21-25-42-small-parser/C-005, C-006, C-007). The `CREATE OR REPLACE` spelling:
+  `python/repark/tests/test_ice_rtas_byname_1.py::test_rtas_replace_records_overwrite`,
   `…::test_rtas_new_table_records_overwrite`,
   `…::test_rtas_empty_new_records_delete`,
   `…::test_rtas_empty_twice_records_two_deletes`
@@ -1044,6 +1084,10 @@ perfectly good read.
   replace of a missing table) and is pinned as a control, not an RTAS cell
   (measured on live Spark 4.1.2, 2026-09-17; transcript excerpt in the
   `ice-rtas-ops-2` ledger). Plain-CTAS-empty is unmeasured and unclaimed.
+  The `REPLACE TABLE` half (IPI-25, 2026-09-20) added no new commit behaviour: the inventory
+  cells `D-REPLACE`, `D-RTAS` and `D-RTAS-TIME-TRAVEL` land exactly on the stamps above —
+  `md.refs` `[]` with only the pre-existing `append` for the column-def form, `[append, overwrite]`
+  for the `AS SELECT` form, and the pre-replace snapshot still readable by `VERSION AS OF`.
 
 ### 2.4 Namespace and table listing statements
 
@@ -1116,6 +1160,47 @@ perfectly good read.
   views when that surface lands (Glue and S3 Tables answer `list_views` unsupported, which
   must read as "no views").
   pins: ice-drop-ns-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+
+#### ICE-DROP-PURGE-1 — `DROP TABLE … PURGE` deletes the data files — **FIXED 2026-09-20, IPI-21**
+
+- **repark** — `DROP TABLE [IF EXISTS] cat.ns.t [PURGE]` carries the keyword end to end: the
+  facade's `DROP` expander keeps a trailing `PURGE` when it qualifies the name, and the router
+  threads `Statement::Drop.purge` into `namespace_ddl::execute_drop_table`. With `PURGE`, the
+  fork's `DeleteReachableFiles` sweeps every file the table's current metadata reaches — data,
+  position and equality deletes, manifests, manifest lists, and the metadata chain — **before**
+  `Catalog::drop_table`, because after the drop the metadata location is no longer resolvable.
+  Without `PURGE` nothing is swept and every data file survives, exactly as before. The sweep is
+  gated on the table property `gc.enabled`: `false` refuses with Java's text
+  `Cannot purge table: GC is disabled (deleting files may corrupt other tables)` and neither
+  sweeps nor drops. A missing target with `PURGE` answers `[TABLE_OR_VIEW_NOT_FOUND]` /
+  SQLSTATE `42P01`; `IF EXISTS` composes with `PURGE` in both directions. Per-file delete
+  failures are collected in `DeleteReachableFilesResult::delete_failures` and do **not** fail the
+  `DROP` (Java suppresses them under `suppressFailureWhenFinished()`); a non-empty list is
+  logged once at the door — one `tracing::warn` naming the table and the failure count — and is
+  never surfaced in the SQL or DataFrame result, exactly as Spark leaves them to the Java log.
+- **Apache Spark** — `DROP TABLE t PURGE` deletes the data files
+  (`data_files_exist_after: [false]`); a plain `DROP TABLE` keeps them
+  (`data_files_exist_after: [true]`); `DROP TABLE t PURGE` on a table with
+  `gc.enabled=false` raises `org.apache.iceberg.exceptions.ValidationException: Cannot purge
+  table: GC is disabled (deleting files may corrupt other tables)`; `DROP TABLE <missing> PURGE`
+  raises `[TABLE_OR_VIEW_NOT_FOUND]` and `DROP TABLE IF EXISTS <missing> PURGE` is ok.
+  *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-19/20 — inventory cells
+  `D-DROP-TABLE-PURGE`, `D-DROP-TABLE-NO-PURGE`, `TP-GC-DISABLED-PURGE` and probe `p3.json`
+  keys `E.drop_table_purge_missing`, `E.drop_table_if_exists_purge`.)*
+- **Pin** — `crates/repark-spark/src/tests/purge.rs` (both arms of the purge branch in one pin,
+  the `gc.enabled` refusal, the `IF EXISTS` composition, and the delete-failure posture);
+  `python/repark/tests/test_ice_small_parser_1.py::{test_drop_table_purge_deletes_data_files,test_drop_table_without_purge_keeps_data_files,test_drop_table_purge_gc_disabled_refuses,test_drop_expander_emits_purge}`.
+  pins: ipi-21-25-42-small-parser/C-008, C-009, C-010
+- **Rationale** — FIXED (2026-09-20, IPI-21). Before, the keyword never reached Rust at all: the
+  facade's `DROP` expander swallowed `t PURGE` as one identifier segment and answered
+  `invalid table identifier`. The `gc.enabled` gate was nearly shipped **without** — the plan
+  packet and an index decision both argued that Java does not gate `DeleteReachableFiles` on
+  `gc.enabled`, which is true of the action and false of the SQL path: Java gates in
+  `SparkCatalog.purgeTable`, and the inventory cell `TP-GC-DISABLED-PURGE` records Spark
+  refusing. Without the gate RePark would have deleted the user's data files where Spark keeps
+  them. The residual divergence is the exception class alone: Spark surfaces Iceberg's
+  `ValidationException` as a `Py4JJavaError`, RePark raises `AnalysisException` with the same
+  text — IPI-51's, like the plain `DROP TABLE <missing>` class gap this row does not touch.
 
 #### DESC-1 — `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` answers Spark rows on Iceberg tables
 

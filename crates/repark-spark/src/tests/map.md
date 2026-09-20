@@ -1075,6 +1075,39 @@ above.
   **D-8 (2026-09-11):** a two-field candidate planned at 1024 is found when the same
   `target_file_size_bytes` is passed, and refuses naming that key when it is omitted.
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `purge.rs` — **IPI-21 (2026-09-20):** `DROP TABLE … PURGE`. The two arms of the purge branch
+  in one pin (a purged table's files are gone, a plain-dropped table's files are still there), the
+  `gc.enabled=false` refusal that sweeps nothing and drops nothing, the composition with
+  `IF EXISTS` and the `[TABLE_OR_VIEW_NOT_FOUND]` / `42P01` answer on a missing target, and the
+  failure posture: a sweep whose every per-file delete fails returns those failures in
+  `DeleteReachableFilesResult::delete_failures` rather than raising, and the `DROP` still runs.
+- `replace_table.rs` — **IPI-25 (2026-09-20):** the `REPLACE TABLE` spelling on the Rust door.
+  `replace_table_column_list_takes_the_column_def_replace_path` asserts the column-def form keeps
+  the single pre-existing `append`, drops the main ref (no current snapshot) and reads zero rows;
+  `replace_table_as_select_records_an_overwrite` asserts `[append, overwrite]`, which is exactly
+  what a rewrite to plain `CREATE TABLE` would lose;
+  `replace_table_on_a_missing_table_refuses_and_creates_nothing` holds the one semantic
+  difference between the two spellings, condition, SQLSTATE and the not-created assertion; and
+  `create_or_replace_table_still_creates_a_missing_table` is the control that keeps the
+  existence check narrow.
+  pins: ipi-21-25-42-small-parser/C-005, C-006, C-007
+- `ref_ddl.rs` — **IPI-42 (2026-09-20):**
+  `ref_guards_are_conditional_and_never_move_an_existing_ref` is the mutation-proof half the four
+  recorded cells cannot be: it pins `b1` at the OLDER of two snapshots before the guarded
+  `CREATE`, so a replace-if-different implementation moves it and reds.
+  `guarded_create_and_drop_apply_to_missing_refs` (split off for clippy's 100-line cap,
+  repark#751 CI) covers the create-a-missing-ref and the conditional-drop arms on both
+  `BRANCH` and `TAG`.
+  `ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse` replaces the
+  retired REF-2 refusal pin: the guarded spellings run on both grammars, and a leftover token
+  still refuses naming its own dynamic span.
+  pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004
+  The four purge functions are
+  `drop_table_purge_deletes_reachable_files_and_plain_drop_keeps_them`,
+  `purge_refuses_when_gc_is_disabled_and_sweeps_nothing`,
+  `purge_collects_delete_failures_and_the_drop_still_runs` and
+  `purge_composes_with_if_exists_and_names_a_missing_table_the_spark_way`.
+  pins: ipi-21-25-42-small-parser/C-008, C-009, C-010
 - `plan_partitioning.rs` — **AP-1 step 1 (2026-09-10):** the plan door pins on memory-catalog
   fixtures: a 90-day `ts` table in 9 ten-day files at a target of the footer-uncompressed
   sum/90 (`days(ts)` first at 0.0

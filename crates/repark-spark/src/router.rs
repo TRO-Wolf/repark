@@ -239,6 +239,10 @@ async fn execute_inner(
     crate::refuse_collation_in_statement(&statement)?;
     crate::refuse_declared_function_in_statement(&statement)?;
     refuse_options_on_non_write(&statement, write_options)?;
+    if let Statement::CreateTable(create) = &statement {
+        crate::normalize::replace_table::refuse_missing_replace_target(catalogs, sql, &create.name)
+            .await?;
+    }
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
             execute_ctas(
@@ -263,8 +267,9 @@ async fn execute_inner(
             object_type: ObjectType::Table,
             names,
             if_exists,
+            purge,
             ..
-        } => execute_drop_table(ctx, catalogs, names, *if_exists).await,
+        } => execute_drop_table(ctx, catalogs, names, *if_exists, *purge).await,
         Statement::Drop {
             object_type: ObjectType::Schema | ObjectType::Database,
             names,

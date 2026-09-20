@@ -3,8 +3,9 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::parser::ParserError;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
-use iceberg::{NamespaceIdent, TableIdent};
+use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_iceberg::write::{
     SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref,
     create_snapshot_ref_with_retention, drop_snapshot_ref, replace_snapshot_ref,
@@ -31,6 +32,7 @@ enum RefOp {
         as_of_version: Option<i64>,
         /// `true` for `CREATE OR REPLACE` (create-if-absent, replace-if-present).
         or_replace: bool,
+        if_not_exists: bool,
         retention: SnapshotRefRetention,
     },
     /// Bare `REPLACE BRANCH|TAG` — requires the ref to already exist (fork `replace_*`).
@@ -43,6 +45,7 @@ enum RefOp {
     Drop {
         kind: SnapshotRefKind,
         name: String,
+        if_exists: bool,
     },
 }
 
@@ -155,6 +158,10 @@ fn finish_create(
     table_parts: Vec<String>,
     or_replace: bool,
 ) -> Result<RefDdl> {
+    let (if_not_exists, name_index) = parse_if_not_exists(significant, name_index);
+    if if_not_exists && or_replace {
+        return Err(refuse_guard_after_replace("CREATE OR REPLACE BRANCH|TAG"));
+    }
     let name = require_ref_name(significant, name_index, "CREATE BRANCH|TAG")?;
     let (as_of_version, after_as_of) = parse_as_of_version(significant, name_index + 1)?;
     let (retention, end_index) = parse_retention_clauses(significant, after_as_of, kind)?;
@@ -166,6 +173,7 @@ fn finish_create(
             name,
             as_of_version,
             or_replace,
+            if_not_exists,
             retention,
         },
     })
@@ -177,6 +185,9 @@ fn finish_replace(
     kind: SnapshotRefKind,
     table_parts: Vec<String>,
 ) -> Result<RefDdl> {
+    if parse_if_not_exists(significant, name_index).0 {
+        return Err(refuse_guard_after_replace("REPLACE BRANCH|TAG"));
+    }
     let name = require_ref_name(significant, name_index, "REPLACE BRANCH|TAG")?;
     let (as_of_version, after_as_of) = parse_as_of_version(significant, name_index + 1)?;
     let (retention, end_index) = parse_retention_clauses(significant, after_as_of, kind)?;
@@ -198,12 +209,17 @@ fn finish_drop(
     kind: SnapshotRefKind,
     table_parts: Vec<String>,
 ) -> Result<RefDdl> {
+    let (if_exists, name_index) = parse_if_exists(significant, name_index);
     let name = require_ref_name(significant, name_index, "DROP BRANCH|TAG")?;
     // DROP has no AS OF / retention — ref name must be the last significant token.
     reject_trailing_tokens(significant, name_index + 1, "DROP BRANCH|TAG")?;
     Ok(RefDdl {
         table_parts,
-        op: RefOp::Drop { kind, name },
+        op: RefOp::Drop {
+            kind,
+            name,
+            if_exists,
+        },
     })
 }
 
@@ -233,6 +249,10 @@ fn parse_create_with_in(
     } else {
         "CREATE BRANCH|TAG"
     };
+    let (if_not_exists, name_index) = parse_if_not_exists(significant, name_index);
+    if if_not_exists && or_replace {
+        return Err(refuse_guard_after_replace(form));
+    }
     let name = require_ref_name(significant, name_index, form)?;
     if !word_eq(significant, name_index + 1, "IN") {
         return Err(DataFusionError::Plan(
@@ -252,6 +272,7 @@ fn parse_create_with_in(
             name,
             as_of_version,
             or_replace,
+            if_not_exists,
             retention,
         },
     })
@@ -262,6 +283,7 @@ fn parse_drop_with_in(
     name_index: usize,
     kind: SnapshotRefKind,
 ) -> Result<RefDdl> {
+    let (if_exists, name_index) = parse_if_exists(significant, name_index);
     let name = require_ref_name(significant, name_index, "DROP BRANCH|TAG")?;
     if !word_eq(significant, name_index + 1, "IN") {
         return Err(DataFusionError::Plan(
@@ -274,8 +296,39 @@ fn parse_drop_with_in(
     reject_trailing_tokens(significant, after, "DROP BRANCH|TAG")?;
     Ok(RefDdl {
         table_parts,
-        op: RefOp::Drop { kind, name },
+        op: RefOp::Drop {
+            kind,
+            name,
+            if_exists,
+        },
     })
+}
+
+fn parse_if_not_exists(significant: &[Sig], index: usize) -> (bool, usize) {
+    if word_eq(significant, index, "IF")
+        && word_eq(significant, index + 1, "NOT")
+        && word_eq(significant, index + 2, "EXISTS")
+    {
+        return (true, index + 3);
+    }
+    (false, index)
+}
+
+fn parse_if_exists(significant: &[Sig], index: usize) -> (bool, usize) {
+    if word_eq(significant, index, "IF") && word_eq(significant, index + 1, "EXISTS") {
+        return (true, index + 2);
+    }
+    (false, index)
+}
+
+fn refuse_guard_after_replace(form: &str) -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(format!(
+            "{form}: IF NOT EXISTS is only grammatical after a plain CREATE BRANCH|TAG \
+             (Spark answers `mismatched input 'NOT' expecting {{<EOF>, 'AS', 'RETAIN', 'WITH'}}`)"
+        ))),
+        None,
+    )
 }
 
 /// Fail loud when significant tokens remain after a fully-parsed ref DDL form.
@@ -291,9 +344,8 @@ fn reject_trailing_tokens(significant: &[Sig], end_index: usize, form: &str) -> 
         return Err(DataFusionError::NotImplemented(format!(
             "{form}: trailing clause after the supported form is not supported yet \
              (got {leftover}) — supported: CREATE [OR REPLACE]|REPLACE|DROP BRANCH|TAG \
-             [AS OF VERSION n] [RETAIN n DAYS|HOURS|MINUTES] \
-             [WITH SNAPSHOT RETENTION n SNAPSHOTS|DAYS|HOURS|MINUTES]; \
-             IF EXISTS / IF NOT EXISTS stay out (docs/spark-sql-iceberg-parity.md §2.2 / r25 T2)"
+             [IF NOT EXISTS|IF EXISTS] name [AS OF VERSION n] [RETAIN n DAYS|HOURS|MINUTES] \
+             [WITH SNAPSHOT RETENTION n SNAPSHOTS|DAYS|HOURS|MINUTES]"
         )));
     }
     Ok(())
@@ -604,43 +656,34 @@ pub(crate) async fn execute_ref_ddl(
             name,
             as_of_version,
             or_replace,
+            if_not_exists,
             retention,
         } => {
             let loaded = handle.load_table(&ident).await.map_err(iceberg_err)?;
-            let snapshot_id = resolve_snapshot_id(
-                &loaded,
-                as_of_version,
-                catalog_name,
-                namespace,
-                table,
-                if or_replace {
-                    "CREATE OR REPLACE BRANCH|TAG"
-                } else {
-                    "CREATE BRANCH|TAG"
-                },
-            )?;
-            if or_replace {
-                create_or_replace_snapshot_ref(
+            let already_there = loaded.metadata().snapshot_for_ref(&name).is_some();
+            if !(if_not_exists && already_there) {
+                let snapshot_id = resolve_snapshot_id(
+                    &loaded,
+                    as_of_version,
+                    catalog_name,
+                    namespace,
+                    table,
+                    if or_replace {
+                        "CREATE OR REPLACE BRANCH|TAG"
+                    } else {
+                        "CREATE BRANCH|TAG"
+                    },
+                )?;
+                execute_create_ref(
                     handle.as_ref(),
                     &ident,
                     kind,
                     &name,
                     snapshot_id,
                     retention,
+                    or_replace,
                 )
-                .await
-                .map_err(iceberg_err)?;
-            } else {
-                create_snapshot_ref_with_retention(
-                    handle.as_ref(),
-                    &ident,
-                    kind,
-                    &name,
-                    snapshot_id,
-                    retention,
-                )
-                .await
-                .map_err(iceberg_err)?;
+                .await?;
             }
         }
         RefOp::Replace {
@@ -662,16 +705,50 @@ pub(crate) async fn execute_ref_ddl(
                 .await
                 .map_err(iceberg_err)?;
         }
-        RefOp::Drop { kind, name } => {
-            drop_snapshot_ref(handle.as_ref(), &ident, kind, &name)
-                .await
-                .map_err(iceberg_err)?;
+        RefOp::Drop {
+            kind,
+            name,
+            if_exists,
+        } => {
+            let present = !if_exists
+                || handle
+                    .load_table(&ident)
+                    .await
+                    .map_err(iceberg_err)?
+                    .metadata()
+                    .snapshot_for_ref(&name)
+                    .is_some();
+            if present {
+                drop_snapshot_ref(handle.as_ref(), &ident, kind, &name)
+                    .await
+                    .map_err(iceberg_err)?;
+            }
         }
     }
 
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, handle.clone(), catalog_name, &namespace).await?;
     ctx.read_empty()
+}
+
+async fn execute_create_ref(
+    handle: &dyn Catalog,
+    ident: &TableIdent,
+    kind: SnapshotRefKind,
+    name: &str,
+    snapshot_id: i64,
+    retention: SnapshotRefRetention,
+    or_replace: bool,
+) -> Result<()> {
+    if or_replace {
+        create_or_replace_snapshot_ref(handle, ident, kind, name, snapshot_id, retention)
+            .await
+            .map_err(iceberg_err)
+    } else {
+        create_snapshot_ref_with_retention(handle, ident, kind, name, snapshot_id, retention)
+            .await
+            .map_err(iceberg_err)
+    }
 }
 
 /// A sniffed write-to-branch candidate.

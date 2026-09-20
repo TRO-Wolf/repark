@@ -333,6 +333,24 @@ pins: rp-4-fork-repin/C-005, C-006
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff. Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
+  `parse_if_not_exists` / `parse_if_exists` take a token index and answer `(matched, next_index)`,
+  so `finish_create`, `finish_drop`, `parse_create_with_in` and `parse_drop_with_in` all consume
+  the guard at the same position; `refuse_guard_after_replace` is the parse-class refusal for the
+  combination Spark's grammar does not admit. The `RefOp::Create.if_not_exists` and
+  `RefOp::Drop.if_exists` flags are read in `execute_ref_ddl` against
+  `TableMetadata::snapshot_for_ref`, never as a replace — a guarded `DROP` on a missing ref
+  reads absent and no-ops rather than raising.
+  `IF NOT EXISTS` / `IF EXISTS` are optional **infixes** between `BRANCH|TAG` and the ref name —
+  Spark's token position, not a trailing clause — shared by the `ALTER TABLE` and the
+  `… IN cat.ns.t` spellings. Both guards are conditional: a missing ref is still created, a
+  present ref is still dropped, and an existing ref is left where it is (an `AS OF VERSION` on
+  the guarded form is ignored, as Spark ignores it). Spark's grammar attaches `IF NOT EXISTS` to
+  the plain `CREATE` alone, so `CREATE OR REPLACE … IF NOT EXISTS` and `REPLACE … IF NOT EXISTS`
+  refuse parse-class rather than being accepted and silently given one meaning
+  (**IPI-42**, 2026-09-20; registry `REF-2` retired). The create arm's
+  create-vs-or-replace dispatch sits in `execute_create_ref` so `execute_ref_ddl`
+  stays under clippy's 100-line cap (repark#751 CI).
+  pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004
   `WITH SNAPSHOT RETENTION` takes BOTH halves — `n SNAPSHOTS` then an optional
   `k DAYS|HOURS|MINUTES` — because Spark's grammar does; the reversed order is a Spark parse
   error and refuses here too. Write-to-branch routing lives in `write_to_branch.rs` (RP-5):
@@ -788,6 +806,14 @@ pins: rp-4-fork-repin/C-005, C-006
   module, not an `alter.rs` arm, because that file sits at its exact ceiling. Pins:
   [tests/alter_write_order.rs](tests/alter_write_order.rs).
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+- `namespace_ddl/` — the table-lifecycle work `namespace_ddl.rs` delegates; see
+  [namespace_ddl/map.md](namespace_ddl/map.md). `purge.rs` holds the `DROP TABLE … PURGE`
+  reachable-file sweep and the `gc.enabled` gate (**IPI-21**, 2026-09-20); `execute_drop_table`
+  runs the sweep before `Catalog::drop_table` because the metadata location must still be
+  resolvable when the action reads it. A non-empty `delete_failures` logs once — one
+  `tracing::warn` naming the table and the count — and the `DROP` still succeeds (Java's
+  log-only suppression, owner ruling 2026-09-20).
+  pins: ipi-21-25-42-small-parser/C-008, C-009, C-010
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:
   matching/no-location requests stay idempotent; contradictory `LOCATION` fails loud naming both
@@ -818,6 +844,11 @@ pins: rp-4-fork-repin/C-005, C-006
 - **FNP-8 (2026-09-07):** the executing parser selects lambda syntax only inside
   recognized higher-order calls. JSON arrows retain the session parser and its AST.
   pins: fnp-8/C-004
+- `normalize/` — token rewrites `normalize.rs` has no ceiling headroom for; see
+  [normalize/map.md](normalize/map.md). `replace_table.rs` rewrites `REPLACE TABLE` to
+  `CREATE OR REPLACE TABLE` **first**, before `is_create_table` gates the other rewrites, and
+  carries the missing-table refusal that keeps the two spellings apart (**IPI-25**, 2026-09-20).
+  pins: ipi-21-25-42-small-parser/C-005, C-006, C-007
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
   multi-statement refuse (BUG-010), the MoR multi-spec DML gate's resolution wrapper (BUG-001
@@ -1007,7 +1038,11 @@ pins: rp-4-fork-repin/C-005, C-006
   selectors with the selector/spec text. pins: ice-tt-resolve-1/C-002
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
-  `reregister*` provider invalidation.
+  `reregister*` provider invalidation. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
+  is the single home of Spark's `[TABLE_OR_VIEW_NOT_FOUND]` text for a three-part name, condition
+  and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs` and
+  `namespace_ddl/purge.rs` all answer through it, so the three cannot drift apart.
+  pins: ipi-21-25-42-small-parser/C-007, C-008
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
   cross-door evidence in `crates/repark-sql/tests/cross_door.rs`.
@@ -1015,7 +1050,7 @@ pins: rp-4-fork-repin/C-005, C-006
   `#[cfg(test)]` root imports required by the unit battery's `use super::*`.
 - `tests/` — production-aligned unit modules with shared fixtures in `common.rs`; see
   [tests/map.md](tests/map.md). Pins include
-  `tests/ref_ddl.rs::ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud`,
+  `tests/ref_ddl.rs::ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse`,
   `tests/metadata_tables.rs::metadata_tables_spark_dot_form_and_guards`, and
   `tests/metadata_tables.rs::metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door`.
 

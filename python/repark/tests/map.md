@@ -3682,6 +3682,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
   UPDATE on an unpartitioned target; partial INSERT NULL-fills omitted nullable columns.
   Arrow path, value + type.
+- `test_ice_small_parser_1.py` — **IPI-21 + IPI-25 + IPI-42 (2026-09-20):** the three
+  small parser shapes. Oracle: the run-25/26 inventory harness cells recorded against live
+  PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (`D-REF-*-IF-*EXISTS`, `D-REPLACE`,
+  `D-RTAS`, `D-RTAS-TIME-TRAVEL`, `D-DROP-TABLE-PURGE`, `TP-GC-DISABLED-PURGE`, and the
+  `D-DROP-TABLE*` regression cells) plus the run-25e probe `p3.json` keys `E.*` for the
+  shapes no cell covers. The ref pins pin the guarded branch at an OLDER snapshot first, so a
+  replace-if-different implementation moves it and reds; the conditional pins cover the
+  create-a-missing-ref and drop-a-present-ref branches the four recorded cells never take.
+  `test_drop_table_without_purge_keeps_data_files` is the regression pin a purge-by-default
+  bug reds, and `test_drop_table_purge_gc_disabled_refuses` is the guard that keeps RePark
+  from deleting files Spark keeps. `test_drop_expander_emits_purge` pins the facade `DROP`
+  rewrite byte-exact on all four spellings, because the cell dies in Python before any Rust
+  fix is reachable.
+  pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to

@@ -215,9 +215,181 @@ async fn write_to_branch_refuses_loud_naming_fork_gap() {
     );
 }
 
-/// DECLARED-DIVERGENCE pin for **`docs/spark-sql-iceberg-parity.md` §2.2 row REF-2**.
 #[tokio::test]
-async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
+async fn ref_guards_are_conditional_and_never_move_an_existing_ref() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.guards AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.guards SELECT * FROM src",
+    )
+    .await;
+    let history: Vec<i64> = load_sales_table(&catalogs, "guards")
+        .await
+        .metadata()
+        .history()
+        .iter()
+        .map(|entry| entry.snapshot_id)
+        .collect();
+    let [first, second] = history.as_slice() else {
+        panic!("expected two snapshots, got {history:?}");
+    };
+    let (first, second) = (*first, *second);
+
+    run(
+        &ctx,
+        &catalogs,
+        &format!("ALTER TABLE ice.sales.guards CREATE BRANCH b1 AS OF VERSION {first}"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards CREATE TAG t1",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards CREATE BRANCH IF NOT EXISTS b1",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("ALTER TABLE ice.sales.guards CREATE TAG IF NOT EXISTS t1 AS OF VERSION {first}"),
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "guards").await;
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("b1")
+            .unwrap()
+            .snapshot_id(),
+        first,
+        "the guard must not move an existing branch to a newer snapshot"
+    );
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("t1")
+            .unwrap()
+            .snapshot_id(),
+        second,
+        "the AS OF VERSION of a guarded CREATE on an existing tag is ignored, not applied"
+    );
+}
+
+#[tokio::test]
+async fn guarded_create_and_drop_apply_to_missing_refs() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.guards AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.guards SELECT * FROM src",
+    )
+    .await;
+    let history: Vec<i64> = load_sales_table(&catalogs, "guards")
+        .await
+        .metadata()
+        .history()
+        .iter()
+        .map(|entry| entry.snapshot_id)
+        .collect();
+    let [first, second] = history.as_slice() else {
+        panic!("expected two snapshots, got {history:?}");
+    };
+    let (first, second) = (*first, *second);
+
+    run(
+        &ctx,
+        &catalogs,
+        &format!("ALTER TABLE ice.sales.guards CREATE BRANCH b1 AS OF VERSION {first}"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards CREATE BRANCH IF NOT EXISTS bnew",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "ALTER TABLE ice.sales.guards CREATE TAG IF NOT EXISTS tnew AS OF VERSION {first}"
+        ),
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "guards").await;
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("bnew")
+            .unwrap()
+            .snapshot_id(),
+        second,
+        "the guard still creates a missing branch, at the current snapshot"
+    );
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("tnew")
+            .unwrap()
+            .snapshot_id(),
+        first,
+        "a guarded CREATE of a missing tag honours its AS OF VERSION"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards DROP BRANCH IF EXISTS bnew",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards DROP TAG IF EXISTS tnew",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards DROP TAG IF EXISTS never_there",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "guards").await;
+    assert!(table.metadata().snapshot_for_ref("bnew").is_none());
+    assert!(table.metadata().snapshot_for_ref("tnew").is_none());
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("b1")
+            .unwrap()
+            .snapshot_id(),
+        first,
+        "the guarded drops must leave the untouched refs alone"
+    );
+}
+
+#[tokio::test]
+async fn ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -227,19 +399,28 @@ async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
     )
     .await;
 
-    // The ALTER TABLE forms reach the ref-DDL parser's trailing-token rejection.
+    for sql in [
+        "ALTER TABLE ice.sales.refdecl CREATE BRANCH IF NOT EXISTS b1",
+        "ALTER TABLE ice.sales.refdecl CREATE BRANCH IF NOT EXISTS b1",
+        "ALTER TABLE ice.sales.refdecl DROP BRANCH IF EXISTS b1",
+        "ALTER TABLE ice.sales.refdecl DROP BRANCH IF EXISTS b1",
+        "CREATE BRANCH IF NOT EXISTS b2 IN ice.sales.refdecl",
+        "DROP TAG IF EXISTS t2 IN ice.sales.refdecl",
+        "DROP BRANCH IF EXISTS b2 IN ice.sales.refdecl",
+    ] {
+        execute(&ctx, &catalogs, sql)
+            .await
+            .unwrap_or_else(|error| panic!("the guarded spelling must run ({sql}): {error}"));
+    }
+
     for (sql, leftover) in [
-        (
-            "ALTER TABLE ice.sales.refdecl CREATE BRANCH IF NOT EXISTS b1",
-            "NOT",
-        ),
-        (
-            "ALTER TABLE ice.sales.refdecl DROP BRANCH IF EXISTS b1",
-            "EXISTS",
-        ),
         (
             "ALTER TABLE ice.sales.refdecl CREATE TAG t1 AS OF VERSION 1 RETAIN 7 DAYS EXTRA",
             "EXTRA",
+        ),
+        (
+            "ALTER TABLE ice.sales.refdecl CREATE BRANCH b9 IF NOT EXISTS",
+            "IF",
         ),
     ] {
         let error = execute(&ctx, &catalogs, sql)
@@ -257,38 +438,21 @@ async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
              {rendered_leftover} ({sql}): {error}"
         );
         assert!(
-            error.contains("IF EXISTS / IF NOT EXISTS stay out"),
-            "the refusal must name the known-but-unsupported spellings ({sql}): {error}"
-        );
-        assert!(
-            error.contains("docs/spark-sql-iceberg-parity.md §2.2"),
-            "the refusal must cite the registry row it defends ({sql}): {error}"
+            error.contains("IF NOT EXISTS|IF EXISTS"),
+            "the refusal must list the grammar it now accepts ({sql}): {error}"
         );
     }
 
-    // The top-level `… IN t` spellings break on the same clause earlier, in the `IN` requirement.
-    for sql in [
-        "CREATE BRANCH IF NOT EXISTS b2 IN ice.sales.refdecl",
-        "DROP TAG IF EXISTS t2 IN ice.sales.refdecl",
-    ] {
-        let error = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("the top-level IF-EXISTS spellings must refuse too")
-            .to_string();
-        assert!(
-            error.contains("IN catalog.namespace.table"),
-            "the refusal must name the supported shape ({sql}): {error}"
-        );
-    }
-
-    // …and nothing was created or dropped by any of the refused statements.
     let refs = rows(
         &ctx,
         &catalogs,
         "SELECT * FROM ice.sales.refdecl.refs WHERE name <> 'main'",
     )
     .await;
-    assert_eq!(refs, 0, "a refused ref DDL must not create or drop a ref");
+    assert_eq!(
+        refs, 0,
+        "every guarded drop ran and no refused DDL created a ref"
+    );
 }
 
 /// A real two-part table literally named `branch_*` must not false-refuse as write-to-branch.
