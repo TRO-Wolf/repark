@@ -66,6 +66,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `dv_count`); the historical parser pins stay byte-identical.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011
+  pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) —
+  **ICE-CATALOG-SESSION-1 (2026-09-20):** the unit pin file; S5 carries the eight
+  `CACHE` / `UNCACHE` / `REFRESH` SQL-door pins (N-7 missing-table refusal, N-8
+  cache-then-write-then-read, `isCached` agreement both ways, `IF EXISTS`
+  tolerance, AS SELECT refusal). The oracle JSON and the eleven cell replays land
+  in S8.
+  pins: ice-catalog-session-1/C-019, C-020, C-021
+
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
   [ice_meta_delete_1_spark_oracle.json](ice_meta_delete_1_spark_oracle.json) +
   [_record_ice_meta_delete_1.py](_record_ice_meta_delete_1.py) —
@@ -4867,8 +4876,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusal, `FutureWarning` on the deprecated alias), `dropGlobalTempView` False,
   `recoverPartitions` None + `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` +
   `TABLE_OR_VIEW_NOT_FOUND` (§5 CAT-RECOVER-1), `refreshTable` (OOB commit visible
-  after refresh, view no-op, missing raise), `refreshByPath` None, and today's
-  `CACHE TABLE` / `UNCACHE TABLE` SQL refusals. Critic round 1 (L-001..L-007):
+  after refresh, view no-op, missing raise), `refreshByPath` None, and the SQL
+  `CACHE` / `UNCACHE` / `REFRESH` doors (rewritten S5: they route to the surface
+  now, `isCached` agrees both ways). Critic round 1 (L-001..L-007):
   staleness-token invalidation of held caches (INSERT / INSERT OVERWRITE / writer
   append / `createOrReplaceTempView` all answer fresh rows and `isCached` False;
   the no-write second read still scans the held cache view under the SQL spy),

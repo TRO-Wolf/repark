@@ -22,6 +22,7 @@ from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEYS,
     normalize_session_time_zone_config,
 )
+from repark.spark.session.sql_cache_statements import try_sql_cache_statement
 from repark.spark.session.sql_set_statements import try_sql_set_statement
 from repark.spark.session.timestamp_type import (
     TIMESTAMP_TYPE_KEYS,
@@ -173,13 +174,20 @@ class ReparkSession:
 
         Registered Python UDTFs (via :meth:`spark.udtf.register`) rewrite
         ``SELECT * FROM name(lit_args)``; LATERAL stays blocked.
+
+        ``CACHE`` / ``UNCACHE`` / ``REFRESH`` statements answer ahead of the engine
+        through the catalog surface, so ``spark.catalog.isCached`` agrees with SQL.
         """
         inner = self._ensure_alive()
         _promote_active(self)
         # UDTF FROM-name(lit_args) before scalar UDF rewrite (distinct registries).
         from repark.spark.udtf import try_sql_registered_udtf
 
-        for rewrite in (try_sql_set_statement, try_sql_registered_udtf):
+        for rewrite in (
+            try_sql_set_statement,
+            try_sql_cache_statement,
+            try_sql_registered_udtf,
+        ):
             if (frame := rewrite(self, query)) is not None:
                 return frame
         # Registry-name scan before bare-table expand (rewrite may re-enter sql).

@@ -627,3 +627,67 @@ fn show_and_cache_statement_variants_parse_as_expected() {
     };
     assert_eq!(function.name.to_string(), "system.rollback_to_snapshot");
 }
+
+#[tokio::test]
+async fn refresh_table_rebuilds_provider_and_answers_empty() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    let batches = execute(&ctx, &catalogs, "REFRESH TABLE ice.sales.t")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert!(batches.iter().all(|batch| batch.num_rows() == 0));
+    let rows = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.t")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert!(rows.iter().all(|batch| batch.num_rows() == 0));
+}
+
+#[tokio::test]
+async fn refresh_table_without_table_keyword_ok() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE TABLE ice.sales.t (id INT)").await;
+    run(&ctx, &catalogs, "REFRESH ice.sales.t").await;
+}
+
+#[tokio::test]
+async fn refresh_missing_table_is_not_found() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let error = execute(&ctx, &catalogs, "REFRESH TABLE ice.sales.nothere")
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("TABLE_OR_VIEW_NOT_FOUND"));
+}
+
+#[tokio::test]
+async fn refresh_temp_view_is_ok() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "REFRESH src").await;
+}
+
+#[tokio::test]
+async fn refresh_path_is_ok() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "REFRESH '/tmp/nonewhere'").await;
+}
+
+#[test]
+fn refresh_parse_accepts_table_and_path_forms_only() {
+    assert!(crate::use_ddl::try_parse_refresh("REFRESH TABLE ice.sales.t").is_some());
+    assert!(crate::use_ddl::try_parse_refresh("refresh t").is_some());
+    assert!(crate::use_ddl::try_parse_refresh("REFRESH '/tmp/x'").is_some());
+    assert!(crate::use_ddl::try_parse_refresh("SELECT 1").is_none());
+    assert!(crate::use_ddl::try_parse_refresh("REFRESH TABLE").is_none());
+    assert!(crate::use_ddl::try_parse_refresh("REFRESH TABLE t PARTITION (p = 1)").is_none());
+    assert!(crate::use_ddl::try_parse_refresh("REFRESH RESOURCE x").is_none());
+}

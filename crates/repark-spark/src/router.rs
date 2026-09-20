@@ -585,6 +585,24 @@ async fn try_describe_table_intercept(
     Some(describe_show::execute_describe_table(ctx, catalogs, describe_table).await)
 }
 
+async fn try_refresh_intercept(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let parsed = crate::use_ddl::try_parse_refresh(sql)?;
+    let target = match parsed.and_then(|target| {
+        write_options
+            .refuse_if_non_empty("REFRESH TABLE")
+            .map(|()| target)
+    }) {
+        Ok(target) => target,
+        Err(error) => return Some(Err(error)),
+    };
+    Some(crate::use_ddl::execute_refresh(ctx, catalogs, target).await)
+}
+
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_alter_intercepts(
     ctx: &SessionContext,
@@ -664,6 +682,9 @@ async fn try_preparse_intercepts(
         return Some(outcome);
     }
     if let Some(result) = try_describe_table_intercept(ctx, catalogs, sql, write_options).await {
+        return Some(result);
+    }
+    if let Some(result) = try_refresh_intercept(ctx, catalogs, sql, write_options).await {
         return Some(result);
     }
     // `SHOW {NAMESPACES|SCHEMAS|DATABASES}` (Group AB).

@@ -43,6 +43,9 @@ pins: rp-4-fork-repin/C-005, C-006
   ShowColumns}` arms route to `use_ddl`; the `DESCRIBE TABLE` intercept skips the Iceberg
   path when a bare name resolves as a session table, so temp views keep winning.
   pins: ice-catalog-session-1/C-015, C-016, C-017
+  **ICE-CATALOG-SESSION-1 S5 (2026-09-20):** the `REFRESH` pre-parse intercept routes to
+  `use_ddl::execute_refresh`, beside the extracted `DESCRIBE TABLE` helper.
+  pins: ice-catalog-session-1/C-019
   **CAST-MAP-SPELL-1 (2026-09-19):** `execute_inner` first runs
   `repark_functions::cast_map::rewrite_map_casts`, so a `CAST` / `TRY_CAST` naming `MAP<…>`
   reaches every intercept and the parser as the shared cast UDF call.
@@ -1230,8 +1233,10 @@ pins: rp-4-fork-repin/C-005, C-006
   S4 adds the `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` executors (sorted
   names, ambient scope from the session defaults, `LIKE`-glob suffix, `TERSE` /
   `EXTENDED` / `FULL` parse refusals) and the `SHOW TABLES IN` scope resolver
-  (catalog-first, like `USE`).
-  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-015, C-016, C-017, C-018, C-022, C-023
+  (catalog-first, like `USE`). S5 adds native `REFRESH [TABLE] name` /
+  `REFRESH 'path'` (temp views and paths answer ok; missing tables refuse
+  `TABLE_OR_VIEW_NOT_FOUND`; hits rebuild the catalog provider).
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-015, C-016, C-017, C-018, C-019, C-022, C-023
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
   cross-door evidence in `crates/repark-sql/tests/cross_door.rs`.

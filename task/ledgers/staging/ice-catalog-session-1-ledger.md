@@ -78,6 +78,13 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
   the current catalog there and two-part `DESCRIBE` resolves like `SELECT` through the same
   read path. `R-SHOW-DATABASES` / `R-DESCRIBE-TWO-PART` move to served; `R-SHOW-TABLES` /
   `R-RENAME-TWO-PART` keep refusing with their new texts (DBT-QUALIFY-1 FIXED).
+- T-5 (tree measurement, S6 owns the remainder): SQL `CACHE` / `REFRESH` short names
+  resolve through the facade `_catalog_state`, like the `catalog.*` method twins — a SQL
+  `USE` moves only the engine defaults until C-028 lands, so short-name cache statements
+  after `USE` wait for S6. Native-door `CACHE` / `UNCACHE TABLE` keep the engine's
+  `Unsupported SQL statement` refusal (Python door only: the cache dict is unreachable
+  without a PyO3 bridge, and H-05 forbids a second cache); the residue is recorded in the
+  S8 registry row.
 
 ## Proposition ledger
 
@@ -101,9 +108,9 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
 | C-016 | `SHOW TABLES` answers Spark's `(namespace, tableName, isTemporary)` shape with `IN` / `FROM` / `LIKE`-glob. | `test_show_tables_after_use_lists_current_namespace` + `show_tables_lists_current_namespace_after_use` + `show_tables_like_and_in_forms` + `show_tables_missing_explicit_namespace_refuses` + `show_tables_empty_ambient_scope_is_empty`. | OPEN | Mechanism pinned S4; cell pins S8. |
 | C-017 | `D-SHOW-COLUMNS` replays EQUAL in declaration order (not the harness sort), all three spellings, winning over `information_schema`. | `test_show_columns_is_declaration_order` + `test_show_columns_beats_information_schema` + `show_columns_answers_declaration_order` + `show_columns_missing_table_is_not_found` + `show_columns_like_is_a_parse_refusal`. | OPEN | Mechanism pinned S4; cell pins S8. |
 | C-018 | Bare `SHOW NAMESPACES` / `SCHEMAS` / `DATABASES` list the current catalog (NS-1 retired). | `test_show_namespaces_bare_uses_current_catalog` + `show_namespaces_bare_lists_current_catalog` + `show_namespaces_bare_lists_current_catalog_nested_still_fails_loud`. | OPEN | Mechanism pinned S4; cell pins S8. |
-| C-019 | `CAT-REFRESH-TABLE` replays EQUAL; a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`. | `test_refresh_table_cell` + `test_refresh_missing_table_raises_table_not_found`. | OPEN | S8. |
-| C-020 | `CAT-CACHE-TABLE` replays EQUAL; SQL `CACHE TABLE` sets `isCached` and a write invalidates. | `test_cache_table_cell` + `test_cache_table_then_write_then_read_sees_the_write`. | OPEN | S8. |
-| C-021 | `UNCACHE TABLE` on a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`; `IF EXISTS` answers ok. | `test_uncache_missing_table` + `test_uncache_if_exists_missing_is_ok`. | OPEN | S8. |
+| C-019 | `CAT-REFRESH-TABLE` replays EQUAL; a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`. | `test_refresh_table_cell` + `test_refresh_missing_table_raises_table_not_found` + `test_refresh_table_answers_empty` + `test_refresh_without_table_keyword_ok` + `refresh_table_rebuilds_provider_and_answers_empty` + `refresh_table_without_table_keyword_ok` + `refresh_missing_table_is_not_found` + `refresh_temp_view_is_ok` + `refresh_path_is_ok` + `refresh_parse_accepts_table_and_path_forms_only`. | OPEN | Mechanism pinned S5; cell pins S8. |
+| C-020 | `CAT-CACHE-TABLE` replays EQUAL; SQL `CACHE TABLE` sets `isCached` and a write invalidates. | `test_cache_table_cell` + `test_cache_table_then_write_then_read_sees_the_write` + rewritten `test_sql_cache_uncache_refresh_doors`. | OPEN | Mechanism pinned S5; cell pins S8. |
+| C-021 | `UNCACHE TABLE` on a missing table refuses `TABLE_OR_VIEW_NOT_FOUND`; `IF EXISTS` answers ok. | `test_uncache_missing_table` + `test_uncache_if_exists_missing_is_ok` + `test_uncache_table_clears_is_cached` + `test_uncache_missing_table_raises_table_not_found` + `test_cache_as_select_stays_not_implemented`. | OPEN | Mechanism pinned S5; cell pins S8. |
 | C-022 | `D-RENAME-TABLE-SHORT` replays EQUAL; cross-catalog `RENAME TO` still refuses. | `test_rename_to_two_part_cell` + `test_rename_across_catalogs_still_refuses` + `rename_two_part_dest_anchors_on_the_source_catalog` + `rename_three_part_dest_across_catalogs_still_refuses` + `alter_source_and_rename_dest_complete_short_names`. | OPEN | Mechanism pinned S3; cell pins S8. |
 | C-023 | `P-CALL-NO-CATALOG` replays EQUAL: two-part `system.<proc>` uses the current catalog. | `test_call_no_catalog_cell` + `call_two_part_resolves_current_catalog` + `resolve_call_target_two_part_uses_current_catalog`. | OPEN | Mechanism pinned S3; cell pins S8. |
 | C-024 | Runtime `conf.set` of `spark.sql.catalog.*` accumulates; first complete block registers, later sets update the side map without re-registering. | `test_runtime_catalog_registration_then_create` + `test_late_table_default_key_lands_on_create`. | OPEN | S8. |

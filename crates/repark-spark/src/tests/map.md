@@ -1141,8 +1141,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: catalog listing + `LIKE`, tables-after-`USE` + `IN`/`LIKE` forms + missing
   explicit namespace refusal + empty ambient scope, columns declaration order +
   missing-table `NOT_FOUND` + `LIKE` refusal, and bare `SHOW NAMESPACES` on the
-  current catalog.
-  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-015, C-016, C-017, C-018, C-022, C-023
+  current catalog. S5 adds the native `REFRESH` pins: provider rebuild + empty
+  answer, no-`TABLE` keyword, missing-table `NOT_FOUND`, temp-view ok, path ok,
+  and the parse-shape unit test.
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-015, C-016, C-017, C-018, C-019, C-022, C-023
 
 - [ice_ddl_clauses_1.rs](ice_ddl_clauses_1.rs) — **IPI-26/27 round 1 (2026-09-20):**
   the pre-parse rewrite pins. `add_columns_plural_splitter_tracks_angle_brackets_at_depth_zero`

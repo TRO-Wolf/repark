@@ -2,13 +2,17 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{BooleanArray, RecordBatch, RecordBatchOptions, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
+use datafusion::common::TableReference;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     ObjectName, ShowStatementFilter, ShowStatementFilterPosition, ShowStatementIn,
     ShowStatementOptions, Use,
 };
-use datafusion::sql::sqlparser::parser::ParserError;
+use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::keywords::Keyword;
+use datafusion::sql::sqlparser::parser::{Parser, ParserError};
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 
@@ -477,4 +481,72 @@ pub(crate) async fn execute_use(
             "Unsupported SQL statement: USE SECONDARY ROLES {roles}"
         ))),
     }
+}
+
+pub(crate) enum RefreshTarget {
+    Table(Vec<String>),
+    Path,
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn try_parse_refresh(sql: &str) -> Option<Result<RefreshTarget>> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !parser.parse_keyword(Keyword::REFRESH) {
+        return None;
+    }
+    let _ = parser.parse_keyword(Keyword::TABLE);
+    if matches!(parser.peek_token().token, Token::SingleQuotedString(_)) {
+        if parser.parse_literal_string().is_err() {
+            return None;
+        }
+        return match parser.peek_token().token {
+            Token::EOF | Token::SemiColon => Some(Ok(RefreshTarget::Path)),
+            _ => None,
+        };
+    }
+    let name = parser.parse_object_name(false).ok()?;
+    if !matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
+        return None;
+    }
+    let parts = name_parts(&name);
+    if parts.is_empty() || parts.len() > 3 {
+        return None;
+    }
+    Some(Ok(RefreshTarget::Table(parts)))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_refresh(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    target: RefreshTarget,
+) -> Result<DataFrame> {
+    let RefreshTarget::Table(parts) = target else {
+        return use_empty_frame(ctx);
+    };
+    if parts.len() == 1
+        && ctx
+            .table_provider(TableReference::Bare {
+                table: parts[0].as_str().into(),
+            })
+            .await
+            .is_ok()
+    {
+        return use_empty_frame(ctx);
+    }
+    let completed = complete_name(ctx, &parts)?;
+    let [catalog, namespace, table] = completed.as_slice() else {
+        return Err(table_or_view_not_found(&parts.join(".")));
+    };
+    let handle = catalog_handle(catalogs, catalog)?;
+    let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
+    if !handle.table_exists(&ident).await.map_err(iceberg_err)? {
+        return Err(table_or_view_not_found(&format!(
+            "{catalog}.{namespace}.{table}"
+        )));
+    }
+    crate::reregister_catalog_provider(ctx, handle.clone(), catalog).await?;
+    use_empty_frame(ctx)
 }
