@@ -338,7 +338,8 @@ pins: rp-4-fork-repin/C-005, C-006
   the guard at the same position; `refuse_guard_after_replace` is the parse-class refusal for the
   combination Spark's grammar does not admit. The `RefOp::Create.if_not_exists` and
   `RefOp::Drop.if_exists` flags are read in `execute_ref_ddl` against
-  `TableMetadata::snapshot_for_ref`, never as a replace.
+  `TableMetadata::snapshot_for_ref`, never as a replace — a guarded `DROP` on a missing ref
+  reads absent and no-ops rather than raising.
   `IF NOT EXISTS` / `IF EXISTS` are optional **infixes** between `BRANCH|TAG` and the ref name —
   Spark's token position, not a trailing clause — shared by the `ALTER TABLE` and the
   `… IN cat.ns.t` spellings. Both guards are conditional: a missing ref is still created, a
