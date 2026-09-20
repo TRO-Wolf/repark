@@ -140,7 +140,7 @@ pub(super) async fn run_rewrite(
     }
     let result = match Box::pin(action.execute(catalog.as_ref())).await {
         Err(error) if is_fork_validation_refusal(&error) => {
-            return Err(illegal_argument_error(error.to_string()));
+            return Err(illegal_argument_error(error.message().to_string()));
         }
         result => result.map_err(iceberg_err)?,
     };

@@ -378,11 +378,11 @@ async fn call_rewrite_positional_strategy_routes_to_the_rewriter() {
             .await
             .expect_err("sort on an unsorted table must refuse");
         let message = error.to_string();
-        assert!(
-            message.contains("Cannot sort data without a valid sort order")
-                && message.contains("is unsorted and no sort order is provided"),
-            "got: {message}"
+        let expected = concat!(
+            "External error: Cannot sort data without a valid sort order, ",
+            "table 'sales.t' is unsorted and no sort order is provided"
         );
+        assert_eq!(message, expected);
     }
 
     // C2-Q-003: positional binpack is accepted (not a blanket positional refuse).

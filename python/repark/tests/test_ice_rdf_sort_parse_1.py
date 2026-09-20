@@ -221,9 +221,10 @@ def test_rdf_sort_on_unsorted_table_refuses(engine: ReparkSession) -> None:
     before = _file_ids_flat(engine, table)
     with pytest.raises(IllegalArgumentException) as caught:
         _rewrite(engine, table, None, "sort")
-    message = str(caught.value)
-    assert "Cannot sort data without a valid sort order" in message
-    assert "is unsorted and no sort order is provided" in message
+    assert str(caught.value) == (
+        "Cannot sort data without a valid sort order, "
+        "table 'ns.unsorted' is unsorted and no sort order is provided"
+    )
     assert _file_ids_flat(engine, table) == before
 
 
@@ -246,13 +247,17 @@ def test_rdf_sort_order_without_strategy_still_sorts(engine: ReparkSession) -> N
 def test_rdf_zorder_refusals_are_the_forks(engine: ReparkSession) -> None:
     """C-009: an unknown z-order column and an empty z-order raise Iceberg's own text."""
     table = _flat_table(engine, "zbad", ZDISC_ROWS)
-    for order, needle in (
-        ("zorder(nope)", "Cannot find column 'nope' in table schema (case sensitive = false)"),
+    for order, expected in (
+        (
+            "zorder(nope)",
+            "Cannot find column 'nope' in table schema (case sensitive = false): "
+            "struct<1: id: optional long, 2: p: optional string, 3: q: optional string>",
+        ),
         ("zorder()", "Cannot ZOrder when no columns are specified"),
     ):
         with pytest.raises(IllegalArgumentException) as caught:
             _rewrite(engine, table, order, "sort")
-        assert needle in str(caught.value), order
+        assert str(caught.value) == expected, order
 
 
 def test_rdf_sort_order_transform_is_a_declared_refusal(engine: ReparkSession) -> None:

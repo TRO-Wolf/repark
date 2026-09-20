@@ -2118,7 +2118,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
   Round 2 (2026-09-20): lint-only rewrap of this file and its recorder (the
   101-column line, the RUF017 list flattening with the same asserted values, the
-  over-split zip call); no pin text changed.
+  over-split zip call); no pin text changed. Round 3 (2026-09-20, V-001): the
+  unsorted-table and z-order refusal pins assert the full fork message by equality
+  against `str(exc)`, so a reintroduced `DataInvalid => ` prefix reds the pin.
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —
   **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** offline pins over the recorded 49-cell
   Spark 4.1.2 oracle ([ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json),

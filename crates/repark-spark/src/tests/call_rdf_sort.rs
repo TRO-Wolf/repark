@@ -158,11 +158,12 @@ async fn call_rdf_sort_on_unsorted_table_surfaces_the_fork_refusal() {
     )
     .await
     .expect_err("sort on an unsorted table must refuse");
-    let message = error.to_string();
-    assert!(
-        message.contains("Cannot sort data without a valid sort order")
-            && message.contains("is unsorted and no sort order is provided"),
-        "got: {message}"
+    assert_eq!(
+        error.to_string(),
+        concat!(
+            "External error: Cannot sort data without a valid sort order, ",
+            "table 'sales.us' is unsorted and no sort order is provided"
+        )
     );
     assert_eq!(
         count_planned_data_files(catalogs["ice"].as_ref(), &ident).await,
@@ -243,12 +244,19 @@ async fn call_rdf_zorder_refusals_come_from_the_fork() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_unsorted(&ctx, &catalogs, "zo").await;
-    for (order, needle) in [
+    for (order, expected) in [
         (
             "zorder(nope)",
-            "Cannot find column 'nope' in table schema (case sensitive = false)",
+            concat!(
+                "External error: Cannot find column 'nope' in table schema ",
+                "(case sensitive = false): ",
+                "struct<1: id: optional long, 2: data: optional string>"
+            ),
         ),
-        ("zorder()", "Cannot ZOrder when no columns are specified"),
+        (
+            "zorder()",
+            "External error: Cannot ZOrder when no columns are specified",
+        ),
     ] {
         let error = execute(
             &ctx,
@@ -260,7 +268,7 @@ async fn call_rdf_zorder_refusals_come_from_the_fork() {
         )
         .await
         .expect_err("bad zorder must refuse");
-        assert!(error.to_string().contains(needle), "got: {error}");
+        assert_eq!(error.to_string(), expected);
     }
 }
 

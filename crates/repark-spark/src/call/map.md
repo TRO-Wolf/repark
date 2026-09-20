@@ -102,7 +102,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
   unchanged. `branch` is deliberately still absent: the fork builder has no branch parameter, so
   accepting it would ship a silently ignored argument (IPI-31 owns it). The fork's
   sort/z-order validation refusals are re-raised through `illegal_argument_error` with the
-  fork text verbatim, so the door reports Java's class as well as Java's text.
+  fork text verbatim, so the door reports Java's class as well as Java's text. Round 3
+  (2026-09-20, V-001): the remap reads `error.message()`, not `error.to_string()` — the
+  latter renders the `DataInvalid => ` kind prefix Java never sends.
   pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009
 - `rewrite_options.rs` — **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(k, v, …)`
   extraction and validation for both rewrite procedures. String/number/boolean/NULL scalar
