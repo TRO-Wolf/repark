@@ -29,8 +29,9 @@ def _git(repo: Path, *args: str) -> str:
 
 
 def _guard(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    script = os.environ.get("MAP_PR_GATE_1_GUARD", str(_GUARD))
     return subprocess.run(
-        ["bash", str(_GUARD), *args],
+        ["bash", script, *args],
         capture_output=True,
         text=True,
         check=False,
@@ -124,6 +125,74 @@ def test_branch_mode_handles_a_root_level_file(repo: Path) -> None:
     _commit(repo, "map")
     passed = _guard(repo, "--base", base)
     assert passed.returncode == 0, passed.stderr
+
+
+def test_branch_mode_diffs_from_the_merge_base(tmp_path: Path) -> None:
+    """pins: map-pr-gate-1/C-002 — `base...HEAD` reads the merge-base; a main-side
+    code-only change sits outside the pull-request diff even across a merge."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-b", "main")
+    for directory in ("pkg", "pkg2", "pkg3"):
+        (repo / directory).mkdir()
+        (repo / directory / "x.rs").write_text("fn x() {}\n", encoding="utf-8")
+        (repo / directory / "map.md").write_text(
+            f"# {directory}\n\n- [x.rs](x.rs)\n", encoding="utf-8"
+        )
+    (repo / "map.md").write_text("# root\n", encoding="utf-8")
+    _commit(repo, "base")
+    _git(repo, "checkout", "-b", "feature")
+    (repo / "pkg" / "x.rs").write_text("fn x2() {}\n", encoding="utf-8")
+    (repo / "pkg" / "map.md").write_text("# pkg\n\n- [x.rs](x.rs) — edited\n", encoding="utf-8")
+    _commit(repo, "feature work")
+    _git(repo, "checkout", "main")
+    (repo / "pkg2" / "x.rs").write_text("fn y2() {}\n", encoding="utf-8")
+    _commit(repo, "main code without map")
+    _git(repo, "checkout", "feature")
+    _git(repo, "merge", "--no-edit", "main")
+    _git(repo, "checkout", "main")
+    (repo / "pkg3" / "x.rs").write_text("fn z2() {}\n", encoding="utf-8")
+    _commit(repo, "main code without map, post-merge")
+    _git(repo, "checkout", "feature")
+    result = _guard(repo, "--base", "main")
+    assert result.returncode == 0, result.stderr
+
+
+def test_branch_mode_fails_on_py_change_without_map(repo: Path) -> None:
+    """pins: map-pr-gate-1/C-002 — `*.py` is inside the suffix filter."""
+    base = _git(repo, "rev-parse", "HEAD").strip()
+    (repo / "pkg" / "tool.py").write_text("x = 1\n", encoding="utf-8")
+    _commit(repo, "work")
+    failed = _guard(repo, "--base", base)
+    assert failed.returncode == 1
+    assert "pkg/map.md" in failed.stderr
+    (repo / "pkg" / "map.md").write_text(
+        "# pkg\n\n- [mod.rs](mod.rs)\n- [tool.py](tool.py)\n", encoding="utf-8"
+    )
+    _commit(repo, "map")
+    passed = _guard(repo, "--base", base)
+    assert passed.returncode == 0, passed.stderr
+
+
+def test_branch_mode_manifest_changes_and_unlisted_files(repo: Path) -> None:
+    """pins: map-pr-gate-1/C-002 — `Cargo.toml` is inside the filter; an unlisted
+    suffix is ignored entirely."""
+    base = _git(repo, "rev-parse", "HEAD").strip()
+    (repo / "pkg" / "Cargo.toml").write_text("[package]\nname = \"pkg\"\n", encoding="utf-8")
+    _commit(repo, "manifest")
+    failed = _guard(repo, "--base", base)
+    assert failed.returncode == 1
+    assert "pkg/map.md" in failed.stderr
+    (repo / "pkg" / "map.md").write_text(
+        "# pkg\n\n- [mod.rs](mod.rs)\n- [Cargo.toml](Cargo.toml)\n", encoding="utf-8"
+    )
+    _commit(repo, "map")
+    passed = _guard(repo, "--base", base)
+    assert passed.returncode == 0, passed.stderr
+    (repo / "pkg" / "notes.txt").write_text("notes\n", encoding="utf-8")
+    _commit(repo, "unlisted file")
+    ignored = _guard(repo, "--base", base)
+    assert ignored.returncode == 0, ignored.stderr
 
 
 def test_staged_mode_warns_and_exits_zero(repo: Path) -> None:
