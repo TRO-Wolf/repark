@@ -13,7 +13,9 @@ from repark.spark._idents import reject_path_escape_segment as _reject_path_esca
 from repark.errors import PySparkValueError
 
 
-_DROP_TABLE_SQL_RE = re.compile(r"(?is)^\s*DROP\s+TABLE\s+(IF\s+EXISTS\s+)?(.+?)\s*;?\s*$")
+_DROP_TABLE_SQL_RE = re.compile(
+    r"(?is)^\s*DROP\s+TABLE\s+(IF\s+EXISTS\s+)?(.+?)(\s+PURGE)?\s*;?\s*$"
+)
 
 
 _INSERT_PREFIX_RE = re.compile(
@@ -25,7 +27,7 @@ _INSERT_DIRECTORY_HEAD_RE = re.compile(r"(?is)^(?:LOCAL\s+)?DIRECTORY\b")
 
 
 _CREATE_TABLE_PREFIX_RE = re.compile(
-    r"(?is)^\s*(CREATE\s+(?:OR\s+REPLACE\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)"
+    r"(?is)^\s*((?:CREATE\s+(?:OR\s+REPLACE\s+)?|REPLACE\s+)TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?)"
 )
 
 

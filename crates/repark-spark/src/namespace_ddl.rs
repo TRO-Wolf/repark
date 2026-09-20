@@ -18,12 +18,15 @@ use crate::catalog_ops::{
     resolve_namespace, sqlparser_err,
 };
 
+pub(crate) mod purge;
+
 /// `DROP TABLE [IF EXISTS] catalog.namespace.table[, …]` → `catalog.drop_table`.
 pub(crate) async fn execute_drop_table(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     names: &[ObjectName],
     if_exists: bool,
+    purge: bool,
 ) -> Result<DataFrame> {
     for name in names {
         let parts = name_parts(name);
@@ -36,6 +39,18 @@ pub(crate) async fn execute_drop_table(
         let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
         if if_exists && !handle.table_exists(&ident).await.map_err(iceberg_err)? {
             continue;
+        }
+        if purge {
+            let swept =
+                purge::purge_table_files(handle.as_ref(), &ident, [catalog, namespace, table])
+                    .await?;
+            if !swept.delete_failures.is_empty() {
+                tracing::warn!(
+                    "DROP TABLE … PURGE on `{catalog}.{namespace}.{table}`: {} per-file deletes \
+                     failed (log-only, suppressed as Java does)",
+                    swept.delete_failures.len()
+                );
+            }
         }
         handle.drop_table(&ident).await.map_err(iceberg_err)?;
         reregister(ctx, handle.clone(), catalog, namespace).await?;

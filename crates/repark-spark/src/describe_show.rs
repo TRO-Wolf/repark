@@ -270,15 +270,11 @@ pub(crate) async fn execute_describe_table(
     let table = match handle.load_table(&ident).await {
         Ok(table) => table,
         Err(error) if error.kind() == ErrorKind::TableNotFound => {
-            return Err(DataFusionError::Plan(format!(
-                "[TABLE_OR_VIEW_NOT_FOUND] The table or view `{}`.`{}`.`{}` cannot be found. \
-                 Verify the spelling and correctness of the schema and catalog. \
-                 If you did not qualify the name with a schema, verify the current_schema() output, \
-                 or qualify the name with the correct schema and catalog. \
-                 To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. \
-                 SQLSTATE: 42P01",
-                describe.catalog, describe.namespace, describe.table
-            )));
+            return Err(crate::catalog_ops::table_or_view_not_found(
+                &describe.catalog,
+                &describe.namespace,
+                &describe.table,
+            ));
         }
         Err(error) => return Err(iceberg_err(error)),
     };

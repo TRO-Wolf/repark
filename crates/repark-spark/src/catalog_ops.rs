@@ -126,6 +126,21 @@ pub(crate) fn resolve_namespace(name: &ObjectName) -> Result<(String, String)> {
 }
 
 /// The dotted identifier parts of an object name (`a.b.c` → `["a", "b", "c"]`).
+pub(crate) fn table_or_view_not_found(
+    catalog: &str,
+    namespace: &str,
+    table: &str,
+) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `{catalog}`.`{namespace}`.`{table}` cannot \
+         be found. Verify the spelling and correctness of the schema and catalog. \
+         If you did not qualify the name with a schema, verify the current_schema() output, \
+         or qualify the name with the correct schema and catalog. \
+         To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. \
+         SQLSTATE: 42P01"
+    ))
+}
+
 pub(crate) fn name_parts(name: &ObjectName) -> Vec<String> {
     name.0
         .iter()

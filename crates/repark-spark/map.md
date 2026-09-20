@@ -27,7 +27,8 @@ TABLE, and the DML passthrough. The unit battery is under `src/tests/` (navigati
 
 - `Cargo.toml` — deps: repark-core, repark-iceberg, repark-functions, repark-ta (feature
   `datafusion`, for the composed `TaExtension`), datafusion + fork family, regex (SHOW … LIKE),
-  async-trait (dialect seam); dev-deps add chrono + futures (battery) and repark-common (the
+  async-trait (dialect seam), tracing (the purge sweep's single warn line, V-001); dev-deps add
+  chrono + futures (battery) and repark-common (the
   `surfaces` registry the `#[cfg(test)]` Q13 matrix audits this door against — dev-only because
   no shipped code reads it). **ICE-READ-PERF-0 (2026-09-19):** dev-dep `serde_json` (the bench's
   JSON output and bed manifest), a `[[bench]] ice_read_perf` (`harness = false`) and a

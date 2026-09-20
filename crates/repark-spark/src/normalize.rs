@@ -22,6 +22,8 @@ use crate::alter;
 use crate::catalog_ops::{iceberg_err, name_parts};
 use crate::merge;
 
+pub(crate) mod replace_table;
+
 /// True when the statement's first keyword token is `MERGE`.
 pub(crate) fn starts_with_merge(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
@@ -167,6 +169,7 @@ pub(crate) fn parse_single_normalized(
     let Ok(mut tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
         return Ok(None);
     };
+    tokens = replace_table::rewrite_replace_table(tokens);
     let mut partitioning = Vec::new();
     if is_create_table(&tokens) {
         tokens = strip_create_table_using(&tokens);

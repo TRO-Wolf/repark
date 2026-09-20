@@ -35,6 +35,7 @@ async-trait.workspace = true
 # `SHOW NAMESPACES … LIKE` — Spark's `StringUtils.filterPattern` compiles each `|`-separated
 # alternative as a Java regex (after `*` → `.*`), so `filter_pattern_matches` needs a real engine.
 regex.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 # `repark_common::surfaces` — the dialect-neutral surface registry the Q13 matrix audits this
