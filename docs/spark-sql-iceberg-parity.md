@@ -6847,7 +6847,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   RPD byte pins compare against vanished delete files. `ICE-RDF-GRANULARITY-1` is FIXED:
   `target_small` runs plain since RP-32 (fork #302), `max_group_size` and
   `partial_progress_groups` since RP-34 (fork #306). Four strict xfails stay, under the
-  fork-ask row `ICE-RDF-RPD-TARGET-SMALL-1` (the `rpd_target_small` and
+  DECLARED row `ICE-RDF-RPD-TARGET-SMALL-1` (the `rpd_target_small` and
   `rpd_target_small_forced` value and snapshot cells, each value cell with a green keep-set
   twin pinning live rows).
   The four `ICE-RDF-RPD-COMMITS-1` cells (`rpd_rewrite_all`, `rpd_min_input_files_1`, value and
@@ -6971,7 +6971,7 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   pins: rp-32-rdf-cow-bytes/C-010
   pins: rp-34-fork-pin/C-001
 
-### ICE-RDF-RPD-TARGET-SMALL-1 — `rewrite_position_delete_files` with a small `target-file-size-bytes` rewrites delete files Spark leaves alone — **OPEN 2026-09-19, fork ask F-RPD-TARGET-SMALL-1**
+### ICE-RDF-RPD-TARGET-SMALL-1 — `rewrite_position_delete_files` with a small `target-file-size-bytes` rewrites delete files Spark leaves alone — **DECLARED 2026-09-20 (RP-40, fork #307): the selection rule is Java's; the residue is parquet-rs against parquet-mr bytes**
 
 - **repark** — at fork `43fcd243` (RP-34) the `rpd_target_small` and
   `rpd_target_small_forced` cells (`target-file-size-bytes` 2000 on the 8-delete-file
@@ -6984,9 +6984,19 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `[rpd_target_small_forced]` and `::test_option_cell_snapshots[rpd_target_small]`,
   `[rpd_target_small_forced]`, `xfail(strict)` with the dated `F-RPD-TARGET-SMALL-1` reason;
   their keep-set twins run plainly and pin the 200 live rows only.
-- **Rationale** — OPEN, fork ask: the delete-file selection rule lives in the fork's
-  `rewrite_position_delete_files`. The cells answered Spark at RP-33; the smaller files
-  #306 writes moved them under the fork's selection threshold. Run 24d owns the fork half.
+- **Measured, fork side (run 24d, fork #307, on the pin at RP-40).** The fork's selection rule
+  is Java's rule exactly: replayed on SPARK-SIZED delete files it selects 0, as Spark does. What
+  differs is the file, not the rule — a parquet-rs delete file of this shape is **1,297 B** where
+  parquet-mr writes **1,590 B**, and about **218 B** of that gap is parquet-mr's deprecated
+  min/max statistics, which parquet-rs has no knob to emit. A 2,000 B target therefore selects
+  nothing on Spark's files and two files on RePark's. #307 also made the Java-visible writer
+  layout identical (`iceberg.schema` byte-for-byte including nested key order, root record name
+  `table`, `pos` not dictionary-encoded), so what is left is the bytes themselves.
+- **Rationale** — DECLARED, not a defect and not a fork ask any more (ruling Q-24d-1, adopted
+  here at the bump that carries #307). Any parity claim about `target-file-size-bytes` on delete
+  files is a claim about two Parquet writers' byte sizes; RePark's answer — the rows — is
+  unchanged (200 live in every cell). The four `xfail(strict)` pins keep the divergence dated and
+  visible, and they flip the day parquet-rs writes the same bytes.
   pins: rp-34-fork-pin/C-002
 
 ### ICE-RDF-COW-BYTES-1 — `rewritten_bytes` missed the DELETE-written survivor file the rewrite folds in — **FIXED 2026-09-19 (RP-32, fork #301 F-RDF-COW-BYTES-1)**
