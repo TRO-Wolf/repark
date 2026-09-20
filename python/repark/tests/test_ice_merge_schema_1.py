@@ -145,14 +145,14 @@ def test_merge_schema_missing_column_writes_null(spark: ReparkSession) -> None:
     """pins: ipi-19-56-37-schema-evolution-write/C-003"""
     table = _create(spark, "df_missing", accept_any=True)
     _seed_named(spark, table)
-    frame = spark.createDataFrame([(7, "g")], "id BIGINT, data STRING")
+    frame = spark.createDataFrame([(7, "g", 14)], "id BIGINT, data STRING, extra BIGINT")
     frame.write.format("iceberg").option("mergeSchema", "true").mode("append").saveAsTable(table)
-    assert _schema(spark, table) == BASE_SCHEMA
+    assert _schema(spark, table) == EVOLVED_LONG
     assert _rows(spark, table) == [
-        [1, "a", "x"],
-        [2, "b", "y"],
-        [3, "c", "x"],
-        [7, "g", None],
+        [1, "a", "x", None],
+        [2, "b", "y", None],
+        [3, "c", "x", None],
+        [7, "g", None, 14],
     ]
 
 
@@ -160,9 +160,17 @@ def test_merge_schema_does_not_narrow_a_wider_column(spark: ReparkSession) -> No
     """pins: ipi-19-56-37-schema-evolution-write/C-003"""
     table = _create(spark, "df_widen", accept_any=True)
     _seed_named(spark, table)
-    frame = spark.createDataFrame([(7, "g", "x")], "id INT, data STRING, cat STRING")
+    frame = spark.createDataFrame(
+        [(7, "g", "x", 14)], "id INT, data STRING, cat STRING, extra BIGINT"
+    )
     frame.write.format("iceberg").option("mergeSchema", "true").mode("append").saveAsTable(table)
-    assert _schema(spark, table) == BASE_SCHEMA
+    assert _schema(spark, table) == EVOLVED_LONG
+    assert _rows(spark, table) == [
+        [1, "a", "x", None],
+        [2, "b", "y", None],
+        [3, "c", "x", None],
+        [7, "g", "x", 14],
+    ]
 
 
 def test_merge_schema_false_with_conf_true_still_raises(spark: ReparkSession) -> None:
