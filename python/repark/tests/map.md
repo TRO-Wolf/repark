@@ -3534,6 +3534,29 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
   UPDATE on an unpartitioned target; partial INSERT NULL-fills omitted nullable columns.
   Arrow path, value + type.
+- `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
+  `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
+  session conf `spark.wap.branch` redirects writes and the session's plain reads to
+  an audit branch, as Spark does. Oracle: live PySpark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0, recorded 2026-09-19 by the generator beside
+  it, SHA-256 `0fb43d0a55f33106d4987dbfd38f7e6f95aadc95eabf3d40d9372f9d8cd8d4f4`; its
+  19 cells reproduce the orchestrator's run-25c measurement
+  (`/tmp/oc-worker/qc-meas/spark-qc5.json`, cells `QW-*`) observation for
+  observation. One parametrized pin per cell asserts every recorded observation —
+  `refs` (name, type, snapshot position), the branch rows, the main rows, the
+  session read while the conf is set and the plain read after it is unset — over
+  SQL INSERT, `writeTo().append()`, `saveAsTable(append)`, CoW and MoR DELETE,
+  UPDATE, MERGE, INSERT OVERWRITE, two stacked INSERT statements, `SET spark.wap.branch`,
+  `fast_forward` publish, and the five negative controls (no `write.wap.enabled`,
+  read-only, explicit `t.branch_other`, explicit `VERSION AS OF 'main'`, CTAS into a
+  new table). The refusal cell pins Java's
+  `Cannot set both WAP ID and branch, but got ID [w1] and branch [audit]` with the
+  `IllegalArgumentException` class. Arrow path (`to_arrow`), value AND type. The
+  native-door row is the negative one: the ANSI door carries no `spark.wap.*` conf,
+  so `repark.sql("SET spark.wap.branch = …")` refuses and no ANSI write redirects.
+  The live cell (`test_live_oracle_fixture_reproduces`) replays the generator in
+  `check` mode and skips without `REPARK_PARITY_LIVE=1`.
+  pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - `test_ice_rtas_byname_1.py` + `ice_rtas_byname_1_spark_oracle.json` +
   `_record_ice_rtas_byname_1_oracle.py` — **ICE-RTAS-BYNAME-1 (2026-09-17):**
   `INSERT … BY NAME` on the Spark door against the live-PySpark-4.1.2 cells

@@ -1,0 +1,1540 @@
+{
+ "unit": "ice-wap-branch-1",
+ "oracle": {
+  "spark": "4.1.2",
+  "iceberg": "1.11.0",
+  "session_tz": "UTC",
+  "catalog": "sc",
+  "seed": "(1, 'a', 'x'), (2, 'b', 'y')",
+  "source": "run 25c cells QW-* (/tmp/oc-worker/qc-meas/cells_qc5.py)"
+ },
+ "cells": {
+  "QW-INSERT": {
+   "title": "INSERT with spark.wap.branch",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "INSERT INTO {T} VALUES (9, 'z', 'q')"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-INSERT-NO-BRANCH": {
+   "title": "wap.branch naming a branch that does not exist",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": null,
+   "steps": [
+    {
+     "sql": "INSERT INTO {T} VALUES (9, 'z', 'q')"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-INSERT-NOT-ENABLED": {
+   "title": "wap.branch without write.wap.enabled",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": "",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "INSERT INTO {T} VALUES (9, 'z', 'q')"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      0
+     ],
+     [
+      "main",
+      "branch",
+      1
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ]
+   }
+  },
+  "QW-READ-ONLY": {
+   "title": "wap.branch set, read only",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      0
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-DF-APPEND": {
+   "title": "DataFrame append",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "frame": "write_to_append"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-DF-SAVEASTABLE": {
+   "title": "saveAsTable append",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "frame": "save_as_table_append"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-DELETE-COW": {
+   "title": "DELETE CoW",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "DELETE FROM {T} WHERE id = 1"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-DELETE-MOR": {
+   "title": "DELETE MoR",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true', 'write.delete.mode'='merge-on-read', 'write.update.mode'='merge-on-read', 'write.merge.mode'='merge-on-read'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "DELETE FROM {T} WHERE id = 1"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-UPDATE": {
+   "title": "UPDATE",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "UPDATE {T} SET data = 'u' WHERE id = 1"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "u",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "u",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-MERGE": {
+   "title": "MERGE",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "MERGE INTO {T} t USING (SELECT 1 AS id, 'm' AS data, 'x' AS cat) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "m",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "m",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-OVERWRITE": {
+   "title": "INSERT OVERWRITE",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "INSERT OVERWRITE {T} VALUES (9, 'z', 'q')"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-TWO-INSERTS": {
+   "title": "two INSERT statements stack on the branch",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "INSERT INTO {T} VALUES (9, 'z', 'q')"
+    },
+    {
+     "sql": "INSERT INTO {T} VALUES (8, 'y', 'q')"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      8,
+      "y",
+      "q"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      2
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      8,
+      "y",
+      "q"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-EXPLICIT-BRANCH": {
+   "title": "write to t.branch_b with wap.branch set",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "ALTER TABLE {T} CREATE BRANCH other"
+    },
+    {
+     "sql": "INSERT INTO {T}.branch_other VALUES (9, 'z', 'q')"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      0
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ],
+     [
+      "other",
+      "branch",
+      1
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-WITH-WAP-ID": {
+   "title": "wap.branch + wap.id together",
+   "conf": {
+    "spark.wap.branch": "audit",
+    "spark.wap.id": "w1"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "INSERT INTO {T} VALUES (9, 'z', 'q')"
+    }
+   ],
+   "after": [],
+   "status": "error",
+   "error": {
+    "type": "IllegalArgumentException",
+    "message": "Cannot set both WAP ID and branch, but got ID [w1] and branch [audit]"
+   },
+   "obs": {}
+  },
+  "QW-SET-SQL": {
+   "title": "SQL SET spark.wap.branch",
+   "conf": {},
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "SET spark.wap.branch = audit"
+    },
+    {
+     "sql": "INSERT INTO {T} VALUES (9, 'z', 'q')"
+    },
+    {
+     "sql": "RESET spark.wap.branch"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-VERSION-AS-OF-MAIN": {
+   "title": "explicit VERSION AS OF main while wap.branch set",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "observe": "explicit-main",
+     "sql": "SELECT * FROM {T} VERSION AS OF 'main'"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "explicit-main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      0
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-METADATA-TABLE": {
+   "title": "t.snapshots while wap.branch set",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "INSERT INTO {T} VALUES (9, 'z', 'q')"
+    },
+    {
+     "observe": "snapshots-ops",
+     "sql": "SELECT operation FROM {T}.snapshots"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "snapshots-ops": [
+     [
+      "append"
+     ],
+     [
+      "append"
+     ]
+    ],
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  },
+  "QW-FAST-FORWARD": {
+   "title": "publish with fast_forward after wap.branch write",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "INSERT INTO {T} VALUES (9, 'z', 'q')"
+    }
+   ],
+   "after": [
+    {
+     "sql": "CALL sc.system.fast_forward('{SHORT}', 'main', 'audit')"
+    },
+    {
+     "observe": "main-after-ff",
+     "sql": "SELECT * FROM {T} VERSION AS OF 'main'"
+    }
+   ],
+   "status": "ok",
+   "obs": {
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      1
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "main-after-ff": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ],
+     [
+      9,
+      "z",
+      "q"
+     ]
+    ]
+   }
+  },
+  "QW-CTAS-OTHER": {
+   "title": "CTAS into a new table while wap.branch set",
+   "conf": {
+    "spark.wap.branch": "audit"
+   },
+   "properties": ", 'write.wap.enabled'='true'",
+   "branch": "audit",
+   "steps": [
+    {
+     "sql": "CREATE TABLE {T2} USING iceberg AS SELECT 1 AS id"
+    },
+    {
+     "observe_ref_names": "ctas-refs"
+    }
+   ],
+   "after": [],
+   "status": "ok",
+   "obs": {
+    "ctas-refs": [
+     "main"
+    ],
+    "session-read": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "refs": [
+     [
+      "audit",
+      "branch",
+      0
+     ],
+     [
+      "main",
+      "branch",
+      0
+     ]
+    ],
+    "main": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "branch": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ],
+    "plain-read-after-unset": [
+     [
+      1,
+      "a",
+      "x"
+     ],
+     [
+      2,
+      "b",
+      "y"
+     ]
+    ]
+   }
+  }
+ }
+}
