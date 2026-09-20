@@ -2112,6 +2112,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   different orders. And a bare `id DESC` with no `NULLS` clause puts the NULL last on live
   Spark, pinning the direction-tied default at runtime and not only in the parser's unit
   tests. `test_rdf_binpack_unchanged` is the regression pin for the untouched bin-pack path.
+  The file reads data files through two helpers: `_file_ids` for the partitioned cells
+  (which need the `$files.partition` column) and `_file_ids_flat` for the unpartitioned
+  fixtures, whose `$files` has no `partition` column until IPI-20 lands.
   pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —
   **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** offline pins over the recorded 49-cell

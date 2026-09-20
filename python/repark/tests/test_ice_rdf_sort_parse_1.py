@@ -139,6 +139,23 @@ def _file_ids(engine: ReparkSession, table: str) -> list[dict[str, Any]]:
     return sorted(out, key=lambda entry: str(entry["partition"]))
 
 
+def _file_ids_flat(engine: ReparkSession, table: str) -> list[dict[str, Any]]:
+    """Every live data file's ids in parquet row order, with no partition column."""
+    arrow = engine.sql(f"SELECT file_path, record_count FROM {table}.files").to_arrow()
+    out = []
+    for index in range(arrow.num_rows):
+        path = arrow.column("file_path")[index].as_py()
+        local = path[len("file:") :] if path.startswith("file:") else path
+        out.append(
+            {
+                "partition": None,
+                "record_count": int(arrow.column("record_count")[index].as_py()),
+                "ids": pq.read_table(local, columns=["id"]).column("id").to_pylist(),
+            }
+        )
+    return sorted(out, key=lambda entry: str(entry["ids"]))
+
+
 def _assert_cell(engine: ReparkSession, table: str, key: str) -> None:
     """The cell's output row, its files and their in-file row order, all Spark's."""
     expected = _ORACLE[key]
@@ -189,27 +206,27 @@ def test_rdf_zorder_is_column_order_sensitive(engine: ReparkSession) -> None:
     ):
         table = _flat_table(engine, key, ZDISC_ROWS)
         assert _rewrite(engine, table, order, "sort") == _ORACLE[key]["out"], key
-        assert _file_ids(engine, table) == _ORACLE[key]["files"], key
+        assert _file_ids_flat(engine, table) == _ORACLE[key]["files"], key
 
 
 def test_rdf_sort_bare_desc_puts_nulls_last(engine: ReparkSession) -> None:
     """C-008: a bare DESC ties to NULLS LAST at runtime, not only in the parser."""
     table = _flat_table(engine, "nulls", NULL_ROWS)
     assert _rewrite(engine, table, "id DESC", "sort") == _ORACLE["nulls"]["out"]
-    assert _file_ids(engine, table) == _ORACLE["nulls"]["files"]
+    assert _file_ids_flat(engine, table) == _ORACLE["nulls"]["files"]
     assert _ORACLE["nulls"]["files"][0]["ids"][-1] is None
 
 
 def test_rdf_sort_on_unsorted_table_refuses(engine: ReparkSession) -> None:
     """C-009: strategy sort with no order and an unsorted table surfaces the fork's refusal."""
     table = _flat_table(engine, "unsorted", ZDISC_ROWS)
-    before = _file_ids(engine, table)
+    before = _file_ids_flat(engine, table)
     with pytest.raises(IllegalArgumentException) as caught:
         _rewrite(engine, table, None, "sort")
     message = str(caught.value)
     assert "Cannot sort data without a valid sort order" in message
     assert "is unsorted and no sort order is provided" in message
-    assert _file_ids(engine, table) == before
+    assert _file_ids_flat(engine, table) == before
 
 
 def test_rdf_binpack_with_sort_order_refuses(engine: ReparkSession) -> None:
@@ -225,7 +242,7 @@ def test_rdf_sort_order_without_strategy_still_sorts(engine: ReparkSession) -> N
     """C-010: an omitted strategy is not bin-pack when a sort_order is present."""
     table = _flat_table(engine, "nostrategy", ZDISC_ROWS)
     assert _rewrite(engine, table, "id DESC") == _ORACLE["zdisc_id_desc"]["out"]
-    assert _file_ids(engine, table) == _ORACLE["zdisc_id_desc"]["files"]
+    assert _file_ids_flat(engine, table) == _ORACLE["zdisc_id_desc"]["files"]
 
 
 def test_rdf_zorder_refusals_are_the_forks(engine: ReparkSession) -> None:
