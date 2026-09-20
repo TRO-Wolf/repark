@@ -283,10 +283,6 @@ async fn call_rdf_sort_order_parse_refusals_match_java() {
             "Cannot mix identity sort columns and a Zorder sort expression: id, zorder(data)",
         ),
         ("id NULLS SIDEWAYS", "Unable to parse sortOrder: "),
-        (
-            "bucket(4, id)",
-            "transform `bucket(…)` is not supported yet",
-        ),
     ] {
         let error = execute(
             &ctx,
@@ -300,6 +296,25 @@ async fn call_rdf_sort_order_parse_refusals_match_java() {
         .expect_err("a malformed sort order must refuse");
         assert!(error.to_string().contains(needle), "got: {error}");
     }
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files(table => 'sales.pr', strategy => 'sort', \
+         sort_order => 'bucket(4, id)')",
+    )
+    .await
+    .expect_err("a transform sort term refuses on the CALL door");
+    assert!(
+        matches!(error, DataFusionError::NotImplemented(_)),
+        "got: {error:?}"
+    );
+    assert_eq!(
+        error.to_string(),
+        concat!(
+            "This feature is not implemented: CALL rewrite_data_files sort_order transform ",
+            "`bucket(…)` is not supported yet — only identity sort columns and zorder(…) are ported"
+        )
+    );
 }
 
 #[tokio::test]

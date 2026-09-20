@@ -322,7 +322,10 @@ def test_rdf_sort_order_transform_is_a_declared_refusal(engine: ReparkSession) -
     table = _flat_table(engine, "xf", ZDISC_ROWS)
     with pytest.raises(UnsupportedOperationException) as caught:
         _rewrite(engine, table, "bucket(4, id)", "sort")
-    assert "transform `bucket(…)` is not supported yet" in str(caught.value)
+    assert str(caught.value) == (
+        "This feature is not implemented: CALL rewrite_data_files sort_order transform "
+        "`bucket(…)` is not supported yet — only identity sort columns and zorder(…) are ported"
+    )
 
 
 def test_rdf_mixed_sort_terms_refuse(engine: ReparkSession) -> None:
