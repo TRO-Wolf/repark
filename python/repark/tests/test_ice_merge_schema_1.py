@@ -532,9 +532,19 @@ def test_sql_set_carries_the_merge_schema_conf(spark: ReparkSession) -> None:
     try:
         assert spark.conf.get(MERGE_SCHEMA_CONF) == "true"
         spark.sql(BY_NAME.format(t=table))
+        assert _schema(spark, table) == EVOLVED_INT
+        spark.conf.unset(MERGE_SCHEMA_CONF)
+        assert spark.conf.get(MERGE_SCHEMA_CONF, "false") != "true"
+        with pytest.raises(
+            IllegalArgumentException, match="Field extra2 not found in source schema"
+        ):
+            spark.sql(
+                f"INSERT INTO {table} BY NAME "
+                "SELECT 1 AS id, 'a' AS data, 'x' AS cat, 5 AS extra, 6 AS extra2"
+            )
+        assert _schema(spark, table) == EVOLVED_INT
     finally:
         spark.conf.unset(MERGE_SCHEMA_CONF)
-    assert _schema(spark, table) == EVOLVED_INT
 
 
 def test_positional_insert_values_never_evolves(spark: ReparkSession) -> None:
