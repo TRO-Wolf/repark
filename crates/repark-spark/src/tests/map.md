@@ -1081,7 +1081,26 @@ above.
   `IF EXISTS` and the `[TABLE_OR_VIEW_NOT_FOUND]` / `42P01` answer on a missing target, and the
   failure posture: a sweep whose every per-file delete fails returns those failures in
   `DeleteReachableFilesResult::delete_failures` rather than raising, and the `DROP` still runs.
-  The four functions are
+- `replace_table.rs` — **IPI-25 (2026-09-20):** the `REPLACE TABLE` spelling on the Rust door.
+  `replace_table_column_list_takes_the_column_def_replace_path` asserts the column-def form keeps
+  the single pre-existing `append`, drops the main ref (no current snapshot) and reads zero rows;
+  `replace_table_as_select_records_an_overwrite` asserts `[append, overwrite]`, which is exactly
+  what a rewrite to plain `CREATE TABLE` would lose;
+  `replace_table_on_a_missing_table_refuses_and_creates_nothing` holds the one semantic
+  difference between the two spellings, condition, SQLSTATE and the not-created assertion; and
+  `create_or_replace_table_still_creates_a_missing_table` is the control that keeps the
+  existence check narrow.
+  pins: ipi-21-25-42-small-parser/C-005, C-006, C-007
+- `ref_ddl.rs` — **IPI-42 (2026-09-20):**
+  `ref_guards_are_conditional_and_never_move_an_existing_ref` is the mutation-proof half the four
+  recorded cells cannot be: it pins `b1` at the OLDER of two snapshots before the guarded
+  `CREATE`, so a replace-if-different implementation moves it and reds, and it covers all four
+  conditional arms on both `BRANCH` and `TAG`.
+  `ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse` replaces the
+  retired REF-2 refusal pin: the guarded spellings run on both grammars, and a leftover token
+  still refuses naming its own dynamic span.
+  pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004
+  The four purge functions are
   `drop_table_purge_deletes_reachable_files_and_plain_drop_keeps_them`,
   `purge_refuses_when_gc_is_disabled_and_sweeps_nothing`,
   `purge_collects_delete_failures_and_the_drop_still_runs` and

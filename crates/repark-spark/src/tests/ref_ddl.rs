@@ -216,6 +216,144 @@ async fn write_to_branch_refuses_loud_naming_fork_gap() {
 }
 
 #[tokio::test]
+async fn ref_guards_are_conditional_and_never_move_an_existing_ref() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.guards AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.guards SELECT * FROM src",
+    )
+    .await;
+    let history: Vec<i64> = load_sales_table(&catalogs, "guards")
+        .await
+        .metadata()
+        .history()
+        .iter()
+        .map(|entry| entry.snapshot_id)
+        .collect();
+    let [first, second] = history.as_slice() else {
+        panic!("expected two snapshots, got {history:?}");
+    };
+    let (first, second) = (*first, *second);
+
+    run(
+        &ctx,
+        &catalogs,
+        &format!("ALTER TABLE ice.sales.guards CREATE BRANCH b1 AS OF VERSION {first}"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards CREATE TAG t1",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards CREATE BRANCH IF NOT EXISTS b1",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("ALTER TABLE ice.sales.guards CREATE TAG IF NOT EXISTS t1 AS OF VERSION {first}"),
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "guards").await;
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("b1")
+            .unwrap()
+            .snapshot_id(),
+        first,
+        "the guard must not move an existing branch to a newer snapshot"
+    );
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("t1")
+            .unwrap()
+            .snapshot_id(),
+        second,
+        "the AS OF VERSION of a guarded CREATE on an existing tag is ignored, not applied"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards CREATE BRANCH IF NOT EXISTS bnew",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "ALTER TABLE ice.sales.guards CREATE TAG IF NOT EXISTS tnew AS OF VERSION {first}"
+        ),
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "guards").await;
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("bnew")
+            .unwrap()
+            .snapshot_id(),
+        second,
+        "the guard still creates a missing branch, at the current snapshot"
+    );
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("tnew")
+            .unwrap()
+            .snapshot_id(),
+        first,
+        "a guarded CREATE of a missing tag honours its AS OF VERSION"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards DROP BRANCH IF EXISTS bnew",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards DROP TAG IF EXISTS tnew",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.guards DROP TAG IF EXISTS never_there",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "guards").await;
+    assert!(table.metadata().snapshot_for_ref("bnew").is_none());
+    assert!(table.metadata().snapshot_for_ref("tnew").is_none());
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("b1")
+            .unwrap()
+            .snapshot_id(),
+        first,
+        "the guarded drops must leave the untouched refs alone"
+    );
+}
+
+#[tokio::test]
 async fn ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
