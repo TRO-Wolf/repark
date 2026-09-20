@@ -66,9 +66,7 @@ def _seeded(session: Any, name: str, properties: str = "") -> str:
 
 def _rows(session: Any, query: str) -> list[list[Any]]:
     """Collect one query as plain lists sorted by id."""
-    return sorted(
-        (list(row) for row in session.sql(query).collect()), key=lambda row: row[0]
-    )
+    return sorted((list(row) for row in session.sql(query).collect()), key=lambda row: row[0])
 
 
 def _schema(session: Any, query: str) -> list[tuple[str, str]]:
@@ -87,13 +85,10 @@ def test_file_predicates_answer_spark(spark: Any) -> None:
         ("id", "bigint"),
         ("_file", "string"),
     ]
-    assert (
-        _rows(
-            spark,
-            f"SELECT id, _file LIKE '%.parquet', _file LIKE '%/data/%' FROM {table}",
-        )
-        == [[2, True, True], [3, True, True], [4, True, True]]
-    )
+    assert _rows(
+        spark,
+        f"SELECT id, _file LIKE '%.parquet', _file LIKE '%/data/%' FROM {table}",
+    ) == [[2, True, True], [3, True, True], [4, True, True]]
 
 
 def test_file_distinct_counts_live_files(spark: Any) -> None:
@@ -111,9 +106,7 @@ def test_file_filter_counts_non_null(spark: Any) -> None:
     pins: ice-metadata-cols-1/C-003
     """
     table = _seeded(spark, "t_file_filter")
-    assert (
-        _rows(spark, f"SELECT count(*) FROM {table} WHERE _file IS NOT NULL") == [[3]]
-    )
+    assert _rows(spark, f"SELECT count(*) FROM {table} WHERE _file IS NOT NULL") == [[3]]
 
 
 def test_pos_is_zero_based_file_ordinal(spark: Any) -> None:
