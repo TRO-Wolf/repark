@@ -800,11 +800,13 @@ Four edits are divergences, and none of them changes what a query returns:
 
 ## Listing what is there
 
-`SHOW NAMESPACES` needs an explicit catalog — repark has no "current catalog" concept, so there is
-nothing for a bare form to resolve against (registry row
-[NS-1](../spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in--from-requires-an-explicit-catalog)):
+`SHOW NAMESPACES` lists the session's current catalog — set it with `USE <catalog>` first, or
+ride the `spark_catalog` build default; the explicit `IN` form keeps working (registry row
+[NS-1](../spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in--from-requires-an-explicit-catalog--fixed-2026-09-20),
+fixed 2026-09-20):
 
 ```python
+spark.sql("USE local")
 spark.sql("SHOW NAMESPACES IN local").show()
 ```
 
@@ -816,19 +818,12 @@ spark.sql("SHOW NAMESPACES IN local").show()
 +-----------+
 ```
 
-```python
-spark.sql("SHOW NAMESPACES")
-```
-
-```text
-AnalysisException: Error during planning: SHOW NAMESPACES requires an explicit catalog —
-`SHOW NAMESPACES IN <catalog>` (RePark has no current-catalog concept, so there is no default to
-resolve against)
-```
-
-`SHOW TABLES IN …` is not implemented (registry row
-[ST-1](../spark-sql-iceberg-parity.md#st-1--show-tables-in--is-unimplemented)); the facade catalog
-API is the working route:
+`SHOW TABLES IN …` answers Spark's `(namespace, tableName, isTemporary)` shape: the bare form
+lists the current namespace, `IN` takes a namespace or `catalog.namespace` (catalog-first, like
+`USE`), and a missing explicit namespace refuses `SCHEMA_NOT_FOUND`. Temp views are not listed
+(registry row
+[ST-1](../spark-sql-iceberg-parity.md#st-1--show-tables-in--is-unimplemented--fixed-2026-09-20),
+fixed 2026-09-20; the facade catalog API remains a working route):
 
 ```python
 print([t.name for t in spark.catalog.listTables("local.sales")])
@@ -838,7 +833,7 @@ print([t.name for t in spark.catalog.listTables("local.sales")])
 ['orders']
 ```
 
-Nested `SHOW NAMESPACES IN catalog.namespace` also refuses — registry row
+Nested `SHOW NAMESPACES IN catalog.namespace` still refuses — registry row
 [NS-2](../spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused).
 
 ## The registry sections that govern Iceberg

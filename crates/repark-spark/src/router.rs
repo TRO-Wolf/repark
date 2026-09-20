@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use datafusion::common::TableReference;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{ObjectType, Statement, TableObject};
+use datafusion::sql::sqlparser::ast::{Insert, ObjectType, Statement, TableObject};
 use repark_core::CatalogRegistry;
 
 use crate::{
@@ -335,34 +335,9 @@ async fn execute_inner(
         Statement::Merge(merge) => {
             execute_merge_statement(ctx, catalogs, merge, schema_evolution).await
         }
-        // INSERT OVERWRITE: probe and validate before an empty-source wipe.
-        Statement::Insert(insert) if insert.overwrite => {
-            execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await
-        }
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {
-            if !write_options.is_empty() {
-                return execute_append_with_options(ctx, catalogs, sql, insert, write_options)
-                    .await;
-            }
-            if repark_iceberg::write::session_write_conf_is_set(ctx)
-                && let TableObject::TableName(name) = &insert.table
-                && crate::insert_overwrite::try_resolve_iceberg_overwrite_target(
-                    ctx, catalogs, name,
-                )
-                .await?
-                .is_some()
-            {
-                return execute_append_with_options(ctx, catalogs, sql, insert, write_options)
-                    .await;
-            }
-            let refusal = match &insert.table {
-                TableObject::TableName(name) => {
-                    refuse_read_only_dml_table_sql(catalogs, &name.to_string())
-                }
-                TableObject::TableFunction(_) | TableObject::TableQuery(_) => None,
-            };
-            passthrough_after_p11(ctx, catalogs, sql, refusal).await
+            execute_insert_routed(ctx, catalogs, sql, insert, write_options).await
         }
         // DELETE/UPDATE.
         Statement::Delete(delete) => execute_delete(ctx, catalogs, sql, delete).await,
@@ -388,6 +363,34 @@ async fn execute_inner(
         }
         _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
     }
+}
+
+async fn execute_insert_routed(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    insert: &Insert,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Result<DataFrame> {
+    if insert.overwrite {
+        return execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await;
+    }
+    if !write_options.is_empty() {
+        return execute_append_with_options(ctx, catalogs, sql, insert, write_options).await;
+    }
+    if repark_iceberg::write::session_write_conf_is_set(ctx)
+        && let TableObject::TableName(name) = &insert.table
+        && crate::insert_overwrite::try_resolve_iceberg_overwrite_target(ctx, catalogs, name)
+            .await?
+            .is_some()
+    {
+        return execute_append_with_options(ctx, catalogs, sql, insert, write_options).await;
+    }
+    let refusal = match &insert.table {
+        TableObject::TableName(name) => refuse_read_only_dml_table_sql(catalogs, &name.to_string()),
+        TableObject::TableFunction(_) | TableObject::TableQuery(_) => None,
+    };
+    passthrough_after_p11(ctx, catalogs, sql, refusal).await
 }
 
 fn refuse_options_on_non_write(

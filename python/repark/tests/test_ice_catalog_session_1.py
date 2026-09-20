@@ -500,26 +500,24 @@ def test_show_catalogs_lists_untouched_configured_catalog(tmp_path: Path) -> Non
 
 def test_hadoop_alias_writes_uuid_metadata_names(tmp_path: Path) -> None:
     """HADOOP-1 pin: the aliased catalog writes UUID metadata names, no version-hint."""
-    import glob
-    import os
     import re
 
     spark = ReparkSession.builder.appName("pytest-ice-catalog-session-1-hd").getOrCreate()
-    warehouse = str(tmp_path / "hdwh")
+    warehouse = tmp_path / "hdwh"
     spark.conf.set("spark.sql.catalog.hd.type", "hadoop")
-    spark.conf.set("spark.sql.catalog.hd.warehouse", warehouse)
+    spark.conf.set("spark.sql.catalog.hd.warehouse", str(warehouse))
     spark.sql("CREATE NAMESPACE hd.ns").to_arrow()
     spark.sql("CREATE TABLE hd.ns.t (a INT) USING iceberg").to_arrow()
     spark.sql("INSERT INTO hd.ns.t VALUES (1)").to_arrow()
-    metas = sorted(glob.glob(f"{warehouse}/**/*.metadata.json", recursive=True))
+    metas = sorted(warehouse.rglob("*.metadata.json"))
     assert len(metas) >= 1
     for meta in metas:
         assert (
             re.fullmatch(
                 r"[0-9]+-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
                 r"\.metadata\.json",
-                os.path.basename(meta),
+                meta.name,
             )
             is not None
         )
-    assert glob.glob(f"{warehouse}/**/version-hint*", recursive=True) == []
+    assert list(warehouse.rglob("version-hint*")) == []

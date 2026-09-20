@@ -4858,8 +4858,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `pyspark`→`repark.spark` smoke, top-level shim identity.
 - [test_catalog_surface.py](test_catalog_surface.py) — **G-INT INT-004** (historical bullet; current surface is the
   R-CURCAT entry above). Pins that still matter: `tableExists` / camelCase aliases /
-  `clearCache`/`dropTempView`. Rowed listing refusals:
-  [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
+  `clearCache`/`dropTempView`.   Rowed listing: `SHOW TABLES IN` answers Spark's shape
+  ([ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in--is-unimplemented--fixed-2026-09-20),
+  fixed 2026-09-20) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_catalog_surface_1.py` + `facade_catalog_oracle.json` — **CATALOG-SURFACE-1
