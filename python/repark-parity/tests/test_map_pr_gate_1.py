@@ -248,3 +248,35 @@ def test_duplicate_row_rule_quiet_when_one_row_mentions_twice(tmp_path: Path) ->
     _commit(repo, "base")
     result = _sync(repo)
     assert result.returncode == 0, result.stderr
+
+
+def test_makefile_runs_branch_mode_over_base() -> None:
+    """pins: map-pr-gate-1/C-009."""
+    makefile = (_REPO / "Makefile").read_text(encoding="utf-8")
+    assert "BASE ?= origin/main" in makefile
+    assert 'bash scripts/check_map_md.sh --base "$(BASE)"' in makefile
+
+
+def test_both_hook_paths_call_the_staged_mode_identically() -> None:
+    """pins: map-pr-gate-1/C-010 — neither hook path passes an argument."""
+    pre_commit = (_REPO / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+    assert "entry: scripts/check_map_md.sh" in pre_commit
+    assert "--base" not in pre_commit
+    makefile = (_REPO / "Makefile").read_text(encoding="utf-8")
+    printf_line = next(
+        line for line in makefile.splitlines() if "printf" in line and "check_map_md.sh" in line
+    )
+    assert "\\nscripts/check_map_md.sh\\n" in printf_line
+    assert "check_map_md.sh --base" not in printf_line
+
+
+def test_ci_guard_is_pr_only_and_gitattributes_carries_union() -> None:
+    """pins: map-pr-gate-1/C-011."""
+    workflow = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    step = workflow.split("- name: map.md guard", 1)[1].split("- name:", 1)[0]
+    assert "if: github.event_name == 'pull_request'" in step
+    assert "git fetch --no-tags origin" in step
+    assert 'check_map_md.sh --base "origin/${{ github.base_ref }}"' in step
+    attributes = (_REPO / ".gitattributes").read_text(encoding="utf-8")
+    assert "map.md merge=union" in attributes
+    assert "**/map.md merge=union" in attributes

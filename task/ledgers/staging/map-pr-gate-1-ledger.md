@@ -53,9 +53,9 @@ change, no sorting, no generator (step 2 owns map migration); no Rust or package
 | C-006 | Bare (staged) mode exits 0, prefixes each finding `WARNING:`, and names the CI check that holds the rule. | `test_staged_mode_warns_and_exits_zero`. | PROVEN | Green; the trailing line names ci.yml's `map.md guard` step. |
 | C-007 | `sync_map_md.py` reports `duplicate row` when two list rows in one map share a first-link target, unconditionally, and `--fix` never resolves it. | `test_duplicate_row_rule_fires_on_two_rows`, `test_duplicate_row_rule_survives_fix`. | PROVEN | Both green; `--fix` leaves both rows in place. |
 | C-008 | A single row that mentions the same target twice is not a duplicate (the comparison is between rows, on first links only). | `test_duplicate_row_rule_quiet_when_one_row_mentions_twice`. | PROVEN | Green. |
-| C-009 | `make check-map-md` runs the branch mode over `BASE ?= origin/main`, and `install-hooks` plus `.pre-commit-config.yaml` invoke the staged mode identically. | diff read of `Makefile` and `.pre-commit-config.yaml`; `make check-map-md` exercised in gates. | PROVEN | `BASE ?= origin/main` added; the hook paths both read `scripts/check_map_md.sh` with no argument; `make check-map-md` green on this branch (§Gates). |
-| C-010 | ci.yml's `map.md guard` step runs `bash scripts/check_map_md.sh --base "origin/${{ github.base_ref }}"` on pull requests and is skipped on a push to main; the checkout fetches the base ref so the merge base resolves. | diff read of `.github/workflows/ci.yml`. | PROVEN | The step carries `if: github.event_name == 'pull_request'` and a `fetch` of the base ref; the push path never reaches it. The end-to-end "CI step fails on such a PR" proof needs a draft PR — not measurable from this lane (no push); recorded as open in the hand-back, not claimed here. |
-| C-011 | `map.md merge=union` resolves a two-sided same-map edit by keeping both rows — measured locally for merge and for rebase in a scratch clone. | scratch-clone measurement (transcript summarised above). | PROVEN | Control conflicted; union merge and union rebase each exited 0 with both rows preserved. GitHub server-side mergeability unmeasured — see the measurement note. |
+| C-009 | `make check-map-md` invokes the branch mode: the Makefile carries `BASE ?= origin/main` and calls `bash scripts/check_map_md.sh --base "$(BASE)"`. | `test_makefile_runs_branch_mode_over_base`. | PROVEN | Green; `make check-map-md` also exercised in §Gates. |
+| C-010 | Both hook paths — the `install-hooks` printf in the Makefile and `.pre-commit-config.yaml` — call `scripts/check_map_md.sh` with no argument (the warn-only staged mode), identically. | `test_both_hook_paths_call_the_staged_mode_identically`. | PROVEN | Green; neither path passes `--base`. |
+| C-011 | ci.yml's `map.md guard` step is `if: github.event_name == 'pull_request'`, fetches `origin/${{ github.base_ref }}` explicitly, and runs `check_map_md.sh --base "origin/${{ github.base_ref }}"`; `.gitattributes` carries `map.md merge=union` and `**/map.md merge=union`. | `test_ci_guard_is_pr_only_and_gitattributes_carries_union`. | PROVEN | Green. The union driver's local merge/rebase behaviour is the measurement note above; the end-to-end "CI step fails on such a PR" proof needs a draft PR — not measurable from this lane (no push); recorded as open in the hand-back, not claimed here. GitHub server-side mergeability unmeasured. |
 | C-012 | `python3 scripts/sync_map_md.py --check` is clean on the tree with the duplicate-row rule armed; the 32 pre-existing findings are listed above and fixed in this pull request. | `python3 scripts/sync_map_md.py --check` on the branch tree. | PROVEN | `map-sync: 310 maps clean (strict=off)` after the fixes (§Gates). |
 
 ## Gates
@@ -117,8 +117,11 @@ COVERAGE_ATTESTATION:
       artifacts: [scripts/check_map_md.sh, scripts/sync_map_md.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Nine fixture tests, one per clause; reverting any of the mode split, the
-        warn-only exit, the diff-filter or the duplicate check reds a named test.
+      evidence: Fifteen tests pin C-001–C-011 — behaviour over scratch repos (C-001–C-008)
+        and file-content assertions on the wiring (C-009–C-011); the merge-commit fixture
+        reds under a two-dot mutation and the suffix fixture reds when `*.py` leaves the
+        case (both mutations verified against a scratch copy, restored). C-012 is
+        ledger/diff-proven, not test-pinned.
       artifacts: [python/repark-parity/tests/test_map_pr_gate_1.py]
   complete: true
 ```
