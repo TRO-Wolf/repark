@@ -1,14 +1,16 @@
 # Unit ledger — ICE-META-DELETE-1 · a DELETE that covers whole files deletes the files (IPI-08)
 
 **Date:** 2026-09-19 · **Branch:** `fix/ice-meta-delete-1` · **Base:** `5770a0f0` (origin/main + the RP-39 pin bump)
-**Model:** claude-opus-5 (round 1, steps 1–7) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Model:** claude-opus-5 (round 1, steps 1–7; round 2, the IPI-11 rebase) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard** (a routing decision above the DELETE write path; no
 table-format semantics of our own — the commit is the fork's `DeleteFilesAction`).
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 Clause ids are the brief's C-1…C-8 written in the gate's three-digit form: C-001 = C-1, …,
-C-008 = C-8.
+C-008 = C-8. **C-009 is round 2's own clause:** ICE-RM-DELETES-1 (#741, IPI-11) merged into
+main while this branch sat in the merge queue, and the routing changes the before-state its
+replay pins enter the procedure with.
 
 **Why now.** Owner direction: 1:1 parity with Spark's Iceberg integration. Spark decides,
 ABOVE `write.delete.mode`, whether a DELETE can be answered by removing whole data files; RePark
@@ -82,6 +84,69 @@ branch-targeted DELETE (C-007).
 | C-006 | The decision passes the session's case sensitivity to the fork, and a lower-cased / wrong-cased column reference behaves as it does on the same door today. | Rust `the_decision_binds_columns_with_the_doors_case_sensitivity`; native door `the_ansi_door_folds_an_unquoted_column_and_stays_exact_on_a_quoted_one`. | PROVEN | What is pinned, not invented: the Spark door passes `spark_door_case_insensitive(...)` (Spark's `spark.sql.caseSensitive=false` default, the same flag Java's `SparkTable` reads) so the reference folds onto the schema column and the fork is called with `case_sensitive = false`. The native ANSI door passes `case_insensitive = false`, as `commit_identity_dml` already does, so the fork is called with `case_sensitive = true`; to bind exactly as that door's own planner binds, an UNQUOTED reference is lower-cased first (DataFusion's default ident normalization) and a QUOTED one is taken verbatim. `"ID"` therefore declines the metadata route and keeps the door's own refusal, touching no file — measured, not assumed: the first spelling of this pin asserted a refusal for unquoted `ID` and was red. |
 | C-007 | Branch writes: the branch is passed to `can_delete_using_metadata` and to the commit, or the ledger states that a door cannot target a branch today. | Reading + Rust `a_branch_selector_and_every_non_identity_clause_decline`. | PROVEN (stated, not added) | **No door can target a branch with a DELETE today, so no branch is passed and none is added here.** A branch-selector target is the four-part name `cat.ns.table.branch_x`; `try_meta_delete_target` accepts three-part names only, so such a statement declines and keeps the route it has on `main` (`plain.rs` already routes four-part names to the fork `TableProvider`). WAP is fail-closed on both doors (registry REF-3: `spark.wap.branch` / `spark.wap.id` cannot be set at all), so Java's `stageOnly()` arm of `SparkTable.deleteWhere` has no reachable counterpart either. The decision and the action consequently use `None` / `MAIN_BRANCH`, which is what every other write on these doors does. |
 | C-008 | Reverting the routing (always taking the row-level path) turns C-001 and C-002 red; the exact mutation and the failing test names are recorded. | Step 5, below. | PROVEN | See "Mutation (C-008)". |
+| C-009 | The routing changes the before-state of ICE-RM-DELETES-1's (IPI-11) partitioned `rewrite_manifests` replay cells, and it moves them toward Spark: SIX of the NINE cells IPI-11 could not replay literally now equal the recorded Spark cell on every recorded field, and each cell that still differs is named with what differs and why. | The re-measured `crates/repark-spark/src/tests/call_rm_deletes.rs` and `python/repark/tests/test_ice_rm_deletes_1.py` pins; the cell-by-cell table below; the C-009 mutation. | PROVEN | Nine Rust pins moved on the rebased branch. Six cells CLOSE (`part_mor`, `part_mor_spec`, `part_mor_nocache`, each v2 and v3): their DELETE statements each cover a whole data file, so RePark now enters the procedure with Spark's own data-only before-state and answers Spark's `(3, 1)`, layout, rows, `replace` and `manifests-created/kept/replaced` literally. Three cells still differ and keep a rule shape over RePark's measured before-state: `evolved_spec_v2/v3` (registry **MANIFEST-4**, new) and `part_mor_real_v2` (registry **ICE-META-DELETE-1-D1**, unchanged by this PR and never named in IPI-11's declared list — corrected here). `part_mor_real_v3` was already literal. The rows are read BEFORE and AFTER every CALL and are equal in all fourteen cells. |
+
+## Round 2 — the IPI-11 cells this routing changes (C-009)
+
+ICE-RM-DELETES-1 recorded 14 Spark 4.1.2 `rewrite_manifests` cells. FIVE replayed literally
+on `main`: `unpart_mor_v2/v3` and `no_deletes_v2/v3` (the DELETE statements there are partial matches or
+absent, so the metadata route does not fire and nothing moved) **and `part_mor_real_v3`**,
+whose recorded before-state already matched RePark's. The round-2 brief counts ten
+non-literal cells; the measured number is **nine** — it counts `part_mor_real_v3`, which the
+IPI-11 ledger itself records as "pinned literally" and which this re-measurement confirms
+equal on every field. The nine could not replay literally because
+**RePark's partitioned DELETE wrote position deletes where Spark's cells show copy-on-write
+consolidation**: the two engines entered the procedure with different tables, so those pins
+asserted Spark's two-leg RULE over RePark's own before-state.
+
+This unit's routing removes that cause wherever the DELETE covers a whole data file. Measured
+on this rebased branch at `98faa2b6`, cell by cell, whole cell — returned row, before and
+after layout, rows, operation, and the `manifests-*` summary — against
+`python/repark/tests/ice_rm_deletes_1_spark_oracle.json` and `…_oracle2.json`:
+
+| Cell | Outcome | Pin before round 2 | Measured now | Spark's recorded cell |
+|---|---|---|---|---|
+| `part_mor_v2`, `part_mor_v3` | **A — CLOSED** | rule: before 6 manifests (3 data + 3 delete), result `(6, 2)`, after `[(0,0,6,0),(1,0,0,3)]`, summary `replace 2/0/6` | before `[(0,0,1,0)×3]`, result `(3, 1)`, after `[(0,0,3,0)]`, rows `[2,3,6]`, `replace`, summary `1/0/3` | identical on every field |
+| `part_mor_spec_v2`, `_v3` | **A — CLOSED** | rule: before 5 manifests (3 data + 2 delete), result `(5, 2)`, after `[(0,0,6,0),(1,0,0,2)]`, summary `replace 2/0/5` | before `[(0,0,1,0),(0,0,1,0),(0,0,2,0)]`, result `(3, 1)`, after `[(0,0,4,0)]`, rows `[2,3,5,6]`, `replace`, summary `1/0/3` | identical on every field |
+| `part_mor_nocache_v2`, `_v3` | **A — CLOSED** | rule: result `(5, 2)`, after `[(0,0,6,0),(1,0,0,2)]`, summary `replace 2/0/5` (no before assertion) | before `[(0,0,1,0),(0,0,1,0),(0,0,2,0)]`, result `(3, 1)`, after `[(0,0,4,0)]`, rows `[2,3,5,6]`, `replace`, summary `1/0/3` | identical on every field |
+| `evolved_spec_v2`, `_v3` | **B — moved, still differs** | rule: before/after 6 manifests `[(0,0,2,0)×3,(0,1,1,0),(1,0,0,1),(1,1,0,1)]`, result `(0,0)` | before/after `[(0,0,1,0),(0,0,2,0),(0,0,2,0),(0,1,0,0)]`, result `(0, 0)`, no new snapshot, op `delete`, rows `[2,3,4,5,6]` | `[(0,0,5,0),(0,1,0,0)]`, result `[0,0]`, op `delete`, rows equal |
+| `part_mor_real_v2` | B — unchanged by this PR | before `[(0,0,2,0)×4,(1,0,0,1)×3]`, result `(7,2)`, after `[(0,0,8,0),(1,0,0,3)]` | the same — the DELETE statements there are partial matches and keep the row-level route | before carries one EMPTY delete manifest, after `[(0,0,8,0),(1,0,0,2)]` |
+| `part_mor_real_v3` | already literal | literal | unchanged | equal |
+| `unpart_mor_v2/v3`, `no_deletes_v2/v3` | already literal | literal | unchanged | equal |
+
+**Why the six close.** Each seed INSERT writes one data file per `cat` value, so
+`DELETE … WHERE id = 1` (and `= 4`, `= 5`) selects a file whose every row matches. Spark
+answered those from metadata all along — its recorded `delete` snapshots carry
+`deleted-data-files: 1` and no delete file — and RePark now does the same, so the manifest
+layout the procedure sees is Spark's: the manifests holding the removed files are rewritten
+in place with the entry dropped, and nothing else moves. The result row, the after layout,
+the surviving rows and all three `manifests-*` counters follow.
+
+**What still differs on `evolved_spec`, and why.** Spark's recorded before-state holds the
+five live spec-0 data files in ONE manifest; RePark holds them in the three append manifests
+(1 + 2 + 2). The total is the same, the spec ids are the same, the empty spec-1 manifest is
+the same, the procedure's answer `(0, 0)` is the same, no snapshot is committed on either
+engine, and the rows are equal. Only the spec-0 manifest COUNT differs, and the difference is
+in the commit path, not in this unit's decision: Spark consolidated its three old-spec
+manifests during the DELETE that followed the partition evolution, RePark's metadata delete
+rewrites only the manifest that holds the removed file. Measured confirmation from the same
+tree: RePark reaches Spark's exact before-layout — `[(0,0,5,0),(0,1,0,0)]` — the moment the
+non-current spec is rewritten explicitly (`spec_id => 0`, the
+`rm_deletes_non_current_spec_rewrites_that_spec` pin). Filed as registry row **MANIFEST-4**.
+
+**One thing the routing did NOT change, checked rather than assumed.** Spark's `evolved_spec`
+cell records `manifests-created/kept/replaced` on its `delete` snapshot; RePark's `delete`
+snapshot carries no `manifests-*` key at all. That is pre-existing and route-independent —
+RePark's row-level delete snapshots (`unpart_mor`, `part_mor_real`) carry none either, and
+only the CALL's own `replace` snapshot writes them. It is therefore not a divergence this PR
+introduces or moves, and no pin asserts Spark's value for it.
+
+**Rows before and after every CALL.** All fourteen cells were probed with the live row set read
+immediately before and immediately after the procedure. Every cell is equal across the CALL
+(`part_mor` `[2,3,6]`, `part_mor_spec` / `part_mor_nocache` `[2,3,5,6]`, `evolved_spec`
+`[2,3,4,5,6]`, `part_mor_real` `[1,2,3,4,5,6,10]`, `unpart_mor` `[2,3,5,6]`, `no_deletes`
+`[1..6]`), and equal to the recorded Spark rows. No manifest rewrite lost or resurrected a
+delete. The assertion is now part of every partitioned pin, on both doors.
 
 ## Mutation (C-008)
 

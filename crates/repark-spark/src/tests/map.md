@@ -361,18 +361,25 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `where` byte-identity pins above are the single-load regression guard.
   pins: maint-rewrite-data-files-options/C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: maint-policy-1/C-028, C-029
-- `call_rm_deletes.rs` — **ICE-RM-DELETES-1 (2026-09-20):** the 14 recorded Spark 4.1.2
-  `rewrite_manifests` cells replayed through RePark DML — unpartitioned and data-only
-  cells pinned end to end against the oracle (before/result/after/rows/op/summary),
-  partitioned cells pinned on Spark's two-leg semantics over RePark's before-state
-  (RePark's DELETE writes position deletes where Spark's cells show copy-on-write),
-  the evolved default answering zeros with no new snapshot, a non-current `spec_id`
-  rewriting that spec, and the unknown-`spec_id` refusal (`Invalid spec id`, Spark's
-  recorded text). Layout tuples sort order-insensitively before comparison. The v3
-  `part_mor_real`
-  replay carries one empty delete manifest (as Spark's recorded before does) and still
-  answers `(7, 2)` with a two-file delete manifest after.
+- `call_rm_deletes.rs` — **ICE-RM-DELETES-1 (2026-09-20), re-measured by ICE-META-DELETE-1
+  round 2 (2026-09-19):** the 14 recorded Spark 4.1.2 `rewrite_manifests` cells replayed
+  through RePark DML. Since the metadata-delete routing landed, **twelve of the fourteen are
+  pinned literally** against the oracle (before layout / result / after layout / rows / op /
+  the three `manifests-*` counters): the unpartitioned and data-only cells, the
+  `part_mor`, `part_mor_spec` and `part_mor_nocache` cells in v2 and v3 — whose DELETE statements each
+  cover a whole data file, so RePark now enters the procedure with Spark's own data-only
+  before-state — and `part_mor_real_v3`, whose replay carries one empty delete manifest (as
+  Spark's recorded before does) and answers `(7, 2)` with a two-file delete manifest after.
+  Two cells keep a rule shape over RePark's own measured before-state and say why:
+  `evolved_spec_v2/v3` (Spark holds the five live spec-0 data files in ONE manifest, RePark
+  in the three append manifests its metadata delete rewrote in place — registry MANIFEST-4)
+  and `part_mor_real_v2` (a third position-delete file where Spark rewrites the superseded
+  one — registry ICE-META-DELETE-1-D1). `non_current_spec_rewrites_that_spec` has no Spark
+  cell and asserts RePark's own answer. Every partitioned pin reads the live rows BEFORE and
+  AFTER the CALL and asserts they are equal, so a rewrite that lost or resurrected a delete
+  cannot pass. Layout tuples sort order-insensitively before comparison.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: ice-meta-delete-1/C-009
 - `write_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 round 2 (2026-09-18, run 21b):** Spark-door
   `write_default` pins on a catalog-created table carrying `c INT` write-default 5. `DEFAULT`
   on `INSERT OVERWRITE` (VALUES and named-list SELECT) fills 5 and goes red with the
