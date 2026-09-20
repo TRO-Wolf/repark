@@ -1,20 +1,23 @@
-# Charter ledger — ICE-SYSTEM-FUNCTIONS-1 · IPI-29 system-function UDFs, rounds 1-2 of 3
+# Charter ledger — ICE-SYSTEM-FUNCTIONS-1 · IPI-29 system-function UDFs, rounds 1-3 of 3
 
 **Date:** 2026-09-20 · **Branch:** `fix/ipi-29-system-functions` · **Base:** `6d029ab8` (`origin/main`) · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
-**Path:** STANDARD. **risk_tier: standard.** **Registry:** none this round; the parity row is filed when WO-3 delivers the catalog-qualified registration and SHOW.
+**Path:** STANDARD. **risk_tier: standard.** **Registry:** row `FN-SYSFN-1` filed and FIXED in `docs/spark-sql-iceberg-parity.md` §7 this round.
 
-**Retires:** WO-3 moves this ledger to `../completed/` in its last commit.
+**Retires:** ready for the departure move to `../completed/`.
 
-**Scope:** rounds 1-2 — `crates/repark-functions/src/iceberg_system.rs`
-(`bucket_udf`, `truncate_udf` in round 1; `years_udf`, `months_udf`, `days_udf`,
-`hours_udf`, `iceberg_version_udf` in round 2), two lines in
-`repark-functions/src/lib.rs` (round 1; round 2 adds none — H-05 spent), the
-external `iceberg` dependency in `repark-functions/Cargo.toml`,
-`python/repark/tests/test_ice_system_functions_1.py`, three `map.md` files, this
-ledger. No code comment added anywhere (`comment-ban hits=0`); Python docstrings
-only where the presence gate needs them. Catalog-qualified registration and SHOW
-are WO-3; `session.rs`, `router.rs`, `repark-spark`, `STATUS.md`, every other
-`Cargo.toml` and every file-size EXCEPTIONS row are untouched.
+**Scope:** rounds 1-3 — `crates/repark-functions/src/iceberg_system.rs` (seven
+UDFs plus, in round 3, the internal-name consts, `SYSTEM_FUNCTION_NAMES` and
+`internal_name()`), two lines in `repark-functions/src/lib.rs` (round 1; H-05
+spent), the external `iceberg` dependency in `repark-functions/Cargo.toml`,
+round 3 in `repark-spark`: the `<cat>.system.<fn>(` rewrite and `SHOW [USER]
+FUNCTIONS IN <cat>.system` parser+executor in `describe_show.rs`, two hooks in
+`router.rs`, file-backed `describe_show/tests.rs`,
+`python/repark/tests/test_ice_system_functions_1.py`, the registry row, five
+`map.md` files, this ledger. No code comment added anywhere (`comment-ban
+hits=0`); Python docstrings only where the presence gate needs them.
+`session.rs`, `STATUS.md`, every `Cargo.toml` besides `repark-functions'`, the
+iceberg pin and every file-size EXCEPTIONS row are untouched; `lib.rs` files
+gain zero lines in round 3.
 
 ## Measurements (decide-then-build evidence)
 
@@ -80,6 +83,41 @@ temporarily recast to `Int32` in both `output_type` and invoke,
 (values `[[19787,-1,null]]` — the right day counts, the wrong type) while
 the NULL pin stays green; reverted before the gate, tree verified clean.
 
+**M-9 — H-02 option A: pre-parse rewrite, no session.rs edge.** The Spark door
+rewrites unquoted `<cat>.system.<fn>(` to the reserved internal UDF name when
+`cat` is a live Iceberg catalog (`catalogs.get`, which holds only Iceberg
+entries) and `fn` is one of the seven; the surgery is span-based over
+`tokenize_with_location` in the `cast_map` shape, so string literals, quoted
+identifiers, comments, `CALL`, two-part `system.<fn>` and unknown catalogs
+pass through untouched, and windows cannot overlap (a match's inner tokens
+can never open a second match). Late-registered catalogs resolve with no
+re-registration. Placement: `describe_show.rs`, not a new module — H-03
+sanctions it, and `repark-spark/src/lib.rs` sits at exactly 150 of its 150
+ceiling, so a new `mod` line would need a code move-out; the file lands at
+811 of 1000 with file-backed `describe_show/tests.rs` (180).
+
+**M-10 — H-03: SHOW is pre-parse with a live-catalog gate.** The intercept
+matches `SHOW [USER] FUNCTIONS IN <catalog>.system` (USER optional) in
+`try_preparse_intercepts`, never reaches `Statement::ShowFunctions`, and
+answers one `function` column with the seven qualified names sorted; the
+router fires it only for a live Iceberg catalog, so unregistered catalogs
+keep DataFusion's old error, and the bare SHOW forms keep theirs (C-023).
+
+**M-11 — H-09 measured: the SQL door has no bare `truncate` builtin.**
+`SELECT truncate(1.9)` and `SELECT truncate(2, data)` both refuse with
+`UNRESOLVED_ROUTINE` on this tree (the `cardinality.rs` fold only fires
+post-resolution, which bare `truncate` never reaches; `F.truncate` does not
+exist). Pinned per H-09's own fallback — measure once, pin that. No
+live-oracle round was run: the C-021/C-023 pins assert today's behavior
+verbatim (no-change guards), and the feature oracle is the recorded
+inventory cells behind the replay (M-12).
+
+**M-12 — replay: 0/15 before, 15/15 EQUAL after.** `harness.py --engine
+repark --cells cells_misc.py` on the lane build, scored by `compare.py` per
+H-08 (FUNCTIONS group only): `FUNCTIONS {'EQUAL': 15}`; the pre-unit
+`out/repark-misc.json` shows all 15 F-* cells `error`. The V-* cells in the
+file still refuse — they belong to IPI-40, untouched per H-08.
+
 ## PROPOSITION LEDGER — ICE-SYSTEM-FUNCTIONS-1 — 2026-09-20
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -101,6 +139,14 @@ the NULL pin stays green; reverted before the gate, tree verified clean.
 | C-015 | `__iceberg_system_hours(ts)` answers `[[-1],[474898],[null]]`. | `test_hours_pins_recorded_values` green offline and live. | **PROVEN** | Exact recorded `F-HOURS` values, Arrow type `int32`. pins: ice-system-functions-1/C-015 |
 | C-016 | `__iceberg_system_iceberg_version()` is a stable non-null string on every row. | `test_iceberg_version_is_non_null_per_row` green offline and live. | **PROVEN** | Three equal non-null strings, Arrow `string`, `df.schema` `StringType()`, `IS NOT NULL` true on all rows; the text itself unpinned per M-7. pins: ice-system-functions-1/C-016 |
 | C-017 | NULL in gives NULL out for the four temporal functions. | `test_every_function_returns_null_for_null_input` green offline and live. | **PROVEN** | The NULL-row query grows by `years` / `months` / `days` (timestamp and date legs) / `hours` calls, all NULL; `iceberg_version` stays excluded as nullary per H-04. pins: ice-system-functions-1/C-017 |
+| C-018 | `sc.system.<fn>` resolves for all seven functions through the rewrite. | Every re-pointed test in the file green offline and live. | **PROVEN** | The whole C-001..C-017 suite re-pointed at `sc.system.<fn>` stays green; the Rust unit pins cover the rewrite edges (multi-call, literals, quoted, CALL, two-part, unknown catalog, case) per M-9. pins: ice-system-functions-1/C-018 |
+| C-019 | `count(*) FILTER (WHERE sc.system.bucket(4, id) = 1)` answers `[1]`. | `test_bucket_in_where_pins_recorded_count` green offline and live. | **PROVEN** | Exact recorded `F-BUCKET-IN-WHERE` count: the function resolves in a predicate, not just projection. pins: ice-system-functions-1/C-019 |
+| C-020 | `SHOW [USER] FUNCTIONS IN sc.system` lists the seven qualified names, sorted, order-preserved. | `test_show_user_functions_in_system_pins_roster` green offline and live. | **PROVEN** | Exact recorded `F-SHOW-FUNCTIONS` rows in order, one `function` column, USER and bare spellings identical, no internal name leaks, per M-10. pins: ice-system-functions-1/C-020 |
+| C-021 | Unqualified `truncate` never becomes Iceberg truncate. | `test_bare_truncate_still_resolves_to_the_builtin` green offline and live. | **PROVEN** | Both arities stay `UNRESOLVED_ROUTINE` — the measured H-09 fallback, since the SQL door has no bare `truncate` builtin (M-11). pins: ice-system-functions-1/C-021 |
+| C-022 | Functions and SHOW resolve under every configured catalog. | `test_functions_resolve_under_every_configured_catalog` green offline and live. | **PROVEN** | Late-registered `hc` answers the bucket values and the `hc`-prefixed roster, proving no re-registration per H-02/H-10. pins: ice-system-functions-1/C-022 |
+| C-023 | SHOW forms without `IN` keep their previous behavior. | `test_show_functions_without_in_is_unchanged` green offline and live. | **PROVEN** | `SHOW FUNCTIONS` keeps the `information_schema.parameters` error, `SHOW USER/SYSTEM FUNCTIONS` keep the `SHOW [VARIABLE]` error — the D-5 scope fence. pins: ice-system-functions-1/C-023 |
+| C-024 | Registry row `FN-SYSFN-1` is filed and retired with residues. | The row in `docs/spark-sql-iceberg-parity.md` §7; replay 15/15 EQUAL. | **PROVEN** | Row states the behavior, the inventory oracle, the pins, and the deliberate fences (two-part, quoted, unknown-catalog SHOW, no pushdown, unpinned version); `FN-SYSFN-1` FIXED 2026-09-20. pins: ice-system-functions-1/C-024 |
+| C-025 | One internal-name call still resolves directly. | `test_internal_bucket_name_still_resolves` green offline and live. | **PROVEN** | `__iceberg_system_bucket(16, id)` answers `[[4],[5],[null]]` as `int32` without the rewrite. pins: ice-system-functions-1/C-025 |
 
 ## Gates
 
@@ -111,6 +157,12 @@ the NULL pin stays green; reverted before the gate, tree verified clean.
 | `cargo test -p repark-functions` (gate tier T, round 2) | `827 passed; 0 failed; 1 ignored` |
 | pytest offline (gate tier U, round 2) | `19 passed in 0.95s` |
 | pytest under `REPARK_PARITY_LIVE=1` (gate tier L, round 2) | `19 passed in 0.72s` |
+| lane gate with `repark-functions,repark-spark` (round 3) | `CB=0 R=0 T=0 U=0 L=0` |
+| `cargo test -p repark-functions` (round 3) | `827 passed; 0 failed; 1 ignored` |
+| `cargo test -p repark-spark` (round 3) | `1289 passed; 0 failed; 5 ignored` |
+| pytest offline (round 3) | `25 passed in 1.74s` |
+| pytest under `REPARK_PARITY_LIVE=1` (round 3) | `25 passed in 1.00s` |
+| inventory replay `cells_misc.py` + `compare.py` (H-08) | `FUNCTIONS {'EQUAL': 15}` (before: 15/15 error) |
 | `cargo clippy -p repark-functions --all-targets -- -D warnings -A clippy::disallowed_methods` (Makefile `rust-clippy` flags) | clean |
 | `cargo clippy -p repark-functions --lib -- -D warnings` (panic-ban shape) | clean |
 | `cargo fmt -p repark-functions -- --check` | clean |
@@ -130,7 +182,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Each clause walked against a run — eight recorded-value pins on the Arrow path value AND type (C-001..C-008), the ten-call NULL row (C-009), the fork-text and old-order refusals (C-010), the mechanical diff (C-011); round 2 adds the four temporal value pins plus the date schema pin (C-012..C-015), the version stability pin (C-016) and the five-call temporal NULL extension (C-017).
+      evidence: Each clause walked against a run — eight recorded-value pins on the Arrow path value AND type (C-001..C-008), the ten-call NULL row (C-009), the fork-text and old-order refusals (C-010), the mechanical diff (C-011); round 2 adds the four temporal value pins plus the date schema pin (C-012..C-015), the version stability pin (C-016) and the five-call temporal NULL extension (C-017); round 3 adds the rewrite suite (C-018), the predicate/SHOW/catalog/fence pins (C-019..C-023), the registry row (C-024) and the kept internal-name test (C-025).
       artifacts: [python/repark/tests/test_ice_system_functions_1.py, crates/repark-functions/src/iceberg_system.rs]
     - id: AT-2
       status: ATTACKED
@@ -148,7 +200,7 @@ COVERAGE_ATTESTATION:
       justification: No privileged action, secret or injection surface; width binds from a typed scalar.
     - id: AT-6
       status: ATTACKED
-      evidence: Registration runs once from register_all under reserved internal names; no bare bucket/truncate/years/months/days/hours/iceberg_version reaches the registry; round 2 adds zero lib.rs lines.
+      evidence: Registration runs once from register_all under reserved internal names; no bare bucket/truncate/years/months/days/hours/iceberg_version reaches the registry; rounds 2-3 add zero lib.rs lines; the qualified spellings resolve through the pre-parse rewrite with no session.rs edge.
       artifacts: [crates/repark-functions/src/lib.rs, crates/repark-functions/src/iceberg_system.rs]
     - id: AT-7
       status: N/A
@@ -163,17 +215,21 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_system_functions_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Every recorded value traces to the inventory dump /tmp/oc-worker/qe/cells/ipi-29-system-functions.txt and the cells_misc.py fixture, replayed on a UTC memory catalog.
+      evidence: Every recorded value traces to the IPI-29 inventory dump and the cells_misc.py fixture, replayed on a UTC memory catalog; the round-3 replay scores FUNCTIONS 15/15 EQUAL against the recorded Spark baseline.
       artifacts: [python/repark/tests/test_ice_system_functions_1.py]
 ```
 
 Every clause above is PROVEN with a quoted command and its output; no clause is
-OPEN. Touched files per clause: C-001..C-010, C-012..C-017
+OPEN. Touched files per clause: C-001..C-010, C-012..C-023, C-025
 `python/repark/tests/test_ice_system_functions_1.py` +
 `python/repark/tests/map.md` + `crates/repark-functions/src/iceberg_system.rs`;
 C-011 `crates/repark-functions/src/lib.rs` + `crates/repark-functions/Cargo.toml`
-+ `crates/repark-functions/map.md` + `crates/repark-functions/src/map.md` plus
-this ledger's own entry in `task/ledgers/staging/map.md`.
++ `crates/repark-functions/map.md` + `crates/repark-functions/src/map.md`;
+C-018..C-023 add `crates/repark-spark/src/describe_show.rs` +
+`crates/repark-spark/src/describe_show/` + `crates/repark-spark/src/router.rs` +
+`crates/repark-spark/src/map.md`; C-024 adds
+`docs/spark-sql-iceberg-parity.md` + `docs/map.md`; plus this ledger's own entry
+in `task/ledgers/staging/map.md`.
 `Cargo.lock` gains the one-line `repark-functions → iceberg` edge (committed
 separately after the gate). `.github/` / `session.rs` / `router.rs` /
 `repark-spark` / `STATUS.md`: untouched. Whole-workspace `cargo test`,
