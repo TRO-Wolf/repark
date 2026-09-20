@@ -219,7 +219,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `scripts/check_rust_file_size.py`, and `session_core.py` 2287 → 2345 with
   `scripts/check_lib_py.py` (the earlier session rounds grew the file; both gate
   scripts already carried the measured values, only this mirror was stale).
-  pins: ice-catalog-session-1/C-031
+  pins: ice-catalog-session-1/C-030
 - `test_cap_1_source_file_line_cap.py` — **ICE-TT-RESOLVE-1 (2026-09-19, run 24c):**
   mirror rows ratchet `repark-python/src/session.rs` 1126 → 1122 and `session_core.py`
   2290 → 2287 with `scripts/check_rust_file_size.py` and `scripts/check_lib_py.py`.
