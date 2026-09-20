@@ -132,7 +132,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   both calls to `run_rewrite` are behind `Box::pin`. At fork PR #316's pin the fork `Table` the
   future holds across its awaits carries a footer-cache field, and the two futures reached
   clippy's 16 KiB `large_futures` bound; boxing is behaviour-neutral (the rewrite pins pass
-  unchanged).
+  unchanged). **RP-40 (2026-09-20):** the action's own `execute` future joined them at 23,184
+  bytes once fork #323 added the sort and zorder strategies; it is boxed the same way.
 - `run_maintenance_apply.rs` — **MAINT-POLICY-1 step 3 (2026-09-10):** the apply path. Each
   planned step runs through the same procedure body the CALL door dispatches to (built
   `CallArgs`, no SQL-text re-entry): position-delete, manifests, expire and orphan steps

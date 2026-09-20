@@ -436,7 +436,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   standing requirement (inventory §8 ruling 6). Always-run: the committed
   `fixtures/torture/data/ice_spark_table_1` Spark-written v2 CoW table (67.8 KB,
   `truth.json` seed oracle — Spark's own CoW MERGE and a `hash` distribution ALTER are
-  baked in) is materialized at its baked-in path under a directory lock, adopted via
+  baked in). **RP-40 (2026-09-20):** `manifests-created`, `manifests-kept` and
+  `manifests-replaced` moved from the Spark-only summary keys to a SHARED set — fork #322
+  writes Java's manifest counts on every operation, and Spark's own append summaries carry
+  them too (measured against Spark 4.1.2 tonight), so the twin having them is parity, not drift is materialized at its baked-in path under a directory lock, adopted via
   `CALL system.register_table` at `v5`, hit with the production
   `UPDATE SET * / INSERT *` MERGE twice and the weekly CALLs
   (`expire_snapshots` / `rewrite_manifests` / `rewrite_data_files` binpack /
