@@ -116,3 +116,51 @@ Numbered, with their cell names. None is a footnote; each is a gate item owned b
 - Slate row: [../../roadmap/mid-term/ice-parity-inventory-2026-09-19.md](../../roadmap/mid-term/ice-parity-inventory-2026-09-19.md) rows 53, IPI-21, IPI-25.
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) — `REF-2` retired, `RTAS-OPS-1` widened, `ICE-DROP-PURGE-1` filed.
 - Ledger index: [map.md](map.md).
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ipi-21-25-42-small-parser
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against the recorded cells and probe keys (D-REF-*, D-REPLACE, D-RTAS, D-RTAS-TIME-TRAVEL, D-DROP-TABLE-PURGE, D-DROP-TABLE-NO-PURGE, TP-GC-DISABLED-PURGE, E.*), not a paraphrase — each keyword shape pinned against the mechanism it lands on (conditional guard, first-token rewrite, purge thread-through), and walking TP-GC-DISABLED-PURGE against the clause set is what caught the pre-write gc-gate reversal.
+      artifacts: [task/ledgers/staging/ipi-21-25-42-small-parser-ledger.md, python/repark/tests/test_ice_small_parser_1.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Missing and present refs exercised for BRANCH and TAG on both guard directions, with and without AS OF VERSION; REPLACE on a missing table on both spellings; PURGE composed with and without IF EXISTS and on a missing table; guardless refusals, an unknown trailing clause, the CREATE OR REPLACE and REPLACE + IF NOT EXISTS parse-class refusals, and the IN cat.ns.t spellings all pinned.
+      artifacts: [crates/repark-spark/src/tests/ref_ddl.rs, crates/repark-spark/src/tests/replace_table.rs, crates/repark-spark/src/tests/purge.rs, crates/repark-spark/src/ref_ddl/tests.rs, python/repark/tests/test_ice_small_parser_1.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Per-file delete failures are collected by the sweep and the drop still completes with one warn at the door (Java's log-only posture, pinned by driving one path's delete to fail); gc.disabled refuses before any sweep and drops nothing; missing-target refusals carry Spark's TABLE_OR_VIEW_NOT_FOUND with SQLSTATE 42P01.
+      artifacts: [crates/repark-spark/src/tests/purge.rs, python/repark/tests/test_ice_small_parser_1.py]
+    - id: AT-4
+      status: ATTACKED
+      evidence: The unit's one ordering invariant — sweep the reachable files before the catalog drop — is pinned by post-return file-existence assertions on both arms; an existing ref is never moved to a newer snapshot under IF NOT EXISTS (state pinned at an older snapshot first, so a replace-if-different reds); REPLACE AS SELECT records the overwrite while the pre-replace snapshot stays readable by VERSION AS OF. No shared mutable state added — the parser threads one token.
+      artifacts: [crates/repark-spark/src/tests/purge.rs, crates/repark-spark/src/tests/ref_ddl.rs, crates/repark-spark/src/tests/replace_table.rs]
+    - id: AT-5
+      status: ATTACKED
+      evidence: The unit's privileged action — deleting user data files — is gated on gc.enabled, the check Spark runs in SparkCatalog.purgeTable before the action; the gate is pinned on both values (refuse carrying the ValidationException text / still purges when true) and was kept per owner rulings 2026-09-20 09:27 and 10:11 after a packet decision had ruled it out. No credential, network or deserialization surface is touched.
+      artifacts: [crates/repark-spark/src/tests/purge.rs, python/repark/tests/test_ice_small_parser_1.py]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The data-loss surface attacked directly — plain DROP TABLE with and without IF EXISTS keeps every recorded file (the regression pin only a purge-by-default mutant reds), gc-disabled sweeps nothing and drops nothing, and REPLACE preserves the pre-replace snapshot for time travel while stamping the overwrite.
+      artifacts: [crates/repark-spark/src/tests/purge.rs, crates/repark-spark/src/tests/replace_table.rs, python/repark/tests/test_ice_small_parser_1.py]
+    - id: AT-7
+      status: N/A
+      justification: Three keyword shapes; the only new runtime work is a flag thread-through and one fork action call bounded by the table's reachable-file count. No loop, buffer or scan is added, so no system-breaking resource surface exists for this unit (AT-7 files system-breaking defects only).
+    - id: AT-8
+      status: ATTACKED
+      evidence: Three seam contracts pinned against recorded Spark answers rather than assumed — the Python DROP expander emits the PURGE token byte-exact, Statement::Drop.purge threads it into execute_drop_table, and the fork's DeleteReachableFiles is consumed under its gc contract; error contracts match the cells (TABLE_OR_VIEW_NOT_FOUND with 42P01, the gc-disabled ValidationException text, the parse-class refusal on OR REPLACE + IF NOT EXISTS).
+      artifacts: [crates/repark-spark/src/tests/purge.rs, crates/repark-spark/src/tests/ref_ddl.rs, python/repark/tests/test_ice_small_parser_1.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The one diagnosable failure path — a per-file delete failure during the sweep — is pinned to surface as exactly one tracing::warn naming the table and the failure count while the SQL result stays clean, matching Java's log-only suppression; the refusal paths carry error class and SQLSTATE a caller can alarm on.
+      artifacts: [crates/repark-spark/src/tests/purge.rs]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Conditional pins are red-first on both arms — a blanket no-op guard reds, a purge-by-default reds the plain-drop arm, and the gc-gate-omitting mutant goes red (the reversal the Measured section records). Span coverage runs across kinds, guard directions and both REPLACE spellings. Mutation spot-check — the DeleteReachableFiles-level delete-failure injection pin kills its mutant; the door-level deleter-Err mutant is NOT killed (no injection channel through the session) and stands as residue 5, accepted per owner ruling 2026-09-20 10:11 — recorded as a residue, not counted as a killed mutant.
+      artifacts: [crates/repark-spark/src/tests/ref_ddl.rs, crates/repark-spark/src/tests/replace_table.rs, crates/repark-spark/src/tests/purge.rs, python/repark/tests/test_ice_small_parser_1.py]
+  complete: true
+```
