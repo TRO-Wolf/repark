@@ -354,3 +354,12 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
   that can fire after a successful commit is a HALT.
 - Pub `write_data_files*` re-exported from the write module root (`../mod.rs`) and the crate
   root (`lib.rs`).
+
+## IPI-19 + IPI-56 (2026-09-20) — the MERGE evolution flag
+
+- `spec.rs` — `MergeSpec` and its clause types, moved here from `mod.rs` (which
+  sits on an exact size baseline) with the new `schema_evolution` flag. When the
+  flag is set `execute_merge` unions the source schema into the table first and
+  expands `UPDATE SET *` / `INSERT *` against the evolved schema, so the single
+  data commit carries the new column.
+  pins: ipi-19-56-37-schema-evolution-write/C-005, C-006, C-009

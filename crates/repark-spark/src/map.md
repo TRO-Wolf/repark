@@ -1224,3 +1224,8 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   without the property — that asymmetry is Spark's, and it is the single thing
   most easily got wrong here.
   pins: ipi-19-56-37-schema-evolution-write/C-002, C-004, C-011
+- `merge.rs` + [`merge/`](merge/map.md) — the `MERGE WITH SCHEMA EVOLUTION`
+  pre-parse strip and the `schema_evolution` flag it carries into the lowered
+  plan. The star-sentinel rewrite moved to `merge/stars.rs` untouched to keep
+  `merge.rs` off the size ceiling. A plain `MERGE INTO` never matches the strip.
+  pins: ipi-19-56-37-schema-evolution-write/C-005, C-007

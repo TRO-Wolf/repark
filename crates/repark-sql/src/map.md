@@ -359,3 +359,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 
 First checks: `cargo test -p repark-sql --lib`. Escalate to: [../map.md#debug](../map.md).
 
+## IPI-19 (2026-09-20)
+
+- `merge.rs` — the ANSI `MERGE INTO` lowering names the new `schema_evolution:
+  false` field. The native door has no `WITH SCHEMA EVOLUTION` spelling, so it
+  never evolves.
+  pins: ipi-19-56-37-schema-evolution-write/C-007
+

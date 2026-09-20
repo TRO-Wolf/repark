@@ -1370,3 +1370,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (C-018..C-025); ready for the departure move to `completed/`.
   `risk_tier: standard`. Branch `fix/ipi-29-system-functions`.
   pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025
+- [ipi-19-56-37-schema-evolution-write-ledger.md](ipi-19-56-37-schema-evolution-write-ledger.md) —
+  **IPI-19 + IPI-56 + IPI-37 (2026-09-20), in flight:** schema evolution on write —
+  the `mergeSchema` / `merge-schema` write option and the `spark.sql.iceberg.merge-schema`
+  session conf over the `write.spark.accept-any-schema` gate, `MERGE WITH SCHEMA EVOLUTION`
+  through a pre-parse token strip, the short-name `mergeInto` qualifier, and the
+  four-combination `INSERT … BY NAME` matrix; the schema evolves first through the fork's
+  `union_by_name_with` and the data commit is the only new snapshot. Registry `EX-DF-9`
+  narrowed to the remaining acceptance gap. `risk_tier: standard`. Branch
+  `fix/ipi-19-56-37-schema-evo-write`.
+  pins: ipi-19-56-37-schema-evolution-write/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
+  C-008, C-009, C-010, C-011, C-012, C-013
