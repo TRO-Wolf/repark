@@ -201,8 +201,12 @@ def test_staged_mode_warns_and_exits_zero(repo: Path) -> None:
     _git(repo, "add", "pkg/mod.rs")
     result = _guard(repo)
     assert result.returncode == 0
-    assert "WARNING:" in result.stderr
-    assert "map.md guard" in result.stderr
+    assert "ERROR" not in result.stderr
+    stderr_lines = result.stderr.splitlines()
+    assert stderr_lines[-1].startswith("note:")
+    assert "map.md guard" in stderr_lines[-1]
+    assert stderr_lines[:-1]
+    assert all(line.startswith("WARNING:") for line in stderr_lines[:-1])
 
 
 def test_duplicate_row_rule_fires_on_two_rows(tmp_path: Path) -> None:
