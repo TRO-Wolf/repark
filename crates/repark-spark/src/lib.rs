@@ -27,6 +27,7 @@ mod namespace_ddl;
 mod nested_column_ddl;
 mod normalize;
 mod ref_ddl;
+mod replace_columns;
 mod router;
 mod spark_ast;
 pub mod spark_literal_typing;

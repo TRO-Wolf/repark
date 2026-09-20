@@ -29,6 +29,10 @@ on:
         type: string
         required: false
         default: ""
+      baseline:
+        description: "run with page selection off and no shared caches — the before half of a pair on one head"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -227,35 +231,46 @@ jobs:
       - name: S3 Tables — cold, warm, concurrent, concurrent-cold (each R-3 checked)
         env:
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+          BASELINE: ${{ inputs.baseline }}
         run: |
           set -euo pipefail
+          baseline_flags=()
+          if [ "${BASELINE}" = "true" ]; then
+            baseline_flags=(--baseline)
+          fi
           for mode in cold warm concurrent concurrent-cold; do
             cargo bench --locked -p repark-spark --bench ice_read_perf -- \
               run --mode "${mode}" --catalog s3tables --prop "table_bucket_arn=${TABLE_BUCKET_ARN}" \
               --table "${BENCH_NAMESPACE}.${BENCH_TABLE}" --repeat "${BENCH_REPEAT}" \
-              --out "${RUNNER_TEMP}/ice-read-perf-out/s3tables-${mode}.json"
+              --out "${RUNNER_TEMP}/ice-read-perf-out/s3tables-${mode}.json" "${baseline_flags[@]}"
           done
       - name: Glue — cold, warm, concurrent, concurrent-cold (each R-3 checked)
         env:
           REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          BASELINE: ${{ inputs.baseline }}
         run: |
           set -euo pipefail
+          baseline_flags=()
+          if [ "${BASELINE}" = "true" ]; then
+            baseline_flags=(--baseline)
+          fi
           for mode in cold warm concurrent concurrent-cold; do
             cargo bench --locked -p repark-spark --bench ice_read_perf -- \
               run --mode "${mode}" --catalog glue --prop "warehouse=${REPARK_ACCEPT_WAREHOUSE}" \
               --table "${BENCH_NAMESPACE}.${BENCH_TABLE}" --repeat "${BENCH_REPEAT}" \
-              --out "${RUNNER_TEMP}/ice-read-perf-out/glue-${mode}.json"
+              --out "${RUNNER_TEMP}/ice-read-perf-out/glue-${mode}.json" "${baseline_flags[@]}"
           done
       - name: bytes read per run and for the dispatch
         if: ${{ !cancelled() }}
         env:
           PURPOSE: ${{ inputs.purpose }}
+          BASELINE: ${{ inputs.baseline }}
         run: |
           set -euo pipefail
           shopt -s nullglob
           total=0
           {
-            echo "## ICE-READ-PERF bench — purpose: ${PURPOSE:-unstated}"
+            echo "## ICE-READ-PERF bench — purpose: ${PURPOSE:-unstated} baseline=${BASELINE:-false}"
             for file in "${RUNNER_TEMP}"/ice-read-perf-out/*.json; do
               bytes="$(jq '.run_io_total.bytes' "${file}")"
               total=$((total + bytes))

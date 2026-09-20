@@ -153,7 +153,15 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   `PURPOSE='$(touch /tmp/pa-pwn)'; echo "x ${PURPOSE:-unstated}"` prints the text literally and
   creates no file; backticks and the unquoted form behave the same, because bash does not
   re-evaluate an expanded value. YAML read by regex, no PyYAML.
+  **ICE-BENCH-BASELINE-1 (2026-09-19):** the dispatch gains a boolean `baseline` input
+  (default false, "the before half of a pair on one head"). Both run loops take it through
+  `env: BASELINE`, append `--baseline` to all eight `run --mode` invocations only when it
+  is `true` (`baseline_flags` array, empty by default — an empty `"${array[@]}"` expands to
+  zero arguments under `set -u`, verified on bash 5.2.21), and the summary header names
+  `baseline=<value>` beside the purpose. Three pins hold the input, the threading and the
+  summary line.
   pins: ice-read-perf-0/C-018, C-019
+  pins: ice-bench-baseline-1/C-004
 - `test_ex_0_example_coverage.py` — **IO-BUCKET-CLUSTER-1 (2026-09-14):** the raw-walk
   count pin moved 936 → 944 with the eight new writer-layout inventory names
   (`DataFrameWriter.bucketBy`/`bucket_by`/`sortBy`/`sort_by`/`clusterBy`/`cluster_by`,
@@ -179,6 +187,11 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   mirror row `writer_readwriter.py` 1095 → 1093, the value round 1 set in
   `scripts/check_lib_py.py` without its mirror.
   The verification fix ratchets it again, 1093 → 1091. pins: ice-overwrite-mode-1/C-018
+- `test_cap_1_source_file_line_cap.py` — **ICE-REPLACE-COLUMNS-1 (2026-09-19, run 25c):**
+  mirror rows ratchet `repark-spark/src/alter.rs` 1813 → 1449 and
+  `repark-spark/src/tests/alter.rs` 1379 → 1184 with `scripts/check_rust_file_size.py`,
+  after the REPLACE COLUMNS planner moved into its own module.
+  pins: ice-replace-columns-1/C-008
 - `test_cap_1_source_file_line_cap.py` — **ICE-DROP-NS-1 (2026-09-19, run 24c):**
   mirror row ratchets `repark-sql/src/tests.rs` 1520 → 1513 with `scripts/check_rust_file_size.py`.
   pins: ice-drop-ns-1/C-011

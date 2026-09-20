@@ -6,13 +6,15 @@ use datafusion::arrow::array::{Array, ArrayRef};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
+use datafusion::common::utils::expr::COUNT_STAR_EXPANSION;
 use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::functions_aggregate::regr::regr_count_udaf;
 use datafusion::functions_window::ntile::ntile_udwf;
 use datafusion::functions_window::rank::{dense_rank_udwf, rank_udwf};
 use datafusion::functions_window::row_number::row_number_udwf;
+use datafusion::logical_expr::expr::AggregateFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::function::{
     AccumulatorArgs, PartitionEvaluatorArgs, StateFieldsArgs, WindowUDFFieldArgs,
@@ -74,7 +76,74 @@ fn rewrite_values(values: Values) -> Result<Transformed<LogicalPlan>> {
 }
 
 pub(crate) fn narrow_provisional_integer_literals(expr: Expr) -> Result<Transformed<Expr>> {
-    expr.transform_up(|node| Ok(narrow_provisional_integer_literal(node)))
+    transform_keeping_count_star(expr, &|node| Ok(narrow_provisional_integer_literal(node)))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn transform_keeping_count_star<F>(expr: Expr, leaf: &F) -> Result<Transformed<Expr>>
+where
+    F: Fn(Expr) -> Result<Transformed<Expr>>,
+{
+    expr.transform_down(|node| match node {
+        Expr::AggregateFunction(call) if is_count_of_one(&call) => keep_count_star(call, leaf),
+        other => leaf(other),
+    })
+}
+
+#[must_use]
+pub fn needs_count_star_expansion(expr: &Expr) -> bool {
+    match expr {
+        Expr::AggregateFunction(call) => {
+            is_count_of_one(call)
+                && !matches!(
+                    call.params.args.as_slice(),
+                    [Expr::Literal(value, _)] if *value == COUNT_STAR_EXPANSION
+                )
+        }
+        _ => false,
+    }
+}
+
+fn is_count_of_one(call: &AggregateFunction) -> bool {
+    call.func.name() == "count"
+        && !call.params.distinct
+        && matches!(
+            call.params.args.as_slice(),
+            [Expr::Literal(
+                ScalarValue::Int32(Some(1)) | ScalarValue::Int64(Some(1)),
+                _
+            )]
+        )
+}
+
+fn keep_count_star<F>(mut call: AggregateFunction, leaf: &F) -> Result<Transformed<Expr>>
+where
+    F: Fn(Expr) -> Result<Transformed<Expr>>,
+{
+    let mut changed = false;
+    for arg in &mut call.params.args {
+        if let Expr::Literal(value, _) = arg
+            && *value != COUNT_STAR_EXPANSION
+        {
+            *value = COUNT_STAR_EXPANSION;
+            changed = true;
+        }
+    }
+    if let Some(filter) = call.params.filter.take() {
+        let rewritten = transform_keeping_count_star(*filter, leaf)?;
+        changed |= rewritten.transformed;
+        call.params.filter = Some(Box::new(rewritten.data));
+    }
+    for sort in &mut call.params.order_by {
+        let rewritten = transform_keeping_count_star(sort.expr.clone(), leaf)?;
+        changed |= rewritten.transformed;
+        sort.expr = rewritten.data;
+    }
+    Ok(Transformed::new(
+        Expr::AggregateFunction(call),
+        changed,
+        TreeNodeRecursion::Jump,
+    ))
 }
 
 pub(crate) fn narrow_provisional_integer_literal(expr: Expr) -> Transformed<Expr> {

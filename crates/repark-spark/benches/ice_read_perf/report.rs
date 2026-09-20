@@ -525,11 +525,13 @@ fn row(text: &mut String, mode: &str, samples: &[&QueryRecord], same: bool) {
 #[must_use]
 pub fn markdown(
     mode: &str,
+    baseline: bool,
     specs: &[QuerySpec],
     records: &[QueryRecord],
     groups: &[QueryRecord],
 ) -> String {
     let mut text = String::new();
+    let _ = writeln!(text, "ice-read-perf mode={mode} baseline={baseline}");
     let _ = writeln!(
         text,
         "| mode | query | n | plan ms | exec→first ms | first batch ms | total ms | rows | \

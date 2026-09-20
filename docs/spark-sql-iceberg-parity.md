@@ -3711,6 +3711,59 @@ the pin rather than obeying it.
 - **Rationale** — FIXED 2026-09-18 (RP-26) at fork #293 (**F-UPDATE-SCHEMA-SAME-1**): a
   schema update that changes nothing commits nothing, mirroring Java.
 
+### ICE-REPLACE-COLUMNS-1 — `ALTER TABLE … REPLACE COLUMNS` drops and re-adds every column — **FIXED 2026-09-19**
+
+- **repark** — **FIXED 2026-09-19.** `ALTER TABLE t REPLACE COLUMNS (…)` deletes every current
+  top-level column and adds the listed ones with **fresh** field ids (the fork's `UpdateSchema`
+  assigns them from `last-column-id + 1`, level-order inside a complex type), in one schema
+  commit: on the seed `(id BIGINT, data STRING, cat STRING)` with rows `(1,a,x),(2,b,y)`,
+  `REPLACE COLUMNS (id BIGINT, data STRING)` answers ids `4, 5`, `last-column-id` 5, a second
+  schema, and the two existing rows read `[NULL, NULL]`. The same holds when the list repeats
+  the current columns (`SAME`: ids 4, 5, 6, all NULL, a new schema), when a kept name changes
+  type (`id INT`, `data BINARY`), when the list is shorter (`ONE`), renamed (`k, v`), carries a
+  `COMMENT` (the doc lands on the new column), or declares a `STRUCT<a: INT, b: STRING>`
+  (`s`=5, `s.a`=6, `s.b`=7, `last-column-id` 7 — the shared sqlparser column-type path, so
+  STRUCT / ARRAY / MAP land like CREATE TABLE and ADD COLUMN, and bare `TIMESTAMP` follows the
+  session `spark.sql.timestampType` carrier). A row inserted after the replace reads back; a
+  second replace moves the ids again (6, 7) and NULLs it too; `VERSION AS OF <first snapshot>`
+  still answers the old rows under the old schema; an empty table replaces cleanly. Refusals
+  carry Spark's text and commit nothing: `NOT NULL` is a `ParseException` (`NOT NULL is not
+  supported in Hive-style REPLACE COLUMNS.`), a duplicate name is an `AnalysisException`
+  carrying `[COLUMN_ALREADY_EXISTS]` … `SQLSTATE: 42711`, and a live
+  partition or sort field whose source id would vanish is Iceberg's `ValidationException` text
+  — `Cannot find source column for partition field: 1000: cat: identity(3)` /
+  `Cannot find source column for sort field: identity(1) ASC NULLS FIRST` — raised before the
+  commit. A column position and a nested name refuse as Hive-style parse errors. The native
+  ANSI door has no Hive-style REPLACE COLUMNS and refuses at the parser.
+  Before (main, measured `repark-pc1-main.json`): a same-named column kept its field id **and
+  its values** (`BASIC` answered ids 1, 2 and rows `[[1,a],[2,b]]`), `SAME` committed nothing,
+  a re-typed name refused as an "identity trap", `STRUCT` refused `I7 primitives only`, and the
+  partition-keep-name and sorted cells silently kept a spec or order whose source column Spark
+  says is gone — 22 of the 34 measured cells differed.
+- **Apache Spark** — Spark's Hive-style `ReplaceColumns` lowers to one `DeleteColumn` per
+  current top-level column plus one `AddColumn` per listed column, so every id is fresh and
+  every existing row reads NULL; the refusals above are Spark's own (`ParseException`
+  `_LEGACY_ERROR_TEMP_0034`, `AnalysisException COLUMN_ALREADY_EXISTS`, and
+  `org.apache.iceberg.exceptions.ValidationException` through `Py4JJavaError`, the table
+  unchanged). *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0,
+  `local[1]` + InMemoryCatalog, 2026-09-19, cells `RC-*` (v2 and v3),
+  `python/repark/tests/ice_replace_columns_1_spark_oracle.json`, re-derived by
+  `python/repark/tests/_record_ice_replace_columns_1_oracle.py`.)*
+- **Pin** — `python/repark/tests/test_ice_replace_columns_1.py` (one pin per measured cell:
+  field ids, required flags, `last-column-id`, schema count, schema, data, time travel; the
+  refusal class and message; the table-untouched twin per refusal; the native-door refusal; the
+  live re-derivation leg); `crates/repark-spark/src/tests/replace_columns.rs` (12 Rust twins);
+  `python/repark/tests/test_alter_table.py` (the facade row, flipped).
+- **Rationale** — FIXED, not declared: the fork's `UpdateSchema` already allows a delete and a
+  same-name add in one batch, and already assigns fresh ids level-order; RePark only had to
+  stop keeping the old id. Residues, both declared: (1) the refusal classes — Spark surfaces
+  Iceberg's `ValidationException` as a `Py4JJavaError`, RePark raises `PySparkException` with
+  the same message core. (2) The `NOT NULL`, column-position and nested-name parse refusals
+  carry Spark's sentence but not its `== SQL ==` caret block. (3) The partition/sort source
+  check reads the **default** spec and sort order only; an older spec that still names a
+  dropped column is out of scope (no measured cell).
+  pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+
 ### ICE-AVRO-NAME-1 — a partition column whose name is not a valid Avro name wrote an unreadable table — **FIXED 2026-09-19 (RP-35, fork #308 F-AVRO-NAME-1)**
 
 - **repark** — **FIXED 2026-09-19** at fork pin RP-35 (`7bd2fea3`). Before it (inventory cell
@@ -6069,7 +6122,7 @@ the pin rather than obeying it.
   | MERGE `ON t.k = 'a' AND t.id = s.id` vs `INSERT INTO` partition `d`, MoR and COW | 2 of 2 | **FIXED** 2 of 2 |
   | 2 MERGEs `ON t.id < 50 …` / `ON t.id >= 50 …`, unpartitioned, copy-on-write | 2 of 2 | **FIXED** 2 of 2 |
   | 2 whole-partition DELETE statements `WHERE k = 'a'` / `k = 'b'` | 2 of 2 | 2 of 2 before and after (COW, one file per partition: each DELETE removes only its own file) |
-  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–7 of 16, unchanged — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
+  | 16 concurrent `INSERT INTO` | Hadoop 9–16 (16 in 4 of 32 repetitions); InMemory 7–9 | 5–10 of 16 at the 2026-09-19 jitter pin (16 of 16 with `commit.retry.num-retries=20`) — BACKLOG row ICE-OCC-SCOPED-1-INSERT-STORM |
 
 - **Pin** — `crates/repark-iceberg/src/write/merge/tests/occ_scoped.rs` (fault-injected race
   through the real `execute_merge` / `execute_predicate_dml`, v2 and v3, MoR and COW:
@@ -6176,7 +6229,7 @@ the pin rather than obeying it.
 - **Rationale** — FIXED 2026-09-18, matching Spark. Java's `conflictDetectionFilter` is the
   target scan's filter, not the insert set, and RePark derives the same.
 
-### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5–7 of 16, Spark 7–15 — **BACKLOG 2026-09-17, corrected 2026-09-18**
+### ICE-OCC-SCOPED-1-INSERT-STORM — 16 concurrent INSERT statements: RePark commits 5–10 of 16, Spark 7–15, and a 20-retry budget commits all 16 — **BACKLOG 2026-09-17, corrected 2026-09-18, re-measured 2026-09-19 at the jitter pin**
 
 - **repark** — sixteen barrier-released `INSERT INTO … VALUES` against one memory-catalog table
   commit v2 7,5,5,6,5,6,6,6,5,5 and v3 6,5,7,5,5,6,5,5,6,7 over ten repetitions (release native,
@@ -6203,12 +6256,28 @@ the pin rather than obeying it.
   (v2/v3 × SQL / `writeTo().append()`: committed + losers = 16, at least one commit, every loser
   a `CatalogCommitConflicts` `PySparkException`, rows and snapshots equal the commits). The
   exact count is not pinned: it is scheduler-dependent in both engines.
+- **Re-measured 2026-09-19 at main `859c6506`** (fork pin `44834673`, which carries
+  F-COMMIT-JITTER-1, fork #320: Java's `Tasks.runTaskWithRetry` schedule with jitter of
+  +[0,10 %)). Thirty-two repetitions per format version, memory catalog, release native:
+  **v2 committed 5–10, mean 6.69; v3 committed 5–10, mean 6.50; sixteen of sixteen in 0 of 64
+  repetitions; no repetition lost a row** (the table's row count equalled the commit count every
+  time). Every loser is still the `CatalogCommitConflicts` class. So the jitter hypothesis of
+  2026-09-18 is **measured and refuted as the explanation**: with the jitter on the pin the top
+  of the band moved from 7 to 10 and the mean did not move.
+- **What the residue actually is — measured the same evening.** With
+  `commit.retry.num-retries = 20` on the table (the only change), the same storm commits
+  **16 of 16 in 8 of 8 repetitions**, mean 16.00, and so does the variant that also widens
+  `commit.retry.min-wait-ms`, `max-wait-ms` and `total-timeout-ms`. The fork honours the
+  Iceberg table properties, and the distance to Spark is the **default budget of four retries**
+  under a sixteen-writer barrier, not a missing or broken retry loop. Java's own default is the
+  same four; Spark's Hadoop catalog reaches 9–16 because its commit path also retries the
+  version-hint write, and its in-memory catalog reaches 7–9, the band RePark's top now touches.
 - **Rationale** — BACKLOG: Q-21a-5's "rarely, not never" was read off one repetition — both
   engines lose appends to the retry budget under a 16-writer barrier storm, Spark somewhat less
-  often. The remaining distance (5–7 vs 7–9 on the same catalog class) is retry jitter: Java's
-  `Tasks.exponentialBackoff` randomizes each wait while the fork's backoff does not — a
-  hypothesis, not a finding (fork card F-COMMIT-JITTER-1, not filed tonight). No product change
-  (ruling Q-23b-1).
+  often. No product change (ruling Q-23b-1, unchanged): the property is the documented lever, the
+  default matches Java's, and a user who needs a sixteen-writer barrier storm to land raises
+  `commit.retry.num-retries`. Evidence: `/tmp/oc-worker/qa/storm_results.json` and
+  `storm_retry_results.json` (run 25a, 2026-09-19).
 
 ### ICE-PROMOTE-READ-1 — filters on a column widened by `ALTER COLUMN … TYPE` dropped the rows written before the promotion — **FIXED 2026-09-16 (fork F-PROMOTE-READ-1)**
 
