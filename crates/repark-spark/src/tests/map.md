@@ -345,7 +345,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   partitioned cells pinned on Spark's two-leg semantics over RePark's before-state
   (RePark's DELETE writes position deletes where Spark's cells show copy-on-write),
   the evolved default answering zeros with no new snapshot, a non-current `spec_id`
-  rewriting that spec, and the unknown-`spec_id` refusal text.
+  rewriting that spec, and the unknown-`spec_id` refusal text. The v3 `part_mor_real`
+  replay carries one empty delete manifest (as Spark's recorded before does) and still
+  answers `(7, 2)` with a two-file delete manifest after.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `write_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 round 2 (2026-09-18, run 21b):** Spark-door
   `write_default` pins on a catalog-created table carrying `c INT` write-default 5. `DEFAULT`

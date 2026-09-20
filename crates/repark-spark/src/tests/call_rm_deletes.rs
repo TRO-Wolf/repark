@@ -592,7 +592,7 @@ async fn rm_deletes_part_mor_real_v3() {
             (0, 0, 2, 0),
             (0, 0, 2, 0),
             (0, 0, 2, 0),
-            (1, 0, 0, 1),
+            (1, 0, 0, 0),
             (1, 0, 0, 1),
             (1, 0, 0, 1)
         ]
@@ -608,7 +608,7 @@ async fn rm_deletes_part_mor_real_v3() {
     );
     assert_eq!(
         layout(&catalogs, "rm_r3").await,
-        vec![(0, 0, 8, 0), (1, 0, 0, 3)]
+        vec![(0, 0, 8, 0), (1, 0, 0, 2)]
     );
     assert_eq!(
         live_ids(&ctx, &catalogs, "rm_r3").await,
