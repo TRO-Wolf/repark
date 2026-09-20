@@ -101,6 +101,9 @@ release profile. A performance claim is a before/after pair from unit 0's bed at
 
 ## Owner rulings (2026-09-18)
 
+- **R-4 (2026-09-19) — v1.5.0 also waits for full Spark–Iceberg parity.** The owner amended R-1: the tag waits for
+  wave 1 below **and** for the parity slate, measured as zero non-EQUAL cells that Spark answers
+  ([ice-parity-inventory-2026-09-19.md §0](ice-parity-inventory-2026-09-19.md#0-owner-ruling-2026-09-19--this-slate-gates-v150)).
 - **R-1 (was Q-2) — v1.5.0 waits for ALL of wave 1.** Units 0 through 4 land, measured, before the tag. Wave 2 stays
   unscheduled.
 - **R-2 (was Q-3) — on S3 Tables, AWS-managed maintenance owns compaction by default; RePark's maintenance is an

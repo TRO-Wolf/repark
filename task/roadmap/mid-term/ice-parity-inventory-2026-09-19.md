@@ -10,6 +10,45 @@ on RePark, and ranks what is left as a unit slate. No product code changed; ever
 **Measured on** RePark main `6a140eb3` (fork pin `18ab9761`), release native. Main has since taken RP-31 (`3e6a172c`,
 fork #299 and #300); the two units RP-31 touches are marked *held* below and should be re-measured, not assumed closed.
 
+## 0. Owner ruling (2026-09-19) — this slate gates v1.5.0
+
+The owner, 2026-09-19 evening: "I want it to gate 1.5, I need to really start using RePark for production pipelines at
+work and for that we need full Iceberg support and I mean full." This amends ruling R-1 of
+[ice-read-perf-slate-2026-09-18.md](ice-read-perf-slate-2026-09-18.md): v1.5.0 now waits for the read-performance
+wave **and** for this slate.
+
+**The gate, as a measurement.** The inventory harness (§6) is re-run on the release candidate's head beside Spark
+4.1.2 + Iceberg 1.11.0, and the matrix of §1 must read:
+
+| verdict | at the inventory (main `6a140eb3`) | at the v1.5.0 gate |
+|---|---|---|
+| DIFFERENT | 57 | **0** |
+| REFUSED-UNREGISTERED | 126 | **0** |
+| NOT-PARSED | 28 | **0** |
+| REFUSED-REGISTERED | 87 | **0**, except the cells a dated owner ruling below carves out (C-1: the 3 streaming cells) |
+| EQUAL + SPARK-CANNOT | 544 | everything else |
+
+A registry row marked DECLARED is not an exemption: a refusal is an end state only where Spark refuses too
+(SPARK-CANNOT) or where a dated owner ruling below names the cell. The 2026-09-16 rating's probes and the run-23
+still-true list are part of the same gate, and so is a green `aws-acceptance` run at the release head.
+
+**Rulings that carve a cell out.**
+
+- **C-1 (owner, 2026-09-19) — IPI-47, structured streaming read and write of Iceberg tables, moves to v1.6.0.** The
+  owner agreed to the orchestrating session's proposal ("I like it, let's get it recorded"). The three streaming cells
+  (`R-STREAM-READ`, `R-STREAM-READ-SKIP`, `W-STREAM-WRITE-FILESRC`) are out of the v1.5.0 gate; every other unit of
+  §2 stays in. Reason: every other gate item makes RePark answer an Iceberg statement the way Spark does, while
+  streaming needs a runtime RePark does not have (`readStream` / `writeStream`, triggers, checkpoints, offsets,
+  restart recovery, exactly-once commits). Its Iceberg half is built by v1.5.0 anyway — incremental append and
+  changelog reads (IPI-22) are what Spark's streaming read loops over. The card is
+  [ice-streaming-1-6.md](ice-streaming-1-6.md). v1.5.0's claim is therefore full Spark–Iceberg parity **for batch**;
+  registry rows SES-DECL-readStream and SES-DECL-streams stay until v1.6.0 and the release notes say so.
+
+Candidates not yet ruled, each with its default until the owner rules: IPI-17 (Spark's `merge-schema` +
+`INSERT … VALUES` adds `col1..colN` — default: do not copy, DECLARED), IPI-18 (RePark accepts three reader options
+Spark 4.1 refuses — default: keep accepting, DECLARED). Every other unit, IPI-40 (views) and IPI-41 (ORC and Avro data
+files) included, is in the gate.
+
 ## 1. The matrix in numbers
 
 842 cells. One verdict each:
