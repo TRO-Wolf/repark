@@ -43,6 +43,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `repark_functions::cast_map::rewrite_map_casts`, so a `CAST` / `TRY_CAST` naming `MAP<…>`
   reaches every intercept and the parser as the shared cast UDF call.
   pins: cast-map-spell-1/C-005
+  **ICE-SYSTEM-FUNCTIONS-1 round 3 (2026-09-20):** `execute_inner` next runs
+  `describe_show::rewrite_system_function_calls` (live-catalog-gated), and
+  `try_preparse_intercepts` gains the `SHOW [USER] FUNCTIONS IN <cat>.system`
+  arm after SHOW NAMESPACES.
+  pins: ice-system-functions-1/C-018, C-020
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
   `return` path of the rewrite — see the `time_travel.rs` row below. **V3-4:** after time
@@ -1010,6 +1015,19 @@ pins: rp-4-fork-repin/C-005, C-006
   predicate): **deliberate Spark delta** — Spark prints `s3.access-key-id` in the clear and
   RePark redacts it; printing a credential is the worse divergence (RF-6).
   pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
+  **ICE-SYSTEM-FUNCTIONS-1 round 3 (2026-09-20):** the file also hosts the
+  `<cat>.system.<fn>(` pre-parse rewrite (`rewrite_system_function_calls`,
+  span surgery over `tokenize_with_location` in the `cast_map` shape) and the
+  `SHOW [USER] FUNCTIONS IN <catalog>.system` parser + one-column `function`
+  executor. The rewrite fires only for unquoted three-part calls whose head is
+  a live Iceberg catalog and whose tail names one of the seven functions;
+  strings, quoted identifiers, two-part `system.<fn>`, `CALL`, and unknown
+  catalogs pass through untouched. The SHOW tail parser claims only an exact
+  two-part `<cat>.system` name — one-part, non-`system`, and trailing-token
+  forms all fall through to stock handling — and the router gates on a live
+  catalog entry, so unknown catalogs keep DataFusion's old error. Unit pins
+  live file-backed in [`describe_show/`](describe_show/map.md).
+  pins: ice-system-functions-1/C-018, C-019, C-020, C-022, C-023, C-024
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`; scan is fork schema-only). **MW-4b:** Glue/HMS

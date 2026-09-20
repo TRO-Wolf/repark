@@ -1342,3 +1342,18 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   cells replayed as Rust pins. `risk_tier: standard`. Branch
   `fix/ice-writer-metrics-1`.
   pins: ice-writer-metrics-1/C-001, C-002, C-003, C-004, C-005
+- [ice-system-functions-1-ledger.md](ice-system-functions-1-ledger.md) —
+  **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), rounds 1-3 of 3, done:** the Iceberg
+  `bucket(n, col)` / `truncate(w, col)` system functions as DataFusion scalar
+  UDFs under reserved internal names, thin wrappers over the fork's
+  `create_transform_function` — eight recorded-value pins on the Arrow path,
+  the NULL row, the fork-text width refusals and the old-order refusal, lane
+  gate `CB=0 R=0 T=0 U=0 L=0`. Round 2 adds `years` / `months` / `days`
+  (DATE, never int) / `hours` / `iceberg_version` with six more clauses
+  (C-012..C-017), the Day-recast mutation self-check, and a second green
+  gate. Round 3 resolves `<cat>.system.<fn>` on every live catalog through a
+  pre-parse rewrite, intercepts `SHOW [USER] FUNCTIONS IN <cat>.system`,
+  files and retires registry row `FN-SYSFN-1`, and replays 15/15 EQUAL
+  (C-018..C-025); ready for the departure move to `completed/`.
+  `risk_tier: standard`. Branch `fix/ipi-29-system-functions`.
+  pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025

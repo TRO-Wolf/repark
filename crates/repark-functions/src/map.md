@@ -474,6 +474,39 @@ scalars live under [`try_invert/`](try_invert/map.md).
   reaches a registered UDF, so the mode cannot be fixed at registration. Colliding keys
   after a key cast are kept, as Spark stores them.
   pins: cast-map-spell-1/C-011, C-012, C-013
+- `iceberg_system.rs` — **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20), round 1 of 3:**
+  the Iceberg `bucket(n, col)` / `truncate(w, col)` system functions as scalar
+  UDFs under reserved internal names (`__iceberg_system_bucket`,
+  `__iceberg_system_truncate`), registered once from `register_all`. Each invoke
+  binds the width from an Int8/16/32/64 scalar literal in `1..=i32::MAX`, builds
+  `Transform::Bucket` / `Transform::Truncate`, and runs the fork's
+  `create_transform_function` over the value array only; the hash, floor and
+  truncation maths stay in the fork. Zero and in-`u32` over-wide widths refuse
+  with the fork `Bucket::new` / `Truncate::new` text; negatives and huge widths
+  reuse the same Java-shaped message; an array width (the old column-first
+  order) refuses. `bucket` returns Int32, `truncate` returns the value type, and
+  NULL in gives NULL out. `lib.rs` grows by exactly the `mod` line and the
+  `register` call (181 of the 182 ceiling). WO-2 slots the temporal and version
+  UDFs into `functions()`. `Cargo.toml` adds the external `iceberg` dependency
+  (invisible to `check-crate-dag` per packet addendum H-02).
+  pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  **Round 2 (2026-09-20):** `years` / `months` / `days` / `hours` join as
+  single-argument UDFs over `Transform::Year` / `Month` / `Day` / `Hour`
+  (`__iceberg_system_years` etc.), sharing the new `apply_transform` helper
+  with the width functions. `days()` returns `Date32` straight from the fork —
+  never recast to Int32 (H-01; the fork enum comment claiming int is stale,
+  Java's `DaysFunction.resultType` is DateType). `hours` takes timestamps only;
+  the other three take date or timestamp. `iceberg_version()` is a nullary
+  UTF8 scalar reporting `env!("CARGO_PKG_VERSION")` — the compiled crate
+  version, since the fork exposes no version API (H-07) — evaluated per row,
+  never null, refusing extra arguments. No `lib.rs` change: the H-05 budget
+  was spent in round 1.
+  pins: ice-system-functions-1/C-012, C-013, C-014, C-015, C-016, C-017
+  **Round 3 (2026-09-20):** the seven internal-name consts, the sorted
+  `SYSTEM_FUNCTION_NAMES` roster, and `internal_name()` join so the Spark
+  door's pre-parse rewrite and SHOW executor share one name home with the
+  UDFs (the `name()` arms now read the consts).
+  pins: ice-system-functions-1/C-018, C-020
 - `session_time_zone.rs` (+ `session_time_zone/`) — the carrier that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty

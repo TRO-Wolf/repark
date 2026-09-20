@@ -5092,6 +5092,7 @@ dependencies = [
  "criterion",
  "datafusion",
  "datafusion-spark",
+ "iceberg",
  "regex",
  "tokio",
 ]

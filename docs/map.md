@@ -41,7 +41,12 @@ repo.
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
   table (one row per dedicated bump PR; started 2026-08-15; live pin RP-11 `189a73ed` on 2026-09-04).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
-  single home for how repark differs from Apache Spark. **ICE-MERGE-APPEND-1 (2026-09-19):**
+  single home for how repark differs from Apache Spark. **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20):**
+  row `FN-SYSFN-1` filed and FIXED in §7 — the seven `<cat>.system.*` functions resolve on
+  every registered Iceberg catalog and `SHOW [USER] FUNCTIONS IN <cat>.system` lists them;
+  declared fences (two-part `system.<fn>`, quoted spellings, unregistered-catalog SHOW, no
+  pushdown, unpinned version text) live on the row, not here.
+  **ICE-MERGE-APPEND-1 (2026-09-19):**
   `ICE-MERGE-APPEND-1` FIXED in §7 — every RePark-owned append commit site now uses the fork's
   `merge_append()` (Java `newAppend`), so the three `commit.manifest*` properties take effect —
   with two fork-routed BACKLOG residues beside it: `ICE-MERGE-APPEND-SUMMARY-1` (the

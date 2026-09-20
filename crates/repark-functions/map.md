@@ -38,7 +38,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   groups) was one boxed accumulator per group; the groups path keeps one sum and one
   count vector. pins: perf-agg-avg-1/C-001, C-002
 
-- `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`.
+- `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`
+  + `iceberg` (**ICE-SYSTEM-FUNCTIONS-1**, 2026-09-20: the external fork crate for the
+  system-function UDFs; external crates are invisible to `check-crate-dag`).
   DataFusion-native: speaks `datafusion::error::Result`, so **no** `repark-core` dep.
   **r24 G10 / PERF-10:** crate-level `criterion` 0.8 dev-dep + `[[bench]] ratio_string_datetime`
   (never `[workspace.dependencies]`). See [benches/map.md](benches/map.md).
