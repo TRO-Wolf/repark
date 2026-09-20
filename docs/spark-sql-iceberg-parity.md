@@ -6910,14 +6910,15 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   Re-measured 2026-09-17 on RP-23 (`4151b488`): still xfailed then.
   pins: ice-rdf-fork-asks-1/C-003
 
-### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
+### MANIFEST-1 — `rewrite_manifests` rewrote data manifests only; Spark rewrites delete manifests too — **FIXED 2026-09-20, ICE-RM-DELETES-1**
 
-- **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data**
-  manifests of the current partition spec and reports only that leg. On a merge-on-read table
-  with four data manifests and three delete manifests it answers
-  `rewritten_manifests_count = 4`, `added_manifests_count = 1`, and the three delete manifests
-  are carried forward untouched. When the data leg has nothing to do **and** two or more delete
-  manifests are present, the call **refuses** rather than answering two zeros.
+- **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data and
+  delete** manifests of the chosen partition spec in one commit and sums both legs. On a
+  merge-on-read table with four data manifests and three delete manifests it answers
+  `rewritten_manifests_count = 7`, `added_manifests_count = 2`, leaving one manifest per leg.
+  A leg with a single at-target manifest is kept, so a delete-only table answers its delete leg
+  alone (one data manifest plus three delete manifests answer `3, 1`) and a table quiet on both
+  legs answers two zeros and commits nothing.
 - **Apache Spark** — runs two legs in one procedure and sums them. Measured on the same shapes:
   five data manifests plus three delete manifests answered `8, 2` (both legs compacted, manifests
   8 → 2); one data manifest plus two delete manifests answered `2, 1`; one data manifest plus one
@@ -6931,22 +6932,26 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   the `DataSourceV2Relation` note this row used to carry is retired — see
   [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_reports_the_data_leg_and_leaves_delete_manifests`
-  and `::call_rewrite_manifests_refuses_zeros_while_delete_manifests_stay`
-- **Rationale** — BACKLOG, and it is fork work. The owned fork's `RewriteManifestsAction` keeps
-  every `Deletes`-content manifest byte-identical by design, so outstanding merge-on-read deletes
-  still apply after the rewrite; there is no delete leg to call. **Contents are unaffected** — the
-  live row set is identical either way, and this is manifest layout. The refusal covers the one
-  shape where the divergence would be invisible: two zeros read as "nothing to compact", so an
-  operator would run the procedure forever on a table that never compacts. Closing the row means a
-  delete-manifest rewrite in the fork.
+  `crates/repark-spark/src/tests/call_rm_deletes.rs` (the 14 recorded Spark 4.1.2 cells
+  replayed),
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_merges_both_legs`
+  and `::call_rewrite_manifests_merges_the_delete_leg_alone`, and
+  `python/repark/tests/test_ice_rm_deletes_1.py`
+- **Rationale** — FIXED 2026-09-20 (ICE-RM-DELETES-1, IPI-11 RePark half, on fork `44834673`
+  carrying the delete-manifest opt-in, fork #318). The fork's
+  `RewriteManifestsAction::rewrite_delete_manifests(true)` joins Spark's second leg in the same
+  `replace` commit with sequence numbers preserved and empty delete manifests dropped; the CALL
+  keeps a quiet leg out of `rewrite_if`, so a lone manifest is never rewritten one to one.
+  **Contents are unaffected** — the live row set is identical either way, and this is manifest
+  layout.
 
-### MANIFEST-2 — `rewrite_manifests` refuses `spec_id`; `use_caching` is accepted and does nothing
+### MANIFEST-2 — `rewrite_manifests` refused `spec_id`; `use_caching` is accepted and does nothing
 
-- **repark** — `spec_id` refuses loud, named or positional. The procedure always rewrites the
-  manifests of the table's **current** partition spec, which is Spark's default, and older specs'
-  manifests are kept. `use_caching` is accepted, type-checked as a boolean **literal**, and
-  changes nothing: a quoted `use_caching => 'true'` refuses here.
+- **repark** — `spec_id` selects the rewritten spec (default: the table's **current** partition
+  spec, which is Spark's default); an id the table does not have raises
+  `IllegalArgumentException: Invalid spec id 99`, Spark's own text. `use_caching` is accepted,
+  type-checked as a boolean **literal**, and changes nothing: a quoted
+  `use_caching => 'true'` refuses here.
 - **Apache Spark** — takes both (`RewriteManifestsProcedure.PARAMETERS`: `table` STRING required,
   `use_caching` BOOLEAN optional, `spec_id` INTEGER optional). `spec_id` selects the spec whose
   manifests are rewritten and refuses an id the table does not have (`Invalid spec id 7`);
@@ -6960,19 +6965,19 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   type "INT"`. So a migrating job written `use_caching => 'true'` runs on Spark and refuses here.
   *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MANIFEST-1.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_argument_surface_is_sparks`
-  and `python/repark/tests/test_maintenance_call.py::test_rewrite_manifests_spec_id_refuses_and_use_caching_is_accepted`
-- **Rationale** — DECLARED. `use_caching` is a Spark-side execution option with no counterpart
-  here, and accepting it keeps a migrating maintenance job's SQL unchanged while the type check
-  keeps a typo loud. The stricter literal rule is kept deliberately, and it is the same rule
-  `remove_orphan_files`' `dry_run` already carries: on this surface a quoted boolean is far more
-  likely a typo than an intent, and Spark's own cast would read `'yes'` as true and an
-  unrecognized string as null. The cost is one edit in a migrating job, and the refusal names the
-  argument. `spec_id` is a *behaviour* selector, so accepting it and ignoring it would
-  silently rewrite the wrong spec's manifests; refusing names what the engine actually does. The
-  fork exposes `RewriteManifestsAction::rewrite_if`, which this engine already uses to pin Spark's
-  default (current spec), so wiring the argument is possible — it is a scope decision, not a
-  capability gap.
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_argument_surface_is_sparks`,
+  `crates/repark-spark/src/tests/call_rm_deletes.rs` (current, non-current and unknown `spec_id`
+  pins) and
+  `python/repark/tests/test_maintenance_call.py::test_rewrite_manifests_spec_id_selects_and_use_caching_is_accepted`
+- **Rationale** — `spec_id` FIXED 2026-09-20 (ICE-RM-DELETES-1): the argument flows into the
+  `rewrite_if` predicate, which the sibling `rewrite_data_files` options map already validated
+  this way. The `use_caching` string-literal strictness stays DECLARED. `use_caching` is a
+  Spark-side execution option with no counterpart here, and accepting it keeps a migrating
+  maintenance job's SQL unchanged while the type check keeps a typo loud. The stricter literal
+  rule is kept deliberately, and it is the same rule `remove_orphan_files`' `dry_run` already
+  carries: on this surface a quoted boolean is far more likely a typo than an intent, and Spark's
+  own cast would read `'yes'` as true and an unrecognized string as null. The cost is one edit in
+  a migrating job, and the refusal names the argument.
 
 ### MANIFEST-3 — above the manifest target size, `rewrite_manifests` writes a different number of manifests
 

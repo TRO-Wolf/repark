@@ -4,6 +4,14 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ice-rm-deletes-1-ledger.md](ice-rm-deletes-1-ledger.md) —
+  **ICE-RM-DELETES-1 (2026-09-20), in flight:** `CALL rewrite_manifests` rewrites delete
+  manifests through the fork #318 opt-in and honours `spec_id` (IPI-11, RePark half) —
+  per-leg work gating in `rewrite_if`, the lone-manifest no-op on both legs, unknown-spec
+  refusal in Spark's recorded `Invalid spec id` text; 14-cell recorded Spark 4.1.2 oracle
+  plus red-first replay pins; registry MANIFEST-1 FIXED, MANIFEST-2 spec half FIXED.
+  `risk_tier: standard`. Branch `fix/ice-rm-deletes-1`.
+  pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice-overwrite-mode-1-ledger.md](ice-overwrite-mode-1-ledger.md) —
   **ICE-OVERWRITE-MODE-1 (2026-09-19), in flight:** Spark's overwrite partition set on
   every overwrite door (IPI-03) — one Rust decision over the session

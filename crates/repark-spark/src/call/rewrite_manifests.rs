@@ -9,23 +9,19 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::{ManifestContentType, ManifestFile, Snapshot, TableProperties};
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, table::Table};
+use repark_core::illegal_argument_error;
 
 use super::{CallArgs, resolve_table_ident};
 use crate::{iceberg_err, reregister};
 
-/// The current snapshot's manifests, split the way Spark's action splits them.
 struct MatchingManifests {
-    /// Data manifests at the table's current spec — the leg this engine rewrites.
     data_count: usize,
-    /// The byte size of those data manifests, for Spark's `targetNumManifests` rule.
     data_bytes: u64,
-    /// Delete manifests at the table's current spec — the leg the fork cannot rewrite.
     delete_count: usize,
+    delete_bytes: u64,
 }
 
 /// Execute `CALL <catalog>.system.rewrite_manifests(table => …)`.
-/// # Errors
-/// Plan / `NotImplemented` / iceberg commit failures as [`DataFusionError`].
 pub(super) async fn execute_rewrite_manifests(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -37,38 +33,46 @@ pub(super) async fn execute_rewrite_manifests(
     args.reject_excess_positional(3)?;
     // Parse and drop.
     args.optional_bool("use_caching", Some(1))?;
-    if args.optional_i32("spec_id", Some(2))?.is_some() {
-        return Err(DataFusionError::NotImplemented(
-            "CALL rewrite_manifests spec_id is not supported — this procedure always rewrites \
-             the manifests of the table's CURRENT partition spec, which is Spark's default. \
-             Spark can target an older spec; this engine cannot select one"
-                .to_string(),
-        ));
-    }
+    let requested_spec = args.optional_i32("spec_id", Some(2))?;
 
     let table_arg = args.require_string("table", 0)?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
 
+    let spec_id = match requested_spec {
+        Some(id) => table
+            .metadata()
+            .partition_spec_by_id(id)
+            .map(|_| id)
+            .ok_or_else(|| illegal_argument_error(format!("Invalid spec id {id}")))?,
+        None => table.metadata().default_partition_spec_id(),
+    };
+
     let Some(snapshot) = table.metadata().current_snapshot() else {
         // Spark finds no manifests on a table with no snapshot and answers zeros.
         return zero_result(ctx);
     };
-    let spec_id = table.metadata().default_partition_spec_id();
     let matching = match_manifests(&table, snapshot, spec_id).await?;
-
-    if is_data_leg_noop(&matching, target_manifest_size_bytes(&table)) {
-        refuse_uncompactable_delete_manifests(&matching, &table_arg)?;
+    let target_bytes = target_manifest_size_bytes(&table);
+    let data_work = is_leg_work(matching.data_count, matching.data_bytes, target_bytes);
+    let delete_work = is_leg_work(matching.delete_count, matching.delete_bytes, target_bytes);
+    if !data_work && !delete_work {
         return zero_result(ctx);
     }
 
     let tx = Transaction::new(&table);
     let action = tx
         .rewrite_manifests()
+        .rewrite_delete_manifests(true)
         // One cluster key, so every matching entry lands in one manifest per spec.
         .cluster_by(|_| String::new())
-        // Java's default filter — `RewriteManifestsSparkAction` rewrites the current spec only.
-        .rewrite_if(move |manifest| manifest.partition_spec_id == spec_id);
+        .rewrite_if(move |manifest| {
+            manifest.partition_spec_id == spec_id
+                && match manifest.content {
+                    ManifestContentType::Data => data_work,
+                    ManifestContentType::Deletes => delete_work,
+                }
+        });
     let tx = action.apply(tx).map_err(iceberg_err)?;
     let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
 
@@ -85,7 +89,6 @@ pub(super) async fn execute_rewrite_manifests(
     count_result(ctx, rewritten, added)
 }
 
-/// Split the current snapshot's manifest list into Spark's two legs at the current spec.
 async fn match_manifests(
     table: &Table,
     snapshot: &Snapshot,
@@ -99,6 +102,7 @@ async fn match_manifests(
         data_count: 0,
         data_bytes: 0,
         delete_count: 0,
+        delete_bytes: 0,
     };
     for manifest in entries.entries() {
         if manifest.partition_spec_id != spec_id {
@@ -109,7 +113,12 @@ async fn match_manifests(
                 matching.data_count += 1;
                 matching.data_bytes = matching.data_bytes.saturating_add(manifest_bytes(manifest));
             }
-            ManifestContentType::Deletes => matching.delete_count += 1,
+            ManifestContentType::Deletes => {
+                matching.delete_count += 1;
+                matching.delete_bytes = matching
+                    .delete_bytes
+                    .saturating_add(manifest_bytes(manifest));
+            }
         }
     }
     Ok(matching)
@@ -130,28 +139,8 @@ fn target_manifest_size_bytes(table: &Table) -> u64 {
         .unwrap_or(TableProperties::PROPERTY_COMMIT_MANIFEST_TARGET_SIZE_BYTES_DEFAULT)
 }
 
-/// Spark's no-op rule: one matching manifest.
-fn is_data_leg_noop(matching: &MatchingManifests, target_bytes: u64) -> bool {
-    matching.data_count <= 1 && matching.data_bytes <= target_bytes
-}
-
-/// Refuse rather than answer zeros a caller reads as "nothing to compact".
-fn refuse_uncompactable_delete_manifests(
-    matching: &MatchingManifests,
-    table_arg: &str,
-) -> Result<()> {
-    if matching.delete_count < 2 {
-        return Ok(());
-    }
-    Err(DataFusionError::NotImplemented(format!(
-        "CALL rewrite_manifests found nothing to do on the data manifests of `{table_arg}`, and \
-         it will not report zeros while {} delete manifest(s) stay uncompacted. Apache Spark \
-         rewrites delete manifests in a second leg of this procedure; the owned fork's action \
-         carries every delete manifest forward unchanged, so this engine cannot. Compact the \
-         delete FILES first with `CALL rewrite_position_delete_files`, which reduces how many \
-         delete manifests later commits produce",
-        matching.delete_count
-    )))
+fn is_leg_work(count: usize, bytes: u64, target_bytes: u64) -> bool {
+    count > 1 || bytes > target_bytes
 }
 
 /// A summary count Spark reads as one of its two columns.
@@ -200,34 +189,15 @@ fn zero_result(ctx: &SessionContext) -> Result<DataFrame> {
 mod tests {
     use super::*;
 
-    fn matching(data_count: usize, data_bytes: u64, delete_count: usize) -> MatchingManifests {
-        MatchingManifests {
-            data_count,
-            data_bytes,
-            delete_count,
-        }
+    #[test]
+    fn one_small_manifest_is_quiet_on_either_leg() {
+        assert!(!is_leg_work(1, 100, 8192));
+        assert!(!is_leg_work(0, 0, 8192));
     }
 
-    /// pins: mw-6-rewrite-manifests/C-004
     #[test]
-    fn the_no_op_rule_is_sparks_target_num_manifests_rule() {
-        // One manifest inside the target: Spark leaves it alone.
-        assert!(is_data_leg_noop(&matching(1, 100, 8192), 8192));
-        // One manifest over the target: Spark splits it, so this engine runs too.
-        assert!(!is_data_leg_noop(&matching(1, 8193, 0), 8192));
-        // Two manifests: Spark merges them however small they are.
-        assert!(!is_data_leg_noop(&matching(2, 100, 0), 8192));
-        // No data manifests at all: nothing matches, so zeros.
-        assert!(is_data_leg_noop(&matching(0, 0, 3), 8192));
-    }
-
-    /// pins: mw-6-rewrite-manifests/C-005
-    #[test]
-    fn zeros_refuse_only_when_spark_would_compact_delete_manifests() {
-        assert!(refuse_uncompactable_delete_manifests(&matching(1, 10, 0), "sales.t").is_ok());
-        assert!(refuse_uncompactable_delete_manifests(&matching(1, 10, 1), "sales.t").is_ok());
-        let error = refuse_uncompactable_delete_manifests(&matching(1, 10, 2), "sales.t")
-            .expect_err("two delete manifests is work Spark would do");
-        assert!(error.to_string().contains("delete manifest"));
+    fn two_manifests_or_an_over_target_one_is_work() {
+        assert!(is_leg_work(2, 100, 8192));
+        assert!(is_leg_work(1, 8193, 8192));
     }
 }

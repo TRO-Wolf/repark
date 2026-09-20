@@ -152,15 +152,18 @@ and measured-parity contract would grow `call.rs` beyond its exact
   the fork's `RewriteManifestsAction` (`transaction/rewrite_manifests.rs`). The action returns no
   counts, so Spark's two columns are read from the new snapshot's summary
   (`manifests-replaced` → `rewritten_manifests_count`, `manifests-created` →
-  `added_manifests_count`). Three guards make the answer Spark's rather than the fork's: a table
-  with no snapshot returns zeros where the action errors; Spark's no-op rule (one matching
-  manifest already at target size) returns zeros and commits nothing; and a zero answer refuses
-  while two or more delete manifests stay uncompacted, because the fork rewrites data manifests
-  only (registry `MANIFEST-1`). `rewrite_if` pins Java's default current-spec filter; `spec_id`
-  refuses and `use_caching` is an accepted no-op (registry `MANIFEST-2`). Above
+  `added_manifests_count`). **ICE-RM-DELETES-1 (2026-09-20):** the fork's
+  `rewrite_delete_manifests(true)` opt-in joins Spark's second leg in the same commit, and
+  `rewrite_if` matches a leg only while that leg has work (more than one manifest, or over
+  `commit.manifest.target-size-bytes`) — a quiet leg is kept, never rewritten one to one —
+  so a delete-only table compacts its deletes and a table quiet on both legs answers zeros
+  and commits nothing. A table with no snapshot answers zeros where the action errors.
+  `spec_id` selects the rewritten spec (unknown ids raise Spark's `Invalid spec id`
+  refusal) and `use_caching` is an accepted no-op. Above
   `commit.manifest.target-size-bytes` the two engines write a different NUMBER of manifests, so
   `added_manifests_count` diverges there (registry `MANIFEST-3`); `rewritten_manifests_count`
   agrees at every size measured.
+  pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
 - `plan_partitioning.rs` (+ `plan_partitioning/`) — **AP-1 step 1 (2026-09-10):** `CALL
   <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
   target positive). Statistics come from one `files WHERE content = 0` read

@@ -13,6 +13,7 @@ mod call_rdf_options;
 mod call_register;
 mod call_rewrite_dangling;
 mod call_rewrite_options;
+mod call_rm_deletes;
 mod call_v3;
 mod call_v3_dv;
 mod cast_binary;
