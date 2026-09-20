@@ -2116,6 +2116,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (which need the `$files.partition` column) and `_file_ids_flat` for the unpartitioned
   fixtures, whose `$files` has no `partition` column until IPI-20 lands.
   pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  Round 2 (2026-09-20): lint-only rewrap of this file and its recorder (the
+  101-column line, the RUF017 list flattening with the same asserted values, the
+  over-split zip call); no pin text changed.
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —
   **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** offline pins over the recorded 49-cell
   Spark 4.1.2 oracle ([ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json),

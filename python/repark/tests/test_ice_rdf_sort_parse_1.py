@@ -201,9 +201,7 @@ def test_rdf_zorder_is_column_order_sensitive(engine: ReparkSession) -> None:
     keys = ("zdisc_id_desc", "zdisc_zorder_p_q", "zdisc_zorder_q_p")
     expected = [_ORACLE[key]["files"][0]["ids"] for key in keys]
     assert len(set(map(tuple, expected))) == 3, "the fixture must discriminate all three"
-    for key, order in zip(
-        keys, ("id DESC", "zorder(p, q)", "zorder(q, p)"), strict=True
-    ):
+    for key, order in zip(keys, ("id DESC", "zorder(p, q)", "zorder(q, p)"), strict=True):
         table = _flat_table(engine, key, ZDISC_ROWS)
         assert _rewrite(engine, table, order, "sort") == _ORACLE[key]["out"], key
         assert _file_ids_flat(engine, table) == _ORACLE[key]["files"], key
@@ -282,4 +280,4 @@ def test_rdf_binpack_unchanged(engine: ReparkSession) -> None:
         assert _rewrite(engine, table, None, strategy) == [5, 2, ">0", 0, 0]
         files = _file_ids(engine, table)
         assert [entry["record_count"] for entry in files] == [6, 2]
-        assert sorted(sum((entry["ids"] for entry in files), [])) == list(range(1, 9))
+        assert sorted([row_id for entry in files for row_id in entry["ids"]]) == list(range(1, 9))

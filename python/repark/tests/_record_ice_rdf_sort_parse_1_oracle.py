@@ -221,7 +221,10 @@ def _record(spark: Any) -> dict[str, Any]:
         ("zdisc_zorder_q_p", "zorder(q, p)"),
     ):
         table = _flat_table(spark, key, ZDISC_ROWS)
-        truth[key] = {"out": _rewrite(spark, table, order, "sort"), "files": _file_ids(spark, table)}
+        truth[key] = {
+            "out": _rewrite(spark, table, order, "sort"),
+            "files": _file_ids(spark, table),
+        }
 
     table = _flat_table(spark, "nulls", NULL_ROWS)
     truth["nulls"] = {
