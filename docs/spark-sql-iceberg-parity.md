@@ -3658,7 +3658,7 @@ the pin rather than obeying it.
   pins: ice-session-write-conf-1/C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040
   pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048
   pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053, C-054, C-055, C-056
-  pins: ice-session-write-conf-1/C-057, C-058
+  pins: ice-session-write-conf-1/C-057, C-058, C-059, C-060, C-061, C-062, C-063, C-064
 - **Rationale** — FIXED for the measured doors. Three residues stay named here,
   none of them pinned as parity:
   - **F-RDF-SESSION-CONF-1 (2026-09-19)** — the fork's `RewriteDataFiles` takes no
@@ -3804,6 +3804,32 @@ the pin rather than obeying it.
   same bytes; anyone unifying these two routes later must carry that coercion first.
   **Round 4 carried it:** the owned append plans the insert rather than a rebuilt SELECT, and
   all five of those pins pass with every plain INSERT owned.
+
+- **Round 8 (2026-09-20) — four CI regressions this unit introduced, all closed.**
+  - **A mixed-case SET target refused where Spark answers (C-063).** Moving the plain
+    `UPDATE … WHERE <scalar>` onto the owned identity route made a latent defect in
+    `canonicalize_identity_selection` reachable: the SET target was canonicalised through
+    `rewrite_fragment_case`, which re-renders a repaired identifier as SQL, so `eventName`
+    arrived at `validate_update_assignments` as `` `eventName` `` and refused. ICE-MIXED-CASE-1
+    `MC-UPD-01` / `MC-UPD-02` were the red. The target now resolves name-to-name against the
+    table's fields; the selection and each SET value keep the fragment rewrite.
+  - **RePark's Parquet writer lost dictionary encoding on every file (C-064).** Round 3
+    copied the fork insert exec's `parquet.enable.dictionary` rule (absent = OFF) into the
+    SHARED `writer_properties_with`, changing the bytes of every RePark-owned write —
+    `test_mw7_scale_smoke` and `test_mw8_runbook` caught it on their bin-pack bands.
+    **Measured:** `ParquetProperties.DEFAULT_IS_DICTIONARY_ENABLED = true` in the shaded
+    parquet-mr of `iceberg-spark-runtime-4.1_2.13-1.11.0` (javap), and the checked-in
+    Spark-written fixtures carry dictionary pages on tables that name no such property
+    (`ice_spark_table_1`'s `ds`, `v3_dv`'s `part` — `PLAIN_DICTIONARY` with a dictionary page
+    offset). Java's default is ON, and RePark now takes it; the fork's rule narrowed to the
+    owned append that stands in for the fork's insert exec, so C-045 still holds.
+  - **OPEN and reported — the fork's insert exec diverges from Java (measured 2026-09-20).**
+    On the unowned INSERT route the fork reads `parquet.enable.dictionary` as absent = OFF,
+    so RePark writes PLAIN where Spark writes dictionary-encoded pages. RePark cannot change
+    it at the pinned rev, and matching it is what keeps the session conf from deciding the
+    INSERT layout. **Fork ask:** make the DataFusion insert exec read that property Java's
+    way — absent = ON — and RePark's owned append drops its `fork_insert_dictionary_rule`
+    flag in the same change.
 
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 
