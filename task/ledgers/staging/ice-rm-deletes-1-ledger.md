@@ -79,9 +79,21 @@ reasons — the delete-only shape hits the zeros-refusal, `spec_id => 0` hits th
 Python (`test_ice_rm_deletes_1.py`): `12 failed, 4 passed`, mirroring Rust exactly
 (same 4 passes: `no_deletes`, `evolved_spec` per version).
 
+## Green (fixed tree `06b95b15`, 2026-09-20)
+
+- Rust `cargo test -p repark-spark rm_deletes`: `16 passed, 0 failed` (the v3
+  `part_mor_real` replay carries one empty delete manifest, as Spark's recorded before
+  does, and answers `(7, 2)` with a two-file delete manifest after — pinned literally).
+- Rust `cargo test -p repark-spark rewrite_manifests` (the brief's gate command):
+  `11 passed, 0 failed` (8 in `call_manifests`, 2 new inline leg-rule pins, 1
+  maintenance planner pin).
+- Release native rebuilt (`maturin develop --release`, 7m34s) +
+  `pytest python/repark/tests/test_ice_rm_deletes_1.py`: `16 passed`.
+- `pytest python/repark/tests/test_maintenance_call.py -k rewrite_manifests`: `3 passed`.
+
 ## Gates
 
-(TBD step 4/6.)
+(TBD step 6.)
 
 ## Mutations (C-006)
 

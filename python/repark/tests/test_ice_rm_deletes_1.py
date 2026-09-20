@@ -134,10 +134,7 @@ def _last_op(session: ReparkSession, table: str) -> tuple[int, str]:
 def _cell(name: str, version: str) -> dict[str, Any]:
     """Return one oracle cell by name and format version."""
     key = f"{name}_v{version}"
-    if name == "part_mor_real":
-        cell = _fixture2()[key]
-    else:
-        cell = _fixture()[key]
+    cell = _fixture2()[key] if name == "part_mor_real" else _fixture()[key]
     assert isinstance(cell, dict)
     return cell
 
@@ -229,9 +226,8 @@ def test_part_mor_nocache_matches_cached(tmp_path: Path, version: str) -> None:
     session = _session(tmp_path)
     table = f"mem.ns.part_mor_nocache_v{version}"
     _replay(session, table, _BUILDS["part_mor_nocache"], version)
-    got = _result_row(
-        session, f"CALL mem.system.rewrite_manifests(table => '{_ref(table)}', use_caching => false)"
-    )
+    call = f"CALL mem.system.rewrite_manifests(table => '{_ref(table)}', use_caching => false)"
+    got = _result_row(session, call)
     assert got == (5, 2), f"part_mor_nocache_v{version} result: {got}"
     assert _layout(session, table) == [(0, 0, 6, 0), (1, 0, 0, 2)]
     _check_rows("part_mor_nocache", version, table, session)

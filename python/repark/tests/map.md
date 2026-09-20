@@ -1987,7 +1987,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   layout/count/row/op pins for the unpartitioned and data-only cells, two-leg semantic
   pins for the partitioned cells (RePark's DELETE writes position deletes where Spark's
   cells show copy-on-write), the evolved zeros-with-no-snapshot pin, the current-spec /
-  positional-spec / unknown-spec pins, and the `use_caching` no-effect pin.
+  positional-spec / unknown-spec pins, and the `use_caching` no-effect pin. The session
+  enables `repark.sql.allowCreateFormatVersion3` for the v3 replays.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice_rm_deletes_1_spark_oracle.json](ice_rm_deletes_1_spark_oracle.json) —
   **ICE-RM-DELETES-1 (2026-09-20):** the 12 recorded Spark 4.1.2 cells
