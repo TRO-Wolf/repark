@@ -782,7 +782,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   error cells among them compare by their whole first message line, the `QR-*` rule. What
   RePark must answer for each is pinned in Rust, per the owner's Rust-first ruling; the
   fixture is the Spark side of those pins.
-  pins: ice-session-write-conf-1/C-047, C-048, C-049, C-054, C-056
+  pins: ice-session-write-conf-1/C-047, C-048, C-049, C-054, C-056, C-057, C-058
 - [_record_ice_session_write_conf_1_paths.py](_record_ice_session_write_conf_1_paths.py) +
   [test_ice_session_write_conf_1_paths.py](test_ice_session_write_conf_1_paths.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c):** the 38 path cells added to the

@@ -3289,7 +3289,7 @@ the pin rather than obeying it.
   the control — equals Spark's; the live tier re-derives one cell on Spark).
   pins: ice-write-options-rp-1/C-007
 
-### ICE-SESSION-WRITE-CONF-1 — session `spark.sql.iceberg.*` write confs — **FIXED 2026-09-19**
+### ICE-SESSION-WRITE-CONF-1 — session `spark.sql.iceberg.*` write confs — **FIXED 2026-09-19, round 4 2026-09-20**
 
 - **repark** — **FIXED 2026-09-19.** One Rust resolver
   (`repark-iceberg` `write/session_write_conf.rs`) layers writer option over
@@ -3460,7 +3460,8 @@ the pin rather than obeying it.
   pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
   pins: ice-session-write-conf-1/C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040
   pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048
-  pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053
+  pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053, C-054, C-055, C-056
+  pins: ice-session-write-conf-1/C-057, C-058
 - **Rationale** — FIXED for the measured doors. Three residues stay named here,
   none of them pinned as parity:
   - **F-RDF-SESSION-CONF-1 (2026-09-19)** — the fork's `RewriteDataFiles` takes no
@@ -3512,7 +3513,38 @@ the pin rather than obeying it.
   compares row order in list order across two runs (the unit's `_data_rows` sorts), and the
   one-line fix wants `uuid`'s `v7` feature declared in the workspace manifest, which the
   round's brief forbids editing.
-- **Round 3 note, an approach that does NOT work (measured 2026-09-19).** Routing every
+- **Round 4 (2026-09-20) — the third critic's two P1s and two P2s, all closed.**
+  - **Static `INSERT OVERWRITE … PARTITION` (P1).** Round 3 gave the dynamic
+    `overwritePartitions` arm a collision oracle built from the partitions it replaces and
+    left the static arm on `EngineSummary::for_overwrite`, where every removal key reads
+    `<resolved at commit>`. Eight new `QO-*` cells show Spark draws the same line on both:
+    overwriting a live partition refuses naming its computed `deleted-records=2`,
+    `deleted-data-files=1` and `total-records=2`, while overwriting a never-written
+    partition stamps `deleted-records=5` / `deleted-data-files=9` and only the total
+    collides. The static arm resolves its removed set from the PARTITION equalities (the
+    staged files cannot answer: an empty source stages nothing and still clears the
+    partition). Both doors share the commit. C-054.
+  - **The conf no longer changes an INSERT's typing (P1).** The owned append planned a
+    reconstructed `SELECT`, which has no target, so a VALUES list unified against itself, a
+    compound NULL lost its type and `DEFAULT` in an outer select lost Spark's
+    `UNRESOLVED_COLUMN … 42703`. It now plans the whole insert through the delegated
+    pipeline and executes that plan's INPUT, on both doors. With the conf gate dropped so
+    every plain INSERT is owned, the whole repark-spark battery is green — including the
+    five typing pins the round-3 note below records as red under that mutation, which
+    retires that note's conclusion. The gate stays only because of the v4/v7 file-naming
+    item above; that one word is what still makes the route conf-dependent. C-055.
+  - **The collision lookup folds nothing (P2).** Three `QC-*` cells: Spark stamps
+    `snapshot-property.Deleted-Records=5` BESIDE its own `deleted-records=3`, because the
+    producer's map is case-sensitive. Only the exact spelling refuses. C-056.
+  - **The layout pins assert Spark's own count (P2).** Six `QU-*` cells record one live data
+    file and `added-data-files=1` for the copy-on-write UPDATE and DELETE and two for a
+    second INSERT, conf or none; the battery had only compared conf against no-conf, which
+    per-batch writers move together. C-057.
+  - **The fixture holds every cell this row cites (P2).** The fifteen round-3 cells were
+    claimed to be in the unit fixture and were not. All fifteen plus this round's seventeen
+    are now in it and re-derived by the live recorder: `ice-session-write-conf-1 oracle
+    check clean (95 cells)`. C-058.
+- **Round 3 note, an approach that does NOT work (measured 2026-09-19; superseded by round 4).** Routing every
   Iceberg plain INSERT through the owned append — the other way to make the session conf
   irrelevant to the route — reds five pinned Spark-visible typing answers
   (`v3_timestamp_ns_door`'s VALUES widening ×2, `list_null_compound`'s map-value widening
@@ -3520,6 +3552,8 @@ the pin rather than obeying it.
   does not carry the target-schema coercion the delegated path has. The INSERT arm of
   P1-OWNERSHIP-FILE-COUNT is closed the other way, by making the owned append write the
   same bytes; anyone unifying these two routes later must carry that coercion first.
+  **Round 4 carried it:** the owned append plans the insert rather than a rebuilt SELECT, and
+  all five of those pins pass with every plain INSERT owned.
 
 ### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
 

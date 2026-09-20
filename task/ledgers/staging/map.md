@@ -628,6 +628,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (Spark folds no conf-key prefix; Spark stamps no `rewrite_manifests` replace snapshot)
   and a third measurement narrowed `F-RDF-SESSION-CONF-1` to its codec half. Fifteen new
   Spark cells (`QP-*`, `QK-*`, `QM-*`); the fixture gains a per-cell `stamped` observation.
+  Round 4 (2026-09-20) closes a THIRD verification critic's two P1s and two P2s: the STATIC
+  `INSERT OVERWRITE … PARTITION` resolves the files its row filter removes (eight `QO-*`
+  cells), the owned INSERT plans the insert rather than a rebuilt `SELECT` so a session conf
+  changes what a commit stamps and never how its source types, the collision lookup uses the
+  verbatim suffix Spark stamps (three `QC-*` cells), and the layout battery asserts Spark's
+  OWN file count (six `QU-*` cells). The thirty-two round-3 and round-4 cells entered the
+  fixture and the live recorder, which re-derives all 95.
   `risk_tier: standard`. Branch `fix/ice-session-write-conf-1`.
   pins: ice-session-write-conf-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: ice-session-write-conf-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
@@ -635,7 +642,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: ice-session-write-conf-1/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
   pins: ice-session-write-conf-1/C-033, C-034, C-035, C-036, C-037, C-038, C-039, C-040
   pins: ice-session-write-conf-1/C-041, C-042, C-043, C-044, C-045, C-046, C-047, C-048
-  pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053
+  pins: ice-session-write-conf-1/C-049, C-050, C-051, C-052, C-053, C-054, C-055, C-056
+  pins: ice-session-write-conf-1/C-057, C-058
 
 ## Pointers
 - Up: [../map.md](../map.md)
