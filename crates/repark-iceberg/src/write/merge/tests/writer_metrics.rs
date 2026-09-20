@@ -12,8 +12,8 @@ use iceberg::io::LocalFsStorageFactory;
 use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
 use iceberg::metadata_columns::{
     RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_ROW_ID,
-    RESERVED_FIELD_ID_DELETE_FILE_PATH, RESERVED_FIELD_ID_DELETE_FILE_POS,
-    RESERVED_FIELD_ID_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_FIELD_ID_ROW_ID,
+    RESERVED_FIELD_ID_DELETE_FILE_PATH, RESERVED_FIELD_ID_LAST_UPDATED_SEQUENCE_NUMBER,
+    RESERVED_FIELD_ID_ROW_ID,
 };
 use iceberg::spec::{
     DataContentType, DataFile, Datum, FormatVersion, ListType, ManifestContentType, MetricsConfig,
@@ -74,8 +74,8 @@ fn cell_properties(cell: &str) -> HashMap<String, String> {
     let max_inferred_key = "write.metadata.metrics.max-inferred-column-defaults".to_string();
     match cell {
         "default" => HashMap::new(),
-        "none" => HashMap::from([(default_key, "none".to_string())]),
-        "counts" => HashMap::from([(default_key, "counts".to_string())]),
+        "none" | "sorted_none" => HashMap::from([(default_key, "none".to_string())]),
+        "counts" | "sorted_counts" => HashMap::from([(default_key, "counts".to_string())]),
         "truncate4" => HashMap::from([(default_key, "truncate(4)".to_string())]),
         "full" => HashMap::from([(default_key, "full".to_string())]),
         "col_none" => HashMap::from([(format!("{column_prefix}s"), "none".to_string())]),
@@ -88,8 +88,6 @@ fn cell_properties(cell: &str) -> HashMap<String, String> {
             (max_inferred_key, "2".to_string()),
             (default_key, "counts".to_string()),
         ]),
-        "sorted_none" => HashMap::from([(default_key, "none".to_string())]),
-        "sorted_counts" => HashMap::from([(default_key, "counts".to_string())]),
         "bad_mode" => HashMap::from([(default_key, "bogus".to_string())]),
         other => panic!("unknown metrics cell {other}"),
     }
@@ -218,7 +216,7 @@ fn metrics_batch() -> RecordBatch {
 fn hex_decode(raw: &str) -> Vec<u8> {
     let bytes = raw.as_bytes();
     assert!(
-        bytes.len() % 2 == 0,
+        bytes.len().is_multiple_of(2),
         "fixture bound hex has even length: {raw}"
     );
     (0..bytes.len())

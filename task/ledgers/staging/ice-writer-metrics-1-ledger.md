@@ -34,8 +34,11 @@ list element `8`.
 
 - **RePark's gzip-level refusal stays.** The fork helper parses `gzip` with a level;
   RePark refuses that combination loud (ICE-WRITE-OPTIONS-1). `position_delete_writer_properties_for`
-  keeps RePark's `parse_compression` validation, then builds through the fork helper.
-  (Recorded step 3.)
+  validates through RePark's `parse_compression` first, then builds through the fork helper.
+- **Unset-zstd default moves 1 → 3 on delete files.** RePark's `parse_compression` defaults
+  to `ZstdLevel::default()` (level 1); the fork helper defaults to level 3. Both are valid
+  zstd a reader cannot distinguish; the C-004 pin reads key/value metadata and bounds, not
+  the codec level, so no pin observes it.
 - **Column sizes are not compared.** They ride Parquet encoding choices, not the metrics
   config; C-003 pins counts, null counts, NaN counts, bounds presence/absence and truncation
   width.
@@ -44,11 +47,11 @@ list element `8`.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | Every RePark Parquet data-file writer applies `MetricsConfig::for_table` of the table it writes: the INSERT path (`write_options.rs`), the fan-out append path (`append_fanout_serial.rs`) and the CoW/MERGE rewrite path (`merge/mod.rs`, `merge/row_lineage.rs`) each have a pin. | `merge/tests/writer_metrics.rs` + `writer_metrics_truth.json` fixture. | OPEN | Ledger skeleton (step 1). |
-| C-002 | The position-delete writer applies `MetricsConfig::for_position_delete_table`. | `merge/tests/writer_metrics.rs`. | OPEN | Ledger skeleton (step 1). |
-| C-003 | Each of the twelve recorded metrics cells: after a RePark INSERT the manifest's per-field metrics equal Spark's recorded cell; an unmatchable cell is a dated declared divergence with a registry row and a strict xfail, never silent. | `merge/tests/writer_metrics.rs` replays all twelve cells. | OPEN | Ledger skeleton (step 1). |
-| C-004 | RePark position-delete files carry the delete-type key/value metadata and untruncated `file_path` bounds, proven by reading back a written delete file's Parquet key/value metadata and its column bounds. | `merge/tests/writer_metrics.rs`. | OPEN | Ledger skeleton (step 1). |
-| C-005 | Mutation proof: removing `with_metrics_config` reds the `none` and `counts` pins; restoring RePark's hand-built delete properties reds the C-004 pin. | Ledger red-run record, reverted. | OPEN | Ledger skeleton (step 1). |
+| C-001 | Every RePark Parquet data-file writer applies `MetricsConfig::for_table` of the table it writes: the INSERT path (`write_options.rs`), the fan-out append path (`append_fanout_serial.rs`) and the CoW/MERGE rewrite path (`merge/mod.rs`, `merge/row_lineage.rs`) each have a pin. | `merge/tests/writer_metrics.rs` + `writer_metrics_truth.json` fixture. | **PROVEN** | `insert_path_applies_table_metrics_config` (write_options stage), `fanout_append_path_applies_table_metrics_config` (partitioned fanout, parallel workers), `merge_rewrite_path_applies_table_metrics_config` (merge/mod builder), `merge_lineage_path_applies_table_metrics_config` (row_lineage builder): each stages under `none` and asserts empty counts and bounds. Red pre-fix, green after. |
+| C-002 | The position-delete writer applies `MetricsConfig::for_position_delete_table`. | `merge/tests/writer_metrics.rs`. | **PROVEN** | `position_delete_config_carries_table_default_and_row_overlays`: on a `none`-default table with `column.s=full`, the table-resolved config reports default `None`, `file_path`/`pos` `Full`, `row.s` `Full`, `row.id` `None`. The writer calls it at `position_delete.rs`. No file-level observable distinguishes the two constructors on the two-column delete schema (both force `Full`), so the pin is at the resolution seam by design. |
+| C-003 | Each of the twelve recorded metrics cells: after a RePark INSERT the manifest's per-field metrics equal Spark's recorded cell; an unmatchable cell is a dated declared divergence with a registry row and a strict xfail, never silent. | `merge/tests/writer_metrics.rs` replays all twelve cells. | **PROVEN** | `metrics_cell_*_matches_spark` × 12 through `append` + manifest read: value/null/nan counts and lower/upper bounds equal the recorded cell on 12/12 (column sizes excluded by decision). Ten cells red pre-fix; `default` and `bad_mode` green throughout as controls. Zero divergences, so no registry rows and no xfails. |
+| C-004 | RePark position-delete files carry the delete-type key/value metadata and untruncated `file_path` bounds, proven by reading back a written delete file's Parquet key/value metadata and its column bounds. | `merge/tests/writer_metrics.rs`. | **PROVEN** | `position_delete_files_carry_delete_type_and_full_path_bounds`: the footer carries `delete-type=position` and the manifest holds equal full-path lower/upper bounds for `file_path`. The KV assertion reds pre-fix; the bounds held already (the old call forced `Full` too). |
+| C-005 | Mutation proof: removing `with_metrics_config` reds the `none` and `counts` pins; restoring RePark's hand-built delete properties reds the C-004 pin. | Ledger red-run record, reverted. | **PROVEN** | See Mutations: both mutations red the named pins and only those seams, then reverted to 18/18 green. |
 
 ## Red runs
 
@@ -62,4 +65,94 @@ list element `8`.
 
 ## Mutations
 
-(step 5 records both C-005 mutations here)
+- Mutation A (2026-09-20): the four data-file `with_metrics_config` calls removed
+  (`write_options.rs`, `append_fanout_serial.rs`, `merge/mod.rs`, `merge/row_lineage.rs`),
+  delete writer untouched. `cargo test -p repark-iceberg --lib writer_metrics` →
+  4 passed, 14 failed, with `metrics_cell_none_matches_spark` and
+  `metrics_cell_counts_matches_spark` both red. Reverted (byte-restore from scratch copies).
+- Mutation B (2026-09-20): `position_delete_writer_properties_for` swapped back to the
+  hand-built reconstruction (compression only, no fork helper). Result: 17 passed,
+  1 failed — exactly `position_delete_files_carry_delete_type_and_full_path_bounds`
+  (the footer marker assertion). Reverted; 18/18 green again.
+- Full package after revert: `cargo test -p repark-iceberg` → 599 passed, 0 failed.
+
+## Notes
+
+- No Python file is touched by this unit (behaviour reachable from Rust; pins are Rust).
+  The native module was not rebuilt: no Python test consumes it here, and the facade
+  suite is out of lane per the brief.
+- `merge/mod.rs` and its size baseline. The actor's wiring grew the file by one line (the
+  `with_metrics_config` chain link, 1761 → 1762 against its exact baseline) and it HALTED rather
+  than raise the ceiling, which is the right call. **Ruling Q-25a-2 (orchestrator, 2026-09-19):
+  no ceiling moves up.** The whole builder construction moved instead into
+  `writer_props::name_matched_parquet_builder`, beside the other writer-property helpers, so the
+  MERGE executor now asks for a configured builder rather than assembling one. `merge/mod.rs` is
+  1,756 lines — five BELOW its old baseline — and the exception row is ratcheted down to 1756.
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ice-writer-metrics-1
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Every clause walked against its pin: C-001 four path pins, C-002 the
+        resolution pin, C-003 the twelve recorded cells, C-004 the footer read-back,
+        C-005 both mutations with revert-to-green.
+      artifacts: [crates/repark-iceberg/src/write/merge/tests/writer_metrics.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: The recorded matrix is the boundary set: malformed mode (bad_mode falls
+        back), truncate widths 4/16/full, per-column and nested overrides, the
+        max-inferred threshold with and without an explicit default, and sorted-column
+        promotion under none and counts. Rows carry no NULLs, as the oracle records.
+      artifacts: [crates/repark-iceberg/src/write/merge/tests/writer_metrics_truth.json]
+    - id: AT-3
+      status: N/A
+      justification: No new failure mode: invalid modes fall back inside the fork, an
+        invalid max-inferred value propagates as a writer-build error per the fork
+        contract, and the pre-existing codec/level refusal pins still pass in the full
+        599-test run.
+    - id: AT-4
+      status: N/A
+      justification: No shared mutable state added; every builder is call-local. The
+        parallel fanout path (K=4 workers) is pinned green beside the serial paths.
+    - id: AT-5
+      status: ATTACKED
+      evidence: The unit's motive is sensitive values in bounds: the none and counts
+        cells prove suppression, and the col_none/col_nested cells prove per-column
+        suppression including a nested field.
+      artifacts: [crates/repark-iceberg/src/write/merge/tests/writer_metrics.rs]
+    - id: AT-6
+      status: ATTACKED
+      evidence: Delete-file Java interop read back from disk: the footer key/value
+        marker and the exact file_path bounds the fork routes on; manifest metrics
+        equal Spark's on 12/12 cells so Spark reads what RePark writes.
+      artifacts: [crates/repark-iceberg/src/write/merge/tests/writer_metrics.rs]
+    - id: AT-7
+      status: N/A
+      justification: No performance surface: two-row pins, one file each, no growth or
+        hot loop introduced.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Fork contracts used at their pinned signatures (for_table,
+        for_position_delete_table, position_delete_writer_properties_for); the two
+        places RePark deliberately differs from the fork helper (gzip-with-level
+        refusal, unset-zstd level 1 vs 3) are recorded in Decisions. No dependency,
+        feature, or ceiling change.
+      artifacts: [crates/repark-iceberg/src/write/writer_props.rs]
+    - id: AT-9
+      status: N/A
+      justification: No new alarmable path: writer-build errors propagate through the
+        existing DataFusion error channel; invalid modes warn through the fork's
+        existing tracing.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Red-first 3/18 pre-fix, 18/18 after; mutation A reds none+counts,
+        mutation B reds exactly the C-004 pin; full package 599 green. Every added
+        branch (four with_metrics_config links, the fork-helper switch, the
+        metrics_config_for helper) changes output on a named pin.
+      artifacts: [crates/repark-iceberg/src/write/merge/tests/writer_metrics.rs]
+  complete: true
+```

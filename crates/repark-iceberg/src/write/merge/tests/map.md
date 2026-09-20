@@ -166,7 +166,9 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   `sorted_none`, `sorted_counts`, `bad_mode`) replayed through `append` against the
   `metrics` key of the copied oracle fixture, plus one `none`-config pin per writer path
   (INSERT stage, fan-out append, CoW rewrite, lineage rewrite), the
-  `for_position_delete_table` resolution pin and the delete-type/full-bounds pin.
+  `for_position_delete_table` resolution pin and the delete-type/full-bounds pin. The
+  path pins cover `write_options.rs`, `append_fanout_serial.rs`, `merge/mod.rs` and
+  `merge/row_lineage.rs` builders respectively.
   pins: ice-writer-metrics-1/C-001
   pins: ice-writer-metrics-1/C-002
   pins: ice-writer-metrics-1/C-003
