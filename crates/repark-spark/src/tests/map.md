@@ -1029,6 +1029,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `../normalize.rs`. Leaf-private helpers (`g3e8_setup`, `g3e8_seed`, `assert_g3e8_message`) stay
   in `dml.rs`; only that leaf uses them.
   See `task/g3e8-guard-ledger.md`.
+- `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** the Spark-door
+  `_file` / `_pos` pins over a two-append plus one-MoR-delete seed.
+  `file_and_pos_answer_spark` replays the four recorded cells verbatim
+  (`R-MC-FILE`, `R-MC-FILE-DISTINCT`, `R-MC-POS`, and the `count(*)` filter
+  `R-MC-FILE-FILTER` that plans an empty projection);
+  `pos_is_the_file_position_after_a_merge_on_read_delete` pins `R-MC-POS-MOR`
+  (a survivor keeps its file ordinal); `select_star_excludes_every_served_metadata_column`
+  pins user-columns-only `*` plus the `*, _file` / `*, _pos` compositions; and
+  `unserved_metadata_columns_refuse_with_a_typed_error` pins the `[ICE-MC-1]` refusal of
+  `_spec_id` / `_partition` / `_deleted`, never the raw `No field named`.
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

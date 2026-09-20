@@ -55,7 +55,11 @@ pins: rp-4-fork-repin/C-005, C-006
   temp provider for single-table reads (`LineagePins` released with the time-travel views);
   JOIN/CTE/subquery/time-travel naming lineage refuse `V3-ROWID-2`. RP-6: plain-`WHERE`
   UPDATE/DELETE are Spark-equal. V3-7: MERGE keeps `_row_id`; subquery-WHERE DML still
-  refuses `V3-COW-1`.
+  refuses `V3-COW-1`. **ICE-METADATA-COLS-1 (2026-09-20):** ahead of the lineage rewrite,
+  `prepare_metadata_column_sql` pins `_file` / `_pos` reads onto a metadata temp provider
+  (`MetadataColumnPins` released with the other pins); `_spec_id` / `_partition` /
+  `_deleted` refuse `[ICE-MC-1]`.
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
   ICE-WRITE-OPTIONS-1 round 4 (2026-09-17, Q-21c-5): every `execute_inner` arm that
