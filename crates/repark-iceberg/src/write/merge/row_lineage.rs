@@ -163,7 +163,8 @@ where
         crate::write::writer_props::writer_properties_for(table)?,
         write_schema,
         FieldMatchMode::Name,
-    );
+    )
+    .with_metrics_config(crate::write::writer_props::metrics_config_for(table)?);
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
     let file_name_generator =

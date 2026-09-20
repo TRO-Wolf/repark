@@ -231,9 +231,17 @@ _VALUE_CELLS: list[tuple[str, dict[str, object], int]] = [
 ]
 
 _RPD_TARGET_SMALL = (
-    "F-RPD-TARGET-SMALL-1 2026-09-19: at fork 43fcd243 RePark rewrites 8 delete files into 8 "
-    "(10 snapshots) where Spark rewrites 0 (9)"
+    "ICE-RDF-RPD-TARGET-SMALL-1 — DECLARED byte-size divergence (2026-09-20): the selection "
+    "rule is Java's, measured identical on Spark-sized files at fork #307; what differs is "
+    "that a parquet-rs delete file of this shape is about 1,297 B where parquet-mr writes "
+    "1,590 B, so a 2,000 B target selects nothing on Spark's files and two on RePark's. The "
+    "outcome sits on that threshold, and the delete file carries the data file's full path in "
+    "its bounds, so a longer warehouse path (a CI runner's temp directory) can push it over "
+    "and the cell then equals Spark. NOT strict for that reason: this cell is red here and "
+    "green there, and neither is a regression. Registry: ICE-RDF-RPD-TARGET-SMALL-1"
 )
+
+_RPD_NON_STRICT = {"rpd_target_small", "rpd_target_small_forced"}
 
 _VALUE_XFAIL: dict[str, str] = {
     "rpd_target_small": _RPD_TARGET_SMALL,
@@ -251,7 +259,8 @@ def _value_params() -> list[object]:
     params = []
     for name, build, rows in _VALUE_CELLS:
         reason = _VALUE_XFAIL.get(name)
-        marks = (pytest.mark.xfail(strict=True, reason=reason),) if reason else ()
+        strict = name not in _RPD_NON_STRICT
+        marks = (pytest.mark.xfail(strict=strict, reason=reason),) if reason else ()
         params.append(pytest.param(name, build, rows, marks=marks, id=name))
     return params
 
@@ -261,7 +270,8 @@ def _snapshot_params() -> list[object]:
     params = []
     for name, build, _rows in _VALUE_CELLS:
         reason = _SNAPSHOT_XFAIL.get(name)
-        marks = (pytest.mark.xfail(strict=True, reason=reason),) if reason else ()
+        strict = name not in _RPD_NON_STRICT
+        marks = (pytest.mark.xfail(strict=strict, reason=reason),) if reason else ()
         params.append(pytest.param(name, build, marks=marks, id=name))
     return params
 
