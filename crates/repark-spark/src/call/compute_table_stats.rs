@@ -7,6 +7,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{Expr, FunctionArg, FunctionArgExpr, FunctionArguments};
 use iceberg::maintenance::ComputeTableStats;
+use iceberg::spec::Type;
 use iceberg::{Catalog, table::Table};
 
 use super::{CallArgs, illegal_argument, resolve_table_ident};
@@ -32,7 +33,7 @@ pub(super) async fn execute_compute_table_stats(
     if table.metadata().current_snapshot().is_none() && snapshot_id.is_none() {
         return empty_statistics_result(ctx);
     }
-    let ordered = order_columns_like_schema(&table, columns.as_deref())?;
+    let ordered = resolve_requested_columns(&table, columns.as_deref())?;
 
     let mut action = ComputeTableStats::new(table);
     if let Some(names) = ordered {
@@ -76,32 +77,93 @@ fn empty_statistics_result(ctx: &SessionContext) -> Result<DataFrame> {
     ctx.read_batches(vec![batch])
 }
 
-fn order_columns_like_schema(
+fn resolve_requested_columns(
     table: &Table,
     columns: Option<&[String]>,
 ) -> Result<Option<Vec<String>>> {
     let Some(names) = columns else {
         return Ok(None);
     };
+    if names.is_empty() {
+        return Err(illegal_argument("Columns cannot be null/empty".to_string()));
+    }
     let schema = table.metadata().current_schema();
+    let mut seen: HashSet<&str> = HashSet::new();
+    let mut ordered = Vec::with_capacity(names.len());
     for name in names {
-        if schema.field_by_name(name).is_none() {
-            return Err(illegal_argument(format!(
+        let field = schema.field_by_name(name).ok_or_else(|| {
+            illegal_argument(format!(
                 "Can't find column {name} in {}",
                 schema_debug(schema)
+            ))
+        })?;
+        if !field.field_type.is_primitive() {
+            return Err(illegal_argument(format!(
+                "Can't compute stats on non-primitive type column: {name} ({})",
+                spark_type_name(&field.field_type)
             )));
         }
+        if seen.insert(name.as_str()) {
+            ordered.push(name.clone());
+        }
     }
-    let wanted: HashSet<&str> = names.iter().map(String::as_str).collect();
-    Ok(Some(
-        schema
-            .as_struct()
-            .fields()
-            .iter()
-            .filter(|field| wanted.contains(field.name.as_str()))
-            .map(|field| field.name.clone())
-            .collect(),
-    ))
+    Ok(Some(ordered))
+}
+
+fn spark_type_name(rendered: &Type) -> String {
+    match rendered {
+        Type::Primitive(primitive) => primitive.to_string(),
+        Type::Struct(struct_type) => {
+            let fields: Vec<String> = struct_type
+                .fields()
+                .iter()
+                .map(|field| {
+                    format!(
+                        "{}: {}: {} {}",
+                        field.id,
+                        field.name,
+                        if field.required {
+                            "required"
+                        } else {
+                            "optional"
+                        },
+                        spark_type_name(&field.field_type)
+                    )
+                })
+                .collect();
+            format!("struct<{}>", fields.join(", "))
+        }
+        Type::List(list_type) => {
+            let element = &list_type.element_field;
+            format!(
+                "list<{}: {} {}>",
+                element.id,
+                if element.required {
+                    "required"
+                } else {
+                    "optional"
+                },
+                spark_type_name(&element.field_type)
+            )
+        }
+        Type::Map(map_type) => {
+            let key = &map_type.key_field;
+            let value = &map_type.value_field;
+            format!(
+                "map<{}: {}, {}: {} {}>",
+                key.id,
+                spark_type_name(&key.field_type),
+                value.id,
+                if value.required {
+                    "required"
+                } else {
+                    "optional"
+                },
+                spark_type_name(&value.field_type)
+            )
+        }
+        Type::Variant => "variant".to_string(),
+    }
 }
 
 fn schema_debug(schema: &iceberg::spec::Schema) -> String {

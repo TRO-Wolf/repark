@@ -183,7 +183,7 @@ async fn call_ancestors_of_names_missing_snapshots_like_spark() {
 }
 
 #[tokio::test]
-async fn call_compute_table_stats_registers_one_blob_per_column_in_schema_order() {
+async fn call_compute_table_stats_registers_blobs_in_caller_order() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed_three(&ctx, &catalogs, "cts").await;
@@ -210,20 +210,136 @@ async fn call_compute_table_stats_registers_one_blob_per_column_in_schema_order(
     let statistics: Vec<_> = table.metadata().statistics_iter().collect();
     assert_eq!(statistics.len(), 1, "one statistics entry per run");
     assert_eq!(statistics[0].statistics_path, paths[0]);
-    let mut fields: Vec<_> = statistics[0]
+    let fields: Vec<_> = statistics[0]
         .blob_metadata
         .iter()
         .map(|blob| blob.fields.clone())
         .collect();
-    fields.sort();
     assert_eq!(
         fields,
-        vec![vec![1], vec![2]],
-        "reversed input lands in schema order"
+        vec![vec![2], vec![1]],
+        "Spark keeps caller order after dedup, not schema order"
     );
     for blob in &statistics[0].blob_metadata {
         assert_eq!(blob.r#type, "apache-datasketches-theta-v1");
     }
+}
+
+#[tokio::test]
+async fn call_compute_table_stats_refuses_empty_columns_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_three(&ctx, &catalogs, "ctsempty").await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.compute_table_stats(table => 'sales.ctsempty', columns => array())",
+    )
+    .await
+    .expect_err("empty columns must refuse");
+    assert!(
+        matches!(error, DataFusionError::Configuration(_)),
+        "Spark's IllegalArgumentException class, got: {error}"
+    );
+    assert!(
+        error.to_string().contains("Columns cannot be null/empty"),
+        "Spark's empty-columns text, got: {error}"
+    );
+    let table = catalogs["ice"]
+        .load_table(&procs_ident("ctsempty"))
+        .await
+        .expect("load table");
+    assert_eq!(
+        table.metadata().statistics_iter().count(),
+        0,
+        "the refusal registers no statistics file"
+    );
+}
+
+#[tokio::test]
+async fn call_compute_table_stats_resolves_nested_names_and_dedupes() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ctsnest (id BIGINT, st STRUCT<a: INT, b: STRING>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.ctsnest VALUES (1, named_struct('a', 1, 'b', 'x')), (2, \
+         named_struct('a', 2, 'b', 'y'))",
+    )
+    .await;
+
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.compute_table_stats(table => 'sales.ctsnest', columns => array('st.a'))",
+    )
+    .await
+    .expect_err("nested column reaches the fork");
+    assert!(
+        error.to_string().contains("Column a not found in table"),
+        "the name passes through to the fork scan instead of collapsing to empty stats, got: \
+         {error}"
+    );
+    let table = catalogs["ice"]
+        .load_table(&procs_ident("ctsnest"))
+        .await
+        .expect("load table");
+    assert_eq!(
+        table.metadata().statistics_iter().count(),
+        0,
+        "no silent empty-stats commit for the nested name"
+    );
+
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.compute_table_stats(table => 'sales.ctsnest', columns => \
+         array('st'))",
+    )
+    .await
+    .expect_err("struct column must refuse");
+    assert!(
+        matches!(error, DataFusionError::Configuration(_)),
+        "Spark's IllegalArgumentException class, got: {error}"
+    );
+    assert!(
+        error.to_string().contains(
+            "Can't compute stats on non-primitive type column: st (struct<3: a: optional int, 4: \
+             b: optional string>)"
+        ),
+        "Spark's non-primitive text, got: {error}"
+    );
+
+    seed_three(&ctx, &catalogs, "ctsdup").await;
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.compute_table_stats(table => 'sales.ctsdup', columns => array('id', \
+         'id'))",
+    )
+    .await
+    .expect("duplicate column CALL")
+    .collect()
+    .await
+    .expect("collect duplicate stats result");
+    assert_eq!(batches[0].num_rows(), 1);
+    let table = catalogs["ice"]
+        .load_table(&procs_ident("ctsdup"))
+        .await
+        .expect("load table");
+    let statistics: Vec<_> = table.metadata().statistics_iter().collect();
+    assert_eq!(statistics.len(), 1);
+    assert_eq!(
+        statistics[0].blob_metadata.len(),
+        1,
+        "a duplicate resolves to one blob"
+    );
 }
 
 #[tokio::test]
@@ -401,8 +517,25 @@ async fn call_rewrite_table_path_stages_manifests_lists_and_answers_sparks_count
     .await
     .expect_err("wrong prefix must refuse");
     assert!(
-        error.to_string().contains("does not start with /nope/"),
-        "Spark's prefix text, got: {error}"
+        matches!(error, DataFusionError::Configuration(_)),
+        "the router guard raises IllegalArgumentException, got: {error}"
+    );
+    let metadata_file = catalogs["ice"]
+        .load_table(&procs_ident("rtp"))
+        .await
+        .expect("load table")
+        .metadata_location()
+        .expect("metadata location")
+        .to_string();
+    assert!(
+        error
+            .to_string()
+            .contains(&format!("Path {metadata_file}/ does not start with /nope/")),
+        "the RePark-owned guard text, not the fork relativize error, got: {error}"
+    );
+    assert!(
+        !error.to_string().contains("RewriteTablePath:"),
+        "the fork error must not satisfy this pin, got: {error}"
     );
 
     let batches = execute(

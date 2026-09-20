@@ -160,13 +160,20 @@ and measured-parity contract would grow `call.rs` beyond its exact
 - `compute_table_stats.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
   <catalog>.system.compute_table_stats(table [, snapshot_id] [, columns])`
   over the fork's `ComputeTableStats`, answering the single `statistics_file`
-  string column with the registered path. The router keeps Spark's three
-  guards: an empty table answers zero rows and commits nothing; `columns`
-  resolves in schema order (a reversed input still registers `[id]` blobs
-  first); an unknown column refuses `Can't find column <name> in table
-  <schema>` as `IllegalArgumentException`. The `columns` argument parses both
-  `array(…)` call and `ARRAY[…]` literal spellings.
+  string column with the registered path. The router keeps Spark's guards:
+  an empty table answers zero rows and commits nothing; an empty `columns`
+  array refuses `Columns cannot be null/empty`; `columns` keeps caller order
+  after dedup (a reversed input registers `[data]` blobs first); an unknown
+  column refuses `Can't find column <name> in table <schema>`; a
+  non-primitive column refuses `Can't compute stats on non-primitive type
+  column: <name> (<type>)` with Spark's struct rendering — all as
+  `IllegalArgumentException`. Nested names pass through to the fork, which has
+  no nested scan projection yet (fork ask R-005 in the unit ledger), so they
+  fail loud instead of collapsing to empty stats. The `columns` argument
+  parses both `array(…)` call and `ARRAY[…]` literal spellings.
   pins: ice-procs-route-1/C-006, C-007, C-008, C-009, C-010
+  Round 3 (2026-09-19, run 25c) measured the refusal texts, the nested field
+  id, the dedup, and the caller-order blobs on live Spark 4.1.2.
 - `compute_partition_stats.rs` — **ICE-PROCS-ROUTE-1 (2026-09-19):** `CALL
   <catalog>.system.compute_partition_stats(table [, snapshot_id])` over the
   fork's `ComputePartitionStats`, answering the single

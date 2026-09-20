@@ -470,9 +470,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
   `call_procs_route_1` (**ICE-PROCS-ROUTE-1 (2026-09-19)**) pins the four routed
   procedure schemas and rows (ancestor chain newest-first with snapshot
-  timestamps, table-stats blobs in schema order, partition-stats registration,
-  rewrite-table-path staging plus Spark's counts), the Spark-shaped refusals,
-  and the version-range refusal. The battery carries no code comments (round
+  timestamps, table-stats blobs in caller order, partition-stats registration,
+  rewrite-table-path staging plus Spark's counts), the Spark-shaped refusals
+  (empty columns, struct column, unknown column, unpartitioned table, wrong
+  prefix with the router-owned text and class), the nested-name pass-through
+  with no silent commit, the duplicate dedup, and the version-range refusal.
+  The battery carries no code comments (round
   rule); its pins are cited from this map and `call/map.md`.
   pins: ice-procs-route-1/C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012,
   C-013, C-014, C-015, C-016
