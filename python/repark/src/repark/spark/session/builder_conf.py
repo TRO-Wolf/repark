@@ -12,6 +12,7 @@ from repark.spark.session.session_configuration import (
     PARTITION_OVERWRITE_MODE_KEY,
     SPARK_SQL_ANSI_ENABLED_KEY,
     SPARK_SQL_CASE_SENSITIVE_KEY,
+    WAP_SESSION_KEYS,
     _DISPLAY_INT_DEFAULTS,
     _RETAINED_CACHE_BYTES_KEY,
     _SQLCONF_DEFAULTS,
@@ -202,7 +203,7 @@ class RuntimeConfig:
             _native.set_runtime_config(inner, key, text)
             if key == SESSION_TIME_ZONE_KEY:
                 refresh_session_zone_canonical(self._session)
-        if key == PARTITION_OVERWRITE_MODE_KEY:
+        if key == PARTITION_OVERWRITE_MODE_KEY or key in WAP_SESSION_KEYS:
             _native.set_runtime_config(inner, key, text)
         if is_iceberg_session_write_key(key):
             _native.set_runtime_config(inner, key, text)
@@ -323,6 +324,11 @@ class RuntimeConfig:
         inner = self._session._ensure_alive()
         if isinstance(key, str) and key.lower() == _RETAINED_CACHE_BYTES_KEY:
             _refuse_read_only_conf_key(key)
+        if key in WAP_SESSION_KEYS:
+            self._store().pop(key, None)
+            self._unset_keys().add(key)
+            _native.set_runtime_config(inner, key, "")
+            return
         if key in (
             SESSION_TIME_ZONE_KEY,
             SPARK_SQL_ANSI_ENABLED_KEY,

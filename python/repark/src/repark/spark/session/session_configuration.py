@@ -34,6 +34,13 @@ PARTITION_OVERWRITE_MODE_KEY = "spark.sql.sources.partitionOverwriteMode"
 SPARK_SQL_CASE_SENSITIVE_KEY = "spark.sql.caseSensitive"
 
 
+WAP_BRANCH_KEY = "spark.wap.branch"
+
+WAP_ID_KEY = "spark.wap.id"
+
+WAP_SESSION_KEYS: frozenset[str] = frozenset({WAP_BRANCH_KEY, WAP_ID_KEY})
+
+
 _SQLCONF_DEFAULTS: dict[str, str] = {
     PARTITION_OVERWRITE_MODE_KEY: "STATIC",
     # Default app name where we control the default (Spark has no default appName).

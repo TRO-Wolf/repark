@@ -16,7 +16,7 @@ use crate::{
     refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
     refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
     spark_ast, starts_with_branch_or_tag_ddl, starts_with_merge, time_travel,
-    try_parse_create_namespace, write_to_branch,
+    try_parse_create_namespace, wap, write_to_branch,
 };
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
@@ -99,13 +99,18 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
         &mut pinned,
     )
     .await?;
+    let sql_after_wap_read =
+        wap::apply_wap_read_redirect(ctx, &catalogs, sql_after_branch.as_ref(), &mut pinned)
+            .await?;
+    let routed_sql = sql_after_wap_read
+        .as_deref()
+        .unwrap_or_else(|| sql_after_branch.as_ref());
     let mut lineage_pins = repark_core::LineagePins::default();
-    let original_for_locations =
-        original_sql_for_locations(sql, canonical_sql, sql_after_branch.as_ref());
+    let original_for_locations = original_sql_for_locations(sql, canonical_sql, routed_sql);
     let result = Box::pin(execute_time_travelled(
         ctx,
         &catalogs,
-        sql_after_branch.as_ref(),
+        routed_sql,
         original_for_locations,
         &mut pinned,
         &mut lineage_pins,
