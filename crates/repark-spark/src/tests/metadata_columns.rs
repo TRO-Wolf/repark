@@ -206,6 +206,50 @@ async fn select_star_excludes_every_served_metadata_column() {
 }
 
 #[tokio::test]
+async fn served_names_fold_and_composed_shapes_refuse() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
+
+    let upper = batches(&session, "SELECT id, _POS FROM ice.ns.t").await;
+    assert_eq!(
+        pairs_i64(&upper),
+        vec![(2, 0), (3, 0), (4, 0)],
+        "unquoted _POS folds to _pos"
+    );
+
+    let quoted = batches(&session, "SELECT id, `_pos` FROM ice.ns.t").await;
+    assert_eq!(
+        pairs_i64(&quoted),
+        vec![(2, 0), (3, 0), (4, 0)],
+        "backtick `_pos` resolves exact"
+    );
+
+    let aliased = batches(&session, "SELECT x._pos FROM ice.ns.t AS x").await;
+    let mut ordinals = i64s(&aliased, 0);
+    ordinals.sort_unstable();
+    assert_eq!(ordinals, vec![0, 0, 0], "compound ident through an alias");
+
+    let error = plan_error(&session, "SELECT `_spec_id` FROM ice.ns.t").await;
+    assert!(
+        error.contains("[ICE-MC-1]"),
+        "backtick unserved refuses typed: {error}"
+    );
+
+    let error = plan_error(&session, "DELETE FROM ice.ns.t WHERE _file IS NOT NULL").await;
+    assert!(
+        error.contains("[ICE-MC-1]"),
+        "metadata over a non-query refuses typed: {error}"
+    );
+
+    let error = plan_error(&session, "SELECT *, _file FROM ice.ns.t, ice.ns.t").await;
+    assert!(
+        error.contains("[ICE-MC-1]"),
+        "star over two relations refuses typed: {error}"
+    );
+}
+
+#[tokio::test]
 async fn unserved_metadata_columns_refuse_with_a_typed_error() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;

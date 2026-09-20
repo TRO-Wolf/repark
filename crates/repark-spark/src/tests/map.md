@@ -1036,9 +1036,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `R-MC-FILE-FILTER` that plans an empty projection);
   `pos_is_the_file_position_after_a_merge_on_read_delete` pins `R-MC-POS-MOR`
   (a survivor keeps its file ordinal); `select_star_excludes_every_served_metadata_column`
-  pins user-columns-only `*` plus the `*, _file` / `*, _pos` compositions; and
+  pins user-columns-only `*` plus the `*, _file` / `*, _pos` compositions;
   `unserved_metadata_columns_refuse_with_a_typed_error` pins the `[ICE-MC-1]` refusal of
-  `_spec_id` / `_partition` / `_deleted`, never the raw `No field named`.
+  `_spec_id` / `_partition` / `_deleted`, never the raw `No field named`; and
+  `served_names_fold_and_composed_shapes_refuse` pins the `_POS` fold, the backtick and
+  aliased spellings, the backtick unserved refusal, and the `[ICE-MC-1]` refusal of a
+  `DELETE` naming `_file` and of a `*` over two relations.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
