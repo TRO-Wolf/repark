@@ -126,11 +126,21 @@ the surviving rows and all three `manifests-*` counters follow.
 five live spec-0 data files in ONE manifest; RePark holds them in the three append manifests
 (1 + 2 + 2). The total is the same, the spec ids are the same, the empty spec-1 manifest is
 the same, the procedure's answer `(0, 0)` is the same, no snapshot is committed on either
-engine, and the rows are equal. Only the spec-0 manifest COUNT differs, and the difference is
-in the commit path, not in this unit's decision: Spark consolidated its three old-spec
-manifests during the DELETE that followed the partition evolution, RePark's metadata delete
-rewrites only the manifest that holds the removed file. Measured confirmation from the same
-tree: RePark reaches Spark's exact before-layout — `[(0,0,5,0),(0,1,0,0)]` — the moment the
+engine, and the rows are equal. Only the spec-0 manifest COUNT differs, and it is neither
+caused nor moved by this unit's decision. **Where Spark merged, measured rather than
+assumed:** the recorded warehouse
+(`/tmp/oc-worker/pd-oracle/wh-rm/ns/evolved_spec_v2/metadata/v8.metadata.json`) shows the
+merge happening at the **INSERT after the partition evolution** — that `append` snapshot
+carries `manifests-created: 2, manifests-kept: 0, manifests-replaced: 3`, i.e. it replaced
+the three old spec-0 append manifests with one and wrote the new spec-1 manifest beside it.
+Neither DELETE merged anything (both are `manifests-replaced: 1`). RePark's append after a
+spec evolution merges nothing, which is the OTHER half of IPI-11's inventory row — "manifest
+merging: `commit.manifest.min-count-to-merge` / merge-on-commit is not applied"
+(`TP-MANIFEST-MIN-MERGE`) — untouched by ICE-RM-DELETES-1, which fixed the
+`P-RM-DELETE-MANIFESTS` half. It was already there on `main`, where the same pin asserted
+three spec-0 manifests; the routing only removed the two delete manifests standing beside
+them. A second measurement from this tree shows the layouts are otherwise the same table:
+RePark reaches Spark's exact before-layout — `[(0,0,5,0),(0,1,0,0)]` — the moment the
 non-current spec is rewritten explicitly (`spec_id => 0`, the
 `rm_deletes_non_current_spec_rewrites_that_spec` pin). Filed as registry row **MANIFEST-4**.
 

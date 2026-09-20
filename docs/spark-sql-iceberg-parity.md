@@ -616,7 +616,11 @@ perfectly good read.
 - **Rationale** — FIXED 2026-09-19. TRIGGER: none of this unit's own — the commit is the
   fork's action, already bytecode-verified against Java. 71 of the 72 cells answer Spark; the
   72nd is ICE-META-DELETE-1-D1 below, a row-level merge-on-read difference this row's decision
-  never reaches.
+  never reaches. The routing also closes six of IPI-11's `rewrite_manifests` cells
+  (`part_mor`, `part_mor_spec`, `part_mor_nocache`, v2 and v3): a whole-file DELETE no longer
+  writes position deletes, so RePark enters that procedure with Spark's own before-state and
+  answers the recorded cell literally — see
+  [MANIFEST-1](#manifest-1--rewrite_manifests-rewrote-data-manifests-only-spark-rewrites-delete-manifests-too--fixed-2026-09-20-ice-rm-deletes-1).
 
 #### ICE-META-DELETE-1-D1 — v2 merge-on-read adds a second position-delete file where Spark rewrites the first — **DECLARED 2026-09-19**
 
@@ -7061,7 +7065,21 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   replayed),
   `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_merges_both_legs`
   and `::call_rewrite_manifests_merges_the_delete_leg_alone`, and
-  `python/repark/tests/test_ice_rm_deletes_1.py`
+  `python/repark/tests/test_ice_rm_deletes_1.py`.
+  **Which of the 14 are literal (re-measured 2026-09-19, ICE-META-DELETE-1 round 2):** twelve
+  — `unpart_mor`, `no_deletes`, `part_mor`, `part_mor_spec` and `part_mor_nocache` in v2 and
+  v3, plus `part_mor_real_v3` — are pinned against the recorded cell on every field (before
+  layout, result row, after layout, rows, operation, the three `manifests-*` counters). When
+  ICE-RM-DELETES-1 landed, only five of those were: the six partitioned whole-file-DELETE
+  cells could not be replayed literally, because RePark's partitioned DELETE wrote position
+  deletes where Spark's cells answer from metadata, so the two engines entered the procedure
+  with different tables and those pins asserted Spark's two-leg RULE over RePark's own
+  before-state. ICE-META-DELETE-1 removed that cause and the six now assert the cell.
+  Two cells keep RePark's measured before-state and say why: `evolved_spec_v2/v3`
+  ([MANIFEST-4](#manifest-4--an-append-after-a-partition-spec-evolution-does-not-merge-the-old-spec-manifests--declared-2026-09-19))
+  and `part_mor_real_v2`
+  ([ICE-META-DELETE-1-D1](#ice-meta-delete-1-d1--v2-merge-on-read-adds-a-second-position-delete-file-where-spark-rewrites-the-first--declared-2026-09-19)
+  — never named in this row before, and unchanged by either unit).
 - **Rationale** — FIXED 2026-09-20 (ICE-RM-DELETES-1, IPI-11 RePark half, on fork `44834673`
   carrying the delete-manifest opt-in, fork #318). The fork's
   `RewriteManifestsAction::rewrite_delete_manifests(true)` joins Spark's second leg in the same
@@ -7200,6 +7218,45 @@ oracle on live Spark.
   catalog's metadata basenames diverge from Hadoop `vN` names (pinned by
   shape); output columns are non-nullable by the rewrite-family precedent
   (the fixture records no nullability).
+### MANIFEST-4 — an append after a partition-spec evolution does not merge the old-spec manifests — **DECLARED 2026-09-19**
+
+- **repark** — on a table whose partition spec has evolved, an `INSERT` writes its new
+  spec-1 manifest and leaves every old spec-0 manifest exactly where it was. The recorded
+  `evolved_spec` shape (three two-file appends, a whole-file DELETE, `ADD PARTITION FIELD
+  bucket(2, id)`, one more `INSERT`, one more whole-file DELETE) ends with FOUR manifests —
+  `[(0,0,1,0), (0,0,2,0), (0,0,2,0), (0,1,0,0)]`, five live spec-0 data files spread over the
+  three append manifests. The live rows, the file count, the spec ids and the empty spec-1
+  manifest are Spark's; only how many manifests hold them differs. `CALL
+  rewrite_manifests(spec_id => 0)` produces Spark's layout exactly —
+  `[(0,0,5,0), (0,1,0,0)]` — so nothing but the merge is missing.
+- **Apache Spark** — the same shape ends with TWO manifests, the five live spec-0 data files
+  in ONE. The merge happens **at the append after the evolution**, not at either DELETE: that
+  `append` snapshot records `manifests-created: 2, manifests-kept: 0, manifests-replaced: 3`,
+  while both `delete` snapshots record `manifests-replaced: 1`. This is Iceberg's
+  merge-on-commit in the snapshot producer.
+  *(oracle: recorded — live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-20, cells
+  `evolved_spec_v2` and `evolved_spec_v3`, byte-identical; the snapshot summaries above are
+  read from the recorded warehouse the cells were taken from.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_rm_deletes.rs::rm_deletes_evolved_spec_v2` / `_v3` and
+  `python/repark/tests/test_ice_rm_deletes_1.py::test_evolved_spec_default_is_a_no_op`
+  assert RePark's four-manifest layout, and
+  `::rm_deletes_non_current_spec_rewrites_that_spec` asserts that an explicit `spec_id => 0`
+  reaches Spark's two-manifest layout.
+  pins: ice-meta-delete-1/C-009
+- **Rationale** — DECLARED 2026-09-19 (ICE-META-DELETE-1 round 2). This is the second half of
+  the parity-inventory row IPI-11 — "manifest merging: `commit.manifest.min-count-to-merge` /
+  merge-on-commit is not applied", inventory token `TP-MANIFEST-MIN-MERGE`. ICE-RM-DELETES-1
+  fixed the first half (`P-RM-DELETE-MANIFESTS`,
+  [MANIFEST-1](#manifest-1--rewrite_manifests-rewrote-data-manifests-only-spark-rewrites-delete-manifests-too--fixed-2026-09-20-ice-rm-deletes-1));
+  this half was there before it and is untouched by it and by ICE-META-DELETE-1 — the
+  metadata-delete routing changed only that the two delete manifests no longer stand beside
+  the three. **Contents are unaffected**: the live row set, the live data files and the
+  procedure's own answer (`0, 0`, no snapshot committed) are identical either way. Fixing it
+  is fork work in the snapshot producer's manifest-merge path, where the exact Java trigger
+  (`min-count-to-merge` is 100 by default, yet Spark merged three manifests here — a
+  non-current-spec group looks to be merged regardless) still has to be read off the
+  bytecode before a unit is scoped.
 
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING — **FIXED 2026-09-05, TYPES-1**
 

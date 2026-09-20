@@ -17,14 +17,20 @@ Spark's cells show copy-on-write consolidation — pre-existing, out of scope pe
 ICE-RDF-OPTIONS-1 round-2 ledger); the in-flight fork `replace`-summary added-file-count
 fix (different keys); `STATUS.md` (never edited by a unit).
 
+> **Round-2 correction (ICE-META-DELETE-1, 2026-09-19).** The shape named on that first line
+> is no longer RePark's: a DELETE covering whole data files is now answered from metadata, as
+> Spark answers it, and **six of the nine cells this unit could not replay literally now equal
+> the recorded Spark cell on every field.** The declared list below is corrected in the PR
+> that closes them (#739). See [Corrected declared list](#corrected-declared-list--ice-meta-delete-1-2026-09-19).
+
 ## PROPOSITION LEDGER — ICE-RM-DELETES-1 — 2026-09-20
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | The CALL rewrites delete manifests; counts and layout equal the Spark MoR cells (v2+v3, partitioned+unpartitioned). | `call_rm_deletes.rs` + `test_ice_rm_deletes_1.py` replay pins vs the copied oracle JSONs. | **PROVEN** | 16/16 Rust + 16/16 Python green: unpartitioned cells literal (`(5, 2)`, 1+1 layout, rows, op, summary); partitioned cells on Spark's two-leg rule over RePark's before-state; `part_mor_real` `(7, 2)` both versions. |
+| C-001 | The CALL rewrites delete manifests; counts and layout equal the Spark MoR cells (v2+v3, partitioned+unpartitioned). | `call_rm_deletes.rs` + `test_ice_rm_deletes_1.py` replay pins vs the copied oracle JSONs. | **PROVEN** | 16/16 Rust + 16/16 Python green: unpartitioned cells literal (`(5, 2)`, 1+1 layout, rows, op, summary); partitioned cells on Spark's two-leg rule over RePark's before-state; `part_mor_real` `(7, 2)` both versions. **Corrected 2026-09-19 (ICE-META-DELETE-1 round 2):** the partitioned whole-file cells no longer need the rule — `part_mor`, `part_mor_spec` and `part_mor_nocache` (v2 and v3) are literal, and the pins assert the cell. The clause's own claim is unchanged and still PROVEN; only the evidence is. |
 | C-002 | A table with no delete files behaves exactly as today (`no_deletes_*` cells). | Same pins, literal replay. | **PROVEN** | `no_deletes_v2/v3` literal on both doors (`(3, 1)`, 6-file layout, rows, op, summary); pre-existing data-only tests untouched and green. |
-| C-003 | `spec_id` is honoured (`part_mor_spec_*`, `evolved_spec_*` hold); unknown ids refuse. | Same pins + refusal pin. | **PROVEN** | Current `spec_id => 0` runs like the default (named + positional, Rust + Python); evolved default stays `(0, 0)` with no new snapshot; non-current `spec_id => 0` rewrites spec 0 alone (`(3, 1)`, kept 3); unknown ids raise `IllegalArgumentException: Invalid spec id 99` (Spark's recorded text, registry MANIFEST-2). |
-| C-004 | `use_caching` keeps its current meaning (`part_mor_nocache_*`). | Same pins. | **PROVEN** | `part_mor_nocache_v2/v3` answer `(5, 2)` like the cached shape on both doors; quoted `use_caching` still refuses (unchanged, registry-declared). |
+| C-003 | `spec_id` is honoured (`part_mor_spec_*`, `evolved_spec_*` hold); unknown ids refuse. | Same pins + refusal pin. | **PROVEN** | Current `spec_id => 0` runs like the default (named + positional, Rust + Python); evolved default stays `(0, 0)` with no new snapshot; non-current `spec_id => 0` rewrites spec 0 alone (`(3, 1)`, kept 3); unknown ids raise `IllegalArgumentException: Invalid spec id 99` (Spark's recorded text, registry MANIFEST-2). **Corrected 2026-09-19 (ICE-META-DELETE-1 round 2):** `part_mor_spec_*` is now literal against the recorded cell, and the non-current pin keeps 1, not 3 — the two delete manifests it used to keep are no longer written. |
+| C-004 | `use_caching` keeps its current meaning (`part_mor_nocache_*`). | Same pins. | **PROVEN** | `part_mor_nocache_v2/v3` answer like the cached shape on both doors; quoted `use_caching` still refuses (unchanged, registry-declared). **Corrected 2026-09-19 (ICE-META-DELETE-1 round 2):** that shared answer is now `(3, 1)`, the recorded Spark cell, where it was `(5, 2)` over RePark's own before-state. The clause — `use_caching` changes nothing — is what it always was, and both cells still answer identically. |
 | C-005 | Delete-only work no longer answers zeros. | Reworked delete-only pin (was the zeros-refusal test). | **PROVEN** | 1 data + 3 delete manifests answer `(3, 1)` with the data manifest kept and one delete manifest after, rows kept (Rust `merges_the_delete_leg_alone`). |
 | C-006 | Mutations bite: opt-in off reds C-001/C-005; `spec_id` refusal restored reds C-003. | Mutation runs recorded below. | **PROVEN** | M-A: 10 rm_deletes + 2 call_manifests pins red, rest green. M-B: 4 rm_deletes + 1 call_manifests pin red, rest green. Both reverted green. |
 
@@ -39,14 +45,22 @@ fix (different keys); `STATUS.md` (never edited by a unit).
 - `unpart_mor`: 3 data + 2 delete manifests rewrite to 1 + 1, result `[5, 2]`.
 - `part_mor_real`: 4 data + 3 delete manifests (one empty) rewrite to 1 + 1, result
   `[7, 2]` — the empty delete manifest counts as replaced and leaves nothing behind.
-- `part_mor` / `part_mor_spec` / `part_mor_nocache`: Spark ran the DELETE statements as
-  copy-on-write (`deleted-data-files: 1`, zero delete files per delete snapshot), so the
-  before-state is data-only and the CALL is data-only (`[3, 1]`). RePark's DELETE writes
-  position deletes on the same DML, so replay pins assert Spark's two-leg semantics on
-  RePark's before-state; rows agree on every cell.
+- `part_mor` / `part_mor_spec` / `part_mor_nocache`: Spark's delete snapshots carry
+  `deleted-data-files: 1` and zero delete files, so the before-state is data-only and the
+  CALL is data-only (`[3, 1]`). RePark's DELETE wrote position deletes on the same DML, so
+  replay pins asserted Spark's two-leg semantics on RePark's before-state; rows agreed on
+  every cell. **Corrected 2026-09-19 (ICE-META-DELETE-1 round 2):** the reading of Spark's
+  side was one step off — those snapshots are not copy-on-write rewrites but METADATA
+  deletes, which is why they carry no added file at all. RePark now takes the same route and
+  all six cells are literal.
 - `evolved_spec`: default-spec CALL matches one empty manifest → `[0, 0]`, no new snapshot
   (`op` stays `delete`). This is the measured keep-a-lone-manifest rule the per-leg
-  no-op mirrors.
+  no-op mirrors. **Corrected 2026-09-19:** this cell's before-state differs from RePark's for
+  a SECOND reason, unstated here at the time and still live — Spark holds its five live
+  spec-0 data files in ONE manifest, RePark in three. The merge happens on Spark's APPEND
+  after the partition evolution (`manifests-created: 2, manifests-kept: 0,
+  manifests-replaced: 3`), not on either DELETE. Registry row **MANIFEST-4**, the
+  `TP-MANIFEST-MIN-MERGE` half of IPI-11.
 - No cell passes a non-current or unknown `spec_id`; `part_mor_spec` passes the current id.
 
 ## Design (step 3)
@@ -131,6 +145,28 @@ Python (`test_ice_rm_deletes_1.py`): `12 failed, 4 passed`, mirroring Rust exact
   C-003 bites.
 - Revert check: each mutation was reverted with the inverse edit; after the M-B revert
   the working tree `git diff` is empty and `rm_deletes` is `16 passed` again.
+
+## Corrected declared list — ICE-META-DELETE-1, 2026-09-19
+
+This unit stated that its partitioned replay pins assert Spark's rule over RePark's own
+before-state, and named the cause. It did not write the list of affected cells down. It is
+written here, corrected to what #739 measured, because #739 is the PR that closes most of it.
+
+**Nine of the fourteen cells were not literal when this unit landed** (not ten: the
+`part_mor_real_v3` replay was literal from the start, as the Green section below records).
+Their state after the metadata-delete routing:
+
+| Cell | Then | Now | Grounds |
+|---|---|---|---|
+| `part_mor_v2`, `part_mor_v3` | rule over RePark's before-state (`(6, 2)`, six manifests) | **CLOSED** — literal `(3, 1)`, `[(0,0,1,0)×3]` → `[(0,0,3,0)]`, rows `[2,3,6]`, `replace`, `1/0/3` | the three DELETE statements each cover a whole data file |
+| `part_mor_spec_v2`, `_v3` | rule (`(5, 2)`, five manifests) | **CLOSED** — literal `(3, 1)`, `[(0,0,1,0),(0,0,1,0),(0,0,2,0)]` → `[(0,0,4,0)]`, rows `[2,3,5,6]`, `replace`, `1/0/3` | same |
+| `part_mor_nocache_v2`, `_v3` | rule (`(5, 2)`) | **CLOSED** — same cell as `part_mor_spec`, literal | same |
+| `evolved_spec_v2`, `_v3` | rule: six manifests including two delete manifests | still DECLARED, narrower — four manifests, data-only, `(0, 0)` and the rows equal Spark; Spark holds the five spec-0 files in one manifest and RePark in three | registry **MANIFEST-4** (new), the merge-on-commit half of IPI-11 |
+| `part_mor_real_v2` | rule: three one-entry delete manifests, after `(1,0,0,3)` | unchanged — those DELETE statements are partial matches and keep the row-level route | registry **ICE-META-DELETE-1-D1** — Spark rewrites the superseded position-delete file, RePark adds a second one. Never named in this ledger before; named now |
+
+`unpart_mor_v2/v3`, `no_deletes_v2/v3` and `part_mor_real_v3` were literal then and are
+literal now. The full round-2 measurement, including the rows read before and after every
+CALL, is in [ice-meta-delete-1-ledger.md](ice-meta-delete-1-ledger.md) clause C-009.
 
 ```yaml
 COVERAGE_ATTESTATION:
