@@ -65,9 +65,19 @@ fix (different keys); `STATUS.md` (never edited by a unit).
   `rewrite_data_files` text (`Cannot use output spec id 99 because the table does not
   contain a reference to this spec-id.`), which is Spark's own validation shape.
 
-## Red-first
+## Red-first (unfixed tree `f928a0ce` + pins only, 2026-09-20)
 
-(TBD step 2.)
+Rust (`cargo test -p repark-spark rm_deletes`): `12 failed, 4 passed`. The 4 passes are
+`rm_deletes_no_deletes_v2/v3` and `rm_deletes_evolved_spec_v2/v3` — already-correct
+behavior kept as regression guards. Every MoR result pin fails data-only vs both-legs
+(`(3, 1)` vs `(5, 2)`, `(3, 1)` vs `(6, 2)`); both spec pins fail on the `NotImplemented`
+refusal. The before-layout assertions in the failing tests all pass, so RePark's replay
+before-states are as the pins assume.
+Rust (`cargo test -p repark-spark rewrite_manifests`): 3 reworked pins fail for the named
+reasons — the delete-only shape hits the zeros-refusal, `spec_id => 0` hits the
+`NotImplemented` refusal, the MERGE shape answers `(4, 1)` instead of `(7, 2)`.
+Python (`test_ice_rm_deletes_1.py`): `12 failed, 4 passed`, mirroring Rust exactly
+(same 4 passes: `no_deletes`, `evolved_spec` per version).
 
 ## Gates
 
