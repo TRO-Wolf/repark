@@ -256,6 +256,29 @@ move, on every field, and nothing else on the branch does.
 | `python3 scripts/check_docs_links.py` | `docs-links: 1027 files, 6117 links checked — clean` |
 | pre-commit (every commit) | `map-sync: 310 maps clean`, `rust-file-size: 707 files clean`, `manifest: 18 components … agree` |
 
+## Gates (round 2, 2026-09-20 — the rebase onto main with ICE-RM-DELETES-1)
+
+| Command | Last line |
+|---|---|
+| `cargo test -p repark-spark --lib call_rm_deletes` | `test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 1232 filtered out; finished in 3.50s` |
+| `cargo test -p repark-spark --lib` | `test result: ok. 1243 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 62.15s` |
+| `cargo test -p repark-iceberg --lib meta_delete` | `test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 581 filtered out` |
+| `cargo test -p repark-iceberg` | `test result: ok. 589 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 36.26s` |
+| `cargo test -p repark-sql --test ansi_meta_delete` | `test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out` |
+| `maturin@1.14.1 develop --release` | `Installed repark-1.4.2` (7m 15s) |
+| `pytest python/repark/tests/test_ice_rm_deletes_1.py -q -p no:cacheprovider` | `16 passed in 22.10s` |
+| `pytest python/repark/tests/test_ice_meta_delete_1.py -q -p no:cacheprovider` | `72 passed, 1 skipped, 1 xfailed in 24.18s` |
+| `cargo clippy -p repark-spark --all-targets -- -D warnings -A clippy::disallowed_methods` | `Finished \`dev\` profile [unoptimized + debuginfo] target(s)` |
+| `cargo fmt --all` | clean (no change to the tree) |
+| `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/qa-build origin/main` | `comment-ban hits=0` |
+| `python3 scripts/check_ledger_grammar.py` | `ledger-grammar: 228 live ledgers clean (1950 clauses, 2523 pinned clause ids, 2 exception rows)` |
+| `python3 scripts/check_docs_links.py` | `docs-links: 1036 files, 6150 links checked — clean` |
+| `uvx ruff@0.15.22 check` / `format --check` (the touched Python pin) | `All checks passed!` / `1 file already formatted` |
+| pre-commit (every round-2 commit) | `map-sync: 310 maps clean`, `rust-file-size: 711 files clean`, `manifest: 18 components … agree` |
+
+The round-1 table above is unchanged and was not re-run; `cargo test -p repark-spark` grew
+from 1207 to 1243 because ICE-RM-DELETES-1's own pins came in with the rebase.
+
 ## Retired premises
 
 Two pins asserted behaviour this decision retires. Neither was weakened — both were re-shaped
