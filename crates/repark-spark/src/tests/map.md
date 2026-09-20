@@ -471,7 +471,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `call_procs_route_1` (**ICE-PROCS-ROUTE-1 (2026-09-19)**) pins the four routed
   procedure schemas and rows (ancestor chain newest-first with snapshot
   timestamps, table-stats blobs in caller order, partition-stats registration,
-  rewrite-table-path staging plus Spark's counts), the Spark-shaped refusals
+  rewrite-table-path staging plus Spark's counts), the older-snapshot answers
+  (ancestors from S1, table and partition stats registered on S0 with S0 ndv,
+  each asserted against the current head), the Spark-shaped refusals
   (empty columns, struct column, unknown column, unpartitioned table, wrong
   prefix with the router-owned text and class), the nested-name pass-through
   with no silent commit, the duplicate dedup, and the version-range refusal.

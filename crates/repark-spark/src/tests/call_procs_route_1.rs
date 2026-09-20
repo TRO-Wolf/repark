@@ -147,6 +147,33 @@ async fn call_ancestors_of_walks_newest_first_with_snapshot_timestamps() {
 }
 
 #[tokio::test]
+async fn call_ancestors_of_honors_older_snapshot_id() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_three(&ctx, &catalogs, "ancold").await;
+    let ids = snapshot_ids(&ctx, &catalogs, "ancold").await;
+    assert_eq!(ids.len(), 3, "seed must commit three snapshots");
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.ancestors_of(table => 'sales.ancold', snapshot_id => {})",
+            ids[1]
+        ),
+    )
+    .await
+    .expect("ancestors_of CALL with older id")
+    .collect()
+    .await
+    .expect("collect ancestors");
+    assert_eq!(
+        int64_column(&batches[0], "snapshot_id"),
+        vec![ids[1], ids[0]],
+        "the walk starts at the requested snapshot, not the current head"
+    );
+}
+
+#[tokio::test]
 async fn call_ancestors_of_names_missing_snapshots_like_spark() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
@@ -223,6 +250,60 @@ async fn call_compute_table_stats_registers_blobs_in_caller_order() {
     for blob in &statistics[0].blob_metadata {
         assert_eq!(blob.r#type, "apache-datasketches-theta-v1");
     }
+}
+
+#[tokio::test]
+async fn call_compute_table_stats_registers_older_snapshot_id() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_three(&ctx, &catalogs, "ctsold").await;
+    let ids = snapshot_ids(&ctx, &catalogs, "ctsold").await;
+    assert_eq!(ids.len(), 3, "seed must commit three snapshots");
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.compute_table_stats(table => 'sales.ctsold', snapshot_id => {})",
+            ids[0]
+        ),
+    )
+    .await
+    .expect("compute_table_stats CALL with older id")
+    .collect()
+    .await
+    .expect("collect stats result");
+    assert_eq!(batches[0].num_rows(), 1);
+    let table = catalogs["ice"]
+        .load_table(&procs_ident("ctsold"))
+        .await
+        .expect("load table");
+    let statistics: Vec<_> = table.metadata().statistics_iter().collect();
+    assert_eq!(statistics.len(), 1, "one statistics entry per run");
+    assert_eq!(
+        statistics[0].snapshot_id, ids[0],
+        "the entry pins the requested snapshot, not the current head"
+    );
+    for blob in &statistics[0].blob_metadata {
+        assert_eq!(
+            blob.snapshot_id, ids[0],
+            "every blob pins the requested snapshot"
+        );
+    }
+    let id_blob = statistics[0]
+        .blob_metadata
+        .iter()
+        .find(|blob| blob.fields == vec![1])
+        .expect("one blob on the id field");
+    assert_eq!(
+        id_blob.properties.get("ndv").map(String::as_str),
+        Some("3"),
+        "the first snapshot holds three distinct ids, the current head eight"
+    );
+    assert_eq!(
+        snapshot_ids(&ctx, &catalogs, "ctsold").await,
+        ids,
+        "the stats run commits no data snapshot"
+    );
 }
 
 #[tokio::test]
@@ -430,6 +511,45 @@ async fn call_compute_partition_stats_registers_entry_and_refuses_unpartitioned(
     assert!(
         error.to_string().contains("Table must be partitioned"),
         "Spark's unpartitioned text, got: {error}"
+    );
+}
+
+#[tokio::test]
+async fn call_compute_partition_stats_registers_older_snapshot_id() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_three(&ctx, &catalogs, "cpsold").await;
+    let ids = snapshot_ids(&ctx, &catalogs, "cpsold").await;
+    assert_eq!(ids.len(), 3, "seed must commit three snapshots");
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.compute_partition_stats(table => 'sales.cpsold', snapshot_id => \
+             {})",
+            ids[0]
+        ),
+    )
+    .await
+    .expect("compute_partition_stats CALL with older id")
+    .collect()
+    .await
+    .expect("collect partition stats result");
+    assert_eq!(batches[0].num_rows(), 1);
+    let table = catalogs["ice"]
+        .load_table(&procs_ident("cpsold"))
+        .await
+        .expect("load table");
+    let entries: Vec<_> = table.metadata().partition_statistics_iter().collect();
+    assert_eq!(entries.len(), 1, "one partition-statistics entry per run");
+    assert_eq!(
+        entries[0].snapshot_id, ids[0],
+        "the entry pins the requested snapshot, not the current head"
+    );
+    assert_eq!(
+        snapshot_ids(&ctx, &catalogs, "cpsold").await,
+        ids,
+        "the stats run commits no data snapshot"
     );
 }
 
