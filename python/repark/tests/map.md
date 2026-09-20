@@ -816,7 +816,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: ice-session-write-conf-1/C-059, C-060, C-062
 - [_record_ice_session_write_conf_1_paths.py](_record_ice_session_write_conf_1_paths.py) +
   [test_ice_session_write_conf_1_paths.py](test_ice_session_write_conf_1_paths.py) —
-  **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c):** the 38 path cells added to the
+  **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19, run 25c; reformatted by ruff 0.15.22 at the queue):** the 38 path cells added to the
   unit fixture from the orchestrator recording `spark-qc1.json` (source SHA-256
   `f854793685590d4d2210c4bf0409150061d4a520eef529f576ab29b7490b0034`, fixture SHA-256
   `56a2ca565dda8a43546f4142c6ec142ea741fd4b6e40ebd925443113c98502c4` since round 5): `QS-*` branch writes

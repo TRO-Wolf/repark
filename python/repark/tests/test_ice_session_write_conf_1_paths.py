@@ -56,6 +56,7 @@ FIXTURE: dict[str, Any] = json.loads(
 
 _ENGINE_RESERVED_KEYS = {"engine-name", "engine-version"}
 
+
 @pytest.fixture
 def spark(tmp_path: Path) -> Any:
     """A session with the two memory catalogs the cells use."""
