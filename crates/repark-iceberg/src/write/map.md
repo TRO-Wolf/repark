@@ -56,6 +56,15 @@ repark-core's error map.
   settings map. Two suffixes that differ only in case are two properties, as they are in
   Spark, so `unset` clears the exact spelling.
   pins: ice-session-write-conf-1/C-048
+- `writer_props.rs` — **ICE-SESSION-WRITE-CONF-1 round 3 (2026-09-19):**
+  `position_delete_codec_resolves_over_the_data_file_property`, the critic's
+  `P2-POSDEL-CODEC-PYTHON-ONLY`. The round-1 footer pin set only
+  `write.parquet.compression-codec` and so stayed green on the OLD data-property-only
+  rule; this one walks three rows where the answer can only come from the resolved
+  order — a delete-codec property beating a data-codec property, a staging override
+  beating both, and an override beating a gzip data property — and reverting
+  `delete_compression_with` to the data property alone reds it in-crate.
+  pins: ice-session-write-conf-1/C-050
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).

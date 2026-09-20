@@ -388,3 +388,118 @@ async fn rewrite_manifests_does_not_refuse_a_colliding_session_key() {
         "Spark commits the engine total and refuses nothing here: {pairs:?}"
     );
 }
+
+async fn branch_head_summary(table: &iceberg::table::Table, branch: &str) -> SummaryPairs {
+    let snapshot = table
+        .metadata()
+        .snapshot_for_ref(branch)
+        .unwrap_or_else(|| panic!("branch {branch} must have a head"));
+    let mut pairs: SummaryPairs = snapshot
+        .summary()
+        .additional_properties
+        .iter()
+        .filter(|(key, _)| *key != NONCE_KEY)
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+    pairs.sort();
+    pairs
+}
+
+async fn branch_write_stamp(table_name: &str, statement: &str) -> SummaryPairs {
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("CREATE TABLE ice.sales.{table_name} (id BIGINT, data STRING) USING iceberg"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.{table_name} VALUES (1,'a'),(2,'b')"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("ALTER TABLE ice.sales.{table_name} CREATE BRANCH b"),
+    )
+    .await;
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team", "a");
+    run(&ctx, &catalogs, &statement.replace("{t}", table_name)).await;
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team");
+    let table = load_sales_table(&catalogs, table_name).await;
+    branch_head_summary(&table, "b").await
+}
+
+#[tokio::test]
+async fn a_branch_insert_stamps_the_session_snapshot_property() {
+    let _: &str = "pins: ice-session-write-conf-1/C-051";
+    let pairs =
+        branch_write_stamp("bins", "INSERT INTO ice.sales.{t}.branch_b VALUES (3,'c')").await;
+    assert!(
+        pairs.contains(&("team".to_string(), "a".to_string())),
+        "the branch head an INSERT commits must carry the session property: {pairs:?}"
+    );
+    assert_eq!(
+        pairs
+            .iter()
+            .find(|(key, _)| key == "added-records")
+            .map(|(_, value)| value.as_str()),
+        Some("1"),
+        "the INSERT must have committed through the append arm: {pairs:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_branch_delete_stamps_the_session_snapshot_property() {
+    let _: &str = "pins: ice-session-write-conf-1/C-051";
+    let pairs = branch_write_stamp("bdel", "DELETE FROM ice.sales.{t}.branch_b WHERE id = 1").await;
+    assert!(
+        pairs.contains(&("team".to_string(), "a".to_string())),
+        "the branch head a DELETE commits must carry the session property: {pairs:?}"
+    );
+}
+
+#[tokio::test]
+async fn truncate_does_not_stamp_and_does_not_refuse_a_colliding_key() {
+    let _: &str = "pins: ice-session-write-conf-1/C-052";
+    let warehouse = TempDir::new().expect("warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.strunc (id BIGINT) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.strunc VALUES (1),(2),(3)",
+    )
+    .await;
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team", "a");
+    set_session_conf(
+        &ctx,
+        "spark.sql.iceberg.snapshot-property.deleted-records",
+        "5",
+    );
+    run(&ctx, &catalogs, "TRUNCATE TABLE ice.sales.strunc").await;
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.team");
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.deleted-records");
+    let table = load_sales_table(&catalogs, "strunc").await;
+    let summaries = summaries_of(&table, &[NONCE_KEY]);
+    let (operation, pairs) = summaries.last().expect("a delete snapshot");
+    assert_eq!(operation, "Delete");
+    assert!(
+        !pairs.iter().any(|(key, _)| key == "team"),
+        "Spark's TRUNCATE stamps nothing: {pairs:?}"
+    );
+    assert!(
+        !pairs
+            .iter()
+            .any(|(key, value)| key == "deleted-records" && value == "5"),
+        "and it takes no colliding session value either: {pairs:?}"
+    );
+}

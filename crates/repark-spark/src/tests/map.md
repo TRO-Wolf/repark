@@ -47,6 +47,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   residue F-RDF-SESSION-CONF-1: Spark does not stamp that replace snapshot either, so only
   the CODEC half of it is a gap.
   pins: ice-session-write-conf-1/C-049
+  And the three pins the critic's `P2-*-PYTHON-ONLY` findings ask for, each one red under
+  the mutation that named it and under nothing else:
+  `a_branch_{insert,delete}_stamps_the_session_snapshot_property` read the BRANCH head's
+  summary, so dropping the extras only where `branch.is_some()` — at
+  `commit_append_with_summary` and at `snapshot_commit`'s on-ref arms, which is mutation
+  (a) — reds exactly those two; the INSERT one also asserts `added-records=1`, so a reroute
+  off the append arm reds it too. `truncate_does_not_stamp_and_does_not_refuse_a_colliding_key`
+  sets BOTH `team` and a colliding `deleted-records=5` and asserts the delete snapshot
+  carries neither, so mutation (h) — routing TRUNCATE through
+  `commit_overwrite_replace_all_with_summary` — reds it on the refusal.
+  pins: ice-session-write-conf-1/C-051, C-052
 - `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
   pins: fnp-4b/C-007
   production-configured session — Databricks session dialect, the `escapedStringLiterals`

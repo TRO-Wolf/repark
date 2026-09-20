@@ -609,6 +609,77 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn position_delete_codec_resolves_over_the_data_file_property() {
+        let _: &str = "pins: ice-session-write-conf-1/C-050";
+        for (properties, staging, want) in [
+            (
+                vec![
+                    (COMPRESSION_CODEC_PROP, "snappy"),
+                    (DELETE_COMPRESSION_CODEC_PROP, "gzip"),
+                ],
+                None,
+                "GZIP",
+            ),
+            (
+                vec![
+                    (COMPRESSION_CODEC_PROP, "snappy"),
+                    (DELETE_COMPRESSION_CODEC_PROP, "snappy"),
+                ],
+                Some("gzip"),
+                "GZIP",
+            ),
+            (
+                vec![(COMPRESSION_CODEC_PROP, "gzip")],
+                Some("snappy"),
+                "SNAPPY",
+            ),
+        ] {
+            let warehouse = TempDir::new().expect("tmp");
+            let catalog = memory_catalog(&warehouse).await;
+            let ident = create_table(
+                &catalog,
+                "t_posdel_order",
+                properties
+                    .iter()
+                    .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+                    .collect(),
+            )
+            .await;
+            append(&catalog, &ident, vec![numeric_batch(10)])
+                .await
+                .expect("seed");
+            let data_path: std::sync::Arc<str> = {
+                let files = live_data_files(&catalog, &ident).await;
+                std::sync::Arc::from(files[0].file_path())
+            };
+            let pairs = vec![(data_path, 0_i64)];
+            let table = catalog.load_table(&ident).await.expect("reload");
+            let overrides = crate::write::write_options::WriterStagingOverrides {
+                codec: staging.map(ToString::to_string),
+                ..crate::write::write_options::WriterStagingOverrides::none()
+            };
+            let written = crate::write::position_delete::write_position_deletes(
+                &table,
+                &pairs,
+                WriteConcurrency::new(1).expect("K=1"),
+                &overrides,
+            )
+            .await
+            .expect("pos deletes");
+            let compression = footer_compression(&catalog, &ident, written[0].file_path()).await;
+            assert_eq!(
+                format!("{compression:?}")
+                    .split('(')
+                    .next()
+                    .unwrap_or_default(),
+                want,
+                "delete codec order is override > `{DELETE_COMPRESSION_CODEC_PROP}` > \
+                 `{COMPRESSION_CODEC_PROP}`; properties {properties:?} staging {staging:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn unknown_codec_on_table_fails_loud_at_write() {
         let warehouse = TempDir::new().expect("tmp");
         let catalog = memory_catalog(&warehouse).await;
