@@ -191,6 +191,24 @@ def test_truncate_long_negative_floors_down(engine: ReparkSession) -> None:
     assert table.column("v").to_pylist() == [-10]
 
 
+def test_bucket_long_binds_each_input_row(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-001 — bucket(16, id) answers 4 for 1 and 5 for -7."""
+    table = engine.sql(f"SELECT {BUCKET}(16, id) AS v FROM {TABLE} WHERE id = 1").to_arrow()
+    assert table.column("v").to_pylist() == [4]
+    table = engine.sql(f"SELECT {BUCKET}(16, id) AS v FROM {TABLE} WHERE id = -7").to_arrow()
+    assert table.column("v").to_pylist() == [5]
+
+
+def test_bucket_string_binds_each_input_row(engine: ReparkSession) -> None:
+    """pins: ice-system-functions-1/C-002 — bucket(16, data) answers 5 for 'abcdef', 7 for 'z'."""
+    table = engine.sql(
+        f"SELECT {BUCKET}(16, data) AS v FROM {TABLE} WHERE data = 'abcdef'"
+    ).to_arrow()
+    assert table.column("v").to_pylist() == [5]
+    table = engine.sql(f"SELECT {BUCKET}(16, data) AS v FROM {TABLE} WHERE data = 'z'").to_arrow()
+    assert table.column("v").to_pylist() == [7]
+
+
 def test_years_pins_recorded_values(engine: ReparkSession) -> None:
     """pins: ice-system-functions-1/C-012 — F-YEARS answers [[-1,-1],[54,54],[null,null]]."""
     table = engine.sql(f"SELECT {YEARS}(ts) AS a, {YEARS}(d) AS b FROM {TABLE}").to_arrow()

@@ -7284,7 +7284,9 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   in, preserved by the fork). NULL in gives NULL out for the round-1 functions; zero and negative
   widths refuse with the fork `Bucket::new` / `Truncate::new` text; the old
   column-first order `bucket(id, 16)` refuses. Rows sort nulls-last so scan
-  order cannot flake a pin. **Round 2** adds the temporal pins on the same
+  order cannot flake a pin, and the bucket long/string cells additionally
+  bind each input row through `WHERE` pins (`id = 1` → 4, `id = -7` → 5;
+  `'abcdef'` → 5, `'z'` → 7). **Round 2** adds the temporal pins on the same
   fixture: `F-YEARS` (the `-1` pre-epoch leg), `F-MONTHS`, `F-DAYS` (values
   plus `date32` / `DateType()` — `days()` is DATE, never int), `F-HOURS`, and
   `F-ICEBERG-VERSION` (`IS NOT NULL` per row; the version text itself stays
