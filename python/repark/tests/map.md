@@ -2125,9 +2125,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   against `str(exc)`, so a reintroduced `DataInvalid => ` prefix reds the pin. V-005:
   `_assert_cell` also pins the recorded post-rewrite sort state (`sort-orders` plus
   default id, both sides sorted by order id — the fork lists the default first,
-  Java lists id-ascending) and the newest snapshot's `replace` operation; the
-  recorder carries all three per cell and the tableorder pin keeps its
-  id-DESC-NULLS-LAST shape check on the oracle itself.
+  Java lists id-ascending) and the current snapshot's `replace` operation, resolved
+  by `current-snapshot-id` on both sides (the fork serializes `snapshots` in hash
+  order, so an array position is not the head); the recorder carries all three
+  per cell and the tableorder pin keeps its id-DESC-NULLS-LAST shape check on
+  the oracle itself.
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —
   **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** offline pins over the recorded 49-cell
   Spark 4.1.2 oracle ([ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json),

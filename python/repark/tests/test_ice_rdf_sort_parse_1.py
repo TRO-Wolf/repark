@@ -176,7 +176,7 @@ def _current_meta(meta_dir: Path) -> dict[str, Any]:
 
 
 def _table_meta(engine: ReparkSession, table: str) -> dict[str, Any]:
-    """The sort state and the newest snapshot's operation from metadata.json."""
+    """The sort state and the current snapshot's operation from metadata.json."""
     arrow = engine.sql(f"SELECT file_path FROM {table}.files").to_arrow()
     path = arrow.column("file_path")[0].as_py()
     local = path[len("file:") :] if path.startswith("file:") else path
@@ -184,10 +184,13 @@ def _table_meta(engine: ReparkSession, table: str) -> dict[str, Any]:
     while not (directory / "metadata").is_dir():
         directory = directory.parent
     meta = _current_meta(directory / "metadata")
+    current = next(
+        snap for snap in meta["snapshots"] if snap["snapshot-id"] == meta["current-snapshot-id"]
+    )
     return {
         "sort_orders": sorted(meta["sort-orders"], key=lambda order: order["order-id"]),
         "default_sort_order_id": meta["default-sort-order-id"],
-        "operation": meta["snapshots"][-1]["summary"]["operation"],
+        "operation": current["summary"]["operation"],
     }
 
 

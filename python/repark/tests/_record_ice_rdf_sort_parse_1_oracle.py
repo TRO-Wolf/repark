@@ -37,7 +37,8 @@ Five fixtures:
 
 Every cell also records its post-rewrite table metadata: the ``sort-orders`` array, the
 ``default-sort-order-id`` (the rewrite is a one-shot instruction and must not move them),
-and the newest snapshot's ``operation``.
+and the current snapshot's ``operation`` (resolved by ``current-snapshot-id`` — the
+``snapshots`` array order is not a clock).
 
 Run it (one JVM at a time)::
 
@@ -180,12 +181,15 @@ def _current_meta(meta_dir: Path) -> dict[str, Any]:
 
 
 def _table_meta(table: str) -> dict[str, Any]:
-    """The sort state and the newest snapshot's operation from metadata.json."""
+    """The sort state and the current snapshot's operation from metadata.json."""
     meta = _current_meta(_WAREHOUSE / table.split(".", 1)[1].replace(".", "/") / "metadata")
+    current = next(
+        snap for snap in meta["snapshots"] if snap["snapshot-id"] == meta["current-snapshot-id"]
+    )
     return {
         "sort_orders": meta["sort-orders"],
         "default_sort_order_id": meta["default-sort-order-id"],
-        "operation": meta["snapshots"][-1]["summary"]["operation"],
+        "operation": current["summary"]["operation"],
     }
 
 
