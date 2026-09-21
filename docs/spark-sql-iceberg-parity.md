@@ -11600,6 +11600,24 @@ field NAME.
   kernel plus the facade destub answer both doors; the fnp-math-1 C-002/C-005 pins hold
   every measured o245 cell byte-exact. Filed 2026-09-05 from the EX-25 measurement.
 
+### EX-FN-7-RESID-1 — the SQL `-0.0` literal folds to `0.0`; the two 12-column hash SELECT statements cannot plan
+
+- **repark** — `CAST(-0.0 AS DOUBLE)` plans identical to `CAST(0.0 AS DOUBLE)`, so the
+  two recorded 12-column hash SELECT statements fail projection-name uniqueness before any kernel
+  runs (reproduced bare: `SELECT -0.0, 0.0` refuses the same way); both statements are
+  strict-xfail pins that name the seam.
+- **Apache Spark** — answers both 12-column SELECT statements (duplicate projection names
+  allowed); `hash(CAST(-0.0 AS DOUBLE))` and `hash(CAST(0.0 AS DOUBLE))` both answer
+  `-1670924195`, so the seam is planning-only, never a value divergence.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_fnp_math_1.py::test_c005_o245_exact_hash_aes_cells`
+  strict-xfail keys `hash|sql|ansi=True|…` and `hash|sql|ansi=False|…` (the two
+  12-column SELECT statements, reason text naming EX-FN-7-RESID-1).
+- **Rationale** — BACKLOG, filed 2026-09-16 (FNP-MATH-1 run 18a step 4): the `-0.0`
+  literal fold is a SQL planner seam owned by run 18c, not a hash-kernel gap; every
+  other hash cell verifies byte-exact on both doors under both ANSI settings.
+  pins: fnp-math-1/C-005
+
 ### EX-FN-8 — `json_tuple` answers; Spark projects the string fields
 
 - **repark** — `F.json_tuple("line", "a", "b")` projects one string column per
