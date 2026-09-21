@@ -69,7 +69,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
     "crates/repark-functions/src/expr_fn.rs": (
         1001,
         "Spark expression-token and scalar render helpers share one expression module.",
-        "Extract the token and scalar renderers into a helper module when that family next changes.",
+        "Extract the token and scalar renderers into a helper module when the family next changes.",
     ),
     "crates/repark-functions/src/spark_time_window.rs": (
         1125,

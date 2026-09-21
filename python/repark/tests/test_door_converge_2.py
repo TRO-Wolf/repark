@@ -36,9 +36,8 @@ boundaries: …` text. The oracle class (`IllegalArgumentException`, G-2 Q3) sta
 OPEN: execution errors cross Arrow IPC and remap in `dataframe/export_errors.py`
 (run 16b's fence), which no Rust route can reach — P2 hand-off to run 16b.
 
-`F.split` still raises `UnsupportedOperationException` in `functions_expr.py`
-(outside this lane's fence): the P2 hand-off test below pins that refusal loudly
-for run 16a, and the split facade sub-cell stays OPEN.
+`F.split` now binds the converged Rust kernel (D-8): the P2 hand-off test below
+pins the arrival for run 16a — the facade answers and matches the SQL door.
 """
 
 from __future__ import annotations
@@ -49,7 +48,7 @@ from decimal import Decimal
 import pyarrow as pa
 import pytest
 
-from repark.errors import AnalysisException, PySparkException, UnsupportedOperationException
+from repark.errors import AnalysisException, PySparkException
 from repark.spark import ReparkSession
 from repark.spark import functions as F  # noqa: N812
 from repark.spark.dataframe import DataFrame
