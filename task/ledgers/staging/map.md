@@ -1409,16 +1409,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   stays user columns) while `_spec_id` / `_partition` / `_deleted` refuse typed
   `[ICE-MC-1]`; registry row `ICE-MC-FILEPOS-1` filed BACKLOG; the A-6
   `pos`/`file_path` test defers on a pin-measured fork name hijack; lane gate
-  `CB=0 R=0 T=0 U=0 L=0`. Ready for the departure move to `completed/`.
+  `CB=0 R=0 T=0 U=0 L=0`. WO-R1 (2026-09-21) merged in as C-011..C-014: the
+  Spark-door `snapshot_id_` / `at_timestamp_` ref selectors. Ready for the
+  departure move to `completed/`.
   `risk_tier: standard`. Branch `fix/ice-metadata-cols-1`.
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [ice-metadata-columns-1-ledger.md](ice-metadata-columns-1-ledger.md) —
-  **ICE-METADATA-COLUMNS-1 (2026-09-21), done:** WO-R1 / RePark D-4 — the
-  Spark-door ref-selector resolver answers `t.snapshot_id_<id>` and
-  `t.at_timestamp_<ms>` through the existing snapshot/time-travel machinery
-  (the two R-TT-*SELECTOR cells, recorded rows verbatim); unparsable numeric
-  suffixes refuse typed `IllegalArgumentException`, never table-not-found;
-  `branch_`/`tag_` selectors and the `t.branch_b.files` error are byte-identical
-  (A-7 near-miss pins). Ready for the departure move to `completed/`.
-  `risk_tier: standard`. Branch `fix/ice-mc-selectors`.
-  pins: ice-metadata-columns-1/C-001, C-002, C-003, C-004
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014

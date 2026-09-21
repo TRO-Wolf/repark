@@ -12,7 +12,7 @@ Fork pin ``4723104b``:
 
 ``VERSION AS OF`` accepts branch/tag names (Spark Iceberg docs, "Time travel").
 
-pins: ice-metadata-columns-1/C-001, C-002, C-003, C-004
+pins: ice-metadata-cols-1/C-011, C-012, C-013, C-014
 """
 
 from __future__ import annotations
