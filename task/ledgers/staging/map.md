@@ -1412,12 +1412,3 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `CB=0 R=0 T=0 U=0 L=0`. Ready for the departure move to `completed/`.
   `risk_tier: standard`. Branch `fix/ice-metadata-cols-1`.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [ice-catalog-session-1-ledger.md](ice-catalog-session-1-ledger.md) —
-  **ICE-CATALOG-SESSION-1 (2026-09-20), in flight:** the session's current
-  catalog / namespace (IPI-32, RePark half) — Spark's `USE`, `current_catalog()`
-  / `current_schema()` / `current_database()`, name completion, `SHOW CATALOGS` /
-  `SHOW COLUMNS` / `SHOW TABLES`, `REFRESH` / `CACHE` / `UNCACHE TABLE`,
-  catalog-less `CALL`, runtime `spark.sql.catalog.*` registration, and the
-  `hadoop` / `InMemoryCatalog` / `table-default.*` config gaps; eleven cells
-  replay EQUAL. `risk_tier: standard`. Branch `fix/ipi-32-catalog-session`.
-  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
