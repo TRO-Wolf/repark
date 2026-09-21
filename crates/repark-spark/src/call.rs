@@ -19,6 +19,7 @@ use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_roo
 use crate::call_args::{CallArgs, bind, expr_as_i64_array};
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
+mod add_files;
 mod ancestors_of;
 mod apply_partitioning;
 mod branch_ops;
@@ -39,6 +40,7 @@ mod run_maintenance;
 mod run_maintenance_apply;
 
 const SUPPORTED_PROCEDURES: &[&str] = &[
+    "add_files",
     "ancestors_of",
     "apply_partitioning",
     "cherrypick_snapshot",
@@ -73,6 +75,7 @@ pub async fn execute_call(
     let args = CallArgs::parse(&function.args)?;
 
     match procedure.as_str() {
+        "add_files" => add_files::execute_add_files(ctx, catalog, &catalog_name, &args).await,
         "ancestors_of" => {
             ancestors_of::execute_ancestors_of(ctx, catalog, &catalog_name, &args).await
         }

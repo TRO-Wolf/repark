@@ -238,6 +238,16 @@ impl BoundArgs {
         )))
     }
 
+    pub(crate) fn require_expr(&self, name: &str) -> Result<&Expr> {
+        if let Some(expr) = self.get(name) {
+            return Ok(expr);
+        }
+        let position = self.declared_position(name);
+        Err(DataFusionError::Plan(format!(
+            "CALL argument `{name}` is required (named `{name} => …` or positional #{position})"
+        )))
+    }
+
     pub(crate) fn optional_string(&self, name: &str) -> Result<Option<String>> {
         self.get(name)
             .map(|expr| expr_as_string(expr, name))

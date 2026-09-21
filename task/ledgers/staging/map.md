@@ -10,9 +10,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   jar plus `bind` in `call_args.rs`; the mixed-args refusal is deleted and the
   RDF and RPD handlers bind against the declared lists, closing `P-POS-RDF`,
   `P-POS-RPD` and `P-CALL-MIXED-ARGS` with nothing else changing product
-  behaviour. `risk_tier: standard`. Branch `fix/ipi-30-31-procedures`.
+  behaviour. **PR1b (2026-09-21)** wires `add_files`, RPD `where` and the four
+  expire arguments on the same branch. `risk_tier: standard`. Branch
+  `fix/ipi-30-31-procedures`.
   pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
+  C-020
 - [ice-error-conditions-1-ledger.md](ice-error-conditions-1-ledger.md) —
   **ICE-ERROR-CONDITIONS-1 (2026-09-20), in flight:** IPI-51 PR1 — the native
   error-condition parser only: PyO3 exceptions report `getCondition`/`getErrorClass`/

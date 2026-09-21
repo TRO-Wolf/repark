@@ -394,7 +394,7 @@ pins: rp-4-fork-repin/C-005, C-006
 - **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` declares `mod changelog;` — the changelog row
   transforms live under `call/` because they are `create_changelog_view`'s, and because
   `src/lib.rs` holds a 150-line ceiling. pins: ice-changelog-1/C-011, C-012, C-013
-- `call.rs` — eighteen maintenance procedures: seventeen maintenance calls plus `register_table`
+- `call.rs` — nineteen maintenance procedures: eighteen maintenance calls plus `register_table`
   (**ICE-PROCS-ROUTE-1 (2026-09-19):** `ancestors_of`, `compute_table_stats`,
   `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the
   fork's maintenance actions; the shared `illegal_argument` helper maps
@@ -415,8 +415,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `call/rewrite_where.rs` into the fork's `RewritePositionDeleteFiles::filter`, and
   `expire_snapshots` binds against its declared list with `snapshot_ids` expiring each id
   in array order while `max_concurrent_deletes`, `stream_results` and
-  `clean_expired_metadata` parse and stay ignored.
-  pins: ice-procedures-1/C-012, C-013, C-014
+  `clean_expired_metadata` parse and stay ignored, and `add_files` routes through
+  `call/add_files.rs` ([call/map.md](call/map.md)).
+  pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
   **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `run_maintenance` plans the
   five D-4 steps over the stamped `[<profile>.maintenance]` policy plus inline overrides,
   and `dry_run => false` applies them step by step (`ran` / `failed` / `skipped`).
@@ -965,8 +966,11 @@ pins: rp-4-fork-repin/C-005, C-006
   declared parameter list into a `BoundArgs` — positionals in declared order, SQL
   NULL as unset, a loud duplicate-binding Plan error when one parameter is bound
   both ways, today's unknown/arity/missing strings otherwise. Array-of-literal
-  coercions land here for the rounds that wire array parameters.
-  pins: ice-procedures-1/C-003, C-004, C-006, C-007, C-008, C-011
+  coercions land here for the rounds that wire array parameters. **PR1b
+  (2026-09-21):** `BoundArgs` gains the scalar readers the wiring rounds need
+  (`optional_i64`, `optional_i32`, `optional_timestamp_ms`, `require_expr`), and
+  the expire handler calls the i64-array coercion.
+  pins: ice-procedures-1/C-003, C-004, C-006, C-007, C-008, C-011, C-013, C-015
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),

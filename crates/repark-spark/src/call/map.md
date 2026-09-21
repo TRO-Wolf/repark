@@ -346,17 +346,34 @@ and measured-parity contract would grow `call.rs` beyond its exact
   it is a RePark-only extra the RDF handler passes to `bind` separately, which
   keeps it named-only.
   pins: ice-procedures-1/C-001, C-002, C-005, C-011
+- `add_files.rs` — **ICE-PROCEDURES-1 PR1b (2026-09-21):** `CALL
+  <catalog>.system.add_files(table => …, source_table => … [, partition_filter] [,
+  check_duplicate_files] [, parallelism])` over the fork's `AddFiles` action.
+  `source_table` takes the `` `parquet`.`<directory>` `` spelling only: any other format
+  refuses naming the format, a catalog-table reference refuses as out of scope, and any
+  other shape refuses with the expected spelling. `partition_filter` reuses the options
+  map parser with its own argument name in the messages; `check_duplicate_files` defaults
+  true; `parallelism` validates positive and rides the fork's reader. When the table
+  properties lack `schema.name-mapping.default` the handler commits Java's mapping JSON
+  in Spark's pretty-print first, so the fork's own ensure stays a no-op and the import
+  binds source columns by name. The output is Spark's two columns with a NULL
+  `changed_partition_count` on every import; the fork's merge-append writes a
+  `changed-partition-count` summary key Java's add_files path does not, so `md.snapshots`
+  stays a fork residue (ledger C-015).
+  pins: ice-procedures-1/C-015, C-016, C-017, C-018, C-019
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
 - Pins: [../tests/call_manifests.rs](../tests/call_manifests.rs),
   [../tests/call_procedures_1.rs](../tests/call_procedures_1.rs),
+  [../tests/call_procedures_2.rs](../tests/call_procedures_2.rs),
   [../tests/call_rewrite_options.rs](../tests/call_rewrite_options.rs),
   [../tests/call_rdf_options.rs](../tests/call_rdf_options.rs),
   `python/repark/tests/test_maintenance_call.py`,
   `python/repark/tests/test_rewrite_data_files_options.py`,
-  `python/repark/tests/test_ice_rdf_options_1.py`
+  `python/repark/tests/test_ice_rdf_options_1.py`,
+  `python/repark/tests/test_ice_procedures_1.py`
 - Divergences: [../../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
   rows `MANIFEST-1`, `MANIFEST-2`, `RDF-SORT-1`, `ICE-RDF-OPTIONS-1`, `RDF-DANGLING-1`
 

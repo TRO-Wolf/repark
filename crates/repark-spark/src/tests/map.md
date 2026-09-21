@@ -481,9 +481,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `expire_snapshots` `snapshot_ids` expires exactly those ids in both named and positional
   spellings with Spark's six columns and row, the accept-and-ignore trio equals the plain
   `older_than` row on twin tables, mistyped new arguments refuse naming their types, and
-  `rewrite_manifests` `sort_by` stays a loud unknown-argument refusal.
+  `rewrite_manifests` `sort_by` stays a loud unknown-argument refusal. `add_files`
+  imports answer Spark's two columns with NULL `changed_partition_count` on partitioned,
+  flat, filtered and parallel twins; every import pins the pretty name-mapping property;
+  reordered source columns bind by name with adopted paths; duplicates raise with Java's
+  text unless forced; and non-parquet, catalog-table and bare-string sources refuse with
+  their own texts.
   Clause citations live in this map, not in the source.
-  pins: ice-procedures-1/C-012, C-013, C-014, C-020
+  pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** 35
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
   bad-job-order / bad-spec / band-crossing / negative-size texts, silent-false booleans,
