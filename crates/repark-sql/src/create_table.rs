@@ -803,6 +803,12 @@ async fn column_def_schema(
             .options
             .iter()
             .any(|option| matches!(option.option, ColumnOption::NotNull));
+        if geospatial_sql_type(&column.data_type) {
+            return Err(DataFusionError::Plan(spark_error::message(
+                spark_error::UNSUPPORTED_FEATURE_GEOSPATIAL_DISABLED,
+                &[],
+            )));
+        }
         let data_type = if nested_type::needs_structural_mapping(&column.data_type) {
             let nested = sql_type_to_iceberg(ctx, &column.data_type, form).await?;
             iceberg::arrow::type_to_arrow_type(&nested).map_err(iceberg_err)?
@@ -857,6 +863,12 @@ fn refuse_nanosecond_timestamp_columns(
         }
     }
     Ok(())
+}
+
+fn geospatial_sql_type(data_type: &datafusion::sql::sqlparser::ast::DataType) -> bool {
+    let upper = data_type.to_string().to_ascii_uppercase();
+    let head = upper.split(['(', ' ', ',']).next().unwrap_or("");
+    head == "GEOMETRY" || head == "GEOGRAPHY"
 }
 
 fn iceberg_v3_named_arrow_type(

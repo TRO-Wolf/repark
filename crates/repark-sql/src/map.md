@@ -45,6 +45,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   **IPI-51 (2026-09-20):** the already-exists arm renders `[TABLE_OR_VIEW_ALREADY_EXISTS]` /
   `SQLSTATE: 42P07` through `repark_common::spark_error` with a per-part-backticked
   `relationName`. pins: ice-error-conditions-1/C-011
+  **IPI-51 PR8 (2026-09-21):** `column_def_schema` stamps Spark's
+  `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]` / `0A000` as `DataFusionError::Plan`
+  when `geospatial_sql_type` names `GEOMETRY` / `GEOGRAPHY` (bare, `(srid)`,
+  case-folded), ahead of the `SELECT CAST` fallback; other types keep the CAST arm
+  (cell `TY-GEOMETRY`). pins: ice-error-conditions-1/C-011
 - `declared_refuse.rs` — FNP-15/16 ANSI-door parse valve (G15 dual-wire: Spark's copy lives in
   `repark-functions`). Sketches (32), CSV/XML/XPath (11), VARIANT (8), geospatial (5), and
   the XML pair `from_xml` / `schema_of_xml` (FNP-GEN-1 D-6, dated 2026-09-15, message names
