@@ -24,16 +24,18 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   unsets the `comment` property with no reregister, like `SET TBLPROPERTIES`
   (cell `D-COMMENT-ON`). Unit pins are inline; door pins are
   [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py).
-- `hive_change_column.rs` — **IPI-26/27 round 2 (2026-09-20):** the two-name
-  Hive `ALTER TABLE t CHANGE [COLUMN] old new TYPE [COMMENT 'lit']` intercept.
-  The type parses with `SparkSqlDialect` and maps at execute time, so
-  non-primitive targets refuse with the session timestamp type applied. Execute
-  applies `UpdateColumnType` plus an optional `UpdateColumnDoc` against the old
-  name, then a `RenameColumn` last when the names differ: the fork resolves
-  replay lookups against the base schema, so an update addressed to the new name
-  would miss (cells `D-X-CHANGE-COLUMN-TYPE`, `D-X-CHANGE-COLUMN-RENAME`). Unit
-  pins are inline; door pins are in `test_ice_ddl_clauses_1.py` beside the
-  `COMMENT ON` pins.
+- `hive_change_column.rs` — **IPI-26/27 round 2 (2026-09-20); rename refusal
+  (2026-09-21):** the two-name Hive `ALTER TABLE t CHANGE [COLUMN] old new TYPE
+  [COMMENT 'lit']` intercept. The type parses with `SparkSqlDialect` and maps at
+  execute time, so non-primitive targets refuse with the session timestamp type
+  applied. Parse refuses the rename form (`old` != `new`) right after the new
+  name with `[PARSE_SYNTAX_ERROR]` / SQLSTATE 42601, as Spark does; execute then
+  applies only `UpdateColumnType` plus an optional `UpdateColumnDoc` against the
+  old name (cell `D-X-CHANGE-COLUMN-TYPE`). Unit pins are inline; door pins are
+  [test_ice_change_column_rename_1.py](../../../../python/repark/tests/test_ice_change_column_rename_1.py)
+  and
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
+  beside the `COMMENT ON` pins.
 
 ## Pointers
 

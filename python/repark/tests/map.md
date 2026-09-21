@@ -3794,6 +3794,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   rewrite byte-exact on all four spellings, because the cell dies in Python before any Rust
   fix is reachable.
   pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- `test_ice_change_column_rename_1.py` — **IPI-26/27 round 2, rename refusal
+  (2026-09-21):** the Hive `CHANGE COLUMN` rename form refuses on the facade SQL
+  door with `[PARSE_SYNTAX_ERROR]` / SQLSTATE 42601, mints no metadata document,
+  and leaves the schema (`data`, never `payload`) untouched; the same-name
+  type-only near miss widens `INT` to `BIGINT` and keeps the row.
 - `test_ice_ddl_clauses_1.py` — **IPI-26/27 round 1 (2026-09-20):** the two silent
   rewrite bugs. Oracle: the run-25/26 inventory harness cells recorded against live
   PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (cells `D-ADD-COL-STRUCT`,
@@ -3806,11 +3811,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   The column-comment pin asserts the doc as the schema row's fourth field, the
   table/`COMMENT ON` pins assert the `comment` property, the `LOCATION` pins
   assert the metadata location and parquet under the given path, the Hive
-  `CHANGE COLUMN` pins assert type plus doc (and the rename twin) with rows
-  intact, and the `DESCRIBE` pin re-checks the comment column. Cells
+  `CHANGE COLUMN` pin asserts type plus doc with rows intact, and the
+  `DESCRIBE` pin re-checks the comment column. Cells
   `D-CREATE-COL-COMMENT`, `D-CREATE-COMMENT`, `D-CTAS-COMMENT`, `D-COMMENT-ON`,
   `D-X-CHANGE-COLUMN-TYPE`, `D-CREATE-LOCATION`, `D-CTAS-LOCATION`,
   `D-DESCRIBE`. A replace-with-`LOCATION` pin holds the loud refusal.
+  **Rename refusal (2026-09-21):** the rename twin moved to
+  [test_ice_change_column_rename_1.py](test_ice_change_column_rename_1.py) as a
+  refusal pin — Spark refuses the two-name form.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to
