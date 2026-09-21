@@ -217,7 +217,6 @@ async fn execute_calibrated(
         &mut lineage_pins,
         &mut metadata_column_pins,
         write_options,
-        bare_name_target,
     ))
     .await;
     metadata_column_pins.release(ctx);
@@ -237,7 +236,6 @@ async fn execute_time_travelled(
     lineage_pins: &mut repark_core::LineagePins,
     metadata_column_pins: &mut repark_core::MetadataColumnPins,
     write_options: &crate::write_options::StatementWriteOptions,
-    bare_name_target: bool,
 ) -> Result<DataFrame> {
     // Iceberg time travel is not modelled by Databricks-dialect sqlparser.
     let sql_after_tt: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
@@ -273,14 +271,7 @@ async fn execute_time_travelled(
         Some(rewritten) => std::borrow::Cow::Owned(rewritten),
         None => sql_after_mc,
     };
-    let result = execute_inner(
-        ctx,
-        catalogs,
-        sql_storage.as_ref(),
-        write_options,
-        bare_name_target,
-    )
-    .await;
+    let result = execute_inner(ctx, catalogs, sql_storage.as_ref(), write_options, false).await;
     if let Some(original) = original_for_locations
         .and_then(|original| original_sql_for_locations(original, sql, sql_storage.as_ref()))
     {

@@ -23,7 +23,10 @@ service, and the wrapper-based read path that expands stored SQL per query.
   filter), `refuse_view_write_target` (INSERT/DELETE/UPDATE/BY NAME guard).
   A marked statement skips the tighten calibration (the session-scoped
   allowance for bare names); an unmarked one enforces it before the catalog
-  write, so the refusal precedes any viewless-catalog refusal.
+  write, so the refusal precedes any viewless-catalog refusal. The bit travels
+  from the original SQL through the calibrated CREATE VIEW reroute only; the
+  time-travel path passes false because the reroute claims every marked
+  statement (the arm parses with the same head sniff).
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
   defaults with aliases applied; `table_names` stays tables-only);
