@@ -435,7 +435,6 @@ async fn select_into_iceberg_catalog_over_tightened_source_refuses() {
 
 #[tokio::test]
 async fn session_scoped_temp_view_refuses_and_select_into_stays_allowed() {
-    // Y-3/Y-4: TEMP VIEW refuses until PR3, SELECT INTO stays allowed.
     let (_dir, session) = ddl_sink_session().await;
     let error = session
         .sql("CREATE TEMPORARY VIEW session_v AS SELECT * FROM tight")
