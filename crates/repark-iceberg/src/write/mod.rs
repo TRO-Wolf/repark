@@ -42,6 +42,7 @@ pub mod scan_concurrency;
 pub mod scan_prune;
 pub mod schema_evolution;
 pub mod session_write_conf;
+pub mod set_location;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
 pub mod sort_order;
