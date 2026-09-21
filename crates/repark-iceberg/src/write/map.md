@@ -56,6 +56,14 @@ repark-core's error map.
   settings map. Two suffixes that differ only in case are two properties, as they are in
   Spark, so `unset` clears the exact spelling.
   pins: ice-session-write-conf-1/C-048
+- `set_location.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
+  `set_table_location` applies the fork's `update_location` action
+  (`TableUpdate::SetLocation`) in one transaction: the move commit itself and every
+  commit after it write the next table metadata under the NEW location, and existing
+  data and metadata files are not moved. A sibling of `alter.rs`, which sits at its
+  exact file-size baseline. 2 in-module pins (the move writes the new metadata file
+  under the new location and advances the catalog pointer; the next property commit
+  lands under the new location while the old metadata file stays).
 - `writer_props.rs`, `write_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `writer_properties_with` takes Java's `parquet.enable.dictionary` default — absent = ON
   (`ParquetProperties.DEFAULT_IS_DICTIONARY_ENABLED = true`, measured by javap on the

@@ -114,6 +114,13 @@ pins: rp-4-fork-repin/C-005, C-006
   [`router/hive_change_column.rs`](router/hive_change_column.rs)), wired after the
   column-move intercept inside `try_preparse_comment_ddl` so the intercept chain
   keeps clippy's line limit (cells `D-COMMENT-ON`, `D-X-CHANGE-COLUMN-TYPE`).
+  **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):** `try_alter_intercepts`
+  gains the `ALTER TABLE … SET LOCATION '<literal>'` arm after `column_move`
+  ([`router/table_props_ddl.rs`](router/table_props_ddl.rs)) — the statement does not
+  survive sqlparser, so it claims exactly that shape (keywords case-insensitive, path
+  verbatim), refuses a malformed tail loud naming the clause, leaves
+  `SET/UNSET TBLPROPERTIES` and branch/tag forms alone, and executes the metadata
+  location move through the fork's `SetLocation` update.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
   in-module tests (MG-2: M2 Oracle sub-predicates, M3

@@ -1268,6 +1268,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `bucket_quoted_string_arguments_are_never_a_width` pin that a quoted string literal
   stays quoted through `render_transform_arg` and refuses as a bucket width with the
   integer error, in either argument position.
+  **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
+  `set_location_moves_the_metadata_location_and_the_next_commit_lands_under_it` pins
+  the full move end to end — the metadata `location` field records the new path, the
+  move commit and the following INSERT both write metadata under it, the INSERT's
+  parquet lands there, the original metadata file is never moved, and the rows read
+  back. `set_location_near_misses_keep_their_own_routing` moves a table named
+  `drop.tag` like any plain table, and
+  `set_location_refuses_write_options_and_missing_literal_loud` holds the
+  write-options gate refusal and the missing-path refusal naming the clause.
   **WO3-R2 (2026-09-21):** `bucket_quoted_string_arguments_are_never_a_width` gains the
   width-first orders, and the sibling `truncate_quoted_string_arguments_are_never_a_width`
   pins all four quoted-literal orders of `truncate`; a quoted string refuses as a width in
