@@ -7433,5 +7433,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   its file ordinal); the star pin holds user-columns-only `*` plus the
   `*, _file` / `*, _pos` compositions; and the refusal pin holds the typed
   `[ICE-MC-1]` `AnalysisException` for `_spec_id` / `_partition` / `_deleted`,
-  never the raw `No field named`.
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  never the raw `No field named`, with the column name asserted per column
+  (r2 V-001). The v3 twin serves `_file` + `_row_id` together, pinning the
+  metadata-before-lineage stage order (r2 V-002, C-009); and the identity twin
+  pins every live `_file` against the table's `files.file_path` (r2 V-003, C-010).
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
