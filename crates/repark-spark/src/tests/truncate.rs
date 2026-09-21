@@ -220,10 +220,10 @@ async fn truncate_view_is_expect_table_not_view() {
     run(
         &ctx,
         &catalogs,
-        "CREATE VIEW v_trunc AS SELECT * FROM ice.sales.t",
+        "CREATE VIEW ice.sales.v_trunc AS SELECT * FROM ice.sales.t",
     )
     .await;
-    let error = execute(&ctx, &catalogs, "TRUNCATE TABLE v_trunc")
+    let error = execute(&ctx, &catalogs, "TRUNCATE TABLE ice.sales.v_trunc")
         .await
         .expect_err("view")
         .to_string();

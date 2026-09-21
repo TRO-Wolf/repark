@@ -132,6 +132,17 @@ fn parse_create_view_header(parser: &mut Parser, body_sql: String) -> Result<Cre
     let if_not_exists = parser.parse_keywords(&[Keyword::IF, Keyword::NOT, Keyword::EXISTS]);
     let object_name = parser.parse_object_name(false).map_err(sqlparser_err)?;
     let name = name_parts(&object_name);
+    if name.len() > 3
+        && name
+            .last()
+            .is_some_and(|suffix| crate::is_metadata_table_name(suffix))
+    {
+        return Err(DataFusionError::Plan(format!(
+            "Iceberg metadata table `{}` is read-only — INSERT/UPDATE/DELETE/MERGE/\
+             CTAS/TRUNCATE/CREATE VIEW/DROP/ALTER targeting a metadata table is not supported",
+            name.join(".")
+        )));
+    }
     if name.is_empty() || name.len() > 3 {
         return Err(DataFusionError::Plan(format!(
             "could not parse `CREATE VIEW`: expected a [catalog.[namespace.]]view name, got `{}`",

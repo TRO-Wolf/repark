@@ -136,7 +136,9 @@ pub(crate) async fn refuse_view_write_target(
     name: &ObjectName,
 ) -> Result<()> {
     let parts = name_parts(name);
-    let (catalog, namespace_name, view_name) = complete_view_name(ctx, &parts)?;
+    let Ok((catalog, namespace_name, view_name)) = complete_view_name(ctx, &parts) else {
+        return Ok(());
+    };
     let ident = TableIdent::new(
         NamespaceIdent::new(namespace_name.clone()),
         view_name.clone(),
@@ -152,6 +154,17 @@ pub(crate) async fn refuse_view_write_target(
 }
 
 fn complete_view_name(ctx: &SessionContext, parts: &[String]) -> Result<(String, String, String)> {
+    if parts.len() >= 4
+        && parts
+            .last()
+            .is_some_and(|suffix| crate::is_metadata_table_name(suffix))
+    {
+        return Err(DataFusionError::Plan(format!(
+            "Iceberg metadata table `{}` is read-only — INSERT/UPDATE/DELETE/MERGE/\
+             CTAS/TRUNCATE/CREATE VIEW/DROP/ALTER targeting a metadata table is not supported",
+            parts.join(".")
+        )));
+    }
     match parts {
         [view] => Ok((
             default_catalog_name(ctx),
