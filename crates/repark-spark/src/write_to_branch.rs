@@ -399,18 +399,17 @@ pub(crate) async fn apply_write_to_branch<'a>(
             keep_existing_selector: span.parts.len() >= 4,
             require_existing_branch: true,
         },
-        None => match wap_branch_target(ctx, catalogs, &wap, &span.parts).await? {
-            Some(target) => target,
-            None => {
-                if let Some(staged) =
-                    wap_id_route_target(ctx, catalogs, &wap, &span.parts, sql).await?
-                {
-                    return commit_write_staged(ctx, catalogs, pinned, &tokens, &span, staged)
-                        .await;
-                }
+        None => {
+            if let Some(target) = wap_branch_target(ctx, catalogs, &wap, &span.parts).await? {
+                target
+            } else if let Some(staged) =
+                wap_id_route_target(ctx, catalogs, &wap, &span.parts, sql).await?
+            {
+                return commit_write_staged(ctx, catalogs, pinned, &tokens, &span, staged).await;
+            } else {
                 return Ok(Cow::Borrowed(sql));
             }
-        },
+        }
     };
     commit_write_on_branch(ctx, catalogs, sql, pinned, &tokens, &span, target).await
 }
