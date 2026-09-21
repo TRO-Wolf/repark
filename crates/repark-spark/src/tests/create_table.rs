@@ -884,7 +884,7 @@ async fn v3_type_column_named_geometry_with_int_succeeds() {
 }
 
 #[tokio::test]
-#[allow(clippy::too_many_lines)] // one flat OPTIONS pin battery over the CREATE/CTAS cell matrix
+#[allow(clippy::too_many_lines)]
 async fn options_stores_both_raw_and_prefixed_keys() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
