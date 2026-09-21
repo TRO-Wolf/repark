@@ -364,9 +364,7 @@ class DataFrameReader:
         travel = self._iceberg_time_travel_opts()
         window = _reader_support.collect_incremental_window(self._options)
         if window:
-            return _reader_incremental.load_incremental(
-                self._session, table_name, window, travel
-            )
+            return _reader_incremental.load_incremental(self._session, table_name, window, travel)
         if travel is not None:
             # read_iceberg_table resolves bare/two-part/spark_catalog; do not
             # bypass the shared layer by forwarding the raw user string only.

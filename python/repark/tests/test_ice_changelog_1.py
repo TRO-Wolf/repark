@@ -64,9 +64,7 @@ def _table(cell_id: str) -> str:
 
 def _snaps(session: Any, table: str) -> list[int]:
     """Snapshot ids in ``(committed_at, snapshot_id)`` order, as the recorder collected them."""
-    arrow = session.sql(
-        f"SELECT snapshot_id, committed_at FROM {table}.snapshots"
-    ).to_arrow()
+    arrow = session.sql(f"SELECT snapshot_id, committed_at FROM {table}.snapshots").to_arrow()
     pairs = sorted(
         zip(
             arrow.column("snapshot_id").to_pylist(),
@@ -94,9 +92,7 @@ def _seed(
 
 def _snaps_with_timestamps(session: Any, table: str) -> list[tuple[int, int]]:
     """Snapshot ids with their commit timestamps in milliseconds, oldest first."""
-    arrow = session.sql(
-        f"SELECT snapshot_id, committed_at FROM {table}.snapshots"
-    ).to_arrow()
+    arrow = session.sql(f"SELECT snapshot_id, committed_at FROM {table}.snapshots").to_arrow()
     pairs = sorted(
         zip(
             arrow.column("snapshot_id").to_pylist(),
@@ -173,9 +169,7 @@ def test_incremental_window_between_two_snapshots(spark: Any) -> None:
     """
     table = _table("QI-S0-S2")
     ids = _seed(spark, table)
-    frame = _incremental(
-        spark, table, start_snapshot_id=ids[0], end_snapshot_id=ids[2]
-    )
+    frame = _incremental(spark, table, start_snapshot_id=ids[0], end_snapshot_id=ids[2])
     _assert_ok("QI-S0-S2", frame)
 
 
@@ -197,9 +191,7 @@ def test_incremental_start_equal_to_end_refuses(spark: Any) -> None:
     table = _table("QI-S1-S1")
     ids = _seed(spark, table)
     with pytest.raises(Exception) as raised:
-        _incremental(
-            spark, table, start_snapshot_id=ids[1], end_snapshot_id=ids[1]
-        ).to_arrow()
+        _incremental(spark, table, start_snapshot_id=ids[1], end_snapshot_id=ids[1]).to_arrow()
     _assert_error("QI-S1-S1", raised.value)
 
 
@@ -235,9 +227,7 @@ def test_incremental_start_after_end_refuses(spark: Any) -> None:
     table = _table("QI-START-AFTER-END")
     ids = _seed(spark, table)
     with pytest.raises(Exception) as raised:
-        _incremental(
-            spark, table, start_snapshot_id=ids[2], end_snapshot_id=ids[0]
-        ).to_arrow()
+        _incremental(spark, table, start_snapshot_id=ids[2], end_snapshot_id=ids[0]).to_arrow()
     _assert_error("QI-START-AFTER-END", raised.value)
 
 
@@ -248,11 +238,7 @@ def test_incremental_composes_with_projection_and_filter(spark: Any) -> None:
     """
     table = _table("QI-PROJECT-FILTER")
     ids = _seed(spark, table)
-    frame = (
-        _incremental(spark, table, start_snapshot_id=ids[0])
-        .where("cat = 'x'")
-        .select("id")
-    )
+    frame = _incremental(spark, table, start_snapshot_id=ids[0]).where("cat = 'x'").select("id")
     _assert_ok("QI-PROJECT-FILTER", frame)
 
 
@@ -284,9 +270,7 @@ def test_incremental_over_a_copy_on_write_delete_skips_it(spark: Any) -> None:
     spark.sql(f"DELETE FROM {table} WHERE id = 3")
     spark.sql(f"INSERT INTO {table} VALUES (6, 'f', 'x')")
     ids = _snaps(spark, table)
-    _assert_ok(
-        "QI-OVER-DELETE-COW", _incremental(spark, table, start_snapshot_id=ids[0])
-    )
+    _assert_ok("QI-OVER-DELETE-COW", _incremental(spark, table, start_snapshot_id=ids[0]))
 
 
 def test_incremental_over_a_merge_on_read_delete_skips_it(spark: Any) -> None:
@@ -299,9 +283,7 @@ def test_incremental_over_a_merge_on_read_delete_skips_it(spark: Any) -> None:
     spark.sql(f"DELETE FROM {table} WHERE id = 3")
     spark.sql(f"INSERT INTO {table} VALUES (6, 'f', 'x')")
     ids = _snaps(spark, table)
-    _assert_ok(
-        "QI-OVER-DELETE-MOR", _incremental(spark, table, start_snapshot_id=ids[0])
-    )
+    _assert_ok("QI-OVER-DELETE-MOR", _incremental(spark, table, start_snapshot_id=ids[0]))
 
 
 def test_incremental_ending_at_a_delete_snapshot_does_not_raise(spark: Any) -> None:
@@ -328,9 +310,7 @@ def test_incremental_over_an_insert_overwrite_skips_it(spark: Any) -> None:
     _seed(spark, table)
     spark.sql(f"INSERT OVERWRITE {table} VALUES (9, 'z', 'x')")
     ids = _snaps(spark, table)
-    _assert_ok(
-        "QI-OVER-OVERWRITE", _incremental(spark, table, start_snapshot_id=ids[0])
-    )
+    _assert_ok("QI-OVER-OVERWRITE", _incremental(spark, table, start_snapshot_id=ids[0]))
 
 
 def test_incremental_over_a_partitioned_table(spark: Any) -> None:
@@ -411,14 +391,11 @@ def test_changes_relation_whole_history(spark: Any) -> None:
     pins: ice-changelog-1/C-009
     """
     table = _changes_fixture(spark, "QI-CHANGES-DEFAULT")
-    frame = spark.sql(
-        f"SELECT id, data, _change_type, _change_ordinal FROM {table}.changes"
-    )
+    frame = spark.sql(f"SELECT id, data, _change_type, _change_ordinal FROM {table}.changes")
     _assert_ok("QI-CHANGES-DEFAULT", frame)
     snaps = _snaps(spark, table)
     valued = spark.sql(
-        f"SELECT id, data, _change_type, _change_ordinal, _commit_snapshot_id "
-        f"FROM {table}.changes"
+        f"SELECT id, data, _change_type, _change_ordinal, _commit_snapshot_id FROM {table}.changes"
     )
     rows = _rows(valued)
     for row in rows:
@@ -441,9 +418,7 @@ def test_changes_relation_schema(spark: Any) -> None:
     pins: ice-changelog-1/C-009
     """
     table = _changes_fixture(spark, "QI-CHANGES-COLS")
-    frame = spark.sql(
-        f"SELECT id, data, cat, _change_type, _change_ordinal FROM {table}.changes"
-    )
+    frame = spark.sql(f"SELECT id, data, cat, _change_type, _change_ordinal FROM {table}.changes")
     _assert_ok("QI-CHANGES-COLS", frame)
     full = spark.sql(f"SELECT * FROM {table}.changes")
     assert [name for name, _ in _cols(full)] == [
@@ -477,9 +452,7 @@ def test_changes_relation_over_a_copy_on_write_update(spark: Any) -> None:
     """
     table = _changes_fixture(spark, "QI-CHANGES-COW-UPDATE")
     spark.sql(f"UPDATE {table} SET data = 'u' WHERE id = 2")
-    frame = spark.sql(
-        f"SELECT id, data, _change_type, _change_ordinal FROM {table}.changes"
-    )
+    frame = spark.sql(f"SELECT id, data, _change_type, _change_ordinal FROM {table}.changes")
     _assert_ok("QI-CHANGES-COW-UPDATE", frame)
 
 
@@ -736,9 +709,7 @@ def test_create_changelog_view_default_name_is_backticked(spark: Any) -> None:
     pins: ice-changelog-1/C-014
     """
     _table_name, short, _view = _clv_fixture(spark, "QC-DEFAULT-NAME")
-    frame = spark.sql(
-        f"CALL {CATALOG}.system.create_changelog_view(table => '{short}')"
-    )
+    frame = spark.sql(f"CALL {CATALOG}.system.create_changelog_view(table => '{short}')")
     _assert_call("QC-DEFAULT-NAME", frame)
     rows = spark.sql("SELECT count(*) FROM t_qc_default_name_changes")
     assert _rows(rows) == CELLS["QC-DEFAULT-NAME"]["obs"]["view"]
