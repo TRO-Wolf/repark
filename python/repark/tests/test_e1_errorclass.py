@@ -148,6 +148,7 @@ def test_native_exception_surface_shim_methods() -> None:
     for exception_type in (
         _native.PySparkException,
         _native.AnalysisException,
+        _native.ArithmeticException,
         _native.ParseException,
         _native.UnsupportedOperationException,
         _native.IllegalArgumentException,

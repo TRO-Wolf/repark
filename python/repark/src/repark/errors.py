@@ -2,6 +2,7 @@
 
 Native classes are re-exported unchanged, so catches use class identity. Engine
 errors map to ``ParseException`` for syntax, ``AnalysisException`` for planning,
+``ArithmeticException`` for ANSI arithmetic failures,
 ``UnsupportedOperationException`` for refused operations, and
 ``IllegalArgumentException`` for invalid configuration, ML parameters, schemas,
 values, or stream inputs. Other execution, IO, and
@@ -21,6 +22,7 @@ from typing import Any
 
 from repark._native import (
     AnalysisException,
+    ArithmeticException,
     CommitStateUnknownException,
     IllegalArgumentException,
     ParseException,
@@ -83,6 +85,7 @@ def _native_get_query_context(self: object) -> list[Any]:
 for _native_exception_type in (
     PySparkException,
     AnalysisException,
+    ArithmeticException,
     ParseException,
     UnsupportedOperationException,
     IllegalArgumentException,
@@ -319,6 +322,7 @@ class PySparkAssertionError(_PySparkErrorMixin, PySparkException, AssertionError
 for _exception_type in (
     PySparkException,
     AnalysisException,
+    ArithmeticException,
     ParseException,
     UnsupportedOperationException,
     IllegalArgumentException,
@@ -329,6 +333,7 @@ del _exception_type
 
 __all__ = [
     "AnalysisException",
+    "ArithmeticException",
     "CommitStateUnknownException",
     "IllegalArgumentException",
     "ParseException",

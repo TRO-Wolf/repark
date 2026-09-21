@@ -490,10 +490,16 @@ def test_bin_rint_bool_refuses_with_spark_class(spark: ReparkSession) -> None:
     ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`` on both doors; the facade
     pre-cast that hid the refusal is gone.
     """
-    with pytest.raises(Exception, match="DATATYPE_MISMATCH"):
+    with pytest.raises(AnalysisException) as bin_caught:
         spark.range(1).select(F.bin(F.lit(True)).alias("t")).to_arrow()
-    with pytest.raises(Exception, match="DATATYPE_MISMATCH"):
+    assert 'The first parameter requires the "BIGINT" type' in str(bin_caught.value)
+    assert bin_caught.value.getErrorClass() == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
+    assert bin_caught.value.getSqlState() == "42K09"
+    with pytest.raises(AnalysisException) as rint_caught:
         spark.range(1).select(F.rint(F.lit(True)).alias("r")).to_arrow()
+    assert 'The first parameter requires the "DOUBLE" type' in str(rint_caught.value)
+    assert rint_caught.value.getErrorClass() == "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
+    assert rint_caught.value.getSqlState() == "42K09"
 
 
 def test_sql_door_regexp_count_null_is_null(spark: ReparkSession) -> None:

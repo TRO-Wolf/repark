@@ -12,6 +12,11 @@ fn exception_class_routes_every_variant() {
         ErrorClass::Analysis
     );
     assert_eq!(
+        Error::Arithmetic("[ARITHMETIC_OVERFLOW] conv overflow. SQLSTATE: 22003".into())
+            .exception_class(),
+        ErrorClass::Arithmetic
+    );
+    assert_eq!(
         Error::DataFusion("boom".into()).exception_class(),
         ErrorClass::Base
     );

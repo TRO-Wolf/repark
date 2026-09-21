@@ -19,6 +19,7 @@ pub(crate) enum EngineErrorKind<'a> {
     Unsupported,
     IllegalArgument,
     IllegalArgumentMarked(&'a IllegalArgumentMarker),
+    ArithmeticOverflow(&'a str),
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
     CommitStateUnknown(&'a CommitStateUnknownError),
@@ -27,6 +28,26 @@ pub(crate) enum EngineErrorKind<'a> {
 
 /// Cap wrapper peeling.
 pub(crate) const MAX_ERROR_PEEL_DEPTH: usize = 32;
+
+const ARITHMETIC_OVERFLOW_HEAD: &str = "[ARITHMETIC_OVERFLOW]";
+const COERCION_FAILED_MARKER: &str = "user-defined coercion failed with: ";
+const PLAN_DISPLAY_PREFIX: &str = "Error during planning: ";
+const SQLSTATE_MARKER: &str = "SQLSTATE: ";
+const SQLSTATE_LEN: usize = 5;
+
+fn coercion_refusal_message(display: &str) -> Option<String> {
+    let rest = display.split(COERCION_FAILED_MARKER).nth(1)?;
+    let rest = rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest);
+    if !rest.starts_with('[') {
+        return None;
+    }
+    let state_start = rest.find(SQLSTATE_MARKER)? + SQLSTATE_MARKER.len();
+    let state = rest.get(state_start..state_start + SQLSTATE_LEN)?;
+    if !state.bytes().all(|byte| byte.is_ascii_alphanumeric()) {
+        return None;
+    }
+    rest.get(..state_start + SQLSTATE_LEN).map(str::to_string)
+}
 
 /// Classify a DataFusion error after peeling wrapper variants up to [`MAX_ERROR_PEEL_DEPTH`].
 pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorKind<'_> {
@@ -59,6 +80,11 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
                 Some(first) => current = first,
                 None => return EngineErrorKind::Other,
             },
+            DataFusionError::Execution(message)
+                if message.starts_with(ARITHMETIC_OVERFLOW_HEAD) =>
+            {
+                return EngineErrorKind::ArithmeticOverflow(message);
+            }
             _ => return EngineErrorKind::Other,
         }
     }
@@ -83,7 +109,11 @@ pub fn engine_err_for_sql(sql: &str, err: DataFusionError) -> Error {
 pub fn engine_err(err: DataFusionError) -> Error {
     match classify_datafusion_error(&err) {
         EngineErrorKind::Parse => Error::Parse(err.to_string()),
-        EngineErrorKind::Analysis => Error::Analysis(err.to_string()),
+        EngineErrorKind::Analysis => {
+            let display = err.to_string();
+            Error::Analysis(coercion_refusal_message(&display).unwrap_or(display))
+        }
+        EngineErrorKind::ArithmeticOverflow(message) => Error::Arithmetic(message.to_string()),
         EngineErrorKind::Unsupported => Error::NotImplemented(err.to_string()),
         EngineErrorKind::IllegalArgument => Error::IllegalArgument(err.to_string()),
         EngineErrorKind::IllegalArgumentMarked(marker) => Error::IllegalArgument(marker.0.clone()),
@@ -169,5 +199,58 @@ mod tests {
         );
         let error = engine_err(wrapped);
         assert!(matches!(error, Error::IllegalArgument(_)));
+    }
+
+    #[test]
+    fn arithmetic_overflow_execution_maps_to_arithmetic_verbatim() {
+        let message = "[ARITHMETIC_OVERFLOW] conv overflow. If necessary set \"spark.sql.ansi.enabled\" \
+             to \"false\" to bypass this error. SQLSTATE: 22003";
+        let error = engine_err(DataFusionError::Execution(message.to_string()));
+        assert_eq!(
+            error.exception_class(),
+            repark_common::ErrorClass::Arithmetic
+        );
+        assert!(matches!(error, Error::Arithmetic(text) if text == message));
+    }
+
+    #[test]
+    fn arithmetic_overflow_survives_context_wrapping() {
+        let wrapped = DataFusionError::Context(
+            "compute".to_string(),
+            Box::new(DataFusionError::Execution(
+                "[ARITHMETIC_OVERFLOW] conv overflow. SQLSTATE: 22003".to_string(),
+            )),
+        );
+        let error = engine_err(wrapped);
+        assert!(matches!(error, Error::Arithmetic(_)));
+    }
+
+    #[test]
+    fn plain_execution_stays_base() {
+        let error = engine_err(DataFusionError::Execution("Cast error: boom".to_string()));
+        assert_eq!(error.exception_class(), repark_common::ErrorClass::Base);
+    }
+
+    #[test]
+    fn coercion_wrap_peels_to_the_refusal_payload() {
+        let payload = "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"bin(<expr>)\" \
+         due to data type mismatch: The first parameter requires the \"BIGINT\" type, however \
+         the argument has the type \"BOOLEAN\". SQLSTATE: 42K09";
+        let display = format!(
+            "Execution error: Function 'bin' user-defined coercion failed with: Error during \
+             planning: {payload}. No function matches the given name and argument types \
+             'bin(Boolean)'. You might need to add explicit type casts."
+        );
+        let error = engine_err(DataFusionError::Plan(display));
+        assert_eq!(error.exception_class(), repark_common::ErrorClass::Analysis);
+        assert!(matches!(error, Error::Analysis(text) if text == payload));
+    }
+
+    #[test]
+    fn coercion_wrap_without_payload_keeps_the_full_display() {
+        let display = "Execution error: Function 'last_day' user-defined coercion failed with: \
+         Error during planning: unsupported type. No function matches.";
+        let error = engine_err(DataFusionError::Plan(display.to_string()));
+        assert!(matches!(error, Error::Analysis(text) if text.contains("No function matches")));
     }
 }

@@ -36,8 +36,8 @@ pub use session::PyReparkSession;
 /// The exception taxonomy lives in [`exceptions`]; see that module for the lint expectation.
 mod exceptions;
 pub use exceptions::{
-    AnalysisException, CommitStateUnknownException, IllegalArgumentException, ParseException,
-    PySparkException, UnsupportedOperationException,
+    AnalysisException, ArithmeticException, CommitStateUnknownException, IllegalArgumentException,
+    ParseException, PySparkException, UnsupportedOperationException,
 };
 
 /// Convert a crate error to its PySpark-shaped Python exception.
@@ -47,6 +47,7 @@ pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
     match err.exception_class() {
         ErrorClass::Parse => ParseException::new_err(message),
         ErrorClass::Analysis => AnalysisException::new_err(message),
+        ErrorClass::Arithmetic => ArithmeticException::new_err(message),
         ErrorClass::Unsupported => UnsupportedOperationException::new_err(message),
         ErrorClass::IllegalArgument => IllegalArgumentException::new_err(message),
         ErrorClass::CommitStateUnknown => {
@@ -126,6 +127,10 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add(
         "AnalysisException",
         module.py().get_type::<AnalysisException>(),
+    )?;
+    module.add(
+        "ArithmeticException",
+        module.py().get_type::<ArithmeticException>(),
     )?;
     module.add("ParseException", module.py().get_type::<ParseException>())?;
     module.add(

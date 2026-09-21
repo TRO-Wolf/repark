@@ -428,7 +428,7 @@ pub(crate) fn unexpected_input_type(name: &str, required: &str, got: &DataType) 
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"{name}(<expr>)\" due to \
          data type mismatch: The first parameter requires the \"{required}\" type, however \
-         the argument has the type \"{}\".",
+         the argument has the type \"{}\". SQLSTATE: 42K09",
         spark_type_name(got)
     ))
 }
@@ -462,7 +462,7 @@ fn float64_values(array: &ArrayRef) -> Result<PrimitiveArray<Float64Type>> {
 pub(crate) fn overflow_error(kind: &str) -> DataFusionError {
     DataFusionError::Execution(format!(
         "[ARITHMETIC_OVERFLOW] {kind} overflow. If necessary set \"spark.sql.ansi.enabled\" \
-         to \"false\" to bypass this error."
+         to \"false\" to bypass this error. SQLSTATE: 22003"
     ))
 }
 

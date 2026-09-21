@@ -215,6 +215,24 @@ def _assert_repr_block_table(
         )
 
 
+_SQLSTATE_RE = re.compile(r"SQLSTATE:\s*([A-Z0-9]{5})")
+
+
+def _recorded_sqlstate(cell: dict[str, Any]) -> str | None:
+    """Read the SQLSTATE the oracle message records, when it records one."""
+    match = _SQLSTATE_RE.search(str(cell.get("message") or ""))
+    return match.group(1) if match is not None else None
+
+
+def _assert_recorded_error(
+    error: BaseException, error_type: str, condition: str, sqlstate: str | None, key: str
+) -> None:
+    """Pin one refusal's recorded class, condition and SQLSTATE."""
+    assert type(error).__name__ == error_type, key
+    assert getattr(error, "getErrorClass")() == condition, key
+    assert getattr(error, "getSqlState")() == sqlstate, key
+
+
 def _frame(spark: ReparkSession) -> DataFrame:
     """Build the shared o245 input frame with per-row timestamps."""
     return spark.sql(_FRAME_SQL)
@@ -478,7 +496,13 @@ def test_c004_o245_error_cells(spark: ReparkSession, key: str) -> None:
         else:
             query = str(cell["expr"]).replace("FRAME", f"({_FRAME_SQL})")
             spark.sql(query).to_arrow()
-    assert condition in str(excinfo.value), key
+    _assert_recorded_error(
+        excinfo.value,
+        str(cell["error_type"]),
+        str(condition),
+        _recorded_sqlstate(cell),
+        key,
+    )
 
 
 @pytest.mark.parametrize(
@@ -491,7 +515,16 @@ def test_c004_f14_aes_error_cells_sql_door(spark: ReparkSession, cell_id: str, a
     _set_ansi(spark, ansi)
     with pytest.raises(Exception) as excinfo:
         spark.sql(str(cell["input"])).to_arrow()
-    assert str(cell["condition"]) in str(excinfo.value), cell_id
+    _assert_recorded_error(
+        excinfo.value,
+        str(cell["error_type"]),
+        str(cell["condition"]),
+        _recorded_sqlstate(cell),
+        cell_id,
+    )
+
+
+_F14_SHORT_ID: dict[str, str] = {"badkey": "F14-aes-badkey", "badvalue": "F14-aes-dec-bad"}
 
 
 @pytest.mark.parametrize(
@@ -524,7 +557,14 @@ def test_c004_f14_aes_error_cells_python_door(
             spark.range(1).select(
                 F.aes_decrypt(F.unhex(F.lit("00")), F.lit("0000111122223333")).alias("v")
             ).to_arrow()
-    assert condition in str(excinfo.value), cell_id
+    oracle = _F14_BY_ID[_F14_SHORT_ID[cell_id]]
+    _assert_recorded_error(
+        excinfo.value,
+        str(oracle["error_type"]),
+        condition,
+        _recorded_sqlstate(oracle),
+        cell_id,
+    )
 
 
 _HASH_SQL_XFAIL = (
@@ -703,7 +743,13 @@ def test_c009_bl6_refusal_cells_sql_door(spark: ReparkSession, cell_id: str, ans
     _set_ansi(spark, ansi)
     with pytest.raises(Exception) as excinfo:
         spark.sql(str(cell["input"])).to_arrow()
-    assert str(cell["condition"]) in str(excinfo.value), cell_id
+    _assert_recorded_error(
+        excinfo.value,
+        str(cell["error_type"]),
+        str(cell["condition"]),
+        _recorded_sqlstate(cell),
+        cell_id,
+    )
 
 
 @pytest.mark.parametrize(
@@ -745,14 +791,20 @@ def test_c009_bl6_value_cells_sql_door(spark: ReparkSession, cell_id: str, ansi:
 @pytest.mark.parametrize("ansi", (True, False))
 def test_c009_bl6_facade_refuses_boolean(spark: ReparkSession, kind: str, ansi: bool) -> None:
     """Pin the BL-6 facade BOOLEAN refusal before the kernel under both ANSI settings."""
-    condition = "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE"
+    oracle = _BL6_BY_ID["BL6-sql-0" if kind == "bin" else "BL6-sql-1"]
     _set_ansi(spark, ansi)
     with pytest.raises(Exception) as excinfo:
         if kind == "bin":
             spark.range(1).select(F.bin(F.lit(True)).alias("v")).to_arrow()
         else:
             spark.range(1).select(F.rint(F.lit(True)).alias("v")).to_arrow()
-    assert condition in str(excinfo.value), kind
+    _assert_recorded_error(
+        excinfo.value,
+        str(oracle["error_type"]),
+        str(oracle["condition"]),
+        _recorded_sqlstate(oracle),
+        kind,
+    )
 
 
 @pytest.mark.parametrize("ansi", (True, False))

@@ -26,6 +26,9 @@ pub enum Error {
     Analysis(String),
 
     #[error("{0}")]
+    Arithmetic(String),
+
+    #[error("{0}")]
     IllegalArgument(String),
 
     /// A session or catalog configuration error naming the invalid key.
@@ -50,6 +53,7 @@ pub enum ErrorClass {
     Parse,
     /// A planning or analysis error mapped to `repark.errors.AnalysisException`.
     Analysis,
+    Arithmetic,
     /// A deterministic unsupported operation mapped to `UnsupportedOperationException`.
     Unsupported,
     /// An invalid engine or catalog config value mapped to `IllegalArgumentException`.
@@ -67,6 +71,7 @@ impl Error {
         match self {
             Error::Parse(_) => ErrorClass::Parse,
             Error::Analysis(_) => ErrorClass::Analysis,
+            Error::Arithmetic(_) => ErrorClass::Arithmetic,
             Error::Config(_) | Error::IllegalArgument(_) => ErrorClass::IllegalArgument,
             Error::NotImplemented(_) => ErrorClass::Unsupported,
             Error::CommitStateUnknown { .. } => ErrorClass::CommitStateUnknown,
