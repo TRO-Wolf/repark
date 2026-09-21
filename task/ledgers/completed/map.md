@@ -1004,7 +1004,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `SHOW COLUMNS` / `SHOW TABLES`, `REFRESH` / `CACHE` / `UNCACHE TABLE`,
   catalog-less `CALL`, runtime `spark.sql.catalog.*` registration, and the
   `hadoop` / `InMemoryCatalog` / `table-default.*` config gaps;   eleven cells
-  replay EQUAL (40 passed; divergences EAGER-1, HADOOP-1 stay pinned in the registry). 30 clauses, 30 PROVEN.
+  replay EQUAL (41 passed; divergences EAGER-1, HADOOP-1 stay pinned in the registry). 30 clauses, 30 PROVEN.
   `risk_tier: standard`. Branch `fix/ipi-32-catalog-session`.
   pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030
 

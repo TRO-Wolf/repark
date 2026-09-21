@@ -75,8 +75,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   tolerance, AS SELECT refusal). S6 adds the runtime-registration pins (first
   complete block registers, late `table-default` lands, the three N-12 precedence
   legs) and the three C-028 agreement pins. S7 adds the `hadoop` / `InMemoryCatalog`
-  registration pins. S8 adds the Spark oracle JSON and the eleven cell replays
-  (38 passed, 2 pinned: EAGER-1 eager `SHOW CATALOGS`, HADOOP-1 UUID metadata names).
+  registration pins. S8 adds the Spark oracle JSON, the eleven cell replays, and the
+  session-start pin `test_show_namespaces_bare_at_session_start_follows_box_not_current_catalog`
+  (41 passed; divergences EAGER-1, HADOOP-1 stay pinned in the registry; bare
+  `SHOW NAMESPACES` follows the registry box while `SELECT current_catalog()` stays `spark_catalog`).
   pins: ice-catalog-session-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028
 
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
