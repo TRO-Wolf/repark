@@ -482,6 +482,39 @@ def test_replace_partition_field_transform_lhs_matching_no_field_refuses(spark: 
     assert "matches no partition field" in str(caught.value)
 
 
+def test_replace_partition_field_days_lhs_wrong_source_refuses(spark: Any) -> None:
+    """``days(data)`` vs a spec whose only days field is ``days(ts)`` refuses loud.
+
+    The transform alone is present in the spec; only the (source column, transform)
+    pair matches, so a resolver ignoring the source column is killed by this pin.
+    """
+    from repark.errors import PySparkException
+
+    table = f"{CATALOG}.{NAMESPACE}.t_replace_lhs_wrong_src"
+    spark.sql(
+        f"CREATE TABLE {table} (ts TIMESTAMP, data STRING) "
+        "USING iceberg PARTITIONED BY (days(ts))"
+    )
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD days(data) WITH hours(data)")
+    assert "matches no partition field" in str(caught.value)
+
+
+def test_replace_partition_field_truncate_lhs_wrong_source_refuses(spark: Any) -> None:
+    """The truncate LHS shares the (source column, transform) resolution and refuses."""
+    from repark.errors import PySparkException
+
+    table = f"{CATALOG}.{NAMESPACE}.t_replace_lhs_trunc_src"
+    spark.sql(f"CREATE TABLE {table} (id BIGINT, data STRING) USING iceberg")
+    spark.sql(f"ALTER TABLE {table} ADD PARTITION FIELD truncate(4, id)")
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"ALTER TABLE {table} REPLACE PARTITION FIELD truncate(4, data) "
+            "WITH truncate(8, data)"
+        )
+    assert "matches no partition field" in str(caught.value)
+
+
 def test_describe_shows_column_comment(spark: Any) -> None:
     """Cell ``D-DESCRIBE`` re-check: the comment column carries the doc."""
     table = f"{CATALOG}.{NAMESPACE}.t_describe_doc"
