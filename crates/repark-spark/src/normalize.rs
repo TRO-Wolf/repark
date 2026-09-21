@@ -595,12 +595,13 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
             args.join(", ")
         ))
     };
+    let integer_error = |raw: &str, label: &str| {
+        DataFusionError::Plan(format!(
+            "CTAS PARTITIONED BY `{name}(…)` {label} must be an integer, got `{raw}`"
+        ))
+    };
     let positive_width = |raw: &str, label: &str| -> Result<u32> {
-        let parsed: i64 = raw.trim().parse().map_err(|_| {
-            DataFusionError::Plan(format!(
-                "CTAS PARTITIONED BY `{name}(…)` {label} must be an integer, got `{raw}`"
-            ))
-        })?;
+        let parsed: i64 = raw.trim().parse().map_err(|_| integer_error(raw, label))?;
         if parsed <= 0 {
             return Err(DataFusionError::Plan(format!(
                 "CTAS PARTITIONED BY `{name}({raw}, …)` {label} must be > 0 (Spark/Iceberg reject \
@@ -619,6 +620,9 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
         let [first, second] = args else {
             return Err(arity_err(&format!("({label}, column)")));
         };
+        if let Some(literal) = args.iter().find(|raw| raw.starts_with(['\'', '"'])) {
+            return Err(integer_error(literal, label));
+        }
         match (parses_as_int(first), parses_as_int(second)) {
             (true, false) => Ok((first, second)),
             (false, true) => Ok((second, first)),
@@ -833,11 +837,10 @@ pub(crate) fn parse_transform_call_args(inner: &[&Token]) -> Result<Vec<String>>
     Ok(args)
 }
 
-/// Render one transform argument's tokens to its semantic string.
+/// Render one transform argument's tokens, keeping string literals quoted.
 pub(crate) fn render_transform_arg(tokens: &[&Token]) -> String {
     match tokens {
         [Token::Word(word)] => word.value.clone(),
-        [Token::DoubleQuotedString(name) | Token::SingleQuotedString(name)] => name.clone(),
         _ => tokens.iter().map(ToString::to_string).collect::<String>(),
     }
 }

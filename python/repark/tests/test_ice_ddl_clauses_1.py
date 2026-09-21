@@ -408,6 +408,47 @@ def test_partition_transform_near_misses_still_refuse(spark: Any) -> None:
     assert "not a supported partition transform" in str(caught.value)
 
 
+def test_bucket_quoted_string_is_never_the_width(spark: Any) -> None:
+    """``bucket('x', 16)``/``bucket(\"x\", 16)`` refuse; the table has column ``x``.
+
+    The wrong implementation under this pin strips the quotes, sniffs ``16`` as the
+    width, and records ``x_bucket``/``bucket[16]`` instead of refusing.
+    """
+    from repark.errors import PySparkException
+
+    for literal in ("'x'", '"x"'):
+        with pytest.raises(PySparkException) as caught:
+            spark.sql(
+                f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_quoted_width (x BIGINT) "
+                f"USING iceberg PARTITIONED BY (bucket({literal}, 16))"
+            )
+        assert "numBuckets must be an integer" in str(caught.value)
+
+
+def test_truncate_quoted_string_is_never_the_width(spark: Any) -> None:
+    """``truncate(ts, 'day')`` refuses: a quoted string is never a width."""
+    from repark.errors import PySparkException
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_trunc_quoted_width (ts TIMESTAMP) "
+            "USING iceberg PARTITIONED BY (truncate(ts, 'day'))"
+        )
+    assert "width must be an integer" in str(caught.value)
+
+
+def test_date_transform_quoted_column_refuses(spark: Any) -> None:
+    """``date('ts')`` refuses: a quoted string is never a partition column."""
+    from repark.errors import PySparkException
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_date_quoted_col (ts TIMESTAMP) "
+            "USING iceberg PARTITIONED BY (date('ts'))"
+        )
+    assert "cannot resolve CTAS partition column" in str(caught.value)
+
+
 def test_replace_partition_field_transform_lhs_days_with_hours(spark: Any, tmp_path: Path) -> None:
     """Cell ``D-REPLACE-PART-FIELD``: ``days(ts) WITH hours(ts)`` resolves via the spec.
 

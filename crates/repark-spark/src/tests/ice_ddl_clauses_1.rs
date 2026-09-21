@@ -205,6 +205,32 @@ fn bucket_two_non_integer_arguments_refuses() {
 }
 
 #[test]
+fn render_transform_arg_keeps_string_literals_quoted() {
+    let single =
+        crate::normalize::render_transform_arg(&[&Token::SingleQuotedString("x".to_string())]);
+    let double =
+        crate::normalize::render_transform_arg(&[&Token::DoubleQuotedString("x".to_string())]);
+    assert_eq!(single, "'x'");
+    assert_eq!(double, "\"x\"");
+}
+
+#[test]
+fn bucket_quoted_string_arguments_are_never_a_width() {
+    for args in [
+        vec!["'x'".to_string(), "16".to_string()],
+        vec!["\"x\"".to_string(), "16".to_string()],
+        vec!["'16'".to_string(), "id".to_string()],
+    ] {
+        let error = build_transform_field("bucket", &args)
+            .expect_err("a quoted string is never a bucket width and must refuse");
+        assert!(
+            error.to_string().contains("numBuckets must be an integer"),
+            "got: {error}"
+        );
+    }
+}
+
+#[test]
 fn replace_partition_field_transform_lhs_parses_to_by_transform_change() {
     let sql = "ALTER TABLE ice.ns.t REPLACE PARTITION FIELD days(ts) WITH hours(ts)";
     let parsed = crate::alter::try_parse_iceberg_alter_ddl(sql)
