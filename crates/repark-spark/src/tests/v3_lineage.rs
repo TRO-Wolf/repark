@@ -348,8 +348,10 @@ async fn v2_table_lineage_columns_are_unresolved() {
     .expect_err("v2 must not plan lineage columns");
     let message = err.to_string();
     assert!(
-        message.contains("No field named") && message.contains("_row_id"),
-        "pre-v3 must fail as the engine Schema class, got: {message}"
+        message.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]")
+            && message.contains("SQLSTATE: 42703")
+            && message.contains("_row_id"),
+        "pre-v3 must fail as UNRESOLVED_COLUMN.WITH_SUGGESTION, got: {message}"
     );
 }
 
@@ -394,8 +396,10 @@ async fn v1_table_lineage_columns_are_unresolved() {
         .expect_err("v1 must not plan lineage columns");
     let message = err.to_string();
     assert!(
-        message.contains("No field named") && message.contains("_row_id"),
-        "v1 must fail as the engine Schema class, got: {message}"
+        message.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]")
+            && message.contains("SQLSTATE: 42703")
+            && message.contains("_row_id"),
+        "v1 must fail as UNRESOLVED_COLUMN.WITH_SUGGESTION, got: {message}"
     );
 }
 

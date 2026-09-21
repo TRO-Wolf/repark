@@ -142,7 +142,9 @@ def test_facade_v2_table_lineage_columns_are_unresolved(tmp_path: Path) -> None:
         with pytest.raises(Exception, match="_row_id") as raised:
             session.sql("SELECT id, _row_id FROM ice.sales.lin2").collect()
         message = str(raised.value)
-        assert "No field named" in message and "_row_id" in message
+        assert "[UNRESOLVED_COLUMN.WITH_SUGGESTION]" in message
+        assert "SQLSTATE: 42703" in message
+        assert "_row_id" in message
     finally:
         session.stop()
 
