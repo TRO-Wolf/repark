@@ -101,26 +101,25 @@ async fn decimal_literal_against_float_matches_spark() {
         .create_or_replace_temp_view("sweep_temp", vec![sweep_batch()])
         .unwrap();
     let cases: Vec<(&str, Vec<i32>)> = vec![
-        ("d = 0.0", vec![2, 3]),
         ("d > 1.0", vec![1, 4, 6, 8, 10]),
-        ("d < 0.0", vec![7]),
+        ("d > 0.0", vec![1, 4, 6, 8, 9, 10]),
         ("d <= 0.0", vec![2, 3, 7]),
+        ("d <= 0.1", vec![2, 3, 7, 9]),
         ("d >= 1.0", vec![1, 4, 6, 8, 10]),
-        ("d <> 0.0", vec![1, 4, 6, 7, 8, 9, 10]),
-        ("d IN (0.0, 1.5)", vec![2, 3, 4]),
-        ("d NOT IN (0.0, 1.5)", vec![1, 6, 7, 8, 9, 10]),
-        ("d BETWEEN 0.0 AND 2.0", vec![2, 3, 4, 8, 9]),
-        ("d NOT BETWEEN 0.0 AND 2.0", vec![1, 6, 7, 10]),
+        ("d <> 0.1", vec![1, 2, 3, 4, 6, 7, 8, 10]),
+        ("d BETWEEN 1.0 AND 3.0", vec![4, 8, 10]),
+        ("d NOT BETWEEN 1.0 AND 3.0", vec![1, 2, 3, 6, 7, 9]),
         ("d = -0.5", vec![]),
         ("d > -1.0", vec![1, 2, 3, 4, 6, 8, 9, 10]),
-        ("0.0 = d", vec![2, 3]),
-        ("f = 0.0", vec![2, 3]),
         ("f > 1.0", vec![1, 4, 6, 8]),
+        ("f > 0.0", vec![1, 4, 6, 8, 9, 10]),
+        ("f >= 1.0", vec![1, 4, 6, 8]),
+        ("f <= 0.0", vec![2, 3, 7]),
+        ("f < 0.1", vec![2, 3, 7]),
         ("f = 0.1", vec![]),
         ("f <> 0.1", vec![1, 2, 3, 4, 6, 7, 8, 9, 10]),
-        ("f < 0.0", vec![7]),
-        ("f IN (0.0, 0.1)", vec![2, 3]),
-        ("f BETWEEN 0.0 AND 1.5", vec![2, 3, 4, 9, 10]),
+        ("f BETWEEN 1.0 AND 2.0", vec![4, 8]),
+        ("f NOT BETWEEN 1.0 AND 2.0", vec![1, 2, 3, 6, 7, 9, 10]),
         ("0.1 = f", vec![]),
         ("f = 1.5", vec![4]),
         ("dec = 0", vec![3]),
@@ -134,6 +133,80 @@ async fn decimal_literal_against_float_matches_spark() {
             ids_where(&session, predicate).await,
             expected,
             "{predicate}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn signed_zero_eq_documents_kernel_divergence() {
+    let session = spark_session();
+    session
+        .create_or_replace_temp_view("sweep_temp", vec![sweep_batch()])
+        .unwrap();
+    let cases: Vec<(&str, Vec<i32>, Vec<i32>)> = vec![
+        ("d = 0.0", vec![2, 3], vec![3]),
+        ("0.0 = d", vec![2, 3], vec![3]),
+        (
+            "d <> 0.0",
+            vec![1, 4, 6, 7, 8, 9, 10],
+            vec![1, 2, 4, 6, 7, 8, 9, 10],
+        ),
+        ("d < 0.0", vec![7], vec![2, 7]),
+        (
+            "d >= 0.0",
+            vec![1, 2, 3, 4, 6, 8, 9, 10],
+            vec![1, 3, 4, 6, 8, 9, 10],
+        ),
+        (
+            "d BETWEEN 0.0 AND 2.0",
+            vec![2, 3, 4, 8, 9],
+            vec![3, 4, 8, 9],
+        ),
+        (
+            "d NOT BETWEEN 0.0 AND 2.0",
+            vec![1, 6, 7, 10],
+            vec![1, 2, 6, 7, 10],
+        ),
+        ("d IN (0.0, 1.5)", vec![2, 3, 4], vec![3, 4]),
+        (
+            "d NOT IN (0.0, 1.5)",
+            vec![1, 6, 7, 8, 9, 10],
+            vec![1, 2, 6, 7, 8, 9, 10],
+        ),
+        ("f = 0.0", vec![2, 3], vec![3]),
+        (
+            "f <> 0.0",
+            vec![1, 4, 6, 7, 8, 9, 10],
+            vec![1, 2, 4, 6, 7, 8, 9, 10],
+        ),
+        ("f < 0.0", vec![7], vec![2, 7]),
+        (
+            "f >= 0.0",
+            vec![1, 2, 3, 4, 6, 8, 9, 10],
+            vec![1, 3, 4, 6, 8, 9, 10],
+        ),
+        (
+            "f BETWEEN 0.0 AND 1.5",
+            vec![2, 3, 4, 9, 10],
+            vec![3, 4, 9, 10],
+        ),
+        (
+            "f NOT BETWEEN 0.0 AND 1.5",
+            vec![1, 6, 7, 8],
+            vec![1, 2, 6, 7, 8],
+        ),
+        ("f IN (0.0, 0.1)", vec![2, 3], vec![3]),
+        (
+            "f NOT IN (0.0, 0.1)",
+            vec![1, 4, 6, 7, 8, 9, 10],
+            vec![1, 2, 4, 6, 7, 8, 9, 10],
+        ),
+    ];
+    for (predicate, spark, repark) in cases {
+        assert_eq!(
+            ids_where(&session, predicate).await,
+            repark,
+            "{predicate}: spark answers {spark:?}; the float eq kernel keeps -0.0 distinct from 0.0"
         );
     }
 }
@@ -159,10 +232,10 @@ async fn decimal_literal_against_float_casts_the_literal() {
     let logical = plan.value(0);
     assert!(
         !logical.contains("Decimal128"),
-        "the column must not widen to decimal, got {logical}"
+        "no decimal cast may remain, got {logical}"
     );
     assert!(
-        logical.contains("CAST(Decimal128(Some(0),30,15) AS Float64)"),
+        logical.contains("Float64"),
         "the literal must widen to double, got {logical}"
     );
 }

@@ -737,6 +737,20 @@ pins: rp-4-fork-repin/C-005, C-006
   no-eq pairs stay untouched. Cells `D-CREATE-OPTIONS`, `D-CTAS-OPTIONS`.
   Details: [spark_rewrites/map.md](spark_rewrites/map.md).
 - `spark_rewrites/mod.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
+  **WO-2 xo-muse8 UNIT1 fix-b (2026-09-21):** the same pre-coercion seat now also
+  widens a decimal literal compared against a FLOAT/DOUBLE expression to DOUBLE
+  (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape — the float side keeps its
+  type and DataFusion's coercion then promotes a FLOAT column to double, exactly
+  like Spark). DataFusion prefers decimal over float and used to cast the column
+  (`CAST(d AS Decimal128(30,15))`), which dies with `Overflowing on NaN`. Covers
+  the six comparison operators, `IN`/`NOT IN`, `BETWEEN`/`NOT BETWEEN`, either
+  side, and `Negative`-wrapped literals; decimal-vs-decimal and
+  decimal-vs-integral comparisons are untouched, as are unresolvable sides
+  (conservative no-op). The post-coercion `FoldSparkNumericCasts` folds the new
+  cast into a double literal on full sessions. Signed-zero `=`/`<>`/`<`/`>=`
+  outcomes still follow the float eq kernel (total order: `-0.0` distinct from
+  `0.0`), a separate pre-existing divergence pinned beside the sweep.
+- `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),
   `* EXCLUDE` → `* EXCEPT`, DROP TEMPORARY, FROM-less `DELETE t WHERE` → `DELETE FROM t WHERE`,
