@@ -7,7 +7,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{DataType as SqlDataType, Expr, Value, ValueWithSpan};
 use datafusion::sql::sqlparser::parser::ParserError;
-use iceberg::transaction::{ApplyTransactionAction, Transaction};
+use iceberg::transaction::{ApplyTransactionAction, Transaction, staged_snapshot_for_wap_id};
 use iceberg::{Catalog, ErrorKind, TableIdent, table::Table};
 use repark_iceberg::write::{SnapshotRefKind, list_snapshot_refs};
 
@@ -250,6 +250,43 @@ pub(super) async fn execute_cherrypick_snapshot(
         schema,
         vec![
             Arc::new(Int64Array::from(vec![snapshot_id])),
+            Arc::new(Int64Array::from(vec![current_snapshot_id])),
+        ],
+    )?;
+    ctx.read_batches(vec![batch])
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(super) async fn execute_publish_changes(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    args: &CallArgs,
+) -> Result<DataFrame> {
+    args.reject_unknown_named(&["table", "wap_id"])?;
+    args.reject_excess_positional(2)?;
+    let table_arg = args.require_string("table", 0)?;
+    let wap_id = args.require_string("wap_id", 1)?;
+    let (ident, table) = load_call_table(&catalog, catalog_name, &table_arg).await?;
+    let staged = staged_snapshot_for_wap_id(table.metadata(), &wap_id)
+        .map_err(|error| DataFusionError::Execution(error.message().to_string()))?;
+    let source_snapshot_id = staged.snapshot_id();
+    let tx = Transaction::new(&table);
+    let action = tx.publish_changes(&wap_id);
+    let tx = action.apply(tx).map_err(iceberg_err)?;
+    let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
+    let current_snapshot_id = committed.metadata().current_snapshot_id().ok_or_else(|| {
+        DataFusionError::Plan("publish committed but table has no current snapshot".to_string())
+    })?;
+    reregister_namespace(ctx, &catalog, catalog_name, &ident).await?;
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("source_snapshot_id", DataType::Int64, false),
+        Field::new("current_snapshot_id", DataType::Int64, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int64Array::from(vec![source_snapshot_id])),
             Arc::new(Int64Array::from(vec![current_snapshot_id])),
         ],
     )?;
