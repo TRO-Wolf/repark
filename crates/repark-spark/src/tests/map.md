@@ -782,14 +782,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   relation list (red-first: the round-1 walker answers two rows where the branch answers four).
   `a_delete_creates_the_wap_branch_that_does_not_exist` and its UPDATE twin pin WAP-002.
   pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-010, C-011, C-012),
+  `wap_id` (**IPI-05, 2026-09-21:** the `spark.wap.id` staged half on the Rust door — a plain
+  INSERT with only the id set stages a snapshot stamped `wap.id` while main stays put;
+  `publish_changes(table, wap_id)` answers `(source_snapshot_id, current_snapshot_id)`,
+  fast-forwarding when main has not moved and replaying with `published-wap-id` over an
+  intervening commit; an unknown id raises the bare `Cannot apply unknown WAP ID '…'`; the
+  near misses stay normal commits — the property without the id, the id without the
+  property, DELETE/UPDATE and INSERT OVERWRITE under the id — and with neither key the
+  write SQL passes through byte-identical; a staged snapshot also cherry-picks onto main),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a
   metadata-table suffix nor a real table whose own name starts with `branch_`; and WAP
-  declared — the remaining publish procedure fails closed, and the engine's own `SET` door
-  still rejects the `spark` conf namespace, so that statement leaves the branch where it was
-  (`fast_forward` and `cherrypick_snapshot` moved to
-  `branch_ops` when ICE-BRANCH-OPS-1 implemented them); and the read-vs-write boundary —
+  declared — the engine's own `SET` door still rejects the `spark` conf namespace, so that
+  statement leaves the branch where it was (`fast_forward` and `cherrypick_snapshot` moved
+  to `branch_ops` when ICE-BRANCH-OPS-1 implemented them, `publish_changes` to `wap_id`
+  with IPI-05); and the read-vs-write boundary —
   a selector in a DML statement's
   source, `USING` operand or predicate subquery reads the ref (four classes plus CTAS, each
   asserting the ref's ids and not `main`'s); a branch write target commits onto the branch
