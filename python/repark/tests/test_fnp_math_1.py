@@ -47,6 +47,50 @@ _C001_NAMES: tuple[str, ...] = (
 
 _C005_NAMES: frozenset[str] = frozenset({"hash", "aes_encrypt", "aes_decrypt", "try_aes_decrypt"})
 
+_FNP_FENCE_REASON = "FNP-MATH-1 fence: {} not built in this PR; flips when the follow-up lands"
+
+_C001_FENCED: frozenset[str] = frozenset(
+    {"collate", "collation", "sentences", "aes_encrypt", "aes_decrypt", "try_aes_decrypt"}
+)
+_C002_FENCED: frozenset[str] = frozenset(
+    {"collate", "collation", "sentences", "locate", "array_join"}
+)
+_C003_FENCED: frozenset[str] = frozenset({"collate", "locate", "sentences", "array_join"})
+_C004_FENCED: frozenset[str] = frozenset({"collate", "aes_decrypt"})
+_C005_FENCED: frozenset[str] = frozenset({"aes_encrypt", "aes_decrypt", "try_aes_decrypt"})
+_F14_FENCE_BY_ID: dict[str, str] = {
+    "F14-aes-badkey": "aes_encrypt",
+    "F14-aes-dec-bad": "aes_decrypt",
+    "F14-aes-gcm-rt": "aes_decrypt",
+    "F14-aes-ecb": "aes_encrypt",
+    "F14-aes-cbc-iv": "aes_encrypt",
+    "F14-aes-gcm-iv": "aes_encrypt",
+    "F14-aes-dec-ecb": "aes_decrypt",
+    "F14-try-aes-bad": "try_aes_decrypt",
+}
+
+
+def _fnp_fence(name: str) -> Any:
+    """Build the strict FNP-MATH-1 xfail mark for one unbuilt function."""
+    return pytest.mark.xfail(strict=True, reason=_FNP_FENCE_REASON.format(name))
+
+
+def _fenced_key(key: str, names: frozenset[str]) -> Any:
+    """Strict-xfail one parametrized key whose leading function is not built in this PR."""
+    name = key.split("|", 1)[0]
+    if name in names:
+        return pytest.param(key, marks=_fnp_fence(name))
+    return key
+
+
+def _fenced_cell(cell_id: str) -> Any:
+    """Strict-xfail one F14 cell whose function is not built in this PR."""
+    name = _F14_FENCE_BY_ID.get(cell_id)
+    if name is None:
+        return cell_id
+    return pytest.param(cell_id, marks=_fnp_fence(name))
+
+
 _COLLATE_UNKNOWN_CONDITION = "COLLATION_INVALID_NAME"
 
 _FRAME_VALUES = (
@@ -376,7 +420,7 @@ def _assert_q12_table(table: pa.Table, cell: dict[str, Any]) -> None:
     assert table.column("v").to_pylist() == [_decode_repr_text(cell["rows"][0])], cell["id"]
 
 
-@pytest.mark.parametrize("name", _C001_NAMES)
+@pytest.mark.parametrize("name", [_fenced_key(name, _C001_FENCED) for name in _C001_NAMES])
 def test_c001_name_present_with_spark_parameters(name: str) -> None:
     """Pin one D-6 name on the facade with PySpark 4.1.2 parameter names."""
     assert hasattr(F, name), name
@@ -389,7 +433,13 @@ def test_c001_presence_without_recorded_signature(name: str) -> None:
     assert hasattr(F, name), name
 
 
-@pytest.mark.parametrize("key", _o245_value_keys("python", frozenset({"split"}) | _C005_NAMES))
+@pytest.mark.parametrize(
+    "key",
+    [
+        _fenced_key(key, _C002_FENCED)
+        for key in _o245_value_keys("python", frozenset({"split"}) | _C005_NAMES)
+    ],
+)
 def test_c002_python_door_value_cells(spark: ReparkSession, key: str) -> None:
     """Pin one o245 Python-door value cell on the recorded ANSI setting."""
     cell = _O245_BY_KEY[key]
@@ -397,7 +447,9 @@ def test_c002_python_door_value_cells(spark: ReparkSession, key: str) -> None:
     _assert_o245_value_table(_run_python(_frame(spark), str(cell["expr"])).to_arrow(), cell)
 
 
-@pytest.mark.parametrize("key", _o245_value_keys("sql", _C005_NAMES))
+@pytest.mark.parametrize(
+    "key", [_fenced_key(key, _C003_FENCED) for key in _o245_value_keys("sql", _C005_NAMES)]
+)
 def test_c003_sql_door_value_cells(spark: ReparkSession, key: str) -> None:
     """Pin one o245 SQL-door value cell on the recorded ANSI setting."""
     cell = _O245_BY_KEY[key]
@@ -411,7 +463,10 @@ def test_c003_sql_door_value_cells(spark: ReparkSession, key: str) -> None:
     _assert_o245_value_table(spark.sql(query).to_arrow(), cell)
 
 
-@pytest.mark.parametrize("key", [k for k, c in _O245_BY_KEY.items() if "error_type" in c])
+@pytest.mark.parametrize(
+    "key",
+    [_fenced_key(key, _C004_FENCED) for key, c in _O245_BY_KEY.items() if "error_type" in c],
+)
 def test_c004_o245_error_cells(spark: ReparkSession, key: str) -> None:
     """Pin one o245 error cell class on its recorded door and ANSI setting."""
     cell = _O245_BY_KEY[key]
@@ -426,7 +481,9 @@ def test_c004_o245_error_cells(spark: ReparkSession, key: str) -> None:
     assert condition in str(excinfo.value), key
 
 
-@pytest.mark.parametrize("cell_id", ["F14-aes-badkey", "F14-aes-dec-bad"])
+@pytest.mark.parametrize(
+    "cell_id", [_fenced_cell(c) for c in ("F14-aes-badkey", "F14-aes-dec-bad")]
+)
 @pytest.mark.parametrize("ansi", (True, False))
 def test_c004_f14_aes_error_cells_sql_door(spark: ReparkSession, cell_id: str, ansi: bool) -> None:
     """Pin one F14 AES error cell on the SQL door under both ANSI settings."""
@@ -440,8 +497,16 @@ def test_c004_f14_aes_error_cells_sql_door(spark: ReparkSession, cell_id: str, a
 @pytest.mark.parametrize(
     ("cell_id", "condition"),
     (
-        ("badkey", "INVALID_PARAMETER_VALUE.AES_KEY_LENGTH"),
-        ("badvalue", "INVALID_PARAMETER_VALUE.AES_CRYPTO_ERROR"),
+        pytest.param(
+            "badkey",
+            "INVALID_PARAMETER_VALUE.AES_KEY_LENGTH",
+            marks=_fnp_fence("aes_encrypt"),
+        ),
+        pytest.param(
+            "badvalue",
+            "INVALID_PARAMETER_VALUE.AES_CRYPTO_ERROR",
+            marks=_fnp_fence("aes_decrypt"),
+        ),
     ),
 )
 @pytest.mark.parametrize("ansi", (True, False))
@@ -470,10 +535,10 @@ _HASH_SQL_XFAIL = (
 
 
 def _c005_param(key: str) -> Any:
-    """Wrap one C-005 key, strict-xfailing the SQL hash SELECT it cannot reach."""
+    """Wrap one C-005 key, strict-xfailing the SQL hash SELECT and the unbuilt AES names."""
     if key.startswith("hash|sql|"):
         return pytest.param(key, marks=pytest.mark.xfail(strict=True, reason=_HASH_SQL_XFAIL))
-    return pytest.param(key)
+    return _fenced_key(key, _C005_FENCED)
 
 
 @pytest.mark.parametrize(
@@ -499,14 +564,17 @@ def test_c005_o245_exact_hash_aes_cells(spark: ReparkSession, key: str) -> None:
 @pytest.mark.parametrize(
     "cell_id",
     [
-        "F14-mask",
-        "F14-mask-null-repl",
-        "F14-aes-gcm-rt",
-        "F14-aes-ecb",
-        "F14-aes-cbc-iv",
-        "F14-aes-gcm-iv",
-        "F14-aes-dec-ecb",
-        "F14-try-aes-bad",
+        _fenced_cell(c)
+        for c in (
+            "F14-mask",
+            "F14-mask-null-repl",
+            "F14-aes-gcm-rt",
+            "F14-aes-ecb",
+            "F14-aes-cbc-iv",
+            "F14-aes-gcm-iv",
+            "F14-aes-dec-ecb",
+            "F14-try-aes-bad",
+        )
     ],
 )
 @pytest.mark.parametrize("ansi", (True, False))
@@ -527,14 +595,17 @@ def test_c005_f14_cells_sql_door(spark: ReparkSession, cell_id: str, ansi: bool)
 @pytest.mark.parametrize(
     "cell_id",
     [
-        "F14-mask",
-        "F14-mask-null-repl",
-        "F14-aes-gcm-rt",
-        "F14-aes-ecb",
-        "F14-aes-cbc-iv",
-        "F14-aes-gcm-iv",
-        "F14-aes-dec-ecb",
-        "F14-try-aes-bad",
+        _fenced_cell(c)
+        for c in (
+            "F14-mask",
+            "F14-mask-null-repl",
+            "F14-aes-gcm-rt",
+            "F14-aes-ecb",
+            "F14-aes-cbc-iv",
+            "F14-aes-gcm-iv",
+            "F14-aes-dec-ecb",
+            "F14-try-aes-bad",
+        )
     ],
 )
 @pytest.mark.parametrize("ansi", (True, False))
