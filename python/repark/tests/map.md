@@ -2115,6 +2115,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   all-zero row and file order — and `strategy => 'sort'` on an unsorted table raises the
   fork's `IllegalArgumentException`, its message pinned by equality.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
+- [test_ice_procedures_1.py](test_ice_procedures_1.py) —
+  **ICE-PROCEDURES-1 (2026-09-20):** the binder pins over the memory catalog. The
+  three inventory cells replay at the door: the four-positional RDF form compacts a
+  two-file table to Spark's recorded `[2, 1, >0, 0, 0]` row, the two-positional RPD
+  form answers `[0, 0, 0, 0]`, and the mixed rollback form answers the previous and
+  current snapshot ids resolved from the snapshots table, never literals. Refusal
+  pins assert class and exact text on the Plan errors the binder keeps: duplicate
+  positional-plus-named binding, unknown `branch`, missing `table`, over-arity on
+  both procedures. A named NULL `sort_order` succeeds, and the not-yet-wired
+  parameters (the four expire arguments, RM `sort_by`, RPD `where` in both
+  spellings) keep their exact current refusals; the quoted
+  `remove-dangling-deletes` extra still binds with the options-map key winning.
+  pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010
 - [test_ice_rdf_sort_parse_1.py](test_ice_rdf_sort_parse_1.py) —
   **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the pins that stand between IPI-43 and a green
   gate over a no-op. `P-RDF-SORT`, `P-RDF-SORT-TABLE-ORDER` and `P-RDF-ZORDER` record the
