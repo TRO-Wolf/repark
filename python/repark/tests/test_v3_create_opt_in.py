@@ -13,7 +13,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
+from repark.errors import AnalysisException, UnsupportedOperationException
 
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 
@@ -108,7 +108,7 @@ def test_format_version_three_create_with_opt_in_is_v3_and_rewrite_runs(
 
 
 def test_v3_geometry_geography_variant_columns_refuse_naming_the_type(tmp_path: Path) -> None:
-    """V3R-1 (2026-08-25): geometry/geography DECLARED (V3-GEO-1), variant is V3-6; all refuse."""
+    """V3R-1 types split by IPI-51 PR8: geospatial is AnalysisException, VARIANT stays UOE."""
     spark = (
         ReparkSession.builder.appName("v3r-1-types")
         .config(_ALLOW_CREATE_V3_KEY, "true")
@@ -117,14 +117,22 @@ def test_v3_geometry_geography_variant_columns_refuse_naming_the_type(tmp_path: 
     try:
         spark.register_memory_catalog("ice", tmp_path)
         spark.sql("CREATE NAMESPACE ice.sales")
-        for type_name in ("GEOMETRY", "GEOGRAPHY", "VARIANT"):
+        for type_name in ("GEOMETRY", "GEOGRAPHY"):
             table = f"ice.sales.t_{type_name.lower()}"
-            with pytest.raises(UnsupportedOperationException, match=type_name):
+            with pytest.raises(AnalysisException) as excinfo:
                 spark.sql(
                     f"CREATE TABLE {table} (id INT, v {type_name}) USING iceberg "
                     "TBLPROPERTIES ('format-version' = '3')"
                 ).collect()
+            assert excinfo.value.getCondition() == "UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED"
+            assert excinfo.value.getSqlState() == "0A000"
             assert not spark.catalog.tableExists(table)
+        with pytest.raises(UnsupportedOperationException, match="VARIANT"):
+            spark.sql(
+                "CREATE TABLE ice.sales.t_variant (id INT, v VARIANT) USING iceberg "
+                "TBLPROPERTIES ('format-version' = '3')"
+            ).collect()
+        assert not spark.catalog.tableExists("ice.sales.t_variant")
     finally:
         spark.stop()
 
