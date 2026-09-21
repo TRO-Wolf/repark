@@ -235,6 +235,8 @@ mod tests {
             ("SELECT startswith('é', '')", Some(true)),
             ("SELECT startswith('Apple', 'ap')", Some(false)),
             ("SELECT startswith('ap', 'apple')", Some(false)),
+            ("SELECT startswith('xap', 'ap')", Some(false)),
+            ("SELECT startswith('apple', 'ap%')", Some(false)),
         ];
         for (sql, expected) in cases {
             assert_eq!(one_bool(&ctx, sql).await, *expected, "{sql}");
