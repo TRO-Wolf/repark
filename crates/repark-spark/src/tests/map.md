@@ -976,6 +976,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `[MERGE_CARDINALITY_VIOLATION]` and `SQLSTATE: 23K01`. The untouched-target
   assert on the second test stays.
   pins: ice-error-conditions-1/C-012
+- `merge_cardinality_mor.rs` — **IPI-51 type slice (2026-09-21):** `merge_cardinality_violation_merge_on_read_errors` is the merge-on-read duplicate-source pin. It requires `Error::Analysis`, `[MERGE_CARDINALITY_VIOLATION]` and `SQLSTATE: 23K01`, and an untouched target. A Stage B `Plan` to `Execution` flip turns this test red while `merge_cardinality_violation_errors` stays green. pins: ice-error-conditions-1/C-012
 - `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the twelve pins that gate
   the metadata-location cache. Two Spark doors are registered over ONE `Arc<dyn Catalog>` built
   with a `CatalogCaches`, which is the only shape in which "two sessions on one catalog" is real
