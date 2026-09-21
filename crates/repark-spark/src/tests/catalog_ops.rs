@@ -88,6 +88,24 @@ fn partition_management_unsupported_starts_with_condition_and_names_table() {
     assert!(message.contains("SQLSTATE: 42601"), "got: {message}");
 }
 
+#[test]
+fn not_supported_command_for_v2_table_starts_with_condition_and_names_command() {
+    let DataFusionError::Plan(message) =
+        catalog_ops::not_supported_command_for_v2_table("MSCK REPAIR TABLE")
+    else {
+        panic!("not_supported_command_for_v2_table must be plan-class");
+    };
+    assert!(
+        message.starts_with("[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]"),
+        "got: {message}"
+    );
+    assert!(
+        message.contains("MSCK REPAIR TABLE is not supported for v2 tables"),
+        "got: {message}"
+    );
+    assert!(message.contains("SQLSTATE: 0A000"), "got: {message}");
+}
+
 #[tokio::test]
 async fn alter_add_hive_partition_refuses_with_partition_management_unsupported() {
     let wh = TempDir::new().unwrap();

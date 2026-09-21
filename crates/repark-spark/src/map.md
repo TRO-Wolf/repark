@@ -1147,7 +1147,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `partition_management_unsupported` is the sibling home of Spark's
   `[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]`/`SQLSTATE: 42601` text
   over a caller-backticked table display (`quoted_table_display` backticks each name part);
-  the `truncate.rs` PARTITION arm answers through it.
+  the `truncate.rs` PARTITION arm answers through it. **IPI-51 PR5 (2026-09-20):**
+  `not_supported_command_for_v2_table` is the sibling home of Spark's
+  `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]`/`SQLSTATE: 0A000` text over a caller-supplied
+  command string (newlines flattened); the four v2-command router intercepts answer through it.
   pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its

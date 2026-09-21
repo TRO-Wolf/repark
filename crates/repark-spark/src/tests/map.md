@@ -554,7 +554,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`; IPI-51 PR4 (2026-09-20):
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table
   display, and `SQLSTATE: 42601`, and the Hive `ADD PARTITION` pin asserts the plan-class
-  stamp end to end.
+  stamp end to end; IPI-51 PR5 (2026-09-20): the `not_supported_command_for_v2_table`
+  unit pin asserts the condition prefix, the command text, and `SQLSTATE: 0A000`.
   pins: ice-error-conditions-1/C-011), `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
   PARTITIONS refuses stamped, and SHOW NAMESPACES / SHOW FUNCTIONS keep their intercepts.
   pins: ice-error-conditions-1/C-011), `alter`, `dml`
