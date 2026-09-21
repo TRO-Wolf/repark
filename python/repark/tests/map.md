@@ -56,6 +56,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]`/`42601` texts
   (truncate-with-tableName, Hive ADD PARTITION, SHOW PARTITIONS); the historical
   tableName-less pin stays byte-identical.
+  **IPI-51 PR5 (2026-09-20):** four stamped-message constructor pins assert type +
+  `getCondition` + `getSqlState` on the new
+  `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]`/`0A000` texts (SET SERDE, DESCRIBE AS JSON,
+  MSCK REPAIR, ANALYZE TABLE); the historical parser pins stay byte-identical.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +

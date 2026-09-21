@@ -260,6 +260,54 @@ def test_show_partitions_stamped_message_parses() -> None:
     assert error.getSqlState() == "42601"
 
 
+def test_set_serde_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] "
+        "ALTER TABLE ... SET [SERDE|SERDEPROPERTIES] is not supported for v2 tables. "
+        "SQLSTATE: 0A000"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "NOT_SUPPORTED_COMMAND_FOR_V2_TABLE"
+    assert error.getSqlState() == "0A000"
+
+
+def test_describe_as_json_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] "
+        "DESCRIBE TABLE AS JSON is not supported for v2 tables. "
+        "SQLSTATE: 0A000"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "NOT_SUPPORTED_COMMAND_FOR_V2_TABLE"
+    assert error.getSqlState() == "0A000"
+
+
+def test_msck_repair_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] "
+        "MSCK REPAIR TABLE is not supported for v2 tables. "
+        "SQLSTATE: 0A000"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "NOT_SUPPORTED_COMMAND_FOR_V2_TABLE"
+    assert error.getSqlState() == "0A000"
+
+
+def test_analyze_table_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] "
+        "ANALYZE TABLE is not supported for v2 tables. "
+        "SQLSTATE: 0A000"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "NOT_SUPPORTED_COMMAND_FOR_V2_TABLE"
+    assert error.getSqlState() == "0A000"
+
+
 def test_attach_error_condition_wins_over_class_parser() -> None:
     """An instance attach must outrank the class-level message parser."""
     error = AnalysisException("[WRONG_CLASS] hello SQLSTATE: 00000")
