@@ -921,3 +921,5 @@ fn starts_insert_source(token: Option<&Token>) -> bool {
             "SELECT" | "VALUES" | "WITH" | "TABLE" | "FROM"
         )
 }
+
+pub(crate) mod create_options;
