@@ -31,10 +31,11 @@ battery is under `src/tests/` (navigation
 
 - `Cargo.toml` — deps: repark-core, repark-iceberg, repark-functions, repark-ta (feature
   `datafusion`, for the composed `TaExtension`), datafusion + fork family, regex (SHOW … LIKE),
-  async-trait (dialect seam), tracing (the purge sweep's single warn line, V-001); dev-deps add
-  chrono + futures (battery) and repark-common (the
-  `surfaces` registry the `#[cfg(test)]` Q13 matrix audits this door against — dev-only because
-  no shipped code reads it). **ICE-READ-PERF-0 (2026-09-19):** dev-dep `serde_json` (the bench's
+  async-trait (dialect seam), tracing (the purge sweep's single warn line, V-001), repark-common
+  (**IPI-51 PR6 slice 3**, 2026-09-21: graduated dev → normal — `normalize.rs` renders through
+  `repark_common::spark_error`, and the `#[cfg(test)]` Q13 matrix keeps auditing against the
+  `surfaces` registry); dev-deps add chrono + futures (battery).
+  **ICE-READ-PERF-0 (2026-09-19):** dev-dep `serde_json` (the bench's
   JSON output and bed manifest), a `[[bench]] ice_read_perf` (`harness = false`) and a
   `[[test]] ice_read_perf_pins` whose root is `benches/ice_read_perf/pins.rs`, so the bench's
   modules are unit-tested without a `#[path]` and without a second target on one file.
@@ -69,8 +70,8 @@ battery is under `src/tests/` (navigation
 - **State & lifecycle:** per-call routing over an `EngineContext` snapshot; registrations installed
   once at build via `SparkExtension`.
 - **Allowed internal deps:** `repark-core`, `repark-iceberg`, `repark-functions`, `repark-ta` (feature
-  `datafusion`) — same-tier edges to functions / ta are legal. Dev-only: `repark-common` (surface
-  matrix).
+  `datafusion`), `repark-common` (condition catalogue + surface matrix) — same-tier edges to
+  functions / ta are legal.
 - **Failure model:** `DataFusionError` propagation + targeted loud refusals for unsupported / wrong-form
   statements; folds to the session taxonomy in core.
 - **Extension points:** add / adjust a Spark-ism normalizer (`normalize.rs`); change what the

@@ -771,7 +771,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   JVM lock; cites
   `spark_door_null_keys_never_match_inner_left_semi_anti`).
 - **Sibling test modules:**
-  `partitioned_ctas`, `partitioned_merge`, `transform_overwrite` (still nests
+  `partitioned_ctas` (**IPI-51 PR6 slice 3**, 2026-09-21: U1-P10 retargeted to
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703` with backticked suggestions, plus the CREATE
+  TABLE `days(ts)` pin on the inventory cell's door; both mutation-proven, the typed-column
+  and duplicate-name near-miss pins untouched; pins: ice-error-conditions-1/C-011),
+  `partitioned_merge`, `transform_overwrite` (still nests
   `provider_partition_correctness`), `service_managed_ctas`,
   `ctas_view` (**CTAS-VIEW-1, 2026-09-03:** unpartitioned CTAS from Utf8View+BinaryView
   batches with one NULL, plus the partitioned control from the same view).
