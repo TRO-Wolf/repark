@@ -13,12 +13,13 @@ use iceberg::{Catalog, Error, TableIdent, table::Table};
 use repark_core::illegal_argument_error;
 
 use super::compute_table_stats::spark_type_name;
+use super::params::params_for;
 use super::rewrite_options::{
     RewriteOptions, extract_option_pairs, has_option_key, parse_rdf_options,
 };
 use super::rewrite_where::parse_rewrite_where;
 use super::{CallArgs, bytes_as_i64, count_as_i32, resolve_table_ident};
-use crate::call_args::expr_as_string;
+use crate::call_args::bind;
 use crate::sort_order_parse::{
     OrderParseError, WriteOrderField, ZOrderScan, parse_identity_sort_order, parse_zorder_columns,
 };
@@ -34,27 +35,23 @@ pub(super) async fn execute_rewrite_data_files(
     catalog_name: &str,
     args: &CallArgs,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&[
-        "table",
-        "strategy",
-        "sort_order",
-        "options",
-        "where",
-        "remove-dangling-deletes",
-    ])?;
-    args.reject_excess_positional(2)?;
-    let strategy_arg = strategy_argument(args)?;
-    let sort_order_arg = args.optional_string("sort_order")?;
-    let table_arg = args.require_string("table", 0)?;
+    let bound = bind(
+        args,
+        params_for("rewrite_data_files"),
+        &["remove-dangling-deletes"],
+    )?;
+    let strategy_arg = bound.optional_string("strategy")?;
+    let sort_order_arg = bound.optional_string("sort_order")?;
+    let table_arg = bound.require_string("table")?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
     let strategy = resolve_strategy(strategy_arg.as_deref(), sort_order_arg.as_deref(), &table)?;
-    let pairs = extract_option_pairs(args, "rewrite_data_files")?;
+    let pairs = extract_option_pairs(&bound, "rewrite_data_files")?;
     let mut options = parse_rdf_options(&pairs, &table, strategy)?;
     if !has_option_key(&pairs, "remove-dangling-deletes") {
-        options.remove_dangling_deletes = args.optional_bool("remove-dangling-deletes", None)?;
+        options.remove_dangling_deletes = bound.optional_bool("remove-dangling-deletes")?;
     }
-    let where_predicate = match args.optional_string("where")? {
+    let where_predicate = match bound.optional_string("where")? {
         Some(where_sql) => Some(parse_rewrite_where(
             where_sql.as_str(),
             table.metadata().current_schema(),
@@ -158,16 +155,6 @@ fn is_fork_validation_refusal(error: &Error) -> bool {
     ];
     let message = error.to_string();
     NEEDLES.iter().any(|needle| message.contains(needle))
-}
-
-fn strategy_argument(args: &CallArgs) -> Result<Option<String>> {
-    if let Some(named) = args.optional_string("strategy")? {
-        return Ok(Some(named));
-    }
-    if args.positional.len() > 1 {
-        return Ok(Some(expr_as_string(&args.positional[1], "strategy")?));
-    }
-    Ok(None)
 }
 
 enum SortTerms {

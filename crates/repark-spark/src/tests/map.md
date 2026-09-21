@@ -461,6 +461,34 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-003
   pins: rp-32-rdf-cow-bytes/C-006, C-007
+- `call_procedures_1.rs` — **ICE-PROCEDURES-1 (2026-09-20):** the declared-parameter
+  binder pins. The four-positional RDF form compacts (a `min-input-files 7` twin on the
+  same six-file shape answers zeros, which proves the map bound as `options`), the
+  two-positional RPD form answers Spark's four zero columns on a delete-free table, and the
+  mixed rollback form rolls back with Spark's two columns. Refusal pins assert class and
+  exact text: duplicate positional-plus-named binding, unknown `branch` with the declared
+  allowed list, missing `table` with its declared position, and over-arity on both
+  procedures. A named NULL `sort_order` with `binpack` succeeds, pinning NULL-as-unset
+  beside the positional NULL in the RDF form. **PR1b (2026-09-21):** the positionally
+  bound RPD `where` pin now asserts the wired form binds onto a delete-free table.
+  Clause citations live in this map, not in the source — the owner's comment ban covers doc
+  comments too.
+  pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-012
+- `call_procedures_2.rs` — **ICE-PROCEDURES-1 PR1b (2026-09-21):** the wiring-round pins.
+  RPD `where` restricts the rewrite to the matching partition (a filtered twin rewrites 1
+  of 2 delete files while the unfiltered twin rewrites both, with live rows intact on
+  each), and a malformed or unknown-column `where` refuses with the exact parse text.
+  `expire_snapshots` `snapshot_ids` expires exactly those ids in both named and positional
+  spellings with Spark's six columns and row, the accept-and-ignore trio equals the plain
+  `older_than` row on twin tables, mistyped new arguments refuse naming their types, and
+  `rewrite_manifests` `sort_by` stays a loud unknown-argument refusal. `add_files`
+  imports answer Spark's two columns with NULL `changed_partition_count` on partitioned,
+  flat, filtered and parallel twins; every import pins the pretty name-mapping property;
+  reordered source columns bind by name with adopted paths; duplicates raise with Java's
+  text unless forced; and non-parquet, catalog-table and bare-string sources refuse with
+  their own texts.
+  Clause citations live in this map, not in the source.
+  pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** 35
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
   bad-job-order / bad-spec / band-crossing / negative-size texts, silent-false booleans,

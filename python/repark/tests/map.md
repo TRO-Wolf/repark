@@ -2115,6 +2115,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   all-zero row and file order — and `strategy => 'sort'` on an unsorted table raises the
   fork's `IllegalArgumentException`, its message pinned by equality.
   pins: maint-rewrite-data-files-options/C-003, C-004, C-005, C-006, C-007
+- [test_ice_procedures_1.py](test_ice_procedures_1.py) —
+  **ICE-PROCEDURES-1 (2026-09-20):** the binder pins over the memory catalog. The
+  three inventory cells replay at the door: the four-positional RDF form compacts a
+  two-file table to Spark's recorded `[2, 1, >0, 0, 0]` row, the two-positional RPD
+  form answers `[0, 0, 0, 0]`, and the mixed rollback form answers the previous and
+  current snapshot ids resolved from the snapshots table, never literals. Refusal
+  pins assert class and exact text on the Plan errors the binder keeps: duplicate
+  positional-plus-named binding, unknown `branch`, missing `table`, over-arity on
+  both procedures. A named NULL `sort_order` succeeds, and the quoted
+  `remove-dangling-deletes` extra still binds with the options-map key winning.
+  **PR1b (2026-09-21):** the wiring-round pins. RPD `where` compacts the matching
+  partition to Spark's `[3, 3, >0, >0]` row; `snapshot_ids` expires exactly those
+  ids to `[0, 0, 0, 0, 1, 0]`; the accept-and-ignore expire trio equals the plain
+  `[1, 0, 0, 1, 3, 0]` row; `add_files` answers its two columns with NULL
+  `changed_partition_count` on partitioned, flat, filtered and parallel twins, with
+  the pretty name-mapping property asserted on every import, adopted paths, by-name
+  binding, Java's duplicate text and the unsupported-source refusals. The
+  not-yet-wired set narrows to RM `sort_by`, which keeps its exact refusal.
+  pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [test_ice_rdf_sort_parse_1.py](test_ice_rdf_sort_parse_1.py) —
   **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the pins that stand between IPI-43 and a green
   gate over a no-op. `P-RDF-SORT`, `P-RDF-SORT-TABLE-ORDER` and `P-RDF-ZORDER` record the

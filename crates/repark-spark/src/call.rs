@@ -16,9 +16,10 @@ use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
 use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 
-use crate::call_args::CallArgs;
+use crate::call_args::{CallArgs, bind, expr_as_i64_array};
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
+mod add_files;
 mod ancestors_of;
 mod apply_partitioning;
 mod branch_ops;
@@ -26,6 +27,7 @@ mod changelog;
 mod compute_partition_stats;
 mod compute_table_stats;
 mod create_changelog_view;
+mod params;
 mod plan_partitioning;
 mod plan_partitioning_bytes;
 mod plan_partitioning_score;
@@ -38,6 +40,7 @@ mod run_maintenance;
 mod run_maintenance_apply;
 
 const SUPPORTED_PROCEDURES: &[&str] = &[
+    "add_files",
     "ancestors_of",
     "apply_partitioning",
     "cherrypick_snapshot",
@@ -72,6 +75,7 @@ pub async fn execute_call(
     let args = CallArgs::parse(&function.args)?;
 
     match procedure.as_str() {
+        "add_files" => add_files::execute_add_files(ctx, catalog, &catalog_name, &args).await,
         "ancestors_of" => {
             ancestors_of::execute_ancestors_of(ctx, catalog, &catalog_name, &args).await
         }
@@ -253,34 +257,17 @@ async fn execute_expire_snapshots(
     catalog_name: &str,
     args: &CallArgs,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&[
-        "table",
-        "older_than",
-        "retain_last",
-        "snapshot_ids",
-        "max_concurrent_deletes",
-        "stream_results",
-        "clean_expired_metadata",
-    ])?;
-    // Spark arity: table, older_than?, retain_last? (+ deferred named-only args)
-    args.reject_excess_positional(3)?;
-    for unsupported in [
-        "snapshot_ids",
-        "max_concurrent_deletes",
-        "stream_results",
-        "clean_expired_metadata",
-    ] {
-        if args.has_named(unsupported) {
-            return Err(DataFusionError::NotImplemented(format!(
-                "CALL expire_snapshots argument `{unsupported}` is not supported in v1 \
-                 (supported: table, older_than, retain_last)"
-            )));
-        }
-    }
-
-    let table_arg = args.require_string("table", 0)?;
-    let older_than_ms = args.optional_timestamp_ms("older_than", Some(1))?;
-    let retain_last = args.optional_i32("retain_last", Some(2))?;
+    let bound = bind(args, params::params_for("expire_snapshots"), &[])?;
+    let table_arg = bound.require_string("table")?;
+    let older_than_ms = bound.optional_timestamp_ms("older_than")?;
+    let retain_last = bound.optional_i32("retain_last")?;
+    let snapshot_ids = match bound.get("snapshot_ids") {
+        Some(expr) => expr_as_i64_array(expr, "snapshot_ids")?,
+        None => Vec::new(),
+    };
+    bound.optional_i64("max_concurrent_deletes")?;
+    bound.optional_bool("stream_results")?;
+    bound.optional_bool("clean_expired_metadata")?;
 
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
@@ -290,13 +277,15 @@ async fn execute_expire_snapshots(
         action = action.expire_older_than(timestamp_ms);
     }
     if let Some(retain) = retain_last {
-        // Pre-validate Java/fork floor so CALL fails at plan time with a stable message.
         if retain < 1 {
             return Err(DataFusionError::Plan(format!(
                 "CALL expire_snapshots retain_last must be >= 1, got {retain}"
             )));
         }
         action = action.retain_last(retain);
+    }
+    for snapshot_id in snapshot_ids {
+        action = action.expire_snapshot_id(snapshot_id);
     }
 
     let tx = Transaction::new(&table);
@@ -357,22 +346,23 @@ async fn execute_rewrite_position_delete_files(
     catalog_name: &str,
     args: &CallArgs,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&["table", "options", "where"])?;
-    // Only `table` is supported positionally.
-    args.reject_excess_positional(1)?;
-    if args.has_named("where") {
-        return Err(DataFusionError::NotImplemented(
-            "CALL rewrite_position_delete_files where filter is not supported in v1 (the fork \
-             exposes RewritePositionDeleteFiles::filter but it is not wired through CALL yet)"
-                .to_string(),
-        ));
-    }
-
-    let table_arg = args.require_string("table", 0)?;
+    let bound = bind(
+        args,
+        params::params_for("rewrite_position_delete_files"),
+        &[],
+    )?;
+    let table_arg = bound.require_string("table")?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-    let pairs = rewrite_options::extract_option_pairs(args, "rewrite_position_delete_files")?;
+    let pairs = rewrite_options::extract_option_pairs(&bound, "rewrite_position_delete_files")?;
     let options = rewrite_options::parse_rpd_options(&pairs, &table)?;
+    let where_predicate = match bound.optional_string("where")? {
+        Some(where_sql) => Some(rewrite_where::parse_rewrite_where(
+            where_sql.as_str(),
+            table.metadata().current_schema(),
+        )?),
+        None => None,
+    };
 
     let mut action = RewritePositionDeleteFiles::new(table);
     if let Some(size) = options.target_file_size_bytes {
@@ -392,6 +382,9 @@ async fn execute_rewrite_position_delete_files(
     }
     if options.rewrite_all {
         action = action.rewrite_all(true);
+    }
+    if let Some(predicate) = where_predicate {
+        action = action.filter(predicate);
     }
     let result = action
         .execute(catalog.as_ref())

@@ -7865,6 +7865,48 @@ oracle on live Spark.
   catalog's metadata basenames diverge from Hadoop `vN` names (pinned by
   shape); output columns are non-nullable by the rewrite-family precedent
   (the fixture records no nullability).
+### ICE-PROCEDURES-1 — `add_files` routing, RPD `where`, the expire arguments — **FIXED 2026-09-21**
+
+`CALL …add_files` refused before this row (`CALL … is not supported`);
+`rewrite_position_delete_files` refused `where`, and `expire_snapshots` refused
+`snapshot_ids`, `max_concurrent_deletes`, `stream_results` and
+`clean_expired_metadata`. They now answer with Spark's schemas and rows over the
+owned fork's maintenance actions.
+
+- **repark** — `CALL <catalog>.system.add_files(table, source_table [,
+  partition_filter] [, check_duplicate_files] [, parallelism])`: directory imports
+  in the `` `parquet`.`<directory>` `` spelling only — any other format refuses
+  naming the format, a catalog-table reference refuses as out of scope. Spark's two
+  columns (`added_files_count`, `changed_partition_count`) with a NULL changed count
+  on every import; the import commits Java's pretty-printed
+  `schema.name-mapping.default` JSON when the table properties lack it, binds source
+  columns by name, adopts the files in place (no byte copy), and honours
+  `partition_filter` and the duplicate check (default true) with Java's texts.
+  `parallelism` validates positive and answers the serial import.
+- **repark** — `rewrite_position_delete_files` `where`: the SQL predicate parses
+  through the shared `rewrite_data_files` predicate path into the fork's
+  `RewritePositionDeleteFiles::filter`.
+- **repark** — `expire_snapshots` `snapshot_ids`, `max_concurrent_deletes`,
+  `stream_results`, `clean_expired_metadata`: `snapshot_ids` expires each id in
+  array order; the other three parse and stay ignored against the measured equality
+  with a plain `older_than` expiry.
+- **Apache Spark** — identical columns, rows, imported data, name-mapping property
+  and refusal texts per the ten inventory cells (`P-ADD-FILES-*`, `P-RPD-WHERE`,
+  the four `P-EXPIRE-*`), except the `md.snapshots` residue below. *(oracle:
+  recorded — `out/spark-proc.json`, live PySpark 4.1.2 + Iceberg 1.11.0.)*
+- **Pin** — `python/repark/tests/test_ice_procedures_1.py` and
+  `crates/repark-spark/src/tests/call_procedures_2.rs` (schemas, rows, NULL-ness,
+  mapping, paths, by-name binding, every refusal).
+- **Rationale** — routing, not table-format work: the fork already implements the
+  actions, and the router only shapes Spark's surface around them. Residue: the
+  fork's merge-append writes a `changed-partition-count` snapshot-summary key
+  Java's add_files path does not write, so the four answered add_files cells report
+  DIFFERENT solely on `md.snapshots` until the fork ask in the ledger lands;
+  `clean_expired_metadata` stays accepted-and-ignored per INDEX decision 15 with its
+  fork behaviour carded; `branch` (RDF) and `sort_by` (RM) keep refusing loud
+  for PR2.
+  pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
+  C-020
 ### MANIFEST-4 — an append after a partition-spec evolution does not merge the old-spec manifests — **DECLARED 2026-09-19**
 
 - **repark** — on a table whose partition spec has evolved, an `INSERT` writes its new

@@ -10,7 +10,7 @@ use iceberg::table::Table;
 use repark_core::illegal_argument_error;
 use repark_functions::java_double::java_double_text;
 
-use super::CallArgs;
+use crate::call_args::BoundArgs;
 use crate::iceberg_err;
 
 const RDF_ACCEPTED: &[&str] = &[
@@ -92,18 +92,15 @@ pub(crate) struct RewriteOptions {
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) fn extract_option_pairs(
-    args: &CallArgs,
+    bound: &BoundArgs,
     procedure: &str,
 ) -> Result<Vec<(String, Option<String>)>> {
-    let Some(expr) = args.named.get("options") else {
+    let Some(expr) = bound.get("options") else {
         return Ok(Vec::new());
     };
     match expr {
-        Expr::Value(ValueWithSpan {
-            value: Value::Null, ..
-        }) => Ok(Vec::new()),
         Expr::Function(function) if function.name.to_string().eq_ignore_ascii_case("map") => {
-            pairs_from_map_args(&function.args, procedure)
+            pairs_from_map_args(&function.args, procedure, "options")
         }
         other => Err(DataFusionError::Plan(format!(
             "CALL {procedure} argument `options` must be map(k, v, …), got {other}"
@@ -112,13 +109,14 @@ pub(crate) fn extract_option_pairs(
 }
 
 #[allow(clippy::missing_errors_doc)]
-fn pairs_from_map_args(
+pub(in crate::call) fn pairs_from_map_args(
     args: &FunctionArguments,
     procedure: &str,
+    argument: &str,
 ) -> Result<Vec<(String, Option<String>)>> {
     let FunctionArguments::List(list) = args else {
         return Err(DataFusionError::Plan(format!(
-            "CALL {procedure} argument `options` must be map(k, v, …)"
+            "CALL {procedure} argument `{argument}` must be map(k, v, …)"
         )));
     };
     let mut exprs = Vec::with_capacity(list.args.len());
@@ -127,23 +125,23 @@ fn pairs_from_map_args(
             FunctionArg::Unnamed(FunctionArgExpr::Expr(expr)) => exprs.push(expr),
             _ => {
                 return Err(DataFusionError::Plan(format!(
-                    "CALL {procedure} argument `options` must be map(k, v, …) of string literals"
+                    "CALL {procedure} argument `{argument}` must be map(k, v, …) of string literals"
                 )));
             }
         }
     }
     if exprs.len() % 2 != 0 {
         return Err(DataFusionError::Plan(format!(
-            "CALL {procedure} argument `options` must list key/value pairs (got {} arguments)",
+            "CALL {procedure} argument `{argument}` must list key/value pairs (got {} arguments)",
             exprs.len()
         )));
     }
     let mut pairs = Vec::with_capacity(exprs.len() / 2);
     let mut seen = HashSet::with_capacity(exprs.len() / 2);
     for chunk in exprs.chunks_exact(2) {
-        let key = scalar_text(chunk[0], procedure)?.ok_or_else(|| {
+        let key = scalar_text(chunk[0], procedure, argument)?.ok_or_else(|| {
             DataFusionError::Plan(format!(
-                "CALL {procedure} argument `options` map keys must be string literals"
+                "CALL {procedure} argument `{argument}` map keys must be string literals"
             ))
         })?;
         if !seen.insert(key.clone()) {
@@ -151,13 +149,13 @@ fn pairs_from_map_args(
                 "[DUPLICATED_MAP_KEY] Duplicate map key {key} was found, please check the input data.\nIf you want to remove the duplicated keys, you can set \"spark.sql.mapKeyDedupPolicy\" to \"LAST_WIN\" so that the key inserted at last takes precedence. SQLSTATE: 23505"
             )));
         }
-        pairs.push((key, scalar_text(chunk[1], procedure)?));
+        pairs.push((key, scalar_text(chunk[1], procedure, argument)?));
     }
     Ok(pairs)
 }
 
 #[allow(clippy::missing_errors_doc)]
-fn scalar_text(expr: &Expr, procedure: &str) -> Result<Option<String>> {
+fn scalar_text(expr: &Expr, procedure: &str, argument: &str) -> Result<Option<String>> {
     match expr {
         Expr::Value(ValueWithSpan { value, .. }) => match value {
             Value::SingleQuotedString(text)
@@ -167,11 +165,11 @@ fn scalar_text(expr: &Expr, procedure: &str) -> Result<Option<String>> {
             Value::Boolean(flag) => Ok(Some(flag.to_string())),
             Value::Null => Ok(None),
             _ => Err(DataFusionError::Plan(format!(
-                "CALL {procedure} argument `options` map keys and values must be string literals"
+                "CALL {procedure} argument `{argument}` map keys and values must be string literals"
             ))),
         },
         _ => Err(DataFusionError::Plan(format!(
-            "CALL {procedure} argument `options` map keys and values must be string literals"
+            "CALL {procedure} argument `{argument}` map keys and values must be string literals"
         ))),
     }
 }

@@ -10,7 +10,9 @@ use repark_core::time_travel::incremental::IncrementalWindow;
 use repark_iceberg::catalog::{ChangelogTableProvider, ChangelogViewProvider};
 
 use super::changelog::ChangelogTransform;
+use super::params::params_for;
 use super::{CallArgs, illegal_argument, resolve_table_ident};
+use crate::call_args::{BoundArgs, bind, expr_as_string_array};
 use crate::iceberg_err;
 
 const NET_CHANGES_WITH_UPDATES: &str = "Not support net changes with update images";
@@ -24,23 +26,18 @@ pub(super) async fn execute_create_changelog_view(
     catalog_name: &str,
     args: &CallArgs,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&[
-        "table",
-        "changelog_view",
-        "options",
-        "compute_updates",
-        "identifier_columns",
-        "net_changes",
-    ])?;
-    args.reject_excess_positional(6)?;
-    let table_arg = args.require_string("table", 0)?;
-    let view_arg = args.optional_string("changelog_view")?;
-    let identifier_argument = args.optional_string_array("identifier_columns")?;
-    let net_changes = args.optional_bool("net_changes", None)?.unwrap_or(false);
-    let compute_update_images = args
-        .optional_bool("compute_updates", None)?
+    let bound = bind(args, params_for("create_changelog_view"), &[])?;
+    let table_arg = bound.require_string("table")?;
+    let view_arg = bound.optional_string("changelog_view")?;
+    let identifier_argument = bound
+        .get("identifier_columns")
+        .map(|expr| expr_as_string_array(expr, "identifier_columns"))
+        .transpose()?;
+    let net_changes = bound.optional_bool("net_changes")?.unwrap_or(false);
+    let compute_update_images = bound
+        .optional_bool("compute_updates")?
         .unwrap_or_else(|| identifier_argument.is_some());
-    let options = window_options(args)?;
+    let options = window_options(&bound)?;
 
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
@@ -74,8 +71,8 @@ pub(super) async fn execute_create_changelog_view(
     output_frame(ctx, &view_name)
 }
 
-fn window_options(args: &CallArgs) -> Result<BTreeMap<String, String>> {
-    let pairs = super::rewrite_options::extract_option_pairs(args, "create_changelog_view")?;
+fn window_options(bound: &BoundArgs) -> Result<BTreeMap<String, String>> {
+    let pairs = super::rewrite_options::extract_option_pairs(bound, "create_changelog_view")?;
     let mut options = BTreeMap::new();
     for (key, value) in pairs {
         if let Some(value) = value {
