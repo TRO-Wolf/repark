@@ -367,6 +367,21 @@ mod tests {
     }
 
     #[test]
+    fn create_view_statement_sniff_matches_durable_only() {
+        assert!(is_create_view_statement(
+            "CREATE VIEW sc.ns.v AS SELECT 1 AS id"
+        ));
+        assert!(is_create_view_statement(
+            "CREATE OR REPLACE VIEW IF NOT EXISTS v AS SELECT 1 AS id"
+        ));
+        assert!(!is_create_view_statement(
+            "CREATE TEMPORARY VIEW v AS SELECT 1 AS id"
+        ));
+        assert!(!is_create_view_statement("CREATE TABLE t (id INT)"));
+        assert!(!is_create_view_statement("SELECT 1"));
+    }
+
+    #[test]
     fn malformed_create_view_fails_loud() {
         assert!(try_parse_create_view("CREATE VIEW v AS").is_some_and(|parsed| parsed.is_err()));
         assert!(
@@ -412,6 +427,16 @@ mod tests {
             panic!("session scope needs an explicit namespace")
         };
         assert!(error.to_string().contains("requires an explicit namespace"));
+        assert!(
+            try_parse_show_views("SHOW VIEWS LIKE 'v*'")
+                .unwrap_or_else(|| panic!("must match"))
+                .is_err()
+        );
+        assert!(
+            try_parse_show_views("SHOW VIEWS IN sc.ns LIKE vs_*")
+                .unwrap_or_else(|| panic!("must match"))
+                .is_err()
+        );
     }
 
     #[test]
