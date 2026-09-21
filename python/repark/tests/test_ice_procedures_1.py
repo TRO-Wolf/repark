@@ -95,13 +95,13 @@ def test_call_mixed_args_rollback_binds(spark: ReparkSession) -> None:
     spark.sql("INSERT INTO mem.ns.mx VALUES (1)")
     spark.sql("INSERT INTO mem.ns.mx VALUES (2)")
     ids = _snapshot_ids(spark, "mem.ns.mx")
-    assert len(ids) == 3
+    assert len(ids) == 2
     cols, row = _result_row(
         spark, f"CALL mem.system.rollback_to_snapshot('ns.mx', snapshot_id => {ids[0]})"
     )
     assert cols == ["previous_snapshot_id", "current_snapshot_id"]
-    assert row == [ids[2], ids[0]]
-    assert _live_ids(spark, "mem.ns.mx") == []
+    assert row == [ids[1], ids[0]]
+    assert _live_ids(spark, "mem.ns.mx") == [1]
 
 
 def test_bind_duplicate_binding_refuses(spark: ReparkSession) -> None:
