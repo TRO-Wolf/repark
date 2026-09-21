@@ -385,7 +385,7 @@ pins: rp-4-fork-repin/C-005, C-006
   baseline). pins: ice-changelog-1/C-009
 - **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` gains `create_changelog_view` in
   `SUPPORTED_PROCEDURES` and the dispatch; `call/create_changelog_view.rs` parses the six Java
-  parameters (`identifier_columns => array(…)` through the new `CallArgs::optional_string_array`),
+  parameters (`identifier_columns => array(…)` through `call_args::expr_as_string_array`),
   applies Java's `shouldComputeUpdateImages` default (an identifier list with no
   `compute_updates` still pairs), refuses `net_changes` beside update images with Java's exact
   text, falls back to the table's identifier fields, and registers the LAZY
