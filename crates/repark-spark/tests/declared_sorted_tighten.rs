@@ -396,22 +396,20 @@ async fn ddl_sink_session() -> (TempDir, ReparkSession) {
 }
 
 #[tokio::test]
-async fn create_view_in_iceberg_catalog_over_tightened_source_refuses() {
+async fn create_view_in_iceberg_catalog_over_tightened_source_stays_allowed() {
     // Y-3.
     let (_dir, session) = ddl_sink_session().await;
     for sql in [
         "CREATE VIEW ice.sales.v_limit AS SELECT * FROM tight LIMIT 0",
         "CREATE VIEW ice.sales.v_false AS SELECT * FROM tight WHERE false",
     ] {
-        let error = session
+        session
             .sql(sql)
             .await
-            .err()
-            .unwrap_or_else(|| panic!("`{sql}` must refuse — it persists an Iceberg table"));
-        assert!(
-            error.to_string().contains("tightenNulls"),
-            "names the flag for `{sql}`: {error}"
-        );
+            .unwrap_or_else(|error| panic!("`{sql}` must stay allowed: {error}"))
+            .collect()
+            .await
+            .unwrap_or_else(|error| panic!("collect `{sql}`: {error}"));
     }
 }
 
@@ -436,16 +434,18 @@ async fn select_into_iceberg_catalog_over_tightened_source_refuses() {
 }
 
 #[tokio::test]
-async fn session_scoped_create_view_and_select_into_over_tightened_source_stay_allowed() {
-    // Y-3/Y-4 allowed side.
+async fn session_scoped_temp_view_refuses_and_select_into_stays_allowed() {
+    // Y-3/Y-4: TEMP VIEW refuses until PR3, SELECT INTO stays allowed.
     let (_dir, session) = ddl_sink_session().await;
-    session
-        .sql("CREATE VIEW session_v AS SELECT * FROM tight")
+    let error = session
+        .sql("CREATE TEMPORARY VIEW session_v AS SELECT * FROM tight")
         .await
-        .expect("session-scoped CREATE VIEW must stay allowed")
-        .collect()
-        .await
-        .expect("collect create view");
+        .err()
+        .unwrap_or_else(|| panic!("session TEMPORARY VIEW must refuse until PR3 wires it"));
+    assert!(
+        error.to_string().contains("Temporary views not supported"),
+        "keeps the PR3 refusal: {error}"
+    );
     session
         .sql("SELECT * INTO session_t FROM tight")
         .await
@@ -454,9 +454,9 @@ async fn session_scoped_create_view_and_select_into_over_tightened_source_stay_a
         .await
         .expect("collect select into");
     let rows = session
-        .sql("SELECT count(*) AS n FROM session_v")
+        .sql("SELECT count(*) AS n FROM session_t")
         .await
-        .expect("session view must read back")
+        .expect("session table must read back")
         .collect()
         .await
         .expect("collect");
@@ -479,12 +479,25 @@ async fn create_view_in_iceberg_catalog_over_untightened_source_stays_allowed() 
         .collect()
         .await
         .expect("collect");
+    let rows = session
+        .sql("SELECT count(*) AS n FROM ice.sales.v_plain")
+        .await
+        .expect("catalog view must read back")
+        .collect()
+        .await
+        .expect("collect");
+    assert_eq!(
+        rows.iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1
+    );
 }
 
 // SQM resolved-catalog gating (Z-1) and the CTAS-wrapped DDL sink (Z-3).
 
 #[tokio::test]
-async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
+async fn default_catalog_bare_name_view_allowed_and_into_refuses() {
     // Z-1, Spark door.
     let (_dir, session) = ddl_sink_session().await;
     session
@@ -495,40 +508,52 @@ async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
         .sql("SET datafusion.catalog.default_schema = 'sales'")
         .await
         .expect("SET default_schema");
-    // Each refusal also asserts the UNPUBLISHED half.
-    for (sql, resolved) in [
-        (
-            "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
-            "ice.sales.v_bare",
-        ),
-        (
-            "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0",
-            "ice.sales.t_bare",
-        ),
-        (
-            "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
-            "ice.sales.v_partial",
-        ),
-        // Three-part still refuses.
-        (
-            "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
-            "ice.sales.v_full",
-        ),
+    for sql in [
+        "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
     ] {
-        let error = session
+        session
             .sql(sql)
             .await
-            .err()
-            .unwrap_or_else(|| panic!("`{sql}` must refuse — it resolves into `ice`"));
-        assert!(
-            error.to_string().contains("tightenNulls"),
-            "names the flag for `{sql}`: {error}"
-        );
-        assert!(
-            !session.table_exists(resolved).await.unwrap(),
-            "`{sql}` refused but `{resolved}` was persisted anyway (R6-4 unpublished half)"
+            .unwrap_or_else(|error| panic!("`{sql}` must stay allowed: {error}"))
+            .collect()
+            .await
+            .unwrap_or_else(|error| panic!("collect `{sql}`: {error}"));
+    }
+    for name in [
+        "ice.sales.v_bare",
+        "ice.sales.v_partial",
+        "ice.sales.v_full",
+    ] {
+        let rows = session
+            .sql(&format!("SELECT count(*) AS n FROM {name}"))
+            .await
+            .unwrap_or_else(|error| panic!("`{name}` must read back: {error}"))
+            .collect()
+            .await
+            .unwrap_or_else(|error| panic!("collect `{name}`: {error}"));
+        assert_eq!(
+            rows.iter()
+                .map(datafusion::arrow::array::RecordBatch::num_rows)
+                .sum::<usize>(),
+            1
         );
     }
+    let sql = "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0";
+    let error = session
+        .sql(sql)
+        .await
+        .err()
+        .unwrap_or_else(|| panic!("`{sql}` must refuse — it resolves into `ice`"));
+    assert!(
+        error.to_string().contains("tightenNulls"),
+        "names the flag for `{sql}`: {error}"
+    );
+    assert!(
+        !session.table_exists("ice.sales.t_bare").await.unwrap(),
+        "`{sql}` refused but `ice.sales.t_bare` was persisted anyway (R6-4 unpublished half)"
+    );
 }
 
 #[tokio::test]

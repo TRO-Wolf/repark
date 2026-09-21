@@ -188,6 +188,13 @@ def _served() -> tuple[Shape, ...]:
             f"describe extended {NAMESPACE}.{STEM}_survey",
             None,
         ),
+        Shape(
+            "S-CREATE-VIEW",
+            "spark__create_view_as",
+            f"create or replace view {CATALOG}.{NAMESPACE}.v_fct as "
+            f"select * from {CATALOG}.{NAMESPACE}.{STEM}_survey",
+            None,
+        ),
     )
 
 
@@ -212,12 +219,6 @@ def _refused() -> tuple[Shape, ...]:
             "fetch_tbl_properties",
             f"show tblproperties {fact}",
             "SHOW [VARIABLE] is not supported unless information_schema is enabled",
-        ),
-        Shape(
-            "R-CREATE-VIEW",
-            "spark__create_view_as",
-            f"create or replace view {CATALOG}.{NAMESPACE}.v_fct as select * from {fact}",
-            "register_table does not support tables with data",
         ),
         Shape(
             "R-CREATE-TEMPORARY-VIEW",
