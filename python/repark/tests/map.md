@@ -2889,7 +2889,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE widen + narrow-refuse twin
   (int→long + float→double + decimal — octo C3), case-insensitive DROP (octo C5), DROP NOT NULL,
   loud refuse partition evolution / ADD NOT NULL, and **V3-6 C-005**
-  Spark-equal DEFAULT DDL refuse (CREATE / ADD COLUMN / SET DEFAULT)
+  Spark-equal DEFAULT DDL refuse (CREATE / ADD COLUMN / SET DEFAULT); the CREATE arm
+  pins the PR7 stamp `AnalysisException` / `UNSUPPORTED_FEATURE.TABLE_OPERATION` / `0A000`
+  / the backticked table, ADD COLUMN and SET DEFAULT stay `UnsupportedOperationException`
   (pins: v3-6-v3-types/C-005). FQ `mem.ns.table` only (no
   bare-name dependency).
 - `test_alter_table.py` — I6 / R-ALTER-TABLE + I7 partition evolution: ADD/DROP/RENAME COLUMN
@@ -3203,7 +3205,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_iceberg_hygiene.py` — I5 R-ICEBERG-HYGIENE: column-def CREATE schema-eq vs CTAS twin
   (Arrow names+types); PARTITIONED BY + TBLPROPERTIES; CTAS+cols rejection pin (Spark message +
   no orphan); CREATE/DROP BRANCH|TAG via SQL DDL + VERSION AS OF time-travel pins; default AS OF
-  = current; DROP main / kind mismatch refuse; DEFAULT column option refuse; trailing AS OF
+  = current; DROP main / kind mismatch refuse; DEFAULT column option refuse (the `with_def`
+  CREATE pins the same PR7 stamp: `AnalysisException` / `UNSUPPORTED_FEATURE.TABLE_OPERATION`
+  / `0A000` / backticked table); trailing AS OF
   misspelled RETENTION refuse; **r25 T2** `test_ref_ddl_replace_and_retain` (CREATE OR REPLACE
   lands + misspelled RETENTION still loud); octo C8 py-lint line wrap on NOT NULL create. No AWS.
 - `test_facade_1_arrow_c_stream.py` — **FACADE-1 (2026-09-12):** capsule seam both ways.
