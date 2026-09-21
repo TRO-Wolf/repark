@@ -165,7 +165,7 @@ def test_bind_null_is_unset(spark: ReparkSession) -> None:
 
 
 def test_not_yet_wired_params_stay_loud(spark: ReparkSession) -> None:
-    """Expire args, sort_by and RPD where keep exact refusals. pins: ice-procedures-1/C-009."""
+    """Expire args and sort_by keep exact refusals. pins: ice-procedures-1/C-009."""
     spark.sql("CREATE TABLE mem.ns.nyw (id BIGINT) USING iceberg")
     spark.sql("INSERT INTO mem.ns.nyw VALUES (1)")
     for argument in (
@@ -186,12 +186,32 @@ def test_not_yet_wired_params_stay_loud(spark: ReparkSession) -> None:
         spark.sql(
             "CALL mem.system.rewrite_manifests(table => 'ns.nyw', sort_by => array('id'))"
         ).to_arrow()
-    for call in (
-        "CALL mem.system.rewrite_position_delete_files(table => 'ns.nyw', where => 'id = 1')",
-        "CALL mem.system.rewrite_position_delete_files('ns.nyw', NULL, 'id = 1')",
-    ):
-        with pytest.raises(UnsupportedOperationException, match="where filter is not supported"):
-            spark.sql(call).to_arrow()
+
+
+def test_rpd_where_rewrites_matching_partition(spark: ReparkSession) -> None:
+    """RPD where compacts only the matching partition. pins: ice-procedures-1/C-012."""
+    spark.sql(
+        "CREATE TABLE mem.ns.rpdw (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat) TBLPROPERTIES ('write.delete.mode' = 'merge-on-read', "
+        "'write.merge.mode' = 'merge-on-read')"
+    )
+    spark.sql("INSERT INTO mem.ns.rpdw VALUES (1, 'a', 'x'), (2, 'b', 'y'), (6, 'f', 'x')")
+    spark.sql("INSERT INTO mem.ns.rpdw VALUES (3, 'c', 'x'), (7, 'g', 'x')")
+    spark.sql("INSERT INTO mem.ns.rpdw VALUES (4, 'd', 'x'), (5, 'e', 'y'), (8, 'h', 'x')")
+    spark.sql("DELETE FROM mem.ns.rpdw WHERE id = 1")
+    spark.sql("DELETE FROM mem.ns.rpdw WHERE id = 3")
+    spark.sql("DELETE FROM mem.ns.rpdw WHERE id = 4")
+    cols, row = _result_row(
+        spark,
+        "CALL mem.system.rewrite_position_delete_files(table => 'ns.rpdw', "
+        "where => 'cat = \"x\"', options => map('rewrite-all', 'true'))",
+    )
+    assert cols == _RPD_COLS
+    assert row[0] == 3
+    assert row[1] == 3
+    assert row[2] > 0
+    assert row[3] > 0
+    assert _live_ids(spark, "mem.ns.rpdw") == [2, 5, 6, 7, 8]
 
 
 def test_dangling_extra_and_precedence_kept(spark: ReparkSession) -> None:

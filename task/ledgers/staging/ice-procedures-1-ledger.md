@@ -9,6 +9,8 @@
 
 **Not in this unit:** wiring `branch` (RDF), `sort_by` (RM), the four expire arguments, or RPD `where`; the `Condition` enum; `SUPPORTED_PROCEDURES`; the registry row (next round files it); `docs/spark-sql-iceberg-parity.md`; `STATUS.md`; versions/tags.
 
+**PR1b (2026-09-21, lane `xb-procs`):** this round wires the three PR1a-deferred behaviours on the same branch — `add_files` routing (C-015…C-019), RPD `where` (C-012), and the four expire arguments (C-013, C-014) — files the registry row and retires it, and keeps `branch` / `sort_by` refusing loud (C-020). Clauses C-012…C-020 open here and flip PROVEN in this round's last commit; the Close and attestation below cover C-001…C-011 until that commit extends them.
+
 ## PROPOSITION LEDGER — ICE-PROCEDURES-1 — 2026-09-20
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -24,6 +26,15 @@
 | C-009 | Not-yet-wired parameters stay loud with exact current refusals: the four expire arguments, RM `sort_by`, RDF `branch` (C-005), and RPD `where` — including a positionally bound `where`. | Rust `call_rpd_positional_where_stays_a_loud_refusal` and the untouched `call_rewrite_position_delete_files_validates_options_and_refuses_where`; Python `test_not_yet_wired_params_stay_loud`. | **PROVEN** | Positional `where` refuses `NotImplemented` with the exact current text; expire and RM handlers untouched so their refusals hold by construction. |
 | C-010 | `remove-dangling-deletes` stays accepted as a RePark-only extra named parameter on RDF and the options-map key still wins; the existing dangling tests stay green. | Existing `call_rewrite_dangling` tests plus `call_rdf_options_empty_map_and_null_are_defaults`; Python `test_dangling_extra_and_precedence_kept`. | **PROVEN** | Full lib suite 1376 passed (dangling files included); options file 122 passed; new Python pin binds the quoted extra and the NULL map key wins. |
 | C-011 | `params.rs` transcribes the jar lists: RDF and RPD bindable names, order and required flags asserted; `branch` is deliberately absent from the RDF bindable set so the binder refuses it (C-005); the array helpers parse `array(…)` and `ARRAY[…]` of literals. | Rust `rewrite_data_files_params_follow_the_jar_order`, `rewrite_position_delete_files_params_follow_the_jar_order`, `params_for_resolves_every_transcribed_procedure`, and the three array-helper unit tests. | **PROVEN** | Transcription mechanically verified with zero mismatches against `procedure-params.txt`; `#[allow(dead_code)]` marks the type field and array helpers until the wiring rounds call them. |
+| C-012 | RPD `where` wires through CALL: `rewrite_position_delete_files(table, where => 'cat = "x"', options => rewrite-all)` compacts only the matching partition's deletes and answers Spark's four columns with row `[3,3,>0,>0]`. | Rust `call_rpd_where_restricts_to_matching_partition` plus the converted `call_rpd_positional_where_binds`; Python `test_rpd_where_rewrites_matching_partition`; replay `P-RPD-WHERE` EQUAL. | OPEN | PR1b proves it. |
+| C-013 | Expire `snapshot_ids` wires: `snapshot_ids => array(<id>)` expires exactly those ids in array order and answers Spark's six columns with row `[0,0,0,0,1,0]`. | Rust `call_expire_snapshot_ids_expires_exactly_those`; Python `test_expire_snapshot_ids_expires_exactly_those`; replay `P-EXPIRE-SNAPSHOT-IDS` EQUAL. | OPEN | PR1b proves it. |
+| C-014 | Expire `stream_results`, `max_concurrent_deletes` and `clean_expired_metadata` are accepted and ignored: each answers the plain `older_than` row `[1,0,0,1,3,0]`. | Rust `call_expire_accept_and_ignore_trio_equals_plain`; Python `test_expire_accept_and_ignore_trio_equals_plain`; replay of the three cells EQUAL. | OPEN | PR1b proves it; the fork behaviour behind `clean_expired_metadata` is carded, not implemented (INDEX decision 15). |
+| C-015 | `add_files` routes partitioned and unpartitioned directory imports with Spark's two columns and a NULL `changed_partition_count`: rows `[[2,null]]` / `[[1,null]]`, and the table reads the imported rows. | Rust `call_add_files_partitioned_imports_two_files` and `call_add_files_unpartitioned_imports_one_file`; Python `test_add_files_partitioned` and `test_add_files_unpartitioned`; replay of the two cells. | OPEN | PR1b proves it. The output row is NULL by mapping (D-5); the fork's merge-append writes a `changed-partition-count` summary key Java's add_files path does not, so `md.snapshots` stays a fork residue (see PR1b design notes). |
+| C-016 | `add_files` `partition_filter` restricts the import: `map('cat','x')` imports 1 file and 1 row. | Rust `call_add_files_partition_filter_restricts`; Python `test_add_files_partition_filter`; replay `P-ADD-FILES-PARTITION-FILTER`. | OPEN | PR1b proves it. |
+| C-017 | `add_files` `parallelism` equals the serial import (D-5 accepted-and-ignored). | Rust `call_add_files_parallelism_matches_serial`; Python `test_add_files_parallelism_matches_serial`; replay `P-ADD-FILES-PARALLELISM`. | OPEN | PR1b proves it. |
+| C-018 | `add_files` with `check_duplicate_files => true` raises when a source path is already live in the table, with Java's `IllegalStateException` text. | Rust `call_add_files_check_duplicate_files_raises`; Python `test_add_files_check_duplicate_raises`; replay `P-ADD-FILES-CHECK-DUP` SPARK-CANNOT. | OPEN | PR1b proves it; the exact Spark message is quoted in the PR1b evidence. |
+| C-019 | Every `add_files` import commits Java's pretty-printed `schema.name-mapping.default` JSON when the table properties lack it; imported files stay under the source directory (no byte copy); source columns bind by name. | Rust `call_add_files_commits_name_mapping_and_binds_by_name` plus the mapping assertion on every Rust add_files pin; Python `test_add_files_name_mapping_no_copy_by_name` plus the mapping assertion on every Python add_files pin. | OPEN | PR1b proves it. |
+| C-020 | `branch` (RDF) and `sort_by` (RM) keep refusing loud; the fork halves land later and PR2 wires them. | Rust `call_bind_unknown_argument_names_allowed` (branch) and the RM `sort_by` unknown-argument pin; Python `test_not_yet_wired_params_stay_loud` narrowed arm. | OPEN | PR1b proves it. |
 
 ## Design notes (why, not what)
 
@@ -57,7 +68,7 @@ Each mutation was applied, run scoped, observed red, and reverted with a clean `
 
 ## Close
 
-Every clause is PROVEN by pin plus mutation; the attestation below covers the ten categories.
+PR1a clauses C-001…C-011 are PROVEN by pin plus mutation; the attestation below covers the ten categories for those clauses. PR1b extends both in this round's last commit.
 
 ```text
 COVERAGE_ATTESTATION:

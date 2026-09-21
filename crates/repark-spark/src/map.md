@@ -411,7 +411,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `ICE-RDF-OPTIONS-1` round 3: signed sizes, IAE-first RPD order, NULL-key precedence),
   and on v3 drops in-scope DVs (`V3-DANGLE-1`
   FIXED). rewrite-position-delete answers its measured options subset and refuses its
-  unwired keys loud.
+  unwired keys loud. **ICE-PROCEDURES-1 PR1b (2026-09-21):** its `where` wires through
+  `call/rewrite_where.rs` into the fork's `RewritePositionDeleteFiles::filter`.
+  pins: ice-procedures-1/C-012
   **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `run_maintenance` plans the
   five D-4 steps over the stamped `[<profile>.maintenance]` policy plus inline overrides,
   and `dry_run => false` applies them step by step (`ran` / `failed` / `skipped`).

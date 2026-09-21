@@ -1147,7 +1147,7 @@ async fn call_rewrite_position_delete_files_validates_options_and_refuses_where(
 
     for (argument, needle) in [
         ("options => map('a', 'b')", "by the action"),
-        ("where => 'id = 1'", "where filter is not supported"),
+        ("where => ';;;'", "Cannot parse predicates"),
     ] {
         let err = execute(
             &ctx,

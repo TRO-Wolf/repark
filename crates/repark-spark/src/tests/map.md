@@ -467,12 +467,19 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   two-positional RPD form answers Spark's four zero columns on a delete-free table, and the
   mixed rollback form rolls back with Spark's two columns. Refusal pins assert class and
   exact text: duplicate positional-plus-named binding, unknown `branch` with the declared
-  allowed list, missing `table` with its declared position, over-arity on both procedures,
-  and a positionally bound RPD `where` staying `NotImplemented`. A named NULL `sort_order`
-  with `binpack` succeeds, pinning NULL-as-unset beside the positional NULL in the RDF form.
+  allowed list, missing `table` with its declared position, and over-arity on both
+  procedures. A named NULL `sort_order` with `binpack` succeeds, pinning NULL-as-unset
+  beside the positional NULL in the RDF form. **PR1b (2026-09-21):** the positionally
+  bound RPD `where` pin now asserts the wired form binds onto a delete-free table.
   Clause citations live in this map, not in the source — the owner's comment ban covers doc
   comments too.
-  pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-012
+- `call_procedures_2.rs` — **ICE-PROCEDURES-1 PR1b (2026-09-21):** the wiring-round pins.
+  RPD `where` restricts the rewrite to the matching partition (a filtered twin rewrites 1
+  of 2 delete files while the unfiltered twin rewrites both, with live rows intact on
+  each), and a malformed or unknown-column `where` refuses with the exact parse text.
+  Clause citations live in this map, not in the source.
+  pins: ice-procedures-1/C-012
 - `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** 35
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
   bad-job-order / bad-spec / band-crossing / negative-size texts, silent-false booleans,

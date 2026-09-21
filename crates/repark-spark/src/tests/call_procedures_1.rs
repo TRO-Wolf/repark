@@ -238,23 +238,34 @@ async fn call_bind_excess_positional_names_arity() {
 }
 
 #[tokio::test]
-async fn call_rpd_positional_where_stays_a_loud_refusal() {
+async fn call_rpd_positional_where_binds() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    let error = execute(
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.w AS SELECT * FROM src",
+    )
+    .await;
+    let frame = execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_position_delete_files('sales.w', NULL, 'id = 1')",
     )
     .await
-    .expect_err("positional where must refuse");
-    let datafusion::error::DataFusionError::NotImplemented(message) = error else {
-        panic!("expected a NotImplemented refusal, got {error}");
-    };
-    assert!(
-        message.contains("where filter is not supported"),
-        "got: {message}"
+    .expect("positional where must bind");
+    let batches = frame.collect().await.expect("collect");
+    assert_eq!(
+        column_names(&batches[0]),
+        vec![
+            "rewritten_delete_files_count",
+            "added_delete_files_count",
+            "rewritten_bytes_count",
+            "added_bytes_count",
+        ]
     );
+    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 0);
+    assert_eq!(call_count(&batches[0], "added_delete_files_count"), 0);
 }
 
 #[tokio::test]

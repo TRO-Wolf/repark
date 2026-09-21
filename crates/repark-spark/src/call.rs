@@ -363,19 +363,18 @@ async fn execute_rewrite_position_delete_files(
         params::params_for("rewrite_position_delete_files"),
         &[],
     )?;
-    if bound.get("where").is_some() {
-        return Err(DataFusionError::NotImplemented(
-            "CALL rewrite_position_delete_files where filter is not supported in v1 (the fork \
-             exposes RewritePositionDeleteFiles::filter but it is not wired through CALL yet)"
-                .to_string(),
-        ));
-    }
-
     let table_arg = bound.require_string("table")?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
     let pairs = rewrite_options::extract_option_pairs(&bound, "rewrite_position_delete_files")?;
     let options = rewrite_options::parse_rpd_options(&pairs, &table)?;
+    let where_predicate = match bound.optional_string("where")? {
+        Some(where_sql) => Some(rewrite_where::parse_rewrite_where(
+            where_sql.as_str(),
+            table.metadata().current_schema(),
+        )?),
+        None => None,
+    };
 
     let mut action = RewritePositionDeleteFiles::new(table);
     if let Some(size) = options.target_file_size_bytes {
@@ -395,6 +394,9 @@ async fn execute_rewrite_position_delete_files(
     }
     if options.rewrite_all {
         action = action.rewrite_all(true);
+    }
+    if let Some(predicate) = where_predicate {
+        action = action.filter(predicate);
     }
     let result = action
         .execute(catalog.as_ref())
