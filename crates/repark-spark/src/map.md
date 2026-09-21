@@ -1429,3 +1429,8 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   plan. The star-sentinel rewrite moved to `merge/stars.rs` untouched to keep
   `merge.rs` off the size ceiling. A plain `MERGE INTO` never matches the strip.
   pins: ipi-19-56-37-schema-evolution-write/C-005, C-007
+- `time_travel.rs` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the Spark-door `snapshot_id_<id>`
+  and `at_timestamp_<ms>` ref selectors resolve to snapshot pins beside `branch_`/`tag_`; an
+  unparsable numeric suffix refuses `IllegalArgumentException` naming the selector, never
+  table-not-found, and `branch_`/`tag_` behaviour is unchanged.
+  pins: ice-metadata-cols-1/C-011, C-012, C-013, C-014
