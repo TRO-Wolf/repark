@@ -14,7 +14,7 @@ import pytest
 
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, IllegalArgumentException
 from repark.spark.session import DataFrameReader
 
 
@@ -356,12 +356,34 @@ def test_multi_arm_case_values(spark: ReparkSession) -> None:
         "int96RebaseModeInRead",
         "start-snapshot-id",
         "end-snapshot-id",
+        "start-timestamp",
+        "end-timestamp",
     ],
 )
 def test_denylist_semantic_keys_fail_loud(spark: ReparkSession, key: str) -> None:
-    """Residual denylist pinned; the incremental window bounds stay Iceberg-only on parquet."""
+    """Residual denylist pinned; all four incremental bounds stay Iceberg-only on parquet."""
     with pytest.raises(AnalysisException, match=r"not supported|incremental"):
         spark.read.format("parquet").option(key, "x").load("/tmp/does_not_matter.parquet")
+
+
+def test_incremental_start_timestamp_refuses_on_plain_iceberg_load(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A timestamp bound on a plain table load refuses with Java's text.
+
+    The text is ``SparkReadConf.incrementalAppendScanBoundaries``'s first refusal.
+
+    pins: ice-changelog-1/C-005
+    """
+    spark.register_memory_catalog("timestamp_catalog", tmp_path)
+    spark.sql("CREATE NAMESPACE timestamp_catalog.db")
+    spark.sql("CREATE TABLE timestamp_catalog.db.events USING iceberg AS SELECT 9 AS id")
+    with pytest.raises(IllegalArgumentException, match="Only changelog scans support"):
+        (
+            spark.read.format("iceberg")
+            .option("start-timestamp", "1")
+            .load("timestamp_catalog.db.events")
+        )
 
 
 @pytest.mark.parametrize("key", ["branch", "tag", "as-of-timestamp", "snapshot-id"])
