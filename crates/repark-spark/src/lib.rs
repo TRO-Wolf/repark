@@ -140,9 +140,7 @@ use iceberg::Catalog;
 #[cfg(test)]
 use repark_core::{CatalogRegistry, LocationPolicy};
 #[cfg(test)]
-use std::collections::HashMap;
-#[cfg(test)]
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 // The Q13 surface matrix.
 #[cfg(test)]
