@@ -3905,6 +3905,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_truncate_quoted_string_is_never_the_width` gains `truncate(4, 'day')` and
   `truncate(4, "day")` beside the kept `truncate(ts, 'day')` case — the refusal holds
   in either argument order, so a first-argument-only quote guard dies on this door too.
+  **D-5 (2026-09-21):** `test_options_stores_both_raw_and_prefixed_keys`
+  asserts the raw key and the `option.`-prefixed copy in the stored property
+  map for cells `D-CREATE-OPTIONS` (`USING iceberg OPTIONS ('k1'='v1')`) and
+  `D-CTAS-OPTIONS` (`USING iceberg OPTIONS ('k'='v') AS SELECT 1 AS i`), with
+  rows read back on the Arrow path; `test_options_mixed_keys_and_verbatim_values`
+  covers unquoted keys and values carrying commas or parens;
+  `test_with_options_still_refuses_with_updated_message` holds the `WITH`
+  refusal on the message that no longer names `OPTIONS`; and the non-iceberg /
+  no-USING `OPTIONS` shapes keep failing as `ParseException`.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to

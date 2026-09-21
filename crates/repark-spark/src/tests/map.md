@@ -382,6 +382,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `v3_type_column_named_geometry_with_int_succeeds` pins a column NAMED `geometry`
   with `INT` succeeding (cell `TY-GEOMETRY`).
   pins: ice-error-conditions-1/C-011
+  **D-5 (2026-09-21):** `options_stores_both_raw_and_prefixed_keys` drives the
+  CREATE and CTAS `OPTIONS` cells end to end — both key spellings in the stored
+  property map, mixed quoted/unquoted keys, and values carrying commas or
+  parens — and `options_near_misses_keep_their_refusals` holds the `WITH`/plain
+  refusals on the updated message plus the non-iceberg and no-USING `OPTIONS`
+  shapes failing loudly with no table created.
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
   `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
   INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond
@@ -1230,6 +1236,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   width-first orders, and the sibling `truncate_quoted_string_arguments_are_never_a_width`
   pins all four quoted-literal orders of `truncate`; a quoted string refuses as a width in
   either argument slot of either transform, so a first-argument-only quote guard dies.
+  **D-5 (2026-09-21):** `create_options_rewrite_stores_both_keys_before_parse`
+  pins the `OPTIONS` → `TBLPROPERTIES` rewrite at parse level (raw and
+  `option.`-prefixed keys on the CreateTable AST for both the CREATE and CTAS
+  shapes) and `create_options_rewrite_stays_off_non_iceberg_and_mixed_shapes`
+  holds the rewrite off non-iceberg, no-USING, `WITH`, and no-eq shapes.
+  `create_table_options_refusal_keeps_plain_and_with_drops_options` pins the
+  narrowed refusal arm on parsed ASTs: `WITH` and plain refuse on the message
+  that no longer names `OPTIONS`, the `Options` variant no longer refuses.
 
 ## Mapping rule
 
