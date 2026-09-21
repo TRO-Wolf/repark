@@ -915,10 +915,10 @@ async fn expand_star_clauses_errors_on_missing_source_column() {
         }],
         vec![],
     );
-    let err = expand_star_clauses(&ctx, &star, &arrow_schema())
-        .await
-        .unwrap_err();
-    assert!(err.to_string().contains("missing from the source: `name`"));
+    let err = expand_star_clauses(&ctx, &star, &arrow_schema()).await;
+    let text = err.unwrap_err().to_string();
+    assert!(text.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"));
+    assert!(text.contains("SQLSTATE: 42703") && text.contains("`name`"));
 }
 
 /// PIN PL-5.

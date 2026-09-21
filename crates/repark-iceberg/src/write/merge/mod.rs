@@ -33,6 +33,7 @@ use iceberg::Catalog;
 use iceberg::TableIdent;
 use iceberg::writer::IcebergWriter;
 
+use repark_common::spark_error;
 use tracing::Instrument;
 use uuid::Uuid;
 
@@ -345,15 +346,14 @@ async fn expand_star_clauses<'a>(
         }
     }
     if !missing.is_empty() {
-        let mode = if spec.case_insensitive {
-            " (columns resolve by name, case-insensitively — Spark default)"
-        } else {
-            " (columns resolve by name, exactly — `spark.sql.caseSensitive=true`)"
-        };
-        return Err(DataFusionError::Plan(format!(
-            "MERGE `UPDATE SET *` / `INSERT *` requires the source to provide every target \
-             column; missing from the source: `{}`{mode}",
-            missing.join("`, `")
+        let column_name = format!("`{}`", missing[0]);
+        let suggestions = format!("`{}`", source_names.join("`, `"));
+        return Err(DataFusionError::Plan(spark_error::message(
+            spark_error::UNRESOLVED_COLUMN_WITH_SUGGESTION,
+            &[
+                ("columnName", column_name.as_str()),
+                ("suggestions", suggestions.as_str()),
+            ],
         )));
     }
 

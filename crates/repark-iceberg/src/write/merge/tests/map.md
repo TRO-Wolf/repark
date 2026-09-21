@@ -30,6 +30,10 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `merge.rs` — primary unit battery. **FNP-4B (2026-09-15):** MERGE internal-SQL
   expectations in backtick form (user names via `quote_ident`, fixed engine names bare).
   pins: fnp-4b/C-002
+  **IPI-51 PR6 slice 2 (2026-09-21):**
+  `expand_star_clauses_errors_on_missing_source_column` requires
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`, `SQLSTATE: 42703` and `` `name` ``; the
+  case-ambiguous near-miss keeps the custom text. pins: ice-error-conditions-1/C-011
 - `merge_dialect.rs` — **FNP-4B round 6 (2026-09-15):** the four MERGE internal
   statements carry no double-quoted identifier and parse under the Spark Databricks
   dialect. pins: fnp-4b/C-024
