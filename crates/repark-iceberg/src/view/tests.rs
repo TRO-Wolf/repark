@@ -1,5 +1,6 @@
 use super::*;
 use crate::catalog::memory_catalog;
+use crate::write::UnsupportedMarker;
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::{DataType, Field as ArrowField};
 use iceberg::io::LocalFsStorageFactory;
@@ -715,10 +716,15 @@ async fn create_view_on_a_viewless_catalog_reports_creating_unsupported() {
     let error = create_or_replace_view(&target, false, false, definition(&warehouse, SQL))
         .await
         .expect_err("a create on a viewless catalog must fail");
-    let message = error.to_string();
-    assert!(
-        message.contains("Creating a view is not supported by catalog: glue"),
-        "pins: ice-views-1/C-005, got: {message}"
+    let DataFusionError::External(inner) = &error else {
+        panic!("a create on a viewless catalog must surface UnsupportedMarker, got: {error}");
+    };
+    let marker = inner
+        .downcast_ref::<UnsupportedMarker>()
+        .unwrap_or_else(|| panic!("must downcast to UnsupportedMarker, got: {error}"));
+    assert_eq!(
+        marker.0, "Creating a view is not supported by catalog: glue",
+        "pins: ice-views-1/C-005"
     );
 }
 
@@ -737,10 +743,15 @@ async fn replace_view_on_a_viewless_catalog_reports_replacing_unsupported() {
     let error = create_or_replace_view(&target, true, false, definition(&warehouse, SQL))
         .await
         .expect_err("a replace on a viewless catalog must fail");
-    let message = error.to_string();
-    assert!(
-        message.contains("Replacing a view is not supported by catalog: glue"),
-        "pins: ice-views-1/C-005, got: {message}"
+    let DataFusionError::External(inner) = &error else {
+        panic!("a replace on a viewless catalog must surface UnsupportedMarker, got: {error}");
+    };
+    let marker = inner
+        .downcast_ref::<UnsupportedMarker>()
+        .unwrap_or_else(|| panic!("must downcast to UnsupportedMarker, got: {error}"));
+    assert_eq!(
+        marker.0, "Replacing a view is not supported by catalog: glue",
+        "pins: ice-views-1/C-005"
     );
 }
 

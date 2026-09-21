@@ -10,6 +10,7 @@ use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent, ViewCreation};
 use repark_common::spark_error;
 
 use super::catalog::{iceberg_to_datafusion, schema_not_found_on_drop};
+use super::write::unsupported_error;
 
 #[cfg(test)]
 mod tests;
@@ -160,9 +161,7 @@ pub async fn create_or_replace_view(
     let ident = TableIdent::new(target.namespace.clone(), target.view_name.to_string());
     let view_exists = match target.catalog.view_exists(&ident).await {
         Ok(exists) => exists,
-        Err(error) if error.kind() == ErrorKind::FeatureUnsupported => {
-            return Err(view_unsupported(target.catalog_name, or_replace));
-        }
+        Err(error) if error.kind() == ErrorKind::FeatureUnsupported => false,
         Err(error) if error.kind() == ErrorKind::NamespaceNotFound => {
             return Err(schema_not_found_on_drop(
                 target.catalog_name,
@@ -190,7 +189,9 @@ pub async fn create_or_replace_view(
                 .await
                 .map(Some);
         }
-        return create_catalog_view(target, definition).await.map(Some);
+        return create_catalog_view(target, definition, or_replace)
+            .await
+            .map(Some);
     }
     if view_exists || table_exists {
         if if_not_exists {
@@ -198,10 +199,16 @@ pub async fn create_or_replace_view(
         }
         return Err(view_already_exists(target.namespace_name, target.view_name));
     }
-    create_catalog_view(target, definition).await.map(Some)
+    create_catalog_view(target, definition, or_replace)
+        .await
+        .map(Some)
 }
 
-async fn create_catalog_view(target: &ViewTarget<'_>, definition: ViewDefinition) -> Result<View> {
+async fn create_catalog_view(
+    target: &ViewTarget<'_>,
+    definition: ViewDefinition,
+    or_replace: bool,
+) -> Result<View> {
     let location = match definition.location_override {
         Some(location) => location,
         None => view_location(&definition.warehouse, target.namespace, target.view_name)?,
@@ -232,7 +239,7 @@ async fn create_catalog_view(target: &ViewTarget<'_>, definition: ViewDefinition
             schema_not_found_on_drop(target.catalog_name, target.namespace_name),
         ),
         Err(error) if error.kind() == ErrorKind::FeatureUnsupported => {
-            Err(view_unsupported(target.catalog_name, false))
+            Err(view_unsupported(target.catalog_name, or_replace))
         }
         Err(error) => Err(iceberg_to_datafusion(error)),
     }
@@ -246,7 +253,7 @@ async fn replace_view_version(
     let view = match target.catalog.load_view(ident).await {
         Ok(view) => view,
         Err(error) if error.kind() == ErrorKind::ViewNotFound => {
-            return create_catalog_view(target, definition).await;
+            return create_catalog_view(target, definition, true).await;
         }
         Err(error) => return Err(iceberg_to_datafusion(error)),
     };
@@ -258,11 +265,13 @@ async fn replace_view_version(
         .with_default_catalog(definition.default_catalog)
         .to_commit()
         .map_err(iceberg_to_datafusion)?;
-    target
-        .catalog
-        .update_view(commit)
-        .await
-        .map_err(iceberg_to_datafusion)
+    match target.catalog.update_view(commit).await {
+        Ok(view) => Ok(view),
+        Err(error) if error.kind() == ErrorKind::FeatureUnsupported => {
+            Err(view_unsupported(target.catalog_name, true))
+        }
+        Err(error) => Err(iceberg_to_datafusion(error)),
+    }
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -374,5 +383,5 @@ fn view_unsupported(catalog_name: &str, or_replace: bool) -> DataFusionError {
     } else {
         format!("Creating a view is not supported by catalog: {catalog_name}")
     };
-    DataFusionError::NotImplemented(message)
+    unsupported_error(message)
 }

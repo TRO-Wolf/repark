@@ -55,6 +55,7 @@ pub mod summary_collision;
 pub mod testing_support;
 /// Whole-table `TRUNCATE TABLE` (delete-only empty overwrite).
 pub mod truncate;
+pub mod unsupported;
 pub mod update_cast;
 pub mod write_options;
 pub mod writer_props;
@@ -70,6 +71,7 @@ pub use snapshot_refs::{
     replace_snapshot_ref,
 };
 pub use testing_support::testing_create_ref;
+pub use unsupported::{UnsupportedMarker, unsupported_error};
 
 pub use file_scoped_rewrite::{FILE_SCOPED_REWRITE_KEY, file_scoped_rewrite_from_config_map};
 pub use scan_concurrency::{
