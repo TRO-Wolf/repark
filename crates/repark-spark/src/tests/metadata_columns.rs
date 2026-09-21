@@ -31,6 +31,29 @@ async fn session(wh: &TempDir) -> ReparkSession {
     session
 }
 
+async fn v3_session(wh: &TempDir) -> ReparkSession {
+    let warehouse = wh.path().to_str().unwrap().to_string();
+    let session = ReparkSession::builder()
+        .with_extension(Arc::new(SparkExtension))
+        .with_sql_dialect(Arc::new(SparkDialect))
+        .config("repark.sql.allowCreateFormatVersion3", "true")
+        .build()
+        .unwrap();
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    session
+        .create_namespace(
+            "ice",
+            "ns",
+            HashMap::from([("location".to_string(), format!("{warehouse}/ns"))]),
+        )
+        .await
+        .unwrap();
+    session
+}
+
 async fn run(session: &ReparkSession, sql: &str) {
     session.sql(sql).await.unwrap().collect().await.unwrap();
 }
@@ -104,6 +127,20 @@ fn pairs_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i
         out.extend((0..left.len()).map(|row| (left.value(row), right.value(row))));
     }
     out.sort_unstable();
+    out
+}
+
+fn strings(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) -> Vec<String> {
+    use datafusion::arrow::array::StringArray;
+    let mut out = Vec::new();
+    for batch in batches {
+        let array = batch
+            .column(col)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("utf8 column");
+        out.extend((0..array.len()).map(|row| array.value(row).to_string()));
+    }
     out
 }
 
@@ -251,6 +288,30 @@ async fn served_names_fold_and_composed_shapes_refuse() {
         error.contains("[ICE-MC-1]"),
         "star over two relations refuses typed: {error}"
     );
+}
+
+#[tokio::test]
+async fn file_and_row_id_answer_together_on_a_format_v3_table() {
+    let wh = TempDir::new().unwrap();
+    let session = v3_session(&wh).await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.tv3 (id BIGINT, data STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    run(&session, "INSERT INTO ice.ns.tv3 VALUES (1, 'a'), (2, 'b')").await;
+    let rows = batches(&session, "SELECT _file, _row_id FROM ice.ns.tv3").await;
+    assert_eq!(field_names(&rows), vec!["_file", "_row_id"], "R-MC-V3-BOTH");
+    let files = strings(&rows, 0);
+    let mut ordinals = i64s(&rows, 1);
+    ordinals.sort_unstable();
+    assert_eq!(files.len(), 2, "R-MC-V3-BOTH");
+    assert!(
+        files.iter().all(|file| file.ends_with(".parquet")),
+        "R-MC-V3-BOTH: {files:?}"
+    );
+    assert_eq!(ordinals, vec![0, 1], "R-MC-V3-BOTH");
 }
 
 #[tokio::test]

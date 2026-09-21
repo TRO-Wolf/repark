@@ -15,7 +15,7 @@ carries as ``[[2,true,true],[3,true,true],[4,true,true]]`` (``R-MC-FILE``),
 ``[[2,0],[3,0],[4,0]]`` (``R-MC-POS``) and ``[[2,0],[3,0],[4,1]]``
 (``R-MC-POS-MOR``).
 
-pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 """
 
 from __future__ import annotations
@@ -43,6 +43,22 @@ def spark(tmp_path: Path) -> Any:
     """Yield a facade session with an in-memory Iceberg catalog named ``mc``."""
     _reset_active_session_for_tests()
     session = ReparkSession.builder.appName("test-ice-metadata-cols-1").getOrCreate()
+    session.register_memory_catalog(CATALOG, tmp_path / "wh")
+    session.sql(f"CREATE NAMESPACE {CATALOG}.{NAMESPACE}")
+    yield session
+    session.stop()
+    _reset_active_session_for_tests()
+
+
+@pytest.fixture
+def spark_v3(tmp_path: Path) -> Any:
+    """Yield a facade session with v3 CREATE allowed and catalog ``mc``."""
+    _reset_active_session_for_tests()
+    session = (
+        ReparkSession.builder.appName("test-ice-metadata-cols-1-v3")
+        .config("repark.sql.allowCreateFormatVersion3", "true")
+        .getOrCreate()
+    )
     session.register_memory_catalog(CATALOG, tmp_path / "wh")
     session.sql(f"CREATE NAMESPACE {CATALOG}.{NAMESPACE}")
     yield session
@@ -169,3 +185,26 @@ def test_unserved_metadata_columns_refuse_typed(spark: Any) -> None:
         assert "[ICE-MC-1]" in text
         assert "No field named" not in text
         assert column in text
+
+
+def test_file_and_row_id_answer_together_on_v3(spark_v3: Any) -> None:
+    """``_file`` + ``_row_id`` on a format-v3 table: the rewrite order serves both.
+
+    pins: ice-metadata-cols-1/C-009
+    """
+    table = f"{CATALOG}.{NAMESPACE}.t_v3_both"
+    spark_v3.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING) USING iceberg "
+        "TBLPROPERTIES ('format-version'='3')"
+    )
+    spark_v3.sql(f"INSERT INTO {table} VALUES (1, 'a'), (2, 'b')")
+    assert _schema(spark_v3, f"SELECT _file, _row_id FROM {table}") == [
+        ("_file", "string"),
+        ("_row_id", "bigint"),
+    ]
+    rows = sorted(
+        (list(row) for row in spark_v3.sql(f"SELECT _file, _row_id FROM {table}").collect()),
+        key=lambda row: row[1],
+    )
+    assert [row[1] for row in rows] == [0, 1]
+    assert all(row[0].endswith(".parquet") for row in rows)
