@@ -50,6 +50,14 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   NTZ opt-in literals/casts (naive µs, no localization), invalid-value refusal
   naming both tokens, DDL `TIMESTAMP` → Iceberg `timestamp` under NTZ /
   `timestamptz` under LTZ. `to_timestamp` stays LTZ.
+- [decimal_float_coercion.rs](decimal_float_coercion.rs) — WO-2 (xo-muse8 UNIT1
+  fix-b): a decimal literal against a DOUBLE/FLOAT column widens the literal to
+  DOUBLE (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape), never the column to
+  decimal — so NaN rows answer instead of `Overflowing on NaN`. Twenty-seven
+  live-Spark-measured row pins (six comparison operators, IN/NOT IN,
+  BETWEEN/NOT BETWEEN, negatives, reversed sides, FLOAT with the 0.1f32
+  double-widening discriminator) plus decimal-vs-decimal/decimal-vs-integral
+  near-miss controls and one logical-plan shape pin.
 - [ta_window.rs](ta_window.rs) — seven
   `sql_route_*` cases prove the TA window
   UDFs the composed `repark_ta::TaExtension` registers are `f64::to_bits`-identical to the
