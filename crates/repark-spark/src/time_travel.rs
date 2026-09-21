@@ -13,8 +13,8 @@ use repark_core::time_travel::{
     selector_time_travel_refusal,
 };
 use repark_core::{
-    CatalogRegistry, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
-    resolve_snapshot_id,
+    CatalogRegistry, branch_time_travel_refusal, illegal_argument_error, invalid_version_pin,
+    parse_version_value, resolve_snapshot_id,
 };
 use repark_functions::session_time_zone::session_time_zone_from_options;
 
@@ -40,7 +40,7 @@ fn find_pinned_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
         .iter()
         .map(|span| (span.table_start, span.clause_end))
         .collect();
-    for span in find_ref_selector_spans(tokens) {
+    for span in find_ref_selector_spans(tokens)? {
         let overlaps = claimed
             .iter()
             .any(|(start, end)| span.table_start < *end && *start < span.clause_end);
@@ -309,7 +309,7 @@ fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
     Ok(spans)
 }
 
-fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
+fn find_ref_selector_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
     let significant: Vec<(usize, &Token)> = tokens
         .iter()
         .enumerate()
@@ -344,19 +344,23 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
             continue;
         }
         let parts = collect_table_parts(&significant[name_start..name_end]);
-        let Some(ref_name) = ref_selector_name(&parts) else {
-            sig_index = name_end;
-            continue;
+        let spec = match ref_selector_name(&parts) {
+            Ok(Some(spec)) => spec,
+            Ok(None) => {
+                sig_index = name_end;
+                continue;
+            }
+            Err(error) => return Err(error),
         };
         spans.push(TimeTravelSpan {
             table_start: significant[name_start].0,
             clause_end: significant[name_end - 1].0 + 1,
             table_parts: parts[..parts.len() - 1].to_vec(),
-            pin: TimeTravelPin::Version(TimeTravelSpec::VersionRef(ref_name)),
+            pin: TimeTravelPin::Version(spec),
         });
         sig_index = name_end;
     }
-    spans
+    Ok(spans)
 }
 
 fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usize> {
@@ -374,23 +378,48 @@ fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usiz
     Some(end)
 }
 
-fn ref_selector_name(parts: &[String]) -> Option<String> {
+fn ref_selector_name(parts: &[String]) -> Result<Option<TimeTravelSpec>> {
     if parts.len() < 4 {
-        return None;
+        return Ok(None);
     }
-    let last = parts.last()?;
+    let Some(last) = parts.last() else {
+        return Ok(None);
+    };
     if crate::metadata_tables::is_metadata_table_name(last) {
-        return None;
+        return Ok(None);
     }
     let lowered = last.to_ascii_lowercase();
-    let rest = lowered
+    if let Some(rest) = lowered
         .strip_prefix("branch_")
-        .or_else(|| lowered.strip_prefix("tag_"))?;
-    if rest.is_empty() {
-        return None;
+        .or_else(|| lowered.strip_prefix("tag_"))
+    {
+        if rest.is_empty() {
+            return Ok(None);
+        }
+        let prefix_len = last.len() - rest.len();
+        return Ok(Some(TimeTravelSpec::VersionRef(
+            last[prefix_len..].to_string(),
+        )));
     }
-    let prefix_len = last.len() - rest.len();
-    Some(last[prefix_len..].to_string())
+    if let Some(rest) = lowered.strip_prefix("snapshot_id_") {
+        let snapshot_id = rest.parse::<i64>().map_err(|_| {
+            illegal_argument_error(format!(
+                "invalid snapshot_id selector '{last}': \
+                 the suffix after 'snapshot_id_' must be an integer snapshot id"
+            ))
+        })?;
+        return Ok(Some(TimeTravelSpec::SnapshotId(snapshot_id)));
+    }
+    if let Some(rest) = lowered.strip_prefix("at_timestamp_") {
+        let timestamp_ms = rest.parse::<i64>().map_err(|_| {
+            illegal_argument_error(format!(
+                "invalid at_timestamp selector '{last}': \
+                 the suffix after 'at_timestamp_' must be an integer millisecond timestamp"
+            ))
+        })?;
+        return Ok(Some(TimeTravelSpec::TimestampMs(timestamp_ms)));
+    }
+    Ok(None)
 }
 
 #[derive(Clone, Copy)]
