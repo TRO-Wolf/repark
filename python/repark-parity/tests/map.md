@@ -215,7 +215,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   pins: ice-session-write-conf-1/C-040
 - `test_cap_1_source_file_line_cap.py` — **ICE-CATALOG-SESSION-1 round 3 rebase (2026-09-20, run 27):**
   mirror rows follow the measured debt after the IPI-29 rebase: `catalog_config.rs`
-  1028 → 1007 and `repark-spark/src/alter.rs` 1449 → 1439 with
+  1028 → 1007 and `repark-spark/src/alter.rs` 1444 → 1439 with
   `scripts/check_rust_file_size.py`, and `session_core.py` 2287 → 2346 with
   `scripts/check_lib_py.py` (the earlier session rounds grew the file; both gate
   scripts already carried the measured values, only this mirror was stale).
