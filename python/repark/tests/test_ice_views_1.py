@@ -192,6 +192,24 @@ def test_view_error_contract(spark: ReparkSession) -> None:
             view_not_found_sentence,
             "42P01",
         ),
+        (
+            "DELETE FROM sc.ns.v WHERE id = 1",
+            "TABLE_OR_VIEW_NOT_FOUND",
+            view_not_found_sentence,
+            "42P01",
+        ),
+        (
+            "UPDATE sc.ns.v SET id = 9 WHERE id = 1",
+            "TABLE_OR_VIEW_NOT_FOUND",
+            view_not_found_sentence,
+            "42P01",
+        ),
+        (
+            "INSERT INTO sc.ns.v BY NAME SELECT id FROM sc.ns.t",
+            "TABLE_OR_VIEW_NOT_FOUND",
+            view_not_found_sentence,
+            "42P01",
+        ),
     ]
     for statement, condition, message, sqlstate in cases:
         with pytest.raises(AnalysisException) as caught:
