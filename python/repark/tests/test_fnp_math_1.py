@@ -575,9 +575,7 @@ _HASH_SQL_XFAIL = (
 
 
 def _c005_param(key: str) -> Any:
-    """Wrap one C-005 key, strict-xfailing the SQL hash SELECT and the unbuilt AES names."""
-    if key.startswith("hash|sql|"):
-        return pytest.param(key, marks=pytest.mark.xfail(strict=True, reason=_HASH_SQL_XFAIL))
+    """Wrap one C-005 key, strict-xfailing the unbuilt AES names."""
     return _fenced_key(key, _C005_FENCED)
 
 
@@ -595,10 +593,28 @@ def test_c005_o245_exact_hash_aes_cells(spark: ReparkSession, key: str) -> None:
     _set_ansi(spark, bool(cell["ansi"]))
     if cell["door"] == "python":
         table = _run_python(_frame(spark), str(cell["expr"])).to_arrow()
+    elif cell["name"] == "hash" and len(_select_items(str(cell["expr"]))) > 1:
+        for index in range(len(cell["columns"])):
+            _assert_o245_single_column(spark, str(cell["expr"]), _FRAME_SQL, cell, index)
+        return
     else:
         query = str(cell["expr"]).replace("FRAME", f"({_FRAME_SQL})")
         table = spark.sql(query).to_arrow()
     _assert_o245_value_table(table, cell)
+
+
+@pytest.mark.xfail(strict=True, reason=_HASH_SQL_XFAIL)
+def test_c005_hash_sql_full_select_negzero_collision(spark: ReparkSession) -> None:
+    """Pin the 12-column hash SELECT's -0.0 projection-name collision on the SQL door."""
+    key = next(
+        key
+        for key, cell in _O245_BY_KEY.items()
+        if cell["name"] == "hash" and cell["door"] == "sql" and cell.get("rows") is not None
+    )
+    cell = _O245_BY_KEY[key]
+    _set_ansi(spark, bool(cell["ansi"]))
+    query = str(cell["expr"]).replace("FRAME", f"({_FRAME_SQL})")
+    spark.sql(query).to_arrow()
 
 
 @pytest.mark.parametrize(
