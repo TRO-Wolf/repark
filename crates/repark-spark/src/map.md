@@ -355,8 +355,19 @@ pins: rp-4-fork-repin/C-005, C-006
   family (measured: `QW-DELETE-NO-BRANCH`, `QW-UPDATE-NO-BRANCH`, `QW-DELETE-MOR-NO-BRANCH`,
   `QW-MERGE-NO-BRANCH`). An empty table with no current snapshot keeps the old path — there is
   no snapshot to branch from and the append creates the ref itself.
+  **IPI-05 (2026-09-21):** `spark.wap.id` alone takes a route of its own. `apply_write_to_branch`
+  runs when either WAP key is set; with no selector and no wap branch, `wap_id_route_target` loads
+  the target, takes the id only for a `write.wap.enabled=true` table, and hands
+  `commit_write_staged` a plain target table registered with `with_stage_only(true)` and
+  `with_snapshot_properties({"wap.id": id})` — no `BranchTarget`, because there is no branch to
+  name. Neither key set, or the id set on a table without the property: the SQL is returned
+  borrowed, byte-identical.
   pins: ice-wap-branch-1/C-002, C-004, C-005, C-012
-- `wap.rs` — **ICE-WAP-BRANCH-1 (2026-09-19):** the `spark.wap.*` session carrier and the
+- `wap.rs` — **IPI-05 (2026-09-21):** `wap_id_for_table` is the read half for the id, the twin of
+  `wap_branch_for_table`: it answers the conf's `spark.wap.id` only for a `write.wap.enabled=true`
+  table and refuses both keys together first, and `WAP_ID_SNAPSHOT_PROPERTY` (`wap.id`) is the one
+  spelling of the summary key the staged route stamps.
+  **ICE-WAP-BRANCH-1 (2026-09-19):** the `spark.wap.*` session carrier and the
   read half of the resolver. `WapSessionConfig` is a DataFusion `ConfigExtension`
   (`repark.wap`) holding `spark.wap.branch` and `spark.wap.id`; the Spark extension installs
   it from the builder conf map and the binding's `set_runtime_config` writes the live one, so
@@ -431,6 +442,9 @@ pins: rp-4-fork-repin/C-005, C-006
 - **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` declares `mod changelog;` — the changelog row
   transforms live under `call/` because they are `create_changelog_view`'s, and because
   `src/lib.rs` holds a 150-line ceiling. pins: ice-changelog-1/C-011, C-012, C-013
+- `call.rs` — **IPI-05 (2026-09-21):** `publish_changes` joins `SUPPORTED_PROCEDURES` (in
+  alphabetical place) with a dispatch arm into `branch_ops::execute_publish_changes`, so the WAP
+  publish is a procedure rather than one of the names the unknown-procedure refusal lists.
 - `call.rs` — nineteen maintenance procedures: eighteen maintenance calls plus `register_table`
   (**ICE-PROCS-ROUTE-1 (2026-09-19):** `ancestors_of`, `compute_table_stats`,
   `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the
