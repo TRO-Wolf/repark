@@ -69,8 +69,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]`/`0A000` text (CREATE column
   `GEOMETRY`/`GEOGRAPHY`, cell `TY-GEOMETRY`); the historical parser pins stay
   byte-identical.
+  **IPI-51 type slice (2026-09-21):** `test_merge_cardinality_violation_stamped_message_parses`
+  builds `AnalysisException` from `Error during planning: ` plus the catalogue
+  `[MERGE_CARDINALITY_VIOLATION]` / `23K01` text and asserts the type name,
+  `getCondition` and `getSqlState`.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-011
+  C-011, C-012
 - [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
   [ice_catalog_session_1_oracle.json](ice_catalog_session_1_oracle.json) —
   **ICE-CATALOG-SESSION-1 (2026-09-20):** the unit pin file; S5 carries the eight
