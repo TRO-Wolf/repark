@@ -84,6 +84,12 @@ holds behavior observed from outside the crate.
   write-default (table `q`, partitioned on the defaulted `c`); a listed static column
   refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`; arity and duplicate-name
   refusals write nothing. pins: ice-v3-write-default-1/C-015
+  **IPI-51 PR9 (2026-09-21):** short positional `VALUES` refuses
+  `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS` / `21S01` with the backticked
+  table, table-column and synthetic `col1`/`col2` params and writes nothing; correct-arity
+  VALUES and the named-list fill still succeed, and SELECT-short / wide / mixed / overwrite /
+  missing-table shapes carry no such condition.
+  pins: ice-error-conditions-1/C-011
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session

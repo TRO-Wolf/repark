@@ -81,6 +81,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
   write-defaults through the shared `overwrite_source_with_defaults`; the dynamic arm
   no longer writes NULL for a defaulted column. pins: ice-v3-write-default-1/C-015
+- `insert_arity.rs` — **IPI-51 PR9 (2026-09-21):** the short-VALUES arity intercept,
+  duplicated from the Spark door (no door-to-door edge). `refuse_if_short_values` refuses a
+  positional `INSERT INTO t VALUES (…)` narrower than the Iceberg target with
+  `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS` / `21S01` as
+  `DataFusionError::Plan`, wired in `router.rs` on the non-overwrite `Statement::Insert` path
+  before `try_execute_session_insert` and `delegate`; every other shape falls through.
+  Pins: [../tests/ansi_write_defaults.rs](../tests/ansi_write_defaults.rs).
+  pins: ice-error-conditions-1/C-011
 - `partition_overwrite.rs` — **test-only DML-B pins** for the ANSI PARTITION forms
   (static overwrite/delete, two-key AND + incomplete-static, string/NULL, dynamic
   `replace-partitions=true`, empty-dynamic refuse) and the remaining Q9 whole-table refuse.

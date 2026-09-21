@@ -10,7 +10,8 @@ use repark_core::EngineContext;
 use repark_iceberg::write::insert_defaults;
 
 use crate::{
-    alter, create_table, guards, merge, ref_ddl, refusals, schema_ddl, sniff, time_travel, truncate,
+    alter, create_table, guards, insert_arity, merge, ref_ddl, refusals, schema_ddl, sniff,
+    time_travel, truncate,
 };
 
 /// The dialect handed to DataFusion's parser.
@@ -157,7 +158,8 @@ async fn execute_time_travelled(
         Statement::Insert(insert) if insert.overwrite => {
             crate::insert_overwrite::execute_insert_overwrite(cx, insert).await
         }
-        Statement::Insert(insert)
+        Statement::Insert(insert) => {
+            insert_arity::refuse_if_short_values(cx.catalogs, insert).await?;
             if let Some(frame) = crate::session_insert::try_execute_session_insert(
                 cx,
                 insert,
@@ -165,9 +167,18 @@ async fn execute_time_travelled(
                 insert_columns.as_deref(),
                 rewrite.preloaded.clone(),
             )
-            .await? =>
-        {
-            Ok(frame)
+            .await?
+            {
+                Ok(frame)
+            } else {
+                delegate(
+                    cx,
+                    rewrite.rewritten.as_deref().unwrap_or(sql),
+                    insert_columns.as_deref(),
+                    rewrite.preloaded,
+                )
+                .await
+            }
         }
         Statement::Call(function) => Err(refusals::maintenance_call(&function.name.to_string())),
         Statement::Truncate(truncate) => truncate::execute_truncate(cx, truncate).await,
