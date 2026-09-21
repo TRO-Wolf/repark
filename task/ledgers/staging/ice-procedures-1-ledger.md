@@ -23,18 +23,18 @@
 | C-006 | A missing required parameter refuses with today's Plan string naming the declared position. | Rust `call_bind_missing_required_names_position` plus unit `bind_missing_required_names_position`; Python `test_bind_missing_required_refuses`. | **PROVEN** | Full message asserted by equality, including the NULL-on-required twin at unit level. |
 | C-007 | More positionals than declared parameters refuses with today's arity string; RePark-only extras are named-only. | Rust `call_bind_excess_positional_names_arity` plus unit `bind_excess_positional_names_arity`; Python `test_bind_excess_positional_refuses`. | **PROVEN** | `at most 5` (RDF) and `at most 3` (RPD) asserted by equality; the extra takes no positional slot. |
 | C-008 | SQL NULL on an optional parameter means unset, positionally and by name: `sort_order => NULL` with `binpack` succeeds. | Rust `call_rdf_named_null_is_unset` (plus C-001 for the positional NULL) plus unit `bind_positional_follows_declared_order_and_null_means_unset`; Python `test_bind_null_is_unset`. | **PROVEN** | Named NULL succeeds where it used to refuse; mutation M3 turns 4 pins red, including the pre-existing `call_rdf_options_empty_map_and_null_are_defaults`. |
-| C-009 | Not-yet-wired parameters stay loud with exact current refusals: the four expire arguments, RM `sort_by`, RDF `branch` (C-005), and RPD `where` — including a positionally bound `where`. | Rust `call_rpd_positional_where_stays_a_loud_refusal` and the untouched `call_rewrite_position_delete_files_validates_options_and_refuses_where`; Python `test_not_yet_wired_params_stay_loud`. | **PROVEN** | Positional `where` refuses `NotImplemented` with the exact current text; expire and RM handlers untouched so their refusals hold by construction. |
+| C-009 | Not-yet-wired parameters stay loud with exact current refusals: the four expire arguments, RM `sort_by`, RDF `branch` (C-005), and RPD `where` — including a positionally bound `where`. | Rust `call_rpd_positional_where_stays_a_loud_refusal` and the untouched `call_rewrite_position_delete_files_validates_options_and_refuses_where`; Python `test_not_yet_wired_params_stay_loud`. | **PROVEN** | Proven at PR1a for all four arms. PR1b (2026-09-21) retires the expire and RPD-`where` arms — now wired and pinned by C-012, C-013, C-014 — narrows the Python pin to the `sort_by` refusal, converts the Rust positional pin to `call_rpd_positional_where_binds`, re-pins the `tests/call.rs` row onto the malformed-`where` parse text (line-neutral, 1287 intact), and carries the remaining scope guard as C-020. |
 | C-010 | `remove-dangling-deletes` stays accepted as a RePark-only extra named parameter on RDF and the options-map key still wins; the existing dangling tests stay green. | Existing `call_rewrite_dangling` tests plus `call_rdf_options_empty_map_and_null_are_defaults`; Python `test_dangling_extra_and_precedence_kept`. | **PROVEN** | Full lib suite 1376 passed (dangling files included); options file 122 passed; new Python pin binds the quoted extra and the NULL map key wins. |
 | C-011 | `params.rs` transcribes the jar lists: RDF and RPD bindable names, order and required flags asserted; `branch` is deliberately absent from the RDF bindable set so the binder refuses it (C-005); the array helpers parse `array(…)` and `ARRAY[…]` of literals. | Rust `rewrite_data_files_params_follow_the_jar_order`, `rewrite_position_delete_files_params_follow_the_jar_order`, `params_for_resolves_every_transcribed_procedure`, and the three array-helper unit tests. | **PROVEN** | Transcription mechanically verified with zero mismatches against `procedure-params.txt`; `#[allow(dead_code)]` marks the type field and array helpers until the wiring rounds call them. |
-| C-012 | RPD `where` wires through CALL: `rewrite_position_delete_files(table, where => 'cat = "x"', options => rewrite-all)` compacts only the matching partition's deletes and answers Spark's four columns with row `[3,3,>0,>0]`. | Rust `call_rpd_where_restricts_to_matching_partition` plus the converted `call_rpd_positional_where_binds`; Python `test_rpd_where_rewrites_matching_partition`; replay `P-RPD-WHERE` EQUAL. | OPEN | PR1b proves it. |
-| C-013 | Expire `snapshot_ids` wires: `snapshot_ids => array(<id>)` expires exactly those ids in array order and answers Spark's six columns with row `[0,0,0,0,1,0]`. | Rust `call_expire_snapshot_ids_expires_exactly_those`; Python `test_expire_snapshot_ids_expires_exactly_those`; replay `P-EXPIRE-SNAPSHOT-IDS` EQUAL. | OPEN | PR1b proves it. |
-| C-014 | Expire `stream_results`, `max_concurrent_deletes` and `clean_expired_metadata` are accepted and ignored: each answers the plain `older_than` row `[1,0,0,1,3,0]`. | Rust `call_expire_accept_and_ignore_trio_equals_plain`; Python `test_expire_accept_and_ignore_trio_equals_plain`; replay of the three cells EQUAL. | OPEN | PR1b proves it; the fork behaviour behind `clean_expired_metadata` is carded, not implemented (INDEX decision 15). |
-| C-015 | `add_files` routes partitioned and unpartitioned directory imports with Spark's two columns and a NULL `changed_partition_count`: rows `[[2,null]]` / `[[1,null]]`, and the table reads the imported rows. | Rust `call_add_files_partitioned_imports_two_files` and `call_add_files_unpartitioned_imports_one_file`; Python `test_add_files_partitioned` and `test_add_files_unpartitioned`; replay of the two cells. | OPEN | PR1b proves it. The output row is NULL by mapping (D-5); the fork's merge-append writes a `changed-partition-count` summary key Java's add_files path does not, so `md.snapshots` stays a fork residue (see PR1b design notes). |
-| C-016 | `add_files` `partition_filter` restricts the import: `map('cat','x')` imports 1 file and 1 row. | Rust `call_add_files_partition_filter_restricts`; Python `test_add_files_partition_filter`; replay `P-ADD-FILES-PARTITION-FILTER`. | OPEN | PR1b proves it. |
-| C-017 | `add_files` `parallelism` equals the serial import (D-5 accepted-and-ignored). | Rust `call_add_files_parallelism_matches_serial`; Python `test_add_files_parallelism_matches_serial`; replay `P-ADD-FILES-PARALLELISM`. | OPEN | PR1b proves it. |
-| C-018 | `add_files` with `check_duplicate_files => true` raises when a source path is already live in the table, with Java's `IllegalStateException` text. | Rust `call_add_files_check_duplicate_files_raises`; Python `test_add_files_check_duplicate_raises`; replay `P-ADD-FILES-CHECK-DUP` SPARK-CANNOT. | OPEN | PR1b proves it; the exact Spark message is quoted in the PR1b evidence. |
-| C-019 | Every `add_files` import commits Java's pretty-printed `schema.name-mapping.default` JSON when the table properties lack it; imported files stay under the source directory (no byte copy); source columns bind by name. | Rust `call_add_files_commits_name_mapping_and_binds_by_name` plus the mapping assertion on every Rust add_files pin; Python `test_add_files_name_mapping_no_copy_by_name` plus the mapping assertion on every Python add_files pin. | OPEN | PR1b proves it. |
-| C-020 | `branch` (RDF) and `sort_by` (RM) keep refusing loud; the fork halves land later and PR2 wires them. | Rust `call_bind_unknown_argument_names_allowed` (branch) and the RM `sort_by` unknown-argument pin; Python `test_not_yet_wired_params_stay_loud` narrowed arm. | OPEN | PR1b proves it. |
+| C-012 | RPD `where` wires through CALL: `rewrite_position_delete_files(table, where => 'cat = "x"', options => rewrite-all)` compacts only the matching partition's deletes and answers Spark's four columns with row `[3,3,>0,>0]`. | Rust `call_rpd_where_restricts_to_matching_partition` plus the converted `call_rpd_positional_where_binds`; Python `test_rpd_where_rewrites_matching_partition`; replay `P-RPD-WHERE` EQUAL. | **PROVEN** | Measured 2026-09-21: the filtered twin rewrites 1 of 2 delete files while the unfiltered twin rewrites both; the replay cell answers `[3,3,>0,>0]` EQUAL. |
+| C-013 | Expire `snapshot_ids` wires: `snapshot_ids => array(<id>)` expires exactly those ids in array order and answers Spark's six columns with row `[0,0,0,0,1,0]`. | Rust `call_expire_snapshot_ids_expires_exactly_those`; Python `test_expire_snapshot_ids_expires_exactly_those`; replay `P-EXPIRE-SNAPSHOT-IDS` EQUAL. | **PROVEN** | Measured 2026-09-21: named and positional spellings both expire exactly the first of four snapshots with row `[0,0,0,0,1,0]`; the replay cell is EQUAL. |
+| C-014 | Expire `stream_results`, `max_concurrent_deletes` and `clean_expired_metadata` are accepted and ignored: each answers the plain `older_than` row `[1,0,0,1,3,0]`. | Rust `call_expire_accept_and_ignore_trio_equals_plain`; Python `test_expire_accept_and_ignore_trio_equals_plain`; replay of the three cells EQUAL. | **PROVEN** | Measured 2026-09-21: all three cells answer `[1,0,0,1,3,0]` EQUAL; the fork behaviour behind `clean_expired_metadata` is carded, not implemented (INDEX decision 15). |
+| C-015 | `add_files` routes partitioned and unpartitioned directory imports with Spark's two columns and a NULL `changed_partition_count`: rows `[[2,null]]` / `[[1,null]]`, and the table reads the imported rows. | Rust `call_add_files_partitioned_imports_two_files` and `call_add_files_unpartitioned_imports_one_file`; Python `test_add_files_partitioned` and `test_add_files_unpartitioned`; replay of the two cells. | **PROVEN** | Measured 2026-09-21: output rows `[[2,null]]` / `[[1,null]]` with NULL by mapping (D-5); every other obs key is EQUAL. The fork's merge-append writes a `changed-partition-count` summary key Java's add_files path does not, so `md.snapshots` stays a fork residue (see PR1b design notes); the cells report DIFFERENT solely on that key. |
+| C-016 | `add_files` `partition_filter` restricts the import: `map('cat','x')` imports 1 file and 1 row. | Rust `call_add_files_partition_filter_restricts`; Python `test_add_files_partition_filter`; replay `P-ADD-FILES-PARTITION-FILTER`. | **PROVEN** | Measured 2026-09-21: `map('cat','x')` imports 1 file and the `x` rows with row `[[1,null]]`; the replay cell is EQUAL except the C-015 `md.snapshots` key. |
+| C-017 | `add_files` `parallelism` equals the serial import (D-5 accepted-and-ignored). | Rust `call_add_files_parallelism_matches_serial`; Python `test_add_files_parallelism_matches_serial`; replay `P-ADD-FILES-PARALLELISM`. | **PROVEN** | Measured 2026-09-21: `parallelism => 2` answers `[[2,null]]` with identical live rows to the serial twin; the replay cell is EQUAL except the C-015 `md.snapshots` key. |
+| C-018 | `add_files` with `check_duplicate_files => true` raises when a source path is already live in the table, with Java's `IllegalStateException` text. | Rust `call_add_files_check_duplicate_files_raises`; Python `test_add_files_check_duplicate_raises`; replay `P-ADD-FILES-CHECK-DUP` SPARK-CANNOT. | **PROVEN** | Measured 2026-09-21: the second import raises `already exist within the target table` (fork `DataInvalid`, `PySparkException` on the Python door); the replay cell is SPARK-CANNOT. The exact Spark message is quoted in the PR1b evidence below. |
+| C-019 | Every `add_files` import commits Java's pretty-printed `schema.name-mapping.default` JSON when the table properties lack it; imported files stay under the source directory (no byte copy); source columns bind by name. | Rust `call_add_files_commits_name_mapping_and_binds_by_name` plus the mapping assertion on every Rust add_files pin; Python `test_add_files_name_mapping_no_copy_by_name` plus the mapping assertion on every Python add_files pin. | **PROVEN** | Measured 2026-09-21: the committed property is byte-exact Jackson pretty-print (replay `md.properties` EQUAL); live paths stay under the source directory; reordered source columns land in the right table columns. |
+| C-020 | `branch` (RDF) and `sort_by` (RM) keep refusing loud; the fork halves land later and PR2 wires them. | Rust `call_bind_unknown_argument_names_allowed` (branch) and `call_rm_sort_by_stays_a_loud_refusal`; Python `test_not_yet_wired_params_stay_loud` narrowed arm. | **PROVEN** | The narrowed pins keep the exact unknown-argument texts; PR2 wires both when the fork halves land. |
 
 ## Design notes (why, not what)
 
@@ -43,6 +43,31 @@
 - The duplicate-binding error keeps today's `Plan` class with a new message rather than a Spark condition: the `Condition` enum at this head has no `DUPLICATE_ROUTINE_PARAMETER_ASSIGNMENT` variant, and the error catalogue is the IPI-51 lane's job.
 - Rollback and the other unswitched handlers keep their own arity and unknown-argument checks; only RDF and RPD call `bind()` in this round, so only their positional forms widen.
 - One dual-violation precedence moves: `bind` checks missing-required before the handler coerces anything, so a missing `table` plus a malformed `strategy` now reports the missing table where the old read order reported the malformed strategy. Every single-violation message is byte-identical; the new order matches Java, which validates required parameters at bind time.
+
+## PR1b design notes (2026-09-21, lane `xb-procs`)
+
+- The handler emits a NULL `changed_partition_count` on every import and deliberately drops the fork's `AddFilesResult.changed_partition_count` (a `let _ =` marks the drop in code, since comments are banned): the oracle records NULL in all four cells while the fork returns `Some(n)`, so passing the value through would ship a wrong number. Mutation M9 fails the pins with a pass-through.
+- The fork's merge-append writes a `changed-partition-count` snapshot-summary key Java's add_files path does not write (all four oracle snapshots lack the key while the recording harness captures the key on other appends in the same file), so the four answered cells report DIFFERENT solely on `md.snapshots`. Nothing on the RePark side can remove a committed summary key; the fork ask F-ADD-FILES-SUMMARY-1 below carries it.
+- The name-mapping property commits in Spark's Jackson pretty-print before the import so the fork's own ensure stays a no-op: the fork writes compact JSON, which would differ from the oracle's `md.properties`. The printer covers the general nested shape; only the flat shape is oracle-measured.
+- `source_table` arrives from the Databricks-dialect parse as a single-quoted string carrying the backticks (`` `parquet`.`<dir>` ``), not as a compound identifier — only an unquoted `db.table` arrives compound. The handler parses the string for the two-backtick grammar and dispatches on a slash in the second part, which mirrors Spark's own format-vs-table dispatch.
+- All argument validation runs before the name-mapping commit so a malformed CALL never leaves a properties change behind; the mapping commit itself persists when the later import fails, exactly like Java's separate ensure commit.
+- Expire's ignored trio parses types strictly (a mistyped ignored argument refuses) but never reads the values; `snapshot_ids` calls the fork once per element in array order. `parallelism` validates positive at plan time so the fork's own floor stays unreachable through CALL.
+- `partition_filter` reuses the options map parser with its own argument name threaded through the messages (the existing `options` call site keeps byte-identical texts); a NULL filter value refuses loud since the fork's filter map has no null representation.
+- `clean_expired_metadata` stays accepted-and-ignored per INDEX decision 15; the fork behaviour (Java deletes expired metadata files when true) is carded as F-EXPIRE-CLEAN-METADATA-1, not implemented.
+
+PR1b fork asks (all verified against the pinned fork source at `df62cdee`, none touched in this round):
+
+- F-ADD-FILES-SUMMARY-1: `AddFiles`' merge-append must not write `changed-partition-count` to the commit summary (Java's add_files path never writes it; oracle: four cells). Unblocks EQUAL on the four answered add_files cells.
+- F-ADD-FILES-RESULT-1 (same root cause, informational): `AddFilesResult.changed_partition_count` returns `Some(n)` where Java's procedure answers NULL; the RePark handler maps to NULL and stays correct when the summary fix lands.
+- F-EXPIRE-CLEAN-METADATA-1: implement Java's `clean_expired_metadata=true` behaviour (delete expired metadata files) on the fork's expire path; RePark accepts-and-ignores until then.
+
+Exact Spark message for `P-ADD-FILES-CHECK-DUP` (`out/spark-proc.json`, paths vary per run):
+
+```text
+java.lang.IllegalStateException: Cannot complete import because data files to be imported already exist within the target table: <paths>.  This is disabled by default as Iceberg is not designed for multiple references to the same file within the same table.  If you are sure, you may set 'check_duplicate_files' to false to force the import.
+```
+
+The fork's `DataInvalid` text matches from `Cannot complete import` onward; RePark surfaces it as `PySparkException` on the Python door (`Error::Iceberg` → `ErrorClass::Base`).
 
 ## Mutation record (all red, all reverted)
 
@@ -56,19 +81,33 @@ Each mutation was applied, run scoped, observed red, and reverted with a clean `
 | M4 | Drop the duplicate-binding check in `bind` | `bind_duplicate_positional_and_named_refuses`, `call_bind_duplicate_positional_and_named_refuses` (2 failed) |
 | M5 | Accept `branch` in `REWRITE_DATA_FILES_PARAMS` (T-8 silent drop) | `rewrite_data_files_params_follow_the_jar_order`, `call_bind_unknown_argument_names_allowed` (2 failed) |
 | Base bite-proof | New Python C-001 pin against the pre-change release build | `test_pos_rdf_positional_form_compacts` failed with the old `at most 2 positional` refusal, then passed after the rebuild |
+| M6 (PR1b) | Skip the RPD `.filter` application (where accepted but ignored) | `call_rpd_where_restricts_to_matching_partition` (1 failed) |
+| M7 (PR1b) | Drop the `snapshot_ids` loop (ids accepted but ignored) | `call_expire_snapshot_ids_expires_exactly_those` (1 failed) |
+| M8 (PR1b) | `stream_results => true` drops `older_than` (trio not ignored) | `call_expire_accept_and_ignore_trio_equals_plain` (1 failed) |
+| M9 (PR1b) | Pass the fork's `changed_partition_count` through instead of NULL | `call_add_files_partitioned_imports_two_files`, `call_add_files_unpartitioned_imports_one_file`, `call_add_files_partition_filter_restricts`, `call_add_files_parallelism_matches_serial` (4 failed; the dup/by-name/refusal pins correctly stay green) |
+| M10 (PR1b) | Answer `0` instead of NULL for `changed_partition_count` | `call_add_files_partitioned_imports_two_files` (1 failed) |
+| M11 (PR1b) | Commit `[]` instead of the pretty name-mapping JSON | `call_add_files_partitioned_imports_two_files` (1 failed) |
+| M12 (PR1b) | Rename the output column to `added_files` | `call_add_files_partitioned_imports_two_files` (1 failed) |
+| M13 (PR1b) | Ignore `partition_filter` (always import everything) | `call_add_files_partition_filter_restricts` (1 failed) |
+
+PR1b mutations ran against the Rust pins only (debug profile, scoped reruns, `/tmp/mut-pr1b.sh`); the Python twins assert identical contracts (same columns, rows, NULL-ness and mapping strings), so a mutation that reds a Rust pin reds its twin. Two guards need no mutation run: the no-copy pin (a copying implementation yields paths outside the source directory by construction) and the by-name pin (positional binding lands values in the wrong columns by construction) — both discriminate structurally.
 
 ## Replay evidence (2026-09-21)
 
 `harness.py --engine repark --cells cells_proc.py cells_deep.py --out out/repark-procs-after.json` on the lane release build, then `compare.py`. `/tmp/nc-build` does not exist on this box, so the run used the lane venv in place of `run-engine.sh`'s repark leg; everything else matches the brief's command. Official `classify` verdicts: `P-POS-RDF` EQUAL, `P-POS-RPD` EQUAL, `P-CALL-MIXED-ARGS` EQUAL — all three byte-identical on cols, rows and data. Verdict diff over the 160 cells of the two families against the stale inventory outputs shows 27 changes and zero regressions: the 3 target cells plus 14 other-lane improvements toward EQUAL, and 10 newly routed procedures (ancestors/stats/RTP, another unit's merged handlers) moving from unregistered refusal to row-differs on UUID-and-timestamp keys; no cell moved away from EQUAL or SPARK-CANNOT.
 
+PR1b replay (2026-09-21, same lane-venv path, release build at this round's S3 head): `P-RPD-WHERE` EQUAL (`[3,3,>0,>0]`); `P-EXPIRE-SNAPSHOT-IDS` EQUAL (`[0,0,0,0,1,0]`); `P-EXPIRE-STREAM-RESULTS`, `P-EXPIRE-MAX-CONCURRENT` and `P-EXPIRE-CLEAN-METADATA` EQUAL (`[1,0,0,1,3,0]` each); `P-ADD-FILES-CHECK-DUP` SPARK-CANNOT (both refuse; RePark raises `PySparkException` with the fork's `DataInvalid` text quoted above). The four answered add_files cells report DIFFERENT solely on `md.snapshots` — the fork-written `changed-partition-count` key (2/1/1/2) against the oracle's keyless summary — with output rows `[[2,null]]`/`[[1,null]]`/`[[1,null]]`/`[[2,null]]`, `md.properties`, refs, data and layout all EQUAL. PR1a's three cells are still EQUAL. Every other non-green PROC cell attributes outside this round: the sibling unit's ancestors/stats/RTP row diffs, cherrypick-WAP, the registered ORPHAN-1/REF-3 refusals, the PR2 `branch`/`sort_by` unregistered pair, and `P-CALL-NO-CATALOG` (fails on `USE sc`, untouched by this diff).
+
 ## Observed, out of unit
 
 - The `call.rs` test module needed two line-neutral re-pins (mixed-args and third-positional now bind); the file stays at its exact 1287 baseline with no added comment lines. Done in this round's step-4 commit, reported here because the brief's touch list did not name the file: the full-crate gate leaves no other consistent reading.
 - Rollback and the other unswitched handlers still prefer the named value when one parameter arrives both ways; only RDF and RPD raise the new duplicate-binding error. A follow-up round extends `bind()` to them.
+- PR1b: the same line-neutral rule forced one more `tests/call.rs` re-pin (the RPD `where` refusal row now pins the malformed-`where` parse text); 1287 intact. The brief's touch list did not name the file, and its `(exact 1303)` count is stale — same justification as PR1a's step 4.
+- PR1b: `docs/guide/iceberg-guide.md` still lists the pre-`add_files` procedure set in prose; the brief names no guide update, so it stays stale until a docs round claims it.
 
 ## Close
 
-PR1a clauses C-001…C-011 are PROVEN by pin plus mutation; the attestation below covers the ten categories for those clauses. PR1b extends both in this round's last commit.
+All twenty clauses C-001…C-020 are PROVEN by pin plus mutation; the attestation below covers the ten categories for the whole unit (PR1a's lines extended, not replaced).
 
 ```text
 COVERAGE_ATTESTATION:
@@ -77,39 +116,39 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Walked the eleven charter clauses against the diff and the runs. Every clause cites a Rust pin and, where the door differs, a Python pin and a replay verdict.
-      artifacts: [crates/repark-spark/src/tests/call_procedures_1.rs, python/repark/tests/test_ice_procedures_1.py, /tmp/oc-worker/nc-inventory/out/repark-procs-after.json]
+      evidence: Walked all twenty clauses against the diff and the runs. Every clause cites a Rust pin and, where the door differs, a Python pin and a replay verdict; the four add_files cells carry the fork-summary residue with its exact key.
+      artifacts: [crates/repark-spark/src/tests/call_procedures_1.rs, crates/repark-spark/src/tests/call_procedures_2.rs, python/repark/tests/test_ice_procedures_1.py, /tmp/oc-worker/nc-inventory/out/repark-procs-after.json]
     - id: AT-2
       status: ATTACKED
-      evidence: Exercised NULL positional and named, empty and NULL options maps, over-arity on both arities, unknown names, duplicate bindings, missing required, and the quoted dashed extra key.
-      artifacts: [call_args::tests::bind_positional_follows_declared_order_and_null_means_unset, tests::call_procedures_1::call_bind_excess_positional_names_arity, python/repark/tests/test_ice_procedures_1.py::test_not_yet_wired_params_stay_loud]
+      evidence: PR1a inputs plus the wiring-round edges: malformed and unknown-column where, mistyped ignored expire args, empty snapshot id arrays by construction, NULL partition-filter values, zero and negative parallelism, duplicate imports with the check on and off, and all three unsupported-source shapes in both spellings.
+      artifacts: [tests::call_procedures_2::call_rpd_where_malformed_refuses_with_parse_text, tests::call_procedures_2::call_expire_ignored_args_type_check, tests::call_procedures_2::call_add_files_refuses_unsupported_sources]
     - id: AT-3
       status: ATTACKED
-      evidence: Every refusal pins error class plus exact text, and every new branch went red under mutation. No IO, retry, or timeout surface exists on this change: bind is synchronous and the handlers commit exactly as before.
-      artifacts: [mutation record M1-M5 above, tests::call_procedures_1::call_rpd_positional_where_stays_a_loud_refusal]
+      evidence: Every refusal pins error class plus exact text, and every new branch went red under mutation. New IO surface: one properties commit plus the fork import commit per add_files CALL; validation precedes the first commit so malformed input leaves no side effect, and the mapping commit persists exactly like Java's separate ensure.
+      artifacts: [mutation record M1-M13 above, tests::call_procedures_1::call_rpd_positional_where_binds, tests::call_procedures_2::call_add_files_check_duplicate_files_raises]
     - id: AT-4
       status: N/A
-      justification: bind is a synchronous pure function over already-parsed args with no shared state; the diff adds no await point, no lock, and no ordering assumption.
+      justification: bind stays a synchronous pure function over already-parsed args with no shared state; the new awaits are sequential catalog commits with no lock and no ordering assumption beyond validate-before-commit.
     - id: AT-5
       status: N/A
-      justification: No privilege, credential, or path-resolution change. Table-idents still flow through the untouched resolve_table_ident with its path-escape refusals, pinned by the existing tests.
+      justification: No privilege or credential change. Source directories flow from the CALL string into the table's own FileIO listing with no escape (absolute paths only, refused otherwise by shape); table-idents still flow through the untouched resolve_table_ident with its path-escape refusals.
     - id: AT-6
       status: ATTACKED
-      evidence: Output schemas and rows are byte-identical except the three target cells, and every kept refusal string is pinned by equality. The replay verdict diff over 160 cells shows no move away from EQUAL or SPARK-CANNOT.
-      artifacts: [/tmp/oc-worker/nc-inventory/out/repark-procs-after.json, tests::call_procedures_1::call_bind_unknown_argument_names_allowed]
+      evidence: Output schemas and rows match the oracle on all ten cells plus PR1a's three; every kept refusal string is pinned by equality. The four add_files cells differ solely on the fork-written md.snapshots key, and every other non-green PROC cell attributes outside this round.
+      artifacts: [/tmp/oc-worker/nc-inventory/out/repark-procs-after.json, docs/spark-sql-iceberg-parity.md ICE-PROCEDURES-1 row]
     - id: AT-7
       status: N/A
-      justification: bind scans at most twelve declared names per CALL with no data loops, no allocation beyond the bound vec, and nothing retained across calls.
+      justification: bind scans at most twelve declared names per CALL; the mapping printer walks one schema (fork-capped depth 100) and the filter map holds at most the partition fields. Import IO is the fork's, unchanged by this diff.
     - id: AT-8
       status: ATTACKED
-      evidence: Unswitched handlers keep their own checks by untouched code. The extract_option_pairs signature change reaches exactly its two call sites. SUPPORTED_PROCEDURES and Cargo.toml are untouched, verified by diff and the T-2 grep.
-      artifacts: [crates/repark-spark/src/call.rs, crates/repark-spark/src/call/rewrite_data_files.rs, crates/repark-spark/src/call/rewrite_options.rs]
+      evidence: Unswitched handlers keep their own checks by untouched code. The pairs_from_map_args threading keeps the options call site byte-identical, verified by the untouched options suites. SUPPORTED_PROCEDURES gains only add_files (T-2 grep: one contains-pin, unaffected); Cargo.toml untouched.
+      artifacts: [crates/repark-spark/src/call.rs, crates/repark-spark/src/call/add_files.rs, crates/repark-spark/src/call/rewrite_options.rs]
     - id: AT-9
       status: ATTACKED
-      evidence: Every new failure names the parameter and the rule in one line, pinned by equality, through the existing Plan channel. No new silent path exists: unset means absent, never a defaulted value.
-      artifacts: [call_args::tests::bind_duplicate_positional_and_named_refuses, tests::call_procedures_1::call_bind_missing_required_names_position]
+      evidence: Every new failure names the parameter and the rule in one line, pinned by equality, through the existing Plan and NotImplemented channels. No new silent path exists: ignored means parsed-and-ignored with equality pins, never a defaulted value.
+      artifacts: [tests::call_procedures_2::call_expire_ignored_args_type_check, tests::call_procedures_2::call_rm_sort_by_stays_a_loud_refusal]
     - id: AT-10
       status: ATTACKED
-      evidence: Five mutations plus a base-build bite-proof all went red on the named pins. Every branch the diff adds has a nameable input in the suite: mixed, duplicate, unknown, excess, missing, NULL named, NULL positional, extra named-only.
-      artifacts: [mutation record M1-M5 above, crates/repark-spark/src/tests/call_procedures_1.rs, python/repark/tests/test_ice_procedures_1.py]
+      evidence: Thirteen mutations plus PR1a's base-build bite-proof all went red on the named pins. Every branch the diff adds has a nameable input in the suite: where on/off/malformed, ids named/positional, trio each, filter on/off, duplicates on/off, parallelism serial/parallel, formats parquet/orc/catalog/bare.
+      artifacts: [mutation record M1-M13 above, crates/repark-spark/src/tests/call_procedures_2.rs, python/repark/tests/test_ice_procedures_1.py]
 ```
