@@ -59,11 +59,11 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
   paren-less spellings still refuse `UNRESOLVED_COLUMN` like Spark and like the
   `now` / `current_timezone` siblings. `Q14_REFUSING_BARE` keeps all six names; H-06's
   drop instruction is declined with this measurement (hand-back open question).
-- T-2 (tree measurement): H-01 lives in `SparkDialect::on_session_built`, not
-  `SparkExtension::configure`. The temp-view home is captured from the same build-time
-  config between the two, and a `spark_catalog` / `default` home breaks every temp-view
-  write (the facade registers `spark_catalog` over it). Diagnosis: `q14` errored on the
-  fixture's `createOrReplaceTempView` until the move; green after.
+- T-2 (tree measurement): H-01 lives in the `SessionDefaults` ConfigExtension installed by
+  `SparkExtension::configure` (`extension.rs:63`) plus the `CatalogRegistry` box seeded to the
+  same `spark_catalog` / `default` pair (`catalog_state.rs:119`). The temp-view home is read
+  from that pair, and a `spark_catalog` / `default` home breaks every temp-view pin:
+  ice-catalog-session-1/C-022
 - T-3 (recorded-cell proof, H-04 deviation): `RENAME TO` resolves against the SOURCE
   table's catalog/namespace, not the session. D-1/H-04 route source AND dest through
   the session completer, but D-RENAME-TABLE-SHORT records Spark `ok` with the session
@@ -73,8 +73,9 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
   before form detection, claiming even RENAME) are removed so short names reach the AST
   path, and token forms complete at execute. `alter.rs` 1449 → 1444, row ratcheted.
   pins: ice-catalog-session-1/C-022
-- T-4 (tree measurement): H-01's `spark_catalog` / `default` build defaults land on the
-  native door too (shared `SparkDialect::on_session_built`), so bare `SHOW NAMESPACES` lists
+- T-4 (tree measurement): H-01's `spark_catalog` / `default` session defaults land on the
+  native door too (`CatalogRegistry::current_defaults`, flipped by `set_session_catalog` on
+  `register_memory_catalog`), so bare `SHOW NAMESPACES` lists
   the current catalog there and two-part `DESCRIBE` resolves like `SELECT` through the same
   read path. `R-SHOW-DATABASES` / `R-DESCRIBE-TWO-PART` / `R-SHOW-TABLES` move to served (after the
   native current-catalog flip the registered catalog is current, so `SHOW TABLES IN gold`
