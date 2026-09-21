@@ -20,6 +20,13 @@ gate needs them. The fork, every `Cargo.toml`, `Cargo.lock`, the pin,
 `STATUS.md`, `metadata_tables.rs`, `time_travel.rs`, `describe_show.rs`, the
 lineage path and the ANSI door are untouched.
 
+**r2 (2026-09-21, WO rc-meta r2):** closes the four critic findings (V-001..
+V-004) test-side only — naming asserts on C-007, the v3 order pin (C-009), the
+`_file` identity pin (C-010), the M-1 pin correction — then a 20-mutation sweep
+proving every assertion in both pin files goes red when its production value
+breaks. No production file changed; every mutation reverted and verified by
+byte-diff against backup.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the tree pins fork `886b94c1`, and every measurement below was taken
@@ -79,6 +86,14 @@ literal (Spark semantics, base path, untouched by the layer). All three
 behaviors are pinned or probed; the compound `x._pos` through an alias resolves
 through the temp view.
 
+**M-8 (r2) — the filter legs pin the count, not nullness.** Under an all-null
+`_file` mutation (F14), `SELECT count(*) FROM t WHERE _file IS NOT NULL` still
+answers `[[3]]`: `_file` is declared non-nullable, so the optimizer eliminates
+the predicate. C-003 / R-MC-FILE-FILTER therefore pin the row count through the
+M-4 empty-projection path (proved by F14b: `+1` row count reds both legs);
+`_file` non-nullness is pinned by the C-010 / R-MC-FILE-IDENTITY equality
+(F11/F13/F14 all red it).
+
 ## PROPOSITION LEDGER — ICE-METADATA-COLS-1 — 2026-09-20
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -89,8 +104,10 @@ through the temp view.
 | C-004 | `SELECT id, _pos FROM t` answers `[[2,0],[3,0],[4,0]]` with `_pos: bigint`. | `file_and_pos_answer_spark` (R-MC-POS leg) and `test_pos_is_zero_based_file_ordinal` green. | **PROVEN** | Exact recorded `R-MC-POS` values, Arrow `int64` via downcast and `df.schema` `bigint`. pins: ice-metadata-cols-1/C-004 |
 | C-005 | `SELECT id, _pos FROM t` after a merge-on-read DELETE answers `[[2,0],[3,0],[4,1]]`. | `pos_is_the_file_position_after_a_merge_on_read_delete` and `test_pos_survives_merge_on_read_delete` green. | **PROVEN** | Exact recorded `R-MC-POS-MOR` values, pin-measured per M-2; no divergence. pins: ice-metadata-cols-1/C-005 |
 | C-006 | `SELECT *` answers user columns only; `*, _file` and `*, _pos` compose. | `select_star_excludes_every_served_metadata_column` and `test_star_excludes_served_metadata_columns` green. | **PROVEN** | Field names `[id, data, cat]` / `+ [_file]` / `+ [_pos]` on both doors of the pin. pins: ice-metadata-cols-1/C-006 |
-| C-007 | `_spec_id`, `_partition`, `_deleted` refuse typed `[ICE-MC-1]`, never raw; served names fold; composed shapes refuse. | `unserved_metadata_columns_refuse_with_a_typed_error`, `served_names_fold_and_composed_shapes_refuse`, `test_unserved_metadata_columns_refuse_typed` green. | **PROVEN** | Each unserved name (bare and backtick) raises `[ICE-MC-1]` naming it, with no `No field named` leak; `_POS` folds, `` `_pos` `` and `x._pos` resolve, and a `DELETE` naming `_file` plus a two-relation `*` refuse `[ICE-MC-1]`. pins: ice-metadata-cols-1/C-007 |
+| C-007 | `_spec_id`, `_partition`, `_deleted` refuse typed `[ICE-MC-1]`, never raw; served names fold; composed shapes refuse. | `unserved_metadata_columns_refuse_with_a_typed_error`, `served_names_fold_and_composed_shapes_refuse`, `test_unserved_metadata_columns_refuse_typed` green. | **PROVEN** | Each unserved name (bare and backtick) raises `[ICE-MC-1]` naming it, with no `No field named` leak (r2 V-001: the naming is now asserted per column per door); `_POS` folds, `` `_pos` `` and `x._pos` resolve, and a `DELETE` naming `_file` plus a two-relation `*` refuse `[ICE-MC-1]`. F1/F2 prove naming, F3 the tag, F3b the no-leak, F4/F5 the composed refusals, F6/F7b/F8 the fold/exact/alias legs. pins: ice-metadata-cols-1/C-007 |
 | C-008 | Registry row `ICE-MC-FILEPOS-1` is filed BACKLOG for IPI-20. | The row in `docs/spark-sql-iceberg-parity.md` §7. | **PROVEN** | Row states the served two, the refused three with their `[ICE-MC-1]` pin, the inventory oracle, and the PR-2 intent; the refusal pins red on purpose when served. pins: ice-metadata-cols-1/C-008 |
+| C-009 | `SELECT _file, _row_id FROM t` on a format-v3 table answers both columns (`_file: string`, `_row_id: bigint`, ids `[0, 1]`): metadata rewrite runs before lineage. | `file_and_row_id_answer_together_on_a_format_v3_table` and `test_file_and_row_id_answer_together_on_v3` green; F10 (stage swap) reds both, F15 (dropped lineage fields) reds both, F12/F13 red the ordinal/suffix legs. | **PROVEN** | V-002 preferred form, no fallback: v3 table builds from fixtures with the `allowCreateFormatVersion3` opt-in. pins: ice-metadata-cols-1/C-009 |
+| C-010 | Every live `_file` equals a `file_path` of the table's own `files` metadata table. | `file_values_equal_the_files_metadata_table_paths` and `test_file_values_equal_files_metadata_table` green; F11 (`mutated-` prefix) reds both while C-001..C-003 stay green; F13/F13b/F14 also red both. | **PROVEN** | V-003 identity pin; the LIKE cell is kept verbatim. pins: ice-metadata-cols-1/C-010 |
 
 ## Gates
 
@@ -109,6 +126,46 @@ through the temp view.
 | `scripts/check_lib_rs.py` | clean (`repark-core` at 154 of 154) |
 | `scripts/check_rust_file_size.py`, `scripts/check_lib_py.py` | clean (new files under the 1000 default) |
 | `ruff check` + `ruff format --check` on the new test file and `check_lib_rs.py` | `All checks passed!`, already formatted |
+| r2 `cargo test -p repark-spark --lib tests::metadata_columns` | `7 passed; 0 failed` |
+| r2 pytest `python/repark/tests/test_ice_metadata_cols_1.py` | `9 passed` |
+| r2 xgate `rc-meta repark-core,repark-iceberg,repark-spark` + 3 pytest files | `CB=0 R=0 T=0 U=0 L=0` (verdict file, all five codes 0) |
+
+## r2 mutation battery (V-001..V-003 findings + CLASS sweep)
+
+Each row: one temporary production break, the pin tests run against it, the
+break reverted and byte-verified. Rust = `cargo test -p repark-spark --lib
+tests::metadata_columns`; pytest = the 9-test facade file (native module
+rebuilt per engine mutation). Test names shortened to their distinctive tail.
+
+| Id | Break (file) | Rust red | Pytest red |
+|---|---|---|---|
+| F1 | refusal omits the column name (`repark-core`) | `unserved…`, `served_names…` | `…refuse_typed` |
+| F2 | refusal always names `_spec_id` (`repark-core`) | `unserved…` (fails on `_partition`) | `…refuse_typed` |
+| F3 | unserved check dropped → raw `No field named` (`repark-core`) | `unserved…`, `served_names…` | `…refuse_typed` |
+| F3b | tagged message embeds `No field named` (`repark-core`) | `unserved…` (no-leak leg) | `…refuse_typed` |
+| F4 | non-query refusal dropped (`repark-core`) | `served_names…` (DELETE leg, untagged) | n/a (rust-only legs) |
+| F5 | multi-relation `*` refusal dropped (`repark-core`) | `served_names…` (two-relation leg) | n/a |
+| F6 | unquoted match made case-sensitive (`repark-core`) | `served_names…` (`_POS` leg) | n/a |
+| F7b | quoted names never match (`repark-core`) | `served_names…` (`` `_pos` `` leg; fold verified green) | n/a |
+| F8 | table alias always overwritten (`repark-core`) | `served_names…` (`x._pos` leg) | n/a |
+| F9 | wildcard expansion disabled (`repark-core`) | `select_star…` (all three queries error) | `…star_excludes…` |
+| F10 | router stages swapped (`repark-spark`) | v3 both-columns test only | `…together_on_v3` only |
+| F11 | every `_file` prefixed `mutated-` (provider) | identity test only | `…equal_files_metadata_table` only |
+| F12 | `+1` on `_pos` / `_row_id` / `id` (provider) | T1, MoR, `served_names…`, v3 (ordinals `[1,2]`) | C-001, C-004, C-005, C-009 rows |
+| F13 | `_file` constant `mutated.orc` (provider) | T1 (LIKE `(F,F)`), identity, v3 (suffix leg) | C-001, C-002, C-009, C-010 |
+| F13b | `_file` constant `a/data/b.parquet` (provider) | T1 (`DISTINCT [1]`), identity | already red by F13 |
+| F14 | `_file` all null (provider) | T1, identity, `select_star…`, v3 | C-001, C-002, C-009, C-010; C-003 green (M-8) |
+| F14b | empty-projection row count `+1` (provider) | T1 (`FILTER [6]`) | C-003 only |
+| F15 | lineage fields dropped on v3 (provider) | v3 both-columns test only | `…together_on_v3` only |
+| F16 | `_file`↔`_pos` types swapped (provider) | all but refusal | C-001/C-004 schemas + C-002/C-005/C-009/C-010 |
+
+Coverage: every assertion in both pin files reddens under at least one row —
+LIKE legs (F13), ids (F12), distinct (F13b), filter count (F14b), `_pos`/MoR
+(F12), star (F9), fold/exact/alias (F6/F7b/F8), tag/no-leak/naming
+(F3/F3b/F1/F2), composed refusals (F4/F5), order (F10), identity (F11), v3
+suffix/ordinals (F13/F12), schemas (F16). The C-001..C-003 prefix-hollowness
+(F11 green) is covered by C-010. Rust T1c cannot fire before the LIKE legs
+(nulls always fail LIKE first); its independent pin is C-003 (F14b).
 
 ## COVERAGE_ATTESTATION
 
@@ -153,7 +210,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/metadata_columns.rs, crates/repark-iceberg/src/catalog/metadata_columns.rs]
     - id: AT-10
       status: ATTACKED
-      evidence: Five recorded cells replayed verbatim on two harnesses (Rust lib + facade pytest); the refusal mutation (drop the unserved check) reds C-007, the empty-projection mutation reds C-003, and each added branch has a nameable input per AT-2.
+      evidence: Five recorded cells replayed verbatim on two harnesses (Rust lib + facade pytest); the r2 battery (F1..F16 incl. F3b/F7b/F13b/F14b) reds every assertion in both pin files, each mutation reverted and byte-verified; the refusal mutation (drop the unserved check) reds C-007, the empty-projection mutation reds C-003, and each added branch has a nameable input per AT-2.
       artifacts: [python/repark/tests/test_ice_metadata_cols_1.py, crates/repark-spark/src/tests/metadata_columns.rs]
 ```
 
