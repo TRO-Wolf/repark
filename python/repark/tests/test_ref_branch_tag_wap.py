@@ -133,17 +133,33 @@ def test_write_to_tag_refuses_like_spark(spark: ReparkSession) -> None:
         spark.sql(f"INSERT INTO {TABLE}.tag_v1 SELECT 2 AS id, 'b' AS name")
 
 
-@pytest.mark.parametrize(
-    "call",
-    [
-        "publish_changes(table => 'ns.events', wap_id => 'w1')",
-    ],
-)
-def test_wap_publish_procedures_refuse_loud(spark: ReparkSession, call: str) -> None:
-    """No WAP publish procedure is implemented; each refusal lists what is."""
-    with pytest.raises(UnsupportedOperationException) as caught:
-        spark.sql(f"CALL mem.system.{call}")
-    assert "not supported" in str(caught.value)
+def test_publish_changes_publishes_the_staged_snapshot(spark: ReparkSession) -> None:
+    """publish_changes answers (source, current) and main gains the staged row."""
+    spark.sql(f"ALTER TABLE {TABLE} SET TBLPROPERTIES ('write.wap.enabled'='true')").collect()
+    spark.conf.set("spark.wap.id", "w1")
+    try:
+        spark.sql(f"INSERT INTO {TABLE} SELECT 2 AS id, 'b' AS name").collect()
+    finally:
+        spark.conf.unset("spark.wap.id")
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1]
+    published = spark.sql(
+        "CALL mem.system.publish_changes(table => 'ns.events', wap_id => 'w1')"
+    ).to_arrow()
+    assert published.schema.names == ["source_snapshot_id", "current_snapshot_id"]
+    assert published.num_rows == 1
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1, 2]
+
+
+def test_publish_changes_with_an_unknown_wap_id_refuses(spark: ReparkSession) -> None:
+    """An unknown wap id raises the fork's bare message, with no kind prefix."""
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            "CALL mem.system.publish_changes(table => 'ns.events', wap_id => 'nope')"
+        ).to_arrow()
+    assert "Cannot apply unknown WAP ID 'nope'" in str(caught.value)
+    assert "DataInvalid" not in str(caught.value)
 
 
 @pytest.mark.parametrize("key", ["spark.wap.branch", "spark.wap.id"])
@@ -170,8 +186,8 @@ def test_wap_branch_leaves_a_table_without_the_property_on_main(spark: ReparkSes
     assert sorted(audit.column("id").to_pylist()) == [1]
 
 
-def test_wap_id_alone_still_lands_on_main(spark: ReparkSession) -> None:
-    """spark.wap.id stages nothing yet (fork ask F-STAGE-ONLY-1). pins: ice-wap-branch-1/C-010"""
+def test_wap_id_alone_stages_off_main(spark: ReparkSession) -> None:
+    """With write.wap.enabled the id stages the write; main stays put until publish."""
     spark.sql(f"ALTER TABLE {TABLE} SET TBLPROPERTIES ('write.wap.enabled'='true')").collect()
     spark.conf.set("spark.wap.id", "w1")
     try:
@@ -179,4 +195,4 @@ def test_wap_id_alone_still_lands_on_main(spark: ReparkSession) -> None:
     finally:
         spark.conf.unset("spark.wap.id")
     main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
-    assert sorted(main.column("id").to_pylist()) == [1, 2]
+    assert sorted(main.column("id").to_pylist()) == [1]
