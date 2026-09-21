@@ -18,7 +18,6 @@ use crate::{catalog_handle, iceberg_err, name_parts, reregister};
 pub(crate) struct HiveChangeColumnDdl {
     table_parts: Vec<String>,
     old_name: String,
-    new_name: String,
     data_type: SqlDataType,
     doc: Option<String>,
 }
@@ -60,6 +59,11 @@ pub(crate) fn try_parse_hive_change_column_ddl(sql: &str) -> Option<Result<HiveC
             ))));
         }
     };
+    if old_name != new_name {
+        return Some(Err(DataFusionError::Plan(format!(
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near '{new_name}'. SQLSTATE: 42601"
+        ))));
+    }
     let data_type = match parser.parse_data_type() {
         Ok(data_type) => data_type,
         Err(error) => {
@@ -90,7 +94,6 @@ pub(crate) fn try_parse_hive_change_column_ddl(sql: &str) -> Option<Result<HiveC
     Some(Ok(HiveChangeColumnDdl {
         table_parts,
         old_name,
-        new_name,
         data_type,
         doc,
     }))
@@ -128,12 +131,6 @@ pub(crate) async fn execute_hive_change_column_ddl(
             doc: Some(doc),
         });
     }
-    if ddl.old_name != ddl.new_name {
-        changes.push(SchemaChange::RenameColumn {
-            from: ddl.old_name.clone(),
-            to: ddl.new_name.clone(),
-        });
-    }
     apply_schema_changes(handle.as_ref(), &ident, &changes)
         .await
         .map_err(iceberg_err)?;
@@ -155,20 +152,44 @@ mod tests {
         .expect("parse");
         assert_eq!(ddl.table_parts, vec!["ice", "sales", "t"]);
         assert_eq!(ddl.old_name, "id");
-        assert_eq!(ddl.new_name, "id");
         assert_eq!(ddl.data_type, SqlDataType::BigInt(None));
         assert_eq!(ddl.doc.as_deref(), Some("hive-style"));
     }
 
     #[test]
     fn parse_hive_change_column_rename_without_comment() {
-        let ddl = try_parse_hive_change_column_ddl(
+        let error = try_parse_hive_change_column_ddl(
             "ALTER TABLE ice.sales.t CHANGE COLUMN data payload STRING",
         )
         .expect("recognize")
+        .expect_err("a rename must refuse at parse time");
+        let message = error.to_string();
+        assert!(message.contains("[PARSE_SYNTAX_ERROR]"), "{message}");
+        assert!(message.contains("42601"), "{message}");
+    }
+
+    #[test]
+    fn parse_hive_change_column_rename_with_comment_refuses() {
+        let error = try_parse_hive_change_column_ddl(
+            "ALTER TABLE ice.sales.t CHANGE COLUMN data payload STRING COMMENT 'moved'",
+        )
+        .expect("recognize")
+        .expect_err("a rename must refuse at parse time");
+        let message = error.to_string();
+        assert!(message.contains("[PARSE_SYNTAX_ERROR]"), "{message}");
+        assert!(message.contains("42601"), "{message}");
+    }
+
+    #[test]
+    fn parse_hive_change_column_same_name_without_comment_parses() {
+        let ddl = try_parse_hive_change_column_ddl(
+            "ALTER TABLE ice.sales.t CHANGE COLUMN data data STRING",
+        )
+        .expect("recognize")
         .expect("parse");
+        assert_eq!(ddl.table_parts, vec!["ice", "sales", "t"]);
         assert_eq!(ddl.old_name, "data");
-        assert_eq!(ddl.new_name, "payload");
+        assert_eq!(ddl.data_type, SqlDataType::String(None));
         assert_eq!(ddl.doc, None);
     }
 
