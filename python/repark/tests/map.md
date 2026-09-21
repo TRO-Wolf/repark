@@ -7415,6 +7415,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   recorded fixture (three append snapshots over `(id, data, cat)`) and compares the recorded
   observations: column names with Spark's type spelling, rows sorted by `repr` as the recorder
   sorted them, and for a refusal the exception class plus Spark's message with the per-run
-  snapshot ids blanked.
+  snapshot ids blanked. **Round 2 (2026-09-20):** the bounds test takes the `multi_snapshot`
+  fixture and asserts both refusals against the real pair (start `s3`, end `s1`); the
+  denylist row covers all four incremental keys and a new pin asserts the timestamp refusal
+  on a plain Iceberg load; `_commit_snapshot_id` is value-pinned per row in
+  `test_changes_relation_whole_history` and in the Rust `rendered()` helper; two reader-door
+  pins cover timestamp windows (`R-CHANGES-TS` and a strict-between start); the eight unused
+  `B017` directives are gone.
   pins: ice-changelog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015
