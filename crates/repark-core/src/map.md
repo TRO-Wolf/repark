@@ -315,6 +315,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `text_scan.rs`, `orc_scan.rs`, `time_travel.rs`, `column_resolution.rs`,
   `stack.rs` (+ `stack/udf.rs`), and `session_time_zone.rs` render through
   `repark_common::spark_error`, byte-identical. `stack.rs` keeps `Result` and `engine_err` and drops the unused `Error` import the M-1 move left behind.
+  **FNP-MATH-1 WO-6b R3 (2026-09-21):** an `Execution` message headed
+  `[ARITHMETIC_OVERFLOW]` routes to `Error::Arithmetic` carrying the inner message
+  verbatim (never the `Execution error: ` display); `Analysis` peels DataFusion's
+  `user-defined coercion failed with: ` wrap to the `[CONDITION] … SQLSTATE: XXXXX`
+  refusal payload when one is present, else keeps the full display. pins: fnp-math-1/C-004
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see

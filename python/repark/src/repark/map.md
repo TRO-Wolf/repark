@@ -41,6 +41,9 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** re-exports `CommitStateUnknownException`
   (`PySparkException` subclass, `operation_id` attribute) for the ambiguous-commit alert
   class. pins: ice-commit-unknown-1/C-002
+  **FNP-MATH-1 WO-6b R3 (2026-09-21):** re-exports `ArithmeticException`
+  (`PySparkException` subclass) with the same structured-error shims.
+  pins: fnp-math-1/C-004
 - `functions.py` — re-export binding of `repark.spark.functions`.
 - `spark/` — the facade package. See [spark/map.md](spark/map.md).
 - `py.typed` — PEP 561 marker.

@@ -245,6 +245,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   engine message. The extractor prefers the longest non-noise candidate and strips the
   leading `External error: ` shell DataFusion adds on the Arrow boundary. Error classes,
   chaining, and the memory advice text are unchanged. pins: dfcore-1/C-005
+  **FNP-MATH-1 WO-6b R3 (2026-09-21):** `_export_engine_error` re-raises a mid-stream
+  message carrying `[ARITHMETIC_OVERFLOW]` as `ArithmeticException` with the structured
+  payload (cut at the SQLSTATE token), never the longest `to_string()` candidate; every
+  other message keeps today's shape. pins: fnp-math-1/C-004
 - `udf_schema.py` owns mapInArrow schema coercion and batch validation (DFCORE-1, moved from
   `core.py`). Arrow widths match the session `createDataFrame` path, so `SMALLINT` / `TINYINT`
   / `FLOAT` stay narrow. pins: dfcore-1/C-006
