@@ -172,10 +172,10 @@ async fn merge_star_missing_source_column_errors() {
     )
     .await
     .unwrap_err();
-    assert!(
-        err.to_string().contains("missing from the source: `name`"),
-        "expected the missing-column star error, got: {err}"
-    );
+    let text = err.to_string();
+    assert!(text.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"));
+    assert!(text.contains("SQLSTATE: 42703"));
+    assert!(text.contains("`name`"));
 }
 
 /// `WHEN MATCHED AND <cond> THEN DELETE`: only the row passing the clause predicate is deleted.
