@@ -10,7 +10,7 @@ def test_fn_startswith_sql_where_matches_spark() -> None:
     try:
         rows = repark.sql(
             "SELECT id FROM (VALUES (1, 'apple'), (2, 'apricot'), (3, 'banana'), "
-            "(4, CAST(NULL AS STRING)), (6, ''), (7, 'Zeta')) AS t(id, s) "
+            "(4, CAST(NULL AS STRING)), (6, ''), (7, 'Zeta'), (8, 'xap')) AS t(id, s) "
             "WHERE startswith(s, 'ap') ORDER BY id"
         ).collect()
         assert [row[0] for row in rows] == [1, 2]
@@ -29,6 +29,7 @@ def test_fn_startswith_df_door_matches_sql_door() -> None:
                 (3, "banana"),
                 (4, None),
                 (6, ""),
+                (8, "xap"),
             ],
             ["id", "s"],
         )

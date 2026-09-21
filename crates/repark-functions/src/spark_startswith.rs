@@ -209,7 +209,7 @@ mod tests {
         let ids = id_column(
             &ctx,
             "SELECT id FROM (VALUES (1, 'apple'), (2, 'apricot'), (3, 'banana'), \
-             (4, CAST(NULL AS VARCHAR)), (6, ''), (7, 'Zeta')) AS t(id, s) \
+             (4, CAST(NULL AS VARCHAR)), (6, ''), (7, 'Zeta'), (8, 'xap')) AS t(id, s) \
              WHERE startswith(s, 'ap') ORDER BY id",
         )
         .await;
