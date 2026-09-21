@@ -299,6 +299,90 @@ async fn missing_column_stays_missing() {
     let state = mixed_state();
     let error = plan_error(&state, "SELECT nope FROM t", true).await;
     assert!(error.contains("nope"), "unexpected message: {error}");
+    assert!(
+        error.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+        "unexpected message: {error}"
+    );
+    assert!(
+        error.contains("SQLSTATE: 42703"),
+        "unexpected message: {error}"
+    );
+}
+
+#[tokio::test]
+async fn missing_column_stamps_unresolved_without_fold() {
+    let state = mixed_state();
+    let error = plan_error(&state, "SELECT nope FROM t", false).await;
+    assert!(error.contains("nope"), "unexpected message: {error}");
+    assert!(
+        error.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+        "unexpected message: {error}"
+    );
+    assert!(
+        error.contains("SQLSTATE: 42703"),
+        "unexpected message: {error}"
+    );
+}
+
+#[tokio::test]
+async fn unresolved_stamp_keeps_exact_case_select() {
+    let state = mixed_state();
+    assert_eq!(
+        plan_names(&state, "SELECT userId FROM t", true).await,
+        vec!["userId".to_string()]
+    );
+}
+
+#[tokio::test]
+async fn unresolved_stamp_keeps_folded_select() {
+    let state = mixed_state();
+    assert_eq!(
+        plan_names(&state, "SELECT USERID FROM t", true).await,
+        vec!["userId".to_string()]
+    );
+}
+
+#[tokio::test]
+async fn unresolved_stamp_skips_ambiguous_references() {
+    let ctx = measured_ctx();
+    let error = plan_error(&ctx.state(), "SELECT id FROM tw", true).await;
+    assert!(
+        error.contains("[AMBIGUOUS_REFERENCE]") && error.contains("SQLSTATE: 42704"),
+        "unexpected message: {error}"
+    );
+    assert!(
+        !error.contains("UNRESOLVED_COLUMN.WITH_SUGGESTION"),
+        "unexpected message: {error}"
+    );
+}
+
+#[tokio::test]
+async fn unresolved_stamp_keeps_select_one() {
+    let state = mixed_state();
+    assert_eq!(plan_names(&state, "SELECT 1", true).await.len(), 1);
+}
+
+#[tokio::test]
+async fn unresolved_stamp_skips_parse_errors() {
+    let ctx = SessionContext::new_with_state(mixed_state());
+    let error = sql_with_column_repair(&ctx, "SELECT FROM", true)
+        .await
+        .unwrap_err()
+        .to_string();
+    assert!(
+        !error.contains("UNRESOLVED_COLUMN.WITH_SUGGESTION"),
+        "unexpected message: {error}"
+    );
+}
+
+#[tokio::test]
+async fn unresolved_stamp_skips_missing_tables() {
+    let state = mixed_state();
+    let error = plan_error(&state, "SELECT nope FROM no_such_table", true).await;
+    assert!(
+        !error.contains("UNRESOLVED_COLUMN.WITH_SUGGESTION"),
+        "unexpected message: {error}"
+    );
 }
 
 type ArrayRef = Arc<dyn datafusion::arrow::array::Array>;

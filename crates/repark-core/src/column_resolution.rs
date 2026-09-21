@@ -29,10 +29,16 @@ async fn plan_with_repair(
     case_insensitive: bool,
 ) -> Result<LogicalPlan> {
     if !case_insensitive {
-        return state.statement_to_plan(statement).await;
+        return state
+            .statement_to_plan(statement)
+            .await
+            .map_err(stamp_unresolved_column);
     }
     let datafusion::sql::parser::Statement::Statement(mut inner) = statement else {
-        return state.statement_to_plan(statement).await;
+        return state
+            .statement_to_plan(statement)
+            .await
+            .map_err(stamp_unresolved_column);
     };
     let first = state
         .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner.clone()))
@@ -61,17 +67,17 @@ async fn plan_with_repair(
             {
                 return Err(spark);
             }
-            return Err(error);
+            return Err(stamp_unresolved_column(error));
         }
         let Some((field, valid)) = missing_field(&error) else {
-            return Err(error);
+            return Err(stamp_unresolved_column(error));
         };
         let miss = (
             field.relation.as_ref().map(ToString::to_string),
             field.name.clone(),
         );
         if !seen.insert(miss) {
-            return Err(error);
+            return Err(stamp_unresolved_column(error));
         }
         let catalog = match known.take() {
             Some(catalog) => catalog,
@@ -80,7 +86,7 @@ async fn plan_with_repair(
         let catalog = known.insert(catalog);
         catalog.absorb(valid);
         if !fold::fold_statement(&mut inner, catalog, &written)? {
-            return Err(error);
+            return Err(stamp_unresolved_column(error));
         }
         match state
             .statement_to_plan(datafusion::sql::parser::Statement::Statement(inner.clone()))
@@ -168,6 +174,32 @@ fn missing_field(error: &DataFusionError) -> Option<(&Column, &[Column])> {
         DataFusionError::Collection(errors) => errors.iter().find_map(missing_field),
         _ => None,
     }
+}
+
+fn stamp_unresolved_column(error: DataFusionError) -> DataFusionError {
+    let Some((field, valid)) = missing_field(&error) else {
+        return error;
+    };
+    if valid.is_empty() {
+        return error;
+    }
+    let missing = field.name.as_str();
+    let column_name = format!("`{missing}`");
+    let suggestions = valid
+        .iter()
+        .map(|column| {
+            let candidate = column.name.as_str();
+            format!("`{candidate}`")
+        })
+        .collect::<Vec<String>>()
+        .join(", ");
+    DataFusionError::Plan(spark_error::message(
+        spark_error::UNRESOLVED_COLUMN_WITH_SUGGESTION,
+        &[
+            ("columnName", column_name.as_str()),
+            ("suggestions", suggestions.as_str()),
+        ],
+    ))
 }
 
 fn missing_ambiguity(error: &DataFusionError) -> Option<&Column> {

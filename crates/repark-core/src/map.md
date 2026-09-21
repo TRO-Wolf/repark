@@ -627,8 +627,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the repair future in `column_resolution/stack.rs`'s grown-stack poll, so the statement clone,
   the fold, DataFusion's planning (its per-level `Spanned::span` walk is unguarded upstream) and
   the final drop run on a stack sized to the statement's nesting depth. Both case modes go
-  through it.
+  through it. IPI-51 PR6 slice 1 (2026-09-21): a `FieldNotFound` that survives the fold is
+  stamped `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703`.
   pins: ice-mixed-case-1/C-001, C-002, C-007, C-013, C-014, C-015, C-016, C-017, C-021, C-022
+  pins: ice-error-conditions-1/C-011
 - `column_resolution/stack.rs` — run 22b: `stack_bytes_for` (a `Visit` walk: open
   queries + their set-operation height + open expressions + open table factors, times
   32 KiB, plus 256 KiB) and `GrownStack`, a future whose every poll runs under
