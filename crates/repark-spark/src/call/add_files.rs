@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Int64Array, RecordBatch};
@@ -61,9 +62,8 @@ fn source_directory(source_expr: &Expr) -> Result<String> {
     let Expr::Value(ValueWithSpan { value, .. }) = source_expr else {
         return source_shape_error(source_expr);
     };
-    let text = match value {
-        Value::SingleQuotedString(text) | Value::DoubleQuotedString(text) => text,
-        _ => return source_shape_error(source_expr),
+    let (Value::SingleQuotedString(text) | Value::DoubleQuotedString(text)) = value else {
+        return source_shape_error(source_expr);
     };
     let Some((format, path)) = split_backticked_pair(text) else {
         return source_shape_error(source_expr);
@@ -233,7 +233,9 @@ fn json_string(out: &mut String, text: &str) {
             '\t' => out.push_str("\\t"),
             '\u{08}' => out.push_str("\\b"),
             '\u{0C}' => out.push_str("\\f"),
-            ch if u32::from(ch) < 0x20 => out.push_str(&format!("\\u{:04x}", u32::from(ch))),
+            ch if u32::from(ch) < 0x20 => {
+                let _ = write!(out, "\\u{:04x}", u32::from(ch));
+            }
             ch => out.push(ch),
         }
     }
