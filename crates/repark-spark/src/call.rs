@@ -16,7 +16,7 @@ use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
 use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 
-use crate::call_args::{CallArgs, bind};
+use crate::call_args::{CallArgs, bind, expr_as_i64_array};
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
 mod ancestors_of;
@@ -254,34 +254,17 @@ async fn execute_expire_snapshots(
     catalog_name: &str,
     args: &CallArgs,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&[
-        "table",
-        "older_than",
-        "retain_last",
-        "snapshot_ids",
-        "max_concurrent_deletes",
-        "stream_results",
-        "clean_expired_metadata",
-    ])?;
-    // Spark arity: table, older_than?, retain_last? (+ deferred named-only args)
-    args.reject_excess_positional(3)?;
-    for unsupported in [
-        "snapshot_ids",
-        "max_concurrent_deletes",
-        "stream_results",
-        "clean_expired_metadata",
-    ] {
-        if args.has_named(unsupported) {
-            return Err(DataFusionError::NotImplemented(format!(
-                "CALL expire_snapshots argument `{unsupported}` is not supported in v1 \
-                 (supported: table, older_than, retain_last)"
-            )));
-        }
-    }
-
-    let table_arg = args.require_string("table", 0)?;
-    let older_than_ms = args.optional_timestamp_ms("older_than", Some(1))?;
-    let retain_last = args.optional_i32("retain_last", Some(2))?;
+    let bound = bind(args, params::params_for("expire_snapshots"), &[])?;
+    let table_arg = bound.require_string("table")?;
+    let older_than_ms = bound.optional_timestamp_ms("older_than")?;
+    let retain_last = bound.optional_i32("retain_last")?;
+    let snapshot_ids = match bound.get("snapshot_ids") {
+        Some(expr) => expr_as_i64_array(expr, "snapshot_ids")?,
+        None => Vec::new(),
+    };
+    bound.optional_i64("max_concurrent_deletes")?;
+    bound.optional_bool("stream_results")?;
+    bound.optional_bool("clean_expired_metadata")?;
 
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
@@ -291,13 +274,15 @@ async fn execute_expire_snapshots(
         action = action.expire_older_than(timestamp_ms);
     }
     if let Some(retain) = retain_last {
-        // Pre-validate Java/fork floor so CALL fails at plan time with a stable message.
         if retain < 1 {
             return Err(DataFusionError::Plan(format!(
                 "CALL expire_snapshots retain_last must be >= 1, got {retain}"
             )));
         }
         action = action.retain_last(retain);
+    }
+    for snapshot_id in snapshot_ids {
+        action = action.expire_snapshot_id(snapshot_id);
     }
 
     let tx = Transaction::new(&table);

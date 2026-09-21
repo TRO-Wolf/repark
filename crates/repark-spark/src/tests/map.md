@@ -478,8 +478,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   RPD `where` restricts the rewrite to the matching partition (a filtered twin rewrites 1
   of 2 delete files while the unfiltered twin rewrites both, with live rows intact on
   each), and a malformed or unknown-column `where` refuses with the exact parse text.
+  `expire_snapshots` `snapshot_ids` expires exactly those ids in both named and positional
+  spellings with Spark's six columns and row, the accept-and-ignore trio equals the plain
+  `older_than` row on twin tables, mistyped new arguments refuse naming their types, and
+  `rewrite_manifests` `sort_by` stays a loud unknown-argument refusal.
   Clause citations live in this map, not in the source.
-  pins: ice-procedures-1/C-012
+  pins: ice-procedures-1/C-012, C-013, C-014, C-020
 - `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** 35
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
   bad-job-order / bad-spec / band-crossing / negative-size texts, silent-false booleans,

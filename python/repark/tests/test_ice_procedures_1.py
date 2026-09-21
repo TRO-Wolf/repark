@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException
 
 _RDF_COLS = [
     "rewritten_data_files_count",
@@ -165,20 +165,9 @@ def test_bind_null_is_unset(spark: ReparkSession) -> None:
 
 
 def test_not_yet_wired_params_stay_loud(spark: ReparkSession) -> None:
-    """Expire args and sort_by keep exact refusals. pins: ice-procedures-1/C-009."""
+    """sort_by keeps its exact refusal. pins: ice-procedures-1/C-009, C-020."""
     spark.sql("CREATE TABLE mem.ns.nyw (id BIGINT) USING iceberg")
     spark.sql("INSERT INTO mem.ns.nyw VALUES (1)")
-    for argument in (
-        "snapshot_ids => array(1)",
-        "max_concurrent_deletes => 2",
-        "stream_results => true",
-        "clean_expired_metadata => true",
-    ):
-        with pytest.raises(
-            UnsupportedOperationException,
-            match=re.escape("is not supported in v1 (supported: table, older_than, retain_last)"),
-        ):
-            spark.sql(f"CALL mem.system.expire_snapshots(table => 'ns.nyw', {argument})").to_arrow()
     with pytest.raises(
         AnalysisException,
         match=re.escape("unknown CALL argument `sort_by`; allowed: table, use_caching, spec_id"),
@@ -186,6 +175,67 @@ def test_not_yet_wired_params_stay_loud(spark: ReparkSession) -> None:
         spark.sql(
             "CALL mem.system.rewrite_manifests(table => 'ns.nyw', sort_by => array('id'))"
         ).to_arrow()
+
+
+_EXPIRE_COLS = [
+    "deleted_data_files_count",
+    "deleted_position_delete_files_count",
+    "deleted_equality_delete_files_count",
+    "deleted_manifest_files_count",
+    "deleted_manifest_lists_count",
+    "deleted_statistics_files_count",
+]
+
+
+def _seed_expire_fixture(spark: ReparkSession, table: str) -> list[int]:
+    """Create the mk3-plus-delete shape and return snapshot ids in commit order."""
+    spark.sql(
+        f"CREATE TABLE mem.ns.{table} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat)"
+    )
+    spark.sql(f"INSERT INTO mem.ns.{table} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (6, 'f', 'x')")
+    spark.sql(f"INSERT INTO mem.ns.{table} VALUES (3, 'c', 'x'), (7, 'g', 'x')")
+    spark.sql(f"INSERT INTO mem.ns.{table} VALUES (4, 'd', 'x'), (5, 'e', 'y'), (8, 'h', 'x')")
+    spark.sql(f"DELETE FROM mem.ns.{table} WHERE id = 1")
+    return _snapshot_ids(spark, f"mem.ns.{table}")
+
+
+def test_expire_snapshot_ids_expires_exactly_those(spark: ReparkSession) -> None:
+    """snapshot_ids expires exactly those ids. pins: ice-procedures-1/C-013."""
+    ids = _seed_expire_fixture(spark, "exs")
+    assert len(ids) == 4
+    cols, row = _result_row(
+        spark,
+        f"CALL mem.system.expire_snapshots(table => 'ns.exs', snapshot_ids => array({ids[0]}))",
+    )
+    assert cols == _EXPIRE_COLS
+    assert row == [0, 0, 0, 0, 1, 0]
+    assert _snapshot_ids(spark, "mem.ns.exs") == ids[1:]
+
+
+def test_expire_accept_and_ignore_trio_equals_plain(spark: ReparkSession) -> None:
+    """Ignored expire args equal the plain older_than row. pins: ice-procedures-1/C-014."""
+    _seed_expire_fixture(spark, "ex0")
+    cols, plain = _result_row(
+        spark,
+        "CALL mem.system.expire_snapshots(table => 'ns.ex0', "
+        "older_than => TIMESTAMP '2999-01-01 00:00:00')",
+    )
+    assert cols == _EXPIRE_COLS
+    assert plain == [1, 0, 0, 1, 3, 0]
+    for table, argument in (
+        ("ex1", "stream_results => true"),
+        ("ex2", "max_concurrent_deletes => 2"),
+        ("ex3", "clean_expired_metadata => true"),
+    ):
+        _seed_expire_fixture(spark, table)
+        cols, row = _result_row(
+            spark,
+            f"CALL mem.system.expire_snapshots(table => 'ns.{table}', "
+            f"older_than => TIMESTAMP '2999-01-01 00:00:00', {argument})",
+        )
+        assert cols == _EXPIRE_COLS
+        assert row == plain
 
 
 def test_rpd_where_rewrites_matching_partition(spark: ReparkSession) -> None:

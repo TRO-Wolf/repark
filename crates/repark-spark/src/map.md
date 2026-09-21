@@ -412,8 +412,11 @@ pins: rp-4-fork-repin/C-005, C-006
   and on v3 drops in-scope DVs (`V3-DANGLE-1`
   FIXED). rewrite-position-delete answers its measured options subset and refuses its
   unwired keys loud. **ICE-PROCEDURES-1 PR1b (2026-09-21):** its `where` wires through
-  `call/rewrite_where.rs` into the fork's `RewritePositionDeleteFiles::filter`.
-  pins: ice-procedures-1/C-012
+  `call/rewrite_where.rs` into the fork's `RewritePositionDeleteFiles::filter`, and
+  `expire_snapshots` binds against its declared list with `snapshot_ids` expiring each id
+  in array order while `max_concurrent_deletes`, `stream_results` and
+  `clean_expired_metadata` parse and stay ignored.
+  pins: ice-procedures-1/C-012, C-013, C-014
   **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `run_maintenance` plans the
   five D-4 steps over the stamped `[<profile>.maintenance]` policy plus inline overrides,
   and `dry_run => false` applies them step by step (`ran` / `failed` / `skipped`).

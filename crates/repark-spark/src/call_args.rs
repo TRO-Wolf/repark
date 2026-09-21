@@ -249,6 +249,29 @@ impl BoundArgs {
             .map(|expr| expr_as_bool(expr, name))
             .transpose()
     }
+
+    pub(crate) fn optional_i64(&self, name: &str) -> Result<Option<i64>> {
+        self.get(name)
+            .map(|expr| expr_as_i64(expr, name))
+            .transpose()
+    }
+
+    pub(crate) fn optional_i32(&self, name: &str) -> Result<Option<i32>> {
+        match self.optional_i64(name)? {
+            None => Ok(None),
+            Some(value) => i32::try_from(value).map(Some).map_err(|_| {
+                DataFusionError::Plan(format!(
+                    "CALL argument `{name}` value {value} does not fit i32"
+                ))
+            }),
+        }
+    }
+
+    pub(crate) fn optional_timestamp_ms(&self, name: &str) -> Result<Option<i64>> {
+        self.get(name)
+            .map(|expr| expr_as_timestamp_ms(expr, name))
+            .transpose()
+    }
 }
 
 fn is_sql_null(expr: &Expr) -> bool {
@@ -486,7 +509,6 @@ pub(crate) fn expr_as_string_array(expr: &Expr, arg_name: &str) -> Result<Vec<St
     }
 }
 
-#[allow(dead_code)]
 pub(crate) fn expr_as_i64_array(expr: &Expr, arg_name: &str) -> Result<Vec<i64>> {
     match expr {
         Expr::Array(array) => array
