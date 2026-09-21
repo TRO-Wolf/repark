@@ -168,3 +168,4 @@ def test_unserved_metadata_columns_refuse_typed(spark: Any) -> None:
         text = str(caught.value)
         assert "[ICE-MC-1]" in text
         assert "No field named" not in text
+        assert column in text

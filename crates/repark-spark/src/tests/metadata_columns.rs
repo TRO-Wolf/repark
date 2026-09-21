@@ -235,6 +235,10 @@ async fn served_names_fold_and_composed_shapes_refuse() {
         error.contains("[ICE-MC-1]"),
         "backtick unserved refuses typed: {error}"
     );
+    assert!(
+        error.contains("_spec_id"),
+        "backtick unserved names the column: {error}"
+    );
 
     let error = plan_error(&session, "DELETE FROM ice.ns.t WHERE _file IS NOT NULL").await;
     assert!(
@@ -263,6 +267,10 @@ async fn unserved_metadata_columns_refuse_with_a_typed_error() {
         assert!(
             !error.contains("No field named"),
             "{column} must not leak the raw planner error, got: {error}"
+        );
+        assert!(
+            error.contains(column),
+            "{column} refusal must name the column, got: {error}"
         );
     }
 }
