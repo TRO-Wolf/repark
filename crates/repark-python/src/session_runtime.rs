@@ -61,6 +61,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(unset_runtime_config, module)?)?;
     module.add_function(wrap_pyfunction!(session_zone_canonical, module)?)?;
     module.add_function(wrap_pyfunction!(session_defaults, module)?)?;
+    module.add_function(wrap_pyfunction!(set_session_catalog, module)?)?;
     module.add_function(wrap_pyfunction!(register_late_catalog_block, module)?)?;
     Ok(())
 }
@@ -69,6 +70,22 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 pub fn session_defaults(session: &PyReparkSession) -> PyResult<(String, String)> {
     fenced_span!("py.session", "session_defaults", {
         Ok(session.session.catalogs_snapshot().current_defaults())
+    })
+}
+
+#[pyfunction]
+pub fn set_session_catalog(session: &PyReparkSession, catalog: &str) -> PyResult<()> {
+    fenced_span!("py.session", "set_session_catalog", {
+        let namespace = if catalog == "spark_catalog" {
+            "default"
+        } else {
+            ""
+        };
+        session
+            .session
+            .catalogs_snapshot()
+            .set_defaults(catalog, namespace);
+        Ok(())
     })
 }
 

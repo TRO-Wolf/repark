@@ -1340,7 +1340,7 @@ class ReparkSession:
             )
         ):
             state["current_catalog"] = name
-            self.sql(f"USE {name}")
+            _native.set_session_catalog(self._ensure_alive(), name)
             # One flip only; `auto_default_catalog` itself stays sticky so spark_catalog
             # refs keep aliasing to the user catalog (the auto catalog never blocks).
             state["auto_flip_done"] = True
