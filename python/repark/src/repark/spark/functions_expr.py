@@ -1274,7 +1274,7 @@ def _binary_aggregate(name: str, col1: Column | str, col2: Column | str) -> Colu
     right, right_part = _aggregate_argument(col2)
     agg_name = f"{name}({left_part}, {right_part})"
     return Column(
-        left._inner.aggregate_binary(name, right._inner),
+        left._inner.aggregate_binary(name, [right._inner]),
         agg_name=agg_name,
         sql_expr=f"{name}({left.sql_expr_part()}, {right.sql_expr_part()})",
         spark_display=agg_name,
