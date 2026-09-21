@@ -229,8 +229,8 @@ def _assert_recorded_error(
 ) -> None:
     """Pin one refusal's recorded class, condition and SQLSTATE."""
     assert type(error).__name__ == error_type, key
-    assert getattr(error, "getErrorClass")() == condition, key
-    assert getattr(error, "getSqlState")() == sqlstate, key
+    assert error.getErrorClass() == condition, key  # type: ignore[attr-defined]
+    assert error.getSqlState() == sqlstate, key  # type: ignore[attr-defined]
 
 
 def _frame(spark: ReparkSession) -> DataFrame:
