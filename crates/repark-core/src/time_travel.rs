@@ -348,16 +348,27 @@ pub async fn read_table_at(
         }
     };
     let temp_name = next_temp_view_name();
-    let _ = ctx.deregister_table(temp_name.as_str());
-    ctx.register_table(temp_name.as_str(), provider)
+    let qualified = format!("datafusion.public.{temp_name}");
+    let catalog = ctx.catalog("datafusion").ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no session catalog `datafusion` for time-travel temp view (have {:?})",
+            ctx.catalog_names()
+        ))
+    })?;
+    let schema = catalog.schema("public").ok_or_else(|| {
+        DataFusionError::Plan("no schema `datafusion.public` for time-travel temp view".to_string())
+    })?;
+    let _ = schema.deregister_table(&temp_name);
+    schema
+        .register_table(temp_name.clone(), provider)
         .map_err(|error| {
             DataFusionError::Plan(format!(
-                "failed to register time-travel temp view {temp_name}: {error}"
+                "failed to register time-travel temp view {qualified}: {error}"
             ))
         })?;
-    ctx.table(temp_name.as_str()).await.map_err(|error| {
+    ctx.table(qualified.as_str()).await.map_err(|error| {
         DataFusionError::Plan(format!(
-            "time-travel temp view {temp_name} unresolved: {error}"
+            "time-travel temp view {qualified} unresolved: {error}"
         ))
     })
 }

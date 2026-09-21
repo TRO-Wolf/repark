@@ -75,6 +75,7 @@ mod spark_string_literals;
 mod time_travel;
 mod transform_overwrite;
 mod truncate;
+mod use_ddl;
 mod v3_cow;
 mod v3_cow_lift;
 mod v3_dml_scan;

@@ -458,7 +458,7 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
     let mut dollar_names: Vec<String> = Vec::new();
     for batch in &shown {
         let column = batch
-            .column(2)
+            .column(1)
             .as_any()
             .downcast_ref::<datafusion::arrow::array::StringArray>()
             .expect("table_name is Utf8");

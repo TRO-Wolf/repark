@@ -39,6 +39,13 @@ pins: rp-4-fork-repin/C-005, C-006
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `execute_merge_statement` (OUTPUT refusal, timestamp_ns cast lowering) so `execute_inner` stays under clippy's 100-line cap (run 22b).
+  **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `Statement::{ShowCatalogs, ShowTables,
+  ShowColumns}` arms route to `use_ddl`; the `DESCRIBE TABLE` intercept skips the Iceberg
+  path when a bare name resolves as a session table, so temp views keep winning.
+  pins: ice-catalog-session-1/C-015, C-016, C-017
+  **ICE-CATALOG-SESSION-1 S5 (2026-09-20):** the `REFRESH` pre-parse intercept routes to
+  `use_ddl::execute_refresh`, beside the extracted `DESCRIBE TABLE` helper.
+  pins: ice-catalog-session-1/C-019
   **CAST-MAP-SPELL-1 (2026-09-19):** `execute_inner` first runs
   `repark_functions::cast_map::rewrite_map_casts`, so a `CAST` / `TRY_CAST` naming `MAP<…>`
   reaches every intercept and the parser as the shared cast UDF call.
@@ -457,6 +464,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `publish_create_table` / `publish_replace_table`; one snapshot); the tail lives
   in `finish_ctas_staged_commit` so `execute_ctas` keeps the function
   length ceiling. Round 3 withdrew the empty-publish-then-append double commit.
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** all three creation sites merge user
+  properties through the catalog side map (the service-managed site takes
+  `catalogs` for it).
+  pins: ice-catalog-session-1/C-027
   pins: ice-write-options-1/C-001, C-003
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
   merged session write, so CTAS stamps session snapshot properties.
@@ -752,6 +763,9 @@ pins: rp-4-fork-repin/C-005, C-006
   primitives behind the same opt-in (pins: v3-6-v3-types/C-003); v2 CREATE refuses via
   the fork's `check_compatibility`.
   4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `execute_schema_create` merges user
+  `TBLPROPERTIES` through the catalog side map (override > user > default).
+  pins: ice-catalog-session-1/C-027
   **FNP-4B round 7 (2026-09-15):** angle-bracket `ARRAY<T>` maps to an Iceberg
   list with nullable `element` fields and table-unique ids from a checked
   allocator (R-16b-21 grant); bare/square-bracket forms still refuse.
@@ -932,6 +946,10 @@ pins: rp-4-fork-repin/C-005, C-006
   options (ICE-WRITE-OPTIONS-1 run 22b, 2026-09-18). pins: ice-write-options-1/C-014
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** it copies `cx.overwrite_intent`; `execute` routes a
   non-`Session` intent through `execute_with_statement_options`. pins: ice-overwrite-mode-1/C-007
+  **ICE-CATALOG-SESSION-1 R6 (2026-09-20):** the S9 `on_session_built` flip and the
+  temp-view-home placeholder are deleted: planner `default_catalog` / `default_schema`
+  stay at the DataFusion builtins in every session, and the auto memory catalog owns
+  the real `spark_catalog`.
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
   `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
@@ -1122,6 +1140,9 @@ pins: rp-4-fork-repin/C-005, C-006
   flag; rows come from `table.metadata()` (Iceberg schema via `schema_to_arrow_schema`,
   default partition spec, location, properties plus a live `current-snapshot-id`, snapshot
   summary for `Statistics`, the session-built `Owner` below).
+  **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `ShowNamespaces.catalog` is `Option` —
+  the bare form lists the session's current catalog (NS-1 FIXED).
+  pins: ice-catalog-session-1/C-018
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
   **REVIEW-FIX-5 (2026-09-10):** the table parser takes one-, two-, and three-part names and
   never filters the table segment of a three-part name, so `cat.ns.files` describes while a
@@ -1206,6 +1227,24 @@ pins: rp-4-fork-repin/C-005, C-006
   `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]`/`SQLSTATE: 0A000` text over a caller-supplied
   command string (newlines flattened); the four v2-command router intercepts answer through it.
   pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
+- `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the session-defaults seam:
+  `session_defaults` / `set_session_defaults` over the registry box
+  (`CatalogRegistry::current_defaults` / `set_defaults`, seeded `spark_catalog` /
+  `default`; `set` also mirrors the `SessionDefaults` carrier `current_catalog()` reads),
+  the one `complete_name` 1/2/3-part resolver every short-name call site shares, and
+  `execute_use` (catalog-first one-part rule per live-Spark probe P-1, per-type default
+  namespace, `SCHEMA_NOT_FOUND` texts, `USE CATALOG` parse refusal, `USE DEFAULT`
+  pre-parse). Planner `default_catalog` / `default_schema` stay at the DataFusion
+  builtins; a raw `SET` of either key still lands there and mirrors that side into the
+  box (R6). `rename_dest` anchors short `RENAME TO` targets on the source table (T-3);
+  the ALTER / CALL / CREATE / CTAS / DROP call sites complete through `complete_name`.
+  S4 adds the `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` executors (sorted
+  names, ambient scope from the session defaults, `LIKE`-glob suffix, `TERSE` /
+  `EXTENDED` / `FULL` parse refusals) and the `SHOW TABLES IN` scope resolver
+  (catalog-first, like `USE`). S5 adds native `REFRESH [TABLE] name` /
+  `REFRESH 'path'` (temp views and paths answer ok; missing tables refuse
+  `TABLE_OR_VIEW_NOT_FOUND`; hits rebuild the catalog provider).
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-015, C-016, C-017, C-018, C-019, C-022, C-023
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
   cross-door evidence in `crates/repark-sql/tests/cross_door.rs`.

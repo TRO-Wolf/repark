@@ -10,12 +10,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import (
-    AnalysisException,
-    ParseException,
-    PySparkValueError,
-    UnsupportedOperationException,
-)
+from repark.errors import AnalysisException, PySparkValueError
 from repark.spark import catalog as catalog_module
 from repark.spark.catalog import Catalog, Table
 from repark.spark.storage import StorageLevel
@@ -404,14 +399,13 @@ def test_clear_cache_drops_catalog_tables(spark: ReparkSession) -> None:
     assert catalog.isCached("t1") is False
 
 
-def test_sql_cache_uncache_refresh_todays_refusals(spark: ReparkSession) -> None:
-    """C-004/C-006: SQL CACHE/UNCACHE/REFRESH doors refuse today (run 15c owns them)."""
-    with pytest.raises(UnsupportedOperationException):
-        spark.sql("cache table tv1")
-    with pytest.raises(UnsupportedOperationException):
-        spark.sql("uncache table tv1")
-    with pytest.raises(ParseException):
-        spark.sql("refresh table t1")
+def test_sql_cache_uncache_refresh_doors(spark: ReparkSession) -> None:
+    """C-004/C-006: SQL CACHE/UNCACHE/REFRESH route to the catalog surface (H-05)."""
+    spark.sql("cache table tv1").to_arrow()
+    assert spark.catalog.isCached("tv1") is True
+    spark.sql("uncache table tv1").to_arrow()
+    assert spark.catalog.isCached("tv1") is False
+    assert spark.sql("refresh table t1").to_arrow().num_rows == 0
 
 
 def test_create_table_iceberg_schema(spark: ReparkSession) -> None:

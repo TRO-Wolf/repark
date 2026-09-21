@@ -2,9 +2,10 @@
 
 use std::collections::HashSet;
 
+use datafusion::common::TableReference;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{ObjectType, Statement, TableObject};
+use datafusion::sql::sqlparser::ast::{Insert, ObjectType, Statement, TableObject};
 use repark_core::CatalogRegistry;
 
 use crate::{
@@ -299,7 +300,7 @@ async fn execute_inner(
             execute_ctas(
                 ctx,
                 catalogs,
-                build_ctas(create, &partitioning, &clauses)?,
+                build_ctas(catalogs, create, &partitioning, &clauses)?,
                 write_options,
             )
             .await
@@ -334,34 +335,9 @@ async fn execute_inner(
         Statement::Merge(merge) => {
             execute_merge_statement(ctx, catalogs, merge, schema_evolution).await
         }
-        // INSERT OVERWRITE: probe and validate before an empty-source wipe.
-        Statement::Insert(insert) if insert.overwrite => {
-            execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await
-        }
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {
-            if !write_options.is_empty() {
-                return execute_append_with_options(ctx, catalogs, sql, insert, write_options)
-                    .await;
-            }
-            if repark_iceberg::write::session_write_conf_is_set(ctx)
-                && let TableObject::TableName(name) = &insert.table
-                && crate::insert_overwrite::try_resolve_iceberg_overwrite_target(
-                    ctx, catalogs, name,
-                )
-                .await?
-                .is_some()
-            {
-                return execute_append_with_options(ctx, catalogs, sql, insert, write_options)
-                    .await;
-            }
-            let refusal = match &insert.table {
-                TableObject::TableName(name) => {
-                    refuse_read_only_dml_table_sql(catalogs, &name.to_string())
-                }
-                TableObject::TableFunction(_) | TableObject::TableQuery(_) => None,
-            };
-            passthrough_after_p11(ctx, catalogs, sql, refusal).await
+            execute_insert_routed(ctx, catalogs, sql, insert, write_options).await
         }
         // DELETE/UPDATE.
         Statement::Delete(delete) => execute_delete(ctx, catalogs, sql, delete).await,
@@ -369,8 +345,52 @@ async fn execute_inner(
         // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
         Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
         Statement::Truncate(truncate) => execute_truncate(ctx, catalogs, truncate).await,
+        Statement::Use(target) => crate::use_ddl::execute_use(ctx, catalogs, target).await,
+        Statement::ShowCatalogs { terse: true, .. }
+        | Statement::ShowTables { terse: true, .. }
+        | Statement::ShowColumns { extended: true, .. }
+        | Statement::ShowColumns { full: true, .. } => {
+            Err(crate::use_ddl::show_parse_refusal("SHOW ..."))
+        }
+        Statement::ShowCatalogs { show_options, .. } => {
+            crate::use_ddl::execute_show_catalogs(ctx, catalogs, show_options)
+        }
+        Statement::ShowTables { show_options, .. } => {
+            crate::use_ddl::execute_show_tables(ctx, catalogs, show_options).await
+        }
+        Statement::ShowColumns { show_options, .. } => {
+            crate::use_ddl::execute_show_columns(ctx, catalogs, show_options).await
+        }
         _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
     }
+}
+
+async fn execute_insert_routed(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    insert: &Insert,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Result<DataFrame> {
+    if insert.overwrite {
+        return execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await;
+    }
+    if !write_options.is_empty() {
+        return execute_append_with_options(ctx, catalogs, sql, insert, write_options).await;
+    }
+    if repark_iceberg::write::session_write_conf_is_set(ctx)
+        && let TableObject::TableName(name) = &insert.table
+        && crate::insert_overwrite::try_resolve_iceberg_overwrite_target(ctx, catalogs, name)
+            .await?
+            .is_some()
+    {
+        return execute_append_with_options(ctx, catalogs, sql, insert, write_options).await;
+    }
+    let refusal = match &insert.table {
+        TableObject::TableName(name) => refuse_read_only_dml_table_sql(catalogs, &name.to_string()),
+        TableObject::TableFunction(_) | TableObject::TableQuery(_) => None,
+    };
+    passthrough_after_p11(ctx, catalogs, sql, refusal).await
 }
 
 fn refuse_options_on_non_write(
@@ -535,6 +555,155 @@ async fn describe_namespace_preparse(
     )
 }
 
+async fn describe_table_resolves_in_session(ctx: &SessionContext, table: &str) -> bool {
+    ctx.table_provider(TableReference::Bare {
+        table: table.into(),
+    })
+    .await
+    .is_ok()
+}
+
+async fn try_describe_table_intercept(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let parsed = describe_show::try_parse_describe_table(sql)?;
+    let mut describe_table = match parsed.and_then(|ddl| {
+        write_options
+            .refuse_if_non_empty("DESCRIBE TABLE")
+            .map(|()| ddl)
+    }) {
+        Ok(describe_table) => describe_table,
+        Err(error) => return Some(Err(error)),
+    };
+    let shadowed = describe_table.catalog.is_empty()
+        && describe_table.namespace.is_empty()
+        && describe_table_resolves_in_session(ctx, &describe_table.table).await;
+    describe_table.complete_from_session(ctx);
+    if shadowed || catalogs.get(&describe_table.catalog).is_none() {
+        return None;
+    }
+    Some(describe_show::execute_describe_table(ctx, catalogs, describe_table).await)
+}
+
+async fn try_refresh_intercept(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let parsed = crate::use_ddl::try_parse_refresh(sql)?;
+    let target = match parsed.and_then(|target| {
+        write_options
+            .refuse_if_non_empty("REFRESH TABLE")
+            .map(|()| target)
+    }) {
+        Ok(target) => target,
+        Err(error) => return Some(Err(error)),
+    };
+    Some(crate::use_ddl::execute_refresh(ctx, catalogs, target).await)
+}
+
+#[derive(Clone, Copy)]
+enum PlannerDefaultSide {
+    Catalog,
+    Namespace,
+}
+
+fn planner_default_set_side(sql: &str) -> Option<PlannerDefaultSide> {
+    let mut body = sql.trim_start();
+    loop {
+        if let Some(rest) = body.strip_prefix("--") {
+            let end = rest.find('\n').map_or(rest.len(), |index| index + 1);
+            body = rest[end..].trim_start();
+        } else if let Some(after_open) = body.strip_prefix("/*") {
+            let end = after_open.find("*/")?;
+            body = after_open[end + 2..].trim_start();
+        } else {
+            break;
+        }
+    }
+    let head = body.get(..3)?;
+    if !head.eq_ignore_ascii_case("set") {
+        return None;
+    }
+    let after_keyword = body[3..].strip_prefix(|char: char| char.is_whitespace())?;
+    let after_keyword = after_keyword.trim_start();
+    for (key, side) in [
+        (
+            "datafusion.catalog.default_catalog",
+            PlannerDefaultSide::Catalog,
+        ),
+        (
+            "datafusion.catalog.default_schema",
+            PlannerDefaultSide::Namespace,
+        ),
+    ] {
+        if let Some(tail) = after_keyword.get(key.len()..)
+            && after_keyword
+                .get(..key.len())
+                .is_some_and(|head| head.eq_ignore_ascii_case(key))
+            && tail.trim_start().starts_with('=')
+        {
+            return Some(side);
+        }
+    }
+    None
+}
+
+async fn try_use_default_intercept(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Option<Result<DataFrame>> {
+    if !crate::use_ddl::is_use_default(sql) {
+        return None;
+    }
+    Some(
+        crate::use_ddl::execute_use(
+            ctx,
+            catalogs,
+            &datafusion::sql::sqlparser::ast::Use::Default,
+        )
+        .await,
+    )
+}
+
+async fn try_planner_default_set_mirror(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let side = planner_default_set_side(sql)?;
+    if let Err(error) = write_options.refuse_if_non_empty("SET") {
+        return Some(Err(error));
+    }
+    let frame = match spark_ast::execute_passthrough(ctx, catalogs, sql).await {
+        Ok(frame) => frame,
+        Err(error) => return Some(Err(error)),
+    };
+    let planner = ctx.copied_config().options().catalog.clone();
+    let (current_catalog, current_namespace) = crate::use_ddl::session_defaults(catalogs);
+    match side {
+        PlannerDefaultSide::Catalog => crate::use_ddl::set_session_defaults(
+            ctx,
+            catalogs,
+            &planner.default_catalog,
+            &current_namespace,
+        ),
+        PlannerDefaultSide::Namespace => crate::use_ddl::set_session_defaults(
+            ctx,
+            catalogs,
+            &current_catalog,
+            &planner.default_schema,
+        ),
+    }
+    Some(Ok(frame))
+}
+
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_alter_intercepts(
     ctx: &SessionContext,
@@ -613,18 +782,11 @@ async fn try_preparse_intercepts(
     if let Some(outcome) = v2_json_preparse(sql, parsed_ddl) {
         return Some(outcome);
     }
-    if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
-        match parsed.and_then(|ddl| parsed_ddl("DESCRIBE TABLE").map(|()| ddl)) {
-            Ok(mut describe_table) => {
-                describe_table.complete_from_session(ctx);
-                if catalogs.get(&describe_table.catalog).is_some() {
-                    return Some(
-                        describe_show::execute_describe_table(ctx, catalogs, describe_table).await,
-                    );
-                }
-            }
-            Err(error) => return Some(Err(error)),
-        }
+    if let Some(result) = try_describe_table_intercept(ctx, catalogs, sql, write_options).await {
+        return Some(result);
+    }
+    if let Some(result) = try_refresh_intercept(ctx, catalogs, sql, write_options).await {
+        return Some(result);
     }
     // `SHOW {NAMESPACES|SCHEMAS|DATABASES}` (Group AB).
     if let Some(parsed) = describe_show::try_parse_show_namespaces(sql) {
@@ -648,6 +810,12 @@ async fn try_preparse_intercepts(
     }
     if let Some(outcome) = v2_tail_preparse(sql, parsed_ddl) {
         return Some(outcome);
+    }
+    if let Some(result) = try_use_default_intercept(ctx, catalogs, sql).await {
+        return Some(result);
+    }
+    if let Some(result) = try_planner_default_set_mirror(ctx, catalogs, sql, write_options).await {
+        return Some(result);
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {

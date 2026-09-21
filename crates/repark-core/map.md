@@ -173,7 +173,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
   carries the out-of-band writer-option map (default impl refuses non-empty,
   delegates when empty); `Session::sql_with_write_options` is the entry.
 - `src/catalog_state.rs` — the hoisted `CatalogRegistry` + `LocationPolicy` (E-4 temp-root
-  resolution at registration).
+  resolution at registration). **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `catalog_names`
+  (sorted, deduped) feeds `SHOW CATALOGS`. pins: ice-catalog-session-1/C-015
 - `src/lineage_columns.rs` — **V3-4:** rewrite `SELECT _row_id` / `_last_updated_sequence_number`
   onto a `LineageColumnsTableProvider` temp view for format-v3 Iceberg tables (single-table
   only; JOIN/CTE/subquery/time-travel refuse `V3-ROWID-2`); v1/v2 stay unresolved. Both SQL

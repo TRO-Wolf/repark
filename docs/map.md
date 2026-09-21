@@ -50,6 +50,10 @@ repo.
   declared fences (two-part `system.<fn>`, quoted spellings, unregistered-catalog SHOW, no
   pushdown, unpinned version text) live on the row, not here.
   **ICE-MERGE-APPEND-1 (2026-09-19):**
+  single home for how repark differs from Apache Spark. **ICE-CATALOG-SESSION-1 S4 (2026-09-20):**
+  NS-1 (bare `SHOW NAMESPACES`), ST-1 (`SHOW TABLES IN`), and DBT-QUALIFY-1 (one
+  resolution rule) flip to FIXED with their pins.
+  pins: ice-catalog-session-1/C-016, C-018, C-022 **ICE-MERGE-APPEND-1 (2026-09-19):**
   `ICE-MERGE-APPEND-1` FIXED in §7 — every RePark-owned append commit site now uses the fork's
   `merge_append()` (Java `newAppend`), so the three `commit.manifest*` properties take effect —
   with two fork-routed BACKLOG residues beside it: `ICE-MERGE-APPEND-SUMMARY-1` (the

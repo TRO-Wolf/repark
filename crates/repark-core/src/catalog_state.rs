@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, PoisonError, RwLock};
 
 use iceberg::Catalog;
 use repark_iceberg::catalog::{CatalogCaches, IcebergCacheSettings};
@@ -66,10 +66,34 @@ fn strip_ascii_prefix_ci<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
 struct CatalogEntry {
     catalog: Arc<dyn Catalog>,
     location_policy: LocationPolicy,
+    table_props: HashMap<String, String>,
+}
+
+const TABLE_DEFAULT_PREFIX: &str = "table-default.";
+
+const TABLE_OVERRIDE_PREFIX: &str = "table-override.";
+
+fn merge_table_creation_properties(
+    side: &HashMap<String, String>,
+    user: &HashMap<String, String>,
+) -> HashMap<String, String> {
+    let mut merged = HashMap::with_capacity(user.len() + side.len());
+    for (key, value) in side {
+        if let Some(stripped) = key.strip_prefix(TABLE_DEFAULT_PREFIX) {
+            merged.insert(stripped.to_string(), value.clone());
+        }
+    }
+    merged.extend(user.iter().map(|(key, value)| (key.clone(), value.clone())));
+    for (key, value) in side {
+        if let Some(stripped) = key.strip_prefix(TABLE_OVERRIDE_PREFIX) {
+            merged.insert(stripped.to_string(), value.clone());
+        }
+    }
+    merged
 }
 
 /// Iceberg catalog handles keyed by DataFusion catalog name, each tagged with a location policy.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct CatalogRegistry {
     entries: HashMap<String, CatalogEntry>,
     database_sources: HashMap<String, Arc<SourceSpec>>,
@@ -79,6 +103,24 @@ pub struct CatalogRegistry {
     local_warehouse_roots: Vec<String>,
     iceberg_caches: Arc<CatalogCaches>,
     maintenance_policy: Option<(String, Option<MaintenancePolicy>)>,
+    session_defaults: Arc<RwLock<(String, String)>>,
+}
+
+impl Default for CatalogRegistry {
+    fn default() -> Self {
+        Self {
+            entries: HashMap::new(),
+            database_sources: HashMap::new(),
+            read_only_catalogs: std::collections::HashSet::new(),
+            local_warehouse_roots: Vec::new(),
+            iceberg_caches: Arc::new(CatalogCaches::new(IcebergCacheSettings::default())),
+            maintenance_policy: None,
+            session_defaults: Arc::new(RwLock::new((
+                "spark_catalog".to_string(),
+                "default".to_string(),
+            ))),
+        }
+    }
 }
 
 impl CatalogRegistry {
@@ -108,8 +150,35 @@ impl CatalogRegistry {
             CatalogEntry {
                 catalog,
                 location_policy: policy,
+                table_props: HashMap::new(),
             },
         );
+    }
+
+    pub fn merge_table_props(&mut self, name: &str, props: &HashMap<String, String>) {
+        let Some(entry) = self.entries.get_mut(name) else {
+            return;
+        };
+        for (key, value) in props {
+            if key.starts_with(TABLE_DEFAULT_PREFIX)
+                || key.starts_with(TABLE_OVERRIDE_PREFIX)
+                || key == crate::catalog_config::WAREHOUSE_PROP
+            {
+                entry.table_props.insert(key.clone(), value.clone());
+            }
+        }
+    }
+
+    #[must_use]
+    pub fn table_creation_properties(
+        &self,
+        name: &str,
+        user: &HashMap<String, String>,
+    ) -> HashMap<String, String> {
+        let Some(entry) = self.entries.get(name) else {
+            return user.clone();
+        };
+        merge_table_creation_properties(&entry.table_props, user)
     }
 
     /// Record a local warehouse root for SEC-02 grandfather.
@@ -174,6 +243,16 @@ impl CatalogRegistry {
         self.entries.contains_key(name) || self.database_sources.contains_key(name)
     }
 
+    #[must_use]
+    pub fn catalog_names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self.entries.keys().cloned().collect();
+        names.extend(self.database_sources.keys().cloned());
+        names.extend(self.read_only_catalogs.iter().cloned());
+        names.sort();
+        names.dedup();
+        names
+    }
+
     pub(crate) fn database_source(&self, name: &str) -> Option<&Arc<SourceSpec>> {
         self.database_sources.get(name)
     }
@@ -184,6 +263,18 @@ impl CatalogRegistry {
         self.entries
             .get(name)
             .map(|entry| entry.location_policy.clone())
+    }
+
+    #[must_use]
+    pub fn current_defaults(&self) -> (String, String) {
+        RwLock::read(&self.session_defaults)
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    pub fn set_defaults(&self, catalog: &str, namespace: &str) {
+        *RwLock::write(&self.session_defaults).unwrap_or_else(PoisonError::into_inner) =
+            (catalog.to_string(), namespace.to_string());
     }
 }
 
@@ -257,5 +348,28 @@ mod tests {
     fn memory_warehouse_fallback_root_does_not_panic_on_utf8_after_file_colon() {
         let root = memory_warehouse_fallback_root("file:/ü/scratch/repark-wh");
         assert_eq!(root, PathBuf::from("/ü/scratch/repark-wh"));
+    }
+
+    #[test]
+    fn table_creation_properties_merge_override_user_default() {
+        let side = HashMap::from([
+            ("table-default.k1".to_string(), "d1".to_string()),
+            ("table-default.k2".to_string(), "d2".to_string()),
+            ("table-override.k2".to_string(), "o2".to_string()),
+            ("warehouse".to_string(), "/tmp/wh".to_string()),
+        ]);
+        let merged = merge_table_creation_properties(
+            &side,
+            &HashMap::from([("k1".to_string(), "user".to_string())]),
+        );
+        assert_eq!(merged.get("k1").map(String::as_str), Some("user"));
+        assert_eq!(merged.get("k2").map(String::as_str), Some("o2"));
+        assert!(!merged.contains_key("warehouse"));
+        let registry = CatalogRegistry::new();
+        let passthrough = registry.table_creation_properties(
+            "missing",
+            &HashMap::from([("k".to_string(), "v".to_string())]),
+        );
+        assert_eq!(passthrough.len(), 1);
     }
 }

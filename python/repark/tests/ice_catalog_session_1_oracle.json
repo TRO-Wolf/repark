@@ -1,0 +1,90 @@
+{
+  "_source": "Spark 4.1.2 + Iceberg 1.11.0 answers transcribed verbatim from /tmp/oc-worker/qe/cells/ipi-32-catalog-session.txt (cells) and /tmp/oc-worker/qe/probe/p3.json (probes).",
+  "cells": {
+    "D-RENAME-TABLE-SHORT": {
+      "title": "ALTER TABLE … RENAME TO ns.new (catalog-less target)",
+      "spark": "ok",
+      "obs": {"data": [[0, "d0", "a"], [1, "d1", "b"], [2, "d2", "a"]]},
+      "repark_step": "ALTER TABLE sc.ns.t_d_rename_table_short RENAME TO ns.u_d_rename_table_short"
+    },
+    "D-SHOW-COLUMNS": {
+      "title": "SHOW COLUMNS IN",
+      "spark": "ok",
+      "obs": {"rows": [["cat"], ["data"], ["id"]]},
+      "repark_step": "SHOW COLUMNS IN sc.ns.t_d_show_columns",
+      "note": "The recorded rows are the harness sort; Spark's real answer is declaration order (N-6) and the replay pins the F.show_columns probes instead."
+    },
+    "P-CALL-NO-CATALOG": {
+      "title": "USE catalog; CALL system.proc(...)",
+      "spark": "ok",
+      "obs": {
+        "out.cols": ["previous_snapshot_id", "current_snapshot_id"],
+        "out.rows": [["S2", "S0"]],
+        "data": [[1, "a", "x"], [2, "b", "y"], [6, "f", "x"]]
+      },
+      "repark_step": "snapshots",
+      "note": "S2/S0 symbolize the 3rd/1st snapshot ids; the replay asserts the same relationship with live ids."
+    },
+    "CAT-TYPE-HADOOP": {
+      "title": "runtime spark.sql.catalog.X.type=hadoop + warehouse",
+      "spark": "ok",
+      "obs": {"rows": [[1]]},
+      "repark_step": "CREATE NAMESPACE IF NOT EXISTS c_hadoop.n1"
+    },
+    "CAT-CATALOG-IMPL-INMEMORY": {
+      "title": "catalog-impl=InMemoryCatalog at runtime",
+      "spark": "ok",
+      "obs": {"ok": true},
+      "repark_step": "CREATE NAMESPACE IF NOT EXISTS c_inmem.n1"
+    },
+    "CAT-TABLE-DEFAULT-OVERRIDE": {
+      "title": "table-default.* / table-override.* catalog props",
+      "spark": "ok",
+      "obs": {"props": [["k1", "d1"], ["k2", "o2"], ["write.format.default", "parquet"]]},
+      "repark_step": "CREATE NAMESPACE IF NOT EXISTS c_tdef.n1"
+    },
+    "CAT-USE-CATALOG-NS": {
+      "title": "USE sc.ns then unqualified CREATE/SHOW",
+      "spark": "ok",
+      "obs": {
+        "rows": [["ns", "uc_t_cat_use_catalog_ns", false]],
+        "current": [["sc", "ns"]]
+      },
+      "repark_step": "USE sc.ns"
+    },
+    "CAT-CURRENT-CATALOG": {
+      "title": "current_catalog() default",
+      "spark": "ok",
+      "obs": {"current": [["spark_catalog"]]},
+      "repark_step": "SELECT current_catalog()"
+    },
+    "CAT-SHOW-CATALOGS": {
+      "title": "SHOW CATALOGS lists sc/hc",
+      "spark": "ok",
+      "obs": {"rows": [["hc"], ["sc"], ["spark_catalog"]]},
+      "repark_step": "SHOW CATALOGS"
+    },
+    "CAT-REFRESH-TABLE": {
+      "title": "REFRESH TABLE",
+      "spark": "ok",
+      "obs": {"ok": true},
+      "repark_step": "REFRESH TABLE sc.ns.t_cat_refresh_table"
+    },
+    "CAT-CACHE-TABLE": {
+      "title": "CACHE TABLE then INSERT then SELECT (refresh on write)",
+      "spark": "ok",
+      "obs": {"rows": [[1], [2]]},
+      "repark_step": "CACHE TABLE sc.ns.t_cat_cache_table"
+    }
+  },
+  "probes": {
+    "F.show_columns": [["id"], ["data"], ["cat"]],
+    "F.show_columns_short": [["id"], ["data"], ["cat"]],
+    "F.show_columns_from": [["id"], ["data"], ["cat"]],
+    "F.td_props": [["current-snapshot-id", "none"], ["format", "iceberg/parquet"], ["format-version", "2"], ["k1", "set-by-user"], ["k2", "o2"], ["kboth", "from-override"], ["write.parquet.compression-codec", "zstd"]],
+    "F.rename_result": [["ns", "t", "False"], ["ns", "uq2", "False"]],
+    "F.show_tables_after_use": [["ns", "t", "False"], ["ns", "uq", "False"]],
+    "F.unqualified_select": [["1"], ["2"]],
+    "F.cache_then_insert_then_read": [["3"]]
+  }
+}

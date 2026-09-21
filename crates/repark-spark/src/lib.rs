@@ -44,6 +44,7 @@ mod time_travel;
 mod time_window;
 mod truncate;
 pub mod type_table;
+mod use_ddl;
 pub mod wap;
 mod window_range;
 pub(crate) mod write_options;
@@ -121,15 +122,14 @@ pub(crate) use normalize::{
 };
 pub use spark_type_names::{spark_ddl_type_name, spark_ddl_type_name_at_depth};
 pub(crate) use truncate::execute_truncate;
+pub(crate) use use_ddl::rename_dest;
 
 mod extension;
 pub use extension::SparkExtension;
 
 // Test-only imports provide the crate-root scope shared by the leaf modules.
 #[cfg(test)]
-use std::collections::HashMap;
-#[cfg(test)]
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 #[cfg(test)]
 use datafusion::error::DataFusionError;

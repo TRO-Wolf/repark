@@ -32,7 +32,7 @@ EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fi
 # requires explicit owner approval; ordinary edits only ratchet rows down.
 EXCEPTIONS: dict[str, tuple[int, str, str]] = {
     "crates/repark-core/src/catalog_config.rs": (
-        1028,
+        1007,
         "Session catalog configuration still owns every backend shape.",
         "Split backend-specific option parsing from shared session installation.",
     ),
@@ -132,7 +132,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split configuration bindings from query and catalog bindings.",
     ),
     "crates/repark-spark/src/alter.rs": (
-        1444,
+        1439,
         "Spark ALTER token rewrites and dispatch share one planner module.",
         "Split syntax normalization from Iceberg operation dispatch.",
     ),

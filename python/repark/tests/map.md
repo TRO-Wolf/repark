@@ -66,6 +66,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `dv_count`); the historical parser pins stay byte-identical.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011
+- [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
+  [ice_catalog_session_1_oracle.json](ice_catalog_session_1_oracle.json) —
+  **ICE-CATALOG-SESSION-1 (2026-09-20):** the unit pin file; S5 carries the eight
+  `CACHE` / `UNCACHE` / `REFRESH` SQL-door pins (N-7 missing-table refusal, N-8
+  cache-then-write-then-read, `isCached` agreement both ways, `IF EXISTS`
+  tolerance, AS SELECT refusal). S6 adds the runtime-registration pins (first
+  complete block registers, late `table-default` lands, the three N-12 precedence
+  legs) and the three C-028 agreement pins. S7 adds the `hadoop` / `InMemoryCatalog`
+  registration pins. S8 adds the Spark oracle JSON, the eleven cell replays, and the
+  session-start pin `test_show_namespaces_bare_at_session_start_follows_box_not_current_catalog`
+  (41 passed; divergences EAGER-1, HADOOP-1 stay pinned in the registry; bare
+  `SHOW NAMESPACES` follows the registry box while `SELECT current_catalog()` stays `spark_catalog`).
+  pins: ice-catalog-session-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028
+
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
   [ice_meta_delete_1_spark_oracle.json](ice_meta_delete_1_spark_oracle.json) +
   [_record_ice_meta_delete_1.py](_record_ice_meta_delete_1.py) —
@@ -1655,6 +1669,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Kiritimati / `Etc/GMT+12` session-zone pin holds the measured UTC-date defect as
   strict-xfail under registry row TZ-9.
   pins: test-hygiene-1/C-003.
+  **ICE-CATALOG-SESSION-1 (2026-09-20):** the Q14 session-name pins split —
+  `current_user` / `user` / `session_user` still refuse while `current_catalog` /
+  `current_database` / `current_schema` answer the engine defaults (value, string
+  type, non-null); the paren-less spellings stay in `Q14_REFUSING_BARE`.
+  pins: ice-catalog-session-1/C-011, C-029.
 - [test_unresolved_routine_1.py](test_unresolved_routine_1.py) +
   [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) —
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** every unknown routine refuses with Spark's
@@ -4480,12 +4499,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `LIKE` is Spark's `StringUtils.filterPattern` and NOT SQL `LIKE` (full match not substring,
   case-insensitive, `|` alternation, `%`/`_` literal, the `LIKE` keyword optional, the pattern
   matched against the QUOTED row), `.show()` rendering, the unknown-catalog `AnalysisException`
-  **class identity** (live pyspark 4.0.0 `SCHEMA_NOT_FOUND` / 42704), the two registry-rowed
-  refusals
-  ([NS-1](../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog) /
-  [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
+  **class identity** (live pyspark 4.0.0 `SCHEMA_NOT_FOUND` / 42704), the bare form
+  listing the current catalog (NS-1 FIXED 2026-09-20, `USE <catalog>` first or the
+  `spark_catalog` build default) and the one remaining registry-rowed refusal
+  ([NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
   failing LOUD, and that a
   relation named `namespaces`/`schemas` is not shadowed (Spark has no `SHOW <relation>` form).
+  pins: ice-catalog-session-1/C-018
 - `test_perf_facade_collect_rows.py` — **PERF-FACADE-COLLECT-1** (2026-09-04): the binding row
   fast path against the pre-existing Python converter, kept callable as
   `rows_export.rows_from_arrow_table_python`. Both converters run on the same batch and every
@@ -4825,10 +4845,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   missing-namespace `SCHEMA_NOT_FOUND` **equals DESCRIBE sibling** (no SHOW precheck;
   AST forbids `_namespace_exists` on `get_database`), `locationUri` equals
   `probe_namespace_location_via_describe` on one memory session, FA-2 `listDatabases`
-  still None.
-  Remaining divergences rowed as
-  [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
+  still None. **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `SHOW TABLES [IN|FROM]
+  [LIKE]` is implemented SQL (ST-1 FIXED); the remaining divergence is
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
+  pins: ice-catalog-session-1/C-016
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_parity3.py` — **R-PARITY3**: `createDataFrame(schema=StructType|DDL)` preserves int32;
   `show(vertical=True)` real `-RECORD` layout + only-showing-top-n. Row factory/pickle pins in
@@ -4839,8 +4859,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `pyspark`→`repark.spark` smoke, top-level shim identity.
 - [test_catalog_surface.py](test_catalog_surface.py) — **G-INT INT-004** (historical bullet; current surface is the
   R-CURCAT entry above). Pins that still matter: `tableExists` / camelCase aliases /
-  `clearCache`/`dropTempView`. Rowed listing refusals:
-  [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
+  `clearCache`/`dropTempView`.   Rowed listing: `SHOW TABLES IN` answers Spark's shape
+  ([ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in--is-unimplemented--fixed-2026-09-20),
+  fixed 2026-09-20) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_catalog_surface_1.py` + `facade_catalog_oracle.json` — **CATALOG-SURFACE-1
@@ -4861,8 +4882,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusal, `FutureWarning` on the deprecated alias), `dropGlobalTempView` False,
   `recoverPartitions` None + `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` +
   `TABLE_OR_VIEW_NOT_FOUND` (§5 CAT-RECOVER-1), `refreshTable` (OOB commit visible
-  after refresh, view no-op, missing raise), `refreshByPath` None, and today's
-  `CACHE TABLE` / `UNCACHE TABLE` SQL refusals. Critic round 1 (L-001..L-007):
+  after refresh, view no-op, missing raise), `refreshByPath` None, and the SQL
+  `CACHE` / `UNCACHE` / `REFRESH` doors (rewritten S5: they route to the surface
+  now, `isCached` agrees both ways). Critic round 1 (L-001..L-007):
   staleness-token invalidation of held caches (INSERT / INSERT OVERWRITE / writer
   append / `createOrReplaceTempView` all answer fresh rows and `isCached` False;
   the no-write second read still scans the held cache view under the SQL spy),

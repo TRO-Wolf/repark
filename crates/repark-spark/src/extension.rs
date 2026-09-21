@@ -60,6 +60,7 @@ impl SessionExtension for SparkExtension {
         let verbatim =
             crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
         let config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);
+        let config = repark_functions::session_names::with_session_defaults(config);
         Ok(repark_functions::session_time_zone::with_session_time_zone(
             config,
             session.session_time_zone.id(),

@@ -40,6 +40,13 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   red-first evidence lives in the two files below.
   pins: dbt-1-adapter/C-001
   pins: sql-set-door-1/C-005
+  **ICE-CATALOG-SESSION-1 S4 (2026-09-20, re-measured after the current-catalog flip):**
+  twenty served, eight refused — `R-SHOW-DATABASES`, `R-DESCRIBE-TWO-PART` and
+  `R-SHOW-TABLES` move to served (a registered memory catalog becomes the current catalog,
+  so `gold` resolves: bare `SHOW NAMESPACES` lists it, two-part `DESCRIBE` resolves like
+  `SELECT`, and `SHOW TABLES IN gold` answers the dbt glob shape); `R-RENAME-TWO-PART`
+  keeps refusing, against a missing namespace — a missing object refuses, never the name's
+  shape (DBT-QUALIFY-1 FIXED).
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row

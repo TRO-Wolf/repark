@@ -62,12 +62,6 @@ pub(crate) fn try_parse_write_order_ddl(sql: &str) -> Option<Result<WriteOrderDd
         index += 2;
     }
     let table_parts = collect_name_parts(&significant, table_start, index)?;
-    if table_parts.len() != 3 {
-        return Some(Err(DataFusionError::Plan(format!(
-            "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{}`",
-            table_parts.join(".")
-        ))));
-    }
     if !word_eq(&significant, index, "WRITE") {
         return None;
     }
@@ -79,7 +73,7 @@ pub(crate) async fn execute_write_order_ddl(
     catalogs: &CatalogRegistry,
     ddl: WriteOrderDdl,
 ) -> Result<DataFrame> {
-    let (catalog_name, ident) = table_parts_to_ident(&ddl.table_parts)?;
+    let (catalog_name, ident) = table_parts_to_ident(catalogs, &ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let fields = ddl
         .fields
@@ -103,8 +97,12 @@ pub(crate) async fn execute_write_order_ddl(
     ctx.read_empty()
 }
 
-fn table_parts_to_ident(parts: &[String]) -> Result<(String, TableIdent)> {
-    let [catalog, namespace, table] = parts else {
+fn table_parts_to_ident(
+    catalogs: &CatalogRegistry,
+    parts: &[String],
+) -> Result<(String, TableIdent)> {
+    let completed = crate::use_ddl::complete_name(catalogs, parts)?;
+    let [catalog, namespace, table] = completed.as_slice() else {
         return Err(DataFusionError::Plan(format!(
             "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{}`",
             parts.join(".")

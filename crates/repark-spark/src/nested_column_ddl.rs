@@ -271,7 +271,7 @@ pub(crate) async fn execute_nested_column_ddl(
     catalogs: &CatalogRegistry,
     ddl: NestedColumnDdl,
 ) -> Result<DataFrame> {
-    let (catalog_name, ident) = table_parts_to_ident(&ddl.table_parts)?;
+    let (catalog_name, ident) = table_parts_to_ident(catalogs, &ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let table = handle.load_table(&ident).await.map_err(iceberg_err)?;
     let changes = match &ddl.operation {

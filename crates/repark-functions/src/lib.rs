@@ -42,6 +42,7 @@ pub mod percentile_approx;
 pub mod quantile_summaries;
 pub mod random;
 pub mod registration;
+pub mod session_names;
 pub mod session_time_zone;
 pub mod spark_base64;
 pub mod spark_chr;
@@ -160,11 +161,7 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in spark_session_window::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
-    iceberg_system::register(ctx);
-    validate::register(ctx);
-    try_invert::register(ctx);
-    temporal_ctor::register(ctx);
-    higher_order::register(ctx);
+    registration::register_udf_families(ctx);
     decimal_spark::register_spark_decimal_planner(ctx);
     integer_spark::register_spark_integer_planner(ctx);
 }

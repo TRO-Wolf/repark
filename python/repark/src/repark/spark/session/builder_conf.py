@@ -41,6 +41,29 @@ _CACHE_BYTE_BUDGET_KEYS_LOWER: frozenset[str] = frozenset(
     {"repark.cache.max_bytes", "repark.cache.max_total_bytes"}
 )
 
+_CATALOG_KEY_PREFIXES: tuple[str, str] = ("spark.sql.catalog.", "repark.sql.catalog.")
+
+
+def _late_catalog_block_name(key: str) -> str | None:
+    """The catalog name a ``spark.sql.catalog.*`` key belongs to, else ``None``."""
+    for prefix in _CATALOG_KEY_PREFIXES:
+        if not key.startswith(prefix):
+            continue
+        rest = key[len(prefix) :]
+        name = rest.split(".", 1)[0]
+        return name or None
+    return None
+
+
+def _late_catalog_block_keys(store: dict[str, str], name: str) -> dict[str, str]:
+    """The accumulated runtime block for one catalog name (both key spellings)."""
+    block: dict[str, str] = {}
+    for key, value in store.items():
+        for prefix in _CATALOG_KEY_PREFIXES:
+            if key == f"{prefix}{name}" or key.startswith(f"{prefix}{name}."):
+                block[key] = value
+    return block
+
 
 class SparkContext:
     """Minimal ``spark.sparkContext`` surface for near-drop-in jobs.
@@ -249,6 +272,24 @@ class RuntimeConfig:
             return
         self._unset_keys().discard(key)
         self._store()[key] = text
+        catalog_name = _late_catalog_block_name(key)
+        if catalog_name is not None:
+            self._register_late_catalog_block(catalog_name)
+
+    def _register_late_catalog_block(self, name: str) -> None:
+        """Offer one name's accumulated block to the live session (H-02).
+
+        Incomplete blocks stay silent; a first complete parse registers and later
+        sets only update the catalog side map. A complete block that cannot build
+        raises from the engine.
+        """
+        store = {
+            key: value for key, value in self._store().items() if key not in self._unset_keys()
+        }
+        if _native.register_late_catalog_block(
+            self._session._ensure_alive(), _late_catalog_block_keys(store, name)
+        ):
+            self._session._note_registered_catalog(name)
 
     def get(
         self,

@@ -213,6 +213,13 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   only this mirror still said 38, so `test_cap_1_exception_tables_equal_the_measured_debt`
   was red. The count now matches the gate.
   pins: ice-session-write-conf-1/C-040
+- `test_cap_1_source_file_line_cap.py` — **ICE-CATALOG-SESSION-1 round 3 rebase (2026-09-20, run 27):**
+  mirror rows follow the measured debt after the IPI-29 rebase: `catalog_config.rs`
+  1028 → 1007 and `repark-spark/src/alter.rs` 1444 → 1439 with
+  `scripts/check_rust_file_size.py`, and `session_core.py` 2287 → 2346 with
+  `scripts/check_lib_py.py` (the earlier session rounds grew the file; both gate
+  scripts already carried the measured values, only this mirror was stale).
+  pins: ice-catalog-session-1/C-030
 - `test_cap_1_source_file_line_cap.py` — **ICE-TT-RESOLVE-1 (2026-09-19, run 24c):**
   mirror rows ratchet `repark-python/src/session.rs` 1126 → 1122 and `session_core.py`
   2290 → 2287 with `scripts/check_rust_file_size.py` and `scripts/check_lib_py.py`.

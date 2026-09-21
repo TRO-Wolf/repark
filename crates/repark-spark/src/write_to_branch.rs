@@ -313,7 +313,7 @@ fn write_dml_kind(sql: &str) -> Option<MorDmlKind> {
     }
 }
 
-fn dotted_name_tokens(parts: &[String]) -> Vec<Token> {
+pub(crate) fn dotted_name_tokens(parts: &[String]) -> Vec<Token> {
     let mut tokens = Vec::new();
     for (index, part) in parts.iter().enumerate() {
         if index > 0 {

@@ -1150,18 +1150,18 @@ perfectly good read.
 
 ### 2.4 Namespace and table listing statements
 
-#### NS-1 — `SHOW NAMESPACES` without `IN` / `FROM` requires an explicit catalog
+#### NS-1 — `SHOW NAMESPACES` without `IN` / `FROM` requires an explicit catalog — **FIXED 2026-09-20**
 
-- **repark** — bare `SHOW NAMESPACES` (no `IN` / `FROM` catalog) refuses at planning with an
-  `AnalysisException` whose message requires an explicit catalog. There is no current-catalog
+- **Before** — bare `SHOW NAMESPACES` (no `IN` / `FROM` catalog) refused at planning with an
+  `AnalysisException` whose message required an explicit catalog. There was no current-catalog
   fallback for this form.
-- **Apache Spark** — uses the current catalog for the bare form. *(oracle: documented — the claim
-  here is the refusal form, not a value.)*
-- **Pin** — `python/repark/tests/test_show_namespaces.py::test_show_namespaces_disclosed_divergences_fail_loud`
-  (the no-`IN`/`FROM` arm)
-- **Rationale** — DECLARED. repark has no engine-side current catalog for free SQL; guessing one
-  would silently list the wrong place. The facade's `listDatabases` path always supplies an
-  explicit catalog. Revisit if engine `USE` / current-catalog state lands.
+- **After** — the bare form lists the session's current catalog (Spark's rule): `USE <catalog>`
+  first, or the `spark_catalog` build default. An unregistered current catalog still refuses
+  loud (`unknown catalog`), never guessing.
+- **Pin** — `python/repark/tests/test_show_namespaces.py::test_show_namespaces_bare_lists_current_catalog`
+  and `crates/repark-spark/src/tests/use_ddl.rs::show_namespaces_bare_lists_current_catalog`.
+- **Rationale** — engine `USE` / current-catalog state landed (ICE-CATALOG-SESSION-1); the
+  no-guess rule now has a current catalog to resolve against.
 
 #### NS-2 — nested `SHOW NAMESPACES IN catalog.namespace` is refused
 
@@ -1286,18 +1286,22 @@ perfectly good read.
   engine-defaults delta stays DECLARED residue on this row until engine `CREATE` stamps
   Spark's defaults.
 
-#### ST-1 — `SHOW TABLES IN …` is unimplemented
+#### ST-1 — `SHOW TABLES IN …` is unimplemented — **FIXED 2026-09-20**
 
-- **repark** — `SHOW TABLES IN <catalog>.…` refuses loud with
-  `UnsupportedOperationException` naming `SHOW TABLES`. The implemented sibling is the Catalog
-  facade method `listTables` (live Iceberg table names + session temp views + DF-schema
-  permanents — **not** a global `information_schema.tables` walk), not this SQL form.
-- **Apache Spark** — accepts `SHOW TABLES IN …` as a catalog SQL form. *(oracle: documented —
-  the claim here is the refusal form, not a value.)*
-- **Pin** — `python/repark/tests/test_catalog_surface.py::test_show_tables_in_not_implemented_divergence`
-- **Rationale** — DECLARED. The facade path is the supported listing surface; a partial SQL
-  implementation that listed the wrong set would be worse than a refusal. `SHOW NAMESPACES IN`
-  remains the implemented SQL listing form for databases.
+- **Before** — `SHOW TABLES IN <catalog>.…` refused loud with
+  `UnsupportedOperationException` naming `SHOW TABLES`.
+- **After** — `SHOW TABLES [IN|FROM name] [LIKE glob]` answers Spark's
+  `(namespace, tableName, isTemporary)` shape from the live catalog: bare lists the current
+  namespace, `IN` takes a namespace or `catalog.namespace` (catalog-first, like `USE`), a
+  missing explicit namespace refuses `SCHEMA_NOT_FOUND`, and a missing ambient scope
+  answers empty. Temp views are not listed (Spark lists them only under the session
+  catalog; deferred — no inventory cell covers it).
+- **Pin** — `python/repark/tests/test_catalog_surface.py::test_show_tables_in_lists_namespace_tables`
+  and `crates/repark-spark/src/tests/use_ddl.rs::show_tables_lists_current_namespace_after_use`
+  (+ the `show_tables_*` siblings).
+- **Rationale** — the SQL form now lists the same live set as the facade path
+  (ICE-CATALOG-SESSION-1); DataFusion cannot serve it (`SHOW TABLES LIKE` is unimplemented
+  upstream and `information_schema` is off by default), so the router owns it.
 
 #### ENC-1 — Iceberg table encryption keys are stored, never applied
 
@@ -3401,6 +3405,69 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
+### ICE-CATALOG-SESSION-1 — the session has no CURRENT CATALOG / NAMESPACE; USE, SHOW, CACHE, REFRESH and runtime catalog SQL all refuse — **FIXED 2026-09-20**
+
+- **repark** — **FIXED 2026-09-20.** The session carries `CURRENT CATALOG` /
+  `CURRENT NAMESPACE` on the engine defaults (`spark_catalog` / `default` at build):
+  `USE <catalog>[.<ns>]` / `USE DATABASE|SCHEMA` / `USE DEFAULT` move it (catalog-first
+  one-part, `SCHEMA_NOT_FOUND` on a miss); `current_catalog()` / `current_schema()` /
+  `current_database()` read it; `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` / bare
+  `SHOW NAMESPACES` answer from it; `CACHE TABLE` / `UNCACHE TABLE` route to the catalog
+  surface on the Python door (the native door keeps the engine's `Unsupported SQL
+  statement` refusal) while `REFRESH TABLE` rebuilds the provider on the native door; runtime
+  `spark.conf.set` of `spark.sql.catalog.*` registers at the first complete block and
+  feeds `table-default.*` / `table-override.*` into `CREATE TABLE` / CTAS with override
+  > user > default precedence; `type=hadoop` and `InMemoryCatalog` alias to `Memory`.
+  All eleven inventory cells replay EQUAL against the oracle below. A runtime block
+  that never completes stays silent and first use refuses `unknown catalog`.
+  `D-SHOW-COLUMNS` pins declaration order (the cell's recorded rows are the harness
+  sort, N-6); `CAT-TABLE-DEFAULT-OVERRIDE` reads its three pairs out of
+  `DESCRIBE TABLE EXTENDED`, whose one extra derived row belongs to that door.
+- **Apache Spark** — session `currentCatalog` / `currentNamespace` with the same
+  statements and answers.
+  *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-20;
+  `python/repark/tests/ice_catalog_session_1_oracle.json`, transcribed verbatim from the
+  inventory cells plus the `F.show_columns*` / `F.td_props` / `F.rename_result` /
+  `F.show_tables_after_use` / `F.unqualified_select` / `F.cache_then_insert_then_read`
+  probes.)*
+- **Pin** — the eleven `*_cell` replays in
+  `python/repark/tests/test_ice_catalog_session_1.py`
+  (`test_current_catalog_answers_spark_catalog`, `test_use_catalog_ns_cell`,
+  `test_show_catalogs_lists_registered`, `test_refresh_table_cell`,
+  `test_cache_table_cell`, `test_show_columns_is_declaration_order`,
+  `test_rename_to_two_part_cell`, `test_call_no_catalog_cell`, `test_hadoop_type_cell`,
+  `test_catalog_impl_inmemory_cell`, `test_table_default_override_cell`)
+- **Rationale** — FIXED. Two deliberate divergences stay open below:
+  `ICE-CATALOG-SESSION-EAGER-1` and `ICE-CATALOG-SESSION-HADOOP-1`.
+  pins: ice-catalog-session-1/C-012, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-022, C-023, C-024, C-025, C-026, C-027
+
+### ICE-CATALOG-SESSION-EAGER-1 — `SHOW CATALOGS` lists configured-but-never-touched catalogs
+
+- **repark** — `SHOW CATALOGS` lists every registered catalog eagerly: a catalog configured
+  at build time but never touched still appears.
+- **Apache Spark** — lists only catalogs that have been touched or registered: before `hc`
+  was used, `SHOW CATALOGS` returned `[["sc"],["spark_catalog"]]` though `hc` was
+  configured at build time (N-11).
+  *(oracle: recorded, live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-20; `F.show_catalogs`
+  vs the `CAT-SHOW-CATALOGS` cell.)*
+- **Pin** —
+  `python/repark/tests/test_ice_catalog_session_1.py::test_show_catalogs_lists_untouched_configured_catalog`
+- **Rationale** — BACKLOG, deliberate (INDEX 26): closing it needs first-touch tracking
+  per catalog, and the leniency only ever shows more names, never fewer.
+  pins: ice-catalog-session-1/C-015
+
+### ICE-CATALOG-SESSION-HADOOP-1 — `type=hadoop` aliases to a memory catalog (UUID metadata names, no version-hint file)
+
+- **repark** — `type=hadoop` registers a memory catalog: metadata files take
+  `<version>-<uuid>.metadata.json` names and no `version-hint.text` is written.
+- **Apache Spark** — a Hadoop catalog writes `version-hint.text` and `vN.metadata.json`
+  names; that naming is load-bearing for `rewrite_table_path` (ipi-30-31 A-8).
+- **Pin** —
+  `python/repark/tests/test_ice_catalog_session_1.py::test_hadoop_alias_writes_uuid_metadata_names`
+- **Rationale** — BACKLOG, deliberate (INDEX 25): card a real `Hadoop` kind if the `vN`
+  naming turns out to matter elsewhere.
+  pins: ice-catalog-session-1/C-025
+
 ### ICE-MERGE-APPEND-1 — an INSERT commits through a MERGING append — **FIXED 2026-09-19 (RePark paths)**
 
 - **repark** — **FIXED 2026-09-19.** Every append commit site RePark owns commits through the
@@ -4738,28 +4805,25 @@ the pin rather than obeying it.
   the `overwrite` operation on the eight copy-on-write `xs IS NULL OR id = 1` cells
   against Spark's `delete`.
 
-### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE`
+### DBT-QUALIFY-1 — a two-part name resolves for `SELECT` but not for `DESCRIBE` or `ALTER TABLE` — **FIXED 2026-09-20**
 
-- **repark** — with catalog `ice` registered, `SELECT count(*) FROM ns.t` resolves and answers.
-  `DESCRIBE EXTENDED ns.t` refuses with `table 'datafusion.ns.t' not found` — it resolved
+- **Before** — with catalog `ice` registered, `SELECT count(*) FROM ns.t` resolved and answered.
+  `DESCRIBE EXTENDED ns.t` refused with `table 'datafusion.ns.t' not found` — it resolved
   against the DataFusion default catalog, not the registered one — and `ALTER TABLE ns.t RENAME
-  TO ns.t2` refuses with `ALTER TABLE expects a three-part catalog.namespace.table name`. The
-  three statements disagree about what a two-part name means. `dbt-repark` renders every
-  relation three-part so none of them can be reached.
-- **Apache Spark** — a two-part name resolves against the current catalog for all three
-  statements. *(oracle: documented — the claim here is the refusal and the mismatched
-  resolution, not a value.)*
+  TO ns.t2` refused with `ALTER TABLE expects a three-part catalog.namespace.table name`. The
+  three statements disagreed about what a two-part name means.
+- **After** — all three statements share the session completer: two-part names resolve against
+  the current catalog (the `spark_catalog` build default until `USE` moves it). `DESCRIBE
+  EXTENDED ns.t` describes the table; short `RENAME TO` completes (dest anchors on the source
+  table) and runs. What still refuses is a missing object, never the name's shape.
+  `dbt-repark` still renders every relation three-part.
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-DESCRIBE-TWO-PART]`
-  and `[R-RENAME-TWO-PART]`, with
+  `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-DESCRIBE-TWO-PART]`
+  and `::test_refused_shapes_fail_loud[R-RENAME-TWO-PART]` (missing-namespace refusal), with
   `python/dbt-repark/tests/test_gold_models.py::test_relations_are_three_part` holding the
   adapter's side
-- **Rationale** — BACKLOG, and it is the interesting one. `NS-1` records that RePark has no
-  engine-side current catalog for free SQL, which explains the two refusals; what this row adds
-  is that `SELECT` **does** have a resolution rule, so the surface is inconsistent rather than
-  uniformly strict. A caller reading only the `SELECT` behaviour will write a two-part name and
-  be surprised by `DESCRIBE`. The fix is one resolution rule for every statement, which is
-  engine work, not adapter work.
+- **Rationale** — engine `USE` / current-catalog state plus the one shared `complete_name`
+  landed (ICE-CATALOG-SESSION-1): the one-resolution-rule fix this row asked for.
 
 ### BL-1 — cast-failure class (G6) — oracle-backed pin home
 

@@ -749,21 +749,31 @@ async fn show_namespaces_unknown_catalog_fails_loud() {
     }
 }
 
-/// MUTATION: default a missing `IN` to any catalog (or truncate a two-part name to its first part) in `parse_show_namespaces_tail` → RED.
-/// AB6: the two disclosed divergences fail LOUD naming the requirement, never guessing.
 #[tokio::test]
-async fn show_namespaces_without_a_catalog_or_with_a_nested_name_fails_loud() {
+async fn show_namespaces_bare_lists_current_catalog_nested_still_fails_loud() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
+    execute(&ctx, &catalogs, "USE ice.sales").await.unwrap();
 
     for sql in ["SHOW NAMESPACES", "SHOW SCHEMAS", "SHOW DATABASES LIKE '*'"] {
-        let error = execute(&ctx, &catalogs, sql)
+        let batches = execute(&ctx, &catalogs, sql)
             .await
-            .expect_err("RePark has no current catalog — this must fail loud");
-        assert!(
-            error.to_string().contains("requires an explicit catalog"),
-            "{sql} must name the requirement, got: {error}"
-        );
+            .unwrap_or_else(|error| panic!("{sql} must list the current catalog: {error}"))
+            .collect()
+            .await
+            .unwrap();
+        let mut rows = Vec::new();
+        for batch in &batches {
+            let names = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .unwrap();
+            for row in 0..batch.num_rows() {
+                rows.push(names.value(row).to_string());
+            }
+        }
+        assert_eq!(rows, vec!["sales".to_string()], "{sql}");
     }
     for sql in [
         "SHOW NAMESPACES IN ice.sales",
@@ -790,7 +800,6 @@ async fn show_namespaces_without_a_catalog_or_with_a_nested_name_fails_loud() {
 }
 
 /// MUTATION: match on `SHOW` alone (dropping the `NAMESPACES|SCHEMAS|DATABASES` check) in `try_parse_show_namespaces` → RED (the other SHOW forms start reporting namespace errors).
-/// Other SHOW forms remain DataFusion-owned, and relation names do not become namespace targets.
 #[tokio::test]
 async fn show_namespaces_intercept_shadows_no_other_statement() {
     let wh = TempDir::new().unwrap();
@@ -799,17 +808,10 @@ async fn show_namespaces_intercept_shadows_no_other_statement() {
     register_source(&ctx, "schemas", &[(2, "b")]);
     register_source(&ctx, "databases", &[(3, "c")]);
 
-    for sql in [
-        "SHOW TABLES",
-        "SHOW TABLES IN ice.sales",
-        "SHOW COLUMNS FROM src",
-        "SHOW VIEWS",
-        "SHOW ALL",
-    ] {
-        // Unsupported SHOW form must fail without a namespace error.
+    for sql in ["SHOW VIEWS", "SHOW ALL"] {
         let error = execute(&ctx, &catalogs, sql)
             .await
-            .expect_err("no other SHOW form works on this base commit");
+            .expect_err("SHOW VIEWS and SHOW ALL stay DataFusion-owned");
         let message = error.to_string();
         assert!(
             !message.contains("SHOW NAMESPACES") && !message.contains("unknown catalog"),

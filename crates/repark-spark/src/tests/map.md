@@ -743,6 +743,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `MetadataTableType::all_types`; **RP-42:** `position_deletes` joins the battery — fork #332
   ports the scan, so it serves rather than refusing and its schema and row total are pinned by
   the same `SELECT *` / `count(*)` / partial-projection assertions as every other type.
+  **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the hidden-from-enumeration pin reads `tableName`
+  at index 1 of the `(namespace, tableName, isTemporary)` SHOW TABLES shape.
   **TYPES-1 (2026-09-05):** CTAS-inferred integer literals are `Int32` (Spark `int`) on
   the Iceberg/Arrow path — the CTAS guard reads its literal column as `Int32`.
   pins: types-1/C-001.
@@ -1130,6 +1132,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `k=v` stays clear. The parser leaves-alone list drops one-part names (D-3 retires that
   refusal; temp-view fall-through stays pinned end to end).
   pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
+- `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
+  one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
+  default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only
+  `DATABASE`/`SCHEMA`, `USE CATALOG` parse refusal, zero-row answer, `USE DEFAULT`
+  arm reachability, the completer legs, and the `SHOW`/`CACHE`/`CALL` statement-variant
+  parse pins. S3 adds the short-name mechanism pins: ALTER source + RENAME dest
+  (source-anchored, T-3), cross-catalog RENAME refusal, CREATE / CTAS / DROP
+  completion, and two-part CALL catalog resolution. S4 adds the `SHOW` mechanism
+  pins: catalog listing + `LIKE`, tables-after-`USE` + `IN`/`LIKE` forms + missing
+  explicit namespace refusal + empty ambient scope, columns declaration order +
+  missing-table `NOT_FOUND` + `LIKE` refusal, and bare `SHOW NAMESPACES` on the
+  current catalog. S5 adds the native `REFRESH` pins: provider rebuild + empty
+  answer, no-`TABLE` keyword, missing-table `NOT_FOUND`, temp-view ok, path ok,
+  and the parse-shape unit test.
+  pins: ice-catalog-session-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-015, C-016, C-017, C-018, C-019, C-022, C-023
 
 - [ice_ddl_clauses_1.rs](ice_ddl_clauses_1.rs) — **IPI-26/27 round 1 (2026-09-20):**
   the pre-parse rewrite pins. `add_columns_plural_splitter_tracks_angle_brackets_at_depth_zero`

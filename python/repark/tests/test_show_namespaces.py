@@ -11,10 +11,10 @@ built native module, pinning what a migrated PySpark caller actually sees:
 - an unknown catalog raises :class:`repark.errors.AnalysisException` **by class identity** (AB4) —
   the class live pyspark 4.0.0 raises for ``SHOW NAMESPACES IN nosuchcatalog``
   (``AnalysisException`` / condition ``SCHEMA_NOT_FOUND`` / SQLSTATE 42704);
-- the two registry-rowed refusals
-  ([NS-1](../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog),
-  [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
-  fail LOUD, and no other ``SHOW`` form is shadowed (AB6).
+- the bare form lists the current catalog (NS-1 retired by ICE-CATALOG-SESSION-1 when
+  engine ``USE`` landed) while the nested-name refusal
+  ([NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
+  fails LOUD, and no other ``SHOW`` form is shadowed (AB6).
 
 The output shape is pinned to a live pyspark 4.0.0 **DataSourceV2** oracle — the catalog class
 repark ships.
@@ -124,18 +124,24 @@ def test_show_namespaces_unknown_catalog_raises_analysis_exception(spark: Repark
         spark.sql("SHOW SCHEMAS IN no_such_catalog LIKE '*'")
 
 
-def test_show_namespaces_disclosed_divergences_fail_loud(spark: ReparkSession) -> None:
-    """AB6 pin for registry rows NS-1 and NS-2 — semantics live only there.
+def test_show_namespaces_bare_lists_current_catalog(spark: ReparkSession) -> None:
+    """NS-1 retired by ICE-CATALOG-SESSION-1: the bare form lists the current catalog.
 
-    See ``docs/spark-sql-iceberg-parity.md`` §2.4 rows
-    [NS-1](../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog)
-    and
-    [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused).
+    pins: ice-catalog-session-1/C-018
     """
-    with pytest.raises(AnalysisException) as no_catalog:
-        spark.sql("SHOW NAMESPACES")
-    assert "requires an explicit catalog" in str(no_catalog.value)
+    spark.sql(f"USE {CATALOG}")
+    assert _names(spark, "SHOW NAMESPACES") == ["`ab space`", "marketing", "sales"]
+    assert _names(spark, "SHOW SCHEMAS") == ["`ab space`", "marketing", "sales"]
+    assert _names(spark, "SHOW DATABASES LIKE '*'") == ["`ab space`", "marketing", "sales"]
 
+
+def test_show_namespaces_disclosed_divergences_fail_loud(spark: ReparkSession) -> None:
+    """AB6 pin for registry row NS-2 — semantics live only there.
+
+    See ``docs/spark-sql-iceberg-parity.md`` §2.4 row
+    [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused).
+    NS-1 retired when engine ``USE`` landed (the bare form above).
+    """
     with pytest.raises(AnalysisException) as nested:
         spark.sql(f"SHOW NAMESPACES IN {CATALOG}.sales")
     assert "one-part `IN <catalog>`" in str(nested.value)

@@ -133,6 +133,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
   `session.rs` baseline ratcheted 1039 → 1002.
   pins: perf-ice-catalog-io-1/C-004
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `register_late_catalog_block` registers one
+  runtime block tolerantly (incomplete parses stay silent; registered names only update
+  the side map; register failures propagate, so the postgres S-6 refusal stays), and
+  `note_catalog_table_props` folds spec props into the side map (called from the builder
+  loop too, one line).
+  pins: ice-catalog-session-1/C-024
+  S7 strips the `///` docs (comment-ban zero); the semantics above stand.
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
   `session.rs` 1002 → 988 and the CAP-1 exception retired (under the default ceiling).
   pins: csv-infer-perf-1/C-006

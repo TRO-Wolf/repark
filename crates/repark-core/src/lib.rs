@@ -2,6 +2,7 @@
 
 mod backend;
 mod catalog_config;
+mod catalog_kind;
 mod catalog_state;
 pub mod column_resolution;
 mod config_file;

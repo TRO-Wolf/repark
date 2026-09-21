@@ -17,7 +17,7 @@ use crate::create_table::sql_type_to_iceberg_with_timestamp_type;
 use crate::replace_columns::ReplaceColumnDef;
 use crate::{
     PartitionFieldSpec, build_transform_field, catalog_handle, iceberg_err, name_parts,
-    property_value, reregister,
+    property_value, rename_dest, reregister,
 };
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
@@ -33,7 +33,7 @@ pub(crate) async fn execute_alter_table(
     name: &ObjectName,
     operations: &[AlterTableOperation],
 ) -> Result<DataFrame> {
-    let (catalog_name, mut ident) = resolve_table(name)?;
+    let (catalog_name, mut ident) = resolve_table(catalogs, name)?;
     let table_display = crate::catalog_ops::quoted_table_display(&name_parts(name));
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
@@ -152,7 +152,7 @@ async fn execute_rename_table(
     src_ident: &TableIdent,
     dest_name: &ObjectName,
 ) -> Result<TableIdent> {
-    let (dest_catalog, dest_ident) = resolve_table(dest_name)?;
+    let (dest_catalog, dest_ident) = rename_dest(catalog_name, src_ident.namespace(), dest_name)?;
     if dest_catalog != catalog_name {
         return Err(DataFusionError::Plan(format!(
             "ALTER TABLE RENAME cannot move across catalogs (`{catalog_name}` → `{dest_catalog}`)"
@@ -355,9 +355,8 @@ fn partition_tblproperties(
     (sets, unsets)
 }
 
-/// Resolve a three-part `catalog.namespace.table` object name to its catalog name + [`TableIdent`].
-fn resolve_table(name: &ObjectName) -> Result<(String, TableIdent)> {
-    let parts = name_parts(name);
+fn resolve_table(catalogs: &CatalogRegistry, name: &ObjectName) -> Result<(String, TableIdent)> {
+    let parts = crate::use_ddl::complete_name(catalogs, &name_parts(name))?;
     let [catalog, namespace, table] = parts.as_slice() else {
         return Err(DataFusionError::Plan(format!(
             "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{name}`"
@@ -731,13 +730,11 @@ pub(crate) fn refuse_unsupported_alter_sql(sql: &str) -> Option<Result<DataFrame
 pub(crate) enum IcebergAlterDdl {
     /// One or more partition-spec evolution ops on a three-part table.
     PartitionSpec {
-        /// `catalog.namespace.table` parts.
         table_parts: Vec<String>,
         /// Ordered ops (usually one; multi-clause future-proof).
         changes: Vec<PartitionSpecChange>,
     },
     ReplaceColumns {
-        /// `catalog.namespace.table` parts.
         table_parts: Vec<String>,
         /// New top-level column list (order preserved).
         columns: Vec<ReplaceColumnDef>,
@@ -775,12 +772,6 @@ pub(crate) fn try_parse_iceberg_alter_ddl(sql: &str) -> Option<Result<IcebergAlt
         index += 2;
     }
     let table_parts = collect_name_parts(&significant, table_start, index)?;
-    if table_parts.len() != 3 {
-        return Some(Err(DataFusionError::Plan(format!(
-            "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{}`",
-            table_parts.join(".")
-        ))));
-    }
 
     // REPLACE COLUMNS (…)
     if word_eq(&significant, index, "REPLACE") && word_eq(&significant, index + 1, "COLUMNS") {
@@ -832,7 +823,7 @@ pub(crate) async fn execute_iceberg_alter_ddl(
             table_parts,
             changes,
         } => {
-            let (catalog_name, ident) = table_parts_to_ident(&table_parts)?;
+            let (catalog_name, ident) = table_parts_to_ident(catalogs, &table_parts)?;
             let handle = catalog_handle(catalogs, &catalog_name)?;
             repark_iceberg::write::alter::apply_partition_spec_changes(
                 handle.as_ref(),
@@ -849,7 +840,7 @@ pub(crate) async fn execute_iceberg_alter_ddl(
             table_parts,
             columns,
         } => {
-            let (catalog_name, ident) = table_parts_to_ident(&table_parts)?;
+            let (catalog_name, ident) = table_parts_to_ident(catalogs, &table_parts)?;
             let handle = catalog_handle(catalogs, &catalog_name)?;
             let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
             let schema_changes =
@@ -869,8 +860,12 @@ pub(crate) async fn execute_iceberg_alter_ddl(
     }
 }
 
-pub(crate) fn table_parts_to_ident(parts: &[String]) -> Result<(String, TableIdent)> {
-    let [catalog, namespace, table] = parts else {
+pub(crate) fn table_parts_to_ident(
+    catalogs: &CatalogRegistry,
+    parts: &[String],
+) -> Result<(String, TableIdent)> {
+    let completed = crate::use_ddl::complete_name(catalogs, parts)?;
+    let [catalog, namespace, table] = completed.as_slice() else {
         return Err(DataFusionError::Plan(format!(
             "ALTER TABLE expects a three-part `catalog.namespace.table` name, got `{}`",
             parts.join(".")

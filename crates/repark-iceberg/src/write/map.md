@@ -101,6 +101,8 @@ repark-core's error map.
   file is vacuously true, which is where Spark's empty `delete` snapshot on a no-match comes
   from. Both doors call this one seat.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+- `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
+  scratch refs quote through the split-aware scratch quoter (982 → 983, under the default ceiling).
 - `predicate_dml.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the identity DELETE / UPDATE builds a
   `CommitScope` from its isolation property and `conflict_filter::for_identity_dml` over its own
   `WHERE`, and hands it to the COW overwrite or the MoR row delta, so a concurrent commit that

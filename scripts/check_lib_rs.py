@@ -29,10 +29,11 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
     # alphabetically; ceilings ratchet DOWN only. Entries are added with a measured count and
     # reason in the same change that makes a crate root exceed the default.
     "repark-core": (
-        154,
+        155,
         "the metadata-columns module decl + three-line re-export (ice-metadata-cols-1, "
-        "IPI-20, measured 154): the root sat exactly at the 150 default, so any new "
-        "module trips it; RATCHET: if re-exports consolidate",
+        "IPI-20, measured 154) plus `mod catalog_kind;` (ICE-CATALOG-SESSION-1 S7, "
+        "kind_from_type / kind_from_catalog_impl moved out of catalog_config.rs); "
+        "RATCHET: if re-exports consolidate or kind resolution moves again",
     ),
     "repark-functions": (
         182,

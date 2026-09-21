@@ -46,4 +46,44 @@ impl ReparkSession {
         skipped.sort();
         Ok((added, skipped))
     }
+
+    pub(super) fn note_catalog_table_props(&self, name: &str, props: &HashMap<String, String>) {
+        self.catalogs
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .merge_table_props(name, props);
+    }
+
+    fn is_catalog_registered(&self, name: &str) -> bool {
+        if self.catalog_handle(name).is_ok() {
+            return true;
+        }
+        self.postgres_catalog_names
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .contains(name)
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn register_late_catalog_block(
+        &self,
+        config: &HashMap<String, String>,
+    ) -> Result<bool> {
+        let Ok(specs) = catalog_config::parse_catalog_specs(config) else {
+            return Ok(false);
+        };
+        let Some(spec) = specs.into_iter().next() else {
+            return Ok(false);
+        };
+        if self.is_catalog_registered(&spec.name) {
+            self.note_catalog_table_props(&spec.name, &spec.props);
+            return Ok(false);
+        }
+        if matches!(spec.kind, CatalogKind::Glue | CatalogKind::S3Tables) {
+            self.resolve_aws_sdk_config_if(true).await;
+        }
+        self.register_catalog_spec(&spec).await?;
+        self.note_catalog_table_props(&spec.name, &spec.props);
+        Ok(true)
+    }
 }

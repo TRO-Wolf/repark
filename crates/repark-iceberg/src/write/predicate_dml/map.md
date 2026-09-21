@@ -1,5 +1,7 @@
 # map — repark-iceberg/src/write/predicate_dml
 
+ICE-CATALOG-SESSION-1 S9 (2026-09-20): the identity collectors' scratch ref and `survivor_sql`'s rewrite ref quote through the split-aware scratch quoter — a 3-part MERGE scratch name renders as three segments, never one dotted identifier (fixes the count_fold reds).
+
 ICE-MIXED-CASE-1 (2026-09-17): predicate DML delegates column resolution to the shared scope helpers so UPDATE/DELETE WHERE folds case exactly like the SELECT door. pins: ice-mixed-case-1/C-003
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
