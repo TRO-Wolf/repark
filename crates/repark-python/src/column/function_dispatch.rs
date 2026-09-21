@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::DataType;
 use datafusion::functions_aggregate::bit_and_or_xor::{bit_and_udaf, bit_or_udaf, bit_xor_udaf};
 use datafusion::functions_aggregate::correlation::corr_udaf;
 use datafusion::functions_aggregate::covariance::{covar_pop_udaf, covar_samp_udaf};
@@ -18,7 +17,7 @@ use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
 use datafusion::functions_aggregate::string_agg::string_agg_udaf;
 use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
-use datafusion::logical_expr::expr::{Cast, ScalarFunction};
+use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{AggregateUDF, Expr, Operator, binary_expr, lit};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
@@ -960,18 +959,9 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     Ok(udaf)
 }
 
-/// Cast an aggregate whose declared return type is unsigned to `Int64`.
-pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
-    match udaf.return_type(&vec![DataType::Int64; arity]) {
-        Ok(returned) if returned.is_unsigned_integer() => {
-            Expr::Cast(Cast::new(Box::new(expr), DataType::Int64))
-        }
-        _ => expr,
-    }
-}
+pub(super) use super::expr_build::cast_unsigned_count_to_signed;
 
-/// Binary aggregate UDAF for [`super::PyColumn::aggregate_binary`].
-pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
+pub(super) fn nary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
         "corr" => corr_udaf(),
         "covar_pop" => covar_pop_udaf(),
@@ -986,6 +976,7 @@ pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "regr_sxy" => regr_sxy_udaf(),
         "regr_syy" => regr_syy_udaf(),
         "string_agg" | "listagg" => string_agg_udaf(),
+        "grouping_id" => repark_functions::aggregate::grouping_id_udaf(),
         other_kind => {
             return Err(PyValueError::new_err(format!(
                 "unknown binary aggregate {other_kind:?}"

@@ -26,6 +26,7 @@ pub mod declared_refuse;
 pub mod expr_fn;
 pub mod format_version;
 pub mod generator;
+mod grouping;
 mod groups_null_state;
 pub mod higher_order;
 pub mod iceberg_system;
@@ -84,6 +85,7 @@ pub mod validate;
 #[cfg(test)]
 mod tests;
 
+pub use grouping::ResolveGroupingId;
 pub use lambda_rebind::analyzer_rules_with_higher_order_preparation;
 pub use registration::analyzer_rules;
 
