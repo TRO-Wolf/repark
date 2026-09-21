@@ -444,6 +444,7 @@ functions	F.get_json_object
 functions	F.getbit
 functions	F.greatest
 functions	F.grouping
+functions	F.grouping_id
 functions	F.hash
 functions	F.hex
 functions	F.hll_sketch_agg

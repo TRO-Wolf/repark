@@ -3,6 +3,9 @@
 ICE-MIXED-CASE-1 round 3 (2026-09-17): the CAP-1 mirror `_RUST_BASELINES` follows the six shrink-only ratchets (merge/mod.rs 1782, merge/tests/merge.rs 1032, streaming_scan.rs 3020, predicate_dml.rs 1141, predicate_dml/tests 1440, cross_door.rs 1254). pins: ice-mixed-case-1/C-012
 
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the mirror follows two more ratchets (merge/mod.rs 1780, predicate_dml.rs 1139). pins: ice-mixed-case-1/C-012
+**FNP-AGG-1 slice (d) (2026-09-21):** EX-0 count 1082 → 1083 (the new
+`F.grouping_id` row, added-only).
+pins: fnp-agg-1/C-006, C-007
 
 DF-PLAN-INTROSPECT-1 follow-up round 3 (2026-09-15, R-11): CAP-1 mirror row
 ratcheted down with the code — `dataframe/core.py` 4027 → 4014 (the
@@ -293,6 +296,10 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   and `spark/src/tests/alter.rs` 1397 → 1379 with `scripts/check_rust_file_size.py`
   (column-move and partition-spec families split to sibling modules).
   pins: ice-column-reorder-1/C-013
+- `test_cap_1_source_file_line_cap.py` — **FNP-AGG-1 slice (d) (2026-09-21):**
+  mirror rows follow the code (`column/mod.rs` 1013 → 1012,
+  `functions.py` 1983 → 1984) with the script baselines.
+  pins: fnp-agg-1/C-007
 - `test_ex_0_example_coverage.py` — **DF-SURFACE-B-1 (2026-09-14):** the enumerated
   public surface moves 948 → 952 as `DataFrame.foreach`,
   `DataFrame.foreachPartition`, `DataFrame.observe`, and `Observation.get` join

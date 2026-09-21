@@ -242,6 +242,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   join ends in `ResourcesExhausted` or spills on every scheduling, per owner ruling
   Q-17c-7. `risk_tier: standard`. Branch `fix/never-oom-panic-1`.
   pins: never-oom-panic-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [fnp-agg-1-ledger.md](fnp-agg-1-ledger.md) —
+  **FNP-AGG-1 slice (d) (2026-09-21), in flight:** grouping_id plus the shared
+  foundation (dispatch widening, refusal mapping, installer, oracles) ported onto
+  current main; slices (a), (b) and (c) follow after it lands.
+  `risk_tier: standard`. Branch `fix/fnp-agg-grouping`.
+  pins: fnp-agg-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [registry-16b-1-ledger.md](../completed/registry-16b-1-ledger.md) —
   **REGISTRY-16B-1 (2026-09-15), in flight:** three BACKLOG registry rows with their pins —
   CONF-UNSET-1, CONF-WAP-1 (run 15c's P2 findings for the RuntimeConfig surface, measured on live

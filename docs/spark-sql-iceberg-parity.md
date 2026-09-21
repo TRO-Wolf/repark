@@ -13469,6 +13469,22 @@ field NAME.
   `_deleted` stays refused behind its explicit scan mode — that is the one
   remaining residue, and its refusal pin reds on purpose when it serves.
 
+### FNP-AGG-1-18B — SQL-door `grouping` reports `int`, Spark reports `tinyint` — **FIXED 2026-09-21 (FNP-AGG-1 slice (d))**
+
+- **repark** — **FIXED 2026-09-21 (FNP-AGG-1 slice (d)).** `SELECT g, k, grouping_id(),
+  grouping_id(g, k), grouping(g) FROM FRAME GROUP BY CUBE(g, k)` answers the right names,
+  values and nullability with Arrow `int8` for `grouping(g)`, and the facade reports the
+  label `tinyint`: the engine-to-facade narrow-width seam this row was filed against is
+  closed at this head, so the pin passes with no xfail.
+- **Apache Spark** — the same query reports `tinyint` for `grouping(g)`.
+  *(oracle: live PySpark 4.1.2, 2026-09-14, `python/repark/tests/fnp_agg_1_spark_oracle.json`
+  SQL grouping cells.)*
+- **Pin** — `python/repark/tests/test_fnp_agg_1.py::test_sql_grouping_reports_tinyint`
+  passes unmarked.
+- **Rationale** — the row lands FIXED: the rebase onto `a3cb8012` closed LOGICAL-WIDTH-1
+  for this label, and slice (d) carries the passing pin rather than the filed xfail.
+  pins: fnp-agg-1/C-003
+
 ## 8. Drop-in disclosure rationale
 
 The narrow surface where the facade accepts a PySpark call **for source compatibility** without
