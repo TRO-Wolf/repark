@@ -324,7 +324,8 @@ mod tests {
             assert!(
                 message.contains("[WRONG_NUM_ARGS.WITHOUT_SUGGESTION]")
                     && message.contains("requires 2 parameters")
-                    && message.contains(&format!("actual number is {got}")),
+                    && message.contains(&format!("actual number is {got}"))
+                    && message.contains("SQLSTATE: 42605"),
                 "{sql}: {message}"
             );
         }
@@ -341,7 +342,8 @@ mod tests {
             let message = refusal_message(&ctx, sql).await;
             assert!(
                 message.contains("[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]")
-                    && message.contains("requires the \"STRING\" type"),
+                    && message.contains("requires the \"STRING\" type")
+                    && message.contains("SQLSTATE: 42K09"),
                 "{sql}: {message}"
             );
         }
