@@ -617,20 +617,16 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
     };
     let parses_as_int = |raw: &str| raw.trim().parse::<i64>().is_ok();
     let sniff_width_column = |label: &str| -> Result<(&String, &String)> {
-        let [first, second] = args else {
-            return Err(arity_err(&format!("({label}, column)")));
-        };
-        if let Some(literal) = args.iter().find(|raw| raw.starts_with(['\'', '"'])) {
-            return Err(integer_error(literal, label));
-        }
-        match (parses_as_int(first), parses_as_int(second)) {
-            (true, false) => Ok((first, second)),
-            (false, true) => Ok((second, first)),
-            _ => Err(DataFusionError::Plan(format!(
-                "CTAS PARTITIONED BY `{name}(…)` expects exactly one integer {label} and one \
-                 column, in either order, got [{}]",
-                args.join(", ")
-            ))),
+        match (args, args.iter().find(|raw| raw.starts_with(['\'', '"']))) {
+            ([first, second], None) => match (parses_as_int(first), parses_as_int(second)) {
+                (true, false) => Ok((first, second)),
+                (false, true) => Ok((second, first)),
+                _ => Err(DataFusionError::Plan(format!(
+                    "CTAS PARTITIONED BY `{name}(…)` expects exactly one integer {label} and one column, in either order, got [{first}, {second}]"
+                ))),
+            },
+            ([_, _], Some(literal)) => Err(integer_error(literal, label)),
+            _ => Err(arity_err(&format!("({label}, column)"))),
         }
     };
     match lower.as_str() {
@@ -663,9 +659,7 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
             })
         }
         _ => Err(DataFusionError::NotImplemented(format!(
-            "CTAS PARTITIONED BY transform `{name}(…)` is not a supported partition transform \
-             (supported: bucket, truncate, year[s], month[s], day[s], date, hour[s], date_hour, \
-             identity)"
+            "CTAS PARTITIONED BY transform `{name}(…)` is not a supported partition transform (supported: bucket, truncate, year[s], month[s], day[s], date, hour[s], date_hour, identity)"
         ))),
     }
 }
