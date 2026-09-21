@@ -578,7 +578,6 @@ async fn try_alter_intercepts(
     None
 }
 
-/// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_preparse_intercepts(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
