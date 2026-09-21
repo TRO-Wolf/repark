@@ -408,9 +408,7 @@ def test_partition_transform_near_misses_still_refuse(spark: Any) -> None:
     assert "not a supported partition transform" in str(caught.value)
 
 
-def test_replace_partition_field_transform_lhs_days_with_hours(
-    spark: Any, tmp_path: Path
-) -> None:
+def test_replace_partition_field_transform_lhs_days_with_hours(spark: Any, tmp_path: Path) -> None:
     """Cell ``D-REPLACE-PART-FIELD``: ``days(ts) WITH hours(ts)`` resolves via the spec.
 
     Live Spark records spec ``[["ts_hour","hour","ts"]]`` with spec-count 2. RePark
@@ -438,9 +436,7 @@ def test_replace_partition_field_transform_lhs_matching_no_field_refuses(spark: 
     table = _create(spark, "t_replace_lhs_nomatch")
     spark.sql(f"ALTER TABLE {table} ADD PARTITION FIELD bucket(4, id) AS id_b4")
     with pytest.raises(PySparkException) as caught:
-        spark.sql(
-            f"ALTER TABLE {table} REPLACE PARTITION FIELD truncate(4, id) WITH bucket(8, id)"
-        )
+        spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD truncate(4, id) WITH bucket(8, id)")
     assert "matches no partition field" in str(caught.value)
 
 
