@@ -472,6 +472,13 @@ fn show_partitions_preparse(
     }
 }
 
+fn v2_command_outcome(refused: Result<()>, command: &str) -> Result<DataFrame> {
+    refused?;
+    Err(crate::catalog_ops::not_supported_command_for_v2_table(
+        command,
+    ))
+}
+
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_preparse_intercepts(
     ctx: &SessionContext,
@@ -540,6 +547,12 @@ async fn try_preparse_intercepts(
             },
         );
     }
+    if describe_show::try_parse_describe_as_json(sql).is_some() {
+        return Some(v2_command_outcome(
+            parsed_ddl("DESCRIBE TABLE"),
+            "DESCRIBE TABLE AS JSON",
+        ));
+    }
     if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
         match parsed.and_then(|ddl| parsed_ddl("DESCRIBE TABLE").map(|()| ddl)) {
             Ok(mut describe_table) => {
@@ -572,6 +585,24 @@ async fn try_preparse_intercepts(
     }
     if let Some(outcome) = show_partitions_preparse(sql, parsed_ddl) {
         return Some(outcome);
+    }
+    if describe_show::try_parse_set_serde(sql).is_some() {
+        return Some(v2_command_outcome(
+            parsed_ddl("ALTER TABLE"),
+            "ALTER TABLE ... SET [SERDE|SERDEPROPERTIES]",
+        ));
+    }
+    if describe_show::try_parse_msck_repair(sql).is_some() {
+        return Some(v2_command_outcome(
+            parsed_ddl("MSCK REPAIR TABLE"),
+            "MSCK REPAIR TABLE",
+        ));
+    }
+    if describe_show::try_parse_analyze_table(sql).is_some() {
+        return Some(v2_command_outcome(
+            parsed_ddl("ANALYZE TABLE"),
+            "ANALYZE TABLE",
+        ));
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {

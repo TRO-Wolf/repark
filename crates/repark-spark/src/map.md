@@ -93,6 +93,11 @@ pins: rp-4-fork-repin/C-005, C-006
   so the `saveAsTable` static pin and the options travel on one statement and the
   router keeps its signatures (clippy's argument and line limits hold).
   pins: ice-write-options-1/C-014
+  **IPI-51 PR5 (2026-09-20):** `try_preparse_intercepts` gains the four v2-command
+  intercepts — DESCRIBE AS JSON ahead of the describe-table arm, SET SERDE / MSCK REPAIR /
+  ANALYZE TABLE after SHOW PARTITIONS — each refusing through the shared
+  `v2_command_outcome` helper so the write-options gate still runs first.
+  pins: ice-error-conditions-1/C-011
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
@@ -1107,6 +1112,13 @@ pins: rp-4-fork-repin/C-005, C-006
   backticked table (`AnalysisException`, `SQLSTATE: 42601`) — Iceberg has no Hive partition
   catalog to list. The arm delegates to a `show_partitions_preparse` helper in `router.rs`
   so `try_preparse_intercepts` stays under clippy's line cap.
+  pins: ice-error-conditions-1/C-011
+  **IPI-51 PR5 (2026-09-20):** the file also hosts the four v2-command recognizers —
+  `try_parse_set_serde` (ALTER TABLE … SET SERDE/SERDEPROPERTIES only),
+  `try_parse_describe_as_json` (… AS JSON with EOF, never a NAMESPACE or HISTORY head),
+  `try_parse_msck_repair` (MSCK REPAIR TABLE only) and `try_parse_analyze_table` (ANALYZE
+  TABLE only, never DATABASE or TABLES) — and the router refuses each through
+  `catalog_ops::not_supported_command_for_v2_table` with Spark's recorded command string.
   pins: ice-error-conditions-1/C-011
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th

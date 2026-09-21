@@ -135,3 +135,142 @@ async fn alter_add_hive_partition_refuses_with_partition_management_unsupported(
     assert!(message.contains("`ice`.`sales`.`t`"), "got: {message}");
     assert!(message.contains("SQLSTATE: 42601"), "got: {message}");
 }
+
+#[tokio::test]
+async fn v2_unsupported_commands_refuse_with_not_supported_command_for_v2_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    for (sql, command) in [
+        (
+            "ALTER TABLE ice.sales.t SET SERDEPROPERTIES ('a'='b')",
+            "ALTER TABLE ... SET [SERDE|SERDEPROPERTIES]",
+        ),
+        (
+            "DESCRIBE TABLE EXTENDED ice.sales.t AS JSON",
+            "DESCRIBE TABLE AS JSON",
+        ),
+        ("MSCK REPAIR TABLE ice.sales.t", "MSCK REPAIR TABLE"),
+        (
+            "ANALYZE TABLE ice.sales.t COMPUTE STATISTICS",
+            "ANALYZE TABLE",
+        ),
+    ] {
+        let error = execute(&ctx, &catalogs, sql).await.expect_err(sql);
+        assert!(
+            matches!(error, DataFusionError::Plan(_)),
+            "v2-unsupported commands must be plan-class, got: {error}"
+        );
+        let message = error.to_string();
+        assert!(
+            message.contains("[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]"),
+            "got: {message}"
+        );
+        assert!(message.contains(command), "got: {message}");
+        assert!(message.contains("SQLSTATE: 0A000"), "got: {message}");
+    }
+}
+
+#[tokio::test]
+async fn v2_command_intercepts_leave_served_statements_alone() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    for sql in [
+        "DESCRIBE TABLE EXTENDED ice.sales.t",
+        "DESCRIBE TABLE ice.sales.t",
+        "DESC ice.sales.t",
+        "DESCRIBE NAMESPACE ice.sales",
+        "SHOW NAMESPACES IN ice",
+        "SHOW FUNCTIONS IN ice.system",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+    }
+}
+
+#[tokio::test]
+async fn describe_history_does_not_gain_v2_command_condition() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    if let Err(error) = execute(&ctx, &catalogs, "DESCRIBE HISTORY ice.sales.t").await {
+        let message = error.to_string();
+        assert!(
+            !message.contains("NOT_SUPPORTED_COMMAND_FOR_V2_TABLE"),
+            "got: {message}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn show_partitions_keeps_partition_management_stamp() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    let error = execute(&ctx, &catalogs, "SHOW PARTITIONS ice.sales.t")
+        .await
+        .expect_err("SHOW PARTITIONS must refuse");
+    let message = error.to_string();
+    assert!(
+        message.contains("PARTITION_MANAGEMENT_IS_UNSUPPORTED"),
+        "got: {message}"
+    );
+    assert!(
+        !message.contains("NOT_SUPPORTED_COMMAND_FOR_V2_TABLE"),
+        "got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn near_miss_statements_do_not_stamp_v2_command_condition() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    for sql in [
+        "ALTER TABLE ice.sales.t SET TBLPROPERTIES ('a'='b')",
+        "ALTER TABLE ice.sales.t SET LOCATION 'file:/tmp/x'",
+        "ANALYZE DATABASE ice.sales COMPUTE STATISTICS",
+        "ANALYZE TABLES IN ice.sales COMPUTE STATISTICS",
+        "MSCK ice.sales.t",
+    ] {
+        if let Err(error) = execute(&ctx, &catalogs, sql).await {
+            let message = error.to_string();
+            assert!(
+                !message.contains("NOT_SUPPORTED_COMMAND_FOR_V2_TABLE"),
+                "got: {message} for {sql}"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn select_one_still_works() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    assert_eq!(rows(&ctx, &catalogs, "SELECT 1").await, 1);
+}

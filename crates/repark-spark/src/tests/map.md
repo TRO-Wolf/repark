@@ -555,7 +555,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table
   display, and `SQLSTATE: 42601`, and the Hive `ADD PARTITION` pin asserts the plan-class
   stamp end to end; IPI-51 PR5 (2026-09-20): the `not_supported_command_for_v2_table`
-  unit pin asserts the condition prefix, the command text, and `SQLSTATE: 0A000`.
+  unit pin asserts the condition prefix, the command text, and `SQLSTATE: 0A000`;
+  the v2-command e2e pin loops the four stamped cells (SET SERDEPROPERTIES, DESCRIBE AS
+  JSON, MSCK REPAIR, ANALYZE COMPUTE STATISTICS) and the near-miss pins hold the ten
+  fall-throughs (plain DESCRIBE/DESC, DESCRIBE NAMESPACE/HISTORY, SHOW PARTITIONS /
+  NAMESPACES / FUNCTIONS, SET TBLPROPERTIES / LOCATION, ANALYZE DATABASE / TABLES, bare
+  MSCK, SELECT 1).
   pins: ice-error-conditions-1/C-011), `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
   PARTITIONS refuses stamped, and SHOW NAMESPACES / SHOW FUNCTIONS keep their intercepts.
   pins: ice-error-conditions-1/C-011), `alter`, `dml`
