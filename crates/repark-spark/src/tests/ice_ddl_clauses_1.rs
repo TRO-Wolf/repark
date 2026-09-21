@@ -2,6 +2,8 @@ use super::super::*;
 use super::common::*;
 use datafusion::sql::sqlparser::dialect::{GenericDialect, SparkSqlDialect};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+use iceberg::spec::Transform;
+use repark_iceberg::write::alter::PartitionSpecChange;
 
 use crate::alter::rewrite_add_columns_plural;
 use crate::normalize::{has_angle_map_column_type, normalized_parse_dialect};
@@ -200,6 +202,87 @@ fn bucket_two_non_integer_arguments_refuses() {
     let error = build_transform_field("bucket", &["a".to_string(), "b".to_string()])
         .expect_err("bucket(\"a\", \"b\") has no integer width and must refuse");
     assert!(error.to_string().contains("integer"), "got: {error}");
+}
+
+#[test]
+fn replace_partition_field_transform_lhs_parses_to_by_transform_change() {
+    let sql = "ALTER TABLE ice.ns.t REPLACE PARTITION FIELD days(ts) WITH hours(ts)";
+    let parsed = crate::alter::try_parse_iceberg_alter_ddl(sql)
+        .expect("REPLACE PARTITION FIELD transform LHS must claim the statement")
+        .expect("statement must parse");
+    let crate::alter::IcebergAlterDdl::PartitionSpec { changes, .. } = parsed else {
+        panic!("{sql} must parse as a partition-spec change");
+    };
+    assert_eq!(changes.len(), 1);
+    assert!(
+        matches!(
+            &changes[0],
+            PartitionSpecChange::ReplaceFieldByTransform {
+                old_source_name,
+                old_transform: Transform::Day,
+                source_name,
+                transform: Transform::Hour,
+                new_name: None,
+            } if old_source_name == "ts" && source_name == "ts"
+        ),
+        "got: {:?}",
+        changes[0]
+    );
+}
+
+#[tokio::test]
+async fn replace_partition_field_transform_lhs_resolves_and_refuses_no_match() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.rpf (ts TIMESTAMP, id BIGINT) USING iceberg",
+    )
+    .await
+    .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.rpf ADD PARTITION FIELD days(ts)",
+    )
+    .await
+    .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.rpf REPLACE PARTITION FIELD days(ts) WITH hours(ts)",
+    )
+    .await
+    .unwrap();
+    let handle = catalog_handle(&catalogs, "ice").unwrap();
+    let table = handle
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".into()),
+            "rpf".into(),
+        ))
+        .await
+        .unwrap();
+    let rendered: Vec<(String, String)> = table
+        .metadata()
+        .default_partition_spec()
+        .fields()
+        .iter()
+        .map(|field| (field.name.clone(), field.transform.to_string()))
+        .collect();
+    assert_eq!(rendered, vec![("ts_hour".to_string(), "hour".to_string())]);
+
+    let no_match = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.rpf REPLACE PARTITION FIELD bucket(4, id) WITH bucket(8, id)",
+    )
+    .await
+    .expect_err("a transform LHS matching no field must refuse loud");
+    assert!(
+        no_match.to_string().contains("matches no partition field"),
+        "got: {no_match}"
+    );
 }
 
 #[test]

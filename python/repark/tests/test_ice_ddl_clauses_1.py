@@ -408,6 +408,42 @@ def test_partition_transform_near_misses_still_refuse(spark: Any) -> None:
     assert "not a supported partition transform" in str(caught.value)
 
 
+def test_replace_partition_field_transform_lhs_days_with_hours(
+    spark: Any, tmp_path: Path
+) -> None:
+    """Cell ``D-REPLACE-PART-FIELD``: ``days(ts) WITH hours(ts)`` resolves via the spec.
+
+    Live Spark records spec ``[["ts_hour","hour","ts"]]`` with spec-count 2. RePark
+    records the same spec rows with spec-count 3: CREATE TABLE materialises an empty
+    spec-0 that Spark omits (pre-existing create-path divergence, not this cell). The
+    REPLACE itself adds exactly one spec, as on Spark, so the count delta is pinned.
+    """
+    table = f"{CATALOG}.{NAMESPACE}.t_replace_lhs"
+    spark.sql(f"CREATE TABLE {table} (ts TIMESTAMP, data STRING) USING iceberg")
+    spark.sql(f"ALTER TABLE {table} ADD PARTITION FIELD days(ts)")
+    before = _metadata(tmp_path / "wh", "t_replace_lhs")
+    spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD days(ts) WITH hours(ts)")
+
+    meta = _metadata(tmp_path / "wh", "t_replace_lhs")
+    _, by_id = _schema_rows(meta)
+    assert _spec(meta, by_id) == [["ts_hour", "hour", "ts"]]
+    assert len(meta["partition-specs"]) == len(before["partition-specs"]) + 1
+    assert meta["default-spec-id"] == before["default-spec-id"] + 1
+
+
+def test_replace_partition_field_transform_lhs_matching_no_field_refuses(spark: Any) -> None:
+    """A transform LHS naming no current partition field refuses loud."""
+    from repark.errors import PySparkException
+
+    table = _create(spark, "t_replace_lhs_nomatch")
+    spark.sql(f"ALTER TABLE {table} ADD PARTITION FIELD bucket(4, id) AS id_b4")
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"ALTER TABLE {table} REPLACE PARTITION FIELD truncate(4, id) WITH bucket(8, id)"
+        )
+    assert "matches no partition field" in str(caught.value)
+
+
 def test_describe_shows_column_comment(spark: Any) -> None:
     """Cell ``D-DESCRIBE`` re-check: the comment column carries the doc."""
     table = f"{CATALOG}.{NAMESPACE}.t_describe_doc"

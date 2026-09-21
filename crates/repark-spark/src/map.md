@@ -824,6 +824,9 @@ pins: rp-4-fork-repin/C-005, C-006
   plan-class through `catalog_ops::partition_management_unsupported` with the backticked
   target (`AnalysisException`, `SQLSTATE: 42601`); the file ratchets 1449 → 1446.
   pins: ice-error-conditions-1/C-011
+  **IPI-26/27 round 3 (2026-09-21):** the `REPLACE PARTITION FIELD` parser left this
+  file for [`replace_partition_field.rs`](replace_partition_field.rs), which also takes
+  the transform-LHS form the file used to refuse.
   **IPI-26/27 round 1 (2026-09-20):** `split_top_level_comma_segments` tracks
   angle depth alongside paren depth, so commas inside `STRUCT<…>` / `MAP<…>` no
   longer split the column list (cells `D-ADD-COL-STRUCT`, `D-X-ADD-COL-MAP-KEY-STRUCT`);
@@ -846,6 +849,17 @@ pins: rp-4-fork-repin/C-005, C-006
   table, then the partition and sort checks, then emits the drops before the adds — the
   order the fork's `UpdateSchema` needs to allow a same-name re-add.
   pins: ice-replace-columns-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `replace_partition_field.rs` — **IPI-26/27 round 3 (2026-09-21, cell
+  `D-REPLACE-PART-FIELD`):** the `ALTER TABLE … REPLACE PARTITION FIELD <old> WITH
+  <transform>(col) [AS name]` parser, moved out of `alter.rs` (exact ceiling). The old
+  field is a bare partition name (the by-name `ReplaceField` path) or a
+  `transform(col)` call, which becomes `ReplaceFieldByTransform` — the fork-side
+  evolution resolves the `(source column, transform)` pair against the CURRENT spec and
+  then runs the by-name remove-plus-add, so `days(ts) WITH hours(ts)` lands spec
+  `[["ts_hour","hour","ts"]]` with spec-count 2, measured against live Spark. A
+  transform LHS matching no current field refuses loud
+  (`matches no partition field in the current spec`). A sibling module, not an
+  `alter.rs` arm, because that file sat at its exact ceiling (now ratcheted down).
 - `column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):** the `ALTER COLUMN …
   FIRST|AFTER` pre-parse (`try_parse_column_move_ddl` / `execute_column_move_ddl`, wired in
   `router.rs` ahead of the residual refusal): an `ALTER`-prefix fast path before any tokenize,
@@ -1018,6 +1032,15 @@ pins: rp-4-fork-repin/C-005, C-006
   (column `COMMENT` options and the query pass through), so both clauses parse on
   either side of `TBLPROPERTIES`. `strip_create_table_using` moved into that
   module to hold the 1000-line ceiling.
+  **IPI-26/27 round 3 (2026-09-21, cells `D-CREATE-PART-DATE-ALIAS` + bucket/truncate
+  near-miss):** `build_transform_field` accepts `date` as an alias of `day` and
+  `date_hour` as an alias of `hour` (field names still fall out of the
+  `{column}_day` / `{column}_hour` rule), and `bucket` / `truncate` now sniff their
+  width argument by type instead of position — exactly one argument parses as an
+  integer and names the width, so `bucket(id, 4)` equals `bucket(4, id)` (same
+  `id_bucket` field name), while `bucket(1, 2)` (both integers) and
+  `bucket('a', 'b')` (neither) refuse loud. [`tests/ice_ddl_clauses_1.rs`](tests/ice_ddl_clauses_1.rs)
+  pins all three.
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
   **ICE-PROCEDURES-1 (2026-09-20):** mixed positional and named arguments are
   legal (Spark accepts the mix), and `bind` binds a `CallArgs` against a

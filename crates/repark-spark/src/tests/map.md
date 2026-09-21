@@ -1169,6 +1169,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **IPI-26/27 round 2 (2026-09-20):** `table_comment_extracts_on_either_side_of_tblproperties`
   and `table_location_extracts_on_either_side_of_tblproperties` pin the clause
   extraction on both sides of `TBLPROPERTIES`, CTAS included.
+  **IPI-26/27 round 3 (2026-09-21, cells `D-CREATE-PART-DATE-ALIAS`, `D-REPLACE-PART-FIELD`
+  + near-miss):** `date_alias_names_the_field_ts_day` pins the `date`/`date_hour`
+  aliases onto the day/hour specs; `bucket_and_truncate_both_argument_orders_give_the_same_spec`,
+  `bucket_two_integer_arguments_raises`, and `bucket_two_non_integer_arguments_refuses`
+  pin the width-arg sniff (both orders identical, ambiguous or integer-less refuse);
+  `replace_partition_field_transform_lhs_parses_to_by_transform_change` pins the
+  transform-LHS parse to `ReplaceFieldByTransform`, and
+  `replace_partition_field_transform_lhs_resolves_and_refuses_no_match` evolves
+  `days(ts) WITH hours(ts)` to `ts_hour` through the door and refuses a LHS matching
+  no current field.
 
 ## Mapping rule
 

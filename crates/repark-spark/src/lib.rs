@@ -28,6 +28,7 @@ mod nested_column_ddl;
 mod normalize;
 mod ref_ddl;
 mod replace_columns;
+mod replace_partition_field;
 mod router;
 mod sort_order_parse;
 mod spark_ast;
@@ -129,9 +130,6 @@ pub use extension::SparkExtension;
 
 // Test-only imports provide the crate-root scope shared by the leaf modules.
 #[cfg(test)]
-use std::{collections::HashMap, sync::Arc};
-
-#[cfg(test)]
 use datafusion::error::DataFusionError;
 #[cfg(test)]
 use datafusion::prelude::SessionContext;
@@ -141,6 +139,10 @@ use datafusion::sql::sqlparser::ast::Statement;
 use iceberg::Catalog;
 #[cfg(test)]
 use repark_core::{CatalogRegistry, LocationPolicy};
+#[cfg(test)]
+use std::collections::HashMap;
+#[cfg(test)]
+use std::sync::Arc;
 
 // The Q13 surface matrix.
 #[cfg(test)]

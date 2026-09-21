@@ -3842,6 +3842,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Rename refusal (2026-09-21):** the rename twin moved to
   [test_ice_change_column_rename_1.py](test_ice_change_column_rename_1.py) as a
   refusal pin — Spark refuses the two-name form.
+  **IPI-26/27 round 3 (2026-09-21, cells `D-CREATE-PART-DATE-ALIAS`,
+  `D-REPLACE-PART-FIELD` + near-miss):** `test_date_alias_names_the_field_ts_day`
+  asserts `date(ts)` / `date_hour(ts)` record the `ts_day` / `ts_hour` names;
+  `test_bucket_both_argument_orders_give_the_same_spec` and
+  `test_truncate_both_argument_orders_give_the_same_spec` assert both
+  `bucket`/`truncate` argument orders record the identical spec;
+  `test_bucket_two_integer_arguments_raises` and
+  `test_partition_transform_near_misses_still_refuse` hold the neither/both-integer
+  and unknown-transform refusals; `test_replace_partition_field_transform_lhs_days_with_hours`
+  asserts the full spec `[["ts_hour","hour","ts"]]` and that the REPLACE adds exactly
+  one spec (live Spark's spec-count 2, minus RePark's pre-existing empty spec-0, a
+  create-path divergence recorded in the test docstring), and
+  `test_replace_partition_field_transform_lhs_matching_no_field_refuses` holds the
+  loud refusal for a LHS matching no current field.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to
