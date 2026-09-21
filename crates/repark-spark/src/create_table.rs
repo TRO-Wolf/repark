@@ -55,7 +55,8 @@ pub(crate) async fn execute_create_table(
     clauses: &CreateClauses,
 ) -> Result<DataFrame> {
     let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
-    let schema_create = build_schema_create(catalogs, create, partitioning, timestamp_type, clauses)?;
+    let schema_create =
+        build_schema_create(catalogs, create, partitioning, timestamp_type, clauses)?;
     execute_schema_create(ctx, catalogs, schema_create).await
 }
 
