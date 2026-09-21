@@ -526,7 +526,6 @@ async fn with_format_version_sets_the_table_format_version() {
     assert!(!door.table_exists("sales", "v1").await, "nothing created");
 }
 
-/// `partitioning = ARRAY[…]` builds the Iceberg partition spec with Java-parity field names.
 #[tokio::test]
 async fn with_partitioning_array_builds_the_partition_spec() {
     let door = door_with_schema().await;
@@ -553,7 +552,6 @@ async fn with_partitioning_array_builds_the_partition_spec() {
         "a partitioned write must round-trip every row"
     );
 
-    // A transform naming a column the SELECT does not produce refuses, listing what IS there.
     let err = door
         .err(
             "CREATE TABLE ice.sales.bad WITH (partitioning = ARRAY['month(missing)']) \
@@ -561,7 +559,9 @@ async fn with_partitioning_array_builds_the_partition_spec() {
         )
         .await;
     assert!(err.contains("`missing`"), "must name the column: {err}");
-    assert!(err.contains("[id]"), "must list the columns: {err}");
+    assert!(err.contains("`id`"), "must list the columns: {err}");
+    assert!(err.contains("UNRESOLVED_COLUMN"), "condition: {err}");
+    assert!(err.contains("42703"), "SQLSTATE: {err}");
 }
 
 /// `location` places the table exactly where it says, overriding the schema location.

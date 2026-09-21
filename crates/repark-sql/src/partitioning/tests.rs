@@ -229,6 +229,14 @@ fn unknown_partition_column_refuses_listing_columns() {
     let err = build_partition_spec(&schema, &transforms)
         .unwrap_err()
         .to_string();
+    assert!(
+        err.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+        "the stamped condition: {err}"
+    );
+    assert!(
+        err.contains("SQLSTATE: 42703"),
+        "the stamped SQLSTATE: {err}"
+    );
     assert!(err.contains("`ts`"), "must name the missing column: {err}");
-    assert!(err.contains("[id]"), "must list what IS there: {err}");
+    assert!(err.contains("`id`"), "must list what IS there: {err}");
 }
