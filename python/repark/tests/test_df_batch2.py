@@ -101,9 +101,9 @@ def test_unpivot_quotes_hostile_names_and_labels(spark: ReparkSession) -> None:
     hostile_out = 'x" AS y, 1 AS z --'
     assert _quote_ident(hostile_out) == f"`{hostile_out.replace(chr(96), chr(96) * 2)}`"
     assert _quote_ident(hostile_out) != f'"{hostile_out}"'  # naive double-quote form still differs
-    # Missing hostile value column → schema analysis error (quoted), not free-SQL inject.
-    with pytest.raises(AnalysisException, match=r"No field named|Schema error"):
+    with pytest.raises(AnalysisException, match=r"UNRESOLVED_COLUMN\.WITH_SUGGESTION") as caught:
         frame.unpivot("order", [hostile_label], "variable", "value").collect()
+    assert "42703" in str(caught.value)
     # Hostile output names stay *one* quoted identifier, not extra columns or a reshaped SELECT.
     var_table = frame.unpivot("order", ["a"], hostile_out, "value").to_arrow()
     assert list(var_table.column_names) == ["order", hostile_out, "value"]

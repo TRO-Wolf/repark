@@ -39,7 +39,10 @@ IPI-51 PR6 slice 1 (2026-09-21): a `FieldNotFound` that survives the fold is sta
 `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703` by `stamp_unresolved_column`, while empty
 valid fields fall through so frameless nullary names keep `WITHOUT_SUGGESTION`
 (the fall-through is pinned by `unresolved_stamp_skips_empty_valid_fields` on `SELECT nope`,
-red under deletion of the early return).
+red under deletion of the early return). The DataFrame SQL-lowering facade pins
+`test_unpivot_quotes_hostile_names_and_labels`, `test_select_hostile_count_name_does_not_retarget_from`
+and `test_select_batch4_af_sql_expr_and_case_preserved` require the stamped condition / `42703`,
+not raw FieldNotFound text (retargeted 2026-09-21).
 pins: ice-error-conditions-1/C-011
 
 ## Files

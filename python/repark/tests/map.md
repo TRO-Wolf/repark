@@ -3164,7 +3164,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **combine C4:** `_grouping_col_sql` always `_quote_ident` + hostile-quote cube keys;
   **combine C5:** cube/rollup agg AS alias names + MIA plan-stable cube pin;
   **combine C6:** polars `_sort_key` generator sticky + orderBy/pl.sort refuse;
-  non-finite float lit CAST embeds on select-global-agg).
+   non-finite float lit CAST embeds on select-global-agg). IPI-51 PR6 slice 1 (2026-09-21):
+   the quoted hostile count miss and the batch-4 hostile stddev miss now pin
+   `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703`, not raw FieldNotFound text
+   (stamped by `stamp_unresolved_column`).
 - `test_pivot.py` — **U2:** NaN-key fixture CASTs `10.0`/`1.0`/`20.0` to DOUBLE (bare
   literals UNION NaN cannot cast to decimal). R-PIVOT pins (values/inferred/multi values/null IS NULL/count/
   alias/cap/limit-then-sort/cube refuse/countDistinct refuse/avg-min-max values/
@@ -3580,7 +3583,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_df_batch2.py` — R-DF-BATCH2 cube/rollup/unpivot/explain + loud census;
   **combine C5:** cube/rollup AS alias column `c` + values; unpivot hostile quote pins;
   **combine C6:** cube first(lit('count(Int64(1))')) uncorrupted + GroupedData.count
-  structural shortcut (C6-SAF-001).
+  structural shortcut (C6-SAF-001). IPI-51 PR6 slice 1 (2026-09-21): the unpivot
+  hostile-quote miss now pins `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703`, not raw
+  FieldNotFound text (stamped by `stamp_unresolved_column`).
 - ruff format lockstep (W7 gate).
 
 - `test_facade_hygiene.py` — R-FACADE-HYGIENE (W7) cdf hide/GC, fillna, dropDuplicates, OOS.
