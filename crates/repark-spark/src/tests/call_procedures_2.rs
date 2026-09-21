@@ -18,6 +18,28 @@ fn plan_message(error: datafusion::error::DataFusionError) -> String {
     message
 }
 
+fn external_message(error: datafusion::error::DataFusionError) -> String {
+    let datafusion::error::DataFusionError::External(source) = error else {
+        panic!("expected an External error, got {error}");
+    };
+    source.to_string()
+}
+
+fn assert_duplicate_refusal(error: datafusion::error::DataFusionError) {
+    let message = external_message(error);
+    assert!(
+        message.contains(
+            "Cannot complete import because data files to be imported already exist within the \
+             target table"
+        ),
+        "duplicate refusal must carry the shared message body, got {message}"
+    );
+    assert!(
+        message.contains("you may set 'check_duplicate_files' to false to force the import"),
+        "duplicate refusal must carry the shared force-import tail, got {message}"
+    );
+}
+
 async fn seed_partitioned_mor_with_deletes(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -703,12 +725,7 @@ async fn call_add_files_check_duplicate_files_raises() {
     )
     .await
     .expect_err("duplicate import must raise");
-    assert!(
-        error
-            .to_string()
-            .contains("already exist within the target table"),
-        "duplicate refusal must name the conflict, got {error}"
-    );
+    assert_duplicate_refusal(error);
     let error = execute(
         &ctx,
         &catalogs,
@@ -719,12 +736,7 @@ async fn call_add_files_check_duplicate_files_raises() {
     )
     .await
     .expect_err("duplicate import with the check omitted must raise");
-    assert!(
-        error
-            .to_string()
-            .contains("already exist within the target table"),
-        "default duplicate refusal must name the conflict, got {error}"
-    );
+    assert_duplicate_refusal(error);
     let frame = execute(
         &ctx,
         &catalogs,

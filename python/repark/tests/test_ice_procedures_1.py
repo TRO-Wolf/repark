@@ -470,8 +470,21 @@ def test_add_files_parallelism_matches_serial(spark: ReparkSession, tmp_path: Pa
     )
 
 
+def _assert_duplicate_refusal(spark: ReparkSession, sql: str) -> None:
+    """Pin the duplicate refusal's exact type plus the shared message body."""
+    with pytest.raises(PySparkException) as exc_info:
+        spark.sql(sql).to_arrow()
+    assert type(exc_info.value) is PySparkException
+    message = str(exc_info.value)
+    assert (
+        "Cannot complete import because data files to be imported "
+        "already exist within the target table" in message
+    )
+    assert "you may set 'check_duplicate_files' to false to force the import." in message
+
+
 def test_add_files_check_duplicate_raises(spark: ReparkSession, tmp_path: Path) -> None:
-    """A second import with the check on raises Java's text. pins: ice-procedures-1/C-018, C-019."""
+    """A duplicate import raises the shared body as base PySparkException. pins: ice-procedures-1/C-018, C-019."""
     root = tmp_path / "addsrc" / "dup"
     _write_partitioned_source(root)
     spark.sql(
@@ -481,15 +494,14 @@ def test_add_files_check_duplicate_raises(spark: ReparkSession, tmp_path: Path) 
     _add_files_result(
         spark, f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`')"
     )
-    with pytest.raises(PySparkException, match="already exist within the target table"):
-        spark.sql(
-            f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`', "
-            "check_duplicate_files => true)"
-        ).to_arrow()
-    with pytest.raises(PySparkException, match="already exist within the target table"):
-        spark.sql(
-            f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`')"
-        ).to_arrow()
+    _assert_duplicate_refusal(
+        spark,
+        f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`', "
+        "check_duplicate_files => true)",
+    )
+    _assert_duplicate_refusal(
+        spark, f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`')"
+    )
     cols, added, changed = _add_files_result(
         spark,
         f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`', "

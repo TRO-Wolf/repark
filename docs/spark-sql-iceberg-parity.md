@@ -7942,8 +7942,9 @@ owned fork's maintenance actions.
   on every import; the import commits Java's pretty-printed
   `schema.name-mapping.default` JSON when the table properties lack it, binds source
   columns by name, adopts the files in place (no byte copy), and honours
-  `partition_filter` and the duplicate check (default true) with Java's texts.
-  `parallelism` validates positive and answers the serial import.
+  `partition_filter` and the duplicate check (default true) with the shared
+  duplicate-refusal body below. `parallelism` validates positive and answers the
+  serial import.
 - **repark** — `rewrite_position_delete_files` `where`: the SQL predicate parses
   through the shared `rewrite_data_files` predicate path into the fork's
   `RewritePositionDeleteFiles::filter`.
@@ -7956,10 +7957,15 @@ owned fork's maintenance actions.
   `b1` moved and `main` unmoved. `branch` beside `remove-dangling-deletes`
   refuses loud in either spelling, and an unknown ref passes the fork text
   through with no Spark-parity claim.
-- **Apache Spark** — identical columns, rows, imported data, name-mapping property
-  and refusal texts per the eleven inventory cells (`P-ADD-FILES-*`, `P-RPD-WHERE`,
-  the four `P-EXPIRE-*`, `P-RDF-BRANCH`), except the `md.snapshots` residue below. *(oracle:
-  recorded — `out/spark-proc.json`, live PySpark 4.1.2 + Iceberg 1.11.0.)*
+- **Apache Spark** — identical columns, rows, imported data and name-mapping property
+  per the eleven inventory cells (`P-ADD-FILES-*`, `P-RPD-WHERE`, the four
+  `P-EXPIRE-*`, `P-RDF-BRANCH`), except the `md.snapshots` residue below. The one
+  non-identical text is the duplicate refusal: Spark raises `Py4JJavaError` wrapping
+  `java.lang.IllegalStateException` while RePark raises the base `PySparkException`
+  carrying the fork's `DataInvalid` text, and both carry the same body from `Cannot
+  complete import` (`P-ADD-FILES-CHECK-DUP` is SPARK-CANNOT; the pins hold the exact
+  type plus that body on each door). *(oracle: recorded — `out/spark-proc.json`, live
+  PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** — `python/repark/tests/test_ice_procedures_1.py` and
   `crates/repark-spark/src/tests/call_procedures_2.rs` (schemas, rows, NULL-ness,
   mapping, paths, by-name binding, every refusal), plus
