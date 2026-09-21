@@ -6,6 +6,19 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [day-report-2026-09-20-27-orchestrating-note.md](day-report-2026-09-20-27-orchestrating-note.md) — **run 27, orchestrating note:**
+  the tick-driven orchestrator harness, the four-engine bake-off (measures, blind grades, one evaluator error withdrawn),
+  the one-Opus close-out lane ($97, seven stopped units merged), the gate scoreboard 461 → 537 EQUAL, the harness defects.
+- [run27-eval-protocol.md](run27-eval-protocol.md) · [run27-blind-grades.md](run27-blind-grades.md) ·
+  [run27-lessons-ledger.md](run27-lessons-ledger.md) — the bake-off's pre-registered protocol with every later change
+  labelled, the two blind graders' scores, and the ledger of observed agent patterns → evidence → instruction.
+- [day-report-2026-09-20-27-opus-closeout.md](day-report-2026-09-20-27-opus-closeout.md) — **run 27, the Opus close-out lane:**
+  tick-by-tick log of closing the seven units stopped on 2026-09-20; two cross-lane findings (exception class vs message;
+  lane clones silently patched to a local fork checkout).
+- [day-report-2026-09-20-27-grok.md](day-report-2026-09-20-27-grok.md) · [day-report-2026-09-20-27-muse.md](day-report-2026-09-20-27-muse.md) ·
+  [day-report-2026-09-20-27-glmflash.md](day-report-2026-09-20-27-glmflash.md) · [day-report-2026-09-20-27-glm.md](day-report-2026-09-20-27-glm.md) —
+  **run 27, the four bake-off lanes' own reports:** error conditions (Grok), system functions (Muse), map gate step 1 and the
+  small parser unit (GLM 5.3 Flash), catalog and session commands (GLM 5.3, paused).
 - [map-currency-card-2026-09-20.md](map-currency-card-2026-09-20.md) — **card MAP-CURRENCY (2026-09-20):** maps
   checked like a build target — 310 maps, 3.06 MB, the lockstep rule unenforced in CI and firing per commit; step 1
   (work order MAP-PR-GATE-1, chartered) moves the rule to the pull request; steps 2–3 (generated navigation with
