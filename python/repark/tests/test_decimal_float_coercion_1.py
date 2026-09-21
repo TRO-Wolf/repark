@@ -190,14 +190,10 @@ def test_sql_door_sweep_matches_spark(seeded: Any) -> None:
     """SQL-door sweep legs equal the recorded Spark answers, value and type."""
     session, table = seeded
     for key, predicate in _MATCH_SQL.items():
-        got = _ids(
-            session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow()
-        )
+        got = _ids(session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow())
         assert got == _oracle_ids(key), key
     for key, (predicate, repark) in _DIVERGE_SQL.items():
-        got = _ids(
-            session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow()
-        )
+        got = _ids(session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow())
         assert got == repark, (
             f"{key}: spark answers {_oracle_ids(key)}; "
             "the float eq kernel keeps -0.0 distinct from 0.0"
@@ -244,13 +240,14 @@ def test_r_nan_filter_replica_matches_recorded_targets(tmp_path: Path) -> None:
             1,
             5,
         ]
+        assert _ids(session.sql(f"SELECT id FROM {table} WHERE d IS NOT NULL").to_arrow()) == [
+            1,
+            2,
+            3,
+            5,
+        ]
         assert _ids(
-            session.sql(f"SELECT id FROM {table} WHERE d IS NOT NULL").to_arrow()
-        ) == [1, 2, 3, 5]
-        assert _ids(
-            session.sql(
-                f"SELECT id FROM {table} WHERE d = CAST('NaN' AS DOUBLE)"
-            ).to_arrow()
+            session.sql(f"SELECT id FROM {table} WHERE d = CAST('NaN' AS DOUBLE)").to_arrow()
         ) == [1]
         assert _ids(session.sql(f"SELECT id FROM {table} WHERE isnan(d)").to_arrow()) == [1]
     finally:
