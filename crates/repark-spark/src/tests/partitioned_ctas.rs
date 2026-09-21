@@ -770,8 +770,20 @@ async fn ctas_partitioned_by_unknown_column_rejected_before_source_runs() {
     .expect_err("an unknown partition column must be rejected");
     let message = error.to_string();
     assert!(
-        message.contains("`nope`") && message.contains("id, name"),
-        "must name the column and the available outputs, got: {message}"
+        message.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+        "the stamped condition, got: {message}"
+    );
+    assert!(
+        message.contains("SQLSTATE: 42703"),
+        "the stamped SQLSTATE, got: {message}"
+    );
+    assert!(
+        message.contains("`nope`"),
+        "must name the missing column, got: {message}"
+    );
+    assert!(
+        message.contains("`id`") && message.contains("`name`"),
+        "must list the available outputs, got: {message}"
     );
     assert!(
         !message.contains("injected CTAS source failure"),
@@ -785,6 +797,48 @@ async fn ctas_partitioned_by_unknown_column_rejected_before_source_runs() {
             ))
             .await
             .unwrap(),
+    );
+}
+
+#[tokio::test]
+async fn create_table_partitioned_by_unknown_transform_source_column_refused() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.hp (id BIGINT, data STRING, cat STRING) USING iceberg \
+             PARTITIONED BY (days(ts))",
+    )
+    .await
+    .expect_err("a partition transform on a missing column must be rejected");
+    let message = error.to_string();
+    assert!(
+        message.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]"),
+        "the stamped condition, got: {message}"
+    );
+    assert!(
+        message.contains("SQLSTATE: 42703"),
+        "the stamped SQLSTATE, got: {message}"
+    );
+    assert!(
+        message.contains("`ts`"),
+        "must name the missing column, got: {message}"
+    );
+    assert!(
+        message.contains("`id`") && message.contains("`data`") && message.contains("`cat`"),
+        "must list the available columns, got: {message}"
+    );
+    assert!(
+        !catalogs["ice"]
+            .table_exists(&TableIdent::new(
+                NamespaceIdent::new("sales".to_string()),
+                "hp".to_string(),
+            ))
+            .await
+            .unwrap(),
+        "no table may be created"
     );
 }
 
