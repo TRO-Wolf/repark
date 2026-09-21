@@ -2147,7 +2147,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   form answers `[0, 0, 0, 0]`, and the mixed rollback form answers the previous and
   current snapshot ids resolved from the snapshots table, never literals. Refusal
   pins assert class and exact text on the Plan errors the binder keeps: duplicate
-  positional-plus-named binding, unknown `branch`, missing `table`, over-arity on
+  positional-plus-named binding, unknown `bogus`, missing `table`, over-arity on
   both procedures. A named NULL `sort_order` succeeds, and the quoted
   `remove-dangling-deletes` extra still binds with the options-map key winning.
   **PR1b (2026-09-21):** the wiring-round pins. RPD `where` compacts the matching
@@ -2158,8 +2158,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the pretty name-mapping property asserted on every import, adopted paths, by-name
   binding, Java's duplicate text and the unsupported-source refusals. The
   not-yet-wired set narrows to RM `sort_by`, which keeps its exact refusal.
+  **PR2a (2026-09-21):** the unknown-argument pin retargets to `bogus` and the RDF
+  arity pin moves to six positionals; the branch end-to-end pin answers
+  `[5, 2, >0, 0, 0]`, moves only `b1` per the refs table, and leaves main's rows
+  untouched.
   pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
+  C-009, C-010, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
 - [test_ice_rdf_sort_parse_1.py](test_ice_rdf_sort_parse_1.py) —
   **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the pins that stand between IPI-43 and a green
   gate over a no-op. `P-RDF-SORT`, `P-RDF-SORT-TABLE-ORDER` and `P-RDF-ZORDER` record the

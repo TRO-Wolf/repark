@@ -7926,7 +7926,7 @@ oracle on live Spark.
   catalog's metadata basenames diverge from Hadoop `vN` names (pinned by
   shape); output columns are non-nullable by the rewrite-family precedent
   (the fixture records no nullability).
-### ICE-PROCEDURES-1 — `add_files` routing, RPD `where`, the expire arguments — **FIXED 2026-09-21**
+### ICE-PROCEDURES-1 — `add_files` routing, RPD `where`, the expire arguments, RDF `branch` — **FIXED 2026-09-21**
 
 `CALL …add_files` refused before this row (`CALL … is not supported`);
 `rewrite_position_delete_files` refused `where`, and `expire_snapshots` refused
@@ -7951,23 +7951,30 @@ owned fork's maintenance actions.
   `stream_results`, `clean_expired_metadata`: `snapshot_ids` expires each id in
   array order; the other three parse and stay ignored against the measured equality
   with a plain `older_than` expiry.
+- **repark** — `rewrite_data_files` `branch` (PR2a): the rewrite plans from the
+  named ref's head and commits only that ref, answering `[5, 2, >0, 0, 0]` with
+  `b1` moved and `main` unmoved. `branch` beside `remove-dangling-deletes`
+  refuses loud in either spelling, and an unknown ref passes the fork text
+  through with no Spark-parity claim.
 - **Apache Spark** — identical columns, rows, imported data, name-mapping property
-  and refusal texts per the ten inventory cells (`P-ADD-FILES-*`, `P-RPD-WHERE`,
-  the four `P-EXPIRE-*`), except the `md.snapshots` residue below. *(oracle:
+  and refusal texts per the eleven inventory cells (`P-ADD-FILES-*`, `P-RPD-WHERE`,
+  the four `P-EXPIRE-*`, `P-RDF-BRANCH`), except the `md.snapshots` residue below. *(oracle:
   recorded — `out/spark-proc.json`, live PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** — `python/repark/tests/test_ice_procedures_1.py` and
   `crates/repark-spark/src/tests/call_procedures_2.rs` (schemas, rows, NULL-ness,
-  mapping, paths, by-name binding, every refusal).
+  mapping, paths, by-name binding, every refusal), plus
+  `crates/repark-spark/src/tests/call_rdf_branch.rs` (branch refs, ghost text,
+  dangling refusal, NULL-unset and explicit-main twins).
 - **Rationale** — routing, not table-format work: the fork already implements the
   actions, and the router only shapes Spark's surface around them. Residue: the
   fork's merge-append writes a `changed-partition-count` snapshot-summary key
   Java's add_files path does not write, so the four answered add_files cells report
   DIFFERENT solely on `md.snapshots` until the fork ask in the ledger lands;
   `clean_expired_metadata` stays accepted-and-ignored per INDEX decision 15 with its
-  fork behaviour carded; `branch` (RDF) and `sort_by` (RM) keep refusing loud
-  for PR2.
+  fork behaviour carded; `sort_by` (RM) keeps refusing loud for the PR2 sort
+  slice.
   pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
-  C-020
+  C-020, C-021
 ### MANIFEST-4 — an append after a partition-spec evolution does not merge the old-spec manifests — **DECLARED 2026-09-19**
 
 - **repark** — on a table whose partition spec has evolved, an `INSERT` writes its new
