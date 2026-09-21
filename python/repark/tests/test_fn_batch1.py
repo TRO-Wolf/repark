@@ -149,9 +149,7 @@ def test_greatest_least_dates(spark: ReparkSession) -> None:
 
 
 def test_split_answers(spark: ReparkSession) -> None:
-    frame = spark.sql(
-        "SELECT * FROM VALUES ('a,b,,c'), (CAST(NULL AS STRING)), ('x') AS t(csvs)"
-    )
+    frame = spark.sql("SELECT * FROM VALUES ('a,b,,c'), (CAST(NULL AS STRING)), ('x') AS t(csvs)")
     table = frame.select(split("csvs", ",").alias("v")).to_arrow()
     assert table.column("v").to_pylist() == [["a", "b", "", "c"], None, ["x"]]
     assert table.schema.field("v").type == pa.list_(
