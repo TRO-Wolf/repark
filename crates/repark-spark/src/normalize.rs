@@ -837,7 +837,7 @@ pub(crate) fn parse_transform_call_args(inner: &[&Token]) -> Result<Vec<String>>
     Ok(args)
 }
 
-/// Render one transform argument's tokens, keeping string literals quoted.
+/// Render one transform argument's tokens to its semantic string.
 pub(crate) fn render_transform_arg(tokens: &[&Token]) -> String {
     match tokens {
         [Token::Word(word)] => word.value.clone(),
