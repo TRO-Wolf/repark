@@ -22,8 +22,9 @@ artefact (the ``>= 1.0`` leg pushes and drops the sub-``1.0`` file with its NaN)
 ``d_between_nan_nan`` is the pure NaN-bound residual. The live tier re-derives
 the grid from live Spark and asserts repark == pinned truth == live Spark,
 including DELETE/UPDATE outcomes at v2 and v3. Bare-decimal-literal spellings
-stay a loud error (ICE-NAN-DECIMAL-LITERAL-1, BACKLOG): the pins codify the
-current needles and the recorded Spark answers.
+answer since WO-2 (2026-09-21, ICE-NAN-DECIMAL-LITERAL-1 FIXED): the decimal
+literal widens to DOUBLE against the DOUBLE column, so ``d = 1.0`` and
+``d IN (NaN, 1.0)`` equal the recorded Spark answers.
 
 pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006
 pins: ice-nan-pushdown-1/C-007, C-008, C-009, C-010, C-011, C-012
@@ -67,8 +68,6 @@ _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 _VERSIONS = ("2", "3")
 _SHAPES = ("mixed", "nan_only", "split")
 _NAN_ONLY_FLOAT_LEGS = ("eq", "neq", "in_nan", "isnan")
-_DECIMAL_EQ_NEEDLE = "Overflowing on NaN"
-_DECIMAL_IN_NEEDLE = "Cannot cast to Decimal128"
 
 
 class _DirLock:
@@ -323,11 +322,11 @@ def test_delete_and_update_touch_exactly_the_nan_rows(tmp_path: Path) -> None:
         session.stop()
 
 
-def test_bare_decimal_literal_spellings_raise_loud(tmp_path: Path) -> None:
-    """ICE-NAN-DECIMAL-LITERAL-1 (BACKLOG): bare decimals fail loud, never silent.
+def test_bare_decimal_literal_spellings_answer(tmp_path: Path) -> None:
+    """ICE-NAN-DECIMAL-LITERAL-1 (FIXED 2026-09-21 by WO-2): bare decimals answer.
 
-    The pins codify today's needles so the fix reds them on purpose; the
-    recorded Spark answers in ``decimal_literal`` are the fix target.
+    The decimal literal widens to DOUBLE against the DOUBLE column, so NaN rows
+    survive and both legs equal the recorded Spark answers.
     """
     assert _TRUTH["decimal_literal"]["d_eq_1_0_bare"] == [2]
     assert _TRUTH["decimal_literal"]["d_in_nan_1_0_bare"] == [1, 2, 5]
@@ -337,12 +336,8 @@ def test_bare_decimal_literal_spellings_raise_loud(tmp_path: Path) -> None:
         session.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
         table = f"{_CATALOG}.{_NAMESPACE}.dec_v2"
         _build_repark_table(session, table, "2", "mixed")
-        with pytest.raises(Exception) as eq_error:
-            session.sql(f"SELECT id FROM {table} WHERE d = 1.0").to_arrow()
-        assert _DECIMAL_EQ_NEEDLE in str(eq_error.value), str(eq_error.value)
-        with pytest.raises(Exception) as in_error:
-            session.sql(f"SELECT id FROM {table} WHERE d IN ({NAN_D}, 1.0)").to_arrow()
-        assert _DECIMAL_IN_NEEDLE in str(in_error.value), str(in_error.value)
+        assert _select_ids(session, table, "d = 1.0") == [2]
+        assert _select_ids(session, table, f"d IN ({NAN_D}, 1.0)") == [1, 2, 5]
     finally:
         session.stop()
 

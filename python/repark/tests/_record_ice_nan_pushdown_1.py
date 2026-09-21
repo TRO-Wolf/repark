@@ -230,8 +230,8 @@ def _record_dml(spark: Any) -> dict[str, dict[str, list[int]]]:
 def _record_decimal_observation(spark: Any, table: str) -> dict[str, list[int]]:
     """Spark answers for bare-decimal-literal spellings on a NaN-holding column.
 
-    RePark raises a loud cast error on both (ICE-NAN-DECIMAL-LITERAL-1); the
-    recorded Spark sets are the fix target.
+    RePark answers both since WO-2 (2026-09-21, ICE-NAN-DECIMAL-LITERAL-1
+    FIXED); the recorded Spark sets are the asserted values.
     """
     return {
         "d_eq_1_0_bare": _ids(spark, f"SELECT id FROM {table} WHERE d = 1.0"),
