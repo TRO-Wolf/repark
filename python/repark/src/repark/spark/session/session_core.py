@@ -260,7 +260,6 @@ class ReparkSession:
 
     def _expand_bare_table_names_in_sql_body(self, query: str) -> str:
         """Statement-form dispatch after leading trivia has been stripped."""
-        # DROP TABLE|VIEW [IF EXISTS] — sqlutils.table() path; views mirror tables.
         drop_expanded = _expand_drop_table_or_view_sql(query, self.resolve_table_name)
         if drop_expanded is not None:
             return drop_expanded
