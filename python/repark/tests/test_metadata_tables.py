@@ -497,7 +497,7 @@ def test_metadata_tables_are_hidden_from_enumeration_at_the_facade(
     )
 
     shown = spark.sql("SHOW TABLES").to_arrow()
-    dollar_names = [name for name in shown.column("table_name").to_pylist() if name and "$" in name]
+    dollar_names = [name for name in shown.column("tableName").to_pylist() if name and "$" in name]
     assert dollar_names == [], f"SHOW TABLES must not list metadata tables: {dollar_names}"
 
 
