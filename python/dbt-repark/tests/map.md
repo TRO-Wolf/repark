@@ -25,14 +25,12 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 
 - `conftest.py` — the two `sys.path` entries above.
 - `test_statement_surface.py` — 30 cases: every statement shape dbt emits, run through
-  `repark.sql()` on a memory catalog. Fourteen served, fourteen refused with the exact message
+  `repark.sql()` on a memory catalog. Seventeen served, eleven refused with the exact message
   (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
   the `CLUSTERED BY (…) INTO n BUCKETS` CTAS shape moved to served under IPI-26/27 round 1,
-  2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform),
-  `repark.sql()` on a memory catalog. Sixteen served, twelve refused with the exact message
-  (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
-  the `LOCATION`, table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served
-  under IPI-26/27 round 2, 2026-09-20),
+  2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform; the `LOCATION`,
+  table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served under IPI-26/27
+  round 2, 2026-09-20),
   plus
   the facade-schema probe (the column source the adapter uses) and the `describe extended`
   probe (Spark shape since SQL-DESCRIBE-1, 2026-09-09 — the old Arrow-spellings premise reds on

@@ -244,7 +244,6 @@ def _refused() -> tuple[Shape, ...]:
             "Expected: end of statement, found: using",
         ),
         Shape(
-        Shape(
             "R-COLUMN-COMMENT",
             "spark__alter_column_comment",
             f"alter table {fact} alter column survey_id comment 'x'",

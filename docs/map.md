@@ -171,9 +171,15 @@ repo.
   CALL-door transform-term refusal.
   **IPI-26/27 round 1 (2026-09-20):** §7 `DBT-CTASCLAUSE-1` rewritten — `CLUSTERED BY (…) INTO
   n BUCKETS` on an Iceberg CTAS is served at the SQL door (rewrites to a `bucket(n, col)`
-  partition transform, INDEX-19; pin `test_served_shapes_run[S-CTAS-CLUSTERED-BY]`); `LOCATION`
-  and `OPTIONS` stay refused, and the adapter's `clustered_by` / `buckets` compile-time refusal
-  awaits the IPI-26/27 dbt-retirement round (A-12).
+  partition transform, INDEX-19; pin `test_served_shapes_run[S-CTAS-CLUSTERED-BY]`); `OPTIONS`
+  stays refused, and the adapter's `clustered_by` / `buckets` compile-time refusal stays over
+  the served clause.
+  **IPI-26/27 round 2 (2026-09-20):** §7 `DBT-CTASCLAUSE-1` and `DBT-RELCOMMENT-1` rewritten —
+  `LOCATION` and table `COMMENT` on an Iceberg CTAS are served end-to-end (the dbt
+  `location_root` and `persist_docs.relation` refusals retired, spark emissions inherited; pins
+  `test_served_shapes_run[S-CTAS-LOCATION]`, `[S-TABLE-COMMENT]`,
+  `[S-TABLE-COMMENT-AFTER-TBLPROPERTIES]`, `test_gold_models.py` inverted acceptance tests);
+  the statement-surface table stands at seventeen served / eleven refused.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;

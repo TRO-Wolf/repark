@@ -106,8 +106,9 @@ illustrative. A claim with no verified basis does not go in.
   compiled SQL in process through `repark.sql()`, no server and no JVM. What works
   (`materialized='table'` with `file_format='iceberg'`, `tblproperties`, `partition_by`, generic
   tests, `threads`, `dbt docs generate`) and what refuses at compile time (`view`, `incremental`,
-  snapshots, `persist_docs`, `location_root`, `options`, `clustered_by`), each naming its
-  registry row; the profile fields; why a memory catalog is per-session; and that there are no
+  snapshots, `persist_docs.columns`, `options`, `clustered_by`), each naming its
+  registry row; `persist_docs.relation` and `location_root` serve since IPI-26/27 round 2
+  (2026-09-20); the profile fields; why a memory catalog is per-session; and that there are no
   transactions. Package: [../../python/dbt-repark/map.md](../../python/dbt-repark/map.md).
 - [sql-doors.md](sql-doors.md) — the two SQL surfaces honestly: the Spark-facade door
   (`spark.sql`, Spark dialect, your session) and the native door (`repark.sql`, stock
