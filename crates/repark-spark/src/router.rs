@@ -479,6 +479,59 @@ fn v2_command_outcome(refused: Result<()>, command: &str) -> Result<DataFrame> {
     ))
 }
 
+fn v2_json_preparse(
+    sql: &str,
+    refuse_options: impl Fn(&str) -> Result<()>,
+) -> Option<Result<DataFrame>> {
+    describe_show::try_parse_describe_as_json(sql)?;
+    Some(v2_command_outcome(
+        refuse_options("DESCRIBE TABLE"),
+        "DESCRIBE TABLE AS JSON",
+    ))
+}
+
+fn v2_tail_preparse(
+    sql: &str,
+    refuse_options: impl Fn(&str) -> Result<()>,
+) -> Option<Result<DataFrame>> {
+    if describe_show::try_parse_set_serde(sql).is_some() {
+        return Some(v2_command_outcome(
+            refuse_options("ALTER TABLE"),
+            "ALTER TABLE ... SET [SERDE|SERDEPROPERTIES]",
+        ));
+    }
+    if describe_show::try_parse_msck_repair(sql).is_some() {
+        return Some(v2_command_outcome(
+            refuse_options("MSCK REPAIR TABLE"),
+            "MSCK REPAIR TABLE",
+        ));
+    }
+    if describe_show::try_parse_analyze_table(sql).is_some() {
+        return Some(v2_command_outcome(
+            refuse_options("ANALYZE TABLE"),
+            "ANALYZE TABLE",
+        ));
+    }
+    None
+}
+
+async fn describe_namespace_preparse(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    refuse_options: impl FnOnce(&str) -> Result<()>,
+) -> Option<Result<DataFrame>> {
+    let parsed = describe_show::try_parse_describe_namespace(sql)?;
+    Some(
+        match parsed.and_then(|ddl| refuse_options("DESCRIBE NAMESPACE").map(|()| ddl)) {
+            Ok(describe_namespace) => {
+                describe_show::execute_describe_namespace(ctx, catalogs, describe_namespace).await
+            }
+            Err(error) => Err(error),
+        },
+    )
+}
+
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_preparse_intercepts(
     ctx: &SessionContext,
@@ -536,22 +589,11 @@ async fn try_preparse_intercepts(
         );
     }
     // `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED]` (Group Z).
-    if let Some(parsed) = describe_show::try_parse_describe_namespace(sql) {
-        return Some(
-            match parsed.and_then(|ddl| parsed_ddl("DESCRIBE NAMESPACE").map(|()| ddl)) {
-                Ok(describe_namespace) => {
-                    describe_show::execute_describe_namespace(ctx, catalogs, describe_namespace)
-                        .await
-                }
-                Err(error) => Err(error),
-            },
-        );
+    if let Some(outcome) = describe_namespace_preparse(ctx, catalogs, sql, parsed_ddl).await {
+        return Some(outcome);
     }
-    if describe_show::try_parse_describe_as_json(sql).is_some() {
-        return Some(v2_command_outcome(
-            parsed_ddl("DESCRIBE TABLE"),
-            "DESCRIBE TABLE AS JSON",
-        ));
+    if let Some(outcome) = v2_json_preparse(sql, parsed_ddl) {
+        return Some(outcome);
     }
     if let Some(parsed) = describe_show::try_parse_describe_table(sql) {
         match parsed.and_then(|ddl| parsed_ddl("DESCRIBE TABLE").map(|()| ddl)) {
@@ -586,23 +628,8 @@ async fn try_preparse_intercepts(
     if let Some(outcome) = show_partitions_preparse(sql, parsed_ddl) {
         return Some(outcome);
     }
-    if describe_show::try_parse_set_serde(sql).is_some() {
-        return Some(v2_command_outcome(
-            parsed_ddl("ALTER TABLE"),
-            "ALTER TABLE ... SET [SERDE|SERDEPROPERTIES]",
-        ));
-    }
-    if describe_show::try_parse_msck_repair(sql).is_some() {
-        return Some(v2_command_outcome(
-            parsed_ddl("MSCK REPAIR TABLE"),
-            "MSCK REPAIR TABLE",
-        ));
-    }
-    if describe_show::try_parse_analyze_table(sql).is_some() {
-        return Some(v2_command_outcome(
-            parsed_ddl("ANALYZE TABLE"),
-            "ANALYZE TABLE",
-        ));
+    if let Some(outcome) = v2_tail_preparse(sql, parsed_ddl) {
+        return Some(outcome);
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {

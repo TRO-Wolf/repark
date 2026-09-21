@@ -95,8 +95,11 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-write-options-1/C-014
   **IPI-51 PR5 (2026-09-20):** `try_preparse_intercepts` gains the four v2-command
   intercepts — DESCRIBE AS JSON ahead of the describe-table arm, SET SERDE / MSCK REPAIR /
-  ANALYZE TABLE after SHOW PARTITIONS — each refusing through the shared
-  `v2_command_outcome` helper so the write-options gate still runs first.
+  ANALYZE TABLE after SHOW PARTITIONS — through `v2_json_preparse` / `v2_tail_preparse`
+  helpers in the `show_partitions_preparse` shape, each refusing through the shared
+  `v2_command_outcome` helper so the write-options gate still runs first. The DESCRIBE
+  NAMESPACE arm moves into `describe_namespace_preparse` so the function holds clippy's
+  line cap.
   pins: ice-error-conditions-1/C-011
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
