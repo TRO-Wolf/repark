@@ -21,6 +21,8 @@ DataFrameReader.sheet_names
 DataFrameWriterV2.overwrite
 F.arrays_zip
 F.base64
+F.bround
+F.conv
 F.decode
 F.encode
 F.expr
@@ -61,6 +63,7 @@ F.kll_sketch_to_string_double
 F.kll_sketch_to_string_float
 F.kurtosis
 F.make_timestamp
+F.mask
 F.mode
 F.monotonically_increasing_id
 F.months_between
