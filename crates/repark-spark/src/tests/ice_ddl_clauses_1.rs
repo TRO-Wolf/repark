@@ -220,11 +220,30 @@ fn bucket_quoted_string_arguments_are_never_a_width() {
         vec!["'x'".to_string(), "16".to_string()],
         vec!["\"x\"".to_string(), "16".to_string()],
         vec!["'16'".to_string(), "id".to_string()],
+        vec!["16".to_string(), "'x'".to_string()],
+        vec!["16".to_string(), "\"x\"".to_string()],
     ] {
         let error = build_transform_field("bucket", &args)
             .expect_err("a quoted string is never a bucket width and must refuse");
         assert!(
             error.to_string().contains("numBuckets must be an integer"),
+            "got: {error}"
+        );
+    }
+}
+
+#[test]
+fn truncate_quoted_string_arguments_are_never_a_width() {
+    for args in [
+        vec!["'day'".to_string(), "4".to_string()],
+        vec!["\"day\"".to_string(), "4".to_string()],
+        vec!["4".to_string(), "'day'".to_string()],
+        vec!["4".to_string(), "\"day\"".to_string()],
+    ] {
+        let error = build_transform_field("truncate", &args)
+            .expect_err("a quoted string is never a truncate width and must refuse");
+        assert!(
+            error.to_string().contains("width must be an integer"),
             "got: {error}"
         );
     }
