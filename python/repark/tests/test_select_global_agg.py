@@ -289,8 +289,8 @@ def test_select_hostile_count_name_does_not_retarget_from(frame: object) -> None
     with pytest.raises(Exception) as caught:
         frame.select(F.count(hostile), F.lit(1).alias("one")).collect()
     message = str(caught.value).lower()
-    # Fail on missing field (quoted), never on unresolved external table ``secret``.
-    assert "no field" in message
+    assert "unresolved_column.with_suggestion" in message
+    assert "42703" in message
     assert "table 'datafusion.public.secret'" not in message
     assert 'table "secret"' not in message
     # Structural pin: sql_expr is quoted (mutation-proof for the quoting fix).
@@ -369,7 +369,8 @@ def test_select_batch4_af_sql_expr_and_case_preserved(frame: object) -> None:
     with pytest.raises(Exception) as caught:
         frame.select(F.stddev(hostile), F.lit(1).alias("one")).collect()
     message = str(caught.value).lower()
-    assert "no field" in message
+    assert "unresolved_column.with_suggestion" in message
+    assert "42703" in message
     assert "table 'datafusion.public.secret'" not in message
 
 

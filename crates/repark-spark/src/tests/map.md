@@ -415,8 +415,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004;
   rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003).
 - `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the RP-6 re-recorded the `repark-sql/src/v3/cow.rs` hash once more after the pins citation moved from its module doc to the map.
-  V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved (`No field
-  named _row_id`), `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
+  V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved
+  (`[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703`, IPI-51 PR6 slice 1, 2026-09-21),
+  `SELECT *, _row_id` expands user columns only, qualified/aliased forms,
   unquoted case-fold, JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`, V3-COW-1 files
   hash-pinned (V3-9 re-records after the merge-on-read lift touched three of the four files;
   later units re-record only for a change they themselves made); the C-001
@@ -425,6 +426,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: rp-4-fork-repin/C-003
   pins: v3-4-serve-lineage-columns/C-001, C-002, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-020
+  pins: ice-error-conditions-1/C-011
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
   rows, partition prune, `.delete_files` content 1/2, B-MOR-3 zeros, RP-3 cells 3–6

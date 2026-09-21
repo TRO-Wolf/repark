@@ -60,6 +60,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `getCondition` + `getSqlState` on the new
   `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]`/`0A000` texts (SET SERDE, DESCRIBE AS JSON,
   MSCK REPAIR, ANALYZE TABLE); the historical parser pins stay byte-identical.
+  **IPI-51 PR6 slice 1 (2026-09-21):** three stamped-message constructor pins assert
+  type + `getCondition` + `getSqlState` on the new
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`/`42703` texts (`_row_id`, `_change_type`,
+  `dv_count`); the historical parser pins stay byte-identical.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
@@ -1791,9 +1795,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_v3_lineage_columns.py](test_v3_lineage_columns.py) — **V3-4:** facade SQL serves
   Spark-equal `_row_id` / `_last_updated_sequence_number` on the V3E-3 fixtures; `SELECT *,
   _row_id` expands user columns only; qualified/aliased forms; unquoted case-fold;
-  JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`; v2 is `No field named _row_id`.
+  JOIN/CTE/subquery/`VERSION AS OF` refuse `V3-ROWID-2`; v2 is
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703` (IPI-51 PR6 slice 1, 2026-09-21).
   pins: v3-4-serve-lineage-columns/C-004, C-005, C-007, C-008, C-011, C-012, C-013, C-014,
   C-015, C-016, C-018, C-020
+  pins: ice-error-conditions-1/C-011
 - [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — **V3E-3 (2026-08-24):** facade adopt of
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2; RP-3 C-007 CALL still refuses
@@ -3158,7 +3164,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **combine C4:** `_grouping_col_sql` always `_quote_ident` + hostile-quote cube keys;
   **combine C5:** cube/rollup agg AS alias names + MIA plan-stable cube pin;
   **combine C6:** polars `_sort_key` generator sticky + orderBy/pl.sort refuse;
-  non-finite float lit CAST embeds on select-global-agg).
+   non-finite float lit CAST embeds on select-global-agg). IPI-51 PR6 slice 1 (2026-09-21):
+   the quoted hostile count miss and the batch-4 hostile stddev miss now pin
+   `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703`, not raw FieldNotFound text
+   (stamped by `stamp_unresolved_column`).
 - `test_pivot.py` — **U2:** NaN-key fixture CASTs `10.0`/`1.0`/`20.0` to DOUBLE (bare
   literals UNION NaN cannot cast to decimal). R-PIVOT pins (values/inferred/multi values/null IS NULL/count/
   alias/cap/limit-then-sort/cube refuse/countDistinct refuse/avg-min-max values/
@@ -3574,7 +3583,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_df_batch2.py` — R-DF-BATCH2 cube/rollup/unpivot/explain + loud census;
   **combine C5:** cube/rollup AS alias column `c` + values; unpivot hostile quote pins;
   **combine C6:** cube first(lit('count(Int64(1))')) uncorrupted + GroupedData.count
-  structural shortcut (C6-SAF-001).
+  structural shortcut (C6-SAF-001). IPI-51 PR6 slice 1 (2026-09-21): the unpivot
+  hostile-quote miss now pins `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703`, not raw
+  FieldNotFound text (stamped by `stamp_unresolved_column`).
 - ruff format lockstep (W7 gate).
 
 - `test_facade_hygiene.py` — R-FACADE-HYGIENE (W7) cdf hide/GC, fillna, dropDuplicates, OOS.

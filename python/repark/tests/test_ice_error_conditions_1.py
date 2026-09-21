@@ -339,3 +339,39 @@ def test_condition_parser_binds_on_every_native_class(
     assert error.getErrorClass() == "FOO"
     assert error.getSqlState() == "42P01"
     assert error.getMessageParameters() is None
+
+
+def test_row_id_unresolved_column_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function "
+        "parameter with name `_row_id` cannot be resolved. Did you mean one of the "
+        "following? [`id`, `data`, `cat`]. SQLSTATE: 42703"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+    assert error.getSqlState() == "42703"
+
+
+def test_change_type_unresolved_column_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function "
+        "parameter with name `_change_type` cannot be resolved. Did you mean one of "
+        "the following? [`id`, `data`]. SQLSTATE: 42703"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+    assert error.getSqlState() == "42703"
+
+
+def test_dv_count_unresolved_column_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function "
+        "parameter with name `dv_count` cannot be resolved. Did you mean one of the "
+        "following? [`partition`, `record_count`, `file_count`]. SQLSTATE: 42703"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+    assert error.getSqlState() == "42703"
