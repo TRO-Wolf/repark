@@ -1041,6 +1041,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `id_bucket` field name), while `bucket(1, 2)` (both integers) and
   `bucket('a', 'b')` (neither) refuse loud. [`tests/ice_ddl_clauses_1.rs`](tests/ice_ddl_clauses_1.rs)
   pins all three.
+  **IPI-26/27 round 3 remediation (2026-09-21):** `render_transform_arg` keeps string
+  literals quoted, so a quoted argument can no longer ride the type sniff as a column:
+  `bucket('x', 16)` and `bucket("x", 16)` refuse with the integer error — only a bare
+  unquoted integer token can be the width.
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
   **ICE-PROCEDURES-1 (2026-09-20):** mixed positional and named arguments are
   legal (Spark accepts the mix), and `bind` binds a `CallArgs` against a

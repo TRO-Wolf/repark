@@ -3852,10 +3852,24 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_partition_transform_near_misses_still_refuse` hold the neither/both-integer
   and unknown-transform refusals; `test_replace_partition_field_transform_lhs_days_with_hours`
   asserts the full spec `[["ts_hour","hour","ts"]]` and that the REPLACE adds exactly
-  one spec (live Spark's spec-count 2, minus RePark's pre-existing empty spec-0, a
-  create-path divergence recorded in the test docstring), and
+  one spec, and
   `test_replace_partition_field_transform_lhs_matching_no_field_refuses` holds the
   loud refusal for a LHS matching no current field.
+  **IPI-26/27 round 3 remediation (2026-09-21):** the REPLACE pin runs the actual
+  inventory sequence (`CREATE … PARTITIONED BY (days(ts))`, then
+  `REPLACE … days(ts) WITH hours(ts)`) and pins the absolute spec-count 2,
+  default-spec-id 1, and the field rows — the earlier note claiming a RePark
+  spec-count 3 from an empty spec-0 was measured on the wrong fixture (unpartitioned
+  CREATE plus ADD PARTITION FIELD) and is withdrawn; on the inventory sequence both
+  engines record spec-count 2. New refusal pins:
+  `test_bucket_quoted_string_is_never_the_width` (both quote spellings, table carries
+  column `x` so the pre-fix behaviour was a landed `x_bucket` spec),
+  `test_truncate_quoted_string_is_never_the_width`,
+  `test_date_transform_quoted_column_refuses`;
+  `test_replace_partition_field_days_lhs_wrong_source_refuses` and
+  `test_replace_partition_field_truncate_lhs_wrong_source_refuses` hold the
+  matches-no-partition-field refusal when the LHS transform is present in the spec
+  but its source column differs — the pair, not the transform alone, resolves.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to
