@@ -323,6 +323,200 @@ def test_replace_with_location_refuses(spark: Any) -> None:
     assert "OR REPLACE" in str(caught.value)
 
 
+def test_date_alias_names_the_field_ts_day(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-CREATE-PART-DATE-ALIAS``: ``date``/``date_hour`` alias day/hour."""
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_date_alias (ts TIMESTAMP, data STRING) "
+        "USING iceberg PARTITIONED BY (date(ts))"
+    )
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_date_hour_alias (ts TIMESTAMP, data STRING) "
+        "USING iceberg PARTITIONED BY (date_hour(ts))"
+    )
+
+    meta = _metadata(tmp_path / "wh", "t_date_alias")
+    _, by_id = _schema_rows(meta)
+    assert _spec(meta, by_id) == [["ts_day", "day", "ts"]]
+
+    meta = _metadata(tmp_path / "wh", "t_date_hour_alias")
+    _, by_id = _schema_rows(meta)
+    assert _spec(meta, by_id) == [["ts_hour", "hour", "ts"]]
+
+
+def test_bucket_both_argument_orders_give_the_same_spec(spark: Any, tmp_path: Path) -> None:
+    """Near-miss pin: ``bucket(id, 4)`` and ``bucket(4, id)`` record the same spec."""
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_w_first (id BIGINT) "
+        "USING iceberg PARTITIONED BY (bucket(4, id))"
+    )
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_c_first (id BIGINT) "
+        "USING iceberg PARTITIONED BY (bucket(id, 4))"
+    )
+
+    for name in ("t_bucket_w_first", "t_bucket_c_first"):
+        meta = _metadata(tmp_path / "wh", name)
+        _, by_id = _schema_rows(meta)
+        assert _spec(meta, by_id) == [["id_bucket", "bucket[4]", "id"]]
+
+
+def test_truncate_both_argument_orders_give_the_same_spec(spark: Any, tmp_path: Path) -> None:
+    """Near-miss pin: ``truncate(data, 4)`` and ``truncate(4, data)`` record the same spec."""
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_trunc_w_first (data STRING) "
+        "USING iceberg PARTITIONED BY (truncate(4, data))"
+    )
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_trunc_c_first (data STRING) "
+        "USING iceberg PARTITIONED BY (truncate(data, 4))"
+    )
+
+    for name in ("t_trunc_w_first", "t_trunc_c_first"):
+        meta = _metadata(tmp_path / "wh", name)
+        _, by_id = _schema_rows(meta)
+        assert _spec(meta, by_id) == [["data_trunc", "truncate[4]", "data"]]
+
+
+def test_bucket_two_integer_arguments_raises(spark: Any) -> None:
+    """``bucket(1, 2)`` is ambiguous — both arguments read as integers — and must refuse."""
+    from repark.errors import PySparkException
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_ambiguous (id BIGINT) "
+            "USING iceberg PARTITIONED BY (bucket(1, 2))"
+        )
+    assert "bucket" in str(caught.value)
+
+
+def test_partition_transform_near_misses_still_refuse(spark: Any) -> None:
+    """Neither-integer bucket args and an unknown transform keep refusing."""
+    from repark.errors import PySparkException
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_str (id BIGINT) "
+            "USING iceberg PARTITIONED BY (bucket('a', 'b'))"
+        )
+    assert "bucket" in str(caught.value)
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_unknown (id BIGINT) "
+            "USING iceberg PARTITIONED BY (unknown_xform(id))"
+        )
+    assert "not a supported partition transform" in str(caught.value)
+
+
+def test_bucket_quoted_string_is_never_the_width(spark: Any) -> None:
+    """``bucket('x', 16)``/``bucket("x", 16)`` refuse in either order; the column is ``x``.
+
+    The wrong implementation under this pin strips the quotes, sniffs ``16`` as the
+    width, and records ``x_bucket``/``bucket[16]`` instead of refusing.
+    """
+    from repark.errors import PySparkException
+
+    for literal in ("'x'", '"x"'):
+        for call in (f"bucket({literal}, 16)", f"bucket(16, {literal})"):
+            with pytest.raises(PySparkException) as caught:
+                spark.sql(
+                    f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_quoted_width (x BIGINT) "
+                    f"USING iceberg PARTITIONED BY ({call})"
+                )
+            assert "numBuckets must be an integer" in str(caught.value)
+
+
+def test_truncate_quoted_string_is_never_the_width(spark: Any) -> None:
+    """``truncate(ts, 'day')``, ``truncate(4, 'day')`` and ``truncate(4, "day")`` refuse.
+
+    A quoted string is never a truncate width, in either argument order.
+    """
+    from repark.errors import PySparkException
+
+    for call in ("truncate(ts, 'day')", "truncate(4, 'day')", 'truncate(4, "day")'):
+        with pytest.raises(PySparkException) as caught:
+            spark.sql(
+                f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_trunc_quoted_width (ts TIMESTAMP) "
+                f"USING iceberg PARTITIONED BY ({call})"
+            )
+        assert "width must be an integer" in str(caught.value)
+
+
+def test_date_transform_quoted_column_refuses(spark: Any) -> None:
+    """``date('ts')`` refuses: the quoted string falls through to planning and fails resolution."""
+    from repark.errors import PySparkException
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_date_quoted_col (ts TIMESTAMP) "
+            "USING iceberg PARTITIONED BY (date('ts'))"
+        )
+    assert "UNRESOLVED_COLUMN" in str(caught.value)
+
+
+def test_replace_partition_field_transform_lhs_days_with_hours(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-REPLACE-PART-FIELD``: ``days(ts) WITH hours(ts)`` resolves via the spec.
+
+    The ACTUAL inventory sequence is ``CREATE … PARTITIONED BY (days(ts))`` then
+    ``REPLACE … days(ts) WITH hours(ts)``. Live Spark records spec
+    ``[["ts_hour","hour","ts"]]`` with spec-count 2; RePark records the same: the
+    CREATE carries one spec (default-spec-id 0) and the REPLACE adds exactly one.
+    """
+    table = f"{CATALOG}.{NAMESPACE}.t_replace_lhs"
+    spark.sql(
+        f"CREATE TABLE {table} (ts TIMESTAMP, data STRING) USING iceberg PARTITIONED BY (days(ts))"
+    )
+    spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD days(ts) WITH hours(ts)")
+
+    meta = _metadata(tmp_path / "wh", "t_replace_lhs")
+    _, by_id = _schema_rows(meta)
+    assert _spec(meta, by_id) == [["ts_hour", "hour", "ts"]]
+    assert len(meta["partition-specs"]) == 2
+    assert meta["default-spec-id"] == 1
+
+
+def test_replace_partition_field_transform_lhs_matching_no_field_refuses(spark: Any) -> None:
+    """A transform LHS naming no current partition field refuses loud."""
+    from repark.errors import PySparkException
+
+    table = _create(spark, "t_replace_lhs_nomatch")
+    spark.sql(f"ALTER TABLE {table} ADD PARTITION FIELD bucket(4, id) AS id_b4")
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD truncate(4, id) WITH bucket(8, id)")
+    assert "matches no partition field" in str(caught.value)
+
+
+def test_replace_partition_field_days_lhs_wrong_source_refuses(spark: Any) -> None:
+    """``days(data)`` vs a spec whose only days field is ``days(ts)`` refuses loud.
+
+    The transform alone is present in the spec; only the (source column, transform)
+    pair matches, so a resolver ignoring the source column is killed by this pin.
+    """
+    from repark.errors import PySparkException
+
+    table = f"{CATALOG}.{NAMESPACE}.t_replace_lhs_wrong_src"
+    spark.sql(
+        f"CREATE TABLE {table} (ts TIMESTAMP, data STRING) USING iceberg PARTITIONED BY (days(ts))"
+    )
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD days(data) WITH hours(data)")
+    assert "matches no partition field" in str(caught.value)
+
+
+def test_replace_partition_field_truncate_lhs_wrong_source_refuses(spark: Any) -> None:
+    """The truncate LHS shares the (source column, transform) resolution and refuses."""
+    from repark.errors import PySparkException
+
+    table = f"{CATALOG}.{NAMESPACE}.t_replace_lhs_trunc_src"
+    spark.sql(f"CREATE TABLE {table} (id BIGINT, data STRING) USING iceberg")
+    spark.sql(f"ALTER TABLE {table} ADD PARTITION FIELD truncate(4, id)")
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"ALTER TABLE {table} REPLACE PARTITION FIELD truncate(4, data) WITH truncate(8, data)"
+        )
+    assert "matches no partition field" in str(caught.value)
+
+
 def test_describe_shows_column_comment(spark: Any) -> None:
     """Cell ``D-DESCRIBE`` re-check: the comment column carries the doc."""
     table = f"{CATALOG}.{NAMESPACE}.t_describe_doc"

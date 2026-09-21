@@ -595,12 +595,13 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
             args.join(", ")
         ))
     };
+    let integer_error = |raw: &str, label: &str| {
+        DataFusionError::Plan(format!(
+            "CTAS PARTITIONED BY `{name}(…)` {label} must be an integer, got `{raw}`"
+        ))
+    };
     let positive_width = |raw: &str, label: &str| -> Result<u32> {
-        let parsed: i64 = raw.trim().parse().map_err(|_| {
-            DataFusionError::Plan(format!(
-                "CTAS PARTITIONED BY `{name}(…)` {label} must be an integer, got `{raw}`"
-            ))
-        })?;
+        let parsed: i64 = raw.trim().parse().map_err(|_| integer_error(raw, label))?;
         if parsed <= 0 {
             return Err(DataFusionError::Plan(format!(
                 "CTAS PARTITIONED BY `{name}({raw}, …)` {label} must be > 0 (Spark/Iceberg reject \
@@ -614,26 +615,37 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
             ))
         })
     };
+    let parses_as_int = |raw: &str| raw.trim().parse::<i64>().is_ok();
+    let sniff_width_column = |label: &str| -> Result<(&String, &String)> {
+        match (args, args.iter().find(|raw| raw.starts_with(['\'', '"']))) {
+            ([first, second], None) => match (parses_as_int(first), parses_as_int(second)) {
+                (true, false) => Ok((first, second)),
+                (false, true) => Ok((second, first)),
+                _ => Err(DataFusionError::Plan(format!(
+                    "CTAS PARTITIONED BY `{name}(…)` expects exactly one integer {label} and one column, in either order, got [{first}, {second}]"
+                ))),
+            },
+            ([_, _], Some(literal)) => Err(integer_error(literal, label)),
+            _ => Err(arity_err(&format!("({label}, column)"))),
+        }
+    };
     match lower.as_str() {
         "bucket" => {
-            let [width, column] = args else {
-                return Err(arity_err("(numBuckets, column)"));
-            };
+            let (width, column) = sniff_width_column("numBuckets")?;
             Ok(PartitionFieldSpec::Bucket {
                 column: column.clone(),
                 num_buckets: positive_width(width, "numBuckets")?,
             })
         }
         "truncate" => {
-            let [width, column] = args else {
-                return Err(arity_err("(width, column)"));
-            };
+            let (width, column) = sniff_width_column("width")?;
             Ok(PartitionFieldSpec::Truncate {
                 column: column.clone(),
                 width: positive_width(width, "width")?,
             })
         }
-        "year" | "years" | "month" | "months" | "day" | "days" | "hour" | "hours" | "identity" => {
+        "year" | "years" | "month" | "months" | "day" | "days" | "date" | "hour" | "hours"
+        | "date_hour" | "identity" => {
             let [column] = args else {
                 return Err(arity_err("a single (column)"));
             };
@@ -641,14 +653,13 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
             Ok(match lower.as_str() {
                 "year" | "years" => PartitionFieldSpec::Year(column),
                 "month" | "months" => PartitionFieldSpec::Month(column),
-                "day" | "days" => PartitionFieldSpec::Day(column),
-                "hour" | "hours" => PartitionFieldSpec::Hour(column),
+                "day" | "days" | "date" => PartitionFieldSpec::Day(column),
+                "hour" | "hours" | "date_hour" => PartitionFieldSpec::Hour(column),
                 _ => PartitionFieldSpec::Identity(column),
             })
         }
         _ => Err(DataFusionError::NotImplemented(format!(
-            "CTAS PARTITIONED BY transform `{name}(…)` is not a supported partition transform \
-             (supported: bucket, truncate, year[s], month[s], day[s], hour[s], identity)"
+            "CTAS PARTITIONED BY transform `{name}(…)` is not a supported partition transform (supported: bucket, truncate, year[s], month[s], day[s], date, hour[s], date_hour, identity)"
         ))),
     }
 }
@@ -824,7 +835,6 @@ pub(crate) fn parse_transform_call_args(inner: &[&Token]) -> Result<Vec<String>>
 pub(crate) fn render_transform_arg(tokens: &[&Token]) -> String {
     match tokens {
         [Token::Word(word)] => word.value.clone(),
-        [Token::DoubleQuotedString(name) | Token::SingleQuotedString(name)] => name.clone(),
         _ => tokens.iter().map(ToString::to_string).collect::<String>(),
     }
 }

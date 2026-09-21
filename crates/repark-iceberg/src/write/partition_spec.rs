@@ -1,6 +1,7 @@
 use iceberg::spec::Transform;
+use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use iceberg::{Catalog, Result, TableIdent};
+use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
 
 #[derive(Debug, Clone)]
 pub enum PartitionSpecChange {
@@ -18,6 +19,13 @@ pub enum PartitionSpecChange {
     },
     ReplaceField {
         old_name: String,
+        source_name: String,
+        transform: Transform,
+        new_name: Option<String>,
+    },
+    ReplaceFieldByTransform {
+        old_source_name: String,
+        old_transform: Transform,
         source_name: String,
         transform: Transform,
         new_name: Option<String>,
@@ -55,9 +63,6 @@ pub async fn apply_partition_spec_changes(
             .cloned()
             .unwrap_or_else(|| requested.to_string())
     };
-    let forget_field_name = |known: &mut Vec<String>, name: &str| {
-        known.retain(|existing| !existing.eq_ignore_ascii_case(name));
-    };
     let tx = Transaction::new(&table);
     let mut action = tx.update_partition_spec().case_sensitive(false);
     for change in changes {
@@ -89,11 +94,23 @@ pub async fn apply_partition_spec_changes(
                 new_name,
             } => {
                 let resolved_old = resolve_field_name(&known_field_names, old_name);
-                forget_field_name(&mut known_field_names, &resolved_old);
-                if let Some(explicit_name) = new_name {
-                    forget_field_name(&mut known_field_names, explicit_name);
-                    known_field_names.push(explicit_name.clone());
-                }
+                note_new_field_name(&mut known_field_names, &resolved_old, new_name.as_deref());
+                action.remove_field(&resolved_old).add_field_with_transform(
+                    new_name.as_deref(),
+                    source_name,
+                    *transform,
+                )
+            }
+            PartitionSpecChange::ReplaceFieldByTransform {
+                old_source_name,
+                old_transform,
+                source_name,
+                transform,
+                new_name,
+            } => {
+                let resolved_old =
+                    resolve_field_by_transform(&table, old_source_name, *old_transform)?;
+                note_new_field_name(&mut known_field_names, &resolved_old, new_name.as_deref());
                 action.remove_field(&resolved_old).add_field_with_transform(
                     new_name.as_deref(),
                     source_name,
@@ -111,4 +128,53 @@ pub async fn apply_partition_spec_changes(
     let tx = action.apply(tx)?;
     tx.commit(catalog).await?;
     Ok(())
+}
+
+fn forget_field_name(known_field_names: &mut Vec<String>, name: &str) {
+    known_field_names.retain(|existing| !existing.eq_ignore_ascii_case(name));
+}
+
+fn note_new_field_name(
+    known_field_names: &mut Vec<String>,
+    resolved_old: &str,
+    new_name: Option<&str>,
+) {
+    forget_field_name(known_field_names, resolved_old);
+    if let Some(explicit_name) = new_name {
+        forget_field_name(known_field_names, explicit_name);
+        known_field_names.push(explicit_name.to_string());
+    }
+}
+
+fn resolve_field_by_transform(
+    table: &Table,
+    source_name: &str,
+    transform: Transform,
+) -> Result<String> {
+    let metadata = table.metadata();
+    let source_id = metadata
+        .current_schema()
+        .field_by_name_case_insensitive(source_name)
+        .map(|field| field.id)
+        .ok_or_else(|| {
+            Error::new(
+                ErrorKind::DataInvalid,
+                format!("Cannot find source column in schema: {source_name}"),
+            )
+        })?;
+    metadata
+        .default_partition_spec()
+        .fields()
+        .iter()
+        .find(|field| field.source_id == source_id && field.transform == transform)
+        .map(|field| field.name.clone())
+        .ok_or_else(|| {
+            Error::new(
+                ErrorKind::DataInvalid,
+                format!(
+                    "REPLACE PARTITION FIELD transform `{transform}` on `{source_name}` matches \
+                     no partition field in the current spec"
+                ),
+            )
+        })
 }

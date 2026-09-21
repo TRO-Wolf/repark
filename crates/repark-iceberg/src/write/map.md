@@ -714,6 +714,13 @@ repark-core's error map.
   `RemoveFieldByTransform` drops by source-plus-transform pair; `ReplaceField` drops by old
   name and adds source plus transform with an optional new name; `RenameField` renames by
   current name. Errors propagate the load, validation, or commit failure unchanged.
+  **IPI-26/27 round 3 (2026-09-21, cell `D-REPLACE-PART-FIELD`):** `ReplaceFieldByTransform`
+  names the replaced field by `(source column, transform)` — resolved against the CURRENT
+  default spec (source column case-insensitive, like the fork's own transform resolution)
+  into the by-name `ReplaceField` flow, and a pair matching no current field refuses loud
+  `DataInvalid` before anything commits. Measured Spark answer for
+  `REPLACE PARTITION FIELD days(ts) WITH hours(ts)`: spec `[["ts_hour","hour","ts"]]`,
+  spec-count 2.
 - `sort_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** `apply_write_order`, the one-transaction
   write-layout primitive over the fork's `Transaction::replace_sort_order` plus an optional
   `write.distribution-mode` property set: column names resolve case-insensitively against the

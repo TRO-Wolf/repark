@@ -803,7 +803,7 @@ pub(crate) fn try_parse_iceberg_alter_ddl(sql: &str) -> Option<Result<IcebergAlt
         && word_eq(&significant, index + 1, "PARTITION")
         && word_eq(&significant, index + 2, "FIELD")
     {
-        return Some(parse_replace_partition_field(
+        return Some(crate::replace_partition_field::parse(
             &significant,
             index + 3,
             table_parts,
@@ -948,63 +948,8 @@ fn parse_drop_partition_field(
     })
 }
 
-fn parse_replace_partition_field(
-    significant: &[Sig],
-    start: usize,
-    table_parts: Vec<String>,
-) -> Result<IcebergAlterDdl> {
-    // REPLACE PARTITION FIELD <old> WITH <term> [AS name] old may be a bare name or transform.
-    let old_name = word_at(significant, start).ok_or_else(|| {
-        DataFusionError::Plan(
-            "ALTER TABLE REPLACE PARTITION FIELD expects the existing partition field name".into(),
-        )
-    })?;
-    if matches!(significant.get(start + 1), Some(Sig::LParen)) {
-        return Err(DataFusionError::NotImplemented(
-            "ALTER TABLE REPLACE PARTITION FIELD with a transform(…) left-hand side is not \
-             supported yet — drop by name or DROP PARTITION FIELD transform(col), then ADD \
-             (I7 stretch)"
-                .into(),
-        ));
-    }
-    if !word_eq(significant, start + 1, "WITH") {
-        return Err(DataFusionError::Plan(
-            "ALTER TABLE REPLACE PARTITION FIELD expects `WITH <transform>(col) [AS name]`".into(),
-        ));
-    }
-    let (field_spec, name, next) = parse_partition_field_term(significant, start + 2)?;
-    let (name, next) = if name.is_some() {
-        (name, next)
-    } else if word_eq(significant, next, "AS") {
-        let alias = word_at(significant, next + 1).ok_or_else(|| {
-            DataFusionError::Plan(
-                "ALTER TABLE REPLACE PARTITION FIELD … AS expects a partition field name".into(),
-            )
-        })?;
-        (Some(alias.to_string()), next + 2)
-    } else {
-        (None, next)
-    };
-    if next < significant.len() {
-        return Err(DataFusionError::Plan(format!(
-            "trailing tokens after REPLACE PARTITION FIELD (starting at `{}`)",
-            render_sig_at(significant, next)
-        )));
-    }
-    let (source_name, transform) = partition_field_spec_parts(&field_spec);
-    Ok(IcebergAlterDdl::PartitionSpec {
-        table_parts,
-        changes: vec![PartitionSpecChange::ReplaceField {
-            old_name: old_name.to_string(),
-            source_name,
-            transform,
-            new_name: name,
-        }],
-    })
-}
-
 /// Parse identity, column, bucket, truncate, and year transforms, optionally parenthesised.
-fn parse_partition_field_term(
+pub(crate) fn parse_partition_field_term(
     significant: &[Sig],
     start: usize,
 ) -> Result<(PartitionFieldSpec, Option<String>, usize)> {
@@ -1139,7 +1084,7 @@ fn partition_field_spec_to_remove_by_transform(
     }
 }
 
-fn partition_field_spec_parts(field_spec: &PartitionFieldSpec) -> (String, Transform) {
+pub(crate) fn partition_field_spec_parts(field_spec: &PartitionFieldSpec) -> (String, Transform) {
     (field_spec.column().to_string(), field_spec.transform())
 }
 

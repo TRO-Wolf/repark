@@ -1169,6 +1169,25 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **IPI-26/27 round 2 (2026-09-20):** `table_comment_extracts_on_either_side_of_tblproperties`
   and `table_location_extracts_on_either_side_of_tblproperties` pin the clause
   extraction on both sides of `TBLPROPERTIES`, CTAS included.
+  **IPI-26/27 round 3 (2026-09-21, cells `D-CREATE-PART-DATE-ALIAS`, `D-REPLACE-PART-FIELD`
+  + near-miss):** `date_alias_names_the_field_ts_day` pins the `date`/`date_hour`
+  aliases onto the day/hour specs; `bucket_and_truncate_both_argument_orders_give_the_same_spec`,
+  `bucket_two_integer_arguments_raises`, and `bucket_two_non_integer_arguments_refuses`
+  pin the width-arg sniff (both orders identical, ambiguous or integer-less refuse);
+  `replace_partition_field_transform_lhs_parses_to_by_transform_change` pins the
+  transform-LHS parse to `ReplaceFieldByTransform`, and
+  `replace_partition_field_transform_lhs_resolves_and_refuses_no_match` evolves
+  `days(ts) WITH hours(ts)` to `ts_hour` through the door and refuses a LHS matching
+  no current field.
+  **IPI-26/27 round 3 remediation (2026-09-21):**
+  `render_transform_arg_keeps_string_literals_quoted` and
+  `bucket_quoted_string_arguments_are_never_a_width` pin that a quoted string literal
+  stays quoted through `render_transform_arg` and refuses as a bucket width with the
+  integer error, in either argument position.
+  **WO3-R2 (2026-09-21):** `bucket_quoted_string_arguments_are_never_a_width` gains the
+  width-first orders, and the sibling `truncate_quoted_string_arguments_are_never_a_width`
+  pins all four quoted-literal orders of `truncate`; a quoted string refuses as a width in
+  either argument slot of either transform, so a first-argument-only quote guard dies.
 
 ## Mapping rule
 

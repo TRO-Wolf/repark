@@ -1041,3 +1041,8 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
   sniffer and the writer's schema options into their own modules.
   pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
 - `test_cap_1_source_file_line_cap.py` — **IPI-26/27 rebase onto main e0b91bca (2026-09-20):** the `crates/repark-spark/src/alter.rs` mirror row 1446 → 1444 matches the `check_rust_file_size.py` baseline (on top of main's IPI-51 ratchet 1449 → 1446, this branch's comma-splitter hunk is a further shrink-only −2, ratchet down).
+- `test_cap_1_source_file_line_cap.py` — **IPI-26/27 cap-1 ratchet onto main cbe6ec97 (2026-09-21):**
+  the `crates/repark-spark/src/alter.rs` mirror row and the `check_rust_file_size.py` exception
+  both ratchet 1444 → 1384 — this branch's REPLACE PARTITION FIELD extraction shrank alter.rs and
+  main's IPI-32 merge shrank it further; live-tree splitlines count is 1384, verified by
+  measurement.

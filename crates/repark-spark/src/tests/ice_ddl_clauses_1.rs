@@ -2,6 +2,8 @@ use super::super::*;
 use super::common::*;
 use datafusion::sql::sqlparser::dialect::{GenericDialect, SparkSqlDialect};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+use iceberg::spec::Transform;
+use repark_iceberg::write::alter::PartitionSpecChange;
 
 use crate::alter::rewrite_add_columns_plural;
 use crate::normalize::{has_angle_map_column_type, normalized_parse_dialect};
@@ -132,6 +134,199 @@ fn clustered_by_reaches_partitioning_before_parse() {
             name: "bucket".to_string(),
             args: vec!["4".to_string(), "id".to_string()],
         }]
+    );
+}
+
+#[test]
+fn date_alias_names_the_field_ts_day() {
+    for (alias, canonical) in [("date", "day"), ("date_hour", "hour")] {
+        assert_eq!(
+            build_transform_field(alias, &["ts".to_string()]).unwrap(),
+            build_transform_field(canonical, &["ts".to_string()]).unwrap(),
+            "{alias} must alias {canonical}"
+        );
+    }
+    assert_eq!(
+        build_transform_field("date", &["ts".to_string()]).unwrap(),
+        PartitionFieldSpec::Day("ts".to_string())
+    );
+    assert_eq!(
+        build_transform_field("date_hour", &["ts".to_string()]).unwrap(),
+        PartitionFieldSpec::Hour("ts".to_string())
+    );
+}
+
+#[test]
+fn bucket_and_truncate_both_argument_orders_give_the_same_spec() {
+    let build = |name: &str, first: &str, second: &str, label: &str| -> PartitionFieldSpec {
+        build_transform_field(name, &[first.to_string(), second.to_string()])
+            .unwrap_or_else(|error| panic!("{label} must build: {error}"))
+    };
+    let bucket_first = build("bucket", "4", "id", "bucket(4, id)");
+    let bucket_second = build("bucket", "id", "4", "bucket(id, 4)");
+    assert_eq!(bucket_first, bucket_second);
+    assert_eq!(
+        bucket_first,
+        PartitionFieldSpec::Bucket {
+            column: "id".to_string(),
+            num_buckets: 4,
+        }
+    );
+    let truncate_first = build("truncate", "4", "data", "truncate(4, data)");
+    let truncate_second = build("truncate", "data", "4", "truncate(data, 4)");
+    assert_eq!(truncate_first, truncate_second);
+    assert_eq!(
+        truncate_first,
+        PartitionFieldSpec::Truncate {
+            column: "data".to_string(),
+            width: 4,
+        }
+    );
+}
+
+#[test]
+fn bucket_two_integer_arguments_raises() {
+    let error = build_transform_field("bucket", &["1".to_string(), "2".to_string()])
+        .expect_err("bucket(1, 2) is ambiguous and must refuse");
+    assert!(error.to_string().contains("bucket"), "got: {error}");
+    let truncate_error = build_transform_field("truncate", &["1".to_string(), "2".to_string()])
+        .expect_err("truncate(1, 2) is ambiguous and must refuse");
+    assert!(
+        truncate_error.to_string().contains("truncate"),
+        "got: {truncate_error}"
+    );
+}
+
+#[test]
+fn bucket_two_non_integer_arguments_refuses() {
+    let error = build_transform_field("bucket", &["a".to_string(), "b".to_string()])
+        .expect_err("bucket(\"a\", \"b\") has no integer width and must refuse");
+    assert!(error.to_string().contains("integer"), "got: {error}");
+}
+
+#[test]
+fn render_transform_arg_keeps_string_literals_quoted() {
+    let single =
+        crate::normalize::render_transform_arg(&[&Token::SingleQuotedString("x".to_string())]);
+    let double =
+        crate::normalize::render_transform_arg(&[&Token::DoubleQuotedString("x".to_string())]);
+    assert_eq!(single, "'x'");
+    assert_eq!(double, "\"x\"");
+}
+
+#[test]
+fn bucket_quoted_string_arguments_are_never_a_width() {
+    for args in [
+        vec!["'x'".to_string(), "16".to_string()],
+        vec!["\"x\"".to_string(), "16".to_string()],
+        vec!["'16'".to_string(), "id".to_string()],
+        vec!["16".to_string(), "'x'".to_string()],
+        vec!["16".to_string(), "\"x\"".to_string()],
+    ] {
+        let error = build_transform_field("bucket", &args)
+            .expect_err("a quoted string is never a bucket width and must refuse");
+        assert!(
+            error.to_string().contains("numBuckets must be an integer"),
+            "got: {error}"
+        );
+    }
+}
+
+#[test]
+fn truncate_quoted_string_arguments_are_never_a_width() {
+    for args in [
+        vec!["'day'".to_string(), "4".to_string()],
+        vec!["\"day\"".to_string(), "4".to_string()],
+        vec!["4".to_string(), "'day'".to_string()],
+        vec!["4".to_string(), "\"day\"".to_string()],
+    ] {
+        let error = build_transform_field("truncate", &args)
+            .expect_err("a quoted string is never a truncate width and must refuse");
+        assert!(
+            error.to_string().contains("width must be an integer"),
+            "got: {error}"
+        );
+    }
+}
+
+#[test]
+fn replace_partition_field_transform_lhs_parses_to_by_transform_change() {
+    let sql = "ALTER TABLE ice.ns.t REPLACE PARTITION FIELD days(ts) WITH hours(ts)";
+    let parsed = crate::alter::try_parse_iceberg_alter_ddl(sql)
+        .expect("REPLACE PARTITION FIELD transform LHS must claim the statement")
+        .expect("statement must parse");
+    let crate::alter::IcebergAlterDdl::PartitionSpec { changes, .. } = parsed else {
+        panic!("{sql} must parse as a partition-spec change");
+    };
+    assert_eq!(changes.len(), 1);
+    assert!(
+        matches!(
+            &changes[0],
+            PartitionSpecChange::ReplaceFieldByTransform {
+                old_source_name,
+                old_transform: Transform::Day,
+                source_name,
+                transform: Transform::Hour,
+                new_name: None,
+            } if old_source_name == "ts" && source_name == "ts"
+        ),
+        "got: {:?}",
+        changes[0]
+    );
+}
+
+#[tokio::test]
+async fn replace_partition_field_transform_lhs_resolves_and_refuses_no_match() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.rpf (ts TIMESTAMP, id BIGINT) USING iceberg",
+    )
+    .await
+    .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.rpf ADD PARTITION FIELD days(ts)",
+    )
+    .await
+    .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.rpf REPLACE PARTITION FIELD days(ts) WITH hours(ts)",
+    )
+    .await
+    .unwrap();
+    let handle = catalog_handle(&catalogs, "ice").unwrap();
+    let table = handle
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".into()),
+            "rpf".into(),
+        ))
+        .await
+        .unwrap();
+    let rendered: Vec<(String, String)> = table
+        .metadata()
+        .default_partition_spec()
+        .fields()
+        .iter()
+        .map(|field| (field.name.clone(), field.transform.to_string()))
+        .collect();
+    assert_eq!(rendered, vec![("ts_hour".to_string(), "hour".to_string())]);
+
+    let no_match = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.rpf REPLACE PARTITION FIELD bucket(4, id) WITH bucket(8, id)",
+    )
+    .await
+    .expect_err("a transform LHS matching no field must refuse loud");
+    assert!(
+        no_match.to_string().contains("matches no partition field"),
+        "got: {no_match}"
     );
 }
 

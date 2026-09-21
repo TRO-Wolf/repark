@@ -3842,6 +3842,39 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **Rename refusal (2026-09-21):** the rename twin moved to
   [test_ice_change_column_rename_1.py](test_ice_change_column_rename_1.py) as a
   refusal pin — Spark refuses the two-name form.
+  **IPI-26/27 round 3 (2026-09-21, cells `D-CREATE-PART-DATE-ALIAS`,
+  `D-REPLACE-PART-FIELD` + near-miss):** `test_date_alias_names_the_field_ts_day`
+  asserts `date(ts)` / `date_hour(ts)` record the `ts_day` / `ts_hour` names;
+  `test_bucket_both_argument_orders_give_the_same_spec` and
+  `test_truncate_both_argument_orders_give_the_same_spec` assert both
+  `bucket`/`truncate` argument orders record the identical spec;
+  `test_bucket_two_integer_arguments_raises` and
+  `test_partition_transform_near_misses_still_refuse` hold the neither/both-integer
+  and unknown-transform refusals; `test_replace_partition_field_transform_lhs_days_with_hours`
+  asserts the full spec `[["ts_hour","hour","ts"]]` and that the REPLACE adds exactly
+  one spec, and
+  `test_replace_partition_field_transform_lhs_matching_no_field_refuses` holds the
+  loud refusal for a LHS matching no current field.
+  **IPI-26/27 round 3 remediation (2026-09-21):** the REPLACE pin runs the actual
+  inventory sequence (`CREATE … PARTITIONED BY (days(ts))`, then
+  `REPLACE … days(ts) WITH hours(ts)`) and pins the absolute spec-count 2,
+  default-spec-id 1, and the field rows — the earlier note claiming a RePark
+  spec-count 3 from an empty spec-0 was measured on the wrong fixture (unpartitioned
+  CREATE plus ADD PARTITION FIELD) and is withdrawn; on the inventory sequence both
+  engines record spec-count 2. New refusal pins:
+  `test_bucket_quoted_string_is_never_the_width` (both quote spellings, table carries
+  column `x` so the pre-fix behaviour was a landed `x_bucket` spec),
+  `test_truncate_quoted_string_is_never_the_width`,
+  `test_date_transform_quoted_column_refuses`;
+  `test_replace_partition_field_days_lhs_wrong_source_refuses` and
+  `test_replace_partition_field_truncate_lhs_wrong_source_refuses` hold the
+  matches-no-partition-field refusal when the LHS transform is present in the spec
+  but its source column differs — the pair, not the transform alone, resolves.
+  **WO3-R2 (2026-09-21):** `test_bucket_quoted_string_is_never_the_width` also runs the
+  width-first order `bucket(16, {literal})` for both quote spellings, and
+  `test_truncate_quoted_string_is_never_the_width` gains `truncate(4, 'day')` and
+  `truncate(4, "day")` beside the kept `truncate(ts, 'day')` case — the refusal holds
+  in either argument order, so a first-argument-only quote guard dies on this door too.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to
