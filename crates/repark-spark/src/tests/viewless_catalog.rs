@@ -142,9 +142,13 @@ async fn test_views_refuse_on_glue_and_s3tables() {
             .create_namespace(&NamespaceIdent::new("ns".to_string()), HashMap::new())
             .await
             .unwrap();
+        let stub: Arc<dyn Catalog> = Arc::new(ViewlessCatalog { inner });
+        repark_iceberg::catalog::register_iceberg_catalog(&ctx, name, stub.clone())
+            .await
+            .unwrap();
         catalogs.insert(
             name.to_string(),
-            Arc::new(ViewlessCatalog { inner }),
+            stub,
             LocationPolicy::TempFallbackAllowed { root: warehouse },
         );
     }
@@ -176,5 +180,27 @@ async fn test_views_refuse_on_glue_and_s3tables() {
             0,
             "pins: ice-views-1/C-005"
         );
+        run(
+            &ctx,
+            &catalogs,
+            &format!("CREATE TABLE {name}.ns.t AS SELECT * FROM src"),
+        )
+        .await;
+        let error = execute(
+            &ctx,
+            &catalogs,
+            &format!("CREATE OR REPLACE VIEW {name}.ns.t AS SELECT 1 AS id"),
+        )
+        .await
+        .expect_err("replace over a table on a viewless catalog must refuse");
+        assert_view_unsupported(error, name, true);
+        let error = execute(
+            &ctx,
+            &catalogs,
+            &format!("CREATE VIEW IF NOT EXISTS {name}.ns.t AS SELECT 1 AS id"),
+        )
+        .await
+        .expect_err("create over a table on a viewless catalog must refuse");
+        assert_view_unsupported(error, name, false);
     }
 }

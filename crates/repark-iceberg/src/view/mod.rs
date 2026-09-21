@@ -161,7 +161,11 @@ pub async fn create_or_replace_view(
     let ident = TableIdent::new(target.namespace.clone(), target.view_name.to_string());
     let view_exists = match target.catalog.view_exists(&ident).await {
         Ok(exists) => exists,
-        Err(error) if error.kind() == ErrorKind::FeatureUnsupported => false,
+        Err(error) if error.kind() == ErrorKind::FeatureUnsupported => {
+            return create_catalog_view(target, definition, or_replace)
+                .await
+                .map(Some);
+        }
         Err(error) if error.kind() == ErrorKind::NamespaceNotFound => {
             return Err(schema_not_found_on_drop(
                 target.catalog_name,
