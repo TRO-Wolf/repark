@@ -27,6 +27,7 @@ CRITIC_F1 = (
     "AS t(g, k, v)"
 )
 
+
 def _payload() -> dict[str, Any]:
     return json.loads(CRITIC_ORACLE_PATH.read_text())
 

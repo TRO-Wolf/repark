@@ -7,9 +7,7 @@ from typing import Any
 from repark.spark.column import Column
 from repark.spark.functions import _aggregate_argument, _thread_origin
 
-FNPAGG1_EXPORTS: tuple[str, ...] = (
-    "grouping_id",
-)
+FNPAGG1_EXPORTS: tuple[str, ...] = ("grouping_id",)
 
 
 def install_into(namespace: dict[str, Any], all: list[str]) -> None:
