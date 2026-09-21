@@ -41,6 +41,26 @@ and measured-parity contract would grow `call.rs` beyond its exact
   found; when absent the lookup stays at target 1 and a miss tells the caller to pass
   the planning target. Guide: `docs/guide/maintenance-policy.md`.
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `create_changelog_view.rs` — **ICE-CHANGELOG-1 (2026-09-20):** the procedure. Java's
+  parameter list verbatim (`table`, `changelog_view`, `options`, `compute_updates`,
+  `identifier_columns`, `net_changes`) — `remove_carryovers` is NOT an argument in Iceberg
+  1.11, so it is behaviour here and not an argument either. The default view name is
+  `` `<table>_changes` `` WITH backticks in the returned row and without them in the registered
+  name, which is what `QC-DEFAULT-NAME` records. pins: ice-changelog-1/C-014
+- `changelog.rs` (+ `changelog/`) — **ICE-CHANGELOG-1 (2026-09-20):** the row transforms
+  `create_changelog_view` applies to the raw changelog relation, ported from Iceberg 1.11's
+  `ChangelogIterator` family (read off the runtime jar's bytecode, not from docs) and held here
+  because they are the PROCEDURE's, never the relation's — `t.changes` stays raw INSERT/DELETE.
+  Java is an if/else, not a chain: `compute_updates` runs `RemoveCarryoverIterator` then
+  `ComputeUpdateIterator` (repartition by the identifier columns + `_change_ordinal`, sort by
+  those + `_change_type`, so a DELETE pairs only with the INSERT that follows it); otherwise
+  `removeCarryoverRows(net_changes)` runs either `RemoveCarryoverIterator` (equality over every
+  column but `_change_type`, so a carryover pair must share one snapshot) or
+  `RemoveNetCarryoverIterator` (equality over the data columns only, a running net count that
+  restarts the group at a zero crossing — which is what yields the recorded LAST-touching
+  ordinal). Sorting and equality both go through one Arrow `RowConverter`, whose default
+  ascending / nulls-first order is Spark's `sortWithinPartitions`.
+  pins: ice-changelog-1/C-011, C-012, C-013
 - `branch_ops.rs` — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`, `cherrypick_snapshot`,
   `set_current_snapshot` and `rollback_to_timestamp` over the fork's `ManageSnapshots` /
   `Transaction::cherry_pick` (no fork change). Ref-kind and ancestry pre-checks shape

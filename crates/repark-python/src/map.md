@@ -60,7 +60,12 @@ and hand execution, SQL, and ML semantics to the engine crates.
   tuples, `session_source` resolves one name through `ReparkSession::source` (the
   undeclared-name refusal maps through `to_py_err`), and `session_source_ping` re-resolves
   then calls `NamedSource::ping` so the connector-pending refusal keeps its engine class.
-  pins: cfg-2/C-013, C-014, C-015 |
+  pins: cfg-2/C-013, C-014, C-015 **ICE-CHANGELOG-1 (2026-09-20):** a fourth free
+  `#[pyfunction]`, `read_iceberg_incremental`, takes the table name plus two raw option maps
+  (the incremental window, and the time-travel pins found beside it) and drives
+  `repark_core::time_travel::incremental::read_incremental` — the facade decides nothing, and
+  `session.rs` keeps its exact baseline because the binding is a free function, not a method.
+  pins: ice-changelog-1/C-001, C-006 |
 | [`text_io.rs`](text_io.rs) | **IO-TEXT-1 (2026-09-14):** the text read/write bindings — two free `#[pyfunction]`s **IO-TEXT-1 (2026-09-15, orchestrator):** `text_io.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
   (the `session_sources` shape, since pyo3 allows one `#[pymethods]` block per type):
   runtime, `write_text_frame` drives `repark_core::write_text_frame` with a newline

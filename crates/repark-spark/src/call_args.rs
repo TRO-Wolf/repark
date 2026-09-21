@@ -113,6 +113,49 @@ impl CallArgs {
             .transpose()
     }
 
+    pub(crate) fn optional_string_array(&self, name: &str) -> Result<Option<Vec<String>>> {
+        let Some(expr) = self.named.get(name) else {
+            return Ok(None);
+        };
+        let elements: Vec<Expr> = match expr {
+            Expr::Array(array) => array.elem.clone(),
+            Expr::Function(function) if function.name.to_string().eq_ignore_ascii_case("array") => {
+                let FunctionArguments::List(list) = &function.args else {
+                    return Err(DataFusionError::Plan(format!(
+                        "CALL argument `{name}` must be array('a', 'b', …)"
+                    )));
+                };
+                let mut elements = Vec::with_capacity(list.args.len());
+                for arg in &list.args {
+                    match arg {
+                        FunctionArg::Unnamed(FunctionArgExpr::Expr(inner)) => {
+                            elements.push(inner.clone());
+                        }
+                        other => {
+                            return Err(DataFusionError::Plan(format!(
+                                "CALL argument `{name}` must be array of string literals, got {other}"
+                            )));
+                        }
+                    }
+                }
+                elements
+            }
+            Expr::Value(ValueWithSpan {
+                value: Value::Null, ..
+            }) => Vec::new(),
+            other => {
+                return Err(DataFusionError::Plan(format!(
+                    "CALL argument `{name}` must be array('a', 'b', …), got {other}"
+                )));
+            }
+        };
+        elements
+            .iter()
+            .map(|element| expr_as_string(element, name))
+            .collect::<Result<Vec<String>>>()
+            .map(Some)
+    }
+
     pub(crate) fn optional_i64(&self, name: &str, position: Option<usize>) -> Result<Option<i64>> {
         if let Some(expr) = self.named.get(name) {
             return expr_as_i64(expr, name).map(Some);

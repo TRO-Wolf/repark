@@ -92,10 +92,26 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
         };
     // Release pinned relations after planning.
     let mut pinned = time_travel::PinnedViews::default();
+    let sql_after_changes: std::borrow::Cow<'_, str> =
+        if time_travel::changes::sql_may_have_changes_relation(sql_after_meta.as_ref()) {
+            match time_travel::changes::prepare_changes_sql(
+                ctx,
+                &catalogs,
+                sql_after_meta.as_ref(),
+                &mut pinned,
+            )
+            .await?
+            {
+                Some(rewritten) => std::borrow::Cow::Owned(rewritten),
+                None => std::borrow::Cow::Borrowed(sql_after_meta.as_ref()),
+            }
+        } else {
+            std::borrow::Cow::Borrowed(sql_after_meta.as_ref())
+        };
     let sql_after_branch = write_to_branch::apply_write_to_branch(
         ctx,
         &catalogs,
-        sql_after_meta.as_ref(),
+        sql_after_changes.as_ref(),
         &mut pinned,
     )
     .await?;

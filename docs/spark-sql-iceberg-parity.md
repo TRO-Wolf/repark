@@ -401,6 +401,64 @@ covers only what is still open: the staged-snapshot flow behind `spark.wap.id`.
   pins: ice-wap-branch-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011, C-012, C-013
 
+#### ICE-CHANGELOG-1 — incremental append reads, `t.changes` and `create_changelog_view` — **FIXED 2026-09-20**
+
+- **repark** — three doors over one Iceberg range scan. (1) The reader options
+  `start-snapshot-id` (exclusive) and `end-snapshot-id` (inclusive, defaulting to the current
+  snapshot) plan an incremental APPEND scan and return the rows the append snapshots in that
+  window added; a non-append snapshot inside the range contributes nothing and does not raise;
+  a projection and a filter compose; the scan reads the end snapshot's schema. (2)
+  `SELECT … FROM cat.ns.t.changes` and `format('iceberg').load('cat.ns.t.changes')` serve the
+  changelog RELATION — the table's columns plus `_change_type`, `_change_ordinal` and
+  `_commit_snapshot_id` — raw INSERT/DELETE over the whole history, or over a window given as
+  snapshot ids or timestamps. (3)
+  `CALL <cat>.system.create_changelog_view(table, changelog_view, options, compute_updates,
+  identifier_columns, net_changes)` registers a lazy session view over that relation with Java's
+  row transforms: carryover removal by default, `compute_updates` pairing a snapshot's DELETE
+  and INSERT into `UPDATE_BEFORE` / `UPDATE_AFTER`, and `net_changes` collapsing the window to
+  each surviving row once at its LAST touching ordinal. The refusals are Java's, verbatim:
+  ``Cannot set only `end-snapshot-id` for incremental scans. Please, set `start-snapshot-id` too.``,
+  ``Only changelog scans support `start-timestamp` and `end-timestamp`. Use `start-snapshot-id`
+  and `end-snapshot-id` for incremental scans.``, `Cannot use time travel in incremental scan`,
+  `Starting snapshot (exclusive) <s> is not a parent ancestor of end snapshot <e>`,
+  `Not support net changes with update images`,
+  `Cannot compute the update images because identifier columns are not set`, and
+  `Delete files are currently not supported in changelog scans` when the range holds row-level
+  delete files — which, as on Spark, surfaces when the VIEW IS READ, not when the procedure is
+  called.
+- **Before (measured 2026-09-20 on `e4160a58`)** — 0 of the 11 inventory cells matched.
+  `start-snapshot-id` / `end-snapshot-id` refused with the facade's "not supported by repark yet
+  (Iceberg incremental read / start-end snapshot window is a future seed)"; `t.changes` failed
+  with `Unsupported compound identifier … Expected 1, 2 or 3 parts, got 4`; and
+  `create_changelog_view` failed with `CALL system.create_changelog_view is not supported`.
+- **After (measured 2026-09-20)** — the 11 inventory cells and the 36-cell superset the unit
+  pins answer as Spark does, row multiset and column types included.
+- **Apache Spark** — as above. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:
+  1.11.0, `local[1]`, InMemoryCatalog; 36 cells recorded by the run-25c measurement and
+  committed verbatim as `python/repark/tests/ice_changelog_1_spark_oracle.json`. Every message
+  and every iterator rule was read off the 1.11.0 runtime jar's bytecode —
+  `SparkReadConf.incrementalAppendScanBoundaries`, `SparkChangelogScanBuilder`,
+  `SnapshotUtil.oldestAncestorAfter`, `CreateChangelogViewProcedure` and the three
+  `ChangelogIterator` implementations.)*
+- **Pin** — `python/repark/tests/test_ice_changelog_1.py` (one pin per recorded cell);
+  `crates/repark-spark/src/call/changelog/tests.rs` (the row transforms on synthetic rows,
+  including the three edges no cell reaches); `crates/repark-core/src/time_travel/incremental/tests.rs`
+  (the window parser and Java's boundary refusals).
+- **Rationale** — FIXED 2026-09-20 (ICE-CHANGELOG-1). The split follows Java's own: the table
+  format plans and reads the change rows (fork `IncrementalAppendScan` /
+  `IncrementalChangelogScan` plus the new `iceberg::arrow::ChangelogReader`), and the engine
+  does the windowing and the row transforms. `t.changes` is NOT a metadata table — a metadata
+  table is snapshot-scoped table metadata, while `t.changes` is table data over a snapshot
+  range — so it resolves as its own relation kind and `METADATA_TABLE_NAMES` is untouched.
+  **Residues, stated plainly:** `remove_carryovers` is implemented as behaviour but is not
+  accepted as an argument, because Iceberg 1.11 does not declare it (accepting an argument Spark
+  rejects would be a leniency divergence); Java's
+  `Identifier field is required as table contains unorderable columns` refusal is not
+  implemented (no cell measures it — a table with a map column and no identifier columns will
+  sort where Spark refuses); `t.branch_b.changes` is out of scope.
+  pins: ice-changelog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015
+
 #### REF-4 — reading a ref through the dotted selector — **FIXED 2026-09-01**
 
 **The boundary is read-vs-write, not query-vs-DML.** `cat.ns.t.branch_b` is a ref selector

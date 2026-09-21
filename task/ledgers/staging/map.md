@@ -1381,3 +1381,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `fix/ipi-19-56-37-schema-evo-write`.
   pins: ipi-19-56-37-schema-evolution-write/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
   C-008, C-009, C-010, C-011, C-012, C-013
+- [ice-changelog-1-ledger.md](ice-changelog-1-ledger.md) —
+  **ICE-CHANGELOG-1 (2026-09-20), in flight:** incremental append reads, the `t.changes`
+  relation and `create_changelog_view` (IPI-22) — the four window reader options reach the
+  fork's `IncrementalAppendScan`, `t.changes` resolves as its own relation kind onto a
+  `ChangelogTableProvider` (never a metadata table), and the procedure registers a lazy view
+  carrying Java's `ChangelogIterator` transforms read off the 1.11.0 bytecode. Needs the fork
+  branch `fix/f-changelog-reader-1` pinned before CI can be green. `risk_tier: standard`.
+  Branch `fix/ice-changelog-1`.
+  pins: ice-changelog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015

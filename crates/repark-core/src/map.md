@@ -791,6 +791,23 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   discards provider errors, and the only thing stopping SQL `CREATE CATALOG` from
   silently replacing the source's provider.
   pins: cfg-2/C-001, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
+- `time_travel/incremental.rs` (+ `time_travel/incremental/tests.rs`) — **ICE-CHANGELOG-1
+  (2026-09-20):** the Iceberg
+  incremental-read door. `IncrementalWindow::from_options` parses the four reader-option
+  strings the facade forwards verbatim (`start-snapshot-id`, `end-snapshot-id`,
+  `start-timestamp`, `end-timestamp`, case-insensitive); `append_boundaries` ports Java
+  `SparkReadConf.incrementalAppendScanBoundaries` — a timestamp bound on a plain table load
+  refuses ``Only changelog scans support `start-timestamp` and `end-timestamp`…`` and an end
+  without a start refuses ``Cannot set only `end-snapshot-id` for incremental scans…``.
+  `read_incremental` refuses a time-travel pin beside a window (`Cannot use time travel in
+  incremental scan`, Java `SparkScanBuilder`; a legacy `snapshot-id` keeps Spark's
+  "no longer supported" message, raised after the boundary checks as Java orders them) and
+  hands `TimeTravelSpec::Incremental { from, to }` to `time_travel::read_table_at`.
+  **Phase 4:** `TimeTravelSpec::Changelog(IncrementalWindow)` carries the raw window for a
+  `t.changes` read, resolved against the table's metadata at provider-build time because Java's
+  timestamp rule needs the ancestry (`oldestAncestorAfter`), and `read_incremental` routes an
+  identifier whose last part is `changes` onto it.
+  pins: ice-changelog-1/C-001, C-002, C-004, C-005, C-006, C-009, C-010
 - `lineage_columns.rs` — **V3-4:** `prepare_lineage_sql` rewrites **single-table** queries
   that name `_row_id` / `_last_updated_sequence_number` onto a v3
   `LineageColumnsTableProvider` temp view (qualified/aliased FROM, unquoted case-fold,
@@ -801,8 +818,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved
   here from `session.rs` in CFG-1 step 3, next to the spec its `into_spec` builds) + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
-  (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the
-  ONE minter of the `__repark_tt_` namespace** (H-1b fix pass, 2026-08-11). SQL-text rewriting
+  (snapshot-pinned static provider via `iceberg-datafusion`, or — **ICE-CHANGELOG-1
+  (2026-09-20)** — `repark_iceberg`'s `IncrementalAppendTableProvider` for the
+  `TimeTravelSpec::Incremental { from, to }` variant, on one table load instead of two), and
+  **`next_temp_view_name` — the ONE minter of the `__repark_tt_` namespace** (H-1b fix pass,
+  2026-08-11). SQL-text rewriting
   remains deferred with the phase-2 router.
   **ICE-TT-RESOLVE-1 (2026-09-19):** the module split at the 1000-line ceiling into
   `time_travel/sql_text.rs` (string/zone parsing, token extraction), `time_travel/sql_ast.rs`
@@ -820,6 +840,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   text before resolving. pins: ice-tt-resolve-1/C-002
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** the moved names resolve only behind the
   `time_travel` module; the stale root re-exports are gone. pins: ice-tt-resolve-1/C-010
+  **ICE-CHANGELOG-1 round 1 (2026-09-20):** `read_table_at`'s Incremental arm re-raises a
+  `DataInvalid`-kind fork refusal through `illegal_argument_error`, so a bad window raises
+  `IllegalArgumentException` as Spark's does; the global `DataInvalid` mapping is untouched.
+  pins: ice-changelog-1/C-007
   **ICE-TT-RESOLVE-1 round 2 close (2026-09-19):** the root block narrows to the six
   externally used names; `lib.rs` sits at the 150 default ceiling. pins: ice-tt-resolve-1/C-012
   **ICE-TT-RESOLVE-1 round 2 (2026-09-19):** `EngineContext::new` is 3-arg again (zone

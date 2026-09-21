@@ -12,12 +12,16 @@ mod builders;
 mod cache_wiring;
 mod caches;
 mod catalog_ops;
+mod changelog;
+mod changelog_view;
 mod counting_storage;
 mod files;
+mod incremental_append;
 mod io_stats;
 mod lineage_columns;
 mod location;
 mod provider;
+mod scan_batches;
 
 // Public product surface (order: provider → builders → location).
 pub use provider::{
@@ -37,6 +41,8 @@ pub use caches::{
     METADATA_CACHE_KEY_ALT,
 };
 pub use catalog_ops::reregister_catalog_provider;
+pub use changelog::{ChangelogTableProvider, ChangelogWindow};
+pub use changelog_view::{ChangelogRowTransform, ChangelogViewProvider};
 pub use counting_storage::{
     CountingStorage, CountingStorageFactory, GLUE_DEFAULT_CONFIGURED_SCHEME,
     S3TABLES_DEFAULT_CONFIGURED_SCHEME, glue_default_storage_factory,
@@ -45,6 +51,7 @@ pub use counting_storage::{
 pub use files::write_text_file;
 pub use iceberg::TableMetadataCacheStats;
 pub use iceberg::arrow::ParquetFooterCacheStats;
+pub use incremental_append::{AppendWindow, IncrementalAppendTableProvider};
 pub use io_stats::{
     IcebergFileClass, IcebergIoCount, IcebergIoCounters, IcebergIoOp, IcebergIoStats,
     PARQUET_TAIL_MAGIC, PUFFIN_TAIL_MAGIC, classify_iceberg_path, ranged_read_op,

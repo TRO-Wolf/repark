@@ -18,6 +18,8 @@ use repark_core::{
 };
 use repark_functions::session_time_zone::session_time_zone_from_options;
 
+pub mod changes;
+
 use crate::catalog_ops::iceberg_err;
 
 /// Whether `sql` contains a Spark Iceberg time-travel clause we must rewrite.

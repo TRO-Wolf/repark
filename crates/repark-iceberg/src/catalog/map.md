@@ -313,6 +313,41 @@ Source comments retain only API and safety contracts; implementation narration i
   `s3://`/`s3a://` → the fork's OpenDAL S3 factory; `file://`/bare **absolute** path → LocalFs;
   anything else — unknown scheme, single-slash typo `s3:/…`, relative/empty path — fails loud,
   never a silent LocalFs).
+- `changelog.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `ChangelogTableProvider` serves the
+  `t.changes` relation on both doors. It calls the fork's `Table::incremental_changelog_scan`
+  plus the fork's new `ChangelogReader`, so the three reserved columns come from ONE definition
+  (`iceberg::arrow::changelog_arrow_schema`) and RePark never re-declares a field id. The rows
+  are RAW INSERT/DELETE: carryover removal, update images and net changes belong to
+  `create_changelog_view`, never to the relation (Java's `SparkChangelogTable` is the same
+  shape). `ChangelogWindow.empty` carries Java's two empty-scan short-circuits
+  (`noSnapshotsAfter` / `noSnapshotsBetween`). A range holding delete manifests is refused by
+  the planner, not here. pins: ice-changelog-1/C-009, C-010, C-015
+  **ICE-CHANGELOG-1 round 1 (2026-09-20):** `scan` probes the fork's `plan_files` first and
+  surfaces ONLY a `FeatureUnsupported` refusal at plan time, so the view read raises
+  `UnsupportedOperationException` through the existing classifier instead of a mid-stream
+  `PySparkException`; every other probe failure stays mid-stream exactly as before, and an
+  empty window skips the probe. pins: ice-changelog-1/C-015
+- `changelog_view.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `ChangelogViewProvider`, the LAZY view
+  `create_changelog_view` registers: it scans its source provider unprojected, applies one
+  row transform (passed in as `ChangelogRowTransform` so the Spark-engine semantics stay in
+  `repark-spark`), then projects. Lazy because Spark's view is: `QC-MOR` records the CALL
+  returning the view name and the delete-file refusal arriving only when the view is READ.
+  pins: ice-changelog-1/C-014, C-015
+- `incremental_append.rs` — **ICE-CHANGELOG-1 (2026-09-20):** `IncrementalAppendTableProvider`
+  serves `format('iceberg').option('start-snapshot-id', …).load(t)`. It calls the fork's
+  `Table::incremental_append_scan` directly (never `iceberg-datafusion`), mirroring
+  `lineage_columns.rs`: `try_new` builds the scan once so the range validation (Java's
+  ``Starting snapshot (exclusive) … is not a parent ancestor of end snapshot …``) fires at
+  load, and takes the arrow schema from the `to` snapshot — the schema Spark reads a
+  mid-range `ADD COLUMN` with. `AppendWindow.from_exclusive` is Java's exclusive `from`.
+  Non-append snapshots inside the range are skipped by the planner, never refused.
+  pins: ice-changelog-1/C-001, C-002, C-003, C-007, C-008
+- `scan_batches.rs` — **ICE-CHANGELOG-1 (2026-09-20):** the batch plumbing every
+  reserved-column provider shares, lifted out of `lineage_columns.rs` so the incremental and
+  changelog providers reuse one copy: `conform_batch` / `resolve_projection` (project the
+  reader's batch onto the declared schema, cast unsafely-lossless, cache the projection per
+  batch schema) and `iceberg_predicate_from_filters` (the equality filters worth pushing into
+  the Iceberg scan). pins: ice-changelog-1/C-008
 - `lineage_columns.rs` — **ICE-EVO-DML-1 (2026-09-17):** `scan_lineage_batches` plans the current
   snapshot with the fork's `project_current_schema()` and reads the tasks with
   `ArrowReaderBuilder`, so a `_row_id` read after `ADD COLUMN` / `RENAME COLUMN` with no write

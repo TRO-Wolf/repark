@@ -1,0 +1,1571 @@
+[
+ {
+  "id": "QI-S0-S2",
+  "group": "QINC",
+  "title": "start S0 end S2",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     4,
+     "d",
+     "y"
+    ],
+    [
+     5,
+     "e",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 3.48
+ },
+ {
+  "id": "QI-S0-OPEN",
+  "group": "QINC",
+  "title": "start S0 to current",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     4,
+     "d",
+     "y"
+    ],
+    [
+     5,
+     "e",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.69
+ },
+ {
+  "id": "QI-S1-S1",
+  "group": "QINC",
+  "title": "start == end (empty)",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Starting snapshot (exclusive) 8104610796420980621 is not a parent ancestor of end snapshot 8104610796420980621"
+  },
+  "error_step": "snapshots",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.56
+ },
+ {
+  "id": "QI-END-ONLY",
+  "group": "QINC",
+  "title": "end-snapshot-id only",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Cannot set only `end-snapshot-id` for incremental scans. Please, set `start-snapshot-id` too."
+  },
+  "error_step": "snapshots",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.58
+ },
+ {
+  "id": "QI-START-UNKNOWN",
+  "group": "QINC",
+  "title": "start not a snapshot",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Starting snapshot (exclusive) 12345 is not a parent ancestor of end snapshot 8190408891181017989"
+  },
+  "error_step": "snapshots",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.53
+ },
+ {
+  "id": "QI-START-AFTER-END",
+  "group": "QINC",
+  "title": "start after end",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Starting snapshot (exclusive) 1529273780174170583 is not a parent ancestor of end snapshot 7045352898160628356"
+  },
+  "error_step": "snapshots",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.51
+ },
+ {
+  "id": "QI-PROJECT-FILTER",
+  "group": "QINC",
+  "title": "projection + filter",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "rows": [
+    [
+     3
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.62
+ },
+ {
+  "id": "QI-WITH-SNAPSHOT-ID",
+  "group": "QINC",
+  "title": "start + snapshot-id together",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Time travel option `snapshot-id` is no longer supported, use Spark built-in `versionAsOf` instead"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.48
+ },
+ {
+  "id": "QI-WITH-VERSIONASOF",
+  "group": "QINC",
+  "title": "start + versionAsOf together",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Cannot use time travel in incremental scan"
+  },
+  "error_step": "snapshots",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.47
+ },
+ {
+  "id": "QI-OVER-DELETE-COW",
+  "group": "QINC",
+  "title": "range spans a CoW delete",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     4,
+     "d",
+     "y"
+    ],
+    [
+     5,
+     "e",
+     "x"
+    ],
+    [
+     6,
+     "f",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.79
+ },
+ {
+  "id": "QI-OVER-DELETE-MOR",
+  "group": "QINC",
+  "title": "range spans a MoR delete",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     4,
+     "d",
+     "y"
+    ],
+    [
+     5,
+     "e",
+     "x"
+    ],
+    [
+     6,
+     "f",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.73
+ },
+ {
+  "id": "QI-END-AT-DELETE",
+  "group": "QINC",
+  "title": "end at a CoW overwrite snapshot",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     4,
+     "d",
+     "y"
+    ],
+    [
+     5,
+     "e",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.62
+ },
+ {
+  "id": "QI-OVER-OVERWRITE",
+  "group": "QINC",
+  "title": "range spans INSERT OVERWRITE",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     4,
+     "d",
+     "y"
+    ],
+    [
+     5,
+     "e",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.65
+ },
+ {
+  "id": "QI-NOT-ANCESTOR",
+  "group": "QINC",
+  "title": "start on another branch lineage",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Starting snapshot (exclusive) 2784206481409908869 is not a parent ancestor of end snapshot 8357832895005758779"
+  },
+  "error_step": "snapshots",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.81
+ },
+ {
+  "id": "QI-PARTITIONED",
+  "group": "QINC",
+  "title": "partitioned table",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     4,
+     "d",
+     "y"
+    ],
+    [
+     5,
+     "e",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.62
+ },
+ {
+  "id": "QI-V3",
+  "group": "QINC",
+  "title": "format v3",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     4,
+     "d",
+     "y"
+    ],
+    [
+     5,
+     "e",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.44
+ },
+ {
+  "id": "QI-SCHEMA-EVOLVED",
+  "group": "QINC",
+  "title": "column added in range",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "extra",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     3,
+     "c",
+     "x",
+     null
+    ],
+    [
+     4,
+     "d",
+     "y",
+     null
+    ],
+    [
+     5,
+     "e",
+     "x",
+     null
+    ],
+    [
+     6,
+     "f",
+     "x",
+     60
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.72
+ },
+ {
+  "id": "QI-SQL-TVF-NONE",
+  "group": "QINC",
+  "title": "SQL cannot pass options: SELECT with snapshot selector",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.47
+ },
+ {
+  "id": "QI-CHANGES-DEFAULT",
+  "group": "QINC",
+  "title": "t.changes whole history",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "_change_type",
+     "string"
+    ],
+    [
+     "_change_ordinal",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "b",
+     "INSERT",
+     0
+    ],
+    [
+     3,
+     "c",
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "d",
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "e",
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.48
+ },
+ {
+  "id": "QI-CHANGES-COLS",
+  "group": "QINC",
+  "title": "t.changes schema",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "_change_type",
+     "string"
+    ],
+    [
+     "_change_ordinal",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "x",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "b",
+     "y",
+     "INSERT",
+     0
+    ],
+    [
+     3,
+     "c",
+     "x",
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "d",
+     "y",
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "e",
+     "x",
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.43
+ },
+ {
+  "id": "QI-CHANGES-MOR-DELETE",
+  "group": "QINC",
+  "title": "t.changes over a MoR delete",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "_change_type",
+     "string"
+    ],
+    [
+     "_change_ordinal",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "INSERT",
+     0
+    ],
+    [
+     3,
+     "DELETE",
+     3
+    ],
+    [
+     3,
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.57
+ },
+ {
+  "id": "QI-CHANGES-COW-UPDATE",
+  "group": "QINC",
+  "title": "t.changes over a CoW update",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "_change_type",
+     "string"
+    ],
+    [
+     "_change_ordinal",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     "a",
+     "DELETE",
+     3
+    ],
+    [
+     1,
+     "a",
+     "INSERT",
+     0
+    ],
+    [
+     1,
+     "a",
+     "INSERT",
+     3
+    ],
+    [
+     2,
+     "b",
+     "DELETE",
+     3
+    ],
+    [
+     2,
+     "b",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "u",
+     "INSERT",
+     3
+    ],
+    [
+     3,
+     "c",
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "d",
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "e",
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 1.02
+ },
+ {
+  "id": "QI-CHANGES-READER-OPEN",
+  "group": "QINC",
+  "title": "t.changes reader start only",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "_change_type",
+     "string"
+    ],
+    [
+     "_change_ordinal",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     4,
+     "INSERT",
+     0
+    ],
+    [
+     5,
+     "INSERT",
+     0
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.39
+ },
+ {
+  "id": "QI-CHANGES-V3-DV",
+  "group": "QINC",
+  "title": "t.changes v3 with a DV delete",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "cols": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "_change_type",
+     "string"
+    ],
+    [
+     "_change_ordinal",
+     "int"
+    ]
+   ],
+   "rows": [
+    [
+     1,
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "INSERT",
+     0
+    ],
+    [
+     3,
+     "DELETE",
+     3
+    ],
+    [
+     3,
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.58
+ },
+ {
+  "id": "QC-DEFAULT",
+  "group": "QINC",
+  "title": "create_changelog_view (table, changelog_view)",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "v_qc_default"
+    ]
+   ],
+   "view": [
+    [
+     1,
+     "a",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "b",
+     "DELETE",
+     3
+    ],
+    [
+     2,
+     "b",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "u",
+     "INSERT",
+     3
+    ],
+    [
+     3,
+     "c",
+     "DELETE",
+     4
+    ],
+    [
+     3,
+     "c",
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "d",
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "e",
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 1.17
+ },
+ {
+  "id": "QC-SCHEMA",
+  "group": "QINC",
+  "title": "create_changelog_view view schema",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "v_qc_schema"
+    ]
+   ],
+   "view": []
+  },
+  "notes": [],
+  "secs": 0.83
+ },
+ {
+  "id": "QC-NET",
+  "group": "QINC",
+  "title": "create_changelog_view net_changes",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "v_qc_net"
+    ]
+   ],
+   "view": [
+    [
+     1,
+     "a",
+     "INSERT",
+     3
+    ],
+    [
+     2,
+     "u",
+     "INSERT",
+     3
+    ],
+    [
+     4,
+     "d",
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "e",
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.94
+ },
+ {
+  "id": "QC-UPDATES-IDENT",
+  "group": "QINC",
+  "title": "create_changelog_view compute_updates",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "v_qc_updates_ident"
+    ]
+   ],
+   "view": [
+    [
+     1,
+     "a",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "b",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "b",
+     "UPDATE_BEFORE",
+     3
+    ],
+    [
+     2,
+     "u",
+     "UPDATE_AFTER",
+     3
+    ],
+    [
+     3,
+     "c",
+     "DELETE",
+     4
+    ],
+    [
+     3,
+     "c",
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "d",
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "e",
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.89
+ },
+ {
+  "id": "QC-UPDATES-TABLE-IDENT",
+  "group": "QINC",
+  "title": "create_changelog_view compute_updates with table identifier fields",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "AnalysisException",
+   "getCondition": "_LEGACY_ERROR_TEMP_2330",
+   "getErrorClass": "_LEGACY_ERROR_TEMP_2330",
+   "getSqlState": null,
+   "msg": "Cannot change nullable column to non-nullable: id.; line 1 pos 0;\nAlterColumns [altercolumnspec(resolvedfieldname(StructField(id,LongType,true)), None, Some(false), None, None, None, false)]\n+- ResolvedTable org.apache.iceberg.spark.SparkCatalog@38370fe6, ns.t_qc_updates_table_ident, sc.ns.t_qc_updates_table_ident, [id#2822L, data#2823, cat#2824]"
+  },
+  "error_step": "ALTER TABLE sc.ns.t_qc_updates_table_ident ALTER COLUMN id SET NOT NULL",
+  "obs": {},
+  "notes": [],
+  "secs": 0.76
+ },
+ {
+  "id": "QC-UPDATES-NO-IDENT",
+  "group": "QINC",
+  "title": "create_changelog_view compute_updates, no identifier columns",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Cannot compute the update images because identifier columns are not set"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.77
+ },
+ {
+  "id": "QC-NET-AND-UPDATES",
+  "group": "QINC",
+  "title": "create_changelog_view net + updates together",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "IllegalArgumentException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Not support net changes with update images"
+  },
+  "error_step": "snapshots",
+  "obs": {},
+  "notes": [],
+  "secs": 0.75
+ },
+ {
+  "id": "QC-OPT-RANGE",
+  "group": "QINC",
+  "title": "create_changelog_view options snapshot range",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "v_qc_opt_range"
+    ]
+   ],
+   "view": [
+    [
+     2,
+     "b",
+     "DELETE",
+     1
+    ],
+    [
+     2,
+     "u",
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "d",
+     "INSERT",
+     0
+    ],
+    [
+     5,
+     "e",
+     "INSERT",
+     0
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.84
+ },
+ {
+  "id": "QC-OPT-TS",
+  "group": "QINC",
+  "title": "create_changelog_view options start-timestamp 0",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "v_qc_opt_ts"
+    ]
+   ],
+   "view": [
+    [
+     1,
+     "a",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "b",
+     "DELETE",
+     3
+    ],
+    [
+     2,
+     "b",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "u",
+     "INSERT",
+     3
+    ],
+    [
+     3,
+     "c",
+     "DELETE",
+     4
+    ],
+    [
+     3,
+     "c",
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "d",
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "e",
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.82
+ },
+ {
+  "id": "QC-MOR",
+  "group": "QINC",
+  "title": "create_changelog_view MoR table (delete files)",
+  "engine": "spark",
+  "status": "error",
+  "error": {
+   "type": "UnsupportedOperationException",
+   "getCondition": null,
+   "getErrorClass": null,
+   "getSqlState": null,
+   "msg": "Delete files are currently not supported in changelog scans"
+  },
+  "error_step": "SELECT id, data, _change_type, _change_ordinal FROM v_qc_mor",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "v_qc_mor"
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.92
+ },
+ {
+  "id": "QC-DEFAULT-NAME",
+  "group": "QINC",
+  "title": "create_changelog_view default view name",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "`t_qc_default_name_changes`"
+    ]
+   ],
+   "view": [
+    [
+     8
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.86
+ },
+ {
+  "id": "QC-SQL-UPDATE-DUP",
+  "group": "QINC",
+  "title": "create_changelog_view identifier with duplicate keys",
+  "engine": "spark",
+  "status": "ok",
+  "obs": {
+   "out.cols": [
+    [
+     "changelog_view",
+     "string"
+    ]
+   ],
+   "out.rows": [
+    [
+     "v_qc_sql_update_dup"
+    ]
+   ],
+   "view": [
+    [
+     1,
+     "a",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "b",
+     "INSERT",
+     0
+    ],
+    [
+     2,
+     "b",
+     "UPDATE_BEFORE",
+     3
+    ],
+    [
+     2,
+     "u",
+     "UPDATE_AFTER",
+     3
+    ],
+    [
+     3,
+     "c",
+     "DELETE",
+     4
+    ],
+    [
+     3,
+     "c",
+     "INSERT",
+     1
+    ],
+    [
+     4,
+     "d",
+     "INSERT",
+     2
+    ],
+    [
+     5,
+     "e",
+     "INSERT",
+     2
+    ]
+   ]
+  },
+  "notes": [],
+  "secs": 0.81
+ }
+]
