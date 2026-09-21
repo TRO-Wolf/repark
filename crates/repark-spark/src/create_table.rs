@@ -317,9 +317,10 @@ fn sql_type_to_iceberg_nested(
         // WITH TIME ZONE / TIMESTAMPTZ stay instants.
         SqlDataType::Timestamp(_, _) => PrimitiveType::Timestamptz,
         SqlDataType::Binary(_) | SqlDataType::Varbinary(_) => PrimitiveType::Binary,
-        other => match iceberg_v3_named_primitive(other) {
-            Some(primitive) => primitive,
-            None => {
+        other => {
+            if let Some(primitive) = iceberg_v3_named_primitive(other) {
+                primitive
+            } else {
                 if geospatial_sql_type(other) {
                     return Err(DataFusionError::Plan(spark_error::message(
                         spark_error::UNSUPPORTED_FEATURE_GEOSPATIAL_DISABLED,
@@ -330,7 +331,7 @@ fn sql_type_to_iceberg_nested(
                     "column type `{other}` is not supported yet for Iceberg tables"
                 )));
             }
-        },
+        }
     };
     Ok(Type::Primitive(primitive))
 }
