@@ -360,7 +360,7 @@ pub async fn read_table_at(
     })?;
     let _ = schema.deregister_table(&temp_name);
     schema
-        .register_table(temp_name.clone(), Arc::new(provider))
+        .register_table(temp_name.clone(), provider)
         .map_err(|error| {
             DataFusionError::Plan(format!(
                 "failed to register time-travel temp view {qualified}: {error}"
