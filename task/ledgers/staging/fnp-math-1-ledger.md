@@ -341,3 +341,24 @@ dependency touched here).
 Registry flips EX-FN-5/7/17/18 to FIXED plus section-7 residual rows, and the
 `make verify` / `make preflight` pass, belong to the closing round with the
 green tree.
+
+## WO-6b R3 (2026-09-21) — critic remediation V-003/V-006 evidence (partial)
+
+C-004 (still OPEN: collation + AES error cells stay fenced): the conv
+ANSI-on cell now pins the recorded `ArithmeticException` class plus
+`ARITHMETIC_OVERFLOW` / SQLSTATE 22003; the BL-6 BOOLEAN refusals pin
+`AnalysisException` plus `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` /
+SQLSTATE 42K09 on both doors under both ANSI settings. All five
+substring-only pins tightened to class + condition + SQLSTATE; the live
+Spark 4.1.2 re-measure confirms the oracle classes and states.
+pins: fnp-math-1/C-004
+
+C-005 (still OPEN: AES cells stay fenced): the two SQL-door hash cells run
+each recorded item as its own query through the mask/split per-item
+vehicle — all 12 items pass un-xfailed on both ANSI settings, including
+hash(ts) 332591456 / 1979615276 / 215785259 and hash(±0.0) -1670924195
+(step-1.4/1.5 re-measured live; RESID-1 value confirmed, no doc
+correction). Only the still-failing 12-column SELECT keeps the strict
+EX-FN-7-RESID-1 xfail, as one collision pin. File totals move 141 passed
+/ 102 xfailed → 143 passed / 101 xfailed, 0 failed / 0 xpassed.
+pins: fnp-math-1/C-005
