@@ -29,8 +29,15 @@ pins: dbt-1-adapter/C-002, dbt-1-adapter/C-004
   | `repark__create_temporary_view` | RePark has no temporary views (`DBT-TEMPVIEW-1`). |
   | `repark__create_view_as` | RePark refuses `create or replace view` (`DBT-VIEW-1`). |
   | `repark__alter_column_comment` | `alter column … comment` is refused (`DBT-COLCOMMENT-1`). |
-  | `repark__comment_clause` | `create table … comment` is refused on an Iceberg CTAS, and after `tblproperties` the parser blames `using` (`DBT-RELCOMMENT-1`). Refusing at compile time keeps that misleading message away from the user. |
-  | `repark__location_clause`, `repark__options_clause`, `repark__clustered_cols` | `LOCATION`, `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS (`DBT-CTASCLAUSE-1`). `partition_by` is served, so `spark__partition_cols` is **not** overridden. |
+  There is deliberately **no** `repark__comment_clause` or `repark__location_clause`
+  (**IPI-26/27 round 2**, 2026-09-20): the SQL door serves `COMMENT` and `LOCATION`
+  on either side of `TBLPROPERTIES`, so the dead overrides were deleted and
+  dbt-spark's emissions are inherited (`DBT-RELCOMMENT-1` retired; the
+  `DBT-CTASCLAUSE-1` location half retired with it). The inherited statements are
+  pinned at `test_served_shapes_run[S-TABLE-COMMENT]`,
+  `test_served_shapes_run[S-TABLE-COMMENT-AFTER-TBLPROPERTIES]`, and
+  `test_served_shapes_run[S-CTAS-LOCATION]`.
+  | `repark__options_clause`, `repark__clustered_cols` | `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS (`DBT-CTASCLAUSE-1`). `partition_by` is served, so `spark__partition_cols` is **not** overridden. |
 
 - `materializations.sql` — `view`, `incremental` and `snapshot` for `adapter='repark'`, each
   raising a compiler error that names its registry row. Materialization lookup walks the plugin

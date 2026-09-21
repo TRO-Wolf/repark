@@ -475,12 +475,13 @@ def test_orc_sql_door_refusal(spark: ReparkSession) -> None:
 
 
 def test_orc_sql_create_using_refusal(spark: ReparkSession) -> None:
-    """cell orc_sql_create_using — USING orc LOCATION is the planner's. pins: io-orc-1/C-009"""
+    """cell orc_sql_create_using — USING orc LOCATION falls through to the column-list
+    refusal (decision 18: LOCATION serves Iceberg). pins: io-orc-1/C-009"""
     from repark.errors import PySparkException
 
     with pytest.raises(PySparkException) as raised:
         spark.sql(f"CREATE TABLE orc_t USING orc LOCATION '{FIXTURES}/m1'")
-    assert "LOCATION is not supported" in str(raised.value)
+    assert "requires a column list" in str(raised.value)
 
 
 def test_orc_write_still_declared(spark: ReparkSession, tmp_path: Path) -> None:

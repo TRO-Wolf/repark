@@ -3663,6 +3663,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   precedent for setup/registry clauses). **Round 3:** `m?` carries the merge
   cell (recorded with `m*`), `m*` refuses naming map.md (R-18b-12), and three
   unapplied-user-schema refuses pin field/type/file-type (R-18b-11) — 50 pins.
+  **Round 4 (2026-09-21):** `test_orc_sql_create_using_refusal` updates the
+  `USING orc LOCATION` pin to the column-list refusal now that decision 18 lets
+  `LOCATION` serve Iceberg — C-009 is still a planner refusal (no orc table is
+  created).
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_io_declared_1.py` + `facade_reader_writer_oracle.json` —
   **IO-DECLARED-1 (2026-09-14):** the orc-write / xml / jdbc declared IO refusals and
@@ -3787,6 +3791,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `CLUSTERED BY` pin asserts the spec `[["id_bucket","bucket[4]","id"]]` in table
   metadata, never mere absence of an error; the corpus pin replays the non-MAP
   `ALTER` shapes and asserts each keeps its pre-widening behaviour.
+  **IPI-26/27 round 2 (2026-09-20):** `COMMENT` everywhere plus `LOCATION`.
+  The column-comment pin asserts the doc as the schema row's fourth field, the
+  table/`COMMENT ON` pins assert the `comment` property, the `LOCATION` pins
+  assert the metadata location and parquet under the given path, the Hive
+  `CHANGE COLUMN` pins assert type plus doc (and the rename twin) with rows
+  intact, and the `DESCRIBE` pin re-checks the comment column. Cells
+  `D-CREATE-COL-COMMENT`, `D-CREATE-COMMENT`, `D-CTAS-COMMENT`, `D-COMMENT-ON`,
+  `D-X-CHANGE-COLUMN-TYPE`, `D-CREATE-LOCATION`, `D-CTAS-LOCATION`,
+  `D-DESCRIBE`. A replace-with-`LOCATION` pin holds the loud refusal.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to

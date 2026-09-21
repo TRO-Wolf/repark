@@ -31,6 +31,16 @@ from `parse_single_normalized` in one line.
   downstream; runs at or past the CTAS `AS` boundary are never rewritten. Unit pins
   are inline in the module; the parse-level pin is
   [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs).
+- `create_clauses.rs` — **IPI-26/27 round 2 (2026-09-20):** `extract_create_clauses`
+  strips the table `COMMENT` / `LOCATION` clauses from a `CREATE TABLE` before the
+  stock parser runs, because sqlparser accepts them only without `TBLPROPERTIES`
+  while dbt emits `tblproperties` first. Only unquoted words at paren depth zero
+  before the CTAS `AS` match, each followed by a string literal (an optional `=`
+  is allowed after `COMMENT` only); column `COMMENT` options, bare table names like
+  `location`, and the query pass through. Duplicates strip with last-wins. It also
+  holds `strip_create_table_using`, moved here from `../normalize.rs` (comments shed
+  in the move) to keep that file at its ceiling. Unit pins are inline in the module;
+  the parse-level pins sit beside round 1's in `../tests/ice_ddl_clauses_1.rs`.
 
 ## Pointers
 

@@ -81,7 +81,7 @@ fn add_columns_plural_splitter_splits_after_top_level_gt() {
         "a top-level `>` must not suppress the comma split, got: {rendered}"
     );
     let parsed = parse_single_normalized(sql).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
-    let Some((statement, _)) = parsed else {
+    let Some((statement, _, _)) = parsed else {
         panic!("{sql:?} must parse once the comma splits the two column defs");
     };
     if let Statement::AlterTable(alter) = &statement {
@@ -99,7 +99,7 @@ fn angle_map_alter_parses_under_widened_dialect() {
         "a MAP< ALTER must trip the angle-map predicate"
     );
     let parsed = parse_single_normalized(sql).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
-    let Some((statement, _)) = parsed else {
+    let Some((statement, _, _)) = parsed else {
         panic!("{sql:?} must parse after the widening");
     };
     assert!(matches!(statement, Statement::AlterTable(_)));
@@ -107,7 +107,7 @@ fn angle_map_alter_parses_under_widened_dialect() {
      INT>, a2 ARRAY<STRING>)";
     let parsed =
         parse_single_normalized(plural).unwrap_or_else(|error| panic!("{plural:?}: {error}"));
-    let Some((statement, _)) = parsed else {
+    let Some((statement, _, _)) = parsed else {
         panic!("{plural:?} must parse after the splitter fix");
     };
     if let Statement::AlterTable(alter) = &statement {
@@ -122,7 +122,7 @@ fn clustered_by_reaches_partitioning_before_parse() {
     let sql = "CREATE TABLE ice.ns.t (id BIGINT, data STRING) USING iceberg CLUSTERED BY (id) \
      INTO 4 BUCKETS";
     let parsed = parse_single_normalized(sql).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
-    let Some((statement, partitioning)) = parsed else {
+    let Some((statement, partitioning, _)) = parsed else {
         panic!("{sql:?} must parse with its partitioning extracted");
     };
     assert!(matches!(statement, Statement::CreateTable(_)));
@@ -209,4 +209,51 @@ fn normalized_parse_dialect_widens_only_angle_map_statements() {
         select.is::<DatabricksDialect>(),
         "any other statement keeps the Databricks dialect"
     );
+}
+
+#[test]
+fn table_comment_extracts_on_either_side_of_tblproperties() {
+    for sql in [
+        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg COMMENT 'tbl' TBLPROPERTIES ('k' = 'v')",
+        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg TBLPROPERTIES ('k' = 'v') COMMENT 'tbl'",
+        "CREATE TABLE ice.ns.t USING iceberg TBLPROPERTIES ('k' = 'v') COMMENT 'tbl' AS SELECT 1",
+    ] {
+        let parsed =
+            parse_single_normalized(sql).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
+        let Some((statement, _, clauses)) = parsed else {
+            panic!("{sql:?} must parse with its comment extracted");
+        };
+        assert!(
+            matches!(statement, Statement::CreateTable(_)),
+            "{sql:?} must stay a CreateTable"
+        );
+        assert_eq!(
+            clauses.comment.as_deref(),
+            Some("tbl"),
+            "{sql:?} keeps its comment"
+        );
+    }
+}
+
+#[test]
+fn table_location_extracts_on_either_side_of_tblproperties() {
+    for sql in [
+        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg LOCATION '/a' TBLPROPERTIES ('k' = 'v')",
+        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg TBLPROPERTIES ('k' = 'v') LOCATION '/a'",
+    ] {
+        let parsed =
+            parse_single_normalized(sql).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
+        let Some((statement, _, clauses)) = parsed else {
+            panic!("{sql:?} must parse with its location extracted");
+        };
+        assert!(
+            matches!(statement, Statement::CreateTable(_)),
+            "{sql:?} must stay a CreateTable"
+        );
+        assert_eq!(
+            clauses.location.as_deref(),
+            Some("/a"),
+            "{sql:?} keeps its location"
+        );
+    }
 }

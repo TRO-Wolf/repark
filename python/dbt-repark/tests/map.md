@@ -25,10 +25,12 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 
 - `conftest.py` — the two `sys.path` entries above.
 - `test_statement_surface.py` — 30 cases: every statement shape dbt emits, run through
-  `repark.sql()` on a memory catalog. Fourteen served, fourteen refused with the exact message
+  `repark.sql()` on a memory catalog. Seventeen served, eleven refused with the exact message
   (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
   the `CLUSTERED BY (…) INTO n BUCKETS` CTAS shape moved to served under IPI-26/27 round 1,
-  2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform),
+  2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform; the `LOCATION`,
+  table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served under IPI-26/27
+  round 2, 2026-09-20),
   plus
   the facade-schema probe (the column source the adapter uses) and the `describe extended`
   probe (Spark shape since SQL-DESCRIBE-1, 2026-09-09 — the old Arrow-spellings premise reds on
@@ -53,6 +55,10 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   table model's `create or replace ... as select` records `overwrite`, not `append`, as
   Spark 4.1.2 does; the properties test asserts the one `overwrite` snapshot.
   pins: dbt-1-adapter/C-002, C-003, C-004
+  **IPI-26/27 round 2 (2026-09-20):** the relation-documentation and `location_root`
+  pins inverted to success — the description lands as the `comment` property and
+  the table lands under `location_root` with readable rows — while the `OPTIONS`,
+  `clustered_by`, and column-documentation refusal pins hold.
 - `test_aws_acceptance_gold.py` — the Glue gold leg, gated on `REPARK_AWS_ACCEPTANCE=1` and
   the same env variables as `python/repark/tests/test_aws_acceptance.py`. It writes to
   `testing_repark_acceptance` and nowhere else. **The orchestrator runs it; a unit agent never

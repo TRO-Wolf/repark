@@ -19,6 +19,9 @@ use crate::{
     try_parse_create_namespace, wap, write_to_branch,
 };
 
+mod comment_on_table;
+mod hive_change_column;
+
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
 /// # Errors
 /// Propagates parse, planning, iceberg, and execution errors as [`DataFusionError`].
@@ -279,7 +282,7 @@ async fn execute_inner(
         return frame;
     }
     // If we can't parse it to a single statement we recognise, let DataFusion have it.
-    let Some((statement, partitioning)) = parse_single_normalized(sql)? else {
+    let Some((statement, partitioning, clauses)) = parse_single_normalized(sql)? else {
         write_options.refuse_if_non_empty("this INSERT form")?;
         return execute_unparsable_fallthrough(ctx, catalogs, sql).await;
     };
@@ -296,7 +299,7 @@ async fn execute_inner(
             execute_ctas(
                 ctx,
                 catalogs,
-                build_ctas(create, &partitioning)?,
+                build_ctas(create, &partitioning, &clauses)?,
                 write_options,
             )
             .await
@@ -309,7 +312,7 @@ async fn execute_inner(
                 return Err(DataFusionError::Plan(message));
             }
             write_options.refuse_if_non_empty("CREATE TABLE without AS SELECT")?;
-            create_table::execute_create_table(ctx, catalogs, create, &partitioning).await
+            create_table::execute_create_table(ctx, catalogs, create, &partitioning, &clauses).await
         }
         Statement::Drop {
             object_type: ObjectType::Table,
@@ -533,14 +536,13 @@ async fn describe_namespace_preparse(
 }
 
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
-async fn try_preparse_intercepts(
+async fn try_alter_intercepts(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Option<Result<DataFrame>> {
     let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
-    // I7 — ADD/DROP/REPLACE PARTITION FIELD + REPLACE COLUMNS (stock sqlparser cannot model).
     if let Some(parsed) = alter::try_parse_iceberg_alter_ddl(sql) {
         return Some(
             match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
@@ -572,6 +574,22 @@ async fn try_preparse_intercepts(
                 Err(error) => Err(error),
             },
         );
+    }
+    None
+}
+
+async fn try_preparse_intercepts(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
+    if let Some(outcome) = try_alter_intercepts(ctx, catalogs, sql, write_options).await {
+        return Some(outcome);
+    }
+    if let Some(frame) = try_preparse_comment_ddl(ctx, catalogs, sql, write_options).await {
+        return Some(frame);
     }
     // I6 residual — forms stock sqlparser still cannot model.
     if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
@@ -636,6 +654,34 @@ async fn try_preparse_intercepts(
         return Some(
             match parsed.and_then(|ddl| parsed_ddl("BRANCH/TAG DDL").map(|()| ddl)) {
                 Ok(ddl) => ref_ddl::execute_ref_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
+    }
+    None
+}
+
+async fn try_preparse_comment_ddl(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
+    if let Some(parsed) = comment_on_table::try_parse_comment_on_table_ddl(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("COMMENT ON TABLE").map(|()| ddl)) {
+                Ok(ddl) => comment_on_table::execute_comment_on_table_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
+    }
+    if let Some(parsed) = hive_change_column::try_parse_hive_change_column_ddl(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => {
+                    hive_change_column::execute_hive_change_column_ddl(ctx, catalogs, ddl).await
+                }
                 Err(error) => Err(error),
             },
         );

@@ -22,7 +22,7 @@ use crate::catalog_ops::{
 };
 use crate::normalize::{
     PartitionFieldSpec, PartitionedByElement, build_partition_spec, build_transform_field,
-    property_value,
+    create_clauses::CreateClauses, property_value,
 };
 use crate::spark_ast;
 
@@ -39,6 +39,7 @@ pub(crate) struct Ctas {
     or_replace: bool,
     /// `TBLPROPERTIES (...)` (e.g.
     properties: HashMap<String, String>,
+    location: Option<String>,
     /// Requested `TBLPROPERTIES ('format-version' = …)`, consumed at execute (session opt-in).
     format_version: Option<String>,
     /// The `PARTITIONED BY` fields, in clause order — identity columns and non-identity transforms.
@@ -49,6 +50,7 @@ pub(crate) struct Ctas {
 pub(crate) fn build_ctas(
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
+    clauses: &CreateClauses,
 ) -> Result<Ctas> {
     let query = create.query.as_ref().ok_or_else(|| {
         DataFusionError::Plan("build_ctas requires a CTAS (query must be Some)".into())
@@ -72,7 +74,6 @@ pub(crate) fn build_ctas(
                 .into(),
         ));
     }
-    // LOCATION / Hive ROW FORMAT etc.
     refuse_unsupported_create_table_clauses(create, "CTAS")?;
     // Explicit CTAS column lists fail before partition validation, matching Spark's parse contract.
     if !create.columns.is_empty() {
@@ -127,6 +128,9 @@ pub(crate) fn build_ctas(
     }
     // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
+    if let Some(comment) = clauses.comment.clone() {
+        properties.insert("comment".to_string(), comment);
+    }
 
     Ok(Ctas {
         catalog: catalog.clone(),
@@ -137,6 +141,7 @@ pub(crate) fn build_ctas(
         if_not_exists: create.if_not_exists,
         or_replace: create.or_replace,
         properties,
+        location: clauses.location.clone(),
         partition_fields,
         format_version,
     })
@@ -170,6 +175,12 @@ pub(crate) async fn execute_ctas(
         }
     }
 
+    check_custom_location(
+        ctas.location.as_deref(),
+        existed,
+        catalogs.location_policy(&ctas.catalog) == Some(LocationPolicy::ServiceManagedLocation),
+        "CTAS",
+    )?;
     // Resolve locations before the SELECT.
     let mode = if existed {
         CtasMode::Replace
@@ -378,6 +389,31 @@ pub(crate) struct CreatePlan {
     pub(crate) file_io: FileIO,
 }
 
+pub(crate) fn check_custom_location(
+    location: Option<&str>,
+    replacing: bool,
+    service_managed: bool,
+    form: &str,
+) -> Result<()> {
+    let Some(location) = location else {
+        return Ok(());
+    };
+    if replacing {
+        return Err(DataFusionError::NotImplemented(format!(
+            "CREATE TABLE … LOCATION is not supported for Iceberg {form} OR REPLACE yet — the \
+             replace keeps the existing table location; omit LOCATION"
+        )));
+    }
+    if service_managed {
+        return Err(DataFusionError::NotImplemented(format!(
+            "CREATE TABLE … LOCATION '{location}' is not supported for Iceberg {form} on a \
+             service-managed catalog — the service assigns the table location (Glue / S3 \
+             Tables); omit LOCATION"
+        )));
+    }
+    Ok(())
+}
+
 /// Resolve the [`CreatePlan`] for a staged CTAS create.
 /// # Errors
 /// Returns a plan error if the location cannot be resolved or uses an unsupported scheme.
@@ -393,6 +429,7 @@ pub(crate) async fn resolve_create_plan(
         &ctas.namespace,
         &ctas.table,
         &ctas.full_name,
+        ctas.location.as_deref(),
     )
     .await
 }
@@ -407,7 +444,25 @@ pub(crate) async fn resolve_create_plan_for(
     namespace: &NamespaceIdent,
     table: &str,
     full_name: &str,
+    custom_location: Option<&str>,
 ) -> Result<CreatePlan> {
+    if let Some(location) = custom_location {
+        reject_path_escape_ident(catalog_name, "catalog")?;
+        for part in namespace.as_ref() {
+            reject_path_escape_ident(part.as_str(), "namespace")?;
+        }
+        reject_path_escape_ident(table, "table")?;
+        catalog
+            .get_namespace(namespace)
+            .await
+            .map_err(iceberg_err)?;
+        let file_io =
+            repark_iceberg::catalog::file_io_for_location(location, catalog.properties())?;
+        return Ok(CreatePlan {
+            location: location.to_string(),
+            file_io,
+        });
+    }
     // The policy is registered alongside the handle.
     let location_policy = catalogs
         .location_policy(catalog_name)
@@ -617,26 +672,10 @@ pub(crate) async fn execute_ctas_service_managed(
     ctx.read_empty()
 }
 
-/// Refuse LOCATION / Hive ROW FORMAT / SERDE / STORED AS clauses.
 pub(crate) fn refuse_unsupported_create_table_clauses(
     create: &CreateTable,
     form: &str,
 ) -> Result<()> {
-    let hive_location = create
-        .hive_formats
-        .as_ref()
-        .and_then(|formats| formats.location.as_deref());
-    let bare_location = create.location.as_deref();
-    let has_location = [hive_location, bare_location]
-        .into_iter()
-        .flatten()
-        .any(|location| !location.trim().is_empty());
-    if has_location {
-        return Err(DataFusionError::NotImplemented(format!(
-            "CREATE TABLE … LOCATION is not supported for Iceberg {form} yet — table location \
-             is derived from the namespace warehouse (or service-managed catalog)"
-        )));
-    }
     if let Some(formats) = create.hive_formats.as_ref() {
         let has_hive_shape = formats.row_format.is_some()
             || formats.serde_properties.is_some()
@@ -655,27 +694,11 @@ pub(crate) fn refuse_unsupported_create_table_clauses(
              TBLPROPERTIES ('write.format.default' = 'parquet') when needed"
         )));
     }
-    // Table COMMENT is not mapped to Iceberg properties yet.
-    if create.comment.is_some() {
-        return Err(DataFusionError::NotImplemented(format!(
-            "CREATE TABLE … COMMENT is not supported for Iceberg {form} yet — use TBLPROPERTIES \
-             or ALTER TABLE when comment support lands"
-        )));
-    }
     match &create.table_options {
         CreateTableOptions::None | CreateTableOptions::TableProperties(_) => {}
         CreateTableOptions::Plain(options)
         | CreateTableOptions::With(options)
         | CreateTableOptions::Options(options) => {
-            let has_comment = options
-                .iter()
-                .any(|option| matches!(option, SqlOption::Comment(_)));
-            if has_comment {
-                return Err(DataFusionError::NotImplemented(format!(
-                    "CREATE TABLE … COMMENT is not supported for Iceberg {form} yet — use \
-                     TBLPROPERTIES or ALTER TABLE when comment support lands"
-                )));
-            }
             if !options.is_empty() {
                 return Err(DataFusionError::NotImplemented(format!(
                     "CREATE TABLE WITH/OPTIONS/plain options are not supported for Iceberg \

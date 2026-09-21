@@ -734,3 +734,25 @@ async fn ctas_service_managed_plain_ctas_records_append() {
     .expect("plain service-managed CTAS");
     assert_eq!(service_managed_ops(&catalogs, "pa").await, ["append"]);
 }
+
+#[tokio::test]
+async fn ctas_custom_location_on_service_managed_catalog_refuses_loud() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, svc) = setup_service_managed(&wh, CommitInjection::None).await;
+    let refused = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE svc.sales.custom LOCATION '/tmp/nope' AS SELECT * FROM src",
+    )
+    .await
+    .expect_err("a custom LOCATION on a service-managed catalog must refuse");
+    assert!(
+        refused.to_string().contains("LOCATION") && refused.to_string().contains("service-managed"),
+        "got: {refused}"
+    );
+    assert_eq!(
+        svc.create_table_calls(),
+        0,
+        "the refusal precedes any catalog write"
+    );
+}

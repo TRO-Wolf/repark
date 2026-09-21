@@ -147,34 +147,34 @@ async fn column_def_create_partitioned_by_identity() {
     );
 }
 
-/// LOCATION + Hive ROW FORMAT refuse; CTAS TEMPORARY refuse.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat refuse-clause pin battery
-async fn column_def_location_and_ctas_temporary_refuse() {
+async fn column_def_location_comment_serve_other_clauses_refuse() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
 
-    let location_err = execute(
+    let custom = wh
+        .path()
+        .join("custom_loc")
+        .join("loc")
+        .to_str()
+        .unwrap()
+        .to_string();
+    execute(
         &ctx,
         &catalogs,
-        "CREATE TABLE ice.sales.loc (id BIGINT) USING iceberg LOCATION '/tmp/should_not'",
+        &format!("CREATE TABLE ice.sales.loc (id BIGINT) USING iceberg LOCATION '{custom}'"),
     )
     .await
-    .expect_err("LOCATION must refuse");
-    assert!(
-        location_err.to_string().contains("LOCATION")
-            && location_err.to_string().contains("not supported"),
-        "got: {location_err}"
-    );
-    assert!(
-        !catalogs["ice"]
-            .table_exists(&TableIdent::new(
-                NamespaceIdent::new("sales".to_string()),
-                "loc".to_string(),
-            ))
-            .await
-            .unwrap()
-    );
+    .expect("a custom LOCATION must serve");
+    let located = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "loc".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(located.metadata().location(), custom.as_str());
 
     let row_format_err = execute(
         &ctx,
@@ -225,40 +225,50 @@ async fn column_def_location_and_ctas_temporary_refuse() {
         "refused CTAS TEMPORARY must not leave a durable table"
     );
 
-    let ctas_location = execute(
+    let ctas_custom = wh
+        .path()
+        .join("custom_loc")
+        .join("cloc")
+        .to_str()
+        .unwrap()
+        .to_string();
+    execute(
         &ctx,
         &catalogs,
-        "CREATE TABLE ice.sales.cloc LOCATION '/tmp/x' AS SELECT * FROM src",
+        &format!("CREATE TABLE ice.sales.cloc LOCATION '{ctas_custom}' AS SELECT * FROM src"),
     )
     .await
-    .expect_err("CTAS LOCATION must refuse");
-    assert!(
-        ctas_location.to_string().contains("LOCATION")
-            && ctas_location.to_string().contains("not supported"),
-        "got: {ctas_location}"
-    );
-    assert!(
-        !catalogs["ice"]
-            .table_exists(&TableIdent::new(
-                NamespaceIdent::new("sales".to_string()),
-                "cloc".to_string(),
-            ))
-            .await
-            .unwrap()
-    );
+    .expect("a CTAS LOCATION must serve");
+    let ctas_located = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "cloc".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(ctas_located.metadata().location(), ctas_custom.as_str());
 
-    // Table COMMENT must refuse.
-    let comment_err = execute(
+    execute(
         &ctx,
         &catalogs,
         "CREATE TABLE ice.sales.cm (id BIGINT) COMMENT 'hello'",
     )
     .await
-    .expect_err("COMMENT must refuse");
-    assert!(
-        comment_err.to_string().contains("COMMENT")
-            && comment_err.to_string().contains("not supported"),
-        "got: {comment_err}"
+    .expect("a table COMMENT must serve");
+    let commented = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "cm".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        commented
+            .metadata()
+            .properties()
+            .get("comment")
+            .map(String::as_str),
+        Some("hello")
     );
 
     // pins: v3-2-create-v3-opt-in/C-007

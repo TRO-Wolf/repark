@@ -4275,61 +4275,58 @@ the pin rather than obeying it.
   in all three files, which this unit's fence (carriers only) forbids; the refusal message
   stays the standard gate text and this row states the true reason.
 
-### DBT-CTASCLAUSE-1 — `LOCATION` and `OPTIONS` are refused on an Iceberg CTAS; `CLUSTERED BY` is served
+### DBT-CTASCLAUSE-1 — `OPTIONS` is refused on an Iceberg CTAS; `LOCATION` and `CLUSTERED BY` are served
 
-- **repark** — of the placement clauses `dbt-spark` can put on a `create table … as`,
-  `PARTITIONED BY` and `CLUSTERED BY` are served. `LOCATION '…'` refuses with
-  `UnsupportedOperationException: CREATE
-  TABLE … LOCATION is not supported for Iceberg CTAS yet — table location is derived from the
-  namespace warehouse (or service-managed catalog)`. `OPTIONS (…)` refuses with
+- **repark** — `OPTIONS (…)` refuses with
   `SQL error: ParserError("Expected: end of statement, found: using …")` — the same misleading
-  position as `DBT-RELCOMMENT-1`, naming `using` rather than the clause that failed.
-  `CLUSTERED BY (…) INTO n BUCKETS` is served at the SQL door (INDEX-19): the parser accepts it
-  and it rewrites to a `bucket(n, col)` partition transform; dbt emits `spark__clustered_cols`
-  and the shape runs green. `dbt-repark` refuses `location_root`, `options` and `clustered_by` /
-  `buckets` at compile time, naming this row.
+  position `DBT-RELCOMMENT-1` used to report, naming `using` rather than the clause that failed.
+  `dbt-repark` refuses `options` at compile time, naming this row. `LOCATION '…'` is served
+  end-to-end: dbt emits `spark__location_clause` (inherited from Spark after the round-2
+  retirement) and the SQL door threads the location into the create plan and FileIO, so data
+  files land under the given path. `CLUSTERED BY (…) INTO n BUCKETS` is served at the SQL door
+  (INDEX-19): the parser accepts it and it rewrites to a `bucket(n, col)` partition transform;
+  dbt emits `spark__clustered_cols` and the shape runs green. The adapter's `clustered_by` /
+  `buckets` compile-time refusal stays over the served clause and names this row.
 - **Apache Spark** — accepts all four clauses on an Iceberg CTAS; `CLUSTERED BY (id) INTO 4
   BUCKETS` records a `bucket[4]` transform on `id` (field `id_bucket`). *(oracle: documented for
-  the refused clauses — the claim there is the refusal and the position it reports, no value
-  oracle; recorded live for the bucket transform, cell `D-X-CLUSTERED-BY`.)*
+  the refused clause — the claim there is the refusal and the position it reports, no value
+  oracle; recorded live for the served clauses, cells `D-X-CLUSTERED-BY`, `D-CREATE-LOCATION`,
+  `D-CTAS-LOCATION`.)*
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CTAS-LOCATION]`
-  and `[R-CTAS-OPTIONS]`, with
-  `::test_served_shapes_run[S-CTAS-PARTITIONED-BY]` and `[S-CTAS-CLUSTERED-BY]` holding the served
-  half, `python/repark/tests/test_ice_ddl_clauses_1.py::test_clustered_by_is_not_silently_dropped`
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CTAS-OPTIONS]`,
+  with `::test_served_shapes_run[S-CTAS-PARTITIONED-BY]`, `[S-CTAS-CLUSTERED-BY]` and
+  `[S-CTAS-LOCATION]` holding the served half,
+  `python/repark/tests/test_ice_ddl_clauses_1.py::test_clustered_by_is_not_silently_dropped`
   pinning the `bucket[4]` spec in table metadata, and
   `python/dbt-repark/tests/test_gold_models.py::test_unsupported_ctas_clauses_refuse` holding the
   adapter's side
-- **Rationale** — BACKLOG for the two refusals that remain. `LOCATION` is a real capability gap
-  with an honest message. `OPTIONS` has no Iceberg meaning distinct from `TBLPROPERTIES`, and its
-  misleading parser position is the `DBT-RELCOMMENT-1` defect worth fixing first. The adapter's
-  `clustered_by` / `buckets` compile-time refusal now sits over a clause the SQL door serves;
-  retiring it is tracked by the IPI-26/27 dbt-retirement round (A-12).
+- **Rationale** — BACKLOG for `OPTIONS`: it has no Iceberg meaning distinct from `TBLPROPERTIES`,
+  and its misleading parser position naming `using` is the diagnostic defect worth fixing first.
+  The adapter's `clustered_by` / `buckets` compile-time refusal stays over a clause the SQL door
+  serves; the round-2 dbt retirement (A-12) retired the comment and location refusals and
+  deliberately left this one.
 
-### DBT-RELCOMMENT-1 — `CREATE TABLE … COMMENT` is refused on a CTAS, and after `TBLPROPERTIES` it names the wrong token
+### DBT-RELCOMMENT-1 — table `COMMENT` on an Iceberg CTAS is served; the misleading parser position is gone for this clause
 
-- **repark** — `CREATE OR REPLACE TABLE t USING iceberg COMMENT 'x' AS SELECT …` refuses with
-  `UnsupportedOperationException: CREATE TABLE … COMMENT is not supported for Iceberg CTAS yet —
-  use TBLPROPERTIES or ALTER TABLE when comment support lands`. That message is clear. Put the
-  same `COMMENT` **after** a `TBLPROPERTIES` clause and the refusal becomes
-  `SQL error: ParserError("Expected: end of statement, found: using at Line: 1, Column: 39")` —
-  it names `using`, which is valid, instead of the `comment` clause that failed. dbt reaches the
-  second form, because `spark__create_table_as` always emits `tblproperties` before
-  `comment_clause()`. `dbt-repark` refuses `persist_docs.relation` at compile time so the
-  misleading diagnostic never reaches a user.
+- **repark** — `CREATE OR REPLACE TABLE t USING iceberg COMMENT 'x' AS SELECT …` and the same
+  with the `COMMENT` **after** a `TBLPROPERTIES` clause are both served: the comment lands as the
+  `comment` table property whichever side of `TBLPROPERTIES` it sits on. dbt emits
+  `spark__comment_clause` (inherited from Spark after the round-2 retirement deleted
+  `repark__comment_clause`) and `persist_docs.relation` no longer refuses at compile time, so
+  relation docs reach the door. The defect this row named — `spark__create_table_as` emitting
+  `tblproperties` before `comment_clause()`, so the old refusal reported `using` instead of the
+  failing clause — is unreachable for `COMMENT` now; the same parser backtracking is still
+  observable on `OPTIONS` (see `DBT-CTASCLAUSE-1`).
 - **Apache Spark** — accepts a table comment on an Iceberg CTAS and stores it in the table
-  metadata. *(oracle: documented — the claim here is the refusal, and the position the refusal
-  reports; no value oracle is involved.)*
+  metadata. *(oracle: recorded live — the `comment` property on the built table.)*
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-TABLE-COMMENT]`
-  and `[R-TABLE-COMMENT-AFTER-TBLPROPERTIES]`, with
-  `python/dbt-repark/tests/test_gold_models.py::test_relation_documentation_refuses` holding the
-  adapter's side
-- **Rationale** — BACKLOG, two things at once. The capability is genuinely missing and the
-  refusal message says so. The **diagnostic** is the defect worth naming: a parser that
-  backtracks and reports the earliest unconsumed token sends a reader to a clause that is
-  correct. Whichever unit lands CTAS `COMMENT` should also check what the refusal points at when
-  a later clause is the one that failed.
+  `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-TABLE-COMMENT]`
+  and `[S-TABLE-COMMENT-AFTER-TBLPROPERTIES]`, with
+  `python/dbt-repark/tests/test_gold_models.py::test_relation_documentation_sets_the_table_comment`
+  holding the adapter's side
+- **Rationale** — SERVED (IPI-26/27 round 2, packet D-4 + the A-12 dbt half). The capability and
+  the diagnostic land together: the door accepts the clause on either side of `TBLPROPERTIES`
+  and reports nothing misleading.
 
 ### DBT-COLCOMMENT-1 — `ALTER TABLE … ALTER COLUMN … COMMENT` is refused, so `persist_docs.columns` cannot run
 

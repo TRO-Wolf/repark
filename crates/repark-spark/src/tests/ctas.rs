@@ -1291,14 +1291,14 @@ async fn ctas_multi_batch_midstream_failure_leaves_no_orphan() {
 #[test]
 fn build_ctas_rejects_missing_query_without_panicking() {
     let sql = "CREATE TABLE ice.sales.t (id INT)";
-    let statements =
-        Parser::parse_sql(&DatabricksDialect {}, sql).expect("CREATE TABLE should parse");
+    let statements = Parser::parse_sql(&DatabricksDialect {}, sql).expect("should parse");
     let Statement::CreateTable(create) = &statements[0] else {
         panic!("expected a CreateTable statement");
     };
     assert!(create.query.is_none(), "fixture must be a non-CTAS create");
 
-    let Err(error) = build_ctas(create, &[]) else {
+    let clauses = crate::normalize::create_clauses::CreateClauses::default();
+    let Err(error) = build_ctas(create, &[], &clauses) else {
         panic!("build_ctas must reject a query-less CREATE TABLE");
     };
     assert!(

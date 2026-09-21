@@ -367,6 +367,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`); **V3-9:** the `format-version = 3` opt-in refusal names the conf and no
   longer claims merge-on-read is unserved. pins: v3-9-mor-predicate-dml-dv/C-006
+  **IPI-26/27 round 2 (2026-09-20):** `column_def_location_comment_serve_other_clauses_refuse`
+  inverts the `LOCATION` / `COMMENT` refuses to success pins (metadata location and
+  the `comment` property), while the Hive `ROW FORMAT`, `STORED AS`, and CTAS
+  `TEMPORARY` refuses hold.
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
   `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
   INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond
@@ -786,6 +790,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_service_managed_plain_ctas_records_append` (`[append]`). The first two go red
   when the `ctas.or_replace` branch in `execute_ctas_service_managed` is reverted.
   pins: ice-rtas-ops-2/C-019
+  **IPI-26/27 round 2 (2026-09-20):**
+  `ctas_custom_location_on_service_managed_catalog_refuses_loud` pins that a CTAS
+  `LOCATION` on a service-managed catalog refuses naming the clause, with zero
+  catalog writes.
 - [nested_column_ddl.rs](nested_column_ddl.rs) — **ICE-NESTED-EVO-1 (2026-09-17):** the Spark
   door's nested DDL end to end on an in-memory catalog: `CREATE TABLE` with struct,
   array-of-struct and map-of-struct columns answers Spark's `DESCRIBE` types;
@@ -1128,6 +1136,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   plain `SELECT`, each pinned to its pre-widening outcome.
   `clustered_by_reaches_partitioning_before_parse` pins the rewritten `bucket(4, id)`
   element. Cells `D-ADD-COL-STRUCT`, `D-X-ADD-COL-MAP-KEY-STRUCT`, `D-X-CLUSTERED-BY`.
+  **IPI-26/27 round 2 (2026-09-20):** `table_comment_extracts_on_either_side_of_tblproperties`
+  and `table_location_extracts_on_either_side_of_tblproperties` pin the clause
+  extraction on both sides of `TBLPROPERTIES`, CTAS included.
 
 ## Mapping rule
 

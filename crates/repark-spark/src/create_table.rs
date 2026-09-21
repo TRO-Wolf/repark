@@ -21,6 +21,7 @@ use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_
 use repark_iceberg::write::nested_type_sql::struct_field_required;
 
 use crate::catalog_ops::table_or_view_already_exists;
+use crate::normalize::create_clauses::CreateClauses;
 use crate::{
     CreatePlan, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
     build_transform_field, catalog_handle, iceberg_err, name_parts, namespace_schema_name,
@@ -38,6 +39,7 @@ struct SchemaCreate {
     properties: HashMap<String, String>,
     partition_fields: Vec<PartitionFieldSpec>,
     schema: Schema,
+    location: Option<String>,
     /// Requested `TBLPROPERTIES ('format-version' = …)`, consumed at execute (session opt-in).
     format_version: Option<String>,
 }
@@ -50,9 +52,10 @@ pub(crate) async fn execute_create_table(
     catalogs: &CatalogRegistry,
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
+    clauses: &CreateClauses,
 ) -> Result<DataFrame> {
     let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
-    let schema_create = build_schema_create(create, partitioning, timestamp_type)?;
+    let schema_create = build_schema_create(create, partitioning, timestamp_type, clauses)?;
     execute_schema_create(ctx, catalogs, schema_create).await
 }
 
@@ -62,6 +65,7 @@ fn build_schema_create(
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
     timestamp_type: SparkTimestampType,
+    clauses: &CreateClauses,
 ) -> Result<SchemaCreate> {
     if create.query.is_some() {
         return Err(DataFusionError::Internal(
@@ -87,7 +91,6 @@ fn build_schema_create(
                 .into(),
         ));
     }
-    // LOCATION / Hive ROW FORMAT etc.
     crate::refuse_unsupported_create_table_clauses(create, "column-def CREATE")?;
     // LIKE / CLONE before empty-column check so the honest NotImplemented surfaces.
     if create.like.is_some() || create.clone.is_some() {
@@ -152,6 +155,9 @@ fn build_schema_create(
     }
     // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
+    if let Some(comment) = clauses.comment.clone() {
+        properties.insert("comment".to_string(), comment);
+    }
 
     let schema = schema_from_column_defs(&create.columns, timestamp_type)?;
     let partition_spec = build_partition_spec(&schema, &partition_fields)?;
@@ -168,6 +174,7 @@ fn build_schema_create(
         properties,
         partition_fields,
         schema,
+        location: clauses.location.clone(),
         format_version,
     })
 }
@@ -183,27 +190,31 @@ fn schema_from_column_defs(
         let field_id = alloc_field_id(&mut next_id)?;
         let iceberg_type =
             sql_type_to_iceberg_nested(&column.data_type, timestamp_type, &mut next_id)?;
-        // Only NULL and NOT NULL are supported.
         let mut required = false;
+        let mut doc: Option<String> = None;
         for option in &column.options {
             match &option.option {
                 ColumnOption::NotNull => required = true,
                 ColumnOption::Null => {}
+                ColumnOption::Comment(text) => doc = Some(text.clone()),
                 other => {
                     return Err(DataFusionError::NotImplemented(format!(
                         "CREATE TABLE column option `{other}` on `{}` is not supported yet — \
-                         only NULL / NOT NULL are accepted (defaults, constraints, generated \
-                         columns stay out of I5 schema-only CREATE)",
+                         only NULL / NOT NULL / COMMENT are accepted (defaults, constraints, \
+                         generated columns stay out of I5 schema-only CREATE)",
                         column.name.value
                     )));
                 }
             }
         }
-        let nested = if required {
+        let mut nested = if required {
             NestedField::required(field_id, column.name.value.clone(), iceberg_type)
         } else {
             NestedField::optional(field_id, column.name.value.clone(), iceberg_type)
         };
+        if let Some(text) = doc {
+            nested = nested.with_doc(text);
+        }
         fields.push(Arc::new(nested));
     }
     Schema::builder()
@@ -409,6 +420,12 @@ async fn execute_schema_create(
             ));
         }
     }
+    crate::ctas::check_custom_location(
+        create.location.as_deref(),
+        existed,
+        catalogs.location_policy(&create.catalog) == Some(LocationPolicy::ServiceManagedLocation),
+        "column-def CREATE",
+    )?;
 
     let partition_spec = build_partition_spec(&create.schema, &create.partition_fields)?;
     let format_version = iceberg_create_format_version(ctx, create.format_version.as_deref())?;
@@ -462,6 +479,7 @@ async fn execute_schema_create(
             &create.namespace,
             &create.table,
             &create.full_name,
+            create.location.as_deref(),
         )
         .await?;
         commit_staged_schema_only(
@@ -749,6 +767,27 @@ mod type_mapping_tests {
             message.contains("not supported")
                 && (message.contains("DEFAULT") || message.contains("default")),
             "got: {message}"
+        );
+    }
+
+    #[test]
+    fn column_comment_maps_to_field_doc() {
+        use datafusion::sql::sqlparser::ast::{ColumnDef, ColumnOption, ColumnOptionDef, Ident};
+
+        let commented = ColumnDef {
+            name: Ident::new("id"),
+            data_type: SqlDataType::BigInt(None),
+            options: vec![ColumnOptionDef {
+                name: None,
+                option: ColumnOption::Comment("the id".to_string()),
+            }],
+        };
+        let schema =
+            schema_from_column_defs(std::slice::from_ref(&commented), SparkTimestampType::Ltz)
+                .unwrap();
+        assert_eq!(
+            schema.as_struct().fields()[0].doc.as_deref(),
+            Some("the id")
         );
     }
 }

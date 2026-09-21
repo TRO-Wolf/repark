@@ -23,12 +23,13 @@ adapter was built to run.
 | `threads` | yes — one shared session, one cursor per statement |
 | `dbt docs generate` | yes — columns come from the frame schema, not `DESCRIBE` |
 | a namespace that does not exist yet | created before the model builds |
-| `persist_docs: {relation: true}` | **refused** — [DBT-RELCOMMENT-1](../spark-sql-iceberg-parity.md) |
+| `persist_docs: {relation: true}` | yes — sets the table `comment` property (`DBT-RELCOMMENT-1`) |
 | `materialized='view'` | **refused** — [DBT-VIEW-1](../spark-sql-iceberg-parity.md) |
 | `materialized='incremental'` | **refused** — [DBT-TEMPVIEW-1](../spark-sql-iceberg-parity.md) |
 | snapshots | **refused** — [DBT-TEMPVIEW-1](../spark-sql-iceberg-parity.md) |
 | `persist_docs: {columns: true}` | **refused** — [DBT-COLCOMMENT-1](../spark-sql-iceberg-parity.md) |
-| `location_root`, `options`, `clustered_by` / `buckets` | **refused** — [DBT-CTASCLAUSE-1](../spark-sql-iceberg-parity.md) |
+| `options`, `clustered_by` / `buckets` | **refused** — [DBT-CTASCLAUSE-1](../spark-sql-iceberg-parity.md) |
+| `location_root` | yes — the table builds under the given path (`DBT-CTASCLAUSE-1`) |
 
 Every refusal happens at compile time with a message naming its registry row, so a model never
 half-builds. The differences from Apache Spark are owned by

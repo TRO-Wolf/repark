@@ -23,6 +23,7 @@ use crate::catalog_ops::{iceberg_err, name_parts};
 use crate::merge;
 
 pub(crate) mod clustered_by;
+pub(crate) mod create_clauses;
 pub(crate) mod replace_table;
 
 /// True when the statement's first keyword token is `MERGE`.
@@ -176,7 +177,13 @@ pub(crate) fn normalized_parse_dialect(tokens: &[Token]) -> &'static dyn Dialect
 /// # Errors A `CREATE TABLE` whose `PARTITIONED BY` clause is malformed errors loudly.
 pub(crate) fn parse_single_normalized(
     sql: &str,
-) -> Result<Option<(Statement, Vec<PartitionedByElement>)>> {
+) -> Result<
+    Option<(
+        Statement,
+        Vec<PartitionedByElement>,
+        create_clauses::CreateClauses,
+    )>,
+> {
     // Strip Spark's USING clause and extract CTAS partitioning before the stock parser runs.
     let dialect = DatabricksDialect {};
     let Ok(mut tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
@@ -184,10 +191,12 @@ pub(crate) fn parse_single_normalized(
     };
     tokens = replace_table::rewrite_replace_table(tokens);
     let mut partitioning = Vec::new();
+    let mut clauses = create_clauses::CreateClauses::default();
     if is_create_table(&tokens) {
-        tokens = strip_create_table_using(&tokens);
+        tokens = create_clauses::strip_create_table_using(&tokens);
         tokens = clustered_by::rewrite_clustered_by(&tokens);
         (tokens, partitioning) = extract_partitioned_by(&tokens)?;
+        (tokens, clauses) = create_clauses::extract_create_clauses(&tokens);
         tokens = rewrite_create_column_types(&tokens, false).map_err(|message| {
             DataFusionError::SQL(Box::new(ParserError::ParserError(message)), None)
         })?;
@@ -210,7 +219,9 @@ pub(crate) fn parse_single_normalized(
         return Err(multi_statement_parse_error());
     }
     if statements.len() == 1 {
-        Ok(statements.pop().map(|statement| (statement, partitioning)))
+        Ok(statements
+            .pop()
+            .map(|statement| (statement, partitioning, clauses)))
     } else {
         Ok(None)
     }
@@ -504,30 +515,6 @@ pub(crate) fn ctas_as_boundary(tokens: &[Token]) -> usize {
         .iter()
         .position(|token| matches!(token, Token::Word(word) if word.keyword == Keyword::AS))
         .unwrap_or(tokens.len())
-}
-
-/// Strip the Spark `USING <provider>` data-source clause from a CREATE TABLE statement.
-pub(crate) fn strip_create_table_using(tokens: &[Token]) -> Vec<Token> {
-    let boundary = ctas_as_boundary(tokens);
-    let mut out = Vec::with_capacity(tokens.len());
-    let mut i = 0;
-    while i < tokens.len() {
-        let is_using = matches!(&tokens[i], Token::Word(word) if word.keyword == Keyword::USING);
-        if i < boundary && is_using {
-            // Skip `USING`, any whitespace, and the following provider word.
-            let mut j = i + 1;
-            while j < tokens.len() && matches!(tokens[j], Token::Whitespace(_)) {
-                j += 1;
-            }
-            if j < tokens.len() && matches!(tokens[j], Token::Word(_)) {
-                i = j + 1;
-                continue;
-            }
-        }
-        out.push(tokens[i].clone());
-        i += 1;
-    }
-    out
 }
 
 /// One element of a Spark `CREATE TABLE … PARTITIONED BY (…)` clause, classified by token shape.
