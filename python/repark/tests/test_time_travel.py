@@ -15,6 +15,7 @@ Fork pin ``4723104b``:
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import pyarrow as pa
@@ -24,6 +25,7 @@ from repark import ReparkSession
 from repark.errors import AnalysisException, IllegalArgumentException, UnsupportedOperationException
 
 TABLE = "mem.ns.events"
+SELECTOR_TABLE = "mem.ns.tt_selector"
 COW = """
     'format-version' = '2',
     'write.delete.mode' = 'copy-on-write',
@@ -49,6 +51,12 @@ def _arrow_ids(table: pa.Table) -> list[int]:
 def _schema_names_types(table: pa.Table) -> list[tuple[str, str]]:
     """Arrow field name + type string pins (divergence-class: value AND type)."""
     return [(field.name, str(field.type)) for field in table.schema]
+
+
+def _rows_id_data_cat(table: pa.Table) -> list[tuple[int, str, str]]:
+    """Sorted full-row pin for the (id, data, cat) selector tables (value pin)."""
+    rows = table.select(["id", "data", "cat"]).to_pylist()
+    return sorted((int(row["id"]), str(row["data"]), str(row["cat"])) for row in rows)
 
 
 @pytest.fixture
@@ -99,6 +107,29 @@ def multi_snapshot(spark: ReparkSession) -> dict[str, object]:
         # MERGE: 2→bee, +5; still has 1,3,4
         "ids_s3": [1, 2, 3, 4, 5],
     }
+
+
+@pytest.fixture
+def selector_snapshots(spark: ReparkSession) -> dict[str, object]:
+    """Three snapshots over (id, data, cat): s0 holds two rows, s1 three, s2 drops id 1.
+
+    Mirrors the R-TT-*SELECTOR harness cells (``cells_read.py`` ``base3``) so the recorded
+    rows replay against the memory catalog.
+    """
+    spark.sql(
+        f"CREATE TABLE {SELECTOR_TABLE} USING iceberg TBLPROPERTIES ({COW}) AS "
+        "SELECT * FROM (VALUES (1, 'a', 'x'), (2, 'b', 'y')) AS t(id, data, cat)"
+    )
+    s0 = spark._testing_list_snapshots(SELECTOR_TABLE)[-1][0]
+    spark.sql(f"INSERT INTO {SELECTOR_TABLE} SELECT 3 AS id, 'c' AS data, 'x' AS cat")
+    s1, s1_ts = spark._testing_list_snapshots(SELECTOR_TABLE)[-1]
+    assert s1 != s0
+    time.sleep(0.02)
+    spark.sql(f"DELETE FROM {SELECTOR_TABLE} WHERE id = 1")
+    s2, s2_ts = spark._testing_list_snapshots(SELECTOR_TABLE)[-1]
+    assert s2 != s1
+    assert int(s1_ts) < int(s2_ts)  # type: ignore[arg-type]
+    return {"s0": s0, "s1": s1, "s1_ts": s1_ts, "s2": s2}
 
 
 def test_sql_version_as_of_snapshot_id(
@@ -599,3 +630,57 @@ def test_multi_table_version_as_of_join(
         f"JOIN {other} VERSION AS OF {other_s1} b ON 1=1 ORDER BY id"
     ).to_arrow()
     assert _arrow_ids(arrow_s2) == multi_snapshot["ids_s2"]
+
+
+def test_snapshot_id_selector_reads_pinned_snapshot(
+    spark: ReparkSession, selector_snapshots: dict[str, object]
+) -> None:
+    """R-TT-SNAPSHOT-ID-SELECTOR: SELECT * FROM t.snapshot_id_<id> reads that snapshot."""
+    s0 = selector_snapshots["s0"]
+    arrow = spark.sql(f"SELECT * FROM {SELECTOR_TABLE}.snapshot_id_{s0}").to_arrow()
+    assert _rows_id_data_cat(arrow) == [(1, "a", "x"), (2, "b", "y")]
+    assert _schema_names_types(arrow) == [("id", "int32"), ("data", "string"), ("cat", "string")]
+
+
+def test_at_timestamp_selector_reads_pinned_snapshot(
+    spark: ReparkSession, selector_snapshots: dict[str, object]
+) -> None:
+    """R-TT-AT-TIMESTAMP-SELECTOR: SELECT * FROM t.at_timestamp_<ms> reads as of that ms."""
+    s1_ts = selector_snapshots["s1_ts"]
+    arrow = spark.sql(f"SELECT * FROM {SELECTOR_TABLE}.at_timestamp_{s1_ts}").to_arrow()
+    assert _rows_id_data_cat(arrow) == [(1, "a", "x"), (2, "b", "y"), (3, "c", "x")]
+    assert _schema_names_types(arrow) == [("id", "int32"), ("data", "string"), ("cat", "string")]
+
+
+def test_snapshot_id_selector_bad_suffix_refuses(
+    spark: ReparkSession, selector_snapshots: dict[str, object]
+) -> None:
+    """Unparsable numeric selector suffixes refuse typed, never table-not-found."""
+    _ = selector_snapshots
+    with pytest.raises(IllegalArgumentException, match=r"invalid snapshot_id selector"):
+        spark.sql(f"SELECT * FROM {SELECTOR_TABLE}.snapshot_id_abc").to_arrow()
+    with pytest.raises(IllegalArgumentException, match=r"must be an integer snapshot id"):
+        spark.sql(f"SELECT * FROM {SELECTOR_TABLE}.snapshot_id_").to_arrow()
+    with pytest.raises(IllegalArgumentException, match=r"invalid at_timestamp selector"):
+        spark.sql(f"SELECT * FROM {SELECTOR_TABLE}.at_timestamp_xyz").to_arrow()
+    with pytest.raises(IllegalArgumentException, match=r"must be an integer millisecond"):
+        spark.sql(f"SELECT * FROM {SELECTOR_TABLE}.at_timestamp_").to_arrow()
+
+
+def test_branch_selector_still_resolves_as_branch_ref(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    """t.branch_<name> / t.tag_<name> keep resolving (numeric selectors change nothing)."""
+    arrow_branch = spark.sql(f"SELECT id FROM {TABLE}.branch_branch_s2 ORDER BY id").to_arrow()
+    assert _arrow_ids(arrow_branch) == multi_snapshot["ids_s2"]
+    arrow_tag = spark.sql(f"SELECT id FROM {TABLE}.tag_tag_s1 ORDER BY id").to_arrow()
+    assert _arrow_ids(arrow_tag) == multi_snapshot["ids_s1"]
+
+
+def test_branch_metadata_composition_still_errors(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    """t.branch_b.files keeps its current error (A-7: behavior unchanged, not success)."""
+    _ = multi_snapshot
+    with pytest.raises(AnalysisException, match=r"compound identifier"):
+        spark.sql(f"SELECT count(*) FROM {TABLE}.branch_b.files").to_arrow()
