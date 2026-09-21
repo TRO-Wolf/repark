@@ -1,7 +1,6 @@
 # map — scripts/
 
 IPI-26/27 round 3 (2026-09-21): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1444 → 1389 (the `REPLACE PARTITION FIELD` parser moves to the sibling `replace_partition_field.rs`, which also takes the transform-LHS form), shrink-only.
-M8-STARTSWITH-1 (2026-09-21): `check_lib_rs.py` moves the `repark-functions` ceiling 182 → 184 (`pub mod spark_startswith;` + one register_all chain link, same sanctioned out (2) with stated reason).
 M8-STARTSWITH-1 (2026-09-21): startswith adds pub mod spark_startswith plus one register_all chain link; root file measured 181, fits under the standing repark-functions ceiling 182 with no raise.
 
 IPI-26/27 round 1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1449 → 1447 (the comma splitter folds angle tracking into one depth counter), shrink-only.
