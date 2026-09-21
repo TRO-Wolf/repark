@@ -122,6 +122,7 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
         .as_deref()
         .unwrap_or_else(|| sql_after_branch.as_ref());
     let mut lineage_pins = repark_core::LineagePins::default();
+    let mut metadata_column_pins = repark_core::MetadataColumnPins::default();
     let original_for_locations = original_sql_for_locations(sql, canonical_sql, routed_sql);
     let result = Box::pin(execute_time_travelled(
         ctx,
@@ -130,15 +131,18 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
         original_for_locations,
         &mut pinned,
         &mut lineage_pins,
+        &mut metadata_column_pins,
         write_options,
     ))
     .await;
+    metadata_column_pins.release(ctx);
     lineage_pins.release(ctx);
     pinned.release(ctx);
     result
 }
 
 /// Continue routing after the time-travel rewrite while preserving pinned-view cleanup.
+#[allow(clippy::too_many_arguments)]
 async fn execute_time_travelled(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -146,6 +150,7 @@ async fn execute_time_travelled(
     original_for_locations: Option<&str>,
     pinned: &mut time_travel::PinnedViews,
     lineage_pins: &mut repark_core::LineagePins,
+    metadata_column_pins: &mut repark_core::MetadataColumnPins,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Iceberg time travel is not modelled by Databricks-dialect sqlparser.
@@ -158,17 +163,29 @@ async fn execute_time_travelled(
         std::borrow::Cow::Borrowed(sql)
     };
     let dialect = datafusion::sql::sqlparser::dialect::DatabricksDialect {};
-    let sql_storage: std::borrow::Cow<'_, str> = match repark_core::prepare_lineage_sql(
+    let sql_after_mc: std::borrow::Cow<'_, str> = match repark_core::prepare_metadata_column_sql(
         ctx,
         catalogs,
         sql_after_tt.as_ref(),
+        &dialect,
+        metadata_column_pins,
+    )
+    .await?
+    {
+        Some(rewritten) => std::borrow::Cow::Owned(rewritten),
+        None => sql_after_tt,
+    };
+    let sql_storage: std::borrow::Cow<'_, str> = match repark_core::prepare_lineage_sql(
+        ctx,
+        catalogs,
+        sql_after_mc.as_ref(),
         &dialect,
         lineage_pins,
     )
     .await?
     {
         Some(rewritten) => std::borrow::Cow::Owned(rewritten),
-        None => sql_after_tt,
+        None => sql_after_mc,
     };
     let result = execute_inner(ctx, catalogs, sql_storage.as_ref(), write_options).await;
     if let Some(original) = original_for_locations

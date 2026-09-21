@@ -1131,8 +1131,10 @@ repark-parity slice.
   file-backed `exceptions` taxonomy module, the two error folds, the `#[pymodule]`
   registration) that already uses the sanctioned file-backed test module (phase-3 PR-3, EC-10;
   ceiling ratcheted 230 → 190 when the taxonomy moved to src/exceptions.rs — without the row
-  every slate reds on the crate's arrival), and `repark-ta` — the verbatim-ported kernel root's `TaError`
-  contract + flat re-export surface).
+  every slate reds on the crate's arrival), `repark-ta` — the verbatim-ported kernel root's `TaError`
+  contract + flat re-export surface, and `repark-core` — the metadata-columns module decl +
+  three-line re-export (ice-metadata-cols-1, IPI-20, measured 154; the root sat exactly at
+  the 150 default).
   **Stale EXCEPTIONS keys fail closed** (WC 2026-08-11): a crate-name key whose
   `crates/<key>/src/lib.rs` is missing is an ERROR (G-8 mold; keys are crate names, not
   paths). Dual-wired: `make check-lib-rs` (in `make ci`) AND a ci.yml

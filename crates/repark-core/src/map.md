@@ -815,6 +815,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   refuse `[V3-ROWID-2]`. v1/v2 stay unresolved (`No field named _row_id`). Both SQL doors
   call it.
   pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
+- `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `prepare_metadata_column_sql`
+  rewrites queries that name `_file` / `_pos` onto a `MetadataColumnsTableProvider` temp
+  view (qualified/aliased FROM, unquoted case-fold, schema-order `*` expand serves user
+  columns only). `_spec_id` / `_partition` / `_deleted` refuse `[ICE-MC-1]` naming the
+  column — unserved-and-declared at the fork pin, never the raw `No field named`. Only the
+  Spark door calls it; the ANSI door does not serve metadata columns in this unit.
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved
   here from `session.rs` in CFG-1 step 3, next to the spec its `into_spec` builds) + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
