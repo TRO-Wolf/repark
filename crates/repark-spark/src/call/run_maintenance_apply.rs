@@ -116,6 +116,7 @@ async fn run_step(
                     target_file_size_bytes: target_size,
                     ..Default::default()
                 },
+                None,
             ))
             .await?
         }
