@@ -375,6 +375,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `[UNSUPPORTED_FEATURE.TABLE_OPERATION]` / `SQLSTATE: 0A000`, the backticked
   `` `ice`.`sales`.`with_def` `` table, and a `Plan` (not `NotImplemented`) error.
   pins: ice-error-conditions-1/C-011
+  **IPI-51 PR8 (2026-09-21):** the V3R-1 type pin splits — `GEOMETRY` / `GEOGRAPHY`
+  and the inventory `GEOMETRY(4326)` spelling require
+  `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]` / `SQLSTATE: 0A000` as `Plan`;
+  `VARIANT` keeps the `NotImplemented` type-naming string; all leave no table behind.
+  `v3_type_column_named_geometry_with_int_succeeds` pins a column NAMED `geometry`
+  with `INT` succeeding (cell `TY-GEOMETRY`).
+  pins: ice-error-conditions-1/C-011
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
   `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
   INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond
@@ -418,7 +425,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: rp-7-f18-repin/C-005
   rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`; rp-3-fork-repin/C-004;
   rp-6-fork-repin/C-002, C-003; v3-7-merge-lineage/C-002; v3-9-mor-predicate-dml-dv/C-003).
-- `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the RP-6 re-recorded the `repark-sql/src/v3/cow.rs` hash once more after the pins citation moved from its module doc to the map.
+- `v3_lineage.rs` — **V3-4:** Spark-door `_row_id` / `_last_updated_sequence_number` on the RP-6 re-recorded the `repark-sql/src/v3/cow.rs` hash once more after the pins citation moved from its module doc to the map. IPI-51 PR8 (2026-09-21) re-records the sql `v3/cow.rs` hash for the `Door::ok` `pub(crate)` change this PR itself makes.
   V3E-3 fixtures (MOR+DV surviving rows), created v3 derivation, v2/v1 unresolved
   (`[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703`, IPI-51 PR6 slice 1, 2026-09-21),
   `SELECT *, _row_id` expands user columns only, qualified/aliased forms,

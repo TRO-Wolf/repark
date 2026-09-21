@@ -53,7 +53,7 @@ impl Door {
         frame.collect().await
     }
 
-    async fn ok(&self, sql: &str) {
+    pub(crate) async fn ok(&self, sql: &str) {
         self.sql(sql)
             .await
             .unwrap_or_else(|err| panic!("`{sql}` must succeed: {err}"));

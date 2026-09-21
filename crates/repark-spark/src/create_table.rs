@@ -317,14 +317,21 @@ fn sql_type_to_iceberg_nested(
         // WITH TIME ZONE / TIMESTAMPTZ stay instants.
         SqlDataType::Timestamp(_, _) => PrimitiveType::Timestamptz,
         SqlDataType::Binary(_) | SqlDataType::Varbinary(_) => PrimitiveType::Binary,
-        other => match iceberg_v3_named_primitive(other) {
-            Some(primitive) => primitive,
-            None => {
+        other => {
+            if let Some(primitive) = iceberg_v3_named_primitive(other) {
+                primitive
+            } else {
+                if geospatial_sql_type(other) {
+                    return Err(DataFusionError::Plan(spark_error::message(
+                        spark_error::UNSUPPORTED_FEATURE_GEOSPATIAL_DISABLED,
+                        &[],
+                    )));
+                }
                 return Err(DataFusionError::NotImplemented(format!(
                     "column type `{other}` is not supported yet for Iceberg tables"
                 )));
             }
-        },
+        }
     };
     Ok(Type::Primitive(primitive))
 }
@@ -353,6 +360,12 @@ fn struct_type_to_iceberg(
         children.push(Arc::new(child));
     }
     Ok(Type::Struct(StructType::new(children)))
+}
+
+fn geospatial_sql_type(data_type: &SqlDataType) -> bool {
+    let upper = data_type.to_string().to_ascii_uppercase();
+    let head = upper.split(['(', ' ', ',']).next().unwrap_or("");
+    head == "GEOMETRY" || head == "GEOGRAPHY"
 }
 
 fn iceberg_v3_named_primitive(data_type: &SqlDataType) -> Option<PrimitiveType> {

@@ -51,6 +51,13 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
 - `types.rs` — `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE (`V3-GEO-1`);
   reuses `cow.rs`'s `Door`. **V3-6 C-004:** the `UNKNOWN` column refuses naming the
   type, no table left (pins: v3-6-v3-types/C-004).
+  **IPI-51 PR8 (2026-09-21):** the type pin splits — `GEOMETRY` / `GEOGRAPHY` and
+  the inventory `GEOMETRY(4326)` spelling require
+  `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]` / `SQLSTATE: 0A000`; `VARIANT` still
+  names `VARIANT`; all leave no table behind. `cow.rs` `Door::ok` turns `pub(crate)`
+  so the new `v3_type_column_named_geometry_with_int_succeeds` pins a column NAMED
+  `geometry` with `INT` succeeding (cell `TY-GEOMETRY`).
+  pins: ice-error-conditions-1/C-011
 - `branch_tag_time_travel.rs` — ANSI branch/tag + `FOR VERSION AS OF` over the partitioned
   v3 DV fixture; RP-3 shared-Puffin DELETE keeps the untouched sibling
   (pins: rp-3-fork-repin/C-004).

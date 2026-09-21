@@ -767,7 +767,7 @@ async fn or_replace_applies_requested_v3_and_alter_upgrades_with_opt_in() {
 async fn v3_type_columns_geometry_geography_variant_refuse_naming_the_type() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
-    for type_name in ["GEOMETRY", "GEOGRAPHY", "VARIANT"] {
+    for type_name in ["GEOMETRY", "GEOGRAPHY"] {
         let table = format!("t_{}", type_name.to_ascii_lowercase());
         let err = execute(
             &ctx,
@@ -778,11 +778,16 @@ async fn v3_type_columns_geometry_geography_variant_refuse_naming_the_type() {
             ),
         )
         .await
-        .unwrap_err()
-        .to_string();
+        .expect_err("geospatial CREATE must refuse");
         assert!(
-            err.to_ascii_uppercase().contains(type_name),
-            "CREATE with a `{type_name}` column must refuse naming the type: {err}"
+            matches!(err, DataFusionError::Plan(_)),
+            "geospatial refuse must be Plan, got: {err:?}"
+        );
+        let message = err.to_string();
+        assert!(
+            message.contains("[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]")
+                && message.contains("SQLSTATE: 0A000"),
+            "CREATE with a `{type_name}` column must carry condition and SQLSTATE: {message}"
         );
         let exists = catalogs["ice"]
             .table_exists(&TableIdent::new(
@@ -793,4 +798,87 @@ async fn v3_type_columns_geometry_geography_variant_refuse_naming_the_type() {
             .unwrap();
         assert!(!exists, "a refused CREATE must leave no `{table}` behind");
     }
+    let variant_err = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t_variant (id INT, v VARIANT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await
+    .expect_err("VARIANT CREATE must refuse");
+    assert!(
+        matches!(variant_err, DataFusionError::NotImplemented(_)),
+        "VARIANT refuse must stay NotImplemented, got: {variant_err:?}"
+    );
+    let variant_message = variant_err.to_string();
+    assert!(
+        variant_message.contains("VARIANT")
+            && variant_message.contains("not supported yet for Iceberg tables"),
+        "CREATE with a `VARIANT` column must refuse naming the type: {variant_message}"
+    );
+    let variant_exists = catalogs["ice"]
+        .table_exists(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "t_variant".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert!(
+        !variant_exists,
+        "a refused CREATE must leave no `t_variant` behind"
+    );
+    let srid_err = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t_geometry_4326 (id INT, g GEOMETRY(4326)) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await
+    .expect_err("GEOMETRY(4326) CREATE must refuse");
+    assert!(
+        matches!(srid_err, DataFusionError::Plan(_)),
+        "GEOMETRY(4326) refuse must be Plan, got: {srid_err:?}"
+    );
+    let srid_message = srid_err.to_string();
+    assert!(
+        srid_message.contains("[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]")
+            && srid_message.contains("SQLSTATE: 0A000"),
+        "CREATE with a `GEOMETRY(4326)` column must carry condition and SQLSTATE: {srid_message}"
+    );
+    let srid_exists = catalogs["ice"]
+        .table_exists(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "t_geometry_4326".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert!(
+        !srid_exists,
+        "a refused CREATE must leave no `t_geometry_4326` behind"
+    );
+}
+
+#[tokio::test]
+async fn v3_type_column_named_geometry_with_int_succeeds() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t_named_geometry (id INT, geometry INT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await
+    .expect("a column named geometry with INT must succeed");
+    let exists = catalogs["ice"]
+        .table_exists(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "t_named_geometry".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert!(
+        exists,
+        "the named-geometry CREATE must leave its table behind"
+    );
 }
