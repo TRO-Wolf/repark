@@ -51,6 +51,14 @@ pub(super) async fn execute_rewrite_data_files(
     if !has_option_key(&pairs, "remove-dangling-deletes") {
         options.remove_dangling_deletes = bound.optional_bool("remove-dangling-deletes")?;
     }
+    let branch = bound.optional_string("branch")?;
+    if branch.is_some() && options.remove_dangling_deletes.unwrap_or(false) {
+        return Err(DataFusionError::NotImplemented(
+            "CALL rewrite_data_files 'branch' cannot be combined with 'remove-dangling-deletes' \
+             yet -- the fork's dangling-delete pass reads main's head, not the named branch"
+                .to_string(),
+        ));
+    }
     let where_predicate = match bound.optional_string("where")? {
         Some(where_sql) => Some(parse_rewrite_where(
             where_sql.as_str(),
@@ -66,6 +74,7 @@ pub(super) async fn execute_rewrite_data_files(
         table,
         where_predicate,
         options,
+        branch.as_deref(),
     ))
     .await
 }
@@ -79,11 +88,15 @@ pub(super) async fn run_rewrite(
     table: Table,
     where_predicate: Option<Predicate>,
     options: RewriteOptions,
+    branch: Option<&str>,
 ) -> Result<DataFrame> {
     let remove_dangling = options.remove_dangling_deletes.unwrap_or(false);
     let mut action = RewriteDataFiles::new(table)
         .remove_dangling_deletes(remove_dangling)
         .strategy(options.strategy.clone());
+    if let Some(name) = branch {
+        action = action.branch(name);
+    }
     if let Some(count) = options.shuffle_partitions_per_file {
         action = action.shuffle_partitions_per_file(count);
     }
@@ -148,10 +161,11 @@ pub(super) async fn run_rewrite(
 }
 
 fn is_fork_validation_refusal(error: &Error) -> bool {
-    const NEEDLES: [&str; 3] = [
+    const NEEDLES: [&str; 4] = [
         "Cannot sort data without a valid sort order",
         "Cannot ZOrder when no columns are specified",
         "Cannot find column '",
+        "snapshot ref '",
     ];
     let message = error.to_string();
     NEEDLES.iter().any(|needle| message.contains(needle))

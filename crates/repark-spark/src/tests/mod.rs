@@ -12,6 +12,7 @@ mod call_orphan;
 mod call_procedures_1;
 mod call_procedures_2;
 mod call_procs_route_1;
+mod call_rdf_branch;
 mod call_rdf_options;
 mod call_rdf_sort;
 mod call_register;

@@ -119,15 +119,15 @@ def test_bind_duplicate_binding_refuses(spark: ReparkSession) -> None:
 
 
 def test_bind_unknown_argument_refuses(spark: ReparkSession) -> None:
-    """Unknown branch refuses with the declared allowed list. pins: ice-procedures-1/C-005."""
+    """Unknown argument refuses with the declared allowed list. pins: ice-procedures-1/C-005."""
     with pytest.raises(
         AnalysisException,
         match=re.escape(
-            "unknown CALL argument `branch`; allowed: table, strategy, sort_order, options, "
-            "where, remove-dangling-deletes"
+            "unknown CALL argument `bogus`; allowed: table, strategy, sort_order, options, "
+            "where, branch, remove-dangling-deletes"
         ),
     ):
-        spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.x', branch => 'b1')").to_arrow()
+        spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.x', bogus => 1)").to_arrow()
 
 
 def test_bind_missing_required_refuses(spark: ReparkSession) -> None:
@@ -143,10 +143,10 @@ def test_bind_excess_positional_refuses(spark: ReparkSession) -> None:
     """Over-arity refuses; extras stay named-only. pins: ice-procedures-1/C-007."""
     with pytest.raises(
         AnalysisException,
-        match=re.escape("CALL accepts at most 5 positional argument(s); got 6"),
+        match=re.escape("CALL accepts at most 6 positional argument(s); got 7"),
     ):
         spark.sql(
-            "CALL mem.system.rewrite_data_files('a', 'b', 'c', map('k', 'v'), 'd', 'e')"
+            "CALL mem.system.rewrite_data_files('a', 'b', 'c', map('k', 'v'), 'd', 'e', 'f')"
         ).to_arrow()
     with pytest.raises(
         AnalysisException,
@@ -530,3 +530,42 @@ def test_add_files_refuses_unsupported_sources(spark: ReparkSession) -> None:
         spark.sql(
             "CALL mem.system.add_files(table => 'ns.afr', source_table => 'plain-string')"
         ).to_arrow()
+
+
+def test_rdf_branch_rewrites_only_the_named_branch(spark: ReparkSession) -> None:
+    """Branch rewrite moves b1 and leaves main untouched. pins: ice-procedures-1/C-021."""
+    spark.sql(
+        "CREATE TABLE mem.ns.rdfb (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat)"
+    )
+    spark.sql("INSERT INTO mem.ns.rdfb VALUES (1, 'a', 'x'), (2, 'b', 'y'), (6, 'f', 'x')")
+    spark.sql("INSERT INTO mem.ns.rdfb VALUES (3, 'c', 'x'), (7, 'g', 'x')")
+    spark.sql("INSERT INTO mem.ns.rdfb VALUES (4, 'd', 'x'), (5, 'e', 'y'), (8, 'h', 'x')")
+    spark.sql("ALTER TABLE mem.ns.rdfb CREATE BRANCH b1")
+    main_before = _snapshot_ids(spark, "mem.ns.rdfb")[-1]
+    before_rows = _live_rows(spark, "mem.ns.rdfb")
+    cols, row = _result_row(
+        spark,
+        "CALL mem.system.rewrite_data_files(table => 'ns.rdfb', branch => 'b1', "
+        "options => map('rewrite-all', 'true'))",
+    )
+    assert cols == _RDF_COLS
+    assert row[0] == 5
+    assert row[1] == 2
+    assert row[2] > 0
+    assert row[3] == 0
+    assert row[4] == 0
+    refs = spark.sql("SELECT name, type, snapshot_id FROM mem.ns.rdfb.refs").to_arrow()
+    got = {
+        name: (kind, snap)
+        for name, kind, snap in zip(
+            refs.column("name").to_pylist(),
+            refs.column("type").to_pylist(),
+            refs.column("snapshot_id").to_pylist(),
+            strict=True,
+        )
+    }
+    assert got["main"] == ("BRANCH", main_before)
+    assert got["b1"][0] == "BRANCH"
+    assert got["b1"][1] != main_before
+    assert _live_rows(spark, "mem.ns.rdfb") == before_rows

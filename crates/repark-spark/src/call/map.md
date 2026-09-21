@@ -98,7 +98,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   the door loads the table once up front and passes the loaded table (or its ident) into
   `run_rewrite`, so a `where` CALL loads once and a missing table reports before a
   malformed `remove-dangling-deletes` value — the pre-step-3 precedence, pinned. The
-  options struct parameter keeps the two-caller core at seven arguments; both CALL arms
+  options struct parameter keeps the two-caller core at eight arguments (PR2a threads
+  the branch name; the `run_maintenance` caller passes `None`); both CALL arms
   dispatch behind `Box::pin` (the options state would push the router future past the
   16 KiB `large_futures` lint otherwise — same remedy as the `run_maintenance` plan path).
   pins: maint-rewrite-data-files-options/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
@@ -119,13 +120,20 @@ and measured-parity contract would grow `call.rs` beyond its exact
   Z-order interleave and every refusal text are surfaced unchanged rather than re-authored, so
   there is no second copy of a rule to drift. The procedure's `sort_order` is a one-shot rewrite
   instruction and is never committed to the table — all three cells measure `md.sort-order`
-  unchanged. `branch` is deliberately still absent: the fork builder has no branch parameter, so
-  accepting it would ship a silently ignored argument (IPI-31 owns it). The fork's
+  unchanged. **ICE-PROCEDURES-1 PR2a (2026-09-21):** `branch` wires through
+  to the fork's `RewriteDataFiles::branch` (sixth/last, StringType, optional, per the
+  jar order): the rewrite plans from the named ref's head and commits only that ref.
+  `branch` beside `remove-dangling-deletes` (top-level extra or options-map key)
+  refuses loud, since the fork's dangling-delete pass reads main's head; an unknown
+  ref passes the fork's `snapshot ref '…' not found` text through
+  `illegal_argument_error` via a fourth NEEDLES entry, with no Spark-parity claim.
+  The fork's
   sort/z-order validation refusals are re-raised through `illegal_argument_error` with the
   fork text verbatim, so the door reports Java's class as well as Java's text. Round 3
   (2026-09-20, V-001): the remap reads `error.message()`, not `error.to_string()` — the
   latter renders the `DataInvalid => ` kind prefix Java never sends.
   pins: ice-rdf-sort-parse-1/C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ice-procedures-1/C-021
 - `rewrite_options.rs` — **ICE-RDF-OPTIONS-1 round 1 (2026-09-17):** `options => map(k, v, …)`
   extraction and validation for both rewrite procedures. String/number/boolean/NULL scalar
   rendering, duplicate-key `[DUPLICATED_MAP_KEY]`, unknown-key listing in map order named for
@@ -338,14 +346,13 @@ and measured-parity contract would grow `call.rs` beyond its exact
   the jar type rides along for the rounds that switch the remaining handlers
   (the array and map coercions read it when a handler wires an array or map
   parameter). `params_for` resolves all twenty jar procedures and answers an
-  empty list for anything else, which `bind` then refuses loud. Two deliberate
-  gaps: `branch` is absent from the RDF list because the fork builder has no
-  branch parameter, so accepting it would ship a silently ignored argument —
-  the binder's unknown-argument refusal is the loud guard until the wiring
-  round adds it; `remove-dangling-deletes` is not declared here either because
+  empty list for anything else, which `bind` then refuses loud. One deliberate
+  gap stays: `remove-dangling-deletes` is not declared here because
   it is a RePark-only extra the RDF handler passes to `bind` separately, which
-  keeps it named-only.
-  pins: ice-procedures-1/C-001, C-002, C-005, C-011
+  keeps it named-only. **PR2a (2026-09-21):** the RDF list gains `branch`
+  sixth/last (StringType, optional), closing the second gap; the binder's
+  unknown-argument refusal now names the six-name list.
+  pins: ice-procedures-1/C-001, C-002, C-005, C-011, C-021
 - `add_files.rs` — **ICE-PROCEDURES-1 PR1b (2026-09-21):** `CALL
   <catalog>.system.add_files(table => …, source_table => … [, partition_filter] [,
   check_duplicate_files] [, parallelism])` over the fork's `AddFiles` action.
@@ -368,6 +375,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
 - Pins: [../tests/call_manifests.rs](../tests/call_manifests.rs),
   [../tests/call_procedures_1.rs](../tests/call_procedures_1.rs),
   [../tests/call_procedures_2.rs](../tests/call_procedures_2.rs),
+  [../tests/call_rdf_branch.rs](../tests/call_rdf_branch.rs),
   [../tests/call_rewrite_options.rs](../tests/call_rewrite_options.rs),
   [../tests/call_rdf_options.rs](../tests/call_rdf_options.rs),
   `python/repark/tests/test_maintenance_call.py`,

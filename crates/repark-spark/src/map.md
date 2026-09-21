@@ -429,8 +429,12 @@ pins: rp-4-fork-repin/C-005, C-006
   `expire_snapshots` binds against its declared list with `snapshot_ids` expiring each id
   in array order while `max_concurrent_deletes`, `stream_results` and
   `clean_expired_metadata` parse and stay ignored, and `add_files` routes through
-  `call/add_files.rs` ([call/map.md](call/map.md)).
-  pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
+  `call/add_files.rs` ([call/map.md](call/map.md)). **ICE-PROCEDURES-1 PR2a
+  (2026-09-21):** `rewrite_data_files` `branch` threads into the fork's
+  `RewriteDataFiles::branch` and commits only that ref; `branch` beside
+  `remove-dangling-deletes` refuses loud, and an unknown ref passes the fork text
+  through.
+  pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-021
   **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `run_maintenance` plans the
   five D-4 steps over the stamped `[<profile>.maintenance]` policy plus inline overrides,
   and `dry_run => false` applies them step by step (`ran` / `failed` / `skipped`).

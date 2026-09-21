@@ -181,14 +181,14 @@ async fn call_bind_unknown_argument_names_allowed() {
     let error = execute(
         &ctx,
         &catalogs,
-        "CALL ice.system.rewrite_data_files(table => 'sales.x', branch => 'b1')",
+        "CALL ice.system.rewrite_data_files(table => 'sales.x', bogus => 1)",
     )
     .await
     .expect_err("unknown argument must refuse");
     assert_eq!(
         plan_message(error),
-        "unknown CALL argument `branch`; allowed: table, strategy, sort_order, options, where, \
-         remove-dangling-deletes"
+        "unknown CALL argument `bogus`; allowed: table, strategy, sort_order, options, where, \
+         branch, remove-dangling-deletes"
     );
 }
 
@@ -216,13 +216,13 @@ async fn call_bind_excess_positional_names_arity() {
     let error = execute(
         &ctx,
         &catalogs,
-        "CALL ice.system.rewrite_data_files('a', 'b', 'c', map('k', 'v'), 'd', 'e')",
+        "CALL ice.system.rewrite_data_files('a', 'b', 'c', map('k', 'v'), 'd', 'e', 'f')",
     )
     .await
     .expect_err("excess positional must refuse");
     assert_eq!(
         plan_message(error),
-        "CALL accepts at most 5 positional argument(s); got 6"
+        "CALL accepts at most 6 positional argument(s); got 7"
     );
     let error = execute(
         &ctx,

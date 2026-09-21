@@ -476,11 +476,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   same six-file shape answers zeros, which proves the map bound as `options`), the
   two-positional RPD form answers Spark's four zero columns on a delete-free table, and the
   mixed rollback form rolls back with Spark's two columns. Refusal pins assert class and
-  exact text: duplicate positional-plus-named binding, unknown `branch` with the declared
+  exact text: duplicate positional-plus-named binding, unknown `bogus` with the declared
   allowed list, missing `table` with its declared position, and over-arity on both
   procedures. A named NULL `sort_order` with `binpack` succeeds, pinning NULL-as-unset
   beside the positional NULL in the RDF form. **PR1b (2026-09-21):** the positionally
   bound RPD `where` pin now asserts the wired form binds onto a delete-free table.
+  **PR2a (2026-09-21):** the unknown-argument pin retargets to `bogus` and the RDF
+  arity pin moves to six positionals, since `branch` now binds.
   Clause citations live in this map, not in the source — the owner's comment ban covers doc
   comments too.
   pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-012
@@ -499,6 +501,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   their own texts.
   Clause citations live in this map, not in the source.
   pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
+- `call_rdf_branch.rs` — **ICE-PROCEDURES-1 PR2a (2026-09-21):** the `branch`
+  wiring pins on the mk3-shape partitioned table. The branch rewrite answers
+  Spark's five columns with `[5, 2, >0, 0, 0]`, moves only `b1` (reloaded
+  metadata: `b1` on the new snapshot, `main` on its pre-rewrite id), and leaves
+  eight rows on both `main` and the branch. `branch` beside
+  `remove-dangling-deletes` refuses with the exact `NotImplemented` text in
+  both the top-level and options-map spellings; unknown `branch => 'ghost'`
+  passes the fork's `snapshot ref 'ghost' not found` text through
+  `illegal_argument_error` with no Spark-parity claim; `branch => NULL` binds
+  as unset and `branch => 'main'` rewrites main like the default.
+  Clause citations live in this map, not in the source.
+  pins: ice-procedures-1/C-021
 - `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** 35
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
   bad-job-order / bad-spec / band-crossing / negative-size texts, silent-false booleans,
