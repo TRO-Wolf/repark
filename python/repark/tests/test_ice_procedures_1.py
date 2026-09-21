@@ -229,11 +229,11 @@ def test_expire_snapshot_ids_expires_exactly_those(spark: ReparkSession) -> None
     assert len(ids) == 4
     cols, row = _result_row(
         spark,
-        f"CALL mem.system.expire_snapshots(table => 'ns.exs', snapshot_ids => array({ids[0]}))",
+        f"CALL mem.system.expire_snapshots(table => 'ns.exs', snapshot_ids => array({ids[0]}, {ids[1]}))",
     )
     assert cols == _EXPIRE_COLS
-    assert row == [0, 0, 0, 0, 1, 0]
-    assert _snapshot_ids(spark, "mem.ns.exs") == ids[1:]
+    assert row == [0, 0, 0, 0, 2, 0]
+    assert _snapshot_ids(spark, "mem.ns.exs") == ids[2:]
 
 
 def test_expire_accept_and_ignore_trio_equals_plain(spark: ReparkSession) -> None:

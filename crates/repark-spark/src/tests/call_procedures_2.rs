@@ -219,32 +219,32 @@ async fn call_expire_snapshot_ids_expires_exactly_those() {
         &ctx,
         &catalogs,
         &format!(
-            "CALL ice.system.expire_snapshots(table => 'sales.exn', snapshot_ids => array({}))",
-            named_ids[0]
+            "CALL ice.system.expire_snapshots(table => 'sales.exn', snapshot_ids => array({}, {}))",
+            named_ids[0], named_ids[1]
         ),
     )
     .await
     .expect("snapshot_ids must expire");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), expire_columns());
-    assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 1, 0]);
+    assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 2, 0]);
     let remaining = snapshot_ids_ordered(&ctx, &catalogs, "exn").await;
-    assert_eq!(remaining, named_ids[1..]);
+    assert_eq!(remaining, named_ids[2..]);
     let positional_ids = snapshot_ids_ordered(&ctx, &catalogs, "exp").await;
     let frame = execute(
         &ctx,
         &catalogs,
         &format!(
-            "CALL ice.system.expire_snapshots('sales.exp', NULL, NULL, NULL, NULL, array({}))",
-            positional_ids[0]
+            "CALL ice.system.expire_snapshots('sales.exp', NULL, NULL, NULL, NULL, array({}, {}))",
+            positional_ids[0], positional_ids[1]
         ),
     )
     .await
     .expect("positional snapshot_ids must bind in declared order");
     let batches = frame.collect().await.expect("collect");
-    assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 1, 0]);
+    assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 2, 0]);
     let remaining = snapshot_ids_ordered(&ctx, &catalogs, "exp").await;
-    assert_eq!(remaining, positional_ids[1..]);
+    assert_eq!(remaining, positional_ids[2..]);
 }
 
 #[tokio::test]
