@@ -71,7 +71,7 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
   dest would cross catalogs and refuse. `rename_dest` in `use_ddl.rs` anchors 1/2-part
   dests on the source; the ALTER token pre-parsers' premature 3-part gates (which fired
   before form detection, claiming even RENAME) are removed so short names reach the AST
-  path, and token forms complete at execute. `alter.rs` 1449 → 1444, row ratcheted.
+  path, and token forms complete at execute. `alter.rs` 1449 → 1439, row ratcheted.
   pins: ice-catalog-session-1/C-022
 - T-4 (tree measurement): H-01's `spark_catalog` / `default` session defaults land on the
   native door too (`CatalogRegistry::current_defaults`, flipped by `set_session_catalog` on

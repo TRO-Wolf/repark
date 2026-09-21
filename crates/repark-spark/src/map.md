@@ -1227,10 +1227,6 @@ pins: rp-4-fork-repin/C-005, C-006
   `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]`/`SQLSTATE: 0A000` text over a caller-supplied
   command string (newlines flattened); the four v2-command router intercepts answer through it.
   pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
-  and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs` and
-  `namespace_ddl/purge.rs` all answer through it, so the three cannot drift apart.
-  pins: ipi-21-25-42-small-parser/C-007, C-008
-  `reregister*` provider invalidation.
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the session-defaults seam:
   `session_defaults` / `set_session_defaults` over the registry box
   (`CatalogRegistry::current_defaults` / `set_defaults`, seeded `spark_catalog` /

@@ -533,7 +533,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - `session_names.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the SQL-door
   `current_catalog()` / `current_schema()` / `current_database()` nullary UDFs — one
   `SessionName` impl, non-nullable Utf8, `Stable`. `current_database` shares the
-  namespace source. Registers through one `register(ctx)` line (crate root 181/182).
+  namespace source. Registers through one `register(ctx)` line (crate root 179/182).
   **R6 (2026-09-20):** the impl reads the `SessionDefaults` carrier
   (`SparkExtension::configure` installs it seeded `spark_catalog` / `default`; `USE`
   mirrors it), falling back to planner `default_catalog` / `default_schema` on

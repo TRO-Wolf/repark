@@ -743,7 +743,6 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `MetadataTableType::all_types`; **RP-42:** `position_deletes` joins the battery — fork #332
   ports the scan, so it serves rather than refusing and its schema and row total are pinned by
   the same `SELECT *` / `count(*)` / partial-projection assertions as every other type.
-  `MetadataTableType::all_types`; `position_deletes` rewrites then scan-refuses.
   **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the hidden-from-enumeration pin reads `tableName`
   at index 1 of the `(namespace, tableName, isTemporary)` SHOW TABLES shape.
   **TYPES-1 (2026-09-05):** CTAS-inferred integer literals are `Int32` (Spark `int`) on
