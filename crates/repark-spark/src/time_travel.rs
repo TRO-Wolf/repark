@@ -656,4 +656,94 @@ mod tests {
             TimeTravelPin::Version(TimeTravelSpec::VersionRef(_))
         ));
     }
+
+    fn id_parts(words: &[&str]) -> Vec<String> {
+        words.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn ref_selector_snapshot_id_and_at_timestamp_resolve_specs() {
+        let cases = [
+            ("snapshot_id_42", TimeTravelSpec::SnapshotId(42)),
+            ("SNAPSHOT_ID_7", TimeTravelSpec::SnapshotId(7)),
+            (
+                "at_timestamp_1789969649715",
+                TimeTravelSpec::TimestampMs(1_789_969_649_715),
+            ),
+            ("AT_TIMESTAMP_1000", TimeTravelSpec::TimestampMs(1000)),
+        ];
+        for (selector, expected) in cases {
+            let found = ref_selector_name(&id_parts(&["ice", "sales", "t", selector]))
+                .expect("a numeric selector must resolve");
+            assert_eq!(found, Some(expected), "{selector}");
+        }
+    }
+
+    #[test]
+    fn ref_selector_bad_numeric_suffix_refuses_typed() {
+        for selector in [
+            "snapshot_id_abc",
+            "snapshot_id_",
+            "at_timestamp_xyz",
+            "at_timestamp_",
+        ] {
+            let error = ref_selector_name(&id_parts(&["ice", "sales", "t", selector]))
+                .expect_err("an unparsable numeric suffix must refuse");
+            let message = error.to_string();
+            assert!(
+                message.contains(selector),
+                "the refusal must name the selector for {selector:?}: {message}"
+            );
+            assert!(
+                !message.contains("compound identifier"),
+                "the refusal must not fall through to table-not-found for {selector:?}: {message}"
+            );
+        }
+    }
+
+    #[test]
+    fn ref_selector_branch_and_tag_keep_original_case() {
+        let cases = [
+            ("branch_audit", "audit"),
+            ("tag_v1", "v1"),
+            ("Branch_Audit", "Audit"),
+            ("TAG_V1", "V1"),
+        ];
+        for (selector, expected) in cases {
+            let found = ref_selector_name(&id_parts(&["ice", "sales", "t", selector]))
+                .expect("a branch/tag selector must resolve");
+            assert_eq!(
+                found,
+                Some(TimeTravelSpec::VersionRef(expected.to_string())),
+                "{selector}"
+            );
+        }
+        assert_eq!(
+            ref_selector_name(&id_parts(&["ice", "sales", "t", "branch_"]))
+                .expect("an empty branch suffix falls through"),
+            None
+        );
+        assert_eq!(
+            ref_selector_name(&id_parts(&["ice", "sales", "t", "tag_"]))
+                .expect("an empty tag suffix falls through"),
+            None
+        );
+    }
+
+    #[test]
+    fn ref_selector_exclusions_unchanged() {
+        for parts in [
+            id_parts(&["ice", "sales", "snapshot_id_5"]),
+            id_parts(&["ice", "sales", "t", "files"]),
+            id_parts(&["ice", "sales", "t", "snapshots"]),
+            id_parts(&["ice", "sales", "t", "branch_b", "files"]),
+            id_parts(&["ice", "sales", "t", "plain"]),
+        ] {
+            assert_eq!(
+                ref_selector_name(&parts).expect("excluded names must not error"),
+                None,
+                "{parts:?}"
+            );
+        }
+    }
 }
