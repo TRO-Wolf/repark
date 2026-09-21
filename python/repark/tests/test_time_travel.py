@@ -263,15 +263,24 @@ def test_reader_options_mutually_exclusive(
         )
 
 
-def test_incremental_snapshot_bounds_reach_the_incremental_scan(spark: ReparkSession) -> None:
+def test_incremental_snapshot_bounds_reach_the_incremental_scan(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
     """ICE-CHANGELOG-1: the window options are served; Spark's two refusals hold.
 
     pins: ice-changelog-1/C-004, C-007
     """
+    s1 = multi_snapshot["s1"]
+    s3 = multi_snapshot["s3"]
     with pytest.raises(IllegalArgumentException, match=r"is not a parent ancestor of end snapshot"):
-        spark.read.format("iceberg").option("start-snapshot-id", "1").load(TABLE)
+        (
+            spark.read.format("iceberg")
+            .option("start-snapshot-id", str(s3))
+            .option("end-snapshot-id", str(s1))
+            .load(TABLE)
+        )
     with pytest.raises(IllegalArgumentException, match=r"Cannot set only `end-snapshot-id`"):
-        spark.read.format("iceberg").option("end-snapshot-id", "1").load(TABLE)
+        spark.read.format("iceberg").option("end-snapshot-id", str(s1)).load(TABLE)
 
 
 def test_write_to_branch_unsupported(
