@@ -375,6 +375,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `[UNSUPPORTED_FEATURE.TABLE_OPERATION]` / `SQLSTATE: 0A000`, the backticked
   `` `ice`.`sales`.`with_def` `` table, and a `Plan` (not `NotImplemented`) error.
   pins: ice-error-conditions-1/C-011
+  **IPI-51 PR8 (2026-09-21):** the V3R-1 type pin splits — `GEOMETRY` / `GEOGRAPHY`
+  and the inventory `GEOMETRY(4326)` spelling require
+  `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]` / `SQLSTATE: 0A000` as `Plan`;
+  `VARIANT` keeps the `NotImplemented` type-naming string; all leave no table behind.
+  `v3_type_column_named_geometry_with_int_succeeds` pins a column NAMED `geometry`
+  with `INT` succeeding (cell `TY-GEOMETRY`).
+  pins: ice-error-conditions-1/C-011
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
   `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
   INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond
