@@ -64,6 +64,7 @@ pub mod spark_sequence;
 pub mod spark_session_window;
 pub mod spark_split;
 pub mod spark_split_part;
+pub mod spark_startswith;
 mod spark_string_timestamp;
 pub mod spark_time_window;
 pub mod spark_window_time;
@@ -152,6 +153,7 @@ pub fn register_all(ctx: &SessionContext) {
         .chain(spark_chr::functions())
         .chain(spark_degrees::functions())
         .chain(spark_elt::functions())
+        .chain(spark_startswith::functions())
     {
         ctx.register_udf(udf.as_ref().clone());
     }

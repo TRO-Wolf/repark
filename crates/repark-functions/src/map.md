@@ -81,6 +81,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `n < 0`. pins: fn-fix-2-string-rows/C-002
 - `spark_elt.rs` — **FN-FIX-2 (2026-09-04):** Spark `elt`; ANSI out-of-range raises
   `INVALID_ARRAY_INDEX`; NULL `n` is NULL. pins: fn-fix-2-string-rows/C-002
+- `spark_startswith.rs` — **M8-STARTSWITH-1 (2026-09-21):** Spark `startswith` (no
+  underscore). NULL-in NULL-out, empty prefix answers true for every non-NULL row,
+  non-string inputs stringify (floats through the Java formatter, so `Infinity` and
+  `-1.0E300` match Spark), nested inputs refuse
+  `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE]`, wrong arity refuses
+  `[WRONG_NUM_ARGS.WITHOUT_SUGGESTION]`; every answer measured on live Spark 4.1.2
+  (UTC, ANSI on) 2026-09-21. DataFusion's `starts_with` keeps its door untouched.
 - `spark_degrees.rs` — **FNP-BITMAP-FACADE-1 run 16a round 3 (DEGREES-RUST-1, owner
   Q-15a-1):** Spark-exact `degrees` / `radians` ScalarUDFs shared by both doors.
   `Signature::user_defined` + pass-through `coerce_types`; numerics and STRING pass,
