@@ -351,6 +351,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
 
 - Up: [../map.md](../map.md)
 - Pins: [../tests/call_manifests.rs](../tests/call_manifests.rs),
+  [../tests/call_procedures_1.rs](../tests/call_procedures_1.rs),
   [../tests/call_rewrite_options.rs](../tests/call_rewrite_options.rs),
   [../tests/call_rdf_options.rs](../tests/call_rdf_options.rs),
   `python/repark/tests/test_maintenance_call.py`,

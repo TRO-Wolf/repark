@@ -461,6 +461,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Registry `RDF-1`.
   pins: rdf-1-position-delete-bounds/C-003
   pins: rp-32-rdf-cow-bytes/C-006, C-007
+- `call_procedures_1.rs` — **ICE-PROCEDURES-1 (2026-09-20):** the declared-parameter
+  binder pins. The four-positional RDF form compacts (a `min-input-files 7` twin on the
+  same six-file shape answers zeros, which proves the map bound as `options`), the
+  two-positional RPD form answers Spark's four zero columns on a delete-free table, and the
+  mixed rollback form rolls back with Spark's two columns. Refusal pins assert class and
+  exact text: duplicate positional-plus-named binding, unknown `branch` with the declared
+  allowed list, missing `table` with its declared position, over-arity on both procedures,
+  and a positionally bound RPD `where` staying `NotImplemented`. A named NULL `sort_order`
+  with `binpack` succeeds, pinning NULL-as-unset beside the positional NULL in the RDF form.
+  Clause citations live in this map, not in the source — the owner's comment ban covers doc
+  comments too.
+  pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - `call_rdf_options.rs` — **ICE-RDF-OPTIONS-1 round 3 (2026-09-17):** 35
   `options => map(…)` pins on both rewrite procedures — Spark's unknown-key / bad-integer /
   bad-job-order / bad-spec / band-crossing / negative-size texts, silent-false booleans,
