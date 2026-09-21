@@ -808,6 +808,12 @@ pins: rp-4-fork-repin/C-005, C-006
   `test_iceberg_hygiene` `with_def`) require the stamped condition / `0A000`,
   not `UnsupportedOperationException`.
   pins: ice-error-conditions-1/C-011
+  **IPI-51 PR8 (2026-09-21):** the `sql_type_to_iceberg_nested` unsupported-type arm
+  stamps Spark's `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]` / `0A000` as
+  `DataFusionError::Plan` when `geospatial_sql_type` names `GEOMETRY` / `GEOGRAPHY`
+  (bare, `(srid)`, case-folded); every other unsupported type keeps the existing
+  `NotImplemented` string (cell `TY-GEOMETRY`).
+  pins: ice-error-conditions-1/C-011
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the
   transaction (so it is never persisted), resolves it against the table's current version and the
