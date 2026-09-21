@@ -743,6 +743,10 @@ pins: rp-4-fork-repin/C-005, C-006
   is gone; the move lives in `column_move.rs`. **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the
   REPLACE COLUMNS parser, planner and the identity-trap gate left this file for
   `replace_columns.rs`; `alter.rs` only detects the form and routes it.
+  **IPI-51 PR4 (2026-09-20):** the residual Hive `ADD PARTITION` refusal now answers
+  plan-class through `catalog_ops::partition_management_unsupported` with the backticked
+  target (`AnalysisException`, `SQLSTATE: 42601`); the file ratchets 1449 → 1446.
+  pins: ice-error-conditions-1/C-011
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** Spark's Hive-style
   `REPLACE COLUMNS` — one `DropColumn` per current top-level column, then one `AddColumn` per
   listed column, so the fork's `UpdateSchema` assigns every column a **fresh** id from
@@ -1062,6 +1066,13 @@ pins: rp-4-fork-repin/C-005, C-006
   catalog entry, so unknown catalogs keep DataFusion's old error. Unit pins
   live file-backed in [`describe_show/`](describe_show/map.md).
   pins: ice-system-functions-1/C-018, C-019, C-020, C-022, C-023, C-024
+  **IPI-51 PR4 (2026-09-20):** the file also parses `SHOW PARTITIONS <table>` (a `SHOW` +
+  `PARTITIONS` head check, so the sibling SHOW parsers keep their statements) and the router
+  arm always refuses it through `catalog_ops::partition_management_unsupported` with the
+  backticked table (`AnalysisException`, `SQLSTATE: 42601`) — Iceberg has no Hive partition
+  catalog to list. The arm delegates to a `show_partitions_preparse` helper in `router.rs`
+  so `try_preparse_intercepts` stays under clippy's line cap.
+  pins: ice-error-conditions-1/C-011
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves
@@ -1097,7 +1108,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `namespace_ddl/purge.rs` and `namespace_ddl.rs` DROP all answer through it, so they cannot
   drift apart. **IPI-51 (2026-09-20):** `table_or_view_already_exists` is the sibling home of
   Spark's `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`SQLSTATE: 42P07` text; the `create_table.rs` and
-  `ctas.rs` already-exists arms answer through it.
+  `ctas.rs` already-exists arms answer through it. **IPI-51 PR4 (2026-09-20):**
+  `partition_management_unsupported` is the sibling home of Spark's
+  `[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]`/`SQLSTATE: 42601` text
+  over a caller-backticked table display (`quoted_table_display` backticks each name part);
+  the `truncate.rs` PARTITION arm answers through it.
   pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its

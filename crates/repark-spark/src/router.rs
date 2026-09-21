@@ -428,6 +428,17 @@ async fn execute_update(
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 
+fn show_partitions_preparse(
+    sql: &str,
+    refuse_options: impl FnOnce(&str) -> Result<()>,
+) -> Option<Result<DataFrame>> {
+    let show = describe_show::try_parse_show_partitions(sql)?;
+    match refuse_options("SHOW PARTITIONS") {
+        Ok(()) => Some(Err(describe_show::show_partitions_refusal(&show))),
+        Err(error) => Some(Err(error)),
+    }
+}
+
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
 async fn try_preparse_intercepts(
     ctx: &SessionContext,
@@ -525,6 +536,9 @@ async fn try_preparse_intercepts(
         && catalogs.get(&show.catalog).is_some()
     {
         return Some(describe_show::execute_show_system_functions(ctx, &show));
+    }
+    if let Some(outcome) = show_partitions_preparse(sql, parsed_ddl) {
+        return Some(outcome);
     }
     // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
     if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {

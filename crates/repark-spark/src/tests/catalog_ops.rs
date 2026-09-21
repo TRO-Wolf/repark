@@ -72,3 +72,48 @@ async fn create_table_existing_is_table_or_view_already_exists() {
         assert!(error.contains("SQLSTATE: 42P07"), "got: {error}");
     }
 }
+
+#[test]
+fn partition_management_unsupported_starts_with_condition_and_names_table() {
+    let DataFusionError::Plan(message) =
+        catalog_ops::partition_management_unsupported("`sc`.`ns`.`t`")
+    else {
+        panic!("partition_management_unsupported must be plan-class");
+    };
+    assert!(
+        message.starts_with("[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]"),
+        "got: {message}"
+    );
+    assert!(message.contains("`sc`.`ns`.`t`"), "got: {message}");
+    assert!(message.contains("SQLSTATE: 42601"), "got: {message}");
+}
+
+#[tokio::test]
+async fn alter_add_hive_partition_refuses_with_partition_management_unsupported() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.t ADD PARTITION (cat = 'q')",
+    )
+    .await
+    .expect_err("hive ADD PARTITION must refuse");
+    assert!(
+        matches!(error, DataFusionError::Plan(_)),
+        "hive ADD PARTITION must be plan-class, got: {error}"
+    );
+    let message = error.to_string();
+    assert!(
+        message.contains("[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]"),
+        "got: {message}"
+    );
+    assert!(message.contains("`ice`.`sales`.`t`"), "got: {message}");
+    assert!(message.contains("SQLSTATE: 42601"), "got: {message}");
+}

@@ -18,7 +18,10 @@ use iceberg::table::Table;
 use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use regex::RegexBuilder;
 
-use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, resolve_namespace};
+use crate::catalog_ops::{
+    catalog_handle, iceberg_err, name_parts, partition_management_unsupported,
+    quoted_table_display, resolve_namespace,
+};
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
 use repark_core::{CatalogRegistry, DescribeOwnerConfig, prop_key_is_secret};
@@ -620,6 +623,32 @@ pub(crate) fn filter_pattern_matches(name: &str, pattern: &str) -> bool {
             .build()
             .is_ok_and(|regex| regex.is_match(name))
     })
+}
+
+pub(crate) struct ShowPartitions {
+    table: String,
+}
+
+pub(crate) fn try_parse_show_partitions(sql: &str) -> Option<ShowPartitions> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !parser.parse_keyword(Keyword::SHOW) {
+        return None;
+    }
+    if !consume_word(&mut parser, "PARTITIONS") {
+        return None;
+    }
+    let name = parser.parse_object_name(false).ok()?;
+    if !matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
+        return None;
+    }
+    let table = quoted_table_display(&name_parts(&name));
+    Some(ShowPartitions { table })
+}
+
+pub(crate) fn show_partitions_refusal(show: &ShowPartitions) -> DataFusionError {
+    partition_management_unsupported(&show.table)
 }
 
 pub(crate) struct ShowSystemFunctions {

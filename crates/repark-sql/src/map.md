@@ -296,7 +296,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   pins: ref-branch-tag-wap/C-003
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C). Pins: `truncate_tests.rs`
   (wipe summary keys, `INVALID_PARTITION_OPERATION` class token, IF EXISTS parse refuse).
-  pins: dml-c-truncate/C-003, C-006, C-007
+  **IPI-51 PR4 (2026-09-20):** the PARTITION arm renders
+  `[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]`/`SQLSTATE: 42601`
+  through `repark_common::spark_error::message` with the backticked target as `tableName`.
+  pins: dml-c-truncate/C-003, C-006, C-007; ice-error-conditions-1/C-011
 - `refusals.rs` — the completed refuse set (Q7/Q9): `INSERT OVERWRITE`, `CALL`,
   `ALTER TABLE … EXECUTE` (pre-parse recognizer). Every message names a
   replacement and, where the design gives one, a trigger. Tests: [refusals/map.md](refusals/map.md).

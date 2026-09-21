@@ -11,8 +11,8 @@ use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 
 use crate::catalog_ops::{
-    iceberg_err, name_parts, namespace_schema_name, refuse_read_only_dml_table_sql,
-    reject_path_escape_ident, reregister,
+    iceberg_err, name_parts, namespace_schema_name, partition_management_unsupported,
+    quoted_table_display, refuse_read_only_dml_table_sql, reject_path_escape_ident, reregister,
 };
 use crate::is_metadata_table_name;
 
@@ -58,11 +58,12 @@ pub(crate) async fn execute_truncate(
 
 fn refuse_unsupported_truncate_shape(truncate: &Truncate) -> Result<()> {
     if truncate.partitions.is_some() {
-        return Err(DataFusionError::Plan(
-            "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition \
-             command is invalid. Table does not support partition management. SQLSTATE: 42601"
-                .to_string(),
-        ));
+        let display = truncate
+            .table_names
+            .first()
+            .map(|target| quoted_table_display(&name_parts(&target.name)))
+            .unwrap_or_default();
+        return Err(partition_management_unsupported(&display));
     }
     if truncate.if_exists {
         return Err(DataFusionError::Plan(

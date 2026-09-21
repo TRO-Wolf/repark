@@ -9,6 +9,7 @@ use datafusion::sql::sqlparser::ast::{ObjectName, Truncate};
 use iceberg::inspect::MetadataTableType;
 use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
+use repark_common::spark_error;
 use repark_core::EngineContext;
 
 use crate::schema_ddl::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident};
@@ -69,11 +70,21 @@ pub(crate) async fn execute_truncate(
 
 fn refuse_unsupported_truncate_shape(truncate: &Truncate) -> Result<()> {
     if truncate.partitions.is_some() {
-        return Err(DataFusionError::Plan(
-            "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition \
-             command is invalid. Table does not support partition management. SQLSTATE: 42601"
-                .to_string(),
-        ));
+        let display = truncate
+            .table_names
+            .first()
+            .map(|target| {
+                name_parts(&target.name)
+                    .iter()
+                    .map(|part| format!("`{part}`"))
+                    .collect::<Vec<_>>()
+                    .join(".")
+            })
+            .unwrap_or_default();
+        return Err(DataFusionError::Plan(spark_error::message(
+            spark_error::INVALID_PARTITION_OPERATION_PARTITION_MANAGEMENT_IS_UNSUPPORTED,
+            &[("tableName", display.as_str())],
+        )));
     }
     if truncate.if_exists {
         return Err(DataFusionError::Plan(

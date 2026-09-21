@@ -829,3 +829,31 @@ async fn show_namespaces_intercept_shadows_no_other_statement() {
             .unwrap_or_else(|error| panic!("{sql} must still work: {error}"));
     }
 }
+
+#[tokio::test]
+async fn show_partitions_refuses_with_partition_management_unsupported() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let error = execute(&ctx, &catalogs, "SHOW PARTITIONS ice.sales.t")
+        .await
+        .expect_err("SHOW PARTITIONS must refuse")
+        .to_string();
+    assert!(
+        error.contains("[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]"),
+        "got: {error}"
+    );
+    assert!(error.contains("`ice`.`sales`.`t`"), "got: {error}");
+    assert!(error.contains("SQLSTATE: 42601"), "got: {error}");
+}
+
+#[tokio::test]
+async fn show_partitions_intercept_steals_no_sibling_show() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(&ctx, &catalogs, "SHOW NAMESPACES IN ice")
+        .await
+        .unwrap_or_else(|error| panic!("SHOW NAMESPACES must keep its intercept: {error}"));
+    execute(&ctx, &catalogs, "SHOW FUNCTIONS IN ice.system")
+        .await
+        .unwrap_or_else(|error| panic!("SHOW FUNCTIONS must keep its intercept: {error}"));
+}
