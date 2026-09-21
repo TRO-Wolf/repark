@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -89,6 +90,36 @@ def _seed(
     session.sql(f"INSERT INTO {table} VALUES (3, 'c', 'x')")
     session.sql(f"INSERT INTO {table} VALUES (4, 'd', 'y'), (5, 'e', 'x')")
     return _snaps(session, table)
+
+
+def _snaps_with_timestamps(session: Any, table: str) -> list[tuple[int, int]]:
+    """Snapshot ids with their commit timestamps in milliseconds, oldest first."""
+    arrow = session.sql(
+        f"SELECT snapshot_id, committed_at FROM {table}.snapshots"
+    ).to_arrow()
+    pairs = sorted(
+        zip(
+            arrow.column("snapshot_id").to_pylist(),
+            arrow.column("committed_at").to_pylist(),
+            strict=True,
+        ),
+        key=lambda pair: (pair[1], pair[0]),
+    )
+    return [(pair[0], int(pair[1].timestamp() * 1000)) for pair in pairs]
+
+
+def _seed_spaced(session: Any, table: str) -> list[tuple[int, int]]:
+    """Seed the recorded fixture with commits spaced so each timestamp differs."""
+    session.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "TBLPROPERTIES ('format-version'='2')"
+    )
+    session.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
+    time.sleep(0.05)
+    session.sql(f"INSERT INTO {table} VALUES (3, 'c', 'x')")
+    time.sleep(0.05)
+    session.sql(f"INSERT INTO {table} VALUES (4, 'd', 'y'), (5, 'e', 'x')")
+    return _snaps_with_timestamps(session, table)
 
 
 def _cols(frame: Any) -> list[list[str]]:
@@ -466,6 +497,61 @@ def test_changes_relation_reader_window(spark: Any) -> None:
         .select("id", "_change_type", "_change_ordinal")
     )
     _assert_ok("QI-CHANGES-READER-OPEN", frame)
+
+
+def test_changes_relation_reader_timestamp_window(spark: Any) -> None:
+    """R-CHANGES-TS — ``load(t.changes)`` with start/end timestamps resolves the window.
+
+    pins: ice-changelog-1/C-010
+    """
+    table = _table("R-CHANGES-TS")
+    stamped = _seed_spaced(spark, table)
+    ids = [pair[0] for pair in stamped]
+    tss = [pair[1] for pair in stamped]
+    assert tss[0] < tss[1] < tss[2]
+    frame = (
+        spark.read.format("iceberg")
+        .option("start-timestamp", str(tss[0]))
+        .option("end-timestamp", str(tss[2]))
+        .load(f"{table}.changes")
+        .select("id", "data", "_change_type", "_change_ordinal", "_commit_snapshot_id")
+    )
+    assert _rows(frame) == sorted(
+        [
+            [3, "c", "INSERT", 0, ids[1]],
+            [4, "d", "INSERT", 1, ids[2]],
+            [5, "e", "INSERT", 1, ids[2]],
+        ],
+        key=repr,
+    )
+
+
+def test_changes_relation_reader_start_timestamp_between_snapshots(spark: Any) -> None:
+    """A start timestamp strictly between two commits excludes the earlier snapshot.
+
+    pins: ice-changelog-1/C-010
+    """
+    table = _table("R-CHANGES-TS-BETWEEN")
+    stamped = _seed_spaced(spark, table)
+    ids = [pair[0] for pair in stamped]
+    tss = [pair[1] for pair in stamped]
+    assert tss[0] < tss[1] < tss[2]
+    start = (tss[1] + tss[2]) // 2
+    assert tss[1] < start < tss[2]
+    frame = (
+        spark.read.format("iceberg")
+        .option("start-timestamp", str(start))
+        .option("end-timestamp", str(tss[2]))
+        .load(f"{table}.changes")
+        .select("id", "data", "_change_type", "_change_ordinal", "_commit_snapshot_id")
+    )
+    assert _rows(frame) == sorted(
+        [
+            [4, "d", "INSERT", 0, ids[2]],
+            [5, "e", "INSERT", 0, ids[2]],
+        ],
+        key=repr,
+    )
 
 
 def test_changes_relation_v3_deletion_vector(spark: Any) -> None:
