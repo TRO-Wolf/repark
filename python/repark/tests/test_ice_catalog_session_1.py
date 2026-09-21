@@ -365,6 +365,17 @@ def test_show_namespaces_bare_uses_current_catalog(spark: ReparkSession) -> None
         assert [[row["namespace"]] for row in rows] == [["ns"]]
 
 
+def test_show_namespaces_bare_at_session_start_follows_box_not_current_catalog(
+    spark: ReparkSession,
+) -> None:
+    """C-018: at session start bare SHOW NAMESPACES follows the registry box,
+    not current_catalog()."""
+    rows = spark.sql("SHOW NAMESPACES").to_arrow().to_pylist()
+    assert [[row["namespace"]] for row in rows] == [["ns"]]
+    answered = spark.sql("SELECT current_catalog()").to_arrow().to_pylist()
+    assert [[row["current_catalog()"]] for row in answered] == [["spark_catalog"]]
+
+
 def test_refresh_table_cell(spark: ReparkSession) -> None:
     """C-019: ``CAT-REFRESH-TABLE`` replays EQUAL."""
     spark.sql("CREATE TABLE sc.ns.t_cat_refresh_table (a INT) USING iceberg").to_arrow()
