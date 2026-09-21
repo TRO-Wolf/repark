@@ -132,7 +132,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split configuration bindings from query and catalog bindings.",
     ),
     "crates/repark-spark/src/alter.rs": (
-        1446,
+        1444,
         "Spark ALTER token rewrites and dispatch share one planner module.",
         "Split syntax normalization from Iceberg operation dispatch.",
     ),
