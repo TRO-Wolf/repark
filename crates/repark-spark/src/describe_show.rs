@@ -651,6 +651,79 @@ pub(crate) fn show_partitions_refusal(show: &ShowPartitions) -> DataFusionError 
     partition_management_unsupported(&show.table)
 }
 
+pub(crate) fn try_parse_set_serde(sql: &str) -> Option<()> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !parser.parse_keywords(&[Keyword::ALTER, Keyword::TABLE]) {
+        return None;
+    }
+    parser.parse_object_name(false).ok()?;
+    if !parser.parse_keyword(Keyword::SET) {
+        return None;
+    }
+    if consume_word(&mut parser, "SERDE") || consume_word(&mut parser, "SERDEPROPERTIES") {
+        Some(())
+    } else {
+        None
+    }
+}
+
+pub(crate) fn try_parse_describe_as_json(sql: &str) -> Option<()> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !parser.parse_keyword(Keyword::DESCRIBE) && !parser.parse_keyword(Keyword::DESC) {
+        return None;
+    }
+    if matches!(&parser.peek_token().token, Token::Word(word) if is_as_json_excluded_head(word)) {
+        return None;
+    }
+    let _ = parser.parse_keyword(Keyword::TABLE);
+    let _ = parser.parse_keyword(Keyword::EXTENDED) || consume_word(&mut parser, "FORMATTED");
+    parser.parse_object_name(false).ok()?;
+    if !parser.parse_keyword(Keyword::AS) || !consume_word(&mut parser, "JSON") {
+        return None;
+    }
+    if matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
+        Some(())
+    } else {
+        None
+    }
+}
+
+fn is_as_json_excluded_head(word: &Word) -> bool {
+    is_namespace_head(word) || word.value.eq_ignore_ascii_case("history")
+}
+
+pub(crate) fn try_parse_msck_repair(sql: &str) -> Option<()> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !consume_word(&mut parser, "MSCK") || !consume_word(&mut parser, "REPAIR") {
+        return None;
+    }
+    if !parser.parse_keyword(Keyword::TABLE) {
+        return None;
+    }
+    parser.parse_object_name(false).ok()?;
+    Some(())
+}
+
+pub(crate) fn try_parse_analyze_table(sql: &str) -> Option<()> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !consume_word(&mut parser, "ANALYZE") {
+        return None;
+    }
+    if !parser.parse_keyword(Keyword::TABLE) {
+        return None;
+    }
+    parser.parse_object_name(false).ok()?;
+    Some(())
+}
+
 pub(crate) struct ShowSystemFunctions {
     pub(crate) catalog: String,
 }

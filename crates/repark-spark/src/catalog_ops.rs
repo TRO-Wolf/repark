@@ -162,6 +162,14 @@ pub(crate) fn partition_management_unsupported(table_display: &str) -> DataFusio
     ))
 }
 
+pub(crate) fn not_supported_command_for_v2_table(command: &str) -> DataFusionError {
+    let flattened = command.replace('\n', " ");
+    DataFusionError::Plan(format!(
+        "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] {flattened} is not supported for v2 tables. \
+         SQLSTATE: 0A000"
+    ))
+}
+
 pub(crate) fn quoted_table_display(parts: &[String]) -> String {
     parts
         .iter()

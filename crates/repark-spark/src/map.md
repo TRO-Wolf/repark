@@ -93,6 +93,14 @@ pins: rp-4-fork-repin/C-005, C-006
   so the `saveAsTable` static pin and the options travel on one statement and the
   router keeps its signatures (clippy's argument and line limits hold).
   pins: ice-write-options-1/C-014
+  **IPI-51 PR5 (2026-09-20):** `try_preparse_intercepts` gains the four v2-command
+  intercepts — DESCRIBE AS JSON ahead of the describe-table arm, SET SERDE / MSCK REPAIR /
+  ANALYZE TABLE after SHOW PARTITIONS — through `v2_json_preparse` / `v2_tail_preparse`
+  helpers in the `show_partitions_preparse` shape, each refusing through the shared
+  `v2_command_outcome` helper so the write-options gate still runs first. The DESCRIBE
+  NAMESPACE arm moves into `describe_namespace_preparse` so the function holds clippy's
+  line cap.
+  pins: ice-error-conditions-1/C-011
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
@@ -1108,6 +1116,13 @@ pins: rp-4-fork-repin/C-005, C-006
   catalog to list. The arm delegates to a `show_partitions_preparse` helper in `router.rs`
   so `try_preparse_intercepts` stays under clippy's line cap.
   pins: ice-error-conditions-1/C-011
+  **IPI-51 PR5 (2026-09-20):** the file also hosts the four v2-command recognizers —
+  `try_parse_set_serde` (ALTER TABLE … SET SERDE/SERDEPROPERTIES only),
+  `try_parse_describe_as_json` (… AS JSON with EOF, never a NAMESPACE or HISTORY head),
+  `try_parse_msck_repair` (MSCK REPAIR TABLE only) and `try_parse_analyze_table` (ANALYZE
+  TABLE only, never DATABASE or TABLES) — and the router refuses each through
+  `catalog_ops::not_supported_command_for_v2_table` with Spark's recorded command string.
+  pins: ice-error-conditions-1/C-011
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves
@@ -1147,7 +1162,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `partition_management_unsupported` is the sibling home of Spark's
   `[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]`/`SQLSTATE: 42601` text
   over a caller-backticked table display (`quoted_table_display` backticks each name part);
-  the `truncate.rs` PARTITION arm answers through it.
+  the `truncate.rs` PARTITION arm answers through it. **IPI-51 PR5 (2026-09-20):**
+  `not_supported_command_for_v2_table` is the sibling home of Spark's
+  `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]`/`SQLSTATE: 0A000` text over a caller-supplied
+  command string (newlines flattened); the four v2-command router intercepts answer through it.
   pins: ipi-21-25-42-small-parser/C-007, C-008; ice-error-conditions-1/C-011
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
