@@ -709,6 +709,22 @@ async fn call_add_files_check_duplicate_files_raises() {
             .contains("already exist within the target table"),
         "duplicate refusal must name the conflict, got {error}"
     );
+    let error = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.add_files(table => 'sales.afd', source_table => '`parquet`.`{}`')",
+            root.display()
+        ),
+    )
+    .await
+    .expect_err("duplicate import with the check omitted must raise");
+    assert!(
+        error
+            .to_string()
+            .contains("already exist within the target table"),
+        "default duplicate refusal must name the conflict, got {error}"
+    );
     let frame = execute(
         &ctx,
         &catalogs,

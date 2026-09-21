@@ -486,6 +486,10 @@ def test_add_files_check_duplicate_raises(spark: ReparkSession, tmp_path: Path) 
             f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`', "
             "check_duplicate_files => true)"
         ).to_arrow()
+    with pytest.raises(PySparkException, match="already exist within the target table"):
+        spark.sql(
+            f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`')"
+        ).to_arrow()
     cols, added, changed = _add_files_result(
         spark,
         f"CALL mem.system.add_files(table => 'ns.afd', source_table => '`parquet`.`{root}`', "
