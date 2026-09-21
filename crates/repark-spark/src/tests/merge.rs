@@ -255,10 +255,10 @@ async fn merge_cardinality_violation_errors() {
     .await
     .unwrap_err();
 
-    assert!(
-        err.to_string().contains("MERGE_CARDINALITY_VIOLATION"),
-        "expected a cardinality violation, got: {err}"
-    );
+    let mapped = repark_core::engine_err(err);
+    assert!(matches!(mapped, repark_common::Error::Analysis(_)));
+    assert!(mapped.to_string().contains("[MERGE_CARDINALITY_VIOLATION]"));
+    assert!(mapped.to_string().contains("SQLSTATE: 23K01"));
 }
 
 /// Insert-only MERGE takes the `fast_append` path.
@@ -741,10 +741,10 @@ async fn merge_duplicate_source_keys_with_matched_raises() {
     )
     .await
     .unwrap_err();
-    assert!(
-        err.to_string().contains("MERGE_CARDINALITY_VIOLATION"),
-        "expected MERGE_CARDINALITY_VIOLATION on duplicate source keys with MATCHED, got: {err}"
-    );
+    let mapped = repark_core::engine_err(err);
+    assert!(matches!(mapped, repark_common::Error::Analysis(_)));
+    assert!(mapped.to_string().contains("[MERGE_CARDINALITY_VIOLATION]"));
+    assert!(mapped.to_string().contains("SQLSTATE: 23K01"));
     // Failed MERGE must leave the target untouched (no partial write).
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.t").await,

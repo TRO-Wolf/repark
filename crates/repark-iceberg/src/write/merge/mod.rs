@@ -758,10 +758,6 @@ pub(super) async fn resolve_affected_data_files(
     .await
 }
 
-/// Spark's `MERGE_CARDINALITY_VIOLATION` message.
-const CARDINALITY_VIOLATION_MSG: &str = "MERGE_CARDINALITY_VIOLATION: a target row matched more \
-    than one source row; deduplicate the source or tighten the ON condition";
-
 /// Spark `isCardinalityCheckNeeded`: skip only a lone unconditional MATCHED DELETE.
 #[must_use]
 fn skip_cardinality(spec: &MergeSpec) -> bool {
@@ -840,9 +836,10 @@ fn fold_discovery_batch_into_affected(
         let match_count = require_non_null_i64(match_counts, row, "match_count")?;
         let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
         if match_count > 1 && !skip_cardinality {
-            return Err(DataFusionError::Execution(
-                CARDINALITY_VIOLATION_MSG.to_string(),
-            ));
+            return Err(DataFusionError::Plan(spark_error::message(
+                spark_error::MERGE_CARDINALITY_VIOLATION,
+                &[],
+            )));
         }
         if is_mutated_flag == 1 {
             let path_str = paths.value(row);
@@ -970,9 +967,10 @@ fn consume_matched_work_batch(
         let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
         let is_update_flag = require_non_null_i64(is_update, row, "is_update")?;
         if match_count > 1 && !skip_cardinality {
-            return Err(DataFusionError::Execution(
-                CARDINALITY_VIOLATION_MSG.to_string(),
-            ));
+            return Err(DataFusionError::Plan(spark_error::message(
+                spark_error::MERGE_CARDINALITY_VIOLATION,
+                &[],
+            )));
         }
         let path_str = paths.value(row);
         let path_index = if let Some(&index) = path_intern.get(path_str) {
