@@ -698,13 +698,13 @@ pub(crate) fn refuse_unsupported_create_table_clauses(
         )));
     }
     match &create.table_options {
-        CreateTableOptions::None | CreateTableOptions::TableProperties(_) => {}
-        CreateTableOptions::Plain(options)
-        | CreateTableOptions::With(options)
-        | CreateTableOptions::Options(options) => {
+        CreateTableOptions::None
+        | CreateTableOptions::TableProperties(_)
+        | CreateTableOptions::Options(_) => {}
+        CreateTableOptions::Plain(options) | CreateTableOptions::With(options) => {
             if !options.is_empty() {
                 return Err(DataFusionError::NotImplemented(format!(
-                    "CREATE TABLE WITH/OPTIONS/plain options are not supported for Iceberg \
+                    "CREATE TABLE WITH/plain options are not supported for Iceberg \
                      {form} yet — use TBLPROPERTIES for Iceberg table properties"
                 )));
             }
