@@ -1179,11 +1179,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `replace_partition_field_transform_lhs_resolves_and_refuses_no_match` evolves
   `days(ts) WITH hours(ts)` to `ts_hour` through the door and refuses a LHS matching
   no current field.
-  **IPI-26/27 round 3 remediation (2026-09-21):**
-  `render_transform_arg_keeps_string_literals_quoted` and
-  `bucket_quoted_string_arguments_are_never_a_width` pin that a quoted string literal
-  stays quoted through `render_transform_arg` and refuses as a bucket width with the
-  integer error, in either argument position.
+   **IPI-26/27 round 3 remediation (2026-09-21):**
+   `render_transform_arg_keeps_string_literals_quoted` and
+   `bucket_quoted_string_arguments_are_never_a_width` pin that a quoted string literal
+   stays quoted through `render_transform_arg` and refuses as a bucket width with the
+   integer error, in either argument position.
+   **WO3-R2 (2026-09-21):** `bucket_quoted_string_arguments_are_never_a_width` gains the
+   width-first orders, and the sibling `truncate_quoted_string_arguments_are_never_a_width`
+   pins all four quoted-literal orders of `truncate`; a quoted string refuses as a width in
+   either argument slot of either transform, so a first-argument-only quote guard dies.
 
 ## Mapping rule
 
