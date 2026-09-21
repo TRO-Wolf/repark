@@ -409,7 +409,7 @@ def test_partition_transform_near_misses_still_refuse(spark: Any) -> None:
 
 
 def test_bucket_quoted_string_is_never_the_width(spark: Any) -> None:
-    """``bucket('x', 16)``/``bucket(\"x\", 16)`` refuse; the table has column ``x``.
+    """``bucket('x', 16)``/``bucket("x", 16)`` refuse in either order; the column is ``x``.
 
     The wrong implementation under this pin strips the quotes, sniffs ``16`` as the
     width, and records ``x_bucket``/``bucket[16]`` instead of refusing.
@@ -417,24 +417,29 @@ def test_bucket_quoted_string_is_never_the_width(spark: Any) -> None:
     from repark.errors import PySparkException
 
     for literal in ("'x'", '"x"'):
-        with pytest.raises(PySparkException) as caught:
-            spark.sql(
-                f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_quoted_width (x BIGINT) "
-                f"USING iceberg PARTITIONED BY (bucket({literal}, 16))"
-            )
-        assert "numBuckets must be an integer" in str(caught.value)
+        for call in (f"bucket({literal}, 16)", f"bucket(16, {literal})"):
+            with pytest.raises(PySparkException) as caught:
+                spark.sql(
+                    f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_quoted_width (x BIGINT) "
+                    f"USING iceberg PARTITIONED BY ({call})"
+                )
+            assert "numBuckets must be an integer" in str(caught.value)
 
 
 def test_truncate_quoted_string_is_never_the_width(spark: Any) -> None:
-    """``truncate(ts, 'day')`` refuses: a quoted string is never a width."""
+    """``truncate(ts, 'day')``, ``truncate(4, 'day')`` and ``truncate(4, "day")`` refuse.
+
+    A quoted string is never a truncate width, in either argument order.
+    """
     from repark.errors import PySparkException
 
-    with pytest.raises(PySparkException) as caught:
-        spark.sql(
-            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_trunc_quoted_width (ts TIMESTAMP) "
-            "USING iceberg PARTITIONED BY (truncate(ts, 'day'))"
-        )
-    assert "width must be an integer" in str(caught.value)
+    for call in ("truncate(ts, 'day')", "truncate(4, 'day')", 'truncate(4, "day")'):
+        with pytest.raises(PySparkException) as caught:
+            spark.sql(
+                f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_trunc_quoted_width (ts TIMESTAMP) "
+                f"USING iceberg PARTITIONED BY ({call})"
+            )
+        assert "width must be an integer" in str(caught.value)
 
 
 def test_date_transform_quoted_column_refuses(spark: Any) -> None:
