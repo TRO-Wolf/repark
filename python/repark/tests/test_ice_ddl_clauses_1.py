@@ -459,8 +459,7 @@ def test_replace_partition_field_transform_lhs_days_with_hours(spark: Any, tmp_p
     """
     table = f"{CATALOG}.{NAMESPACE}.t_replace_lhs"
     spark.sql(
-        f"CREATE TABLE {table} (ts TIMESTAMP, data STRING) "
-        "USING iceberg PARTITIONED BY (days(ts))"
+        f"CREATE TABLE {table} (ts TIMESTAMP, data STRING) USING iceberg PARTITIONED BY (days(ts))"
     )
     spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD days(ts) WITH hours(ts)")
 
@@ -492,8 +491,7 @@ def test_replace_partition_field_days_lhs_wrong_source_refuses(spark: Any) -> No
 
     table = f"{CATALOG}.{NAMESPACE}.t_replace_lhs_wrong_src"
     spark.sql(
-        f"CREATE TABLE {table} (ts TIMESTAMP, data STRING) "
-        "USING iceberg PARTITIONED BY (days(ts))"
+        f"CREATE TABLE {table} (ts TIMESTAMP, data STRING) USING iceberg PARTITIONED BY (days(ts))"
     )
     with pytest.raises(PySparkException) as caught:
         spark.sql(f"ALTER TABLE {table} REPLACE PARTITION FIELD days(data) WITH hours(data)")
@@ -509,8 +507,7 @@ def test_replace_partition_field_truncate_lhs_wrong_source_refuses(spark: Any) -
     spark.sql(f"ALTER TABLE {table} ADD PARTITION FIELD truncate(4, id)")
     with pytest.raises(PySparkException) as caught:
         spark.sql(
-            f"ALTER TABLE {table} REPLACE PARTITION FIELD truncate(4, data) "
-            "WITH truncate(8, data)"
+            f"ALTER TABLE {table} REPLACE PARTITION FIELD truncate(4, data) WITH truncate(8, data)"
         )
     assert "matches no partition field" in str(caught.value)
 
