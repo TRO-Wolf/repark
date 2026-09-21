@@ -81,7 +81,7 @@ fn add_columns_plural_splitter_splits_after_top_level_gt() {
         "a top-level `>` must not suppress the comma split, got: {rendered}"
     );
     let parsed = parse_single_normalized(sql).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
-    let Some((statement, _)) = parsed else {
+    let Some((statement, _, _)) = parsed else {
         panic!("{sql:?} must parse once the comma splits the two column defs");
     };
     if let Statement::AlterTable(alter) = &statement {
