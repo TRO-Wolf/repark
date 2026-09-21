@@ -163,18 +163,30 @@ def test_user_typed_insert_options_not_honoured(spark: ReparkSession) -> None:
     assert "run_id" not in _latest_summary(spark, table)
 
 
-def test_user_typed_ctas_options_still_refuses(spark: ReparkSession) -> None:
-    """SQL-03: user-typed OPTIONS on CTAS keeps main's refusal / parse error."""
+def _table_properties(warehouse: Path, table: str) -> dict[str, str]:
+    """Property map of the newest metadata JSON under the warehouse root."""
+    metas = sorted(warehouse.rglob(f"{table}/metadata/*.metadata.json"))
+    assert metas, f"no metadata found for {table}"
+    meta = json.loads(metas[-1].read_text(encoding="utf-8"))
+    return {str(key): str(value) for key, value in meta.get("properties", {}).items()}
+
+
+def test_user_typed_ctas_options_land_as_properties(spark: ReparkSession, tmp_path: Path) -> None:
+    """SQL-03 (D-5, 2026-09-21): WITH refuses; user-typed OPTIONS on CTAS stores both keys."""
     table = f"{CATALOG}.{NS}.sql_ctas_opt"
     with pytest.raises(UnsupportedOperationException, match="not supported for Iceberg"):
         spark.sql(
             f"CREATE TABLE {table} WITH ('a'='b') AS SELECT * FROM (VALUES (1, 'x')) AS t(id, name)"
         )
-    with pytest.raises(ParseException):
-        spark.sql(
-            f"CREATE TABLE {table} USING iceberg OPTIONS('a'='b') "
-            "AS SELECT * FROM (VALUES (1, 'x')) AS t(id, name)"
-        )
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg OPTIONS('a'='b') "
+        "AS SELECT * FROM (VALUES (1, 'x')) AS t(id, name)"
+    )
+    props = _table_properties(tmp_path, "sql_ctas_opt")
+    assert props["a"] == "b"
+    assert props["option.a"] == "b"
+    arrow = spark.sql(f"SELECT id FROM {table} ORDER BY id").to_arrow()
+    assert arrow.column("id").to_pylist() == [1]
 
 
 def test_snapshot_property_dyn_overwrite(spark: ReparkSession) -> None:
