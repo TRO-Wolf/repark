@@ -991,6 +991,14 @@ pins: rp-4-fork-repin/C-005, C-006
   Spark door parses `x -> y` lambdas without the session-wide FNP-4b flip. Unit pins are
   inline in the module; door pins are [`tests/lambda_door.rs`](tests/lambda_door.rs).
   pins: fnp-8/C-004
+  **IPI-51 PR6 slice 3 (2026-09-21):** `build_partition_spec` stamps a missing
+  partition-source column as `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703` through
+  `repark_common::spark_error` — the missing column backticked as `{columnName}`, the schema
+  fields backticked as `{suggestions}` — on both its callers (`create_table.rs`, `ctas.rs`).
+  Cell `W-INSERT-OVERWRITE-HIDDEN-PART` fails at CREATE here; Spark's
+  `_LEGACY_ERROR_TEMP_3060` id is not copied. Pins: retargeted U1-P10 plus the CREATE TABLE
+  `days(ts)` pin in [`tests/partitioned_ctas.rs`](tests/partitioned_ctas.rs).
+  pins: ice-error-conditions-1/C-011
   **IPI-26/27 round 1 (2026-09-20):** the dialect switch sends a `CREATE` or
   `ALTER TABLE` carrying an angle-bracket `MAP<` to `SparkSqlDialect` (cell
   `D-X-ADD-COL-MAP-KEY-STRUCT`); every other `ALTER` stays on `GenericDialect`,

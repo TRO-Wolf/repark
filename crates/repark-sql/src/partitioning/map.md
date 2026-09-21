@@ -9,6 +9,10 @@ recoverable after the table exists.
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../partitioning.rs`.
+  **IPI-51 PR6 slice 3 (2026-09-21):** `unknown_partition_column_refuses_listing_columns`
+  requires `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703` with backticked suggestions; the
+  empty-transform, resolve-against-schema and unsupported-transform pins are untouched.
+  pins: ice-error-conditions-1/C-011
 
 ## Pointers
 

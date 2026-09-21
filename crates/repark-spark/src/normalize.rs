@@ -16,6 +16,7 @@ use iceberg::spec::{Transform, UnboundPartitionSpec};
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::write::nested_type_sql::rewrite_create_column_types;
 
+use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 
 use crate::alter;
@@ -890,11 +891,15 @@ pub(crate) fn build_partition_spec(
                     .fields()
                     .iter()
                     .map(|field| field.name.clone())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                DataFusionError::Plan(format!(
-                    "cannot resolve CTAS partition column `{column}`: not an output column of \
-                     the SELECT (column names are exact-case; query outputs: [{available}])"
+                    .collect::<Vec<_>>();
+                let column_name = format!("`{column}`");
+                let suggestions = format!("`{}`", available.join("`, `"));
+                DataFusionError::Plan(spark_error::message(
+                    spark_error::UNRESOLVED_COLUMN_WITH_SUGGESTION,
+                    &[
+                        ("columnName", column_name.as_str()),
+                        ("suggestions", suggestions.as_str()),
+                    ],
                 ))
             })?;
         builder = builder

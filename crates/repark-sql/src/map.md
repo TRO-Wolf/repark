@@ -213,6 +213,13 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
 - `partitioning.rs` — partition-transform parsing (a small pure function, per Q2 — deliberately
   NOT shared with the Spark door's `PARTITIONED BY` validator) and Iceberg spec building with
   Java-parity field names. Tests: [partitioning/map.md](partitioning/map.md).
+  **IPI-51 PR6 slice 3 (2026-09-21):** `build_partition_spec` stamps a missing
+  partition-source column as `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703` through
+  `repark_common::spark_error`, the ANSI-door twin of the Spark `normalize.rs` stamp; the
+  unsupported-transform refusal keeps its `NotImplemented` shape. `tests.rs` retargets the
+  `with_partitioning_array` tail the same way and sheds a comment plus its doc line
+  (ceiling 1513).
+  pins: ice-error-conditions-1/C-011
 - `schema_ddl.rs` — `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, `DROP TABLE`, plus the
   shared catalog-handle / name-parts / identifier-hygiene helpers.
   `IF NOT EXISTS` runs the same location-conflict predicate as the Spark door

@@ -2,6 +2,7 @@
 
 use datafusion::error::{DataFusionError, Result};
 use iceberg::spec::{Transform, UnboundPartitionSpec};
+use repark_common::spark_error;
 
 /// One partition transform, parsed from its Trino string spelling.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -199,11 +200,15 @@ pub(crate) fn build_partition_spec(
                     .fields()
                     .iter()
                     .map(|field| field.name.clone())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                DataFusionError::Plan(format!(
-                    "cannot resolve partition column `{column}`: it is not a column of the table \
-                     (names are exact-case; available: [{available}])"
+                    .collect::<Vec<_>>();
+                let column_name = format!("`{column}`");
+                let suggestions = format!("`{}`", available.join("`, `"));
+                DataFusionError::Plan(spark_error::message(
+                    spark_error::UNRESOLVED_COLUMN_WITH_SUGGESTION,
+                    &[
+                        ("columnName", column_name.as_str()),
+                        ("suggestions", suggestions.as_str()),
+                    ],
                 ))
             })?;
         builder = builder
