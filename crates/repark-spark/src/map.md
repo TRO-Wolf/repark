@@ -48,8 +48,8 @@ pins: rp-4-fork-repin/C-005, C-006
   view_ddl`; `namespace_ddl.rs` refuses DROP TABLE over a view and DROP VIEW
   over a table; `insert_by_name.rs` takes the same write guard;
   `describe_show.rs` exposes `tokenize_with_spans` for the view parsers.
-  R2 hardens the guard fail-closed (completion errors propagate, `is_view`
-  returns a `Result`).
+  R2 hardens the guard fail-closed (metadata writes refuse up front, `is_view`
+  returns a `Result`, branch selectors still fall through).
   pins: ice-views-1/C-006, C-007, C-008, C-011, C-012, C-015, C-016
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the

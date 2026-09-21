@@ -21,8 +21,9 @@ service, and the wrapper-based read path that expands stored SQL per query.
   for the output schema, service call), `execute_drop_view`,
   `execute_show_views` (`namespace`/`viewName`/`isTemporary` rows, LIKE
   filter), `refuse_view_write_target` (INSERT/DELETE/UPDATE/BY NAME guard,
-  fail-closed since R2: name-completion errors propagate and `is_view` is a
-  `Result`, so only a positively resolved non-view reaches the table path).
+  fail-closed since R2: metadata-table writes refuse up front, `is_view` is a
+  `Result`, and names that cannot be views (branch selectors) fall through to
+  the table path).
   A marked statement skips the tighten calibration (the session-scoped
   allowance for bare names); an unmarked one enforces it before the catalog
   write, so the refusal precedes any viewless-catalog refusal. The bit travels
