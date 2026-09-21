@@ -770,6 +770,10 @@ pins: rp-4-fork-repin/C-005, C-006
   plan-class through `catalog_ops::partition_management_unsupported` with the backticked
   target (`AnalysisException`, `SQLSTATE: 42601`); the file ratchets 1449 → 1446.
   pins: ice-error-conditions-1/C-011
+  **IPI-26/27 round 1 (2026-09-20):** `split_top_level_comma_segments` tracks
+  angle depth alongside paren depth, so commas inside `STRUCT<…>` / `MAP<…>` no
+  longer split the column list (cells `D-ADD-COL-STRUCT`, `D-X-ADD-COL-MAP-KEY-STRUCT`);
+  `ShiftRight` closes two levels for nested `>>`.
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** Spark's Hive-style
   `REPLACE COLUMNS` — one `DropColumn` per current top-level column, then one `AddColumn` per
   listed column, so the fork's `UpdateSchema` assigns every column a **fresh** id from
@@ -915,6 +919,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `CREATE OR REPLACE TABLE` **first**, before `is_create_table` gates the other rewrites, and
   carries the missing-table refusal that keeps the two spellings apart (**IPI-25**, 2026-09-20).
   pins: ipi-21-25-42-small-parser/C-005, C-006, C-007
+  `clustered_by.rs` rewrites `CLUSTERED BY (col) INTO n BUCKETS` into
+  `PARTITIONED BY (bucket(n, col))` between the `USING` strip and the
+  `PARTITIONED BY` extraction, so the bucket field lands named `{col}_bucket`
+  (**IPI-26/27 round 1**, 2026-09-20, cell `D-X-CLUSTERED-BY`).
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
   multi-statement refuse (BUG-010), the MoR multi-spec DML gate's resolution wrapper (BUG-001
@@ -934,6 +942,10 @@ pins: rp-4-fork-repin/C-005, C-006
   Spark door parses `x -> y` lambdas without the session-wide FNP-4b flip. Unit pins are
   inline in the module; door pins are [`tests/lambda_door.rs`](tests/lambda_door.rs).
   pins: fnp-8/C-004
+  **IPI-26/27 round 1 (2026-09-20):** the dialect switch sends a `CREATE` or
+  `ALTER TABLE` carrying an angle-bracket `MAP<` to `SparkSqlDialect` (cell
+  `D-X-ADD-COL-MAP-KEY-STRUCT`); every other `ALTER` stays on `GenericDialect`,
+  pinned by the corpus in [`tests/ice_ddl_clauses_1.rs`](tests/ice_ddl_clauses_1.rs).
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,

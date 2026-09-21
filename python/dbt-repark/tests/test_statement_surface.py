@@ -118,6 +118,13 @@ def _served() -> tuple[Shape, ...]:
             None,
         ),
         Shape(
+            "S-CTAS-CLUSTERED-BY",
+            "spark__clustered_cols",
+            f"create or replace table {CATALOG}.{NAMESPACE}.clustered using iceberg "
+            "clustered by (a) into 4 buckets as select 1 as a",
+            None,
+        ),
+        Shape(
             "S-RENAME",
             "spark__rename_relation",
             f"alter table {fact} rename to {CATALOG}.{NAMESPACE}.gold_fct_renamed",
@@ -221,13 +228,6 @@ def _refused() -> tuple[Shape, ...]:
             "spark__options_clause",
             f"create or replace table {CATALOG}.{NAMESPACE}.optioned using iceberg "
             'options (compression "zstd") as select 1 as a',
-            "Expected: end of statement, found: using",
-        ),
-        Shape(
-            "R-CTAS-CLUSTERED-BY",
-            "spark__clustered_cols",
-            f"create or replace table {CATALOG}.{NAMESPACE}.clustered using iceberg "
-            "clustered by (a) into 4 buckets as select 1 as a",
             "Expected: end of statement, found: using",
         ),
         Shape(

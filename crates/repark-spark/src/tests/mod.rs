@@ -37,6 +37,7 @@ mod dml;
 mod dyn_by_name_overwrite;
 mod dyn_partition_overwrite;
 mod float_agg;
+mod ice_ddl_clauses_1;
 mod insert_overwrite;
 mod join_null_keys;
 mod lambda_door;

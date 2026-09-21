@@ -8,7 +8,7 @@ use datafusion::sql::sqlparser::ast::{
     Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor, TableWithJoins,
     Value, Visit, Visitor,
 };
-use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
+use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect, GenericDialect};
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
@@ -22,6 +22,7 @@ use crate::alter;
 use crate::catalog_ops::{iceberg_err, name_parts};
 use crate::merge;
 
+pub(crate) mod clustered_by;
 pub(crate) mod replace_table;
 
 /// True when the statement's first keyword token is `MERGE`.
@@ -158,6 +159,18 @@ fn sql_has_lambda_arrow(sql: &str) -> bool {
     false
 }
 
+pub(crate) fn normalized_parse_dialect(tokens: &[Token]) -> &'static dyn Dialect {
+    if (is_create_table(tokens) || alter::tokens_are_alter_table(tokens))
+        && has_angle_map_column_type(tokens)
+    {
+        &datafusion::sql::sqlparser::dialect::SparkSqlDialect {}
+    } else if alter::tokens_are_alter_table(tokens) {
+        &GenericDialect {}
+    } else {
+        &DatabricksDialect {}
+    }
+}
+
 /// Parse one statement with Spark-isms normalized.
 /// # Errors
 /// # Errors A `CREATE TABLE` whose `PARTITIONED BY` clause is malformed errors loudly.
@@ -173,6 +186,7 @@ pub(crate) fn parse_single_normalized(
     let mut partitioning = Vec::new();
     if is_create_table(&tokens) {
         tokens = strip_create_table_using(&tokens);
+        tokens = clustered_by::rewrite_clustered_by(&tokens);
         (tokens, partitioning) = extract_partitioned_by(&tokens)?;
         tokens = rewrite_create_column_types(&tokens, false).map_err(|message| {
             DataFusionError::SQL(Box::new(ParserError::ParserError(message)), None)
@@ -185,18 +199,7 @@ pub(crate) fn parse_single_normalized(
     if is_merge(&tokens) {
         tokens = merge::rewrite_merge_stars(&tokens);
     }
-    // ALTER TABLE uses GenericDialect.
-    let generic = GenericDialect {};
-    let spark = datafusion::sql::sqlparser::dialect::SparkSqlDialect {};
-    let parse_dialect: &dyn datafusion::sql::sqlparser::dialect::Dialect =
-        if alter::tokens_are_alter_table(&tokens) {
-            &generic
-        } else if is_create_table(&tokens) && has_angle_map_column_type(&tokens) {
-            &spark
-        } else {
-            &dialect
-        };
-    let Ok(mut statements) = Parser::new(parse_dialect)
+    let Ok(mut statements) = Parser::new(normalized_parse_dialect(&tokens))
         .with_tokens(tokens)
         .parse_statements()
     else {

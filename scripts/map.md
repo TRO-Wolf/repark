@@ -1,5 +1,7 @@
 # map — scripts/
 
+IPI-26/27 round 1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1449 → 1447 (the comma splitter folds angle tracking into one depth counter), shrink-only.
+
 ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19): `check_rust_file_size.py` DROPS the `write/predicate_dml.rs` exception (1034 → 960, under the default ceiling: the MoR arms split to `predicate_dml/mor_commit.rs` and the UPDATE allow-list moved to `predicate_dml/plain.rs`) `write/merge/tests/streaming_scan.rs` 3020 → 3018 and `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435, all shrink-only, with the CAP-1 mirror.
 
 ICE-SESSION-WRITE-CONF-1 (2026-09-19): `check_rust_file_size.py` ratchets `write/merge/mod.rs` 1761 → 1701 (MERGE staging splits to `session_staging.rs`) and `write/predicate_dml.rs` 1139 → 1034 (identity COW commits split to `cow_commit.rs`), both shrink-only, with the CAP-1 mirror.

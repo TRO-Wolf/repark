@@ -4275,29 +4275,36 @@ the pin rather than obeying it.
   in all three files, which this unit's fence (carriers only) forbids; the refusal message
   stays the standard gate text and this row states the true reason.
 
-### DBT-CTASCLAUSE-1 — `LOCATION`, `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS
+### DBT-CTASCLAUSE-1 — `LOCATION` and `OPTIONS` are refused on an Iceberg CTAS; `CLUSTERED BY` is served
 
-- **repark** — of the placement clauses `dbt-spark` can put on a `create table … as`, only
-  `PARTITIONED BY` is served. `LOCATION '…'` refuses with `UnsupportedOperationException: CREATE
+- **repark** — of the placement clauses `dbt-spark` can put on a `create table … as`,
+  `PARTITIONED BY` and `CLUSTERED BY` are served. `LOCATION '…'` refuses with
+  `UnsupportedOperationException: CREATE
   TABLE … LOCATION is not supported for Iceberg CTAS yet — table location is derived from the
-  namespace warehouse (or service-managed catalog)`. `OPTIONS (…)` and `CLUSTERED BY (…) INTO n BUCKETS` refuse with
+  namespace warehouse (or service-managed catalog)`. `OPTIONS (…)` refuses with
   `SQL error: ParserError("Expected: end of statement, found: using …")` — the same misleading
   position as `DBT-RELCOMMENT-1`, naming `using` rather than the clause that failed.
-  `dbt-repark` refuses `location_root`, `options` and `clustered_by` / `buckets` at compile time,
-  naming this row.
-- **Apache Spark** — accepts all four clauses on an Iceberg CTAS. *(oracle: documented — the
-  claim here is the refusal and the position it reports; no value oracle is involved.)*
+  `CLUSTERED BY (…) INTO n BUCKETS` is served at the SQL door (INDEX-19): the parser accepts it
+  and it rewrites to a `bucket(n, col)` partition transform; dbt emits `spark__clustered_cols`
+  and the shape runs green. `dbt-repark` refuses `location_root`, `options` and `clustered_by` /
+  `buckets` at compile time, naming this row.
+- **Apache Spark** — accepts all four clauses on an Iceberg CTAS; `CLUSTERED BY (id) INTO 4
+  BUCKETS` records a `bucket[4]` transform on `id` (field `id_bucket`). *(oracle: documented for
+  the refused clauses — the claim there is the refusal and the position it reports, no value
+  oracle; recorded live for the bucket transform, cell `D-X-CLUSTERED-BY`.)*
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CTAS-LOCATION]`,
-  `[R-CTAS-OPTIONS]` and `[R-CTAS-CLUSTERED-BY]`, with
-  `::test_served_shapes_run[S-CTAS-PARTITIONED-BY]` holding the served half and
+  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CTAS-LOCATION]`
+  and `[R-CTAS-OPTIONS]`, with
+  `::test_served_shapes_run[S-CTAS-PARTITIONED-BY]` and `[S-CTAS-CLUSTERED-BY]` holding the served
+  half, `python/repark/tests/test_ice_ddl_clauses_1.py::test_clustered_by_is_not_silently_dropped`
+  pinning the `bucket[4]` spec in table metadata, and
   `python/dbt-repark/tests/test_gold_models.py::test_unsupported_ctas_clauses_refuse` holding the
   adapter's side
-- **Rationale** — BACKLOG. `LOCATION` is a real capability gap with an honest message.
-  `CLUSTERED BY` is Hive bucketing, which Iceberg replaces with a bucket **partition
-  transform**, so the right answer there is probably a clearer refusal rather than support.
-  `OPTIONS` has no Iceberg meaning distinct from `TBLPROPERTIES`. What all three share with
-  `DBT-RELCOMMENT-1` is the parser position, and that is the part worth fixing first.
+- **Rationale** — BACKLOG for the two refusals that remain. `LOCATION` is a real capability gap
+  with an honest message. `OPTIONS` has no Iceberg meaning distinct from `TBLPROPERTIES`, and its
+  misleading parser position is the `DBT-RELCOMMENT-1` defect worth fixing first. The adapter's
+  `clustered_by` / `buckets` compile-time refusal now sits over a clause the SQL door serves;
+  retiring it is tracked by the IPI-26/27 dbt-retirement round (A-12).
 
 ### DBT-RELCOMMENT-1 — `CREATE TABLE … COMMENT` is refused on a CTAS, and after `TBLPROPERTIES` it names the wrong token
 
