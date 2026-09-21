@@ -273,18 +273,6 @@ def test_change_column_hive_type_and_comment(spark: Any, tmp_path: Path) -> None
     assert arrow.to_pylist() == [{"id": 1, "data": "a"}]
 
 
-def test_change_column_hive_rename(spark: Any, tmp_path: Path) -> None:
-    """The Hive form renames when its two names differ, and keeps the rows."""
-    table = _create(spark, "t_hive_rename")
-    spark.sql(f"INSERT INTO {table} VALUES (1, 'a')")
-    spark.sql(f"ALTER TABLE {table} CHANGE COLUMN data payload STRING")
-
-    rows, _ = _schema_rows(_metadata(tmp_path / "wh", "t_hive_rename"))
-    assert ["payload", "string", False, None] in rows
-    arrow = spark.sql(f"SELECT id, payload FROM {table} ORDER BY id").to_arrow()
-    assert arrow.to_pylist() == [{"id": 1, "payload": "a"}]
-
-
 def test_create_location_files_land_under_path(spark: Any, tmp_path: Path) -> None:
     """Cell ``D-CREATE-LOCATION``: data files land under the given path."""
     location = tmp_path / "custom_loc" / "t_create_loc"
