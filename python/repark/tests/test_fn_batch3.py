@@ -6,7 +6,6 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
 from repark.spark.functions import (
     add_months,
     date_part,
@@ -114,8 +113,14 @@ def test_batch3_try_to_timestamp_answers(spark: ReparkSession) -> None:
     assert row["fmt"] == "2024-06-15 12:00:00"
 
 
-def test_batch3_loud_unsupported(spark: ReparkSession) -> None:
-    with pytest.raises(UnsupportedOperationException, match="format_number"):
-        format_number("x", 2)
+def test_batch3_format_number_answers(spark: ReparkSession) -> None:
+    frame = spark.sql(
+        "SELECT * FROM VALUES (CAST(2.5 AS DOUBLE)), (CAST(NULL AS DOUBLE)), "
+        "(CAST(0.125 AS DOUBLE)) AS t(d)"
+    )
+    table = frame.select(format_number("d", 2).alias("v")).to_arrow()
+    assert table.column("v").to_pylist() == ["2.50", None, "0.12"]
+    assert table.schema.field("v").type == pa.string()
+    assert table.schema.field("v").nullable is True
     # FNP-3: to_utc_timestamp / from_utc_timestamp ship (datafusion-spark kernels).
     # Behavior + the zone round trip: test_fnp3_destubbed.py.
