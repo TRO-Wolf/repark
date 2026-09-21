@@ -1,0 +1,425 @@
+use super::super::*;
+use super::common::*;
+
+use crate::wap::WapSessionConfig;
+
+const WAP_DDL: &str = "CREATE TABLE ice.sales.t (id INT, name STRING) USING iceberg \
+     TBLPROPERTIES ('format-version'='2', 'write.wap.enabled'='true')";
+const PLAIN_DDL: &str = "CREATE TABLE ice.sales.t (id INT, name STRING) USING iceberg \
+     TBLPROPERTIES ('format-version'='2')";
+
+fn set_wap(ctx: &SessionContext, branch: Option<&str>, id: Option<&str>) {
+    let state_lock = ctx.state_ref();
+    let mut state = state_lock.write();
+    state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .insert(WapSessionConfig {
+            branch: branch.map(str::to_string),
+            id: id.map(str::to_string),
+        });
+}
+
+async fn seed(ctx: &SessionContext, catalogs: &CatalogRegistry, ddl: &str) {
+    run(ctx, catalogs, ddl).await;
+    run(
+        ctx,
+        catalogs,
+        "INSERT INTO ice.sales.t SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+}
+
+async fn ids(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Vec<i32> {
+    let mut found = time_travel_id_multiset(ctx, catalogs, sql).await;
+    found.sort_unstable();
+    found
+}
+
+async fn staged_snapshot_id(catalogs: &CatalogRegistry, wap_id: &str) -> i64 {
+    let table = load_sales_table(catalogs, "t").await;
+    let mut found = None;
+    for snapshot in table.metadata().snapshots() {
+        if snapshot
+            .summary()
+            .additional_properties
+            .get("wap.id")
+            .is_some_and(|value| value == wap_id)
+        {
+            assert!(
+                found.is_none(),
+                "one staged snapshot carries wap.id {wap_id}"
+            );
+            found = Some(snapshot.snapshot_id());
+        }
+    }
+    found.expect("a staged snapshot carries the wap id")
+}
+
+async fn main_snapshot_id(catalogs: &CatalogRegistry) -> i64 {
+    load_sales_table(catalogs, "t")
+        .await
+        .metadata()
+        .snapshot_for_ref("main")
+        .expect("main ref exists")
+        .snapshot_id()
+}
+
+#[tokio::test]
+async fn wap_id_stages_the_insert_and_leaves_main_put() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    set_wap(&ctx, None, None);
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1],
+        "the staged row is invisible on main"
+    );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        seed_id,
+        "main still points at the seed snapshot"
+    );
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+    assert_ne!(staged, seed_id, "the staged snapshot is a new snapshot");
+    let table = load_sales_table(&catalogs, "t").await;
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_by_id(staged)
+            .expect("staged snapshot in the log")
+            .parent_snapshot_id(),
+        Some(seed_id),
+        "the staged snapshot hangs off the seed"
+    );
+}
+
+#[tokio::test]
+async fn publish_changes_fast_forwards_main_to_the_staged_snapshot() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    set_wap(&ctx, None, None);
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.publish_changes(table => 'sales.t', wap_id => 'w1')",
+    )
+    .await
+    .expect("publish answers")
+    .collect()
+    .await
+    .unwrap();
+    assert_eq!(batches.len(), 1, "one output batch");
+    assert_eq!(batches[0].num_rows(), 1, "one output row");
+    let schema = batches[0].schema();
+    assert_eq!(schema.field(0).name(), "source_snapshot_id");
+    assert_eq!(
+        schema.field(0).data_type(),
+        &DataType::Int64,
+        "source id reads back as Int64"
+    );
+    assert!(!schema.field(0).is_nullable(), "source id is non-null");
+    assert_eq!(schema.field(1).name(), "current_snapshot_id");
+    assert_eq!(
+        schema.field(1).data_type(),
+        &DataType::Int64,
+        "current id reads back as Int64"
+    );
+    assert!(!schema.field(1).is_nullable(), "current id is non-null");
+    let source = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .unwrap()
+        .value(0);
+    let current = batches[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .unwrap()
+        .value(0);
+    assert_eq!(source, staged, "the staged snapshot is the source");
+    assert_eq!(
+        current, staged,
+        "a fast-forward publish lands on the staged snapshot itself"
+    );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        staged,
+        "main moved to the staged snapshot"
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2]
+    );
+}
+
+#[tokio::test]
+async fn publish_changes_replays_over_an_intervening_commit() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    set_wap(&ctx, None, None);
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 3 AS id, 'c' AS name",
+    )
+    .await;
+
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.publish_changes(table => 'sales.t', wap_id => 'w1')",
+    )
+    .await
+    .expect("publish answers")
+    .collect()
+    .await
+    .unwrap();
+    let current = batches[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .unwrap()
+        .value(0);
+    assert_ne!(
+        current, staged,
+        "an intervening commit forces a replay, not a fast-forward"
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2, 3],
+        "the replay carries the staged row onto main"
+    );
+    let table = load_sales_table(&catalogs, "t").await;
+    let published = table
+        .metadata()
+        .snapshot_by_id(current)
+        .expect("published snapshot in the log");
+    assert_eq!(
+        published
+            .summary()
+            .additional_properties
+            .get("published-wap-id")
+            .map(String::as_str),
+        Some("w1"),
+        "the replay stamps the published wap id"
+    );
+}
+
+#[tokio::test]
+async fn publish_changes_with_an_unknown_wap_id_raises_the_bare_message() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.publish_changes(table => 'sales.t', wap_id => 'nope')",
+    )
+    .await
+    .expect_err("an unknown wap id must refuse");
+    assert!(
+        matches!(&error, DataFusionError::Execution(message) if message == "Cannot apply unknown WAP ID 'nope'"),
+        "the refusal is the bare fork message, got: {error}"
+    );
+    assert!(
+        !error.to_string().contains("DataInvalid"),
+        "the kind prefix must not leak into the message: {error}"
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1],
+        "the refused publish wrote nothing"
+    );
+}
+
+#[tokio::test]
+async fn wap_enabled_without_an_id_stays_a_normal_commit() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2],
+        "the property alone stages nothing"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_without_the_table_property_stays_a_normal_commit() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, PLAIN_DDL).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    set_wap(&ctx, None, None);
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2],
+        "without the property the id conf is ignored entirely"
+    );
+    let table = load_sales_table(&catalogs, "t").await;
+    assert!(
+        table.metadata().snapshots().all(|snapshot| {
+            !snapshot
+                .summary()
+                .additional_properties
+                .contains_key("wap.id")
+        }),
+        "no snapshot carries a staged wap id"
+    );
+}
+
+#[tokio::test]
+async fn without_either_wap_key_the_write_sql_passes_through_untouched() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+
+    let mut pinned = crate::time_travel::PinnedViews::default();
+    let sql = "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name";
+    let rewritten =
+        crate::write_to_branch::apply_write_to_branch(&ctx, &catalogs, sql, &mut pinned)
+            .await
+            .expect("the fast path never fails");
+    assert!(
+        matches!(rewritten, std::borrow::Cow::Borrowed(_)),
+        "with no wap key the router borrows the input"
+    );
+    assert_eq!(rewritten.as_ref(), sql, "the sql is byte-identical");
+    pinned.release(&ctx);
+}
+
+#[tokio::test]
+async fn a_wap_id_staged_snapshot_cherrypicks_onto_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    set_wap(&ctx, None, None);
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.cherrypick_snapshot(table => 'sales.t', snapshot_id => {staged})"
+        ),
+    )
+    .await;
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2],
+        "the staged snapshot publishes through the cherry-pick"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_leaves_delete_and_update_on_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+
+    set_wap(&ctx, None, Some("w1"));
+    run(&ctx, &catalogs, "DELETE FROM ice.sales.t WHERE id = 1").await;
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![2],
+        "the delete commits to main, not to a stage"
+    );
+    run(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.t SET id = 7 WHERE id = 2",
+    )
+    .await;
+    set_wap(&ctx, None, None);
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![7],
+        "the update commits to main, not to a stage"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_leaves_insert_overwrite_on_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.t SELECT 9 AS id, 'z' AS name",
+    )
+    .await;
+    set_wap(&ctx, None, None);
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![9],
+        "the overwrite replaces main instead of staging"
+    );
+}
