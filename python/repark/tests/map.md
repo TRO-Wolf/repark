@@ -3663,6 +3663,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   precedent for setup/registry clauses). **Round 3:** `m?` carries the merge
   cell (recorded with `m*`), `m*` refuses naming map.md (R-18b-12), and three
   unapplied-user-schema refuses pin field/type/file-type (R-18b-11) — 50 pins.
+  **Round 4 (2026-09-21):** `test_orc_sql_create_using_refusal` updates the
+  `USING orc LOCATION` pin to the column-list refusal now that decision 18 lets
+  `LOCATION` serve Iceberg — C-009 is still a planner refusal (no orc table is
+  created).
   pins: io-orc-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - `test_io_declared_1.py` + `facade_reader_writer_oracle.json` —
   **IO-DECLARED-1 (2026-09-14):** the orc-write / xml / jdbc declared IO refusals and
