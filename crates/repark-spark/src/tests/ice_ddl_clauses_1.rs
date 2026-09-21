@@ -155,6 +155,54 @@ fn date_alias_names_the_field_ts_day() {
 }
 
 #[test]
+fn bucket_and_truncate_both_argument_orders_give_the_same_spec() {
+    let build = |name: &str, first: &str, second: &str, label: &str| -> PartitionFieldSpec {
+        build_transform_field(name, &[first.to_string(), second.to_string()])
+            .unwrap_or_else(|error| panic!("{label} must build: {error}"))
+    };
+    let bucket_first = build("bucket", "4", "id", "bucket(4, id)");
+    let bucket_second = build("bucket", "id", "4", "bucket(id, 4)");
+    assert_eq!(bucket_first, bucket_second);
+    assert_eq!(
+        bucket_first,
+        PartitionFieldSpec::Bucket {
+            column: "id".to_string(),
+            num_buckets: 4,
+        }
+    );
+    let truncate_first = build("truncate", "4", "data", "truncate(4, data)");
+    let truncate_second = build("truncate", "data", "4", "truncate(data, 4)");
+    assert_eq!(truncate_first, truncate_second);
+    assert_eq!(
+        truncate_first,
+        PartitionFieldSpec::Truncate {
+            column: "data".to_string(),
+            width: 4,
+        }
+    );
+}
+
+#[test]
+fn bucket_two_integer_arguments_raises() {
+    let error = build_transform_field("bucket", &["1".to_string(), "2".to_string()])
+        .expect_err("bucket(1, 2) is ambiguous and must refuse");
+    assert!(error.to_string().contains("bucket"), "got: {error}");
+    let truncate_error = build_transform_field("truncate", &["1".to_string(), "2".to_string()])
+        .expect_err("truncate(1, 2) is ambiguous and must refuse");
+    assert!(
+        truncate_error.to_string().contains("truncate"),
+        "got: {truncate_error}"
+    );
+}
+
+#[test]
+fn bucket_two_non_integer_arguments_refuses() {
+    let error = build_transform_field("bucket", &["a".to_string(), "b".to_string()])
+        .expect_err("bucket(\"a\", \"b\") has no integer width and must refuse");
+    assert!(error.to_string().contains("integer"), "got: {error}");
+}
+
+#[test]
 fn dialect_widening_changes_no_other_alter() {
     for (sql, parses) in [
         ("ALTER TABLE ice.ns.t SET TBLPROPERTIES ('k'='v')", true),

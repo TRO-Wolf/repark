@@ -614,20 +614,31 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
             ))
         })
     };
+    let parses_as_int = |raw: &str| raw.trim().parse::<i64>().is_ok();
+    let sniff_width_column = |label: &str| -> Result<(&String, &String)> {
+        let [first, second] = args else {
+            return Err(arity_err(&format!("({label}, column)")));
+        };
+        match (parses_as_int(first), parses_as_int(second)) {
+            (true, false) => Ok((first, second)),
+            (false, true) => Ok((second, first)),
+            _ => Err(DataFusionError::Plan(format!(
+                "CTAS PARTITIONED BY `{name}(…)` expects exactly one integer {label} and one \
+                 column, in either order, got [{}]",
+                args.join(", ")
+            ))),
+        }
+    };
     match lower.as_str() {
         "bucket" => {
-            let [width, column] = args else {
-                return Err(arity_err("(numBuckets, column)"));
-            };
+            let (width, column) = sniff_width_column("numBuckets")?;
             Ok(PartitionFieldSpec::Bucket {
                 column: column.clone(),
                 num_buckets: positive_width(width, "numBuckets")?,
             })
         }
         "truncate" => {
-            let [width, column] = args else {
-                return Err(arity_err("(width, column)"));
-            };
+            let (width, column) = sniff_width_column("width")?;
             Ok(PartitionFieldSpec::Truncate {
                 column: column.clone(),
                 width: positive_width(width, "width")?,

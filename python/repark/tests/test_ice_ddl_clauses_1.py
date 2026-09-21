@@ -343,6 +343,71 @@ def test_date_alias_names_the_field_ts_day(spark: Any, tmp_path: Path) -> None:
     assert _spec(meta, by_id) == [["ts_hour", "hour", "ts"]]
 
 
+def test_bucket_both_argument_orders_give_the_same_spec(spark: Any, tmp_path: Path) -> None:
+    """Near-miss pin: ``bucket(id, 4)`` and ``bucket(4, id)`` record the same spec."""
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_w_first (id BIGINT) "
+        "USING iceberg PARTITIONED BY (bucket(4, id))"
+    )
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_c_first (id BIGINT) "
+        "USING iceberg PARTITIONED BY (bucket(id, 4))"
+    )
+
+    for name in ("t_bucket_w_first", "t_bucket_c_first"):
+        meta = _metadata(tmp_path / "wh", name)
+        _, by_id = _schema_rows(meta)
+        assert _spec(meta, by_id) == [["id_bucket", "bucket[4]", "id"]]
+
+
+def test_truncate_both_argument_orders_give_the_same_spec(spark: Any, tmp_path: Path) -> None:
+    """Near-miss pin: ``truncate(data, 4)`` and ``truncate(4, data)`` record the same spec."""
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_trunc_w_first (data STRING) "
+        "USING iceberg PARTITIONED BY (truncate(4, data))"
+    )
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_trunc_c_first (data STRING) "
+        "USING iceberg PARTITIONED BY (truncate(data, 4))"
+    )
+
+    for name in ("t_trunc_w_first", "t_trunc_c_first"):
+        meta = _metadata(tmp_path / "wh", name)
+        _, by_id = _schema_rows(meta)
+        assert _spec(meta, by_id) == [["data_trunc", "truncate[4]", "data"]]
+
+
+def test_bucket_two_integer_arguments_raises(spark: Any) -> None:
+    """``bucket(1, 2)`` is ambiguous — both arguments read as integers — and must refuse."""
+    from repark.errors import PySparkException
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_ambiguous (id BIGINT) "
+            "USING iceberg PARTITIONED BY (bucket(1, 2))"
+        )
+    assert "bucket" in str(caught.value)
+
+
+def test_partition_transform_near_misses_still_refuse(spark: Any) -> None:
+    """Neither-integer bucket args and an unknown transform keep refusing."""
+    from repark.errors import PySparkException
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_str (id BIGINT) "
+            "USING iceberg PARTITIONED BY (bucket('a', 'b'))"
+        )
+    assert "bucket" in str(caught.value)
+
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_bucket_unknown (id BIGINT) "
+            "USING iceberg PARTITIONED BY (unknown_xform(id))"
+        )
+    assert "not a supported partition transform" in str(caught.value)
+
+
 def test_describe_shows_column_comment(spark: Any) -> None:
     """Cell ``D-DESCRIBE`` re-check: the comment column carries the doc."""
     table = f"{CATALOG}.{NAMESPACE}.t_describe_doc"
