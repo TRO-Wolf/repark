@@ -3866,15 +3866,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   column `x` so the pre-fix behaviour was a landed `x_bucket` spec),
   `test_truncate_quoted_string_is_never_the_width`,
   `test_date_transform_quoted_column_refuses`;
-   `test_replace_partition_field_days_lhs_wrong_source_refuses` and
-   `test_replace_partition_field_truncate_lhs_wrong_source_refuses` hold the
-   matches-no-partition-field refusal when the LHS transform is present in the spec
-   but its source column differs — the pair, not the transform alone, resolves.
-   **WO3-R2 (2026-09-21):** `test_bucket_quoted_string_is_never_the_width` also runs the
-   width-first order `bucket(16, {literal})` for both quote spellings, and
-   `test_truncate_quoted_string_is_never_the_width` gains `truncate(4, 'day')` and
-   `truncate(4, "day")` beside the kept `truncate(ts, 'day')` case — the refusal holds
-   in either argument order, so a first-argument-only quote guard dies on this door too.
+  `test_replace_partition_field_days_lhs_wrong_source_refuses` and
+  `test_replace_partition_field_truncate_lhs_wrong_source_refuses` hold the
+  matches-no-partition-field refusal when the LHS transform is present in the spec
+  but its source column differs — the pair, not the transform alone, resolves.
+  **WO3-R2 (2026-09-21):** `test_bucket_quoted_string_is_never_the_width` also runs the
+  width-first order `bucket(16, {literal})` for both quote spellings, and
+  `test_truncate_quoted_string_is_never_the_width` gains `truncate(4, 'day')` and
+  `truncate(4, "day")` beside the kept `truncate(ts, 'day')` case — the refusal holds
+  in either argument order, so a first-argument-only quote guard dies on this door too.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to
