@@ -1395,6 +1395,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Round 3: NULL `ltrim` / `rtrim` pinned on both doors
   (`test_fn_trim_null_charset_is_null`).
   pins: fn-fix-2-ctrl-1-controls/C-001, C-002, C-003, C-004
+- [test_fn_startswith_1.py](test_fn_startswith_1.py) — **M8-STARTSWITH-1 (2026-09-21):**
+  SQL `startswith(s, 'ap')` answers `[1, 2]` with NULL and `''` excluded (PD p17);
+  `F.startswith` over a literal prefix agrees with `Column.startswith`.
+  Live Spark 4.1.2 (UTC, ANSI on) measured 2026-09-21.
 - [test_examples_window_catalog.py](test_examples_window_catalog.py) — **EX-21 (2026-09-04, r2):**
   EX-22 (2026-09-04): the module docstring names all three batches after the merge of main; imports sorted.
   the five divergence pins for the catalog/session example batch — `registerFunction` answers
