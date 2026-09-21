@@ -244,3 +244,18 @@ def test_drop_namespace_on_view_only_namespace_refuses(spark: ReparkSession) -> 
 def test_drop_view_if_exists_missing_stays_equal(spark: ReparkSession) -> None:
     """V-DROP-IF-EXISTS — missing plus IF EXISTS stays a quiet success."""
     spark.sql("DROP VIEW IF EXISTS sc.ns.missing")
+
+
+def test_drop_view_one_part_round_trips_current_namespace(spark: ReparkSession) -> None:
+    """A-13 symmetric — one-part DROP VIEW resolves like one-part CREATE VIEW."""
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns")
+    spark.sql("CREATE VIEW dropme AS SELECT id FROM sc.ns.t")
+    spark.sql("CREATE VIEW keepme AS SELECT id FROM sc.ns.t")
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns LIKE 'dropme'")) == [["ns", "dropme", False]]
+    spark.sql("DROP VIEW dropme")
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns LIKE 'dropme'")) == []
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns LIKE 'keepme'")) == [["ns", "keepme", False]]
+    spark.sql("DROP VIEW IF EXISTS dropme, keepme")
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == []
+    spark.sql("DROP VIEW IF EXISTS dropme")

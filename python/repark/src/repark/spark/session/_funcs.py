@@ -480,6 +480,7 @@ from repark.spark.session.sql_relations import (
     _SELECT_OR_WITH_HEAD_RE,
     _UPDATE_PREFIX_RE,
     _collect_cte_names,
+    _expand_drop_table_or_view_sql,
     _expand_durable_create_view_sql,
     _expand_temp_view_body_sql,
     _expand_truncate_target_sql,

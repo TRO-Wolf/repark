@@ -19,6 +19,9 @@ _DROP_TABLE_SQL_RE = re.compile(
 )
 
 
+_DROP_VIEW_SQL_RE = re.compile(r"(?is)^\s*DROP\s+VIEW\s+(IF\s+EXISTS\s+)?(.+?)\s*;?\s*$")
+
+
 _INSERT_PREFIX_RE = re.compile(
     r"(?is)^\s*(INSERT\s+(?:OVERWRITE\s+(?:TABLE\s+)?|INTO\s+(?:TABLE\s+)?))"
 )
@@ -939,3 +942,48 @@ def _expand_truncate_target_sql(query: str, resolve: Callable[..., str]) -> str 
         return query
 
     return f"{prefix}{_sql_table_ref(resolved)}{rest}"
+
+
+def _expand_drop_table_or_view_sql(query: str, resolve: Callable[..., str]) -> str | None:
+    """Rewrite ``DROP TABLE|VIEW [IF EXISTS] name [, …]`` targets to three-part form.
+
+    Returns ``None`` when the statement is neither shape. ``PURGE`` stays a
+    TABLE-only tail. VIEW names resolve exactly like TABLE names so a
+    CREATE VIEW / DROP VIEW pair round-trips under the same spelling.
+    """
+
+    table_match = _DROP_TABLE_SQL_RE.match(query)
+
+    if table_match is not None:
+        verb = "TABLE"
+
+        if_exists = table_match.group(1) or ""
+
+        names_blob = table_match.group(2).strip().rstrip(";").strip()
+
+        purge = " PURGE" if table_match.group(3) else ""
+    else:
+        view_match = _DROP_VIEW_SQL_RE.match(query)
+
+        if view_match is None:
+            return None
+
+        verb = "VIEW"
+
+        if_exists = view_match.group(1) or ""
+
+        names_blob = view_match.group(2).strip().rstrip(";").strip()
+
+        purge = ""
+
+    if not names_blob:
+        return query
+
+    qualified: list[str] = []
+
+    for raw_name in _split_sql_table_name_list(names_blob):
+        resolved = resolve(raw_name, prefer_temp_view=False)
+
+        qualified.append(_sql_table_ref(resolved))
+
+    return f"DROP {verb} {if_exists}{', '.join(qualified)}{purge}"
