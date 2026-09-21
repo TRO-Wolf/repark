@@ -1412,3 +1412,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `CB=0 R=0 T=0 U=0 L=0`. Ready for the departure move to `completed/`.
   `risk_tier: standard`. Branch `fix/ice-metadata-cols-1`.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [ice-metadata-columns-1-ledger.md](ice-metadata-columns-1-ledger.md) —
+  **ICE-METADATA-COLUMNS-1 (2026-09-21), done:** WO-R1 / RePark D-4 — the
+  Spark-door ref-selector resolver answers `t.snapshot_id_<id>` and
+  `t.at_timestamp_<ms>` through the existing snapshot/time-travel machinery
+  (the two R-TT-*SELECTOR cells, recorded rows verbatim); unparsable numeric
+  suffixes refuse typed `IllegalArgumentException`, never table-not-found;
+  `branch_`/`tag_` selectors and the `t.branch_b.files` error are byte-identical
+  (A-7 near-miss pins). Ready for the departure move to `completed/`.
+  `risk_tier: standard`. Branch `fix/ice-mc-selectors`.
+  pins: ice-metadata-columns-1/C-001, C-002, C-003, C-004
