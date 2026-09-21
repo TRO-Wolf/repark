@@ -597,6 +597,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `t.branch_b` via session defaults; tag and missing-branch Spark-shaped refuse including
   TRUNCATE; a real three-part table named `branch_<x>` is not a selector.
   pins: rp-5-fork-repin/C-004
+- `insert_arity.rs` — **IPI-51 PR9 (2026-09-21):** short-VALUES arity pins on the
+  inventory 3-col table. The e2e pin stamps `Plan` +
+  `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS` / `21S01` with the backticked
+  table, table-column and synthetic `col1`/`col2` params and leaves the table empty; the
+  near-miss pins hold correct-arity success, named-list / SELECT-short / wide / mixed-length
+  / overwrite / BY NAME / missing-table fall-through without the condition.
+  pins: ice-error-conditions-1/C-011
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`,
   **FNP-4B critic:** `setup()` applies `apply_spark_parser_dialect` and registers
   `__repark_spark_as__`. pins: fnp-4b/C-017

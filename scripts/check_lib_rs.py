@@ -60,6 +60,12 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "module, so it became a file and the ceiling ratcheted 230 -> 190). Already uses the "
         "sanctioned file-backed test module (`#[cfg(test)] mod tests;` -> src/tests.rs)",
     ),
+    "repark-spark": (
+        152,  # measured 151
+        "`mod insert_arity;` (IPI-51 PR9, the short-VALUES arity router intercept) takes the "
+        "root one line past the default; "
+        "RATCHET: if module decls consolidate",
+    ),
     "repark-ta": (
         260,  # measured 249 (49 doc lines + `TaError` enum + kernel re-export block)
         "verbatim port of the v1 kernel crate root: the crate-wide `TaError` enum (the kernel "

@@ -12,12 +12,13 @@ use crate::{
     DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, column_move,
     create_table, delete_target_object_name, describe_show, execute_append_with_options,
     execute_create_namespace, execute_ctas, execute_drop_namespace, execute_drop_table,
-    execute_insert_overwrite, execute_truncate, merge, metadata_tables, nested_column_ddl,
-    object_name_from_table_with_joins, parse_single_normalized, passthrough_after_p11, ref_ddl,
-    refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
-    refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
-    spark_ast, starts_with_branch_or_tag_ddl, starts_with_merge, time_travel,
-    try_parse_create_namespace, wap, write_to_branch,
+    execute_insert_overwrite, execute_truncate, insert_arity, merge, metadata_tables,
+    nested_column_ddl, object_name_from_table_with_joins, parse_single_normalized,
+    passthrough_after_p11, ref_ddl, refuse_dml_subquery_predicate,
+    refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
+    refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, spark_ast,
+    starts_with_branch_or_tag_ddl, starts_with_merge, time_travel, try_parse_create_namespace, wap,
+    write_to_branch,
 };
 
 mod comment_on_table;
@@ -375,6 +376,7 @@ async fn execute_insert_routed(
     if insert.overwrite {
         return execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await;
     }
+    insert_arity::refuse_if_short_values(ctx, catalogs, insert).await?;
     if !write_options.is_empty() {
         return execute_append_with_options(ctx, catalogs, sql, insert, write_options).await;
     }
