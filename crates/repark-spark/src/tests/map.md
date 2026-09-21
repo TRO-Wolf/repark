@@ -694,7 +694,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   missing-table / view / `INVALID_PARTITION_OPERATION` / IF EXISTS parse refuse;
   pins: dml-c-truncate/C-001, C-002, C-005, C-006, C-007; IPI-51 PR4 (2026-09-20): the
   partition pin also asserts `SQLSTATE: 42601` and the backticked target.
-  pins: ice-error-conditions-1/C-011),
+  pins: ice-error-conditions-1/C-011; ICE-VIEWS-1 (2026-09-20):
+  `truncate_view_is_expect_table_not_view` namespace-qualifies its fixture SQL
+  (`CREATE VIEW ice.sales.v_trunc ...` / `TRUNCATE TABLE ice.sales.v_trunc`);
+  assertions unchanged),
   `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
   MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-004, C-005, C-006, C-007),
