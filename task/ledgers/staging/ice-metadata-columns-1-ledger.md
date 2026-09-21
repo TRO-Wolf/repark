@@ -72,8 +72,8 @@ the selector already stripped (3 parts, guard skipped) and AS OF spans whole
 
 | Id | Mutation (production) | Pins that must red | Result |
 |---|---|---|---|
-| M1 | The `snapshot_id_` arm returns `TimestampMs(i64::MAX)` (reads the current snapshot). | `test_snapshot_id_selector_reads_pinned_snapshot` | PENDING — §step 5 |
-| M2 | A bad numeric suffix returns `Ok(None)` (falls through to table-not-found). | `ref_selector_bad_numeric_suffix_refuses_typed`, `test_snapshot_id_selector_bad_suffix_refuses` | PENDING — §step 5 |
+| M1 | The `snapshot_id_` arm returns `TimestampMs(i64::MAX)` (reads the current snapshot). | `test_snapshot_id_selector_reads_pinned_snapshot` | RED 1/1 pytest (`[(2,'b','y'),(3,'c','x')]` current rows vs pinned `[(1,'a','x'),(2,'b','y')]`), 4/4 controls green; RED 1/4 Rust (`ref_selector_snapshot_id_and_at_timestamp_resolve_specs`). Reverted. |
+| M2 | A bad numeric suffix returns `Ok(None)` (falls through to table-not-found). | `ref_selector_bad_numeric_suffix_refuses_typed`, `test_snapshot_id_selector_bad_suffix_refuses` | RED 1/1 pytest (`AnalysisException` fall-through vs `IllegalArgumentException`), 4/4 controls green; RED 1/4 Rust (`ref_selector_bad_numeric_suffix_refuses_typed`). Reverted. |
 
 ## COVERAGE_ATTESTATION
 
