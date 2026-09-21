@@ -304,10 +304,14 @@ def test_insert_into_and_extra_column_refuse() -> None:
                 session.createDataFrame([(19, "s")], "id int, name string").write.insertInto(
                     f"{_CATALOG}.{_NAMESPACE}.defaults"
                 )
-            with pytest.raises(Exception, match="extra in the DataFrame"):
+            oracle_text = "".join(_truth()["cells"]["writeto_extra_col"]["message"]).replace(
+                "`sc`", f"`{_CATALOG}`"
+            )
+            with pytest.raises(Exception) as raised:
                 session.createDataFrame(
                     [(21, "u", "zzz")], "id int, name string, zzz string"
                 ).writeTo(f"{_CATALOG}.{_NAMESPACE}.defaults").append()
+            assert oracle_text in str(raised.value)
             assert _rows(session, _CATALOG, "defaults") == _seed_rows("defaults")
     finally:
         session.stop()

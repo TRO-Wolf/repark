@@ -1182,3 +1182,16 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   `OffsetBuffer` from the measured lengths, and the `as_list_array` panic-downcast at the call site
   became an `exec_err`. Regression pin: `ordinality_packs_positions_for_a_sliced_list`.
   pins: fnp-gen-1/C-002
+
+## IPI-19 + IPI-37 (2026-09-20) — the schema-merging session conf
+
+- `merge_schema.rs` — `spark.sql.iceberg.merge-schema`, a `ConfigExtension`
+  carrier beside the ANSI, case-sensitivity and time-zone knobs
+  (`with_merge_schema_config` at session build, `merge_schema_from_options` at
+  read time, `parse_merge_schema_value` for both doors). It lives in
+  `repark-functions` because that is where every Spark session knob this
+  repository serves already lives, and because `repark-python`'s
+  `set_runtime_config` allowlist and `repark-spark`'s write-option parser both
+  need it — neither can depend on the other. Default `false`, exactly Spark's.
+  Tests are file-backed in [`merge_schema/`](merge_schema/map.md).
+  pins: ipi-19-56-37-schema-evolution-write/C-004, C-012

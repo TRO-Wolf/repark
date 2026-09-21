@@ -104,6 +104,7 @@ fn lower(
             not_matched_by_source,
             commit_branch: None,
             case_insensitive: false,
+            schema_evolution: false,
         },
     ))
 }

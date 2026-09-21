@@ -209,3 +209,10 @@ pins: perf-dynflatten-1-measure/C-002
 `repark_core::time_travel`. pins: ice-tt-resolve-1/C-010
 **ICE-TT-RESOLVE-1 round 2 close (2026-09-19):** the `read_iceberg_table` body lives in
 `session_sources::read_iceberg_table_pinned`; `session.rs` sits at 1123. pins: ice-tt-resolve-1/C-012
+
+IPI-19 + IPI-37 (2026-09-20): `session_runtime.rs`'s `set_runtime_config` gate
+serves a fourth Spark key, `spark.sql.iceberg.merge-schema`, writing
+`repark_functions::merge_schema::MergeSchemaConfig`. The value parses strictly
+(`[INVALID_CONF_VALUE.TYPE_MISMATCH]` / `22022` on anything but a boolean)
+before anything is stored, and the unknown-key refusal names it beside the
+others. pins: ipi-19-56-37-schema-evolution-write/C-004, C-012
