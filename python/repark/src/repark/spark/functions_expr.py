@@ -553,9 +553,7 @@ def date_sub(start: Column | str, days: Column | int | str) -> Column:
     return date_add(start, lit(0) - _integer_argument(days))
 
 
-def split(
-    str: Column | str, pattern: Column | str, limit: Column | int = -1
-) -> Column:
+def split(str: Column | str, pattern: Column | str, limit: Column | int = -1) -> Column:
     """Java-regex split with Spark ``split`` names and limit semantics."""
     if not isinstance(pattern, Column):
         pattern = lit(pattern)
