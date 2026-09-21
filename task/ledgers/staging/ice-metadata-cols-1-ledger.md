@@ -29,13 +29,17 @@ byte-diff against backup.
 
 ## Measurements (decide-then-build evidence)
 
-**M-1 — the tree pins fork `886b94c1`, and every measurement below was taken
-there.** `Cargo.toml:162-166` (all five `[patch.crates-io]` `iceberg*` entries)
-and `Cargo.lock` agree on `886b94c1bbc68f43b791221761b8360dec4767d0`, matching
+**M-1 — the tree pins fork `df62cdee`, and the suite below is green there.**
+`Cargo.toml:162-166` (all five `[patch.crates-io]` `iceberg*` entries) and
+`Cargo.lock` agree on `df62cdee26daa8c337d07fbc87e879ec9fd02f1a`, matching
 `origin/main`; `.cargo/config.toml` carries no `[patch]` override. Pin truth
 comes from two independent legs: reading the pinned source in the cargo git
-cache, and running the suite against the pinned tree. Values below are
-pin-measured unless noted. (r2: supersedes the `3ed905c6` claim.)
+cache, and running the suite against the pinned tree. Values below were first
+measured at fork `886b94c1` and re-run green after RePark's RP-43 pin bump
+carried the tree to `df62cdee`; the M-5 premise was re-read in the cargo cache
+at `df62cdee` (`crates/iceberg/src/scan/mod.rs:461` still tests
+`is_metadata_column_name` before the table schema), so deviation A-6 stands at
+the new pin. (r2: supersedes the `3ed905c6` and `886b94c1` claims.)
 
 **M-2 — R-MC-POS-MOR at the pin is `[[2,0],[3,0],[4,1]]`, Spark-equal, no
 divergence.** Pin run: `pos_is_the_file_position_after_a_merge_on_read_delete`
