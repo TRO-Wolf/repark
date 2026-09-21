@@ -154,10 +154,10 @@ ALLOWED_EDGES: dict[tuple[str, str], tuple[frozenset[str], str]] = {
         "keeps the TA window UDFs callable. The TA set is door-neutral; this door is a consumer",
     ),
     ("repark-spark", "repark-common"): (
-        frozenset({"dev"}),
-        "DEV-ONLY: `repark_common::surfaces`, the dialect-neutral registry this door's "
-        "`matrix.rs` audit compiles against. Nothing in `src/` reads it; it graduates to a "
-        "product edge the day product code does",
+        frozenset({"normal"}),
+        "`repark_common::spark_error`, the Spark condition catalogue the partition-spec "
+        "raise sites render through, plus `repark_common::surfaces`, the dialect-neutral "
+        "registry this door's `matrix.rs` audit compiles against",
     ),
     ("repark-sql", "repark-core"): (
         frozenset({"normal"}),
