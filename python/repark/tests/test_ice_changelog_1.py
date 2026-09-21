@@ -196,7 +196,7 @@ def test_incremental_start_equal_to_end_refuses(spark: Any) -> None:
     """
     table = _table("QI-S1-S1")
     ids = _seed(spark, table)
-    with pytest.raises(Exception) as raised:  # noqa: B017
+    with pytest.raises(Exception) as raised:
         _incremental(
             spark, table, start_snapshot_id=ids[1], end_snapshot_id=ids[1]
         ).to_arrow()
@@ -210,7 +210,7 @@ def test_incremental_end_without_start_refuses(spark: Any) -> None:
     """
     table = _table("QI-END-ONLY")
     ids = _seed(spark, table)
-    with pytest.raises(Exception) as raised:  # noqa: B017
+    with pytest.raises(Exception) as raised:
         _incremental(spark, table, end_snapshot_id=ids[1]).to_arrow()
     _assert_error("QI-END-ONLY", raised.value)
 
@@ -222,7 +222,7 @@ def test_incremental_unknown_start_refuses(spark: Any) -> None:
     """
     table = _table("QI-START-UNKNOWN")
     _seed(spark, table)
-    with pytest.raises(Exception) as raised:  # noqa: B017
+    with pytest.raises(Exception) as raised:
         _incremental(spark, table, start_snapshot_id=12345).to_arrow()
     _assert_error("QI-START-UNKNOWN", raised.value)
 
@@ -234,7 +234,7 @@ def test_incremental_start_after_end_refuses(spark: Any) -> None:
     """
     table = _table("QI-START-AFTER-END")
     ids = _seed(spark, table)
-    with pytest.raises(Exception) as raised:  # noqa: B017
+    with pytest.raises(Exception) as raised:
         _incremental(
             spark, table, start_snapshot_id=ids[2], end_snapshot_id=ids[0]
         ).to_arrow()
@@ -263,7 +263,7 @@ def test_incremental_with_version_as_of_refuses(spark: Any) -> None:
     """
     table = _table("QI-WITH-VERSIONASOF")
     ids = _seed(spark, table)
-    with pytest.raises(Exception) as raised:  # noqa: B017
+    with pytest.raises(Exception) as raised:
         (
             spark.read.format("iceberg")
             .option("start-snapshot-id", str(ids[0]))
@@ -656,7 +656,7 @@ def test_create_changelog_view_without_identifier_columns_refuses(spark: Any) ->
     pins: ice-changelog-1/C-014
     """
     _table_name, short, view = _clv_fixture(spark, "QC-UPDATES-NO-IDENT")
-    with pytest.raises(Exception) as raised:  # noqa: B017
+    with pytest.raises(Exception) as raised:
         spark.sql(
             f"CALL {CATALOG}.system.create_changelog_view("
             f"table => '{short}', changelog_view => '{view}', compute_updates => true)"
@@ -670,7 +670,7 @@ def test_create_changelog_view_net_changes_with_updates_refuses(spark: Any) -> N
     pins: ice-changelog-1/C-014
     """
     _table_name, short, view = _clv_fixture(spark, "QC-NET-AND-UPDATES")
-    with pytest.raises(Exception) as raised:  # noqa: B017
+    with pytest.raises(Exception) as raised:
         spark.sql(
             f"CALL {CATALOG}.system.create_changelog_view("
             f"table => '{short}', changelog_view => '{view}', net_changes => true, "
@@ -725,7 +725,7 @@ def test_create_changelog_view_on_a_merge_on_read_table_refuses_at_read(spark: A
         f"table => '{short}', changelog_view => '{view}')"
     )
     _assert_call("QC-MOR", frame)
-    with pytest.raises(Exception) as raised:  # noqa: B017
+    with pytest.raises(Exception) as raised:
         spark.sql(f"SELECT id, data, _change_type, _change_ordinal FROM {view}").to_arrow()
     _assert_error("QC-MOR", raised.value)
 
