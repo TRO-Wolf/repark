@@ -10,7 +10,6 @@ pins: ice-views-1/C-004, C-006, C-007, C-008, C-009, C-011, C-012, C-013, C-014,
 
 from __future__ import annotations
 
-import glob
 import json
 from pathlib import Path
 from typing import Any
@@ -56,13 +55,11 @@ def test_create_or_replace_view_second_wins(spark: ReparkSession) -> None:
     ]
 
 
-def test_view_version_log_after_replace(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
+def test_view_version_log_after_replace(spark: ReparkSession, tmp_path: Path) -> None:
     """D-5/A-14 — replace appends a version and moves current (metadata JSON)."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     spark.sql("CREATE OR REPLACE VIEW sc.ns.v AS SELECT data FROM sc.ns.t")
-    files = sorted(glob.glob(str(tmp_path / "ns" / "v" / "metadata" / "*.json")))
+    files = sorted((tmp_path / "ns" / "v" / "metadata").glob("*.json"))
     assert files, "pins: ice-views-1/C-009"
     meta = json.loads(Path(files[-1]).read_text(encoding="utf-8"))
     versions = meta["versions"]
@@ -70,9 +67,9 @@ def test_view_version_log_after_replace(
     by_id = {version["version-id"]: version for version in versions}
     current = meta["current-version-id"]
     assert current == max(by_id), "pins: ice-views-1/C-009"
-    assert (
-        by_id[current]["representations"][0]["sql"] == "SELECT data FROM sc.ns.t"
-    ), "pins: ice-views-1/C-009"
+    assert by_id[current]["representations"][0]["sql"] == "SELECT data FROM sc.ns.t", (
+        "pins: ice-views-1/C-009"
+    )
     log = meta["version-log"]
     assert log[-1]["version-id"] == current, "pins: ice-views-1/C-009"
 
@@ -205,8 +202,7 @@ def test_alter_view_as_refuses(spark: ReparkSession) -> None:
         spark.sql("ALTER VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     text = str(caught.value)
     assert (
-        "ALTER VIEW <viewName> AS is not supported. Use CREATE OR REPLACE VIEW instead"
-        in text
+        "ALTER VIEW <viewName> AS is not supported. Use CREATE OR REPLACE VIEW instead" in text
     ), "pins: ice-views-1/C-008"
     assert "[" not in text.split("Error during planning:")[-1], "pins: ice-views-1/C-008"
 
