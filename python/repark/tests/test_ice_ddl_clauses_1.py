@@ -443,7 +443,7 @@ def test_truncate_quoted_string_is_never_the_width(spark: Any) -> None:
 
 
 def test_date_transform_quoted_column_refuses(spark: Any) -> None:
-    """``date('ts')`` refuses: a quoted string is never a partition column."""
+    """``date('ts')`` refuses: the quoted string falls through to planning and fails resolution."""
     from repark.errors import PySparkException
 
     with pytest.raises(PySparkException) as caught:
@@ -451,7 +451,7 @@ def test_date_transform_quoted_column_refuses(spark: Any) -> None:
             f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_date_quoted_col (ts TIMESTAMP) "
             "USING iceberg PARTITIONED BY (date('ts'))"
         )
-    assert "cannot resolve CTAS partition column" in str(caught.value)
+    assert "UNRESOLVED_COLUMN" in str(caught.value)
 
 
 def test_replace_partition_field_transform_lhs_days_with_hours(spark: Any, tmp_path: Path) -> None:
