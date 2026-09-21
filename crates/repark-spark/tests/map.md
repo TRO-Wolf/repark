@@ -18,6 +18,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   CREATE and INSERT remain allowed. EAGER-BUDGET-1 step 2 (2026-09-13): the
   cache-materialize call site passes `None` for the new `max_total_bytes` parameter; the
   pinned refusal is unchanged. pins: eager-budget-1/C-005
+  **ICE-VIEWS-1 (2026-09-20):** CREATE VIEW over a tightened source stays allowed
+  (a view stores SQL, not rows) with read-back pins; session TEMPORARY VIEW
+  refuses until PR3 while SELECT INTO stays allowed.
 - [ddl_sessions.rs](ddl_sessions.rs) — CTAS
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —

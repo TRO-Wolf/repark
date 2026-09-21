@@ -23,6 +23,10 @@ Source comments retain only API and safety contracts; implementation narration i
   namespaces) and refuses a non-empty drop with Spark's `Namespace <ns> is not empty` text
   before any catalog call — the one helper both SQL doors share
   (**ICE-DROP-NS-1**, 2026-09-19).
+  **ICE-VIEWS-1 (2026-09-20):** a non-empty `list_views` also refuses
+  (`Contains N view(s).`), so a view-only namespace cannot drop; viewless
+  catalogs report empty.
+  pins: ice-views-1/C-013
   Module decls + the public re-export list (names unchanged from v1).
   pins: ice-drop-ns-1/C-007
   `schema_not_found_on_drop` is Spark's three-sentence `[SCHEMA_NOT_FOUND]` for a drop, shared

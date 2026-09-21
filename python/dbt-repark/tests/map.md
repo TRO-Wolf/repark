@@ -31,11 +31,14 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform; the `LOCATION`,
   table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served under IPI-26/27
   round 2, 2026-09-20),
+  2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform),
+  `S-CREATE-VIEW` moved to served under ICE-VIEWS-1, 2026-09-20),
   plus
   the facade-schema probe (the column source the adapter uses) and the `describe extended`
   probe (Spark shape since SQL-DESCRIBE-1, 2026-09-09 — the old Arrow-spellings premise reds on
   purpose in that unit's ledger). This file is the
   design evidence for the route choice and the pin behind every registry row this unit filed.
+  `[R-CREATE-TEMPORARY-VIEW]` keeps refusing (PR3 owns it).
   It needs **no adapter**, which is why it stays green when the package is removed — the
   red-first evidence lives in the two files below.
   pins: dbt-1-adapter/C-001

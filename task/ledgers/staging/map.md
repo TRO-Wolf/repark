@@ -16,6 +16,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
   C-020
+- [ice-views-1-ledger.md](ice-views-1-ledger.md) —
+  **ICE-VIEWS-1 (2026-09-20), in flight:** IPI-40 views on the Spark door — WO-1
+  (this PR) is the catalog door and the read path on the memory catalog:
+  `CREATE [OR REPLACE] VIEW`, `DROP VIEW`, `SHOW VIEWS`, `SELECT` from views,
+  the D-9 error contract, and the A-9 viewless refusals. C-001..C-016 PROVEN;
+  C-017 (PR2: DESCRIBE / SHOW CREATE / SHOW TBLPROPERTIES / ALTER VIEW) and
+  C-018 (PR3: SQL temporary views, dbt follow-up) stay OPEN.
+  `risk_tier: standard`. Branch `fix/ipi-40-views-1`.
+  pins: ice-views-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - [ice-error-conditions-1-ledger.md](ice-error-conditions-1-ledger.md) —
   **ICE-ERROR-CONDITIONS-1 (2026-09-20), in flight:** IPI-51 PR1 — the native
   error-condition parser only: PyO3 exceptions report `getCondition`/`getErrorClass`/
