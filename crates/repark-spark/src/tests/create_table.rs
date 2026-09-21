@@ -109,7 +109,15 @@ async fn column_def_create_schema_equals_ctas_twin() {
     .await
     .expect_err("DEFAULT must refuse");
     assert!(
-        default_err.to_string().contains("not supported"),
+        matches!(default_err, DataFusionError::Plan(_)),
+        "DEFAULT refuse must be Plan, got: {default_err:?}"
+    );
+    assert!(
+        default_err
+            .to_string()
+            .contains("[UNSUPPORTED_FEATURE.TABLE_OPERATION]")
+            && default_err.to_string().contains("SQLSTATE: 0A000")
+            && default_err.to_string().contains("`ice`.`sales`.`with_def`"),
         "got: {default_err}"
     );
 }

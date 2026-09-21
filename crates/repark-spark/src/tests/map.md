@@ -371,6 +371,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   inverts the `LOCATION` / `COMMENT` refuses to success pins (metadata location and
   the `comment` property), while the Hive `ROW FORMAT`, `STORED AS`, and CTAS
   `TEMPORARY` refuses hold.
+  **IPI-51 PR7 (2026-09-21):** the twin test's `DEFAULT` refuse pin requires
+  `[UNSUPPORTED_FEATURE.TABLE_OPERATION]` / `SQLSTATE: 0A000`, the backticked
+  `` `ice`.`sales`.`with_def` `` table, and a `Plan` (not `NotImplemented`) error.
+  pins: ice-error-conditions-1/C-011
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
   `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
   INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond
