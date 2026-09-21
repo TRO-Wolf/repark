@@ -78,18 +78,38 @@ def test_pos_rdf_positional_form_compacts(spark: ReparkSession) -> None:
     assert _live_ids(spark, "mem.ns.posrdf") == [1, 2]
 
 
+def _seed_two_position_deletes(spark: ReparkSession, table: str) -> None:
+    """Create a merge-on-read table holding two position-delete files."""
+    spark.sql(
+        f"CREATE TABLE mem.ns.{table} (id BIGINT) USING iceberg "
+        "TBLPROPERTIES ('write.delete.mode' = 'merge-on-read', "
+        "'write.merge.mode' = 'merge-on-read')"
+    )
+    spark.sql(f"INSERT INTO mem.ns.{table} VALUES (1), (2)")
+    spark.sql(f"INSERT INTO mem.ns.{table} VALUES (3), (4)")
+    spark.sql(f"DELETE FROM mem.ns.{table} WHERE id = 1")
+    spark.sql(f"DELETE FROM mem.ns.{table} WHERE id = 3")
+
+
 def test_pos_rpd_positional_options_bind(spark: ReparkSession) -> None:
     """Two positionals bind the map as options. pins: ice-procedures-1/C-002."""
-    spark.sql("CREATE TABLE mem.ns.posrpd (id BIGINT) USING iceberg")
-    spark.sql("INSERT INTO mem.ns.posrpd VALUES (1)")
-    spark.sql("INSERT INTO mem.ns.posrpd VALUES (2)")
+    _seed_two_position_deletes(spark, "posrpd")
+    _seed_two_position_deletes(spark, "posrpdflt")
     cols, row = _result_row(
         spark,
         "CALL mem.system.rewrite_position_delete_files('ns.posrpd', map('rewrite-all', 'true'))",
     )
     assert cols == _RPD_COLS
+    assert row[0] == 2
+    assert row[1] == 2
+    assert row[2] > 0
+    assert row[3] > 0
+    assert _live_ids(spark, "mem.ns.posrpd") == [2, 4]
+    cols, row = _result_row(
+        spark, "CALL mem.system.rewrite_position_delete_files('ns.posrpdflt')"
+    )
+    assert cols == _RPD_COLS
     assert row == [0, 0, 0, 0]
-    assert _live_ids(spark, "mem.ns.posrpd") == [1, 2]
 
 
 def test_call_mixed_args_rollback_binds(spark: ReparkSession) -> None:

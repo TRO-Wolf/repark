@@ -83,16 +83,49 @@ async fn call_rdf_four_positional_form_binds_in_declared_order() {
     assert_eq!(call_count(&batches[0], "added_data_files_count"), 0);
 }
 
+async fn seed_two_position_deletes(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} (id INT, name STRING) USING iceberg TBLPROPERTIES \
+             ('format-version' = '2', 'write.delete.mode' = 'merge-on-read', \
+             'write.merge.mode' = 'merge-on-read')"
+        ),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("INSERT INTO ice.sales.{table} VALUES (1, 'a'), (2, 'b')"),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("INSERT INTO ice.sales.{table} VALUES (3, 'c'), (4, 'd')"),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("DELETE FROM ice.sales.{table} WHERE id = 1"),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("DELETE FROM ice.sales.{table} WHERE id = 3"),
+    )
+    .await;
+}
+
 #[tokio::test]
 async fn call_rpd_two_positional_options_bind() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    run(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.p2 AS SELECT * FROM src",
-    )
-    .await;
+    seed_two_position_deletes(&ctx, &catalogs, "p2").await;
+    seed_two_position_deletes(&ctx, &catalogs, "p2d").await;
     let frame = execute(
         &ctx,
         &catalogs,
@@ -110,10 +143,24 @@ async fn call_rpd_two_positional_options_bind() {
             "added_bytes_count",
         ]
     );
+    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 2);
+    assert_eq!(call_count(&batches[0], "added_delete_files_count"), 2);
+    assert!(call_count(&batches[0], "rewritten_bytes_count") > 0);
+    assert!(call_count(&batches[0], "added_bytes_count") > 0);
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.p2").await,
+        vec![2, 4]
+    );
+    let frame = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files('sales.p2d')",
+    )
+    .await
+    .expect("single positional must bind with default options");
+    let batches = frame.collect().await.expect("collect");
     assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 0);
     assert_eq!(call_count(&batches[0], "added_delete_files_count"), 0);
-    assert_eq!(call_count(&batches[0], "rewritten_bytes_count"), 0);
-    assert_eq!(call_count(&batches[0], "added_bytes_count"), 0);
 }
 
 #[tokio::test]
