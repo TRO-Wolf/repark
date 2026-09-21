@@ -536,14 +536,13 @@ async fn describe_namespace_preparse(
 }
 
 /// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
-async fn try_preparse_intercepts(
+async fn try_alter_intercepts(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Option<Result<DataFrame>> {
     let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
-    // I7 — ADD/DROP/REPLACE PARTITION FIELD + REPLACE COLUMNS (stock sqlparser cannot model).
     if let Some(parsed) = alter::try_parse_iceberg_alter_ddl(sql) {
         return Some(
             match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
@@ -575,6 +574,20 @@ async fn try_preparse_intercepts(
                 Err(error) => Err(error),
             },
         );
+    }
+    None
+}
+
+/// Pre-`parse_single_normalized` intercepts: ALTER, CREATE/DESCRIBE/SHOW namespace.
+async fn try_preparse_intercepts(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &crate::write_options::StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
+    if let Some(outcome) = try_alter_intercepts(ctx, catalogs, sql, write_options).await {
+        return Some(outcome);
     }
     if let Some(frame) = try_preparse_comment_ddl(ctx, catalogs, sql, write_options).await {
         return Some(frame);
