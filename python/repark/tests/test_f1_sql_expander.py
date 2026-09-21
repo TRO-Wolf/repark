@@ -1,7 +1,7 @@
 """Free-SQL bare-name expander — Path A statement forms via resolve_table_name SSOT.
 
-Covers INSERT / SELECT / CTAS / MERGE expansion, temp-view prefer on FROM, and non-rewrite
-residuals (VIEW, TEMP TABLE, multi-statement scripts).
+Covers INSERT / SELECT / CTAS / MERGE / VIEW / TRUNCATE expansion, temp-view prefer on FROM,
+and non-rewrite residuals (TEMP TABLE, multi-statement scripts).
 """
 
 from __future__ import annotations
@@ -61,16 +61,20 @@ def test_expand_create_table_if_not_exists(spark: ReparkSession) -> None:
     assert expanded.startswith("CREATE TABLE IF NOT EXISTS `glue_catalog`.`default`.`bare_t`")
 
 
-def test_create_view_name_not_qualified(spark: ReparkSession) -> None:
-    """View *name* stays bare; body without FROM is unchanged."""
-    sql = "CREATE VIEW bare_v AS SELECT 1 AS id"
-    assert spark._expand_bare_table_names_in_sql(sql) == sql
+def test_create_view_name_qualifies_to_current_catalog(spark: ReparkSession) -> None:
+    """An unqualified durable view name is a catalog view in current catalog+namespace."""
+    expanded = spark._expand_bare_table_names_in_sql("CREATE VIEW bare_v AS SELECT 1 AS id")
+    assert expanded == "CREATE VIEW `glue_catalog`.`default`.`bare_v` AS SELECT 1 AS id"
 
 
 def test_create_view_body_stays_verbatim(spark: ReparkSession) -> None:
-    """Durable CREATE VIEW bodies pass through; the engine qualifies stored names."""
-    sql = "CREATE VIEW bare_v AS SELECT * FROM bare_t WHERE id > 0"
-    assert spark._expand_bare_table_names_in_sql(sql) == sql
+    """Durable CREATE VIEW bodies pass through; only the target name expands."""
+    expanded = spark._expand_bare_table_names_in_sql(
+        "CREATE VIEW bare_v AS SELECT * FROM bare_t WHERE id > 0"
+    )
+    assert expanded == (
+        "CREATE VIEW `glue_catalog`.`default`.`bare_v` AS SELECT * FROM bare_t WHERE id > 0"
+    )
 
 
 def test_create_temp_view_body_from_expands(spark: ReparkSession) -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 
 from repark.spark._idents import is_plain_ident as _is_plain_ident
 
@@ -53,6 +54,14 @@ _UPDATE_PREFIX_RE = re.compile(r"(?is)^\s*(UPDATE\s+)")
 
 
 _DELETE_FROM_PREFIX_RE = re.compile(r"(?is)^\s*(DELETE\s+FROM\s+)")
+
+
+_CREATE_VIEW_DURABLE_PREFIX_RE = re.compile(
+    r"(?is)^\s*(CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+(?:IF\s+NOT\s+EXISTS\s+)?)"
+)
+
+
+_TRUNCATE_TABLE_PREFIX_RE = re.compile(r"(?is)^\s*(TRUNCATE\s+TABLE\s+)")
 
 
 _DESCRIBE_TABLE_PREFIX_RE = re.compile(
@@ -793,3 +802,133 @@ def _parse_table_identifier_segments(name: str) -> list[str]:
         raise PySparkValueError("empty identifier")
 
     return segments
+
+
+def _expand_temp_view_body_sql(query: str, expand_body: Callable[[str], str]) -> str:
+    """Expand FROM/JOIN refs inside a ``CREATE TEMP VIEW … AS <query>`` body.
+
+    Returns the statement unchanged when the body is missing or is not a SELECT/WITH
+    shape; the engine then refuses loud as before.
+    """
+
+    match = re.search(r"(?is)\bAS\b", query)
+
+    if match is None:
+        return query
+
+    prefix = query[: match.end()]
+
+    body = query[match.end() :]
+
+    body_trivia, body_sql = _split_leading_sql_trivia(body)
+
+    if _SELECT_OR_WITH_HEAD_RE.match(body_sql) is None:
+        return query
+
+    expanded_body = expand_body(body_sql)
+
+    return f"{prefix}{body_trivia}{expanded_body}"
+
+
+def _expand_durable_create_view_sql(
+    query: str,
+    resolve: Callable[..., str],
+    ensure_namespace: Callable[[str, str], None],
+) -> str | None:
+    """Rewrite a durable ``CREATE VIEW name …`` target to three-part form.
+
+    Returns ``None`` when the statement is not a durable CREATE VIEW shape. The target
+    resolves through the session ``resolve_table_name`` SSOT without temp-view preference;
+    aliases, COMMENT, TBLPROPERTIES and the body stay byte-identical. A one-part name
+    targets the session current namespace, which the session creates when missing; two-
+    and three-part names never create anything. Failures leave the statement for the
+    engine refusal.
+    """
+
+    prefix_match = _CREATE_VIEW_DURABLE_PREFIX_RE.match(query)
+
+    if prefix_match is None:
+        return None
+
+    prefix = prefix_match.group(1)
+
+    name_start = prefix_match.end()
+
+    while name_start < len(query) and query[name_start].isspace():
+        name_start += 1
+
+    name_end = _scan_sql_table_identifier_end(query, name_start)
+
+    if name_end is None or name_end == name_start:
+        return None
+
+    raw_name = query[name_start:name_end]
+
+    rest = query[name_end:]
+
+    try:
+        spelled = _parse_table_identifier_segments(raw_name.strip())
+    except ValueError:
+        return query
+
+    try:
+        resolved = resolve(raw_name.strip(), prefer_temp_view=False)
+    except Exception:
+        return query
+
+    if len(spelled) == 1:
+        try:
+            resolved_parts = _parse_table_identifier_segments(resolved)
+        except ValueError:
+            return query
+
+        if len(resolved_parts) == 3:
+            try:
+                ensure_namespace(resolved_parts[0], resolved_parts[1])
+            except Exception:
+                return query
+
+    return f"{prefix}{_sql_table_ref(resolved)}{rest}"
+
+
+def _expand_truncate_target_sql(query: str, resolve: Callable[..., str]) -> str | None:
+    """Rewrite a ``TRUNCATE TABLE name`` target to three-part form.
+
+    Returns ``None`` when the statement is not a TRUNCATE TABLE shape. Only the clean
+    single-name shape expands; IF EXISTS, PARTITION and multi-name shapes pass through
+    so the engine refuses them with the original text.
+    """
+
+    prefix_match = _TRUNCATE_TABLE_PREFIX_RE.match(query)
+
+    if prefix_match is None:
+        return None
+
+    prefix = prefix_match.group(1)
+
+    name_start = prefix_match.end()
+
+    while name_start < len(query) and query[name_start].isspace():
+        name_start += 1
+
+    if re.match(r"(?is)IF\s", query[name_start:]) is not None:
+        return query
+
+    name_end = _scan_sql_table_identifier_end(query, name_start)
+
+    if name_end is None or name_end == name_start:
+        return None
+
+    raw_name = query[name_start:name_end]
+
+    rest = query[name_end:]
+
+    if rest.strip().rstrip(";").strip():
+        return query
+
+    try:
+        resolved = resolve(raw_name.strip(), prefer_temp_view=False)
+    except Exception:
+        return query
+
+    return f"{prefix}{_sql_table_ref(resolved)}{rest}"
