@@ -375,3 +375,15 @@ def test_dv_count_unresolved_column_stamped_message_parses() -> None:
     assert isinstance(error, AnalysisException)
     assert error.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
     assert error.getSqlState() == "42703"
+
+
+def test_geometry_geospatial_disabled_stamped_message_parses() -> None:
+    error = AnalysisException(
+        "Error during planning: "
+        "[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED] "
+        "The feature is not supported: Geospatial feature is disabled. "
+        "SQLSTATE: 0A000"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED"
+    assert error.getSqlState() == "0A000"

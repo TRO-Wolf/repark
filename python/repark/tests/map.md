@@ -64,6 +64,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   type + `getCondition` + `getSqlState` on the new
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`/`42703` texts (`_row_id`, `_change_type`,
   `dv_count`); the historical parser pins stay byte-identical.
+  **IPI-51 PR8 (2026-09-21):** one stamped-message constructor pin asserts type +
+  `getCondition` + `getSqlState` on the new
+  `[UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED]`/`0A000` text (CREATE column
+  `GEOMETRY`/`GEOGRAPHY`, cell `TY-GEOMETRY`); the historical parser pins stay
+  byte-identical.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011
 - [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
