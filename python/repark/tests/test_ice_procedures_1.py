@@ -119,15 +119,15 @@ def test_bind_duplicate_binding_refuses(spark: ReparkSession) -> None:
 
 
 def test_bind_unknown_argument_refuses(spark: ReparkSession) -> None:
-    """Unknown branch refuses with the declared allowed list. pins: ice-procedures-1/C-005."""
+    """Unknown argument refuses with the declared allowed list. pins: ice-procedures-1/C-005."""
     with pytest.raises(
         AnalysisException,
         match=re.escape(
-            "unknown CALL argument `branch`; allowed: table, strategy, sort_order, options, "
-            "where, remove-dangling-deletes"
+            "unknown CALL argument `bogus`; allowed: table, strategy, sort_order, options, "
+            "where, branch, remove-dangling-deletes"
         ),
     ):
-        spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.x', branch => 'b1')").to_arrow()
+        spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.x', bogus => 1)").to_arrow()
 
 
 def test_bind_missing_required_refuses(spark: ReparkSession) -> None:
@@ -143,10 +143,10 @@ def test_bind_excess_positional_refuses(spark: ReparkSession) -> None:
     """Over-arity refuses; extras stay named-only. pins: ice-procedures-1/C-007."""
     with pytest.raises(
         AnalysisException,
-        match=re.escape("CALL accepts at most 5 positional argument(s); got 6"),
+        match=re.escape("CALL accepts at most 6 positional argument(s); got 7"),
     ):
         spark.sql(
-            "CALL mem.system.rewrite_data_files('a', 'b', 'c', map('k', 'v'), 'd', 'e')"
+            "CALL mem.system.rewrite_data_files('a', 'b', 'c', map('k', 'v'), 'd', 'e', 'f')"
         ).to_arrow()
     with pytest.raises(
         AnalysisException,
