@@ -308,10 +308,24 @@ impl CatalogRegistry {
         self.entries.keys().cloned().collect()
     }
 
-    pub async fn is_view(&self, catalog: &str, view: &iceberg::TableIdent) -> bool {
-        match self.get(catalog) {
-            Some(handle) => handle.view_exists(view).await.unwrap_or(false),
-            None => false,
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn is_view(
+        &self,
+        catalog: &str,
+        view: &iceberg::TableIdent,
+    ) -> Result<bool, datafusion::error::DataFusionError> {
+        let Some(handle) = self.get(catalog) else {
+            return Ok(false);
+        };
+        match handle.view_exists(view).await {
+            Ok(exists) => Ok(exists),
+            Err(error)
+                if error.kind() == iceberg::ErrorKind::FeatureUnsupported
+                    || error.kind() == iceberg::ErrorKind::NamespaceNotFound =>
+            {
+                Ok(false)
+            }
+            Err(error) => Err(repark_iceberg::catalog::iceberg_to_datafusion(error)),
         }
     }
 

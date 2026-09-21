@@ -154,6 +154,13 @@ def test_show_tables_excludes_views(spark: ReparkSession) -> None:
 def test_view_error_contract(spark: ReparkSession) -> None:
     """M-8/D-9 — message, SQLSTATE and condition on every reachable PR1 row."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    view_not_found_sentence = (
+        "The table or view `sc`.`ns`.`v` cannot be found. "
+        "Verify the spelling and correctness of the schema and catalog. "
+        "If you did not qualify the name with a schema, verify the current_schema() "
+        "output, or qualify the name with the correct schema and catalog. "
+        "To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS."
+    )
     cases = [
         (
             "CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t",
@@ -170,7 +177,7 @@ def test_view_error_contract(spark: ReparkSession) -> None:
         (
             "DROP TABLE sc.ns.v",
             "TABLE_OR_VIEW_NOT_FOUND",
-            "cannot be found",
+            view_not_found_sentence,
             "42P01",
         ),
         (
@@ -182,7 +189,7 @@ def test_view_error_contract(spark: ReparkSession) -> None:
         (
             "INSERT INTO sc.ns.v VALUES (1)",
             "TABLE_OR_VIEW_NOT_FOUND",
-            "cannot be found",
+            view_not_found_sentence,
             "42P01",
         ),
     ]
@@ -193,6 +200,7 @@ def test_view_error_contract(spark: ReparkSession) -> None:
         assert f"[{condition}]" in text, f"pins: ice-views-1/C-007: {statement}"
         assert message in text, f"pins: ice-views-1/C-007: {statement}"
         assert f"SQLSTATE: {sqlstate}" in text, f"pins: ice-views-1/C-007: {statement}"
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0], [1], [2]]
 
 
 def test_alter_view_as_refuses(spark: ReparkSession) -> None:

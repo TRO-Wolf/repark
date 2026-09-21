@@ -37,7 +37,7 @@ pub(crate) async fn execute_drop_table(
         };
         let handle = catalog_handle(catalogs, catalog)?;
         let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
-        if catalogs.is_view(catalog, &ident).await {
+        if catalogs.is_view(catalog, &ident).await? {
             return Err(table_or_view_not_found(catalog, namespace, table));
         }
         if if_exists && !handle.table_exists(&ident).await.map_err(iceberg_err)? {

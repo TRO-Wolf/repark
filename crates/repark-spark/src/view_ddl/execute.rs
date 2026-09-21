@@ -141,14 +141,12 @@ pub(crate) async fn refuse_view_write_target(
     name: &ObjectName,
 ) -> Result<()> {
     let parts = name_parts(name);
-    let Ok((catalog, namespace_name, view_name)) = complete_view_name(ctx, &parts) else {
-        return Ok(());
-    };
+    let (catalog, namespace_name, view_name) = complete_view_name(ctx, &parts)?;
     let ident = TableIdent::new(
         NamespaceIdent::new(namespace_name.clone()),
         view_name.clone(),
     );
-    if catalogs.is_view(&catalog, &ident).await {
+    if catalogs.is_view(&catalog, &ident).await? {
         return Err(table_or_view_not_found(
             &catalog,
             &namespace_name,
