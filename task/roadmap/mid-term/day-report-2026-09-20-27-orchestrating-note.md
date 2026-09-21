@@ -65,4 +65,4 @@ nesting `xr-xr-…` names and reviewing a stale head; the launcher printing "lau
 with `skip-worktree` manifests patched to a local fork path (false reds and false greens); lagging lanes gating
 against an old fork pin; the dirty-count wake storm; **no removal of finished clones — the disk reached 98 % overnight**;
 an ambiguous night rule that two lanes read as a box-wide limit. The ledger with evidence per entry is filed beside
-this note (`run27-lessons-ledger.md`).
+this note (`run27-agent-lessons.md`).
