@@ -633,7 +633,8 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
                 width: positive_width(width, "width")?,
             })
         }
-        "year" | "years" | "month" | "months" | "day" | "days" | "hour" | "hours" | "identity" => {
+        "year" | "years" | "month" | "months" | "day" | "days" | "date" | "hour" | "hours"
+        | "date_hour" | "identity" => {
             let [column] = args else {
                 return Err(arity_err("a single (column)"));
             };
@@ -641,14 +642,15 @@ pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<Parti
             Ok(match lower.as_str() {
                 "year" | "years" => PartitionFieldSpec::Year(column),
                 "month" | "months" => PartitionFieldSpec::Month(column),
-                "day" | "days" => PartitionFieldSpec::Day(column),
-                "hour" | "hours" => PartitionFieldSpec::Hour(column),
+                "day" | "days" | "date" => PartitionFieldSpec::Day(column),
+                "hour" | "hours" | "date_hour" => PartitionFieldSpec::Hour(column),
                 _ => PartitionFieldSpec::Identity(column),
             })
         }
         _ => Err(DataFusionError::NotImplemented(format!(
             "CTAS PARTITIONED BY transform `{name}(…)` is not a supported partition transform \
-             (supported: bucket, truncate, year[s], month[s], day[s], hour[s], identity)"
+             (supported: bucket, truncate, year[s], month[s], day[s], date, hour[s], date_hour, \
+             identity)"
         ))),
     }
 }

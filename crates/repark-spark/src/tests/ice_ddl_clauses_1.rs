@@ -136,6 +136,25 @@ fn clustered_by_reaches_partitioning_before_parse() {
 }
 
 #[test]
+fn date_alias_names_the_field_ts_day() {
+    for (alias, canonical) in [("date", "day"), ("date_hour", "hour")] {
+        assert_eq!(
+            build_transform_field(alias, &["ts".to_string()]).unwrap(),
+            build_transform_field(canonical, &["ts".to_string()]).unwrap(),
+            "{alias} must alias {canonical}"
+        );
+    }
+    assert_eq!(
+        build_transform_field("date", &["ts".to_string()]).unwrap(),
+        PartitionFieldSpec::Day("ts".to_string())
+    );
+    assert_eq!(
+        build_transform_field("date_hour", &["ts".to_string()]).unwrap(),
+        PartitionFieldSpec::Hour("ts".to_string())
+    );
+}
+
+#[test]
 fn dialect_widening_changes_no_other_alter() {
     for (sql, parses) in [
         ("ALTER TABLE ice.ns.t SET TBLPROPERTIES ('k'='v')", true),

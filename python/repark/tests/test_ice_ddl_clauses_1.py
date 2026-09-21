@@ -323,6 +323,26 @@ def test_replace_with_location_refuses(spark: Any) -> None:
     assert "OR REPLACE" in str(caught.value)
 
 
+def test_date_alias_names_the_field_ts_day(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-CREATE-PART-DATE-ALIAS``: ``date``/``date_hour`` alias day/hour."""
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_date_alias (ts TIMESTAMP, data STRING) "
+        "USING iceberg PARTITIONED BY (date(ts))"
+    )
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_date_hour_alias (ts TIMESTAMP, data STRING) "
+        "USING iceberg PARTITIONED BY (date_hour(ts))"
+    )
+
+    meta = _metadata(tmp_path / "wh", "t_date_alias")
+    _, by_id = _schema_rows(meta)
+    assert _spec(meta, by_id) == [["ts_day", "day", "ts"]]
+
+    meta = _metadata(tmp_path / "wh", "t_date_hour_alias")
+    _, by_id = _schema_rows(meta)
+    assert _spec(meta, by_id) == [["ts_hour", "hour", "ts"]]
+
+
 def test_describe_shows_column_comment(spark: Any) -> None:
     """Cell ``D-DESCRIBE`` re-check: the comment column carries the doc."""
     table = f"{CATALOG}.{NAMESPACE}.t_describe_doc"
