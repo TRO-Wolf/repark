@@ -205,6 +205,20 @@ async fn file_and_pos_answer_spark() {
 }
 
 #[tokio::test]
+async fn file_values_equal_the_files_metadata_table_paths() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
+    let live = batches(&session, "SELECT DISTINCT _file FROM ice.ns.t").await;
+    let mut live_files = strings(&live, 0);
+    live_files.sort();
+    let meta = batches(&session, "SELECT file_path FROM `ice`.`ns`.`t`.`files`").await;
+    let mut meta_files = strings(&meta, 0);
+    meta_files.sort();
+    assert_eq!(live_files, meta_files, "R-MC-FILE-IDENTITY");
+}
+
+#[tokio::test]
 async fn pos_is_the_file_position_after_a_merge_on_read_delete() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;

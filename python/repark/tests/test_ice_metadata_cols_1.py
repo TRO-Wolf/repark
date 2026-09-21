@@ -15,7 +15,7 @@ carries as ``[[2,true,true],[3,true,true],[4,true,true]]`` (``R-MC-FILE``),
 ``[[2,0],[3,0],[4,0]]`` (``R-MC-POS``) and ``[[2,0],[3,0],[4,1]]``
 (``R-MC-POS-MOR``).
 
-pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 """
 
 from __future__ import annotations
@@ -208,3 +208,14 @@ def test_file_and_row_id_answer_together_on_v3(spark_v3: Any) -> None:
     )
     assert [row[1] for row in rows] == [0, 1]
     assert all(row[0].endswith(".parquet") for row in rows)
+
+
+def test_file_values_equal_files_metadata_table(spark: Any) -> None:
+    """Every live ``_file`` equals a ``file_path`` of the table's ``files`` table.
+
+    pins: ice-metadata-cols-1/C-010
+    """
+    table = _seeded(spark, "t_file_identity")
+    live = sorted(row[0] for row in spark.sql(f"SELECT DISTINCT _file FROM {table}").collect())
+    meta = sorted(row[0] for row in spark.sql(f"SELECT file_path FROM {table}.files").collect())
+    assert live == meta
