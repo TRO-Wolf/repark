@@ -61,6 +61,9 @@ _CREATE_VIEW_DURABLE_PREFIX_RE = re.compile(
 )
 
 
+_BARE_NAME_MARK = "/* repark:bare-name */"
+
+
 _TRUNCATE_TABLE_PREFIX_RE = re.compile(r"(?is)^\s*(TRUNCATE\s+TABLE\s+)")
 
 
@@ -840,9 +843,9 @@ def _expand_durable_create_view_sql(
     Returns ``None`` when the statement is not a durable CREATE VIEW shape. The target
     resolves through the session ``resolve_table_name`` SSOT without temp-view preference;
     aliases, COMMENT, TBLPROPERTIES and the body stay byte-identical. A one-part name
-    targets the session current namespace, which the session creates when missing; two-
-    and three-part names never create anything. Failures leave the statement for the
-    engine refusal.
+    targets the session current namespace, which the session creates when missing, and
+    carries the bare-name mark the engine reads; two- and three-part names never create
+    anything and stay unmarked. Failures leave the statement for the engine refusal.
     """
 
     prefix_match = _CREATE_VIEW_DURABLE_PREFIX_RE.match(query)
@@ -876,6 +879,8 @@ def _expand_durable_create_view_sql(
     except Exception:
         return query
 
+    qualified = _sql_table_ref(resolved)
+
     if len(spelled) == 1:
         try:
             resolved_parts = _parse_table_identifier_segments(resolved)
@@ -888,7 +893,9 @@ def _expand_durable_create_view_sql(
             except Exception:
                 return query
 
-    return f"{prefix}{_sql_table_ref(resolved)}{rest}"
+            return f"{_BARE_NAME_MARK} {prefix}{qualified}{rest}"
+
+    return f"{prefix}{qualified}{rest}"
 
 
 def _expand_truncate_target_sql(query: str, resolve: Callable[..., str]) -> str | None:

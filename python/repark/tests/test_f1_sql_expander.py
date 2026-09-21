@@ -64,7 +64,9 @@ def test_expand_create_table_if_not_exists(spark: ReparkSession) -> None:
 def test_create_view_name_qualifies_to_current_catalog(spark: ReparkSession) -> None:
     """An unqualified durable view name is a catalog view in current catalog+namespace."""
     expanded = spark._expand_bare_table_names_in_sql("CREATE VIEW bare_v AS SELECT 1 AS id")
-    assert expanded == "CREATE VIEW `glue_catalog`.`default`.`bare_v` AS SELECT 1 AS id"
+    assert expanded == (
+        "/* repark:bare-name */ CREATE VIEW `glue_catalog`.`default`.`bare_v` AS SELECT 1 AS id"
+    )
 
 
 def test_create_view_body_stays_verbatim(spark: ReparkSession) -> None:
@@ -73,7 +75,8 @@ def test_create_view_body_stays_verbatim(spark: ReparkSession) -> None:
         "CREATE VIEW bare_v AS SELECT * FROM bare_t WHERE id > 0"
     )
     assert expanded == (
-        "CREATE VIEW `glue_catalog`.`default`.`bare_v` AS SELECT * FROM bare_t WHERE id > 0"
+        "/* repark:bare-name */ CREATE VIEW `glue_catalog`.`default`.`bare_v` "
+        "AS SELECT * FROM bare_t WHERE id > 0"
     )
 
 

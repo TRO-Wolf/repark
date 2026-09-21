@@ -14,10 +14,16 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `is_create_view_statement` (the durable head sniff the router skip uses),
   the `ALTER VIEW … AS` refusal shape, `SHOW VIEWS [IN ns] [LIKE]`.
   TEMPORARY forms never match (PR3). Unit tests per form.
+  Also `sql_has_bare_name_mark`: the `/* repark:bare-name */` leading-trivia
+  mark the facade emits for one-part targets. The scan stays in leading
+  trivia, so the mark in a body or inside another comment never matches.
 - `execute.rs` — `execute_create_view` (name completion, body prepare + plan
   for the output schema, service call), `execute_drop_view`,
   `execute_show_views` (`namespace`/`viewName`/`isTemporary` rows, LIKE
   filter), `refuse_view_write_target` (INSERT/DELETE/UPDATE/BY NAME guard).
+  A marked statement skips the tighten calibration (the session-scoped
+  allowance for bare names); an unmarked one enforces it before the catalog
+  write, so the refusal precedes any viewless-catalog refusal.
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
   defaults with aliases applied; `table_names` stays tables-only);

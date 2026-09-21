@@ -13,6 +13,31 @@ use crate::namespace_ddl::{consume_word, parse_namespace_property_list};
 pub(crate) const ALTER_VIEW_AS_REFUSAL: &str =
     "ALTER VIEW <viewName> AS is not supported. Use CREATE OR REPLACE VIEW instead";
 
+pub(crate) const BARE_NAME_MARK: &str = "/* repark:bare-name */";
+
+pub(crate) fn sql_has_bare_name_mark(sql: &str) -> bool {
+    let mut rest = sql.trim_start();
+    let mut marked = false;
+    loop {
+        if let Some(after) = rest.strip_prefix(BARE_NAME_MARK) {
+            marked = true;
+            rest = after.trim_start();
+        } else if let Some(after) = rest.strip_prefix("/*") {
+            let Some(end) = after.find("*/") else {
+                return marked;
+            };
+            rest = after[end + 2..].trim_start();
+        } else if rest.starts_with("--") {
+            rest = rest
+                .split_once('\n')
+                .map_or("", |(_, tail)| tail)
+                .trim_start();
+        } else {
+            return marked;
+        }
+    }
+}
+
 pub(crate) struct CreateViewStatement {
     pub(crate) or_replace: bool,
     pub(crate) if_not_exists: bool,
@@ -390,6 +415,26 @@ mod tests {
         ));
         assert!(!is_create_view_statement("CREATE TABLE t (id INT)"));
         assert!(!is_create_view_statement("SELECT 1"));
+    }
+
+    #[test]
+    fn bare_name_mark_matches_only_leading_trivia() {
+        assert!(sql_has_bare_name_mark(
+            "/* repark:bare-name */ CREATE VIEW v AS SELECT 1"
+        ));
+        assert!(sql_has_bare_name_mark(
+            "  /* lead */ /* repark:bare-name */ CREATE VIEW v AS SELECT 1"
+        ));
+        assert!(sql_has_bare_name_mark(
+            "-- lead\n/* repark:bare-name */ CREATE VIEW v AS SELECT 1"
+        ));
+        assert!(!sql_has_bare_name_mark("CREATE VIEW v AS SELECT 1"));
+        assert!(!sql_has_bare_name_mark(
+            "CREATE VIEW v AS SELECT '/* repark:bare-name */'"
+        ));
+        assert!(!sql_has_bare_name_mark(
+            "/* user /* repark:bare-name */ x */ CREATE VIEW v AS SELECT 1"
+        ));
     }
 
     #[test]

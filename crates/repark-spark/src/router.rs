@@ -86,7 +86,16 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());
-    execute_calibrated(ctx, &catalogs, canonical_sql, Some(sql), write_options).await
+    let bare_name_target = crate::view_ddl::parse::sql_has_bare_name_mark(sql);
+    execute_calibrated(
+        ctx,
+        &catalogs,
+        canonical_sql,
+        Some(sql),
+        write_options,
+        bare_name_target,
+    )
+    .await
 }
 
 pub(crate) async fn execute_view_body_query(
@@ -142,9 +151,17 @@ async fn execute_calibrated(
     canonical_sql: &str,
     original_sql: Option<&str>,
     write_options: &crate::write_options::StatementWriteOptions,
+    bare_name_target: bool,
 ) -> Result<DataFrame> {
     if crate::view_ddl::parse::is_create_view_statement(canonical_sql) {
-        return Box::pin(execute_inner(ctx, catalogs, canonical_sql, write_options)).await;
+        return Box::pin(execute_inner(
+            ctx,
+            catalogs,
+            canonical_sql,
+            write_options,
+            bare_name_target,
+        ))
+        .await;
     }
     // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
     let sql_after_meta: std::borrow::Cow<'_, str> =
@@ -200,6 +217,7 @@ async fn execute_calibrated(
         &mut lineage_pins,
         &mut metadata_column_pins,
         write_options,
+        bare_name_target,
     ))
     .await;
     metadata_column_pins.release(ctx);
@@ -219,6 +237,7 @@ async fn execute_time_travelled(
     lineage_pins: &mut repark_core::LineagePins,
     metadata_column_pins: &mut repark_core::MetadataColumnPins,
     write_options: &crate::write_options::StatementWriteOptions,
+    bare_name_target: bool,
 ) -> Result<DataFrame> {
     // Iceberg time travel is not modelled by Databricks-dialect sqlparser.
     let sql_after_tt: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
@@ -254,7 +273,14 @@ async fn execute_time_travelled(
         Some(rewritten) => std::borrow::Cow::Owned(rewritten),
         None => sql_after_mc,
     };
-    let result = execute_inner(ctx, catalogs, sql_storage.as_ref(), write_options).await;
+    let result = execute_inner(
+        ctx,
+        catalogs,
+        sql_storage.as_ref(),
+        write_options,
+        bare_name_target,
+    )
+    .await;
     if let Some(original) = original_for_locations
         .and_then(|original| original_sql_for_locations(original, sql, sql_storage.as_ref()))
     {
@@ -324,6 +350,7 @@ async fn execute_inner(
     catalogs: &CatalogRegistry,
     sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
+    bare_name_target: bool,
 ) -> Result<DataFrame> {
     crate::view_ddl::read::ensure_view_wrappers(ctx, catalogs)?;
     let rewritten_sql = rewrite_sql_for_execute(sql, catalogs);
@@ -343,7 +370,9 @@ async fn execute_inner(
         .await;
     }
     // Pre-parse recognizers for forms stock sqlparser cannot model (or would drop clauses from).
-    if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql, write_options).await {
+    if let Some(frame) =
+        try_preparse_intercepts(ctx, catalogs, sql, write_options, bare_name_target).await
+    {
         return frame;
     }
     // If we can't parse it to a single statement we recognise, let DataFusion have it.
@@ -876,6 +905,7 @@ async fn try_preparse_intercepts(
     catalogs: &CatalogRegistry,
     sql: &str,
     write_options: &crate::write_options::StatementWriteOptions,
+    bare_name_target: bool,
 ) -> Option<Result<DataFrame>> {
     let parsed_ddl = |context: &str| write_options.refuse_if_non_empty(context);
     if let Some(parsed) = crate::view_ddl::parse::try_parse_create_view(sql) {
@@ -883,7 +913,15 @@ async fn try_preparse_intercepts(
             Ok(statement) => statement,
             Err(error) => return Some(Err(error)),
         };
-        return Some(crate::view_ddl::execute::execute_create_view(ctx, catalogs, statement).await);
+        return Some(
+            crate::view_ddl::execute::execute_create_view(
+                ctx,
+                catalogs,
+                statement,
+                bare_name_target,
+            )
+            .await,
+        );
     }
     if let Some(error) = crate::view_ddl::parse::try_parse_alter_view_as(sql) {
         return Some(Err(error));
