@@ -65,10 +65,12 @@ def test_column_def_create_schema_equals_ctas_twin(spark: ReparkSession) -> None
         ("name", "string"),
         ("active", "bool"),
     ]
-    # DEFAULT must refuse loud (not silent ignore).
-    with pytest.raises((UnsupportedOperationException, AnalysisException)) as caught:
+    with pytest.raises(AnalysisException) as caught:
         spark.sql("CREATE TABLE mem.ns.with_def (id BIGINT DEFAULT 0) USING iceberg")
-    assert "not supported" in str(caught.value).lower() or "DEFAULT" in str(caught.value)
+    msg = str(caught.value)
+    assert "UNSUPPORTED_FEATURE.TABLE_OPERATION" in msg
+    assert "0A000" in msg
+    assert "`mem`.`ns`.`with_def`" in msg
 
 
 def test_column_def_create_partitioned_and_props(spark: ReparkSession) -> None:
