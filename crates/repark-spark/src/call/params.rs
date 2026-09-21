@@ -312,6 +312,11 @@ pub(crate) const REWRITE_DATA_FILES_PARAMS: &[ParamDecl] = &[
         data_type: "StringType",
         required: false,
     },
+    ParamDecl {
+        name: "branch",
+        data_type: "StringType",
+        required: false,
+    },
 ];
 
 pub(crate) const REWRITE_MANIFESTS_PARAMS: &[ParamDecl] = &[
@@ -503,7 +508,14 @@ mod tests {
     fn rewrite_data_files_params_follow_the_jar_order() {
         assert_eq!(
             names_of(REWRITE_DATA_FILES_PARAMS),
-            vec!["table", "strategy", "sort_order", "options", "where"]
+            vec![
+                "table",
+                "strategy",
+                "sort_order",
+                "options",
+                "where",
+                "branch"
+            ]
         );
         assert!(REWRITE_DATA_FILES_PARAMS[0].required);
         assert!(
@@ -513,6 +525,7 @@ mod tests {
         );
         assert_eq!(REWRITE_DATA_FILES_PARAMS[0].data_type, "StringType");
         assert_eq!(REWRITE_DATA_FILES_PARAMS[3].data_type, "None");
+        assert_eq!(REWRITE_DATA_FILES_PARAMS[5].data_type, "StringType");
     }
 
     #[test]
