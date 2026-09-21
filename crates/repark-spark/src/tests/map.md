@@ -16,6 +16,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `viewless_catalog.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** the A-9 SQL-door
+  battery: `test_views_refuse_on_glue_and_s3tables` drives CREATE, CREATE OR
+  REPLACE (over a missing name and over an existing table) and SHOW VIEWS=[]
+  through the router on memory-backed viewless doubles named `glue` and
+  `s3tables`, pinning class, null condition and exact message.
+  pins: ice-views-1/C-005
 - `parquet_dictionary.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the
   `parquet.enable.dictionary` battery, read from the written footers: a table that names no
   such property is dictionary-encoded on the owned CTAS route (Java's default), `false` turns

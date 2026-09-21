@@ -1010,6 +1010,12 @@ repark-core's error map.
   repark-core's `error_map.rs` (which re-exports them unchanged) so a
   repark-iceberg refusal can carry the `IllegalArgumentException` class with an
   untouched message.
+- `unsupported.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** `UnsupportedMarker` and
+  `unsupported_error`, the `IllegalArgumentMarker` twin for the `External`
+  classifier arm: a refusal that must reach Python as
+  `UnsupportedOperationException` with byte-exact text (the A-9 viewless
+  CREATE/REPLACE wording, no `NotImplemented` wrapper).
+  pins: ice-views-1/C-005
 - `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
   `EngineSummary`, the snapshot-summary keys the engine computes for the commit
   in hand, which a user `snapshot-property.<k>` may not collide with (Spark's
