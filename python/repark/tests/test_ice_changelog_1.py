@@ -384,6 +384,24 @@ def test_changes_relation_whole_history(spark: Any) -> None:
         f"SELECT id, data, _change_type, _change_ordinal FROM {table}.changes"
     )
     _assert_ok("QI-CHANGES-DEFAULT", frame)
+    snaps = _snaps(spark, table)
+    valued = spark.sql(
+        f"SELECT id, data, _change_type, _change_ordinal, _commit_snapshot_id "
+        f"FROM {table}.changes"
+    )
+    rows = _rows(valued)
+    for row in rows:
+        assert row[4] == snaps[row[3]]
+    assert rows == sorted(
+        [
+            [1, "a", "INSERT", 0, snaps[0]],
+            [2, "b", "INSERT", 0, snaps[0]],
+            [3, "c", "INSERT", 1, snaps[1]],
+            [4, "d", "INSERT", 2, snaps[2]],
+            [5, "e", "INSERT", 2, snaps[2]],
+        ],
+        key=repr,
+    )
 
 
 def test_changes_relation_schema(spark: Any) -> None:

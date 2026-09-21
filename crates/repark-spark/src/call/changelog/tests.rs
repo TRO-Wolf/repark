@@ -76,14 +76,20 @@ fn rendered(batch: &RecordBatch) -> Vec<String> {
         .as_any()
         .downcast_ref::<Int32Array>()
         .expect("ordinal");
+    let commit = batch
+        .column(5)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("commit snapshot");
     let mut rows: Vec<String> = (0..batch.num_rows())
         .map(|row| {
             format!(
-                "{},{},{},{}",
+                "{},{},{},{},{}",
                 ids.value(row),
                 data.value(row),
                 change_type.value(row),
-                ordinal.value(row)
+                ordinal.value(row),
+                commit.value(row)
             )
         })
         .collect();
@@ -97,14 +103,14 @@ fn carryover_removal_drops_the_rewritten_but_unchanged_row() {
     assert_eq!(
         rendered(&got),
         vec![
-            "1,a,INSERT,0".to_string(),
-            "2,b,DELETE,3".to_string(),
-            "2,b,INSERT,0".to_string(),
-            "2,u,INSERT,3".to_string(),
-            "3,c,DELETE,4".to_string(),
-            "3,c,INSERT,1".to_string(),
-            "4,d,INSERT,2".to_string(),
-            "5,e,INSERT,2".to_string(),
+            "1,a,INSERT,0,100".to_string(),
+            "2,b,DELETE,3,103".to_string(),
+            "2,b,INSERT,0,100".to_string(),
+            "2,u,INSERT,3,103".to_string(),
+            "3,c,DELETE,4,104".to_string(),
+            "3,c,INSERT,1,101".to_string(),
+            "4,d,INSERT,2,102".to_string(),
+            "5,e,INSERT,2,102".to_string(),
         ]
     );
 }
@@ -115,10 +121,10 @@ fn net_changes_keep_each_surviving_row_once_at_its_last_ordinal() {
     assert_eq!(
         rendered(&got),
         vec![
-            "1,a,INSERT,3".to_string(),
-            "2,u,INSERT,3".to_string(),
-            "4,d,INSERT,2".to_string(),
-            "5,e,INSERT,2".to_string(),
+            "1,a,INSERT,3,103".to_string(),
+            "2,u,INSERT,3,103".to_string(),
+            "4,d,INSERT,2,102".to_string(),
+            "5,e,INSERT,2,102".to_string(),
         ]
     );
 }
@@ -129,14 +135,14 @@ fn compute_updates_pairs_one_ordinals_delete_and_insert() {
     assert_eq!(
         rendered(&got),
         vec![
-            "1,a,INSERT,0".to_string(),
-            "2,b,INSERT,0".to_string(),
-            "2,b,UPDATE_BEFORE,3".to_string(),
-            "2,u,UPDATE_AFTER,3".to_string(),
-            "3,c,DELETE,4".to_string(),
-            "3,c,INSERT,1".to_string(),
-            "4,d,INSERT,2".to_string(),
-            "5,e,INSERT,2".to_string(),
+            "1,a,INSERT,0,100".to_string(),
+            "2,b,INSERT,0,100".to_string(),
+            "2,b,UPDATE_BEFORE,3,103".to_string(),
+            "2,u,UPDATE_AFTER,3,103".to_string(),
+            "3,c,DELETE,4,104".to_string(),
+            "3,c,INSERT,1,101".to_string(),
+            "4,d,INSERT,2,102".to_string(),
+            "5,e,INSERT,2,102".to_string(),
         ]
     );
 }
@@ -175,7 +181,10 @@ fn an_unpaired_delete_at_a_later_ordinal_stays_a_delete() {
     let got = compute_updates(&batch(&rows), &["id".to_string()]).expect("updates");
     assert_eq!(
         rendered(&got),
-        vec!["3,c,DELETE,4".to_string(), "3,c,INSERT,1".to_string(),]
+        vec![
+            "3,c,DELETE,4,104".to_string(),
+            "3,c,INSERT,1,101".to_string(),
+        ]
     );
 }
 
@@ -188,7 +197,10 @@ fn carryover_removal_keeps_a_delete_and_insert_from_different_snapshots() {
     let got = remove_carryovers(&batch(&rows), false).expect("carryovers");
     assert_eq!(
         rendered(&got),
-        vec!["1,a,DELETE,1".to_string(), "1,a,INSERT,2".to_string(),]
+        vec![
+            "1,a,DELETE,1,101".to_string(),
+            "1,a,INSERT,2,102".to_string(),
+        ]
     );
 }
 
@@ -211,6 +223,9 @@ fn net_changes_keep_a_row_only_deleted_inside_the_window() {
     let got = remove_carryovers(&batch(&rows), true).expect("net changes");
     assert_eq!(
         rendered(&got),
-        vec!["1,a,DELETE,1".to_string(), "2,b,INSERT,2".to_string(),]
+        vec![
+            "1,a,DELETE,1,101".to_string(),
+            "2,b,INSERT,2,102".to_string(),
+        ]
     );
 }
