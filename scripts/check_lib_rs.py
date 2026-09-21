@@ -36,7 +36,7 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "RATCHET: if re-exports consolidate or kind resolution moves again",
     ),
     "repark-functions": (
-        184,
+        182,
         "register_all / analyzer_rules registration glue is root-legitimate; "
         "U5 added the ANSI ConfigExtension module decl; "
         "FN-GT2 X8 added `pub mod url;` + a four-line register_all loop and paid for them "
@@ -47,7 +47,7 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "FNP-WIN-1 step 3 adds `pub mod spark_window_time;` + the grouping-refusal rule "
         "push (measured 182 at commit time), same sanctioned out (2) with this stated reason; "
         "M8-STARTSWITH-1 adds `pub mod spark_startswith;` + one register_all chain link "
-        "(measured 184 at commit time), same sanctioned out (2) with this stated reason; "
+        "(measured 181, fits under the existing 182 with no raise); "
         "RATCHET: if registration moves",
     ),
     "repark-python": (
