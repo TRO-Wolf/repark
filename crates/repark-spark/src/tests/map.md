@@ -936,6 +936,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `merge_matched_and_arm_order_update_then_delete`,
   `merge_matched_and_threshold_update_or_delete`, plus the leaf-private `score_table_rows`
   helper for the two score-arm pins.
+  **IPI-51 PR6 slice 2 (2026-09-21):** `merge_star_missing_source_column_errors`
+  requires `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`, `SQLSTATE: 42703` and `` `name` ``.
+  pins: ice-error-conditions-1/C-011
 - `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the twelve pins that gate
   the metadata-location cache. Two Spark doors are registered over ONE `Arc<dyn Catalog>` built
   with a `CatalogCaches`, which is the only shape in which "two sessions on one catalog" is real

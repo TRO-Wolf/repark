@@ -363,3 +363,14 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
   expands `UPDATE SET *` / `INSERT *` against the evolved schema, so the single
   data commit carries the new column.
   pins: ipi-19-56-37-schema-evolution-write/C-005, C-006, C-009
+
+## IPI-51 PR6 slice 2 (2026-09-21) — MERGE-star missing-column stamp
+
+- `mod.rs` — `expand_star_clauses` renders a missing source column through
+  `repark_common::spark_error::message` with `UNRESOLVED_COLUMN.WITH_SUGGESTION` /
+  `42703`: the first missing target column is `{columnName}` and the source columns
+  are `{suggestions}`. The custom `missing from the source` text and the
+  case-sensitivity suffix are gone; the `SourceMatch::Ambiguous` arm keeps its own
+  text. The edit is line-neutral on the 1656 baseline. Pin:
+  `expand_star_clauses_errors_on_missing_source_column` in `tests/merge.rs`.
+  pins: ice-error-conditions-1/C-011
