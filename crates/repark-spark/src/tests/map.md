@@ -1029,6 +1029,25 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `../normalize.rs`. Leaf-private helpers (`g3e8_setup`, `g3e8_seed`, `assert_g3e8_message`) stay
   in `dml.rs`; only that leaf uses them.
   See `task/g3e8-guard-ledger.md`.
+- `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** the Spark-door
+  `_file` / `_pos` pins over a two-append plus one-MoR-delete seed.
+  `file_and_pos_answer_spark` replays the four recorded cells verbatim
+  (`R-MC-FILE`, `R-MC-FILE-DISTINCT`, `R-MC-POS`, and the `count(*)` filter
+  `R-MC-FILE-FILTER` that plans an empty projection);
+  `pos_is_the_file_position_after_a_merge_on_read_delete` pins `R-MC-POS-MOR`
+  (a survivor keeps its file ordinal); `select_star_excludes_every_served_metadata_column`
+  pins user-columns-only `*` plus the `*, _file` / `*, _pos` compositions;
+  `unserved_metadata_columns_refuse_with_a_typed_error` pins the `[ICE-MC-1]` refusal of
+  `_spec_id` / `_partition` / `_deleted`, never the raw `No field named`, and asserts
+  the message names the requested column (r2 V-001); and
+  `served_names_fold_and_composed_shapes_refuse` pins the `_POS` fold, the backtick and
+  aliased spellings, the backtick unserved refusal (also naming the column), and the
+  `[ICE-MC-1]` refusal of a `DELETE` naming `_file` and of a `*` over two relations.
+  `file_values_equal_the_files_metadata_table_paths` pins live `_file` identity against
+  the table's own `files.file_path` (r2 V-003, C-010); and
+  `file_and_row_id_answer_together_on_a_format_v3_table` pins the metadata-before-lineage
+  stage order by serving `_file` + `_row_id` together on a format-v3 table (r2 V-002, C-009).
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

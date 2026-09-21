@@ -28,6 +28,12 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
     # Measured line counts are noted with each number; ceilings include slack. Keys sorted
     # alphabetically; ceilings ratchet DOWN only. Entries are added with a measured count and
     # reason in the same change that makes a crate root exceed the default.
+    "repark-core": (
+        154,
+        "the metadata-columns module decl + three-line re-export (ice-metadata-cols-1, "
+        "IPI-20, measured 154): the root sat exactly at the 150 default, so any new "
+        "module trips it; RATCHET: if re-exports consolidate",
+    ),
     "repark-functions": (
         182,
         "register_all / analyzer_rules registration glue is root-legitimate; "
