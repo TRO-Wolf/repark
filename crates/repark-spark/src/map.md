@@ -795,6 +795,15 @@ pins: rp-4-fork-repin/C-005, C-006
   property, and the extracted `LOCATION` flows through `SchemaCreate.location`
   into the staged plan (cells `D-CREATE-COL-COMMENT`, `D-CREATE-COMMENT`,
   `D-CREATE-LOCATION`, `D-DESCRIBE`).
+  **IPI-51 PR7 (2026-09-21):** the column-option refuse stamps Spark's
+  `[UNSUPPORTED_FEATURE.TABLE_OPERATION]` / `0A000` through `repark_common::spark_error`
+  as `DataFusionError::Plan` over the backticked three-part table display threaded into
+  `schema_from_column_defs` (cells `D-CREATE-DEFAULT`, `D-CREATE-DEFAULT-V2`,
+  `D-ALTER-DROP-DEFAULT`, all dead at the CREATE). The facade CREATE DEFAULT pins
+  (`test_column_default_ddl_refuses_naming_the_option` CREATE arm,
+  `test_iceberg_hygiene` `with_def`) require the stamped condition / `0A000`,
+  not `UnsupportedOperationException`.
+  pins: ice-error-conditions-1/C-011
 - `format_version.rs` — **V3-10:** the Spark-door adapter for `SET TBLPROPERTIES
   ('format-version' = …)`. It lifts the reserved key out of the property map before the
   transaction (so it is never persisted), resolves it against the table's current version and the

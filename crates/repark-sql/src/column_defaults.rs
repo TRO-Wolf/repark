@@ -127,8 +127,18 @@ async fn create_table_column_default_refuses_naming_the_column() {
     let err = door
         .err("CREATE TABLE ice.sales.defcol (id INT, tag STRING DEFAULT 'x')")
         .await;
-    assert!(err.contains("DEFAULT"), "must name the option: {err}");
-    assert!(err.contains("tag"), "must name the column: {err}");
+    assert!(
+        err.contains("[UNSUPPORTED_FEATURE.TABLE_OPERATION]"),
+        "must carry the condition: {err}"
+    );
+    assert!(
+        err.contains("SQLSTATE: 0A000"),
+        "must carry the SQLSTATE: {err}"
+    );
+    assert!(
+        err.contains("`ice`.`sales`.`defcol`"),
+        "must name the table: {err}"
+    );
     assert!(
         !door.table_exists("sales", "defcol").await,
         "a refused CREATE must leave no table behind"

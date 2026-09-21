@@ -74,6 +74,12 @@ pub(crate) async fn execute_create_table(
     let properties = parse_with_options(&options, form)?;
     let target = resolve_target(cx, &create.name, form)?;
 
+    let display = std::iter::once(target.catalog_name.as_str())
+        .chain(target.namespace.as_ref().iter().map(String::as_str))
+        .chain(std::iter::once(target.table.as_str()))
+        .map(|part| format!("`{part}`"))
+        .collect::<Vec<_>>()
+        .join(".");
     let existed = target
         .catalog
         .table_exists(&target.ident())
@@ -84,12 +90,6 @@ pub(crate) async fn execute_create_table(
             return cx.ctx.read_empty();
         }
         if !create.or_replace {
-            let display = std::iter::once(target.catalog_name.as_str())
-                .chain(target.namespace.as_ref().iter().map(String::as_str))
-                .chain(std::iter::once(target.table.as_str()))
-                .map(|part| format!("`{part}`"))
-                .collect::<Vec<_>>()
-                .join(".");
             return Err(DataFusionError::Plan(spark_error::message(
                 spark_error::TABLE_OR_VIEW_ALREADY_EXISTS,
                 &[("relationName", display.as_str())],
@@ -103,7 +103,7 @@ pub(crate) async fn execute_create_table(
         let schema = Arc::new(frame.schema().as_arrow().clone());
         (schema, Some(frame))
     } else {
-        let schema = column_def_schema(cx.ctx, create, form).await?;
+        let schema = column_def_schema(cx.ctx, create, form, &display).await?;
         let allowed_ns: Vec<String> = create
             .columns
             .iter()
@@ -787,16 +787,15 @@ async fn column_def_schema(
     ctx: &SessionContext,
     create: &CreateTable,
     form: &str,
+    table_name: &str,
 ) -> Result<Arc<ArrowSchema>> {
     let mut fields = Vec::with_capacity(create.columns.len());
     for column in &create.columns {
         for option in &column.options {
             if matches!(option.option, ColumnOption::Default(_)) {
-                return Err(DataFusionError::NotImplemented(format!(
-                    "{form}: column `{}` DEFAULT is not supported — only NULL / NOT NULL are \
-                     accepted, and this engine sets no Iceberg column defaults (Spark 4.1.2 \
-                     refuses column default values too)",
-                    column.name.value
+                return Err(DataFusionError::Plan(spark_error::message(
+                    spark_error::UNSUPPORTED_FEATURE_TABLE_OPERATION,
+                    &[("tableName", table_name)],
                 )));
             }
         }

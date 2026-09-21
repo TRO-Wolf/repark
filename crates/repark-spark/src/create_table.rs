@@ -16,6 +16,7 @@ use iceberg::spec::{
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 
+use repark_common::spark_error;
 use repark_core::{CatalogRegistry, LocationPolicy};
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 use repark_iceberg::write::nested_type_sql::struct_field_required;
@@ -161,7 +162,8 @@ fn build_schema_create(
         properties.insert("comment".to_string(), comment);
     }
 
-    let schema = schema_from_column_defs(&create.columns, timestamp_type)?;
+    let table_name = format!("`{catalog}`.`{namespace}`.`{table}`");
+    let schema = schema_from_column_defs(&create.columns, timestamp_type, &table_name)?;
     let partition_spec = build_partition_spec(&schema, &partition_fields)?;
     // Bind partition validation early (unknown column fails before catalog I/O).
     let _ = partition_spec;
@@ -185,6 +187,7 @@ fn build_schema_create(
 fn schema_from_column_defs(
     columns: &[ColumnDef],
     timestamp_type: SparkTimestampType,
+    table_name: &str,
 ) -> Result<Schema> {
     let mut fields = Vec::with_capacity(columns.len());
     let mut next_id = 1i32;
@@ -199,12 +202,10 @@ fn schema_from_column_defs(
                 ColumnOption::NotNull => required = true,
                 ColumnOption::Null => {}
                 ColumnOption::Comment(text) => doc = Some(text.clone()),
-                other => {
-                    return Err(DataFusionError::NotImplemented(format!(
-                        "CREATE TABLE column option `{other}` on `{}` is not supported yet — \
-                         only NULL / NOT NULL / COMMENT are accepted (defaults, constraints, \
-                         generated columns stay out of I5 schema-only CREATE)",
-                        column.name.value
+                _ => {
+                    return Err(DataFusionError::Plan(spark_error::message(
+                        spark_error::UNSUPPORTED_FEATURE_TABLE_OPERATION,
+                        &[("tableName", table_name)],
                     )));
                 }
             }
@@ -750,9 +751,12 @@ mod type_mapping_tests {
                 option: ColumnOption::NotNull,
             }],
         };
-        let schema =
-            schema_from_column_defs(std::slice::from_ref(&not_null), SparkTimestampType::Ltz)
-                .unwrap();
+        let schema = schema_from_column_defs(
+            std::slice::from_ref(&not_null),
+            SparkTimestampType::Ltz,
+            "`t`",
+        )
+        .unwrap();
         assert!(schema.as_struct().fields()[0].required);
 
         // Parse a real DEFAULT form so the option variant stays accurate across sqlparser bumps.
@@ -764,11 +768,17 @@ mod type_mapping_tests {
         let Statement::CreateTable(create) = &statements[0] else {
             panic!("expected CreateTable");
         };
-        let err = schema_from_column_defs(&create.columns, SparkTimestampType::Ltz).unwrap_err();
+        let err =
+            schema_from_column_defs(&create.columns, SparkTimestampType::Ltz, "`t`").unwrap_err();
+        assert!(
+            matches!(err, DataFusionError::Plan(_)),
+            "DEFAULT refuse must be Plan, got: {err:?}"
+        );
         let message = err.to_string();
         assert!(
-            message.contains("not supported")
-                && (message.contains("DEFAULT") || message.contains("default")),
+            message.contains("[UNSUPPORTED_FEATURE.TABLE_OPERATION]")
+                && message.contains("SQLSTATE: 0A000")
+                && message.contains("column default value"),
             "got: {message}"
         );
     }
@@ -785,9 +795,12 @@ mod type_mapping_tests {
                 option: ColumnOption::Comment("the id".to_string()),
             }],
         };
-        let schema =
-            schema_from_column_defs(std::slice::from_ref(&commented), SparkTimestampType::Ltz)
-                .unwrap();
+        let schema = schema_from_column_defs(
+            std::slice::from_ref(&commented),
+            SparkTimestampType::Ltz,
+            "`t`",
+        )
+        .unwrap();
         assert_eq!(
             schema.as_struct().fields()[0].doc.as_deref(),
             Some("the id")
