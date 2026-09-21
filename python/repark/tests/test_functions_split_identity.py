@@ -434,7 +434,7 @@ def test_functions_all_matches_pre_split_inventory() -> None:
         + 12
         + 8
         + 1
-        + 9
+        + len(alias_names)
         + byname_names
         + len(ARROW_EXPORTS)
         + len(FNP11A_EXPORTS)
