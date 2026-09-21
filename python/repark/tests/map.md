@@ -772,6 +772,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and
   the one this file's own fixture records — after the shared refusal moved onto
   `illegal_argument_error`. pins: ice-session-write-conf-1/C-041
+  **D-5 (2026-09-21):** `test_user_typed_ctas_options_still_refuses` becomes
+  `test_user_typed_ctas_options_land_as_properties` — the IPI-26/27 OPTIONS ruling stores both
+  key spellings, so the CTAS `OPTIONS('a'='b')` pin now asserts the created table's `a` /
+  `option.a` property map beside the kept `WITH ('a'='b')` refusal.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** the DataFrame write-option pins over the
   fixture above (snapshot properties on append / dynamic overwrite / CTAS / V1
   paths with Spark's strip-and-lowercase rule, write-format parquet honour plus
