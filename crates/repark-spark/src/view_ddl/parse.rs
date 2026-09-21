@@ -29,10 +29,14 @@ pub(crate) struct ShowViewsStatement {
 }
 
 pub(crate) fn try_parse_create_view(sql: &str) -> Option<Result<CreateViewStatement>> {
-    if !is_durable_create_view_head(sql) {
+    if !is_create_view_statement(sql) {
         return None;
     }
     Some(parse_create_view_after_head(sql))
+}
+
+pub(crate) fn is_create_view_statement(sql: &str) -> bool {
+    is_durable_create_view_head(sql)
 }
 
 fn is_durable_create_view_head(sql: &str) -> bool {

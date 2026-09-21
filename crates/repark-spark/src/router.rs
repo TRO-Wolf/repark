@@ -143,6 +143,9 @@ async fn execute_calibrated(
     original_sql: Option<&str>,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    if crate::view_ddl::parse::is_create_view_statement(canonical_sql) {
+        return Box::pin(execute_inner(ctx, catalogs, canonical_sql, write_options)).await;
+    }
     // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
     let sql_after_meta: std::borrow::Cow<'_, str> =
         if metadata_tables::sql_may_have_metadata_table_path(canonical_sql) {
