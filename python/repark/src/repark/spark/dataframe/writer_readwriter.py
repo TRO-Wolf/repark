@@ -223,12 +223,19 @@ class DataFrameWriter:
             )
         if normalized_mode == "ignore":
             return
-        columns, projection = self._by_name_projection(session, table_ref, display_name=name)
-        verb = "INSERT OVERWRITE" if normalized_mode == "overwrite" else "INSERT INTO"
+        if normalized_mode == "overwrite":
+            columns, projection = self._by_name_projection(session, table_ref, display_name=name)
+            self._run_through_temp_view(
+                lambda view: (
+                    f"INSERT OVERWRITE {table_ref} ({columns}) SELECT {projection} FROM {view}"
+                ),
+                self._options,
+                static_overwrite=True,
+            )
+            return
         self._run_through_temp_view(
-            lambda view: f"{verb} {table_ref} ({columns}) SELECT {projection} FROM {view}",
+            writer_schema.append_statement(session, self._dataframe, table_ref),
             self._options,
-            static_overwrite=normalized_mode == "overwrite",
         )
 
     save_as_table = saveAsTable
@@ -758,23 +765,13 @@ class DataFrameWriter:
         self, session: Any, table_ref: str, *, display_name: str
     ) -> tuple[str, str]:
         """Return a target column list plus a quoted source projection in target-table order."""
-        from repark.spark._idents import quote_ident as _quote_ident
-
-        target_columns = list(session.sql(f"SELECT * FROM {table_ref} LIMIT 0").column_names())
-        source_columns = self._dataframe.columns
-        source_by_case = _by_name_casefold_map(source_columns, surface="DataFrame")
-        target_by_case = _by_name_casefold_map(target_columns, surface="table")
-        present = [column for column in target_columns if column.casefold() in source_by_case]
-        extra = [column for column in source_columns if column.casefold() not in target_by_case]
-        if extra:
-            raise AnalysisException(
-                f"cannot write DataFrame columns {source_columns} into table {display_name!r} "
-                f"columns {target_columns} by name for saveAsTable"
-                f"; extra in the DataFrame: {extra}"
-            )
-        columns = ", ".join(_quote_ident(column) for column in present)
-        projection = ", ".join(_quote_ident(source_by_case[name.casefold()]) for name in present)
-        return columns, projection
+        return writer_schema.by_name_projection(
+            session,
+            self._dataframe,
+            table_ref,
+            display_name=display_name,
+            surface="saveAsTable",
+        )
 
     def _ctas_sql(self, table_ref: str, *, view: str) -> str:
         """Build a quoted Iceberg CTAS statement."""
@@ -799,6 +796,7 @@ class DataFrameWriter:
         )
 
 
+from repark.spark.dataframe import writer_schema  # noqa: E402
 from repark.spark.dataframe.writer_layout import (  # noqa: E402
     _merge_path_write_tree,
     _normalize_parquet_write_compression,
@@ -925,9 +923,8 @@ class DataFrameWriterV2:
     def append(self) -> None:
         """Append rows to an existing table by column name."""
         session, table_ref = self._existing_table_ref()
-        columns, projection = self._by_name_projection(session, table_ref=table_ref)
         self._run_through_temp_view(
-            lambda view: f"INSERT INTO {table_ref} ({columns}) SELECT {projection} FROM {view}",
+            writer_schema.append_statement(session, self._dataframe, table_ref),
             self._options,
         )
 
@@ -984,26 +981,15 @@ class DataFrameWriterV2:
 
     def _by_name_projection(self, session: Any, *, table_ref: str | None = None) -> tuple[str, str]:
         """Return a target column list plus a quoted source projection in table order."""
-        from repark.spark._idents import quote_ident as _quote_ident
-
-        table = self._table
         if table_ref is None:
             _qualified, table_ref = self._resolved_table()
-        target_columns = list(session.sql(f"SELECT * FROM {table_ref} LIMIT 0").column_names())
-        source_columns = self._dataframe.columns
-        source_by_case = _by_name_casefold_map(source_columns, surface="DataFrame")
-        target_by_case = _by_name_casefold_map(target_columns, surface="table")
-        present = [column for column in target_columns if column.casefold() in source_by_case]
-        extra = [column for column in source_columns if column.casefold() not in target_by_case]
-        if extra:
-            raise AnalysisException(
-                f"cannot write DataFrame columns {source_columns} into table {table!r} columns "
-                f"{target_columns} by name for writeTo"
-                f"; extra in the DataFrame: {extra}"
-            )
-        columns = ", ".join(_quote_ident(column) for column in present)
-        projection = ", ".join(_quote_ident(source_by_case[name.casefold()]) for name in present)
-        return columns, projection
+        return writer_schema.by_name_projection(
+            session,
+            self._dataframe,
+            table_ref,
+            display_name=self._table,
+            surface="writeTo",
+        )
 
     def _ctas_sql(self, *, or_replace: bool, view: str) -> str:
         """Build ``CREATE [OR REPLACE] TABLE … USING iceberg … AS SELECT``."""

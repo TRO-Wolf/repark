@@ -184,14 +184,17 @@ def test_insert_into_positional_vs_save_as_table_by_name_discriminator(
 
 
 def test_save_as_table_append_extra_column_raises(spark: ReparkSession) -> None:
-    # An EXTRA source column (source columns ⊋ table columns) → AnalysisException, never a silent
-    # drop (Spark parity — oracle: "column number ... doesn't match the data schema").
     table = "glue_catalog.writer_ns.extra"
     spark.createDataFrame([(1, 10)], ["a", "b"]).write.saveAsTable(table)
-    with pytest.raises(AnalysisException, match="by name"):
+    with pytest.raises(AnalysisException) as raised:
         spark.createDataFrame([(2, 20, 99)], ["a", "b", "extra"]).write.mode("append").saveAsTable(
             table
         )
+    text = str(raised.value)
+    quoted = ".".join(f"`{segment}`" for segment in table.split("."))
+    assert "[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]" in text
+    assert quoted in text
+    assert "Data columns: `a`, `b`, `extra`" in text
     # the table is untouched (the write never ran).
     assert _read2(spark, table).to_pylist() == [{"a": 1, "b": 10}]
 

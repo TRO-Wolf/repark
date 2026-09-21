@@ -10812,11 +10812,11 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **repark** — the bare string key is sugar for the shared column: on the local Iceberg target
   `[(1, 'a'), (2, 'b')]` and source `[(1, 'A'), (3, 'c')]` over `id`/`name`,
   `source.mergeInto("people", "id").whenMatched().updateAll().whenNotMatched().insertAll().merge()`
-  answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. A Column condition must spell the sides
-  `target.` / `source.`: `F.col("target.id") == F.col("source.id")` answers the same rows, while
-  the SQL-string spellings raise — `F.expr("target.id = source.id")` and a table-name-qualified
-  condition both raise `AnalysisException: Schema error: No field named …`, and update/insert
-  values must spell `col("source.<name>")`.
+  answers `[(1, 'A'), (2, 'b'), (3, 'c')]`. Since IPI-19/56/37 (2026-09-20) the builder also binds
+  Spark's own condition form — the target by its short table name, the source by the frame's
+  alias — in both the SQL-string and the Column shapes, answering Spark's rows. The RePark-only
+  spellings keep working alongside: the bare key and the `target.` / `source.` qualifiers still
+  resolve where Spark raises.
 - **Apache Spark** — the equivalent program answers the same rows on the same locally created
   Iceberg target, with the target's short name and the source alias as the qualifiers:
   `src.alias("s").mergeInto("local.ns.t", F.expr("t.id = s.id")).whenMatched().updateAll()
@@ -10830,10 +10830,16 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   "refuses every locally reachable shape" reading was an artefact of probing the default
   `spark_catalog` parquet target.)*
 - **Pin** — `python/repark/tests/test_examples_dataframe_b.py::test_merge_into_divergence`
+  and the dual-alias pins in `python/repark/tests/test_ice_merge_schema_1.py`: the five
+  `test_df_merge_into_*_with_the_spark_qualifier` tests plus
+  `test_df_merge_into_keeps_the_target_source_qualifiers` and
+  `test_df_merge_into_bare_key_sugar_still_upserts`.
 - **Rationale** — BACKLOG, filed 2026-09-04 from the EX-16 measurement, rewritten after the
-  round-3 re-measure on the pinned Iceberg oracle. The example covers the row-set program, where
-  the engines answer the same rows; this row records the bare-key sugar and the qualifier names
-  until repark's condition spellings match Spark's.
+  round-3 re-measure on the pinned Iceberg oracle. Narrowed 2026-09-20, IPI-19/56/37: Spark's
+  short-name qualifier form now answers, so the row is the remaining acceptance gap only —
+  RePark still accepts qualifiers Spark rejects. Going Spark-exact (refusing the bare key and
+  `target.` / `source.`) breaks shipped facade tests and any user who copied the RePark docs,
+  so it needs an owner ruling, which has not been made.
 
 ### EX-DF-10 — FIXED 2026-09-04 (DF-PRINTSCHEMA-1): `printSchema`'s stdout ended one newline short of Spark's capture
 

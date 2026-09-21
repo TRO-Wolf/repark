@@ -13,6 +13,7 @@ pub(super) fn spec(matched: Vec<MatchedClause>, not_matched: Vec<InsertClause>) 
         not_matched_by_source: vec![],
         commit_branch: None,
         case_insensitive: true,
+        schema_evolution: false,
     }
 }
 

@@ -44,6 +44,9 @@ impl SessionExtension for SparkExtension {
             config,
             case_sensitive,
         );
+        let merge_schema =
+            repark_functions::merge_schema::merge_schema_from_config_map(session.conf)?;
+        let config = repark_functions::merge_schema::with_merge_schema_config(config, merge_schema);
         let overwrite_mode = repark_core::partition_overwrite_mode_from_config_map(session.conf)?;
         let config = repark_core::with_partition_overwrite_mode(config, overwrite_mode);
         let wap = crate::wap::wap_from_config_map(session.conf);

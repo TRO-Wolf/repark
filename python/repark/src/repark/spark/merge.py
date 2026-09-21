@@ -14,22 +14,16 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from repark.errors import (
-    AnalysisException,
-    PySparkTypeError,
-    PySparkValueError,
-    UnsupportedOperationException,
-)
+from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
 from repark.spark._idents import is_plain_ident
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._idents import quote_ident_if_needed as _quote_assign_target
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
+from repark.spark.merge_aliases import resolve_aliases
 
 if TYPE_CHECKING:
     from repark.spark.dataframe import DataFrame
-
-# Bare identifier for equi-join sugar: mergeInto(table, "id") → target.id = source.id
 
 
 def _column_sql(column: Column | str) -> str:
@@ -45,21 +39,20 @@ def _column_sql(column: Column | str) -> str:
     )
 
 
-def _on_sql(condition: Column | str) -> str:
-    """Lower the merge match condition.
+def _on_condition(condition: Column | str) -> tuple[str, str]:
+    """Validate the merge match condition into ``(kind, text)``.
 
-    * ``Column`` → ``sql_expr_part()`` (callers should qualify source/target when needed).
-    * bare identifier str (``\"id\"``) → equi-join sugar ``target.id = source.id`` (PySpark
-      doctest shape; aliases match the SQL we emit).
+    * ``Column`` → ``("sql", sql_expr_part())`` (the user qualifies the sides).
+    * bare identifier str (``\"id\"``) → ``("sugar", name)``, rendered as an equi-join once the
+      statement's aliases are known (PySpark doctest shape).
     * other str → rejected; free SQL fragments are not accepted.
     """
     if isinstance(condition, Column):
-        return condition.sql_expr_part()
+        return "sql", condition.sql_expr_part()
     if isinstance(condition, str):
         stripped = condition.strip()
         if is_plain_ident(stripped):
-            quoted = _quote_ident(stripped)
-            return f"target.{quoted} = source.{quoted}"
+            return "sugar", stripped
         raise PySparkTypeError(
             "mergeInto condition str must be a bare column name for equi-join sugar; "
             "use a Column for general predicates (free SQL ON fragments are refused)"
@@ -67,6 +60,17 @@ def _on_sql(condition: Column | str) -> str:
     raise PySparkTypeError(
         f"mergeInto condition must be Column or str, got {type(condition).__name__}"
     )
+
+
+def _on_sql(condition: Column | str, target_alias: str, source_alias: str) -> str:
+    """Lower the merge match condition against the aliases the statement declares."""
+    kind, text = _on_condition(condition)
+    if kind == "sql":
+        return text
+    quoted = _quote_ident(text)
+    target = _quote_assign_target(target_alias)
+    source = _quote_assign_target(source_alias)
+    return f"{target}.{quoted} = {source}.{quoted}"
 
 
 class _Clause(BaseModel):
@@ -102,7 +106,8 @@ class MergeIntoWriter:
         self._table_name = table.strip()
         # Early injection / identifier gate (discard resolved form — merge re-resolves).
         _resolve_writer_table(dataframe, self._table_name)
-        self._on_sql = _on_sql(condition)
+        self._condition = condition
+        self._on_kind, self._on_text = _on_condition(condition)
         self._clauses: list[_Clause] = []
         self._schema_evolution = False
 
@@ -131,11 +136,9 @@ class MergeIntoWriter:
         return MergeIntoWriter.WhenNotMatchedBySource(self, condition)
 
     def withSchemaEvolution(self) -> MergeIntoWriter:  # noqa: N802 — PySpark method name
-        """Schema evolution is not supported on repark's MERGE path."""
-        raise UnsupportedOperationException(
-            "MergeIntoWriter.withSchemaEvolution() is not supported yet "
-            "(repark MERGE SQL path has no schema-evolution flag; refuse rather than silent no-op)"
-        )
+        """Merge the source's schema into the table's (``MERGE WITH SCHEMA EVOLUTION``)."""
+        self._schema_evolution = True
+        return self
 
     # ---- execution -----------------------------------------------------------------------
 
@@ -163,12 +166,25 @@ class MergeIntoWriter:
         from repark.spark.dataframe import _resolve_writer_table
 
         _qualified, table_ref = _resolve_writer_table(self._dataframe, self._table_name)
+        target_alias, source_alias = resolve_aliases(self._table_name, self._alias_fragments())
+        on_sql = _on_sql(self._condition, target_alias, source_alias)
+        head = "MERGE WITH SCHEMA EVOLUTION" if self._schema_evolution else "MERGE"
         parts = [
-            f"MERGE INTO {table_ref} AS target USING {source_view} AS source ON {self._on_sql}"
+            f"{head} INTO {table_ref} AS {_quote_assign_target(target_alias)} "
+            f"USING {source_view} AS {_quote_assign_target(source_alias)} ON {on_sql}"
         ]
         for clause in self._clauses:
             parts.append(self._render_clause(clause))
         return " ".join(parts)
+
+    def _alias_fragments(self) -> list[str]:
+        """Every rendered SQL fragment whose qualifiers name the target or the source."""
+        fragments = [self._on_text] if self._on_kind == "sql" else []
+        for clause in self._clauses:
+            if clause.predicate_sql:
+                fragments.append(clause.predicate_sql)
+            fragments.extend(clause.assignments.values())
+        return fragments
 
     def _render_clause(self, clause: _Clause) -> str:
         if clause.kind == "matched":

@@ -195,6 +195,12 @@ MERGE unit tests. `merge/mod.rs` declares `#[cfg(test)] mod tests;`.
   pins: ice-writer-metrics-1/C-004
   pins: ice-writer-metrics-1/C-005
 
+## IPI-19 (2026-09-20)
+
+- `helpers.rs`, `occ_scoped.rs` — the shared spec builders name the new
+  `schema_evolution: false` field, so the plain-MERGE batteries keep their shape.
+  pins: ipi-19-56-37-schema-evolution-write/C-007
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

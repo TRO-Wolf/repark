@@ -181,6 +181,7 @@ async fn execute_merge_statement(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     merge: &datafusion::sql::sqlparser::ast::Merge,
+    schema_evolution: bool,
 ) -> Result<DataFrame> {
     if merge.output.is_some() {
         return Err(DataFusionError::NotImplemented(
@@ -203,6 +204,7 @@ async fn execute_merge_statement(
         &merge.source,
         &merge.on,
         &merge.clauses,
+        schema_evolution,
     )
     .await
 }
@@ -216,6 +218,7 @@ fn rewrite_sql_for_execute(sql: &str, catalogs: &CatalogRegistry) -> String {
     system_rewritten.unwrap_or_else(|| sql.to_owned())
 }
 
+#[allow(clippy::too_many_lines)]
 async fn execute_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -224,6 +227,9 @@ async fn execute_inner(
 ) -> Result<DataFrame> {
     let rewritten_sql = rewrite_sql_for_execute(sql, catalogs);
     let sql = rewritten_sql.as_str();
+    let evolving = merge::schema_evolution::strip_schema_evolution(sql);
+    let schema_evolution = evolving.is_some();
+    let sql = evolving.as_deref().unwrap_or(sql);
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
@@ -289,7 +295,9 @@ async fn execute_inner(
             alter::execute_alter_table(ctx, catalogs, &alter_table.name, &alter_table.operations)
                 .await
         }
-        Statement::Merge(merge) => execute_merge_statement(ctx, catalogs, merge).await,
+        Statement::Merge(merge) => {
+            execute_merge_statement(ctx, catalogs, merge, schema_evolution).await
+        }
         // INSERT OVERWRITE: probe and validate before an empty-source wipe.
         Statement::Insert(insert) if insert.overwrite => {
             execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await

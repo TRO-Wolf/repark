@@ -1027,3 +1027,9 @@ Escalate to: [../map.md#debug](../map.md).
 ICE-V3-WRITE-DEFAULT-1 rebase onto ICE-DYN-OVERWRITE-1 (2026-09-18, run 21b): `test_cap_1_source_file_line_cap.py` mirrors `check_lib_py.py`: `writer_readwriter.py` 1109 → 1102 (the merged column-list and `static_overwrite` writer; the CAP-1 mirror moves with it). pins: ice-v3-write-default-1/C-024
 
 RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own copy of §1's totals and counts the §3 matrix against it, so the `meta-position-deletes` verdict flip DIVERGES -> EQUAL at fork 886b94c1 moves the two copies together — EQUAL 73 -> 74, DIVERGES 7 -> 6 — matching the counts the coverage document now states. Critic pass 2 (V-004): `test_the_fork_routed_rows_name_a_trigger` now bounds its read to the row's own `^#{3,4} ` section — the 3000-byte slice had been green on the next section's "TRIGGER: none" — and accepts the FIXED row's retired "TRIGGER fired" wording, so V3-COV-6 stays under guard.
+- `test_cap_1_source_file_line_cap.py` — **IPI-19 + IPI-56 + IPI-37 (2026-09-20):**
+  mirror rows ratchet `write/merge/mod.rs` 1701 → 1656 and
+  `dataframe/writer_readwriter.py` 1091 → 1077 with `scripts/check_rust_file_size.py` /
+  `scripts/check_lib_py.py`, after the schema-evolution work moved the merge clause
+  sniffer and the writer's schema options into their own modules.
+  pins: ipi-19-56-37-schema-evolution-write/C-002, C-004

@@ -1213,3 +1213,34 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   mint step deregisters an occupied name before registering the pinned provider. This is required
   because the schema provider rejects duplicate registration; do not remove that cleanup.
 - **FNP-4B remediation (2026-09-15):** added code comments in `spark_literals.rs`, `spark_rewrites.rs`, `normalize.rs` removed (ruling 2026-08-26); the pre-existing one-line `spark_literals.rs` module doc that `python/repark-parity/tests/test_sqp_1_record.py` pins is kept verbatim.
+
+## IPI-19 + IPI-37 (2026-09-20) — the merge-schema decision
+
+- `write_options.rs` — `mergeSchema` and Iceberg's `merge-schema` are
+  recognised write-option keys (boolean, last-wins, case-insensitive like the
+  rest; any value but `true` is `false`, as Java's `Boolean.parseBoolean`
+  reads it). `StatementWriteOptions::merge_schema(ctx)` is the precedence:
+  **per-write option > session conf `spark.sql.iceberg.merge-schema` > false**,
+  matching Java `SparkWriteConf.mergeSchema()`'s `confParser` order.
+  `refuse_if_non_empty` now skips those two keys, because the by-name append
+  honours them — every other unrecognised key is still ignored, which is
+  Spark's measured behaviour and registry row `ICE-WRITE-OPTIONS-1`; this unit
+  does not reopen it.
+- `insert_by_name.rs` + [`insert_by_name/evolution.rs`](insert_by_name/evolution.rs)
+  — extra source columns are a schema-evolution question, decided in
+  `evolution::columns_to_add` **before** the arity and name arms run, so the
+  three measured outcomes come out of three different places and keep their own
+  error classes: without `write.spark.accept-any-schema` nothing changes and the
+  existing arms answer (`INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS` /
+  `21S01` when the source is wider, `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS`
+  / `KD000` when it is not); with the property but no flag, Java's
+  `IllegalArgumentException: Field <name> not found in source schema`; with
+  both, the extras join the projection and the append evolves. The conf is inert
+  without the property — that asymmetry is Spark's, and it is the single thing
+  most easily got wrong here.
+  pins: ipi-19-56-37-schema-evolution-write/C-002, C-004, C-011
+- `merge.rs` + [`merge/`](merge/map.md) — the `MERGE WITH SCHEMA EVOLUTION`
+  pre-parse strip and the `schema_evolution` flag it carries into the lowered
+  plan. The star-sentinel rewrite moved to `merge/stars.rs` untouched to keep
+  `merge.rs` off the size ceiling. A plain `MERGE INTO` never matches the strip.
+  pins: ipi-19-56-37-schema-evolution-write/C-005, C-007

@@ -1426,3 +1426,8 @@ FNP-WIN-1 orchestrator fix-up (2026-09-15, run 16a): `check_rust_file_size.py` p
   Run 21b round 2 (2026-09-18): 1095 → 1094 — `overwritePartitions()` passes the
   same column list into its `INSERT OVERWRITE` in two lines instead of three.
   pins: ice-v3-write-default-1/C-020
+
+IPI-19 + IPI-37 (2026-09-20): `check_lib_py.py` ratchets
+`dataframe/writer_readwriter.py` 1091 → 1077 (both `_by_name_projection`
+bodies collapse into `dataframe/writer_schema.py`), shrink-only.
+pins: ipi-19-56-37-schema-evolution-write/C-001

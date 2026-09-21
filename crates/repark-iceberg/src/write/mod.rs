@@ -40,6 +40,7 @@ pub(crate) mod position_delete;
 pub mod predicate_dml;
 pub mod scan_concurrency;
 pub mod scan_prune;
+pub mod schema_evolution;
 pub mod session_write_conf;
 /// Product snapshot-ref helpers (CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
@@ -57,6 +58,9 @@ pub mod writer_props;
 
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
 pub use illegal_argument::{IllegalArgumentMarker, illegal_argument_error};
+pub use schema_evolution::{
+    ACCEPT_ANY_SCHEMA_PROP, accepts_any_schema, evolve_schema, incoming_schema,
+};
 pub use snapshot_refs::{
     SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref, create_snapshot_ref,
     create_snapshot_ref_with_retention, drop_snapshot_ref, list_snapshot_refs,

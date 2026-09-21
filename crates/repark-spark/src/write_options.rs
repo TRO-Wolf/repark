@@ -2,6 +2,10 @@ use datafusion::error::{DataFusionError, Result};
 
 const SNAPSHOT_PROPERTY_PREFIX: &str = "snapshot-property.";
 
+const MERGE_SCHEMA_OPTION: &str = "mergeschema";
+
+const MERGE_SCHEMA_OPTION_ICEBERG: &str = "merge-schema";
+
 #[derive(Debug, Default, Clone)]
 pub struct StatementWriteOptions {
     pub raw: Vec<(String, String)>,
@@ -14,6 +18,7 @@ pub struct StatementWriteOptions {
     pub isolation: Option<String>,
     pub overwrite_intent: repark_iceberg::write::OverwriteIntent,
     pub overwrite_mode_dynamic: bool,
+    pub merge_schema: Option<bool>,
 }
 
 impl StatementWriteOptions {
@@ -27,12 +32,24 @@ impl StatementWriteOptions {
         self.raw.is_empty()
     }
 
+    #[must_use]
+    pub fn merge_schema(&self, ctx: &datafusion::prelude::SessionContext) -> bool {
+        self.merge_schema.unwrap_or_else(|| {
+            repark_functions::merge_schema::merge_schema_from_options(ctx.copied_config().options())
+        })
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub fn refuse_if_non_empty(&self, context: &str) -> Result<()> {
-        if self.raw.is_empty() {
+        let keys: Vec<&str> = self
+            .raw
+            .iter()
+            .filter(|(key, _)| !is_merge_schema_key(key))
+            .map(|(key, _)| key.as_str())
+            .collect();
+        if keys.is_empty() {
             return Ok(());
         }
-        let keys: Vec<&str> = self.raw.iter().map(|(key, _)| key.as_str()).collect();
         Err(DataFusionError::Plan(format!(
             "{context} does not support write options ({}); they are only \
              honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)",
@@ -114,6 +131,9 @@ impl StatementWriteOptions {
                     options.overwrite_mode_dynamic =
                         repark_iceberg::write::overwrite_mode_option_is_dynamic(&value);
                 }
+                MERGE_SCHEMA_OPTION | MERGE_SCHEMA_OPTION_ICEBERG => {
+                    options.merge_schema = Some(value.trim().eq_ignore_ascii_case("true"));
+                }
                 _ => {}
             }
         }
@@ -123,6 +143,12 @@ impl StatementWriteOptions {
         )?;
         Ok(options)
     }
+}
+
+#[must_use]
+pub(crate) fn is_merge_schema_key(key: &str) -> bool {
+    key.eq_ignore_ascii_case(MERGE_SCHEMA_OPTION)
+        || key.eq_ignore_ascii_case(MERGE_SCHEMA_OPTION_ICEBERG)
 }
 
 fn validate_write_format(raw: &str) -> Result<String> {
@@ -234,6 +260,55 @@ mod tests {
             StatementWriteOptions::validate(vec![pair("repark-nope", "zzz")]).expect("validate");
         assert!(!options.is_empty());
         assert!(options.snapshot_extra.is_empty());
+    }
+
+    #[test]
+    fn both_merge_schema_spellings_parse_last_wins() {
+        let named =
+            StatementWriteOptions::validate(vec![pair("mergeSchema", "true")]).expect("validate");
+        assert_eq!(named.merge_schema, Some(true));
+        let iceberg =
+            StatementWriteOptions::validate(vec![pair("MERGE-SCHEMA", "TRUE")]).expect("validate");
+        assert_eq!(iceberg.merge_schema, Some(true));
+        let last = StatementWriteOptions::validate(vec![
+            pair("mergeSchema", "true"),
+            pair("mergeSchema", "false"),
+        ])
+        .expect("validate");
+        assert_eq!(last.merge_schema, Some(false));
+    }
+
+    #[test]
+    fn a_non_true_merge_schema_value_is_false_like_javas_parse_boolean() {
+        let options =
+            StatementWriteOptions::validate(vec![pair("mergeSchema", "yes")]).expect("validate");
+        assert_eq!(options.merge_schema, Some(false));
+    }
+
+    #[test]
+    fn merge_schema_is_unset_when_no_option_names_it() {
+        let options = StatementWriteOptions::validate(vec![pair("write-format", "parquet")])
+            .expect("validate");
+        assert_eq!(options.merge_schema, None);
+    }
+
+    #[test]
+    fn merge_schema_alone_does_not_trip_the_unsupported_options_refusal() {
+        let options =
+            StatementWriteOptions::validate(vec![pair("mergeSchema", "true")]).expect("validate");
+        options
+            .refuse_if_non_empty("INSERT ... BY NAME")
+            .expect("merge-schema is honoured on the by-name path");
+        let mixed = StatementWriteOptions::validate(vec![
+            pair("mergeSchema", "true"),
+            pair("compression-codec", "zstd"),
+        ])
+        .expect("validate");
+        let error = mixed
+            .refuse_if_non_empty("INSERT ... BY NAME")
+            .expect_err("a real unsupported option still refuses");
+        assert!(error.to_string().contains("compression-codec"), "{error}");
+        assert!(!error.to_string().contains("mergeschema"), "{error}");
     }
 
     #[test]

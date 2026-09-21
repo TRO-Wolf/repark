@@ -7362,3 +7362,39 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   forms without `IN` and non-`.system` / one-part / trailing-token `IN`
   scopes all keep DataFusion's stock error.
   pins: ice-system-functions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025
+- [test_ice_merge_schema_1.py](test_ice_merge_schema_1.py) — **IPI-19 + IPI-56 +
+  IPI-37 (2026-09-20):** schema evolution on write. The three DataFrame
+  `mergeSchema` / `merge-schema` cells (`saveAsTable` and `writeTo().append()`),
+  the two `MERGE WITH SCHEMA EVOLUTION` cells, the six `DataFrame.mergeInto`
+  cells, and `INSERT … BY NAME` under `spark.sql.iceberg.merge-schema`. Every
+  expected value is Spark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0's
+  recorded answer (run 26e's probe `D.*`, facts M-1..M-9): the new column lands
+  **last**, **optional**, carrying the **source's** type unwidened; existing rows
+  read NULL; a missing source column is filled NULL rather than dropped from the
+  schema (union, not replace); a wider table column is not narrowed. The gate is
+  the table property `write.spark.accept-any-schema` for every evolving write
+  **except** `MERGE WITH SCHEMA EVOLUTION`, which needs no property. The
+  four-combination `(property × conf)` matrix on `INSERT … BY NAME` pins three
+  distinct outcomes with **two different error classes** —
+  `[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]` / `21S01` when the
+  property is absent (the conf is then inert), Java's
+  `IllegalArgumentException: Field extra not found in source schema` when the
+  property is set and the flag is off, and the evolving write when both are on.
+  Regression pins hold the shapes this unit could silently break: a plain
+  `MERGE INTO` whose source carries an extra column still succeeds and ignores
+  it, a target row whose data is literally `evolution` is not eaten by the
+  clause sniffer, positional `INSERT … VALUES` never evolves (IPI-17 stays
+  where it is), and `mergeInto`'s RePark-only `target.` / `source.` qualifiers
+  and bare-key sugar keep working beside Spark's `{short}.id = s.id` form.
+  pins: ipi-19-56-37-schema-evolution-write/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+
+Round 2 (2026-09-20) of the same file: the two refusal pins moved to the class
+the implementation actually reaches. With `write.spark.accept-any-schema` and
+the flag off, the append answers Java's `IllegalArgumentException: Field extra
+not found in source schema` (M-9 row 3's measured class) rather than a RePark
+message; without the property it answers Spark's exact
+`[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]` / `21S01`, on
+`saveAsTable` and `writeTo().append()` alike — two cells outside this unit's
+twelve (`W-DF-EXTRA-COL-ERR`, `W-DF-MERGE-SCHEMA-NO-PROP-ERR`) gain error-class
+parity as a side effect.
+pins: ipi-19-56-37-schema-evolution-write/C-002, C-004

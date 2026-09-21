@@ -1047,3 +1047,33 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   `append_a1_acceptance_identity_partitioned_end_to_end`, now `"t"` like every other
   `create_table` call in the file.
 - **FNP-4B remediation (2026-09-15):** `idents.rs` keeps the backtick `quote_ident_spark`; the unit's added code comments were removed under the 2026-08-26 ruling (facts stay in this map).
+
+## IPI-19 + IPI-37 (2026-09-20) — schema evolution on write
+
+- `schema_evolution.rs` — the one seam every schema-evolving write goes
+  through. `ACCEPT_ANY_SCHEMA_PROP` / `accepts_any_schema` read Spark's table
+  property `write.spark.accept-any-schema`; `incoming_schema` turns the
+  incoming Arrow schema into an Iceberg one with auto-assigned ids;
+  `evolve_schema` commits the fork's `UpdateSchemaAction::union_by_name_with`
+  (Java `unionByNameWith`) **case-insensitively** — Spark's default resolution —
+  and returns the table at the result.
+
+  The merge rule is the fork's, not a second one written here: a new column is
+  added **last and optional**, keeping the source's own type; a column missing
+  from the source stays (union, not replace); a narrowing incoming type is
+  ignored and a widening one promotes. Re-deriving any of that in RePark would
+  diverge on the first nested or promotion case.
+
+  **Why the schema commits before the data, not with it.** The fork's
+  `TransactionAction` trait is `pub(crate)`, so an external engine cannot ask an
+  `UpdateSchemaAction` what schema it *would* produce without committing it —
+  and the data files must carry the evolved schema's field ids before they are
+  written. The schema update therefore commits first and the write runs against
+  the table it returns. That costs nothing observable: a schema update emits
+  only `AddSchema` + `SetCurrentSchema`, never `AddSnapshot`, so the data commit
+  is still the only new snapshot (pinned in
+  [`schema_evolution/`](schema_evolution/map.md)), and it is what Spark itself
+  does — its `MERGE WITH SCHEMA EVOLUTION` runs the schema changes as commands
+  before the merge. The residue is atomicity: a failure between the two leaves a
+  widened schema and no rows, which is Spark's behaviour too.
+  pins: ipi-19-56-37-schema-evolution-write/C-001, C-003, C-005
