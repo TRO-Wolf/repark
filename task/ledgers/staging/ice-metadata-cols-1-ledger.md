@@ -22,17 +22,13 @@ lineage path and the ANSI door are untouched.
 
 ## Measurements (decide-then-build evidence)
 
-**M-1 — the lane builds against a different fork than CI, and every measurement
-below says which.** The lane's `.cargo/config.toml` is skip-worktree with a
-`[patch]` paths override at `/tmp/rc-meta-fork` @ `8c123edb`, which already
-carries a sibling lane's `f-metadata-cols-1` fork unit (`_spec_id`, `_partition`
-and `_deleted` resolve on a data scan). CI builds the Cargo pin `3ed905c6`.
-Black-box probes against the lane fork showed all five columns answering, which
-contradicted the brief's ruling until the override was found. Pin truth comes
-from two independent legs: reading the pinned source in the cargo git cache,
-and a full `cargo test -p repark-spark` run against a scratch copy of the pin
-(`CARGO_TARGET_DIR=/tmp/pin-target`, per-command `--config` path overrides, no
-file touched outside the workspace). Values below are pin-measured unless noted.
+**M-1 — the tree pins fork `886b94c1`, and every measurement below was taken
+there.** `Cargo.toml:162-166` (all five `[patch.crates-io]` `iceberg*` entries)
+and `Cargo.lock` agree on `886b94c1bbc68f43b791221761b8360dec4767d0`, matching
+`origin/main`; `.cargo/config.toml` carries no `[patch]` override. Pin truth
+comes from two independent legs: reading the pinned source in the cargo git
+cache, and running the suite against the pinned tree. Values below are
+pin-measured unless noted. (r2: supersedes the `3ed905c6` claim.)
 
 **M-2 — R-MC-POS-MOR at the pin is `[[2,0],[3,0],[4,1]]`, Spark-equal, no
 divergence.** Pin run: `pos_is_the_file_position_after_a_merge_on_read_delete`
