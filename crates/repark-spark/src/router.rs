@@ -184,8 +184,6 @@ async fn execute_calibrated(
     .await?;
     let sql_after_wap_read =
         wap::apply_wap_read_redirect(ctx, catalogs, sql_after_branch.as_ref(), &mut pinned).await?;
-    let sql_after_wap_read =
-        wap::apply_wap_read_redirect(ctx, catalogs, sql_after_branch.as_ref(), &mut pinned).await?;
     let routed_sql = sql_after_wap_read
         .as_deref()
         .unwrap_or_else(|| sql_after_branch.as_ref());
