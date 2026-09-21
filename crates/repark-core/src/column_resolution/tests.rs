@@ -385,6 +385,17 @@ async fn unresolved_stamp_skips_missing_tables() {
     );
 }
 
+#[tokio::test]
+async fn unresolved_stamp_skips_empty_valid_fields() {
+    let state = mixed_state();
+    let error = plan_error(&state, "SELECT nope", true).await;
+    assert!(error.contains("nope"), "unexpected message: {error}");
+    assert!(
+        !error.contains("UNRESOLVED_COLUMN.WITH_SUGGESTION"),
+        "unexpected message: {error}"
+    );
+}
+
 type ArrayRef = Arc<dyn datafusion::arrow::array::Array>;
 type MeasuredTable<'a> = (&'a str, Vec<Field>, Vec<ArrayRef>);
 

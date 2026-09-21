@@ -37,7 +37,9 @@ pins: ice-mixed-case-1/C-007, C-009, C-013, C-014, C-015, C-016, C-017, C-020, C
 
 IPI-51 PR6 slice 1 (2026-09-21): a `FieldNotFound` that survives the fold is stamped
 `UNRESOLVED_COLUMN.WITH_SUGGESTION` / `42703` by `stamp_unresolved_column`, while empty
-valid fields fall through so frameless nullary names keep `WITHOUT_SUGGESTION`.
+valid fields fall through so frameless nullary names keep `WITHOUT_SUGGESTION`
+(the fall-through is pinned by `unresolved_stamp_skips_empty_valid_fields` on `SELECT nope`,
+red under deletion of the early return).
 pins: ice-error-conditions-1/C-011
 
 ## Files
