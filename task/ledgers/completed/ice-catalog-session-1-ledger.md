@@ -76,8 +76,12 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
 - T-4 (tree measurement): H-01's `spark_catalog` / `default` build defaults land on the
   native door too (shared `SparkDialect::on_session_built`), so bare `SHOW NAMESPACES` lists
   the current catalog there and two-part `DESCRIBE` resolves like `SELECT` through the same
-  read path. `R-SHOW-DATABASES` / `R-DESCRIBE-TWO-PART` move to served; `R-SHOW-TABLES` /
-  `R-RENAME-TWO-PART` keep refusing with their new texts (DBT-QUALIFY-1 FIXED).
+  read path. `R-SHOW-DATABASES` / `R-DESCRIBE-TWO-PART` / `R-SHOW-TABLES` move to served (after the
+  native current-catalog flip the registered catalog is current, so `SHOW TABLES IN gold`
+  answers — the pre-flip `spark_catalog.gold` refusal text no longer fires);
+  `R-RENAME-TWO-PART` keeps refusing against a missing namespace — a missing object
+  refuses, never the name's shape (DBT-QUALIFY-1 FIXED; statement-surface rows re-measured
+  at the final head).
 - T-5 (tree measurement, S6 owns the remainder): SQL `CACHE` / `REFRESH` short names
   resolve through the facade `_catalog_state`, like the `catalog.*` method twins — a SQL
   `USE` moves only the engine defaults until C-028 lands, so short-name cache statements

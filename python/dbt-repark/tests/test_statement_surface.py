@@ -70,6 +70,12 @@ def _served() -> tuple[Shape, ...]:
         Shape("S-SHOW-NS", "repark__list_schemas", f"show namespaces in {CATALOG}", None),
         Shape("S-SHOW-DATABASES", "spark__list_schemas", "show databases", None),
         Shape(
+            "S-SHOW-TABLES",
+            "list_relations_show_tables_without_caching",
+            f"show tables in {NAMESPACE} like '*'",
+            None,
+        ),
+        Shape(
             "S-SET-CONF",
             "server_side_parameters",
             "set spark.sql.shuffle.partitions = 2",
@@ -202,12 +208,6 @@ def _refused() -> tuple[Shape, ...]:
             "SHOW [VARIABLE] is not supported unless information_schema is enabled",
         ),
         Shape(
-            "R-SHOW-TABLES",
-            "list_relations_show_tables_without_caching",
-            f"show tables in {NAMESPACE} like '*'",
-            "The schema `spark_catalog`.`gold` cannot be found",
-        ),
-        Shape(
             "R-SHOW-TBLPROPERTIES",
             "fetch_tbl_properties",
             f"show tblproperties {fact}",
@@ -228,7 +228,7 @@ def _refused() -> tuple[Shape, ...]:
         Shape(
             "R-RENAME-TWO-PART",
             "spark__rename_relation",
-            f"alter table {NAMESPACE}.{STEM}_survey rename to {NAMESPACE}.renamed",
+            f"alter table ghost.{STEM}_survey rename to ghost.renamed",
             "No such namespace",
         ),
         Shape(
