@@ -235,7 +235,7 @@ async fn decimal_literal_against_float_casts_the_literal() {
         "no decimal cast may remain, got {logical}"
     );
     assert!(
-        logical.contains("Float64"),
-        "the literal must widen to double, got {logical}"
+        logical.contains("sweep_temp.d = Float64(0)"),
+        "the folded literal must be the Float64 scalar, got {logical}"
     );
 }
