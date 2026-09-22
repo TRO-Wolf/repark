@@ -259,3 +259,55 @@ def test_drop_view_one_part_round_trips_current_namespace(spark: ReparkSession) 
     spark.sql("DROP VIEW IF EXISTS dropme, keepme")
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == []
     spark.sql("DROP VIEW IF EXISTS dropme")
+
+
+def test_view_cte_earlier_sibling_shadows_catalog_table(spark: ReparkSession) -> None:
+    """V-005 — a CTE body sees its earlier siblings, not the same-named table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql(
+        "CREATE VIEW sc.ns.v AS WITH a AS (SELECT 1 AS id), "
+        "b AS (SELECT id FROM a) SELECT id FROM b"
+    )
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v")) == [[1]]
+
+
+def test_view_cte_forward_reference_reads_catalog_table(spark: ReparkSession) -> None:
+    """V-005 — a CTE does not see a later sibling; the catalog table answers."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql(
+        "CREATE VIEW sc.ns.v AS WITH b AS (SELECT id FROM a), "
+        "a AS (SELECT 1 AS id) SELECT id FROM b"
+    )
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v")) == [[7]]
+
+
+def test_view_recursive_cte_self_reference_is_the_cte(spark: ReparkSession) -> None:
+    """V-005 — a WITH RECURSIVE self-reference is the CTE, not the table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql(
+        "CREATE VIEW sc.ns.v AS WITH RECURSIVE a AS (SELECT CAST(1 AS BIGINT) AS id "
+        "UNION ALL SELECT id + 1 FROM a WHERE id < 3) SELECT id FROM a"
+    )
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[1], [2], [3]]
+
+
+def test_view_nested_with_inside_cte_still_shadows(spark: ReparkSession) -> None:
+    """V-005 — an inner WITH inside a CTE body still shadows the table name."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql(
+        "CREATE VIEW sc.ns.v AS WITH b AS (WITH a AS (SELECT 5 AS id) "
+        "SELECT id FROM a) SELECT id FROM b"
+    )
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v")) == [[5]]
+
+
+def test_view_cte_body_bare_name_uses_stored_namespace(spark: ReparkSession) -> None:
+    """V-005 — a CTE body's bare table ref stays on the view's namespace."""
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE TABLE sc.ns2.a AS SELECT * FROM (VALUES (9)) AS t(id)")
+    spark.sql("CREATE VIEW sc.ns.v AS WITH b AS (SELECT id FROM a) SELECT id FROM b")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v")) == [[7]]
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v")) == [[7]]
