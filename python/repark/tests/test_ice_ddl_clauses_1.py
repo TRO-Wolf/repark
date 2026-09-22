@@ -613,7 +613,9 @@ def test_set_identifier_fields(spark: Any, tmp_path: Path) -> None:
     names existing NOT NULL columns and touches no nullability.
     """
     table = f"{CATALOG}.{NAMESPACE}.t_set_identifier"
-    spark.sql(f"CREATE TABLE {table} (id BIGINT NOT NULL, k STRING NOT NULL, v STRING) USING iceberg")
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT NOT NULL, k STRING NOT NULL, v STRING) USING iceberg"
+    )
     spark.sql(f"ALTER TABLE {table} SET IDENTIFIER FIELDS id, k")
 
     meta = _metadata(tmp_path / "wh", "t_set_identifier")
