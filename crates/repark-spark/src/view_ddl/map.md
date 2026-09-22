@@ -13,10 +13,10 @@ service, and the wrapper-based read path that expands stored SQL per query.
   alias/COMMENT/TBLPROPERTIES forms and verbatim body capture,
   `is_create_view_statement` (the durable head sniff the router skip uses),
   the `ALTER VIEW … AS` refusal shape, `SHOW VIEWS [IN ns] [LIKE]`.
-  TEMPORARY forms never match (PR3). Unit tests per form.
-  Also `sql_has_bare_name_mark`: the `/* repark:bare-name */` leading-trivia
-  mark the facade emits for one-part targets. The scan stays in leading
-  trivia, so the mark in a body or inside another comment never matches.
+  TEMPORARY forms never match (PR3). Unit tests per form. The facade still
+  prefixes one-part targets with `/* repark:bare-name */`; the engine never
+  reads the mark — it only records that the user spelled the name bare
+  (V-001, 2026-09-22).
 - `execute.rs` — `execute_create_view` (name completion, body prepare + plan
   for the output schema, service call), `execute_drop_view`,
   `execute_show_views` (`namespace`/`viewName`/`isTemporary` rows, LIKE
@@ -24,12 +24,10 @@ service, and the wrapper-based read path that expands stored SQL per query.
   fail-closed since R2: metadata-table writes refuse up front, `is_view` is a
   `Result`, and names that cannot be views (branch selectors) fall through to
   the table path).
-  A marked statement skips the tighten calibration (the session-scoped
-  allowance for bare names); an unmarked one enforces it before the catalog
-  write, so the refusal precedes any viewless-catalog refusal. The bit travels
-  from the original SQL through the calibrated CREATE VIEW reroute only; the
-  time-travel path passes false because the reroute claims every marked
-  statement (the arm parses with the same head sniff).
+  The tighten refusal runs unconditionally once `catalog_handle` resolves a
+  registered catalog and before `create_or_replace_view` — a bare-name-marked
+  target is still a catalog write, and CREATE OR REPLACE shares this site —
+  so the refusal precedes any viewless-catalog refusal.
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
   defaults with aliases applied; `table_names` stays tables-only);

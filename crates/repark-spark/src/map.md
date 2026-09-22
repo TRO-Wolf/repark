@@ -54,7 +54,9 @@ pins: rp-4-fork-repin/C-005, C-006
   **WO-R3 (2026-09-22):** the query-only `execute_view_body_query` and the
   `refuse_insert_into_view` guard move to `view_dispatch.rs` (router.rs
   1025 → 967, under the file-size ceiling); behavior unchanged, callers
-  updated by path only.
+  updated by path only. **V-001 (2026-09-22):** the `bare_name_target` bit is
+  gone — the facade's bare-name mark qualifies the name only, and the
+  tighten refusal on the CREATE VIEW catalog write is unconditional.
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `execute_merge_statement` (OUTPUT refusal, timestamp_ns cast lowering) so `execute_inner` stays under clippy's 100-line cap (run 22b).

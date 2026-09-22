@@ -2824,12 +2824,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Rust Spark-door pin.
   Round-4: `CREATE VIEW <catalog>.<ns>.v` and `SELECT … INTO <catalog>.<ns>.t` over a
   tightened source refuse (Y-3 / Y-4 — both leaked on BASE, measured on the pre-fix native
-  module), session-scoped names stay allowed, and the analyzed-schema export carries no
+  module), and the analyzed-schema export carries no
   `repark.tighten_nulls` tag (Y-6 — the node that kills the Rust strip mutant; the
   `to_arrow()` metadata assertions do NOT, and say so). Two `Kills:` claims were re-measured
   and honestly relabelled: the literal-over-tightened node is belt-and-suspenders, not a
   facade discriminator (Y-1), and the cache node's `saveAsTable` half is guarded by the facade
   marker while its SQL half is the R-A discriminator (Y-7 / verifier P-3).
+  V-001 (2026-09-22): the one-part-name pin is rewritten —
+  `test_bare_name_create_view_over_tightened_source_refuses_select_into_allowed`
+  expects the `tightenNulls` refusal (the marked expansion is a
+  registered-catalog write, not a session view) with `SHOW VIEWS` proving
+  nothing published, while `SELECT INTO session_t` stays allowed.
   Round-6 (R6-1): `createOrReplaceTempView` is not a catalog-write door — a QUALIFIED name
   refuses (`AnalysisException`, `tableExists` false for both the 3-part and 2-part spellings),
   a one-part name stays SESSION-LOCAL under `SET datafusion.catalog.default_catalog`
