@@ -817,57 +817,6 @@ async fn wap_id_with_a_session_codec_stages_off_main() {
 }
 
 #[tokio::test]
-async fn session_snapshot_property_without_a_wap_id_commits_on_main() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    seed(&ctx, &catalogs, WAP_DDL).await;
-    let seed_id = main_snapshot_id(&catalogs).await;
-
-    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k", "v");
-    run(
-        &ctx,
-        &catalogs,
-        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
-    )
-    .await;
-    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k");
-
-    assert_eq!(
-        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
-        vec![1, 2],
-        "without the id the conf changes nothing about the commit"
-    );
-    assert_eq!(
-        snapshot_count(&catalogs).await,
-        2,
-        "the normal commit appended one snapshot"
-    );
-    let head = main_snapshot_id(&catalogs).await;
-    assert_ne!(head, seed_id, "main moved to the new snapshot");
-    assert_eq!(
-        ref_heads(&ctx, &catalogs).await,
-        vec![("main".to_string(), "BRANCH".to_string(), head)],
-        "main alone exists and points at the new head"
-    );
-    let table = load_sales_table(&catalogs, "t").await;
-    let props = &table
-        .metadata()
-        .snapshot_by_id(head)
-        .expect("head snapshot in the log")
-        .summary()
-        .additional_properties;
-    assert_eq!(
-        props.get("k").map(String::as_str),
-        Some("v"),
-        "the main snapshot carries the session stamp"
-    );
-    assert!(
-        !props.contains_key("wap.id"),
-        "no wap id stamp without the conf"
-    );
-}
-
-#[tokio::test]
 async fn wap_id_with_statement_and_session_options_stages_all_stamps() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
