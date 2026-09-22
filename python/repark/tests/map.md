@@ -2184,7 +2184,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `changed_partition_count` on partitioned, flat, filtered and parallel twins, with
   the pretty name-mapping property asserted on every import, adopted paths, by-name
   binding, Java's duplicate text and the unsupported-source refusals. The
-  not-yet-wired set narrows to RM `sort_by`, which keeps its exact refusal.
+  not-yet-wired set narrows to RM `sort_by`, which keeps its exact refusal until **RM-SORTBY-1** (2026-09-22) wires it, closing the set.
   **PR2a (2026-09-21):** the unknown-argument pin retargets to `bogus` and the RDF
   arity pin moves to six positionals; the branch end-to-end pin answers
   `[5, 2, >0, 0, 0]`, moves only `b1` per the refs table, and leaves main's rows

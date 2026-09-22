@@ -7977,10 +7977,11 @@ owned fork's maintenance actions.
   Java's add_files path does not write, so the four answered add_files cells report
   DIFFERENT solely on `md.snapshots` until the fork ask in the ledger lands;
   `clean_expired_metadata` stays accepted-and-ignored per INDEX decision 15 with its
-  fork behaviour carded; `sort_by` (RM) keeps refusing loud for the PR2 sort
-  slice.
+  fork behaviour carded. **RM-SORTBY-1 (2026-09-22):** `sort_by` (RM) wires
+  through (named and fourth-positional, NULL-or-missing keeps the legacy path);
+  the PR2 sort slice is closed, pinned by `P-RM-SORT-BY`.
   pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
-  C-020, C-021
+  C-020, C-021, C-022
 ### MANIFEST-4 — an append after a partition-spec evolution does not merge the old-spec manifests — **DECLARED 2026-09-19**
 
 - **repark** — on a table whose partition spec has evolved, an `INSERT` writes its new
