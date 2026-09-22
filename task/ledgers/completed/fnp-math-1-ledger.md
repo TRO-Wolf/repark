@@ -1,6 +1,6 @@
 # Charter ledger — FNP-MATH-1 · math, formatting, masking and crypto functions
 
-**Date:** 2026-09-15 · **Branch:** `feat/fnp-math-1` · **Base:** `e928d227`
+**Date:** 2026-09-15 · **Branch:** `feat/fnp-math-1` · **Base:** `6fa0b7d8`
 **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** EX-FN-5 (format_number), EX-FN-7 (hash) and EX-FN-18 (split) flipped
