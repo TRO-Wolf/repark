@@ -13149,28 +13149,27 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-16 (SQL-LITERAL-TYPING-1 residue). Unifying needs the
   rule installed for core sessions (home question belongs to that card) plus native-door pins.
 
-### ICE-NAN-DECIMAL-LITERAL-1 — bare decimal literals against a NaN-holding DOUBLE column raise — **BACKLOG 2026-09-17**
+### ICE-NAN-DECIMAL-LITERAL-1 — bare decimal literals against a NaN-holding DOUBLE column raise — **FIXED 2026-09-21 (WO-2)**
 
-- **repark** — on an Iceberg table whose `DOUBLE` column holds NaN rows, the SQL
-  door fails loud where a decimal literal meets the column: `WHERE d = 1.0`
-  raises `Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing
-  on NaN`, while `WHERE d IN (CAST('NaN' AS DOUBLE), 1.0)` raises `Cannot cast to
-  Decimal128(30, 15)` without the overflow suffix. The no-NaN-literal spellings
-  `d = 1.0` and `d IN (0.5, 1.0)` fail identically, so this is decimal-literal
-  typing against NaN payloads, not NaN pushdown; the typed spellings (`1.0D`,
-  `CAST(1.0 AS DOUBLE)`) answer the oracle sets.
+- **repark** — on an Iceberg table whose `DOUBLE` column holds NaN rows, a bare
+  decimal literal widens to DOUBLE against the column: `WHERE d = 1.0`
+  answers `[2]` and `WHERE d IN (CAST('NaN' AS DOUBLE), 1.0)` answers
+  `[1, 2, 5]`, the recorded Spark answers. The typed spellings (`1.0D`,
+  `CAST(1.0 AS DOUBLE)`) answer the same sets as before.
 - **Apache Spark** — `WHERE d = 1.0` answers `[2]` and
   `WHERE d IN (CAST('NaN' AS DOUBLE), 1.0)` answers `[1, 2, 5]` on the same
   six-row mixed shape. *(oracle: recorded — PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0, `decimal_literal` in
   `python/repark/tests/ice_nan_pushdown_1_oracle.json`, 2026-09-17.)*
 - **Pin** —
-  `python/repark/tests/test_ice_nan_pushdown_1.py::test_bare_decimal_literal_spellings_raise_loud`
-  holds today's two needles and the two recorded Spark answers; it flips red when
-  the typing lands.
-- **Rationale** — BACKLOG, filed 2026-09-17 (ICE-NAN-PUSHDOWN-1 round 2). Fixing it
-  means teaching the decimal-literal coercion to survive NaN payloads, a planner
-  change beyond a pushdown unit.
+  `python/repark/tests/test_ice_nan_pushdown_1.py::test_bare_decimal_literal_spellings_answer`
+  holds both legs against the recorded Spark answers, and the SQL-door
+  full-grid legs in `python/repark/tests/test_ice_page_prune_1.py`
+  (`test_sql_door_answers_every_recorded_cell`, `test_live_grid_replays_spark`)
+  carry the three bare-decimal range cells; the loud-refusal pin
+  (`test_sql_door_bare_decimal_ranges_refuse_loud`) is removed.
+- **Rationale** — FIXED 2026-09-21 by WO-2: the decimal-literal coercion widens
+  bare decimals to DOUBLE against float columns, so NaN payloads survive.
 
 ### ICE-V3-WRITE-DEFAULT-1 — omitted columns fill from `write_default` on the row-write paths — **FIXED 2026-09-17**
 
