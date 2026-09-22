@@ -7706,7 +7706,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   the un-pinned table), `R-MT-FILES-TT` (three data files at the second snapshot),
   `R-MT-ENTRIES-TT` and `R-MT-PARTITIONS-TT` (scoped to the second snapshot), and
   `R-REF-BRANCH-FILES` (`files VERSION AS OF 'b0'` reads the branch head).
-  pins: xo55-mt/C-001, C-002, C-003, C-004, C-005
+  pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106

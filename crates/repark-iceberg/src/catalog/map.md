@@ -396,7 +396,7 @@ Source comments retain only API and safety contracts; implementation narration i
   The Arrow schema mirrors the fork `IcebergMetadataTableProvider::try_new` sources, so a
   scoped read and an un-pinned read agree column for column; the scan streams one
   `PartitionStream` and projects each batch, so `count(*)` and partial projections hold.
-  pins: xo55-mt/C-001, C-002, C-003, C-004, C-005
+  pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005
 - `metadata_projection.rs` — **retired at RP-5** (fork F-8 / R169 / R170). The fork honors
   metadata-table `projection` and lists catalog entries only. Pins remain in
   `crates/repark-spark/src/tests/metadata_tables.rs`.

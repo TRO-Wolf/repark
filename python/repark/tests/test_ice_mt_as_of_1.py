@@ -12,7 +12,7 @@ Oracle: the run-25/26 inventory harness cells recorded against live PySpark
 answers the packet carries as three files at the second snapshot and
 snapshots-TT equal to snapshots non-TT.
 
-pins: xo55-mt/C-001, C-002, C-003, C-004, C-005
+pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005
 """
 
 from __future__ import annotations
@@ -76,7 +76,7 @@ def _sorted_rows(session: Any, query: str, key: int) -> list[list[Any]]:
 def test_snapshots_tt_equals_current(spark: Any) -> None:
     """Cell ``R-MT-SNAPSHOTS-TT``: TT rows and schema equal the un-pinned table.
 
-    pins: xo55-mt/C-001
+    pins: ipi-23-mt-as-of-1/C-001
     """
     table = _seeded(spark, "t_snapshots_tt")
     second = _snapshot_ids(spark, table)[1]
@@ -91,7 +91,7 @@ def test_snapshots_tt_equals_current(spark: Any) -> None:
 def test_files_tt_scopes_to_snapshot(spark: Any) -> None:
     """Cell ``R-MT-FILES-TT``: three data files live at the second snapshot.
 
-    pins: xo55-mt/C-002
+    pins: ipi-23-mt-as-of-1/C-002
     """
     table = _seeded(spark, "t_files_tt")
     second = _snapshot_ids(spark, table)[1]
@@ -101,7 +101,7 @@ def test_files_tt_scopes_to_snapshot(spark: Any) -> None:
 def test_entries_tt_scopes_to_snapshot(spark: Any) -> None:
     """Cell ``R-MT-ENTRIES-TT``: one entry per live file at the second snapshot.
 
-    pins: xo55-mt/C-003
+    pins: ipi-23-mt-as-of-1/C-003
     """
     table = _seeded(spark, "t_entries_tt")
     second = _snapshot_ids(spark, table)[1]
@@ -111,7 +111,7 @@ def test_entries_tt_scopes_to_snapshot(spark: Any) -> None:
 def test_partitions_tt_scopes_to_snapshot(spark: Any) -> None:
     """Cell ``R-MT-PARTITIONS-TT``: per-partition counts at the second snapshot.
 
-    pins: xo55-mt/C-004
+    pins: ipi-23-mt-as-of-1/C-004
     """
     table = _seeded(spark, "t_partitions_tt")
     second = _snapshot_ids(spark, table)[1]
@@ -125,7 +125,7 @@ def test_partitions_tt_scopes_to_snapshot(spark: Any) -> None:
 def test_branch_files_reads_branch_head(spark: Any) -> None:
     """Cell ``R-REF-BRANCH-FILES``: ``files VERSION AS OF 'b0'`` reads the branch.
 
-    pins: xo55-mt/C-005
+    pins: ipi-23-mt-as-of-1/C-005
     """
     table = _seeded(spark, "t_branch_files")
     spark.sql(f"ALTER TABLE {table} CREATE BRANCH b0")
