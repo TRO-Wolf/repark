@@ -381,6 +381,14 @@ def test_drop_expander_does_not_rewrite_non_drop_sql(spark: ReparkSession) -> No
         "DROP VIEW IF EXISTS `glue_catalog`.`default`.`bare_x`"
     )
 
+    three_part_drop_view = "DROP VIEW sc.ns.v"
+    assert spark._expand_bare_table_names_in_sql(three_part_drop_view) == (
+        "DROP VIEW `sc`.`ns`.`v`"
+    )
+
+    with pytest.raises(AnalysisException, match="invalid table identifier"):
+        spark._expand_bare_table_names_in_sql("DROP VIEW bare_x PURGE")
+
     # Multi-statement scripts still whole-statement only (no mid-script inject).
     script = "SELECT 1; DROP TABLE IF EXISTS bare_x"
     assert spark._expand_bare_table_names_in_sql(script) == script
