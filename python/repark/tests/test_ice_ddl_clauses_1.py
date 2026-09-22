@@ -661,9 +661,7 @@ def test_set_identifier_fields_on_nullable_column_refuses(spark: Any) -> None:
     table = _create(spark, "t_set_identifier_nullable")
     with pytest.raises(IllegalArgumentException) as caught:
         spark.sql(f"ALTER TABLE {table} SET IDENTIFIER FIELDS id")
-    assert (
-        str(caught.value) == "Cannot add field id as an identifier field: not a required field"
-    )
+    assert str(caught.value) == "Cannot add field id as an identifier field: not a required field"
 
 
 def test_identifier_fields_unknown_column_refuses(spark: Any) -> None:
