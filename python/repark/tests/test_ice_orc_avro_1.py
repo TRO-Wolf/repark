@@ -104,6 +104,42 @@ def _live_data_formats(spark: ReparkSession, table: str) -> list[str]:
     return sorted(str(row[0]) for row in rows)
 
 
+def _table_property(spark: ReparkSession, table: str, key: str) -> str | None:
+    """Return table property `key` of `table`, or None when the table lacks it."""
+    rows = spark.sql(f"DESCRIBE TABLE EXTENDED {table}").to_arrow().to_pylist()
+    for row in rows:
+        if row["col_name"] != "Table Properties":
+            continue
+        for pair in str(row["data_type"]).strip("[]").split(","):
+            name, _, value = pair.partition("=")
+            if name == key:
+                return value
+    return None
+
+
+def _snapshot_appends(spark: ReparkSession, table: str) -> list[tuple[Any, Any, Any]]:
+    """Return `(operation, added-records, total-records)` per snapshot in commit order."""
+    rows = spark.sql(
+        f"SELECT operation, summary FROM {table}.snapshots ORDER BY committed_at"
+    ).to_arrow().to_pylist()
+    appends = []
+    for row in rows:
+        summary = dict(row["summary"])
+        appends.append(
+            (row["operation"], summary.get("added-records"), summary.get("total-records"))
+        )
+    return appends
+
+
+def _data_formats_by_snapshot(spark: ReparkSession, table: str) -> list[str]:
+    """Return live data-file formats ordered by the snapshot sequence that added them."""
+    rows = spark.sql(
+        f"SELECT data_file.file_format AS file_format FROM {table}.entries "
+        "WHERE data_file.content = 0 ORDER BY sequence_number"
+    ).to_arrow().to_pylist()
+    return [str(row["file_format"]) for row in rows]
+
+
 def _seed_three(spark: ReparkSession, table: str) -> None:
     """Insert the shared three-row `(id, data, cat)` seed into `table`."""
     spark.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y'), (3, 'c', 'x')")
@@ -176,6 +212,13 @@ def test_tp_format_orc_files_row(spark: ReparkSession) -> None:
     spark.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
     spark.sql(f"INSERT INTO {table} VALUES (3, 'c', 'x')")
     assert _files_summary(spark, table) == [[0, "ORC", 2, 3]]
+    assert _ordered_rows(spark, f"SELECT id, data, cat FROM {table} ORDER BY id") == [
+        [1, "a", "x"],
+        [2, "b", "y"],
+        [3, "c", "x"],
+    ]
+    assert _table_property(spark, table, "write.format.default") == "orc"
+    assert _snapshot_appends(spark, table) == [("append", "2", "2"), ("append", "1", "3")]
 
 
 def test_write_format_option_orc(spark: ReparkSession) -> None:
