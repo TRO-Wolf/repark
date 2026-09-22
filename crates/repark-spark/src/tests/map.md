@@ -956,6 +956,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `file_list_view` still `NotImplemented`), and the near misses refuse
   (`call_remove_orphan_files_near_misses_still_refuse`,
   `call_remove_orphan_files_refuses_a_quoted_dry_run`); ORPHAN-1/ORPHAN-2 retire.
+  **IPI-30 round 3 (2026-09-22):** `call_remove_orphan_files_reads_location_positionally`
+  pins `location` at Spark's positional index 2 — a 4-positional CALL deletes only the
+  orphan under the given directory and leaves the one outside it.
   pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004
   pins: ipi-30-orphan-1/C-005, C-006, C-007, C-008, C-009, C-010, C-011
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`

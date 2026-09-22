@@ -567,7 +567,6 @@ async fn execute_remove_orphan_files(
         "prefix_listing",
         "stream_results",
     ])?;
-    // Spark positional order: table, older_than, location, dry_run.
     args.reject_excess_positional(4)?;
     if args.has_named("file_list_view") {
         return Err(DataFusionError::NotImplemented(
@@ -598,7 +597,7 @@ async fn execute_remove_orphan_files(
         ));
     }
 
-    let location = args.optional_string("location")?;
+    let location = args.optional_string_at("location", Some(2))?;
     let dry_run = args.optional_bool("dry_run", Some(3))?.unwrap_or(false);
     args.optional_i64("max_concurrent_deletes", None)?;
     args.optional_bool("stream_results", None)?;

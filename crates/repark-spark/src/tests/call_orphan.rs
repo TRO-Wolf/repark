@@ -231,6 +231,55 @@ async fn call_remove_orphan_files_armed_deletes_orphans_and_nothing_else() {
 }
 
 #[tokio::test]
+async fn call_remove_orphan_files_reads_location_positionally() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.scoped AS SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+    let table_dir = wh.path().join("sales").join("scoped");
+    let scan_root = table_dir.join("data").join("sub");
+    plant_orphans(&scan_root, 1, 10);
+    let inside = scan_root.join("data").join("orphan-0.parquet");
+    plant_orphans(&table_dir, 1, 10);
+    let outside = table_dir.join("data").join("orphan-0.parquet");
+
+    let result = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.remove_orphan_files('sales.scoped', {}, '{}', false)",
+            older_than_two_days_ago_ms(),
+            scan_root.display()
+        ),
+    )
+    .await
+    .expect("a positional `location` must scope the sweep");
+    let batches = result.collect().await.expect("collect orphan result");
+    let locations = orphan_locations(&batches);
+    assert_eq!(
+        locations.len(),
+        1,
+        "the sweep lists only what `location` covers, got {locations:?}"
+    );
+    assert!(
+        locations[0].contains("/sub/"),
+        "the listed orphan sits under `location`, got {locations:?}"
+    );
+    assert!(
+        !inside.exists(),
+        "the orphan under `location` is deleted, got {inside:?}"
+    );
+    assert!(
+        outside.exists(),
+        "the orphan outside `location` must stay, got {outside:?}"
+    );
+}
+
+#[tokio::test]
 async fn call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
