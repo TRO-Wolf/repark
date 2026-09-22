@@ -5,12 +5,12 @@
 
 **Retires:** ready for the departure move to `../completed/`.
 
-**Scope:** PR-1 narrows the five-column draft to the two columns the fork pin
-serves: `crates/repark-iceberg/src/catalog/metadata_columns.rs` (the served set
-is the hard-coded `METADATA_COLUMN_NAMES = [_file, _pos]`; `_spec_id`,
-`_partition`, `_deleted` move to the hard-coded `UNSERVED_METADATA_COLUMN_NAMES`),
+**Scope:** PR-1 narrows the five-column draft to the columns the fork pin
+serves (two at PR-1; R2 below adds `_spec_id` to make the served three): `crates/repark-iceberg/src/catalog/metadata_columns.rs` (the served set
+is the hard-coded `METADATA_COLUMN_NAMES = [_file, _pos, _spec_id]`;
+`_partition`, `_deleted` stay in the hard-coded `UNSERVED_METADATA_COLUMN_NAMES`),
 `crates/repark-core/src/metadata_columns.rs` (the Spark-door rewrite plus the
-typed `[ICE-MC-1]` refusal of the three unserved names), the router hook and the
+typed `[ICE-MC-1]` refusal of the two unserved names), the router hook and the
 `repark-core` re-export, `crates/repark-spark/src/tests/metadata_columns.rs`,
 `python/repark/tests/test_ice_metadata_cols_1.py`, the registry row, six
 `map.md` files, the `repark-core` lib.rs `154` EXCEPTIONS row (sanctioned out
@@ -32,8 +32,9 @@ byte-diff against backup.
 non-null field, refusal strings advertise the served three, `_partition` /
 `_deleted` stay refused. Four new clauses (C-015..C-018), two mutations (M1/M2),
 each reverted and byte-verified. The ANSI door stays unwired (M-6/A-10); the
-`ICE-MC-FILEPOS-1` registry row still claims `_spec_id` refuses and needs a
-follow-up edit outside this lane's touch list.
+`ICE-MC-FILEPOS-1` row's title + `repark` bullet were re-pointed at the served
+truth in-lane (WO-R2b), while its Spark/Pin/Rationale bullets stay frozen for
+WO-R3.
 
 ## Measurements (decide-then-build evidence)
 
@@ -85,7 +86,7 @@ identically. No RePark-side select spelling can reach those columns — the fork
 offers no id-based select — so serving them needs a fork fix (schema-first
 name resolution). The draft's `plain_columns_...` test waits on that fix as the
 fifth `deferred_to_pr2` entry; the layer itself never claims those names (its
-served set is the hard-coded two).
+served set is the hard-coded three).
 
 **M-6 — the ANSI door is unwired.** `crates/repark-sql/src/router.rs` calls
 `prepare_lineage_sql` but has no metadata-columns hook; per the brief it stays
@@ -124,8 +125,8 @@ constant; M2 (forced constant 0) reds only (b).
 | C-004 | `SELECT id, _pos FROM t` answers `[[2,0],[3,0],[4,0]]` with `_pos: bigint`. | `file_and_pos_answer_spark` (R-MC-POS leg) and `test_pos_is_zero_based_file_ordinal` green. | **PROVEN** | Exact recorded `R-MC-POS` values, Arrow `int64` via downcast and `df.schema` `bigint`. pins: ice-metadata-cols-1/C-004 |
 | C-005 | `SELECT id, _pos FROM t` after a merge-on-read DELETE answers `[[2,0],[3,0],[4,1]]`. | `pos_is_the_file_position_after_a_merge_on_read_delete` and `test_pos_survives_merge_on_read_delete` green. | **PROVEN** | Exact recorded `R-MC-POS-MOR` values, pin-measured per M-2; no divergence. pins: ice-metadata-cols-1/C-005 |
 | C-006 | `SELECT *` answers user columns only; `*, _file` and `*, _pos` compose. | `select_star_excludes_every_served_metadata_column` and `test_star_excludes_served_metadata_columns` green. | **PROVEN** | Field names `[id, data, cat]` / `+ [_file]` / `+ [_pos]` on both doors of the pin. pins: ice-metadata-cols-1/C-006 |
-| C-007 | `_spec_id`, `_partition`, `_deleted` refuse typed `[ICE-MC-1]`, never raw; served names fold; composed shapes refuse. | `unserved_metadata_columns_refuse_with_a_typed_error`, `served_names_fold_and_composed_shapes_refuse`, `test_unserved_metadata_columns_refuse_typed` green. | **PROVEN** | Each unserved name (bare and backtick) raises `[ICE-MC-1]` naming it, with no `No field named` leak (r2 V-001: the naming is now asserted per column per door); `_POS` folds, `` `_pos` `` and `x._pos` resolve, and a `DELETE` naming `_file` plus a two-relation `*` refuse `[ICE-MC-1]`. F1/F2 prove naming, F3 the tag, F3b the no-leak, F4/F5 the composed refusals, F6/F7b/F8 the fold/exact/alias legs. pins: ice-metadata-cols-1/C-007 |
-| C-008 | Registry row `ICE-MC-FILEPOS-1` is filed BACKLOG for IPI-20. | The row in `docs/spark-sql-iceberg-parity.md` §7. | **PROVEN** | Row states the served two, the refused three with their `[ICE-MC-1]` pin, the inventory oracle, and the PR-2 intent; the refusal pins red on purpose when served. pins: ice-metadata-cols-1/C-008 |
+| C-007 | `_partition`, `_deleted` refuse typed `[ICE-MC-1]`, never raw; served names fold; composed shapes refuse. | `unserved_metadata_columns_refuse_with_a_typed_error`, `served_names_fold_and_composed_shapes_refuse`, `test_unserved_metadata_columns_refuse_typed` green. | **PROVEN** | Each unserved name (bare and backtick) raises `[ICE-MC-1]` naming it, with no `No field named` leak (r2 V-001: the naming is now asserted per column per door); `_POS` folds, `` `_pos` `` and `x._pos` resolve, and a `DELETE` naming `_file` plus a two-relation `*` refuse `[ICE-MC-1]`. F1/F2 prove naming, F3 the tag, F3b the no-leak, F4/F5 the composed refusals, F6/F7b/F8 the fold/exact/alias legs. pins: ice-metadata-cols-1/C-007 |
+| C-008 | Registry row `ICE-MC-FILEPOS-1` is filed BACKLOG for IPI-20. | The row in `docs/spark-sql-iceberg-parity.md` §7. | **PROVEN** | Row states the served three (`_file`, `_pos`, `_spec_id`), the refused two with their `[ICE-MC-1]` pin, the inventory oracle, and the PR-2 intent; the refusal pins red on purpose when served. pins: ice-metadata-cols-1/C-008 |
 | C-009 | `SELECT _file, _row_id FROM t` on a format-v3 table answers both columns (`_file: string`, `_row_id: bigint`, ids `[0, 1]`): metadata rewrite runs before lineage. | `file_and_row_id_answer_together_on_a_format_v3_table` and `test_file_and_row_id_answer_together_on_v3` green; F10 (stage swap) reds both, F15 (dropped lineage fields) reds both, F12/F13 red the ordinal/suffix legs. | **PROVEN** | V-002 preferred form, no fallback: v3 table builds from fixtures with the `allowCreateFormatVersion3` opt-in. pins: ice-metadata-cols-1/C-009 |
 | C-010 | Every live `_file` equals a `file_path` of the table's own `files` metadata table. | `file_values_equal_the_files_metadata_table_paths` and `test_file_values_equal_files_metadata_table` green; F11 (`mutated-` prefix) reds both while C-001..C-003 stay green; F13/F13b/F14 also red both. | **PROVEN** | V-003 identity pin; the LIKE cell is kept verbatim. pins: ice-metadata-cols-1/C-010 |
 | C-011 | `SELECT * FROM t.snapshot_id_<id>` answers the pinned snapshot's rows `[(1,"a","x"),(2,"b","y")]` with schema `[id: int32, data: string, cat: string]`. | `ref_selector_snapshot_id_and_at_timestamp_resolve_specs` and `test_snapshot_id_selector_reads_pinned_snapshot` green. | **PROVEN** | Recorded R-TT-SNAPSHOT-ID-SELECTOR rows replayed on the `base3` twin fixture; value AND type on the Arrow path. pins: ice-metadata-cols-1/C-011 |
@@ -253,7 +254,7 @@ COVERAGE_ATTESTATION:
       justification: One temp-view registration per statement naming the columns, released after planning; the scan streams; no added materialization beyond the fork read.
     - id: AT-8
       status: ATTACKED
-      evidence: Served set keyed off the hard-coded two-name const, never the fork's broad is_metadata_column_name; every fork behavior the layer needs verified at the pin by source and by run (M-1..M-4); no new dependency, no pin move.
+      evidence: Served set keyed off the hard-coded three-name const, never the fork's broad is_metadata_column_name; every fork behavior the layer needs verified at the pin by source and by run (M-1..M-4); no new dependency, no pin move.
       artifacts: [crates/repark-iceberg/src/catalog/metadata_columns.rs, task/ledgers/staging/ice-metadata-cols-1-ledger.md]
     - id: AT-9
       status: ATTACKED
