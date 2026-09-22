@@ -932,6 +932,9 @@ repark-core's error map.
   `stage_static_partition_overwrite_files_with` moves here from `partition_overwrite.rs`
   (which only exposes `static_injected_stream`), takes main's column list and an
   `Option` of the overrides, and hands `None` to the canonical untouched.
+  IPI-05 (2026-09-21): `append_staged_with_options` stages a plain INSERT
+  carrying only session snapshot properties under `wap.id` instead of
+  committing on main; re-exported through `write/mod.rs`.
   pins: ice-write-options-1/C-014, C-016, C-017
 - `summary_collision.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
   `for_changes(table, added, removed, branch)` is the general shape — the fork's

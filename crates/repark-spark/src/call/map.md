@@ -61,6 +61,11 @@ and measured-parity contract would grow `call.rs` beyond its exact
   ordinal). Sorting and equality both go through one Arrow `RowConverter`, whose default
   ascending / nulls-first order is Spark's `sortWithinPartitions`.
   pins: ice-changelog-1/C-011, C-012, C-013
+- `branch_ops.rs` — **IPI-05 (2026-09-21):** `execute_publish_changes` publishes a staged WAP
+  snapshot: it looks the snapshot up with the fork's `staged_snapshot_for_wap_id`, re-raising that
+  error's **bare message** (never `to_string()`, which would prefix the error kind and diverge from
+  Java's `Cannot apply unknown WAP ID '…'`), commits the fork's `publish_changes` action, and
+  answers one row `(source_snapshot_id, current_snapshot_id)`.
 - `branch_ops.rs` — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`, `cherrypick_snapshot`,
   `set_current_snapshot` and `rollback_to_timestamp` over the fork's `ManageSnapshots` /
   `Transaction::cherry_pick` (no fork change). Ref-kind and ancestry pre-checks shape

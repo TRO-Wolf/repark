@@ -50,6 +50,7 @@ const SUPPORTED_PROCEDURES: &[&str] = &[
     "expire_snapshots",
     "fast_forward",
     "plan_partitioning",
+    "publish_changes",
     "register_table",
     "rewrite_data_files",
     "rewrite_manifests",
@@ -129,6 +130,9 @@ pub async fn execute_call(
         }
         "cherrypick_snapshot" => {
             branch_ops::execute_cherrypick_snapshot(ctx, catalog, &catalog_name, &args).await
+        }
+        "publish_changes" => {
+            branch_ops::execute_publish_changes(ctx, catalog, &catalog_name, &args).await
         }
         "set_current_snapshot" => {
             branch_ops::execute_set_current_snapshot(ctx, catalog, &catalog_name, &args).await

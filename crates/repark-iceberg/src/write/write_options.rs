@@ -322,6 +322,48 @@ async fn build_unpartitioned_writer_with(
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub async fn append_staged_with_options<S>(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    stream: S,
+    summary_extra: &[(String, String)],
+    staging: &WriterStagingOverrides,
+    concurrency: WriteConcurrency,
+    positional_columns: Option<Vec<String>>,
+) -> Result<Table>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+{
+    let new_files = if let Some(columns) = positional_columns {
+        stage_overwrite_files_with(table, stream, columns, concurrency, staging).await?
+    } else {
+        reject_non_parquet_append(table)?;
+        if table.metadata().default_partition_spec().is_unpartitioned() {
+            stage_unpartitioned_stream_with_overrides(table, stream, concurrency, staging).await?
+        } else {
+            let current_schema = table.metadata().current_schema();
+            let write_schema =
+                Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+            let write_default_columns = write_default_column_names(current_schema);
+            let conformed = stream.map(move |item| {
+                crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+            });
+            stage_partitioned_stream_with_overrides(table, conformed, staging, concurrency).await?
+        }
+    };
+    let engine = EngineSummary::for_append(table, &new_files, None);
+    let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
+    let tx = Transaction::new(table);
+    let action = tx
+        .fast_append()
+        .add_data_files(new_files)
+        .set_snapshot_properties(summary)
+        .stage_only();
+    let tx = action.apply(tx).map_err(iceberg_err)?;
+    commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub async fn commit_append_with_summary(
     catalog: &Arc<dyn Catalog>,
     table: &Table,

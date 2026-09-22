@@ -55,8 +55,26 @@ pub(crate) async fn execute_append_with_options(
             .await?;
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    let (snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;
-    if options.is_empty() {
+    let (mut snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;
+    if branch.is_none()
+        && let Some(wap_id) = crate::wap::wap_id_for_table(&crate::wap::session_wap(ctx), &table)?
+    {
+        snapshot_extra.push((crate::wap::WAP_ID_SNAPSHOT_PROPERTY.to_string(), wap_id));
+        if options.is_empty() {
+            staging.fork_insert_dictionary_rule = true;
+        }
+        let positional = options.is_empty().then(Vec::new);
+        repark_iceberg::write::append_staged_with_options(
+            &catalog,
+            &table,
+            stream,
+            &snapshot_extra,
+            &staging,
+            concurrency,
+            positional,
+        )
+        .await?;
+    } else if options.is_empty() {
         staging.fork_insert_dictionary_rule = true;
         let files = repark_iceberg::write::stage_overwrite_files_with(
             &table,

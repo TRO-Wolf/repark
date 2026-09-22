@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import PySparkException, UnsupportedOperationException
+from repark.errors import IllegalArgumentException, PySparkException, UnsupportedOperationException
 
 TABLE = "mem.ns.events"
 
@@ -30,6 +30,18 @@ def _refs_row(spark: ReparkSession, name: str) -> dict[str, object]:
     table = spark.sql(f"SELECT * FROM {TABLE}.refs WHERE name = '{name}'").to_arrow()
     assert table.num_rows == 1, f"expected one refs row for {name}, got {table.num_rows}"
     return {column: table.column(column).to_pylist()[0] for column in table.schema.names}
+
+
+def _staged_snapshot_id(spark: ReparkSession, wap_id: str) -> int:
+    """Return the one snapshot stamped with ``wap_id``, failing unless exactly one matches."""
+    snapshots = spark.sql(f"SELECT snapshot_id, summary FROM {TABLE}.snapshots").to_arrow()
+    stamped = [
+        row["snapshot_id"]
+        for row in snapshots.to_pylist()
+        if dict(row["summary"] or []).get("wap.id") == wap_id
+    ]
+    assert len(stamped) == 1, f"expected one snapshot stamped {wap_id}, got {len(stamped)}"
+    return int(stamped[0])
 
 
 def test_branch_snapshot_retention_takes_both_halves(spark: ReparkSession) -> None:
@@ -133,17 +145,50 @@ def test_write_to_tag_refuses_like_spark(spark: ReparkSession) -> None:
         spark.sql(f"INSERT INTO {TABLE}.tag_v1 SELECT 2 AS id, 'b' AS name")
 
 
-@pytest.mark.parametrize(
-    "call",
-    [
-        "publish_changes(table => 'ns.events', wap_id => 'w1')",
-    ],
-)
-def test_wap_publish_procedures_refuse_loud(spark: ReparkSession, call: str) -> None:
-    """No WAP publish procedure is implemented; each refusal lists what is."""
-    with pytest.raises(UnsupportedOperationException) as caught:
-        spark.sql(f"CALL mem.system.{call}")
-    assert "not supported" in str(caught.value)
+def test_publish_changes_publishes_the_staged_snapshot(spark: ReparkSession) -> None:
+    """publish_changes answers (source, current) and main gains the staged row."""
+    spark.sql(f"ALTER TABLE {TABLE} SET TBLPROPERTIES ('write.wap.enabled'='true')").collect()
+    spark.conf.set("spark.wap.id", "w1")
+    try:
+        spark.sql(f"INSERT INTO {TABLE} SELECT 2 AS id, 'b' AS name").collect()
+    finally:
+        spark.conf.unset("spark.wap.id")
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1]
+    staged = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
+    assert staged.num_rows == 2
+    staged_id = _staged_snapshot_id(spark, "w1")
+    published = spark.sql(
+        "CALL mem.system.publish_changes(table => 'ns.events', wap_id => 'w1')"
+    ).to_arrow()
+    assert published.schema.names == ["source_snapshot_id", "current_snapshot_id"]
+    assert published.num_rows == 1
+    source = published.column("source_snapshot_id").to_pylist()[0]
+    current = published.column("current_snapshot_id").to_pylist()[0]
+    assert source == staged_id
+    assert current == staged_id
+    assert _refs_row(spark, "main")["snapshot_id"] == current
+    refs = spark.sql(f"SELECT name FROM {TABLE}.refs").to_arrow()
+    assert refs.column("name").to_pylist() == ["main"]
+    after = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
+    assert after.num_rows == 2
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1, 2]
+
+
+def test_publish_changes_with_an_unknown_wap_id_refuses(spark: ReparkSession) -> None:
+    """An unknown wap id raises the fork's bare message, with no kind prefix."""
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql(
+            "CALL mem.system.publish_changes(table => 'ns.events', wap_id => 'nope')"
+        ).to_arrow()
+    assert str(caught.value) == "Cannot apply unknown WAP ID 'nope'"
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1]
+    snapshots = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
+    assert snapshots.num_rows == 1
+    refs = spark.sql(f"SELECT name FROM {TABLE}.refs").to_arrow()
+    assert refs.column("name").to_pylist() == ["main"]
 
 
 @pytest.mark.parametrize("key", ["spark.wap.branch", "spark.wap.id"])
@@ -170,8 +215,8 @@ def test_wap_branch_leaves_a_table_without_the_property_on_main(spark: ReparkSes
     assert sorted(audit.column("id").to_pylist()) == [1]
 
 
-def test_wap_id_alone_still_lands_on_main(spark: ReparkSession) -> None:
-    """spark.wap.id stages nothing yet (fork ask F-STAGE-ONLY-1). pins: ice-wap-branch-1/C-010"""
+def test_wap_id_alone_stages_off_main(spark: ReparkSession) -> None:
+    """With write.wap.enabled the id stages the write; main stays put until publish."""
     spark.sql(f"ALTER TABLE {TABLE} SET TBLPROPERTIES ('write.wap.enabled'='true')").collect()
     spark.conf.set("spark.wap.id", "w1")
     try:
@@ -179,4 +224,9 @@ def test_wap_id_alone_still_lands_on_main(spark: ReparkSession) -> None:
     finally:
         spark.conf.unset("spark.wap.id")
     main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
-    assert sorted(main.column("id").to_pylist()) == [1, 2]
+    assert sorted(main.column("id").to_pylist()) == [1]
+    snapshots = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
+    assert snapshots.num_rows == 2
+    assert _staged_snapshot_id(spark, "w1") != _refs_row(spark, "main")["snapshot_id"]
+    refs = spark.sql(f"SELECT name FROM {TABLE}.refs").to_arrow()
+    assert refs.column("name").to_pylist() == ["main"]
