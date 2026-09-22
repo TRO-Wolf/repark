@@ -14,6 +14,14 @@ async fn door() -> (TempDir, SessionContext, CatalogRegistry) {
     (warehouse, ctx, catalogs)
 }
 
+async fn plan_err(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> String {
+    match execute(ctx, catalogs, sql).await {
+        Ok(_) => panic!("`{sql}` must refuse"),
+        Err(DataFusionError::Plan(inner)) => inner,
+        Err(err) => panic!("`{sql}` must fail as a plan error: {err}"),
+    }
+}
+
 fn assert_cannot_safely_cast(err: &str) {
     assert!(
         err.contains("[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]"),
@@ -29,10 +37,7 @@ fn assert_cannot_safely_cast(err: &str) {
 #[tokio::test]
 async fn update_string_literal_into_bigint_stamps_cannot_safely_cast() {
     let (_warehouse, ctx, catalogs) = door().await;
-    let err = execute(&ctx, &catalogs, "UPDATE ice.sales.t SET id = 'notanumber'")
-        .await
-        .expect_err("string into BIGINT must refuse")
-        .to_string();
+    let err = plan_err(&ctx, &catalogs, "UPDATE ice.sales.t SET id = 'notanumber'").await;
     assert_cannot_safely_cast(&err);
 }
 
@@ -51,10 +56,7 @@ async fn update_string_literal_into_string_succeeds() {
 #[tokio::test]
 async fn update_string_column_into_bigint_stamps_cannot_safely_cast() {
     let (_warehouse, ctx, catalogs) = door().await;
-    let err = execute(&ctx, &catalogs, "UPDATE ice.sales.t SET id = data")
-        .await
-        .expect_err("STRING column into BIGINT must refuse")
-        .to_string();
+    let err = plan_err(&ctx, &catalogs, "UPDATE ice.sales.t SET id = data").await;
     assert_cannot_safely_cast(&err);
 }
 

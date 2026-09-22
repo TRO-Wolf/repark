@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::error::DataFusionError;
 use datafusion::prelude::{SessionConfig, SessionContext};
 use iceberg::spec::{NestedField, PrimitiveType, Schema as IcebergSchema, Type};
 use iceberg::{Catalog, NamespaceIdent, TableCreation};
@@ -35,6 +36,14 @@ impl Door {
         match self.sql(sql).await {
             Ok(_) => panic!("`{sql}` must fail"),
             Err(err) => err.to_string(),
+        }
+    }
+
+    async fn plan_err(&self, sql: &str) -> String {
+        match self.sql(sql).await {
+            Ok(_) => panic!("`{sql}` must fail"),
+            Err(DataFusionError::Plan(inner)) => inner,
+            Err(err) => panic!("`{sql}` must fail as a plan error: {err}"),
         }
     }
 }
@@ -108,7 +117,9 @@ fn assert_cannot_safely_cast(err: &str) {
 #[tokio::test]
 async fn ansi_update_string_literal_into_bigint_stamps_cannot_safely_cast() {
     let door = door_with_table().await;
-    let err = door.err("UPDATE ice.sales.t SET id = 'notanumber'").await;
+    let err = door
+        .plan_err("UPDATE ice.sales.t SET id = 'notanumber'")
+        .await;
     assert_cannot_safely_cast(&err);
 }
 
