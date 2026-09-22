@@ -1418,7 +1418,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
   C-009, C-010, C-011, C-012, C-013, C-014
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
-- [fnp-math-1-ledger.md](fnp-math-1-ledger.md) —
+- [fnp-math-1-ledger.md](../completed/fnp-math-1-ledger.md) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a), in flight:** ledger, fixture and
   red-first pins for the math/formatting/masking/crypto card — `bround`, `conv`,
   `mask`, `collate`, `collation`, `sentences`, `hash`, `format_number`,
