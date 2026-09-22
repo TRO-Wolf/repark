@@ -19,6 +19,7 @@ mod session_insert;
 mod sniff;
 mod time_travel;
 mod truncate;
+mod update_cast;
 
 // --- The seam adapter: this crate's product surface. ---
 pub use dialect::AnsiDialect;

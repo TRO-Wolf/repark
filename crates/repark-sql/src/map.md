@@ -324,6 +324,14 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   `[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED]`/`SQLSTATE: 42601`
   through `repark_common::spark_error::message` with the backticked target as `tableName`.
   pins: dml-c-truncate/C-003, C-006, C-007; ice-error-conditions-1/C-011
+- `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the UPDATE arm (split from DELETE,
+  which is unchanged) runs the subquery-predicate and MoR guards, then
+  `refuse_incompatible_update_cast`, then `execute_identity_or_delegate`: bare-column
+  SET targets resolve on the Iceberg schema, each SET value plans as
+  `SELECT (<expr>) FROM <table>`, and the first non-ANSI-store-assignable pair stamps
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` as `Plan`. Pins:
+  [../tests/ansi_update_cast.rs](../tests/ansi_update_cast.rs).
+  pins: ipi-51/W-UPDATE-TYPE-ERR
 - `refusals.rs` — the completed refuse set (Q7/Q9): `INSERT OVERWRITE`, `CALL`,
   `ALTER TABLE … EXECUTE` (pre-parse recognizer). Every message names a
   replacement and, where the design gives one, a trigger. Tests: [refusals/map.md](refusals/map.md).
