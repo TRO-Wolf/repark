@@ -19,6 +19,7 @@ use crate::time_travel::PinnedViews;
 pub const WAP_BRANCH_KEY: &str = "spark.wap.branch";
 pub const WAP_ID_KEY: &str = "spark.wap.id";
 pub const WAP_ENABLED_PROPERTY: &str = "write.wap.enabled";
+pub(crate) const WAP_ID_SNAPSHOT_PROPERTY: &str = "wap.id";
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct WapSessionConfig {
@@ -165,6 +166,17 @@ pub(crate) fn wap_branch_for_table(
     }
     refuse_both_wap_keys(wap)?;
     Ok(Some(branch.clone()))
+}
+
+pub(crate) fn wap_id_for_table(wap: &WapSessionConfig, table: &Table) -> Result<Option<String>> {
+    let Some(id) = wap.id.as_ref() else {
+        return Ok(None);
+    };
+    if !table_wap_enabled(table) {
+        return Ok(None);
+    }
+    refuse_both_wap_keys(wap)?;
+    Ok(Some(id.clone()))
 }
 
 struct ReadRelation {

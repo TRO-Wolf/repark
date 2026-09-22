@@ -312,19 +312,24 @@ Supported surface, for reference:
   answers `IllegalArgumentException: Branch does not exist: nope`, and RePark's parse-class
   refusal carries no `== SQL ==` caret block — both are IPI-51's.
 
-#### REF-3 — write-audit-publish (WAP) — the `spark.wap.id` staged half
+#### REF-3 — write-audit-publish (WAP) — the `spark.wap.id` staged half — **FIXED 2026-09-21** (IPI-05)
 
-**The `spark.wap.branch` half is FIXED (2026-09-19, ICE-WAP-BRANCH-1 below).** This row now
-covers only what is still open: the staged-snapshot flow behind `spark.wap.id`.
+**Both halves are FIXED:** `spark.wap.branch` on 2026-09-19 (ICE-WAP-BRANCH-1 below), and the
+staged-snapshot flow behind `spark.wap.id` on 2026-09-21 (IPI-05, over fork pin
+`311b9fa41f292914b29d241a7fbac5c44365a6c7`).
 
 - **repark** — `spark.wap.id` stores and reads back (through `spark.conf.set` and through SQL
-  `SET`, since ICE-WAP-BRANCH-1 routes both WAP keys into the Rust carrier) but nothing stages
-  a snapshot for it: a write with `spark.wap.id` set and no `spark.wap.branch` lands on `main`
-  where Spark leaves it unreferenced. The publish procedure
-  `CALL <cat>.system.publish_changes` refuses loud, listing the procedures that do exist
-  (fourteen since 2026-09-17, REF-5–REF-8 included). Setting `spark.wap.id` **and**
-  `spark.wap.branch` together refuses with Java's text before any file is written
-  (ICE-WAP-BRANCH-1).
+  `SET`, since ICE-WAP-BRANCH-1 routes both WAP keys into the Rust carrier), and with
+  `write.wap.enabled=true` on the table it now stages: a plain INSERT with `spark.wap.id` set
+  and no `spark.wap.branch` commits a snapshot carrying `wap.id` in its summary and leaves `main`
+  where it was, while `DELETE`, `UPDATE` and `INSERT OVERWRITE` stay on `main` as before. `CALL <cat>.system.publish_changes(table, wap_id)` looks that snapshot up and answers
+  `(source_snapshot_id, current_snapshot_id)` — fast-forwarding `main` when it has not moved,
+  replaying with `published-wap-id` over an intervening commit — and an unknown id refuses with
+  Java's bare message `Cannot apply unknown WAP ID '<id>'`;
+  `CALL <cat>.system.cherrypick_snapshot` publishes a staged snapshot as well. Without
+  `write.wap.enabled=true` the id is ignored and the write lands on `main`. Setting
+  `spark.wap.id` **and** `spark.wap.branch` together refuses with Java's text before any file is
+  written (ICE-WAP-BRANCH-1).
 - **Apache Spark** — the full flow works. With `write.wap.enabled=true` on the table and
   `spark.wap.branch` set, a plain `INSERT INTO t` stages onto that branch and a plain `SELECT`
   in the same session reads the branch, while `main` stays put until publish;
@@ -336,7 +341,9 @@ covers only what is still open: the staged-snapshot flow behind `spark.wap.id`.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-01. Incidental control from the same
   run: with `spark.wap.branch` set but `write.wap.enabled` **absent**, Spark silently ignored the
   conf and wrote to `main`.)*
-- **Pin** — `crates/repark-spark/src/tests/refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`;
+- **Pin** — `crates/repark-spark/src/tests/wap_id.rs` (the staged INSERT, `publish_changes` on an
+  unmoved and on a moved `main`, the unknown-id refusal, and the near misses that stay ordinary
+  commits); `crates/repark-spark/src/tests/refs_and_wap.rs::wap_publish_procedures_and_session_conf_refuse_loud`;
   facade rows in `python/repark/tests/test_ref_branch_tag_wap.py`; WAP-staged cherry-pick
   live rows in `python/repark/tests/test_ice_branch_ops_1.py::test_live_branch_ops_adopted_shapes`
 - **Rationale** — BACKLOG (2026-09-01, RP-5; narrowed 2026-09-17, ICE-BRANCH-OPS-1:
@@ -344,14 +351,15 @@ covers only what is still open: the staged-snapshot flow behind `spark.wap.id`.
   round 2: cherry-picking a Spark-staged WAP snapshot publishes it with `published-wap-id`
   and refuses the duplicate, pinned live against the recorded oracle; narrowed again
   2026-09-19, ICE-WAP-BRANCH-1: the `spark.wap.branch` half is implemented and pinned).
-  The remaining gap is the staged-snapshot producer behind `spark.wap.id` and the publish
-  procedure that reads it — **fork ask F-STAGE-ONLY-1**: RePark never patches Iceberg
-  table-format semantics locally, and `SnapshotProducer::with_stage_only` is the fork's.
-  **Known residue, stated plainly (2026-09-19):** with `spark.wap.id` set alone on a
-  `write.wap.enabled=true` table, the write lands on `main` where Spark stages it — a silent
-  divergence, now reachable through the SQL `SET` spelling as well as `spark.conf.set`.
-  ICE-WAP-BRANCH-1 left it exactly as it was on main (brief boundary); closing it is either
-  the fork ask or a declared refusal on that one shape.
+  **FIXED 2026-09-21 (IPI-05).** The last gap was the staged-snapshot producer behind
+  `spark.wap.id` and the publish procedure that reads it, both of them fork surface — RePark
+  never patches Iceberg table-format semantics locally. **Fork ask F-STAGE-ONLY-1** landed them
+  (`with_stage_only` and `with_snapshot_properties` on every write action, the `wap.id` lookup
+  and `publish_changes`), and IPI-05 routes the RePark write door at them: a plain INSERT under
+  `spark.wap.id` alone takes a staged route of its own rather than the branch route, and
+  `publish_changes` is a registered procedure instead of a refusal. The 2026-09-19 residue —
+  `spark.wap.id` set alone landing on `main` — is gone in both spellings, `spark.conf.set` and
+  SQL `SET`.
   pins: ref-branch-tag-wap/C-005
   pins: ice-branch-ops-1/C-013
   pins: ice-wap-branch-1/C-010

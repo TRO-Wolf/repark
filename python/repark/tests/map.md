@@ -1794,8 +1794,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
   oracle's values, the reversed order refusing, write-to-branch landing on the named branch
-  (RP-5 / REF-1 FIXED), write-to-tag refusing Spark-shaped, and WAP declared
-  (`publish_changes` and the `spark.wap.*` confs fail closed; `fast_forward` and
+  (RP-5 / REF-1 FIXED), write-to-tag refusing Spark-shaped, and WAP (both `spark.wap.*`
+  confs store and read back, and `publish_changes` is a registered procedure — see the
+  ICE-WAP-BRANCH-1 and IPI-05 clauses below; `fast_forward` and
   `cherrypick_snapshot` moved to `test_ice_branch_ops_1.py` when ICE-BRANCH-OPS-1
   implemented them). The `branch_`/`tag_` READ selectors resolve the ref here too — standalone
   and on a DML statement's read side (`INSERT … SELECT`, `MERGE … USING`, a `DELETE` predicate
@@ -1805,9 +1806,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: rp-5-fork-repin/C-004
   **ICE-WAP-BRANCH-1 (2026-09-19):** the two `spark.wap.*` fail-closed rows are re-pointed at
   the new truth — both keys store through the SQL `SET` door and read back, `spark.wap.branch`
-  is inert on a table without `write.wap.enabled=true`, and `spark.wap.id` on its own still
-  lands the write on `main` (the staged half is fork ask F-STAGE-ONLY-1, registry REF-3).
+  is inert on a table without `write.wap.enabled=true`. The `spark.wap.id` half of that row is
+  superseded by the IPI-05 clause below, which stages it off `main`.
   pins: ice-wap-branch-1/C-004, C-007, C-010
+  **IPI-05 (2026-09-21):** the `spark.wap.id` staged half lands — the id stages the write off
+  `main`, `publish_changes(table, wap_id)` publishes the staged snapshot answering
+  `(source_snapshot_id, current_snapshot_id)`, and an unknown id raises the bare
+  `Cannot apply unknown WAP ID '…'`; the old `publish_changes` refusal row and the
+  stages-nothing row are re-pointed at the new truth. The critic-round-3 strengthening
+  pins the staged snapshot behind the id (exactly one stamped snapshot off `main`), the
+  publish `(source, current)` ids against the staged snapshot, and the refs and
+  snapshot-count shapes on every WAP row.
 - [test_ice_merge_append_1.py](test_ice_merge_append_1.py) +
   [ice_merge_append_1_truth.json](ice_merge_append_1_truth.json) — **ICE-MERGE-APPEND-1
   (2026-09-19):** the recorded-oracle pins for merge-on-commit (IPI-11). The truth JSON holds

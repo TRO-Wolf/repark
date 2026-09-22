@@ -119,6 +119,7 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
         &catalogs,
         sql_after_changes.as_ref(),
         &mut pinned,
+        !write_options.is_empty(),
     )
     .await?;
     let sql_after_wap_read =
