@@ -192,7 +192,7 @@ def _df_condition(key: str) -> Any:
 
 
 def test_sql_door_sweep_matches_spark(seeded: Any) -> None:
-    """SQL-door sweep legs equal the recorded Spark answers, value and type."""
+    """SQL-door match legs equal Spark; zero-bound legs pin the totalOrder divergence."""
     session, table = seeded
     for key, predicate in _MATCH_SQL.items():
         got = _ids(session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow())
@@ -207,7 +207,7 @@ def test_sql_door_sweep_matches_spark(seeded: Any) -> None:
 
 
 def test_df_door_sweep_matches_spark(seeded: Any) -> None:
-    """DataFrame-door legs equal the recorded Spark answers, value and type."""
+    """DataFrame-door match legs equal Spark; zero-bound legs pin the totalOrder divergence."""
     session, table = seeded
     frame = session.table(table)
     for key in _MATCH_DF:
