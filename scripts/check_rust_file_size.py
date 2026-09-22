@@ -87,7 +87,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split property, rename, and schema-evolution operation families.",
     ),
     "crates/repark-iceberg/src/write/append.rs": (
-        1816,
+        1806,
         "Append planning, file writing, and commit assembly share one entry module.",
         "Extract writer preparation from transaction commit assembly.",
     ),
