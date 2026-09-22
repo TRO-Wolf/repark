@@ -7,6 +7,7 @@ tests are JVM-free and pin those recorded names; they do not re-invoke Spark.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pyarrow as pa
@@ -16,6 +17,11 @@ from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
 from repark.errors import AnalysisException, IllegalArgumentException
 from repark.spark.session import DataFrameReader
+
+SNAPSHOT_ID_REFUSAL = (
+    "Time travel option `snapshot-id` is no longer supported, "
+    "use Spark built-in `versionAsOf` instead"
+)
 
 
 @pytest.fixture
@@ -281,11 +287,11 @@ def test_sql_table_ref_accepts_quoted_segments_with_dots() -> None:
 def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Semantic gate on parquet(); time-travel options no longer denylisted.
+    """Semantic gate on parquet(); legacy snapshot-id refuses before catalog lookup.
 
-    ``snapshot-id`` on format('iceberg') is supported; unknown table/snapshot still fails
-    analysis. ``start-snapshot-id`` is served too (ICE-CHANGELOG-1), so it reaches the same
-    unregistered-catalog refusal.
+    ``snapshot-id`` on format('iceberg') refuses like Spark 4.1.2, ahead of any catalog
+    or snapshot resolution. ``start-snapshot-id`` is served (ICE-CHANGELOG-1), so it
+    still reaches the unregistered-catalog refusal.
     """
     import pyarrow.parquet as pq
 
@@ -293,7 +299,7 @@ def test_read_semantic_option_rejected_on_parquet_and_iceberg_snapshot(
     pq.write_table(pa.table({"id": [1]}), path)
     with pytest.raises(AnalysisException, match=r"pathGlobFilter|not supported"):
         spark.read.option("pathGlobFilter", "*.ok.parquet").parquet(str(path))
-    with pytest.raises(AnalysisException, match=r"catalog|not registered|table|snapshot"):
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
         spark.read.format("iceberg").option("snapshot-id", "1").load("glue_catalog.db.t")
     with pytest.raises(AnalysisException, match=r"catalog|not registered|table|snapshot"):
         spark.read.format("iceberg").option("start-snapshot-id", "1").load("glue_catalog.db.t")
@@ -470,7 +476,7 @@ def test_snapshot_id_option_parses_int_and_range() -> None:
 
 
 def test_version_asof_options_forward_raw_without_engine() -> None:
-    """ICE-TT-RESOLVE-1: versionAsOf/timestampAsOf forward raw; legacy pins still parse."""
+    """ICE-TT-RESOLVE-1: versionAsOf/timestampAsOf forward raw; snapshot-id refuses."""
     from typing import cast
 
     reader = DataFrameReader(cast(ReparkSession, None))
@@ -481,14 +487,14 @@ def test_version_asof_options_forward_raw_without_engine() -> None:
         ._iceberg_time_travel_opts()
     )
     assert got == {"version_as_of": "3", "timestamp_as_of": "2026-09-18 10:00:00"}
-    legacy = (
-        DataFrameReader(cast(ReparkSession, None))
-        .format("iceberg")
-        .option("snapshot-id", "7")
-        ._iceberg_time_travel_opts()
-    )
-    assert legacy == {"snapshot_id": 7}
-    with pytest.raises(AnalysisException, match="integer snapshot id"):
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
+        (
+            DataFrameReader(cast(ReparkSession, None))
+            .format("iceberg")
+            .option("snapshot-id", "7")
+            ._iceberg_time_travel_opts()
+        )
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
         (
             DataFrameReader(cast(ReparkSession, None))
             .format("iceberg")

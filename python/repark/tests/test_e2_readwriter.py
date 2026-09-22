@@ -207,17 +207,15 @@ def test_list_tables_spark_catalog_alias(spark: ReparkSession) -> None:
 
 
 def test_read_table_time_travel_resolves_bare_name(spark: ReparkSession) -> None:
-    """DataFrameReader.table + snapshot-id qualifies bare names."""
+    """DataFrameReader.table + versionAsOf qualifies bare names."""
     spark.createDataFrame([(1, "a")], ["id", "name"]).write.saveAsTable("tt_bare")
     snaps = spark._testing_list_snapshots("glue_catalog.default.tt_bare")
     assert snaps, "expected at least one snapshot after saveAsTable"
     snapshot_id = int(snaps[-1][0])
-    # Bare name with time-travel options must resolve under current catalog/NS.
-    frame = spark.read.option("snapshot-id", str(snapshot_id)).table("tt_bare")
+    frame = spark.read.option("versionAsOf", str(snapshot_id)).table("tt_bare")
     rows = frame.to_arrow().to_pylist()
     assert rows == [{"id": 1, "name": "a"}]
-    # spark_catalog alias path through the same read_iceberg_table resolve layer.
-    frame_alias = spark.read.option("snapshot-id", str(snapshot_id)).table(
+    frame_alias = spark.read.option("versionAsOf", str(snapshot_id)).table(
         "spark_catalog.default.tt_bare"
     )
     assert frame_alias.to_arrow().to_pylist() == [{"id": 1, "name": "a"}]
