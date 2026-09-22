@@ -180,7 +180,8 @@ async fn set_identifier_fields_refuses_float_and_double_columns() {
         assert_eq!(
             error.to_string(),
             format!(
-                "External error: Cannot add identifier field {column}: cannot be a float or double type"
+                "External error: Cannot add field {column} as an identifier field: must not be \
+                 float or double field"
             )
         );
     }
@@ -188,6 +189,34 @@ async fn set_identifier_fields_refuses_float_and_double_columns() {
     assert!(
         identifier_ids(&table).is_empty(),
         "the refused SETs must commit nothing"
+    );
+}
+
+#[tokio::test]
+async fn set_identifier_fields_reports_required_before_float_or_double() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.nullfloat (f FLOAT, id BIGINT NOT NULL) USING iceberg",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.nullfloat SET IDENTIFIER FIELDS f",
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "External error: Cannot add field f as an identifier field: not a required field"
+    );
+    let table = load_sales_table(&catalogs, "nullfloat").await;
+    assert!(
+        identifier_ids(&table).is_empty(),
+        "the refused SET must commit nothing"
     );
 }
 

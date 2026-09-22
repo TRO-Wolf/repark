@@ -185,22 +185,22 @@ fn field_child<'a>(field: &'a NestedField, part: &str) -> Option<&'a NestedField
 
 fn validate_identifier_candidate(field: &NestedField, ancestors: &[&NestedField]) -> Result<()> {
     let name = field.name.as_str();
-    match field.field_type.as_ref() {
-        Type::Primitive(PrimitiveType::Float | PrimitiveType::Double) => {
-            return Err(repark_core::illegal_argument_error(format!(
-                "Cannot add identifier field {name}: cannot be a float or double type"
-            )));
-        }
-        Type::Primitive(_) => {}
-        _ => {
-            return Err(repark_core::illegal_argument_error(format!(
-                "Cannot add field {name} as an identifier field: not a primitive type field"
-            )));
-        }
+    if !matches!(field.field_type.as_ref(), Type::Primitive(_)) {
+        return Err(repark_core::illegal_argument_error(format!(
+            "Cannot add field {name} as an identifier field: not a primitive type field"
+        )));
     }
     if !field.required {
         return Err(repark_core::illegal_argument_error(format!(
             "Cannot add field {name} as an identifier field: not a required field"
+        )));
+    }
+    if matches!(
+        field.field_type.as_ref(),
+        Type::Primitive(PrimitiveType::Float | PrimitiveType::Double)
+    ) {
+        return Err(repark_core::illegal_argument_error(format!(
+            "Cannot add field {name} as an identifier field: must not be float or double field"
         )));
     }
     for ancestor in ancestors {
