@@ -15,28 +15,30 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::stream::RecordBatchStreamAdapter;
 use datafusion::physical_plan::streaming::{PartitionStream, StreamingTableExec};
 use futures::TryStreamExt;
-use iceberg::arrow::schema_to_arrow_schema;
+use iceberg::arrow::{schema_to_arrow_schema, type_to_arrow_type};
 use iceberg::metadata_columns::{
     RESERVED_COL_NAME_DELETED, RESERVED_COL_NAME_FILE,
     RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_PARTITION,
     RESERVED_COL_NAME_POS, RESERVED_COL_NAME_ROW_ID, RESERVED_COL_NAME_SPEC_ID,
-    RESERVED_FIELD_ID_FILE, RESERVED_FIELD_ID_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_FIELD_ID_POS,
-    RESERVED_FIELD_ID_ROW_ID, RESERVED_FIELD_ID_SPEC_ID,
+    RESERVED_FIELD_ID_FILE, RESERVED_FIELD_ID_LAST_UPDATED_SEQUENCE_NUMBER,
+    RESERVED_FIELD_ID_PARTITION, RESERVED_FIELD_ID_POS, RESERVED_FIELD_ID_ROW_ID,
+    RESERVED_FIELD_ID_SPEC_ID,
 };
+use iceberg::spec::Type;
 use iceberg::table::Table;
 use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
 
 use crate::catalog::iceberg_to_datafusion;
 use crate::catalog::lineage_columns::{table_serves_row_lineage, user_field_names};
 
-pub const METADATA_COLUMN_NAMES: [&str; 3] = [
+pub const METADATA_COLUMN_NAMES: [&str; 4] = [
     RESERVED_COL_NAME_FILE,
     RESERVED_COL_NAME_POS,
     RESERVED_COL_NAME_SPEC_ID,
+    RESERVED_COL_NAME_PARTITION,
 ];
 
-pub const UNSERVED_METADATA_COLUMN_NAMES: [&str; 2] =
-    [RESERVED_COL_NAME_PARTITION, RESERVED_COL_NAME_DELETED];
+pub const UNSERVED_METADATA_COLUMN_NAMES: [&str; 1] = [RESERVED_COL_NAME_DELETED];
 
 #[must_use]
 pub fn is_served_metadata_column(name: &str) -> bool {
@@ -54,7 +56,7 @@ impl MetadataColumnsTableProvider {
     pub fn try_new(table: Table) -> Result<Self> {
         let user = schema_to_arrow_schema(table.metadata().current_schema())
             .map_err(iceberg_to_datafusion)?;
-        let schema = Arc::new(append_metadata_fields(&user, &table));
+        let schema = Arc::new(append_metadata_fields(&user, &table)?);
         Ok(Self { table, schema })
     }
 }
@@ -66,7 +68,7 @@ fn metadata_field(name: &str, data_type: DataType, field_id: i32, nullable: bool
     )]))
 }
 
-fn append_metadata_fields(user: &Schema, table: &Table) -> Schema {
+fn append_metadata_fields(user: &Schema, table: &Table) -> Result<Schema> {
     let mut fields: Vec<Field> = user
         .fields()
         .iter()
@@ -90,6 +92,18 @@ fn append_metadata_fields(user: &Schema, table: &Table) -> Schema {
         RESERVED_FIELD_ID_SPEC_ID,
         false,
     ));
+    let partition_type = table
+        .metadata()
+        .unified_partition_type()
+        .map_err(iceberg_to_datafusion)?;
+    let partition_arrow =
+        type_to_arrow_type(&Type::Struct(partition_type)).map_err(iceberg_to_datafusion)?;
+    fields.push(metadata_field(
+        RESERVED_COL_NAME_PARTITION,
+        partition_arrow,
+        RESERVED_FIELD_ID_PARTITION,
+        true,
+    ));
     if table_serves_row_lineage(table) {
         fields.push(metadata_field(
             RESERVED_COL_NAME_ROW_ID,
@@ -104,7 +118,7 @@ fn append_metadata_fields(user: &Schema, table: &Table) -> Schema {
             true,
         ));
     }
-    Schema::new(fields)
+    Ok(Schema::new(fields))
 }
 
 #[must_use]

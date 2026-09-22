@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, BooleanArray, Int32Array, Int64Array};
+use datafusion::arrow::array::{
+    Array, BooleanArray, Int32Array, Int64Array, StringArray, StructArray,
+};
 use datafusion::arrow::datatypes::DataType;
 use repark_core::ReparkSession;
 use tempfile::TempDir;
@@ -151,7 +153,6 @@ fn pairs_i64_i32(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Ve
 }
 
 fn strings(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) -> Vec<String> {
-    use datafusion::arrow::array::StringArray;
     let mut out = Vec::new();
     for batch in batches {
         let array = batch
@@ -171,6 +172,118 @@ fn field_names(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<
         .iter()
         .map(|field| field.name().clone())
         .collect()
+}
+
+async fn seed_evo(session: &ReparkSession) {
+    run(
+        session,
+        "CREATE TABLE ice.ns.tevo (id BIGINT, cat STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2')",
+    )
+    .await;
+    run(session, "INSERT INTO ice.ns.tevo VALUES (1, 'x')").await;
+    run(session, "ALTER TABLE ice.ns.tevo ADD PARTITION FIELD cat").await;
+    run(session, "INSERT INTO ice.ns.tevo VALUES (2, 'y')").await;
+}
+
+fn partition_pairs(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, String)> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap();
+        let parts = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StructArray>()
+            .expect("_partition is a struct");
+        let cats = parts
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("union field cat is utf8");
+        for row in 0..ids.len() {
+            assert!(
+                parts.is_valid(row),
+                "partitioned rows serve non-null structs"
+            );
+            out.push((ids.value(row), cats.value(row).to_string()));
+        }
+    }
+    out.sort_unstable();
+    out
+}
+
+fn partition_int_pairs(
+    batches: &[datafusion::arrow::record_batch::RecordBatch],
+) -> Vec<(i64, i32)> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap();
+        let parts = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StructArray>()
+            .expect("_partition is a struct");
+        let slots = parts
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .expect("bucket slot is int32");
+        for row in 0..ids.len() {
+            assert!(
+                parts.is_valid(row),
+                "partitioned rows serve non-null structs"
+            );
+            out.push((ids.value(row), slots.value(row)));
+        }
+    }
+    out.sort_unstable();
+    out
+}
+
+fn evo_partition_rows(
+    batches: &[datafusion::arrow::record_batch::RecordBatch],
+) -> Vec<(i64, i32, bool, Option<String>)> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap();
+        let specs = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        let parts = batch
+            .column(2)
+            .as_any()
+            .downcast_ref::<StructArray>()
+            .expect("_partition is a struct");
+        let cats = parts
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("union field cat is utf8");
+        for row in 0..ids.len() {
+            let cat = if cats.is_null(row) {
+                None
+            } else {
+                Some(cats.value(row).to_string())
+            };
+            out.push((ids.value(row), specs.value(row), parts.is_valid(row), cat));
+        }
+    }
+    out.sort_unstable();
+    out
 }
 
 #[tokio::test]
@@ -273,20 +386,135 @@ async fn spec_id_answers_zero_on_a_single_spec_table() {
 async fn spec_id_reports_each_rows_own_spec_after_evolution() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
-    run(
-        &session,
-        "CREATE TABLE ice.ns.tevo (id BIGINT, cat STRING) USING iceberg \
-         TBLPROPERTIES ('format-version' = '2')",
-    )
-    .await;
-    run(&session, "INSERT INTO ice.ns.tevo VALUES (1, 'x')").await;
-    run(&session, "ALTER TABLE ice.ns.tevo ADD PARTITION FIELD cat").await;
-    run(&session, "INSERT INTO ice.ns.tevo VALUES (2, 'y')").await;
+    seed_evo(&session).await;
     let rows = batches(&session, "SELECT id, _spec_id FROM ice.ns.tevo").await;
     assert_eq!(
         pairs_i64_i32(&rows),
         vec![(1, 0), (2, 1)],
         "R-MC-SPEC-ID-EVO spec-id half"
+    );
+}
+
+#[tokio::test]
+async fn partition_struct_answers_spark() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
+    let rows = batches(&session, "SELECT id, _partition FROM ice.ns.t").await;
+    let field = rows[0].schema().field(1).clone();
+    assert!(field.is_nullable(), "R-MC-PARTITION is nullable");
+    match field.data_type() {
+        DataType::Struct(children) => {
+            assert_eq!(children.len(), 1, "R-MC-PARTITION type");
+            assert_eq!(children[0].name(), "cat", "R-MC-PARTITION type");
+            assert_eq!(
+                children[0].data_type(),
+                &DataType::Utf8,
+                "R-MC-PARTITION type"
+            );
+        }
+        other => panic!("R-MC-PARTITION type: expected Struct, got {other:?}"),
+    }
+    assert_eq!(
+        partition_pairs(&rows),
+        vec![
+            (2, "y".to_string()),
+            (3, "x".to_string()),
+            (4, "x".to_string()),
+        ],
+        "R-MC-PARTITION"
+    );
+}
+
+#[tokio::test]
+async fn partition_is_null_on_an_unpartitioned_table() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "", "").await;
+    let rows = batches(&session, "SELECT id, _partition FROM ice.ns.t").await;
+    let field = rows[0].schema().field(1).clone();
+    assert!(field.is_nullable(), "R-MC-PARTITION-UNPART is nullable");
+    assert!(
+        matches!(field.data_type(), DataType::Struct(_)),
+        "R-MC-PARTITION-UNPART type"
+    );
+    let mut ids = i64s(&rows, 0);
+    ids.sort_unstable();
+    assert_eq!(ids, vec![2, 3, 4], "R-MC-PARTITION-UNPART");
+    for batch in &rows {
+        let parts = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StructArray>()
+            .expect("_partition is a struct");
+        assert_eq!(parts.num_columns(), 0, "R-MC-PARTITION-UNPART");
+        for row in 0..batch.num_rows() {
+            assert!(parts.is_null(row), "R-MC-PARTITION-UNPART");
+        }
+    }
+}
+
+#[tokio::test]
+async fn spec_id_and_partition_answer_after_evolution() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed_evo(&session).await;
+    let rows = batches(&session, "SELECT id, _spec_id, _partition FROM ice.ns.tevo").await;
+    let field = rows[0].schema().field(2).clone();
+    match field.data_type() {
+        DataType::Struct(children) => {
+            assert_eq!(
+                children
+                    .iter()
+                    .map(|child| child.name().clone())
+                    .collect::<Vec<_>>(),
+                vec!["cat"],
+                "R-MC-SPEC-ID-EVO union shape"
+            );
+        }
+        other => panic!("R-MC-SPEC-ID-EVO type: expected Struct, got {other:?}"),
+    }
+    assert_eq!(
+        evo_partition_rows(&rows),
+        vec![(1, 0, true, None), (2, 1, true, Some("y".to_string()))],
+        "R-MC-SPEC-ID-EVO"
+    );
+}
+
+#[tokio::test]
+async fn bucket_partitioned_table_serves_all_four_metadata_columns() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.tb", "PARTITIONED BY (bucket(4, id))", "").await;
+    let served = batches(
+        &session,
+        "SELECT _file, _pos, _spec_id, _partition FROM ice.ns.tb",
+    )
+    .await;
+    assert_eq!(
+        field_names(&served),
+        vec!["_file", "_pos", "_spec_id", "_partition"],
+        "bucket tables serve every metadata column"
+    );
+    let rows = batches(&session, "SELECT id, _partition FROM ice.ns.tb").await;
+    let field = rows[0].schema().field(1).clone();
+    assert!(field.is_nullable(), "bucket _partition is nullable");
+    match field.data_type() {
+        DataType::Struct(children) => {
+            assert_eq!(children.len(), 1, "bucket _partition type");
+            assert_eq!(children[0].name(), "id_bucket", "bucket _partition type");
+            assert_eq!(
+                children[0].data_type(),
+                &DataType::Int32,
+                "bucket _partition type"
+            );
+        }
+        other => panic!("bucket _partition type: expected Struct, got {other:?}"),
+    }
+    assert_eq!(
+        partition_int_pairs(&rows),
+        vec![(2, 0), (3, 3), (4, 2)],
+        "bucket(4, id) partition values"
     );
 }
 
@@ -319,6 +547,12 @@ async fn select_star_excludes_every_served_metadata_column() {
         vec!["id", "data", "cat", "_spec_id"],
         "T-5 / R-MC-STAR-EXCLUDES"
     );
+    let rows = batches(&session, "SELECT *, _partition FROM ice.ns.t").await;
+    assert_eq!(
+        field_names(&rows),
+        vec!["id", "data", "cat", "_partition"],
+        "T-5 / R-MC-STAR-EXCLUDES"
+    );
 }
 
 #[tokio::test]
@@ -346,13 +580,13 @@ async fn served_names_fold_and_composed_shapes_refuse() {
     ordinals.sort_unstable();
     assert_eq!(ordinals, vec![0, 0, 0], "compound ident through an alias");
 
-    let error = plan_error(&session, "SELECT `_partition` FROM ice.ns.t").await;
+    let error = plan_error(&session, "SELECT `_deleted` FROM ice.ns.t").await;
     assert!(
         error.contains("[ICE-MC-1]"),
         "backtick unserved refuses typed: {error}"
     );
     assert!(
-        error.contains("_partition"),
+        error.contains("_deleted"),
         "backtick unserved names the column: {error}"
     );
 
@@ -398,7 +632,7 @@ async fn unserved_metadata_columns_refuse_with_a_typed_error() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
-    for column in ["_partition", "_deleted"] {
+    for column in ["_deleted"] {
         let error = plan_error(&session, &format!("SELECT {column} FROM ice.ns.t")).await;
         assert!(
             error.contains("[ICE-MC-1]"),
@@ -413,8 +647,8 @@ async fn unserved_metadata_columns_refuse_with_a_typed_error() {
             "{column} refusal must name the column, got: {error}"
         );
         assert!(
-            error.contains("this layer serves (_file, _pos, _spec_id)"),
-            "{column} refusal must advertise the served three, got: {error}"
+            error.contains("this layer serves (_file, _pos, _spec_id, _partition)"),
+            "{column} refusal must advertise the served four, got: {error}"
         );
     }
 }
@@ -424,17 +658,17 @@ async fn served_spec_id_beside_an_unserved_column_names_the_unserved_one() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
-    let error = plan_error(&session, "SELECT id, _spec_id, _partition FROM ice.ns.t").await;
+    let error = plan_error(&session, "SELECT id, _spec_id, _deleted FROM ice.ns.t").await;
     assert!(
         error.contains("[ICE-MC-1]"),
-        "R-MC-SPEC-ID-EVO still refuses typed, got: {error}"
+        "composed refusal stays typed, got: {error}"
     );
     assert!(
-        error.contains("metadata column _partition is not yet served"),
-        "R-MC-SPEC-ID-EVO refusal must name _partition, got: {error}"
+        error.contains("metadata column _deleted is not yet served"),
+        "composed refusal must name _deleted, got: {error}"
     );
     assert!(
         !error.contains("metadata column _spec_id"),
-        "R-MC-SPEC-ID-EVO refusal must not blame _spec_id, got: {error}"
+        "composed refusal must not blame _spec_id, got: {error}"
     );
 }
