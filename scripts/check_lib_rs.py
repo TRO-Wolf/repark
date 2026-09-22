@@ -50,7 +50,7 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "(measured 181, fits under the existing 182 with no raise); "
         "FNP-MATH-1 adds `pub mod spark_hash;` + the register_all chain line "
         "(measured 184 at commit time), same sanctioned out (2) with this stated reason; "
-        "FNP-AGG-1 slice (d) adds `mod grouping;` + the grouping re-export (measured 184), "
+        "FNP-AGG-1 slice (d) adds `mod grouping;` + the grouping re-export (measured 183), "
         "same sanctioned out (2) with this stated reason; "
         "RATCHET: if registration moves",
     ),
