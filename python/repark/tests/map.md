@@ -7753,6 +7753,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   probe-55b refusals (`files`/`snapshots VERSION AS OF 'nope'`, `files
   TIMESTAMP AS OF '2000-01-01 00:00:00'`).
   pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [test_ice_branch_schema_1.py](test_ice_branch_schema_1.py) —
+  **xo55-bs R1 (2026-09-22):** R-BRANCH-SCHEMA — a branch read projects the table's
+  current schema after ADD/DROP/RENAME COLUMN (four columns, `z` NULL, `WHERE z IS NULL`
+  answering) on the SQL, `VERSION AS OF`, and `option("branch")` doors, while tag,
+  snapshot-id, and timestamp reads keep the snapshot schema; the legacy `tag` option
+  keeps refusing and unknown refs refuse verbatim. The live tier re-derives the cells
+  on Spark 4.1.2 and cross-reads the adopted table.
+  pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106

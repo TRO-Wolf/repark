@@ -1477,3 +1477,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/proc-orphan-spark-parity`.
   pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012
+- [ipi-07-branch-read-schema-1-ledger.md](ipi-07-branch-read-schema-1-ledger.md) —
+  **IPI-07-BRANCH-READ-SCHEMA-1 (2026-09-22), in flight:** a branch read projects the
+  table's current schema — the two `VersionRef` call sites build through the fork's
+  `try_new_from_table_ref` while tag, snapshot-id, and timestamp pins keep the snapshot
+  schema and unknown refs keep the pinned refusal. Nine proven clauses; FINDING
+  BS-TAGOPT-1 flags the brief's `.option("tag")` clause against the pinned IPI-23
+  refusal. `risk_tier: standard`. Branch `fix/ipi-07-branch-read-schema`.
+  pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
