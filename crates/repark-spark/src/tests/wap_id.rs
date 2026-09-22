@@ -342,6 +342,39 @@ async fn publish_changes_fast_forwards_main_to_the_staged_snapshot() {
     );
 }
 
+async fn assert_publish_metadata(catalogs: &CatalogRegistry, current: i64, staged: i64) {
+    let table = load_sales_table(catalogs, "t").await;
+    let published = table
+        .metadata()
+        .snapshot_by_id(current)
+        .expect("published snapshot in the log");
+    assert_eq!(
+        published
+            .summary()
+            .additional_properties
+            .get("published-wap-id")
+            .map(String::as_str),
+        Some("w1"),
+        "the replay stamps the published wap id"
+    );
+    let staged_props = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        staged_props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        staged_props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
+    );
+}
+
 #[tokio::test]
 async fn publish_changes_replays_over_an_intervening_commit() {
     let wh = TempDir::new().unwrap();
@@ -431,36 +464,7 @@ async fn publish_changes_replays_over_an_intervening_commit() {
         vec![("main".to_string(), "BRANCH".to_string(), current)],
         "main alone exists and points at the replayed snapshot"
     );
-    let table = load_sales_table(&catalogs, "t").await;
-    let published = table
-        .metadata()
-        .snapshot_by_id(current)
-        .expect("published snapshot in the log");
-    assert_eq!(
-        published
-            .summary()
-            .additional_properties
-            .get("published-wap-id")
-            .map(String::as_str),
-        Some("w1"),
-        "the replay stamps the published wap id"
-    );
-    let staged_props = &table
-        .metadata()
-        .snapshot_by_id(staged)
-        .expect("staged snapshot in the log")
-        .summary()
-        .additional_properties;
-    assert_eq!(
-        staged_props.get("added-records").map(String::as_str),
-        Some("1"),
-        "the staged snapshot added one record"
-    );
-    assert_eq!(
-        staged_props.get("total-records").map(String::as_str),
-        Some("2"),
-        "the staged snapshot totals two records"
-    );
+    assert_publish_metadata(&catalogs, current, staged).await;
 }
 
 #[tokio::test]
