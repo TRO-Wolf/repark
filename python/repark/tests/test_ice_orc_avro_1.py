@@ -198,7 +198,9 @@ def test_set_format_then_insert_writes_new_format(spark: ReparkSession) -> None:
     spark.sql(f"ALTER TABLE {table} SET TBLPROPERTIES ('write.format.default' = 'orc')")
     spark.sql(f"INSERT INTO {table} VALUES (2, 'b', 'y')")
     assert _snapshot_count(spark, table) == 2
-    assert _live_data_formats(spark, table) == ["ORC", "PARQUET"]
+    assert _data_formats_by_snapshot(spark, table) == ["PARQUET", "ORC"]
+    assert _table_property(spark, table, "write.format.default") == "orc"
+    assert _snapshot_appends(spark, table) == [("append", "1", "1"), ("append", "1", "2")]
     assert _ordered_rows(spark, f"SELECT id, data, cat FROM {table} ORDER BY id") == [
         [1, "a", "x"],
         [2, "b", "y"],
