@@ -789,13 +789,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   intervening commit; an unknown id raises the bare `Cannot apply unknown WAP ID '…'`; the
   near misses stay normal commits — the property without the id, the id without the
   property, DELETE/UPDATE and INSERT OVERWRITE under the id — and with neither key the
-  write SQL passes through byte-identical; a staged snapshot also cherry-picks onto main),
+  write SQL passes through byte-identical; a staged snapshot also cherry-picks onto main;
+  every pin also asserts its refs and snapshot-count shape, and a first write under the id
+  stages one parentless snapshot without creating `main`),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a
   metadata-table suffix nor a real table whose own name starts with `branch_`; and WAP
   declared — the engine's own `SET` door still rejects the `spark` conf namespace, so that
-  statement leaves the branch where it was (`fast_forward` and `cherrypick_snapshot` moved
+  statement leaves the branch where it was, and the refusal test pins the ref and snapshot
+  counts (`fast_forward` and `cherrypick_snapshot` moved
   to `branch_ops` when ICE-BRANCH-OPS-1 implemented them, `publish_changes` to `wap_id`
   with IPI-05); and the read-vs-write boundary —
   a selector in a DML statement's

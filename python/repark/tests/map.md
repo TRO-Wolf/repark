@@ -1813,7 +1813,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `main`, `publish_changes(table, wap_id)` publishes the staged snapshot answering
   `(source_snapshot_id, current_snapshot_id)`, and an unknown id raises the bare
   `Cannot apply unknown WAP ID '…'`; the old `publish_changes` refusal row and the
-  stages-nothing row are re-pointed at the new truth.
+  stages-nothing row are re-pointed at the new truth. The critic-round-3 strengthening
+  pins the staged snapshot behind the id (exactly one stamped snapshot off `main`), the
+  publish `(source, current)` ids against the staged snapshot, and the refs and
+  snapshot-count shapes on every WAP row.
 - [test_ice_merge_append_1.py](test_ice_merge_append_1.py) +
   [ice_merge_append_1_truth.json](ice_merge_append_1_truth.json) — **ICE-MERGE-APPEND-1
   (2026-09-19):** the recorded-oracle pins for merge-on-commit (IPI-11). The truth JSON holds
