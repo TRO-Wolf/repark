@@ -903,6 +903,20 @@ pins: rp-4-fork-repin/C-005, C-006
   refuse with Spark's `UNRESOLVED_COLUMN` framing. A sibling module, not an `alter.rs` arm,
   because that file sits at its exact ceiling. 4 in-module tests + [`tests/column_move.rs`](tests/column_move.rs).
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-014
+- `table_props_ddl.rs` — **WO-IDENTIFIERS (2026-09-21, cells `D-SET-IDENTIFIER` /
+  `D-DROP-IDENTIFIER`):** the `ALTER TABLE … SET|DROP IDENTIFIER FIELDS <col>[, …]` pre-parse
+  (`try_parse_set_identifier_fields_ddl` / `try_parse_drop_identifier_fields_ddl` /
+  `execute_identifier_fields_ddl`, wired in `router.rs` after the column-move intercept). Every
+  named field is resolved against the current schema (top-level and dotted paths,
+  case-insensitive) and SET refuses — with Iceberg's message shapes, the recorded nullable one
+  being `Cannot add field {name} as an identifier field: not a required field` — optional,
+  float/double, non-primitive and list/map-nested candidates before any transaction action is
+  built; both statements refuse unknown names; `require_column` is never called. SET commits the
+  fork's `UpdateSchemaAction::set_identifier_fields`; DROP replaces the set with
+  current-minus-dropped and leaves nullability untouched. Only the fully well-formed statement
+  is captured — `SET IDENTIFIER` (no FIELDS), parenthesized, dangling-comma and trailing-token
+  variants keep the stock parser fall-through. 4 in-module tests +
+  [`tests/identifier_fields.rs`](tests/identifier_fields.rs).
 - `nested_column_ddl.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** the nested-path `ALTER TABLE`
   pre-parse (`try_parse_nested_column_ddl` / `execute_nested_column_ddl`, wired in `router.rs`
   ahead of the column-move intercept): `ADD COLUMN[S] s.c T [NOT NULL] [COMMENT '…']

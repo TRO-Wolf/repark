@@ -3923,6 +3923,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_with_options_still_refuses_with_updated_message` holds the `WITH`
   refusal on the message that no longer names `OPTIONS`; and the non-iceberg /
   no-USING `OPTIONS` shapes keep failing as `ParseException`.
+  **WO-IDENTIFIERS (2026-09-21, cells `D-SET-IDENTIFIER`, `D-DROP-IDENTIFIER`,
+  `D-SET-IDENTIFIER-NULLABLE`):** `test_set_identifier_fields` pins the oracle schema
+  rows exactly (requiredness unchanged) and identifier fields `["id","k"]`;
+  `test_drop_identifier_fields` pins both columns still required with identifiers
+  reduced to `["id"]`; the nullable-column pin holds the FULL live message
+  `Cannot add field id as an identifier field: not a required field` (a `require_column`
+  mutant would make the SET succeed and die here); unknown columns refuse the
+  not-found message for both statements; `SET IDENTIFIER` without FIELDS and the
+  parenthesized variant keep the stock `Expected: (, found: IDENTIFIER` parse error.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to
