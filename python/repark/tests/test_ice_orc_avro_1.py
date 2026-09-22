@@ -241,6 +241,8 @@ def test_write_format_option_orc(spark: ReparkSession) -> None:
         [8, "h", "w"],
     ]
     assert _snapshot_count(spark, table) == 2
+    assert _table_property(spark, table, "write.format.default") is None
+    assert _snapshot_appends(spark, table) == [("append", "3", "3"), ("append", "2", "5")]
     orc_rows = _ordered_rows(
         spark, f"SELECT file_format, record_count FROM {table}.files WHERE content = 0"
     )
@@ -267,6 +269,8 @@ def test_write_format_option_avro(spark: ReparkSession) -> None:
         [8, "h", "w"],
     ]
     assert _snapshot_count(spark, table) == 2
+    assert _table_property(spark, table, "write.format.default") is None
+    assert _snapshot_appends(spark, table) == [("append", "3", "3"), ("append", "2", "5")]
     avro_rows = _ordered_rows(
         spark, f"SELECT file_format, record_count FROM {table}.files WHERE content = 0"
     )
