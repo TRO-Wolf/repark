@@ -227,3 +227,95 @@ async fn metadata_asof_served_per_type() {
         );
     }
 }
+
+#[tokio::test]
+async fn reader_metadata_path_matches_sql_door() {
+    use repark_core::time_travel::{TimeTravelSpec, read_table_at};
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.m (id INT) USING iceberg",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.m SELECT 1 AS id").await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "m".into());
+    let first = catalogs["ice"]
+        .load_table(&ident)
+        .await
+        .unwrap()
+        .metadata()
+        .current_snapshot_id()
+        .expect("first snapshot");
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.m SELECT 2 AS id").await;
+    let zone = repark_core::SessionTimeZone::default();
+    let parts = ["ice", "sales", "m", "files"]
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let spec = TimeTravelSpec::SnapshotId(first);
+    let reader = read_table_at(&ctx, &catalogs, &parts, &spec, &zone)
+        .await
+        .unwrap();
+    let sql = execute(
+        &ctx,
+        &catalogs,
+        &format!("SELECT * FROM ice.sales.m.files VERSION AS OF {first}"),
+    )
+    .await
+    .unwrap();
+    let reader_names: Vec<String> = reader
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    let sql_names: Vec<String> = sql
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(reader_names, sql_names);
+    let reader_batches = reader.collect().await.unwrap();
+    let sql_batches = sql.collect().await.unwrap();
+    let reader_rows: usize = reader_batches.iter().map(|batch| batch.num_rows()).sum();
+    let sql_rows: usize = sql_batches.iter().map(|batch| batch.num_rows()).sum();
+    assert_eq!(reader_rows, 1);
+    assert_eq!(sql_rows, 1);
+    let rendered = datafusion::arrow::util::pretty::pretty_format_batches(&reader_batches).unwrap();
+    let expected = datafusion::arrow::util::pretty::pretty_format_batches(&sql_batches).unwrap();
+    assert_eq!(rendered.to_string(), expected.to_string());
+    let missing = TimeTravelSpec::SnapshotId(999);
+    let reader = read_table_at(&ctx, &catalogs, &parts, &missing, &zone)
+        .await
+        .unwrap();
+    let sql = execute(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM ice.sales.m.files VERSION AS OF 999",
+    )
+    .await
+    .unwrap();
+    let reader_names: Vec<String> = reader
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    let sql_names: Vec<String> = sql
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(reader_names, sql_names);
+    let reader_batches = reader.collect().await.unwrap();
+    let sql_batches = sql.collect().await.unwrap();
+    let reader_rows: usize = reader_batches.iter().map(|batch| batch.num_rows()).sum();
+    let sql_rows: usize = sql_batches.iter().map(|batch| batch.num_rows()).sum();
+    assert_eq!(reader_rows, 0);
+    assert_eq!(sql_rows, 0);
+}
