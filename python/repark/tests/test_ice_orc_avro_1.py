@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException
+from repark.errors import IllegalArgumentException, PySparkException
 
 CATALOG = "ice_orc_avro_1"
 NS = "ns"
@@ -561,7 +561,7 @@ def test_unknown_write_format_refuses(spark: ReparkSession) -> None:
     spark.sql(f"CREATE TABLE {table} (id BIGINT, name STRING) USING iceberg")
     spark.sql(f"INSERT INTO {table} VALUES (0, 'name-0'), (1, 'name-1')")
     frame = spark.sql("SELECT * FROM (VALUES (2, 'name-2')) AS t(id, name)")
-    with pytest.raises(AnalysisException, match="Invalid file format: csv"):
+    with pytest.raises(IllegalArgumentException, match="^Invalid file format: csv$"):
         frame.writeTo(table).option("write-format", "csv").append()
     assert _snapshot_count(spark, table) == 1
 

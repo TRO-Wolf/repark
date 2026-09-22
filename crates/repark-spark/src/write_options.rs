@@ -157,7 +157,9 @@ fn validate_write_format(raw: &str) -> Result<String> {
     match raw.to_ascii_lowercase().as_str() {
         "parquet" => Ok("parquet".to_string()),
         "orc" | "avro" => Ok(raw.to_ascii_lowercase()),
-        _ => Err(DataFusionError::Plan(format!("Invalid file format: {raw}"))),
+        _ => Err(repark_iceberg::write::illegal_argument_error(format!(
+            "Invalid file format: {raw}"
+        ))),
     }
 }
 

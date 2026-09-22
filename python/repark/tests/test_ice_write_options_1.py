@@ -290,7 +290,7 @@ def test_write_format_bogus_refuses(spark: ReparkSession) -> None:
     """FORMAT-04: an unknown format is refused like Spark's IllegalArgumentException."""
     _seed(spark, "fmt_bogus")
     table = f"{CATALOG}.{NS}.fmt_bogus"
-    with pytest.raises(AnalysisException, match="Invalid file format"):
+    with pytest.raises(IllegalArgumentException, match="^Invalid file format: bogus$"):
         _frame(spark).writeTo(table).option("write-format", "bogus").append()
     assert "Invalid file format" in _fixture_cell("FORMAT-04-bogus")["error"]["message"]
 
