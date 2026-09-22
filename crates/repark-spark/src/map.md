@@ -724,19 +724,6 @@ pins: rp-4-fork-repin/C-005, C-006
   `count_star_keeps_the_int64_expansion_and_its_name`,
   `int32_count_of_one_widens_without_an_int64_literal`.
   pins: ice-count-fold-1/C-001, C-002
-- `spark_rewrites/` — the token-rewrite planners of the canonicalize layer;
-  `mod.rs` carries the shared span helpers and the families below.
-  **D-5 (2026-09-21):** `create_options.rs` (wired last in `spark_literals.rs`
-  `canonical_rewrite`, with its `sql_may_have_create_options` fast-path guard)
-  rewrites the single well-formed `OPTIONS (k=v, …)` clause of a
-  `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)] USING iceberg`
-  statement into `TBLPROPERTIES` carrying each key raw and `option.`-prefixed,
-  so both spellings reach the stored property map. Values copy verbatim from the
-  source with inner literal regions spliced in; non-iceberg providers, a missing
-  `USING iceberg`, `WITH`/plain variants, malformed pairs, and DataFusion-style
-  no-eq pairs stay untouched. Cells `D-CREATE-OPTIONS`, `D-CTAS-OPTIONS`.
-  Details: [spark_rewrites/map.md](spark_rewrites/map.md).
-- `spark_rewrites/mod.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   **WO-2 xo-muse8 UNIT1 fix-b (2026-09-21):** the same pre-coercion seat now also
   widens a decimal literal compared against a FLOAT/DOUBLE expression to DOUBLE
   (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape — the float side keeps its
@@ -750,7 +737,19 @@ pins: rp-4-fork-repin/C-005, C-006
   cast into a double literal on full sessions. Signed-zero `=`/`<>`/`<`/`>=`
   outcomes still follow the float eq kernel (total order: `-0.0` distinct from
   `0.0`), a separate pre-existing divergence pinned beside the sweep.
-- `spark_rewrites.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
+- `spark_rewrites/` — the token-rewrite planners of the canonicalize layer;
+  `mod.rs` carries the shared span helpers and the families below.
+  **D-5 (2026-09-21):** `create_options.rs` (wired last in `spark_literals.rs`
+  `canonical_rewrite`, with its `sql_may_have_create_options` fast-path guard)
+  rewrites the single well-formed `OPTIONS (k=v, …)` clause of a
+  `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)] USING iceberg`
+  statement into `TBLPROPERTIES` carrying each key raw and `option.`-prefixed,
+  so both spellings reach the stored property map. Values copy verbatim from the
+  source with inner literal regions spliced in; non-iceberg providers, a missing
+  `USING iceberg`, `WITH`/plain variants, malformed pairs, and DataFusion-style
+  no-eq pairs stay untouched. Cells `D-CREATE-OPTIONS`, `D-CTAS-OPTIONS`.
+  Details: [spark_rewrites/map.md](spark_rewrites/map.md).
+- `spark_rewrites/mod.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),
   `* EXCLUDE` → `* EXCEPT`, DROP TEMPORARY, FROM-less `DELETE t WHERE` → `DELETE FROM t WHERE`,
