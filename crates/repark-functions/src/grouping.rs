@@ -696,6 +696,34 @@ mod tests {
         assert_eq!(answered, vec![0, 0, 0, 0, 1, 1, 1]);
     }
 
+    #[test]
+    fn grouping_id_accumulator_refuses_with_the_spark_message() {
+        use arrow::datatypes::{Field, Schema};
+        let schema = Schema::empty();
+        let args = AccumulatorArgs {
+            return_field: Arc::new(Field::new("grouping_id", DataType::Int64, false)),
+            schema: &schema,
+            ignore_nulls: false,
+            order_bys: &[],
+            is_reversed: false,
+            name: "grouping_id",
+            is_distinct: false,
+            exprs: &[],
+            expr_fields: &[],
+        };
+        let error = SparkGroupingId::new()
+            .accumulator(args)
+            .expect_err("the accumulator must refuse");
+        let DataFusionError::Plan(message) = error else {
+            panic!("expected a Plan refusal, got {error}");
+        };
+        assert_eq!(
+            message,
+            "[UNSUPPORTED_GROUPING_EXPRESSION] grouping()/grouping_id() can only be used \
+             with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E"
+        );
+    }
+
     #[tokio::test]
     async fn constant_accumulator_merges_cleanly() {
         let single = {
@@ -786,9 +814,7 @@ impl AggregateUDFImpl for SparkGroupingId {
     }
 
     fn accumulator(&self, _acc_args: AccumulatorArgs) -> Result<Box<dyn Accumulator>> {
-        Err(DataFusionError::Plan(
-            "grouping_id() is only supported with CUBE, ROLLUP or GROUPING SETS".to_string(),
-        ))
+        Err(unsupported_grouping_id())
     }
 
     fn state_fields(&self, _args: StateFieldsArgs) -> Result<Vec<FieldRef>> {
