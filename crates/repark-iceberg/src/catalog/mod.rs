@@ -70,8 +70,8 @@ pub use metadata_columns::{
     is_served_metadata_column, metadata_columns_user_field_names,
 };
 pub use snapshot_metadata_table::{
-    MetadataAsofMode, SnapshotMetadataTableProvider, metadata_asof_mode,
-    snapshot_scope_refusal_text,
+    MetadataAsofMode, SnapshotMetadataTableProvider, as_of_snapshot_scope_refusal,
+    metadata_asof_mode, snapshot_scope_refusal_text,
 };
 // Crate-private helpers used by listing/register still in this root and by sibling modules.
 

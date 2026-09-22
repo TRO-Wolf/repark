@@ -142,7 +142,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split syntax normalization from Iceberg operation dispatch.",
     ),
     "crates/repark-spark/src/metadata_tables.rs": (
-        1062,
+        1059,
         "Metadata-table parsing and plan construction share one module.",
         "Extract identifier resolution from metadata plan assembly.",
     ),

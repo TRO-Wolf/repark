@@ -51,6 +51,13 @@ pub fn metadata_asof_mode(metadata_type: &MetadataTableType) -> MetadataAsofMode
 }
 
 #[must_use]
+pub fn as_of_snapshot_scope_refusal(suffix: &str) -> Option<String> {
+    let metadata_type = MetadataTableType::try_from(suffix).ok()?;
+    (metadata_asof_mode(&metadata_type) == MetadataAsofMode::RefuseSnapshotScope)
+        .then(|| snapshot_scope_refusal_text(&metadata_type))
+}
+
+#[must_use]
 pub fn snapshot_scope_refusal_text(metadata_type: &MetadataTableType) -> String {
     format!(
         "Cannot select snapshot in table: {}",

@@ -8,6 +8,7 @@ use iceberg::inspect::MetadataTableType;
 use iceberg::{NamespaceIdent, TableIdent};
 
 use repark_core::CatalogRegistry;
+use repark_iceberg::catalog::as_of_snapshot_scope_refusal;
 
 use crate::catalog_ops::iceberg_err;
 
@@ -116,14 +117,10 @@ pub async fn prepare_metadata_table_sql(
         match decision {
             ResolveDecision::Skip => {}
             ResolveDecision::Rewrite(dollar) => {
-                if candidate.has_as_of {
-                    return Err(DataFusionError::Plan(format!(
-                        "time travel (VERSION/TIMESTAMP AS OF) composed with Iceberg metadata \
-                         table `{}` is not supported in v1 — query the base table with AS OF, \
-                         or the metadata table without AS OF \
-                         (docs/spark-sql-iceberg-parity.md §2.1 metadata tables)",
-                        display_path(&candidate.parts, candidate.suffix)
-                    )));
+                if candidate.has_as_of
+                    && let Some(refusal) = as_of_snapshot_scope_refusal(candidate.suffix)
+                {
+                    return Err(DataFusionError::Plan(refusal));
                 }
                 if candidate.is_write_target {
                     return Err(DataFusionError::Plan(format!(
@@ -165,8 +162,8 @@ pub async fn prepare_metadata_table_sql(
                     Token::SingleQuotedString(_) => Some('\''),
                     _ => None,
                 };
-                let replacement =
-                    dollar_ident_token(&dollar.table_name, span.suffix, original_quote);
+                let quote = span.has_as_of.then_some('"').or(original_quote);
+                let replacement = dollar_ident_token(&dollar.table_name, span.suffix, quote);
                 tokens.splice(name_index..span.end, std::iter::once(replacement));
                 break;
             }
