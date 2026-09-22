@@ -240,10 +240,10 @@ mod tests {
     }
 
     #[test]
-    fn orc_refuses_naming_the_registry_row() {
-        let error =
-            StatementWriteOptions::validate(vec![pair("write-format", "orc")]).expect_err("orc");
-        assert!(error.to_string().contains("ICE-WRITE-OPTIONS-1"));
+    fn orc_writes_naming_the_normalised_value() {
+        let options =
+            StatementWriteOptions::validate(vec![pair("write-format", "orc")]).expect("orc");
+        assert_eq!(options.write_format.as_deref(), Some("orc"));
     }
 
     #[test]
