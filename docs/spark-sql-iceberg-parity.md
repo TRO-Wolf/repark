@@ -13348,14 +13348,16 @@ field NAME.
   F-001). Read path, untouched by the write unit; fork-or-adoption attribution
   is open before any fix.
 
-### ICE-MC-FILEPOS-1 — `_file` and `_pos` answer Spark-equal; `_spec_id`, `_partition`, `_deleted` refuse `[ICE-MC-1]` — **BACKLOG 2026-09-20, IPI-20**
+### ICE-MC-FILEPOS-1 — `_file`, `_pos`, `_spec_id` answer Spark-equal; `_partition`, `_deleted` refuse `[ICE-MC-1]` — **BACKLOG 2026-09-20, IPI-20**
 
-- **repark** — the Spark door serves `_file` (the data-file path, `string`) and
-  `_pos` (the 0-based file ordinal, `bigint`) on Iceberg reads: the five
-  recorded cells answer Spark-equal and `SELECT *` keeps user columns only.
-  `_spec_id`, `_partition` and `_deleted` are not yet served and refuse with a
-  typed `AnalysisException` carrying `[ICE-MC-1]` and naming the column — never
-  the raw `No field named`. The ANSI door serves no metadata columns.
+- **repark** — the Spark door serves `_file` (the data-file path, `string`),
+  `_pos` (the 0-based file ordinal, `bigint`) and `_spec_id` (an `int`, the
+  per-file spec constant; recorded `R-MC-SPEC-ID` / `R-MC-SPEC-ID-EVOLVED`
+  answer `[[2,0],[3,0],[4,0]]`) on Iceberg reads: `SELECT *` keeps user
+  columns only. `_partition` and `_deleted` are not yet served and still
+  refuse with a typed `AnalysisException` carrying `[ICE-MC-1]` and naming
+  the column — never the raw `No field named`. The ANSI door serves no
+  metadata columns.
 - **Apache Spark** — answers the five served cells
   (`[[2,true,true],[3,true,true],[4,true,true]]`,
   `[[3]]`, `[[3]]`, `[[2,0],[3,0],[4,0]]`, `[[2,0],[3,0],[4,1]]`) and serves the
