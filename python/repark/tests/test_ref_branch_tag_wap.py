@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import PySparkException, UnsupportedOperationException
+from repark.errors import IllegalArgumentException, PySparkException, UnsupportedOperationException
 
 TABLE = "mem.ns.events"
 
@@ -178,12 +178,11 @@ def test_publish_changes_publishes_the_staged_snapshot(spark: ReparkSession) -> 
 
 def test_publish_changes_with_an_unknown_wap_id_refuses(spark: ReparkSession) -> None:
     """An unknown wap id raises the fork's bare message, with no kind prefix."""
-    with pytest.raises(PySparkException) as caught:
+    with pytest.raises(IllegalArgumentException) as caught:
         spark.sql(
             "CALL mem.system.publish_changes(table => 'ns.events', wap_id => 'nope')"
         ).to_arrow()
-    assert "Cannot apply unknown WAP ID 'nope'" in str(caught.value)
-    assert "DataInvalid" not in str(caught.value)
+    assert str(caught.value) == "Cannot apply unknown WAP ID 'nope'"
     main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
     assert sorted(main.column("id").to_pylist()) == [1]
     snapshots = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()

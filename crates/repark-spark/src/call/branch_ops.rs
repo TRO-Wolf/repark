@@ -9,6 +9,7 @@ use datafusion::sql::sqlparser::ast::{DataType as SqlDataType, Expr, Value, Valu
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::transaction::{ApplyTransactionAction, Transaction, staged_snapshot_for_wap_id};
 use iceberg::{Catalog, ErrorKind, TableIdent, table::Table};
+use repark_core::illegal_argument_error;
 use repark_iceberg::write::{SnapshotRefKind, list_snapshot_refs};
 
 use super::{CallArgs, resolve_table_ident};
@@ -269,7 +270,7 @@ pub(super) async fn execute_publish_changes(
     let wap_id = args.require_string("wap_id", 1)?;
     let (ident, table) = load_call_table(&catalog, catalog_name, &table_arg).await?;
     let staged = staged_snapshot_for_wap_id(table.metadata(), &wap_id)
-        .map_err(|error| DataFusionError::Execution(error.message().to_string()))?;
+        .map_err(|error| illegal_argument_error(error.message().to_string()))?;
     let source_snapshot_id = staged.snapshot_id();
     let tx = Transaction::new(&table);
     let action = tx.publish_changes(&wap_id);

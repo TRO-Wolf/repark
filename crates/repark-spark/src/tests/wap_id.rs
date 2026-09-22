@@ -450,14 +450,18 @@ async fn publish_changes_with_an_unknown_wap_id_raises_the_bare_message() {
     )
     .await
     .expect_err("an unknown wap id must refuse");
-    assert!(
-        matches!(&error, DataFusionError::Execution(message) if message == "Cannot apply unknown WAP ID 'nope'"),
-        "the refusal is the bare fork message, got: {error}"
-    );
-    assert!(
-        !error.to_string().contains("DataInvalid"),
-        "the kind prefix must not leak into the message: {error}"
-    );
+    let expected = "Cannot apply unknown WAP ID 'nope'";
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected an External marker, got {error:?}");
+    };
+    let marker = inner
+        .downcast_ref::<repark_core::IllegalArgumentMarker>()
+        .expect("expected an IllegalArgumentMarker");
+    assert_eq!(marker.0, expected);
+    match repark_core::engine_err(error) {
+        repark_core::Error::IllegalArgument(message) => assert_eq!(message, expected),
+        other => panic!("expected IllegalArgument, got {other:?}"),
+    }
     assert_eq!(
         ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![1],
