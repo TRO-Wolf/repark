@@ -1148,15 +1148,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   in `dml.rs`; only that leaf uses them.
   See `task/g3e8-guard-ledger.md`.
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** the Spark-door
-  `_file` / `_pos` pins over a two-append plus one-MoR-delete seed.
+  `_file` / `_pos` / `_spec_id` pins over a two-append plus one-MoR-delete seed.
   `file_and_pos_answer_spark` replays the four recorded cells verbatim
   (`R-MC-FILE`, `R-MC-FILE-DISTINCT`, `R-MC-POS`, and the `count(*)` filter
   `R-MC-FILE-FILTER` that plans an empty projection);
   `pos_is_the_file_position_after_a_merge_on_read_delete` pins `R-MC-POS-MOR`
   (a survivor keeps its file ordinal); `select_star_excludes_every_served_metadata_column`
-  pins user-columns-only `*` plus the `*, _file` / `*, _pos` compositions;
+  pins user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id` compositions;
   `unserved_metadata_columns_refuse_with_a_typed_error` pins the `[ICE-MC-1]` refusal of
-  `_spec_id` / `_partition` / `_deleted`, never the raw `No field named`, and asserts
+  `_partition` / `_deleted`, never the raw `No field named`, and asserts
   the message names the requested column (r2 V-001); and
   `served_names_fold_and_composed_shapes_refuse` pins the `_POS` fold, the backtick and
   aliased spellings, the backtick unserved refusal (also naming the column), and the
@@ -1165,7 +1165,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the table's own `files.file_path` (r2 V-003, C-010); and
   `file_and_row_id_answer_together_on_a_format_v3_table` pins the metadata-before-lineage
   stage order by serving `_file` + `_row_id` together on a format-v3 table (r2 V-002, C-009).
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010
+  **WO-R2 (2026-09-22):** `spec_id_answers_zero_on_a_single_spec_table` pins `R-MC-SPEC-ID`
+  (`[[2,0],[3,0],[4,0]]`, Int32); `spec_id_reports_each_rows_own_spec_after_evolution` pins
+  the `R-MC-SPEC-ID-EVO` spec-id half (`[(1,0),(2,1)]`); and
+  `served_spec_id_beside_an_unserved_column_names_the_unserved_one` pins that the composed
+  refusal names `_partition`, not `_spec_id`.
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015, C-016, C-017, C-018
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

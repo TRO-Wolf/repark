@@ -372,12 +372,15 @@ Source comments retain only API and safety contracts; implementation narration i
   this provider when a query names the columns.
   pins: v3-4-serve-lineage-columns/C-002, C-017, C-019, C-020 V3-COV pins in this file: a scan column left behind by a widening ALTER promotes instead of failing (V3-COV-2); the projection is resolved once per scan schema and reused for every batch; a scan that lost a lineage column names it rather than rebuilding a short batch.
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `MetadataColumnsTableProvider`
-  serves `_file` (Utf8) and `_pos` (Int64) on current-snapshot reads by handing the
+  serves `_file` (Utf8), `_pos` (Int64) and `_spec_id` (Int32) on current-snapshot reads by handing the
   projected names straight to the fork scan, so the layer serves whatever the fork serves
   and nothing else. The served set is the hard-coded `METADATA_COLUMN_NAMES`; the
-  hard-coded `UNSERVED_METADATA_COLUMN_NAMES` names the three PR-2 columns. An empty
+  hard-coded `UNSERVED_METADATA_COLUMN_NAMES` names the two remaining PR-2 columns. An empty
   projection (a bare `count(*)`) scans empty and keeps the row count instead of refusing.
   v3 tables also advertise the two lineage columns (lineage wins for those two).
+  **WO-R2 (2026-09-22):** the served const went 2→3 with the Int32 non-null `_spec_id`
+  field (`RESERVED_FIELD_ID_SPEC_ID`); the scan passthrough is unchanged.
+  pins: ice-metadata-cols-1/C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005
 - `metadata_projection.rs` — **retired at RP-5** (fork F-8 / R169 / R170). The fork honors
   metadata-table `projection` and lists catalog entries only. Pins remain in
@@ -430,7 +433,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Pick a FileIO backend by location scheme | `file_io_for_location` / `storage_factory_for_location` in `location.rs` |
 | Read / write a namespace's warehouse location | `resolve_namespace_location` / `mirror_namespace_location_keys` in `location.rs` |
 | Serve `_row_id` / `_last_updated_sequence_number` on a v3 read | `lineage_columns.rs` (`LineageColumnsTableProvider`); SQL doors call `repark_core::prepare_lineage_sql` |
-| Serve `_file` / `_pos` on a Spark-door read | `metadata_columns.rs` (`MetadataColumnsTableProvider`); the Spark door calls `repark_core::prepare_metadata_column_sql` |
+| Serve `_file` / `_pos` / `_spec_id` on a Spark-door read | `metadata_columns.rs` (`MetadataColumnsTableProvider`); the Spark door calls `repark_core::prepare_metadata_column_sql` |
 | Change what `SHOW TABLES` / `information_schema` enumerates | fork `IcebergSchemaProvider::table_names` at pin `00cdde0` (F-8); engine shim retired RP-5 |
 | Change credential handling | not here — AWS SDK default chain *inside the fork* |
 

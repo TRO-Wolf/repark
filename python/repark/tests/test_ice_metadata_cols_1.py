@@ -1,9 +1,9 @@
-"""IPI-20 PR-1 — the Spark door serves ``_file`` and ``_pos`` on Iceberg reads.
+"""IPI-20 PR-1 — the Spark door serves ``_file``, ``_pos`` and ``_spec_id`` on reads.
 
-Five inventory cells replayed verbatim: ``R-MC-FILE``, ``R-MC-FILE-DISTINCT``,
-``R-MC-POS`` and ``R-MC-FILE-FILTER`` over a two-append plus one-delete seed,
-and ``R-MC-POS-MOR`` over the same seed with a merge-on-read delete. The three
-columns the fork pin cannot serve yet — ``_spec_id``, ``_partition``,
+Six inventory cells replayed verbatim: ``R-MC-FILE``, ``R-MC-FILE-DISTINCT``,
+``R-MC-POS``, ``R-MC-FILE-FILTER`` and ``R-MC-SPEC-ID`` over a two-append plus
+one-delete seed, and ``R-MC-POS-MOR`` over the same seed with a merge-on-read
+delete. The two columns the fork pin cannot serve yet — ``_partition``,
 ``_deleted`` — refuse typed with ``[ICE-MC-1]`` instead of the raw planner
 error. ``SELECT *`` keeps user columns only.
 
@@ -12,10 +12,11 @@ Oracle: the run-25/26 inventory harness cells recorded against live PySpark
 (``/tmp/oc-worker/nc-inventory/matrix.json``), whose Spark answers the packet
 carries as ``[[2,true,true],[3,true,true],[4,true,true]]`` (``R-MC-FILE``),
 ``[[3]]`` (``R-MC-FILE-DISTINCT``), ``[[3]]`` (``R-MC-FILE-FILTER``),
-``[[2,0],[3,0],[4,0]]`` (``R-MC-POS``) and ``[[2,0],[3,0],[4,1]]``
-(``R-MC-POS-MOR``).
+``[[2,0],[3,0],[4,0]]`` (``R-MC-POS``), ``[[2,0],[3,0],[4,1]]``
+(``R-MC-POS-MOR``) and ``[[2,0],[3,0],[4,0]]`` (``R-MC-SPEC-ID``).
 
-pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-015, C-016, C-017, C-018
 """
 
 from __future__ import annotations
@@ -150,7 +151,7 @@ def test_pos_survives_merge_on_read_delete(spark: Any) -> None:
 def test_star_excludes_served_metadata_columns(spark: Any) -> None:
     """Cell ``R-MC-STAR-EXCLUDES``: ``*`` stays user columns; explicit names compose.
 
-    pins: ice-metadata-cols-1/C-006
+    pins: ice-metadata-cols-1/C-006, C-017
     """
     table = _seeded(spark, "t_star")
     assert [name for name, _ in _schema(spark, f"SELECT * FROM {table}")] == [
@@ -170,21 +171,41 @@ def test_star_excludes_served_metadata_columns(spark: Any) -> None:
         "cat",
         "_pos",
     ]
+    assert [name for name, _ in _schema(spark, f"SELECT *, _spec_id FROM {table}")] == [
+        "id",
+        "data",
+        "cat",
+        "_spec_id",
+    ]
+
+
+def test_spec_id_is_zero_on_a_single_spec_table(spark: Any) -> None:
+    """Cell ``R-MC-SPEC-ID``: every live row reports spec 0 as ``int``.
+
+    pins: ice-metadata-cols-1/C-015
+    """
+    table = _seeded(spark, "t_spec_id")
+    assert _schema(spark, f"SELECT id, _spec_id FROM {table}") == [
+        ("id", "bigint"),
+        ("_spec_id", "int"),
+    ]
+    assert _rows(spark, f"SELECT id, _spec_id FROM {table}") == [[2, 0], [3, 0], [4, 0]]
 
 
 def test_unserved_metadata_columns_refuse_typed(spark: Any) -> None:
-    """``_spec_id`` / ``_partition`` / ``_deleted`` refuse ``[ICE-MC-1]``, never raw.
+    """``_partition`` / ``_deleted`` refuse ``[ICE-MC-1]``, never raw.
 
-    pins: ice-metadata-cols-1/C-007
+    pins: ice-metadata-cols-1/C-007, C-018
     """
     table = _seeded(spark, "t_refuse")
-    for column in ["_spec_id", "_partition", "_deleted"]:
+    for column in ["_partition", "_deleted"]:
         with pytest.raises(AnalysisException) as caught:
             spark.sql(f"SELECT {column} FROM {table}").collect()
         text = str(caught.value)
         assert "[ICE-MC-1]" in text
         assert "No field named" not in text
         assert column in text
+        assert "this layer serves (_file, _pos, _spec_id)" in text
 
 
 def test_file_and_row_id_answer_together_on_v3(spark_v3: Any) -> None:
