@@ -70,6 +70,10 @@ mod tests {
             "{text}"
         );
         assert!(text.contains("SQLSTATE: KD000"), "{text}");
+        assert!(
+            text.contains("Cannot safely cast `id` \"STRING\" to \"BIGINT\""),
+            "{text}"
+        );
     }
 
     #[test]

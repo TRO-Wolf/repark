@@ -99,9 +99,10 @@ fn assert_cannot_safely_cast(err: &str) {
         "{err}"
     );
     assert!(err.contains("SQLSTATE: KD000"), "{err}");
-    assert!(err.contains("`id`"), "{err}");
-    assert!(err.contains("\"STRING\""), "{err}");
-    assert!(err.contains("\"BIGINT\""), "{err}");
+    assert!(
+        err.contains("Cannot safely cast `id` \"STRING\" to \"BIGINT\""),
+        "{err}"
+    );
 }
 
 #[tokio::test]
