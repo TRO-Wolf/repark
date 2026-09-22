@@ -1,6 +1,7 @@
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Result, TableIdent};
 
+#[allow(clippy::missing_errors_doc)]
 pub async fn set_table_location(
     catalog: &dyn Catalog,
     ident: &TableIdent,
