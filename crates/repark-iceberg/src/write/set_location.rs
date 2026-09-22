@@ -1,12 +1,6 @@
-//! `ALTER TABLE … SET LOCATION` — the table-metadata location move on the fork's public API.
-
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Result, TableIdent};
 
-/// Move a table's metadata location: the commit that follows writes the next table
-/// metadata under the NEW location. Existing data and metadata files are not moved.
-/// # Errors
-/// Propagates any [`iceberg::Error`] from loading the table or committing the transaction.
 pub async fn set_table_location(
     catalog: &dyn Catalog,
     ident: &TableIdent,
