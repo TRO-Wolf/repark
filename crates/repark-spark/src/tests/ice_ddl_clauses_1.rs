@@ -611,8 +611,15 @@ async fn set_location_moves_the_metadata_location_and_the_next_commit_lands_unde
         "CREATE TABLE ice.sales.loc (id BIGINT) USING iceberg",
     )
     .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.loc VALUES (1)").await;
     let old_location = wh.path().join("sales").join("loc");
     let new_location = wh.path().join("moved").join("loc");
+    let pre_move = parquet_files(&old_location);
+    assert_eq!(
+        pre_move.len(),
+        1,
+        "the pre-move INSERT must write exactly one data file"
+    );
     run(
         &ctx,
         &catalogs,
@@ -622,7 +629,16 @@ async fn set_location_moves_the_metadata_location_and_the_next_commit_lands_unde
         ),
     )
     .await;
-    run(&ctx, &catalogs, "INSERT INTO ice.sales.loc VALUES (1)").await;
+    assert_eq!(
+        parquet_files(&old_location),
+        pre_move,
+        "the move must leave the pre-move data file at its old path"
+    );
+    assert!(
+        parquet_files(&new_location).is_empty(),
+        "the move must not copy any data file under the new location"
+    );
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.loc VALUES (2)").await;
 
     let handle = catalog_handle(&catalogs, "ice").unwrap();
     let table = handle
@@ -639,24 +655,46 @@ async fn set_location_moves_the_metadata_location_and_the_next_commit_lands_unde
     );
     assert_eq!(
         metadata_json_files(&old_location).len(),
-        1,
-        "the original metadata file is never moved"
+        2,
+        "the CREATE and the pre-move INSERT keep their metadata under the old location"
     );
     assert_eq!(
         metadata_json_files(&new_location).len(),
         2,
-        "the move commit and the next metadata commit (the INSERT) both land under the new \
-         location"
+        "the move commit and the next metadata commit (the post-move INSERT) both land under \
+         the new location"
     );
+    let post_move = parquet_files(&new_location);
     assert_eq!(
-        parquet_files(&new_location).len(),
+        post_move.len(),
         1,
         "the post-move INSERT writes its data file under the new location"
     );
-    assert_eq!(
-        rows(&ctx, &catalogs, "SELECT id FROM ice.sales.loc").await,
-        1
+    assert!(
+        post_move[0].file_name() != pre_move[0].file_name(),
+        "the post-move data file must be a new file, not the pre-move file relocated"
     );
+    assert_eq!(
+        parquet_files(&old_location),
+        pre_move,
+        "the pre-move data file must still sit at its old path after the post-move INSERT"
+    );
+    let batches = execute(&ctx, &catalogs, "SELECT id FROM ice.sales.loc ORDER BY id")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let mut ids = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Int64Array>()
+            .unwrap();
+        ids.extend((0..column.len()).map(|index| column.value(index)));
+    }
+    assert_eq!(ids, vec![1, 2]);
 }
 
 #[tokio::test]
