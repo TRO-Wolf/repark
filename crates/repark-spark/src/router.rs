@@ -843,6 +843,19 @@ async fn try_preparse_intercepts(
         };
         return Some(crate::view_ddl::execute::execute_alter_view(ctx, catalogs, statement).await);
     }
+    if let Some(parsed) = crate::view_ddl::parse::try_parse_show_tblproperties(sql) {
+        match parsed {
+            Err(error) => return Some(Err(error)),
+            Ok(statement) => {
+                if let Some(result) =
+                    crate::view_ddl::execute::execute_show_tblproperties(ctx, catalogs, statement)
+                        .await
+                {
+                    return Some(result);
+                }
+            }
+        }
+    }
     if let Some(parsed) = crate::view_ddl::parse::try_parse_show_views(sql) {
         let statement = match parsed {
             Ok(statement) => statement,
