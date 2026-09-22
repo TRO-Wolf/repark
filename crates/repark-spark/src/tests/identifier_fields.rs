@@ -402,3 +402,78 @@ async fn set_identifier_fields_refuses_non_primitive_columns() {
         "the refused SET must commit nothing"
     );
 }
+
+#[tokio::test]
+async fn set_identifier_fields_replaces_the_previous_set() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.reseat (id BIGINT NOT NULL, k STRING NOT NULL) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.reseat SET IDENTIFIER FIELDS id, k",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.reseat SET IDENTIFIER FIELDS id",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "reseat").await;
+    let id = field_of(&table, "id");
+    assert_eq!(
+        identifier_ids(&table),
+        HashSet::from([id.id]),
+        "a second SET must replace the identifier set, not union with it"
+    );
+}
+
+#[tokio::test]
+async fn set_and_drop_identifier_fields_use_dotted_names_for_nested_fields() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.reqstruct (s STRUCT<a: BIGINT NOT NULL> NOT NULL, t STRUCT<b: \
+         BIGINT NOT NULL> NOT NULL) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.reqstruct SET IDENTIFIER FIELDS s.a, t.b",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "reqstruct").await;
+    let a = field_of(&table, "s.a");
+    let b = field_of(&table, "t.b");
+    assert_eq!(
+        identifier_ids(&table),
+        HashSet::from([a.id, b.id]),
+        "dotted SET names must commit the nested field ids"
+    );
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.reqstruct DROP IDENTIFIER FIELDS s.a",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "reqstruct").await;
+    let b = field_of(&table, "t.b");
+    let s = field_of(&table, "s");
+    let t = field_of(&table, "t");
+    assert_eq!(
+        identifier_ids(&table),
+        HashSet::from([b.id]),
+        "dropping s.a must leave the nested remainder t.b committed"
+    );
+    assert!(s.required, "s must stay required");
+    assert!(t.required, "t must stay required");
+}

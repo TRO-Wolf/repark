@@ -130,7 +130,7 @@ fn resolve_identifier_names(table: &Table, ddl: &IdentifierFieldsDdl) -> Result<
         let (ancestors, field) =
             find_identifier_field(schema, name).ok_or_else(|| unknown_identifier_field(name))?;
         validate_identifier_candidate(field, &ancestors)?;
-        names.push(field.name.clone());
+        names.push(name.clone());
     }
     Ok(names)
 }
