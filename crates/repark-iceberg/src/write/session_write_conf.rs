@@ -138,6 +138,8 @@ impl SessionWriteView {
             level: statement.level.clone().or_else(|| self.level.clone()),
             target_file_size_bytes: statement.target_file_size_bytes,
             fork_insert_dictionary_rule: statement.fork_insert_dictionary_rule,
+            write_format: statement.write_format.clone(),
+            delete_format: statement.delete_format.clone(),
         }
     }
 }

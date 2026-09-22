@@ -36,6 +36,8 @@ pub struct WriterStagingOverrides {
     pub level: Option<String>,
     pub target_file_size_bytes: Option<u64>,
     pub fork_insert_dictionary_rule: bool,
+    pub write_format: Option<String>,
+    pub delete_format: Option<String>,
 }
 
 impl WriterStagingOverrides {
