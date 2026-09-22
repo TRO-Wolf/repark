@@ -3038,8 +3038,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   non-rewrite pins (SELECT/INSERT/DROP VIEW/script), bare insertInto + MERGE e2e;
   **octo C2 Fixer:** quoted-dotted segment rejoin pin (C2-SEC-001),
   `listTables("spark_catalog.default")` alias (C2-Q-002), `table()` temp-view prefer
-  e2e over catalog shadow (C2-Q-003), bare `read.option(snapshot-id).table` resolve
-  (C2-Q-001);
+  e2e over catalog shadow (C2-Q-003), bare `read.option(versionAsOf).table` resolve
+  (C2-Q-001; IPI-23 2026-09-22: the `snapshot-id` spelling now refuses like Spark);
   **octo C3 Fixer:** `test_save_unsupported_format_loud` requires
   `DATA_SOURCE_NOT_FOUND` (not format-name-only OR) — R1 retargeted to `orc`;
   **octo C4 Fixer:** `test_format_iceberg_load_does_not_prefer_temp_view` (C4-L-001),
@@ -5246,6 +5246,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   CTE AS OF; snapshot-id i64 overflow → AnalysisException (octo C7); triple mutex pin
   (octo C8). Arrow multiset **and** schema pins via
   `to_arrow`. Fork cites in module docstring (pin `4723104b`).
+  **IPI-23 (2026-09-22):** the legacy `snapshot-id` / `as-of-timestamp` / `tag` reader pins
+  refuse with Spark 4.1.2's `IllegalArgumentException` texts (precedence snapshot-id,
+  as-of-timestamp, tag) instead of answering rows — the mutex/overflow/case pins now assert
+  the refusal, the temp-view pin rides `versionAsOf`, and new pins cover each message, the
+  precedence pairs, the `.table()` entry, and the near misses (`branch`, `versionAsOf` with a
+  tag name, `timestampAsOf`, lone `start-snapshot-id`, ignored `split-size` and underscore
+  `snapshot_id`).
 - `test_facade_polish.py` — aggregate **compound display naming** (live-recorded PySpark 4.1.2
   matrix: `sum((x + 1))`, `sum(CAST(x AS DOUBLE))`, `sum(abs(x))` **incl. negatives**, `sum(x AS y)`,
   reflected-op commuting `2 * x` → `sum((x * 2))` + float-literal `2.0` (2026-07-21 review pins;
@@ -5262,6 +5269,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-TT-RESOLVE-1 (2026-09-19):** `test_snapshot_id_option_parses_int_and_range` (legacy
   pin parsing) and `test_version_asof_options_forward_raw_without_engine` (built-ins forward
   raw, legacy junk still loud). pins: ice-tt-resolve-1/C-004
+  **IPI-23 (2026-09-22):** the `snapshot-id` legs of the semantic-gate pin and
+  `test_version_asof_options_forward_raw_without_engine` now assert the Spark 4.1.2 refusal
+  text; the `_parse_*` helper pins are unchanged.
 - `test_group_agg.py` — **U2:** signed-zero collect_set fixture uses `createDataFrame`
   (SQL `-0.0` is DECIMAL 0, no IEEE sign bit). **Group E (E1/E2/E7) + Group J**: the aggregation family, pinned to real
   (2026-07-22 review: ruff-formatted — the unit left the format gate red at tip)

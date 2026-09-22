@@ -188,9 +188,14 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   pins (`crates/repark-spark/src/tests/time_travel.rs`,
   `python/repark/tests/test_time_travel.py::test_sql_timestamp_as_of`).
 - **Rationale** — FIXED 2026-09-19 (ICE-TT-RESOLVE-1 round 1, IPI-01 + IPI-02). TRIGGER: none, the
-  fix is engine-side. IPI-18 stays open: the legacy `snapshot-id` / `as-of-timestamp` /
-  `branch` / `tag` pins keep their behavior when used alone and are in scope only where the
-  fixture shows them.
+  fix is engine-side. IPI-18 stays open: the legacy `snapshot-id` / `as-of-timestamp` / `tag`
+  reader options refuse like Spark 4.1.2 (measured 2026-09-22, Iceberg 1.10) instead of
+  answering rows — ``Time travel option `snapshot-id` is no longer supported, use Spark
+  built-in `versionAsOf` instead``, ``Time travel option `as-of-timestamp` (in millis) is no
+  longer supported, use Spark built-in `timestampAsOf` instead (properly formatted
+  timestamp)``, ``Time travel option `tag` is no longer supported, use Spark built-in
+  `versionAsOf` instead`` — while `branch` keeps its behavior when used alone. The native
+  `read_iceberg_table(snapshot_id=…, tag=…)` kwargs are unchanged.
   **Residue (ruling Q-24c-1, 2026-09-19):** every string reaches a timestamp through the
   engine's `CAST(<string> AS TIMESTAMP)`, which lacks Spark's `stringToTimestamp` grammar.
   The reader's `timestampAsOf` and SQL `TIMESTAMP AS OF` therefore refuse
