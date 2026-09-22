@@ -105,6 +105,9 @@ Two things change on v3 and neither is tunable from here:
 `remove_orphan_files` cutoffs, so a test can drive all three from one fake reading sequence
 instead of timing the box.
 
+**IPI-30 (2026-09-22):** the `remove_orphan_files` step passes `dry_run => true` explicitly —
+the step stays a listing, because Spark's default deletes.
+
 `run_maintenance_step` still takes `capture_refusal` for a CALL that is expected to refuse
 (the migrate pin). On v3, `rewrite_position_delete_files` now runs and returns four zeros,
 so the sequence no longer arms capture for it. Any refusal on v2, and any other v3

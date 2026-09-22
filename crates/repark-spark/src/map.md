@@ -454,8 +454,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the
   fork's maintenance actions; the shared `illegal_argument` helper maps
   procedure-layer validations to `IllegalArgumentException`). Each
-  preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
-  `dry_run` to true, and refuses shared fallback roots; on a `ServiceManagedLocation`
+  preserves Spark's result schema and count sources. Orphan removal takes Spark's defaults
+  (a bare call deletes with `older_than` at now minus 3 days), accepts Spark's optional
+  arguments except `file_list_view`, and refuses shared fallback roots; on a `ServiceManagedLocation`
   catalog (the `s3tables` kind) it refuses before any IO — table buckets answer
   `ListObjectsV2` 405 — naming the service's `unreferencedFileRemoval` maintenance as the
   remedy (**ORPHAN-S3TABLES-1, 2026-09-12**); rewrite-position-delete returns Spark's
