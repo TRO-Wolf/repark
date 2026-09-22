@@ -35,6 +35,10 @@ declines it (a dated ruling in the intake, then the archive).
   rows found and fixed; container accessors a draft hand-over.
 - [night-report-2026-09-20-25e.md](night-report-2026-09-20-25e.md) — **run 25e (the plan packets):** thirteen
   execution packets for the large parity units, 222 cells; four units found to need no fork work.
+- [s3-path-write-1-5-1.md](s3-path-write-1-5-1.md) — **card S3-PATH-WRITE-1 (2026-09-22, v1.5.1, owner ruling):**
+  plain Parquet, CSV and JSON path writes to `s3://` — reads reach S3, Iceberg tables on S3 write, but the
+  path writer is a local staging-and-rename protocol; step 0 is a recorded Spark oracle, then six design
+  questions ruled Rust-first, one day lane, no fork work.
 - [ice-streaming-1-6.md](ice-streaming-1-6.md) — **card ICE-STREAMING (2026-09-19, v1.6.0, owner ruling C-1):**
   structured streaming read and write of Iceberg tables leaves the v1.5.0 parity gate (3 inventory cells, IPI-47) and
   is scheduled with the connectors minor; step 0 is a recorded Spark oracle, then six design questions to rule.
