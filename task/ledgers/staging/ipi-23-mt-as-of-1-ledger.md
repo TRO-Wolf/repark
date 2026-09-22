@@ -92,7 +92,7 @@ partitions `x` (3 records) and `y` (1 record).
 | `uvx ruff@0.15.22 format --check .` | exit 0 (1130 files formatted) |
 | `uvx ruff@0.15.22 check .` | exit 0 |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xo55-mt origin/main HEAD` | exit 0 (`hits=0`) |
-| `.venv/bin/python -m pytest -q python/repark/tests/test_ice_mt_as_of_1.py python/repark/tests/test_metadata_tables.py` | `24 passed in 3.10s` |
+| `.venv/bin/python -m pytest -q python/repark/tests/test_ice_mt_as_of_1.py python/repark/tests/test_metadata_tables.py` | `25 passed in 2.86s` |
 
 ## COVERAGE_ATTESTATION
 
