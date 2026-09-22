@@ -232,13 +232,11 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
     let format_version = table.metadata().format_version();
     if format_version < FormatVersion::V2 {
         return Err(DataFusionError::NotImplemented(format!(
-            "merge-on-read MERGE INTO writes Parquet position deletes on V2 and deletion vectors \
+            "merge-on-read MERGE INTO writes position deletes on V2 and deletion vectors \
              on V3 (this table is {format_version:?}; V1 has no delete files) — use \
              write.merge.mode = 'copy-on-write' instead"
         )));
     }
-    // pins: mw-9-delete-granularity/C-004 — refuse unknown granularity BEFORE any data write
-    // so a MATCHED UPDATE cannot orphan parquet (same class as the V2/format gate above).
     crate::write::position_delete::parse_delete_granularity(
         table
             .metadata()

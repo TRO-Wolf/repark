@@ -78,9 +78,6 @@ pub(crate) fn parse_delete_granularity(raw: Option<&str>) -> Result<DeleteGranul
     )))
 }
 
-/// Write real Parquet position-delete file(s) for `pairs`, each stamped with the `(spec_id, partition)`
-/// # Errors
-/// Returns a DataFusion error if the writer cannot be built or a pair is not live in the snapshot.
 pub(crate) async fn write_position_deletes(
     table: &Table,
     pairs: &[PositionDeletePair],
