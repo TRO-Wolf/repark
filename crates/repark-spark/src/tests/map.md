@@ -1166,7 +1166,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (a survivor keeps its file ordinal); `select_star_excludes_every_served_metadata_column`
   pins user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id` compositions;
   `unserved_metadata_columns_refuse_with_a_typed_error` pins the `[ICE-MC-1]` refusal of
-  `_partition` / `_deleted`, never the raw `No field named`, and asserts
+  `_deleted`, never the raw `No field named`, and asserts
   the message names the requested column (r2 V-001); and
   `served_names_fold_and_composed_shapes_refuse` pins the `_POS` fold, the backtick and
   aliased spellings, the backtick unserved refusal (also naming the column), and the
@@ -1179,7 +1179,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`[[2,0],[3,0],[4,0]]`, Int32); `spec_id_reports_each_rows_own_spec_after_evolution` pins
   the `R-MC-SPEC-ID-EVO` spec-id half (`[(1,0),(2,1)]`); and
   `served_spec_id_beside_an_unserved_column_names_the_unserved_one` pins that the composed
-  refusal names `_partition`, not `_spec_id`.
+  refusal names `_deleted`, not `_spec_id`.
   **WO-R3 (2026-09-22):** `partition_struct_answers_spark` pins `R-MC-PARTITION`
   (`[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]`, nullable struct);
   `partition_is_null_on_an_unpartitioned_table` pins `R-MC-PARTITION-UNPART`

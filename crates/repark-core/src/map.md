@@ -849,7 +849,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `prepare_metadata_column_sql`
   rewrites queries that name `_file` / `_pos` / `_spec_id` onto a `MetadataColumnsTableProvider` temp
   view (qualified/aliased FROM, unquoted case-fold, schema-order `*` expand serves user
-  columns only). `_partition` / `_deleted` refuse `[ICE-MC-1]` naming the
+  columns only). `_deleted` refuses `[ICE-MC-1]` naming the
   column — unserved-and-declared at the fork pin, never the raw `No field named`. Only the
   Spark door calls it; the ANSI door does not serve metadata columns in this unit.
   **WO-R2 (2026-09-22):** both refusal strings advertise the served three; a served

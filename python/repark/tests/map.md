@@ -7651,7 +7651,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   merge-on-read twin, where the survivor keeps its file ordinal); the star pin
   holds user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id`
   compositions; and the refusal pin holds the typed `[ICE-MC-1]` `AnalysisException`
-  for `_partition` / `_deleted`, never the raw `No field named`, with the column
+  for `_deleted`, never the raw `No field named`, with the column
   name asserted per column (r2 V-001). The v3 twin serves `_file` + `_row_id`
   together, pinning the metadata-before-lineage stage order (r2 V-002, C-009); and
   the identity twin pins every live `_file` against the table's `files.file_path`

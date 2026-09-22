@@ -375,7 +375,7 @@ Source comments retain only API and safety contracts; implementation narration i
   serves `_file` (Utf8), `_pos` (Int64) and `_spec_id` (Int32) on current-snapshot reads by handing the
   projected names straight to the fork scan, so the layer serves whatever the fork serves
   and nothing else. The served set is the hard-coded `METADATA_COLUMN_NAMES`; the
-  hard-coded `UNSERVED_METADATA_COLUMN_NAMES` names the two remaining PR-2 columns. An empty
+  hard-coded `UNSERVED_METADATA_COLUMN_NAMES` names the one remaining column, `_deleted`. An empty
   projection (a bare `count(*)`) scans empty and keeps the row count instead of refusing.
   v3 tables also advertise the two lineage columns (lineage wins for those two).
   **WO-R2 (2026-09-22):** the served const went 2→3 with the Int32 non-null `_spec_id`

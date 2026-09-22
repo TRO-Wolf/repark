@@ -64,8 +64,8 @@ pins: rp-4-fork-repin/C-005, C-006
   UPDATE/DELETE are Spark-equal. V3-7: MERGE keeps `_row_id`; subquery-WHERE DML still
   refuses `V3-COW-1`. **ICE-METADATA-COLS-1 (2026-09-20):** ahead of the lineage rewrite,
   `prepare_metadata_column_sql` pins `_file` / `_pos` / `_spec_id` reads onto a metadata
-  temp provider (`MetadataColumnPins` released with the other pins); `_partition` /
-  `_deleted` refuse `[ICE-MC-1]`.
+  temp provider (`MetadataColumnPins` released with the other pins); `_deleted`
+  refuses `[ICE-MC-1]`.
   **WO-R3 (2026-09-22):** the pins carry `_partition` too (a NULLABLE union struct); only
   `_deleted` refuses `[ICE-MC-1]`.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,

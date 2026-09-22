@@ -1406,7 +1406,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [ice-metadata-cols-1-ledger.md](ice-metadata-cols-1-ledger.md) —
   **ICE-METADATA-COLS-1 (2026-09-20), done:** IPI-20 PR-1 — the Spark door
   serves `_file` / `_pos` / `_spec_id` (six recorded cells verbatim on two harnesses,
-  star stays user columns) while `_partition` / `_deleted` refuse typed
+  star stays user columns) while `_deleted` refuses typed
   `[ICE-MC-1]`; registry row `ICE-MC-FILEPOS-1` filed BACKLOG; the A-6
   `pos`/`file_path` test defers on a pin-measured fork name hijack; lane gate
   `CB=0 R=0 T=0 U=0 L=0`. WO-R1 (2026-09-21) merged in as C-011..C-014: the
