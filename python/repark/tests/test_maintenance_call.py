@@ -15,6 +15,7 @@ Fork pin ``4723104b``:
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -278,29 +279,33 @@ def test_register_table_adopts_and_returns_spark_columns(
     assert _arrow_ids(adopted) == [1]
 
 
-def test_remove_orphan_files_requires_an_explicit_older_than(spark: ReparkSession) -> None:
-    """MW-3 / registry row ORPHAN-1.
-
-    Spark defaults ``older_than`` to ``now - 3 days`` and runs; this engine refuses. The
-    procedure deletes files with no rollback, so the most dangerous argument must not be the one
-    the caller never typed.
-    """
-    with pytest.raises(
-        (UnsupportedOperationException, PySparkException),
-        match=r"requires an explicit `older_than`",
-    ):
-        spark.sql("CALL mem.system.remove_orphan_files(table => 'ns.events')")
+def _plant_orphan(table_dir: Path, name: str, age_days: float) -> Path:
+    """Write one unreferenced file into the table's data directory, aged ``age_days`` old."""
+    data_dir = table_dir / "data"
+    assert data_dir.is_dir(), f"a fresh table must carry a data directory under {table_dir}"
+    path = data_dir / name
+    path.write_bytes(b"not really parquet")
+    aged = time.time() - age_days * 24 * 60 * 60
+    os.utime(path, (aged, aged))
+    return path
 
 
-def test_remove_orphan_files_dry_run_is_the_default(spark: ReparkSession, tmp_path: Path) -> None:
-    """MW-3 / registry row ORPHAN-2.
+def _orphan_names(result: pa.Table) -> set[str]:
+    """The file names of an orphan listing, without their directory prefix."""
+    return {
+        Path(location).name for location in result.column("orphan_file_location").to_pylist()
+    }
 
-    Spark's ``dry_run`` defaults to false and DELETES. This engine defaults it to true. The
-    result shape is Spark's either way: one row per orphan, ``orphan_file_location`` a
-    non-nullable string, measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.
 
-    A table with no orphans lists none — the zero-row control that proves the column shape is
-    real rather than an artefact of the fixture.
+def test_remove_orphan_files_defaults_older_than_to_three_days(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A bare call lists with Spark's ``older_than`` default of now minus three days.
+
+    The planted 10-day-old orphan is returned and deleted; the planted 1-day-old orphan is
+    kept. Registry rows ORPHAN-1/ORPHAN-2 (retired 2026-09-22, Spark parity).
+
+    pins: ipi-30-orphan-1/C-001, C-002
     """
     owned = tmp_path / "owned"
     spark.sql(f"CREATE NAMESPACE mem.owned LOCATION '{owned}'")
@@ -308,15 +313,47 @@ def test_remove_orphan_files_dry_run_is_the_default(spark: ReparkSession, tmp_pa
         f"CREATE TABLE mem.owned.events USING iceberg TBLPROPERTIES ({COW}) "
         "AS SELECT 1 AS id, 'a' AS name"
     )
-    older_than_ms = int(time.time() * 1000) - 2 * 24 * 60 * 60 * 1000
-    result = spark.sql(
-        "CALL mem.system.remove_orphan_files("
-        f"table => 'owned.events', older_than => {older_than_ms})"
-    ).to_arrow()
+    table_dir = owned / "events"
+    old = _plant_orphan(table_dir, "orphan-old.parquet", 10)
+    young = _plant_orphan(table_dir, "orphan-young.parquet", 1)
+    result = spark.sql("CALL mem.system.remove_orphan_files(table => 'owned.events')").to_arrow()
     assert _schema_names(result) == ["orphan_file_location"]
     assert result.schema.field("orphan_file_location").type == pa.string()
     assert not result.schema.field("orphan_file_location").nullable
-    assert result.num_rows == 0
+    assert _orphan_names(result) == {"orphan-old.parquet"}
+    assert not old.exists()
+    assert young.exists()
+    live = spark.sql("SELECT id FROM mem.owned.events").to_arrow()
+    assert _arrow_ids(live) == [1]
+
+
+def test_remove_orphan_files_deletes_by_default(spark: ReparkSession, tmp_path: Path) -> None:
+    """A bare call deletes; ``dry_run => true`` lists the same rows and keeps the files.
+
+    Registry rows ORPHAN-1/ORPHAN-2 (retired 2026-09-22, Spark parity).
+
+    pins: ipi-30-orphan-1/C-002, C-003
+    """
+    owned = tmp_path / "owned"
+    spark.sql(f"CREATE NAMESPACE mem.owned LOCATION '{owned}'")
+    spark.sql(
+        f"CREATE TABLE mem.owned.events USING iceberg TBLPROPERTIES ({COW}) "
+        "AS SELECT 1 AS id, 'a' AS name"
+    )
+    table_dir = owned / "events"
+    first = _plant_orphan(table_dir, "orphan-first.parquet", 10)
+    second = _plant_orphan(table_dir, "orphan-second.parquet", 10)
+    listed = spark.sql(
+        "CALL mem.system.remove_orphan_files(table => 'owned.events', dry_run => true)"
+    ).to_arrow()
+    assert _schema_names(listed) == ["orphan_file_location"]
+    assert _orphan_names(listed) == {"orphan-first.parquet", "orphan-second.parquet"}
+    assert first.exists()
+    assert second.exists()
+    deleted = spark.sql("CALL mem.system.remove_orphan_files(table => 'owned.events')").to_arrow()
+    assert _orphan_names(deleted) == {"orphan-first.parquet", "orphan-second.parquet"}
+    assert not first.exists()
+    assert not second.exists()
 
 
 def test_remove_orphan_files_floor_matches_spark(spark: ReparkSession, tmp_path: Path) -> None:
@@ -325,6 +362,8 @@ def test_remove_orphan_files_floor_matches_spark(spark: ReparkSession, tmp_path:
     Measured across the boundary on the oracle: ``now`` refuses, ``now - 23h`` refuses,
     ``now - 25h`` runs. Java enforces it in ``RemoveOrphanFilesProcedure`` rather than the
     Action API, which is why this engine carries it in the CALL router too.
+
+    pins: ipi-30-orphan-1/C-004
     """
     owned = tmp_path / "owned"
     spark.sql(f"CREATE NAMESPACE mem.owned LOCATION '{owned}'")
