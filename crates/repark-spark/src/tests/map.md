@@ -1180,7 +1180,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the `R-MC-SPEC-ID-EVO` spec-id half (`[(1,0),(2,1)]`); and
   `served_spec_id_beside_an_unserved_column_names_the_unserved_one` pins that the composed
   refusal names `_partition`, not `_spec_id`.
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015, C-016, C-017, C-018
+  **WO-R3 (2026-09-22):** `partition_struct_answers_spark` pins `R-MC-PARTITION`
+  (`[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]`, nullable struct);
+  `partition_is_null_on_an_unpartitioned_table` pins `R-MC-PARTITION-UNPART`
+  (`[[2,null],[3,null],[4,null]]`); `spec_id_and_partition_answer_after_evolution` pins
+  the full `R-MC-SPEC-ID-EVO` cell (`[[1,0,[["cat",null]]],[2,1,[["cat","y"]]]]`);
+  `bucket_partitioned_table_serves_all_four_metadata_columns` serves all four metadata
+  columns on a bucket table; the star pin gains the `*, _partition` leg; and the refusal
+  advertises the served four.
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015,
+  C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

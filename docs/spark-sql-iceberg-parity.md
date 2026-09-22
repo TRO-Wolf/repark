@@ -13410,38 +13410,42 @@ field NAME.
   F-001). Read path, untouched by the write unit; fork-or-adoption attribution
   is open before any fix.
 
-### ICE-MC-FILEPOS-1 — `_file`, `_pos`, `_spec_id` answer Spark-equal; `_partition`, `_deleted` refuse `[ICE-MC-1]` — **BACKLOG 2026-09-20, IPI-20**
+### ICE-MC-FILEPOS-1 — `_file`, `_pos`, `_spec_id`, `_partition` answer Spark-equal; `_deleted` refuses `[ICE-MC-1]` — **BACKLOG 2026-09-20, IPI-20**
 
 - **repark** — the Spark door serves `_file` (the data-file path, `string`),
-  `_pos` (the 0-based file ordinal, `bigint`) and `_spec_id` (an `int`, the
+  `_pos` (the 0-based file ordinal, `bigint`), `_spec_id` (an `int`, the
   per-file spec constant; recorded `R-MC-SPEC-ID` / `R-MC-SPEC-ID-EVOLVED`
-  answer `[[2,0],[3,0],[4,0]]`) on Iceberg reads: `SELECT *` keeps user
-  columns only. `_partition` and `_deleted` are not yet served and still
-  refuse with a typed `AnalysisException` carrying `[ICE-MC-1]` and naming
+  answer `[[2,0],[3,0],[4,0]]`) and `_partition` (the partition struct,
+  NULL on unpartitioned tables; recorded `R-MC-PARTITION`
+  `[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]`, `R-MC-PARTITION-UNPART`
+  `[[2,null],[3,null],[4,null]]`, `R-MC-SPEC-ID-EVO`
+  `[[1,0,[["cat",null]]],[2,1,[["cat","y"]]]]`) on Iceberg reads: `SELECT *`
+  keeps user columns only. `_deleted` alone is not yet served and still
+  refuses with a typed `AnalysisException` carrying `[ICE-MC-1]` and naming
   the column — never the raw `No field named`. The ANSI door serves no
   metadata columns.
-- **Apache Spark** — answers the five served cells
-  (`[[2,true,true],[3,true,true],[4,true,true]]`,
-  `[[3]]`, `[[3]]`, `[[2,0],[3,0],[4,0]]`, `[[2,0],[3,0],[4,1]]`) and serves the
-  other three columns where RePark refuses.
-  *(oracle: recorded — the IPI-20 inventory cells (`R-MC-FILE`,
-  `R-MC-FILE-DISTINCT`, `R-MC-FILE-FILTER`, `R-MC-POS`, `R-MC-POS-MOR`),
-  live Spark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0.)*
+- **Apache Spark** — answers the ten served cells (the five R-MC-FILE/POS
+  values plus `R-MC-SPEC-ID` / `R-MC-SPEC-ID-EVOLVED` `[[2,0],[3,0],[4,0]]`,
+  `R-MC-PARTITION`, `R-MC-PARTITION-UNPART`, `R-MC-SPEC-ID-EVO` with the
+  values above) and serves only `_deleted` where RePark refuses.
+  *(oracle: recorded — the IPI-20 inventory cells, live Spark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0.)*
 - **Pin** — `crates/repark-spark/src/tests/metadata_columns.rs`
   (`file_and_pos_answer_spark`, `pos_is_the_file_position_after_a_merge_on_read_delete`,
   `select_star_excludes_every_served_metadata_column`,
   `unserved_metadata_columns_refuse_with_a_typed_error`,
-  `served_names_fold_and_composed_shapes_refuse`) plus
-  `python/repark/tests/test_ice_metadata_cols_1.py` (the five verbatim cell
+  `served_names_fold_and_composed_shapes_refuse`, `spec_id_answers_zero_on_a_single_spec_table`,
+  `spec_id_reports_each_rows_own_spec_after_evolution`, `partition_struct_answers_spark`,
+  `partition_is_null_on_an_unpartitioned_table`, `spec_id_and_partition_answer_after_evolution`,
+  `bucket_partitioned_table_serves_all_four_metadata_columns`) plus
+  `python/repark/tests/test_ice_metadata_cols_1.py` (the eight verbatim cell
   replays, the star pin and the refusal pin).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - **Rationale** — BACKLOG, filed 2026-09-20 (ICE-METADATA-COLS-1, IPI-20 PR-1).
-  `_file` and `_pos` ride the fork pin's ordinary scan path (`_file` as a
-  per-file constant, `_pos` as the read position), so PR-1 proves the RePark
-  half alone; `_spec_id`, `_partition` and `_deleted` need the fork unit
-  (per-file spec ids, struct partition values, deleted-row visibility) plus a
-  pin bump — that is PR-2, and the refusal pins red on purpose when it serves
-  them.
+  The fork unit is MERGED (metadata columns + scan modes) and the pin bumped
+  (RP-45), so the RePark half serves the four ordinary columns end to end;
+  `_deleted` stays refused behind its explicit scan mode — that is the one
+  remaining residue, and its refusal pin reds on purpose when it serves.
 
 ## 8. Drop-in disclosure rationale
 

@@ -36,6 +36,16 @@ each reverted and byte-verified. The ANSI door stays unwired (M-6/A-10); the
 truth in-lane (WO-R2b), while its Spark/Pin/Rationale bullets stay frozen for
 WO-R3.
 
+**WO-R3 (2026-09-22, branch `fix/ice-mc-partition`, base `2c782a99`):** serves
+`_partition` through the cols-1 layer as a NULLABLE struct — provider const
+3→4 plus the eager union-struct field (`unified_partition_type`, field id
+`i32::MAX - 5`), refusal strings advertise the served four, only `_deleted`
+stays refused. Five new clauses (C-019..C-023), three mutations (M1/M2/M3),
+each reverted and byte-verified; M1 recorded as observed per the orchestrator
+ruling (per-query routing keeps the evo leg green). The ANSI door stays
+unwired (M-6/A-10); the `ICE-MC-FILEPOS-1` row's title + all four bullets were
+re-pointed at the served truth in-lane, unfreezing the WO-R2b deferral.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the tree pins fork `df62cdee`, and the suite below is green there.**
@@ -115,6 +125,15 @@ Arrow `Int32` non-nullable with `RESERVED_FIELD_ID_SPEC_ID`, and the unchanged
 values pin and the (b) `[(1,0),(2,1)]` evolution pin prove the per-file
 constant; M2 (forced constant 0) reds only (b).
 
+**M-10 (WO-R3) — the pin serves `_partition` as a NULLABLE union struct.**
+Re-read at fork `311b9fa4`: `TableMetadata::unified_partition_type()` unions
+every live spec, `type_to_arrow_type(&Type::Struct(...))` renders it Arrow,
+field id `RESERVED_FIELD_ID_PARTITION`; rows under a spec without the field,
+and every row of an unpartitioned table, serve a NULL struct. The
+values/unpart/evo/bucket pins prove shape + nulls + evolution; M2 (forced
+null constant) reds values/evo but not unpart, M3 (REQUIRED decl) fails the
+unpart pin.
+
 ## PROPOSITION LEDGER — ICE-METADATA-COLS-1 — 2026-09-20
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -137,6 +156,11 @@ constant; M2 (forced constant 0) reds only (b).
 | C-016 | After `ADD PARTITION FIELD`, rows written under the old spec report 0 and rows under the new spec report the new id (`[(1,0),(2,1)]`). | `spec_id_reports_each_rows_own_spec_after_evolution` green. | **PROVEN** | The `_spec_id` half of recorded `R-MC-SPEC-ID-EVO` (`[[1,0,…],[2,1,…]]`); the full cell still refuses on `_partition` (C-018). A forced constant 0 reds only this pin (M2), so a current-default-spec shortcut dies here. pins: ice-metadata-cols-1/C-016 |
 | C-017 | `SELECT *` still answers user columns only; `*, _spec_id` composes. | `select_star_excludes_every_served_metadata_column` and `test_star_excludes_served_metadata_columns` green. | **PROVEN** | Field names `[id, data, cat]` / `+ [_spec_id]` on both doors of the pin. M1 reds the new leg. pins: ice-metadata-cols-1/C-017 |
 | C-018 | `_partition` / `_deleted` alone refuse typed `[ICE-MC-1]` advertising the served three; `SELECT id, _spec_id, _partition` refuses naming `_partition`, not `_spec_id`. | `unserved_metadata_columns_refuse_with_a_typed_error`, `served_spec_id_beside_an_unserved_column_names_the_unserved_one`, `test_unserved_metadata_columns_refuse_typed` green. | **PROVEN** | Each remaining unserved name raises `[ICE-MC-1]` with `this layer serves (_file, _pos, _spec_id)` and no `No field named` leak; the composed query pins `metadata column _partition is not yet served` plus the absence of `metadata column _spec_id`. pins: ice-metadata-cols-1/C-018 |
+| C-019 | `SELECT id, _partition FROM t` on a `PARTITIONED BY (cat)` table answers `[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]` with nullable `struct<cat:string>`. | `partition_struct_answers_spark` and `test_partition_struct_answers_spark` green, plus a `SELECT id, _partition.cat` projection leg. | **PROVEN** | Exact recorded `R-MC-PARTITION` values, Arrow struct via downcast plus the schema leg. M1 reds it. pins: ice-metadata-cols-1/C-019 |
+| C-020 | `SELECT id, _partition FROM t` on an unpartitioned table answers `[[2,null],[3,null],[4,null]]`. | `partition_is_null_on_an_unpartitioned_table` and `test_partition_is_null_on_unpartitioned_table` green. | **PROVEN** | Exact recorded `R-MC-PARTITION-UNPART` values, NULL struct never error. M1 and M3 red it. pins: ice-metadata-cols-1/C-020 |
+| C-021 | After `ADD PARTITION FIELD`, `SELECT id, _spec_id, _partition` answers `[[1,0,[["cat",null]]],[2,1,[["cat","y"]]]]`. | `spec_id_and_partition_answer_after_evolution` and `test_spec_id_and_partition_answer_after_evolution` green on the own evo fixture. | **PROVEN** | Exact recorded `R-MC-SPEC-ID-EVO` values, full cell now EQUAL. M2 reds it. pins: ice-metadata-cols-1/C-021 |
+| C-022 | `SELECT *` still answers user columns only; `*, _partition` composes. | `select_star_excludes_every_served_metadata_column` and `test_star_excludes_served_metadata_columns` green. | **PROVEN** | Field names `[id, data, cat]` / `+ [_partition]` on both doors of the pin. M1 reds the new leg. pins: ice-metadata-cols-1/C-022 |
+| C-023 | `_deleted` alone refuses typed `[ICE-MC-1]` advertising the served four; the former `_partition`-beside-`_spec_id` pin now succeeds. | `unserved_metadata_columns_refuse_with_a_typed_error`, `test_unserved_metadata_columns_refuse_typed` green. | **PROVEN** | `_deleted` (bare and backtick) raises `[ICE-MC-1]` with `this layer serves (_file, _pos, _spec_id, _partition)` and no `No field named` leak. pins: ice-metadata-cols-1/C-023 |
 
 ## Gates
 
@@ -218,6 +242,20 @@ break reverted with `git diff` at zero bytes.
 |---|---|---|---|
 | M1 | `METADATA_COLUMN_NAMES` back to `[_file, _pos]` (routing drops `_spec_id`). | values (a), evolution (b), star (c) | RED 3/10 (`spec_id_answers_zero_on_a_single_spec_table`, `spec_id_reports_each_rows_own_spec_after_evolution`, `select_star_excludes_every_served_metadata_column` — all fall through to unresolved-column); 7 controls green. Reverted. |
 | M2 | `conform_batch` reports constant `0` for `_spec_id` on every row. | evolution (b) only | RED 1/10 (`spec_id_reports_each_rows_own_spec_after_evolution`: `[(1,0),(2,0)]` vs `[(1,0),(2,1)]`); 9 green including the plain-values pin, proving (b) is the discriminating pin. Reverted. |
+
+## WO-R3 mutations (M1/M2/M3, run 2026-09-22, all reverted and byte-verified)
+
+Each row: one temporary production break, the 14-test
+`cargo test -p repark-spark --lib metadata_columns` subset run against it, the
+break reverted with `git diff` at zero bytes. M1 recorded as observed per the
+orchestrator ruling (WO-R3b Q1): routing is per-query, so the evo leg's green
+is the mechanism, not a gap.
+
+| Id | Mutation (production) | Pins that must red | Result |
+|---|---|---|---|
+| M1 | `METADATA_COLUMN_NAMES` back to three (routing drops `_partition`). | values, unpart, bucket, star (every pure-`_partition` leg) | RED 4/14 (`partition_struct_answers_spark`, `partition_is_null_on_an_unpartitioned_table`, `bucket_partitioned_table_serves_all_four_metadata_columns`, `select_star_excludes_every_served_metadata_column` — all fall through to unresolved-column); evo stays green, routed via `_spec_id`. Reverted. |
+| M2 | `_partition` forced to a null constant. | values, evo (bucket value legs too) | RED 3/14 (values, bucket, evo fail their value asserts); unpart stays green (the discriminating pin). Reverted. |
+| M3 | `_partition` declared REQUIRED. | unpart | RED 3/14 (unpart fails on the NULL struct, values/bucket go with it); the unpart MUST is met. Reverted. |
 
 ## COVERAGE_ATTESTATION
 

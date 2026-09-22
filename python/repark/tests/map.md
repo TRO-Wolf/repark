@@ -7658,7 +7658,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   (r2 V-003, C-010).
   **WO-R2 (2026-09-22):** the `_spec_id` values pin, the `*, _spec_id` star leg, and the
   two-name refusal asserting the served three.
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-015, C-016, C-017, C-018
+  **WO-R3 (2026-09-22):** the `_partition` struct values pin (`R-MC-PARTITION` with the
+  `struct<cat:string>` schema leg plus a `_partition.cat` projection), the unpartitioned
+  NULL pin, the evo twin now answering the full cell, the `*, _partition` star leg, and
+  the refusal asserting the served four.
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
 - `test_time_travel.py` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the selector pins —
   `t.snapshot_id_<id>` / `t.at_timestamp_<ms>` read the pinned snapshot with rows and schema
   asserted, unparsable numeric suffixes refuse typed, and the `branch_`/`tag_` near-miss
