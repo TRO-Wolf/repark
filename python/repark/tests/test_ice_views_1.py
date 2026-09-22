@@ -507,3 +507,123 @@ def test_view_body_cte_shadows_in_derived_table(spark: ReparkSession) -> None:
     spark.catalog.setCurrentCatalog("sc")
     spark.catalog.setCurrentDatabase("ns2")
     assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[1]]
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        pytest.param(
+            "SELECT id FROM t WHERE (SELECT id FROM a) IS NULL",
+            [],
+            id="is-null",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE id IS DISTINCT FROM (SELECT id - 5 FROM a)",
+            [[0], [1]],
+            id="is-distinct-from",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE ((SELECT id FROM a) = 7) IS TRUE",
+            [[0], [1], [2]],
+            id="is-true",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE id BETWEEN (SELECT id - 6 FROM a) AND 2",
+            [[1], [2]],
+            id="between",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE CAST(id AS STRING) ILIKE "
+            "(SELECT CAST(id - 5 AS STRING) FROM a)",
+            [[2]],
+            id="ilike",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE CAST(id AS STRING) RLIKE "
+            "(SELECT CAST(id - 5 AS STRING) FROM a)",
+            [[2]],
+            id="rlike",
+        ),
+        pytest.param(
+            "SELECT CAST((SELECT id FROM a) AS INT) AS x",
+            [[7]],
+            id="cast",
+        ),
+        pytest.param(
+            "SELECT -(SELECT id FROM a) AS x",
+            [[-7]],
+            id="negation",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE NOT ((SELECT id FROM a) = 7)",
+            [],
+            id="not",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE id + (SELECT id FROM a) = 9",
+            [[2]],
+            id="arithmetic",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE id IN (0, (SELECT id - 5 FROM a))",
+            [[0], [2]],
+            id="in-list",
+        ),
+        pytest.param(
+            "SELECT CASE WHEN id = 0 THEN 0 ELSE (SELECT id FROM a) END AS x FROM t",
+            [[0], [7], [7]],
+            id="case-else",
+        ),
+        pytest.param(
+            "SELECT CASE (SELECT id FROM a) WHEN 7 THEN id END AS x FROM t",
+            [[0], [1], [2]],
+            id="case-operand",
+        ),
+        pytest.param(
+            "SELECT coalesce((SELECT id FROM a), 0) AS x",
+            [[7]],
+            id="coalesce",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE NOT EXISTS (SELECT 1 FROM a WHERE id = 7)",
+            [],
+            id="not-exists",
+        ),
+        pytest.param(
+            "SELECT id + 7 FROM t WHERE id = 0 INTERSECT SELECT id FROM a",
+            [[7]],
+            id="intersect",
+        ),
+        pytest.param(
+            "SELECT id FROM t EXCEPT SELECT id - 7 FROM a",
+            [[1], [2]],
+            id="except",
+        ),
+        pytest.param(
+            "WITH a AS (SELECT 1 AS id) SELECT id FROM t "
+            "WHERE EXISTS (SELECT 1 FROM a WHERE id = 1)",
+            [[0], [1], [2]],
+            id="cte-shadows-in-exists",
+        ),
+        pytest.param(
+            "WITH a AS (SELECT 1 AS id) SELECT id FROM t WHERE id = 0 UNION ALL SELECT id FROM a",
+            [[0], [1]],
+            id="cte-shadows-in-union-arm",
+        ),
+        pytest.param(
+            "WITH c AS (SELECT (SELECT id FROM a) AS id) SELECT id FROM c",
+            [[7]],
+            id="subquery-inside-cte-body",
+        ),
+    ],
+)
+def test_view_body_expression_position_qualifies(
+    spark: ReparkSession, body: str, expected: list[list[Any]]
+) -> None:
+    """V-007 — a subquery inside each pinned expression position qualifies its table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql(f"CREATE VIEW sc.ns.v AS {body}")
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == expected
