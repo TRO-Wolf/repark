@@ -318,7 +318,7 @@ sync after changes.
 - **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames
   `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N argument
   columns; arity from the built args) and adds the `grouping_id` arm (n-ary,
-  possibly zero columns) plus the `grouping_id_column` binding behind the
-  unsigned-to-signed cast; `mod.rs` `aggregate_binary` takes the trailing
-  columns as a vector (exact baseline 1012).
+  possibly zero columns); `expr_build.rs` gains the `grouping_id_column`
+  binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary`
+  takes the trailing columns as a vector (exact baseline 1012).
   pins: fnp-agg-1/C-002, C-003, C-004

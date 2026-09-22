@@ -1636,9 +1636,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_fnp_agg_1_critic.py](test_fnp_agg_1_critic.py) +
   `fnp_agg_1_critic_spark_oracle.json` — **FNP-AGG-1 slice (d) (2026-09-21):**
   eight live-PySpark 4.1.2 grouping cells: `grouping_id` exact-order refusals
-  and the `GROUPING SETS` value cell on both doors; the cube `grouping_id()`
-  cell compares rows as a multiset (the plan shape shows rare nondeterministic
-  output order, another slice's seam).
+  on both doors, the `GROUPING SETS` value cell on the SQL door and the cube
+  `grouping_id()` value cell on the Python door; the cube cell compares rows
+  as a multiset (the plan shape shows rare nondeterministic output order,
+  another slice's seam).
   pins: fnp-agg-1/C-002, C-003, C-004
 - [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
