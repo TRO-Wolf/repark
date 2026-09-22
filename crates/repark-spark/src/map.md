@@ -391,8 +391,7 @@ pins: rp-4-fork-repin/C-005, C-006
   the statement's own write target. `both_wap_keys_message` carries Java's exact
   `Cannot set both WAP ID and branch, but got ID [id] and branch [branch]`, raised as an
   `IllegalArgumentException` through `repark_core::illegal_argument_error`.
-  `spark.wap.id` on its own stays inert — staged snapshots are fork ask F-STAGE-ONLY-1,
-  registry row REF-3. `set_value` carries `#[allow(clippy::missing_errors_doc)]` — the
+  `spark.wap.id` on its own takes the staged route recorded under IPI-05 above. `set_value` carries `#[allow(clippy::missing_errors_doc)]` — the
   sanctioned form for the pedantic lint under the comment ban.
   pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010, C-011
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
@@ -445,7 +444,7 @@ pins: rp-4-fork-repin/C-005, C-006
 - `call.rs` — **IPI-05 (2026-09-21):** `publish_changes` joins `SUPPORTED_PROCEDURES` (in
   alphabetical place) with a dispatch arm into `branch_ops::execute_publish_changes`, so the WAP
   publish is a procedure rather than one of the names the unknown-procedure refusal lists.
-- `call.rs` — nineteen maintenance procedures: eighteen maintenance calls plus `register_table`
+- `call.rs` — twenty-one maintenance procedures: twenty maintenance calls plus `register_table`
   (**ICE-PROCS-ROUTE-1 (2026-09-19):** `ancestors_of`, `compute_table_stats`,
   `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the
   fork's maintenance actions; the shared `illegal_argument` helper maps

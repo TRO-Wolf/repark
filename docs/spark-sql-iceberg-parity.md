@@ -315,9 +315,9 @@ staged-snapshot flow behind `spark.wap.id` on 2026-09-21 (IPI-05, over fork pin
 
 - **repark** — `spark.wap.id` stores and reads back (through `spark.conf.set` and through SQL
   `SET`, since ICE-WAP-BRANCH-1 routes both WAP keys into the Rust carrier), and with
-  `write.wap.enabled=true` on the table it now stages: a write with `spark.wap.id` set and no
-  `spark.wap.branch` commits a snapshot carrying `wap.id` in its summary and leaves `main` where
-  it was. `CALL <cat>.system.publish_changes(table, wap_id)` looks that snapshot up and answers
+  `write.wap.enabled=true` on the table it now stages: a plain INSERT with `spark.wap.id` set
+  and no `spark.wap.branch` commits a snapshot carrying `wap.id` in its summary and leaves `main`
+  where it was, while `DELETE`, `UPDATE` and `INSERT OVERWRITE` stay on `main` as before. `CALL <cat>.system.publish_changes(table, wap_id)` looks that snapshot up and answers
   `(source_snapshot_id, current_snapshot_id)` — fast-forwarding `main` when it has not moved,
   replaying with `published-wap-id` over an intervening commit — and an unknown id refuses with
   Java's bare message `Cannot apply unknown WAP ID '<id>'`;
