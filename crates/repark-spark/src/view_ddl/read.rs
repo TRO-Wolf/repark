@@ -289,14 +289,20 @@ fn collect_body_refs(
 }
 
 fn collect_query_refs(query: &mut Query, scopes: &mut CteScopes, candidates: &mut Vec<ObjectName>) {
-    let mut level = HashSet::new();
+    scopes.levels.push(HashSet::new());
     if let Some(with) = &mut query.with {
+        let recursive = with.recursive;
         for table in &mut with.cte_tables {
-            level.insert(table.alias.name.value.to_lowercase());
+            let alias = table.alias.name.value.to_lowercase();
+            if recursive && let Some(level) = scopes.levels.last_mut() {
+                level.insert(alias.clone());
+            }
             collect_query_refs(&mut table.query, scopes, candidates);
+            if let Some(level) = scopes.levels.last_mut() {
+                level.insert(alias);
+            }
         }
     }
-    scopes.levels.push(level);
     collect_set_refs(&mut query.body, scopes, candidates);
     scopes.levels.pop();
 }
@@ -467,14 +473,20 @@ fn rewrite_query_refs(
     scopes: &mut CteScopes,
     qualified: &HashMap<Vec<String>, ObjectName>,
 ) {
-    let mut level = HashSet::new();
+    scopes.levels.push(HashSet::new());
     if let Some(with) = &mut query.with {
+        let recursive = with.recursive;
         for table in &mut with.cte_tables {
-            level.insert(table.alias.name.value.to_lowercase());
+            let alias = table.alias.name.value.to_lowercase();
+            if recursive && let Some(level) = scopes.levels.last_mut() {
+                level.insert(alias.clone());
+            }
             rewrite_query_refs(&mut table.query, scopes, qualified);
+            if let Some(level) = scopes.levels.last_mut() {
+                level.insert(alias);
+            }
         }
     }
-    scopes.levels.push(level);
     rewrite_set_refs(&mut query.body, scopes, qualified);
     scopes.levels.pop();
 }
