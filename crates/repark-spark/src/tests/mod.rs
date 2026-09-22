@@ -29,6 +29,7 @@ mod collation;
 mod column_move;
 mod count_fold;
 mod create_table;
+mod create_table_options;
 mod ctas;
 mod ctas_view;
 mod decimal;
