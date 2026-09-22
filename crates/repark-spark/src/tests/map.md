@@ -797,7 +797,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `wap_publish` (**IPI-05 remediation, 2026-09-22:** publish selection on the Rust door —
   publishing the named id when two are staged answers the named snapshot as source while the
   later stage stays staged; stamping one id twice refuses publish with the fork's bare
-  non-unique text),
+  non-unique text; the sweep pins positional-argument publish, a read with the id still set
+  answering main, a plain options-free staged write on a partitioned table, ordered
+  publishes replaying the second stage, an explicit column list staging, a missing table
+  answering the normal error, and a second publish of one stage refusing),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a

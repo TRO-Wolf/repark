@@ -374,6 +374,23 @@ async fn publish_changes_replays_over_an_intervening_commit() {
     .collect()
     .await
     .unwrap();
+    assert_eq!(batches.len(), 1, "one output batch");
+    assert_eq!(batches[0].num_rows(), 1, "one output row");
+    let schema = batches[0].schema();
+    assert_eq!(schema.field(0).name(), "source_snapshot_id");
+    assert_eq!(
+        schema.field(0).data_type(),
+        &DataType::Int64,
+        "source id reads back as Int64"
+    );
+    assert!(!schema.field(0).is_nullable(), "source id is non-null");
+    assert_eq!(schema.field(1).name(), "current_snapshot_id");
+    assert_eq!(
+        schema.field(1).data_type(),
+        &DataType::Int64,
+        "current id reads back as Int64"
+    );
+    assert!(!schema.field(1).is_nullable(), "current id is non-null");
     let source = batches[0]
         .column(0)
         .as_any()
