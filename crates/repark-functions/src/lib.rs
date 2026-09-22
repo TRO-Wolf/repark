@@ -49,6 +49,7 @@ pub mod spark_chr;
 pub mod spark_degrees;
 pub mod spark_elt;
 pub mod spark_from_unixtime;
+pub mod spark_hash;
 pub mod spark_initcap;
 pub mod spark_isnan;
 pub mod spark_length;
@@ -154,6 +155,7 @@ pub fn register_all(ctx: &SessionContext) {
         .chain(spark_degrees::functions())
         .chain(spark_elt::functions())
         .chain(spark_startswith::functions())
+        .chain(spark_hash::functions())
     {
         ctx.register_udf(udf.as_ref().clone());
     }

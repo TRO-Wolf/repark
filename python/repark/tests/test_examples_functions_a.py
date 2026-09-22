@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime
 from collections.abc import Iterator
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -66,10 +67,13 @@ def test_expr_column_reference_refuses(spark: ReparkSession) -> None:
         frame.select(column.alias("v")).to_arrow()
 
 
-def test_format_number_refuses() -> None:
-    """format_number refuses; Spark renders grouped decimals (EX-FN-5)."""
-    with pytest.raises(UnsupportedOperationException, match="format_number"):
-        F.format_number("x", 2)
+def test_format_number_answers(spark: ReparkSession) -> None:
+    """format_number answers Spark's grouped decimals (EX-FN-5 fixed, fnp-math-1)."""
+    frame = spark.createDataFrame([(2.5,), (None,), (0.125,)], "d DOUBLE")
+    table = frame.select(F.format_number("d", 2).alias("v")).toArrow()
+    assert table.column("v").to_pylist() == ["2.50", None, "0.12"]
+    assert table.schema.field("v").type == pa.string()
+    assert table.schema.field("v").nullable is True
 
 
 def test_from_csv_answers(spark: ReparkSession) -> None:
@@ -82,10 +86,13 @@ def test_from_csv_answers(spark: ReparkSession) -> None:
     ]
 
 
-def test_hash_refuses() -> None:
-    """hash refuses; Spark answers the Murmur3 ints (EX-FN-7)."""
-    with pytest.raises(UnsupportedOperationException, match=r"functions\.hash"):
-        F.hash("n")
+def test_hash_answers(spark: ReparkSession) -> None:
+    """hash answers the Murmur3 ints (EX-FN-7 fixed, fnp-math-1)."""
+    frame = spark.createDataFrame([(1,), (2,), (3,)], "id INT")
+    table = frame.select(F.hash("id").alias("v")).toArrow()
+    assert table.column("v").to_pylist() == [-559580957, 1765031574, -1823081949]
+    assert table.schema.field("v").type == pa.int32()
+    assert table.schema.field("v").nullable is False
 
 
 def test_json_tuple_answers(spark: ReparkSession) -> None:
@@ -173,10 +180,15 @@ def test_sentences_refuses() -> None:
         F.sentences("s")
 
 
-def test_split_refuses() -> None:
-    """split refuses; Spark cuts on the pattern (EX-FN-18)."""
-    with pytest.raises(UnsupportedOperationException, match=r"functions\.split"):
-        F.split("s", ",")
+def test_split_answers(spark: ReparkSession) -> None:
+    """split cuts on the pattern (EX-FN-18 fixed, fnp-math-1)."""
+    frame = spark.createDataFrame([("a,b,,c",), (None,), ("x",)], "csvs STRING")
+    table = frame.select(F.split("csvs", ",").alias("v")).toArrow()
+    assert table.column("v").to_pylist() == [["a", "b", "", "c"], None, ["x"]]
+    assert table.schema.field("v").type == pa.list_(
+        pa.field("element", pa.string(), nullable=False)
+    )
+    assert table.schema.field("v").nullable is True
 
 
 def test_make_interval_string_form(spark: ReparkSession) -> None:

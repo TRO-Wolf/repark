@@ -5,6 +5,7 @@
 use std::sync::Arc;
 
 use arrow::datatypes::DataType;
+use datafusion::common::ScalarValue;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Cast, Expr, ScalarUDF};
 use datafusion_spark::function::bitmap::expr_fn as spark_bitmap;
@@ -17,8 +18,103 @@ use datafusion_spark::function::url as spark_url_udfs;
 use crate::datetime;
 
 /// Wrap `udf` applied to `args` as a scalar-function [`Expr`].
-fn call(udf: Arc<ScalarUDF>, args: Vec<Expr>) -> Expr {
+pub(crate) fn call(udf: Arc<ScalarUDF>, args: Vec<Expr>) -> Expr {
     Expr::ScalarFunction(ScalarFunction::new_udf(udf, args))
+}
+
+#[must_use]
+pub(crate) fn spark_scalar_token(value: &ScalarValue) -> String {
+    use datafusion::common::ScalarValue as Scalar;
+    if value.is_null() {
+        return "NULL".to_owned();
+    }
+    match value {
+        Scalar::Boolean(Some(v)) => v.to_string(),
+        Scalar::Int8(Some(v)) => v.to_string(),
+        Scalar::Int16(Some(v)) => v.to_string(),
+        Scalar::Int32(Some(v)) => v.to_string(),
+        Scalar::Int64(Some(v)) => v.to_string(),
+        Scalar::UInt8(Some(v)) => v.to_string(),
+        Scalar::UInt16(Some(v)) => v.to_string(),
+        Scalar::UInt32(Some(v)) => v.to_string(),
+        Scalar::UInt64(Some(v)) => v.to_string(),
+        Scalar::Float32(Some(v)) => render_float(f64::from(*v)),
+        Scalar::Float64(Some(v)) => render_float(*v),
+        Scalar::Decimal32(Some(v), _, scale) => render_decimal(i128::from(*v), *scale),
+        Scalar::Decimal64(Some(v), _, scale) => render_decimal(i128::from(*v), *scale),
+        Scalar::Decimal128(Some(v), _, scale) => render_decimal(*v, *scale),
+        Scalar::Utf8(Some(v)) | Scalar::LargeUtf8(Some(v)) | Scalar::Utf8View(Some(v)) => v.clone(),
+        _ => value.to_string(),
+    }
+}
+
+#[must_use]
+pub(crate) fn render_float(value: f64) -> String {
+    if value.is_nan() {
+        return "NaN".to_owned();
+    }
+    if value.is_infinite() {
+        return if value.is_sign_positive() {
+            "Infinity".to_owned()
+        } else {
+            "-Infinity".to_owned()
+        };
+    }
+    if value.fract() == 0.0 {
+        format!("{value:.1}")
+    } else {
+        value.to_string()
+    }
+}
+
+#[must_use]
+pub(crate) fn render_decimal(value: i128, scale: i8) -> String {
+    if scale <= 0 {
+        let mut text = value.to_string();
+        for _ in 0..(-scale) {
+            text.push('0');
+        }
+        return text;
+    }
+    let negative = value < 0;
+    let mut digits = value.unsigned_abs().to_string();
+    #[allow(clippy::cast_sign_loss)]
+    let width = usize::from(scale as u8);
+    while digits.len() <= width {
+        digits.insert(0, '0');
+    }
+    let point = digits.len() - width;
+    let (whole, frac) = digits.split_at(point);
+    if negative {
+        format!("-{whole}.{frac}")
+    } else {
+        format!("{whole}.{frac}")
+    }
+}
+
+#[must_use]
+pub(crate) fn spark_cast_type_name(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Decimal32(precision, scale)
+        | DataType::Decimal64(precision, scale)
+        | DataType::Decimal128(precision, scale)
+        | DataType::Decimal256(precision, scale) => format!("DECIMAL({precision},{scale})"),
+        _ => crate::spark_math::spark_type_name(data_type),
+    }
+}
+
+#[must_use]
+pub(crate) fn spark_expr_token(expr: &Expr) -> String {
+    match expr {
+        Expr::Column(column) => column.name.clone(),
+        Expr::Literal(value, _) => spark_scalar_token(value),
+        Expr::Cast(cast) => format!(
+            "CAST({} AS {})",
+            spark_expr_token(&cast.expr),
+            spark_cast_type_name(cast.field.data_type())
+        ),
+        _ => expr.to_string(),
+    }
 }
 
 /// Spark `year(date)` — the calendar year (e.g. `2021`).

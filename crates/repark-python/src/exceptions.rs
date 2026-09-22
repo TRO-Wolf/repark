@@ -3,7 +3,7 @@
 //! user input), and a per-call-site `#[expect]` cannot reach inside the macro expansion
 #![expect(
     clippy::disallowed_methods,
-    reason = "pyo3::create_exception! expands to Result::expect at the five macro \
+    reason = "pyo3::create_exception! expands to Result::expect at the six macro \
               sites below; the expansion is compile-time-constant registration, not a \
               reachable panic path. Scoped here so the spawn/panic bans stay live for \
               the whole crate (p3c ledger P-4/P-5)."
@@ -23,6 +23,13 @@ pyo3::create_exception!(
     PySparkException,
     "A query analysis/planning failure: an unresolved table or column, a type error, an invalid \
      plan. The PySpark name; subclasses PySparkException (hence RuntimeError)."
+);
+pyo3::create_exception!(
+    repark._native,
+    ArithmeticException,
+    PySparkException,
+    "An ANSI arithmetic failure: overflow, divide-by-zero, or an out-of-range numeric value. \
+     The PySpark name; subclasses PySparkException (hence RuntimeError)."
 );
 pyo3::create_exception!(
     repark._native,

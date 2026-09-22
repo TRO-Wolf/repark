@@ -66,6 +66,11 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Calendar and timestamp Spark-semantics functions share one module.",
         "Split calendar extractors from timezone-aware timestamp functions.",
     ),
+    "crates/repark-functions/src/expr_fn.rs": (
+        1001,
+        "Spark expression-token and scalar render helpers share one expression module.",
+        "Extract the token and scalar renderers into a helper module when the family next changes.",
+    ),
     "crates/repark-functions/src/spark_time_window.rs": (
         1125,
         "Window duration parsing, bucket kernels, and the window UDFs share one module.",

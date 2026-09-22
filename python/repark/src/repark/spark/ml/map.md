@@ -19,7 +19,7 @@ delegated estimators live in [feature/map.md](feature/map.md) and [ext/map.md](e
 | `param.py` | Parameters, converters, and shared parameter mixins. |
 | `pipeline.py` | Pipeline composition and atomic persistence. |
 | `regression.py` | Native ordinary least squares and model. |
-| `tuning.py` | Parameter grids and deterministic cross-validation. |
+| `tuning.py` | Parameter grids and deterministic cross-validation. **WO-8:** degenerate hash fold assignment falls back to row_number folds. |
 | `util.py` | Uids and persistence interfaces. |
 
 ## Contracts and limitations

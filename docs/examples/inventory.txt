@@ -340,6 +340,7 @@ functions	F.bitwise_not
 functions	F.bool_and
 functions	F.bool_or
 functions	F.broadcast
+functions	F.bround
 functions	F.btrim
 functions	F.bucket
 functions	F.call_function
@@ -360,6 +361,7 @@ functions	F.column
 functions	F.concat
 functions	F.concat_ws
 functions	F.contains
+functions	F.conv
 functions	F.convert_timezone
 functions	F.corr
 functions	F.cos
@@ -532,6 +534,7 @@ functions	F.map_from_entries
 functions	F.map_keys
 functions	F.map_values
 functions	F.map_zip_with
+functions	F.mask
 functions	F.max
 functions	F.md5
 functions	F.mean

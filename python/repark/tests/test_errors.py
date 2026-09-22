@@ -30,6 +30,7 @@ from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
 from repark.errors import (
     AnalysisException,
+    ArithmeticException,
     CommitStateUnknownException,
     IllegalArgumentException,
     ParseException,
@@ -94,6 +95,13 @@ def test_exception_hierarchy_subclasses_runtime_error() -> None:
     assert not issubclass(CommitStateUnknownException, UnsupportedOperationException)
     assert not issubclass(CommitStateUnknownException, IllegalArgumentException)
     assert not issubclass(PySparkException, CommitStateUnknownException)
+    assert issubclass(ArithmeticException, PySparkException)
+    assert issubclass(ArithmeticException, RuntimeError)
+    assert not issubclass(ArithmeticException, AnalysisException)
+    assert not issubclass(ArithmeticException, ParseException)
+    assert not issubclass(ArithmeticException, UnsupportedOperationException)
+    assert not issubclass(ArithmeticException, IllegalArgumentException)
+    assert not issubclass(AnalysisException, ArithmeticException)
 
 
 def test_analysis_exception_catches_parse_errors_pyspark_parity(spark: ReparkSession) -> None:
@@ -117,6 +125,7 @@ def test_errors_reexported_with_same_identity() -> None:
     # The facade re-exports the SAME class objects the engine raises — catching by identity works,
     # not by name coincidence. Break this and `except AnalysisException` silently stops catching.
     assert AnalysisException is _native.AnalysisException
+    assert ArithmeticException is _native.ArithmeticException
     assert ParseException is _native.ParseException
     assert PySparkException is _native.PySparkException
     assert UnsupportedOperationException is _native.UnsupportedOperationException

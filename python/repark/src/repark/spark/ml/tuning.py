@@ -206,29 +206,36 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         """Assign deterministic fold labels and materialize them once.
 
         Materialization prevents lazy window re-evaluation from changing folds for unchanged
-        input row order.
+        input row order. A degenerate hash assignment falls back to row_number folds.
         """
         fold_col = f"__cv_fold_{uuid.uuid4().hex[:8]}"
         view = scratch_view_name(frame._session, "__repark_cv_src_")
         mat_view = scratch_view_name(frame._session, "__repark_cv_mat_")
         frame.createOrReplaceTempView(view)
-        sql = (
+        primary_sql = (
             f"SELECT {view}.*, "
             f"MOD(abs(hash(concat(CAST(ROW_NUMBER() OVER (ORDER BY 1) AS VARCHAR), "
             f"'_', CAST({int(seed)} AS VARCHAR)))), {int(num_folds)}) AS \"{fold_col}\" "
             f"FROM {view}"
         )
+        fallback_sql = (
+            f"SELECT {view}.*, "
+            f'MOD(ROW_NUMBER() OVER (ORDER BY 1) - 1, {int(num_folds)}) AS "{fold_col}" '
+            f"FROM {view}"
+        )
         try:
             try:
-                folded_lazy = frame._spawn(frame._session.sql(sql))
+                folded_lazy = frame._spawn(frame._session.sql(primary_sql))
+                primary_used = True
             except Exception:
-                sql = (
-                    f"SELECT {view}.*, "
-                    f'MOD(ROW_NUMBER() OVER (ORDER BY 1) - 1, {int(num_folds)}) AS "{fold_col}" '
-                    f"FROM {view}"
-                )
-                folded_lazy = frame._spawn(frame._session.sql(sql))
+                folded_lazy = frame._spawn(frame._session.sql(fallback_sql))
+                primary_used = False
             frame._session.materialize_as_temp_view(mat_view, folded_lazy._inner)
+            if primary_used and self._folds_degenerate(frame, mat_view, fold_col, num_folds):
+                with contextlib.suppress(Exception):
+                    frame._session.drop_temp_view(mat_view)
+                folded_lazy = frame._spawn(frame._session.sql(fallback_sql))
+                frame._session.materialize_as_temp_view(mat_view, folded_lazy._inner)
             folded = frame._spawn(frame._session.sql(f"SELECT * FROM {mat_view}"))
         except Exception:
             with contextlib.suppress(Exception):
@@ -238,6 +245,21 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
             with contextlib.suppress(Exception):
                 frame._session.drop_temp_view(view)
         return folded, fold_col, mat_view
+
+    @staticmethod
+    def _folds_degenerate(frame: Any, mat_view: str, fold_col: str, num_folds: int) -> bool:
+        """Return True when any fold is empty or any train has fewer than two rows."""
+        quoted = _quote_ident(fold_col)
+        tally = frame._spawn(
+            frame._session.sql(
+                f"SELECT {quoted} AS fold, COUNT(*) AS fold_rows FROM {mat_view} GROUP BY {quoted}"
+            )
+        ).collect()
+        counts = [0] * int(num_folds)
+        for row in tally:
+            counts[int(row["fold"])] += int(row["fold_rows"])
+        total = sum(counts)
+        return any(count == 0 or total - count < 2 for count in counts)
 
     def getParallelism(self) -> int:
         """Return the maximum worker count."""

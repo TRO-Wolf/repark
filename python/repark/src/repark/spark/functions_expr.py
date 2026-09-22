@@ -553,12 +553,11 @@ def date_sub(start: Column | str, days: Column | int | str) -> Column:
     return date_add(start, lit(0) - _integer_argument(days))
 
 
-def split(str: Column | str, pattern: str, limit: int = -1) -> Column:
-    """Unsupported: engine has no Spark ``split`` (use SQL when available)."""
-
-    raise UnsupportedOperationException(
-        "functions.split is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+def split(str: Column | str, pattern: Column | str, limit: Column | int = -1) -> Column:
+    """Java-regex split with Spark ``split`` names and limit semantics."""
+    if not isinstance(pattern, Column):
+        pattern = lit(pattern)
+    return _scalar("split", str, pattern, limit)
 
 
 def regexp_extract(str: Column | str, pattern: Column | str, idx: int | Column = 1) -> Column:
@@ -601,11 +600,8 @@ def unix_timestamp(
 
 
 def hash(*cols: Column | str) -> Column:
-    """Unsupported: engine has no Spark ``hash`` (xxhash-style)."""
-
-    raise UnsupportedOperationException(
-        "functions.hash is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+    """Murmur3 hash with Spark ``hash`` names and types."""
+    return _scalar("hash", *cols)
 
 
 def struct(*cols: Column | str) -> Column:
@@ -1115,12 +1111,9 @@ def timestamp_micros(col: Column | str | int) -> Column:
     return _scalar("timestamp_micros", col)
 
 
-def format_number(col: Column | str, d: int) -> Column:
-    """Unsupported because Spark ``format_number`` is not wired."""
-
-    raise UnsupportedOperationException(
-        "functions.format_number is not supported yet (engine gap; disclosed R-FN-BATCH3)"
-    )
+def format_number(col: Column | str, d: Column | int | str) -> Column:
+    """Grouped decimal text with Spark ``format_number`` names and types."""
+    return _scalar("format_number", col, d, lit_indices=frozenset({1}))
 
 
 def try_to_timestamp(col: Column | str, format: Column | str | None = None) -> Column:

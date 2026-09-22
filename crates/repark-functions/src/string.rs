@@ -18,6 +18,11 @@ use datafusion::logical_expr::{
     TypeSignature, Volatility,
 };
 
+mod format_number;
+pub use format_number::{call_format_number, format_number_udf};
+mod mask;
+pub use mask::{call_mask, mask_udf};
+
 /// The string shims to register (after `datafusion-spark`, so they win the name clash).
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
@@ -37,6 +42,8 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         crate::spark_regexp_match::rlike_udf(),
         crate::spark_regexp_match::regexp_replace_udf(),
         crate::spark_split_part::split_part_udf(),
+        format_number_udf(),
+        mask_udf(),
     ]
 }
 

@@ -62,6 +62,7 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::reverse(exprs[0].clone())
         }
+        "bround" | "conv" | "hash" | "format_number" | "mask" => math_expr(name, exprs)?,
         "split" => {
             if exprs.len() != 2 && exprs.len() != 3 {
                 return Err(PyValueError::new_err(format!(
@@ -84,6 +85,56 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
     };
     Ok(expr)
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn math_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
+    match name {
+        "bround" => {
+            if exprs.len() != 1 && exprs.len() != 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 or 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            Ok(repark_functions::spark_math::call_bround(exprs))
+        }
+        "conv" => {
+            if exprs.len() != 3 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 3 args, got {}",
+                    exprs.len()
+                )));
+            }
+            Ok(repark_functions::spark_math::call_conv(exprs))
+        }
+        "hash" => {
+            if exprs.is_empty() {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects at least 1 arg, got 0"
+                )));
+            }
+            Ok(repark_functions::spark_hash::call_hash(exprs))
+        }
+        "format_number" => {
+            if exprs.len() != 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            Ok(repark_functions::string::call_format_number(exprs))
+        }
+        _ => {
+            if exprs.is_empty() || exprs.len() > 5 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 to 5 args, got {}",
+                    exprs.len()
+                )));
+            }
+            Ok(repark_functions::string::call_mask(exprs))
+        }
+    }
 }
 
 fn sequence_expr(name: &str, exprs: &[Expr]) -> PyResult<Expr> {

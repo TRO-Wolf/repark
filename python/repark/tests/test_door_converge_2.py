@@ -36,9 +36,8 @@ boundaries: …` text. The oracle class (`IllegalArgumentException`, G-2 Q3) sta
 OPEN: execution errors cross Arrow IPC and remap in `dataframe/export_errors.py`
 (run 16b's fence), which no Rust route can reach — P2 hand-off to run 16b.
 
-`F.split` still raises `UnsupportedOperationException` in `functions_expr.py`
-(outside this lane's fence): the P2 hand-off test below pins that refusal loudly
-for run 16a, and the split facade sub-cell stays OPEN.
+`F.split` now binds the converged Rust kernel (D-8): the P2 hand-off test below
+pins the arrival for run 16a — the facade answers and matches the SQL door.
 """
 
 from __future__ import annotations
@@ -49,7 +48,7 @@ from decimal import Decimal
 import pyarrow as pa
 import pytest
 
-from repark.errors import AnalysisException, PySparkException, UnsupportedOperationException
+from repark.errors import AnalysisException, PySparkException
 from repark.spark import ReparkSession
 from repark.spark import functions as F  # noqa: N812
 from repark.spark.dataframe import DataFrame
@@ -514,15 +513,15 @@ def test_facade_sequence_illegal_step_text(spark: ReparkSession) -> None:
 
 
 def test_facade_split_refusal_handoff_16a(spark: ReparkSession) -> None:
-    """pins: door-converge-2/C-005 — F.split still refuses; P2 hand-off to run 16a.
+    """pins: door-converge-2/C-005 — the P2 hand-off landed in FNP-MATH-1 run 18a.
 
-    The Python `F.split` raises before reaching the converged Rust kernel, so the
-    split facade sub-cell stays OPEN until run 16a wires it. This pin guards the
-    refusal (loud, typed) so a silent change fails visibly.
+    The Python `F.split` now binds the converged Rust kernel (D-8), so this pin
+    records the arrival: the facade answers and matches the SQL door.
     """
-    _frame(spark)
-    with pytest.raises(UnsupportedOperationException):
-        F.split("s", ",")
+    frame = _frame(spark)
+    api = frame.select(F.split("s", ",").alias("v")).to_arrow()
+    sql = spark.sql("SELECT split(s, ',') AS v FROM t").to_arrow()
+    assert api.column("v").to_pylist() == sql.column("v").to_pylist()
 
 
 def _date_list() -> pa.DataType:

@@ -102,8 +102,14 @@ scalars live under [`try_invert/`](try_invert/map.md).
   names/hex (`'Infinityd'`, `'infd'`, `'1dd'`, `'0x10'`) keep today's refuse/NULL. The shared
   SQL `CAST` kernel is untouched. pins: fnp-bitmap-facade-1/C-012, C-013, C-014,
   C-017, C-018
-- `spark_math.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `abs` / `hypot` / `bin` /
-  `rint` kernels shared by both doors. `abs` keeps the input width, refuses BOOLEAN, and
+- `spark_math.rs` + [`spark_math/`](spark_math/map.md) — **DOOR-CONVERGE-1
+  (2026-09-15):** Spark `abs` / `hypot` / `bin` / `rint` kernels shared by both
+  doors. **FNP-MATH-1 (2026-09-16, run 18a):** `spark_math/bround.rs` adds the
+  `bround` HALF_EVEN kernel (double, decimal, integral; negative scale; Spark
+  result types; `scalar_arguments` scale literal; always-nullable display field)
+  and `spark_math/conv.rs` the `conv` base-conversion kernel (ANSI-carried
+  overflow).
+  `abs` keeps the input width, refuses BOOLEAN, and
   reads the ANSI carrier (`repark.ansi` extension via
   `ansi::spark_ansi_enabled_from_options`) to raise Spark-shaped `[ARITHMETIC_OVERFLOW]`
   on signed minima. `hypot` is rescaled `f64::hypot` (infinity over NaN). `bin` / `rint`
@@ -121,6 +127,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `CAST(5 AS BIGINT)`, and the text refusal.
   pins: sql-literal-typing-1/L-002
   pins: door-converge-1/C-002, C-003, C-008
+  **FNP-MATH-1 step 7 (2026-09-16, run 18a, D-9):** `bin` / `rint` gain
+  `schema_name` overrides so the display reads Spark's `bin(1)` (the D-9
+  BOOLEAN refusal already lives in the coercion above).
+  pins: door-converge-1/C-002, C-003, C-008, fnp-math-1/C-009
 - `spark_base64.rs` — **DOOR-CONVERGE-1 (2026-09-15):** Spark `base64` / `unbase64` — a
   hand-rolled `java.util.Base64` MIME codec (no `base64` crate dep): RFC 4648 padding,
   CRLF chunking every 76 output characters, lenient decode that skips non-alphabet bytes
@@ -901,6 +911,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`find_at`, cures `'.'`-pattern Q12-50/51). The facade arm lives in `dispatch_spark.rs`,
   but the Python `F.split` still raises `UnsupportedOperationException` before reaching
   it — P2 hand-off to run 16a. pins: door-converge-2/C-004
+  **FNP-MATH-1 step 6 (2026-09-16, run 18a, D-8):** `schema_name` renders Spark's
+  `split(str, pattern, limit)` (literals bare, default limit `-1`); coerce validates
+  without casting so literal folds keep Spark nullability; the facade binds above.
+  pins: fnp-math-1/C-008
   **DOOR-CONVERGE-2 round 3 (2026-09-15):** scalar patterns compile once, pattern columns
   resolve through an LRU(64) `PatternCache`, plain literals take the `str` path, and
   `limit` > 0 stops the match walk after `limit - 1` (equivalence-pinned). pins:
@@ -922,6 +936,20 @@ scalars live under [`try_invert/`](try_invert/map.md).
   closed-form counts reserve up front at native width with a scalar fast path. The int/date/
   timestamp row kernels live in `spark_sequence/rows.rs` (file-size split, move-only).
   pins: door-converge-2/C-007, C-009
+- `spark_hash.rs` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):** Spark Murmur3
+  `hash` kernel (seed 42; per-type `mix`/`fmix` shapes verified against the fixture;
+  strings as LE words with per-byte tails; arrays/structs/maps fold; always `int`,
+  never NULL) with its Rust tests. Text/binary arms live in `hash_text_value`,
+  date/time arms in `hash_time_value` (clippy `too_many_lines` split, same shapes).
+  pins: fnp-math-1/C-002, C-003, C-005
+- `string/format_number.rs` — **FNP-MATH-1 step 5 (2026-09-16, run 18a):** Spark
+  `format_number` grouping renderer (HALF_EVEN digit rounding, grouping commas;
+  registered through `string::functions()`). Row detail lives in
+  [`string/map.md`](string/map.md). pins: fnp-math-1/C-002, C-003
+- `string/mask.rs` — **FNP-MATH-1 mask slice (2026-09-16, run 18a):** Spark `mask`
+  character-class masker (missing replacement → `X`/`x`/`n`/keep default, NULL
+  replacement keeps the class; registered through `string::functions()`). Row
+  detail lives in [`string/mask.rs`](string/mask.rs). pins: fnp-math-1/C-002, C-003
 - `spark_reverse.rs` — **DOOR-CONVERGE-2 (2026-09-15):** door-converged `reverse`
   (overwrites the string-only DataFusion kernel): arrays reverse element order with the
   element type, `containsNull` and nullability kept; strings reverse by character; untyped

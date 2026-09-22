@@ -6,7 +6,7 @@
   "rows": 35,
   "frozen_rows": 30,
   "unfrozen_rows": 5,
-  "frozen_names": 889
+  "frozen_names": 890
  },
  "rows": [
   {
@@ -5270,6 +5270,10 @@
    "members": [
     {
      "name": "AnalysisException",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "ArithmeticException",
      "source": "python/repark/src/repark/errors.py"
     },
     {

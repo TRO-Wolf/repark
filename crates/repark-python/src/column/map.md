@@ -258,6 +258,24 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - `split` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the Rust
   arm is ready, but Python `F.split` raises before reaching it (run 16a owns that half).
   pins: door-converge-2/C-004
+- `split` answers through the same arm (FNP-MATH-1 step 6, run 18a, D-8): `F.split`
+  binds the kernel with Spark names, and the door-converge-2 guard pin flips to
+  answer-compare. pins: fnp-math-1/C-008
+- `bround` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
+  name joins the door-converged list (one line — the parent file sits at its ceiling) and the
+  arm builds `spark_math::call_bround` over 1–2 args. pins: fnp-math-1/C-002, C-003
+- `hash` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
+  name joins the same list and the arm builds `spark_hash::call_hash` (1+ args).
+  pins: fnp-math-1/C-002, C-003, C-005
+- `conv` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
+  name joins the same one-line list growth and the arm builds `spark_math::call_conv`
+  over 3 args. pins: fnp-math-1/C-002, C-003, C-004
+- `format_number` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a):
+  the name joins the same list and the arm builds `string::call_format_number` (2 args).
+  pins: fnp-math-1/C-002, C-003
+- `mask` routes through `function_dispatch/dispatch_spark.rs` (FNP-MATH-1 run 18a): the
+  name joins the same list and the arm builds `string::call_mask` (1–5 args).
+  pins: fnp-math-1/C-002, C-003
 - `to_timestamp_ltz` / `to_timestamp_ntz` dispatch beside `to_timestamp`, and
   `try_to_timestamp` joins the `try_to_date` arm (FNP-11B step 3): thin arms over
   `expr_fn` onto the new `timestamp_ltz_ntz` kernels.

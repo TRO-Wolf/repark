@@ -11559,17 +11559,20 @@ field NAME.
   on the example backlog: column references are the name's core use, and a literal-only
   example would document the edge while the middle raises.
 
-### EX-FN-5 — `format_number` refuses; Spark renders grouped decimals
+### EX-FN-5 — `format_number` answers; Spark renders grouped decimals
 
-- **repark** — `F.format_number("x", 2)` raises `UnsupportedOperationException:
-  functions.format_number is not supported yet (engine gap; disclosed R-FN-BATCH3)`.
+- **repark** — `F.format_number(col, d)` renders Spark's grouped decimal text: `2.5` at
+  two decimals answers `"2.50"`, `12345.6789` at zero answers `"12,346"`, `0.125` at two
+  answers `"0.12"`, and NULL stays NULL.
 - **Apache Spark** — `format_number(12332.12345, 2)` answers `"12,332.12"`;
   `format_number(0.5, 2)` answers `"0.50"`; `format_number(-9876.543, 2)` answers
   `"-9,876.54"`; at four decimals `"12,332.1234"`, `"0.5000"`, `"-9,876.5430"`; NULL
   stays NULL. *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_format_number_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
-  on the example backlog until the engine grows the grouping renderer.
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_format_number_answers`
+  and `python/repark/tests/test_fn_batch3.py::test_batch3_format_number_answers`
+- **Rationale** — FIXED 2026-09-16 (FNP-MATH-1 run 18a): the Rust `format_number` kernel
+  plus the facade destub answer both doors; the fnp-math-1 C-002/C-003 pins hold every
+  measured o245 cell. Filed 2026-09-05 from the EX-25 measurement.
 
 ### EX-FN-6 — `from_csv` answers; Spark parses the row struct
 
@@ -11583,16 +11586,39 @@ field NAME.
   the `CsvFold` options rule answer both doors; the s34 pins hold every measured
   cell. Filed 2026-09-05 from the EX-25 measurement.
 
-### EX-FN-7 — `hash` refuses; Spark answers the Murmur3 ints
+### EX-FN-7 — `hash` answers; Spark answers the Murmur3 ints
 
-- **repark** — `F.hash("n")` raises `UnsupportedOperationException: functions.hash is not
-  supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **repark** — `F.hash(...)` answers Spark's Murmur3 ints: `hash(1)` is `-559580957`,
+  `hash(2)` is `1765031574`, `hash(NULL)` is `42`; the o245 hash cells verify byte-exact
+  on both doors under both ANSI settings. The per-item SQL hash cells run; only the full
+  12-column `-0.0`/`0.0` SQL statement stays strict-xfail under EX-FN-7-RESID-1.
 - **Apache Spark** — `hash(1)` is `-559580957`; `hash(2)` is `1765031574`; `hash(NULL)`
   is `42`; `hash(1, "a")` is `-936062819`. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_hash_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
-  on the example backlog until the engine grows the hash kernel.
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_hash_answers` and
+  the residual `python/repark/tests/test_fnp_math_1.py::test_c005_hash_sql_full_select_negzero_collision`
+  (strict-xfail, EX-FN-7-RESID-1).
+- **Rationale** — FIXED 2026-09-16 (FNP-MATH-1 run 18a): the Rust `spark_hash` Murmur3
+  kernel plus the facade destub answer both doors; the fnp-math-1 C-002/C-005 pins hold
+  every measured o245 cell byte-exact. Filed 2026-09-05 from the EX-25 measurement.
+
+### EX-FN-7-RESID-1 — the SQL `-0.0` literal folds to `0.0`; the 12-column hash SELECT statement cannot plan
+
+- **repark** — `CAST(-0.0 AS DOUBLE)` plans identical to `CAST(0.0 AS DOUBLE)`, so the
+  recorded 12-column hash SELECT statement fails projection-name uniqueness before any kernel
+  runs (reproduced bare: `SELECT -0.0, 0.0` refuses the same way); the statement is one
+  strict-xfail pin covering both ANSI settings, while each recorded item also runs alone
+  and passes.
+- **Apache Spark** — answers the 12-column SELECT statement (duplicate projection names
+  allowed); `hash(CAST(-0.0 AS DOUBLE))` and `hash(CAST(0.0 AS DOUBLE))` both answer
+  `-1670924195`, so the seam is planning-only, never a value divergence.
+  *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
+- **Pin** — `python/repark/tests/test_fnp_math_1.py::test_c005_hash_sql_full_select_negzero_collision`
+  (strict-xfail, reason text naming EX-FN-7-RESID-1).
+- **Rationale** — BACKLOG, filed 2026-09-16 (FNP-MATH-1 run 18a step 4): the `-0.0`
+  literal fold is a SQL planner seam owned by run 18c, not a hash-kernel gap; every
+  other hash cell verifies byte-exact on both doors under both ANSI settings.
+  pins: fnp-math-1/C-005
 
 ### EX-FN-8 — `json_tuple` answers; Spark projects the string fields
 
@@ -11722,16 +11748,20 @@ field NAME.
 - **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
   on the example backlog until the sentence kernel lands.
 
-### EX-FN-18 — `split` refuses; Spark cuts on the pattern
+### EX-FN-18 — `split` answers; Spark cuts on the pattern
 
-- **repark** — `F.split("s", ",")` raises `UnsupportedOperationException: functions.split is
-  not supported yet (engine gap; disclosed R-FN-BATCH1)`.
+- **repark** — `F.split(str, pattern[, limit])` cuts on the pattern: `"a,b,,c"` answers
+  `["a", "b", "", "c"]`, `limit=2` answers `["a", "b,,c"]`, NULL stays NULL; the Q12
+  facade pins hold value, `array<string>` type, containsNull=false and nullability on
+  both doors under both ANSI settings.
 - **Apache Spark** — `"a,b,c"` answers `["a", "b", "c"]`; `"a,,c"` answers `["a", "", "c"]`;
   `""` answers `[""]`; NULL answers NULL; `limit=2` answers `["a", "b,c"]`. *(oracle: live
   PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_split_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-05 from the EX-25 measurement. The name stays
-  on the example backlog until the engine grows the split kernel.
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_split_answers` and
+  `python/repark/tests/test_fn_batch1.py::test_split_answers`
+- **Rationale** — FIXED 2026-09-16 (FNP-MATH-1 run 18a): the Rust `spark_split` kernel
+  plus the D-8 facade destub answer both doors; the fnp-math-1 C-003/C-008 pins hold
+  every measured cell. Filed 2026-09-05 from the EX-25 measurement.
 
 ### EX-FN-19 — `make_interval` casts to the terse form; Spark spells the units out — **FIXED 2026-09-15 (FNP-11A)**
 

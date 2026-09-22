@@ -1,4 +1,4 @@
-"""Mathematical and trigonometric function wrappers."""
+"""Mathematical, trigonometric and data-masking function wrappers."""
 
 from __future__ import annotations
 
@@ -6,17 +6,39 @@ import warnings
 from typing import Any
 
 from repark.spark.column import Column
-from repark.spark.functions import _as_column_arg, _scalar
+from repark.spark.functions import _as_column_arg, _scalar, lit
+
+
+def bround(col: Column | str, scale: Column | int | None = None) -> Column:
+    """Banker's rounding with Spark ``bround`` names and types."""
+    return _scalar("bround", col, 0 if scale is None else scale)
+
+
+def conv(col: Column | str, fromBase: Column | int, toBase: Column | int) -> Column:  # noqa: N803
+    """Base conversion with Spark ``conv`` signed-output semantics."""
+    return _scalar("conv", col, fromBase, toBase)
+
+
+def mask(
+    col: Column | str,
+    upperChar: Column | str | None = None,  # noqa: N803
+    lowerChar: Column | str | None = None,  # noqa: N803
+    digitChar: Column | str | None = None,  # noqa: N803
+    otherChar: Column | str | None = None,  # noqa: N803
+) -> Column:
+    """Character-class masking with Spark ``mask`` defaults."""
+    upper = upperChar if upperChar is not None else lit("X")
+    lower = lowerChar if lowerChar is not None else lit("x")
+    digit = digitChar if digitChar is not None else lit("n")
+    other = otherChar if otherChar is not None else lit(None)
+    return _scalar("mask", col, upper, lower, digit, other)
 
 
 def bin(col: Column | str) -> Column:
     """Binary string of a long (PySpark ``functions.bin``).
 
-    Spark casts the input to ``BIGINT`` (numeric and numeric-strings). The
-    ``datafusion-spark`` kernel is Int64-exact, so the leading ``.cast("long")``
-    is the unix_date mold for those accepted inputs. Spark analysis-refuses
-    BOOLEAN; this wrapper's CAST still stringifies ``true``/``false`` to
-    ``1``/``0`` (pinned, not claimed as parity).
+    The kernel casts the input to ``BIGINT`` (numeric and numeric-strings);
+    BOOLEAN refuses with ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE``.
 
     Parameters
     ----------
@@ -32,7 +54,7 @@ def bin(col: Column | str) -> Column:
     --------
     ``F.bin(F.lit(13))`` is ``'1101'``.
     """
-    return _scalar("bin", _as_column_arg(col, as_lit=False).cast("long"))
+    return _scalar("bin", col)
 
 
 def hex(col: Column | str) -> Column:
@@ -101,6 +123,9 @@ def factorial(col: Column | str) -> Column:
 def rint(col: Column | str) -> Column:
     """Nearest integer as a double (PySpark ``functions.rint``).
 
+    The kernel casts the input to ``DOUBLE`` (numeric and numeric-strings);
+    BOOLEAN refuses with ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE``.
+
     Parameters
     ----------
     col : Column or str
@@ -115,7 +140,7 @@ def rint(col: Column | str) -> Column:
     --------
     ``F.rint(F.lit(1.5))`` is ``2.0``.
     """
-    return _scalar("rint", _as_column_arg(col, as_lit=False).cast("double"))
+    return _scalar("rint", col)
 
 
 def width_bucket(
@@ -176,7 +201,7 @@ def toRadians(col: Column | str) -> Column:  # noqa: N802
     return radians(col)
 
 
-INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians")
+INSTALL_NAMES: tuple[str, ...] = ("toDegrees", "toRadians", "bround", "conv", "mask")
 
 
 def install_into(namespace: dict[str, Any], exported: list[str]) -> None:

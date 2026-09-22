@@ -22,6 +22,16 @@ fn to_py_err_routes_to_typed_exceptions_subclassing_runtime_error() {
         assert!(!analysis.is_instance_of::<ParseException>(py));
         assert!(analysis.to_string().contains("No field named zzz"));
 
+        let arithmetic = to_py_err(Error::Arithmetic(
+            "[ARITHMETIC_OVERFLOW] conv overflow. SQLSTATE: 22003".into(),
+        ));
+        assert!(arithmetic.is_instance_of::<ArithmeticException>(py));
+        assert!(arithmetic.is_instance_of::<PySparkException>(py));
+        assert!(arithmetic.is_instance_of::<PyRuntimeError>(py));
+        assert!(!arithmetic.is_instance_of::<AnalysisException>(py));
+        assert!(!arithmetic.is_instance_of::<ParseException>(py));
+        assert!(arithmetic.to_string().contains("ARITHMETIC_OVERFLOW"));
+
         let base = to_py_err(Error::DataFusion("Cast error: boom".into()));
         assert!(base.is_instance_of::<PySparkException>(py));
         assert!(base.is_instance_of::<PyRuntimeError>(py));

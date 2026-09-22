@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from repark.errors import PySparkException
+import re
+
+from repark.errors import ArithmeticException, PySparkException
 
 _EXPORT_MEMORY_ERROR_MARKERS: tuple[str, ...] = (
     "resources exhausted",
@@ -16,6 +18,20 @@ _EXPORT_MEMORY_ERROR_MARKERS: tuple[str, ...] = (
     "datafusion.runtime.memory_limit",
 )
 _PYARROW_DYNAMIC_SOURCE_NOISE = "dynamically evaluated source"
+_ARITHMETIC_OVERFLOW_HEAD = "[ARITHMETIC_OVERFLOW]"
+_SQLSTATE_PATTERN = re.compile(r"SQLSTATE:\s*([A-Z0-9]{5})")
+
+
+def _arithmetic_refusal_message(message: str) -> str | None:
+    """Return the structured arithmetic payload when ``message`` carries one."""
+    start = message.find(_ARITHMETIC_OVERFLOW_HEAD)
+    if start < 0:
+        return None
+    payload = message[start:]
+    match = _SQLSTATE_PATTERN.search(payload)
+    if match is not None:
+        payload = payload[: match.end()]
+    return payload
 
 
 def _export_error_message_is_noise(message: str) -> bool:
@@ -71,8 +87,11 @@ def _export_error_message(error: BaseException) -> str:
 
 
 def _export_engine_error(error: BaseException) -> PySparkException:
-    """Map a mid-stream Arrow export failure to ``PySparkException`` with useful context."""
+    """Map a mid-stream Arrow export failure to its engine exception with useful context."""
     message = _export_error_message(error)
+    refusal = _arithmetic_refusal_message(message)
+    if refusal is not None:
+        return ArithmeticException(refusal)
     lower = message.lower()
     is_memory = any(marker in lower for marker in _EXPORT_MEMORY_ERROR_MARKERS)
     if is_memory and "repark.memory.limit.gb" not in lower:

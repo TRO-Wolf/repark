@@ -6,7 +6,6 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
 from repark.spark.functions import (
     ceil,
     concat_ws,
@@ -149,9 +148,14 @@ def test_greatest_least_dates(spark: ReparkSession) -> None:
     assert ts_table.to_pylist()[0]["t"] == "1970-01-01 00:00:00"
 
 
-def test_unsupported_loud(spark: ReparkSession) -> None:
-    with pytest.raises(UnsupportedOperationException, match="split"):
-        split("s", ",")
+def test_split_answers(spark: ReparkSession) -> None:
+    frame = spark.sql("SELECT * FROM VALUES ('a,b,,c'), (CAST(NULL AS STRING)), ('x') AS t(csvs)")
+    table = frame.select(split("csvs", ",").alias("v")).to_arrow()
+    assert table.column("v").to_pylist() == [["a", "b", "", "c"], None, ["x"]]
+    assert table.schema.field("v").type == pa.list_(
+        pa.field("element", pa.string(), nullable=False)
+    )
+    assert table.schema.field("v").nullable is True
     # FNP-3: datediff ships — Spark's older spelling of date_diff, same engine arm.
     # Behavior: test_fnp3_destubbed.py.
 

@@ -1,0 +1,342 @@
+{
+  "cells12": [
+    {
+      "expr": "split('a,b', ',')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": false,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-41",
+      "rows": [
+        "['a', 'b']"
+      ]
+    },
+    {
+      "expr": "split(s, ',')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": true,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-42",
+      "rows": [
+        "['a', 'b', '', 'c']"
+      ]
+    },
+    {
+      "expr": "split(s, ',', 2)",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": true,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-43",
+      "rows": [
+        "['a', 'b,,c']"
+      ]
+    },
+    {
+      "expr": "split(s, ',', -1)",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": true,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-44",
+      "rows": [
+        "['a', 'b', '', 'c']"
+      ]
+    },
+    {
+      "expr": "split(s, ',', 0)",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": true,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-45",
+      "rows": [
+        "['a', 'b', '', 'c']"
+      ]
+    },
+    {
+      "expr": "split('a1b22c', '[0-9]+')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": false,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-46",
+      "rows": [
+        "['a', 'b', 'c']"
+      ]
+    },
+    {
+      "expr": "split('abc', '')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": false,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-47",
+      "rows": [
+        "['a', 'b', 'c']"
+      ]
+    },
+    {
+      "expr": "split('', ',')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": false,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-48",
+      "rows": [
+        "['']"
+      ]
+    },
+    {
+      "expr": "split(NULL, ',')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": true,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-49",
+      "rows": [
+        "None"
+      ]
+    },
+    {
+      "expr": "split(s, NULL)",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": true,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-50",
+      "rows": [
+        "None"
+      ]
+    },
+    {
+      "expr": "split('a.b', '.')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": false,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-51",
+      "rows": [
+        "['', '', '', '']"
+      ]
+    },
+    {
+      "expr": "split('a|b', '\\\\|')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": false,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-52",
+      "rows": [
+        "['a', 'b']"
+      ]
+    },
+    {
+      "expr": "split(s, ',', CAST(NULL AS INT))",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": true,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-53",
+      "rows": [
+        "None"
+      ]
+    },
+    {
+      "expr": "split('aXbxc', '(?i)x')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": false,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-54",
+      "rows": [
+        "['a', 'b', 'c']"
+      ]
+    },
+    {
+      "expr": "split(123, '2')",
+      "field": {
+        "metadata": {},
+        "name": "v",
+        "nullable": false,
+        "type": {
+          "containsNull": false,
+          "elementType": "string",
+          "type": "array"
+        }
+      },
+      "id": "Q12-55",
+      "rows": [
+        "['1', '3']"
+      ]
+    }
+  ],
+  "cells15": [
+    {
+      "expr": "split('a.b.c', '\\\\Q.\\\\E')",
+      "id": "Q15-9",
+      "nullable": false,
+      "rows": [
+        "['a', 'b', 'c']"
+      ],
+      "type": "array<string>"
+    },
+    {
+      "expr": "split('a,b,c', '(?=,)')",
+      "id": "Q15-10",
+      "nullable": false,
+      "rows": [
+        "['a', ',b', ',c']"
+      ],
+      "type": "array<string>"
+    },
+    {
+      "expr": "split('aa-bb', '(a|b)\\\\1')",
+      "id": "Q15-11",
+      "nullable": false,
+      "rows": [
+        "['', '-', '']"
+      ],
+      "type": "array<string>"
+    },
+    {
+      "expr": "split('aaa', 'a++a')",
+      "id": "Q15-12",
+      "nullable": false,
+      "rows": [
+        "['aaa']"
+      ],
+      "type": "array<string>"
+    },
+    {
+      "condition": null,
+      "error": "Unclosed character class near index 0",
+      "error_type": "IllegalArgumentException",
+      "expr": "split('ab', '[')",
+      "id": "Q15-13"
+    },
+    {
+      "expr": "split('a1b2c', '\\\\d')",
+      "id": "Q15-14",
+      "nullable": false,
+      "rows": [
+        "['a', 'b', 'c']"
+      ],
+      "type": "array<string>"
+    },
+    {
+      "expr": "split('aXbXc', 'X', 2)",
+      "id": "Q15-15",
+      "nullable": false,
+      "rows": [
+        "['a', 'bXc']"
+      ],
+      "type": "array<string>"
+    },
+    {
+      "expr": "split(e, '')",
+      "id": "Q15-16",
+      "nullable": false,
+      "rows": [
+        "['\u00e9', '\ud83c\udf89', 'x']"
+      ],
+      "type": "array<string>"
+    },
+    {
+      "expr": "split('a\ud83c\udf89b', '')",
+      "id": "Q15-17",
+      "nullable": false,
+      "rows": [
+        "['a', '\ud83c\udf89', 'b']"
+      ],
+      "type": "array<string>"
+    }
+  ],
+  "provenance": "Q12-41..55 from /tmp/oc-worker/qc-oracle/fixtures-batch12.json, Q15-9..17 from /tmp/oc-worker/qc-oracle/fixtures-batch15-critic-622.json (PySpark 4.1.2, recorded 2026-09-15); do not edit, fixtures are truth",
+  "spark": "4.1.2"
+}

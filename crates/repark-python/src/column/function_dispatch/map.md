@@ -52,10 +52,24 @@ unit — so a new family gets a child module and the parent's default arm falls 
   **DOOR-CONVERGE-2 (2026-09-15):** `split` joins the converged arms (2–3 args, `-1`
   default limit); the Python `F.split` refusal sits above it, owned by run 16a.
   pins: door-converge-2/C-004
+  **FNP-MATH-1 step 6 (2026-09-16, run 18a):** the `split` arm stays (D-8 binds the
+  facade above it); the math-arm extraction into `math_expr` keeps the
+  `call_scalar_expr` 100-line ceiling. pins: fnp-math-1/C-008
   **DOOR-CONVERGE-2 G-2 (2026-09-15):** the three single-name converged arms merge into
   the converge-1 arm (one pattern list, identical bodies), and the `sequence` arm body
   moves to `sequence_expr` (the `call_scalar_expr` 100-line ceiling holds).
   pins: door-converge-2/C-005
+  **FNP-MATH-1 step 2 (2026-09-16, run 18a):** `bround` joins the converged arms (1–2
+  args, default scale 0) over `spark_math::call_bround`.
+  pins: fnp-math-1/C-002, C-003
+  **FNP-MATH-1 step 3 (2026-09-16, run 18a):** `conv` joins the converged arms (3 args)
+  over `spark_math::call_conv`. pins: fnp-math-1/C-002, C-003, C-004
+  **FNP-MATH-1 step 4 (2026-09-16, run 18a):** `hash` joins the converged arms (1+ args)
+  over `spark_hash::call_hash`. pins: fnp-math-1/C-002, C-003, C-005
+  **FNP-MATH-1 step 5 (2026-09-16, run 18a):** `format_number` joins the converged arms
+  (2 args) over `string::call_format_number`. pins: fnp-math-1/C-002, C-003
+  **FNP-MATH-1 mask slice (2026-09-16, run 18a):** `mask` joins the converged arms
+  (1–5 args) over `string::call_mask`. pins: fnp-math-1/C-002, C-003
 
 ## Pointers
 

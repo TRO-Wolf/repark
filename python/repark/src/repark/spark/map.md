@@ -293,6 +293,17 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child
   more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is
   embedded exactly once (linear). pins: abs-expr-1/C-002, C-004
+  **FNP-MATH-1 step 4 (2026-09-16, run 18a):** `hash` destubs in place to one native
+  `_scalar` call (default display already reads Spark's `hash(a, b)`); `hash` leaves
+  `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES`. pins: fnp-math-1/C-001, C-005
+  **FNP-MATH-1 step 5 (2026-09-16, run 18a):** `format_number` destubs in place to one
+  native `_scalar` call (the `d` scale rides `lit_indices`, so the display reads
+  Spark's `format_number(x, 2)`); `format_number` leaves `FACADE_ONLY_ROUTINE_NAMES`.
+  pins: fnp-math-1/C-001, C-002, C-003
+  **FNP-MATH-1 mask slice (2026-09-16, run 18a):** `mask` lands in
+  `functions_math.py` (absent on the base tree, so no destub): Spark defaults
+  materialize as `lit` args, and the display already reads
+  `mask(masked, X, x, n, NULL)`. pins: fnp-math-1/C-001, C-002, C-003
   **FNP-ALIAS-1 (2026-09-15):** `degrees`/`radians` move to `functions_math.py` (this file sat
   exactly on its ceiling; the baseline ratchets 2247 → 2237 in `check_lib_py.py` and the CAP-1
   mirror). `functions.py` ratchets 1962 → 1960: the two re-export entries move between its
@@ -407,7 +418,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (the DOUBLE literal coerces before the multiply, so no ANSI overflow). Display is Spark's
   `DEGREES(x)`/`RADIANS(x)` via the `dayname`-style rewrap. `toDegrees`/`toRadians` are the
   deprecated aliases and warn Spark's exact `FutureWarning`; they reach `functions.py`
-  through this module's `install_into`. **crit-logic-1 L-001 (2026-09-15):** `_rescaled`
+  through this module's `install_into`. **FNP-MATH-1 step 2 (2026-09-16, run 18a):**
+  `bround(col, scale=None)` joins `INSTALL_NAMES` (thin `_scalar` bind, scale default
+  materialized as `0` so the display reads Spark's `bround(d, 0)`); the installer path
+  keeps `functions.py` untouched under its ceiling. pins: fnp-math-1/C-001, C-002
+  **FNP-MATH-1 step 3 (2026-09-16, run 18a):** `conv(col, fromBase, toBase)` joins
+  `INSTALL_NAMES` beside it. pins: fnp-math-1/C-001, C-002, C-003, C-004
+  **crit-logic-1 L-001 (2026-09-15):** `_rescaled`
   threads join origin like every house wrapper — `join_sql_expr` from the multiply result and
   `**_thread_origin(column)` — so a right-parent column after semi/anti raises
   `MISSING_ATTRIBUTES` instead of silently binding the left, and a two-sided `degrees` ON
@@ -625,6 +642,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
 - **FNP-MISC-1 (2026-09-15, on ARRAY-NULL-1):** `array_append` / `array_prepend` leave `FACADE_ONLY_ROUTINE_NAMES`: since ARRAY-NULL-1 the engine resolves both names itself, so `call_function` reaches them through `_scalar` like any builtin.
 - **FNP-11A (2026-09-15, on 440b2773):** `FNP11A_EXPORTS` lists the eleven names new to `__all__`. `make_timestamp` and `months_between` were already exported through the `functions_expr.py` forwarders, and re-installing them duplicated both names in `__all__` and in `catalog.listFunctions()`. `functions_byname.py` follows the measured PySpark 4.1.2 `call_function` answers: `make_timestamp` / `months_between` resolve in the engine, while `timestamp_add` / `timestamp_diff` raise `UNRESOLVED_ROUTINE`.
 - **DOOR-CONVERGE-2 (#622, 2026-09-15, orchestrator):** `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES` drops `split`: the facade dispatch now resolves `split` on the Spark kernel, so it is no longer a measured engine gap (`test_fnp_misc_1_byname_allowlist_covers_facade`; ruling R-16c-11, run 16a told). `F.split` itself stays run 16a's hand-off. pins: door-converge-2/C-005
+- **FNP-MATH-1 step 6 (2026-09-16, run 18a, D-8):** `F.split` binds the kernel
+  (`str`/`pattern`/`limit`, `str` patterns arrive as `lit` so the display reads
+  Spark's bare `split(csvs, ,, -1)`); the door-converge-2 refusal guard flips to
+  answer-compare. pins: fnp-math-1/C-008
+- **FNP-MATH-1 step 7 (2026-09-16, run 18a, D-9):** `bin` / `rint` drop the facade
+  pre-cast that stringified BOOLEAN past the kernel refusal; the Rust coercion
+  raises Spark's `DATATYPE_MISMATCH` on both doors. pins: fnp-math-1/C-009
 - **DEGREES-RUST-1 by-name drift (2026-09-15, run 16a):** `degrees` / `radians` leave `functions_byname.py`'s `FACADE_ONLY_ROUTINE_NAMES` — once they bind engine scalar UDFs, `call_function` resolves them in the engine, so the derived allowlist no longer lists them as facade-only. pins: fnp-bitmap-facade-1/C-011
 - **FNP-11B step 3 (2026-09-15):** `try_to_timestamp` leaves `FACADE_ONLY_ROUTINE_NAMES` for the same reason — the facade dispatch now resolves it on the tolerant-timestamp kernel. pins: fnp-11b/C-007
 - **FNP-GEN-1 orchestrator fix-up (2026-09-16, run 17a):** `functions_byname.py` drops `posexplode`

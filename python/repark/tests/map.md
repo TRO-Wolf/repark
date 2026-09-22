@@ -3204,6 +3204,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   join/conf + builder gate, sample overload/seed mix, randomSplit seed, count star + struct
   field names, explain extended hang budget, table, show, StorageLevel, toDF, dropDuplicates [].
 - `test_ml_boost_oracle.py` — M4 R-ML-BOOST + **M5 booster-bytes** + **M6 CV parallelism** + **M8 every-ext save/load-or-pin-refuse**: `repark.ml.ext` bare import + ImportError pin, XGBoostRegressor E2E + lib-direct parity, **XGBoostRegressorModel + ClassifierModel save/load predict-parity** (M1 envelope + `booster.raw` via `save_raw`; atomic M7 overwrite; library-major version guard; octo M5 C1/C2 path/params pins), **LightGBM* model_to_string save/load**, **sklearn RF* pin-refuse** exact `pickle forbidden (arbitrary code execution on load)` (save/write/**load/read** — octo M8 C1), matrix completeness pin, no-pickle hygiene grep, **octo M8 C1** classifier-flag mismatch + `num_features<=0` refuse pins, ParamGridBuilder + CrossValidator (LR + XGB grid; best-map selection pins) + **parallelism=1 vs 4 avgMetrics determinism** (M6), OHE plural inputCols/outputCols, PipelineModel.save STOP-loud for ext (no hollow ext publish), training-row re-hold pins, ext MemTable GC ownership, sparse+dense densify 4096 cap, multiclass f1 loud refuse, stretch Classifier/LightGBM/RF lib-direct, numpy not at repark.ml top-level grep-gate; octo C2–C7 pins retained.
+- `test_ml_cv_folds.py` — CrossValidator fold-degeneracy fallback (WO-8): degenerate hash assignment
+  falls back to row_number folds, plus the two WO-8 near-miss pins — genuinely singular data still
+  refuses Cholesky and non-degenerate hash folds keep the hash assignment bit-for-bit.
 - `test_ml_estimators_oracle.py` — **U2:** intercept-only fixture labels `CAST(1.0 AS DOUBLE)`
   (bare `1.0` is DECIMAL and `fit` refuses). R-ML-ESTIMATORS (M3): LinearRegression OLS (perfect line,
   multi-feature, no-intercept, singular/elastic/standardization loud), RegressionEvaluator RMSE,
@@ -7654,3 +7657,42 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   asserted, unparsable numeric suffixes refuse typed, and the `branch_`/`tag_` near-miss
   composition `t.branch_b.files` keeps its current error.
   pins: ice-metadata-cols-1/C-011, C-012, C-013, C-014
+- [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
+  **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
+  in four named blocks, copied verbatim, never re-recorded. Block `o245` (106
+  cells): the D-6 scope names plus `locate` / `array_join`, both doors, both ANSI
+  settings, from `/tmp/oc-worker/pa-math/o245_spark_oracle.json` (2026-09-14).
+  Block `f14` (10 cells): every `F14-*` mask/AES cell from
+  `/tmp/oc-worker/pc-oracle/fixtures-batch3.json` (2026-09-14). Block `q12` (15
+  cells): `Q12-41`…`Q12-55` split cells from
+  `/tmp/oc-worker/qc-oracle/fixtures-batch12.json` (2026-09-15). Block `bl6` (6
+  cells): `BL6-sql-0`…`BL6-sql-3` plus `DIV-like-1` / `DIV-api-like` from
+  `/tmp/oc-worker/pc-oracle/fixtures-batch2.json` (2026-08-18). The top-level
+  `signatures` map is the recorded PySpark parameter shapes for C-001.
+  pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-007, C-008, C-009
+- [test_fnp_math_1.py](test_fnp_math_1.py) — **FNP-MATH-1 step 1 (2026-09-15, run
+  16a):** red-first pins over the fixture above, 227 failed / 16 passed on the
+  base tree. One parametrized test per cell: facade signatures (C-001),
+  Python-door values (C-002), SQL-door values (C-003), error conditions on the
+  recorded door and ANSI setting (C-004), byte-exact hash/AES both doors both
+  ANSI (C-005), the frame-seed control (C-006), fixture integrity (C-007), the
+  split facade half with containsNull (C-008), the BL-6 facade half (C-009).
+  The shared frame grafts `ts` per row with a `CASE` because a `VALUES` list
+  carrying TIMESTAMP fails to execute on the base tree (ledger § out-of-scope).
+  **FNP-MATH-1 step 2 (2026-09-16, run 18a):** `_spark_simple_to_arrow` maps boolean
+  to `pa.bool_()` (`pa.boolean()` is absent in pyarrow 25 and failed every value pin
+  at the helper); the `bround` cells go green on the rebuilt native.
+  **FNP-MATH-1 step 4 (2026-09-16, run 18a):** the frame renders `arr_i` as
+  `array<int>` (Spark's recorded element type; the replay had `array<bigint>`,
+  which hashes differently per element); the 12-column SQL hash SELECT goes
+  `xfail(strict)` on the run-18c `-0.0` planner seam (registry EX-FN-7-RESID-1).
+  **FNP-MATH-1 mask slice (2026-09-16, run 18a):** multi-item mask/split SQL cells run each
+  recorded item through its own query (`_select_items`, `_assert_o245_single_column`):
+  DataFusion requires unique projection names where Spark answers duplicates, and
+  its projection optimizer cannot keep an arg-rendered UDF name stable across
+  repeated columns; values, names, types and rows stay pinned per column. Q12
+  list types map the recorded `containsNull` onto the engine `element` field.
+  **FNP-MATH-1 step 7 (2026-09-16, run 18a, D-9):** `BL6-sql-3` (`2.5D` literal)
+  and the `like`-escape cells go `xfail(strict)` on their owning fences (run 18c
+  parser, LIT-DECIMAL-1); the BOOLEAN refusals pin green on both doors.
+  pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
