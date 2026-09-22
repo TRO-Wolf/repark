@@ -125,8 +125,7 @@ _DIVERGE_DF: dict[str, list[int]] = {
 }
 
 _MISSING_ORACLE_CELLS = sorted(
-    (set(_DIVERGE_SQL) | set(_DIVERGE_DF) | {"df_d_str", "df_f_str"})
-    - set(_ORACLE["cells"])
+    (set(_DIVERGE_SQL) | set(_DIVERGE_DF) | {"df_d_str", "df_f_str"}) - set(_ORACLE["cells"])
 )
 assert not _MISSING_ORACLE_CELLS, f"oracle cells missing: {_MISSING_ORACLE_CELLS}"
 
