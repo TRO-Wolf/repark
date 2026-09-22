@@ -567,6 +567,49 @@ def test_c004_f14_aes_error_cells_python_door(
     )
 
 
+_MASK_REFUSAL_TEMPLATE = (
+    '[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve "mask(<expr>)" due to '
+    'data type mismatch: The {ordinal} parameter requires the "STRING" type, however '
+    'the argument has the type "{got}". SQLSTATE: 42K09'
+)
+
+
+@pytest.mark.parametrize("ansi", (True, False))
+def test_c004_mask_later_arg_refusal_sql_door(spark: ReparkSession, ansi: bool) -> None:
+    """Pin the mask second-argument refusal on the SQL door under both ANSI settings."""
+    _set_ansi(spark, ansi)
+    with pytest.raises(Exception) as excinfo:
+        spark.sql("SELECT mask('Ab', 1)").to_arrow()
+    _assert_recorded_error(
+        excinfo.value,
+        "AnalysisException",
+        "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+        "42K09",
+        "mask-sql-second-int",
+    )
+    assert str(excinfo.value) == _MASK_REFUSAL_TEMPLATE.format(
+        ordinal="second", got="BIGINT"
+    ), "mask-sql-second-int"
+
+
+@pytest.mark.parametrize("ansi", (True, False))
+def test_c004_mask_later_arg_refusal_python_door(spark: ReparkSession, ansi: bool) -> None:
+    """Pin the mask second-argument refusal through the facade under both ANSI settings."""
+    _set_ansi(spark, ansi)
+    with pytest.raises(Exception) as excinfo:
+        spark.range(1).select(F.mask(F.lit("Ab"), F.lit(1)).alias("v")).to_arrow()
+    _assert_recorded_error(
+        excinfo.value,
+        "AnalysisException",
+        "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+        "42K09",
+        "mask-python-second-int",
+    )
+    assert str(excinfo.value) == _MASK_REFUSAL_TEMPLATE.format(
+        ordinal="second", got="INT"
+    ), "mask-python-second-int"
+
+
 _HASH_SQL_XFAIL = (
     "run 18c owns the SQL planner -0.0 fold: CAST(-0.0 AS DOUBLE) plans identical "
     "to CAST(0.0 AS DOUBLE), so the 12-column hash SELECT fails projection-name "

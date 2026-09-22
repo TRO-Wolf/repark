@@ -65,7 +65,7 @@ fn mask_param_error(position: usize, got: &DataType) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"mask(<expr>)\" due to \
          data type mismatch: The {ordinal} parameter requires the \"STRING\" type, however \
-         the argument has the type \"{}\".",
+         the argument has the type \"{}\". SQLSTATE: 42K09",
         crate::spark_math::spark_type_name(got)
     ))
 }
