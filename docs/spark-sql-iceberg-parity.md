@@ -13438,7 +13438,7 @@ field NAME.
   `spec_id_reports_each_rows_own_spec_after_evolution`, `partition_struct_answers_spark`,
   `partition_is_null_on_an_unpartitioned_table`, `spec_id_and_partition_answer_after_evolution`,
   `bucket_partitioned_table_serves_all_four_metadata_columns`) plus
-  `python/repark/tests/test_ice_metadata_cols_1.py` (the eight verbatim cell
+  `python/repark/tests/test_ice_metadata_cols_1.py` (the nine verbatim cell
   replays, the star pin and the refusal pin).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - **Rationale** — BACKLOG, filed 2026-09-20 (ICE-METADATA-COLS-1, IPI-20 PR-1).
