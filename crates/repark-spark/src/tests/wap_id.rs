@@ -66,6 +66,37 @@ async fn main_snapshot_id(catalogs: &CatalogRegistry) -> i64 {
         .snapshot_id()
 }
 
+async fn ref_heads(ctx: &SessionContext, catalogs: &CatalogRegistry) -> Vec<(String, String, i64)> {
+    use datafusion::arrow::array::AsArray;
+
+    let batches = execute(
+        ctx,
+        catalogs,
+        "SELECT name, type, snapshot_id FROM ice.sales.t.refs ORDER BY name",
+    )
+    .await
+    .expect("refs read")
+    .collect()
+    .await
+    .unwrap();
+    let mut heads = Vec::new();
+    for batch in &batches {
+        let names = batch.column(0).as_string::<i32>();
+        let kinds = batch.column(1).as_string::<i32>();
+        let ids = batch
+            .column(2)
+            .as_primitive::<datafusion::arrow::datatypes::Int64Type>();
+        for row in 0..batch.num_rows() {
+            heads.push((
+                names.value(row).to_string(),
+                kinds.value(row).to_string(),
+                ids.value(row),
+            ));
+        }
+    }
+    heads
+}
+
 #[tokio::test]
 async fn wap_id_stages_the_insert_and_leaves_main_put() {
     let wh = TempDir::new().unwrap();
@@ -91,6 +122,20 @@ async fn wap_id_stages_the_insert_and_leaves_main_put() {
         main_snapshot_id(&catalogs).await,
         seed_id,
         "main still points at the seed snapshot"
+    );
+    assert_eq!(
+        load_sales_table(&catalogs, "t")
+            .await
+            .metadata()
+            .snapshots()
+            .count(),
+        2,
+        "the log holds the seed and the staged snapshot"
+    );
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), seed_id)],
+        "main alone exists and still points at the seed"
     );
     let staged = staged_snapshot_id(&catalogs, "w1").await;
     assert_ne!(staged, seed_id, "the staged snapshot is a new snapshot");
