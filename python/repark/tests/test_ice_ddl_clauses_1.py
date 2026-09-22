@@ -677,7 +677,7 @@ def test_identifier_fields_unknown_column_refuses(spark: Any) -> None:
     with pytest.raises(IllegalArgumentException) as caught:
         spark.sql(f"ALTER TABLE {table} DROP IDENTIFIER FIELDS nope")
     assert str(caught.value) == (
-        "Cannot add field nope as an identifier field: not found in current schema or added columns"
+        "Cannot complete drop identifier fields operation: field nope not found"
     )
 
 

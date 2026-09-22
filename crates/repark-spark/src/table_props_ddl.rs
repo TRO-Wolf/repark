@@ -110,49 +110,43 @@ pub(crate) async fn execute_identifier_fields_ddl(
 fn resolve_identifier_names(table: &Table, ddl: &IdentifierFieldsDdl) -> Result<Vec<String>> {
     let schema = table.metadata().current_schema();
     if ddl.remove {
+        let mut remaining: HashSet<i32> = schema.identifier_field_ids().collect();
         for name in &ddl.fields {
-            find_identifier_field(schema, name)?;
+            let (_, field) = find_identifier_field(schema, name)
+                .ok_or_else(|| drop_unknown_identifier_field(name))?;
+            if !remaining.remove(&field.id) {
+                return Err(drop_non_identifier_field(name));
+            }
         }
-        let removed: HashSet<String> = ddl.fields.iter().map(|name| name.to_lowercase()).collect();
-        let remaining: Vec<String> = identifier_field_names(schema)
+        let mut names: Vec<String> = remaining
             .into_iter()
-            .filter(|name| !removed.contains(&name.to_lowercase()))
+            .filter_map(|id| schema.name_by_field_id(id).map(str::to_string))
             .collect();
-        return Ok(remaining);
+        names.sort();
+        return Ok(names);
     }
     let mut names = Vec::with_capacity(ddl.fields.len());
     for name in &ddl.fields {
-        let (ancestors, field) = find_identifier_field(schema, name)?;
+        let (ancestors, field) =
+            find_identifier_field(schema, name).ok_or_else(|| unknown_identifier_field(name))?;
         validate_identifier_candidate(field, &ancestors)?;
         names.push(field.name.clone());
     }
     Ok(names)
 }
 
-fn identifier_field_names(schema: &Schema) -> Vec<String> {
-    schema
-        .identifier_field_ids()
-        .filter_map(|id| schema.field_by_id(id).map(|field| field.name.clone()))
-        .collect()
-}
-
 fn find_identifier_field<'a>(
     schema: &'a Schema,
     name: &str,
-) -> Result<(Vec<&'a NestedField>, &'a NestedField)> {
+) -> Option<(Vec<&'a NestedField>, &'a NestedField)> {
     let parts: Vec<&str> = name.split('.').collect();
-    let Some(mut field) = struct_child(schema.as_struct(), parts[0]) else {
-        return Err(unknown_identifier_field(name));
-    };
+    let mut field = struct_child(schema.as_struct(), parts[0])?;
     let mut ancestors: Vec<&NestedField> = Vec::new();
     for part in &parts[1..] {
         ancestors.push(field);
-        let Some(child) = field_child(field, part) else {
-            return Err(unknown_identifier_field(name));
-        };
-        field = child;
+        field = field_child(field, part)?;
     }
-    Ok((ancestors, field))
+    Some((ancestors, field))
 }
 
 fn struct_child<'a>(struct_type: &'a StructType, part: &str) -> Option<&'a NestedField> {
@@ -234,7 +228,9 @@ fn nested_field_text(field: &NestedField) -> String {
         field_type_text(&field.field_type)
     );
     if let Some(doc) = field.doc.as_ref() {
-        text.push_str(&format!(" ({doc})"));
+        text.push_str(" (");
+        text.push_str(doc);
+        text.push(')');
     }
     text
 }
@@ -293,6 +289,18 @@ fn unknown_identifier_field(name: &str) -> DataFusionError {
     repark_core::illegal_argument_error(format!(
         "Cannot add field {name} as an identifier field: not found in current schema or \
          added columns"
+    ))
+}
+
+fn drop_unknown_identifier_field(name: &str) -> DataFusionError {
+    repark_core::illegal_argument_error(format!(
+        "Cannot complete drop identifier fields operation: field {name} not found"
+    ))
+}
+
+fn drop_non_identifier_field(name: &str) -> DataFusionError {
+    repark_core::illegal_argument_error(format!(
+        "Cannot complete drop identifier fields operation: {name} is not an identifier field"
     ))
 }
 

@@ -150,12 +150,86 @@ async fn set_and_drop_identifier_fields_refuse_unknown_columns() {
     .unwrap_err();
     assert_eq!(
         drop_error.to_string(),
-        "External error: Cannot add field nope as an identifier field: not found in current schema or added columns"
+        "External error: Cannot complete drop identifier fields operation: field nope not found"
     );
     let table = load_sales_table(&catalogs, "unknown").await;
     assert!(
         identifier_ids(&table).is_empty(),
         "the refused statements must commit nothing"
+    );
+}
+
+#[tokio::test]
+async fn drop_identifier_fields_refuses_an_existing_non_identifier_and_commits_nothing() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.keep (id BIGINT NOT NULL, k STRING NOT NULL) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.keep SET IDENTIFIER FIELDS id",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.keep DROP IDENTIFIER FIELDS k",
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "External error: Cannot complete drop identifier fields operation: k is not an \
+         identifier field"
+    );
+    let table = load_sales_table(&catalogs, "keep").await;
+    let id = field_of(&table, "id");
+    assert_eq!(
+        identifier_ids(&table),
+        HashSet::from([id.id]),
+        "the refused DROP must keep the identifier set unchanged"
+    );
+}
+
+#[tokio::test]
+async fn drop_identifier_fields_fails_on_the_second_use_of_one_name() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.twice (id BIGINT NOT NULL, k STRING NOT NULL) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.twice SET IDENTIFIER FIELDS id",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.twice DROP IDENTIFIER FIELDS id, id",
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "External error: Cannot complete drop identifier fields operation: id is not an \
+         identifier field"
+    );
+    let table = load_sales_table(&catalogs, "twice").await;
+    let id = field_of(&table, "id");
+    assert_eq!(
+        identifier_ids(&table),
+        HashSet::from([id.id]),
+        "the refused DROP must keep the identifier set unchanged"
     );
 }
 
