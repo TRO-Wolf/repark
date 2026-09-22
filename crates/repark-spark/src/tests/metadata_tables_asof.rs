@@ -111,15 +111,40 @@ async fn metadata_asof_served_per_type() {
         let sql = format!("SELECT count(*) FROM ice.sales.a.{suffix} VERSION AS OF 999");
         assert_eq!(asof_scalar(&ctx, &catalogs, &sql).await, 0, "{suffix}");
     }
-    let empty_schema = asof_rendered(
+    let empty_fields: Vec<(String, DataType, bool)> = execute(
         &ctx,
         &catalogs,
         "SELECT * FROM ice.sales.a.files VERSION AS OF 999 LIMIT 0",
     )
-    .await;
-    let full_schema =
-        asof_rendered(&ctx, &catalogs, "SELECT * FROM ice.sales.a.files LIMIT 0").await;
-    assert_eq!(empty_schema, full_schema);
+    .await
+    .unwrap()
+    .schema()
+    .fields()
+    .iter()
+    .map(|field| {
+        (
+            field.name().clone(),
+            field.data_type().clone(),
+            field.is_nullable(),
+        )
+    })
+    .collect();
+    let full_fields: Vec<(String, DataType, bool)> =
+        execute(&ctx, &catalogs, "SELECT * FROM ice.sales.a.files LIMIT 0")
+            .await
+            .unwrap()
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| {
+                (
+                    field.name().clone(),
+                    field.data_type().clone(),
+                    field.is_nullable(),
+                )
+            })
+            .collect();
+    assert_eq!(empty_fields, full_fields);
     let mapped = repark_core::engine_err(
         execute(
             &ctx,
