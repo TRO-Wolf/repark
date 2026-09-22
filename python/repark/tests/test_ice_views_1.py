@@ -317,9 +317,7 @@ def test_view_body_is_not_null_subquery_qualifies(spark: ReparkSession) -> None:
     """V-001 r4 — an IS NOT NULL scalar subquery qualifies its bare table."""
     spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
     spark.sql("CREATE NAMESPACE sc.ns2")
-    spark.sql(
-        "CREATE VIEW sc.ns.v AS SELECT id FROM t WHERE (SELECT id FROM a) IS NOT NULL"
-    )
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM t WHERE (SELECT id FROM a) IS NOT NULL")
     spark.catalog.setCurrentCatalog("sc")
     spark.catalog.setCurrentDatabase("ns2")
     assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0], [1], [2]]
@@ -352,9 +350,7 @@ def test_view_body_order_by_subquery_qualifies(spark: ReparkSession) -> None:
     """V-001 r4 — an ORDER BY subquery qualifies its bare table."""
     spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
     spark.sql("CREATE NAMESPACE sc.ns2")
-    spark.sql(
-        "CREATE VIEW sc.ns.v AS SELECT id FROM t ORDER BY abs(id - (SELECT id FROM a))"
-    )
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM t ORDER BY abs(id - (SELECT id FROM a))")
     spark.catalog.setCurrentCatalog("sc")
     spark.catalog.setCurrentDatabase("ns2")
     assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[0], [1], [2]]
@@ -388,8 +384,7 @@ def test_view_body_cte_shadows_in_function_arg_subquery(spark: ReparkSession) ->
     spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
     spark.sql("CREATE NAMESPACE sc.ns2")
     spark.sql(
-        "CREATE VIEW sc.ns.v AS WITH a AS (SELECT 1 AS id) "
-        "SELECT abs((SELECT id FROM a)) AS x"
+        "CREATE VIEW sc.ns.v AS WITH a AS (SELECT 1 AS id) SELECT abs((SELECT id FROM a)) AS x"
     )
     spark.catalog.setCurrentCatalog("sc")
     spark.catalog.setCurrentDatabase("ns2")
