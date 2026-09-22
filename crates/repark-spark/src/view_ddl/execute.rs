@@ -131,10 +131,32 @@ pub(crate) async fn execute_alter_view(
                 handle.update_view(commit).await.map_err(iceberg_err)?;
             }
         }
-        AlterViewAction::RenameTo(_) => {
-            return Err(DataFusionError::Plan(
-                "ALTER VIEW RENAME TO is not implemented".to_string(),
-            ));
+        AlterViewAction::RenameTo(target) => {
+            let (target_catalog, target_namespace, target_name) = complete_view_name(ctx, &target)?;
+            if target_catalog != catalog {
+                return Err(DataFusionError::Plan(format!(
+                    "Cannot move view between catalogs: from={catalog} and to={target_catalog}"
+                )));
+            }
+            let destination = TableIdent::new(
+                NamespaceIdent::new(target_namespace.clone()),
+                target_name.clone(),
+            );
+            match handle.view_exists(&destination).await {
+                Ok(true) => {
+                    let relation = format!("{target_namespace}.{target_name}");
+                    return Err(DataFusionError::Plan(spark_error::message(
+                        spark_error::VIEW_ALREADY_EXISTS,
+                        &[("relationName", relation.as_str())],
+                    )));
+                }
+                Ok(false) => {}
+                Err(error) => return Err(iceberg_err(error)),
+            }
+            handle
+                .rename_view(&ident, &destination)
+                .await
+                .map_err(iceberg_err)?;
         }
     }
     ctx.read_empty()
