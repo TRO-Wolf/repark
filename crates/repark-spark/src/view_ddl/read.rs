@@ -189,7 +189,7 @@ pub(crate) async fn plan_prepared_body(
     sql: &str,
     pins: &PinnedViews,
 ) -> Result<DataFrame> {
-    let frame = crate::router::execute_view_body_query(ctx, catalogs, sql).await;
+    let frame = crate::view_dispatch::execute_view_body_query(ctx, catalogs, sql).await;
     pins.release(ctx);
     frame
 }

@@ -38,6 +38,7 @@ pub mod spark_literals;
 mod spark_rewrites;
 mod spark_type_names;
 mod spark_typed;
+mod view_dispatch;
 pub use spark_typed::{
     FoldSparkNumericCasts, SUFFIX_LITERAL_NAME, SparkProjectionDisplay, spark_as_udf,
     suffix_literal_udf,
