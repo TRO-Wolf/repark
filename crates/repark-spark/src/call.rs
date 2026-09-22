@@ -546,7 +546,6 @@ fn orphan_result_dataframe(ctx: &SessionContext, locations: &[String]) -> Result
     ctx.read_batches(vec![batch])
 }
 
-/// The one procedure here that destroys data, and the only one whose defaults invert Spark's.
 async fn execute_remove_orphan_files(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -565,40 +564,26 @@ async fn execute_remove_orphan_files(
         "equal_authorities",
         "prefix_mismatch_mode",
         "prefix_listing",
+        "stream_results",
     ])?;
     // Spark positional order: table, older_than, location, dry_run.
     args.reject_excess_positional(4)?;
-    for unsupported in [
-        "max_concurrent_deletes",
-        "file_list_view",
-        "equal_schemes",
-        "equal_authorities",
-        "prefix_mismatch_mode",
-        "prefix_listing",
-    ] {
-        if args.has_named(unsupported) {
-            return Err(DataFusionError::NotImplemented(format!(
-                "CALL remove_orphan_files argument `{unsupported}` is not supported in v1 \
-                 (supported: table, older_than, location, dry_run)"
-            )));
-        }
+    if args.has_named("file_list_view") {
+        return Err(DataFusionError::NotImplemented(format!(
+            "CALL remove_orphan_files argument `file_list_view` is not supported in v1 \
+             (supported: table, older_than, location, dry_run, max_concurrent_deletes, \
+             equal_schemes, equal_authorities, prefix_mismatch_mode, prefix_listing, \
+             stream_results)"
+        )));
     }
 
     let table_arg = args.require_string("table", 0)?;
     refuse_service_managed_orphan_sweep(policy.as_ref(), catalog_name, &table_arg)?;
 
-    // REQUIRED, unlike Spark.
-    let older_than_ms = args
-        .optional_timestamp_ms("older_than", Some(1))?
-        .ok_or_else(|| {
-            DataFusionError::Plan(
-            "CALL remove_orphan_files requires an explicit `older_than` (named or positional #1). \
-             Spark defaults it to `now - 3 days`; this engine does not, because the procedure \
-             deletes files with no rollback and a defaulted cutoff is the argument a caller never \
-             thinks about. Pass a timestamp at least 24 hours in the past."
-                .to_string(),
-        )
-        })?;
+    let older_than_ms = match args.optional_timestamp_ms("older_than", Some(1))? {
+        Some(cutoff) => cutoff,
+        None => now_millis()? - 3 * 86_400_000,
+    };
 
     // Java's floor, same threshold, same reason (see ORPHAN_OLDER_THAN_FLOOR_MS).
     let floor_ms = now_millis()? - ORPHAN_OLDER_THAN_FLOOR_MS;
@@ -612,8 +597,7 @@ async fn execute_remove_orphan_files(
     }
 
     let location = args.optional_string("location")?;
-    // Defaults TRUE, inverting Spark (registry row ORPHAN-2).
-    let dry_run = args.optional_bool("dry_run", Some(3))?.unwrap_or(true);
+    let dry_run = args.optional_bool("dry_run", Some(3))?.unwrap_or(false);
 
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
