@@ -90,6 +90,12 @@ holds behavior observed from outside the crate.
   VALUES and the named-list fill still succeed, and SELECT-short / wide / mixed / overwrite /
   missing-table shapes carry no such condition.
   pins: ice-error-conditions-1/C-011
+- `ansi_update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the ANSI door's
+  `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
+  into BIGINT stamps `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` with
+  the backticked column and `"STRING"`/`"BIGINT"`; numeric and string-to-string UPDATE
+  statements succeed; a missing table keeps its own error.
+  pins: ipi-51/W-UPDATE-TYPE-ERR
 
 - `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session

@@ -47,6 +47,7 @@ mod time_travel;
 mod time_window;
 mod truncate;
 pub mod type_table;
+mod update_cast;
 mod use_ddl;
 pub mod wap;
 mod window_range;
