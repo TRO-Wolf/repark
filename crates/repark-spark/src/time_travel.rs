@@ -141,9 +141,15 @@ pub async fn prepare_time_travel_sql(
         }
         let snapshot_id = resolve_table_snapshot(catalogs, &span.table_parts, &spec, &zone).await?;
         let table = load_iceberg_table(catalogs, &span.table_parts).await?;
-        let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
-            .await
-            .map_err(iceberg_err)?;
+        let provider = if let TimeTravelSpec::VersionRef(name) = &spec {
+            IcebergStaticTableProvider::try_new_from_table_ref(table, name)
+                .await
+                .map_err(iceberg_err)?
+        } else {
+            IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
+                .await
+                .map_err(iceberg_err)?
+        };
         let replacement = register_time_travel_provider(ctx, pinned, Arc::new(provider))?;
         tokens.splice(span.table_start..span.clause_end, replacement);
     }
