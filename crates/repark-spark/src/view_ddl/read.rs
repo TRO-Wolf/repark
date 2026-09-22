@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::ops::ControlFlow;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -8,8 +9,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    Expr, Ident, ObjectName, ObjectNamePart, Query, Select, SelectItem, SetExpr, Statement,
-    TableFactor, TableWithJoins,
+    Ident, ObjectName, ObjectNamePart, Query, Statement, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
@@ -245,7 +245,13 @@ async fn qualify_view_body_refs(
     };
     let mut candidates = Vec::new();
     let mut scopes = CteScopes { levels: Vec::new() };
-    collect_body_refs(&mut statement, &mut scopes, &mut candidates);
+    if let Statement::Query(query) = &mut statement {
+        walk_query_refs(query, &mut scopes, &mut |name: &mut ObjectName| {
+            if name_parts(name).len() <= 2 {
+                candidates.push(name.clone());
+            }
+        });
+    }
     let mut distinct = candidates.iter().map(name_parts).collect::<Vec<_>>();
     distinct.sort();
     distinct.dedup();
@@ -274,204 +280,53 @@ async fn qualify_view_body_refs(
         return Ok(sql.to_string());
     }
     let mut scopes = CteScopes { levels: Vec::new() };
-    rewrite_body_refs(&mut statement, &mut scopes, &qualified);
+    if let Statement::Query(query) = &mut statement {
+        walk_query_refs(query, &mut scopes, &mut |name: &mut ObjectName| {
+            if let Some(replacement) = qualified.get(&name_parts(name)) {
+                *name = replacement.clone();
+            }
+        });
+    }
     Ok(statement.to_string())
 }
 
-fn collect_body_refs(
-    statement: &mut Statement,
-    scopes: &mut CteScopes,
-    candidates: &mut Vec<ObjectName>,
-) {
-    if let Statement::Query(query) = statement {
-        collect_query_refs(query, scopes, candidates);
-    }
+struct ScopedRelations<'a, F: FnMut(&mut ObjectName)> {
+    scopes: &'a mut CteScopes,
+    sink: &'a mut F,
+    depth: usize,
 }
 
-fn collect_query_refs(query: &mut Query, scopes: &mut CteScopes, candidates: &mut Vec<ObjectName>) {
-    scopes.levels.push(HashSet::new());
-    if let Some(with) = &mut query.with {
-        let recursive = with.recursive;
-        for table in &mut with.cte_tables {
-            let alias = table.alias.name.value.to_lowercase();
-            if recursive && let Some(level) = scopes.levels.last_mut() {
-                level.insert(alias.clone());
-            }
-            collect_query_refs(&mut table.query, scopes, candidates);
-            if let Some(level) = scopes.levels.last_mut() {
-                level.insert(alias);
-            }
+impl<F: FnMut(&mut ObjectName)> VisitorMut for ScopedRelations<'_, F> {
+    type Break = ();
+
+    fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<()> {
+        self.depth += 1;
+        if self.depth == 2 {
+            walk_query_refs(query, self.scopes, self.sink);
         }
+        ControlFlow::Continue(())
     }
-    collect_set_refs(&mut query.body, scopes, candidates);
-    scopes.levels.pop();
-}
 
-fn collect_set_refs(
-    set_expr: &mut SetExpr,
-    scopes: &mut CteScopes,
-    candidates: &mut Vec<ObjectName>,
-) {
-    match set_expr {
-        SetExpr::Select(select) => collect_select_refs(select, scopes, candidates),
-        SetExpr::Query(query) => collect_query_refs(query, scopes, candidates),
-        SetExpr::SetOperation { left, right, .. } => {
-            collect_set_refs(left, scopes, candidates);
-            collect_set_refs(right, scopes, candidates);
-        }
-        _ => {}
+    fn post_visit_query(&mut self, _query: &mut Query) -> ControlFlow<()> {
+        self.depth -= 1;
+        ControlFlow::Continue(())
     }
-}
 
-fn collect_select_refs(
-    select: &mut Select,
-    scopes: &mut CteScopes,
-    candidates: &mut Vec<ObjectName>,
-) {
-    for item in &mut select.projection {
-        match item {
-            SelectItem::UnnamedExpr(expr)
-            | SelectItem::ExprWithAlias { expr, .. }
-            | SelectItem::ExprWithAliases { expr, .. } => {
-                collect_expr_refs(expr, scopes, candidates);
-            }
-            SelectItem::QualifiedWildcard(_, _) | SelectItem::Wildcard(_) => {}
-        }
-    }
-    for table in &mut select.from {
-        collect_joins_refs(table, scopes, candidates);
-    }
-    if let Some(expr) = select.selection.as_mut() {
-        collect_expr_refs(expr, scopes, candidates);
-    }
-    if let datafusion::sql::sqlparser::ast::GroupByExpr::Expressions(exprs, _) =
-        &mut select.group_by
-    {
-        for expr in exprs {
-            collect_expr_refs(expr, scopes, candidates);
-        }
-    }
-    if let Some(expr) = select.having.as_mut() {
-        collect_expr_refs(expr, scopes, candidates);
-    }
-    if let Some(expr) = select.qualify.as_mut() {
-        collect_expr_refs(expr, scopes, candidates);
-    }
-}
-
-fn collect_joins_refs(
-    joins: &mut TableWithJoins,
-    scopes: &mut CteScopes,
-    candidates: &mut Vec<ObjectName>,
-) {
-    collect_factor_refs(&mut joins.relation, scopes, candidates);
-    for join in &mut joins.joins {
-        collect_factor_refs(&mut join.relation, scopes, candidates);
-    }
-}
-
-fn collect_factor_refs(
-    factor: &mut TableFactor,
-    scopes: &mut CteScopes,
-    candidates: &mut Vec<ObjectName>,
-) {
-    match factor {
-        TableFactor::Table { name, .. } => {
+    fn pre_visit_relation(&mut self, name: &mut ObjectName) -> ControlFlow<()> {
+        if self.depth == 1 {
             let parts = name_parts(name);
-            if parts.len() == 1 && scopes.shadowed(&parts[0]) {
-                return;
-            }
-            if parts.len() <= 2 {
-                candidates.push(name.clone());
+            if !(parts.len() == 1 && self.scopes.shadowed(&parts[0])) {
+                (self.sink)(name);
             }
         }
-        TableFactor::Derived { subquery, .. } => {
-            collect_query_refs(subquery, scopes, candidates);
-        }
-        TableFactor::NestedJoin {
-            table_with_joins, ..
-        } => {
-            collect_joins_refs(table_with_joins, scopes, candidates);
-        }
-        TableFactor::Pivot { table, .. } | TableFactor::Unpivot { table, .. } => {
-            collect_factor_refs(table, scopes, candidates);
-        }
-        _ => {}
+        ControlFlow::Continue(())
     }
 }
 
-fn collect_expr_refs(expr: &mut Expr, scopes: &mut CteScopes, candidates: &mut Vec<ObjectName>) {
-    match expr {
-        Expr::Subquery(query)
-        | Expr::Exists {
-            subquery: query, ..
-        } => {
-            collect_query_refs(query, scopes, candidates);
-        }
-        Expr::InSubquery { subquery, .. } => {
-            collect_query_refs(subquery, scopes, candidates);
-        }
-        Expr::AnyOp { left, .. } | Expr::AllOp { left, .. } => {
-            collect_expr_refs(left, scopes, candidates);
-        }
-        Expr::BinaryOp { left, right, .. }
-        | Expr::IsDistinctFrom(left, right)
-        | Expr::IsNotDistinctFrom(left, right) => {
-            collect_expr_refs(left, scopes, candidates);
-            collect_expr_refs(right, scopes, candidates);
-        }
-        Expr::UnaryOp { expr, .. } | Expr::Cast { expr, .. } | Expr::Nested(expr) => {
-            collect_expr_refs(expr, scopes, candidates);
-        }
-        Expr::InList { expr, list, .. } => {
-            collect_expr_refs(expr, scopes, candidates);
-            for item in list {
-                collect_expr_refs(item, scopes, candidates);
-            }
-        }
-        Expr::Between {
-            expr, low, high, ..
-        } => {
-            collect_expr_refs(expr, scopes, candidates);
-            collect_expr_refs(low, scopes, candidates);
-            collect_expr_refs(high, scopes, candidates);
-        }
-        Expr::Case {
-            conditions,
-            else_result,
-            ..
-        } => {
-            for condition in conditions {
-                collect_expr_refs(&mut condition.condition, scopes, candidates);
-                collect_expr_refs(&mut condition.result, scopes, candidates);
-            }
-            for else_expr in else_result.iter_mut() {
-                collect_expr_refs(else_expr, scopes, candidates);
-            }
-        }
-        Expr::Tuple(exprs) => {
-            for item in exprs {
-                collect_expr_refs(item, scopes, candidates);
-            }
-        }
-        _ => {}
-    }
-}
-
-fn rewrite_body_refs(
-    statement: &mut Statement,
-    scopes: &mut CteScopes,
-    qualified: &HashMap<Vec<String>, ObjectName>,
-) {
-    if let Statement::Query(query) = statement {
-        rewrite_query_refs(query, scopes, qualified);
-    }
-}
-
-fn rewrite_query_refs(
+fn walk_query_refs<F: FnMut(&mut ObjectName)>(
     query: &mut Query,
     scopes: &mut CteScopes,
-    qualified: &HashMap<Vec<String>, ObjectName>,
+    sink: &mut F,
 ) {
     scopes.levels.push(HashSet::new());
     if let Some(with) = &mut query.with {
@@ -481,169 +336,21 @@ fn rewrite_query_refs(
             if recursive && let Some(level) = scopes.levels.last_mut() {
                 level.insert(alias.clone());
             }
-            rewrite_query_refs(&mut table.query, scopes, qualified);
+            walk_query_refs(&mut table.query, scopes, sink);
             if let Some(level) = scopes.levels.last_mut() {
                 level.insert(alias);
             }
         }
     }
-    rewrite_set_refs(&mut query.body, scopes, qualified);
-    scopes.levels.pop();
-}
-
-fn rewrite_set_refs(
-    set_expr: &mut SetExpr,
-    scopes: &mut CteScopes,
-    qualified: &HashMap<Vec<String>, ObjectName>,
-) {
-    match set_expr {
-        SetExpr::Select(select) => rewrite_select_refs(select, scopes, qualified),
-        SetExpr::Query(query) => rewrite_query_refs(query, scopes, qualified),
-        SetExpr::SetOperation { left, right, .. } => {
-            rewrite_set_refs(left, scopes, qualified);
-            rewrite_set_refs(right, scopes, qualified);
-        }
-        _ => {}
-    }
-}
-
-fn rewrite_select_refs(
-    select: &mut Select,
-    scopes: &mut CteScopes,
-    qualified: &HashMap<Vec<String>, ObjectName>,
-) {
-    for item in &mut select.projection {
-        match item {
-            SelectItem::UnnamedExpr(expr)
-            | SelectItem::ExprWithAlias { expr, .. }
-            | SelectItem::ExprWithAliases { expr, .. } => {
-                rewrite_expr_refs(expr, scopes, qualified);
-            }
-            SelectItem::QualifiedWildcard(_, _) | SelectItem::Wildcard(_) => {}
-        }
-    }
-    for table in &mut select.from {
-        rewrite_joins_refs(table, scopes, qualified);
-    }
-    if let Some(expr) = select.selection.as_mut() {
-        rewrite_expr_refs(expr, scopes, qualified);
-    }
-    if let datafusion::sql::sqlparser::ast::GroupByExpr::Expressions(exprs, _) =
-        &mut select.group_by
-    {
-        for expr in exprs {
-            rewrite_expr_refs(expr, scopes, qualified);
-        }
-    }
-    if let Some(expr) = select.having.as_mut() {
-        rewrite_expr_refs(expr, scopes, qualified);
-    }
-    if let Some(expr) = select.qualify.as_mut() {
-        rewrite_expr_refs(expr, scopes, qualified);
-    }
-}
-
-fn rewrite_joins_refs(
-    joins: &mut TableWithJoins,
-    scopes: &mut CteScopes,
-    qualified: &HashMap<Vec<String>, ObjectName>,
-) {
-    rewrite_factor_refs(&mut joins.relation, scopes, qualified);
-    for join in &mut joins.joins {
-        rewrite_factor_refs(&mut join.relation, scopes, qualified);
-    }
-}
-
-fn rewrite_factor_refs(
-    factor: &mut TableFactor,
-    scopes: &mut CteScopes,
-    qualified: &HashMap<Vec<String>, ObjectName>,
-) {
-    match factor {
-        TableFactor::Table { name, .. } => {
-            let parts = name_parts(name);
-            if parts.len() == 1 && scopes.shadowed(&parts[0]) {
-                return;
-            }
-            if let Some(replacement) = qualified.get(&parts) {
-                *name = replacement.clone();
-            }
-        }
-        TableFactor::Derived { subquery, .. } => {
-            rewrite_query_refs(subquery, scopes, qualified);
-        }
-        TableFactor::NestedJoin {
-            table_with_joins, ..
-        } => {
-            rewrite_joins_refs(table_with_joins, scopes, qualified);
-        }
-        TableFactor::Pivot { table, .. } | TableFactor::Unpivot { table, .. } => {
-            rewrite_factor_refs(table, scopes, qualified);
-        }
-        _ => {}
-    }
-}
-
-fn rewrite_expr_refs(
-    expr: &mut Expr,
-    scopes: &mut CteScopes,
-    qualified: &HashMap<Vec<String>, ObjectName>,
-) {
-    match expr {
-        Expr::Subquery(query)
-        | Expr::Exists {
-            subquery: query, ..
-        } => {
-            rewrite_query_refs(query, scopes, qualified);
-        }
-        Expr::InSubquery { subquery, .. } => {
-            rewrite_query_refs(subquery, scopes, qualified);
-        }
-        Expr::AnyOp { left, .. } | Expr::AllOp { left, .. } => {
-            rewrite_expr_refs(left, scopes, qualified);
-        }
-        Expr::BinaryOp { left, right, .. }
-        | Expr::IsDistinctFrom(left, right)
-        | Expr::IsNotDistinctFrom(left, right) => {
-            rewrite_expr_refs(left, scopes, qualified);
-            rewrite_expr_refs(right, scopes, qualified);
-        }
-        Expr::UnaryOp { expr, .. } | Expr::Cast { expr, .. } | Expr::Nested(expr) => {
-            rewrite_expr_refs(expr, scopes, qualified);
-        }
-        Expr::InList { expr, list, .. } => {
-            rewrite_expr_refs(expr, scopes, qualified);
-            for item in list {
-                rewrite_expr_refs(item, scopes, qualified);
-            }
-        }
-        Expr::Between {
-            expr, low, high, ..
-        } => {
-            rewrite_expr_refs(expr, scopes, qualified);
-            rewrite_expr_refs(low, scopes, qualified);
-            rewrite_expr_refs(high, scopes, qualified);
-        }
-        Expr::Case {
-            conditions,
-            else_result,
-            ..
-        } => {
-            for condition in conditions {
-                rewrite_expr_refs(&mut condition.condition, scopes, qualified);
-                rewrite_expr_refs(&mut condition.result, scopes, qualified);
-            }
-            for else_expr in else_result.iter_mut() {
-                rewrite_expr_refs(else_expr, scopes, qualified);
-            }
-        }
-        Expr::Tuple(exprs) => {
-            for item in exprs {
-                rewrite_expr_refs(item, scopes, qualified);
-            }
-        }
-        _ => {}
-    }
+    let with = query.with.take();
+    let mut visitor = ScopedRelations {
+        scopes,
+        sink,
+        depth: 0,
+    };
+    let _ = query.visit(&mut visitor);
+    query.with = with;
+    visitor.scopes.levels.pop();
 }
 
 fn qualify_object_name(
