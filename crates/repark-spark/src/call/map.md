@@ -268,8 +268,14 @@ and measured-parity contract would grow `call.rs` beyond its exact
   refusal) and `use_caching` is an accepted no-op. Above
   `commit.manifest.target-size-bytes` the two engines write a different NUMBER of manifests, so
   `added_manifests_count` diverges there (registry `MANIFEST-3`); `rewritten_manifests_count`
-  agrees at every size measured.
+  agrees at every size measured. **RM-SORTBY-1 (2026-09-21):** `sort_by` wires
+  through, named and fourth-positional per the jar `PARAMETERS` order, parsed as a
+  string array. A non-empty list calls the fork's `sort_by_columns` sort-then-pack
+  instead of the single-key `cluster_by`; a missing or NULL list keeps the legacy
+  path. The empty-list and non-partition-column refusals surface the fork text
+  bare through `illegal_argument_error`.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
+  pins: P-RM-SORT-BY
 - `plan_partitioning.rs` (+ `plan_partitioning/`) — **AP-1 step 1 (2026-09-10):** `CALL
   <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
   target positive). Statistics come from one `files WHERE content = 0` read
