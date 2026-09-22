@@ -6688,47 +6688,50 @@ the pin rather than obeying it.
 > `::test_log1_both_arities_null_on_non_positive_operands`,
 > `python/repark/tests/test_sem1_spark_log.py`. Oracle: live PySpark 4.1.2, 2026-08-31.
 
-### ORPHAN-1 — `remove_orphan_files` requires `older_than`; Spark defaults it
+### ORPHAN-1 — `remove_orphan_files` defaults `older_than` to three days, like Spark (retired 2026-09-22)
+
+> **RETIRED 2026-09-22 (owner ruling Q-55-2).** The required-cutoff refusal is gone: a bare
+> call runs with Spark's `now - 3 days` default and deletes what it lists. The old pins went
+> RED on purpose in the same change and were rewritten to Spark's answers. Retired per §6.
 
 - **repark** — `CALL <catalog>.system.remove_orphan_files(table => …)` with no `older_than`
-  **refuses** at plan time and names the argument. Nothing is listed and nothing is deleted.
+  runs, defaulting `older_than` to `now - 3 days`, exactly as Spark does: the planted
+  10-day-old orphan is listed and deleted, the planted 1-day-old orphan is kept.
 - **Apache Spark** — runs, defaulting `older_than` to `now - 3 days`, and **deletes** the orphans
-  it finds. Measured: two planted orphans aged ten days were listed and removed from disk by a
-  bare `CALL … remove_orphan_files(table => 't')`.
-  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, re-measured 2026-09-02 by
-  V3-11: the bare call listed both planted ten-day-old orphans and both were gone from the data
-  directory afterwards, the answer the 4.0.1 run recorded;
+  it finds. Measured: the bare call listed the planted ten-day-old orphan and it was gone
+  from the data directory afterwards.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-09-22 scoreboard;
   the `DataSourceV2Relation` note this row used to carry is retired — see
   [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
-- **Pin** — `crates/repark-spark/src/tests/call.rs::call_orphan1_requires_an_explicit_older_than`
-  and `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_requires_an_explicit_older_than`
-- **Rationale** — DECLARED, and deliberately stricter than Spark (owner decision OD-2). This is
-  the only procedure on the surface that destroys data with no rollback: a bad compaction is
-  compacted again, deleted files are gone. A defaulted cutoff makes the single most dangerous
-  argument the one the caller never typed, and the default is not conservative — three days is
-  short enough to catch a long-running write. The refusal costs a migrating job one argument and
-  is the cheapest possible place to spend that. **Not to be confused with the 24-hour floor**,
-  which repark also enforces and which is *parity* with Spark, not a stricter posture.
+- **Pin** — `crates/repark-spark/src/tests/call_orphan.rs::call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`
+  and `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_defaults_older_than_to_three_days`
+- **Rationale** — RETIRED by owner ruling Q-55-2 on 2026-09-22: owner decision OD-2 (2026-08-21)
+  is reversed, and repark now answers Spark's answer. **The 24-hour floor stays** — it is
+  *parity* with Spark, not a stricter posture, and it keeps its pins
+  (`call_remove_orphan_files_enforces_sparks_twenty_four_hour_floor`,
+  `test_remove_orphan_files_floor_matches_spark`).
 
-### ORPHAN-2 — `remove_orphan_files` defaults to a dry run; Spark defaults to deleting
+### ORPHAN-2 — `remove_orphan_files` deletes by default, like Spark (retired 2026-09-22)
 
-- **repark** — `dry_run` defaults to **true**. The default call LISTS every orphan and removes
-  nothing; deleting requires `dry_run => false` explicitly. `dry_run` accepts a boolean literal
+> **RETIRED 2026-09-22 (owner ruling Q-55-2).** The dry-run default is gone: a bare call
+> deletes, and listing without deleting needs `dry_run => true`. The old pins went RED on
+> purpose in the same change and were rewritten to Spark's answers. Retired per §6.
+
+- **repark** — `dry_run` defaults to **false**: the default call deletes. `dry_run => true`
+  lists the same rows and deletes nothing. `dry_run` accepts a boolean literal
   only — a quoted `'false'` refuses rather than being coerced, so a typo cannot arm the deletion.
 - **Apache Spark** — `dry_run` defaults to **false**: the default call deletes. Measured on the
-  same fixture — the bare call left three data files where five had been; `dry_run => true`
-  returned the same two rows and left all five in place.
-  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as ORPHAN-1.)*
-- **Pin** — `crates/repark-spark/src/tests/call.rs::call_remove_orphan_files_dry_run_lists_without_deleting`,
+  same 2026-09-22 scoreboard fixture — the bare call listed and deleted the planted
+  ten-day-old orphan; `dry_run => true` listed it and kept it.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-09-22.)*
+- **Pin** — `crates/repark-spark/src/tests/call_orphan.rs::call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`,
+  `::call_remove_orphan_files_dry_run_lists_without_deleting`,
   `::call_remove_orphan_files_armed_deletes_orphans_and_nothing_else`,
   `::call_remove_orphan_files_refuses_a_quoted_dry_run`, and
-  `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_dry_run_is_the_default`
-- **Rationale** — DECLARED, deliberately stricter than Spark (owner decision OD-2). The **result
-  shape is identical either way** — one row per orphan, `orphan_file_location`, exactly Spark's
-  schema — so the dry run is not a second surface bolted on beside the real one; it is Spark's own
-  result with the deletion withheld. A caller who reads the listing and re-runs with
-  `dry_run => false` gets Spark's behaviour exactly. What changes is which of the two a caller
-  gets by typing nothing, and on an unrecoverable operation that default should be the safe one.
+  `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_deletes_by_default`
+- **Rationale** — RETIRED by owner ruling Q-55-2 on 2026-09-22: owner decision OD-2 (2026-08-21)
+  is reversed, and repark now answers Spark's answer. The **result shape is identical either
+  way** — one row per orphan, `orphan_file_location`, exactly Spark's schema.
 
 ### ORPHAN-S3TABLES-1 — `remove_orphan_files` on an S3 Tables table: the bare-bucket parser half FIXED (RP-19), the 405 listing refusal stays open
 
