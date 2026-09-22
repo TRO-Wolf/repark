@@ -98,14 +98,14 @@ fn fold_metadata_ident(ident: &mut Ident) {
 
 fn refuse(kind: &str) -> DataFusionError {
     DataFusionError::Plan(format!(
-        "[ICE-MC-1] a metadata column (_file, _pos) over {kind} \
+        "[ICE-MC-1] a metadata column (_file, _pos, _spec_id) over {kind} \
          is not served; name the columns explicitly on a table relation"
     ))
 }
 
 fn refuse_unserved(name: &str) -> DataFusionError {
     DataFusionError::Plan(format!(
-        "[ICE-MC-1] metadata column {name} is not yet served; this layer serves (_file, _pos)"
+        "[ICE-MC-1] metadata column {name} is not yet served; this layer serves (_file, _pos, _spec_id)"
     ))
 }
 
