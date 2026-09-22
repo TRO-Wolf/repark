@@ -3106,6 +3106,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **IO-ORC-1 (2026-09-16):** `test_load_orc_declared_not_implemented` becomes
   `test_load_orc_reaches_the_scan` (missing path is `PATH_NOT_FOUND` now); the write
   refusal pin is unchanged. pins: io-orc-1/C-004
+  **V-004 (2026-09-22):** the pre-views `DROP VIEW IF EXISTS bare_x` pass-through pin in
+  `test_drop_expander_does_not_rewrite_non_drop_sql` is rewritten to the qualified
+  expansion — R2's `_expand_drop_table_or_view_sql` resolves VIEW targets like TABLE —
+  and the same function gains pins that a three-part `DROP VIEW sc.ns.v` is not
+  re-qualified and that `DROP VIEW … PURGE` refuses (PURGE stays TABLE-only).
 - `test_t4_csv_smart.py` — **r25 T4** smartCsv + Q1 inference protocol: pure rung pins,
   messy preamble/BOM/ragged fixtures, value+type Arrow path (bool/int32/int64/decimal/date/
   timestamp/float64/string), `describe_ingest` diagnostics, opt-in header case normalize,
