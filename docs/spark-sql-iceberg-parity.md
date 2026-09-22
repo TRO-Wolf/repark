@@ -93,17 +93,23 @@ exists to prevent, and every refusal message names the section it is recorded in
 
 #### MT-1 — time travel composed with a metadata table
 
-- **repark** — `SELECT … FROM cat.ns.t.snapshots VERSION AS OF n` (and the `TIMESTAMP AS OF` /
-  `FOR SYSTEM_VERSION AS OF` / `FOR SYSTEM_TIME AS OF` spellings) refuses at planning time with an
-  error naming this section. The base table with `AS OF`, and the metadata table without `AS OF`,
-  both work — and a query that joins a metadata table to a time-travelled *base* table is
-  deliberately **not** caught by this guard.
-- **Apache Spark** — accepts the dotted metadata-table reference as a queryable relation.
-  *(oracle: documented — the claim here is the refusal, not a value.)*
-- **Pin** — `crates/repark-spark/src/tests/metadata_tables.rs::metadata_tables_spark_dot_form_and_guards`
-- **Rationale** — DECLARED. The composition would have to resolve a snapshot for a relation that
-  is itself derived from the snapshot log; getting that wrong silently returns a *plausible* wrong
-  history, which is worse than a refusal. Revisit when a workload needs it.
+- **repark** — **SERVED 2026-09-22 (xo55-mt R1).** `SELECT … FROM cat.ns.t.<meta> VERSION AS OF …`
+  (and the `TIMESTAMP AS OF` / `FOR SYSTEM_VERSION AS OF` / `FOR SYSTEM_TIME AS OF` spellings)
+  answers per metadata table type: `snapshots`, `history`, `refs` and `metadata_log_entries`
+  answer the current table; `manifests`, `files`, `data_files`, `delete_files`, `entries`,
+  `partitions` and `position_deletes` answer the snapshot the `AS OF` value resolves to on the
+  base table (unknown numeric ids answer empty); the five `all_*` tables refuse with Spark's
+  `Cannot select snapshot in table: <TYPE>` text. A query that joins a metadata table to a
+  time-travelled *base* table never touched this path.
+- **Apache Spark** — accepts the dotted metadata-table reference as a queryable relation and
+  answers per the same per-type rules; the `all_*` tables refuse with
+  `UnsupportedOperationException: Cannot select snapshot in table: <TYPE>`.
+  *(oracle: recorded — the run-25/26 inventory legs in
+  `/tmp/oc-worker/scoreboard/2026-09-22/matrix.json`, cells `R-MT-*-TT` and `R-REF-BRANCH-FILES`.)*
+- **Pin** — `crates/repark-spark/src/tests/metadata_tables_asof.rs::metadata_asof_served_per_type`
+  and `python/repark/tests/test_ice_mt_as_of_1.py`
+- **Rationale** — FIXED. The refusal it replaced would have hidden a served Spark surface behind
+  a planning error; the per-type rules above are what Spark 4.1.2 was recorded answering.
 
 #### MT-2 — the read-only diagnostic on a write to a metadata table
 

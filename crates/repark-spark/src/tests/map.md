@@ -828,7 +828,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: types-1/C-001.
   **MW-4b:** Glue-shaped `table_exists` — 4-part
   `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
-  and single-level DataInvalid stay fatal), `normalize`, `local_fs_ddl`,
+  and single-level DataInvalid stay fatal), `metadata_tables_asof` (**xo55-mt R1 (2026-09-22):**
+  the MT-1 AS OF battery — one fixture pinning rule-2 scoping, rule-1 current-table equality,
+  branch/tag/timestamp resolution, unknown-id/ref/timestamp behavior, and the all_* Spark-text
+  refusals), `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names.

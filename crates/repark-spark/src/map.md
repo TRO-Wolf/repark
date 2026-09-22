@@ -433,7 +433,7 @@ pins: rp-4-fork-repin/C-005, C-006
   rewrite and before the branch/WAP redirects, releasing through the same `PinnedViews`.
   `changes` is deliberately NOT a metadata table: a metadata table is snapshot-scoped table
   METADATA reached through the fork's `table$suffix` spelling, while `t.changes` is table DATA
-  over a snapshot RANGE. `metadata_tables.rs` is untouched (it holds an exact 1062-line
+  over a snapshot RANGE. `metadata_tables.rs` is untouched (it holds an exact 1059-line
   baseline). pins: ice-changelog-1/C-009
 - **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` gains `create_changelog_view` in
   `SUPPORTED_PROCEDURES` and the dispatch; `call/create_changelog_view.rs` parses the six Java
@@ -1333,6 +1333,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `table_exists` returns `DataInvalid` for a two-level namespace (not `NamespaceNotFound`).
   The "real table wins" probe on `cat.ns.tbl.snapshots` treats that as absent so the `$`
   rewrite runs; single-level `DataInvalid` and `Unexpected` stay fatal.
+  **xo55-mt R1 (2026-09-22):** AS OF on a served metadata type rewrites (keeping the clause
+  for the time-travel pass, quoting the `$` name so it re-tokenizes as one ident); only the
+  five `all_*` types refuse, with Spark's `Cannot select snapshot in table` text.
 - `time_travel.rs` — I1 SQL-text rewrite to snapshot-pinned providers. `PinnedViews` releases every
   statement-owned registration after planning; reader-option views remain owned by their frame.
   The shared `repark_core::time_travel::next_temp_view_name` counter prevents collisions. Pins:
@@ -1345,6 +1348,9 @@ pins: rp-4-fork-repin/C-005, C-006
   selector overlapping an `AS OF` span is dropped, because Spark does not accept that
   combination. Only the relation a statement WRITES to is out of reach: the router's
   write-to-branch sniff refuses that one first.
+  **xo55-mt R1 (2026-09-22):** a span whose last part is `<table>$<meta>` loads the base
+  table, resolves the `AS OF` value on it, and registers a `SnapshotMetadataTableProvider`
+  (current-table, snapshot-scoped, or empty) through the shared temp-view helper.
   pins: ref-branch-tag-wap/C-002, C-007
   **ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream
   (whitespace kept) so the shared evaluator receives parseable SQL; the expression evaluates

@@ -387,6 +387,16 @@ Source comments retain only API and safety contracts; implementation narration i
   union field serves a non-null union struct with that field NULL (`[["cat", null]]`).
   pins: ice-metadata-cols-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005
+- `snapshot_metadata_table.rs` — **xo55-mt R1 (2026-09-22):** `SnapshotMetadataTableProvider`
+  serves `VERSION/TIMESTAMP AS OF` on a metadata table from the fork's public snapshot-scoped
+  `iceberg::inspect` constructors. `metadata_asof_mode` is the per-type ruling both Spark-door
+  passes share: the four log-like tables answer the current table, the seven file-like tables
+  answer the resolved snapshot (unknown numeric ids answer empty with the normal schema), and
+  the five `all_*` tables refuse with Spark's `Cannot select snapshot in table: <TYPE>` text.
+  The Arrow schema mirrors the fork `IcebergMetadataTableProvider::try_new` sources, so a
+  scoped read and an un-pinned read agree column for column; the scan streams one
+  `PartitionStream` and projects each batch, so `count(*)` and partial projections hold.
+  pins: xo55-mt/C-001, C-002, C-003, C-004, C-005
 - `metadata_projection.rs` — **retired at RP-5** (fork F-8 / R169 / R170). The fork honors
   metadata-table `projection` and lists catalog entries only. Pins remain in
   `crates/repark-spark/src/tests/metadata_tables.rs`.
