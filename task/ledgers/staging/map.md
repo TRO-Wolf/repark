@@ -1432,3 +1432,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   approved under D-7 land in a later build step. 227 failed / 16 passed on base.
   `risk_tier: standard`. Branch `feat/fnp-math-1`.
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [ipi-23-mt-as-of-1-ledger.md](ipi-23-mt-as-of-1-ledger.md) —
+  **IPI-23-MT-AS-OF-1 (2026-09-22), in flight:** `VERSION`/`TIMESTAMP AS OF` on a
+  dotted Iceberg metadata table served on the Spark door — log-like tables answer
+  the current table, file-like tables answer the resolved snapshot (unknown
+  numeric ids answer empty), the five `all_*` tables refuse with Spark's
+  `Cannot select snapshot in table: <TYPE>` text. Five facade pins replay the
+  recorded run-25/26 inventory cells (`R-MT-SNAPSHOTS-TT`, `R-MT-FILES-TT`,
+  `R-MT-ENTRIES-TT`, `R-MT-PARTITIONS-TT`, `R-REF-BRANCH-FILES`); registry row
+  `MT-1` re-ruled DECLARED → FIXED. `risk_tier: standard`. Branch
+  `fix/ipi-23-mt-as-of`.
+  pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005
