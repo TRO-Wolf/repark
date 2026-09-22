@@ -311,7 +311,7 @@ Supported surface, for reference:
 
 **Both halves are FIXED:** `spark.wap.branch` on 2026-09-19 (ICE-WAP-BRANCH-1 below), and the
 staged-snapshot flow behind `spark.wap.id` on 2026-09-21 (IPI-05, over fork pin
-`5a317f074133abf899dc038f2306c157750cf5eb`).
+`311b9fa41f292914b29d241a7fbac5c44365a6c7`).
 
 - **repark** — `spark.wap.id` stores and reads back (through `spark.conf.set` and through SQL
   `SET`, since ICE-WAP-BRANCH-1 routes both WAP keys into the Rust carrier), and with
