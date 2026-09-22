@@ -377,7 +377,9 @@ def test_drop_expander_does_not_rewrite_non_drop_sql(spark: ReparkSession) -> No
     )
 
     drop_view_sql = "DROP VIEW IF EXISTS bare_x"
-    assert spark._expand_bare_table_names_in_sql(drop_view_sql) == drop_view_sql
+    assert spark._expand_bare_table_names_in_sql(drop_view_sql) == (
+        "DROP VIEW IF EXISTS `glue_catalog`.`default`.`bare_x`"
+    )
 
     # Multi-statement scripts still whole-statement only (no mid-script inject).
     script = "SELECT 1; DROP TABLE IF EXISTS bare_x"
