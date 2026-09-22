@@ -1245,11 +1245,12 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   canonical `grouping(g)` display, both error classes in Spark wording; the
   rule also normalizes the planner's qualified projection alias, rebuilding
   the projection so the cached schema follows the renamed exprs). The custom
-  kernel wins over DataFusion 54.1's builtin `grouping` UDAF and its
-  `ResolveGroupingFunction` because only the custom path answers Spark's
-  `tinyint` with the unqualified display and refuses outside grouping sets,
-  while the builtin answers `Int32` qualified and accepts plain `GROUP BY`;
-  pinned by the `GROUPING SETS` and cube tests asserting type and name.
+  path answers Spark's `tinyint` with the unqualified display, while the
+  builtin `grouping` UDAF answers `Int32` qualified; under plain GROUP BY
+  unary `grouping()` answers constant `0` (pinned acceptance, types-1/C-004)
+  and `grouping_id` refuses with `UNSUPPORTED_GROUPING_EXPRESSION`
+  (SQLSTATE `42K0E`); pinned by the `GROUPING SETS` and cube tests
+  asserting type and name.
   `grouping_id` args must equal the grouping columns exactly in order, else
   `GROUPING_ID_COLUMN_MISMATCH` in Spark's message shape (R-18a-19).
   `unqualified_name` is file-local until slice (a) lands `max_min_by.rs`.
