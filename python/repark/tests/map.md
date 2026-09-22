@@ -5219,15 +5219,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `cat.ns.tbl.snapshots` (+ history/files/manifests/partitions/refs/entries/
   metadata_log_entries/all_* family) + `spark.table("…files")`; schema pins from fork
   inspect sources; row sanity on ≥3-snapshot fixture; real table named `files` wins; DML
-  + AS OF composition loud; unpartitioned files/partitions drop the empty `partition`
+  loud; AS OF on a metadata table is served (the metadata table itself is not
+  snapshot-scoped — `t.snapshots VERSION/TIMESTAMP AS OF` returns every snapshot,
+  `t.files FOR SYSTEM_VERSION AS OF` returns the files live at that snapshot) and the
+  parenthesized form `(t.snapshots) VERSION AS OF` is a parse error;
+  unpartitioned files/partitions drop the empty `partition`
   column (fork #194; declared rename of
   `test_unpartitioned_partition_column_divergence` →
   `test_unpartitioned_files_have_no_partition_column`) + readable_metrics-by-name
   pins (R142). Octo C1: FQ column
   named `files` not rewritten; UPDATE/CTAS
-  DML refuse; paren AS OF refuse; metadata of real `files` table; tight readable_metrics
+  DML refuse; paren AS OF parse error; metadata of real `files` table; tight
+  readable_metrics
   interior pin (no hollow `len>=0`). Octo C2: JOIN metadata; TRUNCATE refuse; real
-  `snapshots` wins; all_files ≥ files row bound. Octo C3: TIMESTAMP/SYSTEM_* AS OF refuse.
+  `snapshots` wins; all_files ≥ files row bound. Octo C3: TIMESTAMP/SYSTEM_* AS OF served.
   Octo C5: CREATE VIEW meta refuse. Octo C6: DROP/ALTER meta refuse.
   Octo C8: ruff-format final; OCTO-CONVERGED. **H-1c (2026-08-10,
   [ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)):** the
