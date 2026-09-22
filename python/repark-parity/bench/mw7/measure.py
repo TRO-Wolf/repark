@@ -486,8 +486,8 @@ def maintenance_sequence(
 
     Order is load-bearing: fold the delete files first so `rewrite_data_files` rewrites
     fewer of them, compact the data, re-cluster the churned manifests, expire snapshots,
-    then look for orphans. `remove_orphan_files` runs LAST in its dry-run default — the
-    one procedure with no undo.
+    then look for orphans. `remove_orphan_files` runs LAST as an explicit dry run — the
+    one procedure with no undo, and Spark's default deletes.
     """
     expire_older_than = int(clock() * 1000) + EXPIRE_OLDER_THAN_FUTURE_MS
     orphan_older_than = int(clock() * 1000) - ORPHAN_OLDER_THAN_PAST_MS
@@ -506,7 +506,7 @@ def maintenance_sequence(
         (
             "remove_orphan_files",
             f"CALL {catalog}.system.remove_orphan_files(table => '{table_arg}', "
-            f"older_than => {orphan_older_than})",
+            f"older_than => {orphan_older_than}, dry_run => true)",
         ),
     ]
 
