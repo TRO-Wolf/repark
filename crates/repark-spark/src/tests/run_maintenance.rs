@@ -258,6 +258,11 @@ async fn run_maintenance_dry_run_plans_every_step_with_planned_status() {
         "orphan cleanup renders the computed older_than, got: {}",
         plan[4].arguments
     );
+    assert!(
+        plan[4].arguments.contains("dry_run => false"),
+        "the printed orphan CALL matches the spelling apply executes, got: {}",
+        plan[4].arguments
+    );
 }
 
 #[tokio::test]

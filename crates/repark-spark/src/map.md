@@ -454,8 +454,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the
   fork's maintenance actions; the shared `illegal_argument` helper maps
   procedure-layer validations to `IllegalArgumentException`). Each
-  preserves Spark's result schema and count sources. Orphan removal requires `older_than`, defaults
-  `dry_run` to true, and refuses shared fallback roots; on a `ServiceManagedLocation`
+  preserves Spark's result schema and count sources. Orphan removal takes Spark's defaults
+  (a bare call deletes with `older_than` at now minus 3 days), accepts Spark's optional
+  arguments except `file_list_view` — `location` reads named or positionally at index 2
+  through `call_args::CallArgs::optional_string_at`, matching Spark's parameter order —
+  and refuses shared fallback roots; on a `ServiceManagedLocation`
   catalog (the `s3tables` kind) it refuses before any IO — table buckets answer
   `ListObjectsV2` 405 — naming the service's `unreferencedFileRemoval` maintenance as the
   remedy (**ORPHAN-S3TABLES-1, 2026-09-12**); rewrite-position-delete returns Spark's
@@ -1152,7 +1155,9 @@ pins: rp-4-fork-repin/C-005, C-006
   the expire handler calls the i64-array coercion. **RM-SORTBY-1 (2026-09-21):**
   `CallArgs` gains `optional_string_array`, the named-or-positional string-array
   reader with SQL NULL as unset that the `rewrite_manifests` handler parses
-  `sort_by` through.
+  `sort_by` through. **IPI-30 round 3 (2026-09-22):** `CallArgs` gains
+  `optional_string_at`, the named-first-then-positional string reader
+  `remove_orphan_files` uses for `location` (Spark position 2).
   pins: ice-procedures-1/C-003, C-004, C-006, C-007, C-008, C-011, C-013, C-015
   pins: ice-procedures-1/C-022
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks

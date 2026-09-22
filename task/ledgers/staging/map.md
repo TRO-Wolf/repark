@@ -1450,3 +1450,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   message on the three probe-55b refusals. `risk_tier: standard`. Branch
   `fix/ipi-23-mt-as-of`.
   pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [ipi-30-orphan-1-ledger.md](ipi-30-orphan-1-ledger.md) —
+  **IPI-30-ORPHAN-1 (2026-09-22), in flight:** the orphan-parity R2 — the Python pins, the
+  MW-7 runbook step, the guide and the registry follow R1's engine onto Spark's answers (bare
+  `older_than` is now minus 3 days, a bare call deletes); the runbook step passes
+  `dry_run => true` explicitly and ORPHAN-1/ORPHAN-2 retire per owner ruling Q-55-2.
+  `risk_tier: standard`. Branch `fix/proc-orphan-spark-parity`.
+  pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012

@@ -79,6 +79,21 @@ fn older_than_two_days_ago_ms() -> i64 {
     chrono::Utc::now().timestamp_millis() - 2 * 24 * 60 * 60 * 1000
 }
 
+fn orphan_locations(batches: &[datafusion::arrow::array::RecordBatch]) -> Vec<String> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::StringArray>()
+            .expect("string column");
+        for index in 0..column.len() {
+            out.push(column.value(index).to_string());
+        }
+    }
+    out
+}
+
 /// MW-3: the dry run lists every orphan and deletes nothing.
 #[tokio::test]
 async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
@@ -97,10 +112,7 @@ async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
     let result = execute(
         &ctx,
         &catalogs,
-        &format!(
-            "CALL ice.system.remove_orphan_files(table => 'sales.orphans', older_than => {})",
-            older_than_two_days_ago_ms()
-        ),
+        "CALL ice.system.remove_orphan_files(table => 'sales.orphans', dry_run => true)",
     )
     .await
     .expect("dry run CALL");
@@ -131,11 +143,10 @@ async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
         );
     }
 
-    // The half that matters: dry-run is the DEFAULT, so nothing moved.
     assert_eq!(
         files_under(&table_dir),
         before,
-        "the default is a dry run — not one file may be removed"
+        "dry_run => true must not remove one file"
     );
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.orphans").await,
@@ -219,37 +230,109 @@ async fn call_remove_orphan_files_armed_deletes_orphans_and_nothing_else() {
     );
 }
 
-/// Registry row `ORPHAN-1` — `older_than` is required here and defaulted in Spark.
 #[tokio::test]
-async fn call_orphan1_requires_an_explicit_older_than() {
+async fn call_remove_orphan_files_reads_location_positionally() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
         &ctx,
         &catalogs,
-        "CREATE TABLE ice.sales.need AS SELECT 1 AS id, 'a' AS name",
+        "CREATE TABLE ice.sales.scoped AS SELECT 1 AS id, 'a' AS name",
     )
     .await;
-    let table_dir = wh.path().join("sales").join("need");
+    let table_dir = wh.path().join("sales").join("scoped");
+    let scan_root = table_dir.join("data").join("sub");
+    plant_orphans(&scan_root, 1, 10);
+    let inside = scan_root.join("data").join("orphan-0.parquet");
     plant_orphans(&table_dir, 1, 10);
-    let before = files_under(&table_dir);
+    let outside = table_dir.join("data").join("orphan-0.parquet");
 
-    let err = execute(
+    let result = execute(
         &ctx,
         &catalogs,
-        "CALL ice.system.remove_orphan_files(table => 'sales.need')",
+        &format!(
+            "CALL ice.system.remove_orphan_files('sales.scoped', {}, '{}', false)",
+            older_than_two_days_ago_ms(),
+            scan_root.display()
+        ),
     )
     .await
-    .expect_err("ORPHAN-1: a defaulted cutoff is refused where Spark supplies one");
-    let message = err.to_string();
+    .expect("a positional `location` must scope the sweep");
+    let batches = result.collect().await.expect("collect orphan result");
+    let locations = orphan_locations(&batches);
+    assert_eq!(
+        locations.len(),
+        1,
+        "the sweep lists only what `location` covers, got {locations:?}"
+    );
     assert!(
-        message.contains("requires an explicit `older_than`"),
-        "refusal must name the argument, got: {message}"
+        locations[0].contains("/sub/"),
+        "the listed orphan sits under `location`, got {locations:?}"
+    );
+    assert!(
+        !inside.exists(),
+        "the orphan under `location` is deleted, got {inside:?}"
+    );
+    assert!(
+        outside.exists(),
+        "the orphan outside `location` must stay, got {outside:?}"
+    );
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.bare AS SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+    let table_dir = wh.path().join("sales").join("bare");
+    plant_orphans(&table_dir, 1, 10);
+    let data_dir = table_dir.join("data");
+    std::fs::rename(
+        data_dir.join("orphan-0.parquet"),
+        data_dir.join("orphan-old.parquet"),
+    )
+    .expect("rename the aged orphan aside");
+    plant_orphans(&table_dir, 1, 1);
+    let before = files_under(&table_dir);
+
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.remove_orphan_files(table => 'sales.bare')",
+    )
+    .await
+    .expect("a bare call deletes with Spark's now-minus-3-days default");
+    let batches = result.collect().await.expect("collect orphan result");
+    let locations = orphan_locations(&batches);
+    assert_eq!(locations.len(), 1, "one row, got {locations:?}");
+    assert!(
+        locations[0].ends_with("orphan-old.parquet"),
+        "the row must be the 10-day-old orphan, got {locations:?}"
+    );
+
+    let after = files_under(&table_dir);
+    let removed: Vec<&String> = before.iter().filter(|file| !after.contains(file)).collect();
+    assert_eq!(
+        removed.len(),
+        1,
+        "exactly one file removed, got {removed:?}"
+    );
+    assert!(
+        removed[0].ends_with("orphan-old.parquet"),
+        "only the 10-day-old orphan goes, got {removed:?}"
+    );
+    assert!(
+        after.iter().any(|file| file.ends_with("orphan-0.parquet")),
+        "the 1-day-old orphan stays, got {after:?}"
     );
     assert_eq!(
-        files_under(&table_dir),
-        before,
-        "a refused call must not have touched the table"
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.bare").await,
+        1
     );
 }
 
@@ -307,9 +390,8 @@ async fn call_remove_orphan_files_enforces_sparks_twenty_four_hour_floor() {
     .expect("now-25h is outside the floor and must run, as it does on Spark");
 }
 
-/// MW-3: deferred arguments refuse by name rather than being ignored.
 #[tokio::test]
-async fn call_remove_orphan_files_refuses_deferred_arguments() {
+async fn call_remove_orphan_files_accepts_sparks_optional_arguments() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -318,28 +400,227 @@ async fn call_remove_orphan_files_refuses_deferred_arguments() {
         "CREATE TABLE ice.sales.args AS SELECT 1 AS id, 'a' AS name",
     )
     .await;
+    let table_dir = wh.path().join("sales").join("args");
+    plant_orphans(&table_dir, 1, 10);
+    let before = files_under(&table_dir);
     for argument in [
-        "max_concurrent_deletes => 4",
-        "file_list_view => 'v'",
-        "equal_schemes => map('s3a', 's3')",
-        "equal_authorities => map('a', 'b')",
-        "prefix_mismatch_mode => 'DELETE'",
+        "max_concurrent_deletes => 2",
+        "stream_results => true",
         "prefix_listing => true",
+        "prefix_mismatch_mode => 'IGNORE'",
+        "equal_schemes => map('file','file'), equal_authorities => map('a','a')",
     ] {
-        let err = execute(
+        let result = execute(
             &ctx,
             &catalogs,
             &format!(
                 "CALL ice.system.remove_orphan_files(\
-                     table => 'sales.args', older_than => {}, {argument})",
-                older_than_two_days_ago_ms()
+                     table => 'sales.args', dry_run => true, {argument})"
             ),
         )
         .await
-        .expect_err("deferred argument must refuse");
+        .expect("optional argument must be accepted");
+        let batches = result.collect().await.expect("collect");
+        let locations = orphan_locations(&batches);
+        assert_eq!(
+            locations.len(),
+            1,
+            "{argument} must list the orphan, got {locations:?}"
+        );
         assert!(
-            err.to_string().contains("is not supported in v1"),
-            "refusal must name the argument, got: {err}"
+            locations[0].ends_with("orphan-0.parquet"),
+            "{argument} must list the planted orphan, got {locations:?}"
+        );
+        assert_eq!(
+            files_under(&table_dir),
+            before,
+            "{argument} runs dry, nothing moves"
+        );
+    }
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.remove_orphan_files(\
+             table => 'sales.args', dry_run => true, file_list_view => 'v')",
+    )
+    .await
+    .expect_err("file_list_view still refuses");
+    assert!(
+        matches!(err, DataFusionError::NotImplemented(_)),
+        "file_list_view refuses NotImplemented, got: {err}"
+    );
+    assert_eq!(
+        err.to_string(),
+        "This feature is not implemented: CALL remove_orphan_files argument \
+         `file_list_view` is not supported in v1 (supported: table, older_than, location, \
+         dry_run, max_concurrent_deletes, equal_schemes, equal_authorities, \
+         prefix_mismatch_mode, prefix_listing, stream_results)"
+    );
+    assert_eq!(files_under(&table_dir), before);
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_near_misses_still_refuse() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.near AS SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+    let table_dir = wh.path().join("sales").join("near");
+    plant_orphans(&table_dir, 1, 10);
+    let before = files_under(&table_dir);
+    let hour_ago = chrono::Utc::now().timestamp_millis() - 3_600_000;
+    let cases = [
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.near', prefix_mismatch_mode => 'bogus')"
+                .to_string(),
+            "Error during planning: Invalid mode: bogus".to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.near', equal_schemes => 'file')"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_schemes` must be \
+             map(k, v, …), got 'file'"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.near', stream_results => 'yes')"
+                .to_string(),
+            "Error during planning: CALL argument `stream_results` must be a boolean literal \
+             (true / false), got `'yes'`"
+                .to_string(),
+        ),
+        (
+            format!(
+                "CALL ice.system.remove_orphan_files(\
+                     table => 'sales.near', older_than => {hour_ago})"
+            ),
+            "Error during planning: CALL remove_orphan_files refuses an `older_than` less than \
+             24 hours in the past. A short interval can delete files an in-flight commit has \
+             written but not yet referenced, which corrupts the table. This matches Apache \
+             Spark's own floor."
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(table => 'sales.near', dry_run => 'false')"
+                .to_string(),
+            "Error during planning: CALL argument `dry_run` must be a boolean literal \
+             (true / false), got `'false'`"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(table => 'sales.near', foo => 1)".to_string(),
+            "Error during planning: unknown CALL argument `foo`; allowed: table, older_than, \
+             location, dry_run, max_concurrent_deletes, file_list_view, equal_schemes, \
+             equal_authorities, prefix_mismatch_mode, prefix_listing, stream_results"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.near', equal_schemes => map('k', NULL))"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_schemes` value \
+             for `k` must be a string literal, got NULL"
+                .to_string(),
+        ),
+    ];
+    for (call, expected) in cases {
+        let err = execute(&ctx, &catalogs, &call)
+            .await
+            .expect_err("near miss must refuse");
+        assert_eq!(err.to_string(), expected);
+        assert_eq!(
+            files_under(&table_dir),
+            before,
+            "a refused call must not have touched the table"
+        );
+    }
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_mistyped_arguments_still_refuse() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.mistyped AS SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+    let table_dir = wh.path().join("sales").join("mistyped");
+    plant_orphans(&table_dir, 1, 10);
+    let before = files_under(&table_dir);
+    let cases = [
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', equal_authorities => 'a')"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_authorities` \
+             must be map(k, v, …), got 'a'"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', equal_schemes => foo('a', 'b'))"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_schemes` must be \
+             map(k, v, …), got foo('a', 'b')"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', equal_schemes => map('k'))"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_schemes` must \
+             list key/value pairs (got 1 arguments)"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', max_concurrent_deletes => 'x')"
+                .to_string(),
+            "Error during planning: CALL argument `max_concurrent_deletes` string is not an \
+             integer: x"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', prefix_listing => 'yes')"
+                .to_string(),
+            "Error during planning: CALL argument `prefix_listing` must be a boolean literal \
+             (true / false), got `'yes'`"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', prefix_mismatch_mode => 7)"
+                .to_string(),
+            "Error during planning: CALL argument `prefix_mismatch_mode` must be a string \
+             literal, got 7"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(table => 'sales.mistyped', location => 5)"
+                .to_string(),
+            "Error during planning: CALL argument `location` must be a string literal, got 5"
+                .to_string(),
+        ),
+    ];
+    for (call, expected) in cases {
+        let err = execute(&ctx, &catalogs, &call)
+            .await
+            .expect_err("mistyped argument must refuse");
+        assert_eq!(err.to_string(), expected);
+        assert_eq!(
+            files_under(&table_dir),
+            before,
+            "a refused call must not have touched the table"
         );
     }
 }

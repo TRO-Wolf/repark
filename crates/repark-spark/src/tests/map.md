@@ -950,6 +950,24 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   equality-delete pin exists here.
   pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
+  **IPI-30 (2026-09-22):** Spark's defaults land — the bare call deletes with `older_than` at
+  now minus 3 days (`call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`),
+  the optional arguments are accepted (`call_remove_orphan_files_accepts_sparks_optional_arguments`,
+  `file_list_view` still `NotImplemented`), and the near misses refuse
+  (`call_remove_orphan_files_near_misses_still_refuse`,
+  `call_remove_orphan_files_refuses_a_quoted_dry_run`); ORPHAN-1/ORPHAN-2 retire.
+  **IPI-30 round 3 (2026-09-22):** `call_remove_orphan_files_reads_location_positionally`
+  pins `location` at Spark's positional index 2 — a 4-positional CALL deletes only the
+  orphan under the given directory and leaves the one outside it. The near-miss table
+  gains full-string pins for every refusal the round added or changed: the NULL map value,
+  a non-map `equal_authorities`, a non-`map` function, an odd `map` arity, a non-integer
+  `max_concurrent_deletes`, a quoted `prefix_listing`, a non-string `prefix_mismatch_mode`,
+  a non-string `location`, and the `file_list_view` deferral (upgraded to full-string in
+  `call_remove_orphan_files_accepts_sparks_optional_arguments`); the mistyped-argument
+  cases live in `call_remove_orphan_files_mistyped_arguments_still_refuse` so the
+  near-miss table stays under the function-length lint.
+  pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004
+  pins: ipi-30-orphan-1/C-005, C-006, C-007, C-008, C-009, C-010, C-011
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
   service-managed refusal — a real `s3tables_catalog` (dummy ARN, constructs offline)
@@ -1372,6 +1390,9 @@ above.
   snapshots tables at registration); `run_maintenance_on_s3_tables_marks_the_orphan_step_skipped`
   and `run_maintenance_apply_on_s3_tables_skips_orphan_and_runs_the_rest` pin the skipped
   orphan row — reason in `result` — on the dry run and on apply while the other steps run.
+  **IPI-30 round 3 (2026-09-22):** the planned-frame pin asserts `dry_run => false` on the
+  rendered orphan CALL — the `arguments` cell is what apply executes, so the printed
+  spelling must not omit it.
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016,
   C-017, C-018, C-019
   pins: orphan-s3tables-1/C-003, C-004

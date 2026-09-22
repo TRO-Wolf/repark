@@ -393,7 +393,7 @@ fn plan_steps(
                 catalog_name,
                 "remove_orphan_files",
                 table_arg,
-                &format!(", older_than => {cutoff}"),
+                &format!(", older_than => {cutoff}, dry_run => false"),
             ),
             action: StepAction::RemoveOrphanFiles { older_than: cutoff },
             skip_reason: service_managed
@@ -594,10 +594,10 @@ mod tests {
             .iter()
             .find(|step| step.procedure == "remove_orphan_files")
             .expect("orphan plans");
-        assert!(
-            orphan.arguments.contains("older_than => 1699740800000"),
-            "got: {}",
-            orphan.arguments
+        assert_eq!(
+            orphan.arguments,
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.t', older_than => 1699740800000, dry_run => false)"
         );
     }
 

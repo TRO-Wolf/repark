@@ -63,7 +63,10 @@ illustrative. A claim with no verified basis does not go in.
   is a net-size win on zstd tables at the RP-18 pin. **ORPHAN-S3TABLES-1
   (2026-09-12):** adds the S3 Tables paragraph — table buckets do not list, the
   CALL refuses naming `unreferencedFileRemoval`, and `run_maintenance` reports
-  the orphan step `skipped` with the reason.
+  the orphan step `skipped` with the reason. **IPI-30 round 3 (2026-09-22):** the
+  worked dry run's orphan CALL renders `dry_run => false`, matching the spelling
+  `run_maintenance_apply` executes — the door's default deletes, so the printed
+  arguments say so out loud.
   pins: maint-policy-1/C-026
   pins: orphan-s3tables-1/C-005
   pins: ap-1/C-013

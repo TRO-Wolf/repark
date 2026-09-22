@@ -170,7 +170,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
   step 1's `resolve`; no stamped policy and no inline keys refuse with the D-6 text.
   `plan_steps` admits each D-4 step by its gate (delete ratio from `files WHERE content = 0`
   against `delete_files` byte sums, `rewrite_manifests = true`, set cutoffs) with stable D-4
-  ordinals and renders each step's CALL string; the dry-run frame answers `step` Int32 plus
+  ordinals and renders each step's CALL string — the orphan step carries `dry_run => false`,
+  the same spelling `run_maintenance_apply` passes, so a copied CALL cannot arm differently
+  than the plan shows; the dry-run frame answers `step` Int32 plus
   `procedure` / `arguments` / `status` / `result` Utf8, every `status` `planned`.
   Each `PlannedStep` also carries its typed `StepAction` (the plan-time cutoffs, so apply
   reuses the rendered values bit-for-bit); `dry_run => false` delegates to
@@ -205,7 +207,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `result` is the step's own frame rendered as JSON by a
   small local renderer (no JSON dependency: `Cargo.toml` is frozen this card); unknown
   column types refuse loud rather than guessing. Orphan steps pass `dry_run => false`
-  explicitly (the door defaults it true). **ORPHAN-S3TABLES-1 (2026-09-12):** a step whose
+  explicitly — the door's own default is deleting (Spark parity, IPI-30), so the argument
+  is documentation, not the safeguard. **ORPHAN-S3TABLES-1 (2026-09-12):** a step whose
   `skip_reason` is set never reaches `run_step` — its row is `skipped` with the reason and
   the chain continues (a service-managed orphan sweep on `s3tables`), unlike a
   chain-stopped `skipped` row, which carries an empty result.

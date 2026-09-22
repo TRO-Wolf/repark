@@ -106,6 +106,22 @@ impl CallArgs {
             .transpose()
     }
 
+    pub(crate) fn optional_string_at(
+        &self,
+        name: &str,
+        position: Option<usize>,
+    ) -> Result<Option<String>> {
+        if let Some(expr) = self.named.get(name) {
+            return expr_as_string(expr, name).map(Some);
+        }
+        if let Some(index) = position
+            && let Some(expr) = self.positional.get(index)
+        {
+            return expr_as_string(expr, name).map(Some);
+        }
+        Ok(None)
+    }
+
     pub(crate) fn optional_i64(&self, name: &str, position: Option<usize>) -> Result<Option<i64>> {
         if let Some(expr) = self.named.get(name) {
             return expr_as_i64(expr, name).map(Some);
