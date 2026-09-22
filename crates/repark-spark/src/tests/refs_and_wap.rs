@@ -132,6 +132,21 @@ async fn wap_publish_procedures_and_session_conf_refuse_loud() {
         vec![1, 2, 3],
         "a refused WAP conf must leave the branch where it was"
     );
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT name FROM ice.sales.t.refs").await,
+        2,
+        "only audit and main exist, no refused conf created a ref"
+    );
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT snapshot_id FROM ice.sales.t.snapshots",
+        )
+        .await,
+        2,
+        "only the seed and the one insert committed"
+    );
 }
 
 #[tokio::test]
