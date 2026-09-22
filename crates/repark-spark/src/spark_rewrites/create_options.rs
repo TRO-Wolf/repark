@@ -94,7 +94,9 @@ fn create_options_matches(tokens: &[TokenWithSpan]) -> Vec<CreateOptionsMatch> {
                 break;
             }
             Token::Word(word)
-                if word.quote_style.is_none() && word.value.eq_ignore_ascii_case("OPTIONS") =>
+                if depth == 0
+                    && word.quote_style.is_none()
+                    && word.value.eq_ignore_ascii_case("OPTIONS") =>
             {
                 options_seen += 1;
                 if let Some((found, after)) = match_options_clause(tokens, cursor) {

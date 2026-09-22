@@ -191,3 +191,33 @@ async fn options_near_misses_keep_their_refusals() {
         "a non-iceberg OPTIONS CREATE must not reach the iceberg catalog"
     );
 }
+
+async fn stored_properties(catalogs: &CatalogRegistry, table: &str) -> HashMap<String, String> {
+    catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            table.to_string(),
+        ))
+        .await
+        .unwrap()
+        .metadata()
+        .properties()
+        .clone()
+}
+
+#[tokio::test]
+async fn options_identifier_below_top_level_keeps_the_rewrite() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.opt_shadow (id BIGINT, options STRING) USING iceberg \
+         PARTITIONED BY (options) OPTIONS ('k'='v')",
+    )
+    .await
+    .expect("a column and partition field named options must not block the rewrite");
+    let properties = stored_properties(&catalogs, "opt_shadow").await;
+    assert_eq!(properties.get("k").map(String::as_str), Some("v"));
+    assert_eq!(properties.get("option.k").map(String::as_str), Some("v"));
+}
