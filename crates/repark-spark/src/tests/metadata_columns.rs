@@ -182,7 +182,7 @@ async fn seed_evo(session: &ReparkSession) {
     )
     .await;
     run(session, "INSERT INTO ice.ns.tevo VALUES (1, 'x')").await;
-    run(&session, "ALTER TABLE ice.ns.tevo ADD PARTITION FIELD cat").await;
+    run(session, "ALTER TABLE ice.ns.tevo ADD PARTITION FIELD cat").await;
     run(session, "INSERT INTO ice.ns.tevo VALUES (2, 'y')").await;
 }
 
