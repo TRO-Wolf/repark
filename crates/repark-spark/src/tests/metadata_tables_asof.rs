@@ -120,38 +120,64 @@ async fn metadata_asof_served_per_type() {
     let full_schema =
         asof_rendered(&ctx, &catalogs, "SELECT * FROM ice.sales.a.files LIMIT 0").await;
     assert_eq!(empty_schema, full_schema);
-    let sql = "SELECT count(*) FROM ice.sales.a.files VERSION AS OF 'nope'";
-    let ref_err = execute(&ctx, &catalogs, sql)
+    let mapped = repark_core::engine_err(
+        execute(
+            &ctx,
+            &catalogs,
+            "SELECT count(*) FROM ice.sales.a.files VERSION AS OF 'nope'",
+        )
         .await
-        .expect_err("unknown ref must fail")
-        .to_string();
-    assert!(
-        ref_err.contains("Cannot find matching snapshot ID or reference name for version nope"),
-        "got: {ref_err}"
+        .expect_err("unknown ref must fail"),
     );
-    execute(
-        &ctx,
-        &catalogs,
-        "SELECT count(*) FROM ice.sales.a.snapshots VERSION AS OF 'nope'",
-    )
-    .await
-    .expect_err("unknown ref on a rule-1 type must fail");
-    let sql = "SELECT count(*) FROM ice.sales.a.files TIMESTAMP AS OF '2000-01-01 00:00:00'";
-    let ts_err = execute(&ctx, &catalogs, sql)
+    assert!(
+        matches!(mapped, repark_common::Error::IllegalArgument(ref message)
+            if message.as_str()
+                == "Cannot find matching snapshot ID or reference name for version nope"),
+        "got: {mapped}"
+    );
+    let mapped = repark_core::engine_err(
+        execute(
+            &ctx,
+            &catalogs,
+            "SELECT count(*) FROM ice.sales.a.snapshots VERSION AS OF 'nope'",
+        )
         .await
-        .expect_err("old ts must fail")
-        .to_string();
-    assert!(
-        ts_err.contains("Cannot find a snapshot older than 2000-01-01T00:00:00+00:00"),
-        "got: {ts_err}"
+        .expect_err("unknown ref on a rule-1 type must fail"),
     );
-    execute(
-        &ctx,
-        &catalogs,
-        "SELECT count(*) FROM ice.sales.a.snapshots VERSION AS OF 999",
-    )
-    .await
-    .expect_err("unknown id on a rule-1 type must fail loud");
+    assert!(
+        matches!(mapped, repark_common::Error::IllegalArgument(ref message)
+            if message.as_str()
+                == "Cannot find matching snapshot ID or reference name for version nope"),
+        "got: {mapped}"
+    );
+    let mapped = repark_core::engine_err(
+        execute(
+            &ctx,
+            &catalogs,
+            "SELECT count(*) FROM ice.sales.a.files TIMESTAMP AS OF '2000-01-01 00:00:00'",
+        )
+        .await
+        .expect_err("old ts must fail"),
+    );
+    assert!(
+        matches!(mapped, repark_common::Error::IllegalArgument(ref message)
+            if message.as_str() == "Cannot find a snapshot older than 2000-01-01T00:00:00+00:00"),
+        "got: {mapped}"
+    );
+    let mapped = repark_core::engine_err(
+        execute(
+            &ctx,
+            &catalogs,
+            "SELECT count(*) FROM ice.sales.a.snapshots VERSION AS OF 999",
+        )
+        .await
+        .expect_err("unknown id on a rule-1 type must fail loud"),
+    );
+    assert!(
+        matches!(mapped, repark_common::Error::IllegalArgument(_)),
+        "got: {mapped:?}"
+    );
+    assert_eq!(mapped.to_string(), "Cannot find snapshot with ID 999");
     for (suffix, upper) in [
         ("all_manifests", "ALL_MANIFESTS"),
         ("all_files", "ALL_FILES"),
@@ -160,10 +186,16 @@ async fn metadata_asof_served_per_type() {
         ("all_entries", "ALL_ENTRIES"),
     ] {
         let sql = format!("SELECT count(*) FROM ice.sales.a.{suffix} VERSION AS OF 1");
-        let err = execute(&ctx, &catalogs, &sql)
-            .await
-            .expect_err("all_* must refuse")
-            .to_string();
+        let mapped = repark_core::engine_err(
+            execute(&ctx, &catalogs, &sql)
+                .await
+                .expect_err("all_* must refuse"),
+        );
+        assert!(
+            matches!(mapped, repark_common::Error::Analysis(_)),
+            "{suffix} mapped class, got: {mapped:?}"
+        );
+        let err = mapped.to_string();
         assert!(
             err.contains(&format!("Cannot select snapshot in table: {upper}")),
             "got: {err}"
