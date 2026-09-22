@@ -104,21 +104,6 @@ async fn wap_publish_procedures_and_session_conf_refuse_loud() {
     )
     .await;
 
-    for sql in ["CALL ice.system.publish_changes(table => 'sales.t', wap_id => 'w1')"] {
-        let error = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("no WAP publish procedure is implemented");
-        let message = error.to_string();
-        assert!(
-            message.contains("is not supported"),
-            "WAP procedure must refuse loud for {sql:?}, got: {message}"
-        );
-        assert!(
-            message.contains("Supported procedures"),
-            "the refusal must list what is supported for {sql:?}, got: {message}"
-        );
-    }
-
     for key in ["spark.wap.branch", "spark.wap.id"] {
         let error = execute(&ctx, &catalogs, &format!("SET {key} = 'audit'"))
             .await
@@ -146,6 +131,21 @@ async fn wap_publish_procedures_and_session_conf_refuse_loud() {
         audit_ids,
         vec![1, 2, 3],
         "a refused WAP conf must leave the branch where it was"
+    );
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT name FROM ice.sales.t.refs").await,
+        2,
+        "only audit and main exist, no refused conf created a ref"
+    );
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT snapshot_id FROM ice.sales.t.snapshots",
+        )
+        .await,
+        2,
+        "only the seed and the one insert committed"
     );
 }
 

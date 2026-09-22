@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
@@ -369,10 +370,11 @@ pub(crate) async fn apply_write_to_branch<'a>(
     catalogs: &CatalogRegistry,
     sql: &'a str,
     pinned: &mut PinnedViews,
+    skip_wap_id_route: bool,
 ) -> Result<Cow<'a, str>> {
     let wap = crate::wap::session_wap(ctx);
     let explicit = sniff_write_to_branch(sql).is_some_and(|sniff| sniff_applies(ctx, &sniff));
-    if !explicit && wap.branch.is_none() {
+    if !explicit && wap.branch.is_none() && wap.id.is_none() {
         return Ok(Cow::Borrowed(sql));
     }
     let dialect = DatabricksDialect {};
@@ -398,12 +400,115 @@ pub(crate) async fn apply_write_to_branch<'a>(
             keep_existing_selector: span.parts.len() >= 4,
             require_existing_branch: true,
         },
-        None => match wap_branch_target(ctx, catalogs, &wap, &span.parts).await? {
-            Some(target) => target,
-            None => return Ok(Cow::Borrowed(sql)),
-        },
+        None => {
+            if let Some(target) = wap_branch_target(ctx, catalogs, &wap, &span.parts).await? {
+                target
+            } else if !skip_wap_id_route
+                && let Some(staged) =
+                    wap_id_route_target(ctx, catalogs, &wap, &span.parts, sql).await?
+            {
+                return commit_write_staged(ctx, catalogs, pinned, &tokens, &span, staged).await;
+            } else {
+                return Ok(Cow::Borrowed(sql));
+            }
+        }
     };
     commit_write_on_branch(ctx, catalogs, sql, pinned, &tokens, &span, target).await
+}
+
+struct WapIdTarget {
+    table_parts: Vec<String>,
+    wap_id: String,
+}
+
+fn is_plain_append_insert(ctx: &SessionContext, sql: &str) -> bool {
+    statement_head(sql).is_some_and(|head| head == "INSERT") && !is_owned_write_head(ctx, sql)
+}
+
+async fn wap_id_route_target(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    wap: &crate::wap::WapSessionConfig,
+    parts: &[String],
+    sql: &str,
+) -> Result<Option<WapIdTarget>> {
+    if wap.id.is_none() || !is_plain_append_insert(ctx, sql) {
+        return Ok(None);
+    }
+    let qualified = qualify_table_parts(ctx, parts.to_vec());
+    let Ok((_catalog_name, ident, catalog)) = load_target_table(catalogs, &qualified) else {
+        return Ok(None);
+    };
+    let Ok(table) = catalog.load_table(&ident).await else {
+        return Ok(None);
+    };
+    let Some(wap_id) = crate::wap::wap_id_for_table(wap, &table)? else {
+        return Ok(None);
+    };
+    Ok(Some(WapIdTarget {
+        table_parts: parts.to_vec(),
+        wap_id,
+    }))
+}
+
+async fn commit_write_staged<'a>(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    pinned: &mut PinnedViews,
+    tokens: &[Token],
+    span: &TargetSpan,
+    staged: WapIdTarget,
+) -> Result<Cow<'a, str>> {
+    let qualified = qualify_table_parts(ctx, staged.table_parts);
+    let (_catalog_name, ident, catalog) = load_target_table(catalogs, &qualified)?;
+    let provider =
+        IcebergTableProvider::try_new(catalog, ident.namespace().clone(), ident.name().to_string())
+            .await
+            .map_err(iceberg_err)?
+            .with_stage_only(true)
+            .with_snapshot_properties(HashMap::from([(
+                crate::wap::WAP_ID_SNAPSHOT_PROPERTY.to_string(),
+                staged.wap_id,
+            )]));
+    redirect_write_to_temp_view(ctx, pinned, tokens, span, provider, "wap-staged").map(Cow::Owned)
+}
+
+fn redirect_write_to_temp_view(
+    ctx: &SessionContext,
+    pinned: &mut PinnedViews,
+    tokens: &[Token],
+    span: &TargetSpan,
+    provider: IcebergTableProvider,
+    view_kind: &str,
+) -> Result<String> {
+    let temp_name = next_temp_view_name();
+    let home_catalog = "datafusion".to_string();
+    let home_schema = "public".to_string();
+    let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no session catalog `{home_catalog}` for {view_kind} temp view (have {:?})",
+            ctx.catalog_names()
+        ))
+    })?;
+    let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no schema `{home_catalog}.{home_schema}` for {view_kind} temp view"
+        ))
+    })?;
+    let _ = schema.deregister_table(&temp_name);
+    schema
+        .register_table(temp_name.clone(), Arc::new(provider))
+        .map_err(|error| {
+            DataFusionError::Plan(format!(
+                "failed to register {view_kind} temp view \
+                 {home_catalog}.{home_schema}.{temp_name}: {error}"
+            ))
+        })?;
+    pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
+    let temp_parts = vec![home_catalog, home_schema, temp_name];
+    let mut tokens = tokens.to_vec();
+    tokens.splice(span.start..span.end, dotted_name_tokens(&temp_parts));
+    Ok(tokens_to_sql(&tokens))
 }
 
 async fn create_wap_branch_from_main(
@@ -472,32 +577,6 @@ async fn commit_write_on_branch<'a>(
             .await
             .map_err(iceberg_err)?
             .with_commit_branch(target.branch);
-    let temp_name = next_temp_view_name();
-    let home_catalog = "datafusion".to_string();
-    let home_schema = "public".to_string();
-    let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
-        DataFusionError::Plan(format!(
-            "no session catalog `{home_catalog}` for branch-commit temp view (have {:?})",
-            ctx.catalog_names()
-        ))
-    })?;
-    let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
-        DataFusionError::Plan(format!(
-            "no schema `{home_catalog}.{home_schema}` for branch-commit temp view"
-        ))
-    })?;
-    let _ = schema.deregister_table(&temp_name);
-    schema
-        .register_table(temp_name.clone(), Arc::new(provider))
-        .map_err(|error| {
-            DataFusionError::Plan(format!(
-                "failed to register branch-commit temp view \
-                 {home_catalog}.{home_schema}.{temp_name}: {error}"
-            ))
-        })?;
-    pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
-    let temp_parts = vec![home_catalog, home_schema, temp_name];
-    let mut tokens = tokens.to_vec();
-    tokens.splice(span.start..span.end, dotted_name_tokens(&temp_parts));
-    Ok(Cow::Owned(tokens_to_sql(&tokens)))
+    redirect_write_to_temp_view(ctx, pinned, tokens, span, provider, "branch-commit")
+        .map(Cow::Owned)
 }

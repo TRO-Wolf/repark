@@ -357,8 +357,9 @@ class DataFrameReader:
         """Load a catalog/temp table by name (PySpark ``spark.read.table``).
 
         Same semantics as :meth:`ReparkSession.table` / ``SELECT * FROM <name>``.
-        Iceberg time-travel options (``snapshot-id`` / ``as-of-timestamp`` / ``branch`` / ``tag``)
-        pin a snapshot-static scan. Other semantic reader options fail loud.
+        The ``branch`` / ``versionAsOf`` / ``timestampAsOf`` options pin a
+        snapshot-static scan; the legacy ``snapshot-id`` / ``as-of-timestamp`` / ``tag``
+        options refuse like Spark 4.1.2. Other semantic reader options fail loud.
         """
         self._reject_unsupported_semantic_options()
         travel = self._iceberg_time_travel_opts()
@@ -918,15 +919,15 @@ class DataFrameReader:
     def _iceberg_time_travel_opts(self) -> dict[str, Any] | None:
         """Collect Iceberg time-travel options for :meth:`ReparkSession.read_iceberg_table`.
 
-        Legacy pins (``snapshot-id`` / ``as-of-timestamp`` / ``branch`` / ``tag``)
-        parse here exactly as before and stay mutually exclusive while the Spark
-        built-ins are absent. The built-ins (``versionAsOf`` / ``timestampAsOf``,
-        matched case-insensitively) travel as raw strings; the engine parses
-        them and raises the Spark refusal, so this layer forwards every pin it
-        finds without pre-judging the combination. Returns ``None`` when no pin
-        is set.
+        Spark 4.1.2 refuses the legacy pins (``snapshot-id`` / ``as-of-timestamp`` /
+        ``tag``); this layer raises the same ``IllegalArgumentException`` texts before
+        any other check, in snapshot-id, as-of-timestamp, tag order. ``branch`` still
+        parses here. The built-ins (``versionAsOf`` / ``timestampAsOf``, matched
+        case-insensitively) travel as raw strings; the engine parses them and raises
+        the Spark refusal, so this layer forwards every pin it finds without
+        pre-judging the combination. Returns ``None`` when no pin is set.
         """
-        from repark.errors import AnalysisException
+        from repark.errors import AnalysisException, IllegalArgumentException
 
         found: dict[str, str] = {}
         for key, value in self._options.items():
@@ -935,6 +936,21 @@ class DataFrameReader:
                 found[lowered] = value
         if not found:
             return None
+        if "snapshot-id" in found:
+            raise IllegalArgumentException(
+                "Time travel option `snapshot-id` is no longer supported, "
+                "use Spark built-in `versionAsOf` instead"
+            )
+        if "as-of-timestamp" in found:
+            raise IllegalArgumentException(
+                "Time travel option `as-of-timestamp` (in millis) is no longer supported, "
+                "use Spark built-in `timestampAsOf` instead (properly formatted timestamp)"
+            )
+        if "tag" in found:
+            raise IllegalArgumentException(
+                "Time travel option `tag` is no longer supported, "
+                "use Spark built-in `versionAsOf` instead"
+            )
         if found.get("versionasof") is None and found.get("timestampasof") is None:
             if len(found) > 1:
                 names = " and ".join(sorted(found))

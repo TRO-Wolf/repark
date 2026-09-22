@@ -1794,8 +1794,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — **REF:** the facade rows for
   branch/tag retention and the refused doors — both `WITH SNAPSHOT RETENTION` halves at the
   oracle's values, the reversed order refusing, write-to-branch landing on the named branch
-  (RP-5 / REF-1 FIXED), write-to-tag refusing Spark-shaped, and WAP declared
-  (`publish_changes` and the `spark.wap.*` confs fail closed; `fast_forward` and
+  (RP-5 / REF-1 FIXED), write-to-tag refusing Spark-shaped, and WAP (both `spark.wap.*`
+  confs store and read back, and `publish_changes` is a registered procedure — see the
+  ICE-WAP-BRANCH-1 and IPI-05 clauses below; `fast_forward` and
   `cherrypick_snapshot` moved to `test_ice_branch_ops_1.py` when ICE-BRANCH-OPS-1
   implemented them). The `branch_`/`tag_` READ selectors resolve the ref here too — standalone
   and on a DML statement's read side (`INSERT … SELECT`, `MERGE … USING`, a `DELETE` predicate
@@ -1805,9 +1806,17 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: rp-5-fork-repin/C-004
   **ICE-WAP-BRANCH-1 (2026-09-19):** the two `spark.wap.*` fail-closed rows are re-pointed at
   the new truth — both keys store through the SQL `SET` door and read back, `spark.wap.branch`
-  is inert on a table without `write.wap.enabled=true`, and `spark.wap.id` on its own still
-  lands the write on `main` (the staged half is fork ask F-STAGE-ONLY-1, registry REF-3).
+  is inert on a table without `write.wap.enabled=true`. The `spark.wap.id` half of that row is
+  superseded by the IPI-05 clause below, which stages it off `main`.
   pins: ice-wap-branch-1/C-004, C-007, C-010
+  **IPI-05 (2026-09-21):** the `spark.wap.id` staged half lands — the id stages the write off
+  `main`, `publish_changes(table, wap_id)` publishes the staged snapshot answering
+  `(source_snapshot_id, current_snapshot_id)`, and an unknown id raises the bare
+  `Cannot apply unknown WAP ID '…'`; the old `publish_changes` refusal row and the
+  stages-nothing row are re-pointed at the new truth. The critic-round-3 strengthening
+  pins the staged snapshot behind the id (exactly one stamped snapshot off `main`), the
+  publish `(source, current)` ids against the staged snapshot, and the refs and
+  snapshot-count shapes on every WAP row.
 - [test_ice_merge_append_1.py](test_ice_merge_append_1.py) +
   [ice_merge_append_1_truth.json](ice_merge_append_1_truth.json) — **ICE-MERGE-APPEND-1
   (2026-09-19):** the recorded-oracle pins for merge-on-commit (IPI-11). The truth JSON holds
@@ -3038,8 +3047,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   non-rewrite pins (SELECT/INSERT/DROP VIEW/script), bare insertInto + MERGE e2e;
   **octo C2 Fixer:** quoted-dotted segment rejoin pin (C2-SEC-001),
   `listTables("spark_catalog.default")` alias (C2-Q-002), `table()` temp-view prefer
-  e2e over catalog shadow (C2-Q-003), bare `read.option(snapshot-id).table` resolve
-  (C2-Q-001);
+  e2e over catalog shadow (C2-Q-003), bare `read.option(versionAsOf).table` resolve
+  (C2-Q-001; IPI-23 2026-09-22: the `snapshot-id` spelling now refuses like Spark);
   **octo C3 Fixer:** `test_save_unsupported_format_loud` requires
   `DATA_SOURCE_NOT_FOUND` (not format-name-only OR) — R1 retargeted to `orc`;
   **octo C4 Fixer:** `test_format_iceberg_load_does_not_prefer_temp_view` (C4-L-001),
@@ -5230,8 +5239,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_time_travel.py` — **I1 / R-TIME-TRAVEL** named oracle: multi-snapshot fixture (CTAS +
   append + MERGE) + tag/branch via `_testing_create_ref`; SQL `VERSION AS OF` /
   `TIMESTAMP AS OF` / `FOR SYSTEM_*` (incl. latest-`<=` at s2/s3_ts + mid-interval — octo
-  C1-Q-001/L-001/L-002); reader options `snapshot-id` / `as-of-timestamp` /
-  `branch` / `tag` (all mutex pairs + residual incremental denylist); filter/projection
+  C1-Q-001/L-001/L-002); reader options: legacy `snapshot-id` / `as-of-timestamp` /
+  `tag` REFUSE with Spark 4.1.2's `IllegalArgumentException` texts (every pair refuses
+  legacy-first), `branch` still served; filter/projection
   composition; current-read unaffected; write-to-branch/tag loud; `__repark_tt_*` hidden from
   listTables (rewritten in H-1b with the ephemeral-view leak fix: the SQL rewrite now RELEASES
   its pins, so the non-vacuity half of that pin comes from the reader-options registration,
@@ -5241,11 +5251,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   JOIN dual VERSION AS OF (octo C2); RFC3339 Zulu TIMESTAMP; direct read_iceberg_table
   mutex kwargs; empty branch/tag loud (octo C3); schema-at-snapshot vs current after RTAS
   widen (static provider, not post-hoc filter — octo C4); SYSTEM_VERSION string ref;
-  parquet+TT option loud; INSERT…SELECT AS OF; subquery AS OF; SNAPSHOT-ID case;
+  parquet+TT option loud; INSERT…SELECT AS OF; subquery AS OF; `SNAPSHOT-ID`
+  case-insensitive refusal;
   branch option trims whitespace (octo C5); CTAS/MERGE USING AS OF source (octo C6);
-  CTE AS OF; snapshot-id i64 overflow → AnalysisException (octo C7); triple mutex pin
+  CTE AS OF; snapshot-id i64 overflow refuses with the legacy `IllegalArgumentException`
+  text before parsing (octo C7); triple legacy-combo refusal pin
   (octo C8). Arrow multiset **and** schema pins via
   `to_arrow`. Fork cites in module docstring (pin `4723104b`).
+  **IPI-23 (2026-09-22):** the legacy `snapshot-id` / `as-of-timestamp` / `tag` reader pins
+  refuse with Spark 4.1.2's `IllegalArgumentException` texts (precedence snapshot-id,
+  as-of-timestamp, tag) instead of answering rows — the mutex/overflow/case pins now assert
+  the refusal, the temp-view pin rides `versionAsOf`, and new pins cover each message, the
+  precedence pairs, the `.table()` entry, and the near misses (`branch`, `versionAsOf` with a
+  tag name, `timestampAsOf`, the `start-snapshot-id` windows — lone and start+end each answer
+  `[4]` — ignored `split-size` and underscore `snapshot_id`).
 - `test_facade_polish.py` — aggregate **compound display naming** (live-recorded PySpark 4.1.2
   matrix: `sum((x + 1))`, `sum(CAST(x AS DOUBLE))`, `sum(abs(x))` **incl. negatives**, `sum(x AS y)`,
   reflected-op commuting `2 * x` → `sum((x * 2))` + float-literal `2.0` (2026-07-21 review pins;
@@ -5262,6 +5281,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **ICE-TT-RESOLVE-1 (2026-09-19):** `test_snapshot_id_option_parses_int_and_range` (legacy
   pin parsing) and `test_version_asof_options_forward_raw_without_engine` (built-ins forward
   raw, legacy junk still loud). pins: ice-tt-resolve-1/C-004
+  **IPI-23 (2026-09-22):** the `snapshot-id` legs of the semantic-gate pin and
+  `test_version_asof_options_forward_raw_without_engine` now assert the Spark 4.1.2 refusal
+  text; the `_parse_*` helper pins are unchanged.
 - `test_group_agg.py` — **U2:** signed-zero collect_set fixture uses `createDataFrame`
   (SQL `-0.0` is DECIMAL 0, no IEEE sign bit). **Group E (E1/E2/E7) + Group J**: the aggregation family, pinned to real
   (2026-07-22 review: ruff-formatted — the unit left the format gate red at tip)

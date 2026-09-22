@@ -1,5 +1,6 @@
 use super::super::*;
 use super::common::*;
+use super::wap_id::ref_heads;
 
 use crate::wap::{
     WapSessionConfig, wap_from_config_map, wap_from_options, with_wap_session_config,
@@ -191,6 +192,51 @@ async fn the_write_creates_a_wap_branch_that_does_not_exist() {
     assert_eq!(
         ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![1]
+    );
+}
+
+#[tokio::test]
+async fn a_first_write_under_the_branch_conf_creates_only_the_branch() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, WAP_DDL).await;
+
+    set_wap(&ctx, Some("audit"), None);
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1],
+        "the session's plain read follows the branch the write created"
+    );
+    set_wap(&ctx, None, None);
+
+    let table = load_sales_table(&catalogs, "t").await;
+    assert_eq!(
+        table.metadata().snapshots().count(),
+        1,
+        "the log holds only the branch commit"
+    );
+    let branch_head = table
+        .metadata()
+        .snapshots()
+        .next()
+        .expect("one snapshot in the log")
+        .snapshot_id();
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("audit".to_string(), "BRANCH".to_string(), branch_head)],
+        "only the branch exists, main was never created"
+    );
+    assert!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t")
+            .await
+            .is_empty(),
+        "with no main head the read answers empty"
     );
 }
 
