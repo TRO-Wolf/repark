@@ -593,14 +593,52 @@ async fn a_wap_id_staged_snapshot_cherrypicks_onto_main() {
     set_wap(&ctx, None, None);
     let staged = staged_snapshot_id(&catalogs, "w1").await;
 
-    run(
+    let batches = execute(
         &ctx,
         &catalogs,
         &format!(
             "CALL ice.system.cherrypick_snapshot(table => 'sales.t', snapshot_id => {staged})"
         ),
     )
-    .await;
+    .await
+    .expect("cherry-pick answers")
+    .collect()
+    .await
+    .unwrap();
+    assert_eq!(batches.len(), 1, "one output batch");
+    assert_eq!(batches[0].num_rows(), 1, "one output row");
+    let schema = batches[0].schema();
+    assert_eq!(schema.field(0).name(), "source_snapshot_id");
+    assert_eq!(
+        schema.field(0).data_type(),
+        &DataType::Int64,
+        "source id reads back as Int64"
+    );
+    assert!(!schema.field(0).is_nullable(), "source id is non-null");
+    assert_eq!(schema.field(1).name(), "current_snapshot_id");
+    assert_eq!(
+        schema.field(1).data_type(),
+        &DataType::Int64,
+        "current id reads back as Int64"
+    );
+    assert!(!schema.field(1).is_nullable(), "current id is non-null");
+    let source = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .unwrap()
+        .value(0);
+    let current = batches[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .unwrap()
+        .value(0);
+    assert_eq!(source, staged, "the staged snapshot is the source");
+    assert_eq!(
+        current, staged,
+        "a fast-forward cherry-pick lands on the staged snapshot itself"
+    );
     assert_eq!(
         ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![1, 2],
