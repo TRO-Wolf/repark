@@ -11,6 +11,7 @@ pins: fnp-agg-1/C-002, C-003, C-004
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -134,12 +135,23 @@ def _assert_rows_up_to_ties(
         assert sorted(actual_run, key=repr) == sorted(expected_run, key=repr)
 
 
+_ERROR_SQLSTATE_TAIL = re.compile(r"(SQLSTATE: [A-Z0-9]{5});.*$")
+_ERROR_EXPR_ID = re.compile(r"#\d+")
+
+
+def _expected_error_text(cell: dict[str, Any]) -> str:
+    """Recorded live text minus session-varying expr ids and Spark's query-context tail."""
+    recorded = _ERROR_EXPR_ID.sub("", str(cell["message"]))
+    return _ERROR_SQLSTATE_TAIL.sub(r"\1", recorded)
+
+
 @pytest.mark.parametrize("cell", CRITIC_ERROR, ids=_cell_id)
 def test_critic_error_cell_carries_spark_condition(cell: dict[str, Any]) -> None:
-    """Refusal cells fail with Spark's own condition on their door. pins: fnp-agg-1/C-004."""
+    """Refusal cells fail with Spark's recorded class and full text. pins: fnp-agg-1/C-004."""
     with pytest.raises(Exception) as caught:
         _run_cell(_session(), cell).collect()
-    assert f"[{cell['error_condition']}]" in str(caught.value)
+    assert type(caught.value).__name__ == cell["error_type"]
+    assert str(caught.value) == _expected_error_text(cell)
 
 
 @pytest.mark.parametrize("cell", CRITIC_VALUE, ids=_cell_id)

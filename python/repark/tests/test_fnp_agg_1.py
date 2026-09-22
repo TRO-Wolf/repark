@@ -229,8 +229,19 @@ def _assert_rows_up_to_ties(
         assert sorted(actual_run, key=repr) == sorted(expected_run, key=repr)
 
 
+_ERROR_SQLSTATE_TAIL = re.compile(r"(SQLSTATE: [A-Z0-9]{5});.*$")
+_ERROR_EXPR_ID = re.compile(r"#\d+")
+
+
+def _expected_error_text(cell: dict[str, Any]) -> str:
+    """Recorded live text minus session-varying expr ids and Spark's query-context tail."""
+    recorded = _ERROR_EXPR_ID.sub("", str(cell["message"]))
+    return _ERROR_SQLSTATE_TAIL.sub(r"\1", recorded)
+
+
 def _assert_error_cell(cell: dict[str, Any], failure: Exception) -> None:
-    assert f"[{cell['error_condition']}]" in str(failure)
+    assert type(failure).__name__ == cell["error_type"]
+    assert str(failure) == _expected_error_text(cell)
 
 
 def _split_signature_params(inner: str) -> list[str]:
@@ -387,7 +398,7 @@ def test_python_cube_grouping_reaches_rust_rule() -> None:
 
 @pytest.mark.parametrize("cell", AGG_ERROR, ids=lambda cell: _cell_id(AGG_ERROR, cell))
 def test_error_cell_carries_spark_condition(cell: dict[str, Any]) -> None:
-    """A raising cell fails with Spark's own condition on its door. pins: fnp-agg-1/C-004."""
+    """A raising cell fails with Spark's recorded class and full text. pins: fnp-agg-1/C-004."""
     session = _session("agg", cell["ansi"])
     with pytest.raises(Exception) as caught:
         if cell["door"] == "sql":

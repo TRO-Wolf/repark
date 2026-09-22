@@ -95,19 +95,20 @@ impl AggregateUDFImpl for SparkGrouping {
     }
 }
 
-fn unsupported_grouping_id(display: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "[UNSUPPORTED_GROUPING_EXPRESSION] {display} is only supported with GROUP BY CUBE, \
-         ROLLUP or GROUPING SETS"
-    ))
+fn unsupported_grouping_id() -> DataFusionError {
+    DataFusionError::Plan(
+        "[UNSUPPORTED_GROUPING_EXPRESSION] grouping()/grouping_id() can only be used with \
+         GroupingSets/Cube/Rollup. SQLSTATE: 42K0E"
+            .to_string(),
+    )
 }
 
 fn grouping_id_column_mismatch(args: &[String], order: &[String]) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id ({}) does not match grouping \
-         columns ({}).",
-        args.join(", "),
-        order.join(", ")
+         columns ({}). SQLSTATE: 42803",
+        args.join(","),
+        order.join(",")
     ))
 }
 
@@ -371,23 +372,6 @@ fn resolve_grouping_id_call(
     Ok(Expr::Alias(Alias::new(bits, relation, name)))
 }
 
-fn first_grouping_id_display(aggr_expr: &[Expr]) -> String {
-    for expr in aggr_expr {
-        let candidate = match expr {
-            Expr::AggregateFunction(function) => Some(function),
-            Expr::Alias(alias) => match alias.expr.as_ref() {
-                Expr::AggregateFunction(function) => Some(function),
-                _ => None,
-            },
-            _ => None,
-        };
-        if let Some(function) = candidate.filter(|function| function.func.name() == "grouping_id") {
-            return grouping_id_display(&function.params.args);
-        }
-    }
-    "grouping_id()".to_string()
-}
-
 fn grouping_function(expr: &Expr) -> Option<(&AggregateFunction, OuterName)> {
     match expr {
         Expr::AggregateFunction(function)
@@ -459,9 +443,7 @@ fn rewrite_aggregate(aggregate: Aggregate) -> Result<LogicalPlan> {
             .iter()
             .any(|expr| aggregate_function_name(expr) == Some("grouping_id"))
     {
-        return Err(unsupported_grouping_id(&first_grouping_id_display(
-            &aggr_expr,
-        )));
+        return Err(unsupported_grouping_id());
     }
     let gid_len = usize::from(parts.is_some());
     let (order, sets) = parts.unwrap_or_default();
@@ -589,7 +571,10 @@ mod tests {
         )
         .await;
         assert!(
-            refused.contains("[GROUPING_ID_COLUMN_MISMATCH]"),
+            refused.contains(
+                "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (g) does not match \
+                 grouping columns (g,k). SQLSTATE: 42803"
+            ),
             "{refused}"
         );
     }
@@ -602,7 +587,10 @@ mod tests {
         )
         .await;
         assert!(
-            refused.contains("[GROUPING_ID_COLUMN_MISMATCH]"),
+            refused.contains(
+                "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k,g) does not match \
+                 grouping columns (g,k). SQLSTATE: 42803"
+            ),
             "{refused}"
         );
     }
@@ -664,7 +652,10 @@ mod tests {
         )
         .await;
         assert!(
-            refused.contains("[GROUPING_ID_COLUMN_MISMATCH]"),
+            refused.contains(
+                "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k) does not match \
+                 grouping columns (g,k). SQLSTATE: 42803"
+            ),
             "{refused}"
         );
     }
@@ -677,7 +668,10 @@ mod tests {
         )
         .await;
         assert!(
-            refused.contains("[UNSUPPORTED_GROUPING_EXPRESSION]"),
+            refused.contains(
+                "[UNSUPPORTED_GROUPING_EXPRESSION] grouping()/grouping_id() can only be used \
+                 with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E"
+            ),
             "{refused}"
         );
     }
