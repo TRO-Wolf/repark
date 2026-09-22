@@ -15,11 +15,11 @@ pub(crate) async fn refuse_incompatible_update_cast(
     let parts = crate::name_parts(object_name);
     if parts.is_empty() {
         return Ok(());
-    };
+    }
     let qualified = crate::write_to_branch::qualify_table_parts(ctx, parts);
     if qualified.len() < 3 {
         return Ok(());
-    };
+    }
     let Some(catalog) = catalogs.get(&qualified[0]) else {
         return Ok(());
     };
