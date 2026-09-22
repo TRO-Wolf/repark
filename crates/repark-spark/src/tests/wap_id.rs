@@ -6,12 +6,12 @@ use super::session_write_conf::{set_session_conf, unset_session_conf};
 
 use crate::wap::WapSessionConfig;
 
-const WAP_DDL: &str = "CREATE TABLE ice.sales.t (id INT, name STRING) USING iceberg \
+pub(crate) const WAP_DDL: &str = "CREATE TABLE ice.sales.t (id INT, name STRING) USING iceberg \
      TBLPROPERTIES ('format-version'='2', 'write.wap.enabled'='true')";
 const PLAIN_DDL: &str = "CREATE TABLE ice.sales.t (id INT, name STRING) USING iceberg \
      TBLPROPERTIES ('format-version'='2')";
 
-fn set_wap(ctx: &SessionContext, branch: Option<&str>, id: Option<&str>) {
+pub(crate) fn set_wap(ctx: &SessionContext, branch: Option<&str>, id: Option<&str>) {
     let state_lock = ctx.state_ref();
     let mut state = state_lock.write();
     state
@@ -24,7 +24,7 @@ fn set_wap(ctx: &SessionContext, branch: Option<&str>, id: Option<&str>) {
         });
 }
 
-async fn seed(ctx: &SessionContext, catalogs: &CatalogRegistry, ddl: &str) {
+pub(crate) async fn seed(ctx: &SessionContext, catalogs: &CatalogRegistry, ddl: &str) {
     run(ctx, catalogs, ddl).await;
     run(
         ctx,
@@ -34,13 +34,13 @@ async fn seed(ctx: &SessionContext, catalogs: &CatalogRegistry, ddl: &str) {
     .await;
 }
 
-async fn ids(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Vec<i32> {
+pub(crate) async fn ids(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Vec<i32> {
     let mut found = time_travel_id_multiset(ctx, catalogs, sql).await;
     found.sort_unstable();
     found
 }
 
-async fn staged_snapshot_id(catalogs: &CatalogRegistry, wap_id: &str) -> i64 {
+pub(crate) async fn staged_snapshot_id(catalogs: &CatalogRegistry, wap_id: &str) -> i64 {
     let table = load_sales_table(catalogs, "t").await;
     let mut found = None;
     for snapshot in table.metadata().snapshots() {
@@ -60,7 +60,7 @@ async fn staged_snapshot_id(catalogs: &CatalogRegistry, wap_id: &str) -> i64 {
     found.expect("a staged snapshot carries the wap id")
 }
 
-async fn main_snapshot_id(catalogs: &CatalogRegistry) -> i64 {
+pub(crate) async fn main_snapshot_id(catalogs: &CatalogRegistry) -> i64 {
     load_sales_table(catalogs, "t")
         .await
         .metadata()
@@ -69,7 +69,7 @@ async fn main_snapshot_id(catalogs: &CatalogRegistry) -> i64 {
         .snapshot_id()
 }
 
-async fn snapshot_count(catalogs: &CatalogRegistry) -> usize {
+pub(crate) async fn snapshot_count(catalogs: &CatalogRegistry) -> usize {
     load_sales_table(catalogs, "t")
         .await
         .metadata()
@@ -77,7 +77,10 @@ async fn snapshot_count(catalogs: &CatalogRegistry) -> usize {
         .count()
 }
 
-async fn ref_heads(ctx: &SessionContext, catalogs: &CatalogRegistry) -> Vec<(String, String, i64)> {
+pub(crate) async fn ref_heads(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+) -> Vec<(String, String, i64)> {
     use datafusion::arrow::array::AsArray;
 
     let batches = execute(

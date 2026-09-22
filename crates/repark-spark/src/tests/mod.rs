@@ -98,6 +98,7 @@ mod v3e3;
 mod v3e4;
 mod wap_branch;
 mod wap_id;
+mod wap_id_sweep;
 mod window_temporal_range;
 mod write_defaults;
 mod write_to_branch;
