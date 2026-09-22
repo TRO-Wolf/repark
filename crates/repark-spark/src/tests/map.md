@@ -1164,7 +1164,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `R-MC-FILE-FILTER` that plans an empty projection);
   `pos_is_the_file_position_after_a_merge_on_read_delete` pins `R-MC-POS-MOR`
   (a survivor keeps its file ordinal); `select_star_excludes_every_served_metadata_column`
-  pins user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id` compositions;
+  pins user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id` / `*, _partition`
+  compositions;
   `unserved_metadata_columns_refuse_with_a_typed_error` pins the `[ICE-MC-1]` refusal of
   `_deleted`, never the raw `No field named`, and asserts
   the message names the requested column (r2 V-001); and

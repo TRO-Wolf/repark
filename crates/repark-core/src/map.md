@@ -847,7 +847,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   call it.
   pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `prepare_metadata_column_sql`
-  rewrites queries that name `_file` / `_pos` / `_spec_id` onto a `MetadataColumnsTableProvider` temp
+  rewrites queries that name `_file` / `_pos` / `_spec_id` / `_partition` onto a `MetadataColumnsTableProvider` temp
   view (qualified/aliased FROM, unquoted case-fold, schema-order `*` expand serves user
   columns only). `_deleted` refuses `[ICE-MC-1]` naming the
   column — unserved-and-declared at the fork pin, never the raw `No field named`. Only the

@@ -7643,15 +7643,18 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   pins: ice-changelog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015
 - [test_ice_metadata_cols_1.py](test_ice_metadata_cols_1.py) —
-  **ICE-METADATA-COLS-1 (2026-09-20):** the Spark door serves `_file`, `_pos` and
-  `_spec_id` on Iceberg reads. Six pins replay the recorded inventory queries verbatim over
-  a two-append plus one-delete seed (`R-MC-FILE` with the `string` schema leg,
+  **ICE-METADATA-COLS-1 (2026-09-20):** the Spark door serves `_file`, `_pos`,
+  `_spec_id` and `_partition` on Iceberg reads. Nine pins replay the recorded inventory
+  queries verbatim (`R-MC-FILE` with the `string` schema leg,
   `R-MC-FILE-DISTINCT`, `R-MC-FILE-FILTER`, `R-MC-POS` with the `bigint` schema
-  leg, `R-MC-SPEC-ID` with the `int` schema leg, and `R-MC-POS-MOR` on the
-  merge-on-read twin, where the survivor keeps its file ordinal); the star pin
-  holds user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id`
-  compositions; and the refusal pin holds the typed `[ICE-MC-1]` `AnalysisException`
-  for `_deleted`, never the raw `No field named`, with the column
+  leg, `R-MC-SPEC-ID` with the `int` schema leg and `R-MC-PARTITION` with the
+  `struct<cat:string>` schema leg over a two-append plus one-delete seed;
+  `R-MC-POS-MOR` on the merge-on-read twin, where the survivor keeps its file
+  ordinal; `R-MC-PARTITION-UNPART` on the unpartitioned twin; and
+  `R-MC-SPEC-ID-EVO` on the spec-evolution twin); the star pin
+  holds user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id` /
+  `*, _partition` compositions; and the refusal pin holds the typed `[ICE-MC-1]`
+  `AnalysisException` for `_deleted`, never the raw `No field named`, with the column
   name asserted per column (r2 V-001). The v3 twin serves `_file` + `_row_id`
   together, pinning the metadata-before-lineage stage order (r2 V-002, C-009); and
   the identity twin pins every live `_file` against the table's `files.file_path`

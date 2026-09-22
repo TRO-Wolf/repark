@@ -63,7 +63,7 @@ pins: rp-4-fork-repin/C-005, C-006
   JOIN/CTE/subquery/time-travel naming lineage refuse `V3-ROWID-2`. RP-6: plain-`WHERE`
   UPDATE/DELETE are Spark-equal. V3-7: MERGE keeps `_row_id`; subquery-WHERE DML still
   refuses `V3-COW-1`. **ICE-METADATA-COLS-1 (2026-09-20):** ahead of the lineage rewrite,
-  `prepare_metadata_column_sql` pins `_file` / `_pos` / `_spec_id` reads onto a metadata
+  `prepare_metadata_column_sql` pins `_file` / `_pos` / `_spec_id` / `_partition` reads onto a metadata
   temp provider (`MetadataColumnPins` released with the other pins); `_deleted`
   refuses `[ICE-MC-1]`.
   **WO-R3 (2026-09-22):** the pins carry `_partition` too (a NULLABLE union struct); only
