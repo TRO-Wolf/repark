@@ -239,7 +239,8 @@ async fn set_identifier_fields_refuses_map_and_list_nesting() {
     .unwrap_err();
     assert_eq!(
         key_error.to_string(),
-        "External error: Cannot add field key as an identifier field: must not be nested in m"
+        "External error: Cannot add field key as an identifier field: must not be nested in \
+         1: m: optional map<string, string>"
     );
     let value_error = execute(
         &ctx,
@@ -267,5 +268,63 @@ async fn set_identifier_fields_refuses_map_and_list_nesting() {
     assert!(
         identifier_ids(&table).is_empty(),
         "the refused SETs must commit nothing"
+    );
+}
+
+#[tokio::test]
+async fn set_identifier_fields_refuses_optional_struct_nesting_with_full_parent() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.optstruct (s STRUCT<a: BIGINT NOT NULL>, id BIGINT NOT NULL) \
+         USING iceberg",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.optstruct SET IDENTIFIER FIELDS s.a",
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "External error: Cannot add field a as an identifier field: must not be nested in an \
+         optional field 1: s: optional struct<3: a: required long>"
+    );
+    let table = load_sales_table(&catalogs, "optstruct").await;
+    assert!(
+        identifier_ids(&table).is_empty(),
+        "the refused SET must commit nothing"
+    );
+}
+
+#[tokio::test]
+async fn set_identifier_fields_refuses_non_primitive_columns() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.complex (m MAP<STRING, STRING>, id BIGINT NOT NULL) USING iceberg",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.complex SET IDENTIFIER FIELDS m",
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "External error: Cannot add field m as an identifier field: not a primitive type field"
+    );
+    let table = load_sales_table(&catalogs, "complex").await;
+    assert!(
+        identifier_ids(&table).is_empty(),
+        "the refused SET must commit nothing"
     );
 }

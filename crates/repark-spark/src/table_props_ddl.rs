@@ -207,18 +207,86 @@ fn validate_identifier_candidate(field: &NestedField, ancestors: &[&NestedField]
         if !ancestor.field_type.is_struct() {
             return Err(repark_core::illegal_argument_error(format!(
                 "Cannot add field {name} as an identifier field: must not be nested in {}",
-                ancestor.name
+                nested_field_text(ancestor)
             )));
         }
         if !ancestor.required {
             return Err(repark_core::illegal_argument_error(format!(
                 "Cannot add field {name} as an identifier field: must not be nested in an \
                  optional field {}",
-                ancestor.name
+                nested_field_text(ancestor)
             )));
         }
     }
     Ok(())
+}
+
+fn nested_field_text(field: &NestedField) -> String {
+    let requirement = if field.required {
+        "required"
+    } else {
+        "optional"
+    };
+    let mut text = format!(
+        "{}: {}: {requirement} {}",
+        field.id,
+        field.name,
+        field_type_text(&field.field_type)
+    );
+    if let Some(doc) = field.doc.as_ref() {
+        text.push_str(&format!(" ({doc})"));
+    }
+    text
+}
+
+fn field_type_text(field_type: &Type) -> String {
+    match field_type {
+        Type::Primitive(primitive) => primitive_type_text(primitive),
+        Type::Struct(struct_type) => {
+            let fields: Vec<String> = struct_type
+                .fields()
+                .iter()
+                .map(|field| nested_field_text(field.as_ref()))
+                .collect();
+            format!("struct<{}>", fields.join(", "))
+        }
+        Type::List(list_type) => {
+            format!(
+                "list<{}>",
+                field_type_text(&list_type.element_field.field_type)
+            )
+        }
+        Type::Map(map_type) => format!(
+            "map<{}, {}>",
+            field_type_text(&map_type.key_field.field_type),
+            field_type_text(&map_type.value_field.field_type)
+        ),
+        Type::Variant => "variant".to_string(),
+    }
+}
+
+fn primitive_type_text(primitive: &PrimitiveType) -> String {
+    match primitive {
+        PrimitiveType::Boolean => "boolean".to_string(),
+        PrimitiveType::Int => "int".to_string(),
+        PrimitiveType::Long => "long".to_string(),
+        PrimitiveType::Float => "float".to_string(),
+        PrimitiveType::Double => "double".to_string(),
+        PrimitiveType::Decimal { precision, scale } => {
+            format!("decimal({precision}, {scale})")
+        }
+        PrimitiveType::Date => "date".to_string(),
+        PrimitiveType::Time => "time".to_string(),
+        PrimitiveType::Timestamp => "timestamp".to_string(),
+        PrimitiveType::Timestamptz => "timestamptz".to_string(),
+        PrimitiveType::TimestampNs => "timestamp_ns".to_string(),
+        PrimitiveType::TimestamptzNs => "timestamptz_ns".to_string(),
+        PrimitiveType::String => "string".to_string(),
+        PrimitiveType::Uuid => "uuid".to_string(),
+        PrimitiveType::Fixed(size) => format!("fixed[{size}]"),
+        PrimitiveType::Binary => "binary".to_string(),
+        PrimitiveType::Unknown => "unknown".to_string(),
+    }
 }
 
 fn unknown_identifier_field(name: &str) -> DataFusionError {
