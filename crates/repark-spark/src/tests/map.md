@@ -1380,6 +1380,9 @@ above.
   snapshots tables at registration); `run_maintenance_on_s3_tables_marks_the_orphan_step_skipped`
   and `run_maintenance_apply_on_s3_tables_skips_orphan_and_runs_the_rest` pin the skipped
   orphan row — reason in `result` — on the dry run and on apply while the other steps run.
+  **IPI-30 round 3 (2026-09-22):** the planned-frame pin asserts `dry_run => false` on the
+  rendered orphan CALL — the `arguments` cell is what apply executes, so the printed
+  spelling must not omit it.
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016,
   C-017, C-018, C-019
   pins: orphan-s3tables-1/C-003, C-004

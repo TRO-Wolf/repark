@@ -62,7 +62,7 @@ time, so the `older_than` values move):
 | 2 | rewrite_data_files | CALL mem.system.rewrite_data_files(table => 'ns.orders', options => map('target-file-size-bytes', '67108864')) | planned |
 | 3 | rewrite_manifests | CALL mem.system.rewrite_manifests(table => 'ns.orders') | planned |
 | 4 | expire_snapshots | CALL mem.system.expire_snapshots(table => 'ns.orders', older_than => 1789040131633, retain_last => 2) | planned |
-| 5 | remove_orphan_files | CALL mem.system.remove_orphan_files(table => 'ns.orders', older_than => 1788780931633) | planned |
+| 5 | remove_orphan_files | CALL mem.system.remove_orphan_files(table => 'ns.orders', older_than => 1788780931633, dry_run => false) | planned |
 
 The matching apply answers `ran` with each step's own result frame as JSON:
 
