@@ -96,11 +96,12 @@ async fn insert_string_into_bigint_keeps_the_insert_path() {
     .await
     {
         Ok(frame) => match frame.collect().await {
-            Ok(_) => String::new(),
+            Ok(_) => panic!("INSERT string into BIGINT must fail on the insert path"),
             Err(err) => err.to_string(),
         },
         Err(err) => err.to_string(),
     };
+    assert!(text.contains("Cannot cast string 'notanumber'"), "{text}");
     assert!(
         !text.contains("Cannot write incompatible data for the table"),
         "{text}"
