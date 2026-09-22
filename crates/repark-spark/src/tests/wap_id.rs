@@ -152,6 +152,53 @@ async fn wap_id_stages_the_insert_and_leaves_main_put() {
 }
 
 #[tokio::test]
+async fn wap_id_on_a_first_write_stages_without_creating_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, WAP_DDL).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+    set_wap(&ctx, None, None);
+
+    assert!(
+        ref_heads(&ctx, &catalogs).await.is_empty(),
+        "no ref exists, main was never created"
+    );
+    assert!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t")
+            .await
+            .is_empty(),
+        "with no main head the read answers empty"
+    );
+    assert_eq!(
+        load_sales_table(&catalogs, "t")
+            .await
+            .metadata()
+            .snapshots()
+            .count(),
+        1,
+        "the log holds only the staged snapshot"
+    );
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+    let table = load_sales_table(&catalogs, "t").await;
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_by_id(staged)
+            .expect("staged snapshot in the log")
+            .parent_snapshot_id(),
+        None,
+        "the staged first write has no parent"
+    );
+}
+
+#[tokio::test]
 async fn publish_changes_fast_forwards_main_to_the_staged_snapshot() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
