@@ -370,6 +370,7 @@ pub(crate) async fn apply_write_to_branch<'a>(
     catalogs: &CatalogRegistry,
     sql: &'a str,
     pinned: &mut PinnedViews,
+    skip_wap_id_route: bool,
 ) -> Result<Cow<'a, str>> {
     let wap = crate::wap::session_wap(ctx);
     let explicit = sniff_write_to_branch(sql).is_some_and(|sniff| sniff_applies(ctx, &sniff));
@@ -402,8 +403,9 @@ pub(crate) async fn apply_write_to_branch<'a>(
         None => {
             if let Some(target) = wap_branch_target(ctx, catalogs, &wap, &span.parts).await? {
                 target
-            } else if let Some(staged) =
-                wap_id_route_target(ctx, catalogs, &wap, &span.parts, sql).await?
+            } else if !skip_wap_id_route
+                && let Some(staged) =
+                    wap_id_route_target(ctx, catalogs, &wap, &span.parts, sql).await?
             {
                 return commit_write_staged(ctx, catalogs, pinned, &tokens, &span, staged).await;
             } else {

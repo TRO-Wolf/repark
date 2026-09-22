@@ -513,7 +513,7 @@ async fn without_either_wap_key_the_write_sql_passes_through_untouched() {
     let mut pinned = crate::time_travel::PinnedViews::default();
     let sql = "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name";
     let rewritten =
-        crate::write_to_branch::apply_write_to_branch(&ctx, &catalogs, sql, &mut pinned)
+        crate::write_to_branch::apply_write_to_branch(&ctx, &catalogs, sql, &mut pinned, false)
             .await
             .expect("the fast path never fails");
     assert!(
