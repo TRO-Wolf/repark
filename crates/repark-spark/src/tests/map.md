@@ -516,7 +516,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `expire_snapshots` `snapshot_ids` expires exactly those ids in both named and positional
   spellings with Spark's six columns and row, the accept-and-ignore trio equals the plain
   `older_than` row on twin tables, mistyped new arguments refuse naming their types, and
-  `rewrite_manifests` `sort_by` stays a loud unknown-argument refusal. `add_files`
+  the `rewrite_manifests` unknown-argument pin names the four-name list now that
+  `sort_by` is wired (**RM-SORTBY-1**, 2026-09-21). `add_files`
   imports answer Spark's two columns with NULL `changed_partition_count` on partitioned,
   flat, filtered and parallel twins; every import pins the pretty name-mapping property;
   reordered source columns bind by name with adopted paths; duplicates raise with Java's
@@ -720,6 +721,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: rp-11-repin-f24/C-002
   `call_manifests` (**MW-6**) pins the two non-nullable `int` columns, no-op zero result, current
   spec filter, delete-manifest refusal, and `MANIFEST-3` count divergence.
+  **RM-SORTBY-1 (2026-09-21):** the `sort_by` pins — the sorted rewrite packs one
+  partition value per manifest with contents differing from the legacy rewrite on
+  twin tables, positional `sort_by` sorts, NULL runs legacy, and the empty-list
+  and non-partition-column refusals carry the fork text verbatim.
+  pins: ice-procedures-1/C-022
   `call_procs_route_1` (**ICE-PROCS-ROUTE-1 (2026-09-19)**) pins the four routed
   procedure schemas and rows (ancestor chain newest-first with snapshot
   timestamps, table-stats blobs in caller order, partition-stats registration,

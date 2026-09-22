@@ -328,19 +328,19 @@ async fn call_expire_ignored_args_type_check() {
 }
 
 #[tokio::test]
-async fn call_rm_sort_by_stays_a_loud_refusal() {
+async fn call_rm_unknown_argument_names_extended_list() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     let error = execute(
         &ctx,
         &catalogs,
-        "CALL ice.system.rewrite_manifests(table => 'sales.x', sort_by => array('id'))",
+        "CALL ice.system.rewrite_manifests(table => 'sales.x', bogus => 1)",
     )
     .await
-    .expect_err("sort_by must refuse");
+    .expect_err("bogus must refuse");
     assert_eq!(
         plan_message(error),
-        "unknown CALL argument `sort_by`; allowed: table, use_caching, spec_id"
+        "unknown CALL argument `bogus`; allowed: table, use_caching, spec_id, sort_by"
     );
 }
 

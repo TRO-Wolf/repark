@@ -8,7 +8,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::{ManifestContentType, ManifestFile, Snapshot, TableProperties};
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
-use iceberg::{Catalog, table::Table};
+use iceberg::{Catalog, Error, table::Table};
 use repark_core::illegal_argument_error;
 
 use super::{CallArgs, resolve_table_ident};
@@ -28,12 +28,12 @@ pub(super) async fn execute_rewrite_manifests(
     catalog_name: &str,
     args: &CallArgs,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&["table", "use_caching", "spec_id"])?;
-    // Spark positional order: table, use_caching, spec_id (jar `PARAMETERS`).
-    args.reject_excess_positional(3)?;
+    args.reject_unknown_named(&["table", "use_caching", "spec_id", "sort_by"])?;
+    args.reject_excess_positional(4)?;
     // Parse and drop.
     args.optional_bool("use_caching", Some(1))?;
     let requested_spec = args.optional_i32("spec_id", Some(2))?;
+    let sort_by = args.optional_string_array("sort_by", Some(3))?;
 
     let table_arg = args.require_string("table", 0)?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
@@ -61,20 +61,27 @@ pub(super) async fn execute_rewrite_manifests(
     }
 
     let tx = Transaction::new(&table);
-    let action = tx
-        .rewrite_manifests()
-        .rewrite_delete_manifests(true)
-        // One cluster key, so every matching entry lands in one manifest per spec.
-        .cluster_by(|_| String::new())
-        .rewrite_if(move |manifest| {
-            manifest.partition_spec_id == spec_id
-                && match manifest.content {
-                    ManifestContentType::Data => data_work,
-                    ManifestContentType::Deletes => delete_work,
-                }
-        });
+    let unclustered = tx.rewrite_manifests().rewrite_delete_manifests(true);
+    let grouped = match sort_by {
+        Some(columns) => unclustered
+            .sort_by_columns(columns)
+            .map_err(|error| illegal_argument_error(error.message().to_string()))?,
+        None => unclustered.cluster_by(|_| String::new()),
+    };
+    let action = grouped.rewrite_if(move |manifest| {
+        manifest.partition_spec_id == spec_id
+            && match manifest.content {
+                ManifestContentType::Data => data_work,
+                ManifestContentType::Deletes => delete_work,
+            }
+    });
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    let committed = tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
+    let committed = match tx.commit(catalog.as_ref()).await {
+        Err(error) if is_sort_column_refusal(&error) => {
+            return Err(illegal_argument_error(error.message().to_string()));
+        }
+        result => result.map_err(iceberg_err)?,
+    };
 
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
@@ -141,6 +148,13 @@ fn target_manifest_size_bytes(table: &Table) -> u64 {
 
 fn is_leg_work(count: usize, bytes: u64, target_bytes: u64) -> bool {
     count > 1 || bytes > target_bytes
+}
+
+fn is_sort_column_refusal(error: &Error) -> bool {
+    const NEEDLES: [&str; 2] = ["Cannot sort by column", "Cannot sort by columns"];
+    NEEDLES
+        .iter()
+        .any(|needle| error.message().contains(needle))
 }
 
 /// A summary count Spark reads as one of its two columns.

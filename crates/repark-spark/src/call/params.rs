@@ -337,7 +337,7 @@ pub(crate) const REWRITE_MANIFESTS_PARAMS: &[ParamDecl] = &[
     },
     ParamDecl {
         name: "sort_by",
-        data_type: "None",
+        data_type: "createArrayType",
         required: false,
     },
 ];

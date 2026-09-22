@@ -1089,8 +1089,12 @@ pins: rp-4-fork-repin/C-005, C-006
   coercions land here for the rounds that wire array parameters. **PR1b
   (2026-09-21):** `BoundArgs` gains the scalar readers the wiring rounds need
   (`optional_i64`, `optional_i32`, `optional_timestamp_ms`, `require_expr`), and
-  the expire handler calls the i64-array coercion.
+  the expire handler calls the i64-array coercion. **RM-SORTBY-1 (2026-09-21):**
+  `CallArgs` gains `optional_string_array`, the named-or-positional string-array
+  reader with SQL NULL as unset that the `rewrite_manifests` handler parses
+  `sort_by` through.
   pins: ice-procedures-1/C-003, C-004, C-006, C-007, C-008, C-011, C-013, C-015
+  pins: ice-procedures-1/C-022
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),
