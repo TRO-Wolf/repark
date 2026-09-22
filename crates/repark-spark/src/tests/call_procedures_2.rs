@@ -18,6 +18,28 @@ fn plan_message(error: datafusion::error::DataFusionError) -> String {
     message
 }
 
+fn external_message(error: datafusion::error::DataFusionError) -> String {
+    let datafusion::error::DataFusionError::External(source) = error else {
+        panic!("expected an External error, got {error}");
+    };
+    source.to_string()
+}
+
+fn assert_duplicate_refusal(error: datafusion::error::DataFusionError) {
+    let message = external_message(error);
+    assert!(
+        message.contains(
+            "Cannot complete import because data files to be imported already exist within the \
+             target table"
+        ),
+        "duplicate refusal must carry the shared message body, got {message}"
+    );
+    assert!(
+        message.contains("you may set 'check_duplicate_files' to false to force the import"),
+        "duplicate refusal must carry the shared force-import tail, got {message}"
+    );
+}
+
 async fn seed_partitioned_mor_with_deletes(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -83,6 +105,7 @@ async fn call_rpd_where_restricts_to_matching_partition() {
             "added_bytes_count",
         ]
     );
+    assert_rpd_schema_is_sparks(&batches[0]);
     assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 1);
     assert_eq!(call_count(&batches[0], "added_delete_files_count"), 1);
     assert!(call_count(&batches[0], "rewritten_bytes_count") > 0);
@@ -96,6 +119,7 @@ async fn call_rpd_where_restricts_to_matching_partition() {
     .await
     .expect("unfiltered rewrite must run");
     let batches = frame.collect().await.expect("collect");
+    assert_rpd_schema_is_sparks(&batches[0]);
     assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 2);
     assert_eq!(call_count(&batches[0], "added_delete_files_count"), 2);
     assert_eq!(
@@ -197,32 +221,34 @@ async fn call_expire_snapshot_ids_expires_exactly_those() {
         &ctx,
         &catalogs,
         &format!(
-            "CALL ice.system.expire_snapshots(table => 'sales.exn', snapshot_ids => array({}))",
-            named_ids[0]
+            "CALL ice.system.expire_snapshots(table => 'sales.exn', snapshot_ids => array({}, {}))",
+            named_ids[0], named_ids[1]
         ),
     )
     .await
     .expect("snapshot_ids must expire");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), expire_columns());
-    assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 1, 0]);
+    assert_expire_schema_is_sparks(&batches[0]);
+    assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 2, 0]);
     let remaining = snapshot_ids_ordered(&ctx, &catalogs, "exn").await;
-    assert_eq!(remaining, named_ids[1..]);
+    assert_eq!(remaining, named_ids[2..]);
     let positional_ids = snapshot_ids_ordered(&ctx, &catalogs, "exp").await;
     let frame = execute(
         &ctx,
         &catalogs,
         &format!(
-            "CALL ice.system.expire_snapshots('sales.exp', NULL, NULL, NULL, NULL, array({}))",
-            positional_ids[0]
+            "CALL ice.system.expire_snapshots('sales.exp', NULL, NULL, NULL, NULL, array({}, {}))",
+            positional_ids[0], positional_ids[1]
         ),
     )
     .await
     .expect("positional snapshot_ids must bind in declared order");
     let batches = frame.collect().await.expect("collect");
-    assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 1, 0]);
+    assert_expire_schema_is_sparks(&batches[0]);
+    assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 2, 0]);
     let remaining = snapshot_ids_ordered(&ctx, &catalogs, "exp").await;
-    assert_eq!(remaining, positional_ids[1..]);
+    assert_eq!(remaining, positional_ids[2..]);
 }
 
 #[tokio::test]
@@ -242,6 +268,7 @@ async fn call_expire_accept_and_ignore_trio_equals_plain() {
     .expect("plain expiry must run");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), expire_columns());
+    assert_expire_schema_is_sparks(&batches[0]);
     let plain = expire_row(&batches[0]);
     for (table, argument) in [
         ("ex1", "stream_results => true"),
@@ -260,6 +287,7 @@ async fn call_expire_accept_and_ignore_trio_equals_plain() {
         .expect("ignored argument must be accepted");
         let batches = frame.collect().await.expect("collect");
         assert_eq!(column_names(&batches[0]), expire_columns());
+        assert_expire_schema_is_sparks(&batches[0]);
         assert_eq!(expire_row(&batches[0]), plain);
         assert_eq!(snapshot_ids_ordered(&ctx, &catalogs, table).await.len(), 1);
     }
@@ -332,6 +360,61 @@ fn changed_partition_count_is_null(batch: &datafusion::arrow::array::RecordBatch
         .column_by_name("changed_partition_count")
         .expect("changed column")
         .is_null(0)
+}
+
+fn schema_triples(batch: &datafusion::arrow::array::RecordBatch) -> Vec<(String, DataType, bool)> {
+    batch
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| {
+            (
+                field.name().clone(),
+                field.data_type().clone(),
+                field.is_nullable(),
+            )
+        })
+        .collect()
+}
+
+fn assert_add_files_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        vec![
+            ("added_files_count".to_string(), DataType::Int64, false),
+            ("changed_partition_count".to_string(), DataType::Int64, true),
+        ]
+    );
+}
+
+fn assert_expire_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        expire_columns()
+            .into_iter()
+            .map(|name| (name, DataType::Int64, true))
+            .collect::<Vec<_>>()
+    );
+}
+
+fn assert_rpd_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        vec![
+            (
+                "rewritten_delete_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+            (
+                "added_delete_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+            ("rewritten_bytes_count".to_string(), DataType::Int64, false),
+            ("added_bytes_count".to_string(), DataType::Int64, false),
+        ]
+    );
 }
 
 async fn copy_source_files(
@@ -469,6 +552,7 @@ async fn call_add_files_partitioned_imports_two_files() {
     .expect("partitioned import must run");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), add_files_columns());
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 2);
     assert!(changed_partition_count_is_null(&batches[0]));
     assert_eq!(
@@ -520,6 +604,7 @@ async fn call_add_files_unpartitioned_imports_one_file() {
     .expect("flat import must run");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), add_files_columns());
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 1);
     assert!(changed_partition_count_is_null(&batches[0]));
     assert_eq!(
@@ -580,6 +665,7 @@ async fn call_add_files_partition_filter_restricts() {
     .await
     .expect("filtered import must run");
     let batches = frame.collect().await.expect("collect");
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 1);
     assert!(changed_partition_count_is_null(&batches[0]));
     assert_eq!(
@@ -655,6 +741,8 @@ async fn call_add_files_parallelism_matches_serial() {
     .await
     .expect("parallel import must run");
     let parallel = frame.collect().await.expect("collect");
+    assert_add_files_schema_is_sparks(&serial[0]);
+    assert_add_files_schema_is_sparks(&parallel[0]);
     assert_eq!(added_files_count(&serial[0]), 2);
     assert_eq!(added_files_count(&parallel[0]), 2);
     assert!(changed_partition_count_is_null(&parallel[0]));
@@ -703,12 +791,18 @@ async fn call_add_files_check_duplicate_files_raises() {
     )
     .await
     .expect_err("duplicate import must raise");
-    assert!(
-        error
-            .to_string()
-            .contains("already exist within the target table"),
-        "duplicate refusal must name the conflict, got {error}"
-    );
+    assert_duplicate_refusal(error);
+    let error = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.add_files(table => 'sales.afd', source_table => '`parquet`.`{}`')",
+            root.display()
+        ),
+    )
+    .await
+    .expect_err("duplicate import with the check omitted must raise");
+    assert_duplicate_refusal(error);
     let frame = execute(
         &ctx,
         &catalogs,
@@ -721,6 +815,7 @@ async fn call_add_files_check_duplicate_files_raises() {
     .await
     .expect("forced import must run");
     let batches = frame.collect().await.expect("collect");
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 1);
 }
 
@@ -759,6 +854,7 @@ async fn call_add_files_commits_name_mapping_and_binds_by_name() {
     .await
     .expect("reordered import must run");
     let batches = frame.collect().await.expect("collect");
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 1);
     assert_eq!(
         time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.afo").await,

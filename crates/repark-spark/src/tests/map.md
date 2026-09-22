@@ -490,6 +490,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   bound RPD `where` pin now asserts the wired form binds onto a delete-free table.
   **PR2a (2026-09-21):** the unknown-argument pin retargets to `bogus` and the RDF
   arity pin moves to six positionals, since `branch` now binds.
+  **PR2b sweep (2026-09-21):** the RPD two-positional pin rewrites two delete
+  files with a default-options twin answering zeros, the positional `where` pin
+  rewrites 1 of 2 files, and every leg asserts its output schema is Spark's.
   Clause citations live in this map, not in the source — the owner's comment ban covers doc
   comments too.
   pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-012
@@ -506,6 +509,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   reordered source columns bind by name with adopted paths; duplicates raise with Java's
   text unless forced; and non-parquet, catalog-table and bare-string sources refuse with
   their own texts.
+  **PR2b sweep (2026-09-21):** the duplicate pin covers the omitted
+  `check_duplicate_files` default, the expire pin expires two ids asserting the
+  two-id remainder, and the add_files/expire pins assert Int64 types with
+  nullability.
   Clause citations live in this map, not in the source.
   pins: ice-procedures-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - `call_rdf_branch.rs` — **ICE-PROCEDURES-1 PR2a (2026-09-21):** the `branch`
