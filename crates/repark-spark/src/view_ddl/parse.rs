@@ -30,6 +30,11 @@ pub(crate) struct ShowViewsStatement {
     pub(crate) like: Option<String>,
 }
 
+pub(crate) struct ShowTblpropertiesStatement {
+    pub(crate) name: Vec<String>,
+    pub(crate) key: Option<String>,
+}
+
 pub(crate) struct AlterViewStatement {
     pub(crate) name: Vec<String>,
     pub(crate) action: AlterViewAction,
@@ -363,6 +368,41 @@ fn parse_show_views_after_head(parser: &mut Parser) -> Result<ShowViewsStatement
         ));
     }
     Ok(ShowViewsStatement { namespace, like })
+}
+
+pub(crate) fn try_parse_show_tblproperties(
+    sql: &str,
+) -> Option<Result<ShowTblpropertiesStatement>> {
+    let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&DatabricksDialect {}).with_tokens(tokens);
+    if !parser.parse_keyword(Keyword::SHOW) {
+        return None;
+    }
+    if !consume_word(&mut parser, "TBLPROPERTIES") {
+        return None;
+    }
+    Some(parse_show_tblproperties_after_head(&mut parser))
+}
+
+fn parse_show_tblproperties_after_head(parser: &mut Parser) -> Result<ShowTblpropertiesStatement> {
+    let object_name = parser.parse_object_name(false).map_err(sqlparser_err)?;
+    let name = name_parts(&object_name);
+    let mut key = None;
+    if parser.consume_token(&Token::LParen) {
+        key = Some(parse_show_tblproperties_key(parser)?);
+        parser.expect_token(&Token::RParen).map_err(sqlparser_err)?;
+    }
+    expect_end(parser, "SHOW TBLPROPERTIES")?;
+    Ok(ShowTblpropertiesStatement { name, key })
+}
+
+fn parse_show_tblproperties_key(parser: &mut Parser) -> Result<String> {
+    if let Token::SingleQuotedString(value) = parser.peek_token().token.clone() {
+        parser.next_token();
+        return Ok(value);
+    }
+    let object_name = parser.parse_object_name(false).map_err(sqlparser_err)?;
+    Ok(name_parts(&object_name).join("."))
 }
 
 #[cfg(test)]
@@ -724,5 +764,67 @@ mod tests {
         assert!(try_parse_show_views("SHOW TABLES IN sc.ns").is_none());
         assert!(try_parse_show_views("SHOW NAMESPACES IN sc").is_none());
         assert!(try_parse_show_views("SHOW CREATE TABLE sc.ns.t").is_none());
+    }
+
+    fn shown_tblproperties(sql: &str) -> ShowTblpropertiesStatement {
+        try_parse_show_tblproperties(sql)
+            .unwrap_or_else(|| panic!("must match: {sql}"))
+            .unwrap_or_else(|error| panic!("must parse: {sql}: {error}"))
+    }
+
+    #[test]
+    fn show_tblproperties_parses_name_and_quoted_key() {
+        let parsed = shown_tblproperties("SHOW TBLPROPERTIES sc.ns.v ('k')");
+        assert_eq!(parsed.name, vec!["sc", "ns", "v"]);
+        assert_eq!(parsed.key, Some("k".to_string()));
+        let parsed = shown_tblproperties("SHOW TBLPROPERTIES v ('a.b');");
+        assert_eq!(parsed.name, vec!["v"]);
+        assert_eq!(parsed.key, Some("a.b".to_string()));
+    }
+
+    #[test]
+    fn show_tblproperties_parses_unquoted_and_dotted_keys() {
+        let parsed = shown_tblproperties("SHOW TBLPROPERTIES sc.ns.v (k)");
+        assert_eq!(parsed.key, Some("k".to_string()));
+        let parsed = shown_tblproperties("SHOW TBLPROPERTIES sc.ns.v (a.b)");
+        assert_eq!(parsed.key, Some("a.b".to_string()));
+    }
+
+    #[test]
+    fn show_tblproperties_parses_without_key() {
+        let parsed = shown_tblproperties("SHOW TBLPROPERTIES sc.ns.v");
+        assert_eq!(parsed.name, vec!["sc", "ns", "v"]);
+        assert_eq!(parsed.key, None);
+        let parsed = shown_tblproperties("show tblproperties ns.v");
+        assert_eq!(parsed.name, vec!["ns", "v"]);
+    }
+
+    #[test]
+    fn show_tblproperties_malformed_tails_fail_loud() {
+        assert!(
+            try_parse_show_tblproperties("SHOW TBLPROPERTIES")
+                .is_some_and(|parsed| parsed.is_err())
+        );
+        assert!(
+            try_parse_show_tblproperties("SHOW TBLPROPERTIES v (")
+                .is_some_and(|parsed| parsed.is_err())
+        );
+        assert!(
+            try_parse_show_tblproperties("SHOW TBLPROPERTIES v ('k') extra")
+                .is_some_and(|parsed| parsed.is_err())
+        );
+        assert!(
+            try_parse_show_tblproperties("SHOW TBLPROPERTIES v 'k'")
+                .is_some_and(|parsed| parsed.is_err())
+        );
+    }
+
+    #[test]
+    fn show_tblproperties_other_show_forms_do_not_match() {
+        assert!(try_parse_show_tblproperties("SHOW VIEWS IN sc.ns").is_none());
+        assert!(try_parse_show_tblproperties("SHOW TABLES IN sc.ns").is_none());
+        assert!(try_parse_show_tblproperties("SHOW TBLPROPERTIESX sc.ns.v").is_none());
+        assert!(try_parse_show_tblproperties("SHOW COLUMNS IN sc.ns.t").is_none());
+        assert!(try_parse_show_tblproperties("SELECT 1").is_none());
     }
 }
