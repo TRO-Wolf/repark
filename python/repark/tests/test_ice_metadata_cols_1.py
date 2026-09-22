@@ -15,7 +15,8 @@ carries as ``[[2,true,true],[3,true,true],[4,true,true]]`` (``R-MC-FILE``),
 ``[[2,0],[3,0],[4,0]]`` (``R-MC-POS``), ``[[2,0],[3,0],[4,1]]``
 (``R-MC-POS-MOR``) and ``[[2,0],[3,0],[4,0]]`` (``R-MC-SPEC-ID``).
 
-pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-015, C-016, C-017, C-018
+pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-015, C-016, C-017, C-018
 """
 
 from __future__ import annotations
