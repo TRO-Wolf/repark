@@ -163,6 +163,22 @@ async fn wap_id_stages_the_insert_and_leaves_main_put() {
         Some(seed_id),
         "the staged snapshot hangs off the seed"
     );
+    let props = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
+    );
 }
 
 #[tokio::test]
@@ -307,6 +323,23 @@ async fn publish_changes_fast_forwards_main_to_the_staged_snapshot() {
         vec![("main".to_string(), "BRANCH".to_string(), staged)],
         "main alone exists and points at the published snapshot"
     );
+    let table = load_sales_table(&catalogs, "t").await;
+    let props = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
+    );
 }
 
 #[tokio::test]
@@ -384,6 +417,22 @@ async fn publish_changes_replays_over_an_intervening_commit() {
             .map(String::as_str),
         Some("w1"),
         "the replay stamps the published wap id"
+    );
+    let staged_props = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        staged_props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        staged_props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
     );
 }
 
@@ -567,6 +616,23 @@ async fn a_wap_id_staged_snapshot_cherrypicks_onto_main() {
         ref_heads(&ctx, &catalogs).await,
         vec![("main".to_string(), "BRANCH".to_string(), head)],
         "main alone exists and points at the staged snapshot"
+    );
+    let table = load_sales_table(&catalogs, "t").await;
+    let props = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
     );
 }
 

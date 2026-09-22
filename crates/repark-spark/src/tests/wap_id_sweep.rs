@@ -637,3 +637,304 @@ async fn wap_id_leaves_ctas_on_main() {
         );
     }
 }
+
+#[tokio::test]
+async fn wap_id_with_statement_options_leaves_insert_overwrite_on_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    let options = crate::write_options::StatementWriteOptions::validate(vec![(
+        "snapshot-property.team".to_string(),
+        "a".to_string(),
+    )])
+    .unwrap();
+    set_wap(&ctx, None, Some("w1"));
+    crate::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.t SELECT 9 AS id, 'z' AS name",
+        &HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    set_wap(&ctx, None, None);
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![9],
+        "the overwrite replaces main instead of staging"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the overwrite committed one snapshot on main"
+    );
+    let head = main_snapshot_id(&catalogs).await;
+    assert_ne!(head, seed_id, "main moved to the overwrite");
+    let table = load_sales_table(&catalogs, "t").await;
+    let props = &table
+        .metadata()
+        .snapshot_by_id(head)
+        .expect("head snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("team").map(String::as_str),
+        Some("a"),
+        "the main snapshot carries the statement stamp"
+    );
+    assert!(
+        !props.contains_key("wap.id"),
+        "the overwrite stamps no wap id"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_with_statement_and_session_options_leaves_insert_overwrite_on_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    let options = crate::write_options::StatementWriteOptions::validate(vec![(
+        "snapshot-property.team".to_string(),
+        "a".to_string(),
+    )])
+    .unwrap();
+    set_wap(&ctx, None, Some("w1"));
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k", "v");
+    crate::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.t SELECT 9 AS id, 'z' AS name",
+        &HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k");
+    set_wap(&ctx, None, None);
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![9],
+        "the overwrite replaces main instead of staging"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the overwrite committed one snapshot on main"
+    );
+    let head = main_snapshot_id(&catalogs).await;
+    assert_ne!(head, seed_id, "main moved to the overwrite");
+    let table = load_sales_table(&catalogs, "t").await;
+    let props = &table
+        .metadata()
+        .snapshot_by_id(head)
+        .expect("head snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("team").map(String::as_str),
+        Some("a"),
+        "the main snapshot carries the statement stamp"
+    );
+    assert_eq!(
+        props.get("k").map(String::as_str),
+        Some("v"),
+        "the main snapshot carries the session stamp"
+    );
+    assert!(
+        !props.contains_key("wap.id"),
+        "the overwrite stamps no wap id"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_with_statement_options_leaves_ctas_on_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+
+    let options = crate::write_options::StatementWriteOptions::validate(vec![(
+        "snapshot-property.team".to_string(),
+        "a".to_string(),
+    )])
+    .unwrap();
+    set_wap(&ctx, None, Some("w1"));
+    crate::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.c1 AS SELECT 1 AS id",
+        &HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k", "v");
+    crate::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.c2 AS SELECT 2 AS id",
+        &HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k");
+    set_wap(&ctx, None, None);
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.c1").await,
+        vec![1],
+        "the options CTAS committed its rows"
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.c2").await,
+        vec![2],
+        "the options and session-conf CTAS committed its rows"
+    );
+    for name in ["c1", "c2"] {
+        let table = load_sales_table(&catalogs, name).await;
+        assert_eq!(
+            table.metadata().snapshots().count(),
+            1,
+            "the CTAS committed exactly one snapshot"
+        );
+        let props = &table
+            .metadata()
+            .snapshots()
+            .next()
+            .expect("one snapshot in the log")
+            .summary()
+            .additional_properties;
+        assert_eq!(
+            props.get("team").map(String::as_str),
+            Some("a"),
+            "the CTAS snapshot carries the statement stamp"
+        );
+        assert!(
+            !props.contains_key("wap.id"),
+            "no snapshot carries a staged wap id"
+        );
+    }
+    let table = load_sales_table(&catalogs, "c2").await;
+    let props = &table
+        .metadata()
+        .snapshots()
+        .next()
+        .expect("one snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("k").map(String::as_str),
+        Some("v"),
+        "the session-conf CTAS snapshot carries the session stamp"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_with_statement_options_refuses_insert_by_name() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    let options = crate::write_options::StatementWriteOptions::validate(vec![(
+        "snapshot-property.team".to_string(),
+        "a".to_string(),
+    )])
+    .unwrap();
+    set_wap(&ctx, None, Some("w1"));
+    let error = crate::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t BY NAME SELECT 'b' AS name, 2 AS id",
+        &HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .expect_err("a by-name append cannot honour statement options");
+    set_wap(&ctx, None, None);
+
+    assert!(
+        error.to_string().contains("does not support write options"),
+        "the refusal names the unsupported options: {error}"
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1],
+        "the refused write changed nothing"
+    );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        seed_id,
+        "main still points at the seed snapshot"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        1,
+        "the refused write left only the seed snapshot"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_with_statement_and_session_options_refuses_insert_by_name() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    let options = crate::write_options::StatementWriteOptions::validate(vec![(
+        "snapshot-property.team".to_string(),
+        "a".to_string(),
+    )])
+    .unwrap();
+    set_wap(&ctx, None, Some("w1"));
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k", "v");
+    let error = crate::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t BY NAME SELECT 'b' AS name, 2 AS id",
+        &HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .expect_err("a by-name append cannot honour statement options");
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k");
+    set_wap(&ctx, None, None);
+
+    assert!(
+        error.to_string().contains("does not support write options"),
+        "the refusal names the unsupported options: {error}"
+    );
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1],
+        "the refused write changed nothing"
+    );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        seed_id,
+        "main still points at the seed snapshot"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        1,
+        "the refused write left only the seed snapshot"
+    );
+}
