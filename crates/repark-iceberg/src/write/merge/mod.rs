@@ -2,7 +2,6 @@
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -25,7 +24,7 @@ use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::expr::Predicate;
-use iceberg::spec::{DataFile, DataFileFormat, FormatVersion, ManifestContentType};
+use iceberg::spec::{DataFile, FormatVersion, ManifestContentType};
 use iceberg::table::Table;
 
 use iceberg::Catalog;
@@ -216,14 +215,6 @@ pub enum MergeMode {
 
 /// Resolve the merge mode and reject unsupported formats before any IO.
 fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "MERGE INTO writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
     match table.metadata().properties().get(MERGE_MODE_PROP) {
         None => return Ok(MergeMode::CopyOnWrite),
         Some(mode) if mode.trim().eq_ignore_ascii_case("copy-on-write") => {
@@ -1451,14 +1442,6 @@ where
     let conformed = stream.map(move |item| {
         conform_batch_retaining_unmapped_columns(&write_schema, &write_default_columns, &item?)
     });
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "MERGE INTO writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
     let build_writer =
         || async { session_staging::build_unpartitioned_data_file_writer(table).await };
     crate::write::distribution::drive_unpartitioned(table, conformed, max_concurrent, build_writer)
