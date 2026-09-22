@@ -794,6 +794,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   stages one parentless snapshot without creating `main`; the R5 session-conf staging fix
   (a plain INSERT carrying only session snapshot properties stages under the id) and its
   12-pin class sweep live in `wap_id_sweep`, split out of `wap_id` under the 1000-line ceiling),
+  `wap_publish` (**IPI-05 remediation, 2026-09-22:** publish selection on the Rust door —
+  publishing the named id when two are staged answers the named snapshot as source while the
+  later stage stays staged; stamping one id twice refuses publish with the fork's bare
+  non-unique text),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a
