@@ -3125,7 +3125,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   pin `parsers` out of the tree). The old reader refusal pins
   (`test_reader_orc_refuses_at_the_call`, `test_reader_format_orc_refuses_at_load`) retire
   in this unit: the names now read. The writer is a new-crate write path and stays
-  declared; Python never grows a reader.
+  declared; Python never grows a reader. Iceberg ORC table files round-trip since
+  2026-09-22 (`ICE-WRITE-OPTIONS-ORC-AVRO` served); the plain-file writer refusal above
+  is unchanged.
 
 ### IO-ORC-SQL-1 — the SQL door over ORC paths stays with the planner
 
@@ -4060,23 +4062,28 @@ the pin rather than obeying it.
     way — absent = ON — and RePark's owned append drops its `fork_insert_dictionary_rule`
     flag in the same change.
 
-### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **DECLARED 2026-09-17**
+### ICE-WRITE-OPTIONS-ORC-AVRO — `write-format` orc/avro — **SERVED 2026-09-22**
 
-- **repark** — `.option("write-format", "orc"|"avro")` on any Iceberg write refuses with
-  `UnsupportedOperationException` naming this row; nothing is staged and no snapshot
-  commits. Parquet (any case) proceeds; any other value refuses with `Invalid file
-  format`. The table property `write.format.default=orc|avro` refuses the same way at
-  write time (`FeatureUnsupported`, naming the format and the write path) — measured
-  2026-09-18, so neither door writes a silent parquet file.
+- **repark** — `.option("write-format", "orc"|"avro")` on any Iceberg write lands ORC /
+  AVRO data files: the written files carry the exact `.orc` / `.avro` suffix and
+  `SELECT file_format FROM t.files` reports ORC / AVRO. The table property
+  `write.format.default=orc|avro` resolves the same way at write time, so neither
+  door writes a silent parquet file. Parquet (any case) proceeds; any other value
+  refuses with `Invalid file format`.
 - **Apache Spark** — writes ORC / AVRO data files for those values (recorded
   `FORMAT-02` / `FORMAT-03`); `bogus` refuses with `IllegalArgumentException: Invalid
   file format: bogus`. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_ice_write_options_1.py::test_write_format_orc_refuses`
-  and `::test_write_format_avro_refuses` (refusal plus snapshot-count-still-1).
-- **Rationale** — DECLARED 2026-09-17. RePark has no ORC/Avro Iceberg writer; writing
-  parquet files while the user asked for orc/avro is the silent wrong answer this row
-  exists to prevent. Revisit when a writer for either format lands.
+- **Pin** — `python/repark/tests/test_ice_write_options_1.py::test_write_format_orc_writes`
+  and `::test_write_format_avro_writes` (exact suffix plus `file_format` ORC / AVRO),
+  with the S6 option-door twins
+  `python/repark/tests/test_ice_orc_avro_1.py::test_write_format_option_orc` and
+  `::test_write_format_option_avro`.
+- **Rationale** — SERVED 2026-09-22 (RP-47: fork#344 `AnyFileWriter` seam at pin
+  `604edca0`, per-write option > table property > parquet through `resolve_data_format`,
+  every owned builder site routed). C-005/C-006 are served by this change through the
+  `write-format` option door, not a fork nested-read limit.
   pins: ice-write-options-1/C-002
+  pins: ice-orc-avro-1/C-005, C-006
 
 ### IO-JDBC-FORMAT-1 — `format("jdbc").load()` sends every URL to the PostgreSQL connector; `spark.read.jdbc` dispatches by URL — **BACKLOG 2026-09-15**
 

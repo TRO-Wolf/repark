@@ -240,6 +240,9 @@ pins: rp-4-fork-repin/C-005, C-006
   with an empty column list) instead of the by-name append, so positional
   `VALUES` resolve over all columns as Spark's do; the by-name arm stays for
   the option-carrying form.
+  **IPI-41 WO1 (2026-09-22):** the `write-format` / `delete-format` options are
+  copied into staging here, so the option door reaches `resolve_data_format`.
+  pins: ice-orc-avro-1/C-005, C-006
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
   strip (sqlparser has no `BY NAME`), the count-first Spark error rule, the positional
   projection build, the staged-append executor (stream → conform → `commit_append_to` →
@@ -320,6 +323,9 @@ pins: rp-4-fork-repin/C-005, C-006
   (lower-cased like every key) sets `overwrite_mode_dynamic` when its value is `dynamic` in
   any case — Iceberg's `SparkWriteConf` reading; other values are ignored like Spark.
   `overwrite_mode(ctx)` assembles the decision input. pins: ice-overwrite-mode-1/C-006
+  **IPI-41 WO3a (2026-09-22):** `validate_write_format` accepts orc/avro
+  case-insensitively (parquet-identical normalisation); only unknown names refuse
+  with `Invalid file format`. pins: ice-orc-avro-1/C-021
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007

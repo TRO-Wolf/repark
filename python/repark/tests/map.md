@@ -809,6 +809,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   Run 22b (ICE-NESTED-EVO-1 merge): the non-write arms sweep gains the nested-DDL intercept
   (`ALTER TABLE … ADD COLUMN s.z INT`), which refuses a non-empty options map like the other
   pre-parse ALTER intercepts.
+  **IPI-41 WO3a (2026-09-22):** FORMAT-02/03 invert to `test_write_format_orc_writes` /
+  `test_write_format_avro_writes` — exact data-file suffix plus every-files-row
+  `file_format` ORC / AVRO (T-4); `bogus` keeps its refusal.
+- [test_ice_orc_avro_1.py](test_ice_orc_avro_1.py) —
+  **IPI-41 (2026-09-22):** the red-first S6 battery for ORC and Avro Iceberg data
+  files — create-with-format, set-format-then-insert, property-table row,
+  option-door orc/avro, six copy-on-write DELETE / UPDATE / MERGE twins, v2
+  merge-on-read delete format, the delete-format override, v3 PUFFIN, foreign ORC
+  read, ORC metrics, empty Avro metrics, wide-type round trips (ORC primitives
+  plus the nested typed refusal, Avro all 13), unknown-format refusal and
+  compaction-keeps-format. 22P offline and 22P live.
+  pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: ice-orc-avro-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  pins: ice-orc-avro-1/C-017, C-018, C-019, C-020, C-021, C-022
 - [test_ice_write_options_1_rebase.py](test_ice_write_options_1_rebase.py) —
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the write options across the paths main
   added under them. WO-DYN-01..06: dynamic `insertInto` overwrite and `INSERT OVERWRITE …

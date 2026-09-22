@@ -332,6 +332,12 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
 - `row_lineage.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the lineage
   fanout writer site honours the session write conf
   (`write_partitioned_lineage_files_with`).
+- `mod.rs`, `row_lineage.rs`, `session_staging.rs` — **IPI-41 WO2b (2026-09-22):**
+  the MERGE builder sites route through `resolve_data_format` (partitioned lineage
+  fanout, unpartitioned rewrite, staging carry), and the MERGE format gates leave,
+  so copy-on-write rewrites keep the table's ORC / AVRO bytes. The format-version
+  gate stays: it guards versions, not formats.
+  pins: ice-orc-avro-1/C-007, C-008, C-009, C-010, C-011, C-012
 
 ## I want to…
 
