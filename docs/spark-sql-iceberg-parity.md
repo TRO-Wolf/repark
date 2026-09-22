@@ -1298,8 +1298,13 @@ perfectly good read.
   `Part N` transform rows, and under `EXTENDED`/`FORMATTED` (byte-identical) the `# Metadata
   Columns` and `# Detailed Table Information` blocks including the `Statistics` row. A missing
   table raises `AnalysisException` with `[TABLE_OR_VIEW_NOT_FOUND]`; temp views,
-  DataFusion-native tables, metadata-table suffixes, and unregistered catalogs fall through
-  unchanged. One measured residue: `Table Properties` carries the engine's stored properties
+  DataFusion-native tables, and unregistered catalogs fall through unchanged. FIXED
+  2026-09-22 (IPI-23 / R-MT-DESCRIBE): `DESCRIBE [TABLE]|DESC cat.ns.t.<meta>` answers one row
+  per column of the metadata table — `col_name`, `data_type` (the Spark DDL type name),
+  `comment` NULL — exactly the columns `SELECT *` returns, in the same order; a missing base
+  table raises `[TABLE_OR_VIEW_NOT_FOUND]` naming the base table, and `EXTENDED`/`FORMATTED`
+  on a metadata table print the same column rows with no extra sections (unmeasured on Spark).
+  One measured residue: `Table Properties` carries the engine's stored properties
   plus a live `current-snapshot-id`, while Spark stamps `format`, `format-version`, and
   `write.parquet.compression-codec` defaults at `CREATE` — the 2026-09-09 live leg matches
   19 of 22 rows byte for byte, differing only on `Name` (catalog), `Location` (path), and
@@ -1309,7 +1314,9 @@ perfectly good read.
   `string`, `timestamp`, `days(ts)`, one `k=v` property.)*
 - **Pin** — `python/repark/tests/test_describe_table.py` (eight offline pins plus
   `test_describe_table_live_matches_capture_and_repark`, which re-measures the capture live
-  and diffs repark against it row for row)
+  and diffs repark against it row for row); metadata tables
+  `python/repark/tests/test_ice_mt_describe_1.py` (eight offline pins plus the live snapshots
+  leg, which re-measures the R-MT-DESCRIBE cell live)
 - **Rationale** — FIXED 2026-09-09 (SQL-DESCRIBE-1): the `ParseException: Expected: end of
   statement, found: EXTENDED` bug is closed by the router intercept. The `Table Properties`
   engine-defaults delta stays DECLARED residue on this row until engine `CREATE` stamps
