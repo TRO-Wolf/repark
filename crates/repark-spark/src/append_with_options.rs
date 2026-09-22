@@ -56,6 +56,8 @@ pub(crate) async fn execute_append_with_options(
     let stream = source_df.execute_stream().await?;
     let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
     let (mut snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;
+    staging.write_format = options.write_format.clone();
+    staging.delete_format = options.delete_format.clone();
     if branch.is_none()
         && let Some(wap_id) = crate::wap::wap_id_for_table(&crate::wap::session_wap(ctx), &table)?
     {

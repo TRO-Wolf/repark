@@ -11,6 +11,7 @@ pub struct StatementWriteOptions {
     pub raw: Vec<(String, String)>,
     pub snapshot_extra: Vec<(String, String)>,
     pub write_format: Option<String>,
+    pub delete_format: Option<String>,
     pub target_file_size_bytes: Option<u64>,
     pub codec: Option<String>,
     pub level: Option<String>,
@@ -117,6 +118,7 @@ impl StatementWriteOptions {
             }
             match key.as_str() {
                 "write-format" => options.write_format = Some(validate_write_format(&value)?),
+                "delete-format" => options.delete_format = Some(value),
                 "target-file-size-bytes" => {
                     options.target_file_size_bytes =
                         Some(repark_iceberg::write::parse_target_file_size(&value)?);
