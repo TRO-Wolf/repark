@@ -404,7 +404,12 @@ impl ScalarUDFImpl for Factorial {
             [data_type] if data_type.is_integer() || matches!(data_type, DataType::Null) => {
                 Ok(vec![DataType::Int32])
             }
-            [data_type] => Err(unexpected_input_type("factorial", "INT", data_type, "first")),
+            [data_type] => Err(unexpected_input_type(
+                "factorial",
+                "INT",
+                data_type,
+                "first",
+            )),
             _ => exec_err!("'factorial' expects one argument, got {}", arg_types.len()),
         }
     }

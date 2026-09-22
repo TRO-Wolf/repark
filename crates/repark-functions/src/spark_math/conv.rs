@@ -79,10 +79,20 @@ fn plan_conv(arg_types: &[DataType]) -> Result<()> {
         );
     }
     if !is_conv_input(&arg_types[0]) {
-        return Err(unexpected_input_type("conv", "STRING", &arg_types[0], "first"));
+        return Err(unexpected_input_type(
+            "conv",
+            "STRING",
+            &arg_types[0],
+            "first",
+        ));
     }
     if !is_conv_base(&arg_types[1]) {
-        return Err(unexpected_input_type("conv", "INT", &arg_types[1], "second"));
+        return Err(unexpected_input_type(
+            "conv",
+            "INT",
+            &arg_types[1],
+            "second",
+        ));
     }
     if !is_conv_base(&arg_types[2]) {
         return Err(unexpected_input_type("conv", "INT", &arg_types[2], "third"));

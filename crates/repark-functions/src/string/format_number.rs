@@ -90,7 +90,12 @@ fn plan_format_number(arg_types: &[DataType]) -> Result<()> {
         ));
     }
     if !is_format_d(&arg_types[1]) {
-        return Err(unexpected_input_type("format_number", "INT", &arg_types[1], "second"));
+        return Err(unexpected_input_type(
+            "format_number",
+            "INT",
+            &arg_types[1],
+            "second",
+        ));
     }
     Ok(())
 }
@@ -412,8 +417,9 @@ fn render_float_scale(values: &ArrayRef, row: usize, decimals: usize) -> Result<
             })?
             .value(row),
     };
-    format_double_value(value, decimals)
-        .ok_or_else(|| unexpected_input_type("format_number", "DOUBLE", values.data_type(), "first"))
+    format_double_value(value, decimals).ok_or_else(|| {
+        unexpected_input_type("format_number", "DOUBLE", values.data_type(), "first")
+    })
 }
 
 fn render_with_scale(values: &ArrayRef, row: usize, decimals: usize) -> Result<String> {
