@@ -227,6 +227,7 @@ async fn call_expire_snapshot_ids_expires_exactly_those() {
     .expect("snapshot_ids must expire");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), expire_columns());
+    assert_expire_schema_is_sparks(&batches[0]);
     assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 2, 0]);
     let remaining = snapshot_ids_ordered(&ctx, &catalogs, "exn").await;
     assert_eq!(remaining, named_ids[2..]);
@@ -242,6 +243,7 @@ async fn call_expire_snapshot_ids_expires_exactly_those() {
     .await
     .expect("positional snapshot_ids must bind in declared order");
     let batches = frame.collect().await.expect("collect");
+    assert_expire_schema_is_sparks(&batches[0]);
     assert_eq!(expire_row(&batches[0]), vec![0, 0, 0, 0, 2, 0]);
     let remaining = snapshot_ids_ordered(&ctx, &catalogs, "exp").await;
     assert_eq!(remaining, positional_ids[2..]);
@@ -264,6 +266,7 @@ async fn call_expire_accept_and_ignore_trio_equals_plain() {
     .expect("plain expiry must run");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), expire_columns());
+    assert_expire_schema_is_sparks(&batches[0]);
     let plain = expire_row(&batches[0]);
     for (table, argument) in [
         ("ex1", "stream_results => true"),
@@ -282,6 +285,7 @@ async fn call_expire_accept_and_ignore_trio_equals_plain() {
         .expect("ignored argument must be accepted");
         let batches = frame.collect().await.expect("collect");
         assert_eq!(column_names(&batches[0]), expire_columns());
+        assert_expire_schema_is_sparks(&batches[0]);
         assert_eq!(expire_row(&batches[0]), plain);
         assert_eq!(snapshot_ids_ordered(&ctx, &catalogs, table).await.len(), 1);
     }
@@ -354,6 +358,41 @@ fn changed_partition_count_is_null(batch: &datafusion::arrow::array::RecordBatch
         .column_by_name("changed_partition_count")
         .expect("changed column")
         .is_null(0)
+}
+
+fn schema_triples(batch: &datafusion::arrow::array::RecordBatch) -> Vec<(String, DataType, bool)> {
+    batch
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| {
+            (
+                field.name().clone(),
+                field.data_type().clone(),
+                field.is_nullable(),
+            )
+        })
+        .collect()
+}
+
+fn assert_add_files_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        vec![
+            ("added_files_count".to_string(), DataType::Int64, false),
+            ("changed_partition_count".to_string(), DataType::Int64, true),
+        ]
+    );
+}
+
+fn assert_expire_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        expire_columns()
+            .into_iter()
+            .map(|name| (name, DataType::Int64, true))
+            .collect::<Vec<_>>()
+    );
 }
 
 async fn copy_source_files(
@@ -491,6 +530,7 @@ async fn call_add_files_partitioned_imports_two_files() {
     .expect("partitioned import must run");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), add_files_columns());
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 2);
     assert!(changed_partition_count_is_null(&batches[0]));
     assert_eq!(
@@ -542,6 +582,7 @@ async fn call_add_files_unpartitioned_imports_one_file() {
     .expect("flat import must run");
     let batches = frame.collect().await.expect("collect");
     assert_eq!(column_names(&batches[0]), add_files_columns());
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 1);
     assert!(changed_partition_count_is_null(&batches[0]));
     assert_eq!(
@@ -602,6 +643,7 @@ async fn call_add_files_partition_filter_restricts() {
     .await
     .expect("filtered import must run");
     let batches = frame.collect().await.expect("collect");
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 1);
     assert!(changed_partition_count_is_null(&batches[0]));
     assert_eq!(
@@ -677,6 +719,8 @@ async fn call_add_files_parallelism_matches_serial() {
     .await
     .expect("parallel import must run");
     let parallel = frame.collect().await.expect("collect");
+    assert_add_files_schema_is_sparks(&serial[0]);
+    assert_add_files_schema_is_sparks(&parallel[0]);
     assert_eq!(added_files_count(&serial[0]), 2);
     assert_eq!(added_files_count(&parallel[0]), 2);
     assert!(changed_partition_count_is_null(&parallel[0]));
@@ -749,6 +793,7 @@ async fn call_add_files_check_duplicate_files_raises() {
     .await
     .expect("forced import must run");
     let batches = frame.collect().await.expect("collect");
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 1);
 }
 
@@ -787,6 +832,7 @@ async fn call_add_files_commits_name_mapping_and_binds_by_name() {
     .await
     .expect("reordered import must run");
     let batches = frame.collect().await.expect("collect");
+    assert_add_files_schema_is_sparks(&batches[0]);
     assert_eq!(added_files_count(&batches[0]), 1);
     assert_eq!(
         time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.afo").await,
