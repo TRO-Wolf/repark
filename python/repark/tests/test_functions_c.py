@@ -178,7 +178,6 @@ def test_fn_c_deferred_names_are_absent() -> None:
         "max_by",
         "min_by",
         "product",
-        "grouping_id",
         "percentile",
     )
     present = [name for name in deferred if hasattr(F, name)]
