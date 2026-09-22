@@ -241,7 +241,12 @@ async fn metadata_tables_spark_dot_form_and_guards() {
     )
     .await
     .expect_err("a parenthesized AS OF is a parse error, not a detected span");
-    let paren_msg = paren_asof.to_string();
+    let mapped = repark_core::engine_err(paren_asof);
+    assert!(
+        matches!(mapped, repark_common::Error::Parse(_)),
+        "got: {mapped:?}"
+    );
+    let paren_msg = mapped.to_string();
     assert!(
         paren_msg.contains("Expected: end of statement"),
         "the parenthesized form must fail as a SQL parse error, got: {paren_msg}"
