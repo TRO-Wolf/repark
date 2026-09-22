@@ -205,6 +205,85 @@ async fn stored_properties(catalogs: &CatalogRegistry, table: &str) -> HashMap<S
         .clone()
 }
 
+async fn assert_no_sales_table(catalogs: &CatalogRegistry, table: &str) {
+    assert!(
+        !catalogs["ice"]
+            .table_exists(&TableIdent::new(
+                NamespaceIdent::new("sales".to_string()),
+                table.to_string(),
+            ))
+            .await
+            .unwrap(),
+        "a refused CREATE must leave no table behind: {table}"
+    );
+}
+
+#[tokio::test]
+async fn duplicate_options_clauses_refuse_with_no_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.opt_dup (id BIGINT) USING iceberg OPTIONS ('a'='b') \
+         OPTIONS ('k'='v')",
+    )
+    .await
+    .expect_err("two OPTIONS clauses must refuse");
+    assert_no_sales_table(&catalogs, "opt_dup").await;
+}
+
+#[tokio::test]
+async fn options_missing_equals_refuses_with_no_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.opt_noeq (id BIGINT) USING iceberg OPTIONS ('k' 'v')",
+    )
+    .await
+    .expect_err("an OPTIONS pair without = must refuse");
+    assert_no_sales_table(&catalogs, "opt_noeq").await;
+}
+
+#[tokio::test]
+async fn options_trailing_comma_refuses_with_no_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.opt_trail (id BIGINT) USING iceberg OPTIONS ('k'='v',)",
+    )
+    .await
+    .expect_err("an OPTIONS trailing comma must refuse");
+    assert_no_sales_table(&catalogs, "opt_trail").await;
+}
+
+#[tokio::test]
+async fn tblproperties_plus_options_refuses_with_no_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for (table, sql) in [
+        (
+            "opt_both_a",
+            "CREATE TABLE ice.sales.opt_both_a (id BIGINT) USING iceberg \
+             TBLPROPERTIES ('a'='b') OPTIONS ('k'='v')",
+        ),
+        (
+            "opt_both_b",
+            "CREATE TABLE ice.sales.opt_both_b (id BIGINT) USING iceberg \
+             OPTIONS ('k'='v') TBLPROPERTIES ('a'='b')",
+        ),
+    ] {
+        execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("TBLPROPERTIES together with OPTIONS must refuse");
+        assert_no_sales_table(&catalogs, table).await;
+    }
+}
+
 #[tokio::test]
 async fn options_identifier_below_top_level_keeps_the_rewrite() {
     let wh = TempDir::new().unwrap();
