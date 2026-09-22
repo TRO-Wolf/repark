@@ -4410,6 +4410,39 @@ the pin rather than obeying it.
   spelling catching up, not a missing capability. The pin codifies today's refusal so the fix
   reds it on purpose.
 
+### ICE-SET-LOCATION-1 — `ALTER TABLE … SET LOCATION '<path>'` is served; the location moves, the files stay
+
+- **repark** — the statement moves the table's metadata location: the move commit writes the
+  next table metadata under the NEW location (and every commit after it lands there too), the
+  metadata document's `location` field records the new path, and new data files are written
+  under it, while the original metadata file is left in place. Keywords are case-insensitive
+  and the quoted path survives verbatim. The statement is a pre-parse intercept on the Spark
+  SQL door ([`crates/repark-spark/src/router/table_props_ddl.rs`](../crates/repark-spark/src/router/table_props_ddl.rs)),
+  wired after the column-move intercept; it refuses through the same
+  `parsed_ddl("ALTER TABLE")` write-options gate as its siblings, refuses a missing or
+  non-string path loud naming the clause, and leaves `SET/UNSET TBLPROPERTIES`, branch/tag
+  DDL and every other ALTER form untouched. Execute also defensively invalidates the
+  touched namespace after the move — sibling convention, not a tested leg: the move
+  changes no names, so no pin can observe it. **The foot-gun: moving the location does
+  not move the files** — existing data and metadata stay at the old path.
+- **Apache Spark** — `ALTER TABLE t SET LOCATION 'p'` updates the table location in the table
+  metadata of an Iceberg table; existing files are not relocated and the next commit carries
+  the new location. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0
+  recorded Spark accepting the statement in the run-25/26 inventory
+  ([ice-parity-inventory-2026-09-19.md](../task/roadmap/mid-term/ice-parity-inventory-2026-09-19.md),
+  row 33, cell `D-SET-LOCATION`); the served value claims above are pinned on RePark's side
+  by the offline cell, not re-measured value-by-value against Spark.)*
+- **Pin** —
+  `python/repark/tests/test_ice_ddl_clauses_1.py::test_alter_table_set_location_moves_the_metadata_location`
+  and, on the Rust side,
+  `crates/repark-spark/src/tests/ice_ddl_clauses_1.rs::set_location_moves_the_metadata_location_and_the_next_commit_lands_under_it`
+  plus `::set_location_near_misses_keep_their_own_routing` and
+  `::set_location_refuses_write_options_and_missing_literal_loud`, with the fork-level move
+  and next-commit pins in `crates/repark-iceberg/src/write/set_location.rs`.
+- **Rationale** — SERVED (IPI-26/27, cell `D-SET-LOCATION`). The inventory form the parser
+  rejected (`Expected: (, found: LOCATION`) now answers through the fork's `SetLocation`
+  update action; the served row stays to carry the foot-gun disclosure, not a divergence.
+
 ### ICE-COLUMN-REORDER-1 — `ALTER COLUMN … FIRST/AFTER` column moves — **FIXED 2026-09-17**
 
 - **repark** — `ALTER TABLE cat.ns.t ALTER COLUMN c FIRST` and `ALTER COLUMN c AFTER x` move

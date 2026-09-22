@@ -565,3 +565,211 @@ fn create_table_options_refusal_keeps_plain_and_with_drops_options() {
         "the OPTIONS refusal is deleted: the variant must not refuse"
     );
 }
+
+fn metadata_json_files(location: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let dir = location.join("metadata");
+    let mut files: Vec<std::path::PathBuf> = if dir.is_dir() {
+        std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(std::result::Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.to_string_lossy().ends_with(".metadata.json"))
+            .collect()
+    } else {
+        Vec::new()
+    };
+    files.sort();
+    files
+}
+
+fn parquet_files(location: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut files: Vec<std::path::PathBuf> = Vec::new();
+    if location.is_dir() {
+        for entry in std::fs::read_dir(location)
+            .unwrap()
+            .filter_map(std::result::Result::ok)
+        {
+            let path = entry.path();
+            if path.is_dir() {
+                files.extend(parquet_files(&path));
+            } else if path.to_string_lossy().ends_with(".parquet") {
+                files.push(path);
+            }
+        }
+    }
+    files.sort();
+    files
+}
+
+#[tokio::test]
+async fn set_location_moves_the_metadata_location_and_the_next_commit_lands_under_it() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.loc (id BIGINT) USING iceberg",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.loc VALUES (1)").await;
+    let old_location = wh.path().join("sales").join("loc");
+    let new_location = wh.path().join("moved").join("loc");
+    let pre_move = parquet_files(&old_location);
+    assert_eq!(
+        pre_move.len(),
+        1,
+        "the pre-move INSERT must write exactly one data file"
+    );
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "ALTER TABLE ice.sales.loc SET LOCATION '{}'",
+            new_location.display()
+        ),
+    )
+    .await;
+    assert_eq!(
+        parquet_files(&old_location),
+        pre_move,
+        "the move must leave the pre-move data file at its old path"
+    );
+    assert!(
+        parquet_files(&new_location).is_empty(),
+        "the move must not copy any data file under the new location"
+    );
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.loc VALUES (2)").await;
+
+    let handle = catalog_handle(&catalogs, "ice").unwrap();
+    let table = handle
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".into()),
+            "loc".into(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        table.metadata().location(),
+        new_location.to_str().unwrap(),
+        "the metadata `location` field must record the new path"
+    );
+    assert_eq!(
+        metadata_json_files(&old_location).len(),
+        2,
+        "the CREATE and the pre-move INSERT keep their metadata under the old location"
+    );
+    assert_eq!(
+        metadata_json_files(&new_location).len(),
+        2,
+        "the move commit and the next metadata commit (the post-move INSERT) both land under \
+         the new location"
+    );
+    let post_move = parquet_files(&new_location);
+    assert_eq!(
+        post_move.len(),
+        1,
+        "the post-move INSERT writes its data file under the new location"
+    );
+    assert!(
+        post_move[0].file_name() != pre_move[0].file_name(),
+        "the post-move data file must be a new file, not the pre-move file relocated"
+    );
+    assert_eq!(
+        parquet_files(&old_location),
+        pre_move,
+        "the pre-move data file must still sit at its old path after the post-move INSERT"
+    );
+    let batches = execute(&ctx, &catalogs, "SELECT id FROM ice.sales.loc ORDER BY id")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let mut ids = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::Int64Array>()
+            .unwrap();
+        ids.extend((0..column.len()).map(|index| column.value(index)));
+    }
+    assert_eq!(ids, vec![1, 2]);
+}
+
+#[tokio::test]
+async fn set_location_near_misses_keep_their_own_routing() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, "CREATE NAMESPACE ice.drop").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.drop.tag (id BIGINT) USING iceberg",
+    )
+    .await;
+    let moved = wh.path().join("moved").join("tag");
+    run(
+        &ctx,
+        &catalogs,
+        &format!(
+            "ALTER TABLE ice.drop.tag SET LOCATION '{}'",
+            moved.display()
+        ),
+    )
+    .await;
+    let handle = catalog_handle(&catalogs, "ice").unwrap();
+    let table = handle
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("drop".into()),
+            "tag".into(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        table.metadata().location(),
+        moved.to_str().unwrap(),
+        "table-name segments that look like DDL verbs must not route to branch/tag DDL"
+    );
+}
+
+#[tokio::test]
+async fn set_location_refuses_write_options_and_missing_literal_loud() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.sl (id BIGINT) USING iceberg",
+    )
+    .await;
+
+    let options = crate::write_options::StatementWriteOptions::validate(vec![(
+        "compression-codec".to_string(),
+        "zstd".to_string(),
+    )])
+    .unwrap();
+    let options_error = crate::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.sl SET LOCATION '/tmp/x'",
+        &std::collections::HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .expect_err("SET LOCATION must go through the ALTER TABLE write-options gate");
+    assert!(
+        options_error
+            .to_string()
+            .contains("ALTER TABLE does not support write options"),
+        "got: {options_error}"
+    );
+
+    let missing = execute(&ctx, &catalogs, "ALTER TABLE ice.sales.sl SET LOCATION")
+        .await
+        .expect_err("a missing path must refuse loud, never silently drop");
+    assert!(
+        missing.to_string().contains("SET LOCATION"),
+        "got: {missing}"
+    );
+}

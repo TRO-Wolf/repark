@@ -36,6 +36,21 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   and
   [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
   beside the `COMMENT ON` pins.
+- `table_props_ddl.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
+  the `ALTER TABLE <cat.ns.tbl> SET LOCATION '<literal>'` intercept (the statement does
+  not survive sqlparser). The parser is a `DatabricksDialect` reader that claims only
+  after `SET LOCATION` — keywords case-insensitive, the quoted path verbatim — so
+  `SET/UNSET TBLPROPERTIES`, branch/tag shapes and every other ALTER form pass through;
+  a claimed-but-malformed tail (non-three-part name, missing or non-string path,
+  trailing tokens) refuses loud naming the clause. Execute moves the metadata location
+  through `repark_iceberg::write::set_location::set_table_location` behind the
+  `parsed_ddl("ALTER TABLE")` write-options gate, then defensively invalidates the
+  touched namespace as the schema-changing intercepts do — sibling convention, not a
+  tested leg: the move changes no names, so no pin can observe it. Unit pins are
+  inline; door pins are
+  [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs) and
+  [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
+  (first linked from the `comment_on_table.rs` row above).
 
 ## Pointers
 

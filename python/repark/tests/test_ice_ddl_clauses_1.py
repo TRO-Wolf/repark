@@ -280,6 +280,31 @@ def test_change_column_hive_type_and_comment(spark: Any, tmp_path: Path) -> None
     assert arrow.to_pylist() == [{"id": 1, "data": "a"}]
 
 
+def test_alter_table_set_location_moves_the_metadata_location(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-SET-LOCATION``: the metadata location moves; files are not moved."""
+    table = _create(spark, "t_set_location")
+    spark.sql(f"INSERT INTO {table} VALUES (1, 'a')")
+    old_table = tmp_path / "wh" / "repark_ctas" / CATALOG / NAMESPACE / "t_set_location"
+    pre_move = sorted(old_table.rglob("*.parquet"))
+    assert len(pre_move) == 1
+    moved = tmp_path / "moved" / "t_set_location"
+    spark.sql(f"ALTER TABLE {table} SET LOCATION '{moved}'")
+    assert sorted(old_table.rglob("*.parquet")) == pre_move
+    assert sorted(moved.rglob("*.parquet")) == []
+    spark.sql(f"INSERT INTO {table} VALUES (2, 'b')")
+
+    meta = _metadata(moved.parent, "t_set_location")
+    assert meta["location"] == str(moved)
+    assert len(list(old_table.glob("metadata/*.metadata.json"))) == 2
+    assert len(list((moved / "metadata").glob("*.metadata.json"))) == 2
+    post_move = sorted(moved.rglob("*.parquet"))
+    assert len(post_move) == 1
+    assert post_move[0].name != pre_move[0].name
+    assert sorted(old_table.rglob("*.parquet")) == pre_move
+    arrow = spark.sql(f"SELECT id, data FROM {table} ORDER BY id").to_arrow()
+    assert arrow.to_pylist() == [{"id": 1, "data": "a"}, {"id": 2, "data": "b"}]
+
+
 def test_create_location_files_land_under_path(spark: Any, tmp_path: Path) -> None:
     """Cell ``D-CREATE-LOCATION``: data files land under the given path."""
     location = tmp_path / "custom_loc" / "t_create_loc"
