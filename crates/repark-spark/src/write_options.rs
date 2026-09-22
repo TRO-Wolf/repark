@@ -156,10 +156,7 @@ pub(crate) fn is_merge_schema_key(key: &str) -> bool {
 fn validate_write_format(raw: &str) -> Result<String> {
     match raw.to_ascii_lowercase().as_str() {
         "parquet" => Ok("parquet".to_string()),
-        "orc" | "avro" => Err(DataFusionError::NotImplemented(format!(
-            "write-format {raw:?} has no RePark Iceberg writer — only parquet is written \
-             (ICE-WRITE-OPTIONS-1 ORC/AVRO declared 2026-09-17)"
-        ))),
+        "orc" | "avro" => Ok(raw.to_ascii_lowercase()),
         _ => Err(DataFusionError::Plan(format!("Invalid file format: {raw}"))),
     }
 }
