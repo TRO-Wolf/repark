@@ -73,6 +73,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   builds `AnalysisException` from `Error during planning: ` plus the catalogue
   `[MERGE_CARDINALITY_VIOLATION]` / `23K01` text and asserts the type name,
   `getCondition` and `getSqlState`.
+  **IPI-51 PR9 (2026-09-21):** one stamped-message constructor pin asserts type +
+  `getCondition` + `getSqlState` on the new
+  `[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS]`/`21S01` text (short
+  positional VALUES, cell `W-INSERT-WRONG-ARITY-ERR`); the historical parser pins stay
+  byte-identical.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011, C-012
 - [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
@@ -7330,6 +7335,12 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   Spark's recorded accept, an OPEN registry row (C-022).
   The V-01 pin goes green with the writer change (arity refusal before).
   pins: ice-v3-write-default-1/C-020, C-021, C-022
+  **IPI-51 PR9 (2026-09-21):** `test_short_inserts_refuse` retargets the
+  positional-short VALUES pin from `Inconsistent data length` to `AnalysisException` with
+  `getCondition() == "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS"` and
+  `getSqlState() == "21S01"`; the SELECT-short `Column count doesn't match` pin and the
+  no-write assertion are unchanged.
+  pins: ice-error-conditions-1/C-011
 - [_record_ice_array_insert_1.py](_record_ice_array_insert_1.py) — the **record driver**
   for ICE-ARRAY-INSERT-1 (NOT a `test_` module; never collected). `SHAPES` is the shape
   catalog (column DDL, SELECT source, VALUES rows); `record_all()` writes each shape

@@ -27,6 +27,8 @@ from typing import Any
 import pyarrow as pa
 import pytest
 
+from repark.errors import AnalysisException
+
 _REPOS_ROOT = Path(__file__).resolve().parents[3]
 _FIXTURE_SRC = (
     _REPOS_ROOT
@@ -281,10 +283,15 @@ def test_short_inserts_refuse() -> None:
             _adopt(session, _CATALOG, "defaults")
             _cell_errors("insert_positional_short")
             _cell_errors("insert_select_short")
-            with pytest.raises(Exception, match="Inconsistent data length"):
+            with pytest.raises(AnalysisException) as excinfo:
                 session.sql(
                     f"INSERT INTO {_CATALOG}.{_NAMESPACE}.defaults VALUES (8, 'h')"
                 ).collect()
+            assert (
+                excinfo.value.getCondition()
+                == "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS"
+            )
+            assert excinfo.value.getSqlState() == "21S01"
             with pytest.raises(Exception, match="Column count doesn't match"):
                 session.sql(f"INSERT INTO {_CATALOG}.{_NAMESPACE}.defaults SELECT 9, 'i'").collect()
             assert _rows(session, _CATALOG, "defaults") == _seed_rows("defaults")

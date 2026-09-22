@@ -403,3 +403,17 @@ def test_merge_cardinality_violation_stamped_message_parses() -> None:
     assert type(error).__name__ == "AnalysisException"
     assert error.getCondition() == "MERGE_CARDINALITY_VIOLATION"
     assert error.getSqlState() == "23K01"
+
+
+def test_insert_wrong_arity_not_enough_data_columns_stamped_message_parses() -> None:
+    """The W-INSERT-WRONG-ARITY-ERR stamp parses its condition and SQLSTATE."""
+    error = AnalysisException(
+        "Error during planning: "
+        "[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] "
+        "Cannot write to `sc`.`ns`.`t_w_insert_wrong_arity_err`, the reason is not enough "
+        "data columns:\nTable columns: `id`, `data`, `cat`.\nData columns: `col1`, `col2`. "
+        "SQLSTATE: 21S01"
+    )
+    assert isinstance(error, AnalysisException)
+    assert error.getCondition() == "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS"
+    assert error.getSqlState() == "21S01"
