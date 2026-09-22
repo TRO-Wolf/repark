@@ -725,7 +725,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   partition value per manifest with contents differing from the legacy rewrite on
   twin tables, positional `sort_by` sorts, NULL runs legacy, and the empty-list
   and non-partition-column refusals carry the fork text verbatim.
-  pins: P-RM-SORT-BY
+  pins: ice-procedures-1/C-022
   `call_procs_route_1` (**ICE-PROCS-ROUTE-1 (2026-09-19)**) pins the four routed
   procedure schemas and rows (ancestor chain newest-first with snapshot
   timestamps, table-stats blobs in caller order, partition-stats registration,

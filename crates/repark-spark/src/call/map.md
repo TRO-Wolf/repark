@@ -275,7 +275,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   path. The empty-list and non-partition-column refusals surface the fork text
   bare through `illegal_argument_error`.
   pins: ice-rm-deletes-1/C-001, C-002, C-003, C-004, C-005, C-006
-  pins: P-RM-SORT-BY
+  pins: ice-procedures-1/C-022
 - `plan_partitioning.rs` (+ `plan_partitioning/`) — **AP-1 step 1 (2026-09-10):** `CALL
   <catalog>.system.plan_partitioning(table => …, target_file_size_bytes => …)` (both required,
   target positive). Statistics come from one `files WHERE content = 0` read

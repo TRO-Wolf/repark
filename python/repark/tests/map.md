@@ -2198,7 +2198,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pure; positional and NULL forms and both fork refusals pin exact text.
   pins: ice-procedures-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021
-  pins: P-RM-SORT-BY
+  pins: ice-procedures-1/C-022
 - [test_ice_rdf_sort_parse_1.py](test_ice_rdf_sort_parse_1.py) —
   **ICE-RDF-SORT-PARSE-1 (2026-09-20):** the pins that stand between IPI-43 and a green
   gate over a no-op. `P-RDF-SORT`, `P-RDF-SORT-TABLE-ORDER` and `P-RDF-ZORDER` record the

@@ -269,7 +269,7 @@ def _manifest_partition_bounds(spark: ReparkSession, table: str) -> list[list[tu
 
 
 def test_rm_sort_by_changes_manifest_clustering(spark: ReparkSession) -> None:
-    """sort_by packs one partition value per manifest. pins: P-RM-SORT-BY."""
+    """sort_by packs one partition value per manifest. pins: ice-procedures-1/C-022."""
     _seed_interleaved_partitioned(spark, "rmlegacy")
     _seed_interleaved_partitioned(spark, "rmsorted")
     _, legacy_row = _result_row(
@@ -292,7 +292,7 @@ def test_rm_sort_by_changes_manifest_clustering(spark: ReparkSession) -> None:
 
 
 def test_rm_sort_by_empty_array_refuses(spark: ReparkSession) -> None:
-    """Empty sort_by refuses with the fork text verbatim. pins: P-RM-SORT-BY."""
+    """Empty sort_by refuses with the fork text verbatim. pins: ice-procedures-1/C-022."""
     _seed_interleaved_partitioned(spark, "rmempty")
     with pytest.raises(
         IllegalArgumentException,
@@ -309,7 +309,7 @@ def test_rm_sort_by_empty_array_refuses(spark: ReparkSession) -> None:
 
 
 def test_rm_sort_by_non_partition_column_refuses(spark: ReparkSession) -> None:
-    """sort_by on a non-partition column refuses verbatim. pins: P-RM-SORT-BY."""
+    """sort_by on a non-partition column refuses verbatim. pins: ice-procedures-1/C-022."""
     _seed_interleaved_partitioned(spark, "rmnonpart")
     with pytest.raises(
         IllegalArgumentException,
@@ -326,7 +326,7 @@ def test_rm_sort_by_non_partition_column_refuses(spark: ReparkSession) -> None:
 
 
 def test_rm_sort_by_positional_and_null(spark: ReparkSession) -> None:
-    """Positional sort_by sorts; NULL sort_by runs legacy. pins: P-RM-SORT-BY."""
+    """Positional sort_by sorts; NULL sort_by runs legacy. pins: ice-procedures-1/C-022."""
     _seed_interleaved_partitioned(spark, "rmpos")
     _seed_interleaved_partitioned(spark, "rmnull")
     _, positional_row = _result_row(

@@ -1094,7 +1094,7 @@ pins: rp-4-fork-repin/C-005, C-006
   reader with SQL NULL as unset that the `rewrite_manifests` handler parses
   `sort_by` through.
   pins: ice-procedures-1/C-003, C-004, C-006, C-007, C-008, C-011, C-013, C-015
-  pins: P-RM-SORT-BY
+  pins: ice-procedures-1/C-022
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),
