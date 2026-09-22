@@ -78,6 +78,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS]`/`21S01` text (short
   positional VALUES, cell `W-INSERT-WRONG-ARITY-ERR`); the historical parser pins stay
   byte-identical.
+  **IPI-51 PR10 (2026-09-22):**
+  `test_update_type_cannot_safely_cast_stamped_message_parses` builds
+  `AnalysisException` from `Error during planning: ` plus the catalogue
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` / `KD000` text (cell
+  `W-UPDATE-TYPE-ERR`) and asserts `getCondition` and `getSqlState`.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011, C-012
 - [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
