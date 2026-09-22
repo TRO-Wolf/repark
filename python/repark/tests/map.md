@@ -5230,8 +5230,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - `test_time_travel.py` — **I1 / R-TIME-TRAVEL** named oracle: multi-snapshot fixture (CTAS +
   append + MERGE) + tag/branch via `_testing_create_ref`; SQL `VERSION AS OF` /
   `TIMESTAMP AS OF` / `FOR SYSTEM_*` (incl. latest-`<=` at s2/s3_ts + mid-interval — octo
-  C1-Q-001/L-001/L-002); reader options `snapshot-id` / `as-of-timestamp` /
-  `branch` / `tag` (all mutex pairs + residual incremental denylist); filter/projection
+  C1-Q-001/L-001/L-002); reader options: legacy `snapshot-id` / `as-of-timestamp` /
+  `tag` REFUSE with Spark 4.1.2's `IllegalArgumentException` texts (every pair refuses
+  legacy-first), `branch` still served; filter/projection
   composition; current-read unaffected; write-to-branch/tag loud; `__repark_tt_*` hidden from
   listTables (rewritten in H-1b with the ephemeral-view leak fix: the SQL rewrite now RELEASES
   its pins, so the non-vacuity half of that pin comes from the reader-options registration,
@@ -5241,9 +5242,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   JOIN dual VERSION AS OF (octo C2); RFC3339 Zulu TIMESTAMP; direct read_iceberg_table
   mutex kwargs; empty branch/tag loud (octo C3); schema-at-snapshot vs current after RTAS
   widen (static provider, not post-hoc filter — octo C4); SYSTEM_VERSION string ref;
-  parquet+TT option loud; INSERT…SELECT AS OF; subquery AS OF; SNAPSHOT-ID case;
+  parquet+TT option loud; INSERT…SELECT AS OF; subquery AS OF; `SNAPSHOT-ID`
+  case-insensitive refusal;
   branch option trims whitespace (octo C5); CTAS/MERGE USING AS OF source (octo C6);
-  CTE AS OF; snapshot-id i64 overflow → AnalysisException (octo C7); triple mutex pin
+  CTE AS OF; snapshot-id i64 overflow refuses with the legacy `IllegalArgumentException`
+  text before parsing (octo C7); triple legacy-combo refusal pin
   (octo C8). Arrow multiset **and** schema pins via
   `to_arrow`. Fork cites in module docstring (pin `4723104b`).
   **IPI-23 (2026-09-22):** the legacy `snapshot-id` / `as-of-timestamp` / `tag` reader pins
@@ -5251,8 +5254,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   as-of-timestamp, tag) instead of answering rows — the mutex/overflow/case pins now assert
   the refusal, the temp-view pin rides `versionAsOf`, and new pins cover each message, the
   precedence pairs, the `.table()` entry, and the near misses (`branch`, `versionAsOf` with a
-  tag name, `timestampAsOf`, lone `start-snapshot-id`, ignored `split-size` and underscore
-  `snapshot_id`).
+  tag name, `timestampAsOf`, the `start-snapshot-id` windows — lone and start+end each answer
+  `[4]` — ignored `split-size` and underscore `snapshot_id`).
 - `test_facade_polish.py` — aggregate **compound display naming** (live-recorded PySpark 4.1.2
   matrix: `sum((x + 1))`, `sum(CAST(x AS DOUBLE))`, `sum(abs(x))` **incl. negatives**, `sum(x AS y)`,
   reflected-op commuting `2 * x` → `sum((x * 2))` + float-literal `2.0` (2026-07-21 review pins;
