@@ -525,12 +525,14 @@ position-delete files are counted separately rather than folded into the data-fi
 Files that no snapshot references — an aborted write, a crashed job — are invisible to Iceberg and
 cost storage forever. `remove_orphan_files` finds them.
 
-**It is the only procedure here that destroys data, so its defaults are not Spark's.**
+**It is the only procedure here that destroys data, and its defaults are Spark's: a bare
+call deletes everything older than three days. Pass `dry_run => true` to list first.**
 
 ```python
 spark.sql(
     "CALL local.system.remove_orphan_files("
-    "table => 'sales.orders', older_than => TIMESTAMP '2026-08-18 00:00:00')"
+    "table => 'sales.orders', older_than => TIMESTAMP '2026-08-18 00:00:00', "
+    "dry_run => true)"
 ).show()
 ```
 
@@ -542,16 +544,15 @@ spark.sql(
 +-----------------------------------------------+
 ```
 
-That call **listed** those files. It did not delete them. Two differences from Spark, both
-deliberate, both registry rows:
+That call **listed** those files. It did not delete them, because it passed
+`dry_run => true`. Both defaults are Spark's, like-for-like:
 
-- **`older_than` is required**
-  ([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
-  Spark defaults it to `now - 3 days`. Deleted files do not come back, so the cutoff is not
-  something to leave to a default.
-- **`dry_run` defaults to true**
-  ([ORPHAN-2](../spark-sql-iceberg-parity.md#orphan-2--remove_orphan_files-defaults-to-a-dry-run-spark-defaults-to-deleting)).
-  Spark's default deletes. Read the listing first, then arm it:
+- **`older_than` defaults to `now - 3 days`**, exactly as on Spark
+  ([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-defaults-older_than-to-three-days-like-spark-retired-2026-09-22)).
+  The old required-cutoff refusal is retired: a bare call runs.
+- **`dry_run` defaults to false**, exactly as on Spark
+  ([ORPHAN-2](../spark-sql-iceberg-parity.md#orphan-2--remove_orphan_files-deletes-by-default-like-spark-retired-2026-09-22)).
+  A bare call DELETES. Read the listing first, then arm it:
 
 ```python
 spark.sql(
@@ -561,8 +562,9 @@ spark.sql(
 ).show()
 ```
 
-`dry_run` takes a boolean literal. A quoted `'false'` refuses rather than being read as false, so
-a typo cannot arm the deletion.
+Leaving `dry_run` out deletes too — that is Spark's default, and `dry_run => false` only says
+so out loud. `dry_run` takes a boolean literal. A quoted `'false'` refuses rather than being
+read as false, so a typo cannot arm the deletion.
 
 One rule is **not** a repark invention: an `older_than` less than 24 hours in the past refuses,
 because a short interval can delete files an in-flight commit has written but not yet referenced.
@@ -609,11 +611,13 @@ behaves differently on each. Run the whole cycle behind your merge workload, in 
 3. `rewrite_data_files` compacts the data files those merges fanned out.
 4. `rewrite_manifests` re-groups the manifests the first two steps churned.
 5. `expire_snapshots` drops every snapshot older than your cutoff.
-6. `remove_orphan_files` lists what no snapshot references. This is the dry-run default.
-7. `remove_orphan_files` with `dry_run => false` deletes that listing, once you have read it.
+6. `remove_orphan_files` with `dry_run => true` lists what no snapshot references.
+7. `remove_orphan_files` with the default (or `dry_run => false`) deletes that listing, once
+   you have read it.
 
 Each step is one task in an Airflow DAG. The block below is **steps 2 to 6**. Step 1 is your
-merge workload. Step 7 is the same orphan call with `dry_run => false` added.
+merge workload. Step 7 is the same orphan call without `dry_run => true` — the default
+deletes.
 
 ```python
 from datetime import UTC, datetime, timedelta
@@ -634,7 +638,7 @@ MAINTENANCE_CYCLE = [
     f"CALL {CATALOG}.system.expire_snapshots(table => '{TABLE}', "
     f"older_than => {EXPIRE_CUTOFF}, retain_last => 1)",
     f"CALL {CATALOG}.system.remove_orphan_files(table => '{TABLE}', "
-    f"older_than => {ORPHAN_CUTOFF})",
+    f"older_than => {ORPHAN_CUTOFF}, dry_run => true)",
 ]
 
 for statement in MAINTENANCE_CYCLE:
@@ -723,7 +727,7 @@ A production window is a trade against that. A window of zero is not a trade.
 past, which is Apache Spark's floor too. So a cycle never sees the orphans that the same cycle's
 `expire_snapshots` just created. Step 6 catches yesterday's cycle, not today's. A dry run that
 lists nothing on a young warehouse is not a clean bill of health
-([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
+([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-defaults-older_than-to-three-days-like-spark-retired-2026-09-22)).
 
 **Budget the cycle at about 2.5 minutes on v2** for a 10-million-row merge-on-read table
 carrying 50 merges of debt
@@ -784,13 +788,14 @@ One edit is hygiene, not a divergence: pass `expire_snapshots` an explicit `olde
 block above does. Spark defaults the cutoff to the same five-day window, so a Spark DAG without
 the argument keeps five days of history there too.
 
-Four edits are divergences, and none of them changes what a query returns:
+`remove_orphan_files` needs no edit: its defaults are Spark's since 2026-09-22 — a bare
+call deletes everything older than three days, and `dry_run` takes a boolean literal
+([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-defaults-older_than-to-three-days-like-spark-retired-2026-09-22),
+[ORPHAN-2](../spark-sql-iceberg-parity.md#orphan-2--remove_orphan_files-deletes-by-default-like-spark-retired-2026-09-22),
+both retired).
 
-- `remove_orphan_files` needs an explicit `older_than` here. Spark defaults it
-  ([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
-- `remove_orphan_files` is a dry run here by default. Spark deletes. Step 7 needs
-  `dry_run => false`, as a boolean literal
-  ([ORPHAN-2](../spark-sql-iceberg-parity.md#orphan-2--remove_orphan_files-defaults-to-a-dry-run-spark-defaults-to-deleting)).
+Two edits are divergences, and neither of them changes what a query returns:
+
 - `rewrite_manifests` takes a boolean literal for `use_caching` where
   Spark also casts a quoted `'true'`
   ([MANIFEST-2](../spark-sql-iceberg-parity.md#manifest-2--rewrite_manifests-refused-spec_id-use_caching-is-accepted-and-does-nothing)).
