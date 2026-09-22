@@ -16,10 +16,10 @@ a divergence, with the recorded Spark answers in ``truth.json`` as the fix
 target.
 
 Every assertion runs on the Arrow path (id values AND the ``int64`` Arrow
-type, lineage ``int64`` on v3) on both doors: ``session.sql`` carries the
-predicate grid except the three bare-decimal range cells on the NaN-holding
-``d`` column, which refuse loud under ICE-NAN-DECIMAL-LITERAL-1 (BACKLOG) and
-are pinned on their needle; the DataFrame door carries every cell through
+type, lineage ``int64`` on v3) on both doors: ``session.sql`` carries the full
+predicate grid including the three bare-decimal range cells on the NaN-holding
+``d`` column (ICE-NAN-DECIMAL-LITERAL-1, FIXED 2026-09-21 by WO-2 — the decimal
+bounds widen to DOUBLE); the DataFrame door carries every cell through
 ``table().filter().select("id").orderBy("id").to_arrow()`` with double bounds
 (the frame schema does not resolve the v3 lineage columns — SQL-door-only
 today — so lineage rides the SQL door). The live tier re-derives the answers
@@ -71,8 +71,6 @@ _NAMESPACE = "ns"
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 _TABLES = ("base_v2", "base_v3", "del_v2", "del_v3", "evo_v2")
 _LINEAGE_TABLES = frozenset({"base_v3", "del_v3"})
-_DECIMAL_RANGE_CELLS = ("d_lt", "d_gt", "d_not_lt")
-_DECIMAL_RANGE_NEEDLE = "Overflowing on NaN"
 
 
 class _DirLock:
@@ -174,8 +172,6 @@ def test_sql_door_answers_every_recorded_cell() -> None:
                 lineage = table in _LINEAGE_TABLES
                 columns = _columns(lineage)
                 for cell, predicate in _queries(table).items():
-                    if cell in _DECIMAL_RANGE_CELLS:
-                        continue
                     arrow = session.sql(
                         f"SELECT {columns} FROM {qualified} WHERE {predicate} ORDER BY id"
                     ).to_arrow()
@@ -188,35 +184,6 @@ def test_sql_door_answers_every_recorded_cell() -> None:
                     table,
                     "_unfiltered",
                 )
-    finally:
-        session.stop()
-
-
-def test_sql_door_bare_decimal_ranges_refuse_loud() -> None:
-    """ICE-NAN-DECIMAL-LITERAL-1 (BACKLOG): bare decimals on NaN ``d`` fail loud.
-
-    The pins codify today's needle so the fix reds them on purpose; the
-    recorded Spark answers in ``truth.json`` are the fix target.
-    """
-    session = _new_session("ice-page-prune-1-decimal")
-    try:
-        session.register_memory_catalog(_CATALOG, Path("/tmp/repark-ice-page-prune-1-mem"))
-        session.sql(f"CREATE NAMESPACE {_CATALOG}.{_NAMESPACE}")
-        for table in ("base_v2", "base_v3", "del_v3"):
-            with _materialize(table) as metadata_file:
-                table_arg = f"{_NAMESPACE}.{table}"
-                _register(session, table_arg, metadata_file)
-                qualified = f"{_CATALOG}.{table_arg}"
-                for cell in _DECIMAL_RANGE_CELLS:
-                    with pytest.raises(Exception) as raised:
-                        session.sql(
-                            f"SELECT id FROM {qualified} WHERE {_queries(table)[cell]}"
-                        ).to_arrow()
-                    assert _DECIMAL_RANGE_NEEDLE in str(raised.value), (
-                        table,
-                        cell,
-                        str(raised.value)[:200],
-                    )
     finally:
         session.stop()
 
@@ -587,8 +554,6 @@ def test_live_grid_replays_spark(tmp_path: Path) -> None:
             lineage = key in _LINEAGE_TABLES
             columns = _columns(lineage)
             for cell, predicate in _queries(key).items():
-                if cell in _DECIMAL_RANGE_CELLS:
-                    continue
                 arrow = repark.sql(
                     f"SELECT {columns} FROM {qualified} WHERE {predicate} ORDER BY id"
                 ).to_arrow()

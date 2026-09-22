@@ -78,6 +78,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS]`/`21S01` text (short
   positional VALUES, cell `W-INSERT-WRONG-ARITY-ERR`); the historical parser pins stay
   byte-identical.
+  **IPI-51 PR10 (2026-09-22):**
+  `test_update_type_cannot_safely_cast_stamped_message_parses` builds
+  `AnalysisException` from `Error during planning: ` plus the catalogue
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` / `KD000` text (cell
+  `W-UPDATE-TYPE-ERR`) and asserts `getCondition` and `getSqlState`.
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011, C-012
 - [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
@@ -541,7 +546,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   DELETE/UPDATE row outcomes at v2 and v3. Live (`REPARK_PARITY_LIVE=1`): Spark
   rebuilds the grid and the DML and asserts repark == truth == live Spark on both
   doors, including RePark DML on adopted live tables. The bare-decimal-literal
-  BACKLOG pins hold today's loud needles against the recorded Spark answers.
+  legs answer since WO-2 (2026-09-21, ICE-NAN-DECIMAL-LITERAL-1 FIXED): the
+  decimal literal widens to DOUBLE, so `d = 1.0` and `d IN (NaN, 1.0)` equal
+  the recorded Spark answers.
   pins: ice-nan-pushdown-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
 - [_record_ice_page_prune_1.py](_record_ice_page_prune_1.py) +
   [fixtures/ice_page_prune_1/](fixtures/ice_page_prune_1/map.md) +
@@ -556,9 +563,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`--rewrite` re-records). The pin test adopts each warehouse and asserts
   RePark equals Spark on every predicate, lineage, and unfiltered cell on the
   SQL door (double bounds on the DataFrame door, ids only — lineage is
-  SQL-door-only), except the three bare-decimal `d`-range cells (loud under
-  ICE-NAN-DECIMAL-LITERAL-1), pinned as a divergence with the recorded answers as fix
-  target. `del_v2` (rewritten position deletes whose manifest sizes are stale) refused loud
+  SQL-door-only), including the three bare-decimal `d`-range cells
+  (ICE-NAN-DECIMAL-LITERAL-1, FIXED 2026-09-21 by WO-2 — the decimal bounds
+  widen to DOUBLE). `del_v2` (rewritten position deletes whose manifest sizes are stale) refused loud
   until RP-36 (fork #310's footer retry) and now answers every recorded cell on both doors. Step 3 (same file):
   RePark-written 300,000-row v2/v3 tables (measured page counts per column
   chunk: four on the narrow columns, six on the wide 86-char string column of
@@ -1736,6 +1743,21 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: sql-literal-typing-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: sql-literal-typing-1/L-001, L-002, L-003
   pins: sql-literal-typing-1/V-001
+- [test_decimal_float_coercion_1.py](test_decimal_float_coercion_1.py) +
+  [decimal_float_coercion_1_spark_oracle.json](decimal_float_coercion_1_spark_oracle.json) —
+  **WO-2 xo-muse8 UNIT1 fix-b (2026-09-21):** the decimal-literal-vs-float sweep
+  at the facade. The SQL door carries 46 legs over an Iceberg table seeded by
+  SQL INSERT with payload-preserving spellings (true `-0.0` via
+  `CAST('-0.0' AS DOUBLE)`; NaN/NULL DOUBLE, FLOAT and DECIMAL(6,2) payloads)
+  against the 64-cell live-Spark-4.1.2 oracle: 29 match (six comparison operators, IN/NOT
+  IN, BETWEEN/NOT BETWEEN, negatives, reversed sides, the 0.1f32
+  double-widening discriminator, decimal near-miss controls, isnan/NaN-eq/
+  not-null guards) and 17 zero-bound legs pin the separate pre-existing
+  signed-zero kernel divergence with Spark's answer beside RePark's. The
+  DataFrame door carries 18 legs (`F.col` comparisons, `isin`, `between`,
+  string predicates, `F.lit`) with the same split. The R-NAN-FILTER replica
+  runs the scoreboard cell's exact Iceberg SQL and hits every recorded target
+  (`-0.0` inserts as `+0.0`, so zero is `[2, 3]`).
 - [test_dml_c_truncate.py](test_dml_c_truncate.py) — **DML-C:** facade `.sql()` TRUNCATE
   wipes rows, stamps `operation=delete`, time-travels to the pre-truncate snapshot;
   missing table is `TABLE_OR_VIEW_NOT_FOUND`; a view is `EXPECT_TABLE_NOT_VIEW`;

@@ -1,0 +1,1083 @@
+{
+ "spark_version": "4.1.2",
+ "recorded": "2026-09-21",
+ "session_time_zone": "UTC",
+ "ansi": true,
+ "fixture": "10 rows (id INT, d DOUBLE, f FLOAT, dec DECIMAL(6,2)): (1, NaN, NaN, 10.50), (2, -0.0, -0.0, -3.25), (3, 0.0, 0.0, 0.00), (4, 1.5, 1.5, 0.01), (5, NULL, NULL, NULL), (6, Infinity, Infinity, 999.99), (7, -1e300, -1e30, -99.99), (8, 2.0, 2.0, 7.00), (9, 0.1, 0.1, 1.00), (10, 3.0, 0.1, 42.42)",
+ "cells": {
+  "d_eq_0": {
+   "sql": "SELECT id FROM t WHERE d = 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "d_eq_rev": {
+   "sql": "SELECT id FROM t WHERE 0.0 = d",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "d_gt_1": {
+   "sql": "SELECT id FROM t WHERE d > 1.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_gt_0": {
+   "sql": "SELECT id FROM t WHERE d > 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_lt_0": {
+   "sql": "SELECT id FROM t WHERE d < 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     7
+    ]
+   ]
+  },
+  "d_lte_0": {
+   "sql": "SELECT id FROM t WHERE d <= 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     7
+    ]
+   ]
+  },
+  "d_lte_01": {
+   "sql": "SELECT id FROM t WHERE d <= 0.1",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     7
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  "d_gte_1": {
+   "sql": "SELECT id FROM t WHERE d >= 1.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_gte_0": {
+   "sql": "SELECT id FROM t WHERE d >= 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_ne_0": {
+   "sql": "SELECT id FROM t WHERE d <> 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_ne_01": {
+   "sql": "SELECT id FROM t WHERE d <> 0.1",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_in": {
+   "sql": "SELECT id FROM t WHERE d IN (0.0, 1.5)",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ]
+  },
+  "d_notin": {
+   "sql": "SELECT id FROM t WHERE d NOT IN (0.0, 1.5)",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_between": {
+   "sql": "SELECT id FROM t WHERE d BETWEEN 0.0 AND 2.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  "d_not_between": {
+   "sql": "SELECT id FROM t WHERE d NOT BETWEEN 0.0 AND 2.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_between_1_3": {
+   "sql": "SELECT id FROM t WHERE d BETWEEN 1.0 AND 3.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     4
+    ],
+    [
+     8
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "d_not_between_1_3": {
+   "sql": "SELECT id FROM t WHERE d NOT BETWEEN 1.0 AND 3.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  "d_eq_neg": {
+   "sql": "SELECT id FROM t WHERE d = -0.5",
+   "schema": "struct<id:int>",
+   "rows": []
+  },
+  "d_gt_neg": {
+   "sql": "SELECT id FROM t WHERE d > -1.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "f_eq_0": {
+   "sql": "SELECT id FROM t WHERE f = 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "f_eq_rev": {
+   "sql": "SELECT id FROM t WHERE 0.1 = f",
+   "schema": "struct<id:int>",
+   "rows": []
+  },
+  "f_gt_1": {
+   "sql": "SELECT id FROM t WHERE f > 1.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ]
+   ]
+  },
+  "f_gt_0": {
+   "sql": "SELECT id FROM t WHERE f > 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "f_gte_1": {
+   "sql": "SELECT id FROM t WHERE f >= 1.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ]
+   ]
+  },
+  "f_gte_0": {
+   "sql": "SELECT id FROM t WHERE f >= 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "f_lte_0": {
+   "sql": "SELECT id FROM t WHERE f <= 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     7
+    ]
+   ]
+  },
+  "f_lt_0": {
+   "sql": "SELECT id FROM t WHERE f < 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     7
+    ]
+   ]
+  },
+  "f_lt_01": {
+   "sql": "SELECT id FROM t WHERE f < 0.1",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     7
+    ]
+   ]
+  },
+  "f_eq_01": {
+   "sql": "SELECT id FROM t WHERE f = 0.1",
+   "schema": "struct<id:int>",
+   "rows": []
+  },
+  "f_ne_01": {
+   "sql": "SELECT id FROM t WHERE f <> 0.1",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "f_ne_0": {
+   "sql": "SELECT id FROM t WHERE f <> 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "f_in": {
+   "sql": "SELECT id FROM t WHERE f IN (0.0, 0.1)",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "f_notin": {
+   "sql": "SELECT id FROM t WHERE f NOT IN (0.0, 0.1)",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "f_between": {
+   "sql": "SELECT id FROM t WHERE f BETWEEN 0.0 AND 1.5",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "f_not_between": {
+   "sql": "SELECT id FROM t WHERE f NOT BETWEEN 0.0 AND 1.5",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ]
+   ]
+  },
+  "f_between_1_2": {
+   "sql": "SELECT id FROM t WHERE f BETWEEN 1.0 AND 2.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     4
+    ],
+    [
+     8
+    ]
+   ]
+  },
+  "f_not_between_1_2": {
+   "sql": "SELECT id FROM t WHERE f NOT BETWEEN 1.0 AND 2.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "f_eq_15": {
+   "sql": "SELECT id FROM t WHERE f = 1.5",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     4
+    ]
+   ]
+  },
+  "dec_eq_0": {
+   "sql": "SELECT id FROM t WHERE dec = 0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     3
+    ]
+   ]
+  },
+  "dec_eq_00": {
+   "sql": "SELECT id FROM t WHERE dec = 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     3
+    ]
+   ]
+  },
+  "dec_gt_10": {
+   "sql": "SELECT id FROM t WHERE dec > 10",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "dec_lt_0": {
+   "sql": "SELECT id FROM t WHERE dec < 0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     7
+    ]
+   ]
+  },
+  "dec_in": {
+   "sql": "SELECT id FROM t WHERE dec IN (0.0, 1.00)",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     3
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  "isnan_d": {
+   "sql": "SELECT id FROM t WHERE isnan(d)",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  "d_eq_nan": {
+   "sql": "SELECT id FROM t WHERE d = CAST('NaN' AS DOUBLE)",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ]
+   ]
+  },
+  "d_notnull": {
+   "sql": "SELECT id FROM t WHERE d IS NOT NULL",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "df_d_eq": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "df_d_gt": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "df_d_str": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "df_d_lit": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "df_f_eq": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": []
+  },
+  "df_f_lit": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": []
+  },
+  "df_f_gt": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ]
+   ]
+  },
+  "df_d_ne": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "df_d_lt": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     7
+    ]
+   ]
+  },
+  "df_d_lte": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     7
+    ]
+   ]
+  },
+  "df_d_gte": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "df_d_in": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ]
+  },
+  "df_d_between": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  "df_d_not_between": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "df_f_in": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  "df_f_between": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
+  "df_dec_eq": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     3
+    ]
+   ]
+  },
+  "df_f_str": {
+   "door": "df",
+   "schema": "struct<id:int>",
+   "rows": []
+  }
+ }
+}

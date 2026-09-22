@@ -1,5 +1,6 @@
 # map — scripts/
 
+IPI-51 PR10 (2026-09-22): `check_lib_rs.py` gains the `repark-spark` 152 row for `mod update_cast;` (measured 151, one past the default 150). pins: ipi-51/W-UPDATE-TYPE-ERR
 IPI-26/27 round 3 (2026-09-21): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1444 → 1389 (the `REPLACE PARTITION FIELD` parser moves to the sibling `replace_partition_field.rs`, which also takes the transform-LHS form), shrink-only.
 M8-STARTSWITH-1 (2026-09-21): startswith adds pub mod spark_startswith plus one register_all chain link; root file measured 181, fits under the standing repark-functions ceiling 182 with no raise.
 
@@ -866,6 +867,11 @@ repark-parity slice.
 
 ## Contents
 
+- `coordinator/` — the tick-driven lane coordinator (2026-09-22, moved in from the campaign's
+  scratch tooling and renamed from `xorch`): a bash driver that waits for free and wakes a model
+  for one bounded tick at a time, one lane per systemd unit; engines for Grok, Muse, GLM and Codex;
+  `gate.sh`, `review.sh`, `pr.sh` helpers; the handbook every tick starts with; the lessons ledger.
+  Operator tooling, not a CI gate. See [coordinator/map.md](coordinator/map.md).
 - `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
   assembler. `build --unit --role --base --brief` writes Markdown (stable prefix
   first) and a JSON sidecar; `check` validates the schema, every stable-prefix

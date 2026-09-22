@@ -1216,6 +1216,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `k=v` stays clear. The parser leaves-alone list drops one-part names (D-3 retires that
   refusal; temp-view fall-through stays pinned end to end).
   pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
+- `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
+  `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
+  and a STRING column into BIGINT stamp
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` with the backticked column
+  and `"STRING"`/`"BIGINT"`; numeric, string-to-string, and explicit-CAST UPDATE
+  statements succeed; a missing table keeps its own error and INSERT keeps the other
+  cell's prose.
+  pins: ipi-51/W-UPDATE-TYPE-ERR
 - `use_ddl.rs` — **ICE-CATALOG-SESSION-1 (2026-09-20):** the `USE` behavior pins over
   one- and two-catalog memory setups: two-part set, v2 clear-to-empty, session-catalog
   default restore, self-`USE` keep, catalog-first one-part (probe P-1), namespace-only

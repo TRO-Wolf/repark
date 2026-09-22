@@ -314,6 +314,14 @@ pins: rp-4-fork-repin/C-005, C-006
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `execute_update` calls
+  `refuse_incompatible_update_cast` after the read-only, subquery-predicate, and MoR
+  refusals and before `execute_passthrough`: bare-column SET targets resolve on the
+  Iceberg schema, each SET value plans as `SELECT (<expr>) FROM <table>`, and the
+  first non-ANSI-store-assignable pair stamps
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` as `Plan`. Missing
+  catalog/table, unresolvable names, and failed probes fall through. Pins:
+  [tests/update_cast.rs](tests/update_cast.rs). pins: ipi-51/W-UPDATE-TYPE-ERR
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -724,6 +732,19 @@ pins: rp-4-fork-repin/C-005, C-006
   `count_star_keeps_the_int64_expansion_and_its_name`,
   `int32_count_of_one_widens_without_an_int64_literal`.
   pins: ice-count-fold-1/C-001, C-002
+  **WO-2 xo-muse8 UNIT1 fix-b (2026-09-21):** the same pre-coercion seat now also
+  widens a decimal literal compared against a FLOAT/DOUBLE expression to DOUBLE
+  (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape — the float side keeps its
+  type and DataFusion's coercion then promotes a FLOAT column to double, exactly
+  like Spark). DataFusion prefers decimal over float and used to cast the column
+  (`CAST(d AS Decimal128(30,15))`), which dies with `Overflowing on NaN`. Covers
+  the six comparison operators, `IN`/`NOT IN`, `BETWEEN`/`NOT BETWEEN`, either
+  side, and `Negative`-wrapped literals; decimal-vs-decimal and
+  decimal-vs-integral comparisons are untouched, as are unresolvable sides
+  (conservative no-op). The post-coercion `FoldSparkNumericCasts` folds the new
+  cast into a double literal on full sessions. Signed-zero `=`/`<>`/`<`/`>=`
+  outcomes still follow the float eq kernel (total order: `-0.0` distinct from
+  `0.0`), a separate pre-existing divergence pinned beside the sweep.
 - `spark_rewrites/` — the token-rewrite planners of the canonicalize layer;
   `mod.rs` carries the shared span helpers and the families below.
   **D-5 (2026-09-21):** `create_options.rs` (wired last in `spark_literals.rs`
