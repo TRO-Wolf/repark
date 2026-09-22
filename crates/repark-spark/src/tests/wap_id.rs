@@ -66,6 +66,14 @@ async fn main_snapshot_id(catalogs: &CatalogRegistry) -> i64 {
         .snapshot_id()
 }
 
+async fn snapshot_count(catalogs: &CatalogRegistry) -> usize {
+    load_sales_table(catalogs, "t")
+        .await
+        .metadata()
+        .snapshots()
+        .count()
+}
+
 async fn ref_heads(ctx: &SessionContext, catalogs: &CatalogRegistry) -> Vec<(String, String, i64)> {
     use datafusion::arrow::array::AsArray;
 
@@ -267,6 +275,16 @@ async fn publish_changes_fast_forwards_main_to_the_staged_snapshot() {
         ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![1, 2]
     );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the fast-forward moves main without adding a snapshot"
+    );
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), staged)],
+        "main alone exists and points at the published snapshot"
+    );
 }
 
 #[tokio::test]
@@ -316,6 +334,21 @@ async fn publish_changes_replays_over_an_intervening_commit() {
         vec![1, 2, 3],
         "the replay carries the staged row onto main"
     );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        current,
+        "main moved to the replayed snapshot"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        4,
+        "the log holds seed, staged, intervening and replay"
+    );
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), current)],
+        "main alone exists and points at the replayed snapshot"
+    );
     let table = load_sales_table(&catalogs, "t").await;
     let published = table
         .metadata()
@@ -337,6 +370,7 @@ async fn publish_changes_with_an_unknown_wap_id_raises_the_bare_message() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
 
     let error = execute(
         &ctx,
@@ -358,6 +392,21 @@ async fn publish_changes_with_an_unknown_wap_id_raises_the_bare_message() {
         vec![1],
         "the refused publish wrote nothing"
     );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        seed_id,
+        "main still points at the seed snapshot"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        1,
+        "the refused publish left only the seed snapshot"
+    );
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), seed_id)],
+        "main alone exists and still points at the seed"
+    );
 }
 
 #[tokio::test]
@@ -376,6 +425,17 @@ async fn wap_enabled_without_an_id_stays_a_normal_commit() {
         ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![1, 2],
         "the property alone stages nothing"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the normal commit appended one snapshot"
+    );
+    let head = main_snapshot_id(&catalogs).await;
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), head)],
+        "main alone exists and points at the new head"
     );
 }
 
@@ -408,6 +468,17 @@ async fn wap_id_without_the_table_property_stays_a_normal_commit() {
                 .contains_key("wap.id")
         }),
         "no snapshot carries a staged wap id"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the normal commit appended one snapshot"
+    );
+    let head = main_snapshot_id(&catalogs).await;
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), head)],
+        "main alone exists and points at the new head"
     );
 }
 
@@ -460,6 +531,21 @@ async fn a_wap_id_staged_snapshot_cherrypicks_onto_main() {
         vec![1, 2],
         "the staged snapshot publishes through the cherry-pick"
     );
+    let head = main_snapshot_id(&catalogs).await;
+    assert_eq!(
+        head, staged,
+        "the cherry-pick fast-forwards main to the staged snapshot"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the cherry-pick adds no snapshot of its own"
+    );
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), head)],
+        "main alone exists and points at the staged snapshot"
+    );
 }
 
 #[tokio::test]
@@ -493,6 +579,17 @@ async fn wap_id_leaves_delete_and_update_on_main() {
         vec![7],
         "the update commits to main, not to a stage"
     );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        4,
+        "seed, insert, delete and update each committed"
+    );
+    let head = main_snapshot_id(&catalogs).await;
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), head)],
+        "main alone exists and points at the update"
+    );
 }
 
 #[tokio::test]
@@ -513,5 +610,16 @@ async fn wap_id_leaves_insert_overwrite_on_main() {
         ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![9],
         "the overwrite replaces main instead of staging"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the overwrite committed one snapshot on main"
+    );
+    let head = main_snapshot_id(&catalogs).await;
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), head)],
+        "main alone exists and points at the overwrite"
     );
 }
