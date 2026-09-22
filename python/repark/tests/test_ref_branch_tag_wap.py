@@ -196,3 +196,14 @@ def test_wap_id_alone_stages_off_main(spark: ReparkSession) -> None:
         spark.conf.unset("spark.wap.id")
     main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
     assert sorted(main.column("id").to_pylist()) == [1]
+    snapshots = spark.sql(f"SELECT snapshot_id, summary FROM {TABLE}.snapshots").to_arrow()
+    assert snapshots.num_rows == 2
+    stamped = [
+        row["snapshot_id"]
+        for row in snapshots.to_pylist()
+        if dict(row["summary"] or []).get("wap.id") == "w1"
+    ]
+    assert len(stamped) == 1
+    assert stamped[0] != _refs_row(spark, "main")["snapshot_id"]
+    refs = spark.sql(f"SELECT name FROM {TABLE}.refs").to_arrow()
+    assert refs.column("name").to_pylist() == ["main"]
