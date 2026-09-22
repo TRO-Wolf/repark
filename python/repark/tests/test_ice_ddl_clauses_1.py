@@ -111,6 +111,13 @@ def _spec(meta: dict[str, Any], by_id: dict[int, str]) -> list[list[Any]]:
     return [[f["name"], f["transform"], by_id.get(f["source-id"], f["source-id"])] for f in fields]
 
 
+def _identifier_fields(meta: dict[str, Any], by_id: dict[int, str]) -> list[str]:
+    """Identifier-field names of the current schema, sorted, mapped from field ids."""
+    current = meta["current-schema-id"]
+    schema = next(item for item in meta["schemas"] if item["schema-id"] == current)
+    return sorted(by_id.get(i, str(i)) for i in schema.get("identifier-field-ids", []))
+
+
 def _arrow_fields(session: Any, table: str) -> dict[str, pa.Field]:
     """Arrow fields of ``SELECT *`` keyed by top-level column name."""
     arrow = session.sql(f"SELECT * FROM {table}").to_arrow()
@@ -596,3 +603,92 @@ def test_options_off_iceberg_or_without_using_still_refuses(spark: Any) -> None:
         spark.sql(
             f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_no_using_options (id BIGINT) OPTIONS ('k'='v')"
         )
+
+
+def test_set_identifier_fields(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-SET-IDENTIFIER``: the set is recorded; requiredness is unchanged.
+
+    Live Spark records schema ``[["id","long",true,null],["k","string",true,null],
+    ["v","string",false,null]]`` and identifier fields ``["id","k"]``: the SET
+    names existing NOT NULL columns and touches no nullability.
+    """
+    table = f"{CATALOG}.{NAMESPACE}.t_set_identifier"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT NOT NULL, k STRING NOT NULL, v STRING) USING iceberg"
+    )
+    spark.sql(f"ALTER TABLE {table} SET IDENTIFIER FIELDS id, k")
+
+    meta = _metadata(tmp_path / "wh", "t_set_identifier")
+    rows, by_id = _schema_rows(meta)
+    assert rows == [
+        ["id", "long", True, None],
+        ["k", "string", True, None],
+        ["v", "string", False, None],
+    ]
+    assert _identifier_fields(meta, by_id) == ["id", "k"]
+
+
+def test_drop_identifier_fields(spark: Any, tmp_path: Path) -> None:
+    """Cell ``D-DROP-IDENTIFIER``: DROP replaces the set and keeps both columns required.
+
+    Live Spark records schema ``[["id","long",true,null],["k","string",true,null]]``
+    and identifier fields ``["id"]`` after ``SET IDENTIFIER FIELDS id, k`` then
+    ``DROP IDENTIFIER FIELDS k``: the dropped column stays required.
+    """
+    table = f"{CATALOG}.{NAMESPACE}.t_drop_identifier"
+    spark.sql(f"CREATE TABLE {table} (id BIGINT NOT NULL, k STRING NOT NULL) USING iceberg")
+    spark.sql(f"ALTER TABLE {table} SET IDENTIFIER FIELDS id, k")
+    spark.sql(f"ALTER TABLE {table} DROP IDENTIFIER FIELDS k")
+
+    meta = _metadata(tmp_path / "wh", "t_drop_identifier")
+    rows, by_id = _schema_rows(meta)
+    assert rows == [
+        ["id", "long", True, None],
+        ["k", "string", True, None],
+    ]
+    assert _identifier_fields(meta, by_id) == ["id"]
+
+
+def test_set_identifier_fields_on_nullable_column_refuses(spark: Any) -> None:
+    """Cell ``D-SET-IDENTIFIER-NULLABLE``: the full live-Spark message, nothing commits.
+
+    Live Spark raises ``IllegalArgumentException: Cannot add field id as an
+    identifier field: not a required field``. A mutant that calls ``require_column``
+    from the SET handler would make the statement succeed and fail this pin.
+    """
+    from repark.errors import IllegalArgumentException
+
+    table = _create(spark, "t_set_identifier_nullable")
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql(f"ALTER TABLE {table} SET IDENTIFIER FIELDS id")
+    assert str(caught.value) == "Cannot add field id as an identifier field: not a required field"
+
+
+def test_identifier_fields_unknown_column_refuses(spark: Any) -> None:
+    """An unknown column named in either statement refuses with the full message."""
+    from repark.errors import IllegalArgumentException
+
+    table = _create(spark, "t_identifier_unknown")
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql(f"ALTER TABLE {table} SET IDENTIFIER FIELDS nope")
+    assert str(caught.value) == (
+        "Cannot add field nope as an identifier field: not found in current schema or added columns"
+    )
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql(f"ALTER TABLE {table} DROP IDENTIFIER FIELDS nope")
+    assert str(caught.value) == (
+        "Cannot complete drop identifier fields operation: field nope not found"
+    )
+
+
+def test_set_identifier_singular_keeps_the_parser_fall_through(spark: Any) -> None:
+    """``SET IDENTIFIER`` (no FIELDS) and a malformed variant keep the stock parse error."""
+    from repark.errors import ParseException
+
+    table = _create(spark, "t_identifier_singular")
+    with pytest.raises(ParseException) as caught:
+        spark.sql(f"ALTER TABLE {table} SET IDENTIFIER id")
+    assert "Expected: (, found: IDENTIFIER" in str(caught.value)
+    with pytest.raises(ParseException) as caught:
+        spark.sql(f"ALTER TABLE {table} SET IDENTIFIER FIELDS (id)")
+    assert "Expected: (, found: IDENTIFIER" in str(caught.value)

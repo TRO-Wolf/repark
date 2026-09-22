@@ -894,6 +894,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
   pins: ice-column-reorder-1/C-001, C-002
+- [identifier_fields.rs](identifier_fields.rs) — **WO-IDENTIFIERS (2026-09-21):**
+  end to end over `common::setup`:
+  `set_identifier_fields_records_the_set_without_changing_requiredness` pins identifier ids
+  `{id, k}` with `id`/`k` required and `v` optional unchanged;
+  `drop_identifier_fields_replaces_the_set_and_keeps_requiredness` pins identifiers `{id}`
+  with BOTH columns still required after the drop. The refusal pins hold the FULL messages —
+  nullable, unknown in both statements, float/double, map-key
+  `must not be nested in m`, map-value and list-element `not a required field` — plus the
+  nothing-committed observable on a reloaded table: a mutant that calls `require_column` from
+  the SET handler would flip the column to required and fail the nullable pin.
 - [count_fold.rs](count_fold.rs) — **ICE-COUNT-FOLD-1 (2026-09-19):** the `count(*)`
   statistics fold over a four-file, twelve-row table on the production session
   (`ReparkSession` with `SparkExtension` + `SparkDialect`, so `SparkIntegralLiteral` runs —

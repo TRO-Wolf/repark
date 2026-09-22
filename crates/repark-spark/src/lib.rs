@@ -42,6 +42,7 @@ pub use spark_typed::{
     FoldSparkNumericCasts, SUFFIX_LITERAL_NAME, SparkProjectionDisplay, spark_as_udf,
     suffix_literal_udf,
 };
+mod table_props_ddl;
 mod time_travel;
 mod time_window;
 mod truncate;
@@ -131,11 +132,9 @@ pub use extension::SparkExtension;
 
 // Test-only imports provide the crate-root scope shared by the leaf modules.
 #[cfg(test)]
-use datafusion::error::DataFusionError;
-#[cfg(test)]
-use datafusion::prelude::SessionContext;
-#[cfg(test)]
 use datafusion::sql::sqlparser::ast::Statement;
+#[cfg(test)]
+use datafusion::{error::DataFusionError, prelude::SessionContext};
 #[cfg(test)]
 use iceberg::Catalog;
 #[cfg(test)]

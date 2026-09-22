@@ -42,6 +42,7 @@ mod dyn_by_name_overwrite;
 mod dyn_partition_overwrite;
 mod float_agg;
 mod ice_ddl_clauses_1;
+mod identifier_fields;
 mod insert_arity;
 mod insert_overwrite;
 mod join_null_keys;
