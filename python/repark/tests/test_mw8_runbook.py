@@ -299,10 +299,12 @@ def test_the_runbook_runs_the_documented_procedures_in_order(cycle: RunbookCycle
     Order is load-bearing: folding the delete files first stops ``rewrite_data_files`` reading
     every one of them, and ``remove_orphan_files`` stays last as the one procedure with no undo.
     The order comes from the driver, so the guide and this test cannot disagree about it.
+
+    pins: ipi-30-orphan-1/C-012
     """
     assert [step.procedure for step in cycle.steps] == RUNBOOK_PROCEDURES
-    assert "dry_run" not in _step(cycle, "remove_orphan_files").sql, (
-        "step 6 must take the dry-run default (registry ORPHAN-2)"
+    assert "dry_run => true" in _step(cycle, "remove_orphan_files").sql, (
+        "step 6 must pass dry_run => true explicitly (Spark's default deletes)"
     )
     assert measure.ORPHAN_OLDER_THAN_PAST_MS > 24 * ONE_HOUR_MS
 
@@ -448,6 +450,8 @@ def test_the_printed_cycle_matches_the_sequence_the_engine_runs() -> None:
     looks correct. Values are compared where the guide prints a literal; a placeholder is skipped
     (the guide passes a ``TIMESTAMP`` literal where the driver passes epoch milliseconds). The
     claim is the procedure names, their order, and the argument NAMES.
+
+    pins: ipi-30-orphan-1/C-012
     """
     printed = _calls_of(_printed_cycle())
     driven = _calls_of(
@@ -476,7 +480,7 @@ def test_the_printed_cycle_matches_the_sequence_the_engine_runs() -> None:
                     f"the guide prints {procedure}({name} => {printed_value}) where this unit "
                     f"measured {driven_value}"
                 )
-    orphan_arguments = [name for name, _value in dict(printed)["remove_orphan_files"]]
-    assert "dry_run" not in orphan_arguments, (
-        "step 6 must print the dry-run default (registry ORPHAN-2); step 7 arms it in prose"
+    orphan_printed = dict(dict(printed)["remove_orphan_files"])
+    assert orphan_printed.get("dry_run") == "true", (
+        "step 6 must pass dry_run => true explicitly (Spark's default deletes)"
     )

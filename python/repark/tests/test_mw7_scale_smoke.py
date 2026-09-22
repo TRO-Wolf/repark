@@ -378,17 +378,21 @@ def test_rewrite_manifests_drops_the_manifest_count(smoke_run: Any) -> None:
 
 
 def test_maintenance_is_the_charters_sequence(smoke_run: Any) -> None:
-    """C-006: five procedures, the charter's order, orphan cleanup last and dry-run.
+    """C-006: five procedures, the charter's order, orphan cleanup last as an explicit dry run.
 
-    `remove_orphan_files` is the one procedure with no undo. It must stay last, must carry
-    no `dry_run` argument (the engine's default is true — registry row `ORPHAN-2`), and its
-    `older_than` must clear Spark's 24-hour floor.
+    `remove_orphan_files` is the one procedure with no undo. It must stay last, must pass
+    `dry_run => true` explicitly (Spark's default deletes — registry rows ORPHAN-1/ORPHAN-2,
+    retired 2026-09-22, Spark parity), and its `older_than` must clear Spark's 24-hour floor.
+
+    pins: ipi-30-orphan-1/C-012
     """
     for mode in ("mor", "cow"):
         leg = _leg(smoke_run, mode)
         assert [step.procedure for step in leg.maintenance] == MAINTENANCE_ORDER
     orphan_sql = _leg(smoke_run, "mor").maintenance[-1].sql
-    assert "dry_run" not in orphan_sql
+    assert "dry_run => true" in orphan_sql, (
+        "step 6 must pass dry_run => true explicitly (Spark's default deletes)"
+    )
     assert measure.ORPHAN_OLDER_THAN_PAST_MS > ONE_DAY_MS
     assert measure.EXPIRE_OLDER_THAN_FUTURE_MS > 0
 
