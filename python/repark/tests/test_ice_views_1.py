@@ -399,3 +399,111 @@ def test_view_body_qualified_name_left_alone(spark: ReparkSession) -> None:
     spark.catalog.setCurrentCatalog("sc")
     spark.catalog.setCurrentDatabase("ns2")
     assert _rows(spark.sql("SELECT * FROM sc.ns.v")) == [[7]]
+
+
+def test_view_body_in_subquery_qualifies(spark: ReparkSession) -> None:
+    """V-006 — an IN subquery qualifies its bare table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM t WHERE id IN (SELECT id - 5 FROM a)")
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[2]]
+
+
+def test_view_body_not_in_subquery_qualifies(spark: ReparkSession) -> None:
+    """V-006 — a NOT IN subquery qualifies its bare table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM t WHERE id NOT IN (SELECT id - 5 FROM a)")
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0], [1]]
+
+
+def test_view_body_exists_subquery_qualifies(spark: ReparkSession) -> None:
+    """V-006 — an EXISTS subquery qualifies its bare table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM t WHERE EXISTS (SELECT 1 FROM a WHERE id = 7)")
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0], [1], [2]]
+
+
+def test_view_body_case_when_subquery_qualifies(spark: ReparkSession) -> None:
+    """V-006 — a CASE WHEN condition subquery qualifies its bare table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql(
+        "CREATE VIEW sc.ns.v AS SELECT id FROM t WHERE CASE WHEN (SELECT id FROM a) = 7 "
+        "THEN id = 0 ELSE false END"
+    )
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0]]
+
+
+def test_view_body_having_subquery_qualifies(spark: ReparkSession) -> None:
+    """V-006 — a HAVING subquery qualifies its bare table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM t GROUP BY id HAVING (SELECT id FROM a) = 7")
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0], [1], [2]]
+
+
+def test_view_body_derived_table_qualifies(spark: ReparkSession) -> None:
+    """V-006 — a derived table qualifies its bare table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM (SELECT id FROM a) AS d")
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[7]]
+
+
+def test_view_body_union_arm_qualifies(spark: ReparkSession) -> None:
+    """V-006 — a UNION ALL arm qualifies its bare table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM t WHERE id = 0 UNION ALL SELECT id FROM a")
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0], [7]]
+
+
+def test_view_body_bare_scalar_subquery_qualifies(spark: ReparkSession) -> None:
+    """V-006 — a bare scalar subquery qualifies its bare table."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT (SELECT id FROM a) AS x")
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY x")) == [[7]]
+
+
+def test_view_body_cte_shadows_in_in_subquery(spark: ReparkSession) -> None:
+    """V-006 — a bare name inside an IN subquery is still the CTE."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql(
+        "CREATE VIEW sc.ns.v AS WITH a AS (SELECT 1 AS id) SELECT id FROM t "
+        "WHERE id IN (SELECT id FROM a)"
+    )
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[1]]
+
+
+def test_view_body_cte_shadows_in_derived_table(spark: ReparkSession) -> None:
+    """V-006 — a bare name inside a derived table is still the CTE."""
+    spark.sql("CREATE TABLE sc.ns.a AS SELECT * FROM (VALUES (7)) AS t(id)")
+    spark.sql("CREATE NAMESPACE sc.ns2")
+    spark.sql(
+        "CREATE VIEW sc.ns.v AS WITH a AS (SELECT 1 AS id) SELECT id FROM (SELECT id FROM a) AS d"
+    )
+    spark.catalog.setCurrentCatalog("sc")
+    spark.catalog.setCurrentDatabase("ns2")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[1]]
