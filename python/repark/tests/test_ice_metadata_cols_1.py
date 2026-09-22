@@ -1,11 +1,13 @@
-"""IPI-20 PR-1 — the Spark door serves ``_file``, ``_pos`` and ``_spec_id`` on reads.
+"""IPI-20 PR-1 — the Spark door serves ``_file``, ``_pos``, ``_spec_id`` and ``_partition``.
 
-Six inventory cells replayed verbatim: ``R-MC-FILE``, ``R-MC-FILE-DISTINCT``,
+Nine inventory cells replayed verbatim: ``R-MC-FILE``, ``R-MC-FILE-DISTINCT``,
 ``R-MC-POS``, ``R-MC-FILE-FILTER`` and ``R-MC-SPEC-ID`` over a two-append plus
-one-delete seed, and ``R-MC-POS-MOR`` over the same seed with a merge-on-read
-delete. The two columns the fork pin cannot serve yet — ``_partition``,
-``_deleted`` — refuse typed with ``[ICE-MC-1]`` instead of the raw planner
-error. ``SELECT *`` keeps user columns only.
+one-delete seed, ``R-MC-POS-MOR`` over the same seed with a merge-on-read
+delete, ``R-MC-PARTITION`` over the same seed, ``R-MC-PARTITION-UNPART`` over
+the unpartitioned twin, and ``R-MC-SPEC-ID-EVO`` over the spec-evolution twin.
+The one column the fork pin cannot serve yet — ``_deleted`` — refuses typed
+with ``[ICE-MC-1]`` instead of the raw planner error. ``SELECT *`` keeps user
+columns only.
 
 Oracle: the run-25/26 inventory harness cells recorded against live PySpark
 4.1.2 + ``iceberg-spark-runtime-4.1_2.13:1.11.0``
@@ -13,10 +15,14 @@ Oracle: the run-25/26 inventory harness cells recorded against live PySpark
 carries as ``[[2,true,true],[3,true,true],[4,true,true]]`` (``R-MC-FILE``),
 ``[[3]]`` (``R-MC-FILE-DISTINCT``), ``[[3]]`` (``R-MC-FILE-FILTER``),
 ``[[2,0],[3,0],[4,0]]`` (``R-MC-POS``), ``[[2,0],[3,0],[4,1]]``
-(``R-MC-POS-MOR``) and ``[[2,0],[3,0],[4,0]]`` (``R-MC-SPEC-ID``).
+(``R-MC-POS-MOR``), ``[[2,0],[3,0],[4,0]]`` (``R-MC-SPEC-ID``),
+``[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]``
+(``R-MC-PARTITION``), ``[[2,null],[3,null],[4,null]]``
+(``R-MC-PARTITION-UNPART``) and ``[[1,0,[["cat",null]]],[2,1,[["cat","y"]]]]``
+(``R-MC-SPEC-ID-EVO``).
 
 pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-  C-015, C-016, C-017, C-018
+  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
 """
 
 from __future__ import annotations
@@ -78,6 +84,31 @@ def _seeded(session: Any, name: str, properties: str = "") -> str:
     session.sql(f"INSERT INTO {table} VALUES {FIRST_APPEND}")
     session.sql(f"INSERT INTO {table} VALUES {SECOND_APPEND}")
     session.sql(f"DELETE FROM {table} WHERE id = 1")
+    return table
+
+
+def _seeded_unpartitioned(session: Any, name: str) -> str:
+    """Create the unpartitioned two-append twin, delete id 1, return its name."""
+    table = f"{CATALOG}.{NAMESPACE}.{name}"
+    session.sql(
+        f"CREATE TABLE {table} {SEED_DDL} USING iceberg TBLPROPERTIES ('format-version'='2')"
+    )
+    session.sql(f"INSERT INTO {table} VALUES {FIRST_APPEND}")
+    session.sql(f"INSERT INTO {table} VALUES {SECOND_APPEND}")
+    session.sql(f"DELETE FROM {table} WHERE id = 1")
+    return table
+
+
+def _seeded_evo(session: Any, name: str) -> str:
+    """Create the spec-evolution twin: insert, add the field, insert again."""
+    table = f"{CATALOG}.{NAMESPACE}.{name}"
+    session.sql(
+        f"CREATE TABLE {table} (id BIGINT, cat STRING) USING iceberg "
+        "TBLPROPERTIES ('format-version'='2')"
+    )
+    session.sql(f"INSERT INTO {table} VALUES (1, 'x')")
+    session.sql(f"ALTER TABLE {table} ADD PARTITION FIELD cat")
+    session.sql(f"INSERT INTO {table} VALUES (2, 'y')")
     return table
 
 
@@ -151,7 +182,7 @@ def test_pos_survives_merge_on_read_delete(spark: Any) -> None:
 def test_star_excludes_served_metadata_columns(spark: Any) -> None:
     """Cell ``R-MC-STAR-EXCLUDES``: ``*`` stays user columns; explicit names compose.
 
-    pins: ice-metadata-cols-1/C-006, C-017
+    pins: ice-metadata-cols-1/C-006, C-017, C-022
     """
     table = _seeded(spark, "t_star")
     assert [name for name, _ in _schema(spark, f"SELECT * FROM {table}")] == [
@@ -177,6 +208,12 @@ def test_star_excludes_served_metadata_columns(spark: Any) -> None:
         "cat",
         "_spec_id",
     ]
+    assert [name for name, _ in _schema(spark, f"SELECT *, _partition FROM {table}")] == [
+        "id",
+        "data",
+        "cat",
+        "_partition",
+    ]
 
 
 def test_spec_id_is_zero_on_a_single_spec_table(spark: Any) -> None:
@@ -192,20 +229,87 @@ def test_spec_id_is_zero_on_a_single_spec_table(spark: Any) -> None:
     assert _rows(spark, f"SELECT id, _spec_id FROM {table}") == [[2, 0], [3, 0], [4, 0]]
 
 
-def test_unserved_metadata_columns_refuse_typed(spark: Any) -> None:
-    """``_partition`` / ``_deleted`` refuse ``[ICE-MC-1]``, never raw.
+def test_partition_struct_answers_spark(spark: Any) -> None:
+    """Cell ``R-MC-PARTITION``: every live row serves its ``cat`` partition value.
 
-    pins: ice-metadata-cols-1/C-007, C-018
+    pins: ice-metadata-cols-1/C-019
+    """
+    table = _seeded(spark, "t_partition")
+    assert _schema(spark, f"SELECT id, _partition FROM {table}") == [
+        ("id", "bigint"),
+        ("_partition", "struct<cat:string>"),
+    ]
+    rows = sorted(
+        (row.asDict() for row in spark.sql(f"SELECT id, _partition FROM {table}").collect()),
+        key=lambda row: row["id"],
+    )
+    assert rows == [
+        {"id": 2, "_partition": {"cat": "y"}},
+        {"id": 3, "_partition": {"cat": "x"}},
+        {"id": 4, "_partition": {"cat": "x"}},
+    ]
+    assert _rows(spark, f"SELECT id, _partition.cat FROM {table}") == [
+        [2, "y"],
+        [3, "x"],
+        [4, "x"],
+    ]
+
+
+def test_partition_is_null_on_unpartitioned_table(spark: Any) -> None:
+    """Cell ``R-MC-PARTITION-UNPART``: unpartitioned rows serve a NULL struct.
+
+    pins: ice-metadata-cols-1/C-020
+    """
+    table = _seeded_unpartitioned(spark, "t_partition_unpart")
+    assert _schema(spark, f"SELECT id, _partition FROM {table}") == [
+        ("id", "bigint"),
+        ("_partition", "struct<>"),
+    ]
+    assert _rows(spark, f"SELECT id, _partition FROM {table}") == [
+        [2, None],
+        [3, None],
+        [4, None],
+    ]
+
+
+def test_spec_id_and_partition_answer_after_evolution(spark: Any) -> None:
+    """Cell ``R-MC-SPEC-ID-EVO``: old-spec rows serve null ``cat``, new rows ``y``.
+
+    pins: ice-metadata-cols-1/C-021
+    """
+    table = _seeded_evo(spark, "t_evo_full")
+    assert _schema(spark, f"SELECT id, _spec_id, _partition FROM {table}") == [
+        ("id", "bigint"),
+        ("_spec_id", "int"),
+        ("_partition", "struct<cat:string>"),
+    ]
+    rows = sorted(
+        (
+            row.asDict()
+            for row in spark.sql(f"SELECT id, _spec_id, _partition FROM {table}").collect()
+        ),
+        key=lambda row: row["id"],
+    )
+    assert rows == [
+        {"id": 1, "_spec_id": 0, "_partition": {"cat": None}},
+        {"id": 2, "_spec_id": 1, "_partition": {"cat": "y"}},
+    ]
+
+
+def test_unserved_metadata_columns_refuse_typed(spark: Any) -> None:
+    """``_deleted`` refuses ``[ICE-MC-1]``, never raw.
+
+    pins: ice-metadata-cols-1/C-007, C-018, C-023
     """
     table = _seeded(spark, "t_refuse")
-    for column in ["_partition", "_deleted"]:
+    for column in ["_deleted"]:
         with pytest.raises(AnalysisException) as caught:
             spark.sql(f"SELECT {column} FROM {table}").collect()
         text = str(caught.value)
         assert "[ICE-MC-1]" in text
         assert "No field named" not in text
         assert column in text
-        assert "this layer serves (_file, _pos, _spec_id)" in text
+        assert "this layer serves (_file, _pos, _spec_id, _partition)" in text
 
 
 def test_file_and_row_id_answer_together_on_v3(spark_v3: Any) -> None:
