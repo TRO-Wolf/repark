@@ -811,7 +811,9 @@ repark-core's error map.
   carries the target `branch` (`Some(name)` when the statement named `<table>.branch_<name>`), and the executor scans that ref's snapshot and commits on it;
   and its executor is comment-free per the ban (it plans the identity SELECT over the pinned
   scratch, then COW-rewrites or writes MoR deletes; errors are planning, write or commit
-  failures, plus `NotImplemented` for non-Parquet or non-V2 MoR).
+  failures, plus `NotImplemented` for non-V2 MoR; data files follow the write-format option
+  over `write.format.default`, v2 MoR writes position deletes per `write.delete.format.default`
+  over the data format, v3 writes deletion vectors).
   `try_allowed_plain_update` joins `plain::try_allowed_plain_identity` as an owned identity
   route (see `predicate_dml/map.md`). pins: ice-session-write-conf-1/C-038
 - `position_delete.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**

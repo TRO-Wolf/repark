@@ -1386,9 +1386,7 @@ pub(super) fn cast_one_batch_to_write_schema(
     Ok(RecordBatch::try_new(write_schema.clone(), columns)?)
 }
 
-/// Write batches as Parquet data files through iceberg's writer stack, unpartitioned (v1).
-/// # Errors
-/// Returns a DataFusion error if the table is not Parquet-default, writer setup fails, or a batch
+#[allow(clippy::missing_errors_doc)]
 pub async fn write_data_files(table: &Table, batches: Vec<RecordBatch>) -> Result<Vec<DataFile>> {
     write_data_files_with_concurrency(table, batches, WriteConcurrency::default()).await
 }
@@ -1409,9 +1407,7 @@ pub async fn write_data_files_with_concurrency(
     .await
 }
 
-/// Stream batches into unpartitioned Parquet writers as the source produces each batch.
-/// # Errors
-/// Returns a DataFusion error if the table is not Parquet-default or the writer/source fails.
+#[allow(clippy::missing_errors_doc)]
 pub async fn write_data_files_from_stream<S>(table: &Table, stream: S) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,

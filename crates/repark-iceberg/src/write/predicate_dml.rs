@@ -517,7 +517,7 @@ fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<Delet
             let format_version = table.metadata().format_version();
             if format_version < FormatVersion::V2 {
                 return Err(DataFusionError::NotImplemented(format!(
-                    "merge-on-read {verb} writes Parquet position deletes on V2 and deletion \
+                    "merge-on-read {verb} writes position deletes on V2 and deletion \
                      vectors on V3 (this table is {format_version:?}; V1 has no delete files) — \
                      use {property} = '{MODE_COPY_ON_WRITE}' instead"
                 )));

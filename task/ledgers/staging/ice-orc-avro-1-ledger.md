@@ -1,7 +1,7 @@
 # Charter ledger — ICE-ORC-AVRO-1 · ORC and Avro Iceberg data files (IPI-41 RePark half)
 
 **Date:** 2026-09-22 · **Branch:** `fix/ice-orc-avro-1` · **Base:** `origin/main`
-`a6d4c0db` · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+`743f1be9` · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
