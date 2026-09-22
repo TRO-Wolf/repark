@@ -25,7 +25,6 @@ pub(crate) use super::append_fanout_serial::{
 
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
 /// # Errors
-/// A missing table surfaces the catalog load error.
 pub async fn append(
     catalog: &Arc<dyn Catalog>,
     table_ident: &TableIdent,
@@ -50,7 +49,6 @@ pub async fn append(
     commit_append(catalog, &table, new_files).await
 }
 
-/// Write batches as identity-partitioned data files, sibling of `write_data_files`.
 /// # Errors
 /// A batch with a missing, extra, or duplicate column (unless the missing column carries an
 /// Iceberg `write-default`), an uncastable/overflowing value, or a NULL
