@@ -537,6 +537,230 @@ async fn call_rewrite_manifests_argument_surface_is_sparks() {
     );
 }
 
+async fn seed_interleaved_partitioned(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} (id INT, cat STRING) USING iceberg PARTITIONED BY \
+             (cat) TBLPROPERTIES ('format-version' = '2', \
+             'commit.manifest.target-size-bytes' = '4096')"
+        ),
+    )
+    .await;
+    for id in 0..8 {
+        let group = if id % 2 == 0 { "x" } else { "y" };
+        run(
+            ctx,
+            catalogs,
+            &format!("INSERT INTO ice.sales.{table} VALUES ({id}, '{group}')"),
+        )
+        .await;
+    }
+}
+
+async fn manifest_partition_groupings(
+    catalog: &dyn Catalog,
+    ident: &TableIdent,
+) -> Vec<Vec<String>> {
+    let table = catalog.load_table(ident).await.expect("load table");
+    let metadata = table.metadata();
+    let snapshot = metadata.current_snapshot().expect("current snapshot");
+    let manifest_list = snapshot
+        .load_manifest_list(table.file_io(), metadata)
+        .await
+        .expect("load manifest list");
+    let mut grouped = Vec::new();
+    for manifest in manifest_list.entries() {
+        if manifest.content != ManifestContentType::Data {
+            continue;
+        }
+        let loaded_manifest = manifest
+            .load_manifest(table.file_io())
+            .await
+            .expect("load manifest");
+        let mut values: Vec<String> = loaded_manifest
+            .entries()
+            .iter()
+            .filter(|entry| entry.is_alive())
+            .map(|entry| format!("{:?}", entry.data_file().partition().fields()))
+            .collect();
+        values.sort_unstable();
+        grouped.push(values);
+    }
+    grouped.sort_unstable();
+    grouped
+}
+
+#[tokio::test]
+async fn call_rewrite_manifests_sort_by_packs_one_partition_value_per_manifest() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_interleaved_partitioned(&ctx, &catalogs, "legacy").await;
+    seed_interleaved_partitioned(&ctx, &catalogs, "sorted").await;
+    for table in ["legacy", "sorted"] {
+        assert_eq!(
+            manifest_shape(catalogs["ice"].as_ref(), &sales(table)).await,
+            (8, 0, 8),
+            "fixture must strand eight single-entry data manifests"
+        );
+    }
+
+    let legacy_batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests(table => 'sales.legacy')",
+    )
+    .await
+    .expect("legacy rewrite_manifests CALL")
+    .collect()
+    .await
+    .expect("collect result");
+    assert_eq!(
+        call_manifest_count(&legacy_batches[0], "rewritten_manifests_count"),
+        8
+    );
+    let sorted_batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests(table => 'sales.sorted', sort_by => array('cat'))",
+    )
+    .await
+    .expect("sorted rewrite_manifests CALL")
+    .collect()
+    .await
+    .expect("collect result");
+    assert_rewrite_manifests_schema_is_sparks(&sorted_batches[0]);
+    assert_eq!(
+        call_manifest_count(&sorted_batches[0], "rewritten_manifests_count"),
+        8
+    );
+    let sorted_added = call_manifest_count(&sorted_batches[0], "added_manifests_count");
+    assert!(
+        sorted_added >= 2,
+        "the tiny target must split the sorted rewrite, got {sorted_added}"
+    );
+
+    let legacy_grouping =
+        manifest_partition_groupings(catalogs["ice"].as_ref(), &sales("legacy")).await;
+    let sorted_grouping =
+        manifest_partition_groupings(catalogs["ice"].as_ref(), &sales("sorted")).await;
+    assert!(
+        legacy_grouping
+            .iter()
+            .any(|values| values.iter().any(|value| value != &values[0])),
+        "the legacy rewrite must pack the interleaved partitions mixed, got {legacy_grouping:?}"
+    );
+    assert!(
+        sorted_grouping
+            .iter()
+            .all(|values| values.iter().all(|value| value == &values[0])),
+        "every sorted manifest must hold one partition value, got {sorted_grouping:?}"
+    );
+    assert_ne!(
+        legacy_grouping, sorted_grouping,
+        "the sorted rewrite must group entries differently from the legacy rewrite"
+    );
+}
+
+#[tokio::test]
+async fn call_rewrite_manifests_sort_by_empty_array_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_interleaved_partitioned(&ctx, &catalogs, "empty").await;
+    let refused = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests(table => 'sales.empty', sort_by => array())",
+    )
+    .await
+    .expect_err("an empty sort_by must refuse");
+    assert!(
+        refused
+            .to_string()
+            .contains("sort_by must not be empty when provided"),
+        "the refusal must carry the fork text verbatim, got: {refused}"
+    );
+}
+
+#[tokio::test]
+async fn call_rewrite_manifests_sort_by_non_partition_column_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_interleaved_partitioned(&ctx, &catalogs, "nonpart").await;
+    let refused = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests(table => 'sales.nonpart', sort_by => array('id'))",
+    )
+    .await
+    .expect_err("a non-partition sort_by column must refuse");
+    assert!(
+        refused
+            .to_string()
+            .contains("Cannot sort by column 'id': not a partition field of spec 0"),
+        "the refusal must carry the fork text verbatim, got: {refused}"
+    );
+}
+
+#[tokio::test]
+async fn call_rewrite_manifests_sort_by_positional_and_null() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_interleaved_partitioned(&ctx, &catalogs, "positional").await;
+    seed_interleaved_partitioned(&ctx, &catalogs, "nullsort").await;
+
+    let positional_batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests('sales.positional', true, 0, array('cat'))",
+    )
+    .await
+    .expect("positional sort_by runs")
+    .collect()
+    .await
+    .expect("collect result");
+    assert_eq!(
+        call_manifest_count(&positional_batches[0], "rewritten_manifests_count"),
+        8
+    );
+    let positional_grouping =
+        manifest_partition_groupings(catalogs["ice"].as_ref(), &sales("positional")).await;
+    assert!(
+        positional_grouping
+            .iter()
+            .all(|values| values.iter().all(|value| value == &values[0])),
+        "positional sort_by must sort like the named form, got {positional_grouping:?}"
+    );
+
+    let null_batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests(table => 'sales.nullsort', sort_by => NULL)",
+    )
+    .await
+    .expect("NULL sort_by runs as the legacy rewrite")
+    .collect()
+    .await
+    .expect("collect result");
+    assert_eq!(
+        call_manifest_count(&null_batches[0], "rewritten_manifests_count"),
+        8
+    );
+    let null_grouping =
+        manifest_partition_groupings(catalogs["ice"].as_ref(), &sales("nullsort")).await;
+    assert!(
+        null_grouping
+            .iter()
+            .any(|values| values.iter().any(|value| value != &values[0])),
+        "NULL sort_by must pack like the legacy rewrite, got {null_grouping:?}"
+    );
+}
+
 /// Read an `Int32` result column as `i64`.
 fn call_manifest_count(batch: &datafusion::arrow::array::RecordBatch, name: &str) -> i64 {
     let index = batch.schema().index_of(name).expect("column present");

@@ -11,7 +11,12 @@ import pyarrow.parquet as pq
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkException, UnsupportedOperationException
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    PySparkException,
+    UnsupportedOperationException,
+)
 
 _RDF_COLS = [
     "rewritten_data_files_count",
@@ -60,6 +65,11 @@ _EXPIRE_SCHEMA = [
 _ADD_FILES_SCHEMA = [
     ("added_files_count", pa.int64(), False),
     ("changed_partition_count", pa.int64(), True),
+]
+
+_RM_SCHEMA = [
+    ("rewritten_manifests_count", pa.int32(), False),
+    ("added_manifests_count", pa.int32(), False),
 ]
 
 
@@ -237,17 +247,104 @@ def test_bind_null_is_unset(spark: ReparkSession) -> None:
     assert cols == _RDF_COLS
 
 
-def test_not_yet_wired_params_stay_loud(spark: ReparkSession) -> None:
-    """sort_by keeps its exact refusal. pins: ice-procedures-1/C-009, C-020."""
-    spark.sql("CREATE TABLE mem.ns.nyw (id BIGINT) USING iceberg")
-    spark.sql("INSERT INTO mem.ns.nyw VALUES (1)")
+def _seed_interleaved_partitioned(spark: ReparkSession, table: str) -> None:
+    """Create a cat-partitioned table with eight single-row manifests under a 4 KB target."""
+    spark.sql(
+        f"CREATE TABLE mem.ns.{table} (id INT, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat) TBLPROPERTIES ('format-version' = '2', "
+        "'commit.manifest.target-size-bytes' = '4096')"
+    )
+    for seq in range(8):
+        group = "x" if seq % 2 == 0 else "y"
+        spark.sql(f"INSERT INTO mem.ns.{table} VALUES ({seq}, '{group}')")
+
+
+def _manifest_partition_bounds(spark: ReparkSession, table: str) -> list[list[tuple[str, str]]]:
+    """Return per-manifest (lower, upper) partition bounds from the manifests table."""
+    batch = spark.sql(f"SELECT partition_summaries FROM mem.ns.{table}.manifests").to_arrow()
+    bounds = []
+    for summaries in batch.column("partition_summaries").to_pylist():
+        bounds.append([(entry["lower_bound"], entry["upper_bound"]) for entry in summaries])
+    return sorted(bounds)
+
+
+def test_rm_sort_by_changes_manifest_clustering(spark: ReparkSession) -> None:
+    """sort_by packs one partition value per manifest. pins: P-RM-SORT-BY."""
+    _seed_interleaved_partitioned(spark, "rmlegacy")
+    _seed_interleaved_partitioned(spark, "rmsorted")
+    _, legacy_row = _result_row(
+        spark, "CALL mem.system.rewrite_manifests(table => 'ns.rmlegacy')", schema=_RM_SCHEMA
+    )
+    assert legacy_row[0] == 8
+    _, sorted_row = _result_row(
+        spark,
+        "CALL mem.system.rewrite_manifests(table => 'ns.rmsorted', sort_by => array('cat'))",
+        schema=_RM_SCHEMA,
+    )
+    assert sorted_row[0] == 8
+    assert sorted_row[1] >= 2
+    legacy_bounds = _manifest_partition_bounds(spark, "rmlegacy")
+    sorted_bounds = _manifest_partition_bounds(spark, "rmsorted")
+    assert any(low != high for manifest in legacy_bounds for low, high in manifest)
+    assert all(low == high for manifest in sorted_bounds for low, high in manifest)
+    assert sorted_bounds != legacy_bounds
+    assert _live_ids(spark, "mem.ns.rmsorted") == list(range(8))
+
+
+def test_rm_sort_by_empty_array_refuses(spark: ReparkSession) -> None:
+    """Empty sort_by refuses with the fork text verbatim. pins: P-RM-SORT-BY."""
+    _seed_interleaved_partitioned(spark, "rmempty")
     with pytest.raises(
-        AnalysisException,
-        match=re.escape("unknown CALL argument `sort_by`; allowed: table, use_caching, spec_id"),
+        IllegalArgumentException,
+        match=re.escape("sort_by must not be empty when provided"),
     ):
         spark.sql(
-            "CALL mem.system.rewrite_manifests(table => 'ns.nyw', sort_by => array('id'))"
+            "CALL mem.system.rewrite_manifests(table => 'ns.rmempty', sort_by => array())"
         ).to_arrow()
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql(
+            "CALL mem.system.rewrite_manifests(table => 'ns.rmempty', sort_by => array())"
+        ).to_arrow()
+    assert str(caught.value) == "sort_by must not be empty when provided"
+
+
+def test_rm_sort_by_non_partition_column_refuses(spark: ReparkSession) -> None:
+    """sort_by on a non-partition column refuses verbatim. pins: P-RM-SORT-BY."""
+    _seed_interleaved_partitioned(spark, "rmnonpart")
+    with pytest.raises(
+        IllegalArgumentException,
+        match=re.escape("Cannot sort by column 'id': not a partition field of spec 0"),
+    ):
+        spark.sql(
+            "CALL mem.system.rewrite_manifests(table => 'ns.rmnonpart', sort_by => array('id'))"
+        ).to_arrow()
+    with pytest.raises(IllegalArgumentException) as caught:
+        spark.sql(
+            "CALL mem.system.rewrite_manifests(table => 'ns.rmnonpart', sort_by => array('id'))"
+        ).to_arrow()
+    assert str(caught.value) == "Cannot sort by column 'id': not a partition field of spec 0"
+
+
+def test_rm_sort_by_positional_and_null(spark: ReparkSession) -> None:
+    """Positional sort_by sorts; NULL sort_by runs legacy. pins: P-RM-SORT-BY."""
+    _seed_interleaved_partitioned(spark, "rmpos")
+    _seed_interleaved_partitioned(spark, "rmnull")
+    _, positional_row = _result_row(
+        spark,
+        "CALL mem.system.rewrite_manifests('ns.rmpos', true, 0, array('cat'))",
+        schema=_RM_SCHEMA,
+    )
+    assert positional_row[0] == 8
+    positional_bounds = _manifest_partition_bounds(spark, "rmpos")
+    assert all(low == high for manifest in positional_bounds for low, high in manifest)
+    _, null_row = _result_row(
+        spark,
+        "CALL mem.system.rewrite_manifests(table => 'ns.rmnull', sort_by => NULL)",
+        schema=_RM_SCHEMA,
+    )
+    assert null_row[0] == 8
+    null_bounds = _manifest_partition_bounds(spark, "rmnull")
+    assert any(low != high for manifest in null_bounds for low, high in manifest)
 
 
 _EXPIRE_COLS = [

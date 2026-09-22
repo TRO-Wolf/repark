@@ -173,6 +173,26 @@ impl CallArgs {
         Ok(None)
     }
 
+    pub(crate) fn optional_string_array(
+        &self,
+        name: &str,
+        position: Option<usize>,
+    ) -> Result<Option<Vec<String>>> {
+        if let Some(expr) = self.named.get(name) {
+            if is_sql_null(expr) {
+                return Ok(None);
+            }
+            return expr_as_string_array(expr, name).map(Some);
+        }
+        if let Some(index) = position
+            && let Some(expr) = self.positional.get(index)
+            && !is_sql_null(expr)
+        {
+            return expr_as_string_array(expr, name).map(Some);
+        }
+        Ok(None)
+    }
+
     pub(crate) fn has_named(&self, name: &str) -> bool {
         self.named.contains_key(name)
     }
@@ -709,6 +729,49 @@ mod tests {
         let error = expr_as_string_array(&select_expr("SELECT array('a', 1)"), "columns")
             .expect_err("mixed element must refuse");
         assert!(plan_message(error).contains("must be a string literal"));
+    }
+
+    #[test]
+    fn optional_string_array_reads_named_positional_and_null_means_unset() {
+        let args = CallArgs {
+            named: HashMap::from([
+                ("sort_by".to_string(), select_expr("SELECT array('cat')")),
+                ("dropped".to_string(), select_expr("SELECT NULL")),
+            ]),
+            positional: vec![select_expr("SELECT NULL")],
+        };
+        assert_eq!(
+            args.optional_string_array("sort_by", Some(3))
+                .expect("named"),
+            Some(vec!["cat".to_string()])
+        );
+        assert_eq!(
+            args.optional_string_array("dropped", None)
+                .expect("null named"),
+            None
+        );
+        assert_eq!(
+            args.optional_string_array("missing", Some(0))
+                .expect("null positional"),
+            None
+        );
+        assert_eq!(
+            args.optional_string_array("missing", Some(9))
+                .expect("absent"),
+            None
+        );
+        let scalar = CallArgs {
+            named: HashMap::from([("sort_by".to_string(), select_expr("SELECT 'x'"))]),
+            positional: Vec::new(),
+        };
+        assert_eq!(
+            plan_message(
+                scalar
+                    .optional_string_array("sort_by", None)
+                    .expect_err("scalar must refuse")
+            ),
+            "CALL argument `sort_by` must be an array of string literals, got 'x'"
+        );
     }
 
     #[test]
