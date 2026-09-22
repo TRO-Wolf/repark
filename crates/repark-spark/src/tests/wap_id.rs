@@ -1,5 +1,8 @@
+use std::collections::HashSet;
+
 use super::super::*;
 use super::common::*;
+use super::session_write_conf::{set_session_conf, unset_session_conf};
 
 use crate::wap::WapSessionConfig;
 
@@ -605,6 +608,231 @@ async fn wap_id_leaves_delete_and_update_on_main() {
         ref_heads(&ctx, &catalogs).await,
         vec![("main".to_string(), "BRANCH".to_string(), head)],
         "main alone exists and points at the update"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_with_a_session_snapshot_property_stages_both_stamps() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k", "v");
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k");
+    set_wap(&ctx, None, None);
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1],
+        "the staged row is invisible on main"
+    );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        seed_id,
+        "main still points at the seed snapshot"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the log holds the seed and the staged snapshot"
+    );
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), seed_id)],
+        "main alone exists and still points at the seed"
+    );
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+    assert_ne!(staged, seed_id, "the staged snapshot is a new snapshot");
+    let table = load_sales_table(&catalogs, "t").await;
+    let staged_snapshot = table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log");
+    assert_eq!(
+        staged_snapshot.parent_snapshot_id(),
+        Some(seed_id),
+        "the staged snapshot hangs off the seed"
+    );
+    let props = &staged_snapshot.summary().additional_properties;
+    assert_eq!(
+        props.get("wap.id").map(String::as_str),
+        Some("w1"),
+        "the staged snapshot carries the wap id"
+    );
+    assert_eq!(
+        props.get("k").map(String::as_str),
+        Some("v"),
+        "the staged snapshot carries the session stamp"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_with_a_session_codec_stages_off_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    set_wap(&ctx, None, Some("w1"));
+    set_session_conf(&ctx, "spark.sql.iceberg.compression-codec", "gzip");
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    unset_session_conf(&ctx, "spark.sql.iceberg.compression-codec");
+    set_wap(&ctx, None, None);
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1],
+        "the staged row is invisible on main"
+    );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        seed_id,
+        "main still points at the seed snapshot"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the log holds the seed and the staged snapshot"
+    );
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), seed_id)],
+        "main alone exists and still points at the seed"
+    );
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+    assert_ne!(staged, seed_id, "the staged snapshot is a new snapshot");
+}
+
+#[tokio::test]
+async fn session_snapshot_property_without_a_wap_id_commits_on_main() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k", "v");
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+    )
+    .await;
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k");
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1, 2],
+        "without the id the conf changes nothing about the commit"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the normal commit appended one snapshot"
+    );
+    let head = main_snapshot_id(&catalogs).await;
+    assert_ne!(head, seed_id, "main moved to the new snapshot");
+    assert_eq!(
+        ref_heads(&ctx, &catalogs).await,
+        vec![("main".to_string(), "BRANCH".to_string(), head)],
+        "main alone exists and points at the new head"
+    );
+    let table = load_sales_table(&catalogs, "t").await;
+    let props = &table
+        .metadata()
+        .snapshot_by_id(head)
+        .expect("head snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("k").map(String::as_str),
+        Some("v"),
+        "the main snapshot carries the session stamp"
+    );
+    assert!(
+        !props.contains_key("wap.id"),
+        "no wap id stamp without the conf"
+    );
+}
+
+#[tokio::test]
+async fn wap_id_with_statement_and_session_options_stages_all_stamps() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed(&ctx, &catalogs, WAP_DDL).await;
+    let seed_id = main_snapshot_id(&catalogs).await;
+
+    let options = crate::write_options::StatementWriteOptions::validate(vec![(
+        "snapshot-property.team".to_string(),
+        "a".to_string(),
+    )])
+    .unwrap();
+    set_wap(&ctx, None, Some("w1"));
+    set_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k", "v");
+    crate::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
+        &HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    unset_session_conf(&ctx, "spark.sql.iceberg.snapshot-property.k");
+    set_wap(&ctx, None, None);
+
+    assert_eq!(
+        ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
+        vec![1],
+        "the staged row is invisible on main"
+    );
+    assert_eq!(
+        main_snapshot_id(&catalogs).await,
+        seed_id,
+        "main still points at the seed snapshot"
+    );
+    assert_eq!(
+        snapshot_count(&catalogs).await,
+        2,
+        "the log holds the seed and the staged snapshot"
+    );
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+    let table = load_sales_table(&catalogs, "t").await;
+    let props = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("wap.id").map(String::as_str),
+        Some("w1"),
+        "the staged snapshot carries the wap id"
+    );
+    assert_eq!(
+        props.get("team").map(String::as_str),
+        Some("a"),
+        "the staged snapshot carries the statement stamp"
+    );
+    assert_eq!(
+        props.get("k").map(String::as_str),
+        Some("v"),
+        "the staged snapshot carries the session stamp"
     );
 }
 
