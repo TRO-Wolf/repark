@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::DataFrame;
 use datafusion::sql::parser::Statement as DFStatement;
-use datafusion::sql::sqlparser::ast::{ObjectType, Statement};
+use datafusion::sql::sqlparser::ast::{Insert, ObjectType, Statement};
 use repark_core::EngineContext;
 use repark_iceberg::write::insert_defaults;
 
@@ -159,26 +159,14 @@ async fn execute_time_travelled(
             crate::insert_overwrite::execute_insert_overwrite(cx, insert).await
         }
         Statement::Insert(insert) => {
-            insert_arity::refuse_if_short_values(cx.catalogs, insert).await?;
-            if let Some(frame) = crate::session_insert::try_execute_session_insert(
+            execute_insert_routed(
                 cx,
                 insert,
                 rewrite.rewritten.as_deref().unwrap_or(sql),
                 insert_columns.as_deref(),
-                rewrite.preloaded.clone(),
+                rewrite.preloaded,
             )
-            .await?
-            {
-                Ok(frame)
-            } else {
-                delegate(
-                    cx,
-                    rewrite.rewritten.as_deref().unwrap_or(sql),
-                    insert_columns.as_deref(),
-                    rewrite.preloaded,
-                )
-                .await
-            }
+            .await
         }
         Statement::Call(function) => Err(refusals::maintenance_call(&function.name.to_string())),
         Statement::Truncate(truncate) => truncate::execute_truncate(cx, truncate).await,
@@ -195,6 +183,29 @@ async fn execute_time_travelled(
             )
             .await
         }
+    }
+}
+
+async fn execute_insert_routed(
+    cx: &EngineContext<'_>,
+    insert: &Insert,
+    rewritten: &str,
+    listed: Option<&[String]>,
+    preloaded: Option<iceberg::table::Table>,
+) -> Result<DataFrame> {
+    insert_arity::refuse_if_short_values(cx.catalogs, insert).await?;
+    if let Some(frame) = crate::session_insert::try_execute_session_insert(
+        cx,
+        insert,
+        rewritten,
+        listed,
+        preloaded.clone(),
+    )
+    .await?
+    {
+        Ok(frame)
+    } else {
+        delegate(cx, rewritten, listed, preloaded).await
     }
 }
 
