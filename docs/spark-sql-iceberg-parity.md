@@ -11590,29 +11590,31 @@ field NAME.
 
 - **repark** — `F.hash(...)` answers Spark's Murmur3 ints: `hash(1)` is `-559580957`,
   `hash(2)` is `1765031574`, `hash(NULL)` is `42`; the o245 hash cells verify byte-exact
-  on both doors under both ANSI settings, except the two 12-column `-0.0`/`0.0` SQL
-  statements, which stay strict-xfail under EX-FN-7-RESID-1.
+  on both doors under both ANSI settings. The per-item SQL hash cells run; only the full
+  12-column `-0.0`/`0.0` SQL statement stays strict-xfail under EX-FN-7-RESID-1.
 - **Apache Spark** — `hash(1)` is `-559580957`; `hash(2)` is `1765031574`; `hash(NULL)`
   is `42`; `hash(1, "a")` is `-936062819`. *(oracle: live PySpark 4.1.2, ANSI on,
   2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_hash_answers`
+- **Pin** — `python/repark/tests/test_examples_functions_a.py::test_hash_answers` and
+  the residual `python/repark/tests/test_fnp_math_1.py::test_c005_hash_sql_full_select_negzero_collision`
+  (strict-xfail, EX-FN-7-RESID-1).
 - **Rationale** — FIXED 2026-09-16 (FNP-MATH-1 run 18a): the Rust `spark_hash` Murmur3
   kernel plus the facade destub answer both doors; the fnp-math-1 C-002/C-005 pins hold
   every measured o245 cell byte-exact. Filed 2026-09-05 from the EX-25 measurement.
 
-### EX-FN-7-RESID-1 — the SQL `-0.0` literal folds to `0.0`; the two 12-column hash SELECT statements cannot plan
+### EX-FN-7-RESID-1 — the SQL `-0.0` literal folds to `0.0`; the 12-column hash SELECT statement cannot plan
 
 - **repark** — `CAST(-0.0 AS DOUBLE)` plans identical to `CAST(0.0 AS DOUBLE)`, so the
-  two recorded 12-column hash SELECT statements fail projection-name uniqueness before any kernel
-  runs (reproduced bare: `SELECT -0.0, 0.0` refuses the same way); both statements are
-  strict-xfail pins that name the seam.
-- **Apache Spark** — answers both 12-column SELECT statements (duplicate projection names
+  recorded 12-column hash SELECT statement fails projection-name uniqueness before any kernel
+  runs (reproduced bare: `SELECT -0.0, 0.0` refuses the same way); the statement is one
+  strict-xfail pin covering both ANSI settings, while each recorded item also runs alone
+  and passes.
+- **Apache Spark** — answers the 12-column SELECT statement (duplicate projection names
   allowed); `hash(CAST(-0.0 AS DOUBLE))` and `hash(CAST(0.0 AS DOUBLE))` both answer
   `-1670924195`, so the seam is planning-only, never a value divergence.
   *(oracle: live PySpark 4.1.2, ANSI on, 2026-09-05, EX-25 batch.)*
-- **Pin** — `python/repark/tests/test_fnp_math_1.py::test_c005_o245_exact_hash_aes_cells`
-  strict-xfail keys `hash|sql|ansi=True|…` and `hash|sql|ansi=False|…` (the two
-  12-column SELECT statements, reason text naming EX-FN-7-RESID-1).
+- **Pin** — `python/repark/tests/test_fnp_math_1.py::test_c005_hash_sql_full_select_negzero_collision`
+  (strict-xfail, reason text naming EX-FN-7-RESID-1).
 - **Rationale** — BACKLOG, filed 2026-09-16 (FNP-MATH-1 run 18a step 4): the `-0.0`
   literal fold is a SQL planner seam owned by run 18c, not a hash-kernel gap; every
   other hash cell verifies byte-exact on both doors under both ANSI settings.
