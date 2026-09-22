@@ -788,20 +788,51 @@ mod tests {
     #[tokio::test]
     async fn decimal_comparison_forms_all_widen_the_literal() {
         let ctx = decimal_float_ctx();
-        for sql in [
-            "SELECT id FROM v WHERE 0.0 = d",
-            "SELECT id FROM v WHERE d > 1.0",
-            "SELECT id FROM v WHERE d <= 1.0",
-            "SELECT id FROM v WHERE d <> 0.0",
-            "SELECT id FROM v WHERE d = -0.5",
-            "SELECT id FROM v WHERE d IN (0.0, 1.5)",
-            "SELECT id FROM v WHERE d NOT IN (0.0, 1.5)",
-            "SELECT id FROM v WHERE d BETWEEN 0.0 AND 2.0",
-            "SELECT id FROM v WHERE d NOT BETWEEN 0.0 AND 2.0",
-            "SELECT id FROM v WHERE f BETWEEN 0.0 AND 1.5",
-        ] {
+        let cases: Vec<(&str, &str)> = vec![
+            (
+                "SELECT id FROM v WHERE 0.0 = d",
+                "CAST(Decimal128(Some(0),1,1) AS Float64) = v.d",
+            ),
+            (
+                "SELECT id FROM v WHERE d > 1.0",
+                "v.d > CAST(Decimal128(Some(10),2,1) AS Float64)",
+            ),
+            (
+                "SELECT id FROM v WHERE d <= 1.0",
+                "v.d <= CAST(Decimal128(Some(10),2,1) AS Float64)",
+            ),
+            (
+                "SELECT id FROM v WHERE d <> 0.0",
+                "v.d != CAST(Decimal128(Some(0),1,1) AS Float64)",
+            ),
+            (
+                "SELECT id FROM v WHERE d = -0.5",
+                "v.d = CAST(Decimal128(Some(-5),1,1) AS Float64)",
+            ),
+            (
+                "SELECT id FROM v WHERE d IN (0.0, 1.5)",
+                "v.d IN ([CAST(Decimal128(Some(0),1,1) AS Float64), CAST(Decimal128(Some(15),2,1) AS Float64)])",
+            ),
+            (
+                "SELECT id FROM v WHERE d NOT IN (0.0, 1.5)",
+                "v.d NOT IN ([CAST(Decimal128(Some(0),1,1) AS Float64), CAST(Decimal128(Some(15),2,1) AS Float64)])",
+            ),
+            (
+                "SELECT id FROM v WHERE d BETWEEN 0.0 AND 2.0",
+                "v.d BETWEEN CAST(Decimal128(Some(0),1,1) AS Float64) AND CAST(Decimal128(Some(20),2,1) AS Float64)",
+            ),
+            (
+                "SELECT id FROM v WHERE d NOT BETWEEN 0.0 AND 2.0",
+                "v.d NOT BETWEEN CAST(Decimal128(Some(0),1,1) AS Float64) AND CAST(Decimal128(Some(20),2,1) AS Float64)",
+            ),
+            (
+                "SELECT id FROM v WHERE f BETWEEN 0.0 AND 1.5",
+                "v.f BETWEEN CAST(Decimal128(Some(0),1,1) AS Float64) AND CAST(Decimal128(Some(15),2,1) AS Float64)",
+            ),
+        ];
+        for (sql, needle) in cases {
             let rendered = analyzed_render(&ctx, sql).await;
-            assert!(rendered.contains("AS Float64"), "{sql}: {rendered}");
+            assert!(rendered.contains(needle), "{sql}: {rendered}");
             assert!(!rendered.contains(" AS Decimal"), "{sql}: {rendered}");
         }
     }
@@ -832,11 +863,17 @@ mod tests {
             .unwrap();
         let config = ctx.state().config_options().clone();
         let once = SparkIntegralLiteral.analyze(plan, &config).unwrap();
-        let twice = SparkIntegralLiteral.analyze(once.clone(), &config).unwrap();
-        assert_eq!(
-            format!("{}", once.display_indent()),
-            format!("{}", twice.display_indent())
+        let rendered = format!("{}", once.display_indent());
+        assert!(
+            rendered.contains("v.d = CAST(Decimal128(Some(0),1,1) AS Float64)"),
+            "{rendered}"
         );
+        assert!(
+            rendered.contains("v.f > CAST(Decimal128(Some(10),2,1) AS Float64)"),
+            "{rendered}"
+        );
+        let twice = SparkIntegralLiteral.analyze(once.clone(), &config).unwrap();
+        assert_eq!(rendered, format!("{}", twice.display_indent()));
     }
 
     #[tokio::test]
