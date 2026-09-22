@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use datafusion::arrow::array::RecordBatch;
@@ -12,6 +11,7 @@ use iceberg::spec::{DataFile, DataFileFormat, PartitionKey, Struct};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
+use iceberg::writer::file_writer::AnyFileWriterBuilder;
 use iceberg::writer::file_writer::ParquetWriterBuilder;
 use iceberg::writer::file_writer::location_generator::{
     DefaultFileNameGenerator, DefaultLocationGenerator,
@@ -24,6 +24,7 @@ use crate::write::commit_error::commit_result;
 use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::write_default_column_names;
+use crate::write::data_format::resolve_data_format;
 use crate::write::merge::OPERATION_ID_PROP;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::partition_overwrite::{PartitionEquality, StaticPartitionOverwrite};
@@ -111,7 +112,6 @@ pub async fn append_with_statement_options<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
-    reject_non_parquet_append(table)?;
     let new_files = if table.metadata().default_partition_spec().is_unpartitioned() {
         stage_unpartitioned_stream_with_overrides(table, stream, concurrency, staging).await?
     } else {
@@ -124,18 +124,6 @@ where
         stage_partitioned_stream_with_overrides(table, conformed, staging, concurrency).await?
     };
     commit_append_with_summary(catalog, table, new_files, summary_extra, branch).await
-}
-
-fn reject_non_parquet_append(table: &Table) -> Result<()> {
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "append writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
-    Ok(())
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -180,14 +168,6 @@ where
             &item?,
         )
     });
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "MERGE INTO writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
     let build_writer = || async { build_unpartitioned_writer_with(table, staging).await };
     crate::write::distribution::drive_unpartitioned(
         table,
@@ -208,14 +188,6 @@ pub async fn stage_partitioned_stream_with_overrides<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "append writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
     crate::write::append::fanout_conformed_stream_with_concurrency(
         table,
         conformed,
@@ -292,20 +264,35 @@ async fn build_unpartitioned_writer_with(
     staging: &WriterStagingOverrides,
 ) -> Result<impl IcebergWriter + use<>> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        staged_writer_properties(table, staging)?,
-        crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
-        FieldMatchMode::Name,
-    )
-    .with_metrics_config(crate::write::writer_props::metrics_config_for(table)?);
+    let file_format = resolve_data_format(
+        staging.write_format.as_deref(),
+        Some(table_props.write_format_default.as_str()),
+    )?;
+    let file_writer_builder = if file_format == DataFileFormat::Parquet {
+        AnyFileWriterBuilder::Parquet(Box::new(
+            ParquetWriterBuilder::new_with_match_mode(
+                staged_writer_properties(table, staging)?,
+                crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
+                FieldMatchMode::Name,
+            )
+            .with_metrics_config(crate::write::writer_props::metrics_config_for(table)?),
+        ))
+    } else {
+        AnyFileWriterBuilder::for_format(
+            file_format,
+            crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
+            table.metadata().properties(),
+            crate::write::writer_props::metrics_config_for(table)?,
+            FieldMatchMode::Name,
+        )
+        .map_err(iceberg_err)?
+    };
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
     let file_name_generator =
         DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
     let rolling_builder = RollingFileWriterBuilder::new(
-        parquet_builder,
+        file_writer_builder,
         target_file_size_with(table, staging.target_file_size_bytes)?,
         table.file_io().clone(),
         location_generator,
@@ -339,7 +326,6 @@ where
     let new_files = if let Some(columns) = positional_columns {
         stage_overwrite_files_with(table, stream, columns, concurrency, staging).await?
     } else {
-        reject_non_parquet_append(table)?;
         if table.metadata().default_partition_spec().is_unpartitioned() {
             stage_unpartitioned_stream_with_overrides(table, stream, concurrency, staging).await?
         } else {
