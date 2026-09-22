@@ -32,6 +32,18 @@ def _refs_row(spark: ReparkSession, name: str) -> dict[str, object]:
     return {column: table.column(column).to_pylist()[0] for column in table.schema.names}
 
 
+def _staged_snapshot_id(spark: ReparkSession, wap_id: str) -> int:
+    """Return the one snapshot stamped with ``wap_id``, failing unless exactly one matches."""
+    snapshots = spark.sql(f"SELECT snapshot_id, summary FROM {TABLE}.snapshots").to_arrow()
+    stamped = [
+        row["snapshot_id"]
+        for row in snapshots.to_pylist()
+        if dict(row["summary"] or []).get("wap.id") == wap_id
+    ]
+    assert len(stamped) == 1, f"expected one snapshot stamped {wap_id}, got {len(stamped)}"
+    return int(stamped[0])
+
+
 def test_branch_snapshot_retention_takes_both_halves(spark: ReparkSession) -> None:
     """``WITH SNAPSHOT RETENTION n SNAPSHOTS k DAYS`` writes both retention fields."""
     spark.sql(
@@ -143,11 +155,23 @@ def test_publish_changes_publishes_the_staged_snapshot(spark: ReparkSession) -> 
         spark.conf.unset("spark.wap.id")
     main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
     assert sorted(main.column("id").to_pylist()) == [1]
+    staged = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
+    assert staged.num_rows == 2
+    staged_id = _staged_snapshot_id(spark, "w1")
     published = spark.sql(
         "CALL mem.system.publish_changes(table => 'ns.events', wap_id => 'w1')"
     ).to_arrow()
     assert published.schema.names == ["source_snapshot_id", "current_snapshot_id"]
     assert published.num_rows == 1
+    source = published.column("source_snapshot_id").to_pylist()[0]
+    current = published.column("current_snapshot_id").to_pylist()[0]
+    assert source == staged_id
+    assert current == staged_id
+    assert _refs_row(spark, "main")["snapshot_id"] == current
+    refs = spark.sql(f"SELECT name FROM {TABLE}.refs").to_arrow()
+    assert refs.column("name").to_pylist() == ["main"]
+    after = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
+    assert after.num_rows == 2
     main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
     assert sorted(main.column("id").to_pylist()) == [1, 2]
 
@@ -160,6 +184,12 @@ def test_publish_changes_with_an_unknown_wap_id_refuses(spark: ReparkSession) ->
         ).to_arrow()
     assert "Cannot apply unknown WAP ID 'nope'" in str(caught.value)
     assert "DataInvalid" not in str(caught.value)
+    main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert sorted(main.column("id").to_pylist()) == [1]
+    snapshots = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
+    assert snapshots.num_rows == 1
+    refs = spark.sql(f"SELECT name FROM {TABLE}.refs").to_arrow()
+    assert refs.column("name").to_pylist() == ["main"]
 
 
 @pytest.mark.parametrize("key", ["spark.wap.branch", "spark.wap.id"])
@@ -196,14 +226,8 @@ def test_wap_id_alone_stages_off_main(spark: ReparkSession) -> None:
         spark.conf.unset("spark.wap.id")
     main = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
     assert sorted(main.column("id").to_pylist()) == [1]
-    snapshots = spark.sql(f"SELECT snapshot_id, summary FROM {TABLE}.snapshots").to_arrow()
+    snapshots = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
     assert snapshots.num_rows == 2
-    stamped = [
-        row["snapshot_id"]
-        for row in snapshots.to_pylist()
-        if dict(row["summary"] or []).get("wap.id") == "w1"
-    ]
-    assert len(stamped) == 1
-    assert stamped[0] != _refs_row(spark, "main")["snapshot_id"]
+    assert _staged_snapshot_id(spark, "w1") != _refs_row(spark, "main")["snapshot_id"]
     refs = spark.sql(f"SELECT name FROM {TABLE}.refs").to_arrow()
     assert refs.column("name").to_pylist() == ["main"]
