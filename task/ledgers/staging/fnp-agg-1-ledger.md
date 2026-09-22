@@ -40,8 +40,8 @@ doors. Slices (a), (b) and (c) follow after this lands.
 | C-003 | The SQL-door grouping value cells answer, and the `tinyint` label matches Spark. | PROVEN | 2/2 card SQL value cells green, `test_sql_grouping_reports_tinyint` passes unmarked (registry `FNP-AGG-1-18B` FIXED), the critic SQL value cell green, and the `test_types_1` grouping pins flipped to `int8`/`int8`. |
 | C-004 | The grouping error cells fail with Spark's own error condition on their own door. | PROVEN | 6/6 card error pins green (`GROUPING_ID_COLUMN_MISMATCH` subset refusal, `UNSUPPORTED_GROUPING_EXPRESSION` outside grouping sets) plus 6/6 critic refusal pins including cube-reversed args. |
 | C-005 | Multi-partition merge: the grouping accumulator merges cleanly across partitions. | PROVEN | Kernel `constant_accumulator_merges_cleanly` green beside the UDAF; all `grouping` kernel tests green. |
-| C-006 | No regression: the touched suites stay green. | PROVEN | `cargo test -p repark-functions --lib grouping` green; card + critic + split-identity + grouping `test_types_1` cells green; EX-0 1083 and cap-1 mirrors green. |
-| C-007 | Registry (`FNP-AGG-1-18B` → FIXED) and every touched `map.md` in lockstep. | PROVEN | 18B row lands FIXED with its passing pin; `agg_misc.py` covers `F.grouping_id` with inventory +1 and EX-0 1082 → 1083; all nine touched `map.md` files carry slice-(d) rows. |
+| C-006 | No regression: the touched suites stay green. | PROVEN | `cargo test -p repark-functions --lib grouping` green; card + critic + split-identity + grouping `test_types_1` cells green; EX-0 1086 and cap-1 mirrors green. |
+| C-007 | Registry (`FNP-AGG-1-18B` → FIXED) and every touched `map.md` in lockstep. | PROVEN | 18B row lands FIXED with its passing pin; `agg_misc.py` covers `F.grouping_id` with inventory +1 and EX-0 1085 → 1086; all ten touched `map.md` files carry slice-(d) rows. |
 | C-008 | Slice (a) lands its card names with both-door pins against the recorded cells. | OPEN | Unbuilt at this head. |
 | C-009 | Slice (b) lands its card names with both-door pins against the recorded cells. | OPEN | Unbuilt at this head. |
 | C-010 | Slice (c) lands its card names with both-door pins against the recorded cells. | OPEN | Unbuilt at this head. |
@@ -52,13 +52,13 @@ VERDICT: 10 clauses, 7 PROVEN, 3 OPEN, 0 REJECTED.
 
 | gate | result |
 |---|---|
-| `cargo test -p repark-functions --lib grouping` | exit 0 — 10 passed, 0 failed (9 `grouping::tests` + 1 pre-existing `java_double` filter match) |
+| `cargo test -p repark-functions --lib grouping` | exit 0 — 12 passed, 0 failed (10 `grouping::tests` + 2 pre-existing filter matches: `java_double::format_float`, `string::format_number`) |
 | `test_fnp_agg_1.py` + `test_fnp_agg_1_critic.py` | exit 0 — 24 passed (16 card + 8 critic), 0 failed, 0 xfail |
 | `test_functions_split_identity.py`, grouping `test_types_1.py` | exit 0 — 4 passed |
-| `test_ex_0_example_coverage.py`, `test_cap_1_source_file_line_cap.py` | exit 0 — 49 passed (EX-0 1083, mirrors hold) |
-| `check_example_coverage.py --require-execute` | exit 0 — 108 backlog, 250 examples; `agg_misc.py` prints the cube rows |
-| `check_lib_rs.py`, `check_rust_file_size.py`, `check_lib_py.py` | exit 0 — all clean (184 / 1012 / 1984 re-measured head-vs-main) |
-| `check_ledger_grammar.py`, `check_map_md.sh` | exit 0 — 243 ledgers clean; maps clean |
+| `test_ex_0_example_coverage.py`, `test_cap_1_source_file_line_cap.py` | exit 0 — 49 passed (EX-0 1086, mirrors hold) |
+| `check_example_coverage.py --require-execute` | exit 0 — 111 backlog, 250 examples; `agg_misc.py` prints the cube rows |
+| `check_lib_rs.py`, `check_rust_file_size.py`, `check_lib_py.py` | exit 0 — all clean (185 / 1012 / 1984 re-measured head-vs-main) |
+| `check_ledger_grammar.py`, `check_map_md.sh` | exit 0 — 245 ledgers clean; maps clean |
 | `make rust-clippy`, `make rust-panic-ban` | exit 0 — both clean |
 | comment-ban self-check vs `origin/main` | `comment-ban hits=0` |
 

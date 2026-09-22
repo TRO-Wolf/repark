@@ -3,7 +3,7 @@
 ICE-MIXED-CASE-1 round 3 (2026-09-17): the CAP-1 mirror `_RUST_BASELINES` follows the six shrink-only ratchets (merge/mod.rs 1782, merge/tests/merge.rs 1032, streaming_scan.rs 3020, predicate_dml.rs 1141, predicate_dml/tests 1440, cross_door.rs 1254). pins: ice-mixed-case-1/C-012
 
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): the mirror follows two more ratchets (merge/mod.rs 1780, predicate_dml.rs 1139). pins: ice-mixed-case-1/C-012
-**FNP-AGG-1 slice (d) (2026-09-21):** EX-0 count 1082 → 1083 (the new
+**FNP-AGG-1 slice (d) (2026-09-21):** EX-0 count 1085 → 1086 (the new
 `F.grouping_id` row, added-only).
 pins: fnp-agg-1/C-006, C-007
 
