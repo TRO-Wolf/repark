@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, BooleanArray, Int64Array};
+use datafusion::arrow::array::{Array, BooleanArray, Int32Array, Int64Array};
+use datafusion::arrow::datatypes::DataType;
 use repark_core::ReparkSession;
 use tempfile::TempDir;
 
@@ -130,6 +131,25 @@ fn pairs_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i
     out
 }
 
+fn pairs_i64_i32(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, i32)> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let left = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap();
+        let right = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        out.extend((0..left.len()).map(|row| (left.value(row), right.value(row))));
+    }
+    out.sort_unstable();
+    out
+}
+
 fn strings(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) -> Vec<String> {
     use datafusion::arrow::array::StringArray;
     let mut out = Vec::new();
@@ -232,6 +252,45 @@ async fn pos_is_the_file_position_after_a_merge_on_read_delete() {
 }
 
 #[tokio::test]
+async fn spec_id_answers_zero_on_a_single_spec_table() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
+    let rows = batches(&session, "SELECT id, _spec_id FROM ice.ns.t").await;
+    assert_eq!(
+        rows[0].schema().field(1).data_type(),
+        &DataType::Int32,
+        "R-MC-SPEC-ID type"
+    );
+    assert_eq!(
+        pairs_i64_i32(&rows),
+        vec![(2, 0), (3, 0), (4, 0)],
+        "R-MC-SPEC-ID"
+    );
+}
+
+#[tokio::test]
+async fn spec_id_reports_each_rows_own_spec_after_evolution() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.tevo (id BIGINT, cat STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2')",
+    )
+    .await;
+    run(&session, "INSERT INTO ice.ns.tevo VALUES (1, 'x')").await;
+    run(&session, "ALTER TABLE ice.ns.tevo ADD PARTITION FIELD cat").await;
+    run(&session, "INSERT INTO ice.ns.tevo VALUES (2, 'y')").await;
+    let rows = batches(&session, "SELECT id, _spec_id FROM ice.ns.tevo").await;
+    assert_eq!(
+        pairs_i64_i32(&rows),
+        vec![(1, 0), (2, 1)],
+        "R-MC-SPEC-ID-EVO spec-id half"
+    );
+}
+
+#[tokio::test]
 async fn select_star_excludes_every_served_metadata_column() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
@@ -252,6 +311,12 @@ async fn select_star_excludes_every_served_metadata_column() {
     assert_eq!(
         field_names(&rows),
         vec!["id", "data", "cat", "_pos"],
+        "T-5 / R-MC-STAR-EXCLUDES"
+    );
+    let rows = batches(&session, "SELECT *, _spec_id FROM ice.ns.t").await;
+    assert_eq!(
+        field_names(&rows),
+        vec!["id", "data", "cat", "_spec_id"],
         "T-5 / R-MC-STAR-EXCLUDES"
     );
 }
@@ -281,13 +346,13 @@ async fn served_names_fold_and_composed_shapes_refuse() {
     ordinals.sort_unstable();
     assert_eq!(ordinals, vec![0, 0, 0], "compound ident through an alias");
 
-    let error = plan_error(&session, "SELECT `_spec_id` FROM ice.ns.t").await;
+    let error = plan_error(&session, "SELECT `_partition` FROM ice.ns.t").await;
     assert!(
         error.contains("[ICE-MC-1]"),
         "backtick unserved refuses typed: {error}"
     );
     assert!(
-        error.contains("_spec_id"),
+        error.contains("_partition"),
         "backtick unserved names the column: {error}"
     );
 
@@ -333,7 +398,7 @@ async fn unserved_metadata_columns_refuse_with_a_typed_error() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
-    for column in ["_spec_id", "_partition", "_deleted"] {
+    for column in ["_partition", "_deleted"] {
         let error = plan_error(&session, &format!("SELECT {column} FROM ice.ns.t")).await;
         assert!(
             error.contains("[ICE-MC-1]"),
@@ -347,5 +412,29 @@ async fn unserved_metadata_columns_refuse_with_a_typed_error() {
             error.contains(column),
             "{column} refusal must name the column, got: {error}"
         );
+        assert!(
+            error.contains("this layer serves (_file, _pos, _spec_id)"),
+            "{column} refusal must advertise the served three, got: {error}"
+        );
     }
+}
+
+#[tokio::test]
+async fn served_spec_id_beside_an_unserved_column_names_the_unserved_one() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
+    let error = plan_error(&session, "SELECT id, _spec_id, _partition FROM ice.ns.t").await;
+    assert!(
+        error.contains("[ICE-MC-1]"),
+        "R-MC-SPEC-ID-EVO still refuses typed, got: {error}"
+    );
+    assert!(
+        error.contains("metadata column _partition is not yet served"),
+        "R-MC-SPEC-ID-EVO refusal must name _partition, got: {error}"
+    );
+    assert!(
+        !error.contains("metadata column _spec_id"),
+        "R-MC-SPEC-ID-EVO refusal must not blame _spec_id, got: {error}"
+    );
 }
