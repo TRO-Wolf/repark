@@ -128,8 +128,9 @@ constant; M2 (forced constant 0) reds only (b).
 **M-10 (WO-R3) — the pin serves `_partition` as a NULLABLE union struct.**
 Re-read at fork `311b9fa4`: `TableMetadata::unified_partition_type()` unions
 every live spec, `type_to_arrow_type(&Type::Struct(...))` renders it Arrow,
-field id `RESERVED_FIELD_ID_PARTITION`; rows under a spec without the field,
-and every row of an unpartitioned table, serve a NULL struct. The
+field id `RESERVED_FIELD_ID_PARTITION`; every row of an unpartitioned table
+serves a NULL struct, and a row written under a spec that lacks a union field
+serves a non-null union struct with that field NULL (`[["cat", null]]`). The
 values/unpart/evo/bucket pins prove shape + nulls + evolution; M2 (forced
 null constant) reds values/evo but not unpart, M3 (REQUIRED decl) fails the
 unpart pin.

@@ -1417,7 +1417,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Ready for the departure move to `completed/`.
   `risk_tier: standard`. Branch `fix/ice-metadata-cols-1`.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018,
+  C-019, C-020, C-021, C-022, C-023
   C-009, C-010, C-011, C-012, C-013, C-014
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - [fnp-math-1-ledger.md](../completed/fnp-math-1-ledger.md) —
@@ -1431,5 +1432,3 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   approved under D-7 land in a later build step. 227 failed / 16 passed on base.
   `risk_tier: standard`. Branch `feat/fnp-math-1`.
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020,
-  C-021, C-022, C-023

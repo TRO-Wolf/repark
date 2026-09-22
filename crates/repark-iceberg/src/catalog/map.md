@@ -381,8 +381,9 @@ Source comments retain only API and safety contracts; implementation narration i
   **WO-R2 (2026-09-22):** the served const went 2→3 with the Int32 non-null `_spec_id`
   field (`RESERVED_FIELD_ID_SPEC_ID`); the scan passthrough is unchanged.
   **WO-R3 (2026-09-22):** the served const went 3→4 with the eager union-struct
-  `_partition` field (`unified_partition_type`, `RESERVED_FIELD_ID_PARTITION`); rows under a
-  spec without the field and every row of an unpartitioned table serve a NULL struct.
+  `_partition` field (`unified_partition_type`, `RESERVED_FIELD_ID_PARTITION`); every row of
+  an unpartitioned table serves a NULL struct, and a row written under a spec that lacks a
+  union field serves a non-null union struct with that field NULL (`[["cat", null]]`).
   pins: ice-metadata-cols-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005
 - `metadata_projection.rs` — **retired at RP-5** (fork F-8 / R169 / R170). The fork honors
