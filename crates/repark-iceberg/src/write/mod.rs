@@ -53,6 +53,7 @@ pub mod summary_collision;
 pub mod testing_support;
 /// Whole-table `TRUNCATE TABLE` (delete-only empty overwrite).
 pub mod truncate;
+pub mod update_cast;
 pub mod write_options;
 pub mod writer_props;
 
