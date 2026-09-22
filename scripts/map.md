@@ -1,5 +1,6 @@
 # map — scripts/
 
+xo55-mt R1 (2026-09-22): `check_rust_file_size.py` ratchets `repark-spark/src/metadata_tables.rs` 1062 → 1059 (the blanket AS OF refusal folds into the shared rule-3 helper), shrink-only.
 IPI-51 PR10 (2026-09-22): `check_lib_rs.py` gains the `repark-spark` 152 row for `mod update_cast;` (measured 151, one past the default 150). pins: ipi-51/W-UPDATE-TYPE-ERR
 IPI-26/27 round 3 (2026-09-21): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1444 → 1389 (the `REPLACE PARTITION FIELD` parser moves to the sibling `replace_partition_field.rs`, which also takes the transform-LHS form), shrink-only.
 M8-STARTSWITH-1 (2026-09-21): startswith adds pub mod spark_startswith plus one register_all chain link; root file measured 181, fits under the standing repark-functions ceiling 182 with no raise.

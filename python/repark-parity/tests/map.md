@@ -1056,3 +1056,4 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
   main's IPI-32 merge shrank it further; live-tree splitlines count is 1384, verified by
   measurement.
 - `test_cap_1_source_file_line_cap.py` — **IPI-51 type slice (2026-09-21):** the mirror row ratchets `write/merge/mod.rs` 1656 → 1654 to match `scripts/check_rust_file_size.py`. No other `_RUST_BASELINES` row moves. pins: ice-error-conditions-1/C-012
+- `test_cap_1_source_file_line_cap.py` — **IPI-23 metadata tables AS OF (2026-09-22):** the mirror row ratchets `crates/repark-spark/src/metadata_tables.rs` 1062 → 1059 to match `scripts/check_rust_file_size.py`. No other `_RUST_BASELINES` row moves.

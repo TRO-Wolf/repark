@@ -2,10 +2,12 @@
 
 use std::sync::Arc;
 
+use datafusion::datasource::TableProvider;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+use iceberg::inspect::MetadataTableType;
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
 use repark_core::time_travel::{
@@ -17,6 +19,10 @@ use repark_core::{
     parse_version_value, resolve_snapshot_id,
 };
 use repark_functions::session_time_zone::session_time_zone_from_options;
+use repark_iceberg::catalog::{
+    MetadataAsofMode, SnapshotMetadataTableProvider, metadata_asof_mode,
+    snapshot_scope_refusal_text,
+};
 
 pub mod changes;
 
@@ -127,41 +133,110 @@ pub async fn prepare_time_travel_sql(
                 TimeTravelSpec::TimestampMs(millis)
             }
         };
+        if let Some(metadata) = split_metadata_dollar(&span.table_parts) {
+            let replacement =
+                prepare_metadata_as_of(ctx, catalogs, pinned, metadata, &spec, &zone).await?;
+            tokens.splice(span.table_start..span.clause_end, replacement);
+            continue;
+        }
         let snapshot_id = resolve_table_snapshot(catalogs, &span.table_parts, &spec, &zone).await?;
         let table = load_iceberg_table(catalogs, &span.table_parts).await?;
         let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
             .await
             .map_err(iceberg_err)?;
-        let temp_name = next_temp_view_name();
-        let home_catalog = "datafusion".to_string();
-        let home_schema = "public".to_string();
-        let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
-            DataFusionError::Plan(format!(
-                "no session catalog `{home_catalog}` for time-travel temp view (have {:?})",
-                ctx.catalog_names()
-            ))
-        })?;
-        let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
-            DataFusionError::Plan(format!(
-                "no schema `{home_catalog}.{home_schema}` for time-travel temp view"
-            ))
-        })?;
-        let _ = schema.deregister_table(&temp_name);
-        pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
-        schema
-            .register_table(temp_name.clone(), Arc::new(provider))
-            .map_err(|error| {
-                DataFusionError::Plan(format!(
-                    "failed to register time-travel temp view \
-                     {home_catalog}.{home_schema}.{temp_name}: {error}"
-                ))
-            })?;
-        let replacement =
-            crate::write_to_branch::dotted_name_tokens(&[home_catalog, home_schema, temp_name]);
+        let replacement = register_time_travel_provider(ctx, pinned, Arc::new(provider))?;
         tokens.splice(span.table_start..span.clause_end, replacement);
     }
 
     Ok(Some(tokens_to_sql(&tokens)))
+}
+
+struct MetadataDollarParts {
+    base_parts: Vec<String>,
+    metadata_suffix: &'static str,
+}
+
+fn split_metadata_dollar(table_parts: &[String]) -> Option<MetadataDollarParts> {
+    let [catalog, namespace, table] = table_parts else {
+        return None;
+    };
+    let (base, suffix) = table.split_once('$')?;
+    if base.is_empty() {
+        return None;
+    }
+    let metadata_suffix = crate::metadata_tables::canonical_metadata_table_name(suffix)?;
+    Some(MetadataDollarParts {
+        base_parts: vec![catalog.clone(), namespace.clone(), base.to_string()],
+        metadata_suffix,
+    })
+}
+
+async fn prepare_metadata_as_of(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    pinned: &mut PinnedViews,
+    metadata: MetadataDollarParts,
+    spec: &TimeTravelSpec,
+    zone: &repark_core::SessionTimeZone,
+) -> Result<Vec<Token>> {
+    let metadata_type =
+        MetadataTableType::try_from(metadata.metadata_suffix).map_err(DataFusionError::Plan)?;
+    if metadata_asof_mode(&metadata_type) == MetadataAsofMode::RefuseSnapshotScope {
+        return Err(DataFusionError::Plan(snapshot_scope_refusal_text(
+            &metadata_type,
+        )));
+    }
+    let table = load_iceberg_table(catalogs, &metadata.base_parts).await?;
+    if metadata_asof_mode(&metadata_type) == MetadataAsofMode::ServeCurrent {
+        resolve_snapshot_id(table.metadata(), spec, zone)?;
+        let provider = SnapshotMetadataTableProvider::try_new_current(table, metadata_type)?;
+        return register_time_travel_provider(ctx, pinned, Arc::new(provider));
+    }
+    if let TimeTravelSpec::SnapshotId(snapshot_id) = spec
+        && table.metadata().snapshot_by_id(*snapshot_id).is_none()
+    {
+        let provider = SnapshotMetadataTableProvider::try_new_empty(table, metadata_type)?;
+        return register_time_travel_provider(ctx, pinned, Arc::new(provider));
+    }
+    let resolved = resolve_snapshot_id(table.metadata(), spec, zone)?;
+    let provider = SnapshotMetadataTableProvider::try_new_scoped(table, metadata_type, resolved)?;
+    register_time_travel_provider(ctx, pinned, Arc::new(provider))
+}
+
+fn register_time_travel_provider(
+    ctx: &SessionContext,
+    pinned: &mut PinnedViews,
+    provider: Arc<dyn TableProvider>,
+) -> Result<Vec<Token>> {
+    let temp_name = next_temp_view_name();
+    let home_catalog = "datafusion".to_string();
+    let home_schema = "public".to_string();
+    let df_catalog = ctx.catalog(&home_catalog).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no session catalog `{home_catalog}` for time-travel temp view (have {:?})",
+            ctx.catalog_names()
+        ))
+    })?;
+    let schema = df_catalog.schema(&home_schema).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "no schema `{home_catalog}.{home_schema}` for time-travel temp view"
+        ))
+    })?;
+    let _ = schema.deregister_table(&temp_name);
+    pinned.record(format!("{home_catalog}.{home_schema}.{temp_name}"));
+    schema
+        .register_table(temp_name.clone(), provider)
+        .map_err(|error| {
+            DataFusionError::Plan(format!(
+                "failed to register time-travel temp view \
+                 {home_catalog}.{home_schema}.{temp_name}: {error}"
+            ))
+        })?;
+    Ok(crate::write_to_branch::dotted_name_tokens(&[
+        home_catalog,
+        home_schema,
+        temp_name,
+    ]))
 }
 
 async fn resolve_table_snapshot(

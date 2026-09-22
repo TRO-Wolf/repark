@@ -828,7 +828,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: types-1/C-001.
   **MW-4b:** Glue-shaped `table_exists` — 4-part
   `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
-  and single-level DataInvalid stay fatal), `normalize`, `local_fs_ddl`,
+  and single-level DataInvalid stay fatal. **xo55-mt R2 (2026-09-22):** the served AS OF
+  rewrite keeps its clause, and the parenthesized `(t.snapshots) VERSION AS OF` pin asserts
+  the SQL parse error (`Expected: end of statement`) alongside the retired-refusal absence;
+  **mt-r4-pins (2026-09-22):** the paren pin additionally asserts the mapped `Parse` class
+  via `engine_err`),
+  `metadata_tables_asof` (**xo55-mt R1 (2026-09-22):**
+  the MT-1 AS OF battery — one fixture pinning rule-2 scoping, rule-1 current-table equality,
+  branch/tag/timestamp resolution, unknown-id/ref/timestamp behavior, and the all_* Spark-text
+  refusals. **mt-r4-pins (2026-09-22, critic r1 V-001/V-002):** every refusal asserts the
+  mapped `engine_err` class plus the full message — unknown-ref and too-old-timestamp →
+  `IllegalArgument` verbatim, the rule-1 unknown id → `IllegalArgument("Cannot find snapshot
+  with ID 999")`, `all_*` → mapped `Analysis` (the UnsupportedOperationException gap
+  declared) — and the empty-scan schema pin compares Arrow fields (name, data type,
+  nullability)), `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names.

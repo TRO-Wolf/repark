@@ -205,18 +205,16 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         "DML error must name metadata read-only, got: {dml_msg}"
     );
 
-    // AS OF composition is out of scope v1.
-    let asof_err = execute(
-        &ctx,
+    let asof_rewritten = metadata_tables::prepare_metadata_table_sql(
         &catalogs,
         "SELECT * FROM ice.sales.mt.snapshots VERSION AS OF 1",
     )
     .await
-    .expect_err("AS OF + metadata");
-    let asof_msg = asof_err.to_string();
+    .expect("served AS OF must rewrite")
+    .expect("must rewrite");
     assert!(
-        asof_msg.contains("not supported") || asof_msg.contains("time travel"),
-        "composition error must disclose out-of-scope, got: {asof_msg}"
+        asof_rewritten.contains("mt$snapshots") && asof_rewritten.contains("VERSION AS OF 1"),
+        "rewrite must keep the AS OF clause for the time-travel pass, got: {asof_rewritten}"
     );
 
     // C1-Q-002: rewrite string must land on fork `$` form (mutation pin).
@@ -236,18 +234,26 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         "dotted meta suffix must not survive rewrite: {rewritten}"
     );
 
-    // C1-L-002: parenthesized AS OF still refused.
     let paren_asof = execute(
         &ctx,
         &catalogs,
         "SELECT * FROM (ice.sales.mt.snapshots) VERSION AS OF 1",
     )
     .await
-    .expect_err("paren AS OF + metadata");
-    let paren_msg = paren_asof.to_string();
+    .expect_err("a parenthesized AS OF is a parse error, not a detected span");
+    let mapped = repark_core::engine_err(paren_asof);
     assert!(
-        paren_msg.contains("not supported") || paren_msg.contains("time travel"),
-        "paren composition must refuse loud, got: {paren_msg}"
+        matches!(mapped, repark_common::Error::Parse(_)),
+        "got: {mapped:?}"
+    );
+    let paren_msg = mapped.to_string();
+    assert!(
+        paren_msg.contains("Expected: end of statement"),
+        "the parenthesized form must fail as a SQL parse error, got: {paren_msg}"
+    );
+    assert!(
+        !paren_msg.contains("not supported in v1"),
+        "the retired composition refusal must be gone, got: {paren_msg}"
     );
 
     // C1-L-003: metadata of a real table literally named `files`.
@@ -355,20 +361,11 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         "multi-span rewrite must produce both $ forms, got: {multi}"
     );
 
-    // C3-Q-001: TIMESTAMP / SYSTEM_* AS OF composition refuse loud.
     for sql in [
-        "SELECT * FROM ice.sales.mt.snapshots TIMESTAMP AS OF '2099-01-01 00:00:00'",
-        "SELECT * FROM ice.sales.mt.files FOR SYSTEM_VERSION AS OF 1",
-        "SELECT * FROM ice.sales.mt.history FOR SYSTEM_TIME AS OF '2099-01-01 00:00:00'",
+        "SELECT count(*) FROM ice.sales.mt.snapshots TIMESTAMP AS OF '2099-01-01 00:00:00'",
+        "SELECT count(*) FROM ice.sales.mt.history FOR SYSTEM_TIME AS OF '2099-01-01 00:00:00'",
     ] {
-        let err = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("TIMESTAMP/SYSTEM AS OF + metadata");
-        let msg = err.to_string();
-        assert!(
-            msg.contains("not supported") || msg.contains("time travel"),
-            "AS OF form must refuse loud ({sql}): {msg}"
-        );
+        asof_scalar(&ctx, &catalogs, sql).await;
     }
 
     // C3-L-002: metadata join + base table VERSION AS OF (meta first, then TT).

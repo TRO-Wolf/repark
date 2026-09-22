@@ -9,7 +9,8 @@ Pins:
 - row content sanity on a ≥3-snapshot fixture
 - real table literally named ``files`` wins over suffix interpretation
 - DML targeting a metadata table is loud
-- AS OF + metadata composition is out of scope v1 (loud disclose)
+- AS OF on a metadata table is served (the metadata table itself is not snapshot-scoped);
+  the parenthesized form is a parse error
 - unpartitioned metadata tables drop the empty ``partition`` column (fork #194 / Java)
 
 Fork pin ``b009ac1`` (the rev in the workspace ``[patch.crates-io]``; re-verify on every repin).
@@ -33,7 +34,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, ParseException
 
 TABLE = "mem.ns.events"
 COW = """
@@ -368,33 +369,34 @@ def test_dml_on_metadata_table_loud(
     assert "read-only" in message or "metadata table" in message
 
 
-def test_as_of_composition_loud_out_of_scope(
+def test_as_of_on_metadata_tables_served(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
+    """AS OF on a metadata table answers (Spark 4.1.2 parity); parens are a parse error.
+
+    The snapshots table is not snapshot-scoped: ``VERSION``/``TIMESTAMP AS OF`` return every
+    snapshot of the table. ``FOR SYSTEM_VERSION AS OF`` on ``.files`` returns the files live at
+    that snapshot. The parenthesized form ``(t.snapshots) VERSION AS OF`` is a parser error in
+    both engines; only the class is pinned (SQLSTATE/condition is a generic parser gap).
+    """
     s1 = multi_snapshot["s1"]
-    with pytest.raises(AnalysisException) as raised:
-        spark.sql(f"SELECT * FROM {TABLE}.snapshots VERSION AS OF {s1}").to_arrow()
-    message = str(raised.value).lower()
-    assert "not supported" in message or "time travel" in message or "as of" in message
 
-    # Parenthesized composition still refuses.
-    with pytest.raises(AnalysisException) as raised:
+    snapshots_version = spark.sql(f"SELECT * FROM {TABLE}.snapshots VERSION AS OF {s1}").to_arrow()
+    assert snapshots_version.num_rows == multi_snapshot["snapshot_count"]
+
+    snapshots_timestamp = spark.sql(
+        f"SELECT * FROM {TABLE}.snapshots TIMESTAMP AS OF '2099-01-01 00:00:00'"
+    ).to_arrow()
+    assert snapshots_timestamp.num_rows == multi_snapshot["snapshot_count"]
+
+    files_version = spark.sql(f"SELECT * FROM {TABLE}.files VERSION AS OF {s1}").to_arrow()
+    files_system_version = spark.sql(
+        f"SELECT * FROM {TABLE}.files FOR SYSTEM_VERSION AS OF {s1}"
+    ).to_arrow()
+    assert files_system_version.num_rows == files_version.num_rows == 1
+
+    with pytest.raises(ParseException):
         spark.sql(f"SELECT * FROM ({TABLE}.snapshots) VERSION AS OF {s1}").to_arrow()
-    message = str(raised.value).lower()
-    assert "not supported" in message or "time travel" in message or "as of" in message
-
-    # TIMESTAMP / SYSTEM_* forms refuse loud (not only VERSION).
-    with pytest.raises(AnalysisException) as raised:
-        spark.sql(
-            f"SELECT * FROM {TABLE}.snapshots TIMESTAMP AS OF '2099-01-01 00:00:00'"
-        ).to_arrow()
-    message = str(raised.value).lower()
-    assert "not supported" in message or "time travel" in message or "as of" in message
-
-    with pytest.raises(AnalysisException) as raised:
-        spark.sql(f"SELECT * FROM {TABLE}.files FOR SYSTEM_VERSION AS OF {s1}").to_arrow()
-    message = str(raised.value).lower()
-    assert "not supported" in message or "time travel" in message or "as of" in message
 
 
 def test_fq_column_named_files_not_rewritten(

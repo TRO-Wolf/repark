@@ -5219,15 +5219,20 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `cat.ns.tbl.snapshots` (+ history/files/manifests/partitions/refs/entries/
   metadata_log_entries/all_* family) + `spark.table("…files")`; schema pins from fork
   inspect sources; row sanity on ≥3-snapshot fixture; real table named `files` wins; DML
-  + AS OF composition loud; unpartitioned files/partitions drop the empty `partition`
+  loud; AS OF on a metadata table is served (the metadata table itself is not
+  snapshot-scoped — `t.snapshots VERSION/TIMESTAMP AS OF` returns every snapshot,
+  `t.files FOR SYSTEM_VERSION AS OF` returns the files live at that snapshot) and the
+  parenthesized form `(t.snapshots) VERSION AS OF` is a parse error;
+  unpartitioned files/partitions drop the empty `partition`
   column (fork #194; declared rename of
   `test_unpartitioned_partition_column_divergence` →
   `test_unpartitioned_files_have_no_partition_column`) + readable_metrics-by-name
   pins (R142). Octo C1: FQ column
   named `files` not rewritten; UPDATE/CTAS
-  DML refuse; paren AS OF refuse; metadata of real `files` table; tight readable_metrics
+  DML refuse; paren AS OF parse error; metadata of real `files` table; tight
+  readable_metrics
   interior pin (no hollow `len>=0`). Octo C2: JOIN metadata; TRUNCATE refuse; real
-  `snapshots` wins; all_files ≥ files row bound. Octo C3: TIMESTAMP/SYSTEM_* AS OF refuse.
+  `snapshots` wins; all_files ≥ files row bound. Octo C3: TIMESTAMP/SYSTEM_* AS OF served.
   Octo C5: CREATE VIEW meta refuse. Octo C6: DROP/ALTER meta refuse.
   Octo C8: ruff-format final; OCTO-CONVERGED. **H-1c (2026-08-10,
   [ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)):** the
@@ -7694,6 +7699,18 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   asserted, unparsable numeric suffixes refuse typed, and the `branch_`/`tag_` near-miss
   composition `t.branch_b.files` keeps its current error.
   pins: ice-metadata-cols-1/C-011, C-012, C-013, C-014
+- [test_ice_mt_as_of_1.py](test_ice_mt_as_of_1.py) —
+  **xo55-mt R1 (2026-09-22):** `VERSION AS OF` on Iceberg metadata tables answers Spark 4.1.2
+  (registry MT-1 retired). Five pins replay the recorded inventory cells over a partitioned
+  merge-on-read seed (two appends, one delete): `R-MT-SNAPSHOTS-TT` (TT rows and schema equal
+  the un-pinned table), `R-MT-FILES-TT` (three data files at the second snapshot),
+  `R-MT-ENTRIES-TT` and `R-MT-PARTITIONS-TT` (scoped to the second snapshot), and
+  `R-REF-BRANCH-FILES` (`files VERSION AS OF 'b0'` reads the branch head).
+  **R4 (2026-09-22, WO mt-r4-pins):** `test_mt_as_of_refusals_match_spark`
+  pins `IllegalArgumentException` and the full recorded message on the three
+  probe-55b refusals (`files`/`snapshots VERSION AS OF 'nope'`, `files
+  TIMESTAMP AS OF '2000-01-01 00:00:00'`).
+  pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106
