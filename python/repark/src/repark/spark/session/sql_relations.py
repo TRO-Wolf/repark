@@ -847,8 +847,9 @@ def _expand_durable_create_view_sql(
     resolves through the session ``resolve_table_name`` SSOT without temp-view preference;
     aliases, COMMENT, TBLPROPERTIES and the body stay byte-identical. A one-part name
     targets the session current namespace, which the session creates when missing, and
-    carries the bare-name mark the engine reads; two- and three-part names never create
-    anything and stay unmarked. Failures leave the statement for the engine refusal.
+    carries the bare-name mark recording the one-part spelling; two- and three-part
+    names never create anything and stay unmarked. Failures leave the statement for
+    the engine refusal.
     """
 
     prefix_match = _CREATE_VIEW_DURABLE_PREFIX_RE.match(query)
