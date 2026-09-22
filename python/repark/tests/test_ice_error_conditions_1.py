@@ -167,7 +167,7 @@ def test_drop_table_missing_stamped_message_parses() -> None:
 
 
 def test_update_type_cannot_safely_cast_stamped_message_parses() -> None:
-    """The W-UPDATE-TYPE-ERR stamp parses its condition and SQLSTATE."""
+    """The W-UPDATE-TYPE-ERR stamp parses and carries the directional cast phrase."""
     error = AnalysisException(
         "Error during planning: "
         "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible "
@@ -177,6 +177,7 @@ def test_update_type_cannot_safely_cast_stamped_message_parses() -> None:
     assert isinstance(error, AnalysisException)
     assert error.getCondition() == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
     assert error.getSqlState() == "KD000"
+    assert 'Cannot safely cast `id` "STRING" to "BIGINT"' in str(error)
 
 
 def test_create_table_existing_stamped_message_parses() -> None:
