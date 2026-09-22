@@ -361,7 +361,9 @@ pins: rp-4-fork-repin/C-005, C-006
   `commit_write_staged` a plain target table registered with `with_stage_only(true)` and
   `with_snapshot_properties({"wap.id": id})` — no `BranchTarget`, because there is no branch to
   name. Neither key set, or the id set on a table without the property: the SQL is returned
-  borrowed, byte-identical.
+  borrowed, byte-identical. R5 (2026-09-21): the session-conf path stages too — with the id
+  set and no explicit branch, a plain INSERT carrying only session snapshot properties
+  stages a snapshot stamped `wap.id` instead of committing on main.
   pins: ice-wap-branch-1/C-002, C-004, C-005, C-012
 - `wap.rs` — **IPI-05 (2026-09-21):** `wap_id_for_table` is the read half for the id, the twin of
   `wap_branch_for_table`: it answers the conf's `spark.wap.id` only for a `write.wap.enabled=true`

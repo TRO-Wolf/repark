@@ -791,7 +791,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   property, DELETE/UPDATE and INSERT OVERWRITE under the id — and with neither key the
   write SQL passes through byte-identical; a staged snapshot also cherry-picks onto main;
   every pin also asserts its refs and snapshot-count shape, and a first write under the id
-  stages one parentless snapshot without creating `main`),
+  stages one parentless snapshot without creating `main`; the R5 session-conf staging fix
+  (a plain INSERT carrying only session snapshot properties stages under the id) and its
+  12-pin class sweep live in `wap_id_sweep`, split out of `wap_id` under the 1000-line ceiling),
   `refs_and_wap` (**REF:** both `WITH SNAPSHOT RETENTION` halves at the oracle's values and the
   reversed order refusing; the `branch_`/`tag_` READ selectors resolving the ref, joining
   against the live table, refusing loud on a missing ref, and claiming neither a
