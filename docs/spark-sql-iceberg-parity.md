@@ -4421,8 +4421,10 @@ the pin rather than obeying it.
   wired after the column-move intercept; it refuses through the same
   `parsed_ddl("ALTER TABLE")` write-options gate as its siblings, refuses a missing or
   non-string path loud naming the clause, and leaves `SET/UNSET TBLPROPERTIES`, branch/tag
-  DDL and every other ALTER form untouched. **The foot-gun: moving the location does not
-  move the files** — existing data and metadata stay at the old path.
+  DDL and every other ALTER form untouched. Execute also defensively invalidates the
+  touched namespace after the move — sibling convention, not a tested leg: the move
+  changes no names, so no pin can observe it. **The foot-gun: moving the location does
+  not move the files** — existing data and metadata stay at the old path.
 - **Apache Spark** — `ALTER TABLE t SET LOCATION 'p'` updates the table location in the table
   metadata of an Iceberg table; existing files are not relocated and the next commit carries
   the new location. *(oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0

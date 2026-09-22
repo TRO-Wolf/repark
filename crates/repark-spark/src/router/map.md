@@ -44,8 +44,10 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
   a claimed-but-malformed tail (non-three-part name, missing or non-string path,
   trailing tokens) refuses loud naming the clause. Execute moves the metadata location
   through `repark_iceberg::write::set_location::set_table_location` behind the
-  `parsed_ddl("ALTER TABLE")` write-options gate, then invalidates the touched
-  namespace like the schema-changing intercepts. Unit pins are inline; door pins are
+  `parsed_ddl("ALTER TABLE")` write-options gate, then defensively invalidates the
+  touched namespace as the schema-changing intercepts do — sibling convention, not a
+  tested leg: the move changes no names, so no pin can observe it. Unit pins are
+  inline; door pins are
   [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs) and
   [test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py)
   (first linked from the `comment_on_table.rs` row above).

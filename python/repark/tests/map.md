@@ -3959,10 +3959,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   parenthesized variant keep the stock `Expected: (, found: IDENTIFIER` parse error.
   **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   `test_alter_table_set_location_moves_the_metadata_location` flips the inventory
-  `SET LOCATION` form from the parser error to success: the metadata document records
-  the new location, the move commit and the following INSERT both write their metadata
-  files under it, the INSERT's parquet lands there, the original metadata file is
-  never moved, and the rows read back — the location moves, the files do not.
+  `SET LOCATION` form from the parser error to success: one row is inserted BEFORE the
+  move, the metadata document records the new location, the pre-move parquet keeps its
+  old path and nothing lands under the new location until the post-move INSERT, whose
+  parquet lands there as a new file, and both rows read back exactly — the location
+  moves, the files do not.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to

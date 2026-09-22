@@ -1270,10 +1270,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   integer error, in either argument position.
   **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   `set_location_moves_the_metadata_location_and_the_next_commit_lands_under_it` pins
-  the full move end to end — the metadata `location` field records the new path, the
-  move commit and the following INSERT both write metadata under it, the INSERT's
-  parquet lands there, the original metadata file is never moved, and the rows read
-  back. `set_location_near_misses_keep_their_own_routing` moves a table named
+  the full move end to end — one row is inserted BEFORE the move, the metadata
+  `location` field records the new path, the pre-move parquet keeps its old path and
+  nothing lands under the new location until the post-move INSERT, whose parquet lands
+  there as a new file, and both rows read back with exact ids.
+  `set_location_near_misses_keep_their_own_routing` moves a table named
   `drop.tag` like any plain table, and
   `set_location_refuses_write_options_and_missing_literal_loud` holds the
   write-options gate refusal and the missing-path refusal naming the clause.
