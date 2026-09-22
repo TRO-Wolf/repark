@@ -452,3 +452,116 @@ fn table_location_extracts_on_either_side_of_tblproperties() {
         );
     }
 }
+
+#[test]
+fn create_options_rewrite_stores_both_keys_before_parse() {
+    use datafusion::sql::sqlparser::ast::{CreateTableOptions, SqlOption};
+
+    for (sql, expected) in [
+        (
+            "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg OPTIONS ('k1'='v1')",
+            vec![("k1", "v1"), ("option.k1", "v1")],
+        ),
+        (
+            "CREATE TABLE ice.ns.t USING iceberg OPTIONS ('k'='v') AS SELECT 1 AS i",
+            vec![("k", "v"), ("option.k", "v")],
+        ),
+    ] {
+        let canonical = crate::spark_literals::canonicalize(sql)
+            .unwrap_or_else(|error| panic!("{sql:?}: {error}"));
+        let parsed =
+            parse_single_normalized(&canonical).unwrap_or_else(|error| panic!("{sql:?}: {error}"));
+        let Some((Statement::CreateTable(create), _, _)) = parsed else {
+            panic!("{sql:?} must parse as CreateTable after the OPTIONS rewrite");
+        };
+        let CreateTableOptions::TableProperties(options) = &create.table_options else {
+            panic!(
+                "{sql:?} must carry TBLPROPERTIES after the rewrite, got {:?}",
+                create.table_options
+            );
+        };
+        let mut pairs: Vec<(String, String)> = Vec::new();
+        for option in options {
+            if let SqlOption::KeyValue { key, value } = option {
+                pairs.push((key.value.clone(), property_value(value)));
+            }
+        }
+        assert_eq!(
+            pairs.len(),
+            expected.len(),
+            "{sql:?} must store raw and option.-prefixed keys, got {pairs:?}"
+        );
+        for ((got_key, got_value), (want_key, want_value)) in pairs.iter().zip(expected.iter()) {
+            assert_eq!(got_key, want_key, "{sql:?} must store key {want_key}");
+            assert_eq!(
+                got_value, want_value,
+                "{sql:?} must store value of {want_key}"
+            );
+        }
+    }
+}
+
+#[test]
+fn create_options_rewrite_stays_off_non_iceberg_and_mixed_shapes() {
+    use datafusion::sql::sqlparser::ast::CreateTableOptions;
+
+    for sql in [
+        "CREATE TABLE ice.ns.t (id BIGINT) USING parquet OPTIONS ('k'='v')",
+        "CREATE TABLE ice.ns.t (id BIGINT) OPTIONS ('k'='v')",
+        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg WITH ('k'='v')",
+        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg OPTIONS ('k' 'v')",
+    ] {
+        let canonical = crate::spark_literals::canonicalize(sql)
+            .unwrap_or_else(|error| panic!("{sql:?}: {error}"));
+        let parsed = parse_single_normalized(&canonical);
+        let carries_tblproperties = matches!(&parsed, Ok(Some((Statement::CreateTable(create), _, _)))
+            if matches!(create.table_options, CreateTableOptions::TableProperties(_)));
+        assert!(
+            !carries_tblproperties,
+            "{sql:?} must not gain TBLPROPERTIES from the OPTIONS rewrite, got {parsed:?}"
+        );
+    }
+    let canonical = crate::spark_literals::canonicalize(
+        "CREATE TABLE ice.ns.t (id BIGINT) USING parquet OPTIONS ('k'='v')",
+    )
+    .unwrap();
+    assert!(
+        !canonical.contains("TBLPROPERTIES"),
+        "a non-iceberg provider must not be rewritten, got: {canonical}"
+    );
+}
+
+#[test]
+fn create_table_options_refusal_keeps_plain_and_with_drops_options() {
+    use datafusion::sql::sqlparser::ast::CreateTable;
+    use datafusion::sql::sqlparser::dialect::GenericDialect;
+
+    let parse_create = |sql: &str| -> CreateTable {
+        let statements = Parser::parse_sql(&GenericDialect {}, sql).expect("parse");
+        match statements.into_iter().next().expect("one statement") {
+            Statement::CreateTable(create) => create,
+            other => panic!("expected CreateTable, got {other}"),
+        }
+    };
+    let with = parse_create("CREATE TABLE cat.ns.t (id BIGINT) WITH ('k'='v')");
+    let err = refuse_unsupported_create_table_clauses(&with, "column-def CREATE").unwrap_err();
+    let message = err.to_string();
+    assert!(
+        message.contains("WITH/plain options are not supported")
+            && message.contains("use TBLPROPERTIES for Iceberg table properties")
+            && !message.contains("OPTIONS"),
+        "got: {message}"
+    );
+    let plain = parse_create("CREATE TABLE cat.ns.t (id BIGINT) ENGINE = InnoDB");
+    let err = refuse_unsupported_create_table_clauses(&plain, "CTAS").unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("WITH/plain options are not supported"),
+        "got: {err}"
+    );
+    let options = parse_create("CREATE TABLE cat.ns.t (id BIGINT) OPTIONS ('k'='v')");
+    assert!(
+        refuse_unsupported_create_table_clauses(&options, "column-def CREATE").is_ok(),
+        "the OPTIONS refusal is deleted: the variant must not refuse"
+    );
+}

@@ -772,6 +772,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and
   the one this file's own fixture records — after the shared refusal moved onto
   `illegal_argument_error`. pins: ice-session-write-conf-1/C-041
+  **D-5 (2026-09-21):** `test_user_typed_ctas_options_still_refuses` becomes
+  `test_user_typed_ctas_options_land_as_properties` — the IPI-26/27 OPTIONS ruling stores both
+  key spellings, so the CTAS `OPTIONS('a'='b')` pin now asserts the created table's `a` /
+  `option.a` property map beside the kept `WITH ('a'='b')` refusal.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** the DataFrame write-option pins over the
   fixture above (snapshot properties on append / dynamic overwrite / CTAS / V1
   paths with Spark's strip-and-lowercase rule, write-format parquet honour plus
@@ -3905,6 +3909,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_truncate_quoted_string_is_never_the_width` gains `truncate(4, 'day')` and
   `truncate(4, "day")` beside the kept `truncate(ts, 'day')` case — the refusal holds
   in either argument order, so a first-argument-only quote guard dies on this door too.
+  **D-5 (2026-09-21):** `test_options_stores_both_raw_and_prefixed_keys`
+  asserts the raw key and the `option.`-prefixed copy in the stored property
+  map for cells `D-CREATE-OPTIONS` (`USING iceberg OPTIONS ('k1'='v1')`) and
+  `D-CTAS-OPTIONS` (`USING iceberg OPTIONS ('k'='v') AS SELECT 1 AS i`), with
+  rows read back on the Arrow path; `test_options_mixed_keys_and_verbatim_values`
+  covers unquoted keys and values carrying commas or parens;
+  `test_with_options_still_refuses_with_updated_message` holds the `WITH`
+  refusal on the message that no longer names `OPTIONS`; and the non-iceberg /
+  no-USING `OPTIONS` shapes keep failing as `ParseException`.
 - `test_ice_wap_branch_1.py` + `ice_wap_branch_1_spark_oracle.json` +
   `_record_ice_wap_branch_1_oracle.py` — **ICE-WAP-BRANCH-1 (2026-09-19):** the
   session conf `spark.wap.branch` redirects writes and the session's plain reads to

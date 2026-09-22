@@ -533,3 +533,66 @@ def test_describe_shows_column_comment(spark: Any) -> None:
         "data_type": "bucket(4, id)",
         "comment": "",
     }
+
+
+def test_options_stores_both_raw_and_prefixed_keys(spark: Any, tmp_path: Path) -> None:
+    """Cells ``D-CREATE-OPTIONS``/``D-CTAS-OPTIONS``: OPTIONS stores raw + prefixed keys."""
+    create_table = f"{CATALOG}.{NAMESPACE}.t_create_options"
+    spark.sql(f"CREATE TABLE {create_table} (id BIGINT) USING iceberg OPTIONS ('k1'='v1')")
+
+    create_props = _properties(_metadata(tmp_path / "wh", "t_create_options"))
+    assert create_props["k1"] == "v1"
+    assert create_props["option.k1"] == "v1"
+
+    ctas_table = f"{CATALOG}.{NAMESPACE}.t_ctas_options"
+    spark.sql(f"CREATE TABLE {ctas_table} USING iceberg OPTIONS ('k'='v') AS SELECT 1 AS i")
+
+    ctas_props = _properties(_metadata(tmp_path / "wh", "t_ctas_options"))
+    assert ctas_props["k"] == "v"
+    assert ctas_props["option.k"] == "v"
+    arrow = spark.sql(f"SELECT i FROM {ctas_table} ORDER BY i").to_arrow()
+    assert arrow.column("i").to_pylist() == [1]
+
+
+def test_options_mixed_keys_and_verbatim_values(spark: Any, tmp_path: Path) -> None:
+    """Unquoted keys and values with commas or parens store both key spellings."""
+    table = f"{CATALOG}.{NAMESPACE}.t_options_mixed"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT) USING iceberg "
+        "OPTIONS (k1='v1', 'k2'='v2', 'a'='x,y', 'b'='p)q')"
+    )
+
+    props = _properties(_metadata(tmp_path / "wh", "t_options_mixed"))
+    assert props["k1"] == "v1"
+    assert props["option.k1"] == "v1"
+    assert props["k2"] == "v2"
+    assert props["option.k2"] == "v2"
+    assert props["a"] == "x,y"
+    assert props["b"] == "p)q"
+
+
+def test_with_options_still_refuses_with_updated_message(spark: Any) -> None:
+    """The ``WITH (...)`` variant keeps refusing; the message no longer names OPTIONS."""
+    from repark.errors import UnsupportedOperationException
+
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_with_options (id BIGINT) "
+            "USING iceberg WITH ('k'='v')"
+        )
+    assert "WITH/plain options are not supported" in str(caught.value)
+
+
+def test_options_off_iceberg_or_without_using_still_refuses(spark: Any) -> None:
+    """Without ``USING iceberg`` the rewrite must not fire; those shapes stay errors."""
+    from repark.errors import ParseException
+
+    with pytest.raises(ParseException):
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_parquet_options (id BIGINT) "
+            "USING parquet OPTIONS ('k'='v')"
+        )
+    with pytest.raises(ParseException):
+        spark.sql(
+            f"CREATE TABLE {CATALOG}.{NAMESPACE}.t_no_using_options (id BIGINT) OPTIONS ('k'='v')"
+        )
