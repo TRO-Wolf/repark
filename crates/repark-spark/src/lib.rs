@@ -12,6 +12,7 @@ mod collation;
 mod column_move;
 mod create_table;
 mod ctas;
+mod describe_metadata_table;
 mod describe_show;
 mod dialect;
 mod format_version;

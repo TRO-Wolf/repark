@@ -207,6 +207,7 @@ pub(crate) struct DescribeTable {
     pub(crate) namespace: String,
     pub(crate) table: String,
     pub(crate) extended: bool,
+    pub(crate) from_two_part_name: bool,
 }
 
 impl DescribeTable {
@@ -252,6 +253,7 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         namespace,
         table,
         extended,
+        from_two_part_name: parts.len() == 2,
     }))
 }
 
@@ -267,6 +269,11 @@ pub(crate) async fn execute_describe_table(
     describe: DescribeTable,
 ) -> Result<DataFrame> {
     let handle = catalog_handle(catalogs, &describe.catalog)?;
+    if let Some(described) =
+        crate::describe_metadata_table::try_describe_metadata_table(ctx, handle, &describe).await
+    {
+        return ctx.read_batch(described?);
+    }
     let ident = TableIdent::new(
         NamespaceIdent::new(describe.namespace.clone()),
         describe.table.clone(),
