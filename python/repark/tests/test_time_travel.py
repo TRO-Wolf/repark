@@ -785,8 +785,23 @@ def test_start_snapshot_id_alone_answers(
         .select("id")
         .to_arrow()
     )
-    assert "id" in arrow.column_names
-    assert arrow.num_rows >= 1
+    assert _arrow_ids(arrow) == [4]
+
+
+def test_start_and_end_snapshot_id_answers(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    s1 = multi_snapshot["s1"]
+    s2 = multi_snapshot["s2"]
+    arrow = (
+        spark.read.format("iceberg")
+        .option("start-snapshot-id", str(s1))
+        .option("end-snapshot-id", str(s2))
+        .load(TABLE)
+        .select("id")
+        .to_arrow()
+    )
+    assert _arrow_ids(arrow) == [4]
 
 
 def test_unrelated_split_size_option_ignored(
