@@ -47,6 +47,7 @@ mod lambda_door;
 mod list_null_compound;
 mod local_fs_ddl;
 mod merge;
+mod merge_cardinality_mor;
 mod merge_nmbs;
 mod metadata_columns;
 mod metadata_tables;

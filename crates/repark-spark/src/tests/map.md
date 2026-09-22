@@ -970,6 +970,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **IPI-51 PR6 slice 2 (2026-09-21):** `merge_star_missing_source_column_errors`
   requires `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`, `SQLSTATE: 42703` and `` `name` ``.
   pins: ice-error-conditions-1/C-011
+  **IPI-51 type slice (2026-09-21):** `merge_cardinality_violation_errors` and
+  `merge_duplicate_source_keys_with_matched_raises` map the plan error through
+  `repark_core::engine_err` and require `Error::Analysis`,
+  `[MERGE_CARDINALITY_VIOLATION]` and `SQLSTATE: 23K01`. The untouched-target
+  assert on the second test stays.
+  pins: ice-error-conditions-1/C-012
+- `merge_cardinality_mor.rs` — **IPI-51 type slice (2026-09-21):** `merge_cardinality_violation_merge_on_read_errors` is the merge-on-read duplicate-source pin. It requires `Error::Analysis`, `[MERGE_CARDINALITY_VIOLATION]` and `SQLSTATE: 23K01`, and an untouched target. A Stage B `Plan` to `Execution` flip turns this test red while `merge_cardinality_violation_errors` stays green. pins: ice-error-conditions-1/C-012
 - `catalog_cache_staleness.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the twelve pins that gate
   the metadata-location cache. Two Spark doors are registered over ONE `Arc<dyn Catalog>` built
   with a `CatalogCaches`, which is the only shape in which "two sessions on one catalog" is real

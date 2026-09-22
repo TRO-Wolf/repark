@@ -1,5 +1,5 @@
 """pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
-C-008, C-009, C-011"""
+C-008, C-009, C-011, C-012"""
 
 from __future__ import annotations
 
@@ -387,3 +387,19 @@ def test_geometry_geospatial_disabled_stamped_message_parses() -> None:
     assert isinstance(error, AnalysisException)
     assert error.getCondition() == "UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED"
     assert error.getSqlState() == "0A000"
+
+
+def test_merge_cardinality_violation_stamped_message_parses() -> None:
+    """pins: ice-error-conditions-1/C-012 — the W-MERGE-DUP-SOURCE-ERR stamp parses."""
+    error = AnalysisException(
+        "Error during planning: "
+        "[MERGE_CARDINALITY_VIOLATION] The ON search condition of the MERGE statement "
+        "matched a single row from the target table with multiple rows of the source "
+        "table.\n"
+        "This could result in the target row being operated on more than once with an "
+        "update or delete operation and is not allowed. SQLSTATE: 23K01"
+    )
+    assert isinstance(error, AnalysisException)
+    assert type(error).__name__ == "AnalysisException"
+    assert error.getCondition() == "MERGE_CARDINALITY_VIOLATION"
+    assert error.getSqlState() == "23K01"

@@ -75,6 +75,14 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   idempotent). V3-7: v3 MERGE carries stored `_row_id` through `row_lineage.rs`
   (`schema_with_row_lineage`); last-updated is nulled only on UPDATE rows.
   pins: v3-7-merge-lineage/C-001
+  **IPI-51 type slice (2026-09-21):** both cardinality guards
+  (`fold_discovery_batch_into_affected`, `consume_matched_work_batch`) raise
+  `DataFusionError::Plan` with `spark_error::message(MERGE_CARDINALITY_VIOLATION, &[])`,
+  so `W-MERGE-DUP-SOURCE-ERR` surfaces as `AnalysisException` /
+  `MERGE_CARDINALITY_VIOLATION` / `23K01` (A-6 substitute for Spark's
+  `SparkRuntimeException`). `skip_cardinality` is unchanged.
+  `CARDINALITY_VIOLATION_MSG` is gone. Baseline 1656 → 1654.
+  pins: ice-error-conditions-1/C-012
   **WRITE-ORDER-DIST-1 (2026-09-06):** the unpartitioned staged-write entry delegates to the
   distribution module's `drive_unpartitioned`, so a declared default sort order sorts that path
   too; the batch-sink helpers it shares (`BatchWriter`, `ForkBatchWriter`,
