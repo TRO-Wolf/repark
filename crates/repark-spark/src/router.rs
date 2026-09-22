@@ -17,8 +17,8 @@ use crate::{
     passthrough_after_p11, ref_ddl, refuse_dml_subquery_predicate,
     refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
     refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, spark_ast,
-    starts_with_branch_or_tag_ddl, starts_with_merge, time_travel, try_parse_create_namespace, wap,
-    write_to_branch,
+    starts_with_branch_or_tag_ddl, starts_with_merge, table_props_ddl, time_travel,
+    try_parse_create_namespace, wap, write_to_branch,
 };
 
 mod comment_on_table;
@@ -742,6 +742,22 @@ async fn try_alter_intercepts(
         return Some(
             match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
                 Ok(ddl) => column_move::execute_column_move_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
+    }
+    if let Some(parsed) = table_props_ddl::try_parse_set_identifier_fields_ddl(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => table_props_ddl::execute_identifier_fields_ddl(ctx, catalogs, ddl).await,
+                Err(error) => Err(error),
+            },
+        );
+    }
+    if let Some(parsed) = table_props_ddl::try_parse_drop_identifier_fields_ddl(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER TABLE").map(|()| ddl)) {
+                Ok(ddl) => table_props_ddl::execute_identifier_fields_ddl(ctx, catalogs, ddl).await,
                 Err(error) => Err(error),
             },
         );

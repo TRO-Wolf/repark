@@ -82,7 +82,7 @@ pub(crate) fn try_parse_column_move_ddl(sql: &str) -> Option<Result<ColumnMoveDd
     None
 }
 
-fn parse_column_path(significant: &[Sig], start: usize) -> Option<(String, usize)> {
+pub(crate) fn parse_column_path(significant: &[Sig], start: usize) -> Option<(String, usize)> {
     let first = word_at(significant, start)?;
     let mut parts = vec![first.to_string()];
     let mut index = start + 1;
