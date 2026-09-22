@@ -429,7 +429,7 @@ def test_empty_branch_option_fails_loud(
 ) -> None:
     """Empty branch pin and any tag pin fail loud (not silent current-snapshot)."""
     _ = multi_snapshot
-    with pytest.raises(AnalysisException):
+    with pytest.raises(AnalysisException, match=r"non-empty branch name"):
         spark.read.format("iceberg").option("branch", "").load(TABLE).to_arrow()
     with pytest.raises(IllegalArgumentException, match=re.escape(TAG_REFUSAL)):
         spark.read.format("iceberg").option("tag", "   ").load(TABLE).to_arrow()
