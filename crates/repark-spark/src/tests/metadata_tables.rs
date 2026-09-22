@@ -240,8 +240,12 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         "SELECT * FROM (ice.sales.mt.snapshots) VERSION AS OF 1",
     )
     .await
-    .expect_err("a parenthesized AS OF is not a detected span");
+    .expect_err("a parenthesized AS OF is a parse error, not a detected span");
     let paren_msg = paren_asof.to_string();
+    assert!(
+        paren_msg.contains("Expected: end of statement"),
+        "the parenthesized form must fail as a SQL parse error, got: {paren_msg}"
+    );
     assert!(
         !paren_msg.contains("not supported in v1"),
         "the retired composition refusal must be gone, got: {paren_msg}"
