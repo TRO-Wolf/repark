@@ -555,6 +555,72 @@ async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
 }
 
 #[tokio::test]
+async fn bare_name_marked_create_view_over_tightened_source_refuses() {
+    let (_dir, session) = ddl_sink_session().await;
+    let marked_tightened = "/* repark:bare-name */ CREATE VIEW `ice`.`sales`.`v_marked` AS SELECT * FROM tight LIMIT 0";
+    let error = session
+        .sql(marked_tightened)
+        .await
+        .err()
+        .unwrap_or_else(|| {
+            panic!("`{marked_tightened}` must refuse — the mark qualifies the name")
+        });
+    assert!(
+        error.to_string().contains("tightenNulls"),
+        "names the flag for `{marked_tightened}`: {error}"
+    );
+    session
+        .sql("CREATE VIEW ice.sales.v_marked AS SELECT * FROM plain LIMIT 0")
+        .await
+        .expect("the refused CREATE must not have published the view")
+        .collect()
+        .await
+        .expect("collect");
+    let marked_plain =
+        "/* repark:bare-name */ CREATE VIEW `ice`.`sales`.`v_marked_plain` AS SELECT * FROM plain";
+    session
+        .sql(marked_plain)
+        .await
+        .expect("a marked create over an untightened source stays allowed")
+        .collect()
+        .await
+        .expect("collect");
+    let rows = session
+        .sql("SELECT count(*) AS n FROM ice.sales.v_marked_plain")
+        .await
+        .expect("the persisted catalog view must read back")
+        .collect()
+        .await
+        .expect("collect");
+    assert_eq!(
+        rows.iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn alter_view_as_over_tightened_source_keeps_its_own_refusal() {
+    let (_dir, session) = ddl_sink_session().await;
+    let error = session
+        .sql("ALTER VIEW ice.sales.v_alter AS SELECT * FROM tight")
+        .await
+        .err()
+        .unwrap_or_else(|| panic!("ALTER VIEW … AS must refuse"));
+    assert!(
+        error
+            .to_string()
+            .contains("ALTER VIEW <viewName> AS is not supported"),
+        "keeps the ALTER VIEW refusal, not the tighten error: {error}"
+    );
+    assert!(
+        !error.to_string().contains("tightenNulls"),
+        "the tighten error must not preempt the ALTER refusal: {error}"
+    );
+}
+
+#[tokio::test]
 async fn ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table() {
     // The passthrough guard rejects the inner `SELECT … INTO` before either table is published.
     let (_dir, session) = ddl_sink_session().await;
