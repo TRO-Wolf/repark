@@ -7575,3 +7575,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   metadata-before-lineage stage order (r2 V-002, C-009); and the identity twin
   pins every live `_file` against the table's `files.file_path` (r2 V-003, C-010).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- `test_time_travel.py` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the selector pins —
+  `t.snapshot_id_<id>` / `t.at_timestamp_<ms>` read the pinned snapshot with rows and schema
+  asserted, unparsable numeric suffixes refuse typed, and the `branch_`/`tag_` near-miss
+  composition `t.branch_b.files` keeps its current error.
+  pins: ice-metadata-cols-1/C-011, C-012, C-013, C-014

@@ -13,8 +13,8 @@ use repark_core::time_travel::{
     selector_time_travel_refusal,
 };
 use repark_core::{
-    CatalogRegistry, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
-    resolve_snapshot_id,
+    CatalogRegistry, branch_time_travel_refusal, illegal_argument_error, invalid_version_pin,
+    parse_version_value, resolve_snapshot_id,
 };
 use repark_functions::session_time_zone::session_time_zone_from_options;
 
@@ -40,7 +40,7 @@ fn find_pinned_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
         .iter()
         .map(|span| (span.table_start, span.clause_end))
         .collect();
-    for span in find_ref_selector_spans(tokens) {
+    for span in find_ref_selector_spans(tokens)? {
         let overlaps = claimed
             .iter()
             .any(|(start, end)| span.table_start < *end && *start < span.clause_end);
@@ -309,7 +309,7 @@ fn find_time_travel_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
     Ok(spans)
 }
 
-fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
+fn find_ref_selector_spans(tokens: &[Token]) -> Result<Vec<TimeTravelSpan>> {
     let significant: Vec<(usize, &Token)> = tokens
         .iter()
         .enumerate()
@@ -344,19 +344,23 @@ fn find_ref_selector_spans(tokens: &[Token]) -> Vec<TimeTravelSpan> {
             continue;
         }
         let parts = collect_table_parts(&significant[name_start..name_end]);
-        let Some(ref_name) = ref_selector_name(&parts) else {
-            sig_index = name_end;
-            continue;
+        let spec = match ref_selector_name(&parts) {
+            Ok(Some(spec)) => spec,
+            Ok(None) => {
+                sig_index = name_end;
+                continue;
+            }
+            Err(error) => return Err(error),
         };
         spans.push(TimeTravelSpan {
             table_start: significant[name_start].0,
             clause_end: significant[name_end - 1].0 + 1,
             table_parts: parts[..parts.len() - 1].to_vec(),
-            pin: TimeTravelPin::Version(TimeTravelSpec::VersionRef(ref_name)),
+            pin: TimeTravelPin::Version(spec),
         });
         sig_index = name_end;
     }
-    spans
+    Ok(spans)
 }
 
 fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usize> {
@@ -374,23 +378,48 @@ fn dotted_name_end(significant: &[(usize, &Token)], start: usize) -> Option<usiz
     Some(end)
 }
 
-fn ref_selector_name(parts: &[String]) -> Option<String> {
+fn ref_selector_name(parts: &[String]) -> Result<Option<TimeTravelSpec>> {
     if parts.len() < 4 {
-        return None;
+        return Ok(None);
     }
-    let last = parts.last()?;
+    let Some(last) = parts.last() else {
+        return Ok(None);
+    };
     if crate::metadata_tables::is_metadata_table_name(last) {
-        return None;
+        return Ok(None);
     }
     let lowered = last.to_ascii_lowercase();
-    let rest = lowered
+    if let Some(rest) = lowered
         .strip_prefix("branch_")
-        .or_else(|| lowered.strip_prefix("tag_"))?;
-    if rest.is_empty() {
-        return None;
+        .or_else(|| lowered.strip_prefix("tag_"))
+    {
+        if rest.is_empty() {
+            return Ok(None);
+        }
+        let prefix_len = last.len() - rest.len();
+        return Ok(Some(TimeTravelSpec::VersionRef(
+            last[prefix_len..].to_string(),
+        )));
     }
-    let prefix_len = last.len() - rest.len();
-    Some(last[prefix_len..].to_string())
+    if let Some(rest) = lowered.strip_prefix("snapshot_id_") {
+        let snapshot_id = rest.parse::<i64>().map_err(|_| {
+            illegal_argument_error(format!(
+                "invalid snapshot_id selector '{last}': \
+                 the suffix after 'snapshot_id_' must be an integer snapshot id"
+            ))
+        })?;
+        return Ok(Some(TimeTravelSpec::SnapshotId(snapshot_id)));
+    }
+    if let Some(rest) = lowered.strip_prefix("at_timestamp_") {
+        let timestamp_ms = rest.parse::<i64>().map_err(|_| {
+            illegal_argument_error(format!(
+                "invalid at_timestamp selector '{last}': \
+                 the suffix after 'at_timestamp_' must be an integer millisecond timestamp"
+            ))
+        })?;
+        return Ok(Some(TimeTravelSpec::TimestampMs(timestamp_ms)));
+    }
+    Ok(None)
 }
 
 #[derive(Clone, Copy)]
@@ -655,5 +684,95 @@ mod tests {
             spans[0].pin,
             TimeTravelPin::Version(TimeTravelSpec::VersionRef(_))
         ));
+    }
+
+    fn id_parts(words: &[&str]) -> Vec<String> {
+        words.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn ref_selector_snapshot_id_and_at_timestamp_resolve_specs() {
+        let cases = [
+            ("snapshot_id_42", TimeTravelSpec::SnapshotId(42)),
+            ("SNAPSHOT_ID_7", TimeTravelSpec::SnapshotId(7)),
+            (
+                "at_timestamp_1789969649715",
+                TimeTravelSpec::TimestampMs(1_789_969_649_715),
+            ),
+            ("AT_TIMESTAMP_1000", TimeTravelSpec::TimestampMs(1000)),
+        ];
+        for (selector, expected) in cases {
+            let found = ref_selector_name(&id_parts(&["ice", "sales", "t", selector]))
+                .expect("a numeric selector must resolve");
+            assert_eq!(found, Some(expected), "{selector}");
+        }
+    }
+
+    #[test]
+    fn ref_selector_bad_numeric_suffix_refuses_typed() {
+        for selector in [
+            "snapshot_id_abc",
+            "snapshot_id_",
+            "at_timestamp_xyz",
+            "at_timestamp_",
+        ] {
+            let error = ref_selector_name(&id_parts(&["ice", "sales", "t", selector]))
+                .expect_err("an unparsable numeric suffix must refuse");
+            let message = error.to_string();
+            assert!(
+                message.contains(selector),
+                "the refusal must name the selector for {selector:?}: {message}"
+            );
+            assert!(
+                !message.contains("compound identifier"),
+                "the refusal must not fall through to table-not-found for {selector:?}: {message}"
+            );
+        }
+    }
+
+    #[test]
+    fn ref_selector_branch_and_tag_keep_original_case() {
+        let cases = [
+            ("branch_audit", "audit"),
+            ("tag_v1", "v1"),
+            ("Branch_Audit", "Audit"),
+            ("TAG_V1", "V1"),
+        ];
+        for (selector, expected) in cases {
+            let found = ref_selector_name(&id_parts(&["ice", "sales", "t", selector]))
+                .expect("a branch/tag selector must resolve");
+            assert_eq!(
+                found,
+                Some(TimeTravelSpec::VersionRef(expected.to_string())),
+                "{selector}"
+            );
+        }
+        assert_eq!(
+            ref_selector_name(&id_parts(&["ice", "sales", "t", "branch_"]))
+                .expect("an empty branch suffix falls through"),
+            None
+        );
+        assert_eq!(
+            ref_selector_name(&id_parts(&["ice", "sales", "t", "tag_"]))
+                .expect("an empty tag suffix falls through"),
+            None
+        );
+    }
+
+    #[test]
+    fn ref_selector_exclusions_unchanged() {
+        for parts in [
+            id_parts(&["ice", "sales", "snapshot_id_5"]),
+            id_parts(&["ice", "sales", "t", "files"]),
+            id_parts(&["ice", "sales", "t", "snapshots"]),
+            id_parts(&["ice", "sales", "t", "branch_b", "files"]),
+            id_parts(&["ice", "sales", "t", "plain"]),
+        ] {
+            assert_eq!(
+                ref_selector_name(&parts).expect("excluded names must not error"),
+                None,
+                "{parts:?}"
+            );
+        }
     }
 }

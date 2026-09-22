@@ -1409,6 +1409,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   stays user columns) while `_spec_id` / `_partition` / `_deleted` refuse typed
   `[ICE-MC-1]`; registry row `ICE-MC-FILEPOS-1` filed BACKLOG; the A-6
   `pos`/`file_path` test defers on a pin-measured fork name hijack; lane gate
-  `CB=0 R=0 T=0 U=0 L=0`. Ready for the departure move to `completed/`.
+  `CB=0 R=0 T=0 U=0 L=0`. WO-R1 (2026-09-21) merged in as C-011..C-014: the
+  Spark-door `snapshot_id_` / `at_timestamp_` ref selectors. Ready for the
+  departure move to `completed/`.
   `risk_tier: standard`. Branch `fix/ice-metadata-cols-1`.
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014

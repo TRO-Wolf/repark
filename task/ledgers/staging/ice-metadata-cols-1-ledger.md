@@ -112,6 +112,10 @@ M-4 empty-projection path (proved by F14b: `+1` row count reds both legs);
 | C-008 | Registry row `ICE-MC-FILEPOS-1` is filed BACKLOG for IPI-20. | The row in `docs/spark-sql-iceberg-parity.md` §7. | **PROVEN** | Row states the served two, the refused three with their `[ICE-MC-1]` pin, the inventory oracle, and the PR-2 intent; the refusal pins red on purpose when served. pins: ice-metadata-cols-1/C-008 |
 | C-009 | `SELECT _file, _row_id FROM t` on a format-v3 table answers both columns (`_file: string`, `_row_id: bigint`, ids `[0, 1]`): metadata rewrite runs before lineage. | `file_and_row_id_answer_together_on_a_format_v3_table` and `test_file_and_row_id_answer_together_on_v3` green; F10 (stage swap) reds both, F15 (dropped lineage fields) reds both, F12/F13 red the ordinal/suffix legs. | **PROVEN** | V-002 preferred form, no fallback: v3 table builds from fixtures with the `allowCreateFormatVersion3` opt-in. pins: ice-metadata-cols-1/C-009 |
 | C-010 | Every live `_file` equals a `file_path` of the table's own `files` metadata table. | `file_values_equal_the_files_metadata_table_paths` and `test_file_values_equal_files_metadata_table` green; F11 (`mutated-` prefix) reds both while C-001..C-003 stay green; F13/F13b/F14 also red both. | **PROVEN** | V-003 identity pin; the LIKE cell is kept verbatim. pins: ice-metadata-cols-1/C-010 |
+| C-011 | `SELECT * FROM t.snapshot_id_<id>` answers the pinned snapshot's rows `[(1,"a","x"),(2,"b","y")]` with schema `[id: int32, data: string, cat: string]`. | `ref_selector_snapshot_id_and_at_timestamp_resolve_specs` and `test_snapshot_id_selector_reads_pinned_snapshot` green. | **PROVEN** | Recorded R-TT-SNAPSHOT-ID-SELECTOR rows replayed on the `base3` twin fixture; value AND type on the Arrow path. pins: ice-metadata-cols-1/C-011 |
+| C-012 | `SELECT * FROM t.at_timestamp_<ms>` answers the as-of rows `[(1,"a","x"),(2,"b","y"),(3,"c","x")]` with schema `[id: int32, data: string, cat: string]`. | `ref_selector_snapshot_id_and_at_timestamp_resolve_specs` and `test_at_timestamp_selector_reads_pinned_snapshot` green. | **PROVEN** | Recorded R-TT-AT-TIMESTAMP-SELECTOR rows replayed on the `base3` twin fixture; value AND type on the Arrow path. pins: ice-metadata-cols-1/C-012 |
+| C-013 | An unparsable numeric suffix (`snapshot_id_abc`, `snapshot_id_` empty, `at_timestamp_xyz`, `at_timestamp_` empty) refuses `IllegalArgumentException` naming the selector, never table-not-found. | `ref_selector_bad_numeric_suffix_refuses_typed` and `test_snapshot_id_selector_bad_suffix_refuses` green. | **PROVEN** | The `illegal_argument_error` convention shared with the branch/tag refusals; the message names the selector and the expected integer shape, with a no-`compound identifier` assertion at both levels. pins: ice-metadata-cols-1/C-013 |
+| C-014 | `branch_`/`tag_` selectors resolve unchanged (lowered match, original-case value, empty rest falls through, metadata-table and short names excluded) and `t.branch_b.files` keeps its current `AnalysisException` compound-identifier error. | `ref_selector_branch_and_tag_keep_original_case`, `ref_selector_exclusions_unchanged`, `test_branch_selector_still_resolves_as_branch_ref`, `test_branch_metadata_composition_still_errors` green, plus the untouched `refs_and_wap` suite. | **PROVEN** | A-7 near-miss: behavior byte-identical, asserted as the current error, not success. pins: ice-metadata-cols-1/C-014 |
 
 ## Gates
 
@@ -170,6 +174,17 @@ LIKE legs (F13), ids (F12), distinct (F13b), filter count (F14b), `_pos`/MoR
 suffix/ordinals (F13/F12), schemas (F16). The C-001..C-003 prefix-hollowness
 (F11 green) is covered by C-010. Rust T1c cannot fire before the LIKE legs
 (nulls always fail LIKE first); its independent pin is C-003 (F14b).
+
+## WO-R1 selector mutations (M1/M2, carried not re-run)
+
+Carried from the merged `ice-metadata-columns-1` ledger (WO-R1, 2026-09-21,
+branch `fix/ice-mc-selectors`); the mutations stay reverted and the production
+tree is the step-4 tree.
+
+| Id | Mutation (production) | Pins that must red | Result |
+|---|---|---|---|
+| M1 | The `snapshot_id_` arm returns `TimestampMs(i64::MAX)` (reads the current snapshot). | `test_snapshot_id_selector_reads_pinned_snapshot` | RED 1/1 pytest (`[(2,'b','y'),(3,'c','x')]` current rows vs pinned `[(1,'a','x'),(2,'b','y')]`), 4/4 controls green; RED 1/4 Rust (`ref_selector_snapshot_id_and_at_timestamp_resolve_specs`). Reverted. |
+| M2 | A bad numeric suffix returns `Ok(None)` (falls through to table-not-found). | `ref_selector_bad_numeric_suffix_refuses_typed`, `test_snapshot_id_selector_bad_suffix_refuses` | RED 1/1 pytest (`AnalysisException` fall-through vs `IllegalArgumentException`), 4/4 controls green; RED 1/4 Rust (`ref_selector_bad_numeric_suffix_refuses_typed`). Reverted. |
 
 ## COVERAGE_ATTESTATION
 
