@@ -1,6 +1,6 @@
 # Charter ledger — FNP-AGG-1 slice (d) · grouping_id plus the shared foundation
 
-**Date:** 2026-09-21 · **Branch:** `fix/fnp-agg-grouping` · **Base:** `13b174d1` · **Model:**
+**Date:** 2026-09-21 · **Branch:** `fix/fnp-agg-grouping` · **Base:** `8eaa9941` · **Model:**
 muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `FNP-AGG-1-18B` lands FIXED in this slice; no other registry row.
