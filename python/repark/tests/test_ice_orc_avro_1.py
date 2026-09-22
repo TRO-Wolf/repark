@@ -448,7 +448,7 @@ def _single_file_metrics(spark: ReparkSession, table: str) -> dict[str, Any]:
     return metrics
 
 
-def test_orc_metrics_match_spark(spark: ReparkSession) -> None:
+def test_orc_metrics_carry_full_column_metrics(spark: ReparkSession) -> None:
     """M-5: ORC files carry full column metrics; NaN counts only on float columns.
 
     pins: ice-orc-avro-1/C-017.
@@ -465,7 +465,6 @@ def test_orc_metrics_match_spark(spark: ReparkSession) -> None:
     assert metrics["id"]["nan_value_count"] is None
     assert metrics["id"]["lower_bound"] == 1
     assert metrics["id"]["upper_bound"] == 2
-    assert metrics["id"]["column_size"] is not None
     assert metrics["ratio"]["value_count"] == 2
     assert metrics["ratio"]["null_value_count"] == 0
     assert metrics["ratio"]["nan_value_count"] == 0
@@ -476,6 +475,9 @@ def test_orc_metrics_match_spark(spark: ReparkSession) -> None:
     assert metrics["data"]["nan_value_count"] is None
     assert metrics["data"]["lower_bound"] == "a"
     assert metrics["data"]["upper_bound"] == "b"
+    for column in ("id", "ratio", "data"):
+        size = metrics[column]["column_size"]
+        assert isinstance(size, int) and size > 0, column
 
 
 def test_avro_metrics_are_empty(spark: ReparkSession) -> None:
