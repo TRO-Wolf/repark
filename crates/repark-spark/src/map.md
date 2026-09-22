@@ -47,7 +47,9 @@ pins: rp-4-fork-repin/C-005, C-006
   arms, the DROP VIEW match arm, INSERT/DELETE/UPDATE view write guards, the
   query-only `execute_view_body_query` (no DDL dispatch, so no `Send` cycle),
   and the CREATE VIEW straight-to-`execute_inner` skip that keeps stored bodies
-  verbatim past the time-travel/lineage rewrites. `lib.rs` wires `pub mod
+  verbatim past the time-travel/lineage rewrites. **IPI-40 PR3 (2026-09-22):**
+  `try_parse_alter_view` arms SET/UNSET TBLPROPERTIES and RENAME TO directly
+  after the `ALTER VIEW … AS` refusal and before SHOW VIEWS. `lib.rs` wires `pub mod
   view_ddl`; `namespace_ddl.rs` refuses DROP TABLE over a view and DROP VIEW
   over a table; `insert_by_name.rs` takes the same write guard;
   `describe_show.rs` exposes `tokenize_with_spans` for the view parsers.
