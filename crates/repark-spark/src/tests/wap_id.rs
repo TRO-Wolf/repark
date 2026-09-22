@@ -374,12 +374,22 @@ async fn publish_changes_replays_over_an_intervening_commit() {
     .collect()
     .await
     .unwrap();
+    let source = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .unwrap()
+        .value(0);
     let current = batches[0]
         .column(1)
         .as_any()
         .downcast_ref::<Int64Array>()
         .unwrap()
         .value(0);
+    assert_eq!(
+        source, staged,
+        "the replay still reports the staged snapshot as its source"
+    );
     assert_ne!(
         current, staged,
         "an intervening commit forces a replay, not a fast-forward"
