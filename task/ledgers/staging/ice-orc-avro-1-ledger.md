@@ -53,10 +53,10 @@ refusing merge-on-read) are untouched; they guard versions, not formats.
 |---|---|---|---|---|
 | C-001 | `D-CREATE-FMT-ORC`: table with `write.format.default='orc'`, INSERT reads back `[[1,a],[2,b]]` with one ORC file. | `test_ice_orc_avro_1.py::test_create_format_orc_insert_reads_back`. | PROVEN | Rows plus `file_format = [["ORC", 1]]`; S6 22P both legs (WO3a). |
 | C-002 | `D-CREATE-FMT-AVRO`: same with `'avro'`, one AVRO file. | `test_ice_orc_avro_1.py::test_create_format_avro_insert_reads_back`. | PROVEN | Rows plus `file_format = [["AVRO", 1]]`; S6 22P both legs (WO3a). |
-| C-003 | `D-X-SET-FORMAT-ORC-THEN-INSERT`: ALTER to orc, next INSERT lands ORC beside the old PARQUET file. | `test_ice_orc_avro_1.py::test_set_format_then_insert_writes_new_format`. | PROVEN | 2 append snapshots, second data file ORC, first PARQUET; S6 22P (WO3a). |
-| C-004 | `TP-FORMAT-ORC`: property table `t.files` reads `[[0, "ORC", 2, 3]]`. | `test_ice_orc_avro_1.py::test_tp_format_orc_files_row`. | PROVEN | Exact `t.files` row; S6 22P both legs (WO3a). |
-| C-005 | `W-DF-OPT-WRITE-FORMAT-ORC`: `.option("write-format","orc").saveAsTable` lands ORC bytes, not parquet. | `test_ice_orc_avro_1.py::test_write_format_option_orc`. | PROVEN | 5 rows, 2 snapshots, `["ORC", 2]` in `.files`; R-ORC-1 rules this the option door (WO3a). |
-| C-006 | `W-DF-OPT-WRITE-FORMAT-AVRO`: same with `avro`. | `test_ice_orc_avro_1.py::test_write_format_option_avro`. | PROVEN | 5 rows, 2 snapshots, `["AVRO", 2]` in `.files`; R-ORC-1 (WO3a). |
+| C-003 | `D-X-SET-FORMAT-ORC-THEN-INSERT`: ALTER to orc, next INSERT lands ORC beside the old PARQUET file. | `test_ice_orc_avro_1.py::test_set_format_then_insert_writes_new_format`. | PROVEN | Rows plus formats by snapshot `[PARQUET, ORC]`, property `write.format.default=orc`, appends `(1,1),(1,2)`; strengthened per critic r1 V-002 (WO-798). |
+| C-004 | `TP-FORMAT-ORC`: rows `[[1,a,x],[2,b,y],[3,c,x]]`, property orc, appends `(2,2),(1,3)`, property table `t.files` reads `[[0, "ORC", 2, 3]]`. | `test_ice_orc_avro_1.py::test_tp_format_orc_files_row`. | PROVEN | Data rows, property, snapshot appends and the exact `t.files` row; strengthened per critic r1 V-001 (WO-798). |
+| C-005 | `W-DF-OPT-WRITE-FORMAT-ORC`: `.option("write-format","orc").saveAsTable` lands ORC bytes, not parquet. | `test_ice_orc_avro_1.py::test_write_format_option_orc`. | PROVEN | 5 rows, property unset, appends `(3,3),(2,5)`, `["ORC", 2]` in `.files`; R-ORC-1 rules this the option door (WO3a); snapshot asserts added by the WO-798 sweep. |
+| C-006 | `W-DF-OPT-WRITE-FORMAT-AVRO`: same with `avro`. | `test_ice_orc_avro_1.py::test_write_format_option_avro`. | PROVEN | 5 rows, property unset, appends `(3,3),(2,5)`, `["AVRO", 2]` in `.files`; R-ORC-1 (WO3a); snapshot asserts added by the WO-798 sweep. |
 | C-007 | `W-FMT-ORC-DELETE`: copy-on-write DELETE on an ORC table rewrites ORC, never Parquet. | `test_ice_orc_avro_1.py::test_cow_delete_on_orc_rewrites_as_orc`. | PROVEN | Rows after DELETE, every live `content = 0` file ORC; S6 22P (WO3a). |
 | C-008 | `W-FMT-ORC-UPDATE`: copy-on-write UPDATE on an ORC table rewrites ORC. | `test_ice_orc_avro_1.py::test_cow_update_on_orc_rewrites_as_orc`. | PROVEN | Rows after UPDATE, every live data file ORC; S6 22P (WO3a). |
 | C-009 | `W-FMT-ORC-MERGE`: copy-on-write MERGE on an ORC table rewrites ORC. | `test_ice_orc_avro_1.py::test_cow_merge_on_orc_rewrites_as_orc`. | PROVEN | Rows after MERGE, every live data file ORC; S6 22P (WO3a). |
@@ -67,12 +67,13 @@ refusing merge-on-read) are untouched; they guard versions, not formats.
 | C-014 | M-2: `write.delete.format.default=parquet` overrides data ORC on the delete side. | `test_ice_orc_avro_1.py::test_delete_format_default_overrides`. | PROVEN | `.files` reads `[[0, ORC], [1, PARQUET]]`; S6 22P (WO3a). |
 | C-015 | M-3: v3 merge-on-read DELETE writes a PUFFIN side for parquet, orc and avro data. | `test_ice_orc_avro_1.py::test_v3_delete_side_is_puffin_for_every_data_format`. | PROVEN | `[[0, <FMT>, 3], [1, PUFFIN, 1]]` for all three formats; S6 22P (WO3a). |
 | C-016 | `W-READ-FOREIGN-ORC`: rows read back from an ORC table. | `test_ice_orc_avro_1.py::test_read_foreign_orc_table`. | PROVEN | `[[1,a,x],[2,b,y],[3,c,x]]`; closed for free with the write (WO3a). |
-| C-017 | M-5: ORC files carry full column metrics, `nan_value_count` only on float/double. | `test_ice_orc_avro_1.py::test_orc_metrics_match_spark`. | PROVEN | `readable_metrics` per column match the recorded Spark values; S6 22P (WO3a). |
+| C-017 | M-5: ORC files carry full column metrics, `nan_value_count` only on float/double. | `test_ice_orc_avro_1.py::test_orc_metrics_carry_full_column_metrics`. | PROVEN | Counts, bounds, NaN count only on float, positive int column sizes on id/ratio/data; no Spark metrics recording exists for this unit, so no Spark comparison is claimed. Renamed per critic r1 V-005 (WO-798). |
 | C-018 | M-6: Avro files carry no column metrics. | `test_ice_orc_avro_1.py::test_avro_metrics_are_empty`. | PROVEN | Every `readable_metrics` field NULL; S6 22P (WO3a). |
 | C-019 | ORC primitives round-trip; nested columns pin the fork reader's typed refusal. | `test_ice_orc_avro_1.py::test_all_types_round_trip_orc`. | PROVEN | 10 primitives read back exact; ARRAY/MAP/STRUCT refuse with `ORC data-file read of nested type for field '<name>'`; fork read-nested follow-up inverts those arms. |
 | C-020 | M-7: all 13 probe types round-trip through Avro. | `test_ice_orc_avro_1.py::test_all_types_round_trip_avro`. | PROVEN | Full wide row reads back exact; S6 22P (WO3a). |
 | C-021 | Unknown `write-format` refuses with Java's `Invalid file format: <name>` shape. | `test_ice_orc_avro_1.py::test_unknown_write_format_refuses`. | PROVEN | `write-format = csv` refuses, snapshot count stays 1; S6 22P (WO3a). |
 | C-022 | Compaction keeps the table format on an ORC table. | `test_ice_orc_avro_1.py::test_compaction_keeps_table_format`. | PROVEN | `rewrite_data_files` leaves ORC files; S6 22P (WO3a). |
+| C-023 | Partitioned v3 table with `write.format.default='orc'`: copy-on-write DELETE rewrites ORC on the lineage path. | `test_ice_orc_avro_1.py::test_partitioned_v3_cow_delete_rewrites_orc`. | PROVEN | Surviving rows plus every live `content = 0` file ORC; added per critic r1 V-003 (WO-798). |
 
 ## 1. Red-first record
 
@@ -139,4 +140,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 22 clauses, 22 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 23 clauses, 23 PROVEN, 0 OPEN, 0 REJECTED.
