@@ -29,7 +29,6 @@ pub(super) async fn execute_rewrite_manifests(
     args: &CallArgs,
 ) -> Result<DataFrame> {
     args.reject_unknown_named(&["table", "use_caching", "spec_id", "sort_by"])?;
-    // Spark positional order: table, use_caching, spec_id, sort_by (jar `PARAMETERS`).
     args.reject_excess_positional(4)?;
     // Parse and drop.
     args.optional_bool("use_caching", Some(1))?;
@@ -67,10 +66,7 @@ pub(super) async fn execute_rewrite_manifests(
         Some(columns) => unclustered
             .sort_by_columns(columns)
             .map_err(|error| illegal_argument_error(error.message().to_string()))?,
-        None => {
-            // One cluster key, so every matching entry lands in one manifest per spec.
-            unclustered.cluster_by(|_| String::new())
-        }
+        None => unclustered.cluster_by(|_| String::new()),
     };
     let action = grouped.rewrite_if(move |manifest| {
         manifest.partition_spec_id == spec_id
