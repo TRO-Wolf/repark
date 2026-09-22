@@ -84,6 +84,18 @@ repark-core's error map.
   beating both, and an override beating a gzip data property — and reverting
   `delete_compression_with` to the data property alone reds it in-crate.
   pins: ice-session-write-conf-1/C-050
+- `data_format.rs` — **IPI-41 WO1 (2026-09-22):** the format-resolution seam both write
+  doors route through. `resolve_data_format(staging_format, table_default)` returns the
+  per-write `write-format` option when present, else the `write.format.default` table
+  property, else parquet. `resolve_delete_format(staging_format, table_property,
+  data_format, format_version)` returns PUFFIN on format-version 3 before consulting any
+  setting, else the per-write `delete-format` option, else the
+  `write.delete.format.default` property, else the resolved DATA format. The vocabulary is
+  parquet/orc/avro case-insensitively; any other string refuses with
+  `Invalid file format: {name}`, the same shape `validate_write_format` uses. Callers pass
+  `staging.write_format` / `staging.delete_format` (`WriterStagingOverrides`) with the raw
+  property values from `table.metadata().properties()`; nothing calls these resolvers yet
+  (WO2 routes the five builder sites).
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
