@@ -382,12 +382,19 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `v3_type_column_named_geometry_with_int_succeeds` pins a column NAMED `geometry`
   with `INT` succeeding (cell `TY-GEOMETRY`).
   pins: ice-error-conditions-1/C-011
-  **D-5 (2026-09-21):** `options_stores_both_raw_and_prefixed_keys` drives the
-  CREATE and CTAS `OPTIONS` cells end to end — both key spellings in the stored
-  property map, mixed quoted/unquoted keys, and values carrying commas or
-  parens — and `options_near_misses_keep_their_refusals` holds the `WITH`/plain
-  refusals on the updated message plus the non-iceberg and no-USING `OPTIONS`
-  shapes failing loudly with no table created.
+- `create_table_options.rs` — **D-5 (2026-09-21):**
+  `options_stores_both_raw_and_prefixed_keys` drives the CREATE and CTAS
+  `OPTIONS` cells end to end — both key spellings in the stored property map,
+  mixed quoted/unquoted keys, and values carrying commas or parens — and
+  `options_near_misses_keep_their_refusals` holds the `WITH`/plain refusals on
+  the updated message plus the non-iceberg and no-USING `OPTIONS` shapes
+  failing loudly with no table created.
+  **WO-XBOPT-REMEDIATION (2026-09-22):** `options_identifier_below_top_level_keeps_the_rewrite`
+  pins the depth-0 guard (a column and partition field both named `options`),
+  the four malformed/duplicate shapes refuse with no table left behind,
+  and the sweep pins the temporary spellings, the lowercase keyword, an
+  `options` alias in the CTAS select list, further non-iceberg providers,
+  and the missing-USING shape at their exact end states.
 - `v3_timestamp_ns_door.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door on
   `timestamp_ns` / `timestamptz_ns` — string casts keep nine digits (offset honoured),
   INSERT VALUES widens `TIMESTAMP` literals and strings, INSERT SELECT widens microsecond

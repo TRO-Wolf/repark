@@ -30,5 +30,5 @@ path stay in `spark_literals.rs`.
   Pins: the parse-level and near-miss pins in
   [tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs), the end-to-end
   cells `D-CREATE-OPTIONS` / `D-CTAS-OPTIONS` in
-  [tests/create_table.rs](../tests/create_table.rs) and
+  [tests/create_table_options.rs](../tests/create_table_options.rs) and
   [python/repark/tests/test_ice_ddl_clauses_1.py](../../../../python/repark/tests/test_ice_ddl_clauses_1.py).
