@@ -292,9 +292,7 @@ def _plant_orphan(table_dir: Path, name: str, age_days: float) -> Path:
 
 def _orphan_names(result: pa.Table) -> set[str]:
     """The file names of an orphan listing, without their directory prefix."""
-    return {
-        Path(location).name for location in result.column("orphan_file_location").to_pylist()
-    }
+    return {Path(location).name for location in result.column("orphan_file_location").to_pylist()}
 
 
 def test_remove_orphan_files_defaults_older_than_to_three_days(
