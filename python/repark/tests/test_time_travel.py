@@ -17,6 +17,7 @@ pins: ice-metadata-cols-1/C-011, C-012, C-013, C-014
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 
@@ -34,6 +35,17 @@ COW = """
     'write.update.mode' = 'copy-on-write',
     'write.merge.mode' = 'copy-on-write'
 """
+SNAPSHOT_ID_REFUSAL = (
+    "Time travel option `snapshot-id` is no longer supported, "
+    "use Spark built-in `versionAsOf` instead"
+)
+AS_OF_TIMESTAMP_REFUSAL = (
+    "Time travel option `as-of-timestamp` (in millis) is no longer supported, "
+    "use Spark built-in `timestampAsOf` instead (properly formatted timestamp)"
+)
+TAG_REFUSAL = (
+    "Time travel option `tag` is no longer supported, use Spark built-in `versionAsOf` instead"
+)
 
 
 @pytest.fixture
@@ -226,29 +238,16 @@ def test_current_read_unaffected_after_time_travel(
 
 def test_reader_option_snapshot_id(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
     s1 = multi_snapshot["s1"]
-    arrow = (
-        spark.read.format("iceberg")
-        .option("snapshot-id", str(s1))
-        .load(TABLE)
-        .select("id")
-        .to_arrow()
-    )
-    assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
-    assert "id" in arrow.column_names
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
+        spark.read.format("iceberg").option("snapshot-id", str(s1)).load(TABLE)
 
 
 def test_reader_option_as_of_timestamp(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
     s1_ts = multi_snapshot["s1_ts"]
-    arrow = (
-        spark.read.format("iceberg")
-        .option("as-of-timestamp", str(s1_ts))
-        .load(TABLE)
-        .select("id")
-        .to_arrow()
-    )
-    assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
+    with pytest.raises(IllegalArgumentException, match=re.escape(AS_OF_TIMESTAMP_REFUSAL)):
+        spark.read.format("iceberg").option("as-of-timestamp", str(s1_ts)).load(TABLE)
 
 
 def test_reader_option_branch_and_tag(
@@ -263,30 +262,27 @@ def test_reader_option_branch_and_tag(
     )
     assert _arrow_ids(arrow_branch) == multi_snapshot["ids_s2"]
 
-    arrow_tag = (
-        spark.read.format("iceberg").option("tag", "tag_s1").load(TABLE).select("id").to_arrow()
-    )
-    assert _arrow_ids(arrow_tag) == multi_snapshot["ids_s1"]
+    with pytest.raises(IllegalArgumentException, match=re.escape(TAG_REFUSAL)):
+        spark.read.format("iceberg").option("tag", "tag_s1").load(TABLE)
 
 
-def test_reader_options_mutually_exclusive(
+def test_reader_option_combinations_refuse_legacy_first(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
     s1 = multi_snapshot["s1"]
     s1_ts = multi_snapshot["s1_ts"]
-    exclusive_pairs = [
-        (("snapshot-id", str(s1)), ("branch", "branch_s2")),
-        (("snapshot-id", str(s1)), ("tag", "tag_s1")),
-        (("snapshot-id", str(s1)), ("as-of-timestamp", str(s1_ts))),
-        (("branch", "branch_s2"), ("tag", "tag_s1")),
-        (("as-of-timestamp", str(s1_ts)), ("branch", "branch_s2")),
-        (("as-of-timestamp", str(s1_ts)), ("tag", "tag_s1")),
+    refusing_pairs = [
+        ((("snapshot-id", str(s1)), ("branch", "branch_s2")), SNAPSHOT_ID_REFUSAL),
+        ((("snapshot-id", str(s1)), ("tag", "tag_s1")), SNAPSHOT_ID_REFUSAL),
+        ((("snapshot-id", str(s1)), ("as-of-timestamp", str(s1_ts))), SNAPSHOT_ID_REFUSAL),
+        ((("branch", "branch_s2"), ("tag", "tag_s1")), TAG_REFUSAL),
+        ((("as-of-timestamp", str(s1_ts)), ("branch", "branch_s2")), AS_OF_TIMESTAMP_REFUSAL),
+        ((("as-of-timestamp", str(s1_ts)), ("tag", "tag_s1")), AS_OF_TIMESTAMP_REFUSAL),
     ]
-    for (key_a, value_a), (key_b, value_b) in exclusive_pairs:
-        with pytest.raises(AnalysisException, match=r"mutually exclusive"):
-            (spark.read.format("iceberg").option(key_a, value_a).option(key_b, value_b).load(TABLE))
-    # A triple of options also fails loud.
-    with pytest.raises(AnalysisException, match=r"mutually exclusive"):
+    for ((key_a, value_a), (key_b, value_b)), expected in refusing_pairs:
+        with pytest.raises(IllegalArgumentException, match=re.escape(expected)):
+            spark.read.format("iceberg").option(key_a, value_a).option(key_b, value_b).load(TABLE)
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
         (
             spark.read.format("iceberg")
             .option("snapshot-id", str(s1))
@@ -357,7 +353,7 @@ def test_time_travel_temp_views_hidden_from_list_tables(
         "the SQL time-travel rewrite must release its ephemeral pins once the statement is planned"
     )
 
-    _ = spark.read.format("iceberg").option("snapshot-id", str(s1)).load(TABLE).to_arrow()
+    _ = spark.read.format("iceberg").option("versionAsOf", str(s1)).load(TABLE).to_arrow()
     after_read = _tt_registrations(spark)
     assert len(after_read) > len(before), (
         "the reader-options pin must still be registered — otherwise the listTables assertion "
@@ -431,11 +427,11 @@ def test_read_iceberg_table_mutex_kwargs(
 def test_empty_branch_option_fails_loud(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """Empty branch/tag pins fail loud (not silent current-snapshot)."""
+    """Empty branch pin and any tag pin fail loud (not silent current-snapshot)."""
     _ = multi_snapshot
     with pytest.raises(AnalysisException):
         spark.read.format("iceberg").option("branch", "").load(TABLE).to_arrow()
-    with pytest.raises(AnalysisException):
+    with pytest.raises(IllegalArgumentException, match=re.escape(TAG_REFUSAL)):
         spark.read.format("iceberg").option("tag", "   ").load(TABLE).to_arrow()
 
 
@@ -448,12 +444,12 @@ def test_cte_version_as_of(spark: ReparkSession, multi_snapshot: dict[str, objec
     assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
 
 
-def test_snapshot_id_overflow_is_analysis_exception(
+def test_snapshot_id_overflow_refuses_before_parsing(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """snapshot-id outside i64 → AnalysisException (not bare OverflowError)."""
+    """Out-of-range snapshot-id still refuses with the legacy text (refusal precedes parsing)."""
     _ = multi_snapshot
-    with pytest.raises(AnalysisException, match=r"64-bit|snapshot-id"):
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
         spark.read.format("iceberg").option("snapshot-id", str(2**63)).load(TABLE)
 
 
@@ -528,14 +524,8 @@ def test_reader_option_case_insensitive_snapshot_id(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
     s1 = multi_snapshot["s1"]
-    arrow = (
-        spark.read.format("iceberg")
-        .option("SNAPSHOT-ID", str(s1))
-        .load(TABLE)
-        .select("id")
-        .to_arrow()
-    )
-    assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
+        spark.read.format("iceberg").option("SNAPSHOT-ID", str(s1)).load(TABLE)
 
 
 def test_branch_option_trims_whitespace(
