@@ -15,10 +15,9 @@ use datafusion::sql::sqlparser::ast::{
 };
 use futures::StreamExt;
 use iceberg::arrow::schema_to_arrow_schema;
-use iceberg::spec::{DataFileFormat, FormatVersion};
+use iceberg::spec::FormatVersion;
 use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
-use std::str::FromStr;
 
 use crate::write::conflict_filter::for_identity_dml;
 use crate::write::file_scoped_rewrite::allowlist_from_paths;
@@ -508,14 +507,6 @@ fn resolve_update_isolation(table: &Table) -> Result<IsolationLevel> {
 }
 
 fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<DeleteWriteMode> {
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "identity {verb} writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
     let mode = table
         .metadata()
         .properties()
