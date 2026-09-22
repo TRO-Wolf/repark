@@ -12,7 +12,7 @@ Oracle: the run-25/26 inventory harness cells recorded against live PySpark
 answers the packet carries as three files at the second snapshot and
 snapshots-TT equal to snapshots non-TT.
 
-pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005
+pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005, C-006
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
+from repark.errors import IllegalArgumentException
 from repark.spark.session import _reset_active_session_for_tests
 
 CATALOG = "mt"
@@ -132,3 +133,28 @@ def test_branch_files_reads_branch_head(spark: Any) -> None:
     assert _count(spark, f"SELECT count(*) FROM {table}.files VERSION AS OF 'b0'") == _count(
         spark, f"SELECT count(*) FROM {table}.files"
     )
+
+
+def test_mt_as_of_refusals_match_spark(spark: Any) -> None:
+    """Probe 55b refusals: class ``IllegalArgumentException`` plus the full message.
+
+    pins: ipi-23-mt-as-of-1/C-006
+    """
+    table = _seeded(spark, "t_refusals")
+    for query, message in [
+        (
+            f"SELECT count(*) FROM {table}.files VERSION AS OF 'nope'",
+            "Cannot find matching snapshot ID or reference name for version nope",
+        ),
+        (
+            f"SELECT count(*) FROM {table}.snapshots VERSION AS OF 'nope'",
+            "Cannot find matching snapshot ID or reference name for version nope",
+        ),
+        (
+            f"SELECT count(*) FROM {table}.files TIMESTAMP AS OF '2000-01-01 00:00:00'",
+            "Cannot find a snapshot older than 2000-01-01T00:00:00+00:00",
+        ),
+    ]:
+        with pytest.raises(IllegalArgumentException) as caught:
+            spark.sql(query).collect()
+        assert str(caught.value) == message

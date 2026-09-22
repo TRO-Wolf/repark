@@ -1440,6 +1440,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `Cannot select snapshot in table: <TYPE>` text. Five facade pins replay the
   recorded run-25/26 inventory cells (`R-MT-SNAPSHOTS-TT`, `R-MT-FILES-TT`,
   `R-MT-ENTRIES-TT`, `R-MT-PARTITIONS-TT`, `R-REF-BRANCH-FILES`); registry row
-  `MT-1` re-ruled DECLARED → FIXED. `risk_tier: standard`. Branch
+  `MT-1` re-ruled DECLARED → FIXED. **R4 (2026-09-22, WO mt-r4-pins):** the
+  refusal pins assert the mapped `engine_err` class plus the full message
+  (unknown-ref / too-old-timestamp → `IllegalArgument` verbatim; the rule-1
+  unknown id → `IllegalArgument("Cannot find snapshot with ID 999")`; `all_*`
+  → mapped `Analysis`, the UnsupportedOperationException gap declared; the
+  paren form → mapped `Parse`), and the empty-scan schema pin compares Arrow
+  fields. Facade pin C-006 asserts `IllegalArgumentException` and the full
+  message on the three probe-55b refusals. `risk_tier: standard`. Branch
   `fix/ipi-23-mt-as-of`.
-  pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005
+  pins: ipi-23-mt-as-of-1/C-001, C-002, C-003, C-004, C-005, C-006

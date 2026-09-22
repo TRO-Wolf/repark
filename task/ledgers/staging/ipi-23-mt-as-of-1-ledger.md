@@ -1,6 +1,6 @@
 # Charter ledger — IPI-23-MT-AS-OF-1 · `VERSION AS OF` on Iceberg metadata tables, Spark door
 
-**Date:** 2026-09-22 · **Branch:** `fix/ipi-23-mt-as-of` · **Base:** `cdb5e234` (`origin/main`) · **Model:** muse-spark-1.3-contributor (R1) + swe-2-high (R2/R3) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Date:** 2026-09-22 · **Branch:** `fix/ipi-23-mt-as-of` · **Base:** `cdb5e234` (`origin/main`) · **Model:** muse-spark-1.3-contributor (R1) + swe-2-high (R2/R3/R4) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.** **Registry:** row `MT-1` in `docs/spark-sql-iceberg-parity.md` re-ruled DECLARED → FIXED (served) this unit.
 
 **Retires:** in flight.
@@ -33,6 +33,21 @@ as a SQL parse error in the spark-door test, with lockstep maps (commits
 `ipi-23-mt-as-of-1`, this ledger and its map row filed. No test logic or asserted
 value changed.
 
+**R4 (2026-09-22, WO mt-r4-pins, critic r1 V-001/V-002):** test-only pin
+tightening — every refusal pin now asserts the mapped `engine_err` class plus
+the full message, not `contains()` on the DataFusion text: the unknown-ref
+(`files`/`snapshots VERSION AS OF 'nope'`) and too-old-timestamp
+(`files TIMESTAMP AS OF '2000-01-01 00:00:00'`) refusals pin
+`IllegalArgument` with Spark's recorded sentences verbatim; `snapshots
+VERSION AS OF 999` pins `IllegalArgument("Cannot find snapshot with ID 999")`
+(RePark stays loud; Spark's INTERNAL_ERROR is not copied); the five `all_*`
+refusals keep the Spark text and additionally pin their mapped `Analysis`
+variant (the gap to Spark's `UnsupportedOperationException` is declared,
+not copied); the paren form pins the mapped `Parse` class. The empty-scan
+schema pin compares Arrow fields (name, data type, nullability) instead of
+rendered text. New facade pin C-006 asserts `IllegalArgumentException` and
+the full message for the three recorded refusals. No production change.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The five facade pins replay the
@@ -57,6 +72,7 @@ partitions `x` (3 records) and `y` (1 record).
 | C-003 | `SELECT count(*) FROM mt.ns.t.entries VERSION AS OF <second-id>` answers `[[3]]`. | `test_entries_tt_scopes_to_snapshot` green. | **PROVEN** | Recorded cell `R-MT-ENTRIES-TT`: one entry per live file at the second snapshot. pins: ipi-23-mt-as-of-1/C-003 |
 | C-004 | `SELECT partition.cat, record_count FROM mt.ns.t.partitions VERSION AS OF <second-id>` answers `[["x",3],["y",1]]`. | `test_partitions_tt_scopes_to_snapshot` green. | **PROVEN** | Recorded cell `R-MT-PARTITIONS-TT`: per-partition record counts at the second snapshot. pins: ipi-23-mt-as-of-1/C-004 |
 | C-005 | After `ALTER TABLE … CREATE BRANCH b0`, `SELECT count(*) FROM mt.ns.t.files VERSION AS OF 'b0'` answers the same count as the un-pinned `SELECT count(*) FROM …​.files`. | `test_branch_files_reads_branch_head` green. | **PROVEN** | Recorded cell `R-REF-BRANCH-FILES`: the branch ref reads the branch head. pins: ipi-23-mt-as-of-1/C-005 |
+| C-006 | `SELECT count(*) FROM mt.ns.t.files VERSION AS OF 'nope'`, `… .snapshots VERSION AS OF 'nope'` and `… .files TIMESTAMP AS OF '2000-01-01 00:00:00'` each refuse with `IllegalArgumentException` whose message equals Spark's recorded sentence (`Cannot find matching snapshot ID or reference name for version nope` ×2; `Cannot find a snapshot older than 2000-01-01T00:00:00+00:00`). | `test_mt_as_of_refusals_match_spark` green. | **PROVEN** | Spark 4.1.2 probe 55b recordings; class and full message asserted by equality on the facade. pins: ipi-23-mt-as-of-1/C-006 |
 
 ## Gates
 
@@ -87,15 +103,15 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Each clause walked to its recorded PySpark 4.1.2 cell — row/schema equality on snapshots-TT (C-001), exact counts on files/entries (C-002/C-003), exact partition rows (C-004), branch-head count equality (C-005); every assert collects on the Arrow path.
+      evidence: Each clause walked to its recorded PySpark 4.1.2 cell — row/schema equality on snapshots-TT (C-001), exact counts on files/entries (C-002/C-003), exact partition rows (C-004), branch-head count equality (C-005), refusal class plus full message on the probe-55b refusals (C-006); every assert collects on the Arrow path.
       artifacts: [python/repark/tests/test_ice_mt_as_of_1.py]
     - id: AT-2
       status: ATTACKED
-      evidence: The shared seed exercises a two-append merge-on-read history with a delete, so the pinned snapshot sits mid-history; the facade pins cover snapshot-id and named-branch AS OF spellings; the Rust battery adds rule-1/rule-2 per-type scoping, timestamp resolution, and unknown-id/ref behavior.
+      evidence: The shared seed exercises a two-append merge-on-read history with a delete, so the pinned snapshot sits mid-history; the facade pins cover snapshot-id and named-branch AS OF spellings; the Rust battery adds rule-1/rule-2 per-type scoping, timestamp resolution, and unknown-id/ref behavior — R4 pins the mapped `IllegalArgument` class plus the full Spark-recorded message on each refusal, `IllegalArgument("Cannot find snapshot with ID 999")` verbatim on the rule-1 unknown id, and compares the empty scan's Arrow fields (name, data type, nullability) rather than rendered text.
       artifacts: [python/repark/tests/test_ice_mt_as_of_1.py, crates/repark-spark/src/tests/metadata_tables_asof.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: The five `all_*` tables refuse with Spark's `Cannot select snapshot in table: <TYPE>` text and the parenthesized `(t.snapshots) VERSION AS OF` form pins the SQL parse error; both refusal classes are asserted in the Rust battery.
+      evidence: The five `all_*` tables refuse with Spark's `Cannot select snapshot in table: <TYPE>` text under their mapped `Analysis` class (the gap to Spark's `UnsupportedOperationException` is declared, not copied) and the parenthesized `(t.snapshots) VERSION AS OF` form pins the mapped `Parse` class; both refusal classes are asserted in the Rust battery.
       artifacts: [crates/repark-spark/src/tests/metadata_tables_asof.rs, crates/repark-spark/src/tests/metadata_tables.rs]
     - id: AT-4
       status: ATTACKED
