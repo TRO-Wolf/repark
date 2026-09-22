@@ -330,32 +330,8 @@ def test_python_door_value_cell_matches_oracle(cell: dict[str, Any]) -> None:
     _assert_value_cell(_run_python_cell(session, AGG_FRAME, cell), cell)
 
 
-_SQL_LISTAGG_XFAIL = (
-    "SQL door has no listagg routine and no WITHIN GROUP ordered-set syntax — "
-    "ledger Remediation R-18a-26"
-)
-_SQL_ANY_VALUE_XFAIL = (
-    "planner rejects duplicate projection names Spark allows "
-    "(both columns are any_value(v)) — ledger Remediation R-18a-26"
-)
-
-
 def _sql_value_params() -> list[Any]:
-    params: list[Any] = []
-    for cell in AGG_VALUE_SQL:
-        if cell["name"] == "listagg":
-            params.append(
-                pytest.param(cell, marks=pytest.mark.xfail(strict=True, reason=_SQL_LISTAGG_XFAIL))
-            )
-        elif cell["name"] == "any_value":
-            params.append(
-                pytest.param(
-                    cell, marks=pytest.mark.xfail(strict=True, reason=_SQL_ANY_VALUE_XFAIL)
-                )
-            )
-        else:
-            params.append(pytest.param(cell))
-    return params
+    return [pytest.param(cell) for cell in AGG_VALUE_SQL]
 
 
 @pytest.mark.parametrize(
