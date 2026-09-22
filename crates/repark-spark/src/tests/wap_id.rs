@@ -204,6 +204,22 @@ async fn wap_id_on_a_first_write_stages_without_creating_main() {
         None,
         "the staged first write has no parent"
     );
+    let staged_summary = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        staged_summary.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged first write added one record"
+    );
+    assert_eq!(
+        staged_summary.get("total-records").map(String::as_str),
+        Some("1"),
+        "the staged first write totals one record"
+    );
 }
 
 #[tokio::test]
