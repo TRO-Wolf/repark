@@ -34,9 +34,17 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `ensure_view_wrappers`; time-travel prepare plus stored-namespace
   qualification with CTE shadowing; the 100-deep `VIEW_NESTED_DEPTH_LIMIT`
   guard; non-query bodies refused loud.
-- `describe.rs` — stub module this PR; PR2 owns DESCRIBE / SHOW CREATE /
-  SHOW TBLPROPERTIES / ALTER VIEW.
-  pins: ice-views-1/C-007, C-008, C-016
+- `describe.rs` — **PR2 (2026-09-22, V-DESCRIBE):** `describe_view_frame`
+  is the view probe on the `TableNotFound` arm of `execute_describe_table`
+  (`../describe_show.rs`): a loaded view answers, `ViewNotFound` re-arms the
+  unchanged `TABLE_OR_VIEW_NOT_FOUND` refusal (fail-closed), every other load
+  error propagates through `iceberg_err`. `describe_view_rows` /
+  `describe_view_batch` render the stored schema's columns ONLY —
+  `spark_ddl_type_name` spellings, a doc-less column renders `""` (the table
+  path renders null), no blank/`# Partitioning`/`# Metadata Columns` trailer,
+  and EXTENDED is the same columns-only answer. SHOW CREATE /
+  SHOW TBLPROPERTIES / ALTER VIEW stay later PRs.
+  pins: ice-views-1/C-017
 
 ## Pointers
 
