@@ -61,9 +61,9 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "sanctioned file-backed test module (`#[cfg(test)] mod tests;` -> src/tests.rs)",
     ),
     "repark-spark": (
-        152,  # measured 151
+        152,
         "`mod insert_arity;` (IPI-51 PR9, the short-VALUES arity router intercept) takes the "
-        "root one line past the default; "
+        "root one line past the default (measured 151); "
         "RATCHET: if module decls consolidate",
     ),
     "repark-ta": (
