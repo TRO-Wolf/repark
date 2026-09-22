@@ -153,7 +153,7 @@ async fn wap_id_with_session_and_statement_options_stages_partitioned_writes() {
 }
 
 #[tokio::test]
-async fn wap_id_with_statement_options_and_no_session_conf_refuses_loud() {
+async fn wap_id_with_statement_options_and_no_session_conf_stages() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     seed(&ctx, &catalogs, WAP_DDL).await;
@@ -165,7 +165,7 @@ async fn wap_id_with_statement_options_and_no_session_conf_refuses_loud() {
     )])
     .unwrap();
     set_wap(&ctx, None, Some("w1"));
-    let error = crate::execute_with_statement_options(
+    crate::execute_with_statement_options(
         &ctx,
         &catalogs,
         "INSERT INTO ice.sales.t SELECT 2 AS id, 'b' AS name",
@@ -173,19 +173,16 @@ async fn wap_id_with_statement_options_and_no_session_conf_refuses_loud() {
         &options,
     )
     .await
-    .expect_err("statement options without a session conf cannot stage");
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
     set_wap(&ctx, None, None);
 
-    assert!(
-        error
-            .to_string()
-            .contains("requires a 3-part Iceberg table name"),
-        "the refusal names the unresolvable target: {error}"
-    );
     assert_eq!(
         ids(&ctx, &catalogs, "SELECT id FROM ice.sales.t").await,
         vec![1],
-        "the refused write changed nothing"
+        "the staged row is invisible on main"
     );
     assert_eq!(
         main_snapshot_id(&catalogs).await,
@@ -194,8 +191,37 @@ async fn wap_id_with_statement_options_and_no_session_conf_refuses_loud() {
     );
     assert_eq!(
         snapshot_count(&catalogs).await,
-        1,
-        "the refused write left only the seed snapshot"
+        2,
+        "the log holds the seed and the staged snapshot"
+    );
+    let staged = staged_snapshot_id(&catalogs, "w1").await;
+    assert_ne!(staged, seed_id, "the staged snapshot is a new snapshot");
+    let table = load_sales_table(&catalogs, "t").await;
+    let props = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("wap.id").map(String::as_str),
+        Some("w1"),
+        "the staged snapshot carries the wap id"
+    );
+    assert_eq!(
+        props.get("team").map(String::as_str),
+        Some("a"),
+        "the staged snapshot carries the statement stamp"
+    );
+    assert_eq!(
+        props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
     );
 }
 
