@@ -958,7 +958,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `call_remove_orphan_files_refuses_a_quoted_dry_run`); ORPHAN-1/ORPHAN-2 retire.
   **IPI-30 round 3 (2026-09-22):** `call_remove_orphan_files_reads_location_positionally`
   pins `location` at Spark's positional index 2 — a 4-positional CALL deletes only the
-  orphan under the given directory and leaves the one outside it.
+  orphan under the given directory and leaves the one outside it. The near-miss table
+  gains full-string pins for every refusal the round added or changed: the NULL map value,
+  a non-map `equal_authorities`, a non-`map` function, an odd `map` arity, a non-integer
+  `max_concurrent_deletes`, a quoted `prefix_listing`, a non-string `prefix_mismatch_mode`,
+  a non-string `location`, and the `file_list_view` deferral (upgraded to full-string in
+  `call_remove_orphan_files_accepts_sparks_optional_arguments`); the mistyped-argument
+  cases live in `call_remove_orphan_files_mistyped_arguments_still_refuse` so the
+  near-miss table stays under the function-length lint.
   pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004
   pins: ipi-30-orphan-1/C-005, C-006, C-007, C-008, C-009, C-010, C-011
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`

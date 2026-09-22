@@ -449,9 +449,12 @@ async fn call_remove_orphan_files_accepts_sparks_optional_arguments() {
         matches!(err, DataFusionError::NotImplemented(_)),
         "file_list_view refuses NotImplemented, got: {err}"
     );
-    assert!(
-        err.to_string().contains("is not supported in v1"),
-        "refusal names the deferral, got: {err}"
+    assert_eq!(
+        err.to_string(),
+        "This feature is not implemented: CALL remove_orphan_files argument \
+         `file_list_view` is not supported in v1 (supported: table, older_than, location, \
+         dry_run, max_concurrent_deletes, equal_schemes, equal_authorities, \
+         prefix_mismatch_mode, prefix_listing, stream_results)"
     );
     assert_eq!(files_under(&table_dir), before);
 }
@@ -518,11 +521,101 @@ async fn call_remove_orphan_files_near_misses_still_refuse() {
              equal_authorities, prefix_mismatch_mode, prefix_listing, stream_results"
                 .to_string(),
         ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.near', equal_schemes => map('k', NULL))"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_schemes` value \
+             for `k` must be a string literal, got NULL"
+                .to_string(),
+        ),
     ];
     for (call, expected) in cases {
         let err = execute(&ctx, &catalogs, &call)
             .await
             .expect_err("near miss must refuse");
+        assert_eq!(err.to_string(), expected);
+        assert_eq!(
+            files_under(&table_dir),
+            before,
+            "a refused call must not have touched the table"
+        );
+    }
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_mistyped_arguments_still_refuse() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.mistyped AS SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+    let table_dir = wh.path().join("sales").join("mistyped");
+    plant_orphans(&table_dir, 1, 10);
+    let before = files_under(&table_dir);
+    let cases = [
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', equal_authorities => 'a')"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_authorities` \
+             must be map(k, v, …), got 'a'"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', equal_schemes => foo('a', 'b'))"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_schemes` must be \
+             map(k, v, …), got foo('a', 'b')"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', equal_schemes => map('k'))"
+                .to_string(),
+            "Error during planning: CALL remove_orphan_files argument `equal_schemes` must \
+             list key/value pairs (got 1 arguments)"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', max_concurrent_deletes => 'x')"
+                .to_string(),
+            "Error during planning: CALL argument `max_concurrent_deletes` string is not an \
+             integer: x"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', prefix_listing => 'yes')"
+                .to_string(),
+            "Error during planning: CALL argument `prefix_listing` must be a boolean literal \
+             (true / false), got `'yes'`"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(\
+                 table => 'sales.mistyped', prefix_mismatch_mode => 7)"
+                .to_string(),
+            "Error during planning: CALL argument `prefix_mismatch_mode` must be a string \
+             literal, got 7"
+                .to_string(),
+        ),
+        (
+            "CALL ice.system.remove_orphan_files(table => 'sales.mistyped', location => 5)"
+                .to_string(),
+            "Error during planning: CALL argument `location` must be a string literal, got 5"
+                .to_string(),
+        ),
+    ];
+    for (call, expected) in cases {
+        let err = execute(&ctx, &catalogs, &call)
+            .await
+            .expect_err("mistyped argument must refuse");
         assert_eq!(err.to_string(), expected);
         assert_eq!(
             files_under(&table_dir),
