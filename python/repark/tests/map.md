@@ -1741,9 +1741,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_decimal_float_coercion_1.py](test_decimal_float_coercion_1.py) +
   [decimal_float_coercion_1_spark_oracle.json](decimal_float_coercion_1_spark_oracle.json) —
   **WO-2 xo-muse8 UNIT1 fix-b (2026-09-21):** the decimal-literal-vs-float sweep
-  at the facade. The SQL door carries 46 legs over an Arrow-built ten-row frame
-  (true `-0.0`/NaN/NULL DOUBLE, FLOAT and DECIMAL(6,2) payloads) against the
-  63-cell live-Spark-4.1.2 oracle: 29 match (six comparison operators, IN/NOT
+  at the facade. The SQL door carries 46 legs over an Iceberg table seeded by
+  SQL INSERT with payload-preserving spellings (true `-0.0` via
+  `CAST('-0.0' AS DOUBLE)`; NaN/NULL DOUBLE, FLOAT and DECIMAL(6,2) payloads)
+  against the 64-cell live-Spark-4.1.2 oracle: 29 match (six comparison operators, IN/NOT
   IN, BETWEEN/NOT BETWEEN, negatives, reversed sides, the 0.1f32
   double-widening discriminator, decimal near-miss controls, isnan/NaN-eq/
   not-null guards) and 17 zero-bound legs pin the separate pre-existing
