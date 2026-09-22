@@ -26,9 +26,14 @@ pub(crate) async fn execute_view_body_query(
             std::borrow::Cow::Borrowed(sql)
         };
     let mut pinned = time_travel::PinnedViews::default();
-    let sql_after_branch =
-        write_to_branch::apply_write_to_branch(ctx, catalogs, sql_after_meta.as_ref(), &mut pinned)
-            .await?;
+    let sql_after_branch = write_to_branch::apply_write_to_branch(
+        ctx,
+        catalogs,
+        sql_after_meta.as_ref(),
+        &mut pinned,
+        false,
+    )
+    .await?;
     let sql_after_wap =
         wap::apply_wap_read_redirect(ctx, catalogs, sql_after_branch.as_ref(), &mut pinned).await?;
     let routed_sql = sql_after_wap
