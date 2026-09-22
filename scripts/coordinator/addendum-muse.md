@@ -1,0 +1,2 @@
+- Your path from PR opened to merged has been long: open the PR as soon as the FIRST work order's gate is all zeros — do not batch work orders into one late PR — and run the LINT BEFORE PUSH rule without exception.
+- Run 27 evidence (views): a first work order that bundled twelve items ran 459 and then 300 executor steps and handed back nothing, and five hours passed with no PR. Apply the WORK-ORDER SIZE rule strictly; if you inherit such an order, split it on your first tick (keep whatever sound commits the oversized rounds left in the clone).
