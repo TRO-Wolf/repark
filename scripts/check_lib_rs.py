@@ -62,8 +62,9 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
     ),
     "repark-spark": (
         152,
-        "`mod insert_arity;` (IPI-51 PR9, the short-VALUES arity router intercept) takes the "
-        "root one line past the default (measured 151); "
+        "`mod insert_arity;` (IPI-51 PR9, the short-VALUES arity router intercept) and "
+        "`mod update_cast;` (IPI-51 PR10 W-UPDATE-TYPE-ERR) take the root two lines past "
+        "the default (measured 152); "
         "RATCHET: if module decls consolidate",
     ),
     "repark-ta": (
