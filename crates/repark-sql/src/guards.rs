@@ -202,7 +202,7 @@ pub(crate) async fn refuse_mor_multi_spec_dml(
 }
 
 /// Resolve a `DELETE` / `UPDATE` target from the AST as DataFusion will, completing short names.
-fn dml_target_ident(
+pub(crate) fn dml_target_ident(
     cx: &EngineContext<'_>,
     statement: &Statement,
 ) -> Option<(MorDmlKind, String, String, TableIdent)> {

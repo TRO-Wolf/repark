@@ -483,6 +483,7 @@ async fn execute_update(
         }
     }
     refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, MorDmlKind::Update).await?;
+    crate::update_cast::refuse_incompatible_update_cast(ctx, catalogs, update).await?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 

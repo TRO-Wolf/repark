@@ -241,6 +241,11 @@ repark-core's error map.
   `commit_truncate_to` commits onto a named branch.
   pins: dml-c-truncate/C-001, C-005
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `incompatible_update_message` renders
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` through the shared
+  `ansi_store_assignable` predicate (never a second matrix) with uppercase Spark type
+  names; an unlisted type falls through to `None`. Both doors call it before executing
+  a positional UPDATE. pins: ipi-51/W-UPDATE-TYPE-ERR
 - `conflict_filter.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the conflict-detection filter a DML
   commit hands the fork's serializable validation (Java `SparkScan.filterExpression()` threaded into
   `RowDelta` / `OverwriteFiles.conflictDetectionFilter` by `SparkPositionDeltaWrite` /

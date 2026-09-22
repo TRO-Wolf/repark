@@ -314,6 +314,14 @@ pins: rp-4-fork-repin/C-005, C-006
   PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
   [tests/truncate.rs](tests/truncate.rs). pins: dml-c-truncate/C-002, C-005, C-006, C-007
   pins: rp-5-fork-repin/C-004
+- `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `execute_update` calls
+  `refuse_incompatible_update_cast` after the read-only, subquery-predicate, and MoR
+  refusals and before `execute_passthrough`: bare-column SET targets resolve on the
+  Iceberg schema, each SET value plans as `SELECT (<expr>) FROM <table>`, and the
+  first non-ANSI-store-assignable pair stamps
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` as `Plan`. Missing
+  catalog/table, unresolvable names, and failed probes fall through. Pins:
+  [tests/update_cast.rs](tests/update_cast.rs). pins: ipi-51/W-UPDATE-TYPE-ERR
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via

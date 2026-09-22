@@ -171,7 +171,11 @@ async fn execute_time_travelled(
         Statement::Call(function) => Err(refusals::maintenance_call(&function.name.to_string())),
         Statement::Truncate(truncate) => truncate::execute_truncate(cx, truncate).await,
         // --- Delegated DML: allow-list first, then G3-E8 and async MoR/V3 valves.
-        Statement::Delete(_) | Statement::Update(_) => {
+        Statement::Delete(_) => execute_identity_or_delegate(cx, sql, statement.as_ref()).await,
+        Statement::Update(_) => {
+            guards::refuse_dml_subquery_predicate(statement.as_ref())?;
+            guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
+            crate::update_cast::refuse_incompatible_update_cast(cx, statement.as_ref()).await?;
             execute_identity_or_delegate(cx, sql, statement.as_ref()).await
         }
         _ => {
