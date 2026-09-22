@@ -8,6 +8,7 @@ S6 rows in order; the unit ledger adopts these numbers when it lands.
 pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 pins: ice-orc-avro-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 pins: ice-orc-avro-1/C-017, C-018, C-019, C-020, C-021, C-022
+pins: ice-orc-avro-1/C-023
 """
 
 from __future__ import annotations
@@ -347,6 +348,22 @@ def test_cow_merge_on_avro_rewrites_as_avro(spark: ReparkSession) -> None:
         f"MERGE INTO {table} t USING (SELECT 1 AS id) s ON t.id = s.id WHEN MATCHED THEN DELETE"
     )
     _cow_files_are(spark, table, "AVRO", [[2, "b", "y"], [3, "c", "x"]])
+
+
+def test_partitioned_v3_cow_delete_rewrites_orc(spark: ReparkSession) -> None:
+    """V3 partitioned copy-on-write DELETE keeps ORC bytes on the lineage path.
+
+    pins: ice-orc-avro-1/C-023.
+    """
+    table = f"{CATALOG}.{NS}.v3_part_orc_del"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat) TBLPROPERTIES ('format-version' = '3', "
+        "'write.format.default' = 'orc', 'write.delete.mode' = 'copy-on-write')"
+    )
+    _seed_three(spark, table)
+    spark.sql(f"DELETE FROM {table} WHERE id = 1")
+    _cow_files_are(spark, table, "ORC", [[2, "b", "y"], [3, "c", "x"]])
 
 
 def test_mor_delete_on_orc_writes_orc_delete_file(spark: ReparkSession) -> None:
