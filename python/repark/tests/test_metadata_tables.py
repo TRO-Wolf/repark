@@ -381,9 +381,7 @@ def test_as_of_on_metadata_tables_served(
     """
     s1 = multi_snapshot["s1"]
 
-    snapshots_version = spark.sql(
-        f"SELECT * FROM {TABLE}.snapshots VERSION AS OF {s1}"
-    ).to_arrow()
+    snapshots_version = spark.sql(f"SELECT * FROM {TABLE}.snapshots VERSION AS OF {s1}").to_arrow()
     assert snapshots_version.num_rows == multi_snapshot["snapshot_count"]
 
     snapshots_timestamp = spark.sql(
@@ -391,9 +389,7 @@ def test_as_of_on_metadata_tables_served(
     ).to_arrow()
     assert snapshots_timestamp.num_rows == multi_snapshot["snapshot_count"]
 
-    files_version = spark.sql(
-        f"SELECT * FROM {TABLE}.files VERSION AS OF {s1}"
-    ).to_arrow()
+    files_version = spark.sql(f"SELECT * FROM {TABLE}.files VERSION AS OF {s1}").to_arrow()
     files_system_version = spark.sql(
         f"SELECT * FROM {TABLE}.files FOR SYSTEM_VERSION AS OF {s1}"
     ).to_arrow()
