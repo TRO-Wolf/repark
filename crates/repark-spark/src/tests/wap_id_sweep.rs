@@ -60,6 +60,16 @@ async fn wap_id_with_a_session_conf_stages_a_first_write_without_creating_main()
         Some("v"),
         "the staged snapshot carries the session stamp"
     );
+    assert_eq!(
+        props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged first write added one record"
+    );
+    assert_eq!(
+        props.get("total-records").map(String::as_str),
+        Some("1"),
+        "the staged first write totals one record"
+    );
 }
 
 #[tokio::test]
@@ -143,6 +153,17 @@ async fn wap_id_with_session_and_statement_options_stages_partitioned_writes() {
                 .is_some_and(|value| value == wap_id)
             {
                 hits += 1;
+                let staged_props = &snapshot.summary().additional_properties;
+                assert_eq!(
+                    staged_props.get("added-records").map(String::as_str),
+                    Some("1"),
+                    "the staged snapshot added one record"
+                );
+                assert_eq!(
+                    staged_props.get("total-records").map(String::as_str),
+                    Some("2"),
+                    "the staged snapshot totals two records"
+                );
             }
         }
         assert_eq!(

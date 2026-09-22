@@ -675,6 +675,16 @@ async fn wap_id_with_a_session_snapshot_property_stages_both_stamps() {
         Some("v"),
         "the staged snapshot carries the session stamp"
     );
+    assert_eq!(
+        props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
+    );
 }
 
 #[tokio::test]
@@ -717,6 +727,23 @@ async fn wap_id_with_a_session_codec_stages_off_main() {
     );
     let staged = staged_snapshot_id(&catalogs, "w1").await;
     assert_ne!(staged, seed_id, "the staged snapshot is a new snapshot");
+    let table = load_sales_table(&catalogs, "t").await;
+    let props = &table
+        .metadata()
+        .snapshot_by_id(staged)
+        .expect("staged snapshot in the log")
+        .summary()
+        .additional_properties;
+    assert_eq!(
+        props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
+    );
 }
 
 #[tokio::test]
@@ -836,6 +863,16 @@ async fn wap_id_with_statement_and_session_options_stages_all_stamps() {
         props.get("k").map(String::as_str),
         Some("v"),
         "the staged snapshot carries the session stamp"
+    );
+    assert_eq!(
+        props.get("added-records").map(String::as_str),
+        Some("1"),
+        "the staged snapshot added one record"
+    );
+    assert_eq!(
+        props.get("total-records").map(String::as_str),
+        Some("2"),
+        "the staged snapshot totals two records"
     );
 }
 
