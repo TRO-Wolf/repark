@@ -249,6 +249,91 @@ async fn ansi_static_partition_column_list_refusals() {
 }
 
 #[tokio::test]
+async fn ansi_short_values_insert_stamps_not_enough_data_columns() {
+    let door = door_with_tables().await;
+    let err = door.err("INSERT INTO ice.sales.t VALUES (8, 'h')").await;
+    assert!(
+        err.contains("[INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS]"),
+        "{err}"
+    );
+    assert!(err.contains("SQLSTATE: 21S01"), "{err}");
+    assert!(err.contains("Table columns: `id`, `name`, `c`."), "{err}");
+    assert!(err.contains("Data columns: `col1`, `col2`."), "{err}");
+    assert!(err.contains("`ice`.`sales`.`t`"), "{err}");
+    let empty = door.ok("SELECT id FROM ice.sales.t").await;
+    assert_eq!(empty.iter().map(RecordBatch::num_rows).sum::<usize>(), 0);
+}
+
+#[tokio::test]
+async fn ansi_correct_arity_values_insert_succeeds() {
+    let door = door_with_tables().await;
+    door.ok("INSERT INTO ice.sales.t VALUES (1, 'a', 5)").await;
+    let batches = door.ok("SELECT id, name, c FROM ice.sales.t").await;
+    assert_eq!(one_row_strings(&batches), (1, "a".to_string(), 5));
+}
+
+#[tokio::test]
+async fn ansi_named_column_list_short_payload_still_fills_write_default() {
+    let door = door_with_tables().await;
+    door.ok("INSERT INTO ice.sales.t (id, name) VALUES (8, 'h')")
+        .await;
+    let batches = door.ok("SELECT id, name, c FROM ice.sales.t").await;
+    assert_eq!(one_row_strings(&batches), (8, "h".to_string(), 5));
+}
+
+#[tokio::test]
+async fn ansi_short_insert_select_keeps_column_count_mismatch() {
+    let door = door_with_tables().await;
+    let err = door.err("INSERT INTO ice.sales.t SELECT 9, 'i'").await;
+    assert!(err.contains("Column count doesn't match"), "{err}");
+    assert!(!err.contains("NOT_ENOUGH_DATA_COLUMNS"), "{err}");
+    let empty = door.ok("SELECT id FROM ice.sales.t").await;
+    assert_eq!(empty.iter().map(RecordBatch::num_rows).sum::<usize>(), 0);
+}
+
+#[tokio::test]
+async fn ansi_wide_and_mixed_values_have_no_arity_condition() {
+    let door = door_with_tables().await;
+    for sql in [
+        "INSERT INTO ice.sales.t VALUES (1, 'a', 5, 'extra')",
+        "INSERT INTO ice.sales.t VALUES (1, 'a', 5), (2, 'b')",
+    ] {
+        match door.sql(sql).await {
+            Ok(_) => {}
+            Err(err) => assert!(
+                !err.to_string().contains("NOT_ENOUGH_DATA_COLUMNS"),
+                "{sql}: {err}"
+            ),
+        }
+    }
+}
+
+#[tokio::test]
+async fn ansi_missing_table_short_values_has_no_arity_condition() {
+    let door = door_with_tables().await;
+    let err = door
+        .err("INSERT INTO ice.sales.never_there VALUES (1, 'a')")
+        .await;
+    assert!(!err.is_empty());
+    assert!(!err.contains("NOT_ENOUGH_DATA_COLUMNS"), "{err}");
+}
+
+#[tokio::test]
+async fn ansi_short_overwrite_values_has_no_arity_condition() {
+    let door = door_with_tables().await;
+    match door
+        .sql("INSERT OVERWRITE ice.sales.t VALUES (8, 'h')")
+        .await
+    {
+        Ok(_) => {}
+        Err(err) => assert!(
+            !err.to_string().contains("NOT_ENOUGH_DATA_COLUMNS"),
+            "{err}"
+        ),
+    }
+}
+
+#[tokio::test]
 async fn ansi_default_in_outer_select_under_with_refuses_unresolved() {
     let door = door_with_tables().await;
     for sql in [

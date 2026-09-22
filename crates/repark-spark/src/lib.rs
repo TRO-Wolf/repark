@@ -15,6 +15,7 @@ mod ctas;
 mod describe_show;
 mod dialect;
 mod format_version;
+mod insert_arity;
 mod insert_by_name;
 mod insert_overwrite;
 mod insert_timestamp_ns;

@@ -280,6 +280,15 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-write-options-1/C-001, C-003
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the by-name append commit resolves
   the merged session write.
+- `insert_arity.rs` — **IPI-51 PR9 (2026-09-21):** the short-VALUES arity router
+  intercept. `refuse_if_short_values` refuses a positional `INSERT INTO t VALUES (…)` whose
+  VALUES width is strictly below the Iceberg target's field count with
+  `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS` / `21S01` through the
+  `repark-common` catalogue as `DataFusionError::Plan`, so DataFusion never sees the short
+  list. Anything else — overwrite, column list, partition clause, non-VALUES source,
+  mixed-length rows, equal-or-wider VALUES, a missing table — falls through untouched.
+  Pins: [tests/insert_arity.rs](tests/insert_arity.rs).
+  pins: ice-error-conditions-1/C-011
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property

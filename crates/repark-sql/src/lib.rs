@@ -5,6 +5,7 @@ mod create_table;
 mod declared_refuse;
 mod dialect;
 mod guards;
+mod insert_arity;
 mod insert_overwrite;
 mod merge;
 mod partitioning;
