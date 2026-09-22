@@ -5,8 +5,6 @@ muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.m
 **Path:** STANDARD. **risk_tier: standard.**
 **Registry:** `FNP-AGG-1-18B` lands FIXED in this slice; no other registry row.
 
-**Retires:** this ledger moves to `../completed/` in this unit's last commit.
-
 **Why now.** The 1.5 Spark-parity campaign measured fourteen aggregate names against live
 PySpark 4.1.2 (`/tmp/oc-worker/pa-agg/agg_misc_spark_oracle.json`, 2026-09-14). This slice
 ports the `grouping_id` family plus the shared foundation out of the rescue reference
@@ -44,8 +42,11 @@ doors. Slices (a), (b) and (c) follow after this lands.
 | C-005 | Multi-partition merge: the grouping accumulator merges cleanly across partitions. | PROVEN | Kernel `constant_accumulator_merges_cleanly` green beside the UDAF; all `grouping` kernel tests green. |
 | C-006 | No regression: the touched suites stay green. | PROVEN | `cargo test -p repark-functions --lib grouping` green; card + critic + split-identity + grouping `test_types_1` cells green; EX-0 1083 and cap-1 mirrors green. |
 | C-007 | Registry (`FNP-AGG-1-18B` → FIXED) and every touched `map.md` in lockstep. | PROVEN | 18B row lands FIXED with its passing pin; `agg_misc.py` covers `F.grouping_id` with inventory +1 and EX-0 1082 → 1083; all nine touched `map.md` files carry slice-(d) rows. |
+| C-008 | Slice (a) lands its card names with both-door pins against the recorded cells. | OPEN | Unbuilt at this head. |
+| C-009 | Slice (b) lands its card names with both-door pins against the recorded cells. | OPEN | Unbuilt at this head. |
+| C-010 | Slice (c) lands its card names with both-door pins against the recorded cells. | OPEN | Unbuilt at this head. |
 
-VERDICT: 7 clauses, 7 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 10 clauses, 7 PROVEN, 3 OPEN, 0 REJECTED.
 
 ## Gates (2026-09-21, this head)
 
