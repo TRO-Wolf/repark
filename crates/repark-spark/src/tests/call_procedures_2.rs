@@ -105,6 +105,7 @@ async fn call_rpd_where_restricts_to_matching_partition() {
             "added_bytes_count",
         ]
     );
+    assert_rpd_schema_is_sparks(&batches[0]);
     assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 1);
     assert_eq!(call_count(&batches[0], "added_delete_files_count"), 1);
     assert!(call_count(&batches[0], "rewritten_bytes_count") > 0);
@@ -118,6 +119,7 @@ async fn call_rpd_where_restricts_to_matching_partition() {
     .await
     .expect("unfiltered rewrite must run");
     let batches = frame.collect().await.expect("collect");
+    assert_rpd_schema_is_sparks(&batches[0]);
     assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 2);
     assert_eq!(call_count(&batches[0], "added_delete_files_count"), 2);
     assert_eq!(
@@ -392,6 +394,26 @@ fn assert_expire_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch)
             .into_iter()
             .map(|name| (name, DataType::Int64, true))
             .collect::<Vec<_>>()
+    );
+}
+
+fn assert_rpd_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        vec![
+            (
+                "rewritten_delete_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+            (
+                "added_delete_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+            ("rewritten_bytes_count".to_string(), DataType::Int64, false),
+            ("added_bytes_count".to_string(), DataType::Int64, false),
+        ]
     );
 }
 

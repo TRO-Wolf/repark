@@ -18,6 +18,76 @@ fn plan_message(error: datafusion::error::DataFusionError) -> String {
     message
 }
 
+fn schema_triples(batch: &datafusion::arrow::array::RecordBatch) -> Vec<(String, DataType, bool)> {
+    batch
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| {
+            (
+                field.name().clone(),
+                field.data_type().clone(),
+                field.is_nullable(),
+            )
+        })
+        .collect()
+}
+
+fn assert_rdf_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        vec![
+            (
+                "rewritten_data_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+            ("added_data_files_count".to_string(), DataType::Int32, false),
+            ("rewritten_bytes_count".to_string(), DataType::Int64, false),
+            (
+                "failed_data_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+            (
+                "removed_delete_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+        ]
+    );
+}
+
+fn assert_rpd_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        vec![
+            (
+                "rewritten_delete_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+            (
+                "added_delete_files_count".to_string(),
+                DataType::Int32,
+                false
+            ),
+            ("rewritten_bytes_count".to_string(), DataType::Int64, false),
+            ("added_bytes_count".to_string(), DataType::Int64, false),
+        ]
+    );
+}
+
+fn assert_rollback_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(
+        schema_triples(batch),
+        vec![
+            ("previous_snapshot_id".to_string(), DataType::Int64, false),
+            ("current_snapshot_id".to_string(), DataType::Int64, false),
+        ]
+    );
+}
+
 async fn seed_six_files(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) {
     run(
         ctx,
@@ -60,6 +130,7 @@ async fn call_rdf_four_positional_form_binds_in_declared_order() {
             "removed_delete_files_count",
         ]
     );
+    assert_rdf_schema_is_sparks(&batches[0]);
     assert!(
         call_count(&batches[0], "rewritten_data_files_count") >= 2,
         "binpack must rewrite with min-input-files 1"
@@ -79,6 +150,7 @@ async fn call_rdf_four_positional_form_binds_in_declared_order() {
     .await
     .expect("four positional args must bind");
     let batches = frame.collect().await.expect("collect");
+    assert_rdf_schema_is_sparks(&batches[0]);
     assert_eq!(call_count(&batches[0], "rewritten_data_files_count"), 0);
     assert_eq!(call_count(&batches[0], "added_data_files_count"), 0);
 }
@@ -143,6 +215,7 @@ async fn call_rpd_two_positional_options_bind() {
             "added_bytes_count",
         ]
     );
+    assert_rpd_schema_is_sparks(&batches[0]);
     assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 2);
     assert_eq!(call_count(&batches[0], "added_delete_files_count"), 2);
     assert!(call_count(&batches[0], "rewritten_bytes_count") > 0);
@@ -159,6 +232,7 @@ async fn call_rpd_two_positional_options_bind() {
     .await
     .expect("single positional must bind with default options");
     let batches = frame.collect().await.expect("collect");
+    assert_rpd_schema_is_sparks(&batches[0]);
     assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 0);
     assert_eq!(call_count(&batches[0], "added_delete_files_count"), 0);
 }
@@ -196,6 +270,7 @@ async fn call_rollback_mixed_positional_and_named_binds() {
         column_names(&batches[0]),
         vec!["previous_snapshot_id", "current_snapshot_id"]
     );
+    assert_rollback_schema_is_sparks(&batches[0]);
     assert_eq!(call_count(&batches[0], "previous_snapshot_id"), second);
     assert_eq!(call_count(&batches[0], "current_snapshot_id"), first);
     assert_eq!(
@@ -284,20 +359,58 @@ async fn call_bind_excess_positional_names_arity() {
     );
 }
 
+async fn seed_partitioned_two_deletes(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} (id INT, cat STRING) USING iceberg PARTITIONED BY \
+             (cat) TBLPROPERTIES ('format-version' = '2', 'write.delete.mode' = 'merge-on-read', \
+             'write.merge.mode' = 'merge-on-read')"
+        ),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("INSERT INTO ice.sales.{table} VALUES (1, 'x'), (2, 'x')"),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("INSERT INTO ice.sales.{table} VALUES (3, 'y'), (4, 'y')"),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("DELETE FROM ice.sales.{table} WHERE id = 1"),
+    )
+    .await;
+    run(
+        ctx,
+        catalogs,
+        &format!("DELETE FROM ice.sales.{table} WHERE id = 3"),
+    )
+    .await;
+}
+
 #[tokio::test]
 async fn call_rpd_positional_where_binds() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    run(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.w AS SELECT * FROM src",
-    )
-    .await;
+    seed_partitioned_two_deletes(&ctx, &catalogs, "w").await;
+    seed_partitioned_two_deletes(&ctx, &catalogs, "wu").await;
     let frame = execute(
         &ctx,
         &catalogs,
-        "CALL ice.system.rewrite_position_delete_files('sales.w', NULL, 'id = 1')",
+        "CALL ice.system.rewrite_position_delete_files('sales.w', map('rewrite-all', 'true'), \
+         'cat = \"x\"')",
     )
     .await
     .expect("positional where must bind");
@@ -311,8 +424,26 @@ async fn call_rpd_positional_where_binds() {
             "added_bytes_count",
         ]
     );
-    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 0);
-    assert_eq!(call_count(&batches[0], "added_delete_files_count"), 0);
+    assert_rpd_schema_is_sparks(&batches[0]);
+    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 1);
+    assert_eq!(call_count(&batches[0], "added_delete_files_count"), 1);
+    assert!(call_count(&batches[0], "rewritten_bytes_count") > 0);
+    assert!(call_count(&batches[0], "added_bytes_count") > 0);
+    assert_eq!(
+        time_travel_id_multiset(&ctx, &catalogs, "SELECT id FROM ice.sales.w").await,
+        vec![2, 4]
+    );
+    let frame = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files('sales.wu', map('rewrite-all', 'true'))",
+    )
+    .await
+    .expect("two positional args must bind without where");
+    let batches = frame.collect().await.expect("collect");
+    assert_rpd_schema_is_sparks(&batches[0]);
+    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 2);
+    assert_eq!(call_count(&batches[0], "added_delete_files_count"), 2);
 }
 
 #[tokio::test]
@@ -344,4 +475,5 @@ async fn call_rdf_named_null_is_unset() {
             "removed_delete_files_count",
         ]
     );
+    assert_rdf_schema_is_sparks(&batches[0]);
 }

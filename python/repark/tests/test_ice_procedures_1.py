@@ -28,6 +28,40 @@ _RPD_COLS = [
     "added_bytes_count",
 ]
 
+_RDF_SCHEMA = [
+    ("rewritten_data_files_count", pa.int32(), False),
+    ("added_data_files_count", pa.int32(), False),
+    ("rewritten_bytes_count", pa.int64(), False),
+    ("failed_data_files_count", pa.int32(), False),
+    ("removed_delete_files_count", pa.int32(), False),
+]
+
+_RPD_SCHEMA = [
+    ("rewritten_delete_files_count", pa.int32(), False),
+    ("added_delete_files_count", pa.int32(), False),
+    ("rewritten_bytes_count", pa.int64(), False),
+    ("added_bytes_count", pa.int64(), False),
+]
+
+_ROLLBACK_SCHEMA = [
+    ("previous_snapshot_id", pa.int64(), False),
+    ("current_snapshot_id", pa.int64(), False),
+]
+
+_EXPIRE_SCHEMA = [
+    ("deleted_data_files_count", pa.int64(), True),
+    ("deleted_position_delete_files_count", pa.int64(), True),
+    ("deleted_equality_delete_files_count", pa.int64(), True),
+    ("deleted_manifest_files_count", pa.int64(), True),
+    ("deleted_manifest_lists_count", pa.int64(), True),
+    ("deleted_statistics_files_count", pa.int64(), True),
+]
+
+_ADD_FILES_SCHEMA = [
+    ("added_files_count", pa.int64(), False),
+    ("changed_partition_count", pa.int64(), True),
+]
+
 
 @pytest.fixture
 def spark(tmp_path: Path) -> ReparkSession:
@@ -38,9 +72,18 @@ def spark(tmp_path: Path) -> ReparkSession:
     return session
 
 
-def _result_row(spark: ReparkSession, sql: str) -> tuple[list[str], list[int]]:
+def _schema_triples(batch: pa.RecordBatch) -> list[tuple[str, pa.DataType, bool]]:
+    """Return name, type and nullability for every result column."""
+    return [(field.name, field.type, field.nullable) for field in batch.schema]
+
+
+def _result_row(
+    spark: ReparkSession, sql: str, schema: list[tuple[str, pa.DataType, bool]] | None = None
+) -> tuple[list[str], list[int]]:
     """Run one CALL and return its column names and first row."""
     batch = spark.sql(sql).to_arrow()
+    if schema is not None:
+        assert _schema_triples(batch) == schema
     names = batch.schema.names
     return (names, [int(batch.column(name)[0].as_py()) for name in names])
 
@@ -68,6 +111,7 @@ def test_pos_rdf_positional_form_compacts(spark: ReparkSession) -> None:
         spark,
         "CALL mem.system.rewrite_data_files('ns.posrdf', 'binpack', NULL, "
         "map('min-input-files', '2'))",
+        schema=_RDF_SCHEMA,
     )
     assert cols == _RDF_COLS
     assert row[0] == 2
@@ -98,6 +142,7 @@ def test_pos_rpd_positional_options_bind(spark: ReparkSession) -> None:
     cols, row = _result_row(
         spark,
         "CALL mem.system.rewrite_position_delete_files('ns.posrpd', map('rewrite-all', 'true'))",
+        schema=_RPD_SCHEMA,
     )
     assert cols == _RPD_COLS
     assert row[0] == 2
@@ -106,7 +151,9 @@ def test_pos_rpd_positional_options_bind(spark: ReparkSession) -> None:
     assert row[3] > 0
     assert _live_ids(spark, "mem.ns.posrpd") == [2, 4]
     cols, row = _result_row(
-        spark, "CALL mem.system.rewrite_position_delete_files('ns.posrpdflt')"
+        spark,
+        "CALL mem.system.rewrite_position_delete_files('ns.posrpdflt')",
+        schema=_RPD_SCHEMA,
     )
     assert cols == _RPD_COLS
     assert row == [0, 0, 0, 0]
@@ -120,7 +167,9 @@ def test_call_mixed_args_rollback_binds(spark: ReparkSession) -> None:
     ids = _snapshot_ids(spark, "mem.ns.mx")
     assert len(ids) == 2
     cols, row = _result_row(
-        spark, f"CALL mem.system.rollback_to_snapshot('ns.mx', snapshot_id => {ids[0]})"
+        spark,
+        f"CALL mem.system.rollback_to_snapshot('ns.mx', snapshot_id => {ids[0]})",
+        schema=_ROLLBACK_SCHEMA,
     )
     assert cols == ["previous_snapshot_id", "current_snapshot_id"]
     assert row == [ids[1], ids[0]]
@@ -183,6 +232,7 @@ def test_bind_null_is_unset(spark: ReparkSession) -> None:
         spark,
         "CALL mem.system.rewrite_data_files(table => 'ns.nnu', strategy => 'binpack', "
         "sort_order => NULL)",
+        schema=_RDF_SCHEMA,
     )
     assert cols == _RDF_COLS
 
@@ -229,7 +279,9 @@ def test_expire_snapshot_ids_expires_exactly_those(spark: ReparkSession) -> None
     assert len(ids) == 4
     cols, row = _result_row(
         spark,
-        f"CALL mem.system.expire_snapshots(table => 'ns.exs', snapshot_ids => array({ids[0]}, {ids[1]}))",
+        f"CALL mem.system.expire_snapshots(table => 'ns.exs', "
+        f"snapshot_ids => array({ids[0]}, {ids[1]}))",
+        schema=_EXPIRE_SCHEMA,
     )
     assert cols == _EXPIRE_COLS
     assert row == [0, 0, 0, 0, 2, 0]
@@ -243,6 +295,7 @@ def test_expire_accept_and_ignore_trio_equals_plain(spark: ReparkSession) -> Non
         spark,
         "CALL mem.system.expire_snapshots(table => 'ns.ex0', "
         "older_than => TIMESTAMP '2999-01-01 00:00:00')",
+        schema=_EXPIRE_SCHEMA,
     )
     assert cols == _EXPIRE_COLS
     assert plain == [1, 0, 0, 1, 3, 0]
@@ -256,6 +309,7 @@ def test_expire_accept_and_ignore_trio_equals_plain(spark: ReparkSession) -> Non
             spark,
             f"CALL mem.system.expire_snapshots(table => 'ns.{table}', "
             f"older_than => TIMESTAMP '2999-01-01 00:00:00', {argument})",
+            schema=_EXPIRE_SCHEMA,
         )
         assert cols == _EXPIRE_COLS
         assert row == plain
@@ -278,6 +332,7 @@ def test_rpd_where_rewrites_matching_partition(spark: ReparkSession) -> None:
         spark,
         "CALL mem.system.rewrite_position_delete_files(table => 'ns.rpdw', "
         "where => 'cat = \"x\"', options => map('rewrite-all', 'true'))",
+        schema=_RPD_SCHEMA,
     )
     assert cols == _RPD_COLS
     assert row[0] == 3
@@ -298,12 +353,14 @@ def test_dangling_extra_and_precedence_kept(spark: ReparkSession) -> None:
     cols, _row = _result_row(
         spark,
         "CALL mem.system.rewrite_data_files(table => 'ns.dng', 'remove-dangling-deletes' => true)",
+        schema=_RDF_SCHEMA,
     )
     assert cols == _RDF_COLS
     cols, row = _result_row(
         spark,
         "CALL mem.system.rewrite_data_files(table => 'ns.dng', "
         "options => map('remove-dangling-deletes', NULL), 'remove-dangling-deletes' => true)",
+        schema=_RDF_SCHEMA,
     )
     assert cols == _RDF_COLS
     assert row[4] == 0
@@ -342,6 +399,7 @@ def _write_partitioned_source(root: Path) -> None:
 def _add_files_result(spark: ReparkSession, sql: str) -> tuple[list[str], int, int | None]:
     """Run one add_files CALL and return columns, added count and changed count-or-None."""
     batch = spark.sql(sql).to_arrow()
+    assert _schema_triples(batch) == _ADD_FILES_SCHEMA
     names = batch.schema.names
     added = int(batch.column("added_files_count")[0].as_py())
     raw_changed = batch.column("changed_partition_count")[0].as_py()
@@ -484,7 +542,7 @@ def _assert_duplicate_refusal(spark: ReparkSession, sql: str) -> None:
 
 
 def test_add_files_check_duplicate_raises(spark: ReparkSession, tmp_path: Path) -> None:
-    """A duplicate import raises the shared body as base PySparkException. pins: ice-procedures-1/C-018, C-019."""
+    """Duplicate imports raise the shared body. pins: ice-procedures-1/C-018, C-019."""
     root = tmp_path / "addsrc" / "dup"
     _write_partitioned_source(root)
     spark.sql(
@@ -584,6 +642,7 @@ def test_rdf_branch_rewrites_only_the_named_branch(spark: ReparkSession) -> None
         spark,
         "CALL mem.system.rewrite_data_files(table => 'ns.rdfb', branch => 'b1', "
         "options => map('rewrite-all', 'true'))",
+        schema=_RDF_SCHEMA,
     )
     assert cols == _RDF_COLS
     assert row[0] == 5
