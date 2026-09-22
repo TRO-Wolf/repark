@@ -684,9 +684,7 @@ def test_c005_o245_exact_hash_aes_cells(spark: ReparkSession, key: str) -> None:
 
 @pytest.mark.xfail(strict=True, reason=_HASH_SQL_XFAIL)
 @pytest.mark.parametrize("ansi", (True, False))
-def test_c005_hash_sql_full_select_negzero_collision(
-    spark: ReparkSession, ansi: bool
-) -> None:
+def test_c005_hash_sql_full_select_negzero_collision(spark: ReparkSession, ansi: bool) -> None:
     """Pin the 12-column hash SELECT's -0.0 collision on the SQL door, both ANSI settings."""
     key = next(
         key
