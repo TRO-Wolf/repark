@@ -27,6 +27,14 @@ proving every assertion in both pin files goes red when its production value
 breaks. No production file changed; every mutation reverted and verified by
 byte-diff against backup.
 
+**WO-R2 (2026-09-22, branch `fix/ice-mc-spec-id`, base `13b174d1`):** serves
+`_spec_id` through the cols-1 layer — provider const 2→3 plus the Int32
+non-null field, refusal strings advertise the served three, `_partition` /
+`_deleted` stay refused. Four new clauses (C-015..C-018), two mutations (M1/M2),
+each reverted and byte-verified. The ANSI door stays unwired (M-6/A-10); the
+`ICE-MC-FILEPOS-1` registry row still claims `_spec_id` refuses and needs a
+follow-up edit outside this lane's touch list.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the tree pins fork `df62cdee`, and the suite below is green there.**
@@ -98,6 +106,14 @@ M-4 empty-projection path (proved by F14b: `+1` row count reds both legs);
 `_file` non-nullness is pinned by the C-010 / R-MC-FILE-IDENTITY equality
 (F11/F13/F14 all red it).
 
+**M-9 (WO-R2) — the pin serves per-file `_spec_id` as Int32.** Re-read at fork
+`97f9b8a` (`crates/iceberg/src/metadata_columns.rs`): `SPEC_ID_FIELD` is
+`NestedField::required` over `PrimitiveType::Int`, so the provider declares
+Arrow `Int32` non-nullable with `RESERVED_FIELD_ID_SPEC_ID`, and the unchanged
+`table.scan().select(column_names)` passthrough carries the values. The (a)
+values pin and the (b) `[(1,0),(2,1)]` evolution pin prove the per-file
+constant; M2 (forced constant 0) reds only (b).
+
 ## PROPOSITION LEDGER — ICE-METADATA-COLS-1 — 2026-09-20
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
@@ -116,6 +132,10 @@ M-4 empty-projection path (proved by F14b: `+1` row count reds both legs);
 | C-012 | `SELECT * FROM t.at_timestamp_<ms>` answers the as-of rows `[(1,"a","x"),(2,"b","y"),(3,"c","x")]` with schema `[id: int32, data: string, cat: string]`. | `ref_selector_snapshot_id_and_at_timestamp_resolve_specs` and `test_at_timestamp_selector_reads_pinned_snapshot` green. | **PROVEN** | Recorded R-TT-AT-TIMESTAMP-SELECTOR rows replayed on the `base3` twin fixture; value AND type on the Arrow path. pins: ice-metadata-cols-1/C-012 |
 | C-013 | An unparsable numeric suffix (`snapshot_id_abc`, `snapshot_id_` empty, `at_timestamp_xyz`, `at_timestamp_` empty) refuses `IllegalArgumentException` naming the selector, never table-not-found. | `ref_selector_bad_numeric_suffix_refuses_typed` and `test_snapshot_id_selector_bad_suffix_refuses` green. | **PROVEN** | The `illegal_argument_error` convention shared with the branch/tag refusals; the message names the selector and the expected integer shape, with a no-`compound identifier` assertion at both levels. pins: ice-metadata-cols-1/C-013 |
 | C-014 | `branch_`/`tag_` selectors resolve unchanged (lowered match, original-case value, empty rest falls through, metadata-table and short names excluded) and `t.branch_b.files` keeps its current `AnalysisException` compound-identifier error. | `ref_selector_branch_and_tag_keep_original_case`, `ref_selector_exclusions_unchanged`, `test_branch_selector_still_resolves_as_branch_ref`, `test_branch_metadata_composition_still_errors` green, plus the untouched `refs_and_wap` suite. | **PROVEN** | A-7 near-miss: behavior byte-identical, asserted as the current error, not success. pins: ice-metadata-cols-1/C-014 |
+| C-015 | `SELECT id, _spec_id FROM t` on a single-spec table answers `[[2,0],[3,0],[4,0]]` with `_spec_id: int`. | `spec_id_answers_zero_on_a_single_spec_table` and `test_spec_id_is_zero_on_a_single_spec_table` green. | **PROVEN** | Exact recorded `R-MC-SPEC-ID` values, Arrow `int32` via downcast plus the `int` schema leg. M1 reds it. pins: ice-metadata-cols-1/C-015 |
+| C-016 | After `ADD PARTITION FIELD`, rows written under the old spec report 0 and rows under the new spec report the new id (`[(1,0),(2,1)]`). | `spec_id_reports_each_rows_own_spec_after_evolution` green. | **PROVEN** | The `_spec_id` half of recorded `R-MC-SPEC-ID-EVO` (`[[1,0,…],[2,1,…]]`); the full cell still refuses on `_partition` (C-018). A forced constant 0 reds only this pin (M2), so a current-default-spec shortcut dies here. pins: ice-metadata-cols-1/C-016 |
+| C-017 | `SELECT *` still answers user columns only; `*, _spec_id` composes. | `select_star_excludes_every_served_metadata_column` and `test_star_excludes_served_metadata_columns` green. | **PROVEN** | Field names `[id, data, cat]` / `+ [_spec_id]` on both doors of the pin. M1 reds the new leg. pins: ice-metadata-cols-1/C-017 |
+| C-018 | `_partition` / `_deleted` alone refuse typed `[ICE-MC-1]` advertising the served three; `SELECT id, _spec_id, _partition` refuses naming `_partition`, not `_spec_id`. | `unserved_metadata_columns_refuse_with_a_typed_error`, `served_spec_id_beside_an_unserved_column_names_the_unserved_one`, `test_unserved_metadata_columns_refuse_typed` green. | **PROVEN** | Each remaining unserved name raises `[ICE-MC-1]` with `this layer serves (_file, _pos, _spec_id)` and no `No field named` leak; the composed query pins `metadata column _partition is not yet served` plus the absence of `metadata column _spec_id`. pins: ice-metadata-cols-1/C-018 |
 
 ## Gates
 
@@ -185,6 +205,18 @@ tree is the step-4 tree.
 |---|---|---|---|
 | M1 | The `snapshot_id_` arm returns `TimestampMs(i64::MAX)` (reads the current snapshot). | `test_snapshot_id_selector_reads_pinned_snapshot` | RED 1/1 pytest (`[(2,'b','y'),(3,'c','x')]` current rows vs pinned `[(1,'a','x'),(2,'b','y')]`), 4/4 controls green; RED 1/4 Rust (`ref_selector_snapshot_id_and_at_timestamp_resolve_specs`). Reverted. |
 | M2 | A bad numeric suffix returns `Ok(None)` (falls through to table-not-found). | `ref_selector_bad_numeric_suffix_refuses_typed`, `test_snapshot_id_selector_bad_suffix_refuses` | RED 1/1 pytest (`AnalysisException` fall-through vs `IllegalArgumentException`), 4/4 controls green; RED 1/4 Rust (`ref_selector_bad_numeric_suffix_refuses_typed`). Reverted. |
+
+## WO-R2 mutations (M1/M2, run 2026-09-22, both reverted and byte-verified)
+
+Each row: one temporary production break in
+`crates/repark-iceberg/src/catalog/metadata_columns.rs`, the 10-test
+`cargo test -p repark-spark --lib metadata_columns` subset run against it, the
+break reverted with `git diff` at zero bytes.
+
+| Id | Mutation (production) | Pins that must red | Result |
+|---|---|---|---|
+| M1 | `METADATA_COLUMN_NAMES` back to `[_file, _pos]` (routing drops `_spec_id`). | values (a), evolution (b), star (c) | RED 3/10 (`spec_id_answers_zero_on_a_single_spec_table`, `spec_id_reports_each_rows_own_spec_after_evolution`, `select_star_excludes_every_served_metadata_column` — all fall through to unresolved-column); 7 controls green. Reverted. |
+| M2 | `conform_batch` reports constant `0` for `_spec_id` on every row. | evolution (b) only | RED 1/10 (`spec_id_reports_each_rows_own_spec_after_evolution`: `[(1,0),(2,0)]` vs `[(1,0),(2,1)]`); 9 green including the plain-values pin, proving (b) is the discriminating pin. Reverted. |
 
 ## COVERAGE_ATTESTATION
 

@@ -7602,19 +7602,22 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   pins: ice-changelog-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015
 - [test_ice_metadata_cols_1.py](test_ice_metadata_cols_1.py) —
-  **ICE-METADATA-COLS-1 (2026-09-20):** the Spark door serves `_file` and `_pos`
-  on Iceberg reads. Five pins replay the recorded inventory queries verbatim over
+  **ICE-METADATA-COLS-1 (2026-09-20):** the Spark door serves `_file`, `_pos` and
+  `_spec_id` on Iceberg reads. Six pins replay the recorded inventory queries verbatim over
   a two-append plus one-delete seed (`R-MC-FILE` with the `string` schema leg,
   `R-MC-FILE-DISTINCT`, `R-MC-FILE-FILTER`, `R-MC-POS` with the `bigint` schema
-  leg, and `R-MC-POS-MOR` on the merge-on-read twin, where the survivor keeps
-  its file ordinal); the star pin holds user-columns-only `*` plus the
-  `*, _file` / `*, _pos` compositions; and the refusal pin holds the typed
-  `[ICE-MC-1]` `AnalysisException` for `_spec_id` / `_partition` / `_deleted`,
-  never the raw `No field named`, with the column name asserted per column
-  (r2 V-001). The v3 twin serves `_file` + `_row_id` together, pinning the
-  metadata-before-lineage stage order (r2 V-002, C-009); and the identity twin
-  pins every live `_file` against the table's `files.file_path` (r2 V-003, C-010).
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+  leg, `R-MC-SPEC-ID` with the `int` schema leg, and `R-MC-POS-MOR` on the
+  merge-on-read twin, where the survivor keeps its file ordinal); the star pin
+  holds user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id`
+  compositions; and the refusal pin holds the typed `[ICE-MC-1]` `AnalysisException`
+  for `_partition` / `_deleted`, never the raw `No field named`, with the column
+  name asserted per column (r2 V-001). The v3 twin serves `_file` + `_row_id`
+  together, pinning the metadata-before-lineage stage order (r2 V-002, C-009); and
+  the identity twin pins every live `_file` against the table's `files.file_path`
+  (r2 V-003, C-010).
+  **WO-R2 (2026-09-22):** the `_spec_id` values pin, the `*, _spec_id` star leg, and the
+  two-name refusal asserting the served three.
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-015, C-016, C-017, C-018
 - `test_time_travel.py` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the selector pins —
   `t.snapshot_id_<id>` / `t.at_timestamp_<ms>` read the pinned snapshot with rows and schema
   asserted, unparsable numeric suffixes refuse typed, and the `branch_`/`tag_` near-miss
