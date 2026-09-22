@@ -46,6 +46,8 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "the analyzer_rules push (measured 180) with no further out available; "
         "FNP-WIN-1 step 3 adds `pub mod spark_window_time;` + the grouping-refusal rule "
         "push (measured 182 at commit time), same sanctioned out (2) with this stated reason; "
+        "M8-STARTSWITH-1 adds `pub mod spark_startswith;` + one register_all chain link "
+        "(measured 181, fits under the existing 182 with no raise); "
         "RATCHET: if registration moves",
     ),
     "repark-python": (

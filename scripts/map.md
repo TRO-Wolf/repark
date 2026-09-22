@@ -1,6 +1,7 @@
 # map — scripts/
 
 IPI-26/27 round 3 (2026-09-21): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1444 → 1389 (the `REPLACE PARTITION FIELD` parser moves to the sibling `replace_partition_field.rs`, which also takes the transform-LHS form), shrink-only.
+M8-STARTSWITH-1 (2026-09-21): startswith adds pub mod spark_startswith plus one register_all chain link; root file measured 181, fits under the standing repark-functions ceiling 182 with no raise.
 
 IPI-26/27 round 1 (2026-09-20): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1449 → 1447 (the comma splitter folds angle tracking into one depth counter), shrink-only.
 IPI-51 type slice (2026-09-21): `check_rust_file_size.py` ratchets `write/merge/mod.rs` 1656 → 1654 (the ad-hoc cardinality string leaves; both guards render `MERGE_CARDINALITY_VIOLATION` through the catalogue), shrink-only. pins: ice-error-conditions-1/C-012
