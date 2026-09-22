@@ -1,1 +1,0 @@
-- Planning ticks: one unit per tick. Findings go in the state file in 15 lines or fewer per unit; long analysis goes to a file the work order cites. Read with grep and line ranges, never whole files.

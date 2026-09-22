@@ -3,7 +3,7 @@ set -euo pipefail
 . "$(dirname "$(readlink -f "$0")")/env.sh"
 LANE="$1"; TITLE="$2"; BODY="$3"; DRAFT="${4:-}"; REPO="${COORDINATOR_REPO:-repark}"
 BANNED_TRAILER='co-authored[-]by|claude[-]session|claude\.ai'
-BANNED_BODY='co-authored[-]by|claude\.ai|generated with'
+BANNED_BODY='co-authored[-]by|claude\.ai|generated[ ]with'
 cd $SCRATCH/$LANE
 BR=$(git branch --show-current)
 [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "STOP: dirty tree"; exit 3; }

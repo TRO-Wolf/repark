@@ -29,32 +29,42 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
 
 ## Contents
 
-- `env.sh` — the only place paths live. Sourced by every script. `COORDINATOR_ROOT` (campaign
+- `env.sh` — the only place paths live. Sourced by the six path scripts (`start`, `drive`, `status`,
+  `gate`, `review`, `pr`); the engines read only `COORDINATOR_*` knobs with defaults. `COORDINATOR_ROOT` (campaign
   root, default `/tmp/oc-worker`), `COORDINATOR_LIB` (sibling tooling: `build-slot.sh`,
   `local-gate.sh`, `comment_ban.py`, `drive-merge.sh`; default `$ROOT/_lib`), `COORDINATOR_SCRATCH`
   (where lane clones and worker output live, default `/tmp`), `COORDINATOR_MERGE_QUEUE`,
   `COORDINATOR_GH_OWNER`. The handbook is a template over the same names (`{{HERE}}`, `{{LIB}}`,
-  `{{ROOT}}`, `{{SCRATCH}}`, `{{MERGE_QUEUE}}`), filled by the driver at tick time.
+  `{{ROOT}}`, `{{SCRATCH}}`, `{{MERGE_QUEUE}}`), filled by the driver at tick time. Today the
+  sibling tooling in `$LIB` (`r7-launch.sh`, `r9-lane.sh`, `local-gate.sh`, `drive-merge.sh`) still
+  writes under `/tmp` and `/tmp/oc-worker` regardless of these variables, so a non-default root or
+  scratch only moves the coordinator's own files and is not a supported way to run; the variables
+  exist for the day that tooling takes the same names.
 - `start.sh <run-dir> <unit> <engine> [until]` — launches one lane as a transient user unit in
-  `repark.slice` (`Restart=always`, four restarts per two hours, exit 0 never restarted). Refuses a
+  `repark.slice` (`Restart=always`, four restarts per two hours, exit 0 never restarted); every
+  `COORDINATOR_*` variable set in the launcher's environment is forwarded into the unit. Refuses a
   missing list, an unknown engine, a missing lib directory, or a slice without a memory cap.
 - `drive.sh` — the loop. Each iteration: stop if state says DONE; compile the tick prompt (handbook
   + engine addendum + list + state + `status.sh` + the claims tail + the tick instruction); run
-  `engine-<engine>.sh`; log the meter; then wait. `WORKING` re-ticks at once; `WAITING` sleeps until
+  `engine-<engine>.sh`; log the meter; then wait. `WORKING` re-ticks after five seconds; `WAITING` sleeps until
   the `status.sh quiet` fingerprint changes, a ruling or `ASK <unit>` line lands in claims, the idle
   limit (`COORDINATOR_MAX_IDLE`, 1500 s, doubling from 60 s while nothing is in flight) or the
   deadline passes. `COORDINATOR_MIN_GAP` batches wake events. Three failed ticks in a row exit 1.
 - `status.sh <run-dir> <unit> [full|quiet]` — the world as the lane sees it: active worker units,
   the newest round per worker family (exit, hand-back present), the clone's head and dirtiness, the
   local-gate result, the PR states (cached five minutes), the merge-queue tail, and the count of
-  claims lines addressed to it. `quiet` omits the volatile fields so the driver can fingerprint it.
+  claims lines addressed to it. `quiet` omits the time, the clone line and the merge-queue tail so
+  the driver can fingerprint it; when the PR cache refreshes and `gh` fails, the previous line for
+  that PR is kept rather than replaced, so a `gh` outage does not wake the driver.
 - `engine-<name>.sh <workdir> <prompt-file> <out-dir>` — one bounded model call, writing the raw
-  output plus `meter.txt` (turns/steps/tools and cost where the CLI reports it; blank is unknown,
-  not zero). `grok` (grok-4.7, effort `COORDINATOR_EFFORT` default xhigh), `grok47` (alias),
+  output plus `meter.txt`: `grok` and `glm` write turns/steps and `cost_usd` (0 when the CLI
+  omits it); `muse` writes tool count and terminal state and `sol` token counts — neither reports
+  a cost, so their lanes show no dollar figure, which means unknown, not free. `grok` (grok-4.7, effort `COORDINATOR_EFFORT` default xhigh), `grok47` (alias),
   `muse` (muse-spark-1.3-contributor, max), `glm` (opencode on zai/glm-5.3), `glmflash` (alias on
   glm-5.3-flash), `sol` (codex on gpt-5.6-sol, high). Model, effort, turn cap and tick timeout come
-  from `COORDINATOR_MODEL`, `COORDINATOR_EFFORT`, `COORDINATOR_TURNS`, `COORDINATOR_TICK_TIMEOUT`.
-  The Claude engine is not in the repo.
+  from `COORDINATOR_MODEL`, `COORDINATOR_EFFORT`, `COORDINATOR_TURNS`, `COORDINATOR_TICK_TIMEOUT`
+  (`COORDINATOR_VARIANT` for `glm`). Files: `engine-grok.sh`, `engine-grok47.sh`, `engine-muse.sh`,
+  `engine-glm.sh`, `engine-glmflash.sh`, `engine-sol.sh`. The Claude engine is not in the repo.
 - `gate.sh <lane> <crates…> <pytest paths…>` — queues the local gate under `build-slot.sh` and
   returns at once; the result lands in `$ROOT/<lane>-localgate.done`.
 - `review.sh <lane> <brief>` — clones the lane's clone to `rv-<lane>`, points origin at GitHub with
@@ -67,8 +77,9 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
 - `handbook.md` — the standing instructions every tick starts with: how ticks work, the hard rules
   (comment ban, no Claude models, no AWS, identity and trailers, questions before rulings), the
   toolbox, the order of work for a unit, and the rules learned from run 27.
-- `addendum-<engine>.md` — per-engine additions from the lessons ledger, appended to the handbook
-  for that engine only.
+- `addendum-glm.md`, `addendum-glmflash.md`, `addendum-muse.md` — per-engine additions from the
+  lessons ledger, appended to the handbook for that engine only (`drive.sh` loads
+  `addendum-<engine>.md` when it exists).
 - `critic-brief-template.md` — the brief a lane fills and hands to `review.sh`.
 - `lessons.md` — the ledger: observed pattern → evidence → the instruction it became. Applied at the
   next run's start, never mid-run. Rows keep the pre-rename names; its header says how they map.
@@ -83,7 +94,6 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
 | extend or cut a deadline | `date -d '2026-09-23 06:00' +%s > <run-dir>/until-<unit>` (an epoch survives midnight; `HHMM` does not) |
 | see every lane | `for u in <run-dir>/state-*.md; do head -1 "$u"; done`, or `status.sh <run-dir> <unit>` for one |
 | stop a lane now | `systemctl --user stop <unit>`; its state stays where it was |
-| run this from another root | `COORDINATOR_ROOT=… COORDINATOR_SCRATCH=… scripts/coordinator/start.sh …` (both are passed into the unit) |
 
 ## Known weak spots (open, from run 27)
 

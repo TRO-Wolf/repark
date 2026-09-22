@@ -32,7 +32,7 @@ if [ -n "$PRS" ]; then
     : > $C.tmp
     for P in $PRS; do
       R=${P%%#*}; N=${P##*#}
-      gh pr view $N -R $GH_OWNER/$R --json state,mergeable,statusCheckRollup --jq "\"$P state=\(.state) mergeable=\(.mergeable) checks: \([.statusCheckRollup[]?|(.conclusion // .status)]|group_by(.)|map(\"\(.[0])=\(length)\")|join(\" \"))\"" >> $C.tmp 2>/dev/null || echo "$P (gh failed)" >> $C.tmp
+      gh pr view $N -R $GH_OWNER/$R --json state,mergeable,statusCheckRollup --jq "\"$P state=\(.state) mergeable=\(.mergeable) checks: \([.statusCheckRollup[]?|(.conclusion // .status)]|group_by(.)|map(\"\(.[0])=\(length)\")|join(\" \"))\"" >> $C.tmp 2>/dev/null || { grep -m1 -F "$P " $C 2>/dev/null || echo "$P (gh failed)"; } >> $C.tmp
     done
     mv $C.tmp $C
   fi
