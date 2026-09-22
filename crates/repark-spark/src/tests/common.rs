@@ -714,3 +714,38 @@ pub(super) fn count_objects(root: &std::path::Path) -> usize {
     }
     count
 }
+
+pub(super) async fn asof_scalar(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> i64 {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .unwrap()
+        .value(0)
+}
+
+pub(super) async fn asof_rendered(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> String {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    datafusion::arrow::util::pretty::pretty_format_batches(&batches)
+        .unwrap()
+        .to_string()
+}

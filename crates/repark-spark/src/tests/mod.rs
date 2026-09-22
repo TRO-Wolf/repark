@@ -54,6 +54,7 @@ mod merge_cardinality_mor;
 mod merge_nmbs;
 mod metadata_columns;
 mod metadata_tables;
+mod metadata_tables_asof;
 mod namespace_ddl;
 mod nan_pushdown;
 mod nested_column_ddl;

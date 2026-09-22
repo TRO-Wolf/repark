@@ -144,7 +144,7 @@ pub async fn prepare_time_travel_sql(
         let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
             .await
             .map_err(iceberg_err)?;
-        let replacement = register_time_travel_provider(ctx, pinned, Arc::new(provider)).await?;
+        let replacement = register_time_travel_provider(ctx, pinned, Arc::new(provider))?;
         tokens.splice(span.table_start..span.clause_end, replacement);
     }
 
@@ -190,20 +190,20 @@ async fn prepare_metadata_as_of(
     if metadata_asof_mode(&metadata_type) == MetadataAsofMode::ServeCurrent {
         resolve_snapshot_id(table.metadata(), spec, zone)?;
         let provider = SnapshotMetadataTableProvider::try_new_current(table, metadata_type)?;
-        return register_time_travel_provider(ctx, pinned, Arc::new(provider)).await;
+        return register_time_travel_provider(ctx, pinned, Arc::new(provider));
     }
     if let TimeTravelSpec::SnapshotId(snapshot_id) = spec
         && table.metadata().snapshot_by_id(*snapshot_id).is_none()
     {
         let provider = SnapshotMetadataTableProvider::try_new_empty(table, metadata_type)?;
-        return register_time_travel_provider(ctx, pinned, Arc::new(provider)).await;
+        return register_time_travel_provider(ctx, pinned, Arc::new(provider));
     }
     let resolved = resolve_snapshot_id(table.metadata(), spec, zone)?;
     let provider = SnapshotMetadataTableProvider::try_new_scoped(table, metadata_type, resolved)?;
-    register_time_travel_provider(ctx, pinned, Arc::new(provider)).await
+    register_time_travel_provider(ctx, pinned, Arc::new(provider))
 }
 
-async fn register_time_travel_provider(
+fn register_time_travel_provider(
     ctx: &SessionContext,
     pinned: &mut PinnedViews,
     provider: Arc<dyn TableProvider>,
