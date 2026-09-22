@@ -23,7 +23,6 @@ pub(crate) async fn execute_create_view(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     statement: CreateViewStatement,
-    bare_name_target: bool,
 ) -> Result<DataFrame> {
     let (catalog, namespace_name, view_name) = complete_view_name(ctx, &statement.name)?;
     let handle = catalog_handle(catalogs, &catalog)?;
@@ -35,10 +34,8 @@ pub(crate) async fn execute_create_view(
         prepare_view_body_sql(ctx, catalogs, &catalog, &namespace, &statement.body_sql).await?;
     let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
     pins.release(ctx);
-    if !bare_name_target {
-        repark_core::refuse_iceberg_create_of_tightened_plan(frame.logical_plan())
-            .map_err(|error| DataFusionError::Plan(error.to_string()))?;
-    }
+    repark_core::refuse_iceberg_create_of_tightened_plan(frame.logical_plan())
+        .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     let view_display = format!("{catalog}.{namespace_name}.{view_name}");
     let schema =
         view_schema_for_output(frame.schema().as_arrow(), &statement.aliases, &view_display)?;
