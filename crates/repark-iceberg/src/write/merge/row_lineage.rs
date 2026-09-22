@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{RecordBatch, UInt32Array};
@@ -16,11 +15,11 @@ use iceberg::metadata_columns::{
 use iceberg::spec::{DataFile, DataFileFormat, Literal, PartitionKey, Struct};
 use iceberg::table::Table;
 use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
-use iceberg::writer::file_writer::ParquetWriterBuilder;
 use iceberg::writer::file_writer::location_generator::{
     DefaultFileNameGenerator, DefaultLocationGenerator,
 };
 use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
+use iceberg::writer::file_writer::{AnyFileWriterBuilder, ParquetWriterBuilder};
 use iceberg::writer::partitioning::PartitioningWriter;
 use iceberg::writer::partitioning::fanout_writer::FanoutWriter;
 use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
@@ -152,26 +151,41 @@ where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
+    let file_format = crate::write::data_format::resolve_data_format(
+        staging.write_format.as_deref(),
+        Some(table_props.write_format_default.as_str()),
+    )?;
     let write_schema = iceberg_parquet_schema(table)?;
     let user_schema = table.metadata().current_schema().clone();
     let user_count = user_schema.as_struct().fields().len();
     let partition_spec = table.metadata().default_partition_spec().clone();
     let calculator =
         PartitionValueCalculator::try_new(&partition_spec, &user_schema).map_err(iceberg_err)?;
-    let parquet_builder = ParquetWriterBuilder::new_with_match_mode(
-        crate::write::write_options::staged_writer_properties(table, staging)?,
-        write_schema,
-        FieldMatchMode::Name,
-    )
-    .with_metrics_config(crate::write::writer_props::metrics_config_for(table)?);
+    let file_writer_builder = if file_format == DataFileFormat::Parquet {
+        AnyFileWriterBuilder::Parquet(Box::new(
+            ParquetWriterBuilder::new_with_match_mode(
+                crate::write::write_options::staged_writer_properties(table, staging)?,
+                write_schema,
+                FieldMatchMode::Name,
+            )
+            .with_metrics_config(crate::write::writer_props::metrics_config_for(table)?),
+        ))
+    } else {
+        AnyFileWriterBuilder::for_format(
+            file_format,
+            write_schema,
+            table.metadata().properties(),
+            crate::write::writer_props::metrics_config_for(table)?,
+            FieldMatchMode::Name,
+        )
+        .map_err(iceberg_err)?
+    };
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
     let file_name_generator =
         DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
     let rolling_builder = RollingFileWriterBuilder::new(
-        parquet_builder,
+        file_writer_builder,
         crate::write::writer_props::target_file_size_with(table, staging.target_file_size_bytes)?,
         table.file_io().clone(),
         location_generator,
