@@ -676,3 +676,141 @@ def test_branch_metadata_composition_still_errors(
     _ = multi_snapshot
     with pytest.raises(AnalysisException, match=r"compound identifier"):
         spark.sql(f"SELECT count(*) FROM {TABLE}.branch_b.files").to_arrow()
+
+
+def test_legacy_snapshot_id_refuses_like_spark(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    s1 = multi_snapshot["s1"]
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
+        spark.read.format("iceberg").option("snapshot-id", str(s1)).load(TABLE)
+
+
+def test_legacy_as_of_timestamp_refuses_like_spark(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    s1_ts = multi_snapshot["s1_ts"]
+    with pytest.raises(IllegalArgumentException, match=re.escape(AS_OF_TIMESTAMP_REFUSAL)):
+        spark.read.format("iceberg").option("as-of-timestamp", str(s1_ts)).load(TABLE)
+
+
+def test_legacy_tag_refuses_like_spark(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    _ = multi_snapshot
+    with pytest.raises(IllegalArgumentException, match=re.escape(TAG_REFUSAL)):
+        spark.read.format("iceberg").option("tag", "tag_s1").load(TABLE)
+
+
+def test_legacy_snapshot_id_wins_over_as_of_timestamp(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    s1 = multi_snapshot["s1"]
+    s1_ts = multi_snapshot["s1_ts"]
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
+        (
+            spark.read.format("iceberg")
+            .option("snapshot-id", str(s1))
+            .option("as-of-timestamp", str(s1_ts))
+            .load(TABLE)
+        )
+
+
+def test_legacy_tag_refusal_with_branch(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    _ = multi_snapshot
+    with pytest.raises(IllegalArgumentException, match=re.escape(TAG_REFUSAL)):
+        (
+            spark.read.format("iceberg")
+            .option("branch", "branch_s2")
+            .option("tag", "tag_s1")
+            .load(TABLE)
+        )
+
+
+def test_legacy_snapshot_id_wins_over_tag(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    s1 = multi_snapshot["s1"]
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
+        (
+            spark.read.format("iceberg")
+            .option("tag", "tag_s1")
+            .option("snapshot-id", str(s1))
+            .load(TABLE)
+        )
+
+
+def test_table_entry_legacy_snapshot_id_refuses(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    s1 = multi_snapshot["s1"]
+    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
+        spark.read.option("snapshot-id", str(s1)).table(TABLE)
+
+
+def test_version_as_of_with_tag_name_answers(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    arrow = (
+        spark.read.format("iceberg")
+        .option("versionAsOf", "tag_s1")
+        .load(TABLE)
+        .select("id")
+        .to_arrow()
+    )
+    assert _arrow_ids(arrow) == multi_snapshot["ids_s1"]
+
+
+def test_timestamp_as_of_answers(spark: ReparkSession, multi_snapshot: dict[str, object]) -> None:
+    arrow = (
+        spark.read.format("iceberg")
+        .option("timestampAsOf", "2999-01-01")
+        .load(TABLE)
+        .select("id")
+        .to_arrow()
+    )
+    assert _arrow_ids(arrow) == multi_snapshot["ids_s3"]
+
+
+def test_start_snapshot_id_alone_answers(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    s1 = multi_snapshot["s1"]
+    arrow = (
+        spark.read.format("iceberg")
+        .option("start-snapshot-id", str(s1))
+        .load(TABLE)
+        .select("id")
+        .to_arrow()
+    )
+    assert "id" in arrow.column_names
+    assert arrow.num_rows >= 1
+
+
+def test_unrelated_split_size_option_ignored(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    arrow = (
+        spark.read.format("iceberg")
+        .option("split-size", "16MB")
+        .load(TABLE)
+        .select("id")
+        .to_arrow()
+    )
+    assert _arrow_ids(arrow) == multi_snapshot["ids_s3"]
+
+
+def test_snapshot_id_underscore_option_ignored(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    s1 = multi_snapshot["s1"]
+    arrow = (
+        spark.read.format("iceberg")
+        .option("snapshot_id", str(s1))
+        .load(TABLE)
+        .select("id")
+        .to_arrow()
+    )
+    assert _arrow_ids(arrow) == multi_snapshot["ids_s3"]
