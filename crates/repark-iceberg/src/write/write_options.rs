@@ -325,19 +325,16 @@ where
 {
     let new_files = if let Some(columns) = positional_columns {
         stage_overwrite_files_with(table, stream, columns, concurrency, staging).await?
+    } else if table.metadata().default_partition_spec().is_unpartitioned() {
+        stage_unpartitioned_stream_with_overrides(table, stream, concurrency, staging).await?
     } else {
-        if table.metadata().default_partition_spec().is_unpartitioned() {
-            stage_unpartitioned_stream_with_overrides(table, stream, concurrency, staging).await?
-        } else {
-            let current_schema = table.metadata().current_schema();
-            let write_schema =
-                Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
-            let write_default_columns = write_default_column_names(current_schema);
-            let conformed = stream.map(move |item| {
-                crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
-            });
-            stage_partitioned_stream_with_overrides(table, conformed, staging, concurrency).await?
-        }
+        let current_schema = table.metadata().current_schema();
+        let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+        let write_default_columns = write_default_column_names(current_schema);
+        let conformed = stream.map(move |item| {
+            crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+        });
+        stage_partitioned_stream_with_overrides(table, conformed, staging, concurrency).await?
     };
     let engine = EngineSummary::for_append(table, &new_files, None);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
