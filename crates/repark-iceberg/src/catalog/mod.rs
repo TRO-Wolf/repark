@@ -23,6 +23,7 @@ mod location;
 mod metadata_columns;
 mod provider;
 mod scan_batches;
+mod snapshot_metadata_table;
 
 // Public product surface (order: provider → builders → location).
 pub use provider::{
@@ -67,6 +68,10 @@ pub use location::{
 pub use metadata_columns::{
     METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, UNSERVED_METADATA_COLUMN_NAMES,
     is_served_metadata_column, metadata_columns_user_field_names,
+};
+pub use snapshot_metadata_table::{
+    MetadataAsofMode, SnapshotMetadataTableProvider, metadata_asof_mode,
+    snapshot_scope_refusal_text,
 };
 // Crate-private helpers used by listing/register still in this root and by sibling modules.
 
