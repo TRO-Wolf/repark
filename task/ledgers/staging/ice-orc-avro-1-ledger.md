@@ -69,7 +69,8 @@ refusing merge-on-read) are untouched; they guard versions, not formats.
 | C-016 | `W-READ-FOREIGN-ORC`: rows read back from an ORC table. | `test_ice_orc_avro_1.py::test_read_foreign_orc_table`. | PROVEN | `[[1,a,x],[2,b,y],[3,c,x]]`; closed for free with the write (WO3a). |
 | C-017 | M-5: ORC files carry full column metrics, `nan_value_count` only on float/double. | `test_ice_orc_avro_1.py::test_orc_metrics_carry_full_column_metrics`. | PROVEN | Counts, bounds, NaN count only on float, positive int column sizes on id/ratio/data; no Spark metrics recording exists for this unit, so no Spark comparison is claimed. Renamed per critic r1 V-005 (WO-798). |
 | C-018 | M-6: Avro files carry no column metrics. | `test_ice_orc_avro_1.py::test_avro_metrics_are_empty`. | PROVEN | Every `readable_metrics` field NULL; S6 22P (WO3a). |
-| C-019 | ORC primitives round-trip; nested columns pin the fork reader's typed refusal. | `test_ice_orc_avro_1.py::test_all_types_round_trip_orc`. | PROVEN | 10 primitives read back exact; ARRAY/MAP/STRUCT refuse with `ORC data-file read of nested type for field '<name>'`; fork read-nested follow-up inverts those arms. |
+| C-019 | M-7: the 10 ORC primitive columns round-trip exact. | `test_ice_orc_avro_1.py::test_all_types_round_trip_orc` primitives leg. | PROVEN | 10 primitives read back exact; nested arms moved to residue R-1. |
+| R-1 | OPEN residue: nested ORC read (ARRAY/MAP/STRUCT) refuses at the fork reader; Spark round-trips them (packet M-7). | Fork read-nested follow-up inverts the nested arms of `test_ice_orc_avro_1.py::test_all_types_round_trip_orc`. | OPEN | Current pin: ARRAY/MAP/STRUCT refuse with `ORC data-file read of nested type for field '<name>'`. |
 | C-020 | M-7: all 13 probe types round-trip through Avro. | `test_ice_orc_avro_1.py::test_all_types_round_trip_avro`. | PROVEN | Full wide row reads back exact; S6 22P (WO3a). |
 | C-021 | Unknown `write-format` refuses with Java's `Invalid file format: <name>` shape. | `test_ice_orc_avro_1.py::test_unknown_write_format_refuses`. | PROVEN | `write-format = csv` refuses, snapshot count stays 1; S6 22P (WO3a). |
 | C-022 | Compaction keeps the table format on an ORC table. | `test_ice_orc_avro_1.py::test_compaction_keeps_table_format`. | PROVEN | `rewrite_data_files` leaves ORC files; S6 22P (WO3a). |
@@ -140,4 +141,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 23 clauses, 23 PROVEN, 0 OPEN, 0 REJECTED.
+VERDICT: 24 clauses, 23 PROVEN, 1 OPEN, 0 REJECTED.
