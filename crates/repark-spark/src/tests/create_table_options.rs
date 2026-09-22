@@ -300,3 +300,99 @@ async fn options_identifier_below_top_level_keeps_the_rewrite() {
     assert_eq!(properties.get("k").map(String::as_str), Some("v"));
     assert_eq!(properties.get("option.k").map(String::as_str), Some("v"));
 }
+
+#[tokio::test]
+async fn temp_spellings_with_options_refuse_with_no_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for spelling in ["TEMPORARY", "TEMP", "TRANSIENT", "VOLATILE"] {
+        let lower = spelling.to_lowercase();
+        let column_def = format!(
+            "CREATE {spelling} TABLE ice.sales.opt_tmp_{lower} (id BIGINT) USING iceberg \
+             OPTIONS ('k'='v')"
+        );
+        execute(&ctx, &catalogs, &column_def)
+            .await
+            .expect_err("a temporary spelling with OPTIONS must refuse");
+        assert_no_sales_table(&catalogs, &format!("opt_tmp_{lower}")).await;
+        let ctas = format!(
+            "CREATE {spelling} TABLE ice.sales.opt_tmp_ctas_{lower} USING iceberg \
+             OPTIONS ('k'='v') AS SELECT * FROM src"
+        );
+        execute(&ctx, &catalogs, &ctas)
+            .await
+            .expect_err("a temporary CTAS spelling with OPTIONS must refuse");
+        assert_no_sales_table(&catalogs, &format!("opt_tmp_ctas_{lower}")).await;
+    }
+}
+
+#[tokio::test]
+async fn lowercase_options_keyword_stores_both_keys() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.opt_lower (id BIGINT) USING iceberg options ('k'='v')",
+    )
+    .await
+    .expect("a lowercase options keyword must rewrite");
+    let properties = stored_properties(&catalogs, "opt_lower").await;
+    assert_eq!(properties.get("k").map(String::as_str), Some("v"));
+    assert_eq!(properties.get("option.k").map(String::as_str), Some("v"));
+}
+
+#[tokio::test]
+async fn options_identifier_in_ctas_select_list_keeps_the_rewrite() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.opt_ctas_shadow USING iceberg OPTIONS ('k'='v') AS \
+         SELECT 1 AS options",
+    )
+    .await
+    .expect("an options alias in the CTAS select list must not block the rewrite");
+    let properties = stored_properties(&catalogs, "opt_ctas_shadow").await;
+    assert_eq!(properties.get("k").map(String::as_str), Some("v"));
+    assert_eq!(properties.get("option.k").map(String::as_str), Some("v"));
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT options FROM ice.sales.opt_ctas_shadow"
+        )
+        .await,
+        1
+    );
+}
+
+#[tokio::test]
+async fn non_iceberg_providers_with_options_refuse_with_no_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for (table, provider) in [("opt_parquet_x", "parquet"), ("opt_delta_x", "delta")] {
+        let sql = format!(
+            "CREATE TABLE ice.sales.{table} (id BIGINT) USING {provider} OPTIONS ('k'='v')"
+        );
+        execute(&ctx, &catalogs, &sql)
+            .await
+            .expect_err("a non-iceberg provider with OPTIONS must refuse");
+        assert_no_sales_table(&catalogs, table).await;
+    }
+}
+
+#[tokio::test]
+async fn missing_using_with_options_refuses_with_no_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.opt_nous_x (id BIGINT) OPTIONS ('k'='v')",
+    )
+    .await
+    .expect_err("OPTIONS without USING iceberg must refuse");
+    assert_no_sales_table(&catalogs, "opt_nous_x").await;
+}
