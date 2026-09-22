@@ -54,7 +54,7 @@ VERDICT: 10 clauses, 7 PROVEN, 3 OPEN, 0 REJECTED.
 |---|---|
 | `cargo test -p repark-functions --lib grouping` | exit 0 — 12 passed, 0 failed (10 `grouping::tests` + 2 pre-existing filter matches: `java_double::format_float`, `string::format_number`) |
 | `test_fnp_agg_1.py` + `test_fnp_agg_1_critic.py` | exit 0 — 24 passed (16 card + 8 critic), 0 failed, 0 xfail |
-| `test_functions_split_identity.py`, grouping `test_types_1.py` | exit 0 — 4 passed |
+| `test_functions_split_identity.py`, grouping `test_types_1.py` | exit 0 — 3 passed, 1 skipped (`test_live_grouping_sets_match_on_value_with_type_carve_out` skips unless `REPARK_PARITY_LIVE=1`) |
 | `test_ex_0_example_coverage.py`, `test_cap_1_source_file_line_cap.py` | exit 0 — 49 passed (EX-0 1086, mirrors hold) |
 | `check_example_coverage.py --require-execute` | exit 0 — 111 backlog, 250 examples; `agg_misc.py` prints the cube rows |
 | `check_lib_rs.py`, `check_rust_file_size.py`, `check_lib_py.py` | exit 0 — all clean (185 / 1012 / 1984 re-measured head-vs-main) |
