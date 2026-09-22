@@ -453,6 +453,36 @@
     ]
    ]
   },
+  "f_gte_0": {
+   "sql": "SELECT id FROM t WHERE f >= 0.0",
+   "schema": "struct<id:int>",
+   "rows": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ]
+   ]
+  },
   "f_lte_0": {
    "sql": "SELECT id FROM t WHERE f <= 0.0",
    "schema": "struct<id:int>",

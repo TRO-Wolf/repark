@@ -124,6 +124,12 @@ _DIVERGE_DF: dict[str, list[int]] = {
     "df_f_between": [3, 4, 9, 10],
 }
 
+_MISSING_ORACLE_CELLS = sorted(
+    (set(_DIVERGE_SQL) | set(_DIVERGE_DF) | {"df_d_str", "df_f_str"})
+    - set(_ORACLE["cells"])
+)
+assert not _MISSING_ORACLE_CELLS, f"oracle cells missing: {_MISSING_ORACLE_CELLS}"
+
 
 @pytest.fixture
 def seeded(tmp_path: Path) -> Any:
@@ -192,6 +198,7 @@ def test_sql_door_sweep_matches_spark(seeded: Any) -> None:
     for key, predicate in _MATCH_SQL.items():
         got = _ids(session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow())
         assert got == _oracle_ids(key), key
+    assert _oracle_ids("f_gte_0") == [1, 2, 3, 4, 6, 8, 9, 10], _ORACLE["cells"]["f_gte_0"]
     for key, (predicate, repark) in _DIVERGE_SQL.items():
         got = _ids(session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow())
         assert got == repark, (
