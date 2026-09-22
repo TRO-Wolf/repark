@@ -199,10 +199,10 @@ fn plan_bround(arg_types: &[DataType]) -> Result<()> {
         );
     }
     if !is_bround_input(&arg_types[0]) {
-        return Err(unexpected_input_type("bround", "DOUBLE", &arg_types[0]));
+        return Err(unexpected_input_type("bround", "DOUBLE", &arg_types[0], "first"));
     }
     if arg_types.len() == 2 && !is_integral_or_null(&arg_types[1]) {
-        return Err(unexpected_input_type("bround", "INT", &arg_types[1]));
+        return Err(unexpected_input_type("bround", "INT", &arg_types[1], "second"));
     }
     Ok(())
 }

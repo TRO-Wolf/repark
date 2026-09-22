@@ -567,9 +567,9 @@ def test_c004_f14_aes_error_cells_python_door(
     )
 
 
-_MASK_REFUSAL_TEMPLATE = (
-    '[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve "mask(<expr>)" due to '
-    'data type mismatch: The {ordinal} parameter requires the "STRING" type, however '
+_REFUSAL_TEMPLATE = (
+    '[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve "{name}(<expr>)" due to '
+    'data type mismatch: The {ordinal} parameter requires the "{required}" type, however '
     'the argument has the type "{got}". SQLSTATE: 42K09'
 )
 
@@ -587,8 +587,8 @@ def test_c004_mask_later_arg_refusal_sql_door(spark: ReparkSession, ansi: bool) 
         "42K09",
         "mask-sql-second-int",
     )
-    assert str(excinfo.value) == _MASK_REFUSAL_TEMPLATE.format(
-        ordinal="second", got="BIGINT"
+    assert str(excinfo.value) == _REFUSAL_TEMPLATE.format(
+        name="mask", ordinal="second", required="STRING", got="BIGINT"
     ), "mask-sql-second-int"
 
 
@@ -605,9 +605,45 @@ def test_c004_mask_later_arg_refusal_python_door(spark: ReparkSession, ansi: boo
         "42K09",
         "mask-python-second-int",
     )
-    assert str(excinfo.value) == _MASK_REFUSAL_TEMPLATE.format(
-        ordinal="second", got="INT"
+    assert str(excinfo.value) == _REFUSAL_TEMPLATE.format(
+        name="mask", ordinal="second", required="STRING", got="INT"
     ), "mask-python-second-int"
+
+
+@pytest.mark.parametrize("ansi", (True, False))
+def test_c004_conv_later_arg_refusal_sql_door(spark: ReparkSession, ansi: bool) -> None:
+    """Pin the conv fromBase refusal naming the second parameter on the SQL door."""
+    _set_ansi(spark, ansi)
+    with pytest.raises(Exception) as excinfo:
+        spark.sql("SELECT conv('1', 1.5, 10)").to_arrow()
+    _assert_recorded_error(
+        excinfo.value,
+        "AnalysisException",
+        "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+        "42K09",
+        "conv-sql-base-double",
+    )
+    assert str(excinfo.value) == _REFUSAL_TEMPLATE.format(
+        name="conv", ordinal="second", required="INT", got="DECIMAL128(2, 1)"
+    ), "conv-sql-base-double"
+
+
+@pytest.mark.parametrize("ansi", (True, False))
+def test_c004_bround_later_arg_refusal_sql_door(spark: ReparkSession, ansi: bool) -> None:
+    """Pin the bround scale refusal naming the second parameter on the SQL door."""
+    _set_ansi(spark, ansi)
+    with pytest.raises(Exception) as excinfo:
+        spark.sql("SELECT bround(CAST(1.5 AS DOUBLE), 1.5)").to_arrow()
+    _assert_recorded_error(
+        excinfo.value,
+        "AnalysisException",
+        "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+        "42K09",
+        "bround-sql-scale-double",
+    )
+    assert str(excinfo.value) == _REFUSAL_TEMPLATE.format(
+        name="bround", ordinal="second", required="INT", got="DECIMAL128(2, 1)"
+    ), "bround-sql-scale-double"
 
 
 _HASH_SQL_XFAIL = (

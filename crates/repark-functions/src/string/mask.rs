@@ -78,7 +78,7 @@ fn plan_mask(arg_types: &[DataType]) -> Result<()> {
         );
     }
     if !is_mask_text(&arg_types[0]) {
-        return Err(unexpected_input_type("mask", "STRING", &arg_types[0]));
+        return Err(unexpected_input_type("mask", "STRING", &arg_types[0], "first"));
     }
     for (position, data_type) in arg_types.iter().enumerate().skip(1) {
         if !is_mask_text(data_type) {

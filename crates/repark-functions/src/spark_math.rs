@@ -123,7 +123,7 @@ impl ScalarUDFImpl for SparkAbs {
                 Ok(vec![data_type.clone()])
             }
             [DataType::Null] => Ok(vec![DataType::Int32]),
-            [data_type] => Err(unexpected_input_type("abs", "NUMERIC", data_type)),
+            [data_type] => Err(unexpected_input_type("abs", "NUMERIC", data_type, "first")),
             _ => exec_err!("'abs' expects one argument, got {}", arg_types.len()),
         }
     }
@@ -189,8 +189,12 @@ impl ScalarUDFImpl for SparkHypot {
                 Ok(vec![DataType::Float64, DataType::Float64])
             }
             [left, right] => {
-                let bad = if acceptable_double(left) { right } else { left };
-                Err(unexpected_input_type("hypot", "DOUBLE", bad))
+                let (bad, ordinal) = if acceptable_double(left) {
+                    (right, "second")
+                } else {
+                    (left, "first")
+                };
+                Err(unexpected_input_type("hypot", "DOUBLE", bad, ordinal))
             }
             _ => exec_err!("'hypot' expects two arguments, got {}", arg_types.len()),
         }
@@ -266,7 +270,7 @@ impl ScalarUDFImpl for SparkBin {
             {
                 Ok(vec![DataType::Int64])
             }
-            [data_type] => Err(unexpected_input_type("bin", "BIGINT", data_type)),
+            [data_type] => Err(unexpected_input_type("bin", "BIGINT", data_type, "first")),
             _ => exec_err!("'bin' expects one argument, got {}", arg_types.len()),
         }
     }
@@ -345,7 +349,7 @@ impl ScalarUDFImpl for SparkRint {
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         match arg_types {
             [data_type] if acceptable_double(data_type) => Ok(vec![DataType::Float64]),
-            [data_type] => Err(unexpected_input_type("rint", "DOUBLE", data_type)),
+            [data_type] => Err(unexpected_input_type("rint", "DOUBLE", data_type, "first")),
             _ => exec_err!("'rint' expects one argument, got {}", arg_types.len()),
         }
     }
@@ -400,7 +404,7 @@ impl ScalarUDFImpl for Factorial {
             [data_type] if data_type.is_integer() || matches!(data_type, DataType::Null) => {
                 Ok(vec![DataType::Int32])
             }
-            [data_type] => Err(unexpected_input_type("factorial", "INT", data_type)),
+            [data_type] => Err(unexpected_input_type("factorial", "INT", data_type, "first")),
             _ => exec_err!("'factorial' expects one argument, got {}", arg_types.len()),
         }
     }
@@ -424,10 +428,15 @@ fn acceptable_double(data_type: &DataType) -> bool {
     ) || unwrap_dict(data_type).is_numeric()
 }
 
-pub(crate) fn unexpected_input_type(name: &str, required: &str, got: &DataType) -> DataFusionError {
+pub(crate) fn unexpected_input_type(
+    name: &str,
+    required: &str,
+    got: &DataType,
+    ordinal: &str,
+) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"{name}(<expr>)\" due to \
-         data type mismatch: The first parameter requires the \"{required}\" type, however \
+         data type mismatch: The {ordinal} parameter requires the \"{required}\" type, however \
          the argument has the type \"{}\". SQLSTATE: 42K09",
         spark_type_name(got)
     ))
