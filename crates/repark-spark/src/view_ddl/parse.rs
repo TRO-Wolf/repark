@@ -8,7 +8,9 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 
 use crate::catalog_ops::{name_parts, sqlparser_err};
 use crate::describe_show::tokenize_with_spans;
-use crate::namespace_ddl::{consume_word, parse_namespace_property_list};
+use crate::namespace_ddl::{
+    consume_word, parse_namespace_property_list, parse_namespace_property_string,
+};
 
 pub(crate) const ALTER_VIEW_AS_REFUSAL: &str =
     "ALTER VIEW <viewName> AS is not supported. Use CREATE OR REPLACE VIEW instead";
@@ -26,6 +28,17 @@ pub(crate) struct CreateViewStatement {
 pub(crate) struct ShowViewsStatement {
     pub(crate) namespace: Vec<String>,
     pub(crate) like: Option<String>,
+}
+
+pub(crate) struct AlterViewStatement {
+    pub(crate) name: Vec<String>,
+    pub(crate) action: AlterViewAction,
+}
+
+pub(crate) enum AlterViewAction {
+    SetProperties(HashMap<String, String>),
+    UnsetProperties { keys: Vec<String>, if_exists: bool },
+    RenameTo(Vec<String>),
 }
 
 pub(crate) fn try_parse_create_view(sql: &str) -> Option<Result<CreateViewStatement>> {
@@ -214,6 +227,82 @@ pub(crate) fn try_parse_alter_view_as(sql: &str) -> Option<DataFusionError> {
         return None;
     }
     Some(DataFusionError::Plan(ALTER_VIEW_AS_REFUSAL.to_string()))
+}
+
+pub(crate) fn try_parse_alter_view(sql: &str) -> Option<Result<AlterViewStatement>> {
+    let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&DatabricksDialect {}).with_tokens(tokens);
+    if !parser.parse_keyword(Keyword::ALTER) {
+        return None;
+    }
+    if !consume_word(&mut parser, "VIEW") {
+        return None;
+    }
+    let object_name = parser.parse_object_name(false).ok()?;
+    let name = name_parts(&object_name);
+    let verb = match parser.peek_token().token {
+        Token::Word(word) if word.quote_style.is_none() => word.value,
+        _ => return None,
+    };
+    if !verb.eq_ignore_ascii_case("SET")
+        && !verb.eq_ignore_ascii_case("UNSET")
+        && !verb.eq_ignore_ascii_case("RENAME")
+    {
+        return None;
+    }
+    Some(parse_alter_view_tail(&mut parser, name))
+}
+
+fn parse_alter_view_tail(parser: &mut Parser, name: Vec<String>) -> Result<AlterViewStatement> {
+    let action = if consume_word(parser, "SET") {
+        if !consume_word(parser, "TBLPROPERTIES") {
+            return Err(DataFusionError::Plan(
+                "could not parse `ALTER VIEW`: expected TBLPROPERTIES after SET".to_string(),
+            ));
+        }
+        let mut properties = HashMap::new();
+        parse_namespace_property_list(parser, &mut properties, "ALTER VIEW")?;
+        AlterViewAction::SetProperties(properties)
+    } else if consume_word(parser, "UNSET") {
+        if !consume_word(parser, "TBLPROPERTIES") {
+            return Err(DataFusionError::Plan(
+                "could not parse `ALTER VIEW`: expected TBLPROPERTIES after UNSET".to_string(),
+            ));
+        }
+        let if_exists = parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]);
+        let keys = parse_alter_view_unset_keys(parser)?;
+        AlterViewAction::UnsetProperties { keys, if_exists }
+    } else if consume_word(parser, "RENAME") {
+        if !consume_word(parser, "TO") {
+            return Err(DataFusionError::Plan(
+                "could not parse `ALTER VIEW`: expected TO after RENAME".to_string(),
+            ));
+        }
+        let target = parser.parse_object_name(false).map_err(sqlparser_err)?;
+        AlterViewAction::RenameTo(name_parts(&target))
+    } else {
+        return Err(DataFusionError::Plan(
+            "could not parse `ALTER VIEW`: expected SET, UNSET or RENAME".to_string(),
+        ));
+    };
+    expect_end(parser, "ALTER VIEW")?;
+    Ok(AlterViewStatement { name, action })
+}
+
+fn parse_alter_view_unset_keys(parser: &mut Parser) -> Result<Vec<String>> {
+    parser.expect_token(&Token::LParen).map_err(sqlparser_err)?;
+    let mut keys = Vec::new();
+    if parser.consume_token(&Token::RParen) {
+        return Ok(keys);
+    }
+    loop {
+        keys.push(parse_namespace_property_string(parser, "ALTER VIEW")?);
+        if !parser.consume_token(&Token::Comma) {
+            break;
+        }
+    }
+    parser.expect_token(&Token::RParen).map_err(sqlparser_err)?;
+    Ok(keys)
 }
 
 pub(crate) fn try_parse_show_views(sql: &str) -> Option<Result<ShowViewsStatement>> {
@@ -416,6 +505,85 @@ mod tests {
         assert!(try_parse_alter_view_as("ALTER VIEW v SET TBLPROPERTIES ('k'='v')").is_none());
         assert!(try_parse_alter_view_as("ALTER VIEW v UNSET TBLPROPERTIES ('k')").is_none());
         assert!(try_parse_alter_view_as("ALTER VIEW v RENAME TO w").is_none());
+    }
+
+    fn altered(sql: &str) -> AlterViewStatement {
+        try_parse_alter_view(sql)
+            .unwrap_or_else(|| panic!("must match: {sql}"))
+            .unwrap_or_else(|error| panic!("must parse: {sql}: {error}"))
+    }
+
+    #[test]
+    fn alter_view_set_tblproperties_parses() {
+        let parsed = altered("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v', 'n'='1')");
+        assert_eq!(parsed.name, vec!["sc", "ns", "v"]);
+        let AlterViewAction::SetProperties(properties) = parsed.action else {
+            panic!("must be a SET action");
+        };
+        assert_eq!(properties.get("k"), Some(&"v".to_string()));
+        assert_eq!(properties.get("n"), Some(&"1".to_string()));
+    }
+
+    #[test]
+    fn alter_view_unset_tblproperties_parses_with_and_without_if_exists() {
+        let parsed = altered("ALTER VIEW sc.ns.v UNSET TBLPROPERTIES ('k', 'n')");
+        let AlterViewAction::UnsetProperties { keys, if_exists } = parsed.action else {
+            panic!("must be an UNSET action");
+        };
+        assert_eq!(keys, vec!["k".to_string(), "n".to_string()]);
+        assert!(!if_exists);
+        let parsed = altered("ALTER VIEW sc.ns.v UNSET TBLPROPERTIES IF EXISTS ('k')");
+        let AlterViewAction::UnsetProperties { keys, if_exists } = parsed.action else {
+            panic!("must be an UNSET action");
+        };
+        assert_eq!(keys, vec!["k".to_string()]);
+        assert!(if_exists);
+    }
+
+    #[test]
+    fn alter_view_rename_to_parses() {
+        let parsed = altered("ALTER VIEW sc.ns.v RENAME TO sc.ns.w");
+        assert_eq!(parsed.name, vec!["sc", "ns", "v"]);
+        let AlterViewAction::RenameTo(target) = parsed.action else {
+            panic!("must be a RENAME action");
+        };
+        assert_eq!(target, vec!["sc", "ns", "w"]);
+        let parsed = altered("ALTER VIEW v RENAME TO w");
+        let AlterViewAction::RenameTo(target) = parsed.action else {
+            panic!("must be a RENAME action");
+        };
+        assert_eq!(target, vec!["w"]);
+    }
+
+    #[test]
+    fn alter_view_malformed_tails_fail_loud() {
+        assert!(
+            try_parse_alter_view("ALTER VIEW sc.ns.v SET TBLPROPERTIES")
+                .is_some_and(|parsed| parsed.is_err())
+        );
+        assert!(
+            try_parse_alter_view("ALTER VIEW sc.ns.v RENAME TO")
+                .is_some_and(|parsed| parsed.is_err())
+        );
+        assert!(
+            try_parse_alter_view("ALTER VIEW sc.ns.v UNSET TBLPROPERTIES 'k'")
+                .is_some_and(|parsed| parsed.is_err())
+        );
+        assert!(
+            try_parse_alter_view("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v') extra")
+                .is_some_and(|parsed| parsed.is_err())
+        );
+    }
+
+    #[test]
+    fn alter_view_unsupported_shapes_do_not_match() {
+        assert!(try_parse_alter_view("ALTER VIEW sc.ns.v AS SELECT 1").is_none());
+        assert!(try_parse_alter_view("ALTER VIEW sc.ns.v").is_none());
+        assert!(try_parse_alter_view("ALTER VIEW sc.ns.v ADD COLUMN id INT").is_none());
+        assert!(try_parse_alter_view("ALTER VIEWS sc.ns.v SET TBLPROPERTIES ('k'='v')").is_none());
+        assert!(try_parse_alter_view("ALTER VIEWX sc.ns.v SET TBLPROPERTIES ('k'='v')").is_none());
+        assert!(try_parse_alter_view("ALTER TABLE sc.ns.t SET TBLPROPERTIES ('k'='v')").is_none());
+        assert!(try_parse_alter_view("SELECT 1").is_none());
     }
 
     #[test]
