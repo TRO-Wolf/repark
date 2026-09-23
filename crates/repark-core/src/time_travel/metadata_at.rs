@@ -122,7 +122,7 @@ fn split_metadata_path(parts: &[String]) -> Option<(Vec<String>, MetadataTableTy
 }
 
 fn quoted_ident(part: &str) -> String {
-    format!("\"{}\"", part.replace('"', "\"\""))
+    format!("`{}`", part.replace('`', "``"))
 }
 
 async fn table_exists_parts(catalogs: &CatalogRegistry, parts: &[String]) -> Result<bool> {
