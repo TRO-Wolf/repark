@@ -141,7 +141,15 @@ def test_alter_view_set_then_show_reflects_updates(spark: ReparkSession) -> None
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     spark.sql("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v2', 'j'='u')")
     assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v2"]]
-    assert ["j", "u"] in sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
+    rows = sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
+    location = next(value for key, value in rows if key == "location")
+    assert rows == [
+        ["format-version", "1"],
+        ["j", "u"],
+        ["k", "v2"],
+        ["location", location],
+        ["provider", "iceberg"],
+    ]
 
 
 def test_bare_and_two_part_names_do_not_follow_use(spark: ReparkSession) -> None:
