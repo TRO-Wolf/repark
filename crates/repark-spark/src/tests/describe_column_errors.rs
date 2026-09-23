@@ -60,13 +60,13 @@ fn five_part_table_error() -> String {
     "Unsupported compound identifier 'a.b.c.d.e'. Expected 1, 2 or 3 parts, got 5".to_string()
 }
 
-fn assert_parser_sql_error(sql: &str, expected: String) {
+fn assert_parser_sql_error(sql: &str, expected: &str) {
     let Some(result) = crate::describe_show::try_parse_describe_table(sql) else {
         panic!("{sql} must take the describe-table path");
     };
     match result {
         Err(DataFusionError::SQL(error, _)) => match *error {
-            ParserError::ParserError(message) => assert_eq!(message, expected, "{sql}"),
+            ParserError::ParserError(message) => assert_eq!(message.as_str(), expected, "{sql}"),
             error => panic!("{sql} must use ParserError, got {error:?}"),
         },
         Err(error) => panic!("{sql} must return SQL parser error, got {error:?}"),
@@ -74,12 +74,12 @@ fn assert_parser_sql_error(sql: &str, expected: String) {
     }
 }
 
-fn assert_parser_plan_error(sql: &str, expected: String) {
+fn assert_parser_plan_error(sql: &str, expected: &str) {
     let Some(result) = crate::describe_show::try_parse_describe_table(sql) else {
         panic!("{sql} must take the describe-table path");
     };
     match result {
-        Err(DataFusionError::Plan(message)) => assert_eq!(message, expected, "{sql}"),
+        Err(DataFusionError::Plan(message)) => assert_eq!(message.as_str(), expected, "{sql}"),
         Err(error) => panic!("{sql} must return plan error, got {error:?}"),
         Ok(_) => panic!("{sql} must return an error"),
     }
@@ -113,11 +113,11 @@ async fn assert_session_sql_error(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-    expected: String,
+    expected: &str,
 ) {
     match execute(ctx, catalogs, sql).await {
         Err(DataFusionError::SQL(error, _)) => match *error {
-            ParserError::ParserError(message) => assert_eq!(message, expected, "{sql}"),
+            ParserError::ParserError(message) => assert_eq!(message.as_str(), expected, "{sql}"),
             error => panic!("{sql} must use ParserError, got {error:?}"),
         },
         Err(error) => panic!("{sql} must return SQL parser error, got {error:?}"),
@@ -129,10 +129,10 @@ async fn assert_session_plan_error(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-    expected: String,
+    expected: &str,
 ) {
     match execute(ctx, catalogs, sql).await {
-        Err(DataFusionError::Plan(message)) => assert_eq!(message, expected, "{sql}"),
+        Err(DataFusionError::Plan(message)) => assert_eq!(message.as_str(), expected, "{sql}"),
         Err(error) => panic!("{sql} must return plan error, got {error:?}"),
         Ok(_) => panic!("{sql} must return an error"),
     }
@@ -216,7 +216,7 @@ macro_rules! parser_error_case {
     ($name:ident, $sql:expr, $expected:expr) => {
         #[test]
         fn $name() {
-            assert_parser_sql_error($sql, $expected);
+            assert_parser_sql_error($sql, &$expected);
         }
     };
 }
@@ -236,7 +236,7 @@ macro_rules! session_error_case {
         async fn $name() {
             let warehouse = TempDir::new().unwrap();
             let (ctx, catalogs) = setup(&warehouse).await;
-            assert_session_sql_error(&ctx, &catalogs, $sql, $expected).await;
+            assert_session_sql_error(&ctx, &catalogs, $sql, &$expected).await;
         }
     };
 }
@@ -343,7 +343,7 @@ parser_error_case!(
 fn parser_tbl_four_part_returns_table_not_found() {
     assert_parser_plan_error(
         "DESCRIBE ice.sales.dc.id",
-        table_not_found_error(&["ice", "sales", "dc", "id"]),
+        &table_not_found_error(&["ice", "sales", "dc", "id"]),
     );
 }
 
@@ -567,7 +567,7 @@ async fn session_tbl_four_part_returns_table_not_found() {
         &ctx,
         &catalogs,
         "DESCRIBE ice.sales.dc.id",
-        table_not_found_error(&["ice", "sales", "dc", "id"]),
+        &table_not_found_error(&["ice", "sales", "dc", "id"]),
     )
     .await;
 }
@@ -580,7 +580,7 @@ async fn session_tbl_missing_returns_table_not_found() {
         &ctx,
         &catalogs,
         "DESCRIBE ice.sales.nope",
-        table_not_found_error(&["ice", "sales", "nope"]),
+        &table_not_found_error(&["ice", "sales", "nope"]),
     )
     .await;
 }
@@ -593,7 +593,7 @@ async fn session_tbl_missing_column_returns_table_not_found() {
         &ctx,
         &catalogs,
         "DESCRIBE ice.sales.nope id",
-        table_not_found_error(&["ice", "sales", "nope"]),
+        &table_not_found_error(&["ice", "sales", "nope"]),
     )
     .await;
 }
@@ -607,7 +607,7 @@ async fn session_col_missing_returns_spark_column_error() {
         &ctx,
         &catalogs,
         "DESCRIBE ice.sales.dc nope",
-        unresolved_column_error(),
+        &unresolved_column_error(),
     )
     .await;
 }
@@ -621,7 +621,7 @@ async fn session_col_nested_returns_spark_legacy_error() {
         &ctx,
         &catalogs,
         "DESCRIBE ice.sales.dc s.a",
-        nested_column_error(),
+        &nested_column_error(),
     )
     .await;
 }
@@ -635,7 +635,7 @@ async fn session_col_nested_deep_returns_spark_type_error() {
         &ctx,
         &catalogs,
         "DESCRIBE ice.sales.dc s.a.b",
-        deep_nested_column_error(),
+        &deep_nested_column_error(),
     )
     .await;
 }
@@ -754,7 +754,7 @@ async fn session_tbl_five_part_pins_current_divergence() {
         &ctx,
         &catalogs,
         "DESCRIBE a.b.c.d.e",
-        five_part_table_error(),
+        &five_part_table_error(),
     )
     .await;
 }
@@ -770,7 +770,7 @@ async fn session_col_view_pins_current_divergence() {
         &ctx,
         &catalogs,
         "DESCRIBE ice.sales.v id",
-        table_not_found_error(&["ice", "sales", "v"]),
+        &table_not_found_error(&["ice", "sales", "v"]),
     )
     .await;
 }

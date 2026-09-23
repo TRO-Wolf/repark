@@ -19,20 +19,19 @@ use crate::spark_type_names::spark_ddl_type_name;
 pub(crate) fn parse_describe_column_tail(
     parser: &mut Parser,
     sql: &str,
-) -> Option<Result<Option<Vec<String>>>> {
+) -> Result<Option<Vec<String>>> {
     match parser.peek_token().token {
-        Token::EOF | Token::SemiColon => Some(Ok(None)),
+        Token::EOF | Token::SemiColon => Ok(None),
         _ => {
             let token = parser.peek_token().token.clone();
-            let column_name = match parser.parse_object_name(false) {
-                Ok(column_name) => column_name,
-                Err(_) => return Some(Err(describe_column_token_parse_error(&token, sql))),
+            let Ok(column_name) = parser.parse_object_name(false) else {
+                return Err(describe_column_token_parse_error(&token, sql));
             };
             if !column_name.0.iter().all(|part| {
                 part.as_ident()
                     .is_some_and(|ident| ident.quote_style.is_none_or(|quote| quote == '`'))
             }) {
-                return Some(Err(describe_token_parse_error(&token)));
+                return Err(describe_token_parse_error(&token));
             }
             let column = name_parts(&column_name);
             match column.as_slice() {
@@ -40,7 +39,7 @@ pub(crate) fn parse_describe_column_tail(
                     if word.eq_ignore_ascii_case("PARTITION")
                         && matches!(parser.peek_token().token, Token::LParen) =>
                 {
-                    Some(Err(describe_partition_parse_error()))
+                    Err(describe_partition_parse_error())
                 }
                 [word]
                     if (word.eq_ignore_ascii_case("VERSION")
@@ -48,15 +47,15 @@ pub(crate) fn parse_describe_column_tail(
                         && parser.parse_keyword(Keyword::AS)
                         && consume_word(parser, "OF") =>
                 {
-                    Some(Err(describe_parse_error("OF")))
+                    Err(describe_parse_error("OF"))
                 }
                 [word] if word.eq_ignore_ascii_case("FOR") && consume_word(parser, "VERSION") => {
-                    Some(Err(describe_parse_error("VERSION")))
+                    Err(describe_parse_error("VERSION"))
                 }
                 _ if matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) => {
-                    Some(Ok(Some(column)))
+                    Ok(Some(column))
                 }
-                _ => Some(Err(describe_token_parse_error(&parser.peek_token().token))),
+                _ => Err(describe_token_parse_error(&parser.peek_token().token)),
             }
         }
     }

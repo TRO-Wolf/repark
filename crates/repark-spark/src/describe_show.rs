@@ -227,9 +227,8 @@ impl DescribeTable {
 
 pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable>> {
     let dialect = DatabricksDialect {};
-    let tokens = match Tokenizer::new(&dialect, sql).tokenize() {
-        Ok(tokens) => tokens,
-        Err(_) => return describe_tokenizer_error(sql),
+    let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
+        return describe_tokenizer_error(sql);
     };
     let mut parser = Parser::new(&dialect).with_tokens(tokens);
     if !parser.parse_keyword(Keyword::DESCRIBE) && !parser.parse_keyword(Keyword::DESC) {
@@ -248,9 +247,8 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         return None;
     }
     let token = parser.peek_token().token.clone();
-    let name = match parser.parse_object_name(false) {
-        Ok(name) => name,
-        Err(_) => return Some(Err(describe_table_name_parse_error(&token, sql))),
+    let Ok(name) = parser.parse_object_name(false) else {
+        return Some(Err(describe_table_name_parse_error(&token, sql)));
     };
     if !name.0.iter().all(|part| {
         part.as_ident()
@@ -258,7 +256,7 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
     }) {
         return Some(Err(describe_table_name_token_parse_error(&token)));
     }
-    let column = match crate::describe_column::parse_describe_column_tail(&mut parser, sql)? {
+    let column = match crate::describe_column::parse_describe_column_tail(&mut parser, sql) {
         Ok(column) => column,
         Err(error) => return Some(Err(error)),
     };
@@ -317,17 +315,16 @@ fn unclosed_describe_quote(sql: &str) -> Option<char> {
     let mut quote = None;
     let mut characters = sql.chars().peekable();
     while let Some(character) = characters.next() {
-        match quote {
-            Some(open_quote) if character == open_quote => {
+        if let Some(open_quote) = quote {
+            if character == open_quote {
                 if characters.peek().copied() == Some(open_quote) {
                     characters.next();
                 } else {
                     quote = None;
                 }
             }
-            Some(_) => {}
-            None if matches!(character, '\'' | '`' | '"') => quote = Some(character),
-            None => {}
+        } else if matches!(character, '\'' | '`' | '"') {
+            quote = Some(character);
         }
     }
     quote
