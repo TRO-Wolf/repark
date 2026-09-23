@@ -1557,8 +1557,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `describe_column_errors.rs` — **WO-B4 (2026-09-23):** one parser pin and one session pin
   cover every measured malformed table-name and column-tail row: exact `DataFusionError::SQL`
   parser payloads, parser-class route, condition text, four-part table-not-found, nested-column
-  errors, answer rows, and non-table fallthrough. The five-part and view-column current
-  outcomes are exact declared divergences.
+  errors, answer rows, and non-table fallthrough. Five-part names remain an exact declared
+  divergence; view columns return Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`, even when the
+  column exists, while a plain view description still returns rows.
   pins: wo-b4-describe-errors/C-001, C-002, C-003, C-005
 - `describe_owner.rs` — **DESCRIBE-COLUMN-1 round 2 (2026-09-23):** end-to-end memory-catalog
   pins cover identity-only partition-information rows in plain and EXTENDED output, two-column
