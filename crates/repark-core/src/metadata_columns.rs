@@ -15,8 +15,7 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::metadata_columns::RESERVED_COL_NAME_FILE;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::catalog::{
-    METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, UNSERVED_METADATA_COLUMN_NAMES,
-    metadata_columns_user_field_names,
+    METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, metadata_columns_user_field_names,
 };
 
 use crate::catalog_state::CatalogRegistry;
@@ -65,10 +64,6 @@ fn canonical_metadata_token(value: &str, quoted: bool) -> Option<&'static str> {
     canonical_token_in(value, quoted, &METADATA_COLUMN_NAMES)
 }
 
-fn canonical_unserved_token(value: &str, quoted: bool) -> Option<&'static str> {
-    canonical_token_in(value, quoted, &UNSERVED_METADATA_COLUMN_NAMES)
-}
-
 fn canonical_token_in(value: &str, quoted: bool, names: &[&'static str]) -> Option<&'static str> {
     names.iter().copied().find(|name| {
         if quoted {
@@ -113,14 +108,6 @@ fn sql_mentions_input_file_name_call(sql: &str, dialect: &dyn Dialect) -> bool {
     })
 }
 
-fn first_unserved_metadata_column(sql: &str, dialect: &dyn Dialect) -> Option<&'static str> {
-    let tokens = Tokenizer::new(dialect, sql).tokenize().ok()?;
-    tokens.iter().find_map(|token| match token {
-        Token::Word(word) => canonical_unserved_token(&word.value, word.quote_style.is_some()),
-        _ => None,
-    })
-}
-
 fn canonical_metadata_ident(ident: &Ident) -> Option<&'static str> {
     canonical_metadata_token(&ident.value, ident.quote_style.is_some())
 }
@@ -134,14 +121,8 @@ fn fold_metadata_ident(ident: &mut Ident) {
 
 fn refuse(kind: &str) -> DataFusionError {
     DataFusionError::Plan(format!(
-        "[ICE-MC-1] a metadata column (_file, _pos, _spec_id, _partition) over {kind} \
+        "[ICE-MC-1] a metadata column (_file, _pos, _spec_id, _partition, _deleted) over {kind} \
          is not served; name the columns explicitly on a table relation"
-    ))
-}
-
-fn refuse_unserved(name: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "[ICE-MC-1] metadata column {name} is not yet served; this layer serves (_file, _pos, _spec_id, _partition)"
     ))
 }
 
@@ -154,9 +135,7 @@ pub async fn prepare_metadata_column_sql(
     pinned: &mut MetadataColumnPins,
 ) -> Result<Option<String>> {
     let mentions_served = sql_mentions_metadata_columns(sql, dialect);
-    let unserved = first_unserved_metadata_column(sql, dialect);
-    let mentions_metadata = mentions_served || unserved.is_some();
-    if !mentions_metadata && !sql_mentions_input_file_name_call(sql, dialect) {
+    if !mentions_served && !sql_mentions_input_file_name_call(sql, dialect) {
         return Ok(None);
     }
     let Ok(mut statements) = Parser::parse_sql(dialect, sql) else {
@@ -167,7 +146,7 @@ pub async fn prepare_metadata_column_sql(
     }
     let statement = &mut statements[0];
     if !matches!(statement, Statement::Query(_)) {
-        return if mentions_metadata {
+        return if mentions_served {
             Err(refuse("a non-query statement"))
         } else {
             Ok(None)
@@ -217,9 +196,6 @@ pub async fn prepare_metadata_column_sql(
     }
     if rewrites.is_empty() {
         return Ok(None);
-    }
-    if let Some(name) = unserved {
-        return Err(refuse_unserved(name));
     }
 
     let mut visitor = RewriteMetadataColumns {

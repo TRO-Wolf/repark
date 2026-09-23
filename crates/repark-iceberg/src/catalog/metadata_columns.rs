@@ -20,9 +20,9 @@ use iceberg::metadata_columns::{
     RESERVED_COL_NAME_DELETED, RESERVED_COL_NAME_FILE,
     RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_COL_NAME_PARTITION,
     RESERVED_COL_NAME_POS, RESERVED_COL_NAME_ROW_ID, RESERVED_COL_NAME_SPEC_ID,
-    RESERVED_FIELD_ID_FILE, RESERVED_FIELD_ID_LAST_UPDATED_SEQUENCE_NUMBER,
-    RESERVED_FIELD_ID_PARTITION, RESERVED_FIELD_ID_POS, RESERVED_FIELD_ID_ROW_ID,
-    RESERVED_FIELD_ID_SPEC_ID,
+    RESERVED_FIELD_ID_DELETED, RESERVED_FIELD_ID_FILE,
+    RESERVED_FIELD_ID_LAST_UPDATED_SEQUENCE_NUMBER, RESERVED_FIELD_ID_PARTITION,
+    RESERVED_FIELD_ID_POS, RESERVED_FIELD_ID_ROW_ID, RESERVED_FIELD_ID_SPEC_ID,
 };
 use iceberg::spec::Type;
 use iceberg::table::Table;
@@ -31,14 +31,13 @@ use parquet::arrow::PARQUET_FIELD_ID_META_KEY;
 use crate::catalog::iceberg_to_datafusion;
 use crate::catalog::lineage_columns::{table_serves_row_lineage, user_field_names};
 
-pub const METADATA_COLUMN_NAMES: [&str; 4] = [
+pub const METADATA_COLUMN_NAMES: [&str; 5] = [
     RESERVED_COL_NAME_FILE,
     RESERVED_COL_NAME_POS,
     RESERVED_COL_NAME_SPEC_ID,
     RESERVED_COL_NAME_PARTITION,
+    RESERVED_COL_NAME_DELETED,
 ];
-
-pub const UNSERVED_METADATA_COLUMN_NAMES: [&str; 1] = [RESERVED_COL_NAME_DELETED];
 
 #[must_use]
 pub fn is_served_metadata_column(name: &str) -> bool {
@@ -103,6 +102,12 @@ fn append_metadata_fields(user: &Schema, table: &Table) -> Result<Schema> {
         partition_arrow,
         RESERVED_FIELD_ID_PARTITION,
         true,
+    ));
+    fields.push(metadata_field(
+        RESERVED_COL_NAME_DELETED,
+        DataType::Boolean,
+        RESERVED_FIELD_ID_DELETED,
+        false,
     ));
     if table_serves_row_lineage(table) {
         fields.push(metadata_field(
