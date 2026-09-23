@@ -1310,18 +1310,6 @@ pins: rp-4-fork-repin/C-005, C-006
   [`../../../task/g5br-range-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-g5br-range-residuals-ledger.md),
   [`../../../task/z4-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-z4-residuals-ledger.md),
   [`../../../task/w4-z-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-w4-z-residuals-ledger.md).
-- `describe_metadata_table.rs` — **IPI-23-MT-DESCRIBE-1 (2026-09-22):**
-  `DESCRIBE` on an Iceberg metadata table answers one row per column of the metadata
-  table (`col_name`, Spark DDL `data_type`, `comment` NULL) from the same
-  `TableProvider` schema `SELECT *` resolves. `try_describe_metadata_table` serves
-  the rewritten `$` form (a missing base maps to `table_or_view_not_found` naming
-  the base table; other provider errors pass through) and the two-part form after
-  `USE` (a real `namespace.table` wins; the base must exist in the session default
-  namespace); `try_parse_describe_metadata_table` parses the un-rewritten four-part
-  form the metadata rewrite leaves untouched (missing base, `EXTENDED`/`FORMATTED`,
-  which print the column rows only). `describe_show.rs` carries the five-line hook
-  and the router a two-line `or_else`.
-  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-007, C-009
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
   SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`

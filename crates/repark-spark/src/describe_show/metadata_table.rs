@@ -11,7 +11,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 
-use crate::catalog_ops::{catalog_handle, name_parts, table_or_view_not_found};
+use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, table_or_view_not_found};
 use crate::describe_show::DescribeTable;
 use crate::metadata_tables::canonical_metadata_table_name;
 use crate::namespace_ddl::consume_word;
@@ -91,10 +91,20 @@ async fn dollar_metadata_table(
                 base.to_string(),
             );
             match handle.load_table(&base_ident).await {
-                Err(error) if error.kind() == ErrorKind::TableNotFound => Some(Err(
-                    table_or_view_not_found(&describe.catalog, &describe.namespace, base),
-                )),
-                _ => Some(Err(provider_error)),
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        ErrorKind::TableNotFound | ErrorKind::NamespaceNotFound
+                    ) =>
+                {
+                    Some(Err(table_or_view_not_found(
+                        &describe.catalog,
+                        &describe.namespace,
+                        base,
+                    )))
+                }
+                Err(error) => Some(Err(iceberg_err(error))),
+                Ok(_) => Some(Err(provider_error)),
             }
         }
     }

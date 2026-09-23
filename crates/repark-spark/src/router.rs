@@ -607,7 +607,7 @@ async fn try_describe_table_intercept(
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Option<Result<DataFrame>> {
     let parsed = describe_show::try_parse_describe_table(sql).or_else(|| {
-        crate::describe_metadata_table::try_parse_describe_metadata_table(sql).map(Ok)
+        crate::describe_show::metadata_table::try_parse_describe_metadata_table(sql).map(Ok)
     })?;
     let mut describe_table = match parsed.and_then(|ddl| {
         write_options

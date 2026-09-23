@@ -10,6 +10,8 @@ live PySpark 4.1.2 + Iceberg 1.11.0 on 2026-09-22: the six snapshots rows below
 with no partition section and no blank rows. The live leg re-measures that cell.
 
 pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: ipi-23-mt-describe-1/C-010, C-011, C-012
+pins: ipi-23-mt-describe-1/C-013, C-014, C-015
 """
 
 from __future__ import annotations
@@ -193,6 +195,128 @@ def test_unknown_suffix_keeps_compound_identifier_error(spark: Any) -> None:
     )
     with pytest.raises(AnalysisException, match=re.escape(expected)):
         spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.{TABLE}.nope")
+
+
+def test_explicit_three_part_with_real_namespace_falls_through(spark: Any) -> None:
+    """V-001: an explicit three-part name never takes default-namespace recovery.
+
+    pins: ipi-23-mt-describe-1/C-010
+    """
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}")
+    spark.sql(f"CREATE TABLE {CATALOG}.{NAMESPACE}.otherns (id BIGINT) USING iceberg")
+    spark.sql(f"CREATE NAMESPACE {CATALOG}.otherns")
+    expected = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`otherns`.`snapshots` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE {CATALOG}.otherns.snapshots")
+    assert str(excinfo.value) == expected
+
+
+def test_explicit_three_part_missing_namespace_keeps_plain_error(spark: Any) -> None:
+    """V-001: an explicit three-part name answers the plain-path error, not rows.
+
+    pins: ipi-23-mt-describe-1/C-011
+    """
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}")
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE {CATALOG}.{TABLE}.snapshots")
+    assert str(excinfo.value) == 'NamespaceNotFound => No such namespace: NamespaceIdent(["t"])'
+
+
+def test_missing_namespace_maps_to_not_found_naming_base(spark: Any) -> None:
+    """V-002: a missing namespace answers 42P01 naming the base table, twice spelled.
+
+    pins: ipi-23-mt-describe-1/C-012
+    """
+    expected = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`nosuchns`.`{TABLE}` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE {CATALOG}.nosuchns.{TABLE}.snapshots")
+    assert str(excinfo.value) == expected
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE EXTENDED {CATALOG}.nosuchns.{TABLE}.snapshots")
+    assert str(excinfo.value) == expected
+
+
+def test_quoted_dollar_name_answers_metadata_rows(spark: Any) -> None:
+    """Sweep: a quoted ``t$snapshots`` name answers the six snapshots rows.
+
+    pins: ipi-23-mt-describe-1/C-013
+    """
+    assert _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.`{TABLE}$snapshots`") == SNAPSHOT_ROWS
+
+
+def test_explicit_three_part_namespace_shadowing_base_falls_through(spark: Any) -> None:
+    """V-001 class: a namespace named like the base table still falls through.
+
+    pins: ipi-23-mt-describe-1/C-014
+    """
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}")
+    spark.sql(f"CREATE NAMESPACE {CATALOG}.{TABLE}")
+    expected = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{TABLE}`.`snapshots` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE {CATALOG}.{TABLE}.snapshots")
+    assert str(excinfo.value) == expected
+
+
+def test_four_part_extended_formatted_matrix(spark: Any) -> None:
+    """Sweep: EXTENDED/FORMATTED of every settled four-part case match plain.
+
+    pins: ipi-23-mt-describe-1/C-015
+    """
+    missing = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{NAMESPACE}`.`missing` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE EXTENDED {CATALOG}.{NAMESPACE}.missing.snapshots")
+    assert str(excinfo.value) == missing
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE TABLE FORMATTED {CATALOG}.{NAMESPACE}.missing.snapshots")
+    assert str(excinfo.value) == missing
+    unknown = (
+        "Error during planning: Unsupported compound identifier "
+        f"'`{CATALOG}`.`{NAMESPACE}`.`{TABLE}`.`nope`'. Expected 1, 2 or 3 parts, got 4"
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE EXTENDED {CATALOG}.{NAMESPACE}.{TABLE}.nope")
+    assert str(excinfo.value) == unknown
+    upper = f"{CATALOG}.{NAMESPACE}.{TABLE}.SNAPSHOTS"
+    assert _rows(spark, f"DESCRIBE EXTENDED {upper}") == SNAPSHOT_ROWS
+    absent_ns = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`nosuchns`.`{TABLE}` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE TABLE FORMATTED {CATALOG}.nosuchns.{TABLE}.snapshots")
+    assert str(excinfo.value) == absent_ns
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
