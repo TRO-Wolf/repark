@@ -1508,8 +1508,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **IPI-23-MT-DESCRIBE-1 (2026-09-22), in flight:** `DESCRIBE [TABLE]`/`DESC` on a
   dotted Iceberg metadata table answers one row per column of the metadata table
   from the same provider schema `SELECT *` resolves; a missing base raises
-  `TABLE_OR_VIEW_NOT_FOUND` naming the base table, and `EXTENDED`/`FORMATTED`
-  print the column rows only. Eight facade pins replay the recorded
+  `TABLE_OR_VIEW_NOT_FOUND` naming the full metadata-table name as written, and
+  `EXTENDED`/`FORMATTED` print the column rows only. Eight facade pins replay the recorded
   `R-MT-DESCRIBE` cell plus spelling variants, the two-part `USE` form, and four
   near misses; registry row `DESC-1` re-ruled to the served behavior.
   `risk_tier: standard`. Branch `fix/ipi-23-describe-metadata-table`.

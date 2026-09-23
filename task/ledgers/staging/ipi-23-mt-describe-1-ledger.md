@@ -167,7 +167,7 @@ FINDING:
   severity: S2
   category: AT-3
   clause: C-012
-  claim: A missing namespace on a four-part DESCRIBE leaked the provider error `failed to resolve schema` instead of 42P01 naming the base table.
+  claim: A missing namespace on a four-part DESCRIBE leaked the provider error `failed to resolve schema` instead of 42P01 naming the full metadata-table name as written.
   evidence: R0 `DESCRIBE mt.nosuchns.t.snapshots` and the EXTENDED spelling both raised `failed to resolve schema: nosuchns`; post-fix both raise the full TABLE_OR_VIEW_NOT_FOUND message naming `mt`.`nosuchns`.`t`
   disposition: REMEDIATED (three-way base-load match in dollar_metadata_table naming the full four-part name via table_or_view_not_found_parts; pinned by test_missing_namespace_maps_to_not_found_naming_base and the C-015 matrix)
 ```
@@ -219,7 +219,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Missing base maps to TABLE_OR_VIEW_NOT_FOUND/42P01 naming the base table with no `$` leak (C-007); unknown suffixes keep the compound-identifier plan error byte for byte (C-008); any other provider error passes through unchanged by construction of the match.
+      evidence: Missing base maps to TABLE_OR_VIEW_NOT_FOUND/42P01 naming the full metadata-table name as written with no `$` leak (C-007); unknown suffixes keep the compound-identifier plan error byte for byte (C-008); any other provider error passes through unchanged by construction of the match.
       artifacts: [python/repark/tests/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-4
       status: ATTACKED
@@ -241,7 +241,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-9
       status: ATTACKED
-      evidence: The missing-base error names the base table without the `$` suffix form, so a typo is diagnosable from the error; rejected shapes keep today's loud errors.
+      evidence: The missing-base error names the full metadata-table name as written without the `$` suffix form, so a typo is diagnosable from the error; rejected shapes keep today's loud errors.
       artifacts: [crates/repark-spark/src/describe_show/metadata_table.rs, python/repark/tests/test_ice_mt_describe_1.py]
     - id: AT-10
       status: ATTACKED
