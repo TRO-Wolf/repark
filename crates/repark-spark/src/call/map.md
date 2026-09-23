@@ -13,8 +13,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
 `rewrite_where`; `call.rs` keeps
 `apply_partitioning`, `rewrite_manifests`, `rewrite_data_files`, `rewrite_options`, and
 `rewrite_where`; `call.rs` keeps
-`expire_snapshots`, `rewrite_position_delete_files`, `remove_orphan_files`,
-`rollback_to_snapshot`, `register_table`).
+`expire_snapshots`, `rewrite_position_delete_files`,
+`rollback_to_snapshot`, `register_table`). `remove_orphan_files` moved here on 2026-09-22
+(`remove_orphan_files.rs`, `orphan_file_list.rs`).
 
 ## Contents
 
@@ -164,6 +165,28 @@ and measured-parity contract would grow `call.rs` beyond its exact
   BETWEEN on primitives). Failures wrap as Spark's `Cannot parse predicates in where option`.
   In-module unit tests pin each convertible operator's Predicate shape.
   pins: maint-rewrite-data-files-options/C-007
+- `remove_orphan_files.rs` — **IPI-30 guard narrowed (2026-09-22, owner ruling Q-55-6):** the
+  procedure body, moved out of `call.rs` with its comments shed. The scan path is `location`,
+  or the table location when `location` is absent. On a `TempFallbackAllowed` catalog
+  `refuse_shared_temp_fallback_location` refuses a scan path that is `<root>/repark_ctas` or
+  `<root>/repark_ansi_ctas`, or a parent of either, after the lexical and `file:` normalisation
+  (a table's own directory under the root is sweepable). `refuse_scan_over_other_tables`
+  walks every namespace and table through the catalog API and refuses a scan path that
+  equals or contains another table's location, naming it. A `ServiceManagedLocation`
+  catalog still refuses before any IO. Without `file_list_view` the fork's
+  `DeleteOrphanFiles` lists and deletes; with it, `orphan_file_list.rs` answers and the
+  same partial-delete refusal applies. Registry row ORPHAN-3.
+  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-008
+- `orphan_file_list.rs` — **IPI-30 (2026-09-22):** `file_list_view`, ported from Java
+  `compareToFileList`. The view must carry `file_path` (a string) and `last_modified` (a
+  timestamp); a missing view answers `TABLE_OR_VIEW_NOT_FOUND`. Candidates are the non-null
+  rows with `last_modified < older_than` whose normalised path lies under the scan path.
+  The referenced set is the fork's `DeleteReachableFiles` walk with a collecting
+  `delete_with`, which matches the set `DeleteOrphanFiles` uses. The join runs on the URI
+  path under `equal_schemes` (Spark's `s3n`/`s3a` defaults merged), `equal_authorities` and
+  `prefix_mismatch_mode`. Orphans come back verbatim, sorted and deduplicated. `gc.enabled =
+  false` refuses with the fork's text.
+  pins: ipi-30-orphan-guard-narrow-1/C-005, C-006, C-007
 - `run_maintenance.rs` — **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `CALL
   <catalog>.system.run_maintenance(table => … [, dry_run => …] [, <D-1 key> => …])`.
   Inline keys overlay the stamped file policy (per-table entry, then profile) through

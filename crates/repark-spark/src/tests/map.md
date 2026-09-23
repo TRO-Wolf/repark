@@ -707,7 +707,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
   MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-004, C-005, C-006, C-007),
-  `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root`
+  `call`, and `call_orphan`. `call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root`
   and `call_orphan_shared_ctas_root_rule` pin the fallback-root safety contract. Maintenance tests
   pin Spark's full schemas, typed count sources, deletion-vector refusal, and file-granularity rules.
   `call_v3` (**V3-0 / RP-4**): v3 rewrite preserves lineage, v2 control, and
@@ -969,7 +969,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **IPI-30 (2026-09-22):** Spark's defaults land — the bare call deletes with `older_than` at
   now minus 3 days (`call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`),
   the optional arguments are accepted (`call_remove_orphan_files_accepts_sparks_optional_arguments`,
-  `file_list_view` still `NotImplemented`), and the near misses refuse
+  `file_list_view` since accepted, see `call_orphan_scope.rs`), and the near misses refuse
   (`call_remove_orphan_files_near_misses_still_refuse`,
   `call_remove_orphan_files_refuses_a_quoted_dry_run`); ORPHAN-1/ORPHAN-2 retire.
   **IPI-30 round 3 (2026-09-22):** `call_remove_orphan_files_reads_location_positionally`
@@ -978,12 +978,28 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   gains full-string pins for every refusal the round added or changed: the NULL map value,
   a non-map `equal_authorities`, a non-`map` function, an odd `map` arity, a non-integer
   `max_concurrent_deletes`, a quoted `prefix_listing`, a non-string `prefix_mismatch_mode`,
-  a non-string `location`, and the `file_list_view` deferral (upgraded to full-string in
-  `call_remove_orphan_files_accepts_sparks_optional_arguments`); the mistyped-argument
+  a non-string `location`, and the since-retired `file_list_view` deferral; the mistyped-argument
   cases live in `call_remove_orphan_files_mistyped_arguments_still_refuse` so the
   near-miss table stays under the function-length lint.
   pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004
-  pins: ipi-30-orphan-1/C-005, C-006, C-007, C-008, C-009, C-010, C-011
+  pins: ipi-30-orphan-1/C-005, C-006, C-007, C-008, C-009, C-011
+  **IPI-30 guard narrowed (2026-09-22, owner ruling Q-55-6):** `call_orphan_shared_ctas_root_rule`
+  now accepts a table's own directory under `<root>/repark_ctas` and refuses only the root, its
+  `file:` / `..` / trailing-slash / ANSI aliases, and its parents; the remote and no-policy
+  rows and the name-prefix sibling accept. `call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root`
+  keeps the execute-path refusal at the root.
+  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-008, C-009
+- [call_orphan_scope.rs](call_orphan_scope.rs) — **IPI-30 guard narrowed (2026-09-22, owner
+  ruling Q-55-6):** end-to-end pins on a `ReparkSession` memory catalog whose namespace has
+  no `location`, so every table sits under `<warehouse>/repark_ctas/ice/ns/<table>`. The
+  bare call sweeps the table's own directory (10-day orphan listed and deleted, 1-day orphan
+  kept); a `location` at the warehouse, `repark_ctas` or `repark_ansi_ctas` refuses; a
+  `location` holding another table refuses naming it. `file_list_view` (a temp view
+  registered through `create_or_replace_temp_view_from`, since the SQL door has no `CREATE
+  TEMP VIEW`) lists the view's orphans verbatim under `dry_run => true`, deletes exactly
+  the listed ones when armed, and refuses a missing view (`TABLE_OR_VIEW_NOT_FOUND`), a
+  warehouse `location` and a non-timestamp `last_modified`.
+  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
   service-managed refusal — a real `s3tables_catalog` (dummy ARN, constructs offline)
