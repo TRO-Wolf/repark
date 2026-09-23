@@ -95,6 +95,8 @@ test expectations stand.
 | r3fix: `cargo test -p repark-spark --lib metadata_columns` (head) | 14 passed, expectations unchanged |
 | r3fix mutation check | alias fallback restored in `sole_input_file_name_relation` → the CTE collision test red again (`a refused query must fail: [RecordBatch { … StringArray ["x"] … }]`); reverted uncommitted |
 | r3fix name-at-visit measurement | `replacement`-only match in `sole_input_file_name_relation` → all six served tests red (`UNRESOLVED_ROUTINE`); the SELECT carries the rewrite's `original` name at `pre_visit_select`, so only `find(name)` is kept |
+| r3fix: `make rust-clippy`; `make rust-panic-ban` | both exit 0 |
+| r3fix: `bash scripts/check_map_md.sh --base origin/main`; `python3 scripts/check_ledger_grammar.py`; `comment_ban.py` | all exit 0 (`hits=0`; `251 live ledgers clean, 2331 clauses`) |
 
 ## COVERAGE_ATTESTATION
 
