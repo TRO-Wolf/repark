@@ -2,6 +2,8 @@
 
 U1-MEM-LAYOUT-1 (2026-09-23): `remove_orphan_files.rs` adds fail-closed refusals for foreign metadata and scans inside another registered table. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-020
 
+U1-MEM-LAYOUT-1 layout-r8 (2026-09-23): `refuse_scan_over_foreign_metadata` also reads `<A>/metadata/` for every ancestor `A` of the scan path, from its parent up to the storage root, or up to and including the swept table's own location when the scan lies inside it (`metadata_probe_ancestors`). `orphan_file_list.rs::location_path_start` becomes `pub(super)` so the walk keeps the scan's spelling. pins: u1-mem-layout-1/C-011, C-029, C-030, C-031
+
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001).
 
 ## Purpose

@@ -998,6 +998,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   keeps the execute-path refusal at the root.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-008, C-009
 - [mem_layout.rs](mem_layout.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** CTAS, column-definition CREATE, explicit and namespace location precedence, nested namespaces, legacy fallback, path escape rejection, and file URI normalization. pins: u1-mem-layout-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
+- [call_orphan_ancestor.rs](call_orphan_ancestor.rs) — **U1-MEM-LAYOUT-1 layout-r8 (2026-09-23):**
+  the ancestor metadata probe. `m1.ns.a` sweeping `<wh>/ns/b/data` or `<wh>/ns/b/data/sub`, where
+  `m2.ns.b` (or a second session's `ice.ns.b`) sits at `<wh>/ns/b`, refuses in all three spellings
+  and through `file_list_view` with the complete message naming `<wh>/ns/b` in the scan's spelling
+  (`call_orphan_ancestor_two_catalogs_sibling_data_dir_scan_refuses`,
+  `…_two_sessions_sibling_data_dir_scan_refuses`). `metadata_probe_ancestors` walks from the scan's
+  parent to the storage root (`/`, `s3://bkt/`), or stops at the own location when the scan lies
+  inside it (`…_enumeration_walks_to_the_storage_root_or_the_own_location`). Near misses stay
+  sweepable: `m1.ns.a`'s own `data/` beside `m2.ns.b`, and `<wh>/scratch/x` with no table above it
+  (`…_own_data_dir_scan_beside_another_catalog_deletes_the_orphan`,
+  `…_scan_with_no_table_above_it_is_swept`). pins: u1-mem-layout-1/C-029, C-030, C-031, C-032
 - [call_orphan_cotenancy.rs](call_orphan_cotenancy.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** shared-warehouse catalog refusal, own-history metadata sweep, non-metadata sweep, default sweep, nested namespace guards, own-table location exception, and unreadable metadata refusal with its complete message. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
   **Layout-r7 (2026-09-23):** a `data/` scan of a shared `<wh>/ns/t` refuses for two catalogs,
   two sessions and two same-catalog tables on one `LOCATION`, in all three spellings and through

@@ -10,7 +10,7 @@ use super::call_orphan_scope::{
 use super::common::*;
 use crate::{SparkDialect, SparkExtension};
 
-async fn memory_session(warehouse: &TempDir, catalogs: &[&str]) -> ReparkSession {
+pub(super) async fn memory_session(warehouse: &TempDir, catalogs: &[&str]) -> ReparkSession {
     let session = ReparkSession::builder()
         .with_extension(Arc::new(SparkExtension))
         .with_sql_dialect(Arc::new(SparkDialect))
@@ -25,12 +25,12 @@ async fn memory_session(warehouse: &TempDir, catalogs: &[&str]) -> ReparkSession
     session
 }
 
-async fn create_with_row(session: &ReparkSession, table: &str, id: i32) {
+pub(super) async fn create_with_row(session: &ReparkSession, table: &str, id: i32) {
     submit(session, &format!("CREATE TABLE {table} (id INT)")).await;
     submit(session, &format!("INSERT INTO {table} VALUES ({id})")).await;
 }
 
-async fn ids(session: &ReparkSession, table: &str) -> Vec<i32> {
+pub(super) async fn ids(session: &ReparkSession, table: &str) -> Vec<i32> {
     let batches = session
         .sql(&format!("SELECT id FROM {table}"))
         .await
@@ -51,7 +51,7 @@ async fn ids(session: &ReparkSession, table: &str) -> Vec<i32> {
     out
 }
 
-async fn load(session: &ReparkSession, catalog: &str, parts: &[&str]) -> Table {
+pub(super) async fn load(session: &ReparkSession, catalog: &str, parts: &[&str]) -> Table {
     session
         .catalogs_snapshot()
         .get(catalog)
@@ -62,7 +62,7 @@ async fn load(session: &ReparkSession, catalog: &str, parts: &[&str]) -> Table {
         .unwrap()
 }
 
-fn metadata_files(table: &Table) -> Vec<String> {
+pub(super) fn metadata_files(table: &Table) -> Vec<String> {
     let mut files: Vec<String> = table
         .metadata()
         .metadata_log()
@@ -74,7 +74,7 @@ fn metadata_files(table: &Table) -> Vec<String> {
     files
 }
 
-fn age_tree(dir: &Path, days: u64) {
+pub(super) fn age_tree(dir: &Path, days: u64) {
     let stamp = std::time::SystemTime::now() - std::time::Duration::from_secs(days * 86_400);
     for entry in std::fs::read_dir(dir).expect("read dir").flatten() {
         let path = entry.path();
@@ -124,7 +124,7 @@ fn inside_other_table_refusal(
     )
 }
 
-fn file_spellings(path: &Path) -> [String; 3] {
+pub(super) fn file_spellings(path: &Path) -> [String; 3] {
     [
         path.display().to_string(),
         format!("file://{}", path.display()),
@@ -505,7 +505,7 @@ async fn call_orphan_cotenancy_unreadable_metadata_file_refuses() {
     assert_eq!(ids(&session, "ice.ns.t").await, vec![1]);
 }
 
-fn walk(dir: &Path) -> Vec<PathBuf> {
+pub(super) fn walk(dir: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     for entry in std::fs::read_dir(dir).expect("read dir").flatten() {
         let path = entry.path();

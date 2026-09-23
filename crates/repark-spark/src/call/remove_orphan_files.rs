@@ -13,7 +13,9 @@ use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent};
 use repark_core::{LocationPolicy, memory_warehouse_fallback_root};
 
-use super::orphan_file_list::{FileListRequest, listed_orphans, normalize_location_path};
+use super::orphan_file_list::{
+    FileListRequest, listed_orphans, location_path_start, normalize_location_path,
+};
 use super::{CallArgs, resolve_table_ident, rewrite_options};
 use crate::iceberg_err;
 
@@ -143,28 +145,57 @@ pub(crate) async fn refuse_scan_over_foreign_metadata(
             &own_uuid,
         ));
     }
-    let scan = normalize_orphan_scan_path(scan_location);
     let own_location = swept.metadata().location();
     let own = normalize_orphan_scan_path(own_location);
-    if scan == own || !scan.starts_with(&own) {
-        return Ok(());
-    }
-    let own_metadata_dir = format!(
-        "{}/metadata",
-        normalize_location_path(own_location).trim_end_matches('/')
-    );
-    if let Some((location, read)) = foreign_metadata_file(swept, &own_metadata_dir).await? {
-        return Err(foreign_metadata_refusal(
-            table_arg,
-            &format!(
+    for ancestor in metadata_probe_ancestors(scan_location, own_location) {
+        let directory = if ancestor.ends_with('/') {
+            format!("{ancestor}metadata")
+        } else {
+            format!("{ancestor}/metadata")
+        };
+        let Some((location, read)) = foreign_metadata_file(swept, &directory).await? else {
+            continue;
+        };
+        let holder = if normalize_orphan_scan_path(&ancestor) == own {
+            format!(
                 "path `{scan_location}` lies inside the swept table's own location \
                  `{own_location}`, whose metadata directory holds `{location}`"
-            ),
-            read,
-            &own_uuid,
+            )
+        } else {
+            format!(
+                "path `{scan_location}` lies inside `{ancestor}`, whose metadata directory holds \
+                 `{location}`"
+            )
+        };
+        return Err(foreign_metadata_refusal(
+            table_arg, &holder, read, &own_uuid,
         ));
     }
     Ok(())
+}
+
+pub(crate) fn metadata_probe_ancestors(scan_location: &str, own_location: &str) -> Vec<String> {
+    let own = normalize_orphan_scan_path(own_location);
+    if normalize_orphan_scan_path(scan_location) == own {
+        return Vec::new();
+    }
+    let normal = normalize_location_path(scan_location);
+    let start = location_path_start(&normal);
+    let head = normal.get(..start).unwrap_or_default();
+    let path = Path::new(normal.get(start..).unwrap_or_default());
+    let mut out = Vec::new();
+    for ancestor in path.ancestors().skip(1) {
+        if ancestor.as_os_str().is_empty() {
+            break;
+        }
+        let spelled = format!("{head}{}", ancestor.display());
+        let reached_own = normalize_orphan_scan_path(&spelled) == own;
+        out.push(spelled);
+        if reached_own {
+            break;
+        }
+    }
+    out
 }
 
 async fn foreign_metadata_file(
