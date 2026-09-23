@@ -1495,10 +1495,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
 - `show_table_extended.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** memory-catalog end-to-end
   pins for `SHOW TABLE EXTENDED`: exact partitioned and plain information text, property
-  redaction and snapshot changes, sorted matching tables without views, alternation and
-  case-insensitive LIKE, FROM and ambient scopes, LOCATION's managed classification, owner,
-  struct tree lines, missing-LIKE and partition/missing-table/missing-namespace refusals, and
-  SHOW-family near misses that remain outside this parser.
+  redaction, v3 and Unicode property scalars, and snapshot changes, sorted matching tables
+  without views, alternation and case-insensitive LIKE, FROM and ambient scopes, LOCATION's
+  managed classification, owner, struct tree lines, missing-LIKE and
+  partition/missing-table/missing-namespace refusals, and SHOW-family near misses that remain
+  outside this parser.
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

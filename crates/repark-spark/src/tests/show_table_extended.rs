@@ -245,6 +245,39 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
 }
 
 #[tokio::test]
+async fn show_table_extended_keeps_v3_and_unicode_property_scalars() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v3 (id BIGINT) USING iceberg \
+         TBLPROPERTIES ('format-version'='3', 'κ'='💥')",
+    )
+    .await;
+    let properties = character_properties(&[
+        ("current-snapshot-id", "none"),
+        ("format", "iceberg/parquet"),
+        ("format-version", "3"),
+        ("write.parquet.compression-codec", "zstd"),
+        ("κ", "💥"),
+    ]);
+    let (_, rows) = show_table_extended(
+        &ctx,
+        &catalogs,
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'v3'",
+    )
+    .await;
+    assert!(
+        rows[0]
+            .3
+            .contains(&format!("Table Properties: {properties}\n")),
+        "{}",
+        rows[0].3
+    );
+}
+
+#[tokio::test]
 async fn show_table_extended_lists_sorted_tables_and_excludes_views() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;

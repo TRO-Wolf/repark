@@ -180,4 +180,29 @@ mod tests {
              |    |    |-- element: string (containsNull = true)\n |-- ts: timestamp (nullable = true)\n"
         );
     }
+
+    #[test]
+    fn tree_string_renders_map_children() {
+        let entries = Field::new(
+            "entries",
+            DataType::Struct(
+                vec![
+                    Field::new("key", DataType::Utf8, false),
+                    Field::new("value", DataType::Int64, true),
+                ]
+                .into(),
+            ),
+            false,
+        );
+        let schema = Schema::new(vec![Field::new(
+            "attributes",
+            DataType::Map(Arc::new(entries), false),
+            true,
+        )]);
+        assert_eq!(
+            spark_tree_string(&schema),
+            "root\n |-- attributes: map (nullable = true)\n |    |-- key: string\n \
+             |    |-- value: long (valueContainsNull = true)\n"
+        );
+    }
 }
