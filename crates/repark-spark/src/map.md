@@ -485,8 +485,9 @@ pins: rp-4-fork-repin/C-005, C-006
   (a bare call deletes with `older_than` at now minus 3 days), accepts every Spark argument
   including `file_list_view` — `location` reads named or positionally at index 2
   through `call_args::CallArgs::optional_string_at`, matching Spark's parameter order —
-  and refuses only a scan path that is the shared fallback root, a parent of it, or a
-  directory holding another table of the catalog (**ORPHAN-3, owner ruling Q-55-6,
+  and its guards refuse a scan path that is the shared fallback root, a parent of it, or a
+  directory holding another table of the catalog, while the listing path also refuses a table
+  whose stored location is not in normal path form (**ORPHAN-3, owner ruling Q-55-6,
   2026-09-22**; body in `call/remove_orphan_files.rs`); on a `ServiceManagedLocation`
   catalog (the `s3tables` kind) it refuses before any IO — table buckets answer
   `ListObjectsV2` 405 — naming the service's `unreferencedFileRemoval` maintenance as the

@@ -6757,13 +6757,15 @@ the pin rather than obeying it.
   now sweeps that directory. The planted 10-day-old `data/orphan-file.parquet` comes back as one
   `orphan_file_location` row and is deleted. A 1-day-old orphan gives zero rows and is kept.
   A sibling table in the same namespace does not block that sweep. On a `TempFallbackAllowed`
-  catalog the call still refuses a scan path (`location`, else the table location) in exactly
-  three cases: it is the fallback root `<warehouse>/repark_ctas` or
+  catalog the shared-root and other-table guards refuse a scan path (`location`, else the table
+  location) in three cases: it is the fallback root `<warehouse>/repark_ctas` or
   `<warehouse>/repark_ansi_ctas` (the pinned spellings are a trailing slash, `file:/`,
   hostless `file://`, `file:///` and `..`), it is a parent of that root (the warehouse
   itself), or it equals or contains the location of another table in the same catalog, in any
   namespace including a nested one. The first two keep the old "shared CTAS fallback root"
-  text. The third names the other table.
+  text. The third names the other table. Separately, the listing path (no `file_list_view`)
+  refuses a table whose own stored location is not in normal path form, described below. A
+  `location` strictly inside another table's directory is none of these cases and is not refused.
   Without `file_list_view`, the `location` argument reaches the fork's listing with its path in
   lexical normal form (scheme and authority as given), so `<t>/data/..`, `<t>/./` and
   `<t>//data` list the same orphans as `<t>` and never the live file; a `file://` location
@@ -6826,9 +6828,11 @@ the pin rather than obeying it.
 - **Rationale** — FIXED by owner ruling Q-55-6 under Q-55-2 (full Spark parity), 2026-09-22.
   The old guard refused every table under the fallback root. It protected against two sessions
   that share one warehouse writing the same derived directory. The narrowed guard refuses in
-  exactly the three ruled cases: the fallback root itself, a parent of it, or a scan path
+  the three ruled cases: the fallback root itself, a parent of it, or a scan path
   equal to or containing another registered table's location. The CTAS create location is
-  unchanged (Q-55-7). Ledger:
+  unchanged (Q-55-7). The listing path separately refuses a table whose stored location is not in
+  normal path form until the fork's join normalises both sides; `file_list_view` still sweeps it.
+  Ledger:
   [../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md](../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md).
 
 ### ORPHAN-S3TABLES-1 — `remove_orphan_files` on an S3 Tables table: the bare-bucket parser half FIXED (RP-19), the 405 listing refusal stays open
