@@ -6803,7 +6803,11 @@ the pin rather than obeying it.
   `::call_remove_orphan_files_file_list_view_keeps_rows_inside_the_older_than_window`,
   `::call_remove_orphan_files_file_list_view_skips_paths_outside_the_scan_location`,
   `::call_remove_orphan_files_file_list_view_prefix_conflicts_match_the_listing_path`,
-  `::call_remove_orphan_files_file_list_view_names_an_authority_conflict`),
+  `::call_remove_orphan_files_file_list_view_names_an_authority_conflict`,
+  `::call_remove_orphan_files_file_list_view_keeps_a_live_file_named_through_an_alias`,
+  `::call_remove_orphan_files_file_list_view_matches_a_table_location_that_holds_an_alias`,
+  `::call_remove_orphan_files_file_list_view_resolves_an_aliased_scan_location`,
+  `::call_remove_orphan_files_refuses_a_location_holding_a_table_spelled_through_an_alias`),
   `crates/repark-spark/src/tests/call_orphan_view.rs` (the `file_list_view` spelling, gc,
   malformed-view, NULL-timestamp, mode, `equal_schemes`, failed-delete and policy-scope pins),
   `crates/repark-spark/src/tests/call_orphan.rs::call_orphan_shared_ctas_root_rule`, and
