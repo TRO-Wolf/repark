@@ -65,7 +65,7 @@ pub(crate) async fn refuse_insert_into_view(
     insert: &datafusion::sql::sqlparser::ast::Insert,
 ) -> Result<()> {
     if let datafusion::sql::sqlparser::ast::TableObject::TableName(name) = &insert.table {
-        crate::view_ddl::execute::refuse_view_write_target(ctx, catalogs, name).await?;
+        crate::view_ddl::execute::refuse_view_write_target(catalogs, name).await?;
     }
     Ok(())
 }

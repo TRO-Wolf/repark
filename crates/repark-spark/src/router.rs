@@ -458,7 +458,7 @@ async fn execute_delete(
         return Err(DataFusionError::Plan(message));
     }
     if let Some(name) = delete_target_object_name(delete) {
-        crate::view_ddl::execute::refuse_view_write_target(ctx, catalogs, name).await?;
+        crate::view_ddl::execute::refuse_view_write_target(catalogs, name).await?;
     }
     // ObjectName only — never TableWithJoins Display (aliases would under-refuse BUG-001).
     let object_name = delete_target_object_name(delete);
@@ -510,7 +510,7 @@ async fn execute_update(
         return Err(DataFusionError::Plan(message));
     }
     if let Some(name) = object_name {
-        crate::view_ddl::execute::refuse_view_write_target(ctx, catalogs, name).await?;
+        crate::view_ddl::execute::refuse_view_write_target(catalogs, name).await?;
     }
     {
         let as_statement = datafusion::sql::sqlparser::ast::Statement::Update(update.clone());

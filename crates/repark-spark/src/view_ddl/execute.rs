@@ -273,7 +273,6 @@ pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<Reco
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn refuse_view_write_target(
-    _ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     name: &ObjectName,
 ) -> Result<()> {

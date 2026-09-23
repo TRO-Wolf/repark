@@ -515,7 +515,7 @@ async fn view_create_drop_and_write_guard_complete_bare_names_from_use() {
     let Statement::Drop { names, .. } = &statements[0] else {
         panic!("expected DROP VIEW");
     };
-    let error = crate::view_ddl::execute::refuse_view_write_target(&ctx, &catalogs, &names[0])
+    let error = crate::view_ddl::execute::refuse_view_write_target(&catalogs, &names[0])
         .await
         .expect_err("view write target must refuse");
     assert_eq!(
@@ -529,6 +529,47 @@ async fn view_create_drop_and_write_guard_complete_bare_names_from_use() {
             .await
             .expect("view removed")
     );
+}
+
+#[tokio::test]
+async fn bare_alter_view_without_namespace_refuses_and_write_guard_falls_through() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "ice", "");
+    let error = execute(&ctx, &catalogs, "ALTER VIEW v SET TBLPROPERTIES ('k'='v')")
+        .await
+        .expect_err("bare view needs a namespace");
+    let DataFusionError::Plan(message) = error else {
+        panic!("expected Plan refusal, got {error:?}");
+    };
+    assert_eq!(
+        message,
+        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.``.`v` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+    );
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    let view = catalogs["ice"]
+        .load_view(&ident)
+        .await
+        .expect("unchanged view");
+    assert!(!view.metadata().properties().contains_key("k"));
+    let statements = Parser::parse_sql(&DatabricksDialect {}, "INSERT INTO v VALUES (9)")
+        .expect("insert statement");
+    let Statement::Insert(insert) = &statements[0] else {
+        panic!("expected INSERT");
+    };
+    let datafusion::sql::sqlparser::ast::TableObject::TableName(name) = &insert.table else {
+        panic!("expected table name");
+    };
+    assert!(matches!(
+        crate::view_ddl::execute::refuse_view_write_target(&catalogs, name).await,
+        Ok(())
+    ));
 }
 
 #[tokio::test]
