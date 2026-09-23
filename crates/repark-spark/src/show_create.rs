@@ -161,10 +161,7 @@ pub(crate) fn starts_with_show_create_table(sql: &str) -> bool {
 pub(crate) fn skip_sql_whitespace_and_comments(sql: &str, mut position: usize) -> Option<usize> {
     let bytes = sql.as_bytes();
     loop {
-        while bytes
-            .get(position)
-            .is_some_and(|byte| byte.is_ascii_whitespace())
-        {
+        while bytes.get(position).is_some_and(u8::is_ascii_whitespace) {
             position += 1;
         }
         let tail = bytes.get(position..)?;
