@@ -608,7 +608,7 @@ async fn served_names_fold_and_composed_shapes_refuse() {
     assert_eq!(
         quoted_deleted
             .iter()
-            .map(|batch| batch.num_rows())
+            .map(datafusion::arrow::record_batch::RecordBatch::num_rows)
             .sum::<usize>(),
         3,
         "backtick `_deleted` resolves exact"
@@ -809,5 +809,10 @@ async fn served_spec_id_and_deleted_answer_together() {
         vec!["id", "_spec_id", "_deleted"],
         "composed served columns answer together"
     );
-    assert_eq!(rows.iter().map(|batch| batch.num_rows()).sum::<usize>(), 3);
+    assert_eq!(
+        rows.iter()
+            .map(datafusion::arrow::record_batch::RecordBatch::num_rows)
+            .sum::<usize>(),
+        3
+    );
 }
