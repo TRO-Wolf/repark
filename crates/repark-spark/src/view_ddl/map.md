@@ -34,6 +34,10 @@ service, and the wrapper-based read path that expands stored SQL per query.
   fail-closed since R2: metadata-table writes refuse up front, `is_view` is a
   `Result`, and names that cannot be views (branch selectors) fall through to
   the table path). pins: ice-views-1/C-017
+  Name completion for CREATE, DROP, ALTER, RENAME targets, and the write guard
+  reads `use_ddl::session_defaults(catalogs)`; one-part SHOW VIEWS IN reads its
+  catalog from the same defaults. A bare name with no current namespace uses
+  `TABLE_OR_VIEW_NOT_FOUND`, as `use_ddl::complete_name` does.
   The tighten refusal runs unconditionally once `catalog_handle` resolves a
   registered catalog and before `create_or_replace_view` — a bare-name-marked
   target is still a catalog write, and CREATE OR REPLACE shares this site —
