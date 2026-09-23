@@ -899,7 +899,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `spark_door_null_keys_never_match_inner_left_semi_anti`).
 - **Sibling test modules:**
   - [`router.rs`](router.rs) — `bug010_multi_statement_refuses_parse_class` pins the Spark
-    `PARSE_SYNTAX_ERROR` parser class and SQLSTATE `42601` for multi-statement SQL.
+    `PARSE_SYNTAX_ERROR` parser class and SQLSTATE `42601`; every accepted trailing-semicolon,
+    whitespace, and comment form returns the complete `SELECT 1` batch.
     pins: wo-c5/C-001
   - [`show_create.rs`](show_create.rs) — `show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
     `show_create_comment_before_table_keyword_keeps_tokenizer_fallthrough`, and
@@ -1448,7 +1449,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   invalid-`AS` refusals; every parse refusal asserts the `DataFusionError::SQL` parser variant,
   while analysis refusals assert `DataFusionError::Plan`, with the full measured text. Near
   misses preserve the current view-target and SHOW CREATE outcomes. SHOW TABLES and SHOW
-  COLUMNS compare complete Spark rows and schemas; SHOW TBLPROPERTIES keeps its pinned refusal.
+  COLUMNS compare complete Spark rows and Arrow schemas; SHOW TBLPROPERTIES keeps its pinned refusal.
   DESCRIBE EXTENDED pins its complete Arrow schema, full column-section triples, the fresh-table
   `Table Properties` triple, and the table `Comment` triple. The detail rows `Name`, `Type`,
   `Comment`, and `Location` are compared as complete triples, with `Location` taken from metadata.
@@ -1461,8 +1462,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO-C3 C3:** the multi-term m2 sort fixture now includes `write.distribution-mode=range` and
   compares its entire measured CREATE statement; related SHOW CREATE tests compare complete
   answers rather than fragments.
-  **WO-C3 C5 (updated by WO-C4, 2026-09-23):** SHOW TABLES and SHOW COLUMNS compare complete
-  Spark rows and Arrow field types; SHOW TBLPROPERTIES keeps its full pinned analysis refusal.
+  **WO-C3 C5 (updated by WO-C4 and WO-C7, 2026-09-23):** SHOW TABLES and SHOW COLUMNS compare
+  complete Spark rows and Arrow schemas; SHOW TBLPROPERTIES keeps its full pinned analysis refusal.
   pins: wo-c3/C-001, C-002, C-003, C-005
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal

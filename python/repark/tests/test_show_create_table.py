@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -62,23 +63,26 @@ def _location(spark: ReparkSession) -> str:
 
 def test_show_create_table_answers_spark_text(spark: ReparkSession) -> None:
     frame = spark.sql(f"SHOW CREATE TABLE {QUALIFIED}")
-    assert frame.columns == ["createtab_stmt"]
-    rows = frame.collect()
-    assert len(rows) == 1
-    assert rows[0][0] == (
-        f"CREATE TABLE {QUALIFIED} (\n"
-        "  id BIGINT NOT NULL COMMENT 'c',\n"
-        "  data STRING)\n"
-        "USING iceberg\n"
-        "PARTITIONED BY (bucket(4, id))\n"
-        f"LOCATION '{_location(spark)}'\n"
-        "TBLPROPERTIES (\n"
-        "  'current-snapshot-id' = 'none',\n"
-        "  'format' = 'iceberg/parquet',\n"
-        "  'format-version' = '2',\n"
-        "  'k' = 'v',\n"
-        "  'write.parquet.compression-codec' = 'zstd')\n"
-    )
+    result = frame.to_arrow()
+    assert result.schema == pa.schema([pa.field("createtab_stmt", pa.string(), nullable=False)])
+    assert result.to_pylist() == [
+        {
+            "createtab_stmt": (
+                f"CREATE TABLE {QUALIFIED} (\n"
+                "  id BIGINT NOT NULL COMMENT 'c',\n"
+                "  data STRING)\n"
+                "USING iceberg\n"
+                "PARTITIONED BY (bucket(4, id))\n"
+                f"LOCATION '{_location(spark)}'\n"
+                "TBLPROPERTIES (\n"
+                "  'current-snapshot-id' = 'none',\n"
+                "  'format' = 'iceberg/parquet',\n"
+                "  'format-version' = '2',\n"
+                "  'k' = 'v',\n"
+                "  'write.parquet.compression-codec' = 'zstd')\n"
+            )
+        }
+    ]
 
 
 def test_show_create_as_serde_has_spark_error_contract(spark: ReparkSession) -> None:
@@ -128,8 +132,10 @@ def test_show_create_comments_match_the_uncommented_answer(
 ) -> None:
     expected = spark.sql(f"SHOW CREATE TABLE {QUALIFIED}")
     actual = spark.sql(statement)
-    assert actual.columns == expected.columns, label
-    assert actual.collect() == expected.collect(), label
+    expected_result = expected.to_arrow()
+    actual_result = actual.to_arrow()
+    assert actual_result.schema == expected_result.schema, label
+    assert actual_result.to_pylist() == expected_result.to_pylist(), label
 
 
 @pytest.mark.parametrize(("label", "statement"), COMMENTED_SHOW_CREATE_REFUSALS)
@@ -200,5 +206,7 @@ def test_show_create_multi_statement_has_spark_parse_contract(spark: ReparkSessi
 def test_show_tables_comment_near_miss_matches_its_uncommented_answer(spark: ReparkSession) -> None:
     expected = spark.sql(f"SHOW TABLES IN {CATALOG}.{NAMESPACE}")
     actual = spark.sql(f"/* c */ SHOW TABLES IN {CATALOG}.{NAMESPACE}")
-    assert actual.columns == expected.columns
-    assert actual.collect() == expected.collect()
+    expected_result = expected.to_arrow()
+    actual_result = actual.to_arrow()
+    assert actual_result.schema == expected_result.schema
+    assert actual_result.to_pylist() == expected_result.to_pylist()

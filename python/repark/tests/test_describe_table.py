@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import pyarrow as pa
@@ -66,9 +67,13 @@ def _rows(spark: ReparkSession, sql: str) -> list[tuple[str, str, str | None]]:
 def test_describe_table_plain_matches_spark_rows(spark: ReparkSession) -> None:
     """D-2: plain DESCRIBE returns the step-1 capture rows with Spark nullability."""
     table = spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.{TABLE}").to_arrow()
-    assert table.schema.names == ["col_name", "data_type", "comment"]
-    assert [field.type for field in table.schema] == [pa.string()] * 3
-    assert [field.nullable for field in table.schema] == [False, False, True]
+    assert table.schema == pa.schema(
+        [
+            pa.field("col_name", pa.string(), nullable=False),
+            pa.field("data_type", pa.string(), nullable=False),
+            pa.field("comment", pa.string(), nullable=True),
+        ]
+    )
     assert _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.{TABLE}") == PLAIN_ROWS
     assert _rows(spark, f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE}") == PLAIN_ROWS
 
@@ -78,22 +83,24 @@ def test_describe_table_extended_sections(spark: ReparkSession) -> None:
     rows = _rows(spark, f"DESCRIBE TABLE EXTENDED {CATALOG}.{NAMESPACE}.{TABLE}")
     assert rows[: len(EXTENDED_HEAD)] == EXTENDED_HEAD
     detail = rows[len(EXTENDED_HEAD) :]
-    assert detail[0] == ("Name", f"{CATALOG}.{NAMESPACE}.{TABLE}", "")
-    assert detail[1] == ("Type", "MANAGED", "")
-    assert detail[2][0] == "Location"
-    assert detail[2][1].endswith(f"/{NAMESPACE}/{TABLE}")
-    assert detail[2][2] == ""
-    assert detail[3] == ("Provider", "iceberg", "")
-    assert detail[4][0] == "Owner"
-    assert detail[4][1] != ""
-    assert detail[4][2] == ""
-    assert detail[5] == (
-        "Table Properties",
-        "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,k=v,"
-        "write.parquet.compression-codec=zstd]",
-        "",
-    )
-    assert detail[6] == ("Statistics", "0 bytes, 0 rows", None)
+    assert len(detail) == 7
+    assert detail[0:2] == [
+        ("Name", f"{CATALOG}.{NAMESPACE}.{TABLE}", ""),
+        ("Type", "MANAGED", ""),
+    ]
+    assert re.fullmatch(r"(?:file:)?/.+/dsns1/t1", detail[2][1])
+    assert detail[2] == ("Location", detail[2][1], "")
+    assert detail[3:] == [
+        ("Provider", "iceberg", ""),
+        ("Owner", "unknown", ""),
+        (
+            "Table Properties",
+            "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,k=v,"
+            "write.parquet.compression-codec=zstd]",
+            "",
+        ),
+        ("Statistics", "0 bytes, 0 rows", None),
+    ]
 
 
 def test_describe_formatted_is_extended(spark: ReparkSession) -> None:
@@ -150,10 +157,13 @@ def test_describe_table_statistics_counts_written_rows(spark: ReparkSession) -> 
     )
     extended = _rows(spark, f"DESCRIBE TABLE EXTENDED {CATALOG}.{NAMESPACE}.{TABLE}")
     statistics = next(value for name, value, _ in extended if name == "Statistics")
-    assert statistics.endswith("2 rows")
-    assert not statistics.startswith("0 bytes")
+    assert re.fullmatch(r"[0-9]+ bytes, 2 rows", statistics)
     properties = next(value for name, value, _ in extended if name == "Table Properties")
-    assert "current-snapshot-id=none" not in properties
+    assert re.fullmatch(
+        r"\[current-snapshot-id=[0-9]+,format=iceberg/parquet,format-version=2,"
+        r"write.parquet.compression-codec=zstd\]",
+        properties,
+    )
 
 
 def test_describe_table_show_truncate_false_prints(
@@ -220,7 +230,17 @@ def test_describe_table_live_matches_capture_and_repark(tmp_path: Path) -> None:
     assert live_extended[base + 3] == ("Provider", "iceberg", "")
     assert repark_extended[base + 6] == ("Statistics", "0 bytes, 0 rows", None)
     assert live_extended[base + 6] == ("Statistics", "0 bytes, 0 rows", None)
-    for offset in (2, 4):
-        assert repark_extended[base + offset][1] != ""
-        assert live_extended[base + offset][1] != ""
-    assert repark_extended[base + 5] == live_extended[base + 5]
+    assert re.fullmatch(r"(?:file:)?/.+/dsns1/t1", repark_extended[base + 2][1])
+    assert re.fullmatch(r"(?:file:)?/.+/dsns1/t1", live_extended[base + 2][1])
+    assert repark_extended[base + 4] == ("Owner", "unknown", "")
+    assert live_extended[base + 4][0] == "Owner"
+    assert re.fullmatch(r"[A-Za-z0-9_.-]+", live_extended[base + 4][1])
+    assert live_extended[base + 4][2] == ""
+    expected_properties = (
+        "Table Properties",
+        "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,k=v,"
+        "write.parquet.compression-codec=zstd]",
+        "",
+    )
+    assert repark_extended[base + 5] == expected_properties
+    assert live_extended[base + 5] == expected_properties

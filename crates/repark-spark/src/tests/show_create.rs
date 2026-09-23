@@ -702,17 +702,12 @@ async fn show_tables_matches_the_complete_spark_row_and_schema() {
     assert_eq!(batches.len(), 1, "{sql}");
     let batch = batches.first().expect(sql);
     assert_eq!(
-        batch
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| (field.name().clone(), field.data_type().clone()))
-            .collect::<Vec<_>>(),
-        vec![
-            ("namespace".to_string(), DataType::Utf8),
-            ("tableName".to_string(), DataType::Utf8),
-            ("isTemporary".to_string(), DataType::Boolean),
-        ]
+        batch.schema().as_ref(),
+        &Schema::new(vec![
+            Field::new("namespace", DataType::Utf8, false),
+            Field::new("tableName", DataType::Utf8, false),
+            Field::new("isTemporary", DataType::Boolean, false),
+        ])
     );
     let namespaces = batch
         .column(0)
@@ -761,13 +756,8 @@ async fn show_columns_matches_the_complete_spark_row_and_schema() {
     assert_eq!(batches.len(), 1, "{sql}");
     let batch = batches.first().expect(sql);
     assert_eq!(
-        batch
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| (field.name().clone(), field.data_type().clone()))
-            .collect::<Vec<_>>(),
-        vec![("col_name".to_string(), DataType::Utf8)]
+        batch.schema().as_ref(),
+        &Schema::new(vec![Field::new("col_name", DataType::Utf8, false)])
     );
     let names = batch
         .column(0)

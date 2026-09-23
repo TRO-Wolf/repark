@@ -180,7 +180,12 @@ mod tests {
         let twelve: Vec<String> = names.into_iter().take(12).collect();
         let ordered = java_hash_set_order(twelve);
         assert_eq!(ordered.first().map(String::as_str), Some("p"));
-        assert_eq!(ordered.last().map(String::as_str), Some("o"));
+        assert_eq!(
+            ordered,
+            ["p", "q", "r", "s", "h", "i", "j", "k", "l", "m", "n", "o"]
+                .map(str::to_string)
+                .to_vec()
+        );
     }
 
     #[test]
@@ -190,8 +195,13 @@ mod tests {
             "comment",
             "provider",
             "location",
+            "current-snapshot-id",
+            "format-version",
+            "identifier-fields",
             "sort-order",
             "format",
+            "external",
+            "is_managed_location",
         ] {
             assert!(is_reserved_property(key), "{key}");
         }

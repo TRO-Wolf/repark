@@ -30,6 +30,12 @@ async fn bug010_multi_statement_refuses_parse_class() {
 async fn bug010_trailing_semicolon_whitespace_comments_allowed() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
+    let expected = execute(&ctx, &catalogs, "SELECT 1")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
     for sql in [
         "SELECT 1;",
         "SELECT 1;  ",
@@ -43,12 +49,13 @@ async fn bug010_trailing_semicolon_whitespace_comments_allowed() {
         "SELECT 1; /* only comment after */",
         "-- lead\nSELECT 1;",
     ] {
-        execute(&ctx, &catalogs, sql)
+        let actual = execute(&ctx, &catalogs, sql)
             .await
             .unwrap_or_else(|err| panic!("single-stmt trailing form must pass: {sql:?}: {err}"))
             .collect()
             .await
             .unwrap_or_else(|err| panic!("collect failed for {sql:?}: {err}"));
+        assert_eq!(actual, expected, "{sql}");
     }
 }
 
