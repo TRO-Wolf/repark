@@ -7,8 +7,8 @@ properties, or a single keyed row (a case-sensitive miss answers Spark's
 table or cannot resolve falls through to the upstream planning refusal, and a
 name that is neither table nor view answers the PR2 TABLE_OR_VIEW_NOT_FOUND.
 Measured against Spark 4.1.2 + Iceberg 1.11.0
-(/tmp/oc-worker/run27/ticks-xo-opus3/064/MEASURED-showprops.md); the no-key row
-order is Java map iteration order, so every no-key pin compares sorted.
+(/tmp/oc-worker/run27/ticks-xo-opus3/064/MEASURED-showprops.md).
+No-key order residue: D-VIEW-SHOWPROPS-1.
 
 pins: ice-views-1/C-017
 """
@@ -163,12 +163,7 @@ def test_alter_view_set_then_show_reflects_updates(spark: ReparkSession, tmp_pat
 
 
 def test_bare_and_two_part_names_do_not_follow_use(spark: ReparkSession) -> None:
-    """E9 — bare and two-part names do not follow USE.
-
-    Spark answers ``[["k","v"]]`` for both; repark resolves short names
-    through the planner defaults, which USE does not move, so the name falls
-    through to the upstream SHOW refusal. The residue is pinned, not fixed.
-    """
+    """E9 — pin the bare and two-part name residue D-VIEW-SHOWPROPS-1."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     spark.sql("CREATE NAMESPACE sc.other")
     spark.catalog.setCurrentCatalog("sc")
