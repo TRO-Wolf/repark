@@ -240,12 +240,7 @@ def test_old_name_is_gone_after_rename(spark: ReparkSession) -> None:
 def test_rename_to_bare_target_reports_cross_catalog_move(
     spark: ReparkSession,
 ) -> None:
-    """E9 — a bare target resolves under the planner default ``datafusion``.
-
-    Spark answers ``to=spark_catalog``; repark resolves the bare target through
-    ``datafusion.catalog.default_catalog``, which stays ``datafusion`` in this
-    session. The residue is pinned, not fixed.
-    """
+    """D-VIEW-ALTER-1 — a bare target resolves in the default catalog."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.v RENAME TO w")
