@@ -56,6 +56,22 @@ async fn present_view_returns_reserved_and_stored_rows() {
         .expect("view must be handled")
         .expect("view must answer");
     let batches = frame.collect().await.expect("collect view properties");
+    assert_eq!(
+        batches[0]
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| (
+                field.name().as_str(),
+                field.data_type(),
+                field.is_nullable()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("key", &DataType::Utf8, false),
+            ("value", &DataType::Utf8, false)
+        ]
+    );
     let rows = batches
         .iter()
         .flat_map(|batch| {
@@ -79,13 +95,23 @@ async fn present_view_returns_reserved_and_stored_rows() {
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    assert_eq!(rows.len(), 5);
-    assert_eq!(rows[1], ("provider".to_string(), "iceberg".to_string()));
-    assert_eq!(rows[2], ("format-version".to_string(), "1".to_string()));
-    assert_eq!(rows[3], ("a".to_string(), "b".to_string()));
-    assert_eq!(rows[4], ("k".to_string(), "v".to_string()));
-    assert_eq!(rows[0].0, "location");
-    assert!(rows[0].1.ends_with("/sales/v"));
+    assert_eq!(
+        rows,
+        vec![
+            (
+                "location".to_string(),
+                warehouse
+                    .path()
+                    .join("sales/v")
+                    .to_string_lossy()
+                    .into_owned()
+            ),
+            ("provider".to_string(), "iceberg".to_string()),
+            ("format-version".to_string(), "1".to_string()),
+            ("a".to_string(), "b".to_string()),
+            ("k".to_string(), "v".to_string()),
+        ]
+    );
 }
 
 #[tokio::test]
@@ -282,6 +308,24 @@ async fn router_preserves_show_parse_error_and_table_fallthrough() {
     .collect()
     .await
     .expect("collect view properties");
+    assert_eq!(
+        rows[0]
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| (
+                field.name().as_str(),
+                field.data_type(),
+                field.is_nullable()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("key", &DataType::Utf8, false),
+            ("value", &DataType::Utf8, false)
+        ]
+    );
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].num_rows(), 1);
     let keys = rows[0]
         .column(0)
         .as_any()
