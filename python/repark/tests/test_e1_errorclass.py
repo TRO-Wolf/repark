@@ -166,6 +166,37 @@ def test_native_exception_surface_shim_methods() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("statement", "expected_sql_state", "expected_text"),
+    [
+        (
+            "INSERT INTO t (id) BY NAME SELECT 1 AS id",
+            "42601",
+            'SQL error: ParserError("[PARSE_SYNTAX_ERROR] BY NAME cannot be combined with an '
+            'explicit column list. SQLSTATE: 42601")',
+        ),
+        (
+            "SELECT 1; SELECT 2",
+            None,
+            'SQL error: ParserError("[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements '
+            "in one call are not supported (Spark parity). Only a single statement is accepted; "
+            'a trailing semicolon, whitespace, or comment after that statement is allowed")',
+        ),
+    ],
+)
+def test_parser_wrapper_refusals_report_the_native_error_condition(
+    spark: ReparkSession,
+    statement: str,
+    expected_sql_state: str | None,
+    expected_text: str,
+) -> None:
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement).collect()
+    assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert caught.value.getSqlState() == expected_sql_state
+    assert str(caught.value) == expected_text
+
+
 def test_engine_analysis_error_has_surface_methods(spark: ReparkSession) -> None:
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SELECT * FROM __no_such_table__")

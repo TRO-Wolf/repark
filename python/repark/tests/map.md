@@ -88,6 +88,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `AnalysisException` from `Error during planning: ` plus the catalogue
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` / `KD000` text (cell
   `W-UPDATE-TYPE-ERR`) and asserts `getCondition` and `getSqlState`.
+  **WO-C3 C4 (2026-09-23):** ParserError wrappers reject ordinary and lowercase bracket text,
+  while a no-prefix Spark-shaped wrapper parses its condition and SQLSTATE.
+  pins: wo-c3/C-004
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011, C-012
 - [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
@@ -3044,6 +3047,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   invalid-constructor pins mirror DayTime (`123` / `(YEAR, 321)` — C7-Q-001);
   getitem closed-slice Spark substr value pin
   (`test_column_getitem_slice_substr_spark_semantics` — C7-L-001).
+  **WO-C3 C4 (2026-09-23):** INSERT BY NAME with a column list and multi-statement SQL pin the
+  native ParserError wrapper's exact RePark text and `PARSE_SYNTAX_ERROR` condition.
+  pins: wo-c3/C-004
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
   expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare
   SELECT/INSERT/CTAS/UPDATE/DELETE; temp-view prefer on FROM; VIEW/TEMP TABLE non-rewrite;

@@ -72,6 +72,29 @@ def test_condition_parser_strips_each_known_prefix(prefix: str) -> None:
     assert error.getSqlState() == "42P01"
 
 
+@pytest.mark.parametrize(
+    ("message", "expected_condition", "expected_sql_state"),
+    [
+        ('SQL error: ParserError("sql parser error: Expected: x")', None, None),
+        ('SQL error: ParserError("[lowercase] x")', None, None),
+        (
+            'ParserError("[PARSE_SYNTAX_ERROR] x SQLSTATE: 42601")',
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+        ),
+    ],
+)
+def test_parser_wrapper_condition_extraction_rejects_malformed_forms(
+    message: str,
+    expected_condition: str | None,
+    expected_sql_state: str | None,
+) -> None:
+    error = ParseException(message)
+    assert error.getCondition() == expected_condition
+    assert error.getSqlState() == expected_sql_state
+    assert str(error) == message
+
+
 def test_condition_parser_does_not_search_for_a_bracket() -> None:
     """After one prefix the bracket must still sit at column 0."""
     error = AnalysisException(
