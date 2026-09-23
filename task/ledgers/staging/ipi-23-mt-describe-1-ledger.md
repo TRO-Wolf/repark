@@ -456,6 +456,8 @@ ledger/map file; `git diff origin/main...HEAD` over every file under `task/`,
 | md-r7fix `make rust-clippy` + `make rust-panic-ban` + `make check-rust-file-size` + `check_lib_rs.py` + `check_map_md.sh --base origin/main` + `check_ledger_grammar.py` + `comment_ban.py` + ruff format/check on the test file | all exit 0 |
 | md-r8fix local-gate at `4a7df5ec`: `build-slot.sh local-gate.sh xo55-md "repark-spark:--lib+describe"` + the ten work-order files + the six sweep-added files (`test_ice_small_parser_1.py`, `test_dml_c_truncate.py`, `test_errors.py`, `test_perf_describe_1.py`, `test_catalog_surface.py`, `python/dbt-repark/tests/test_statement_surface.py`) | `CB=0 R=0 T=0 U=0 L=0`: rust 69 passed; offline 429 passed, 2 skipped, 1 xfailed; live 431 passed, 1 xfailed |
 | md-r8fix `check_map_md.sh --base origin/main` + `check_ledger_grammar.py` + `comment_ban.py` + ruff format/check on both test files | all exit 0 |
+| md-r9fix local-gate at `033c6605`: `build-slot.sh local-gate.sh xo55-md "repark-spark:--lib+describe"` + the ten work-order files | `CB=0 R=0 T=0 U=0 L=0`: rust 69 passed; offline 316 passed, 2 skipped, 1 xfailed; live 318 passed, 1 xfailed |
+| md-r9fix `check_ledger_grammar.py` + `comment_ban.py` after every commit | all exit 0 |
 
 ## COVERAGE_ATTESTATION
 
