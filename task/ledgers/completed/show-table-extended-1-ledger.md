@@ -15,7 +15,7 @@
 | Recognizer / near miss | Pin |
 |---|---|
 | `try_parse_show_table_extended`: truncated `SHOW TABLE EXTENDED`, `... LIKE`, `IN`, unclosed pattern quote, unclosed PARTITION, extra `)`, and trailing text after LIKE or PARTITION | Existing `parse_refuses_required_syntax_shapes`; new `parse_near_misses_keep_exact_answers` |
-| `try_parse_show_table_extended`: empty pattern, lowercase keywords, terminal `--` comment, and unclosed comment | New `parse_near_misses_keep_exact_answers`; unclosed block-comment tokenizer detail also pinned by `show_table_extended_near_miss_probes_keep_their_exact_outcomes`. These cases were not separately measured: unmeasured pins. |
+| `try_parse_show_table_extended`: empty pattern, lowercase keywords, terminal `--` comment, and unclosed comment | New `parse_near_misses_keep_exact_answers` pins the parser-level answers, including `None` for an unclosed comment. End to end, the router front door (WO-C10) answers an unclosed `/*` with `UNCLOSED_BRACKETED_COMMENT` / `42601`; `show_table_extended_near_miss_probes_keep_their_exact_outcomes` pins that full rendered text. These cases were not separately measured: unmeasured pins. |
 | `try_parse_show_table_extended` wrong-case boundary, `SHOW TABLES EXTENDED`, `SHOW TABLE EXTENDEDX` | Existing `show_table_extended_near_miss_probes_keep_their_exact_outcomes`; lowercase acceptance is in `parse_near_misses_keep_exact_answers`. |
 | Comment-aware keyword scanner: inter-keyword unclosed comment, comment-ending line, and keyword near misses | Existing `comment_aware_keyword_scanner_leaves_show_table_near_misses_alone` and `show_table_extended_near_miss_probes_keep_their_exact_outcomes`; terminal line comment is in `parse_near_misses_keep_exact_answers`. |
 | `spark_parse_message` bracket prefix: `[`, `[X`, leading-space ` [X] y`, empty message | New `parser_error_bracket_near_misses_keep_complete_messages`; all were unmeasured. |
@@ -24,6 +24,17 @@
 Spark 4.1.2 (orchestrator run m14, 2026-09-23; `sc.ns.x` exists) accepts `SHOW TABLE EXTENDED IN sc.ns LIKE 'x';` with rows and columns `[namespace, tableName, isTemporary, information]`; it also accepts the same query with `;;` and `; ;`. `SELECT 1;;` returns one row `[1]`. RePark matches the `;;` and `; ;` answers, pinned by `parse_near_misses_keep_exact_answers` and `show_table_extended_near_miss_probes_keep_their_exact_outcomes`.
 
 Spark 4.1.2 refuses `SHOW TABLE EXTENDED IN sc.ns LIKE 'x';;x` with `[PARSE_SYNTAX_ERROR] Syntax error at or near 'x': extra input 'x'. SQLSTATE: 42601`. RePark refuses it at the front-door multi-statement guard with `SQL error: ParserError("[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601")`. This is a known divergence, repo-wide and out of scope. The query does not reach the SHOW TABLE EXTENDED intercept. No parser logic change is needed.
+
+## WO-A8 front-door alignment
+
+- The router front door (WO-C10) answers every unclosed `/*` with `UNCLOSED_BRACKETED_COMMENT` /
+  `42601` before this parser runs. The two end-to-end unclosed-comment probes pin that full
+  rendered text; no SHOW TABLE EXTENDED pin claims a tokenizer outcome for an unclosed comment.
+- The near-miss tests moved to `tests/show_table_extended_near_miss.rs`. Their successful
+  fall-throughs compare the complete Arrow schema and every row, and every SHOW TABLE EXTENDED
+  answer compares its complete four-column Arrow schema.
+- The facade `Location` pin follows the MEM-LAYOUT-1 memory-catalog layout
+  `<warehouse>/ns1/entity`.
 
 ## WO-A5 follow-up audit
 
@@ -44,8 +55,9 @@ Spark 4.1.2 refuses `SHOW TABLE EXTENDED IN sc.ns LIKE 'x';;x` with `[PARSE_SYNT
   pins and now uses an ordinary test-file pointer. `crates/repark-spark/src/tests/map.md` cites
   `wo-a1b/C-002, C-003` for literal PARTITION and full refusal pins, and
   `show-table-extended-1/C-001, C-002, C-003, C-004` for parser, metadata, scope, and facade/dbt
-  pins. `python/repark/tests/map.md` cites `wo-a1b/C-003` for facade refusals. Its corrected
-  INSERT BY NAME citation is `wo-c3/C-004`; its multi-statement citation remains `wo-c5/C-001`.
+  pins. `python/repark/tests/map.md` cites `wo-a1b/C-003` for facade refusals. Its WO-A4 note
+  re-cites no WO-C3 or WO-C5 clause; the INSERT BY NAME (`wo-c3/C-004`) and multi-statement
+  (`wo-c5/C-001`) citations stay on the base rows.
 - **V-005 provenance:** C-001 and C-003 cite `/tmp/xo-xo-opus61/measure/u4a_live.json`; C-002
   cites that measurement and `/tmp/xd-create-scratch/m13.json`; C-004 is facade-derived with the
   recorded `DBT-TBLPROPS-1` leg. The deep tree now has a complete exact Rust row pin.

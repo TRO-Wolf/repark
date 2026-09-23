@@ -25,7 +25,7 @@
 
 | Clause | Proposition | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
-| C-001 | Lexer failures after the exact SHOW TABLE EXTENDED head return Spark parse errors while every near miss returns `None`. | Parser unit pins for three delimiters and five near misses. | **PROVEN** | `cargo test -p repark-spark show_table_extended` passes the delimiter and near-miss pins. |
+| C-001 | Lexer failures after the exact SHOW TABLE EXTENDED head return Spark parse errors while every near miss returns `None`. | Parser unit pins for three delimiters and five near misses. | **PROVEN** | `cargo test -p repark-spark show_table_extended` passes the delimiter and near-miss pins. End to end, an unclosed `/*` never reaches this parser: the router front door (WO-C10) answers `UNCLOSED_BRACKETED_COMMENT` / `42601` first. |
 | C-002 | PARTITION uses its pattern as one literal table name and preserves the shared scope failure contract. | End-to-end Rust pins for present, absent, wildcard, and scope cases. | **PROVEN** | Rust end-to-end pins cover present, absent, literal wildcard, and shared scope outcomes. |
 | C-003 | Rust and facade refusal pins assert the typed full error contract, and each swept test has one exact outcome. | Targeted Rust, facade, dbt, and structural gates. | **PROVEN** | WO-A4 restores bare bracketed `ParserError` messages, pins complete SHOW TABLE EXTENDED rows, and corrects the completed-ledger labels. Targeted core, Spark, facade, and dbt tests pass. |
 
