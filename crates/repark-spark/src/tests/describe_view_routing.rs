@@ -5,8 +5,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use iceberg::{Error, ErrorKind};
 
 #[derive(Debug)]
-struct ViewlessCatalog {
-    inner: Arc<dyn Catalog>,
+pub(super) struct ViewlessCatalog {
+    pub(super) inner: Arc<dyn Catalog>,
 }
 
 #[async_trait::async_trait]
@@ -94,11 +94,21 @@ impl Catalog for ViewlessCatalog {
 }
 
 #[derive(Debug)]
-struct FaultCatalog {
-    inner: Arc<dyn Catalog>,
-    table_failure: Option<ErrorKind>,
-    view_failure: Option<ErrorKind>,
-    view_calls: Arc<AtomicUsize>,
+pub(super) struct FaultCatalog {
+    pub(super) inner: Arc<dyn Catalog>,
+    pub(super) table_failure: Option<ErrorKind>,
+    pub(super) view_failure: Option<ErrorKind>,
+    pub(super) view_calls: Arc<AtomicUsize>,
+    pub(super) faults: ViewFaults,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct ViewFaults {
+    pub(super) table_exists_failure: Option<ErrorKind>,
+    pub(super) table_exists_calls: Option<Arc<AtomicUsize>>,
+    pub(super) view_exists_failure: Option<ErrorKind>,
+    pub(super) rename_view_calls: Option<Arc<AtomicUsize>>,
+    pub(super) update_view_calls: Option<Arc<AtomicUsize>>,
 }
 
 #[async_trait::async_trait]
@@ -157,10 +167,6 @@ impl Catalog for FaultCatalog {
         self.inner.drop_table(table).await
     }
 
-    async fn table_exists(&self, table: &TableIdent) -> iceberg::Result<bool> {
-        self.inner.table_exists(table).await
-    }
-
     async fn rename_table(&self, src: &TableIdent, dest: &TableIdent) -> iceberg::Result<()> {
         self.inner.rename_table(src, dest).await
     }
@@ -187,6 +193,16 @@ impl Catalog for FaultCatalog {
         self.inner.load_table(table).await
     }
 
+    async fn table_exists(&self, table: &TableIdent) -> iceberg::Result<bool> {
+        if let Some(calls) = &self.faults.table_exists_calls {
+            calls.fetch_add(1, Ordering::SeqCst);
+        }
+        if let Some(kind) = self.faults.table_exists_failure {
+            return Err(Error::new(kind, "injected table_exists failure"));
+        }
+        self.inner.table_exists(table).await
+    }
+
     async fn load_view(&self, view: &TableIdent) -> iceberg::Result<iceberg::view::View> {
         self.view_calls.fetch_add(1, Ordering::SeqCst);
         if let Some(kind) = self.view_failure {
@@ -194,9 +210,37 @@ impl Catalog for FaultCatalog {
         }
         self.inner.load_view(view).await
     }
+
+    async fn view_exists(&self, view: &TableIdent) -> iceberg::Result<bool> {
+        if let Some(kind) = self.faults.view_exists_failure {
+            return Err(Error::new(kind, "injected view_exists failure"));
+        }
+        self.inner.view_exists(view).await
+    }
+
+    async fn rename_view(
+        &self,
+        source: &TableIdent,
+        destination: &TableIdent,
+    ) -> iceberg::Result<()> {
+        if let Some(calls) = &self.faults.rename_view_calls {
+            calls.fetch_add(1, Ordering::SeqCst);
+        }
+        self.inner.rename_view(source, destination).await
+    }
+
+    async fn update_view(
+        &self,
+        commit: iceberg::view::ViewCommit,
+    ) -> iceberg::Result<iceberg::view::View> {
+        if let Some(calls) = &self.faults.update_view_calls {
+            calls.fetch_add(1, Ordering::SeqCst);
+        }
+        self.inner.update_view(commit).await
+    }
 }
 
-async fn register_catalog(
+pub(super) async fn register_catalog(
     ctx: &SessionContext,
     catalogs: &mut CatalogRegistry,
     catalog: Arc<dyn Catalog>,
@@ -214,7 +258,7 @@ async fn register_catalog(
     );
 }
 
-async fn collected_rows(
+pub(super) async fn collected_rows(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
@@ -263,6 +307,7 @@ async fn describe_table_load_failure_never_probes_view() {
         table_failure: Some(ErrorKind::Unexpected),
         view_failure: None,
         view_calls: view_calls.clone(),
+        faults: ViewFaults::default(),
     });
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
     let error = execute(&ctx, &catalogs, "DESCRIBE fault.sales.absent")
@@ -289,6 +334,7 @@ async fn describe_view_load_failure_keeps_original_error() {
         table_failure: None,
         view_failure: Some(ErrorKind::Unexpected),
         view_calls: view_calls.clone(),
+        faults: ViewFaults::default(),
     });
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
     let error = execute(&ctx, &catalogs, "DESCRIBE fault.sales.absent")
@@ -361,6 +407,7 @@ async fn describe_view_uses_stored_schema_after_source_disappears() {
         table_failure: None,
         view_failure: None,
         view_calls: Arc::new(AtomicUsize::new(0)),
+        faults: ViewFaults::default(),
     });
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
     assert_eq!(
