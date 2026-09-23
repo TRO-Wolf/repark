@@ -15,25 +15,34 @@ intercept, `SHOW` surfaces, and partition-information section stay unchanged.
 
 ## Plan
 
-- [ ] S0: ledger and red-first Rust and Python pins.
-- [ ] S1: parser carrier and time-travel refusal.
-- [ ] S2: column execution module and error rows.
-- [ ] S3: facade expansion for one column tail.
+- [x] S0: ledger and red-first Rust and Python pins.
+- [x] S1: parser carrier and time-travel refusal.
+- [x] S2: column execution module and error rows.
+- [x] S3: facade expansion for one column tail.
 - [ ] S4: registry, maps, gates, and ledger retirement.
 
 ## PROPOSITION LEDGER — DESCRIBE-COLUMN-1 — 2026-09-23
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | `DESCRIBE [TABLE] [EXTENDED|FORMATTED] t col` parses one plain, quoted, or dotted column path and leaves unrelated tails on their existing doors. | Parser pins include table, namespace, function, query, JSON, and two-word tail near misses. | **OPEN** | Live Spark 4.1.2 measurement supplied in the work order. |
-| C-002 | A top-level column answers non-null `info_name` / `info_value` rows for name, Spark DDL type, and comment text or literal `NULL`. | End-to-end memory-catalog pins cover comment, no comment, EXTENDED, FORMATTED, struct, case, and backticks. | **OPEN** | Live Spark 4.1.2 measurement supplied in the work order. |
-| C-003 | A nested path and a missing column refuse with Spark's measured class and text. | End-to-end pins cover `st.a` and `nope`, including suggestion order. | **OPEN** | Live Spark 4.1.2 measurement supplied in the work order. |
-| C-004 | `VERSION AS OF`, `TIMESTAMP AS OF`, and `FOR VERSION AS OF` return the measured `PARSE_SYNTAX_ERROR` near token. | Parser and session pins cover all four measured forms. | **OPEN** | Live Spark 4.1.2 measurement supplied in the work order. |
-| C-005 | The facade retains a single column tail while qualifying both a three-part and a default-namespace table name. | Python facade pins cover qualified and bare table forms. | **OPEN** | Live Spark 4.1.2 measurement supplied in the work order. |
-| C-006 | The parity registry and every touched map describe the delivered scope, and the required gates and comment-ban check pass. | Registry and map diffs plus recorded gate exits. | **OPEN** | Pending final validation. |
+| C-001 | `DESCRIBE [TABLE] [EXTENDED|FORMATTED] t col` parses one plain, backticked, or dotted column path and leaves unrelated tails on their existing doors. | Parser pins include table, namespace, function, query, JSON, and two-word tail near misses. | **PROVEN** | `cargo test -p repark-spark` exits 0; the parser pins cover the claimed forms and near misses. |
+| C-002 | A top-level column answers non-null `info_name` / `info_value` rows for name, Spark DDL type, and comment text or literal `NULL`. | End-to-end memory-catalog pins cover comment, no comment, EXTENDED, FORMATTED, struct, case, and backticks. | **PROVEN** | `cargo test -p repark-spark` exits 0; the column session pin covers every measured answer. |
+| C-003 | A nested path and a missing column refuse with Spark's measured class and text. | End-to-end pins cover `st.a` and `nope`, including suggestion order. | **PROVEN** | `cargo test -p repark-spark` exits 0; the refusal pin checks both measured texts. |
+| C-004 | `VERSION AS OF`, `TIMESTAMP AS OF`, and `FOR VERSION AS OF` return the measured `PARSE_SYNTAX_ERROR` near token. | Parser and session pins cover all four measured forms. | **PROVEN** | `cargo test -p repark-spark` exits 0; the parser and session pins check each near token. |
+| C-005 | The facade retains a single column tail while qualifying both a three-part and a default-namespace table name. | Python facade pins cover qualified and bare table forms. | **PROVEN** | `make develop` and `.venv/bin/python -m pytest python/repark/tests/test_describe_table.py -q` exit 0. |
+| C-006 | The parity registry and every touched map describe the delivered scope, and the required gates and comment-ban check pass. | Registry and map diffs plus recorded gate exits. | **OPEN** | Maps, size, comment-ban, Rust test, and facade test gates exit 0. The required all-targets Clippy command exits 101 on 4,853 existing `unwrap`/`expect` findings in untouched test targets; `cargo clippy -p repark-spark --lib -- -D warnings` exits 0. |
 
 ## Self Logic Review — SLR-001
 
 The hand parser owns the new grammar because the router already receives its parsed carrier. The
 column execution lives outside `describe_show.rs` to preserve its file-size ceiling. Missing-column
 text uses the existing Spark error helper; suggestions use Spark's measured similarity order.
+
+## Validation (2026-09-23)
+
+`cargo test -p repark-spark`, `python3 scripts/check_rust_file_size.py`,
+`bash scripts/check_map_md.sh`, `make check-map-md`,
+`python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xd-show origin/main HEAD`, and
+`.venv/bin/python -m pytest python/repark/tests/test_describe_table.py -q` exit 0.
+`cargo clippy -p repark-spark --all-targets -- -D warnings` exits 101 on unrelated existing test
+lint findings, so this ledger remains in `staging/` and S4 stays open.
