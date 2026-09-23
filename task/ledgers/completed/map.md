@@ -178,7 +178,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   `risk_tier: standard`. Branch `feat/decimal-cache-1`.
   pins: decimal-cache-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [describe-column-1-ledger.md](describe-column-1-ledger.md) —
-  **DESCRIBE-COLUMN-1 (2026-09-23), in flight:** Spark's one-column DESCRIBE rows and
+  **DESCRIBE-COLUMN-1 (2026-09-23), completed:** Spark's one-column DESCRIBE rows and
   parse-altitude VERSION/TIMESTAMP refusal on the Spark SQL door. Round 2 adds identity partition
   rows and CREATE-family owner stamping. `risk_tier: standard`.
   Branch `xd/describe`.
