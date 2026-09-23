@@ -177,4 +177,64 @@ async fn alter_view_unset_if_exists_updates_only_when_a_key_is_present() {
     )
     .await;
     assert_eq!(update_calls.load(Ordering::SeqCst), 1);
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    let view = catalogs["fault"]
+        .load_view(&ident)
+        .await
+        .expect("updated view");
+    assert!(!view.metadata().properties().contains_key("k"));
+}
+
+#[tokio::test]
+async fn alter_view_set_commits_the_property_once() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, mut catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    let update_calls = Arc::new(AtomicUsize::new(0));
+    let catalog = Arc::new(FaultCatalog {
+        inner: catalogs["ice"].clone(),
+        table_failure: None,
+        view_failure: None,
+        view_calls: Arc::new(AtomicUsize::new(0)),
+        faults: ViewFaults {
+            update_view_calls: Some(update_calls.clone()),
+            ..ViewFaults::default()
+        },
+    });
+    register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER VIEW fault.sales.v SET TBLPROPERTIES ('k'='v')",
+    )
+    .await;
+    assert_eq!(update_calls.load(Ordering::SeqCst), 1);
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    let view = catalogs["fault"]
+        .load_view(&ident)
+        .await
+        .expect("updated view");
+    assert_eq!(
+        view.metadata().properties().get("k"),
+        Some(&"v".to_string())
+    );
+}
+
+#[tokio::test]
+async fn alter_view_router_keeps_the_tail_parser_refusal() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let error = execute(&ctx, &catalogs, "ALTER VIEW ice.sales.v SET OTHER")
+        .await
+        .expect_err("malformed SET must refuse")
+        .to_string();
+    assert_eq!(
+        error,
+        "Error during planning: could not parse `ALTER VIEW`: expected TBLPROPERTIES after SET"
+    );
 }
