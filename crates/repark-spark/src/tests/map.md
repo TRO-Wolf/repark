@@ -22,6 +22,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the viewless catalog refusal, unchanged tables, and stored view columns after
   the source table disappears, including EXTENDED. Failure pins check the
   DataFusion variant and the wrapped Iceberg error kind.
+  the source table disappears, including EXTENDED.
+- `alter_view_routing.rs` — ALTER VIEW pins viewless catalog refusals, error propagation, and property update counts.
 - `viewless_catalog.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** the A-9 SQL-door
   battery: `test_views_refuse_on_glue_and_s3tables` drives CREATE, CREATE OR
   REPLACE (over a missing name and over an existing table) and SHOW VIEWS=[]

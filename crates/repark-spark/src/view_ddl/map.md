@@ -23,7 +23,8 @@ service, and the wrapper-based read path that expands stored SQL per query.
 - `execute.rs` — `execute_create_view` (name completion, body prepare + plan
   for the output schema, service call), `execute_drop_view`,
   `execute_show_views` (`namespace`/`viewName`/`isTemporary` rows, LIKE
-  filter), `execute_alter_view` (**PR3:** `load_view` first; SET/UNSET answer
+  filter), `execute_alter_view` (**PR3:** `load_view` first; `ViewNotFound` and
+  `FeatureUnsupported` both count as no view; SET/UNSET answer
   `UNSUPPORTED_FEATURE.CATALOG_OPERATION` for a missing view AND a table
   alike, UNSET refuses the first absent key in statement order unless
   `IF EXISTS`; RENAME refuses a cross-catalog target, answers
