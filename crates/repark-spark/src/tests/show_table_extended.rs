@@ -192,6 +192,7 @@ pub(super) fn managed_row(
 async fn show_table_extended_answers_exact_partitioned_information() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     run(
         &ctx,
         &catalogs,
@@ -215,7 +216,7 @@ async fn show_table_extended_answers_exact_partitioned_information() {
         location: &table_location(&catalogs, "pc").await,
         properties: &properties,
         comment: Some("tbl comment"),
-        owner: None,
+        owner: Some(&owner),
         tree: "root\n |-- id: long (nullable = false)\n |-- ts: timestamp (nullable = true)\n |-- cat: string (nullable = true)\n",
     });
     let (columns, rows) = show_table_extended(
@@ -235,6 +236,7 @@ async fn show_table_extended_answers_exact_partitioned_information() {
 async fn show_table_extended_tracks_snapshot_and_plain_information() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     run(
         &ctx,
         &catalogs,
@@ -255,7 +257,7 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
         location: &location,
         properties: &properties,
         comment: None,
-        owner: None,
+        owner: Some(&owner),
         tree: "root\n |-- id: long (nullable = true)\n",
     });
     let (columns, rows) = show_table_extended(
@@ -289,7 +291,7 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
             "pl",
             &location,
             &snapshot_properties,
-            None,
+            Some(&owner),
             "root\n |-- id: long (nullable = true)\n",
         )]
     );
@@ -299,6 +301,7 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
 async fn show_table_extended_keeps_v3_and_unicode_property_scalars() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     run(
         &ctx,
         &catalogs,
@@ -321,7 +324,7 @@ async fn show_table_extended_keeps_v3_and_unicode_property_scalars() {
         location: &location,
         properties: &properties,
         comment: None,
-        owner: None,
+        owner: Some(&owner),
         tree: "root\n |-- id: long (nullable = true)\n",
     });
     let (_, rows) = show_table_extended(
@@ -340,6 +343,7 @@ async fn show_table_extended_keeps_v3_and_unicode_property_scalars() {
 async fn show_table_extended_lists_sorted_tables_and_excludes_views() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     for table in ["pl", "lo", "v3"] {
         run(
             &ctx,
@@ -375,7 +379,7 @@ async fn show_table_extended_lists_sorted_tables_and_excludes_views() {
                 location: &lo_location,
                 properties: &properties,
                 comment: None,
-                owner: None,
+                owner: Some(&owner),
                 tree: "root\n |-- id: long (nullable = true)\n",
             }),
         ),
@@ -390,7 +394,7 @@ async fn show_table_extended_lists_sorted_tables_and_excludes_views() {
                 location: &pl_location,
                 properties: &properties,
                 comment: None,
-                owner: None,
+                owner: Some(&owner),
                 tree: "root\n |-- id: long (nullable = true)\n",
             }),
         ),
@@ -405,7 +409,7 @@ async fn show_table_extended_lists_sorted_tables_and_excludes_views() {
                 location: &v3_location,
                 properties: &properties,
                 comment: None,
-                owner: None,
+                owner: Some(&owner),
                 tree: "root\n |-- id: long (nullable = true)\n",
             }),
         ),
@@ -426,6 +430,7 @@ async fn show_table_extended_lists_sorted_tables_and_excludes_views() {
 async fn show_table_extended_filters_alternation_case_and_ambient_scope() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     for table in ["lo", "pl"] {
         run(
             &ctx,
@@ -452,8 +457,8 @@ async fn show_table_extended_filters_alternation_case_and_ambient_scope() {
     assert_eq!(
         rows,
         vec![
-            managed_row("lo", &lo_location, &properties, None, tree),
-            managed_row("pl", &pl_location, &properties, None, tree),
+            managed_row("lo", &lo_location, &properties, Some(&owner), tree),
+            managed_row("pl", &pl_location, &properties, Some(&owner), tree),
         ]
     );
     let (_, rows) = show_table_extended(
@@ -464,13 +469,25 @@ async fn show_table_extended_filters_alternation_case_and_ambient_scope() {
     .await;
     assert_eq!(
         rows,
-        vec![managed_row("pl", &pl_location, &properties, None, tree)]
+        vec![managed_row(
+            "pl",
+            &pl_location,
+            &properties,
+            Some(&owner),
+            tree
+        )]
     );
     run(&ctx, &catalogs, "USE ice.sales").await;
     let (_, rows) = show_table_extended(&ctx, &catalogs, "SHOW TABLE EXTENDED LIKE 'pl'").await;
     assert_eq!(
         rows,
-        vec![managed_row("pl", &pl_location, &properties, None, tree)]
+        vec![managed_row(
+            "pl",
+            &pl_location,
+            &properties,
+            Some(&owner),
+            tree
+        )]
     );
 }
 
@@ -478,6 +495,7 @@ async fn show_table_extended_filters_alternation_case_and_ambient_scope() {
 async fn show_table_extended_reports_location_management_owner_and_tree() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     let location = warehouse.path().join("custom_lo");
     run(
         &ctx,
@@ -531,7 +549,7 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
             "lo",
             &lo_location,
             &properties,
-            None,
+            Some(&owner),
             "root\n |-- id: long (nullable = true)\n",
         )]
     );
@@ -563,7 +581,7 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
             "nested",
             &nested_location,
             &properties,
-            None,
+            Some(&owner),
             "root\n |-- s: struct (nullable = true)\n |    |-- x: integer (nullable = true)\n |    |-- y: array (nullable = true)\n |    |    |-- element: string (containsNull = true)\n",
         )]
     );
@@ -573,6 +591,7 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
 async fn show_table_extended_reports_measured_deep_tree() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     run(
         &ctx,
         &catalogs,
@@ -600,7 +619,7 @@ async fn show_table_extended_reports_measured_deep_tree() {
             "deep",
             &location,
             &properties,
-            None,
+            Some(&owner),
             concat!(
                 "root\n",
                 " |-- m: map (nullable = true)\n",
