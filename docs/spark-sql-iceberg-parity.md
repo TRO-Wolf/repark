@@ -6743,6 +6743,99 @@ the pin rather than obeying it.
   is reversed, and repark now answers Spark's answer. The **result shape is identical either
   way** — one row per orphan, `orphan_file_location`, exactly Spark's schema.
 
+### ORPHAN-3 — `remove_orphan_files` sweeps a memory-catalog table's own directory and accepts `file_list_view` (FIXED 2026-09-22)
+
+> **FIXED 2026-09-22 (owner ruling Q-55-6 under Q-55-2 full Spark parity).** The shared-root
+> guard is narrowed to the three refusals the ruling keeps, listed under **repark** below.
+> `file_list_view` is accepted. The pins that asserted the old refusal and the old
+> `NotImplemented` were rewritten to Spark's answers. (The brief named this row
+> `ORPHAN-2`. That id already belongs to the retired dry-run-default row above, so it is filed
+> as `ORPHAN-3`.)
+
+- **repark** — On a memory catalog, a table created without an explicit table `LOCATION` in a
+  namespace created without `location` sits at `<warehouse>/repark_ctas/<catalog>/<ns>/<table>`.
+  `CALL <catalog>.system.remove_orphan_files(table => …)`
+  now sweeps that directory. The planted 10-day-old `data/orphan-file.parquet` comes back as one
+  `orphan_file_location` row and is deleted. A 1-day-old orphan gives zero rows and is kept.
+  A sibling table in the same namespace does not block that sweep. On a `TempFallbackAllowed`
+  catalog the shared-root and other-table guards refuse a scan path (`location`, else the table
+  location) in three cases: it is the fallback root `<warehouse>/repark_ctas` or
+  `<warehouse>/repark_ansi_ctas` (the pinned spellings are a trailing slash, `file:/`,
+  hostless `file://`, `file:///` and `..`), it is a parent of that root (the warehouse
+  itself), or it equals or contains the location of another table in the same catalog, in any
+  namespace including a nested one. The first two keep the old "shared CTAS fallback root"
+  text. The third names the other table. Separately, the listing path (no `file_list_view`)
+  refuses a table whose own stored location is not in normal path form, described below. A
+  `location` strictly inside another table's directory is none of these cases and is not refused.
+  Without `file_list_view`, the `location` argument reaches the fork's listing with its path in
+  lexical normal form (scheme and authority as given), so `<t>/data/..`, `<t>/./` and
+  `<t>//data` list the same orphans as `<t>` and never the live file; a `file://` location
+  lists nothing on the fork's local listing, canonical or not (fork behaviour, unchanged).
+  Until the fork's join normalises both sides, the listing path refuses, dry or armed, a table
+  whose own stored location is not in normal form (for example `<wh>/detour/../aliased/t`),
+  naming the location and pointing at `file_list_view`, which still sweeps it. Java lists such
+  a table; this refusal is the residue.
+  `file_list_view => '<view>'` reads the view's `file_path` STRING and `last_modified` TIMESTAMP
+  rows and keeps those whose `last_modified` is non-null and older than `older_than` and whose
+  path lies under the scan path. It subtracts the table's referenced files, comparing URI
+  paths after `.` and `..` segments are resolved and repeated `/` collapse on both sides, so an
+  alias of a live file (`<data>/../data/<f>`, `<data>/./<f>`, `<data>//<f>`) is never an orphan.
+  This follows the ruling that Java builds both sides through Hadoop `Path.toUri()`, which
+  normalises the URI (unmeasured: no scoreboard cell lists an aliased path). It returns each
+  orphan once, sorted, exactly as the view spelled it. `dry_run => true` deletes nothing.
+  `dry_run => false` deletes exactly the listed orphans, and a delete the filesystem refuses is
+  reported. An ERROR-mode prefix conflict and a `gc.enabled` refusal fail with the same string
+  the listing path gives; IGNORE keeps a conflicting path and DELETE lists it. A view that does
+  not exist answers `[TABLE_OR_VIEW_NOT_FOUND]`. The under-the-scan-path test compares
+  normalised path components, so a view path outside the scan location, including a `..`
+  escape, is never a candidate and is never deleted (unmeasured: no scoreboard cell lists an
+  out-of-scope path, so Spark's answer for one is not recorded).
+- **Apache Spark** — P-ORPHAN-DEFAULT returns one row
+  (`file:<wh>/hc/ns/t_p_orphan_default/data/orphan-file.parquet`) and the orphan is deleted.
+  P-ORPHAN-DRY-RUN, -LOCATION, -PREFIX-MODE, -EQUAL-SCHEMES, -PREFIX-LISTING and
+  -STREAM-RESULTS each return that one row and keep the orphan. -MAX-CONCURRENT returns it
+  and deletes it. P-ORPHAN-YOUNG returns zero rows and keeps the orphan.
+  P-ORPHAN-FILE-LIST-VIEW (`dry_run => true, file_list_view => 'nc_flv'`, the view listing
+  only the orphan as `<table location>/data/orphan-file.parquet` with
+  `last_modified = from_unixtime(0)`) returns the path exactly as the view gave it, with no
+  `file:` scheme, and keeps the orphan. RePark on `85011ea0` refused the first nine at the
+  shared-root guard and refused FILE-LIST-VIEW with `NotImplemented`.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, scoreboard harness
+  `sb-803`, 2026-09-22.)*
+- **Pin** — `crates/repark-spark/src/tests/call_orphan_scope.rs` (`::call_remove_orphan_files_sweeps_a_fallback_tables_own_directory`,
+  `::call_remove_orphan_files_refuses_a_location_holding_another_table`,
+  `::call_remove_orphan_files_refuses_the_warehouse_and_the_fallback_root`,
+  `::call_remove_orphan_files_file_list_view_dry_run_lists_the_view_orphans_verbatim`,
+  `::call_remove_orphan_files_file_list_view_armed_deletes_only_the_listed_orphans`,
+  `::call_remove_orphan_files_file_list_view_near_misses_refuse`,
+  `::call_remove_orphan_files_sweeps_one_fallback_table_beside_a_sibling`,
+  `::call_remove_orphan_files_refuses_a_location_holding_a_table_of_another_namespace`,
+  `::call_remove_orphan_files_refuses_a_location_holding_a_nested_namespace_table`,
+  `::call_remove_orphan_files_file_list_view_keeps_rows_inside_the_older_than_window`,
+  `::call_remove_orphan_files_file_list_view_skips_paths_outside_the_scan_location`,
+  `::call_remove_orphan_files_file_list_view_prefix_conflicts_match_the_listing_path`,
+  `::call_remove_orphan_files_file_list_view_names_an_authority_conflict`,
+  `::call_remove_orphan_files_file_list_view_keeps_a_live_file_named_through_an_alias`,
+  `::call_remove_orphan_files_file_list_view_matches_a_table_location_that_holds_an_alias`,
+  `::call_remove_orphan_files_file_list_view_resolves_an_aliased_scan_location`,
+  `::call_remove_orphan_files_refuses_a_location_holding_a_table_spelled_through_an_alias`,
+  `::call_remove_orphan_files_listing_path_resolves_an_aliased_location`,
+  `::call_remove_orphan_files_listing_path_refuses_a_table_location_that_holds_an_alias`),
+  `crates/repark-spark/src/tests/call_orphan_view.rs` (the `file_list_view` spelling, gc,
+  malformed-view, NULL-timestamp, mode, `equal_schemes`, failed-delete and policy-scope pins),
+  `crates/repark-spark/src/tests/call_orphan.rs::call_orphan_shared_ctas_root_rule` and
+  `::call_remove_orphan_files_listing_path_table_location_normal_form_rule`, and
+  `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root`
+- **Rationale** — FIXED by owner ruling Q-55-6 under Q-55-2 (full Spark parity), 2026-09-22.
+  The old guard refused every table under the fallback root. It protected against two sessions
+  that share one warehouse writing the same derived directory. The narrowed guard refuses in
+  the three ruled cases: the fallback root itself, a parent of it, or a scan path
+  equal to or containing another registered table's location. The CTAS create location is
+  unchanged (Q-55-7). The listing path separately refuses a table whose stored location is not in
+  normal path form until the fork's join normalises both sides; `file_list_view` still sweeps it.
+  Ledger:
+  [../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md](../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md).
+
 ### ORPHAN-S3TABLES-1 — `remove_orphan_files` on an S3 Tables table: the bare-bucket parser half FIXED (RP-19), the 405 listing refusal stays open
 
 - **repark** — `CALL <catalog>.system.remove_orphan_files(…)` on a table whose location is a

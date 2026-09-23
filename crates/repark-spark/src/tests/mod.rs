@@ -10,6 +10,8 @@ mod branch_read_schema;
 mod call;
 mod call_manifests;
 mod call_orphan;
+mod call_orphan_scope;
+mod call_orphan_view;
 mod call_procedures_1;
 mod call_procedures_2;
 mod call_procs_route_1;

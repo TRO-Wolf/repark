@@ -878,7 +878,7 @@ repark-parity slice.
 - `coordinator/` — the tick-driven lane coordinator (2026-09-22, moved in from the campaign's
   scratch tooling and renamed from `xorch`): a bash driver that waits for free and wakes a model
   for one bounded tick at a time, one lane per systemd unit; engines for Grok, Muse, GLM and Codex;
-  `gate.sh`, `review.sh`, `pr.sh` helpers; the handbook every tick starts with; the lessons ledger.
+  `gate.sh`, `review.sh`, `pr.sh`, `verdict.sh` helpers; the handbook every tick starts with; the lessons ledger.
   Operator tooling, not a CI gate. See [coordinator/map.md](coordinator/map.md).
 - `sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker packet
   assembler. `build --unit --role --base --brief` writes Markdown (stable prefix
