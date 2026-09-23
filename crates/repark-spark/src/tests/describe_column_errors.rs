@@ -46,6 +46,17 @@ fn unresolved_column_error() -> String {
         .to_string()
 }
 
+fn unresolved_column_without_suggestion_error(column: &str) -> String {
+    let column = column
+        .split('.')
+        .map(|part| format!("`{}`", part.replace('`', "``")))
+        .collect::<Vec<_>>()
+        .join(".");
+    format!(
+        "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name {column} cannot be resolved.  SQLSTATE: 42703"
+    )
+}
+
 fn nested_column_error() -> String {
     "[_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support nested column: s.a.".to_string()
 }
@@ -760,7 +771,7 @@ async fn session_tbl_five_part_pins_current_divergence() {
 }
 
 #[tokio::test]
-async fn session_col_view_pins_current_divergence() {
+async fn session_col_view_returns_spark_unresolved_column_error() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
     execute(&ctx, &catalogs, "CREATE VIEW ice.sales.v AS SELECT 1 AS id")
@@ -770,7 +781,36 @@ async fn session_col_view_pins_current_divergence() {
         &ctx,
         &catalogs,
         "DESCRIBE ice.sales.v id",
-        &table_not_found_error(&["ice", "sales", "v"]),
+        &unresolved_column_without_suggestion_error("id"),
     )
     .await;
+}
+
+#[tokio::test]
+async fn session_col_view_missing_column_returns_spark_unresolved_column_error() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    execute(&ctx, &catalogs, "CREATE VIEW ice.sales.v AS SELECT 1 AS id")
+        .await
+        .unwrap();
+    assert_session_plan_error(
+        &ctx,
+        &catalogs,
+        "DESCRIBE ice.sales.v nope",
+        &unresolved_column_without_suggestion_error("nope"),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn session_describe_view_without_column_returns_rows() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    execute(&ctx, &catalogs, "CREATE VIEW ice.sales.v AS SELECT 1 AS id")
+        .await
+        .unwrap();
+    assert_eq!(
+        describe_column_rows(&ctx, &catalogs, "DESCRIBE ice.sales.v").await,
+        vec![("id".to_string(), "int".to_string())]
+    );
 }

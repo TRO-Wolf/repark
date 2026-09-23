@@ -81,6 +81,9 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `spark_ddl_type_name` spellings, a doc-less column renders `""` (the table
   path renders null), no blank/`# Partitioning`/`# Metadata Columns` trailer,
   and EXTENDED is the same columns-only answer. SHOW CREATE stays a later PR.
+  and EXTENDED is the same columns-only answer; any supplied column refuses
+  with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`. SHOW CREATE /
+  SHOW TBLPROPERTIES / ALTER VIEW stay later PRs.
   pins: ice-views-1/C-017
 
 ## Pointers

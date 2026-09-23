@@ -9,8 +9,8 @@ use iceberg::{Catalog, ErrorKind, TableIdent};
 
 use crate::catalog_ops::{iceberg_err, table_or_view_not_found};
 use crate::describe_show::DescribeTable;
-use crate::spark_error;
 use crate::spark_type_names::spark_ddl_type_name;
+use repark_common::spark_error;
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn describe_view_frame(
