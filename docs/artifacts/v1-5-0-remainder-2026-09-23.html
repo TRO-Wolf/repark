@@ -1,0 +1,214 @@
+<title>v1.5.0 Remainder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F2F5F7; --paper: #FFFFFF; --ink: #1A2430; --muted: #5A6470; --line: #D6DEE5;
+    --accent: #0E6C88; --accent-soft: #DCEBF1; --accent-ink: #FFFFFF;
+    --good: #2A7A4B; --good-soft: #DDEFE3; --warn: #A86A10; --warn-soft: #F6E8CF;
+    --bad: #B0372A; --bad-soft: #F5DCD8; --hold: #5A6470; --hold-soft: #E4E8EC;
+    --sans: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+    --cond: "IBM Plex Sans Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1418; --paper: #151D23; --ink: #E4EAEF; --muted: #9AA6B1; --line: #27333C;
+      --accent: #4DB1CF; --accent-soft: #163541; --accent-ink: #0B1519;
+      --good: #63C48A; --good-soft: #163425; --warn: #E0A64A; --warn-soft: #3A2C12;
+      --bad: #EE7A6C; --bad-soft: #3E1D19; --hold: #9AA6B1; --hold-soft: #242E36;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1418; --paper: #151D23; --ink: #E4EAEF; --muted: #9AA6B1; --line: #27333C;
+    --accent: #4DB1CF; --accent-soft: #163541; --accent-ink: #0B1519;
+    --good: #63C48A; --good-soft: #163425; --warn: #E0A64A; --warn-soft: #3A2C12;
+    --bad: #EE7A6C; --bad-soft: #3E1D19; --hold: #9AA6B1; --hold-soft: #242E36;
+  }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.55 var(--sans); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 64px; padding-inline: 24px; }
+  h1, h2, h3 { font-family: var(--cond); font-weight: 600; letter-spacing: .005em; text-wrap: balance; margin: 0; }
+  h1 { font-size: 40px; line-height: 1.05; }
+  h2 { font-size: 24px; margin-block: 44px 14px; padding-top: 18px; border-top: 1px solid var(--line); }
+  h3 { font-size: 17px; }
+  p { max-width: 68ch; margin: 0 0 12px; }
+  .eyebrow { font-family: var(--cond); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; color: var(--accent); }
+  .lede { color: var(--muted); max-width: 70ch; margin-top: 10px; }
+  code, .mono { font-family: var(--mono); font-size: .92em; }
+  .num { font-variant-numeric: tabular-nums; }
+  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 28px; }
+  .stat { background: var(--paper); border: 1px solid var(--line); padding: 14px 16px; }
+  .stat .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-family: var(--cond); }
+  .stat .v { font-family: var(--cond); font-size: 34px; line-height: 1.1; margin-top: 4px; }
+  .stat .s { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .stat.good .v { color: var(--good); } .stat.bad .v { color: var(--bad); } .stat.accent .v { color: var(--accent); }
+  .bar { display: flex; height: 22px; border: 1px solid var(--line); background: var(--paper); margin-top: 22px; overflow: hidden; }
+  .bar span { display: block; height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+  .reg { border-left: 4px solid var(--bad); background: var(--bad-soft); padding: 12px 16px; margin-top: 22px; }
+  .reg p { margin: 0; max-width: none; }
+  .units { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  .unit { background: var(--paper); border: 1px solid var(--line); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .unit header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .unit .count { font-family: var(--cond); font-size: 26px; color: var(--accent); white-space: nowrap; }
+  .unit .count small { font-size: 13px; color: var(--muted); font-family: var(--sans); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-family: var(--cond); font-size: 12px; letter-spacing: .04em; padding: 2px 8px; border: 1px solid var(--line); background: var(--hold-soft); color: var(--ink); }
+  .chip.owner { background: var(--warn-soft); border-color: var(--warn); }
+  .chip.orch { background: var(--accent-soft); border-color: var(--accent); }
+  .chip.none { background: var(--good-soft); border-color: var(--good); }
+  .chip.flight { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .unit p { margin: 0; font-size: 14px; max-width: none; }
+  .cells { font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--muted); word-break: break-word; }
+  table { border-collapse: collapse; width: 100%; background: var(--paper); border: 1px solid var(--line); font-size: 14px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--cond); font-weight: 600; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .tablewrap { overflow-x: auto; }
+  ol.decisions { padding-left: 22px; max-width: 78ch; }
+  ol.decisions li { margin-bottom: 8px; }
+  .shrink { color: var(--warn); font-weight: 500; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  @media (max-width: 480px) { h1 { font-size: 30px; } .stat .v { font-size: 26px; } }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">RePark · Iceberg parity gate · 2026-09-23 05:0x</div>
+  <h1>v1.5.0 Remainder</h1>
+  <p class="lede">Every gate cell that does not yet read EQUAL against Spark 4.1.2 + Iceberg 1.11, on main <code>88b6f59f</code>, grouped into the units that close them — with Spark's recorded answer, the ruling each needs and who makes it, the executor tier and a size. The gate reads zero when the owner calls the tag.</p>
+
+  <div class="strip">
+    <div class="stat good"><div class="k">EQUAL</div><div class="v num">607 <small>/ 718</small></div><div class="s">84.5 % of the gate</div></div>
+    <div class="stat accent"><div class="k">Since 09-22</div><div class="v num">+35</div><div class="s">573 → 607, 20 RePark + 4 fork merges</div></div>
+    <div class="stat"><div class="k">Open</div><div class="v num">111</div><div class="s">in 12 units</div></div>
+    <div class="stat"><div class="k">Already in flight</div><div class="v num">22</div><div class="s">open PRs and stacked branches</div></div>
+    <div class="stat"><div class="k">Owner decisions</div><div class="v num">7</div><div class="s">3 can shrink the gate</div></div>
+    <div class="stat bad"><div class="k">Regression</div><div class="v num">1</div><div class="s">REG-1, bisect owed</div></div>
+  </div>
+
+  <div class="bar" title="Open cells by group">
+    <span style="width:24.3%;background:#0E6C88" title="DDL 27"></span>
+    <span style="width:21.6%;background:#2F8AA6" title="PROC 24"></span>
+    <span style="width:18.0%;background:#4DB1CF" title="WRITE 20"></span>
+    <span style="width:9.0%;background:#7CC6DC" title="READ 10"></span>
+    <span style="width:8.1%;background:#A86A10" title="PUSHDOWN 9"></span>
+    <span style="width:6.3%;background:#C98A2E" title="TYPES 7"></span>
+    <span style="width:3.6%;background:#5A6470" title="PROPS 4"></span>
+    <span style="width:3.6%;background:#7C8894" title="VIEWS 4"></span>
+    <span style="width:3.6%;background:#9AA6B1" title="EDGE 4"></span>
+    <span style="width:1.8%;background:#B0372A" title="CATALOG 1 · V3-LINEAGE 1"></span>
+  </div>
+  <div class="legend">
+    <span><i style="background:#0E6C88"></i>DDL 27</span><span><i style="background:#2F8AA6"></i>PROC 24</span><span><i style="background:#4DB1CF"></i>WRITE 20</span><span><i style="background:#7CC6DC"></i>READ 10</span><span><i style="background:#A86A10"></i>PUSHDOWN 9</span><span><i style="background:#C98A2E"></i>TYPES 7</span><span><i style="background:#5A6470"></i>PROPS 4</span><span><i style="background:#7C8894"></i>VIEWS 4</span><span><i style="background:#9AA6B1"></i>EDGE 4</span><span><i style="background:#B0372A"></i>CATALOG 1 · V3-LINEAGE 1</span>
+  </div>
+
+  <div class="reg">
+    <p><strong>REG-1 — <code>R-TT-TIMESTAMP-AS-OF-EPOCH</code></strong> was EQUAL on 09-21 and 09-22 and is DIFFERENT today, reproduced on a second READ-only run: Spark answers the three rows of the snapshot at that second, RePark the two rows of the snapshot after it. Deterministic, so a regression from one of 09-22's merges that touched snapshot resolution (#802 first suspect, #804 second). First task of the next READ lane: bisect on the harness, fix, and no other unit touches the time-travel resolver until it is green.</p>
+  </div>
+
+  <h2>The units</h2>
+  <p class="lede">Ruling: <span class="chip none">none</span> buildable as measured · <span class="chip orch">orch</span> the orchestrating session rules and logs it · <span class="chip owner">owner</span> the owner decides first. Tier: <code>opus</code> = Opus 5.5 high, <code>terra</code> = GPT-5.6 Terra, <code>muse</code> = Muse 1.3 max, <code>devin</code> = Devin SWE-2. Size: S ≤ half a day-lane, M = a day-lane, L = more.</p>
+
+  <div class="units">
+    <div class="unit">
+      <header><h3>U0 · Already in flight</h3><div class="count num">22 <small>cells</small></div></header>
+      <div class="chips"><span class="chip flight">land, don't design</span><span class="chip">opus · devin</span></div>
+      <p>#807 orphan guard + <code>file_list_view</code> (10) · #805 reader loads metadata tables (2) · #806 <code>DESCRIBE</code> on metadata tables (1) · views PR2–PR4 built, measured, stacked on the merged PR1 — first task the V-009 red-first pin (4) · fork #345/#346 merged → RP-48 pin bump for <code>R-MT-FILES</code>, then the HashMap file-order proof on <code>R-MC-ROW-ID-V3</code> and <code>L-INSERT-OVERWRITE</code> (3) · views PR5/PR6 not started (2).</p>
+    </div>
+    <div class="unit">
+      <header><h3>U1 · Memory-catalog layout</h3><div class="count num">14 <small>cells, shared</small></div></header>
+      <div class="chips"><span class="chip owner">owner confirms Q-55-7</span><span class="chip">opus</span><span class="chip">M</span></div>
+      <p>Spark's hadoop catalog puts a table at <code>&lt;wh&gt;/&lt;ns&gt;/&lt;t&gt;</code> with <code>v&lt;N&gt;.metadata.json</code>; the memory catalog uses <code>&lt;root&gt;/repark_ctas/&lt;cat&gt;/&lt;ns&gt;/&lt;t&gt;</code> and uuid names. Every cell that prints a location or a metadata file name waits on this. Ephemeral catalog, nothing persisted — but it moves where files land.</p>
+      <div class="cells">P-ORPHAN-* (9 after #807) · P-TABLE-STATS-* · P-PART-STATS-* · P-RTP-DEFAULT</div>
+    </div>
+    <div class="unit">
+      <header><h3>U2 · Harness artefacts</h3><div class="count num">5 <small>+ 6 halves</small></div></header>
+      <div class="chips"><span class="chip owner">declared equivalences</span><span class="chip">no code</span><span class="chip">S</span></div>
+      <p>Wall-clock commit millis in <code>ancestors_of</code>, raw snapshot ids on the Spark leg vs <code>S3</code> labels on RePark's, random uuids in statistics file names. Proposal: three <code>overrides.json</code> rules, each citing the measured rows. The owner rules because the goal reads "zero non-EQUAL".</p>
+      <div class="cells">P-ANCESTORS-OF · P-ANCESTORS-OF-ID · P-POS-ANCESTORS · P-CHERRYPICK-WAP · P-PUBLISH-CHANGES · (stats file names)</div>
+    </div>
+    <div class="unit">
+      <header><h3>U3 · Pushdown batteries</h3><div class="count num">9 <small>cells</small></div></header>
+      <div class="chips"><span class="chip none">none</span><span class="chip">devin · muse</span><span class="chip">S</span></div>
+      <p>41 predicates per transform; every predicate both engines answer already agrees. RePark refuses two shapes: <code>startswith()</code> as a filter and a decimal literal against a DOUBLE holding NaN/Infinity. Spark's own <code>INTERNAL_ERROR</code> on <code>cat IN (…)</code> over the MoR table becomes SPARK-CANNOT per sub-predicate.</p>
+      <div class="cells">PD-IDENT · PD-BUCKET · PD-TRUNC · PD-DAYS · PD-MONTHS · PD-YEARS · PD-HOURS · PD-MULTI · PD-UNPARTITIONED</div>
+    </div>
+    <div class="unit">
+      <header><h3>U4 · SHOW and DESCRIBE</h3><div class="count num">10 <small>cells</small></div></header>
+      <div class="chips"><span class="chip orch">orch</span><span class="chip">opus · terra</span><span class="chip">M</span></div>
+      <p><code>SHOW CREATE TABLE</code>, <code>SHOW TBLPROPERTIES</code> (+ key form, missing-key row), <code>SHOW TABLE EXTENDED</code>, <code>DESCRIBE t col</code>, the <code>DESCRIBE EXTENDED</code> row grammar (<code># Partition Information</code>, <code>Owner</code>), <code>DESCRIBE … VERSION AS OF</code> must <em>refuse</em>, and the default <code>owner=</code> property. The dbt-era registry rows retire with the unit.</p>
+      <div class="cells">D-SHOW-CREATE(-PLAIN) · D-SHOW-TBLPROPERTIES(-KEY) · D-SHOW-TABLE-EXTENDED · D-DESCRIBE-COLUMN(-PLAIN) · D-DESCRIBE-EXTENDED · D-DESCRIBE-VERSION · D-CREATE-DEFAULT-PROPS</div>
+    </div>
+    <div class="unit">
+      <header><h3>U5 · Nested ALTER and the DDL tail</h3><div class="count num">14 <small>cells</small></div></header>
+      <div class="chips"><span class="chip orch">orch</span><span class="chip owner">D-NS-NESTED</span><span class="chip">terra · opus</span><span class="chip">L, or S + M</span></div>
+      <p>Five parser shapes (<code>ALTER COLUMN st.a TYPE</code>, <code>arr.element</code>, <code>m.value</code>, <code>UNSET … IF EXISTS</code>, <code>SET DBPROPERTIES</code>) and nine semantics: nested ADD COLUMN, column COMMENT, format-version 1, <code>truncate</code> on BINARY, <code>WRITE ORDERED BY</code> transforms, CREATE BRANCH before any snapshot, two refusals to match (hive-style <code>PARTITIONED BY (cat STRING)</code>, <code>RENAME TO</code> on the hadoop catalog), and nested namespaces — the owner's call.</p>
+      <div class="cells">D-ALTER-TYPE-NESTED · -ARRAY-ELEM · -MAP-VALUE · D-UNSET-PROPS-IF-EXISTS · D-NS-ALTER-PROPS · D-ADD-COL-STRUCT · D-X-ADD-COL-MAP-KEY-STRUCT · D-ALTER-COMMENT · D-CREATE-V1 · D-CREATE-PART-TRUNC-BIN · D-WRITE-ORDERED-TRANSFORM · D-REF-BRANCH-ON-EMPTY · D-X-PARTITIONED-COLDEF · D-RENAME-TABLE · D-NS-NESTED</div>
+    </div>
+    <div class="unit">
+      <header><h3>U6 · Write refusals</h3><div class="count num">7 <small>cells</small></div></header>
+      <div class="chips"><span class="chip owner">TP-ACCEPT-ANY-SCHEMA-DF</span><span class="chip">muse</span><span class="chip">S–M</span></div>
+      <p>In every one Spark 4.1.2 <em>refuses</em> and RePark performs the schema evolution — MERGE WITH SCHEMA EVOLUTION, <code>mergeSchema</code> options, accept-any-schema inserts. The fix is refusal parity (same class, same message shape), not removing the capability. The one Spark answers, <code>W-INSERT-MERGE-SCHEMA-CONF</code>, lands new columns <em>first</em> — a column-order rule to match.</p>
+      <div class="cells">W-MERGE-SCHEMA-EVOLUTION(-PROP, -PROP-BIGINT) · W-DF-OPT-MERGE-SCHEMA(-ICEBERG) · W-ACCEPT-ANY-INSERT-VALUES · TP-ACCEPT-ANY-SCHEMA-DF · W-INSERT-MERGE-SCHEMA-CONF</div>
+    </div>
+    <div class="unit">
+      <header><h3>U7 · DataFrame writer shapes</h3><div class="count num">7 <small>cells</small></div></header>
+      <div class="chips"><span class="chip none">none</span><span class="chip">opus · devin</span><span class="chip">M</span></div>
+      <p><code>save('cat.ns.t')</code> as a table name; <code>mode('overwrite').saveAsTable</code> <em>replaces</em> the table (history reset) where RePark overwrites in place; <code>writeTo.option('branch')</code>; <code>writeTo.overwrite(filter)</code> by partition and by row; <code>bucketBy</code> refused with Spark's class; <code>output-spec-id</code> writes under the old spec.</p>
+      <div class="cells">W-DF-SAVE-NAME · W-DF-SAVE-OVERWRITE-NAME · W-DF-SAVEASTABLE-OVERWRITE · W-DF-V2-OPTION-BRANCH · W-DF-V2-OVERWRITE-COND-PART · -ROWS · W-DF-V1-BUCKETBY-ERR · W-DF-OPT-OUTPUT-SPEC-ID</div>
+    </div>
+    <div class="unit">
+      <header><h3>U8 · SQL write tail</h3><div class="count num">5 <small>cells</small></div></header>
+      <div class="chips"><span class="chip none">none</span><span class="chip">terra · opus</span><span class="chip">M</span></div>
+      <p><code>INSERT INTO … PARTITION (cat='q')</code>, Spark 4's <code>REPLACE WHERE</code> (not parsed), INSERT into a bucket-partitioned table (the hash-distribution write path), and struct-field assignment in MERGE and UPDATE, which shares its plan with U5's nested ALTER.</p>
+      <div class="cells">W-INSERT-PARTITION-CLAUSE · W-INSERT-OVERWRITE-WHERE · W-INSERT-BUCKETED · W-MERGE-NESTED · W-UPDATE-NESTED-FIELD</div>
+    </div>
+    <div class="unit">
+      <header><h3>U9 · Types</h3><div class="count num">7 <small>cells</small></div></header>
+      <div class="chips"><span class="chip owner">TZ-6/TZ-9 · variant</span><span class="chip">opus · fork lane</span><span class="chip">L</span></div>
+      <p><code>timestamp_ntz</code> (v2 and v3), <code>timestamp_ltz</code>, <code>map&lt;string,int&gt;</code> end to end, the v3 <code>unknown</code> type, uuid columns read as string — and <code>variant</code>, which needs a fork writer. Timestamp-without-zone semantics and variant's place in 1.5.0 are the owner's.</p>
+      <div class="cells">TY-TIMESTAMP-NTZ · TY-TIMESTAMP-NTZ-V3 · TY-TIMESTAMP-LTZ · TY-MAP · TY-UNKNOWN-VOID · TY-UUID-READ · TY-VARIANT-V3</div>
+    </div>
+    <div class="unit">
+      <header><h3>U10 · READ rest</h3><div class="count num">5 <small>cells</small></div></header>
+      <div class="chips"><span class="chip none">none</span><span class="chip bad">REG-1 first</span><span class="chip">opus</span><span class="chip">M</span></div>
+      <p>The epoch time-travel regression, then the <code>_deleted</code> scan mode (packet 10's named hard step, fork arm), <code>input_file_name()</code> as an alias of <code>_file</code>, and the catalog-less loads by table location and by <code>metadata.json</code> through the fork's static table.</p>
+      <div class="cells">R-TT-TIMESTAMP-AS-OF-EPOCH · R-MC-DELETED · R-INPUT-FILE-NAME · R-DF-LOAD-PATH · R-DF-LOAD-METADATA-JSON</div>
+    </div>
+    <div class="unit">
+      <header><h3>U11 · Props, edge, catalog</h3><div class="count num">8 <small>cells</small></div></header>
+      <div class="chips"><span class="chip owner">TZ-9 · CAT-TYPE-MEMORY</span><span class="chip">muse · fork lane</span><span class="chip">S–M each</span></div>
+      <p>Manifest merging on commit (Spark leaves 1, RePark 3), file-granularity deletes (2 files vs 1), the v1 CoW leg, output column case as written in the query, a refusal to match on upper-case partition sources, <code>listDatabases()</code> scope, a wall-clock <code>TIMESTAMP AS OF</code> under a session zone, and whether <code>type=memory</code> — RePark's own catalog — stays as a dated extension.</p>
+      <div class="cells">TP-MANIFEST-MIN-MERGE · TP-DELETE-GRANULARITY-FILE · TP-FORMAT-V1-DELETE · E-CASE-SELECT · E-CASE-PARTITION-FIELD · E-CATALOG-LISTDATABASES · E-TZ-TIMESTAMP-AS-OF · CAT-TYPE-MEMORY</div>
+    </div>
+    <div class="unit">
+      <header><h3>Carved out · Streaming</h3><div class="count num">3 <small>cells</small></div></header>
+      <div class="chips"><span class="chip">owner ruling C-1, 2026-09-19</span><span class="chip">v1.6.0</span></div>
+      <p>Structured streaming read and write of Iceberg tables leaves the v1.5.0 gate (card ICE-STREAMING). Not in the 718.</p>
+      <div class="cells">R-STREAM-READ · R-STREAM-READ-SKIP · W-STREAM-WRITE-FILESRC</div>
+    </div>
+  </div>
+
+  <h2>The owner's decisions, collected</h2>
+  <ol class="decisions">
+    <li><strong>Q-55-7 memory-catalog layout</strong> — <code>&lt;warehouse&gt;/&lt;ns&gt;/&lt;t&gt;</code> plus versioned metadata names (U1): confirm, or keep the layout and carry 14 cells as a dated residue.</li>
+    <li><strong>Harness overrides</strong> for wall-clock, snapshot-label and statistics-file-name columns (U2): declared equivalences under the zero-non-EQUAL goal.</li>
+    <li><strong><code>D-NS-NESTED</code></strong> — nested namespaces in 1.5.0, or a dated carve-out. <span class="shrink">Can shrink the gate.</span></li>
+    <li><strong><code>TP-ACCEPT-ANY-SCHEMA-DF</code></strong> and its six refusal-parity siblings (U6): refusal parity is the proposal.</li>
+    <li><strong>TZ-6 / TZ-9</strong> — timestamp-without-zone semantics (<code>TY-TIMESTAMP-NTZ*</code>, <code>E-TZ-TIMESTAMP-AS-OF</code>).</li>
+    <li><strong><code>TY-VARIANT-V3</code></strong> — the fork variant writer in 1.5.0, or a dated carve-out. <span class="shrink">Can shrink the gate.</span></li>
+    <li><strong><code>CAT-TYPE-MEMORY</code></strong> — RePark's own catalog type stays as a dated extension, or refuses like Spark. <span class="shrink">Can shrink the gate.</span></li>
+  </ol>
+
+  <h2>Sequencing</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Day</th><th>Lane A</th><th>Lane B</th><th>Lane C</th><th>Lane D</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>REG-1 bisect → #805, #806 → U10 READ rest</td><td>Views PR2–PR6 (V-009 pin first)</td><td>#807 → U1 layout → U2 evidence for the owner</td><td>U3 pushdown → U4 SHOW / DESCRIBE</td></tr>
+      <tr><td class="num">2</td><td>U5 parser (terra) + semantics (opus)</td><td>U6 write refusals</td><td>U7 DataFrame writer</td><td>U8 SQL write tail</td></tr>
+      <tr><td class="num">3</td><td>U9 types</td><td>U11 props / edge / catalog</td><td colspan="2">Fork lane: manifest merge on commit, file-granularity deletes, variant writer, RP-49</td></tr>
+    </tbody>
+  </table></div>
+  <p class="lede" style="margin-top:12px">Opus 5.5 high orchestrators; <code>opus</code>, <code>terra</code>, <code>muse</code> and <code>devin</code> executors. The seven decisions gate nothing on day 1 and everything with a name on days 2–3 — the morning-of-day-2 ask.</p>
+
+  <footer>Source: gate scoreboard 2026-09-23 (<code>scoreboard/2026-09-23/matrix.json</code>), recorded Spark 4.1.2 + Iceberg 1.11 legs, RePark legs re-run on a release build of main <code>88b6f59f</code>. Verdicts: EQUAL, DIFFERENT, REFUSED (registered / unregistered), NOT-PARSED, SPARK-CANNOT. The markdown of record: <code>task/roadmap/mid-term/v1-5-0-remainder-spec-2026-09-23.md</code>.</footer>
+</div>

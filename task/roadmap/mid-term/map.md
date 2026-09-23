@@ -6,6 +6,15 @@ measurements behind it; it leaves when the owner charters it (a brief under `bri
 declines it (a dated ruling in the intake, then the archive).
 
 ## Contents
+- [day-report-2026-09-22-27-orchestrating-note.md](day-report-2026-09-22-27-orchestrating-note.md) — **run 27, night of
+  09-21 and day of 09-22, orchestrating note:** the scoreboard, the owner's rulings (file order emulated, orphan defaults
+  Spark's, Opus 5.5 orchestrators and executors, the Codex sandbox opened), the session's rulings, the 5.5 comparison
+  with its confound, tooling changes and what the next run inherits.
+- [v1-5-0-remainder-spec-2026-09-23.md](v1-5-0-remainder-spec-2026-09-23.md) — **the v1.5.0 remainder, cell by cell:**
+  every non-EQUAL gate cell on the 09-23 main grouped into units with Spark's recorded answer, the ruling it needs, the
+  executor tier and a size; the input to the next run's lists.
+- **run 27, the night lanes' own reports (09-21 → 22):** [muse2](night-report-2026-09-21-27-muse2.md) — views, second assignment · [grok2](night-report-2026-09-21-27-grok2.md) — IPI-51 continued · [grok47](night-report-2026-09-21-27-grok47.md) — IPI-51 exception-type slice on Grok 4.7 · [glmflash2](night-report-2026-09-21-27-glmflash2.md) — IPI-26/27 parser and DDL · [opus2](night-report-2026-09-21-27-opus2.md) — the Opus close-out of IPI-32 and IPI-05 · [muse3](night-report-2026-09-21-27-muse3.md) — IPI-41 ORC/Avro, the fork half · [muse4](night-report-2026-09-21-27-muse4.md) — IPI-30/31 procedures · [muse5](night-report-2026-09-21-27-muse5.md) — views, continued · [muse6](night-report-2026-09-21-27-muse6.md) — metadata columns · [muse7](night-report-2026-09-21-27-muse7.md) — non-Iceberg functions · [muse8](night-report-2026-09-21-27-muse8.md) — the finish-time order.
+- **run 27, the day lanes' own reports (09-22):** [muse9](day-report-2026-09-22-27-muse9.md) — functions, full-Muse day lane · [muse10](day-report-2026-09-22-27-muse10.md) — WAP, SET LOCATION and RP-47, full-Muse day lane · [opus3](day-report-2026-09-22-27-opus3.md) — IPI-40 views on Opus 5 high · [opus55](day-report-2026-09-22-27-opus55.md) — READ and PROC residue on Opus 5.5 high · [opus56](day-report-2026-09-22-27-opus56.md) — functions, Opus 5.5 successor of muse9 · [opus57](day-report-2026-09-22-27-opus57.md) — RP-47 landed, Opus 5.5 successor of muse10.
 - [day-report-2026-09-20-27-orchestrating-note.md](day-report-2026-09-20-27-orchestrating-note.md) — **run 27, orchestrating note:**
   the tick-driven orchestrator harness, the four-engine bake-off (measures, blind grades, one evaluator error withdrawn),
   the one-Opus close-out lane ($97, seven stopped units merged), the gate scoreboard 461 → 537 EQUAL, the harness defects.
