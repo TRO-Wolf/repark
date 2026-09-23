@@ -309,6 +309,9 @@ pub(crate) async fn execute_describe_table(
         }
         Err(error) => return Err(iceberg_err(error)),
     };
+    if describe.column.is_some() {
+        return crate::describe_column::execute_describe_column(ctx, &describe, &table);
+    }
     let owner = describe_table_owner(ctx);
     ctx.read_batch(describe_table_batch(&describe, &table, &owner)?)
 }

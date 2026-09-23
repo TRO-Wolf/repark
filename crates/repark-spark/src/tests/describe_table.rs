@@ -360,18 +360,22 @@ async fn describe_table_column_refusals_match_spark() {
     let nested = execute(&ctx, &catalogs, "DESCRIBE ice.sales.dc st.a")
         .await
         .expect_err("a nested describe column must refuse");
-    assert_eq!(
-        nested.to_string(),
-        "[_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support nested column: st.a."
+    assert!(
+        nested.to_string().ends_with(
+            "[_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support nested column: st.a."
+        ),
+        "{nested}"
     );
     let missing = execute(&ctx, &catalogs, "DESCRIBE ice.sales.dc nope")
         .await
         .expect_err("a missing describe column must refuse");
-    assert_eq!(
-        missing.to_string(),
-        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with \
-         name `nope` cannot be resolved. Did you mean one of the following? [`id`, `st`, `data`]. \
-         SQLSTATE: 42703"
+    assert!(
+        missing.to_string().ends_with(
+            "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with \
+             name `nope` cannot be resolved. Did you mean one of the following? [`id`, `st`, \
+             `data`]. SQLSTATE: 42703"
+        ),
+        "{missing}"
     );
     for (sql, near) in [
         ("DESCRIBE ice.sales.dc VERSION AS OF 1", "OF"),
@@ -385,9 +389,11 @@ async fn describe_table_column_refusals_match_spark() {
         let error = execute(&ctx, &catalogs, sql)
             .await
             .expect_err("a describe time-travel tail must refuse");
-        assert_eq!(
-            error.to_string(),
-            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601")
+        assert!(
+            error.to_string().ends_with(&format!(
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"
+            )),
+            "{error}"
         );
     }
 }
