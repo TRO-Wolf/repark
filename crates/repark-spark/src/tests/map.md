@@ -1434,10 +1434,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   typed `AS SERDE`, missing-table, bare, four-part-name, malformed-quote, trailing-token, and
   invalid-`AS` refusals; every parse refusal asserts the `DataFusionError::SQL` parser variant,
   while analysis refusals assert `DataFusionError::Plan`, with the full measured text. Near
-  misses pin one exact current outcome each: view targets, SHOW CREATE, SHOW TABLES, SHOW
-  COLUMNS, and SHOW TBLPROPERTIES. The DESCRIBE EXTENDED `Table Properties` row is equal to the
-  measured fresh-table string, and the `Comment` detail row (after `Type`, a column named
-  `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
+  misses preserve the current view-target and SHOW CREATE outcomes. SHOW TABLES, SHOW COLUMNS,
+  and SHOW TBLPROPERTIES compare Spark rows and schemas. The DESCRIBE EXTENDED `Table Properties`
+  row is equal to the measured fresh-table string, and the `Comment` detail row (after `Type`, a
+  column named `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
   pins: wo-c2/C-001, C-002, C-003, C-004
   **WO-C3 (2026-09-23):** nested bracket comments and line comments before or between SHOW
   CREATE TABLE keywords keep every m8 lexical and trailing form in the typed parse refusal;
@@ -1447,7 +1447,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO-C3 C3:** the multi-term m2 sort fixture now includes `write.distribution-mode=range` and
   compares its entire measured CREATE statement; related SHOW CREATE tests compare complete
   answers rather than fragments.
-  pins: wo-c3/C-001, C-002, C-003
+  **WO-C3 C5:** SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES compare complete Spark rows
+  and Arrow field types; TBLPROPERTIES uses the shared property list.
+  pins: wo-c3/C-001, C-002, C-003, C-005
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

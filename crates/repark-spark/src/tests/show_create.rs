@@ -1,6 +1,8 @@
 use super::super::*;
 use super::common::*;
 
+use datafusion::arrow::array::BooleanArray;
+use datafusion::arrow::datatypes::DataType;
 use datafusion::sql::sqlparser::parser::ParserError;
 
 const AS_SERDE_MESSAGE: &str = "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] SHOW CREATE TABLE AS SERDE is not supported for v2 \
@@ -581,7 +583,7 @@ async fn show_create_without_an_object_keeps_its_current_parse_refusal() {
 }
 
 #[tokio::test]
-async fn show_tables_keeps_its_current_schema_and_table_name() {
+async fn show_tables_matches_the_complete_spark_row_and_schema() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -591,33 +593,56 @@ async fn show_tables_keeps_its_current_schema_and_table_name() {
     )
     .await;
     let sql = "SHOW TABLES IN ice.sales";
-    let (columns, namespaces) = outcome(&ctx, &catalogs, sql).await.expect(sql);
-    assert_eq!(
-        columns,
-        vec![
-            "namespace".to_string(),
-            "tableName".to_string(),
-            "isTemporary".to_string(),
-        ]
-    );
-    assert_eq!(namespaces, vec!["sales".to_string()]);
     let batches = execute(&ctx, &catalogs, sql)
         .await
         .expect(sql)
         .collect()
         .await
         .expect(sql);
+    assert_eq!(batches.len(), 1, "{sql}");
     let batch = batches.first().expect(sql);
+    assert_eq!(
+        batch
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| (field.name().clone(), field.data_type().clone()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("namespace".to_string(), DataType::Utf8),
+            ("tableName".to_string(), DataType::Utf8),
+            ("isTemporary".to_string(), DataType::Boolean),
+        ]
+    );
+    let namespaces = batch
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect(sql);
     let table_names = batch
         .column(1)
         .as_any()
         .downcast_ref::<StringArray>()
         .expect(sql);
-    assert_eq!(table_names.value(0), "t");
+    let temporary = batch
+        .column(2)
+        .as_any()
+        .downcast_ref::<BooleanArray>()
+        .expect(sql);
+    assert_eq!(
+        (0..batch.num_rows())
+            .map(|index| (
+                namespaces.value(index).to_string(),
+                table_names.value(index).to_string(),
+                temporary.value(index),
+            ))
+            .collect::<Vec<_>>(),
+        vec![("sales".to_string(), "t".to_string(), false)]
+    );
 }
 
 #[tokio::test]
-async fn show_columns_keeps_its_current_schema_and_column_name() {
+async fn show_columns_matches_the_complete_spark_row_and_schema() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -627,14 +652,38 @@ async fn show_columns_keeps_its_current_schema_and_column_name() {
     )
     .await;
     let sql = "SHOW COLUMNS IN ice.sales.t";
+    let batches = execute(&ctx, &catalogs, sql)
+        .await
+        .expect(sql)
+        .collect()
+        .await
+        .expect(sql);
+    assert_eq!(batches.len(), 1, "{sql}");
+    let batch = batches.first().expect(sql);
     assert_eq!(
-        outcome(&ctx, &catalogs, sql).await.expect(sql),
-        (vec!["col_name".to_string()], vec!["id".to_string()])
+        batch
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| (field.name().clone(), field.data_type().clone()))
+            .collect::<Vec<_>>(),
+        vec![("col_name".to_string(), DataType::Utf8)]
+    );
+    let names = batch
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect(sql);
+    assert_eq!(
+        (0..batch.num_rows())
+            .map(|index| names.value(index).to_string())
+            .collect::<Vec<_>>(),
+        vec!["id".to_string()]
     );
 }
 
 #[tokio::test]
-async fn show_tblproperties_keeps_its_current_analysis_refusal() {
+async fn show_tblproperties_matches_the_complete_spark_rows_and_schema() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -644,10 +693,53 @@ async fn show_tblproperties_keeps_its_current_analysis_refusal() {
     )
     .await;
     let sql = "SHOW TBLPROPERTIES ice.sales.t";
+    let batches = execute(&ctx, &catalogs, sql)
+        .await
+        .expect(sql)
+        .collect()
+        .await
+        .expect(sql);
+    assert_eq!(batches.len(), 1, "{sql}");
+    let batch = batches.first().expect(sql);
     assert_eq!(
-        execution_error(&ctx, &catalogs, sql).await.to_string(),
-        "Error during planning: SHOW [VARIABLE] is not supported unless information_schema is \
-         enabled"
+        batch
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| (field.name().clone(), field.data_type().clone()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("key".to_string(), DataType::Utf8),
+            ("value".to_string(), DataType::Utf8),
+        ]
+    );
+    let keys = batch
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect(sql);
+    let values = batch
+        .column(1)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect(sql);
+    assert_eq!(
+        (0..batch.num_rows())
+            .map(|index| (
+                keys.value(index).to_string(),
+                values.value(index).to_string(),
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("current-snapshot-id".to_string(), "none".to_string()),
+            ("format".to_string(), "iceberg/parquet".to_string()),
+            ("format-version".to_string(), "2".to_string()),
+            ("k".to_string(), "v".to_string()),
+            (
+                "write.parquet.compression-codec".to_string(),
+                "zstd".to_string(),
+            ),
+        ]
     );
 }
 

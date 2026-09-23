@@ -19,7 +19,7 @@ pushes, or rebases.
 - [x] Pin full RePark refusal text and narrow the SHOW CREATE parity claim for IPI-51's caret-block residue.
 - [x] Pin the complete multi-term sort-order CREATE text from the measured m2 answer.
 - [x] Pin ParserError condition extraction for the measured INSERT BY NAME and multi-statement shapes.
-- [ ] Pin complete SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES rows and Arrow types.
+- [x] Pin complete SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES rows and Arrow types.
 
 ## PROPOSITION LEDGER — WO-C3 — 2026-09-23
 
@@ -29,7 +29,7 @@ pushes, or rebases.
 | C-002 | SHOW CREATE parse refusals expose Spark's condition, SQLSTATE, and first line while retaining RePark's exact no-caret rendering. | Rust and facade exact-message pins; registry scope statement. | PROVEN | Exact Rust parser and rendered-error checks plus facade message equality; registry assigns the absent caret block to IPI-51. |
 | C-003 | The multi-term sort-order fixture matches the complete measured m2 CREATE text after only catalog/name/location substitution. | Exact Rust CREATE-text pin. | PROVEN | `show_create_multi_term_sort_order_matches_spark` carries the `range` property and matches the full m2 text. |
 | C-004 | ParserError-wrapped parse refusals report their bracketed condition without classifying malformed wrappers. | Facade and direct native-exception pins. | PROVEN | Facade pins cover INSERT BY NAME and multi-statement; direct parser-wrapper pins cover ordinary, lowercase, and no-prefix messages. |
-| C-005 | SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES near misses preserve complete Spark row shapes and Arrow field types. | Exact Rust rows and schema pins. | OPEN | No view behavior changes. |
+| C-005 | SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES near misses preserve complete Spark row shapes and Arrow field types. | Exact Rust rows and schema pins. | PROVEN | SHOW TABLES and SHOW COLUMNS pin full rows and schemas; SHOW TBLPROPERTIES now serves the shared property rows and schema. |
 
 ```yaml
 COVERAGE_ATTESTATION:

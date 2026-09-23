@@ -87,7 +87,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_update_type_cannot_safely_cast_stamped_message_parses` builds
   `AnalysisException` from `Error during planning: ` plus the catalogue
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` / `KD000` text (cell
-  `W-UPDATE-TYPE-ERR`) and asserts `getCondition` and `getSqlState`.
+  `W-UPDATE-TYPE-ERR`) and asserts the complete rendered text, `getCondition`, and
+  `getSqlState`.
   **WO-C3 C4 (2026-09-23):** ParserError wrappers reject ordinary and lowercase bracket text,
   while a no-prefix Spark-shaped wrapper parses its condition and SQLSTATE.
   pins: wo-c3/C-004

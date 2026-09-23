@@ -200,7 +200,12 @@ def test_update_type_cannot_safely_cast_stamped_message_parses() -> None:
     assert isinstance(error, AnalysisException)
     assert error.getCondition() == "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
     assert error.getSqlState() == "KD000"
-    assert 'Cannot safely cast `id` "STRING" to "BIGINT"' in str(error)
+    assert str(error) == (
+        "Error during planning: "
+        "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible "
+        "data for the table `ice`.`sales`.`t`: Cannot safely cast `id` "
+        '"STRING" to "BIGINT". SQLSTATE: KD000'
+    )
 
 
 def test_create_table_existing_stamped_message_parses() -> None:
