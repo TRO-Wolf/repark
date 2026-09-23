@@ -289,6 +289,13 @@ pub(crate) async fn execute_describe_table(
             )
             .await;
         }
+        Err(error) if error.kind() == ErrorKind::NamespaceNotFound => {
+            return Err(crate::catalog_ops::table_or_view_not_found(
+                &describe.catalog,
+                &describe.namespace,
+                &describe.table,
+            ));
+        }
         Err(error) => return Err(iceberg_err(error)),
     };
     let owner = describe_table_owner(ctx);

@@ -147,9 +147,17 @@ def test_two_part_after_use_is_plain_not_found(spark: Any) -> None:
     pins: ipi-23-mt-describe-1/C-004
     """
     spark.sql(f"USE {CATALOG}.{NAMESPACE}")
+    expected = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{TABLE}`.`snapshots` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {TABLE}.snapshots")
-    assert str(excinfo.value) == 'NamespaceNotFound => No such namespace: NamespaceIdent(["t"])'
+    assert str(excinfo.value) == expected
 
 
 def test_plain_table_describe_unchanged(spark: Any) -> None:
@@ -227,9 +235,17 @@ def test_explicit_three_part_missing_namespace_keeps_plain_error(spark: Any) -> 
     pins: ipi-23-mt-describe-1/C-011
     """
     spark.sql(f"USE {CATALOG}.{NAMESPACE}")
+    expected = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{TABLE}`.`snapshots` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.{TABLE}.snapshots")
-    assert str(excinfo.value) == 'NamespaceNotFound => No such namespace: NamespaceIdent(["t"])'
+    assert str(excinfo.value) == expected
 
 
 def test_missing_namespace_maps_to_not_found_naming_full_name(spark: Any) -> None:
