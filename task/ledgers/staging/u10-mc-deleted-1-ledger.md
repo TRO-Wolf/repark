@@ -181,7 +181,7 @@ the collected rows → `select_star_keeps_user_columns_on_mor_table` fails, left
 |---|---|
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xo58-mcd origin/main HEAD` | exit 0 |
 | `build-slot.sh cargo test -p repark-spark --lib metadata_columns` | exit 0 — 25 passed |
-| `build-slot.sh cargo test -p repark-core --lib metadata_columns` | exit 0 — 0 tests (module compiles clean) |
+| `build-slot.sh cargo test -p repark-core --lib metadata_columns` | exit 0 — 9 passed |
 | `build-slot.sh cargo test -p repark-iceberg --lib metadata_columns` | exit 0 — 0 tests (module compiles clean) |
 | `build-slot.sh make rust-clippy` | exit 0 |
 | `build-slot.sh make rust-panic-ban` | exit 0 |
