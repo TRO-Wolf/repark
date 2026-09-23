@@ -452,14 +452,12 @@ async fn execute_schema_create(
             .load_table(&table_ident)
             .await
             .map_err(iceberg_err)?;
-        let mut properties =
-            catalogs.table_creation_properties(&create.catalog, &create.properties);
+        let mut properties = stamped_creation_properties(ctx, catalogs, &create);
         stamp_requested_format_version(
             &mut properties,
             create.format_version.as_deref(),
             format_version,
         );
-        stamp_owner(ctx, &mut properties);
         let creation = TableCreation::builder()
             .name(create.table.clone())
             .schema(create.schema)
@@ -479,9 +477,7 @@ async fn execute_schema_create(
         == Some(LocationPolicy::ServiceManagedLocation)
     {
         validate_service_managed_create(catalog.as_ref(), &create).await?;
-        let mut properties =
-            catalogs.table_creation_properties(&create.catalog, &create.properties);
-        stamp_owner(ctx, &mut properties);
+        let properties = stamped_creation_properties(ctx, catalogs, &create);
         let creation = TableCreation::builder()
             .name(create.table.clone())
             .schema(create.schema)
@@ -504,9 +500,7 @@ async fn execute_schema_create(
             create.location.as_deref(),
         )
         .await?;
-        let mut properties =
-            catalogs.table_creation_properties(&create.catalog, &create.properties);
-        stamp_owner(ctx, &mut properties);
+        let properties = stamped_creation_properties(ctx, catalogs, &create);
         commit_staged_schema_only(
             catalog.as_ref(),
             plan,
@@ -569,6 +563,16 @@ pub(crate) fn stamp_owner(ctx: &SessionContext, properties: &mut HashMap<String,
         "owner".to_string(),
         crate::describe_show::describe_table_owner(ctx),
     );
+}
+
+fn stamped_creation_properties(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    create: &SchemaCreate,
+) -> HashMap<String, String> {
+    let mut properties = catalogs.table_creation_properties(&create.catalog, &create.properties);
+    stamp_owner(ctx, &mut properties);
+    properties
 }
 
 pub(crate) const RESERVED_OWNER_PROPERTY_ERROR: &str = concat!(
