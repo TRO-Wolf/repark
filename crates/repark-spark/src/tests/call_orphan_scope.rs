@@ -166,6 +166,10 @@ async fn call_remove_orphan_files_refuses_a_location_holding_another_table() {
         namespace_dir.display().to_string(),
         other_dir.display().to_string(),
         format!("file://{}", namespace_dir.display()),
+        format!("{}/", other_dir.display()),
+        format!("{}/./", namespace_dir.display()),
+        format!("{}//b", namespace_dir.display()),
+        format!("{}/a/..", namespace_dir.display()),
     ] {
         let err = call_rows(
             &session,
@@ -261,6 +265,40 @@ async fn call_remove_orphan_files_refuses_a_location_holding_a_table_of_another_
     assert!(own_orphan.exists(), "a refused sweep deletes nothing");
     assert!(foreign_orphan.exists(), "a refused sweep deletes nothing");
     assert!(foreign_live.exists());
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_refuses_a_location_holding_a_table_spelled_through_an_alias() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let own_dir = ctas(&session, &warehouse, "a").await;
+    std::fs::create_dir_all(warehouse.path().join("detour")).unwrap();
+    submit(
+        &session,
+        &format!(
+            "CREATE NAMESPACE ice.al LOCATION '{}/detour/../aliased'",
+            warehouse.path().display()
+        ),
+    )
+    .await;
+    submit(
+        &session,
+        "CREATE TABLE ice.al.t USING iceberg AS SELECT 1 AS id",
+    )
+    .await;
+    let own_orphan = plant(&own_dir, "orphan-file.parquet", 10);
+
+    let err = call_rows(
+        &session,
+        &format!(
+            "CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{}/aliased')",
+            warehouse.path().display()
+        ),
+    )
+    .await
+    .expect_err("a table whose metadata spells its location through `..` is still found");
+    assert!(err.contains("holds table `ice.al.t`"), "{err}");
+    assert!(own_orphan.exists());
 }
 
 #[tokio::test]

@@ -693,6 +693,8 @@ fn call_orphan_shared_ctas_root_rule() {
         "file:/scratch/repark_ctas",
         "file://scratch/repark_ctas",
         "/scratch/repark_ctas/mem/..",
+        "/scratch/./repark_ctas",
+        "/scratch//repark_ctas",
     ] {
         let err = refuse_shared_temp_fallback_location(Some(&policy), root_alias, "owned.t")
             .expect_err("the fallback root, its aliases and its parents must refuse");
@@ -701,6 +703,20 @@ fn call_orphan_shared_ctas_root_rule() {
             "{root_alias}: {err}"
         );
     }
+
+    let aliased_root = LocationPolicy::TempFallbackAllowed {
+        root: std::path::PathBuf::from("/scratch/detour/.."),
+    };
+    let err = refuse_shared_temp_fallback_location(
+        Some(&aliased_root),
+        "/scratch/repark_ctas",
+        "owned.t",
+    )
+    .expect_err("a warehouse registered through `..` still guards its fallback root");
+    assert!(
+        err.to_string().contains("shared CTAS fallback root"),
+        "{err}"
+    );
 }
 
 #[tokio::test]
