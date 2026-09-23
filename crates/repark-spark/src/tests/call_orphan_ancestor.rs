@@ -61,6 +61,7 @@ fn call_orphan_ancestor_enumeration_walks_to_the_storage_root_or_the_own_locatio
 }
 
 fn ancestor_metadata_refusal(
+    table_arg: &str,
     scan: &str,
     ancestor: &str,
     file: &str,
@@ -68,7 +69,7 @@ fn ancestor_metadata_refusal(
     own_uuid: &str,
 ) -> String {
     format!(
-        "CALL remove_orphan_files refuses to sweep `ns.a`: path `{scan}` lies inside \
+        "CALL remove_orphan_files refuses to sweep `{table_arg}`: path `{scan}` lies inside \
          `{ancestor}`, whose metadata directory holds `{file}`, the metadata file of another \
          table (table-uuid `{uuid}`; the swept table's is `{own_uuid}`), such as a table of \
          another catalog or session on the same warehouse. This procedure deletes every file the \
@@ -121,6 +122,7 @@ async fn assert_sibling_data_scan_refused(
             assert_eq!(
                 plan_message(err),
                 ancestor_metadata_refusal(
+                    "ns.a",
                     &scan,
                     &ancestor,
                     &first_foreign,
@@ -144,6 +146,7 @@ async fn assert_sibling_data_scan_refused(
     assert_eq!(
         plan_message(err),
         ancestor_metadata_refusal(
+            "ns.a",
             &scan,
             &other_dir.display().to_string(),
             &first_foreign,
@@ -246,4 +249,130 @@ async fn call_orphan_ancestor_scan_with_no_table_above_it_is_swept() {
     assert_eq!(walk(&warehouse.path().join("ns").join("b")), other_before);
     assert_eq!(ids(&session, "m1.ns.a").await, vec![1]);
     assert_eq!(ids(&session, "m2.ns.b").await, vec![2]);
+}
+
+async fn nested_table_session(warehouse: &TempDir, host: &str, nested: &str) -> ReparkSession {
+    let catalogs: Vec<&str> = if host == nested {
+        vec![host]
+    } else {
+        vec![host, nested]
+    };
+    let session = memory_session(warehouse, &catalogs).await;
+    submit(&session, &format!("CREATE NAMESPACE {host}.a")).await;
+    submit(&session, &format!("CREATE NAMESPACE {nested}.o")).await;
+    create_with_row(&session, &format!("{host}.a.t"), 1).await;
+    submit(
+        &session,
+        &format!(
+            "CREATE TABLE {nested}.o.x (id INT) LOCATION '{}'",
+            warehouse.path().join("a").join("t").join("x").display()
+        ),
+    )
+    .await;
+    submit(&session, &format!("INSERT INTO {nested}.o.x VALUES (2)")).await;
+    plant(
+        &warehouse.path().join("a").join("t").join("x"),
+        "orphan-file.parquet",
+        10,
+    );
+    age_tree(&warehouse.path().join("a"), 10);
+    session
+}
+
+async fn assert_nested_scans_refused(
+    session: &ReparkSession,
+    host: &str,
+    nested: &str,
+    warehouse: &TempDir,
+    scan_equal_refusal: impl Fn(&str, &str) -> String,
+) {
+    let swept = load(session, host, &["a", "t"]).await;
+    let foreign = load(session, nested, &["o", "x"]).await;
+    let nested_dir = warehouse.path().join("a").join("t").join("x");
+    let first_foreign = metadata_files(&foreign)
+        .into_iter()
+        .next()
+        .expect("the nested table wrote metadata files");
+    let foreign_uuid = foreign.metadata().uuid().to_string();
+    let own_uuid = swept.metadata().uuid().to_string();
+    let before = walk(&nested_dir);
+    for (scan, ancestor) in file_spellings(&nested_dir.join("data"))
+        .into_iter()
+        .zip(file_spellings(&nested_dir))
+    {
+        let err = call_error(
+            session,
+            &format!(
+                "CALL {host}.system.remove_orphan_files(table => 'a.t', location => '{scan}')"
+            ),
+        )
+        .await;
+        assert_eq!(
+            plan_message(err),
+            ancestor_metadata_refusal(
+                "a.t",
+                &scan,
+                &ancestor,
+                &first_foreign,
+                &foreign_uuid,
+                &own_uuid
+            ),
+            "{scan}"
+        );
+    }
+    for scan in file_spellings(&nested_dir) {
+        let err = call_error(
+            session,
+            &format!(
+                "CALL {host}.system.remove_orphan_files(table => 'a.t', location => '{scan}')"
+            ),
+        )
+        .await;
+        assert_eq!(
+            plan_message(err),
+            scan_equal_refusal(&scan, &first_foreign),
+            "{scan}"
+        );
+    }
+    assert_eq!(walk(&nested_dir), before, "a refused sweep deletes nothing");
+    assert_eq!(ids(session, &format!("{host}.a.t")).await, vec![1]);
+    assert_eq!(ids(session, &format!("{nested}.o.x")).await, vec![2]);
+}
+
+#[tokio::test]
+async fn call_orphan_ancestor_same_catalog_scan_of_a_table_nested_in_the_own_location_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let session = nested_table_session(&warehouse, "ice", "ice").await;
+    let nested_location = warehouse.path().join("a").join("t").join("x");
+    assert_nested_scans_refused(&session, "ice", "ice", &warehouse, |scan, _| {
+        format!(
+            "CALL remove_orphan_files refuses to sweep `a.t`: path `{scan}` holds table \
+             `ice.o.x` at `{}`. This procedure deletes every file the swept table's own metadata \
+             does not reference, which would include that table's live files. Sweep a path that \
+             holds only this table's files.",
+            nested_location.display()
+        )
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn call_orphan_ancestor_other_catalog_scan_of_a_table_nested_in_the_own_location_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let session = nested_table_session(&warehouse, "m1", "m2").await;
+    let swept = load(&session, "m1", &["a", "t"]).await;
+    let foreign = load(&session, "m2", &["o", "x"]).await;
+    let own_uuid = swept.metadata().uuid().to_string();
+    let foreign_uuid = foreign.metadata().uuid().to_string();
+    assert_nested_scans_refused(&session, "m1", "m2", &warehouse, |scan, file| {
+        format!(
+            "CALL remove_orphan_files refuses to sweep `a.t`: path `{scan}` holds `{file}`, the \
+             metadata file of another table (table-uuid `{foreign_uuid}`; the swept table's is \
+             `{own_uuid}`), such as a table of another catalog or session on the same warehouse. \
+             This procedure deletes every file the swept table's own metadata does not reference, \
+             which would include that table's live files. Give the table its own LOCATION \
+             (`CREATE TABLE ... LOCATION '<path>'`), then sweep it."
+        )
+    })
+    .await;
 }

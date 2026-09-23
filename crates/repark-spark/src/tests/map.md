@@ -1011,7 +1011,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   inside it (`…_enumeration_walks_to_the_storage_root_or_the_own_location`). Near misses stay
   sweepable: `m1.ns.a`'s own `data/` beside `m2.ns.b`, and `<wh>/scratch/x` with no table above it
   (`…_own_data_dir_scan_beside_another_catalog_deletes_the_orphan`,
-  `…_scan_with_no_table_above_it_is_swept`). pins: u1-mem-layout-1/C-029, C-030, C-031, C-032
+  `…_scan_with_no_table_above_it_is_swept`). A scan inside a table nested in the swept table's own
+  location refuses, in one catalog and across two (`…_same_catalog_scan_of_a_table_nested_in_the_own_location_refuses`,
+  `…_other_catalog_scan_of_a_table_nested_in_the_own_location_refuses`).
+  pins: u1-mem-layout-1/C-029, C-030, C-031, C-032, C-034
 - [call_orphan_cotenancy.rs](call_orphan_cotenancy.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** shared-warehouse catalog refusal, own-history metadata sweep, non-metadata sweep, default sweep, nested namespace guards, own-table location exception, and unreadable metadata refusal with its complete message. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
   **Layout-r7 (2026-09-23):** a `data/` scan of a shared `<wh>/ns/t` refuses for two catalogs,
   two sessions and two same-catalog tables on one `LOCATION`, in all three spellings and through

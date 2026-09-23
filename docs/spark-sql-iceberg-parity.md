@@ -6913,7 +6913,8 @@ the pin rather than obeying it.
   location, whose metadata directory holds the file (two catalogs or two sessions sharing
   `<warehouse>/ns/t`, scan `<warehouse>/ns/t/data`). A hit at any other ancestor names that
   directory (`m1.ns.a` at `<warehouse>/ns/a` sweeping `<warehouse>/ns/b/data`, where `m2.ns.b`
-  sits at `<warehouse>/ns/b`). The probe reads only `metadata/` directories, so a table nested
+  sits at `<warehouse>/ns/b`, or `a.t` sweeping `<warehouse>/a/t/x/data` where another table,
+  of any catalog, sits at `<warehouse>/a/t/x`). The probe reads only `metadata/` directories, so a table nested
   in the swept table's root does not block a sweep of the root's `data/`. A refused call deletes
   nothing, and the other table keeps its rows. The check runs only under this catalog kind's
   `TempFallbackAllowed` policy. The `file:/` and `file:///` spellings of the scan path give the
@@ -6942,14 +6943,16 @@ the pin rather than obeying it.
   `::call_orphan_ancestor_two_sessions_sibling_data_dir_scan_refuses`,
   `::call_orphan_ancestor_enumeration_walks_to_the_storage_root_or_the_own_location`,
   `::call_orphan_ancestor_own_data_dir_scan_beside_another_catalog_deletes_the_orphan`,
-  `::call_orphan_ancestor_scan_with_no_table_above_it_is_swept`)
+  `::call_orphan_ancestor_scan_with_no_table_above_it_is_swept`,
+  `::call_orphan_ancestor_same_catalog_scan_of_a_table_nested_in_the_own_location_refuses`,
+  `::call_orphan_ancestor_other_catalog_scan_of_a_table_nested_in_the_own_location_refuses`)
 - **Rationale** — orchestrator co-tenancy ruling, 2026-09-23, enforcing the Q-55-6 property
   ("never sweep a directory that holds another table's files"). The memory layout
   (ICE-CATALOG-MEM-LAYOUT-1) lets a catalog that cannot see the other table share its directory,
   so the catalog walk behind ORPHAN-3 cannot find it. The refusal is stricter than Spark and
   stays until co-tenant tables on one warehouse get separate directories. Ledger:
   [../task/ledgers/staging/u1-mem-layout-1-ledger.md](../task/ledgers/staging/u1-mem-layout-1-ledger.md)
-  C-011 to C-013, C-015 to C-017, C-019, C-020, C-023, C-024, C-026, C-027, C-029 to C-032.
+  C-011 to C-013, C-015 to C-017, C-019, C-020, C-023, C-024, C-026, C-027, C-029 to C-032, C-034.
 
 ### ORPHAN-S3TABLES-1 — `remove_orphan_files` on an S3 Tables table: the bare-bucket parser half FIXED (RP-19), the 405 listing refusal stays open
 
