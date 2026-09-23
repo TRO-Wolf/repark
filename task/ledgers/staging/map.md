@@ -1512,7 +1512,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   callers (SQL door, `read_table_at`); the un-pinned arm quotes into the router path.
   Twenty-two facade pins assert reader/SQL equality plus near misses and — after
   critic r2 — the absolute recorded field type, nullability and rows where the
-  cells measured them; the two recorded cells replay Spark-equal. The Rust pin
+  cells measured them; the two recorded cells replay Spark-equal.
+  **critic r3 (2026-09-23):** the `all_*` columns pin absolute against Spark
+  4.1.2, the live leg drops its file-split-dependent pins, and C-015/C-019 are
+  marked router-equivalence-only — Spark refuses the quoted-dollar spellings
+  (pre-existing divergence filed). The Rust pin
   `metadata_asof_nested_namespace_real_table_wins` covers the four-part
   real-table-wins branch. `risk_tier: standard`. Branch
   `fix/ipi-23-reader-metadata-tables`.

@@ -72,6 +72,30 @@ the timestamp-scoped `record_count` rows `[[1],[2]]`, C-007 pins the empty
 frame's `record_count` field, C-009 pins the absolute selector rows, and
 C-020 pins the uppercase-suffix AS OF `record_count` rows `[[2]]`.
 
+**Follow-up (2026-09-23, WO rd-r6fix, critic r3):** three findings plus a class
+sweep, all test/ledger-side. V-001 (P1): the live leg's `DELETE … id = 1`
+depended on how many files Spark's first INSERT wrote (one file → `overwrite`,
+two → `delete` — both observed); it now deletes id 3, a whole single-row file,
+so Spark always commits `delete`, and the first-snapshot `record_count` pin
+`[[1],[1]]` is replaced by `sum == 2`; the sorted operations pin, both
+reader/SQL equalities and both schema pins are unchanged. V-002 (P1): C-018
+asserted only reader/SQL equality — the loop now also pins each `all_*`
+column list verbatim against the Spark 4.1.2 measurement (21 names for
+`all_files`/`all_data_files`/`all_delete_files`, 6 for `all_entries`, 14 for
+`all_manifests`); row counts stay unpinned as layout-dependent. C-019's
+double-quoted `"t$snapshots"` spelling is one Spark 4.1.2 refuses on both
+doors (reader `IllegalArgumentException` `Cannot parse identifier`; SQL
+`ParseException [PARSE_SYNTAX_ERROR]`, SQLSTATE 42601) while RePark serves it —
+the test stays as router equivalence and the clause is REJECTED as a parity
+claim; the same applies to C-015, whose three-spelling refusal equality covers
+two quoted-dollar spellings Spark parse-refuses. Both are pre-existing
+divergences, not introduced by this PR, filed for follow-up. V-003 (P3): the
+IPI-23-MT-READER-1 note in `crates/repark-spark/src/tests/map.md` sat after the
+`normalize`, `local_fs_ddl` list line with a stray `nullability).` and a
+duplicated list item; it now closes the `metadata_tables_asof` entry.
+Sweep: every other clause's pin classification is recorded in the hand-back;
+no pin count moved (still twenty-two facade pins, C-001..C-022).
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The two replay cells were recorded
@@ -120,11 +144,11 @@ the SQL door's backticked spelling by construction (unquoted internal SQL, uncha
 | C-012 | Near miss: the legacy `snapshot-id` / `as-of-timestamp` / `tag` options on `load("mt.ns.t.files")` refuse with the #800 `IllegalArgumentException` texts. | `test_legacy_options_on_metadata_keep_refusal_texts` green. | **PROVEN** | Python-layer refusals fire before any engine routing. pins: ipi-23-mt-reader-1/C-012 |
 | C-013 | Live leg: on Spark 4.1.2 itself the reader answers what SQL answers for `load(t.snapshots)` and `versionAsOf` on `load(t.files)`. | `test_live_spark_reader_matches_sql` green under `REPARK_PARITY_LIVE=1`. | **PROVEN** | Goal premise re-measured on the live oracle in the gate's live leg. pins: ipi-23-mt-reader-1/C-013 |
 | C-014 | V-001: `load("mt.ns.T_CASETWIN.snapshots")` (stored lowercase) fails with the SQL door's class and full backticked text. | `test_load_case_twin_table_matches_sql_door` green. | **PROVEN** | Red-first: double-quoted vs backticked identifier; equal after the fix. pins: ipi-23-mt-reader-1/C-014 |
-| C-015 | V-002: `SELECT count(*) FROM mt.ns."missing$all_files" VERSION AS OF 1` gives the `ALL_FILES` refusal (class, sqlstate, full message), equal to the existing-table dollar and dotted spellings. | `test_quoted_dollar_missing_table_refuses_all_files` green. | **PROVEN** | Red-first: `TableNotFound` before the refusal-first fix. pins: ipi-23-mt-reader-1/C-015 |
+| C-015 | V-002: `SELECT count(*) FROM mt.ns."missing$all_files" VERSION AS OF 1` gives the `ALL_FILES` refusal (class, sqlstate, full message), equal to the existing-table dollar and dotted spellings — implicitly the Spark refusal contract. | `test_quoted_dollar_missing_table_refuses_all_files` green. | **REJECTED** (ROUTER-EQUIVALENCE ONLY — DIVERGES FROM SPARK) | The three-spelling equality holds on RePark and stays pinned as router equivalence (red-first `TableNotFound` before the refusal-first fix); on Spark 4.1.2 both quoted-dollar spellings parse-refuse (`PARSE_SYNTAX_ERROR`, the C-019 measurement) before any `ALL_FILES` check, so the pinned equality is RePark-internal. Pre-existing divergence filed for follow-up. pins: ipi-23-mt-reader-1/C-015 |
 | C-016 | Sweep: `load("mt.ns.t.SNAPSHOTS")` equals the SQL door (rows and columns). | `test_load_uppercase_suffix_equals_sql` green. | **PROVEN** | Uppercase suffix serves on both doors. pins: ipi-23-mt-reader-1/C-016 |
 | C-017 | Sweep: missing-table and missing-namespace un-pinned loads fail with the SQL door's exact text. | `test_load_missing_parent_matches_sql_door` green. | **PROVEN** | Red-first on quoting with C-014; equal after. pins: ipi-23-mt-reader-1/C-017 |
-| C-018 | Sweep: every `all_*` table un-pinned equals the SQL door (rows and columns). | `test_load_all_types_without_as_of_equals_sql` green. | **PROVEN** | All five serve via the fork on both doors. pins: ipi-23-mt-reader-1/C-018 |
-| C-019 | Sweep: the quoted `t$snapshots` spelling un-pinned equals the SQL door (rows and columns). | `test_load_quoted_dollar_spelling_equals_sql` green. | **PROVEN** | Three-part passthrough serves on both doors. pins: ipi-23-mt-reader-1/C-019 |
+| C-018 | Sweep: every `all_*` table un-pinned equals the SQL door (rows and columns). | `test_load_all_types_without_as_of_equals_sql` green. | **PROVEN** | Rows relative (router equivalence); columns absolute (Spark 4.1.2, measured 2026-09-23) — all five serve via the fork on both doors. pins: ipi-23-mt-reader-1/C-018 |
+| C-019 | Sweep: the quoted `t$snapshots` spelling un-pinned equals the SQL door (rows and columns) — implicitly a Spark-servable parity spelling. | `test_load_quoted_dollar_spelling_equals_sql` green. | **REJECTED** (ROUTER-EQUIVALENCE ONLY — DIVERGES FROM SPARK) | Door-equality holds and stays pinned as router equivalence; Spark 4.1.2 refuses the double-quoted `"t$snapshots"` spelling on both doors — reader `IllegalArgumentException: Cannot parse identifier: sc.db."t$snapshots"`, SQL `ParseException [PARSE_SYNTAX_ERROR] Syntax error at or near '"t$snapshots"'`, SQLSTATE 42601 (measured 2026-09-23). Pre-existing divergence filed for follow-up. pins: ipi-23-mt-reader-1/C-019 |
 | C-020 | Sweep: uppercase `.FILES` with `versionAsOf` equals SQL `VERSION AS OF` (rows and columns). | `test_load_uppercase_suffix_as_of_equals_sql` green. | **PROVEN** | Case-insensitive routing on both doors. pins: ipi-23-mt-reader-1/C-020 |
 | C-021 | Sweep: missing parents and the unknown suffix with `versionAsOf` fail with the SQL door's exact three-part text. | `test_load_missing_parent_as_of_matches_sql_door` green. | **PROVEN** | Fallthrough parity on both doors. pins: ipi-23-mt-reader-1/C-021 |
 | C-022 | Sweep: the remaining four `all_*` refusals match the SQL door's class and text. | `test_load_all_types_as_of_refuse_alike` green. | **PROVEN** | Per-type refusal sentences verbatim on both doors. pins: ipi-23-mt-reader-1/C-022 |
@@ -173,7 +197,7 @@ COVERAGE_ATTESTATION:
       justification: Read-only metadata scans over the session's own catalog; no auth, secret, or injection surface added — the quoted internal SQL only reorders identifier segments the parser already accepted.
     - id: AT-6
       status: ATTACKED
-      evidence: Registry row MT-1 gains the served reader leg; every previously green behavior in scope (plain loads, selectors, real metadata-named tables, unknown suffix, legacy refusals) is pinned unchanged, and no existing test's expected value moved.
+      evidence: Registry row MT-1 gains the served reader leg; every previously green behavior in scope (plain loads, selectors, real metadata-named tables, unknown suffix, legacy refusals) is pinned unchanged, and no existing test's expected value moved. Critic r3 re-marks C-015/C-019 router-equivalence-only — Spark 4.1.2 refuses the quoted-dollar spellings (pre-existing divergence filed for follow-up).
       artifacts: [docs/spark-sql-iceberg-parity.md, python/repark/tests/test_ice_mt_reader_1.py]
     - id: AT-7
       status: N/A
@@ -192,8 +216,11 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py, python/repark/tests/map.md, crates/repark-core/src/time_travel/map.md]
 ```
 
-Every clause above is PROVEN against the SQL door on the same table, and the two
-replay cells against recorded PySpark 4.1.2 rows; no clause is OPEN. Touched files
+Every clause above except C-015 and C-019 is PROVEN against the SQL door on the
+same table, and the two replay cells against recorded PySpark 4.1.2 rows; C-015
+and C-019 are REJECTED as parity clauses — each holds as router equivalence on
+spellings Spark 4.1.2 refuses (pre-existing divergence filed for follow-up).
+No clause is OPEN. Touched files
 per the Scope paragraph; the fork, `Cargo.toml`/`Cargo.lock`, `STATUS.md`, `wap.rs`
 and the ANSI door are untouched. `make verify` and the full facade suite were not
 run per the work order's gate list; the gates table above is the proof.

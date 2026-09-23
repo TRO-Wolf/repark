@@ -7781,10 +7781,12 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   the SQL door's class and text. **critic r2 (2026-09-23):** the recorded cells also
   pin the reader frame's field name, `simpleString()` and `nullable`
   (`operation` string nullable, `record_count` bigint non-nullable) plus the absolute
-  rows; the live leg picks the first snapshot by `committed_at` and pins its own
-  engine's measured answers (`append, append, delete`; `[[1],[1]]` — the Hadoop
-  catalog under `local[2]` labels the COW delete `delete` and writes two
-  one-record files, unlike the recorded probe's InMemoryCatalog under `local[1]`).
+  rows; the live leg picks the first snapshot by `committed_at`.
+  **critic r3 (2026-09-23):** the live leg deletes the whole-file row id 3 so Spark
+  always commits `delete`, and the first-snapshot files pin is `record_count`
+  summing to 2 — both independent of Spark's file split; the `all_*` sweep pins
+  the Spark 4.1.2 column lists outright (rows stay relative), and the
+  quoted-dollar test is router equivalence on a spelling Spark refuses.
   Near misses pin today's behaviour: plain loads, branch/tag/snapshot-id
   selectors, a real table named `snapshots`, the unknown-suffix error, and the
   #800 legacy-option refusals.
