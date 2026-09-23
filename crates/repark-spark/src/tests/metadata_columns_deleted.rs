@@ -583,4 +583,16 @@ async fn served_spec_id_and_deleted_answer_together() {
         vec![(1, 0, true), (2, 0, false), (3, 0, false), (4, 0, false)],
         "R-MC-DELETED-SPEC-MOR"
     );
+    let schema = rows[0].schema();
+    assert_eq!(
+        schema.fields()[1].data_type(),
+        &DataType::Int32,
+        "R-MC-DELETED-SPEC-MOR"
+    );
+    assert_eq!(
+        schema.fields()[2].data_type(),
+        &DataType::Boolean,
+        "R-MC-DELETED-SPEC-MOR"
+    );
+    assert!(!schema.fields()[2].is_nullable(), "R-MC-DELETED-SPEC-MOR");
 }
