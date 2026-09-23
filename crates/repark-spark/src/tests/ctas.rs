@@ -1339,12 +1339,7 @@ async fn register_memory_catalog_location_less_ctas_lands_under_warehouse() {
         .await
         .unwrap();
 
-    let under_warehouse = warehouse_dir
-        .path()
-        .join("repark_ctas")
-        .join("a13mem")
-        .join("a13ns")
-        .join("events");
+    let under_warehouse = warehouse_dir.path().join("a13ns").join("events");
     assert!(
         under_warehouse.exists(),
         "location-less Spark CTAS must write under the warehouse, missing {under_warehouse:?}"
@@ -1358,4 +1353,5 @@ async fn register_memory_catalog_location_less_ctas_lands_under_warehouse() {
         !global.exists(),
         "must not share the process-temp root, found {global:?}"
     );
+    assert!(!warehouse_dir.path().join("repark_ctas").exists());
 }

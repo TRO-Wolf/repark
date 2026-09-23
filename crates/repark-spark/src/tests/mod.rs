@@ -53,6 +53,7 @@ mod join_null_keys;
 mod lambda_door;
 mod list_null_compound;
 mod local_fs_ddl;
+mod mem_layout;
 mod merge;
 mod merge_cardinality_mor;
 mod merge_nmbs;

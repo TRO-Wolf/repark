@@ -1370,17 +1370,17 @@ async fn register_memory_catalog_fallback_root_is_the_warehouse() {
         .register_memory_catalog("ice", warehouse_path.to_str().unwrap())
         .await
         .unwrap();
-    match session.catalogs_snapshot().location_policy("ice") {
-        Some(LocationPolicy::TempFallbackAllowed { root }) => {
-            assert_eq!(root, warehouse_path, "fallback root must be the warehouse");
-            assert_ne!(
-                root,
-                std::env::temp_dir(),
-                "the process temp dir is the pre-A13 shared root"
-            );
-        }
-        other => panic!("expected TempFallbackAllowed, got {other:?}"),
-    }
+    let catalogs = session.catalogs_snapshot();
+    let Some(LocationPolicy::TempFallbackAllowed { root }) = catalogs.location_policy("ice") else {
+        panic!("expected TempFallbackAllowed");
+    };
+    assert_eq!(root, warehouse_path, "fallback root must be the warehouse");
+    assert_ne!(
+        root,
+        std::env::temp_dir(),
+        "the process temp dir is the pre-A13 shared root"
+    );
+    assert_eq!(catalogs.warehouse_layout_root("ice"), Some(root));
 }
 
 /// A13: the `spark.sql.catalog.*.type=memory` config path uses the same warehouse root.
@@ -1398,10 +1398,10 @@ async fn configured_memory_catalog_fallback_root_is_the_warehouse() {
         .build()
         .unwrap();
     session.register_configured_catalogs().await.unwrap();
-    match session.catalogs_snapshot().location_policy("mem") {
-        Some(LocationPolicy::TempFallbackAllowed { root }) => {
-            assert_eq!(root, warehouse.path());
-        }
-        other => panic!("expected TempFallbackAllowed, got {other:?}"),
-    }
+    let catalogs = session.catalogs_snapshot();
+    let Some(LocationPolicy::TempFallbackAllowed { root }) = catalogs.location_policy("mem") else {
+        panic!("expected TempFallbackAllowed");
+    };
+    assert_eq!(root, warehouse.path());
+    assert_eq!(catalogs.warehouse_layout_root("mem"), Some(root));
 }

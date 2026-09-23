@@ -157,7 +157,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split parsing failures from procedure execution scenarios.",
     ),
     "crates/repark-spark/src/tests/ctas.rs": (
-        1361,
+        1357,
         "CTAS behavior and property scenarios share one test module.",
         "Split format and property cases from query-shape cases.",
     ),
