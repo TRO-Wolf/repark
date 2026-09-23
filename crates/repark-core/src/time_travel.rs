@@ -340,11 +340,19 @@ pub async fn read_table_at(
         }
         pinned => {
             let snapshot_id = resolve_snapshot_id(table.metadata(), pinned, zone)?;
-            Arc::new(
-                IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
-                    .await
-                    .map_err(iceberg_err)?,
-            )
+            if let TimeTravelSpec::VersionRef(name) = pinned {
+                Arc::new(
+                    IcebergStaticTableProvider::try_new_from_table_ref(table, name)
+                        .await
+                        .map_err(iceberg_err)?,
+                )
+            } else {
+                Arc::new(
+                    IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
+                        .await
+                        .map_err(iceberg_err)?,
+                )
+            }
         }
     };
     let temp_name = next_temp_view_name();
