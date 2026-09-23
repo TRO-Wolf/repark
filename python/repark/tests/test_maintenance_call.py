@@ -412,29 +412,38 @@ def test_positional_rollback_args(spark: ReparkSession, multi_snapshot: dict[str
     assert _arrow_ids(after) == multi_snapshot["ids_s1"]
 
 
-def test_remove_orphan_files_refuses_the_shared_ctas_fallback_root(
-    spark: ReparkSession,
+def test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root(
+    spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """MW-3: a table in the shared CTAS fallback root is not sweepable.
+    """Owner ruling Q-55-6: a fallback table's own directory is sweepable; the root is not.
 
     ``register_memory_catalog`` carries a ``TempFallbackAllowed`` policy, so a namespace created
-    with no ``location`` places its tables at ``<warehouse>/repark_ctas/<catalog>/<ns>/<table>``
-    (A13: ``warehouse`` is the catalog argument, not the process temp dir). That path is still
-    derived from NAMES under the warehouse, so two processes sharing one warehouse share the
-    directory. Orphan removal deletes what one table's metadata does not reference.
+    with no ``location`` places its tables at ``<warehouse>/repark_ctas/<catalog>/<ns>/<table>``.
+    Sweeping that table's own directory runs like Spark: the 10-day-old orphan is listed and
+    deleted. A ``location`` at the shared root or at the warehouse still refuses, deleting nothing.
+
+    pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-004
     """
     spark.sql(
         f"CREATE TABLE {TABLE} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
     )
-    older_than_ms = int(time.time() * 1000) - 2 * 24 * 60 * 60 * 1000
-    with pytest.raises(
-        (UnsupportedOperationException, PySparkException),
-        match=r"shared CTAS fallback root",
-    ):
-        spark.sql(
-            "CALL mem.system.remove_orphan_files("
-            f"table => 'ns.events', older_than => {older_than_ms})"
-        )
+    table_dir = tmp_path / "repark_ctas" / "mem" / "ns" / "events"
+    orphan = _plant_orphan(table_dir, "orphan-file.parquet", 10)
+    for location in (tmp_path, tmp_path / "repark_ctas"):
+        with pytest.raises(
+            (UnsupportedOperationException, PySparkException),
+            match=r"shared CTAS fallback root",
+        ):
+            spark.sql(
+                "CALL mem.system.remove_orphan_files("
+                f"table => 'ns.events', location => '{location}')"
+            )
+        assert orphan.exists()
+    result = spark.sql("CALL mem.system.remove_orphan_files(table => 'ns.events')").to_arrow()
+    assert _orphan_names(result) == {"orphan-file.parquet"}
+    assert not orphan.exists()
+    live = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
+    assert _arrow_ids(live) == [1]
 
 
 def _manifest_count(spark: ReparkSession, table: str) -> int:
