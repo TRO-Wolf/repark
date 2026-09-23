@@ -1502,6 +1502,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   outside this parser. **WO-A1b (2026-09-23):** every parser refusal pins its SQL error variant
   and complete condition/SQLSTATE text; partition lookup pins literal wildcard absence; the
   unclaimed SHOW TABLE(S) forms pin their current exact variants and messages.
+  pins: wo-a1b/C-002, C-003
   pins: show-table-extended-1/C-001, C-002, C-003, C-004
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal

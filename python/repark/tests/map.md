@@ -5071,6 +5071,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `SHOW TABLE EXTENDED IN catalog.namespace LIKE pattern` answers its four-column facade shape
   and metadata text. **WO-A1b (2026-09-23):** its bare, unclosed-quote, existing-PARTITION, and
   absent-PARTITION paths pin exception class, condition, SQLSTATE, and complete message.
+  pins: wo-a1b/C-003
   The remaining divergence is
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   pins: ice-catalog-session-1/C-016
