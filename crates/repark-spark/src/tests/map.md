@@ -876,7 +876,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `router` (`bug010_multi_statement_refuses_parse_class`: multi-statement `PARSE_SYNTAX_ERROR` /
   `42601`, trailing-semicolon acceptance, F-BR-2 eager DML), `show_create`
   (`show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
-  `show_create_comment_before_table_keyword_keeps_tokenizer_fallthrough`, and
+  `show_create_unclosed_before_table_keywords_use_spark_parse_contract`, and
   `show_create_multi_statement_keeps_spark_invalid_statement_class` pin the refusal classes
   and texts), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /

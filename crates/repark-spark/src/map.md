@@ -1394,7 +1394,8 @@ pins: rp-4-fork-repin/C-005, C-006
 - `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
   for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
   for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the
-  `describe_show` idiom: once the raw head is `SHOW CREATE TABLE`, lexical failures, a missing
+  `describe_show` idiom: once the raw head is `SHOW CREATE TABLE`, lexical failures other than an
+  unclosed bracketed comment (the front door answers that first, see WO-C10 below), a missing
   or invalid name, trailing tokens, and a non-`SERDE` `AS` word all refuse with Spark's measured
   `[INVALID_STATEMENT_OR_CLAUSE]` / `42601`; the router applies that refusal before literal
   canonicalization can return a tokenizer error. Four-or-more-part names refuse as
