@@ -179,7 +179,6 @@ mod tests {
         assert_eq!(java_hash_set_order(names.clone()), names);
         let twelve: Vec<String> = names.into_iter().take(12).collect();
         let ordered = java_hash_set_order(twelve);
-        assert_eq!(ordered.first().map(String::as_str), Some("p"));
         assert_eq!(
             ordered,
             ["p", "q", "r", "s", "h", "i", "j", "k", "l", "m", "n", "o"]
