@@ -573,6 +573,48 @@ mod tests {
             try_parse_alter_view("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v') extra")
                 .is_some_and(|parsed| parsed.is_err())
         );
+        for sql in [
+            "ALTER VIEW v SET ('k'='v')",
+            "ALTER VIEW v UNSET ('k')",
+            "ALTER VIEW v RENAME v2",
+            "ALTER VIEW v RENAME TO .",
+            "ALTER VIEW v UNSET TBLPROPERTIES ('k'",
+        ] {
+            assert!(
+                try_parse_alter_view(sql).is_some_and(|parsed| parsed.is_err()),
+                "{sql}"
+            );
+        }
+    }
+
+    #[test]
+    fn alter_view_unset_accepts_empty_and_comma_separated_key_lists() {
+        let parsed = altered("ALTER VIEW v UNSET TBLPROPERTIES ()");
+        let AlterViewAction::UnsetProperties { keys, if_exists } = parsed.action else {
+            panic!("must be an UNSET action");
+        };
+        assert!(keys.is_empty());
+        assert!(!if_exists);
+        let parsed = altered("ALTER VIEW v UNSET TBLPROPERTIES ('first', 'second')");
+        let AlterViewAction::UnsetProperties { keys, .. } = parsed.action else {
+            panic!("must be an UNSET action");
+        };
+        assert_eq!(keys, vec!["first", "second"]);
+    }
+
+    #[test]
+    fn alter_view_tail_rejects_an_unrecognized_verb() {
+        let tokens = Tokenizer::new(&DatabricksDialect {}, "OTHER")
+            .tokenize()
+            .expect("tokens");
+        let mut parser = Parser::new(&DatabricksDialect {}).with_tokens(tokens);
+        let error = parse_alter_view_tail(&mut parser, vec!["v".to_string()])
+            .err()
+            .expect("unrecognized verb must refuse");
+        assert_eq!(
+            error.to_string(),
+            "Error during planning: could not parse `ALTER VIEW`: expected SET, UNSET or RENAME"
+        );
     }
 
     #[test]
@@ -584,6 +626,9 @@ mod tests {
         assert!(try_parse_alter_view("ALTER VIEWX sc.ns.v SET TBLPROPERTIES ('k'='v')").is_none());
         assert!(try_parse_alter_view("ALTER TABLE sc.ns.t SET TBLPROPERTIES ('k'='v')").is_none());
         assert!(try_parse_alter_view("SELECT 1").is_none());
+        assert!(try_parse_alter_view("ALTER VIEW v \"SET\" TBLPROPERTIES ('k'='v')").is_none());
+        assert!(try_parse_alter_view("ALTER VIEW . SET TBLPROPERTIES ('k'='v')").is_none());
+        assert!(try_parse_alter_view("ALTER VIEW 'unterminated").is_none());
     }
 
     #[test]
