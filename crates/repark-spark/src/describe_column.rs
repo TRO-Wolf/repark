@@ -21,7 +21,14 @@ pub(crate) fn parse_describe_column_tail(
     match parser.peek_token().token {
         Token::EOF | Token::SemiColon => Some(Ok(None)),
         _ => {
-            let column = name_parts(&parser.parse_object_name(false).ok()?);
+            let column_name = parser.parse_object_name(false).ok()?;
+            if !column_name.0.iter().all(|part| {
+                part.as_ident()
+                    .is_some_and(|ident| ident.quote_style.is_none_or(|quote| quote == '`'))
+            }) {
+                return None;
+            }
+            let column = name_parts(&column_name);
             match column.as_slice() {
                 [word]
                     if (word.eq_ignore_ascii_case("VERSION")

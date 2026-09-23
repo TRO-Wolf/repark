@@ -271,6 +271,7 @@ async fn describe_table_parser_leaves_non_table_forms_alone() {
         "DESC SCHEMA ice.sales",
         "DESCRIBE ice.sales.t1.snapshots",
         "DESCRIBE ice.sales.t1 col extra",
+        "DESCRIBE ice.sales.t1 \"id\"",
         "DESCRIBE ice.sales.t1 AS JSON",
         "DESCRIBE FUNCTION upper",
         "DESCRIBE QUERY SELECT 1",
