@@ -211,18 +211,24 @@ async fn call_remove_orphan_files_file_list_view_applies_equal_schemes() {
     assert_eq!(view, prefix_conflict_message("(x, )"));
     assert_eq!(view, listing);
 
-    register_file_list(&session, &[(format!("s3a://bucket{}", live.display()), 0)]).await;
-    let err = call_rows(
-        &session,
-        &format!(
-            "CALL ice.system.remove_orphan_files(table => 'fq.t', dry_run => true, \
-             file_list_view => 'v', location => 's3a://bucket{}')",
-            table_dir.display()
-        ),
-    )
-    .await
-    .expect_err("s3a folds to s3 by default and still differs from file");
-    assert_eq!(err, prefix_conflict_message("(file, s3)"));
+    for scheme in ["s3a", "s3n"] {
+        register_file_list(
+            &session,
+            &[(format!("{scheme}://bucket{}", live.display()), 0)],
+        )
+        .await;
+        let err = call_rows(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'fq.t', dry_run => true, \
+                 file_list_view => 'v', location => '{scheme}://bucket{}')",
+                table_dir.display()
+            ),
+        )
+        .await
+        .expect_err("the scheme folds to s3 by default and still differs from file");
+        assert_eq!(err, prefix_conflict_message("(file, s3)"), "{scheme}");
+    }
     assert!(live.exists());
 }
 

@@ -1013,7 +1013,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   unparsable value refuse with the listing path's string. A view with no `last_modified`
   column or a non-string `file_path` refuses. A NULL `last_modified` row is kept. IGNORE and
   DELETE classify a scheme conflict. `equal_schemes` keys are comma-split and trimmed, and
-  `s3a` folds to `s3`. A delete the filesystem refuses (a mode-0555 directory) is reported.
+  `s3a` and `s3n` fold to `s3`. A delete the filesystem refuses (a mode-0555 directory) is reported.
   On a `RequireExplicitLocation` catalog the other-table walk does not run.
   pins: ipi-30-orphan-guard-narrow-1/C-005, C-007, C-008, C-012, C-014, C-015, C-016
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
