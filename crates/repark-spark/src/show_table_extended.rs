@@ -1,10 +1,25 @@
+use std::sync::Arc;
+
+use datafusion::arrow::array::{BooleanArray, RecordBatch, StringArray};
+use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
+use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+use iceberg::spec::TableMetadata;
+use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
+use repark_core::CatalogRegistry;
 
-use crate::catalog_ops::name_parts;
+use crate::catalog_ops::{
+    iceberg_err, name_parts, partition_management_unsupported, quoted_table_display,
+    table_or_view_not_found,
+};
+use crate::describe_show::filter_pattern_matches;
+use crate::spark_tree_string::spark_tree_string;
+use crate::table_props_view::spark_table_properties;
+use crate::write_options::StatementWriteOptions;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ShowTableExtended {
@@ -52,6 +67,163 @@ pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTabl
         pattern,
         has_partition,
     }))
+}
+
+pub(crate) async fn try_show_table_extended_intercept(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    write_options: &StatementWriteOptions,
+) -> Option<Result<DataFrame>> {
+    let statement = try_parse_show_table_extended(sql)?;
+    let statement = match statement.and_then(|statement| {
+        write_options
+            .refuse_if_non_empty("SHOW TABLE EXTENDED")
+            .map(|()| statement)
+    }) {
+        Ok(statement) => statement,
+        Err(error) => return Some(Err(error)),
+    };
+    Some(execute_show_table_extended(ctx, catalogs, statement).await)
+}
+
+async fn execute_show_table_extended(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: ShowTableExtended,
+) -> Result<DataFrame> {
+    let ((catalog, namespace), ambient) =
+        crate::use_ddl::resolve_show_tables_scope(catalogs, statement.scope).await?;
+    let empty = show_table_extended_batch(Vec::new())?;
+    let Some(handle) = catalogs.get(&catalog) else {
+        return ctx.read_batch(empty);
+    };
+    if ambient
+        && (namespace.is_empty()
+            || !handle
+                .namespace_exists(&NamespaceIdent::new(namespace.clone()))
+                .await
+                .map_err(iceberg_err)?)
+    {
+        return ctx.read_batch(empty);
+    }
+    let mut tables = repark_iceberg::catalog::list_table_names(handle.as_ref(), &namespace).await?;
+    tables.sort();
+    let matching_tables: Vec<String> = tables
+        .into_iter()
+        .filter(|table| filter_pattern_matches(table, &statement.pattern))
+        .collect();
+    if statement.has_partition {
+        let Some(table) = matching_tables.first() else {
+            return Err(table_or_view_not_found(
+                &catalog,
+                &namespace,
+                &statement.pattern,
+            ));
+        };
+        let display = quoted_table_display(&[catalog.clone(), namespace.clone(), table.clone()]);
+        return Err(partition_management_unsupported(&display));
+    }
+    let mut rows = Vec::with_capacity(matching_tables.len());
+    for table_name in matching_tables {
+        let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone());
+        let table = match handle.load_table(&ident).await {
+            Ok(table) => table,
+            Err(error) if error.kind() == ErrorKind::TableNotFound => {
+                return Err(table_or_view_not_found(&catalog, &namespace, &table_name));
+            }
+            Err(error) => return Err(iceberg_err(error)),
+        };
+        rows.push((
+            namespace.clone(),
+            table_name,
+            false,
+            show_table_information(&catalog, &namespace, ident.name(), table.metadata())?,
+        ));
+    }
+    ctx.read_batch(show_table_extended_batch(rows)?)
+}
+
+fn show_table_extended_batch(rows: Vec<(String, String, bool, String)>) -> Result<RecordBatch> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("namespace", DataType::Utf8, false),
+        Field::new("tableName", DataType::Utf8, false),
+        Field::new("isTemporary", DataType::Boolean, false),
+        Field::new("information", DataType::Utf8, false),
+    ]));
+    let mut namespaces = Vec::with_capacity(rows.len());
+    let mut tables = Vec::with_capacity(rows.len());
+    let mut temporary = Vec::with_capacity(rows.len());
+    let mut information = Vec::with_capacity(rows.len());
+    for (namespace, table, is_temporary, table_information) in rows {
+        namespaces.push(namespace);
+        tables.push(table);
+        temporary.push(is_temporary);
+        information.push(table_information);
+    }
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(StringArray::from(namespaces)),
+            Arc::new(StringArray::from(tables)),
+            Arc::new(BooleanArray::from(temporary)),
+            Arc::new(StringArray::from(information)),
+        ],
+    )?)
+}
+
+fn show_table_information(
+    catalog: &str,
+    namespace: &str,
+    table_name: &str,
+    table: &TableMetadata,
+) -> Result<String> {
+    let mut lines = vec![
+        format!("Catalog: {catalog}"),
+        format!("Namespace: {namespace}"),
+        format!("Table: {table_name}"),
+    ];
+    lines.push(if table.properties().contains_key("external") {
+        "Type: EXTERNAL".to_string()
+    } else {
+        "Type: MANAGED".to_string()
+    });
+    if let Some(comment) = table.properties().get("comment") {
+        lines.push(format!("Comment: {comment}"));
+    }
+    lines.push(format!("Location: {}", table.location()));
+    lines.push("Provider: iceberg".to_string());
+    if let Some(owner) = table.properties().get("owner") {
+        lines.push(format!("Owner: {owner}"));
+    }
+    lines.push(format!(
+        "Table Properties: {}",
+        spark_character_properties(table)
+    ));
+    let arrow_schema =
+        iceberg::arrow::schema_to_arrow_schema(table.current_schema()).map_err(iceberg_err)?;
+    lines.push(format!(
+        "Schema: {}",
+        spark_tree_string(arrow_schema.as_ref())
+    ));
+    Ok(format!("{}\n", lines.join("\n")))
+}
+
+fn spark_character_properties(table: &TableMetadata) -> String {
+    let properties = spark_table_properties(table)
+        .into_iter()
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let bracketed = format!("[{properties}]");
+    format!(
+        "[{}]",
+        bracketed
+            .chars()
+            .map(|character| character.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
 
 fn consume_parenthesized(parser: &mut Parser) -> bool {

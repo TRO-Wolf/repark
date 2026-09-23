@@ -38,6 +38,7 @@ mod spark_ast;
 pub mod spark_literal_typing;
 pub mod spark_literals;
 mod spark_rewrites;
+mod spark_tree_string;
 mod spark_type_names;
 mod spark_typed;
 mod view_dispatch;

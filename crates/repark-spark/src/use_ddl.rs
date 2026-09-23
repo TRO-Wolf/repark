@@ -310,7 +310,7 @@ fn show_tables_batch(rows: Vec<(String, String)>) -> Result<RecordBatch> {
 }
 
 #[allow(clippy::missing_errors_doc)]
-async fn resolve_show_tables_scope(
+pub(crate) async fn resolve_show_tables_scope(
     catalogs: &CatalogRegistry,
     scope: Option<Vec<String>>,
 ) -> Result<((String, String), bool)> {
