@@ -42,6 +42,9 @@ pins: rp-4-fork-repin/C-005, C-006
   execution, and the wrapper-based read path (`parse` / `execute` / `read`).
   **PR2 (2026-09-22, V-DESCRIBE):** `describe.rs` answers DESCRIBE on a view
   from its stored schema off the `TableNotFound` arm in `describe_show.rs`.
+  **PR4 (2026-09-23, SHOW TBLPROPERTIES):** viewless catalogs fall through to
+  the table path when `load_view` returns `FeatureUnsupported`; routing and
+  error-identity pins live in `tests/show_tblproperties_routing.rs`.
   pins: ice-views-1/C-007, C-008, C-016, C-017
 - `router.rs` — **ICE-VIEWS-1 (2026-09-20):** pre-parse CREATE/DROP/SHOW VIEWS
   arms, the DROP VIEW match arm, INSERT/DELETE/UPDATE view write guards, the
