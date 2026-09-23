@@ -7814,6 +7814,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   #800 legacy-option refusals.
   The live leg replays the reader/SQL equality on live Spark 4.1.2 under
   `REPARK_PARITY_LIVE=1`.
+  **rd-r12fix (2026-09-23):** C-008 gains the `_frame_cols` equality beside each
+  `_frame_rows` compare, so the rows-and-column-names claim above now holds of
+  every answering test outside the named C-010/C-013 exceptions.
   pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
   C-022

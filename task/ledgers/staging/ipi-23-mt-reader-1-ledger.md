@@ -222,6 +222,31 @@ schema" → the SQL door's column names, what `_frame_cols` asserts), AT-1's
 table is in the rd-r11fix hand-back. Pin count unchanged: twenty-two facade
 pins, C-001..C-022.
 
+**Follow-up (2026-09-23, WO rd-r12fix, critic r9):** three findings plus a
+test-first class sweep, all test/ledger-side. V-001 (P1): the module
+docstring and the tests `map.md` entry claimed answering tests compare rows
+AND column names against the SQL door with only C-010 and C-013 excepted —
+C-008 compared rows only; the test now holds each read's reader and SQL
+frames in variables and asserts `_frame_cols` equality beside each
+`_frame_rows` equality on the current and the pinned read, mutation-proven
+by a `withColumnRenamed` scratch copy (fails on the new assert, reverted).
+V-002 (P1): the C-011 row's quoted literal dropped the `Error during
+planning: ` prefix the test asserts — the row now quotes the tested string
+exactly; the literal sweep found no other short quote (M-3's is an
+ellipsis-marked partial). V-003 (P2): AT-9 overstated — "errors verbatim"
+and "never a silent wrong table" — it now claims the class/`getSqlState()`
+pairing with text equality only where a test asserts it (C-006, C-014,
+C-017, C-021 and C-022 reader-vs-SQL; C-015 pairwise across its three SQL
+spellings), C-011's reader-own literal, real-table-wins on an existing
+probe answer (the nested-namespace Rust pin), and the #219
+`DataInvalid`-on-multi-level rule the reader copies from the SQL door; no
+Rust change — changing one copy would split the doors. Follow-up gap: a
+non-Glue catalog's `DataInvalid` raised for another cause is read as
+not-found on both doors alike. Sweep: the test-first assertion matrix and
+the prose/literal tables are in the rd-r12fix hand-back; no prose sentence
+elsewhere claims more than its test asserts. Pin count unchanged:
+twenty-two facade pins, C-001..C-022.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The two replay cells were recorded
