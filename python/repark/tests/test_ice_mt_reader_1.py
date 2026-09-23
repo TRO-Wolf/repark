@@ -331,11 +331,17 @@ def test_load_plain_and_version_as_of_unchanged(spark: Any) -> None:
     """
     table = _seeded(spark, "t_load_plain")
     second = _snapshot_ids(spark, table)[1]
-    current = _frame_rows(_iceberg_reader(spark).load(table))
-    assert current == _frame_rows(spark.sql(f"SELECT * FROM {table}"))
+    current_frame = _iceberg_reader(spark).load(table)
+    current_sql = spark.sql(f"SELECT * FROM {table}")
+    current = _frame_rows(current_frame)
+    assert current == _frame_rows(current_sql)
+    assert _frame_cols(current_frame) == _frame_cols(current_sql)
     assert current == [[1, "a", "x"], [2, "b", "y"]]
-    pinned = _frame_rows(_iceberg_reader(spark).option("versionAsOf", second).load(table))
-    assert pinned == _frame_rows(spark.sql(f"SELECT * FROM {table} VERSION AS OF {second}"))
+    pinned_frame = _iceberg_reader(spark).option("versionAsOf", second).load(table)
+    pinned_sql = spark.sql(f"SELECT * FROM {table} VERSION AS OF {second}")
+    pinned = _frame_rows(pinned_frame)
+    assert pinned == _frame_rows(pinned_sql)
+    assert _frame_cols(pinned_frame) == _frame_cols(pinned_sql)
     assert pinned == [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"]]
     assert pinned != current
 
