@@ -109,6 +109,8 @@ pub(super) struct ViewFaults {
     pub(super) view_exists_failure: Option<ErrorKind>,
     pub(super) rename_view_calls: Option<Arc<AtomicUsize>>,
     pub(super) update_view_calls: Option<Arc<AtomicUsize>>,
+    pub(super) update_view_failure: Option<ErrorKind>,
+    pub(super) rename_view_failure: Option<ErrorKind>,
 }
 
 #[async_trait::async_trait]
@@ -226,6 +228,9 @@ impl Catalog for FaultCatalog {
         if let Some(calls) = &self.faults.rename_view_calls {
             calls.fetch_add(1, Ordering::SeqCst);
         }
+        if let Some(kind) = self.faults.rename_view_failure {
+            return Err(Error::new(kind, "injected rename_view failure"));
+        }
         self.inner.rename_view(source, destination).await
     }
 
@@ -235,6 +240,9 @@ impl Catalog for FaultCatalog {
     ) -> iceberg::Result<iceberg::view::View> {
         if let Some(calls) = &self.faults.update_view_calls {
             calls.fetch_add(1, Ordering::SeqCst);
+        }
+        if let Some(kind) = self.faults.update_view_failure {
+            return Err(Error::new(kind, "injected update_view failure"));
         }
         self.inner.update_view(commit).await
     }

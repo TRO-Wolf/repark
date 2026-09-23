@@ -694,3 +694,226 @@ async fn alter_view_router_refuses_statement_write_options() {
         "Error during planning: ALTER VIEW does not support write options (write-format); they are only honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)"
     );
 }
+
+#[tokio::test]
+async fn alter_view_unknown_catalog_and_four_part_names_refuse() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    for (statement, expected) in [
+        (
+            "ALTER VIEW nosuch.sales.v SET TBLPROPERTIES ('k'='v')",
+            "Error during planning: unknown catalog `nosuch`",
+        ),
+        (
+            "ALTER VIEW a.b.c.d SET TBLPROPERTIES ('k'='v')",
+            "Error during planning: expected a [catalog.[namespace.]]view name, got `a.b.c.d`",
+        ),
+        (
+            "ALTER VIEW ice.sales.v RENAME TO a.b.c.d",
+            "Error during planning: expected a [catalog.[namespace.]]view name, got `a.b.c.d`",
+        ),
+        (
+            "DROP VIEW a.b.c.d",
+            "Error during planning: expected a [catalog.[namespace.]]view name, got `a.b.c.d`",
+        ),
+    ] {
+        let error = execute(&ctx, &catalogs, statement)
+            .await
+            .expect_err("statement must refuse");
+        assert!(matches!(error, DataFusionError::Plan(_)), "{statement}");
+        assert_eq!(error.to_string(), expected, "{statement}");
+    }
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    assert!(
+        catalogs["ice"]
+            .view_exists(&ident)
+            .await
+            .expect("view existence")
+    );
+}
+
+#[tokio::test]
+async fn bare_view_names_without_namespace_refuse_create_drop_and_rename_target() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "ice", "");
+    let expected = "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.``.`w` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01";
+    for statement in [
+        "ALTER VIEW ice.sales.v RENAME TO w",
+        "CREATE VIEW w AS SELECT * FROM src",
+        "DROP VIEW w",
+    ] {
+        let error = execute(&ctx, &catalogs, statement)
+            .await
+            .expect_err("bare name without a namespace must refuse");
+        assert!(matches!(error, DataFusionError::Plan(_)), "{statement}");
+        assert_eq!(error.to_string(), expected, "{statement}");
+    }
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    assert!(
+        catalogs["ice"]
+            .view_exists(&ident)
+            .await
+            .expect("view existence")
+    );
+}
+
+#[tokio::test]
+async fn show_views_one_part_namespace_uses_the_session_catalog() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "ice", "");
+    let batches = execute(&ctx, &catalogs, "SHOW VIEWS IN sales")
+        .await
+        .expect("SHOW VIEWS must plan")
+        .collect()
+        .await
+        .expect("SHOW VIEWS must collect");
+    let rows: Vec<(String, String, bool)> = batches
+        .iter()
+        .flat_map(|batch| {
+            let namespaces = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .expect("namespace");
+            let names = batch
+                .column(1)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .expect("viewName");
+            let temporary = batch
+                .column(2)
+                .as_any()
+                .downcast_ref::<datafusion::arrow::array::BooleanArray>()
+                .expect("isTemporary");
+            (0..batch.num_rows()).map(move |index| {
+                (
+                    namespaces.value(index).to_string(),
+                    names.value(index).to_string(),
+                    temporary.value(index),
+                )
+            })
+        })
+        .collect();
+    assert_eq!(rows, vec![("sales".to_string(), "v".to_string(), false)]);
+}
+
+#[tokio::test]
+async fn alter_view_invalid_history_size_propagates_the_commit_error() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v') AS SELECT * FROM src",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER VIEW ice.sales.v SET TBLPROPERTIES ('version.history.num-entries'='-1')",
+    )
+    .await
+    .expect_err("negative history size must refuse");
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected an External error, got {error:?}");
+    };
+    let source = inner
+        .downcast_ref::<iceberg::Error>()
+        .expect("expected an Iceberg error");
+    assert_eq!(source.kind(), ErrorKind::DataInvalid);
+    assert_eq!(
+        error.to_string(),
+        "External error: DataInvalid => version.history.num-entries must be positive but was -1"
+    );
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    let view = catalogs["ice"]
+        .load_view(&ident)
+        .await
+        .expect("unchanged view");
+    assert_eq!(
+        view.metadata()
+            .properties()
+            .get("version.history.num-entries"),
+        None
+    );
+}
+
+#[tokio::test]
+async fn alter_view_update_and_rename_failures_propagate() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, mut catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v') AS SELECT * FROM src",
+    )
+    .await;
+    let catalog = Arc::new(FaultCatalog {
+        inner: catalogs["ice"].clone(),
+        table_failure: None,
+        view_failure: None,
+        view_calls: Arc::new(AtomicUsize::new(0)),
+        faults: ViewFaults {
+            update_view_failure: Some(ErrorKind::Unexpected),
+            rename_view_failure: Some(ErrorKind::Unexpected),
+            ..ViewFaults::default()
+        },
+    });
+    register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
+    for (statement, expected) in [
+        (
+            "ALTER VIEW fault.sales.v SET TBLPROPERTIES ('j'='u')",
+            "External error: Unexpected => injected update_view failure",
+        ),
+        (
+            "ALTER VIEW fault.sales.v UNSET TBLPROPERTIES ('k')",
+            "External error: Unexpected => injected update_view failure",
+        ),
+        (
+            "ALTER VIEW fault.sales.v RENAME TO fault.sales.b",
+            "External error: Unexpected => injected rename_view failure",
+        ),
+    ] {
+        let error = execute(&ctx, &catalogs, statement)
+            .await
+            .expect_err("catalog failure must propagate");
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External error, got {error:?}");
+        };
+        let source = inner
+            .downcast_ref::<iceberg::Error>()
+            .expect("expected an Iceberg error");
+        assert_eq!(source.kind(), ErrorKind::Unexpected, "{statement}");
+        assert_eq!(error.to_string(), expected, "{statement}");
+    }
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    let view = catalogs["ice"]
+        .load_view(&ident)
+        .await
+        .expect("unchanged view");
+    assert_eq!(
+        view.metadata().properties().get("k"),
+        Some(&"v".to_string())
+    );
+    assert_eq!(view.metadata().properties().get("j"), None);
+}

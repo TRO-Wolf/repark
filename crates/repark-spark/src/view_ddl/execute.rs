@@ -438,6 +438,26 @@ mod tests {
     }
 
     #[test]
+    fn commit_refuses_a_key_that_is_both_set_and_removed() {
+        let view = stored_view(stored(&[("k", "v")]));
+        let removals = vec!["k".to_string()];
+        let Err(error) = view_properties_commit(&view, stored(&[("k", "v2")]), &removals) else {
+            panic!("a key both set and removed must refuse");
+        };
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External error, got {error:?}");
+        };
+        let source = inner
+            .downcast_ref::<iceberg::Error>()
+            .unwrap_or_else(|| panic!("expected an Iceberg error, got {error:?}"));
+        assert_eq!(source.kind(), ErrorKind::DataInvalid);
+        assert_eq!(
+            error.to_string(),
+            "External error: DataInvalid => Cannot remove and update the same key: k"
+        );
+    }
+
+    #[test]
     fn unset_selection_keeps_present_keys_in_statement_order() {
         let stored = stored(&[("k", "v"), ("n", "1")]);
         let keys = vec!["n".to_string(), "k".to_string()];
