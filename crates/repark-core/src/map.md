@@ -890,10 +890,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   call it.
   pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `prepare_metadata_column_sql`
-  rewrites queries that name `_file` / `_pos` / `_spec_id` / `_partition` onto a `MetadataColumnsTableProvider` temp
+  rewrites queries that name `_file` / `_pos` / `_spec_id` / `_partition` / `_deleted` onto a `MetadataColumnsTableProvider` temp
   view (qualified/aliased FROM, unquoted case-fold, schema-order `*` expand serves user
-  columns only). `_deleted` refuses `[ICE-MC-1]` naming the
-  column — unserved-and-declared at the fork pin, never the raw `No field named`. Only the
+  columns only). Only the
   Spark door calls it; the ANSI door does not serve metadata columns in this unit.
   **WO-R2 (2026-09-22):** both refusal strings advertise the served three; a served
   `_spec_id` beside an unserved name refuses naming the unserved one.
@@ -922,12 +921,21 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   quoted stays exact) is never treated as the physical table and falls
   through unrewritten; qualified names are never CTE references and stay
   collected.
+  **WO-R3 (2026-09-22):** `_partition` joins the served set as a NULLABLE union struct.
+  **mcdel-r1 (2026-09-23):** `_deleted` joins the served set — the projected name
+  reaches the pinned fork unchanged, whose include-deleted scan mode marks
+  merge-on-read deleted rows `true`; the unserved-token machinery
+  (`UNSERVED_METADATA_COLUMN_NAMES`, the unserved scan and its refusal) is deleted,
+  and the composed refusal message now names all five served columns. A metadata
+  column over a time-travel read keeps the planner's unresolved-column error — the
+  pinned static provider does not advertise metadata columns.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022, C-023
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
   C-012, C-013
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
   so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved

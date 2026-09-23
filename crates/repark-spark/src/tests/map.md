@@ -1362,11 +1362,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (a survivor keeps its file ordinal); `select_star_excludes_every_served_metadata_column`
   pins user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id` / `*, _partition`
   compositions;
-  `unserved_metadata_columns_refuse_with_a_typed_error` pins the `[ICE-MC-1]` refusal of
-  `_deleted`, never the raw `No field named`, and asserts
-  the message names the requested column (r2 V-001); and
   `served_names_fold_and_composed_shapes_refuse` pins the `_POS` fold, the backtick and
-  aliased spellings, the backtick unserved refusal (also naming the column), and the
+  aliased spellings, the backtick-quoted `_deleted` resolution, and the
   `[ICE-MC-1]` refusal of a `DELETE` naming `_file` and of a `*` over two relations.
   `file_values_equal_the_files_metadata_table_paths` pins live `_file` identity against
   the table's own `files.file_path` (r2 V-003, C-010); and
@@ -1375,8 +1372,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO-R2 (2026-09-22):** `spec_id_answers_zero_on_a_single_spec_table` pins `R-MC-SPEC-ID`
   (`[[2,0],[3,0],[4,0]]`, Int32); `spec_id_reports_each_rows_own_spec_after_evolution` pins
   the `R-MC-SPEC-ID-EVO` spec-id half (`[(1,0),(2,1)]`); and
-  `served_spec_id_beside_an_unserved_column_names_the_unserved_one` pins that the composed
-  refusal names `_deleted`, not `_spec_id`.
+  `served_spec_id_and_deleted_answer_together` pins the composed `_spec_id` + `_deleted`
+  query answering instead of refusing.
   **WO-R3 (2026-09-22):** `partition_struct_answers_spark` pins `R-MC-PARTITION`
   (`[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]`, nullable struct);
   `partition_is_null_on_an_unpartitioned_table` pins `R-MC-PARTITION-UNPART`
@@ -1385,6 +1382,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `bucket_partitioned_table_serves_all_four_metadata_columns` serves all four metadata
   columns on a bucket table; the star pin gains the `*, _partition` leg; and the refusal
   advertises the served four.
+  **mcdel-r1 (2026-09-23):** `deleted_column_marks_merge_on_read_deleted_row` pins the
+  recorded `R-MC-DELETED` cell (`SELECT id, _deleted` = `[(1,true),(2,false),(3,false),(4,false)]`,
+  the field non-null Boolean); `not_projecting_deleted_still_filters_mor_rows` pins
+  `SELECT id` = `[2,3,4]` and `count(*)` = 3 on the same merge-on-read table;
+  `select_star_keeps_user_columns_on_mor_table` pins `*` to the three user columns;
+  `deleted_predicates_reapply_above_the_scan` pins `WHERE _deleted` / `WHERE NOT
+  _deleted` re-applied above the `Inexact` scan (RePark-internal consistency,
+  unmeasured vs Spark); `deleted_column_on_copy_on_write_marks_all_rows_false` pins
+  `[(2,false),(3,false),(4,false)]` on the copy-on-write twin;
+  `deleted_name_folds_unquoted_but_quoted_upper_stays_unknown` pins unquoted
+  `_DELETED` answering like `_deleted` while quoted `` `_DELETED` `` keeps the
+  unknown-column error; `metadata_column_over_time_travel_keeps_todays_error` pins
+  the planner's unresolved-column error for a metadata column over `VERSION AS OF`
+  (measured, not `[ICE-MC-1]` — see the ledger's premise correction).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015,
   C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
@@ -1434,6 +1445,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statement (the `[UNRESOLVED_ROUTINE]` error, never `[ICE-MC-1]`).
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013
+  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

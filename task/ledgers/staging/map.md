@@ -1573,3 +1573,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
   C-022
+- [u10-mc-deleted-1-ledger.md](u10-mc-deleted-1-ledger.md) —
+  **U10-MC-DELETED-1 (2026-09-23), in flight:** `_deleted` joins the served
+  metadata-column set as a non-null Boolean after `_partition` — the projected
+  name reaches the pinned fork's include-deleted scan mode, so
+  `SELECT id, _deleted` on a merge-on-read table answers the recorded
+  `R-MC-DELETED` cell `[[1,true],[2,false],[3,false],[4,false]]` on both doors
+  while not projecting it keeps the delete filter and `SELECT *` stays user
+  columns. The unserved-token machinery is deleted and the composed refusal
+  names all five columns. Measured premise correction pinned: a metadata column
+  over a time-travel read raises `[UNRESOLVED_COLUMN]`, not `[ICE-MC-1]`.
+  `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
+  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
