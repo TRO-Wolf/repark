@@ -1008,6 +1008,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   `xd/show-create`.
 - [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), completed:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
 - [wo-c5-ledger.md](wo-c5-ledger.md) — **WO-C5 (2026-09-23), completed:** parser refusal pins for multi-statement SQL, unclosed bracket comments after the SHOW CREATE TABLE head, and the refusal-test audit. Its C-003 claim that a comment hiding `TABLE` falls through to the tokenizer error is superseded by WO-C10: the front door answers `UNCLOSED_BRACKETED_COMMENT`. `risk_tier: standard`. Branch `xd/show-create`.
+- [wo-c5-ledger.md](wo-c5-ledger.md) — **WO-C5 (2026-09-23), completed:** parser refusal pins for multi-statement SQL, unclosed bracket comments, tokenizer fall-through, and the refusal-test audit. `risk_tier: standard`. Branch `xd/show-create`.
+- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 (2026-09-23), in flight:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
+- [wo-a1b-ledger.md](wo-a1b-ledger.md) —
+  **WO-A1b (2026-09-23), in flight:** follow-up exactness repair for SHOW TABLE EXTENDED:
+  typed lexer and refusal pins, literal PARTITION table resolution, and exact near-miss outcomes.
+  `risk_tier: standard`. Branch `xd/show-tblprops`.
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under
