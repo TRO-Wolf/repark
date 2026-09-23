@@ -143,9 +143,7 @@ def test_use_catalog_resolves_two_part_view_write_refusal(spark: ReparkSession) 
 
 
 @pytest.mark.parametrize("use_name,table_name", [("sc.ns", "t"), ("sc", "ns.t")])
-def test_use_resolves_table_insert(
-    spark: ReparkSession, use_name: str, table_name: str
-) -> None:
+def test_use_resolves_table_insert(spark: ReparkSession, use_name: str, table_name: str) -> None:
     """A table write resolves the current catalog and namespace."""
     spark.sql(f"USE {use_name}")
     spark.sql(f"INSERT INTO {table_name} VALUES (9, 'd9')")
