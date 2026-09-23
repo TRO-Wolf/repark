@@ -1446,7 +1446,9 @@ pins: rp-4-fork-repin/C-005, C-006
   uses `spark_table_properties`, the stored location, and `spark_tree_string`; a PARTITION tail
   treats the LIKE pattern as a literal table name before the shared partition-management refusal.
   **WO-A1b (2026-09-23):** lexer errors under the exact SHOW TABLE EXTENDED head stay typed
-  `PARSE_SYNTAX_ERROR` refusals, including an unclosed delimiter; every other head falls through.
+  `PARSE_SYNTAX_ERROR` refusals, including an unclosed quote or backtick; every other head falls
+  through. An unclosed `/*` never reaches this parser end to end: the router front door (WO-C10)
+  answers `UNCLOSED_BRACKETED_COMMENT` / `42601` first.
   The router retries that parser when literal canonicalization fails first. Views and session
   temporary views remain absent from this statement's Iceberg listing.
   Parser unit pins cover required syntax refusals and near misses.

@@ -1490,11 +1490,6 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO-C3 C5 (updated by WO-C4 and WO-C7, 2026-09-23):** SHOW TABLES and SHOW COLUMNS compare
   complete Spark rows and Arrow schemas; SHOW TBLPROPERTIES keeps its full pinned analysis refusal.
   pins: wo-c3/C-001, C-002, C-003, C-005
-  the `AS SERDE` and missing-table refusals, the bare `SHOW CREATE TABLE` parse error, the
-  near misses (view targets not answered as tables; SHOW CREATE, SHOW TABLES/COLUMNS/
-  TBLPROPERTIES not claimed), and the DESCRIBE EXTENDED `Table Properties` row equal to the
-  measured fresh-table string, and the `Comment` detail row (after `Type`, a column named
-  `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
 - `show_table_extended.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** memory-catalog end-to-end
   pins for `SHOW TABLE EXTENDED`: full four-column rows for partitioned/plain, v3 Unicode,
   sorted tables, LOCATION, owner, and nested/deep schema trees; property redaction and snapshot
@@ -1502,7 +1497,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   partition/missing-table/missing-namespace refusals, and SHOW-family near misses that remain
   outside this parser. **WO-A4 (2026-09-23):** every parser refusal pins its SQL error variant
   and complete condition/SQLSTATE text; partition lookup pins literal wildcard absence; the
-  unclaimed SHOW TABLE(S) forms pin their current exact variants and messages. **WO-A5
+  unclaimed SHOW TABLE(S) forms pin their current exact variants and messages. **WO-A8
+  (2026-09-23):** the leading and inter-keyword unclosed `/*` probes pin the full rendered
+  `UNCLOSED_BRACKETED_COMMENT` / `42601` text the router front door (WO-C10) answers. **WO-A5
   (2026-09-23):** snapshot, alternation, case, and ambient-scope checks compare complete ordered
   four-column row vectors.
   pins: wo-a1b/C-002, C-003
