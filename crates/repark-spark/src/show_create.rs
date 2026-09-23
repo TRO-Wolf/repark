@@ -547,6 +547,9 @@ mod tests {
             "/* c */ SHOW CREATE TABLE sc.sales.t",
             "SHOW /* c */ CREATE TABLE sc.sales.t",
             "/* a /* b */ c */ SHOW CREATE TABLE `sc.sales",
+            "SHOW --c\rCREATE TABLE `sc.sales",
+            "show create table `sc.sales",
+            "sHoW cReAtE tAbLe `sc.sales",
         ] {
             assert!(starts_with_show_create_table(sql), "{sql}");
         }
@@ -564,6 +567,8 @@ mod tests {
             "SELECT '/* */ SHOW CREATE TABLE `x'",
             "SHOW/**/CREATED TABLE x",
             "SHOW CREATE VIEW `x",
+            "SHOW CREATE TABLES `x",
+            "SHOW CREATE TABLE_x `x",
         ] {
             assert!(!starts_with_show_create_table(sql), "{sql}");
             assert!(try_parse_show_create(sql).is_none(), "{sql}");

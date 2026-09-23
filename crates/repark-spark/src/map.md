@@ -1418,6 +1418,10 @@ pins: rp-4-fork-repin/C-005, C-006
   WO-C10's front-door rule, including a comment that hides `TABLE`. SHOW CREATE TABLE followed
   by another statement keeps `INVALID_STATEMENT_OR_CLAUSE` / `42601`.
   pins: wo-c5/C-002, C-003, C-004; wo-c10/C-001
+  **WO-C11 (2026-09-23):** the inline recognizer tests add a `\r`-ended line comment, mixed-case
+  keywords, and the `TABLES` / `TABLE_x` word-boundary near misses, so removing the `\r` stop,
+  case folding, or either identifier-continuation check fails a test.
+  pins: wo-c3/C-001
 - `table_props_view.rs` — **C1 SHOW CREATE (2026-09-23):** `spark_table_properties`, the one
   Spark-visible table property list (Iceberg 1.11 `SparkTable.properties()` minus Spark's
   `TABLE_RESERVED_PROPERTIES`), shared by DESCRIBE EXTENDED `Table Properties` and SHOW CREATE

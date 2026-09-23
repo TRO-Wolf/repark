@@ -13,6 +13,7 @@ fn planner_default_set_recognizer_pins_malformed_near_misses() {
         "SETX datafusion.catalog.default_catalog = 'ice'",
         "SET datafusion.catalog.default_catalog_extra = 'ice'",
         "/* unclosed SET datafusion.catalog.default_catalog = 'ice'",
+        "SETdatafusion.catalog.default_catalog = 'ice'",
     ] {
         assert!(
             crate::router::planner_default_set_side(sql).is_none(),
@@ -24,6 +25,12 @@ fn planner_default_set_recognizer_pins_malformed_near_misses() {
             "-- lead\nSeT/* comment */datafusion.catalog.default_catalog /* c */ = 'ice'"
         ),
         Some(crate::router::PlannerDefaultSide::Catalog)
+    ));
+    assert!(matches!(
+        crate::router::planner_default_set_side(
+            "set DataFusion.Catalog.Default_Schema --c\r= 'sales'"
+        ),
+        Some(crate::router::PlannerDefaultSide::Namespace)
     ));
 }
 

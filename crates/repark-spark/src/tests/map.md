@@ -909,6 +909,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
     misses. The escaped quotes reach the comment scanner because the front-door tokenizer
     reads `\` literally, so those rows fail if its quote or escape branch is removed.
     pins: wo-c10/C-002
+    `planner_default_set_recognizer_pins_malformed_near_misses` also pins `SETdatafusion…` (no
+    word boundary) and a mixed-case key with a `\r`-ended comment before `=`. The underscore
+    boundary after `SET` is unobservable: neither key starts with `_`.
   - [`show_create.rs`](show_create.rs) — `show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
     `show_create_unclosed_before_table_keywords_use_spark_parse_contract`, and
     `show_create_multi_statement_keeps_spark_invalid_statement_class` pin complete parser text.
