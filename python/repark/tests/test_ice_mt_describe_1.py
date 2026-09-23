@@ -13,7 +13,7 @@ with no partition section and no blank rows. The live leg re-measures that cell.
 pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 pins: ipi-23-mt-describe-1/C-010, C-011, C-012
 pins: ipi-23-mt-describe-1/C-013, C-014, C-015
-pins: ipi-23-mt-describe-1/C-016
+pins: ipi-23-mt-describe-1/C-016, C-018, C-019
 """
 
 from __future__ import annotations
@@ -194,6 +194,53 @@ def test_missing_base_not_found_names_full_name(spark: Any) -> None:
     assert f"`{CATALOG}`.`{NAMESPACE}`.`missing`.`snapshots`" in text
     assert "$" not in text
     assert "42P01" in text
+
+
+def test_missing_base_not_found_names_written_case(spark: Any) -> None:
+    """A missing base names the four written parts, identifier case kept.
+
+    pins: ipi-23-mt-describe-1/C-018
+    """
+    template = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        "{name} cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    cases = [
+        (
+            f"DESCRIBE {CATALOG}.{NAMESPACE}.missing.SNAPSHOTS",
+            f"`{CATALOG}`.`{NAMESPACE}`.`missing`.`SNAPSHOTS`",
+        ),
+        (
+            f"DESCRIBE {CATALOG}.{NAMESPACE}.Missing.snapshots",
+            f"`{CATALOG}`.`{NAMESPACE}`.`Missing`.`snapshots`",
+        ),
+    ]
+    for sql, name in cases:
+        with pytest.raises(AnalysisException) as excinfo:
+            spark.sql(sql)
+        assert str(excinfo.value) == template.format(name=name)
+
+
+def test_quoted_dollar_missing_base_names_written_name(spark: Any) -> None:
+    """A quoted ``t$snapshots`` with a missing base names the written ``$`` name.
+
+    pins: ipi-23-mt-describe-1/C-019
+    """
+    expected = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{NAMESPACE}`.`missing$snapshots` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.`missing$snapshots`")
+    assert str(excinfo.value) == expected
 
 
 def test_unknown_suffix_keeps_compound_identifier_error(spark: Any) -> None:
