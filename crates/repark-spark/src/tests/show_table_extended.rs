@@ -5,6 +5,18 @@ use super::common::*;
 
 type ExtendedRow = (String, String, bool, String);
 
+#[derive(Clone, Copy)]
+struct Information<'a> {
+    catalog: &'a str,
+    namespace: &'a str,
+    table: &'a str,
+    location: &'a str,
+    properties: &'a str,
+    comment: Option<&'a str>,
+    owner: Option<&'a str>,
+    tree: &'a str,
+}
+
 async fn outcome(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -98,16 +110,17 @@ fn character_properties(pairs: &[(&str, &str)]) -> String {
     )
 }
 
-fn information(
-    catalog: &str,
-    namespace: &str,
-    table: &str,
-    location: &str,
-    properties: &str,
-    comment: Option<&str>,
-    owner: Option<&str>,
-    tree: &str,
-) -> String {
+fn information(expectation: Information<'_>) -> String {
+    let Information {
+        catalog,
+        namespace,
+        table,
+        location,
+        properties,
+        comment,
+        owner,
+        tree,
+    } = expectation;
     let mut lines = vec![
         format!("Catalog: {catalog}"),
         format!("Namespace: {namespace}"),
@@ -147,16 +160,16 @@ async fn show_table_extended_answers_exact_partitioned_information() {
         ("k", "v"),
         ("write.parquet.compression-codec", "zstd"),
     ]);
-    let expected = information(
-        "ice",
-        "sales",
-        "pc",
-        &table_location(&catalogs, "pc").await,
-        &properties,
-        Some("tbl comment"),
-        None,
-        "root\n |-- id: long (nullable = false)\n |-- ts: timestamp (nullable = true)\n |-- cat: string (nullable = true)\n",
-    );
+    let expected = information(Information {
+        catalog: "ice",
+        namespace: "sales",
+        table: "pc",
+        location: &table_location(&catalogs, "pc").await,
+        properties: &properties,
+        comment: Some("tbl comment"),
+        owner: None,
+        tree: "root\n |-- id: long (nullable = false)\n |-- ts: timestamp (nullable = true)\n |-- cat: string (nullable = true)\n",
+    });
     let (columns, rows) = show_table_extended(
         &ctx,
         &catalogs,
@@ -195,16 +208,16 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
         ("format-version", "2"),
         ("write.parquet.compression-codec", "zstd"),
     ]);
-    let expected = information(
-        "ice",
-        "sales",
-        "pl",
-        &location,
-        &properties,
-        None,
-        None,
-        "root\n |-- id: long (nullable = true)\n",
-    );
+    let expected = information(Information {
+        catalog: "ice",
+        namespace: "sales",
+        table: "pl",
+        location: &location,
+        properties: &properties,
+        comment: None,
+        owner: None,
+        tree: "root\n |-- id: long (nullable = true)\n",
+    });
     let (_, rows) = show_table_extended(
         &ctx,
         &catalogs,
@@ -231,16 +244,16 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
     .await;
     assert_eq!(
         rows[0].3,
-        information(
-            "ice",
-            "sales",
-            "pl",
-            &location,
-            &snapshot_properties,
-            None,
-            None,
-            "root\n |-- id: long (nullable = true)\n",
-        )
+        information(Information {
+            catalog: "ice",
+            namespace: "sales",
+            table: "pl",
+            location: &location,
+            properties: &snapshot_properties,
+            comment: None,
+            owner: None,
+            tree: "root\n |-- id: long (nullable = true)\n",
+        })
     );
 }
 

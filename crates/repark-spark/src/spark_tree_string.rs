@@ -12,7 +12,7 @@ enum TreeEntry<'a> {
 pub(crate) fn spark_tree_string(schema: &Schema) -> String {
     let mut lines = vec!["root".to_string()];
     let mut entries = Vec::new();
-    push_fields(&mut entries, schema.fields(), " |".to_string(), 0);
+    push_fields(&mut entries, schema.fields(), " |", 0);
     while let Some(entry) = entries.pop() {
         match entry {
             TreeEntry::Field(field, prefix, depth) => {
@@ -65,7 +65,7 @@ fn push_children<'a>(
     let child_prefix = format!("{prefix}    |");
     let child_depth = depth + 1;
     match data_type {
-        DataType::Struct(fields) => push_fields(entries, fields, child_prefix, child_depth),
+        DataType::Struct(fields) => push_fields(entries, fields, &child_prefix, child_depth),
         DataType::List(field)
         | DataType::ListView(field)
         | DataType::LargeList(field)
@@ -99,11 +99,11 @@ fn push_children<'a>(
 fn push_fields<'a>(
     entries: &mut Vec<TreeEntry<'a>>,
     fields: &'a Fields,
-    prefix: String,
+    prefix: &str,
     depth: usize,
 ) {
     for field in fields.iter().rev() {
-        entries.push(TreeEntry::Field(field.as_ref(), prefix.clone(), depth));
+        entries.push(TreeEntry::Field(field.as_ref(), prefix.to_string(), depth));
     }
 }
 

@@ -36,9 +36,8 @@ pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTabl
         return None;
     }
     let scope = if parser.parse_keyword(Keyword::IN) || parser.parse_keyword(Keyword::FROM) {
-        let name = match parser.parse_object_name(false) {
-            Ok(name) => name,
-            Err(_) => return Some(Err(syntax_error_at(&parser))),
+        let Ok(name) = parser.parse_object_name(false) else {
+            return Some(Err(syntax_error_at(&parser)));
         };
         Some(name_parts(&name))
     } else {
@@ -47,9 +46,10 @@ pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTabl
     if !parser.parse_keyword(Keyword::LIKE) {
         return Some(Err(syntax_error_at(&parser)));
     }
-    let pattern = match parser.next_token().token {
-        Token::SingleQuotedString(pattern) | Token::DoubleQuotedString(pattern) => pattern,
-        _ => return Some(Err(syntax_error_at(&parser))),
+    let (Token::SingleQuotedString(pattern) | Token::DoubleQuotedString(pattern)) =
+        parser.next_token().token
+    else {
+        return Some(Err(syntax_error_at(&parser)));
     };
     let has_partition = if parser.parse_keyword(Keyword::PARTITION) {
         if !consume_parenthesized(&mut parser) {
