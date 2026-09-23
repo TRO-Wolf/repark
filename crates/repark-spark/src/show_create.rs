@@ -122,8 +122,12 @@ fn at_statement_end(parser: &Parser) -> bool {
 }
 
 pub(crate) fn starts_with_show_create_table(sql: &str) -> bool {
+    starts_with_sql_keywords(sql, &["SHOW", "CREATE", "TABLE"])
+}
+
+pub(crate) fn starts_with_sql_keywords(sql: &str, keywords: &[&str]) -> bool {
     let mut position = 0;
-    for expected in ["SHOW", "CREATE", "TABLE"] {
+    for expected in keywords {
         let Some(keyword_start) = skip_sql_whitespace_and_comments(sql, position) else {
             return false;
         };
@@ -552,6 +556,38 @@ mod tests {
             "sHoW cReAtE tAbLe `sc.sales",
         ] {
             assert!(starts_with_show_create_table(sql), "{sql}");
+        }
+    }
+
+    #[test]
+    fn comment_aware_keyword_scanner_matches_show_table_extended_forms() {
+        for sql in [
+            "/* c */ SHOW TABLE EXTENDED",
+            "-- c\nSHOW TABLE EXTENDED",
+            "SHOW/* c */TABLE /* d */EXTENDED",
+            "/* a /* nested */ b */ show table extended",
+        ] {
+            assert!(
+                starts_with_sql_keywords(sql, &["SHOW", "TABLE", "EXTENDED"]),
+                "{sql}"
+            );
+        }
+    }
+
+    #[test]
+    fn comment_aware_keyword_scanner_leaves_show_table_near_misses_alone() {
+        for sql in [
+            "SHOW TABLES EXTENDED",
+            "SHOW TABLE EXTENDEDX",
+            "SHOW TABLE_EXTENDED",
+            "/* unclosed SHOW TABLE EXTENDED",
+            "SHOW -- c TABLE EXTENDED",
+            "",
+        ] {
+            assert!(
+                !starts_with_sql_keywords(sql, &["SHOW", "TABLE", "EXTENDED"]),
+                "{sql}"
+            );
         }
     }
 
