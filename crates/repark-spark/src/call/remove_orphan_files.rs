@@ -8,8 +8,9 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::Expr;
 use iceberg::maintenance::{DeleteOrphanFiles, PrefixMismatchMode};
+use iceberg::spec::TableMetadata;
 use iceberg::table::Table;
-use iceberg::{Catalog, NamespaceIdent, TableIdent};
+use iceberg::{Catalog, NamespaceIdent};
 use repark_core::{LocationPolicy, memory_warehouse_fallback_root};
 
 use super::orphan_file_list::{FileListRequest, listed_orphans, normalize_location_path};
@@ -51,7 +52,7 @@ async fn refuse_scan_over_other_tables(
     policy: Option<&LocationPolicy>,
     catalog: &dyn Catalog,
     catalog_name: &str,
-    swept: &TableIdent,
+    swept: &Table,
     scan_location: &str,
     table_arg: &str,
 ) -> Result<()> {
@@ -59,6 +60,8 @@ async fn refuse_scan_over_other_tables(
         return Ok(());
     }
     let scan = normalize_orphan_scan_path(scan_location);
+    let own = normalize_orphan_scan_path(swept.metadata().location());
+    let swept = swept.identifier();
     let mut pending = catalog.list_namespaces(None).await.map_err(iceberg_err)?;
     let mut seen: HashSet<NamespaceIdent> = HashSet::new();
     while let Some(namespace) = pending.pop() {
@@ -77,7 +80,8 @@ async fn refuse_scan_over_other_tables(
             }
             let other = catalog.load_table(&ident).await.map_err(iceberg_err)?;
             let other_location = other.metadata().location();
-            if normalize_orphan_scan_path(other_location).starts_with(&scan) {
+            let other_path = normalize_orphan_scan_path(other_location);
+            if other_path.starts_with(&scan) {
                 return Err(DataFusionError::Plan(format!(
                     "CALL remove_orphan_files refuses to sweep `{table_arg}`: path \
                      `{scan_location}` holds table `{catalog_name}.{}.{}` at `{other_location}`. \
@@ -86,6 +90,88 @@ async fn refuse_scan_over_other_tables(
                      holds only this table's files.",
                     ident.namespace().as_ref().join("."),
                     ident.name()
+                )));
+            }
+            if scan.starts_with(&other_path) && !scan.starts_with(&own) {
+                return Err(DataFusionError::Plan(format!(
+                    "CALL remove_orphan_files refuses to sweep `{table_arg}`: path \
+                     `{scan_location}` lies inside table `{catalog_name}.{}.{}` at \
+                     `{other_location}` and outside the swept table's own location \
+                     `{}`. This procedure deletes every file the swept table's own metadata \
+                     does not reference, which would include that table's live files. Sweep a \
+                     path that holds only this table's files.",
+                    ident.namespace().as_ref().join("."),
+                    ident.name(),
+                    own.display()
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn refuse_scan_over_foreign_metadata(
+    policy: Option<&LocationPolicy>,
+    swept: &Table,
+    scan_location: &str,
+    table_arg: &str,
+) -> Result<()> {
+    if !matches!(policy, Some(LocationPolicy::TempFallbackAllowed { .. })) {
+        return Ok(());
+    }
+    let metadata = swept.metadata();
+    let own_files: HashSet<PathBuf> = swept
+        .metadata_location()
+        .into_iter()
+        .chain(
+            metadata
+                .metadata_log()
+                .iter()
+                .map(|entry| entry.metadata_file.as_str()),
+        )
+        .map(normalize_orphan_scan_path)
+        .collect();
+    let own_uuid = metadata.uuid();
+    let file_io = swept.file_io();
+    let mut candidates: Vec<(PathBuf, String)> = file_io
+        .list(normalize_location_path(scan_location))
+        .await
+        .map_err(iceberg_err)?
+        .into_iter()
+        .map(|file| (normalize_orphan_scan_path(&file.location), file.location))
+        .filter(|(path, _)| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.ends_with(".metadata.json"))
+                && !own_files.contains(path)
+        })
+        .collect();
+    candidates.sort();
+    for (_, location) in candidates {
+        match TableMetadata::read_from(file_io, &location)
+            .await
+            .map(|foreign| foreign.uuid())
+        {
+            Ok(uuid) if uuid == own_uuid => {}
+            Ok(uuid) => {
+                return Err(DataFusionError::Plan(format!(
+                    "CALL remove_orphan_files refuses to sweep `{table_arg}`: path \
+                     `{scan_location}` holds `{location}`, the metadata file of another table \
+                     (table-uuid `{uuid}`; the swept table's is `{own_uuid}`), such as a table of \
+                     another catalog or session on the same warehouse. This procedure deletes \
+                     every file the swept table's own metadata does not reference, which would \
+                     include that table's live files. Give the table its own LOCATION \
+                     (`CREATE TABLE ... LOCATION '<path>'`), then sweep it."
+                )));
+            }
+            Err(reason) => {
+                return Err(DataFusionError::Plan(format!(
+                    "CALL remove_orphan_files refuses to sweep `{table_arg}`: path \
+                     `{scan_location}` holds `{location}`, a metadata file that is not in the \
+                     swept table's metadata log and cannot be read as table metadata \
+                     ({reason}), so it may belong to another table whose live files this \
+                     procedure would delete. Give the table its own LOCATION \
+                     (`CREATE TABLE ... LOCATION '<path>'`), then sweep it."
                 )));
             }
         }
@@ -245,11 +331,12 @@ pub(super) async fn execute_remove_orphan_files(
         policy.as_ref(),
         catalog.as_ref(),
         catalog_name,
-        table.identifier(),
+        &table,
         &scan_location,
         &table_arg,
     )
     .await?;
+    refuse_scan_over_foreign_metadata(policy.as_ref(), &table, &scan_location, &table_arg).await?;
 
     if let Some(view) = file_list_view {
         let request = FileListRequest {
