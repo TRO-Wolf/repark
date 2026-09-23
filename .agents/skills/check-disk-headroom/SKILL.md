@@ -105,7 +105,7 @@ That path was keyed by **names alone**, so every session that used `mem.ns.event
 one shared directory. Measured 2026-08-21: **2.7 G across 22 catalog names**.
 
 **A13** (`register_memory_catalog`) sets the fallback root to the supplied warehouse, so new
-writes land at `<warehouse>/repark_ctas/…`. A leftover `/tmp/repark_ctas` from older sessions
+writes land at `<warehouse>/<namespace>/<table>`. A leftover `/tmp/repark_ctas` from older sessions
 and from the `CatalogRegistry::from` test helper (no warehouse argument) may still exist. It is
 safe to delete in full.
 
