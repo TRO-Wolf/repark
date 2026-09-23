@@ -1000,8 +1000,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   registered through `create_or_replace_temp_view_from`, since the SQL door has no `CREATE
   TEMP VIEW`) lists the view's orphans verbatim under `dry_run => true`, deletes exactly
   the listed ones when armed, and refuses a missing view (`TABLE_OR_VIEW_NOT_FOUND`), a
-  warehouse `location` and a non-timestamp `last_modified`.
-  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010
+  warehouse `location` and a non-timestamp `last_modified`. On a table under a `file:///`
+  namespace location, a bare view path fails with the same prefix-conflict string as a bare
+  `location` listing, for a scheme pair and for a scheme plus authority pair.
+  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
   service-managed refusal — a real `s3tables_catalog` (dummy ARN, constructs offline)

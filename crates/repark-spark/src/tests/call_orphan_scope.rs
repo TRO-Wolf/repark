@@ -556,3 +556,102 @@ async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     );
     assert!(orphan.exists());
 }
+
+async fn file_scheme_table(session: &ReparkSession, warehouse: &TempDir) -> (PathBuf, PathBuf) {
+    let namespace_dir = warehouse.path().join("fq");
+    submit(
+        session,
+        &format!(
+            "CREATE NAMESPACE ice.fq LOCATION 'file://{}'",
+            namespace_dir.display()
+        ),
+    )
+    .await;
+    submit(
+        session,
+        "CREATE TABLE ice.fq.t USING iceberg AS SELECT 1 AS id",
+    )
+    .await;
+    let table_dir = namespace_dir.join("t");
+    let live = referenced_data_file(&table_dir);
+    let stamp = std::time::SystemTime::now() - std::time::Duration::from_secs(10 * 86_400);
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(&live)
+        .expect("reopen the live file")
+        .set_modified(stamp)
+        .expect("age the live file");
+    (table_dir, live)
+}
+
+fn prefix_conflict_message(pairs: &str) -> String {
+    format!(
+        "DataInvalid => Unable to determine whether certain files are orphan. Metadata references \
+         files that match listed/provided files except for authority/scheme. Please, inspect the \
+         conflicting authorities/schemes and provide which of them are equal by further \
+         configuring the action via equalSchemes() and equalAuthorities() methods. Set the prefix \
+         mismatch mode to 'IGNORE' to skip remaining locations with conflicting \
+         authorities/schemes or to 'DELETE' iff you are ABSOLUTELY confident that remaining \
+         conflicting authorities/schemes are different. It will be impossible to recover deleted \
+         files. Conflicting authorities/schemes: [{pairs}]."
+    )
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_prefix_conflicts_match_the_listing_path() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let (table_dir, live) = file_scheme_table(&session, &warehouse).await;
+    register_file_list(&session, &[(live.display().to_string(), 0)]).await;
+
+    for (extra, pairs) in [
+        ("", "(file, )"),
+        (
+            ", equal_authorities => map('', 'hostA')",
+            "(file, ), (hostA, )",
+        ),
+    ] {
+        let view = call_rows(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'fq.t', file_list_view => 'v'{extra})"
+            ),
+        )
+        .await
+        .expect_err("a bare view path against file: metadata is a scheme conflict");
+        let listing = call_rows(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'fq.t', location => '{}'{extra})",
+                table_dir.display()
+            ),
+        )
+        .await
+        .expect_err("a bare listing against file: metadata is the same conflict");
+        assert_eq!(view, prefix_conflict_message(pairs));
+        assert_eq!(view, listing, "both doors emit the fork's conflict text");
+    }
+    assert!(live.exists(), "a prefix conflict deletes nothing");
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_names_an_authority_conflict() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let (_, live) = file_scheme_table(&session, &warehouse).await;
+    register_file_list(
+        &session,
+        &[(format!("file://localhost{}", live.display()), 0)],
+    )
+    .await;
+
+    let err = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'fq.t', file_list_view => 'v', \
+         equal_authorities => map('', 'hostA'))",
+    )
+    .await
+    .expect_err("a mapped empty authority against localhost is an authority conflict");
+    assert_eq!(err, prefix_conflict_message("(hostA, localhost)"));
+    assert!(live.exists(), "a prefix conflict deletes nothing");
+}

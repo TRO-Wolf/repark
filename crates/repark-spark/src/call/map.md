@@ -185,8 +185,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `delete_with`, which matches the set `DeleteOrphanFiles` uses. The join runs on the URI
   path under `equal_schemes` (Spark's `s3n`/`s3a` defaults merged), `equal_authorities` and
   `prefix_mismatch_mode`. Orphans come back verbatim, sorted and deduplicated. `gc.enabled =
-  false` refuses with the fork's text.
-  pins: ipi-30-orphan-guard-narrow-1/C-005, C-006, C-007
+  false` refuses with the fork's text. An ERROR-mode prefix conflict builds the fork's
+  `prefix_conflict_error` pairs and text and goes through the same `iceberg_err`, so both
+  paths fail with one string.
+  pins: ipi-30-orphan-guard-narrow-1/C-005, C-006, C-007, C-011
 - `run_maintenance.rs` — **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `CALL
   <catalog>.system.run_maintenance(table => … [, dry_run => …] [, <D-1 key> => …])`.
   Inline keys overlay the stamped file policy (per-table entry, then profile) through

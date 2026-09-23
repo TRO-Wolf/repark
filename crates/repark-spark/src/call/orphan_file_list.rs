@@ -55,7 +55,8 @@ pub(super) async fn listed_orphans(
             .push(valid);
     }
     let mut orphans = BTreeSet::new();
-    let mut conflicts = BTreeSet::new();
+    let mut scheme_conflicts = BTreeSet::new();
+    let mut authority_conflicts = BTreeSet::new();
     for candidate in candidates {
         let actual = split_uri(&candidate, &maps);
         let Some(valid) = valid_by_path.get(&actual.path) else {
@@ -71,32 +72,68 @@ pub(super) async fn listed_orphans(
             }
             PrefixMismatchMode::Ignore => {}
             PrefixMismatchMode::Error => {
-                conflicts.extend(valid.iter().map(|valid| {
-                    format!(
-                        "({}://{}, {}://{})",
-                        valid.scheme.as_deref().unwrap_or_default(),
-                        valid.authority.as_deref().unwrap_or_default(),
-                        actual.scheme.as_deref().unwrap_or_default(),
-                        actual.authority.as_deref().unwrap_or_default(),
-                    )
-                }));
+                scheme_conflicts.extend(first_conflict(
+                    valid,
+                    |parts| parts.scheme.as_deref(),
+                    &actual,
+                ));
+                authority_conflicts.extend(first_conflict(
+                    valid,
+                    |parts| parts.authority.as_deref(),
+                    &actual,
+                ));
             }
         }
     }
-    if !conflicts.is_empty() {
-        return Err(DataFusionError::Plan(format!(
-            "Unable to determine whether certain files are orphan. Metadata references files \
-             that match listed/provided files except for authority/scheme. Please, inspect the \
+    if !scheme_conflicts.is_empty() || !authority_conflicts.is_empty() {
+        return Err(prefix_conflict_error(
+            &scheme_conflicts,
+            &authority_conflicts,
+        ));
+    }
+    Ok(orphans.into_iter().collect())
+}
+
+fn first_conflict(
+    valid: &[UriParts],
+    component: impl Fn(&UriParts) -> Option<&str>,
+    actual: &UriParts,
+) -> Option<(String, String)> {
+    valid
+        .iter()
+        .find(|valid| !component_matches(component(valid), component(actual)))
+        .map(|valid| {
+            (
+                component(valid).unwrap_or_default().to_string(),
+                component(actual).unwrap_or_default().to_string(),
+            )
+        })
+}
+
+fn prefix_conflict_error(
+    scheme_conflicts: &BTreeSet<(String, String)>,
+    authority_conflicts: &BTreeSet<(String, String)>,
+) -> DataFusionError {
+    let mut conflicts: Vec<String> = scheme_conflicts
+        .iter()
+        .chain(authority_conflicts)
+        .map(|(valid, actual)| format!("({valid}, {actual})"))
+        .collect();
+    conflicts.sort();
+    iceberg_err(iceberg::Error::new(
+        iceberg::ErrorKind::DataInvalid,
+        format!(
+            "Unable to determine whether certain files are orphan. Metadata references files that \
+             match listed/provided files except for authority/scheme. Please, inspect the \
              conflicting authorities/schemes and provide which of them are equal by further \
              configuring the action via equalSchemes() and equalAuthorities() methods. Set the \
              prefix mismatch mode to 'IGNORE' to skip remaining locations with conflicting \
              authorities/schemes or to 'DELETE' iff you are ABSOLUTELY confident that remaining \
              conflicting authorities/schemes are different. It will be impossible to recover \
              deleted files. Conflicting authorities/schemes: [{}].",
-            conflicts.into_iter().collect::<Vec<_>>().join(", ")
-        )));
-    }
-    Ok(orphans.into_iter().collect())
+            conflicts.join(", ")
+        ),
+    ))
 }
 
 fn refuse_gc_disabled(table: &Table) -> Result<()> {
