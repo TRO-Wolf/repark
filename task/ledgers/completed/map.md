@@ -936,6 +936,11 @@ else. The next pickup's `make ledger-archive` files everything here under
   PySpark 4.1.2 classic oracle; eight `SES-*` registry rows filed.
   `risk_tier: standard`. Branch `feat/session-surface-1`.
   pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [show-table-extended-1-ledger.md](show-table-extended-1-ledger.md) —
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23), in flight:** Spark-door `SHOW TABLE EXTENDED
+  [IN|FROM namespace] LIKE pattern` parses before sqlparser and answers the four-column
+  Iceberg-table listing with Spark metadata text, property redaction, and schema tree output.
+  `risk_tier: standard`. Branch `xd/show-tblprops`.
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 - [sql-harden-1-cutover-shapes-ledger.md](sql-harden-1-cutover-shapes-ledger.md) — Unit ledger — SQL-HARDEN-1 · the cutover pipeline cutover Iceberg SQL shapes
 - [sql-harden-2-cow-shapes-ledger.md](sql-harden-2-cow-shapes-ledger.md) — Unit ledger — SQL-HARDEN-2 · copy-on-write cutover shapes
