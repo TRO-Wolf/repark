@@ -173,6 +173,17 @@ async fn input_file_name_equals_file_on_every_row() {
         vec![(2, true), (3, true), (4, true)],
         "input_file_name() equals _file per row"
     );
+
+    let rows = batches(
+        &session,
+        "SELECT id, input_file_name() = _file FROM ice.ns.t AS x",
+    )
+    .await;
+    assert_eq!(
+        id_bool_pairs(&rows),
+        vec![(2, true), (3, true), (4, true)],
+        "input_file_name() qualifies through the user's own alias"
+    );
 }
 
 #[tokio::test]
