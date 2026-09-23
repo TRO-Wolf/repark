@@ -114,6 +114,19 @@ fn i64s(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) ->
     out
 }
 
+fn bools(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) -> Vec<bool> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let array = batch
+            .column(col)
+            .as_any()
+            .downcast_ref::<BooleanArray>()
+            .unwrap();
+        out.extend((0..array.len()).map(|row| array.value(row)));
+    }
+    out
+}
+
 fn pairs_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, i64)> {
     let mut out = Vec::new();
     for batch in batches {
@@ -587,24 +600,27 @@ async fn served_names_fold_and_composed_shapes_refuse() {
         "backtick `_deleted` resolves exact"
     );
     assert_eq!(
-        quoted_deleted
-            .iter()
-            .map(datafusion::arrow::record_batch::RecordBatch::num_rows)
-            .sum::<usize>(),
-        3,
+        bools(&quoted_deleted, 0),
+        vec![false, false, false],
         "backtick `_deleted` resolves exact"
     );
 
     let error = plan_error(&session, "DELETE FROM ice.ns.t WHERE _file IS NOT NULL").await;
-    assert!(
-        error.contains("[ICE-MC-1]"),
-        "metadata over a non-query refuses typed: {error}"
+    assert_eq!(
+        error,
+        "Error during planning: [ICE-MC-1] a metadata column (_file, _pos, _spec_id, \
+         _partition, _deleted) over a non-query statement is not served; name the columns \
+         explicitly on a table relation",
+        "metadata over a non-query refuses typed"
     );
 
     let error = plan_error(&session, "SELECT *, _file FROM ice.ns.t, ice.ns.t").await;
-    assert!(
-        error.contains("[ICE-MC-1]"),
-        "star over two relations refuses typed: {error}"
+    assert_eq!(
+        error,
+        "Error during planning: [ICE-MC-1] a metadata column (_file, _pos, _spec_id, \
+         _partition, _deleted) over a wildcard over more than one relation is not served; \
+         name the columns explicitly on a table relation",
+        "star over two relations refuses typed"
     );
 }
 
