@@ -72,10 +72,15 @@ def _table_properties(spark: ReparkSession, table: str) -> dict[str, str]:
     return dict(pair.split("=", 1) for pair in raw[1:-1].split(",") if "=" in pair)
 
 
-def test_alter_view_unset_tblproperties_cell(spark: ReparkSession) -> None:
+def test_alter_view_unset_tblproperties_cell(spark: ReparkSession, tmp_path: Path) -> None:
     """V-ALTER-UNSET — UNSET removes the stored property; the view still reads."""
-    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v','k2'='w') AS SELECT id FROM sc.ns.t")
     spark.sql("ALTER VIEW sc.ns.v UNSET TBLPROPERTIES ('k')")
+    metadata_files = sorted((tmp_path / "ns" / "v" / "metadata").glob("*.json"))
+    assert metadata_files
+    properties = json.loads(metadata_files[-1].read_text(encoding="utf-8"))["properties"]
+    assert "k" not in properties
+    assert properties["k2"] == "w"
     frame = spark.sql("SELECT * FROM sc.ns.v")
     assert [(field.name, field.type) for field in frame.to_arrow().schema] == [("id", pa.int64())]
     assert sorted(_rows(frame)) == [[1], [2]]

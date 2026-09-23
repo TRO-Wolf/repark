@@ -194,7 +194,7 @@ async fn alter_view_unset_if_exists_updates_only_when_a_key_is_present() {
     run(
         &ctx,
         &catalogs,
-        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v') AS SELECT * FROM src",
+        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v','k2'='w') AS SELECT * FROM src",
     )
     .await;
     let update_calls = Arc::new(AtomicUsize::new(0));
@@ -229,6 +229,10 @@ async fn alter_view_unset_if_exists_updates_only_when_a_key_is_present() {
         .await
         .expect("updated view");
     assert!(!view.metadata().properties().contains_key("k"));
+    assert_eq!(
+        view.metadata().properties().get("k2"),
+        Some(&"w".to_string())
+    );
 }
 
 #[tokio::test]
