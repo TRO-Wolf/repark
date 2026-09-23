@@ -59,20 +59,26 @@ def _rows(frame: Any) -> list[list[Any]]:
     return [list(row) for row in frame.collect()]
 
 
+def _show_rows(frame: Any) -> list[list[Any]]:
+    """Pin the SHOW TBLPROPERTIES Arrow schema and return its full row set."""
+    table = frame.to_arrow()
+    assert [(field.name, field.type, field.nullable) for field in table.schema] == [
+        ("key", pa.string(), False),
+        ("value", pa.string(), False),
+    ]
+    return [list(row.values()) for row in table.to_pylist()]
+
+
 def test_show_tblproperties_key_cell(spark: ReparkSession) -> None:
     """V-SHOW-TBLPROPERTIES — the measured cell: one row, two string columns."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
-    table = spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')").to_arrow()
-    assert table.schema.names == ["key", "value"]
-    assert [field.type for field in table.schema] == [pa.string()] * 2
-    assert [field.nullable for field in table.schema] == [False, False]
-    assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v"]]
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v"]]
 
 
 def test_no_key_lists_reserved_then_stored_sorted(spark: ReparkSession, tmp_path: Path) -> None:
     """E1 — the reserved three plus the stored properties, compared sorted."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v', 'a'='b') AS SELECT id FROM sc.ns.t")
-    rows = sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
+    rows = sorted(_show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
     assert rows == [
         ["a", "b"],
         ["format-version", "1"],
@@ -88,7 +94,7 @@ def test_no_key_without_stored_properties_is_reserved_only(
 ) -> None:
     """E2 — a property-less view answers exactly the three reserved rows."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
-    rows = sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
+    rows = sorted(_show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
     assert rows == [
         ["format-version", "1"],
         ["location", str(tmp_path / "ns" / "v")],
@@ -99,7 +105,7 @@ def test_no_key_without_stored_properties_is_reserved_only(
 def test_missing_key_answers_the_spark_sentence(spark: ReparkSession) -> None:
     """E3 — an absent key is a row, not an error."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
-    assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('nope')")) == [
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('nope')")) == [
         ["nope", "View sc.ns.v does not have property: nope"]
     ]
 
@@ -107,7 +113,7 @@ def test_missing_key_answers_the_spark_sentence(spark: ReparkSession) -> None:
 def test_key_lookup_is_case_sensitive(spark: ReparkSession) -> None:
     """E4 — 'K' does not hit stored 'k'."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
-    assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('K')")) == [
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('K')")) == [
         ["K", "View sc.ns.v does not have property: K"]
     ]
 
@@ -115,8 +121,10 @@ def test_key_lookup_is_case_sensitive(spark: ReparkSession) -> None:
 def test_reserved_keys_answer_the_reserved_values(spark: ReparkSession) -> None:
     """E5 — 'provider' and 'format-version' hit the reserved rows."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
-    assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('provider')")) == [["provider", "iceberg"]]
-    assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('format-version')")) == [
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('provider')")) == [
+        ["provider", "iceberg"]
+    ]
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('format-version')")) == [
         ["format-version", "1"]
     ]
 
@@ -124,8 +132,8 @@ def test_reserved_keys_answer_the_reserved_values(spark: ReparkSession) -> None:
 def test_unquoted_and_dotted_keys(spark: ReparkSession) -> None:
     """E6 — (k) and (a.b) spellings reach the same stored keys."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v', 'a.b'='c') AS SELECT id FROM sc.ns.t")
-    assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v (k)")) == [["k", "v"]]
-    assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v (a.b)")) == [["a.b", "c"]]
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v (k)")) == [["k", "v"]]
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v (a.b)")) == [["a.b", "c"]]
 
 
 def test_missing_view_is_table_or_view_not_found(spark: ReparkSession) -> None:
@@ -143,8 +151,8 @@ def test_alter_view_set_then_show_reflects_updates(spark: ReparkSession, tmp_pat
     """E8 — ALTER VIEW SET TBLPROPERTIES updates what SHOW answers."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     spark.sql("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v2', 'j'='u')")
-    assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v2"]]
-    rows = sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v2"]]
+    rows = sorted(_show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
     assert rows == [
         ["format-version", "1"],
         ["j", "u"],
