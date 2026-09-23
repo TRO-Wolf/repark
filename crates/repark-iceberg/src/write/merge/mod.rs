@@ -491,7 +491,6 @@ async fn plan_and_commit(
     }
 }
 
-/// The copy-on-write arm: discover affected files, rewrite plus insert, then Parquet write.
 async fn plan_and_commit_cow(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,

@@ -1,7 +1,7 @@
 # Charter ledger — ICE-ORC-AVRO-1 · ORC and Avro Iceberg data files (IPI-41 RePark half)
 
 **Date:** 2026-09-22 · **Branch:** `fix/ice-orc-avro-1` · **Base:** `origin/main`
-`743f1be9` · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+`85011ea0` · **Model:** muse-spark-1.3-contributor · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
@@ -16,7 +16,7 @@ format, and every owned builder site writes it.
 
 **Not in this unit:** the plain-file ORC writer (`DataFrameWriter.orc(path)` stays
 `NOT_IMPLEMENTED` under `IO-ORC-1`, T-8); fork ORC nested-type reads (typed refusal
-pinned at C-019, fork follow-up); `STATUS.md`; `claims.txt`; any pin value.
+tracked as R-1, fork follow-up); `STATUS.md`; `claims.txt`; any pin value.
 
 ## Rulings recorded at open
 
@@ -71,10 +71,12 @@ refusing merge-on-read) are untouched; they guard versions, not formats.
 | C-018 | M-6: Avro files carry no column metrics. | `test_ice_orc_avro_1.py::test_avro_metrics_are_empty`. | PROVEN | Every `readable_metrics` field NULL; S6 22P (WO3a). |
 | C-019 | M-7: the 10 ORC primitive columns round-trip exact. | `test_ice_orc_avro_1.py::test_all_types_round_trip_orc` primitives leg. | PROVEN | 10 primitives read back exact; nested arms moved to residue R-1. |
 | R-1 | OPEN residue: nested ORC read (ARRAY/MAP/STRUCT) refuses at the fork reader; Spark round-trips them (packet M-7). | Fork read-nested follow-up inverts the nested arms of `test_ice_orc_avro_1.py::test_all_types_round_trip_orc`. | OPEN | Current pin: ARRAY/MAP/STRUCT refuse with `ORC data-file read of nested type for field '<name>'`. |
+| R-2 | OPEN residue: SQL INSERT into a table whose `write.format.default` is unknown refuses at the fork writer (`IcebergWriteExec`, pin 604edca0 `write.rs:298`, `DataFileFormat::from_str`) with `Unsupported data file format: <name>`, class PySparkException (DataInvalid, packet D-3); Spark answers IllegalArgumentException `Invalid file format: <name>`. | Follow-up: map at the RePark boundary or a fork change; no inventory cell. | OPEN | Observed on `writeTo(t).append()` (lowers to SQL INSERT through the temp-view door): `PySparkException: DataInvalid => Unsupported data file format: csv`, snapshot count unchanged. |
 | C-020 | M-7: all 13 probe types round-trip through Avro. | `test_ice_orc_avro_1.py::test_all_types_round_trip_avro`. | PROVEN | Full wide row reads back exact; S6 22P (WO3a). |
 | C-021 | Unknown `write-format` refuses with Java's `Invalid file format: <name>` shape. | `test_ice_orc_avro_1.py::test_unknown_write_format_refuses`. | PROVEN | `write-format = csv` refuses, snapshot count stays 1; S6 22P (WO3a). |
 | C-022 | Compaction keeps the table format on an ORC table. | `test_ice_orc_avro_1.py::test_compaction_keeps_table_format`. | PROVEN | `rewrite_data_files` leaves ORC files; S6 22P (WO3a). |
 | C-023 | Partitioned v3 table with `write.format.default='orc'`: copy-on-write DELETE rewrites ORC on the lineage path. | `test_ice_orc_avro_1.py::test_partitioned_v3_cow_delete_rewrites_orc`. | PROVEN | Surviving rows plus every live `content = 0` file ORC; added per critic r1 V-003 (WO-798). |
+| C-025 | Unknown `write.delete.format.default` refuses a v2 merge-on-read DELETE with Java's `Invalid file format: <name>` shape. | `test_ice_orc_avro_1.py::test_unknown_delete_format_property_refuses`. | PROVEN | `write.delete.format.default = csv` raises `IllegalArgumentException` matching `^Invalid file format: csv$`, snapshot count stays 1; added per critic r3 V-001 (WO-798 REM4). |
 
 ## 1. Red-first record
 
@@ -83,9 +85,10 @@ and 11 green via the fork read path, per the packet §6 shape. WO2a/WO2b routed 
 builder sites; WO3a inverted the three refusal pins (Rust `expect_err("orc")` unit
 test plus `FORMAT-02/03` → `test_write_format_orc_writes` /
 `test_write_format_avro_writes` with exact-suffix plus `file_format` asserts per
-T-4). Final battery: `test_ice_orc_avro_1.py` 22P offline and 22P live
-(`REPARK_PARITY_LIVE=1`, no live-conditional code); `test_ice_write_options_1.py`
-68P/1S offline and 69P live; `test_io_orc_1.py` 50P untouched (T-8).
+T-4). Final battery: `test_ice_orc_avro_1.py` 24P offline at the REM4 head and
+22P live at WO3a (`REPARK_PARITY_LIVE=1`, no live-conditional code);
+`test_ice_write_options_1.py` 68P/1S offline and 69P live; `test_io_orc_1.py` 50P
+untouched (T-8).
 
 ## 2. Gates at assembly
 
@@ -106,7 +109,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/ice-orc-avro-1-ledger.md, python/repark/tests/test_ice_orc_avro_1.py]
     - id: AT-2
       status: ATTACKED
-      evidence: All 13 inventory cells plus the M-1/M-2/M-3 delete-format cells, the M-5/M-6 metrics cells, the M-7 wide-type cells, the D-5.1 refusal cell and the compaction cell, each asserting rows and file_format or files rows, not rows alone.
+      evidence: All 13 inventory cells plus the M-1/M-2/M-3 delete-format cells, the M-5/M-6 metrics cells, the M-7 wide-type cells, the D-5.1 refusal cell and the compaction cell are pinned; C-016 asserts rows only, C-019 asserts the primitive row with R-1 carrying the nested refusal, and C-021/C-025 assert the refusal class and the full message.
       artifacts: [python/repark/tests/test_ice_orc_avro_1.py]
     - id: AT-3
       status: ATTACKED
@@ -141,4 +144,4 @@ COVERAGE_ATTESTATION:
   complete: true
 ```
 
-VERDICT: 24 clauses, 23 PROVEN, 1 OPEN, 0 REJECTED.
+VERDICT: 26 clauses, 24 PROVEN, 2 OPEN, 0 REJECTED.

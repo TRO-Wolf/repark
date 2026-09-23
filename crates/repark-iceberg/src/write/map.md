@@ -92,12 +92,13 @@ repark-core's error map.
   setting, else the per-write `delete-format` option, else the
   `write.delete.format.default` property, else the resolved DATA format. The vocabulary is
   parquet/orc/avro case-insensitively; any other string refuses with
-  `Invalid file format: {name}`, the same shape `validate_write_format` uses. Callers pass
+  `Invalid file format: {name}` (IllegalArgumentException), the same shape
+  `validate_write_format` uses. Callers pass
   `staging.write_format` / `staging.delete_format` (`WriterStagingOverrides`) with the raw
   property values from `table.metadata().properties()`; WO2 routed the five builder
   sites through them (unpartitioned staging, partitioned fanout, partitioned lineage,
   unpartitioned MERGE, position deletes), and WO3a opened `validate_write_format` to
-  orc/avro. pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006
+  orc/avro. pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-025
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
