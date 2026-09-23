@@ -188,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn reserved_keys_cover_both_the_iceberg_and_spark_sets() {
+    fn show_create_reserved_keys_cover_both_sets_and_exact_match_near_misses() {
         for key in [
             "owner",
             "comment",
@@ -205,5 +205,8 @@ mod tests {
             assert!(is_reserved_property(key), "{key}");
         }
         assert!(!is_reserved_property("write.format.default"));
+        assert!(!is_reserved_property(""));
+        assert!(!is_reserved_property("COMMENT"));
+        assert!(!is_reserved_property("owner-extra"));
     }
 }

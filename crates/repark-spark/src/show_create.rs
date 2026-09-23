@@ -472,10 +472,18 @@ mod tests {
 
     #[test]
     fn split_table_options_moves_option_keys_and_drops_shadowed_properties() {
-        let (options, properties) =
-            split_table_options(pairs(&[("foo", "1"), ("k", "v"), ("option.foo", "2")]));
+        let (options, properties) = split_table_options(pairs(&[
+            ("foo", "1"),
+            ("k", "v"),
+            ("option.foo", "2"),
+            ("option", "3"),
+            ("optionish.foo", "4"),
+        ]));
         assert_eq!(options, pairs(&[("foo", "2")]));
-        assert_eq!(properties, pairs(&[("k", "v")]));
+        assert_eq!(
+            properties,
+            pairs(&[("k", "v"), ("option", "3"), ("optionish.foo", "4")])
+        );
     }
 
     #[test]
