@@ -1,6 +1,6 @@
 # map — scripts/
 
-U1-MEM-LAYOUT-1 (2026-09-23): map lockstep and ledger grammar checks cover the memory-catalog layout pins; this unit adds no script changes.
+U1-MEM-LAYOUT-1 (2026-09-23): `check_rust_file_size.py` ratchets `repark-spark/src/tests/ctas.rs` 1361 → 1357 (the A13 door pin's path shortens under the new layout), shrink-only; layout-r8 changes no baseline. The map lockstep and ledger grammar checks cover the memory-catalog layout pins.
 
 xo55-mt R1 (2026-09-22): `check_rust_file_size.py` ratchets `repark-spark/src/metadata_tables.rs` 1062 → 1059 (the blanket AS OF refusal folds into the shared rule-3 helper), shrink-only.
 IPI-51 PR10 (2026-09-22): `check_lib_rs.py` gains the `repark-spark` 152 row for `mod update_cast;` (measured 151, one past the default 150). pins: ipi-51/W-UPDATE-TYPE-ERR
