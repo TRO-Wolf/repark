@@ -6779,20 +6779,29 @@ the pin rather than obeying it.
 > as `ORPHAN-3`.)
 
 - **repark** — On a memory catalog, a table created without an explicit table `LOCATION` in a
-  namespace created without `location` sits at `<warehouse>/repark_ctas/<catalog>/<ns>/<table>`.
+  namespace created without `location` sits at `<warehouse>/<ns>/<table>` (since 2026-09-23,
+  [ICE-CATALOG-MEM-LAYOUT-1](#ice-catalog-mem-layout-1--a-memory-catalogs-location-less-create-lands-at-warehousenstable--fixed-2026-09-23-q-55-7);
+  before, `<warehouse>/repark_ctas/<catalog>/<ns>/<table>`).
   `CALL <catalog>.system.remove_orphan_files(table => …)`
   now sweeps that directory. The planted 10-day-old `data/orphan-file.parquet` comes back as one
   `orphan_file_location` row and is deleted. A 1-day-old orphan gives zero rows and is kept.
   A sibling table in the same namespace does not block that sweep. On a `TempFallbackAllowed`
   catalog the shared-root and other-table guards refuse a scan path (`location`, else the table
-  location) in three cases: it is the fallback root `<warehouse>/repark_ctas` or
+  location) in four cases: it is the fallback root `<warehouse>/repark_ctas` or
   `<warehouse>/repark_ansi_ctas` (the pinned spellings are a trailing slash, `file:/`,
   hostless `file://`, `file:///` and `..`), it is a parent of that root (the warehouse
-  itself), or it equals or contains the location of another table in the same catalog, in any
-  namespace including a nested one. The first two keep the old "shared CTAS fallback root"
-  text. The third names the other table. Separately, the listing path (no `file_list_view`)
-  refuses a table whose own stored location is not in normal path form, described below. A
-  `location` strictly inside another table's directory is none of these cases and is not refused.
+  itself), it equals or contains the location of another table in the same catalog, in any
+  namespace including a nested one, or (since 2026-09-23) it lies inside the location of another
+  table in the same catalog and outside the swept table's own location (for example
+  `<wh>/ns/b/data` swept as `ns.a`). The first two keep the old "shared CTAS fallback root"
+  text. The third and fourth name the other table. A path inside both another table's location
+  and the swept table's own (a table whose own location sits under another table's) is swept.
+  All four compare lexically normalised path components, so the `file:/` and `file:///`
+  spellings of a path get the bare path's verdict. The same catalog also refuses a scan path
+  holding another table's metadata file, row
+  [ORPHAN-4](#orphan-4--remove_orphan_files-refuses-a-scan-path-holding-another-tables-metadata-file-2026-09-23).
+  Separately, the listing path (no `file_list_view`) refuses a table whose own stored location
+  is not in normal path form, described below.
   Without `file_list_view`, the `location` argument reaches the fork's listing with its path in
   lexical normal form (scheme and authority as given), so `<t>/data/..`, `<t>/./` and
   `<t>//data` list the same orphans as `<t>` and never the live file; a `file://` location
@@ -6847,20 +6856,65 @@ the pin rather than obeying it.
   `::call_remove_orphan_files_refuses_a_location_holding_a_table_spelled_through_an_alias`,
   `::call_remove_orphan_files_listing_path_resolves_an_aliased_location`,
   `::call_remove_orphan_files_listing_path_refuses_a_table_location_that_holds_an_alias`),
+  `crates/repark-spark/src/tests/call_orphan_cotenancy.rs` (`::call_orphan_cotenancy_location_inside_another_table_refuses`,
+  `::call_orphan_cotenancy_table_located_inside_another_table_sweeps_its_data_dir`,
+  `::call_orphan_cotenancy_nested_namespace_table_data_dir_passes_the_guards`),
   `crates/repark-spark/src/tests/call_orphan_view.rs` (the `file_list_view` spelling, gc,
   malformed-view, NULL-timestamp, mode, `equal_schemes`, failed-delete and policy-scope pins),
   `crates/repark-spark/src/tests/call_orphan.rs::call_orphan_shared_ctas_root_rule` and
   `::call_remove_orphan_files_listing_path_table_location_normal_form_rule`, and
-  `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root`
+  `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_memory_table_but_never_the_shared_root`
 - **Rationale** — FIXED by owner ruling Q-55-6 under Q-55-2 (full Spark parity), 2026-09-22.
   The old guard refused every table under the fallback root. It protected against two sessions
   that share one warehouse writing the same derived directory. The narrowed guard refuses in
   the three ruled cases: the fallback root itself, a parent of it, or a scan path
-  equal to or containing another registered table's location. The CTAS create location is
-  unchanged (Q-55-7). The listing path separately refuses a table whose stored location is not in
+  equal to or containing another registered table's location. On 2026-09-23 the orchestrator's
+  co-tenancy ruling added the fourth case (a scan path inside another table's location and
+  outside the swept table's own), which enforces the same Q-55-6 property ("never sweep a
+  directory that holds another table's files"). The CTAS create location moved to
+  `<warehouse>/<ns>/<table>` under Q-55-7 on 2026-09-23. The listing path separately refuses a table whose stored location is not in
   normal path form until the fork's join normalises both sides; `file_list_view` still sweeps it.
   Ledger:
-  [../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md](../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md).
+  [../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md](../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md);
+  the fourth case:
+  [../task/ledgers/staging/u1-mem-layout-1-ledger.md](../task/ledgers/staging/u1-mem-layout-1-ledger.md)
+  C-014, C-018.
+
+### ORPHAN-4 — `remove_orphan_files` refuses a scan path holding another table's metadata file (2026-09-23)
+
+- **repark** — On a catalog registered through `register_memory_catalog` (or
+  `spark.sql.catalog.<c>.type=memory|hadoop`), two catalogs, or two sessions that register the
+  same catalog name, on one warehouse put a location-less `ns.t` in the same directory
+  `<warehouse>/ns/t`. Each reads only its own rows. Before listing, and before reading a
+  `file_list_view`, `CALL <catalog>.system.remove_orphan_files` reads every file under the scan
+  path (`location`, else the table location), at any depth, whose name ends in
+  `.metadata.json`, except the swept table's current metadata file and the files in its
+  metadata log. A file whose `table-uuid` differs from the swept table's refuses the call,
+  naming the file and both uuids and telling the user to give the table its own `LOCATION`. A
+  file that cannot be read as table metadata refuses too. A file with the swept table's own
+  `table-uuid` (for example a copy of an old metadata file of this table) is not a refusal, and
+  the sweep treats it as an orphan like any other unreferenced file. A refused call deletes
+  nothing, and the other table keeps its rows. The check runs only under this catalog kind's
+  `TempFallbackAllowed` policy. The `file:/` and `file:///` spellings of the scan path give the
+  bare path's verdict.
+- **Apache Spark** — not measured. No scoreboard cell puts two catalogs or two sessions on one
+  warehouse. Iceberg's orphan action subtracts only the swept table's reachable files. It has
+  no check for another table's metadata under the scan path.
+  *(oracle: none — source reading of Iceberg's `DeleteOrphanFilesSparkAction`, not a run.)*
+- **Pin** — `crates/repark-spark/src/tests/call_orphan_cotenancy.rs`
+  (`::call_orphan_cotenancy_two_catalogs_on_one_warehouse_refuse`,
+  `::call_orphan_cotenancy_two_sessions_with_one_catalog_name_refuse`,
+  `::call_orphan_cotenancy_unreadable_metadata_file_refuses`,
+  `::call_orphan_cotenancy_own_history_metadata_copy_is_swept`,
+  `::call_orphan_cotenancy_stray_non_metadata_file_is_swept`,
+  `::call_orphan_cotenancy_single_catalog_default_sweep_deletes_the_orphan`)
+- **Rationale** — orchestrator co-tenancy ruling, 2026-09-23, enforcing the Q-55-6 property
+  ("never sweep a directory that holds another table's files"). The memory layout
+  (ICE-CATALOG-MEM-LAYOUT-1) lets a catalog that cannot see the other table share its directory,
+  so the catalog walk behind ORPHAN-3 cannot find it. The refusal is stricter than Spark and
+  stays until co-tenant tables on one warehouse get separate directories. Ledger:
+  [../task/ledgers/staging/u1-mem-layout-1-ledger.md](../task/ledgers/staging/u1-mem-layout-1-ledger.md)
+  C-011 to C-013, C-015 to C-017, C-019, C-020.
 
 ### ORPHAN-S3TABLES-1 — `remove_orphan_files` on an S3 Tables table: the bare-bucket parser half FIXED (RP-19), the 405 listing refusal stays open
 
