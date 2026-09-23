@@ -992,6 +992,10 @@ else. The next pickup's `make ledger-archive` files everything here under
   `percentile_approx` accuracy divergence filed (`WIN-SLIDE-PCT-ACC-1`). `risk_tier: standard`.
   Branch `feat/win-slide-1`.
   pins: win-slide-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- [wo-c2-ledger.md](wo-c2-ledger.md) — **WO-C2 (2026-09-23), completed:** critic repair for
+  `SHOW CREATE TABLE`: typed class/condition/SQLSTATE refusal pins, exact near-miss outcomes,
+  and lexer failures that stay on the recognized parse path. `risk_tier: standard`. Branch
+  `xd/show-create`.
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under
