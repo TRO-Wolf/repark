@@ -577,7 +577,7 @@ pub(super) async fn file_scheme_table(
     .await;
     let table_dir = namespace_dir.join("t");
     let live = referenced_data_file(&table_dir);
-    let stamp = std::time::SystemTime::now() - std::time::Duration::from_secs(10 * 86_400);
+    let stamp = std::time::SystemTime::now() - std::time::Duration::from_hours(10 * 24);
     std::fs::OpenOptions::new()
         .write(true)
         .open(&live)
