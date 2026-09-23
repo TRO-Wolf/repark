@@ -488,21 +488,18 @@ async fn call_orphan_cotenancy_unreadable_metadata_file_refuses() {
         "CALL ice.system.remove_orphan_files(table => 'ns.t')",
     )
     .await;
-    let message = plan_message(err);
-    let prefix = format!(
-        "CALL remove_orphan_files refuses to sweep `ns.t`: path `{}` holds `{}`, a metadata file \
-         that is not in the swept table's metadata log and cannot be read as table metadata (",
-        table_dir.display(),
-        unreadable.display()
-    );
-    assert!(message.starts_with(&prefix), "{message}");
-    assert!(
-        message.ends_with(
-            "), so it may belong to another table whose live files this procedure would delete. \
-             Give the table its own LOCATION (`CREATE TABLE ... LOCATION '<path>'`), then sweep \
-             it."
-        ),
-        "{message}"
+    assert_eq!(
+        plan_message(err),
+        format!(
+            "CALL remove_orphan_files refuses to sweep `ns.t`: path `{}` holds `{}`, a metadata \
+             file that is not in the swept table's metadata log and cannot be read as table \
+             metadata (DataInvalid => Failed to parse json string, source: key must be a string \
+             at line 1 column 3), so it may belong to another table whose live files this \
+             procedure would delete. Give the table its own LOCATION \
+             (`CREATE TABLE ... LOCATION '<path>'`), then sweep it.",
+            table_dir.display(),
+            unreadable.display()
+        )
     );
     assert!(unreadable.exists());
     assert_eq!(ids(&session, "ice.ns.t").await, vec![1]);
