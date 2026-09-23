@@ -8,10 +8,13 @@ Every answering test compares the reader against the SQL door on the same
 table (rows and column names) and, where the recorded cells measured them,
 the absolute field name, ``dataType.simpleString()``, ``nullable`` and rows
 of the reader frame; the ``all_*`` sweep additionally pins the Spark 4.1.2
-column lists outright; every refusal compares the reader's class and text
-against the SQL door's. Near misses pin today's behaviour:
+column lists outright; every paired refusal compares the reader's class and
+text against the SQL door's (the missing-table quoted-dollar refusal instead
+compares three SQL spellings pairwise). Near misses pin today's behaviour:
 plain loads, branch/tag/snapshot-id selectors, a real table named
-``snapshots``, the unknown-suffix error, and the legacy-option refusals.
+``snapshots``, the unknown-suffix error (literal text; only ``getSqlState()``
+is paired), and the legacy-option refusals (standalone literal texts with
+``getSqlState()`` ``None``).
 
 Oracle: recorded Spark 4.1.2 + Iceberg 1.11.0 inventory cells
 ``R-DF-LOAD-META`` (``load(t.snapshots)`` rows ``append, append,
