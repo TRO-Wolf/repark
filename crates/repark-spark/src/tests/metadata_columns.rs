@@ -133,6 +133,25 @@ fn pairs_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i
     out
 }
 
+fn pairs_i64_bool(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, bool)> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let left = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .unwrap();
+        let right = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<BooleanArray>()
+            .unwrap();
+        out.extend((0..left.len()).map(|row| (left.value(row), right.value(row))));
+    }
+    out.sort_unstable();
+    out
+}
+
 fn pairs_i64_i32(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, i32)> {
     let mut out = Vec::new();
     for batch in batches {
@@ -580,14 +599,19 @@ async fn served_names_fold_and_composed_shapes_refuse() {
     ordinals.sort_unstable();
     assert_eq!(ordinals, vec![0, 0, 0], "compound ident through an alias");
 
-    let error = plan_error(&session, "SELECT `_deleted` FROM ice.ns.t").await;
-    assert!(
-        error.contains("[ICE-MC-1]"),
-        "backtick unserved refuses typed: {error}"
+    let quoted_deleted = batches(&session, "SELECT `_deleted` FROM ice.ns.t").await;
+    assert_eq!(
+        field_names(&quoted_deleted),
+        vec!["_deleted"],
+        "backtick `_deleted` resolves exact"
     );
-    assert!(
-        error.contains("_deleted"),
-        "backtick unserved names the column: {error}"
+    assert_eq!(
+        quoted_deleted
+            .iter()
+            .map(|batch| batch.num_rows())
+            .sum::<usize>(),
+        3,
+        "backtick `_deleted` resolves exact"
     );
 
     let error = plan_error(&session, "DELETE FROM ice.ns.t WHERE _file IS NOT NULL").await;
@@ -628,47 +652,162 @@ async fn file_and_row_id_answer_together_on_a_format_v3_table() {
 }
 
 #[tokio::test]
-async fn unserved_metadata_columns_refuse_with_a_typed_error() {
+async fn deleted_column_marks_merge_on_read_deleted_row() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
-    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
-    for column in ["_deleted"] {
-        let error = plan_error(&session, &format!("SELECT {column} FROM ice.ns.t")).await;
-        assert!(
-            error.contains("[ICE-MC-1]"),
-            "{column} must refuse typed, got: {error}"
-        );
-        assert!(
-            !error.contains("No field named"),
-            "{column} must not leak the raw planner error, got: {error}"
-        );
-        assert!(
-            error.contains(column),
-            "{column} refusal must name the column, got: {error}"
-        );
-        assert!(
-            error.contains("this layer serves (_file, _pos, _spec_id, _partition)"),
-            "{column} refusal must advertise the served four, got: {error}"
-        );
-    }
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    let rows = batches(&session, "SELECT id, _deleted FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(
+        pairs_i64_bool(&rows),
+        vec![(1, true), (2, false), (3, false), (4, false)],
+        "R-MC-DELETED"
+    );
+    let schema = rows[0].schema();
+    let field = &schema.fields()[1];
+    assert_eq!(field.name(), "_deleted", "R-MC-DELETED");
+    assert_eq!(field.data_type(), &DataType::Boolean, "R-MC-DELETED");
+    assert!(!field.is_nullable(), "R-MC-DELETED");
 }
 
 #[tokio::test]
-async fn served_spec_id_beside_an_unserved_column_names_the_unserved_one() {
+async fn not_projecting_deleted_still_filters_mor_rows() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    let rows = batches(&session, "SELECT id FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(i64s(&rows, 0), vec![2, 3, 4], "R-MC-DELETED-NOPROJ");
+    let rows = batches(&session, "SELECT count(*) FROM ice.ns.t").await;
+    assert_eq!(i64s(&rows, 0), vec![3], "R-MC-DELETED-NOPROJ");
+}
+
+#[tokio::test]
+async fn select_star_keeps_user_columns_on_mor_table() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    let rows = batches(&session, "SELECT * FROM ice.ns.t").await;
+    assert_eq!(
+        field_names(&rows),
+        vec!["id", "data", "cat"],
+        "R-MC-DELETED-STAR"
+    );
+}
+
+#[tokio::test]
+async fn deleted_predicates_reapply_above_the_scan() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    let rows = batches(
+        &session,
+        "SELECT id, _deleted FROM ice.ns.t WHERE NOT _deleted ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        pairs_i64_bool(&rows),
+        vec![(2, false), (3, false), (4, false)],
+        "R-MC-DELETED-PRED"
+    );
+    let rows = batches(
+        &session,
+        "SELECT id, _deleted FROM ice.ns.t WHERE _deleted ORDER BY id",
+    )
+    .await;
+    assert_eq!(pairs_i64_bool(&rows), vec![(1, true)], "R-MC-DELETED-PRED");
+}
+
+#[tokio::test]
+async fn deleted_column_on_copy_on_write_marks_all_rows_false() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
-    let error = plan_error(&session, "SELECT id, _spec_id, _deleted FROM ice.ns.t").await;
-    assert!(
-        error.contains("[ICE-MC-1]"),
-        "composed refusal stays typed, got: {error}"
+    let rows = batches(&session, "SELECT id, _deleted FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(
+        pairs_i64_bool(&rows),
+        vec![(2, false), (3, false), (4, false)],
+        "R-MC-DELETED-COW"
     );
-    assert!(
-        error.contains("metadata column _deleted is not yet served"),
-        "composed refusal must name _deleted, got: {error}"
+}
+
+#[tokio::test]
+async fn deleted_name_folds_unquoted_but_quoted_upper_stays_unknown() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    let rows = batches(&session, "SELECT id, _DELETED FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(
+        pairs_i64_bool(&rows),
+        vec![(1, true), (2, false), (3, false), (4, false)],
+        "R-MC-DELETED-FOLD"
     );
+    let error = plan_error(&session, "SELECT id, `_DELETED` FROM ice.ns.t").await;
     assert!(
-        !error.contains("metadata column _spec_id"),
-        "composed refusal must not blame _spec_id, got: {error}"
+        error.contains("UNRESOLVED_COLUMN") && error.contains("_DELETED"),
+        "quoted `_DELETED` keeps the unknown-column error: {error}"
     );
+}
+
+#[tokio::test]
+async fn metadata_column_over_time_travel_keeps_todays_error() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    let catalogs = session.catalogs_snapshot();
+    let ident = iceberg::TableIdent::new(
+        iceberg::NamespaceIdent::new("ns".to_string()),
+        "t".to_string(),
+    );
+    let snapshot_id = catalogs
+        .get("ice")
+        .unwrap()
+        .load_table(&ident)
+        .await
+        .unwrap()
+        .metadata()
+        .current_snapshot_id()
+        .unwrap();
+    let error = plan_error(
+        &session,
+        &format!("SELECT id, _file FROM ice.ns.t VERSION AS OF {snapshot_id}"),
+    )
+    .await;
+    assert!(
+        error.contains("UNRESOLVED_COLUMN") && error.contains("_file"),
+        "metadata column over time travel keeps today's error: {error}"
+    );
+    let error = plan_error(
+        &session,
+        &format!("SELECT id, _deleted FROM ice.ns.t VERSION AS OF {snapshot_id}"),
+    )
+    .await;
+    assert!(
+        error.contains("UNRESOLVED_COLUMN") && error.contains("_deleted"),
+        "metadata column over time travel keeps today's error: {error}"
+    );
+}
+
+#[tokio::test]
+async fn served_spec_id_and_deleted_answer_together() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
+    let rows = batches(&session, "SELECT id, _spec_id FROM ice.ns.t").await;
+    assert_eq!(
+        pairs_i64_i32(&rows),
+        vec![(2, 0), (3, 0), (4, 0)],
+        "composed served columns answer together"
+    );
+    let rows = batches(&session, "SELECT id, _deleted FROM ice.ns.t").await;
+    assert_eq!(
+        pairs_i64_bool(&rows),
+        vec![(2, false), (3, false), (4, false)],
+        "composed served columns answer together"
+    );
+    let rows = batches(&session, "SELECT id, _spec_id, _deleted FROM ice.ns.t").await;
+    assert_eq!(
+        field_names(&rows),
+        vec!["id", "_spec_id", "_deleted"],
+        "composed served columns answer together"
+    );
+    assert_eq!(rows.iter().map(|batch| batch.num_rows()).sum::<usize>(), 3);
 }
