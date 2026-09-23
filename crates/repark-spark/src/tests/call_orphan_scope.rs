@@ -623,6 +623,28 @@ async fn call_remove_orphan_files_file_list_view_matches_a_table_location_that_h
 }
 
 #[tokio::test]
+async fn call_remove_orphan_files_file_list_view_resolves_an_aliased_scan_location() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+    file_list_view(&session, &[&orphan]).await;
+
+    let listed = call_rows(
+        &session,
+        &format!(
+            "CALL ice.system.remove_orphan_files(table => 'ns.t', dry_run => true, \
+             file_list_view => 'v', location => 'file://{}/data/..')",
+            table_dir.display()
+        ),
+    )
+    .await
+    .expect("an aliased spelling of the table directory is the table directory");
+    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert!(orphan.exists());
+}
+
+#[tokio::test]
 async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     let warehouse = TempDir::new().unwrap();
     let session = fallback_session(&warehouse).await;
