@@ -111,6 +111,74 @@ def test_set_overwrites_existing_property_and_adds_another(
     assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
 
 
+def test_use_catalog_and_namespace_resolves_bare_alter_view(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """USE resolves SET, UNSET, and RENAME names through the view catalog."""
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc.ns")
+    spark.sql("ALTER VIEW v SET TBLPROPERTIES ('j'='u')")
+    spark.sql("ALTER VIEW v UNSET TBLPROPERTIES ('k')")
+    metadata_files = sorted((tmp_path / "ns" / "v" / "metadata").glob("*.json"))
+    properties = json.loads(metadata_files[-1].read_text(encoding="utf-8"))["properties"]
+    assert properties["j"] == "u"
+    assert "k" not in properties
+    spark.sql("ALTER VIEW v RENAME TO w")
+    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.w"))) == [[1], [2]]
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("DESCRIBE sc.ns.v").collect()
+    assert str(caught.value) == f"Error during planning: {_table_or_view_not_found('v')}"
+    assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert caught.value.getSqlState() == "42P01"
+
+
+def test_use_catalog_resolves_two_part_alter_view(spark: ReparkSession, tmp_path: Path) -> None:
+    """USE catalog completes two-part SET and RENAME names."""
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc")
+    spark.sql("ALTER VIEW ns.v SET TBLPROPERTIES ('j'='u')")
+    metadata_files = sorted((tmp_path / "ns" / "v" / "metadata").glob("*.json"))
+    properties = json.loads(metadata_files[-1].read_text(encoding="utf-8"))["properties"]
+    assert properties["j"] == "u"
+    spark.sql("ALTER VIEW ns.v RENAME TO ns.w")
+    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.w"))) == [[1], [2]]
+
+
+def test_three_part_alter_view_ignores_use_defaults(spark: ReparkSession, tmp_path: Path) -> None:
+    """Three-part names reach the same view before and after USE."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('j'='a')")
+    spark.sql("USE sc.ns")
+    spark.sql("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('j'='u')")
+    metadata_files = sorted((tmp_path / "ns" / "v" / "metadata").glob("*.json"))
+    properties = json.loads(metadata_files[-1].read_text(encoding="utf-8"))["properties"]
+    assert properties["j"] == "u"
+    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
+
+
+def test_bare_missing_view_after_use_keeps_e3_refusal(spark: ReparkSession) -> None:
+    """A bare missing name after USE keeps E3's full refusal."""
+    spark.sql("USE sc.ns")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("ALTER VIEW nope SET TBLPROPERTIES ('k'='v')")
+    assert str(caught.value) == f"Error during planning: {CATALOG_OPERATION_UNSUPPORTED}"
+    assert caught.value.getCondition() == "UNSUPPORTED_FEATURE.CATALOG_OPERATION"
+    assert caught.value.getSqlState() == "0A000"
+
+
+def test_bare_view_without_use_refuses_catalog_operation(spark: ReparkSession) -> None:
+    """A bare view name resolves in the default catalog and refuses view writes."""
+    spark.catalog.setCurrentCatalog("spark_catalog")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("ALTER VIEW v SET TBLPROPERTIES ('k'='v')")
+    assert str(caught.value) == (
+        "Error during planning: [UNSUPPORTED_FEATURE.CATALOG_OPERATION] The feature is not "
+        "supported: Catalog `spark_catalog` does not support views. SQLSTATE: 0A000"
+    )
+    assert caught.value.getCondition() == "UNSUPPORTED_FEATURE.CATALOG_OPERATION"
+    assert caught.value.getSqlState() == "0A000"
+
+
 def test_unset_missing_key_without_if_exists_refuses(spark: ReparkSession) -> None:
     """E1 — plain AnalysisException, no condition, and the view still reads."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
@@ -247,10 +315,11 @@ def test_rename_to_bare_target_reports_cross_catalog_move(
 ) -> None:
     """D-VIEW-ALTER-1 — a bare target resolves in the default catalog."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.catalog.setCurrentCatalog("spark_catalog")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.v RENAME TO w")
     assert str(caught.value) == (
-        "Error during planning: Cannot move view between catalogs: from=sc and to=datafusion"
+        "Error during planning: Cannot move view between catalogs: from=sc and to=spark_catalog"
     )
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
@@ -259,10 +328,11 @@ def test_rename_to_bare_target_reports_cross_catalog_move(
 def test_rename_to_two_part_target_reports_cross_catalog_move(spark: ReparkSession) -> None:
     """A two-part target resolves in the default catalog and leaves the view readable."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.catalog.setCurrentCatalog("spark_catalog")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.v RENAME TO ns.w")
     assert str(caught.value) == (
-        "Error during planning: Cannot move view between catalogs: from=sc and to=datafusion"
+        "Error during planning: Cannot move view between catalogs: from=sc and to=spark_catalog"
     )
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE

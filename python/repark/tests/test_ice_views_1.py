@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -83,6 +84,22 @@ def test_show_views_and_drop(spark: ReparkSession) -> None:
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == [["ns", "other_v", False]]
     spark.sql("DROP VIEW sc.ns.other_v")
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == []
+
+
+def test_use_resolves_show_views_and_bare_create_drop(spark: ReparkSession) -> None:
+    """USE supplies the catalog for SHOW and the namespace for CREATE and DROP."""
+    spark.sql("USE sc.ns")
+    spark.sql("CREATE VIEW vb AS SELECT id FROM sc.ns.t")
+    frame = spark.sql("SHOW VIEWS IN ns")
+    assert [(field.name, field.type) for field in frame.to_arrow().schema] == [
+        ("namespace", pa.string()),
+        ("viewName", pa.string()),
+        ("isTemporary", pa.bool_()),
+    ]
+    assert _rows(frame) == [["ns", "vb", False]]
+    assert _rows(spark.sql("SELECT * FROM sc.ns.vb ORDER BY id")) == [[0], [1], [2]]
+    spark.sql("DROP VIEW vb")
+    assert _rows(spark.sql("SHOW VIEWS IN ns")) == []
 
 
 def test_create_view_if_not_exists_is_noop(spark: ReparkSession) -> None:
