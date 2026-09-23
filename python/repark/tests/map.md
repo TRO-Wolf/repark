@@ -7773,6 +7773,17 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   keeps refusing and unknown refs refuse verbatim. The live tier re-derives the cells
   on Spark 4.1.2 and cross-reads the adopted table.
   pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [test_ice_mt_reader_1.py](test_ice_mt_reader_1.py) —
+  **IPI-23-MT-READER-1 (2026-09-22):** `format("iceberg").load("c.n.t.<meta>")` answers
+  what SQL `SELECT * FROM c.n.t.<meta>` answers, and with `versionAsOf` / `timestampAsOf`
+  what SQL `VERSION AS OF` / `TIMESTAMP AS OF` answers — each reader answer asserted
+  against the SQL door on the same table (rows and column names), each refusal against
+  the SQL door's class and text. Near misses pin today's behaviour: plain loads,
+  branch/tag/snapshot-id selectors, a real table named `snapshots`, the unknown-suffix
+  error, and the #800 legacy-option refusals. The live leg replays the reader/SQL
+  equality on live Spark 4.1.2 under `REPARK_PARITY_LIVE=1`.
+  pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106

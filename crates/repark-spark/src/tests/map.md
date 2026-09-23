@@ -862,6 +862,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   covers the reader-options door.
   pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008),
   `normalize`, `local_fs_ddl`,
+  nullability). **IPI-23-MT-READER-1 (2026-09-22):**
+  `reader_metadata_path_matches_sql_door` calls the moved `provider_for_spec`
+  through both callers — `read_table_at` and the SQL door — for one scoped and one
+  empty case (rows, rendered batches, schema names equal).
+  pins: ipi-23-mt-reader-1/C-004, C-007), `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names.
