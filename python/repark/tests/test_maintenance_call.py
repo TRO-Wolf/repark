@@ -16,6 +16,7 @@ Fork pin ``4723104b``:
 from __future__ import annotations
 
 import os
+import re
 import time
 from pathlib import Path
 
@@ -23,7 +24,12 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import IllegalArgumentException, PySparkException, UnsupportedOperationException
+from repark.errors import (
+    AnalysisException,
+    IllegalArgumentException,
+    PySparkException,
+    UnsupportedOperationException,
+)
 
 TABLE = "mem.ns.events"
 COW = """
@@ -290,6 +296,18 @@ def _plant_orphan(table_dir: Path, name: str, age_days: float) -> Path:
     return path
 
 
+def _shared_root_refusal(table_arg: str, location: Path, root: Path) -> str:
+    return (
+        f"Error during planning: CALL remove_orphan_files refuses to sweep `{table_arg}`: path "
+        f"`{location}` sits in or contains the shared CTAS fallback root `{root}`. That path is "
+        "derived from the catalog, namespace and table NAME alone, so any other process using "
+        "the same names writes to the same directory — and this procedure deletes whatever the "
+        "table's own metadata does not reference, which would include another session's live "
+        "files. Re-create the namespace with an explicit location (`CREATE NAMESPACE "
+        "<catalog>.<namespace> LOCATION '<path>'`) so the table owns its directory, then sweep it."
+    )
+
+
 def _orphan_names(result: pa.Table) -> set[str]:
     """The file names of an orphan listing, without their directory prefix."""
     return {Path(location).name for location in result.column("orphan_file_location").to_pylist()}
@@ -431,10 +449,8 @@ def test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root(
     orphan = _plant_orphan(table_dir, "orphan-file.parquet", 10)
     young = _plant_orphan(table_dir, "orphan-young.parquet", 1)
     for location in (tmp_path, tmp_path / "repark_ctas"):
-        with pytest.raises(
-            (UnsupportedOperationException, PySparkException),
-            match=r"shared CTAS fallback root",
-        ):
+        expected = _shared_root_refusal("ns.events", location, tmp_path / "repark_ctas")
+        with pytest.raises(AnalysisException, match=f"^{re.escape(expected)}$"):
             spark.sql(
                 "CALL mem.system.remove_orphan_files("
                 f"table => 'ns.events', location => '{location}')"

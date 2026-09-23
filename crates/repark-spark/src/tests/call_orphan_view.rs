@@ -2,8 +2,9 @@ use std::os::unix::fs::PermissionsExt;
 
 use super::super::*;
 use super::call_orphan_scope::{
-    call_rows, ctas, fallback_session, file_scheme_table, plant, prefix_conflict_message,
-    referenced_data_file, register_file_list, submit,
+    call_error, call_rows, ctas, execution_message, external_message, fallback_session,
+    file_scheme_table, plan_message, plant, prefix_conflict_message, referenced_data_file,
+    register_file_list, submit,
 };
 use super::common::*;
 
@@ -59,7 +60,8 @@ async fn call_remove_orphan_files_file_list_view_gc_refusals_match_the_listing_p
         ),
         (
             "maybe",
-            "DataInvalid => Invalid boolean value 'maybe' for table property 'gc.enabled'",
+            "DataInvalid => Invalid boolean value 'maybe' for table property 'gc.enabled', \
+             source: provided string was not `true` or `false`",
         ),
     ] {
         submit(
@@ -67,19 +69,21 @@ async fn call_remove_orphan_files_file_list_view_gc_refusals_match_the_listing_p
             &format!("ALTER TABLE ice.ns.t SET TBLPROPERTIES ('gc.enabled' = '{value}')"),
         )
         .await;
-        let view = call_rows(
-            &session,
-            "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v')",
-        )
-        .await
-        .expect_err("gc.enabled gates the view path");
-        let listing = call_rows(
-            &session,
-            "CALL ice.system.remove_orphan_files(table => 'ns.t')",
-        )
-        .await
-        .expect_err("gc.enabled gates the listing path");
-        assert!(view.starts_with(expected), "{value}: {view}");
+        let view = external_message(
+            call_error(
+                &session,
+                "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v')",
+            )
+            .await,
+        );
+        let listing = external_message(
+            call_error(
+                &session,
+                "CALL ice.system.remove_orphan_files(table => 'ns.t')",
+            )
+            .await,
+        );
+        assert_eq!(view, expected, "{value}");
         assert_eq!(view, listing, "{value}: both doors answer with one string");
     }
     assert!(orphan.exists());
@@ -110,15 +114,14 @@ async fn call_remove_orphan_files_file_list_view_refuses_a_malformed_view() {
         session
             .create_or_replace_temp_view_from(view, &frame)
             .unwrap();
-        let err = call_rows(
+        let err = call_error(
             &session,
             &format!(
                 "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => '{view}')"
             ),
         )
-        .await
-        .expect_err("a malformed view refuses");
-        assert!(err.contains(expected), "{view}: {err}");
+        .await;
+        assert_eq!(plan_message(err), expected, "{view}");
     }
     assert!(orphan.exists());
 }
@@ -191,23 +194,25 @@ async fn call_remove_orphan_files_file_list_view_applies_equal_schemes() {
     register_file_list(&session, &[(live.display().to_string(), 0)]).await;
 
     let mapped = ", equal_schemes => map('s3, file', 'x')";
-    let view = call_rows(
-        &session,
-        &format!(
-            "CALL ice.system.remove_orphan_files(table => 'fq.t', file_list_view => 'v'{mapped})"
-        ),
-    )
-    .await
-    .expect_err("the mapped valid scheme still conflicts with a bare path");
-    let listing = call_rows(
-        &session,
-        &format!(
-            "CALL ice.system.remove_orphan_files(table => 'fq.t', location => '{}'{mapped})",
-            table_dir.display()
-        ),
-    )
-    .await
-    .expect_err("the listing path maps the same way");
+    let view = external_message(
+        call_error(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'fq.t', file_list_view => 'v'{mapped})"
+            ),
+        )
+        .await,
+    );
+    let listing = external_message(
+        call_error(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'fq.t', location => '{}'{mapped})",
+                table_dir.display()
+            ),
+        )
+        .await,
+    );
     assert_eq!(view, prefix_conflict_message("(x, )"));
     assert_eq!(view, listing);
 
@@ -217,7 +222,7 @@ async fn call_remove_orphan_files_file_list_view_applies_equal_schemes() {
             &[(format!("{scheme}://bucket{}", live.display()), 0)],
         )
         .await;
-        let err = call_rows(
+        let err = call_error(
             &session,
             &format!(
                 "CALL ice.system.remove_orphan_files(table => 'fq.t', dry_run => true, \
@@ -225,9 +230,12 @@ async fn call_remove_orphan_files_file_list_view_applies_equal_schemes() {
                 table_dir.display()
             ),
         )
-        .await
-        .expect_err("the scheme folds to s3 by default and still differs from file");
-        assert_eq!(err, prefix_conflict_message("(file, s3)"), "{scheme}");
+        .await;
+        assert_eq!(
+            external_message(err),
+            prefix_conflict_message("(file, s3)"),
+            "{scheme}"
+        );
     }
     assert!(live.exists());
 }
@@ -242,20 +250,20 @@ async fn call_remove_orphan_files_file_list_view_reports_a_failed_delete() {
     register_file_list(&session, &[(orphan.display().to_string(), 0)]).await;
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
 
-    let err = call_rows(
+    let err = call_error(
         &session,
         "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v')",
     )
     .await;
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
-    let err = err.expect_err("a delete the filesystem refuses is reported, not swallowed");
-    assert!(
-        err.contains(&format!(
-            "CALL remove_orphan_files deleted 0 of 1 orphan files; 1 could not be removed. \
-             First failure: `{}`",
-            orphan.display()
-        )),
-        "{err}"
+    let path = orphan.display();
+    assert_eq!(
+        execution_message(err),
+        format!(
+            "CALL remove_orphan_files deleted 0 of 1 orphan files; 1 could not be removed. First \
+             failure: `{path}` — Unexpected => Failed to delete file {path}: Permission denied \
+             (os error 13). Re-run to retry the remainder."
+        )
     );
     assert!(orphan.exists());
 }

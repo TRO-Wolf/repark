@@ -112,6 +112,66 @@ pub(super) async fn call_rows(session: &ReparkSession, sql: &str) -> Result<Vec<
     Ok(out)
 }
 
+pub(super) async fn call_error(session: &ReparkSession, sql: &str) -> DataFusionError {
+    let catalogs = session.catalogs_snapshot();
+    match crate::execute(session.context(), &catalogs, sql).await {
+        Ok(frame) => frame
+            .collect()
+            .await
+            .map(|_| ())
+            .expect_err("the CALL must refuse"),
+        Err(error) => error,
+    }
+}
+
+pub(super) fn plan_message(error: DataFusionError) -> String {
+    match error {
+        DataFusionError::Plan(message) => message,
+        other => panic!("expected DataFusionError::Plan, got {other:?}"),
+    }
+}
+
+pub(super) fn external_message(error: DataFusionError) -> String {
+    match error {
+        DataFusionError::External(inner) => inner.to_string(),
+        other => panic!("expected DataFusionError::External, got {other:?}"),
+    }
+}
+
+pub(super) fn execution_message(error: DataFusionError) -> String {
+    match error {
+        DataFusionError::Execution(message) => message,
+        other => panic!("expected DataFusionError::Execution, got {other:?}"),
+    }
+}
+
+pub(super) fn shared_root_refusal(table_arg: &str, scan: &str, root: &Path) -> String {
+    format!(
+        "CALL remove_orphan_files refuses to sweep `{table_arg}`: path `{scan}` sits in or \
+         contains the shared CTAS fallback root `{}`. That path is derived from the catalog, \
+         namespace and table NAME alone, so any other process using the same names writes to the \
+         same directory — and this procedure deletes whatever the table's own metadata does not \
+         reference, which would include another session's live files. Re-create the namespace \
+         with an explicit location (`CREATE NAMESPACE <catalog>.<namespace> LOCATION '<path>'`) \
+         so the table owns its directory, then sweep it.",
+        root.display()
+    )
+}
+
+pub(super) fn other_table_refusal(
+    table_arg: &str,
+    scan: &str,
+    other: &str,
+    other_location: &str,
+) -> String {
+    format!(
+        "CALL remove_orphan_files refuses to sweep `{table_arg}`: path `{scan}` holds table \
+         `{other}` at `{other_location}`. This procedure deletes every file the swept table's own \
+         metadata does not reference, which would include that table's live files. Sweep a path \
+         that holds only this table's files."
+    )
+}
+
 #[tokio::test]
 async fn call_remove_orphan_files_sweeps_a_fallback_tables_own_directory() {
     let warehouse = TempDir::new().unwrap();
@@ -171,17 +231,22 @@ async fn call_remove_orphan_files_refuses_a_location_holding_another_table() {
         format!("{}//b", namespace_dir.display()),
         format!("{}/a/..", namespace_dir.display()),
     ] {
-        let err = call_rows(
+        let err = call_error(
             &session,
             &format!(
                 "CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{location}')"
             ),
         )
-        .await
-        .expect_err("a location holding another table's files must refuse");
-        assert!(
-            err.contains("ice.ns.b") && err.contains("CALL remove_orphan_files refuses"),
-            "the refusal must name the other table: {err}"
+        .await;
+        assert_eq!(
+            plan_message(err),
+            other_table_refusal(
+                "ns.a",
+                &location,
+                "ice.ns.b",
+                &other_dir.display().to_string()
+            ),
+            "{location}"
         );
     }
     assert!(own_orphan.exists(), "a refused sweep deletes nothing");
@@ -249,18 +314,20 @@ async fn call_remove_orphan_files_refuses_a_location_holding_a_table_of_another_
     let foreign_orphan = plant(&foreign_table, "orphan-file.parquet", 10);
     let foreign_live = referenced_data_file(&foreign_table);
 
-    let err = call_rows(
+    let scan = namespace_dir.display().to_string();
+    let err = call_error(
         &session,
-        &format!(
-            "CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{}')",
-            namespace_dir.display()
-        ),
+        &format!("CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{scan}')"),
     )
-    .await
-    .expect_err("a table of another namespace inside the scan must refuse");
-    assert!(
-        err.contains("holds table `ice.other.c`"),
-        "the refusal must name the other namespace's table: {err}"
+    .await;
+    assert_eq!(
+        plan_message(err),
+        other_table_refusal(
+            "ns.a",
+            &scan,
+            "ice.other.c",
+            &foreign_table.display().to_string()
+        )
     );
     assert!(own_orphan.exists(), "a refused sweep deletes nothing");
     assert!(foreign_orphan.exists(), "a refused sweep deletes nothing");
@@ -288,16 +355,21 @@ async fn call_remove_orphan_files_refuses_a_location_holding_a_table_spelled_thr
     .await;
     let own_orphan = plant(&own_dir, "orphan-file.parquet", 10);
 
-    let err = call_rows(
+    let scan = format!("{}/aliased", warehouse.path().display());
+    let err = call_error(
         &session,
-        &format!(
-            "CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{}/aliased')",
-            warehouse.path().display()
-        ),
+        &format!("CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{scan}')"),
     )
-    .await
-    .expect_err("a table whose metadata spells its location through `..` is still found");
-    assert!(err.contains("holds table `ice.al.t`"), "{err}");
+    .await;
+    assert_eq!(
+        plan_message(err),
+        other_table_refusal(
+            "ns.a",
+            &scan,
+            "ice.al.t",
+            &format!("{}/detour/../aliased/t", warehouse.path().display())
+        )
+    );
     assert!(own_orphan.exists());
 }
 
@@ -334,18 +406,20 @@ async fn call_remove_orphan_files_refuses_a_location_holding_a_nested_namespace_
         .unwrap();
     let own_orphan = plant(&own_dir, "orphan-file.parquet", 10);
 
-    let err = call_rows(
+    let scan = inner_dir.display().to_string();
+    let err = call_error(
         &session,
-        &format!(
-            "CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{}')",
-            inner_dir.display()
-        ),
+        &format!("CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{scan}')"),
     )
-    .await
-    .expect_err("a table of a nested namespace inside the scan must refuse");
-    assert!(
-        err.contains("holds table `ice.ns.inner.d`"),
-        "the refusal must name the nested table: {err}"
+    .await;
+    assert_eq!(
+        plan_message(err),
+        other_table_refusal(
+            "ns.a",
+            &scan,
+            "ice.ns.inner.d",
+            &inner_dir.join("d").display().to_string()
+        )
     );
     assert!(own_orphan.exists(), "a refused sweep deletes nothing");
 }
@@ -357,24 +431,24 @@ async fn call_remove_orphan_files_refuses_the_warehouse_and_the_fallback_root() 
     let table_dir = ctas(&session, &warehouse, "t").await;
     let orphan = plant(&table_dir, "orphan-file.parquet", 10);
 
-    for location in [
-        warehouse.path().display().to_string(),
-        warehouse.path().join("repark_ctas").display().to_string(),
-        warehouse
-            .path()
-            .join("repark_ansi_ctas")
-            .display()
-            .to_string(),
+    let ctas_root = warehouse.path().join("repark_ctas");
+    let ansi_root = warehouse.path().join("repark_ansi_ctas");
+    for (location, root) in [
+        (warehouse.path().display().to_string(), &ctas_root),
+        (ctas_root.display().to_string(), &ctas_root),
+        (ansi_root.display().to_string(), &ansi_root),
     ] {
-        let err = call_rows(
+        let err = call_error(
             &session,
             &format!(
                 "CALL ice.system.remove_orphan_files(table => 'ns.t', location => '{location}')"
             ),
         )
-        .await
-        .expect_err("the warehouse and the fallback root never sweep");
-        assert!(err.contains("shared CTAS fallback root"), "{err}");
+        .await;
+        assert_eq!(
+            plan_message(err),
+            shared_root_refusal("ns.t", &location, root)
+        );
     }
     assert!(orphan.exists(), "a refused sweep deletes nothing");
 }
@@ -597,10 +671,10 @@ async fn call_remove_orphan_files_file_list_view_matches_a_table_location_that_h
         .load_table(&iceberg::TableIdent::from_strs(["al", "t"]).unwrap())
         .await
         .unwrap();
-    assert!(
-        table.metadata().location().contains("/detour/../aliased/t"),
-        "the table's own metadata spells its location through `..`: {}",
-        table.metadata().location()
+    assert_eq!(
+        table.metadata().location(),
+        format!("{}/detour/../aliased/t", warehouse.path().display()),
+        "the table's own metadata spells its location through `..`"
     );
     let table_dir = warehouse.path().join("aliased").join("t");
     let live = referenced_data_file(&table_dir);
@@ -651,31 +725,36 @@ async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     let table_dir = ctas(&session, &warehouse, "t").await;
     let orphan = plant(&table_dir, "orphan-file.parquet", 10);
 
-    let err = call_rows(
+    let err = call_error(
         &session,
         "CALL ice.system.remove_orphan_files(\
              table => 'ns.t', dry_run => true, file_list_view => 'no_such_view')",
     )
-    .await
-    .expect_err("a missing view refuses");
-    assert!(
-        err.contains("[TABLE_OR_VIEW_NOT_FOUND]") && err.contains("`no_such_view`"),
-        "Spark answers table or view not found: {err}"
+    .await;
+    assert_eq!(
+        plan_message(err),
+        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `no_such_view` cannot be found. Verify the \
+         spelling and correctness of the schema and catalog.\nIf you did not qualify the name \
+         with a schema, verify the current_schema() output, or qualify the name with the correct \
+         schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP \
+         TABLE IF EXISTS. SQLSTATE: 42P01"
     );
     assert!(orphan.exists());
 
     file_list_view(&session, &[&orphan]).await;
-    let err = call_rows(
+    let scan = warehouse.path().display().to_string();
+    let err = call_error(
         &session,
         &format!(
             "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v', \
-             location => '{}')",
-            warehouse.path().display()
+             location => '{scan}')"
         ),
     )
-    .await
-    .expect_err("the warehouse root refuses in file_list_view mode too");
-    assert!(err.contains("shared CTAS fallback root"), "{err}");
+    .await;
+    assert_eq!(
+        plan_message(err),
+        shared_root_refusal("ns.t", &scan, &warehouse.path().join("repark_ctas"))
+    );
     assert!(orphan.exists());
 
     let frame = session
@@ -688,15 +767,14 @@ async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     session
         .create_or_replace_temp_view_from("untimed", &frame)
         .unwrap();
-    let err = call_rows(
+    let err = call_error(
         &session,
         "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'untimed')",
     )
-    .await
-    .expect_err("a view without a timestamp last_modified refuses");
-    assert!(
-        err.contains("Invalid last_modified column") && err.contains("is not a timestamp"),
-        "{err}"
+    .await;
+    assert_eq!(
+        plan_message(err),
+        "Invalid last_modified column: Int32 is not a timestamp"
     );
     assert!(orphan.exists());
 }
@@ -758,23 +836,25 @@ async fn call_remove_orphan_files_file_list_view_prefix_conflicts_match_the_list
             "(file, ), (hostA, )",
         ),
     ] {
-        let view = call_rows(
-            &session,
-            &format!(
-                "CALL ice.system.remove_orphan_files(table => 'fq.t', file_list_view => 'v'{extra})"
-            ),
-        )
-        .await
-        .expect_err("a bare view path against file: metadata is a scheme conflict");
-        let listing = call_rows(
-            &session,
-            &format!(
-                "CALL ice.system.remove_orphan_files(table => 'fq.t', location => '{}'{extra})",
-                table_dir.display()
-            ),
-        )
-        .await
-        .expect_err("a bare listing against file: metadata is the same conflict");
+        let view = external_message(
+            call_error(
+                &session,
+                &format!(
+                    "CALL ice.system.remove_orphan_files(table => 'fq.t', file_list_view => 'v'{extra})"
+                ),
+            )
+            .await,
+        );
+        let listing = external_message(
+            call_error(
+                &session,
+                &format!(
+                    "CALL ice.system.remove_orphan_files(table => 'fq.t', location => '{}'{extra})",
+                    table_dir.display()
+                ),
+            )
+            .await,
+        );
         assert_eq!(view, prefix_conflict_message(pairs));
         assert_eq!(view, listing, "both doors emit the fork's conflict text");
     }
@@ -792,13 +872,15 @@ async fn call_remove_orphan_files_file_list_view_names_an_authority_conflict() {
     )
     .await;
 
-    let err = call_rows(
+    let err = call_error(
         &session,
         "CALL ice.system.remove_orphan_files(table => 'fq.t', file_list_view => 'v', \
          equal_authorities => map('', 'hostA'))",
     )
-    .await
-    .expect_err("a mapped empty authority against localhost is an authority conflict");
-    assert_eq!(err, prefix_conflict_message("(hostA, localhost)"));
+    .await;
+    assert_eq!(
+        external_message(err),
+        prefix_conflict_message("(hostA, localhost)")
+    );
     assert!(live.exists(), "a prefix conflict deletes nothing");
 }

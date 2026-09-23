@@ -642,8 +642,15 @@ async fn call_remove_orphan_files_refuses_a_quoted_dry_run() {
 fn call_orphan_shared_ctas_root_rule() {
     use repark_core::LocationPolicy;
 
+    use super::call_orphan_scope::shared_root_refusal;
     use crate::call::remove_orphan_files::refuse_shared_temp_fallback_location;
 
+    let ctas_root = std::path::Path::new("/scratch/repark_ctas");
+    let ansi_root = std::path::Path::new("/scratch/repark_ansi_ctas");
+    let plan = |err: DataFusionError| match err {
+        DataFusionError::Plan(message) => message,
+        other => panic!("expected DataFusionError::Plan, got {other:?}"),
+    };
     let policy = LocationPolicy::TempFallbackAllowed {
         root: std::path::PathBuf::from("/scratch"),
     };
@@ -651,11 +658,9 @@ fn call_orphan_shared_ctas_root_rule() {
     let err =
         refuse_shared_temp_fallback_location(Some(&policy), "/scratch/repark_ctas", "ns.events")
             .expect_err("the shared CTAS root itself must refuse");
-    let message = err.to_string();
-    assert!(message.contains("shared CTAS fallback root"), "{message}");
-    assert!(
-        message.contains("CREATE NAMESPACE"),
-        "the refusal must tell the caller how to get out of it: {message}"
+    assert_eq!(
+        plan(err),
+        shared_root_refusal("ns.events", "/scratch/repark_ctas", ctas_root)
     );
 
     for own in [
@@ -698,9 +703,15 @@ fn call_orphan_shared_ctas_root_rule() {
     ] {
         let err = refuse_shared_temp_fallback_location(Some(&policy), root_alias, "owned.t")
             .expect_err("the fallback root, its aliases and its parents must refuse");
-        assert!(
-            err.to_string().contains("shared CTAS fallback root"),
-            "{root_alias}: {err}"
+        let root = if root_alias == "/scratch/repark_ansi_ctas" {
+            ansi_root
+        } else {
+            ctas_root
+        };
+        assert_eq!(
+            plan(err),
+            shared_root_refusal("owned.t", root_alias, root),
+            "{root_alias}"
         );
     }
 
@@ -713,9 +724,9 @@ fn call_orphan_shared_ctas_root_rule() {
         "owned.t",
     )
     .expect_err("a warehouse registered through `..` still guards its fallback root");
-    assert!(
-        err.to_string().contains("shared CTAS fallback root"),
-        "{err}"
+    assert_eq!(
+        plan(err),
+        shared_root_refusal("owned.t", "/scratch/repark_ctas", ctas_root)
     );
 }
 
@@ -755,18 +766,19 @@ async fn call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root() 
         .await
         .unwrap();
     let fallback = warehouse_dir.path().join("repark_ctas");
-    let err = session
-        .sql(&format!(
+    let scan = fallback.display().to_string();
+    let err = super::call_orphan_scope::call_error(
+        &session,
+        &format!(
             "CALL ice.system.remove_orphan_files(table => 'owned.t', older_than => {}, \
-             location => '{}')",
+             location => '{scan}')",
             older_than_two_days_ago_ms(),
-            fallback.display()
-        ))
-        .await
-        .expect_err("CALL location at the fallback root must refuse");
-    assert!(
-        err.to_string().contains("shared CTAS fallback root"),
-        "{err}"
+        ),
+    )
+    .await;
+    assert_eq!(
+        super::call_orphan_scope::plan_message(err),
+        super::call_orphan_scope::shared_root_refusal("owned.t", &scan, &fallback)
     );
 }
 
