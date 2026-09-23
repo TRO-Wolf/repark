@@ -110,7 +110,10 @@ exists to prevent, and every refusal message names the section it is recorded in
   (and `read.table`) answers what the SQL door answers for the same metadata table, and
   `.option("versionAsOf", v)` / `.option("timestampAsOf", ts)` answers what SQL
   `VERSION AS OF v` / `TIMESTAMP AS OF ts` answers: one shared `provider_for_spec` in
-  `repark-core` serves both doors, so reader refusals carry the SQL door's texts verbatim.
+  `repark-core` serves both doors, so paired reader refusals carry the SQL door's class
+  and text; the unknown-suffix refusal (C-011) pins its own literal text and pairs only
+  `getSqlState()`, and the legacy-option refusals (C-012) are standalone literals with
+  `getSqlState()` `None`.
 - **Pin** — `crates/repark-spark/src/tests/metadata_tables_asof.rs::metadata_asof_served_per_type`
   and `python/repark/tests/test_ice_mt_as_of_1.py`; the reader leg pins in
   `crates/repark-spark/src/tests/metadata_tables_asof.rs::reader_metadata_path_matches_sql_door`

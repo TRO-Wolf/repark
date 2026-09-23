@@ -7777,8 +7777,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **IPI-23-MT-READER-1 (2026-09-22):** `format("iceberg").load("c.n.t.<meta>")` answers
   what SQL `SELECT * FROM c.n.t.<meta>` answers, and with `versionAsOf` / `timestampAsOf`
   what SQL `VERSION AS OF` / `TIMESTAMP AS OF` answers — each reader answer asserted
-  against the SQL door on the same table (rows and column names), each paired refusal
-  against the SQL door's class and text. **critic r2 (2026-09-23):** the recorded cells also
+  against the SQL door on the same table (rows and column names; C-010 pins the
+  reader's rows standalone with no SQL arm, and the live leg C-013 compares the
+  selected rows only, pinning absolute fields and the `record_count` sum), each
+  paired refusal against the SQL door's class and text.
+  **critic r2 (2026-09-23):** the recorded cells also
   pin the reader frame's field name, `simpleString()` and `nullable`
   (`operation` string nullable, `record_count` bigint non-nullable) plus the absolute
   rows; the live leg then picked the first snapshot by `committed_at`.
