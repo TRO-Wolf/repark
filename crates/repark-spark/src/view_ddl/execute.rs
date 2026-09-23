@@ -28,7 +28,7 @@ pub(crate) async fn execute_create_view(
     catalogs: &CatalogRegistry,
     statement: CreateViewStatement,
 ) -> Result<DataFrame> {
-    let (catalog, namespace_name, view_name) = complete_view_name(ctx, &statement.name)?;
+    let (catalog, namespace_name, view_name) = complete_view_name(catalogs, &statement.name)?;
     let handle = catalog_handle(catalogs, &catalog)?;
     let warehouse = warehouse_for_catalog(catalogs, &catalog)?;
     let (stored_properties, location_override) =
@@ -77,7 +77,7 @@ pub(crate) async fn execute_drop_view(
 ) -> Result<DataFrame> {
     for name in names {
         let parts = name_parts(name);
-        let (catalog, namespace_name, view_name) = complete_view_name(ctx, &parts)?;
+        let (catalog, namespace_name, view_name) = complete_view_name(catalogs, &parts)?;
         let handle = catalog_handle(catalogs, &catalog)?;
         let namespace = NamespaceIdent::new(namespace_name.clone());
         let target = ViewTarget {
@@ -98,7 +98,7 @@ pub(crate) async fn execute_alter_view(
     catalogs: &CatalogRegistry,
     statement: AlterViewStatement,
 ) -> Result<DataFrame> {
-    let (catalog, namespace_name, view_name) = complete_view_name(ctx, &statement.name)?;
+    let (catalog, namespace_name, view_name) = complete_view_name(catalogs, &statement.name)?;
     let handle = catalog_handle(catalogs, &catalog)?;
     let ident = TableIdent::new(
         NamespaceIdent::new(namespace_name.clone()),
@@ -137,7 +137,8 @@ pub(crate) async fn execute_alter_view(
             }
         }
         AlterViewAction::RenameTo(target) => {
-            let (target_catalog, target_namespace, target_name) = complete_view_name(ctx, &target)?;
+            let (target_catalog, target_namespace, target_name) =
+                complete_view_name(catalogs, &target)?;
             if target_catalog != catalog {
                 return Err(DataFusionError::Plan(format!(
                     "Cannot move view between catalogs: from={catalog} and to={target_catalog}"
@@ -231,7 +232,10 @@ pub(crate) async fn execute_show_views(
     statement: ShowViewsStatement,
 ) -> Result<DataFrame> {
     let (catalog, namespace_name) = match statement.namespace.as_slice() {
-        [namespace] => (default_catalog_name(ctx), namespace.clone()),
+        [namespace] => (
+            crate::use_ddl::session_defaults(catalogs).0,
+            namespace.clone(),
+        ),
         [catalog, namespace] => (catalog.clone(), namespace.clone()),
         _ => {
             return Err(DataFusionError::Plan(format!(
@@ -269,7 +273,7 @@ pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<Reco
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn refuse_view_write_target(
-    ctx: &SessionContext,
+    _ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     name: &ObjectName,
 ) -> Result<()> {
@@ -277,7 +281,7 @@ pub(crate) async fn refuse_view_write_target(
     if is_metadata_table_target(&parts) {
         return Err(metadata_table_write_refusal(&parts));
     }
-    let Ok((catalog, namespace_name, view_name)) = complete_view_name(ctx, &parts) else {
+    let Ok((catalog, namespace_name, view_name)) = complete_view_name(catalogs, &parts) else {
         return Ok(());
     };
     let ident = TableIdent::new(
@@ -309,35 +313,28 @@ fn metadata_table_write_refusal(parts: &[String]) -> DataFusionError {
     ))
 }
 
-fn complete_view_name(ctx: &SessionContext, parts: &[String]) -> Result<(String, String, String)> {
+fn complete_view_name(
+    catalogs: &CatalogRegistry,
+    parts: &[String],
+) -> Result<(String, String, String)> {
     if is_metadata_table_target(parts) {
         return Err(metadata_table_write_refusal(parts));
     }
+    let (default_catalog, default_namespace) = crate::use_ddl::session_defaults(catalogs);
     match parts {
-        [view] => Ok((
-            default_catalog_name(ctx),
-            default_namespace_name(ctx),
-            view.clone(),
+        [view] if default_namespace.is_empty() => Err(table_or_view_not_found(
+            &default_catalog,
+            &default_namespace,
+            view,
         )),
-        [namespace, view] => Ok((default_catalog_name(ctx), namespace.clone(), view.clone())),
+        [view] => Ok((default_catalog, default_namespace, view.clone())),
+        [namespace, view] => Ok((default_catalog, namespace.clone(), view.clone())),
         [catalog, namespace, view] => Ok((catalog.clone(), namespace.clone(), view.clone())),
         _ => Err(DataFusionError::Plan(format!(
             "expected a [catalog.[namespace.]]view name, got `{}`",
             parts.join(".")
         ))),
     }
-}
-
-fn default_catalog_name(ctx: &SessionContext) -> String {
-    ctx.copied_config()
-        .options()
-        .catalog
-        .default_catalog
-        .clone()
-}
-
-fn default_namespace_name(ctx: &SessionContext) -> String {
-    ctx.copied_config().options().catalog.default_schema.clone()
 }
 
 fn warehouse_for_catalog(catalogs: &CatalogRegistry, catalog_name: &str) -> Result<String> {
