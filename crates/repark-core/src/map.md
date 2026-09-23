@@ -923,6 +923,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   core_pinned_name`, prefix-checked), so wrapping the frame in another node here, or changing the
   prefix, silently restores that door's half of the leak. The fence is the broadened
   `LIKE '__repark_tt%'` assertion in `crates/repark-sql/tests/introspection.rs`.
+  **xo55-bs R1 (2026-09-22):** `read_table_at`'s pinned arm builds a `VersionRef` provider
+  through the fork's `try_new_from_table_ref` (current schema for a branch, snapshot schema
+  for a tag) after `resolve_snapshot_id`, so the reader-options branch read tracks the live
+  schema and unknown refs keep the pinned refusal.
+  pins: ipi-07-branch-read-schema-1/C-002, C-006
 - `sorted_view.rs` — SE-1 declared-sorted temp views: `verify_batches_sorted` (the O(n)
   adjacent-pair lexicographic check, ASC NULLS LAST, cross-batch) + `declared_sort_order`
   (`Column::from_name`, never ident-parsing `col()` — the U-DF-1 lowercase-fold class)

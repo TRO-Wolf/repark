@@ -6,6 +6,7 @@ mod alter;
 mod alter_write_order;
 mod apply_partitioning;
 mod branch_ops;
+mod branch_read_schema;
 mod call;
 mod call_manifests;
 mod call_orphan;

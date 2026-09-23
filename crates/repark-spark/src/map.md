@@ -1391,6 +1391,11 @@ pins: rp-4-fork-repin/C-005, C-006
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** a four-part `AS OF` name refuses
   before resolving — branch selectors with `Can't time travel in branch`, tag
   selectors with the selector/spec text. pins: ice-tt-resolve-1/C-002
+  **xo55-bs R1 (2026-09-22):** a `VersionRef` span builds its provider through the fork's
+  `try_new_from_table_ref` (current schema for a branch, snapshot schema for a tag) after
+  the RePark resolution gatekeeper, so unknown refs keep the pinned refusal; snapshot-id
+  and timestamp spans keep `try_new_from_table_snapshot`.
+  pins: ipi-07-branch-read-schema-1/C-001, C-003, C-004, C-005, C-006, C-008
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
   `reregister*` provider invalidation. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
