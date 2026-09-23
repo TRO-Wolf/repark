@@ -229,23 +229,23 @@ def test_load_version_as_of_equals_sql(spark: Any) -> None:
     pins: ipi-23-mt-reader-1/C-004
     """
     table = _seeded(spark, "t_load_version")
-    first = _snapshot_ids(spark, table)[0]
-    for suffix in ("files", "snapshots", "entries", "manifests"):
-        reader = _iceberg_reader(spark).option("versionAsOf", first).load(f"{table}.{suffix}")
-        sql = spark.sql(f"SELECT * FROM {table}.{suffix} VERSION AS OF {first}")
-        assert _frame_rows(reader) == _frame_rows(sql), suffix
-        assert _frame_cols(reader) == _frame_cols(sql), suffix
-    record_frame = (
-        _iceberg_reader(spark)
-        .option("versionAsOf", first)
-        .load(f"{table}.files")
-        .select("record_count")
-    )
+    first, second = _snapshot_ids(spark, table)[:2]
+    for snapshot_id in (first, second):
+        for suffix in ("files", "snapshots", "entries", "manifests"):
+            reader = (
+                _iceberg_reader(spark).option("versionAsOf", snapshot_id).load(f"{table}.{suffix}")
+            )
+            sql = spark.sql(f"SELECT * FROM {table}.{suffix} VERSION AS OF {snapshot_id}")
+            assert _frame_rows(reader) == _frame_rows(sql), (snapshot_id, suffix)
+            assert _frame_cols(reader) == _frame_cols(sql), (snapshot_id, suffix)
+    pinned_files = _iceberg_reader(spark).option("versionAsOf", second).load(f"{table}.files")
+    assert _frame_rows(pinned_files) != _frame_rows(_iceberg_reader(spark).load(f"{table}.files"))
+    record_frame = pinned_files.select("record_count")
     assert [
         (field.name, field.dataType.simpleString(), field.nullable)
         for field in record_frame.schema.fields
     ] == [("record_count", "bigint", False)]
-    assert sum(row[0] for row in record_frame.collect()) == 2
+    assert sum(row[0] for row in record_frame.collect()) == 3
 
 
 def test_load_timestamp_as_of_equals_sql(spark: Any) -> None:
@@ -259,6 +259,7 @@ def test_load_timestamp_as_of_equals_sql(spark: Any) -> None:
     sql = spark.sql(f"SELECT * FROM {table}.files TIMESTAMP AS OF '{stamp}'")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
+    assert _frame_rows(reader) != _frame_rows(_iceberg_reader(spark).load(f"{table}.files"))
     assert sum(row[0] for row in reader.select("record_count").collect()) == 3
 
 
@@ -316,13 +317,14 @@ def test_load_plain_and_version_as_of_unchanged(spark: Any) -> None:
     pins: ipi-23-mt-reader-1/C-008
     """
     table = _seeded(spark, "t_load_plain")
-    first = _snapshot_ids(spark, table)[0]
+    second = _snapshot_ids(spark, table)[1]
     current = _frame_rows(_iceberg_reader(spark).load(table))
     assert current == _frame_rows(spark.sql(f"SELECT * FROM {table}"))
     assert current == [[1, "a", "x"], [2, "b", "y"]]
-    pinned = _frame_rows(_iceberg_reader(spark).option("versionAsOf", first).load(table))
-    assert pinned == _frame_rows(spark.sql(f"SELECT * FROM {table} VERSION AS OF {first}"))
-    assert pinned == [[1, "a", "x"], [2, "b", "y"]]
+    pinned = _frame_rows(_iceberg_reader(spark).option("versionAsOf", second).load(table))
+    assert pinned == _frame_rows(spark.sql(f"SELECT * FROM {table} VERSION AS OF {second}"))
+    assert pinned == [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"]]
+    assert pinned != current
 
 
 def test_load_branch_tag_snapshot_id_selectors_unchanged(spark: Any) -> None:
@@ -331,20 +333,24 @@ def test_load_branch_tag_snapshot_id_selectors_unchanged(spark: Any) -> None:
     pins: ipi-23-mt-reader-1/C-009
     """
     table = _seeded(spark, "t_load_selectors")
-    first, second = _snapshot_ids(spark, table)[:2]
-    spark.sql(f"ALTER TABLE {table} CREATE TAG t0 AS OF VERSION {first}")
+    second = _snapshot_ids(spark, table)[1]
+    spark.sql(f"ALTER TABLE {table} CREATE TAG t0 AS OF VERSION {second}")
     spark.sql(f"ALTER TABLE {table} CREATE BRANCH b0 AS OF VERSION {second}")
     expected = {
         "branch_b0": [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"]],
-        "tag_t0": [[1, "a", "x"], [2, "b", "y"]],
-        f"snapshot_id_{first}": [[1, "a", "x"], [2, "b", "y"]],
+        "tag_t0": [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"]],
+        f"snapshot_id_{second}": [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"]],
     }
-    for suffix in ("branch_b0", "tag_t0", f"snapshot_id_{first}"):
+    for suffix in ("branch_b0", "tag_t0", f"snapshot_id_{second}"):
         reader = _iceberg_reader(spark).load(f"{table}.{suffix}")
         sql = spark.sql(f"SELECT * FROM {table}.{suffix}")
         assert _frame_rows(reader) == _frame_rows(sql), suffix
         assert _frame_cols(reader) == _frame_cols(sql), suffix
         assert _frame_rows(reader) == expected[suffix], suffix
+    current_rows = _frame_rows(_iceberg_reader(spark).load(table))
+    assert _frame_rows(_iceberg_reader(spark).load(f"{table}.tag_t0")) != current_rows
+    snapshot_rows = _frame_rows(_iceberg_reader(spark).load(f"{table}.snapshot_id_{second}"))
+    assert snapshot_rows != current_rows
 
 
 def test_load_table_named_snapshots_reads_real_table(spark: Any) -> None:
@@ -541,12 +547,13 @@ def test_load_uppercase_suffix_as_of_equals_sql(spark: Any) -> None:
     pins: ipi-23-mt-reader-1/C-020
     """
     table = _seeded(spark, "t_upper_asof")
-    first = _snapshot_ids(spark, table)[0]
-    reader = _iceberg_reader(spark).option("versionAsOf", first).load(f"{table}.FILES")
-    sql = spark.sql(f"SELECT * FROM {table}.FILES VERSION AS OF {first}")
+    second = _snapshot_ids(spark, table)[1]
+    reader = _iceberg_reader(spark).option("versionAsOf", second).load(f"{table}.FILES")
+    sql = spark.sql(f"SELECT * FROM {table}.FILES VERSION AS OF {second}")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
-    assert sum(row[0] for row in reader.select("record_count").collect()) == 2
+    assert _frame_rows(reader) != _frame_rows(_iceberg_reader(spark).load(f"{table}.FILES"))
+    assert sum(row[0] for row in reader.select("record_count").collect()) == 3
 
 
 def test_load_missing_parent_as_of_matches_sql_door(spark: Any) -> None:
