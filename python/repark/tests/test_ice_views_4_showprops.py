@@ -146,3 +146,30 @@ def test_current_catalog_and_database_resolve_the_name(spark: ReparkSession) -> 
     assert _rows(spark.sql("SHOW TBLPROPERTIES v ('k')")) == [["k", "v"]]
     spark.catalog.setCurrentDatabase("other")
     assert _rows(spark.sql("SHOW TBLPROPERTIES ns.v ('k')")) == [["k", "v"]]
+
+
+def test_show_tblproperties_on_a_table_falls_through(spark: ReparkSession) -> None:
+    """Near-miss a — a table keeps the upstream SHOW planning refusal."""
+    for tail in ("", " ('k')"):
+        with pytest.raises(AnalysisException) as caught:
+            spark.sql(f"SHOW TBLPROPERTIES sc.ns.t{tail}")
+        assert SHOW_VARIABLE_UNSUPPORTED in str(caught.value)
+
+
+def test_show_views_and_show_tables_unchanged(spark: ReparkSession) -> None:
+    """Near-miss b — the neighboring SHOW doors answer as before."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    views = spark.sql("SHOW VIEWS IN sc.ns").to_arrow()
+    assert views.schema.names == ["namespace", "viewName", "isTemporary"]
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == [["ns", "v", False]]
+    tables = spark.sql("SHOW TABLES IN sc.ns").to_arrow()
+    assert tables.schema.names == ["namespace", "tableName", "isTemporary"]
+    assert _rows(spark.sql("SHOW TABLES IN sc.ns")) == [["ns", "t", False]]
+
+
+def test_tblpropertiesx_is_not_recognized(spark: ReparkSession) -> None:
+    """Near-miss c — the head word must be exactly TBLPROPERTIES."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SHOW TBLPROPERTIESX sc.ns.v")
+    assert SHOW_VARIABLE_UNSUPPORTED in str(caught.value)
