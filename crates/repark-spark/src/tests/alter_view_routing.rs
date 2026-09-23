@@ -232,13 +232,13 @@ async fn alter_view_unset_if_exists_updates_only_when_a_key_is_present() {
 }
 
 #[tokio::test]
-async fn alter_view_set_commits_the_property_once() {
+async fn alter_view_set_overwrites_property_and_adds_another_once() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, mut catalogs) = setup(&warehouse).await;
     run(
         &ctx,
         &catalogs,
-        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v') AS SELECT * FROM src",
     )
     .await;
     let update_calls = Arc::new(AtomicUsize::new(0));
@@ -256,7 +256,7 @@ async fn alter_view_set_commits_the_property_once() {
     run(
         &ctx,
         &catalogs,
-        "ALTER VIEW fault.sales.v SET TBLPROPERTIES ('k'='v')",
+        "ALTER VIEW fault.sales.v SET TBLPROPERTIES ('k'='v2','j'='u')",
     )
     .await;
     assert_eq!(update_calls.load(Ordering::SeqCst), 1);
@@ -267,7 +267,11 @@ async fn alter_view_set_commits_the_property_once() {
         .expect("updated view");
     assert_eq!(
         view.metadata().properties().get("k"),
-        Some(&"v".to_string())
+        Some(&"v2".to_string())
+    );
+    assert_eq!(
+        view.metadata().properties().get("j"),
+        Some(&"u".to_string())
     );
 }
 

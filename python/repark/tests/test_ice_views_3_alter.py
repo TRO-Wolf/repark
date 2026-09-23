@@ -11,6 +11,7 @@ pins: ice-views-1/C-017
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -84,6 +85,20 @@ def test_alter_view_set_tblproperties_and_rename_cell(spark: ReparkSession) -> N
     spark.sql("ALTER VIEW sc.ns.va SET TBLPROPERTIES ('k'='v')")
     spark.sql("ALTER VIEW sc.ns.va RENAME TO sc.ns.vb")
     assert _rows(spark.sql("SELECT * FROM sc.ns.vb")) == []
+
+
+def test_set_overwrites_existing_property_and_adds_another(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """The committed view metadata contains both the overwrite and the new key."""
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
+    spark.sql("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v2','j'='u')")
+    metadata_files = sorted((tmp_path / "ns" / "v" / "metadata").glob("*.json"))
+    assert metadata_files
+    metadata = json.loads(metadata_files[-1].read_text(encoding="utf-8"))
+    assert metadata["properties"]["k"] == "v2"
+    assert metadata["properties"]["j"] == "u"
+    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
 
 
 def test_unset_missing_key_without_if_exists_refuses(spark: ReparkSession) -> None:
