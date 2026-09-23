@@ -22,6 +22,20 @@ files; and this ledger. The fork, every `Cargo.toml`, `Cargo.lock`, `STATUS.md`,
 `crates/repark-spark/src/wap.rs` and `crates/repark-sql/**` are untouched; no code
 comment added anywhere.
 
+**Follow-up (2026-09-22, WO rd-r4fix, critic r1):** three findings plus a class
+sweep. V-001 (P1): `quoted_ident` emitted double quotes where the SQL door emits
+backticks — now backticks, doubling embedded ones, exactly like the Python
+expander's `quote_ident`. V-002 (P2): `prepare_metadata_as_of` loaded the base table
+before the `all_*` refusal — the refusal is first again, kept in
+`provider_for_spec` for the reader. V-003 (P2) SKIPPED: no facade API creates a
+multi-level namespace (SQL DDL is two/three-part only; `create_namespace` and
+`testing_oob_create_table` build single-level idents; dotted spellings name one
+namespace), so the fixture is unconstructible without new catalog features, which
+the work order forbids. Sweep: every SQL-door metadata spelling paired against the
+reader; the quoted-`$` form with AS OF differs (reader `TableNotFound`, SQL serves)
+and is reported, not fixed — `$` is not a reader spelling and the reader matches
+Spark there. No existing expected value moved.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The two replay cells were recorded
@@ -69,6 +83,15 @@ the SQL door's backticked spelling by construction (unquoted internal SQL, uncha
 | C-011 | Near miss: `load("mt.ns.t.nope")` keeps today's `AnalysisException` text (`Unsupported compound identifier 'mt.ns.t_load_nope.nope'. Expected 1, 2 or 3 parts, got 4`). | `test_load_unknown_suffix_keeps_error_text` green. | **PROVEN** | The reader's own literal, measured on main (M-3). pins: ipi-23-mt-reader-1/C-011 |
 | C-012 | Near miss: the legacy `snapshot-id` / `as-of-timestamp` / `tag` options on `load("mt.ns.t.files")` refuse with the #800 `IllegalArgumentException` texts. | `test_legacy_options_on_metadata_keep_refusal_texts` green. | **PROVEN** | Python-layer refusals fire before any engine routing. pins: ipi-23-mt-reader-1/C-012 |
 | C-013 | Live leg: on Spark 4.1.2 itself the reader answers what SQL answers for `load(t.snapshots)` and `versionAsOf` on `load(t.files)`. | `test_live_spark_reader_matches_sql` green under `REPARK_PARITY_LIVE=1`. | **PROVEN** | Goal premise re-measured on the live oracle in the gate's live leg. pins: ipi-23-mt-reader-1/C-013 |
+| C-014 | V-001: `load("mt.ns.T_CASETWIN.snapshots")` (stored lowercase) fails with the SQL door's class and full backticked text. | `test_load_case_twin_table_matches_sql_door` green. | **PROVEN** | Red-first: double-quoted vs backticked identifier; equal after the fix. pins: ipi-23-mt-reader-1/C-014 |
+| C-015 | V-002: `SELECT count(*) FROM mt.ns."missing$all_files" VERSION AS OF 1` gives the `ALL_FILES` refusal (class, sqlstate, full message), equal to the existing-table dollar and dotted spellings. | `test_quoted_dollar_missing_table_refuses_all_files` green. | **PROVEN** | Red-first: `TableNotFound` before the refusal-first fix. pins: ipi-23-mt-reader-1/C-015 |
+| C-016 | Sweep: `load("mt.ns.t.SNAPSHOTS")` equals the SQL door (rows and columns). | `test_load_uppercase_suffix_equals_sql` green. | **PROVEN** | Uppercase suffix serves on both doors. pins: ipi-23-mt-reader-1/C-016 |
+| C-017 | Sweep: missing-table and missing-namespace un-pinned loads fail with the SQL door's exact text. | `test_load_missing_parent_matches_sql_door` green. | **PROVEN** | Red-first on quoting with C-014; equal after. pins: ipi-23-mt-reader-1/C-017 |
+| C-018 | Sweep: every `all_*` table un-pinned equals the SQL door (rows and columns). | `test_load_all_types_without_as_of_equals_sql` green. | **PROVEN** | All five serve via the fork on both doors. pins: ipi-23-mt-reader-1/C-018 |
+| C-019 | Sweep: the quoted `t$snapshots` spelling un-pinned equals the SQL door (rows and columns). | `test_load_quoted_dollar_spelling_equals_sql` green. | **PROVEN** | Three-part passthrough serves on both doors. pins: ipi-23-mt-reader-1/C-019 |
+| C-020 | Sweep: uppercase `.FILES` with `versionAsOf` equals SQL `VERSION AS OF` (rows and columns). | `test_load_uppercase_suffix_as_of_equals_sql` green. | **PROVEN** | Case-insensitive routing on both doors. pins: ipi-23-mt-reader-1/C-020 |
+| C-021 | Sweep: missing parents and the unknown suffix with `versionAsOf` fail with the SQL door's exact three-part text. | `test_load_missing_parent_as_of_matches_sql_door` green. | **PROVEN** | Fallthrough parity on both doors. pins: ipi-23-mt-reader-1/C-021 |
+| C-022 | Sweep: the remaining four `all_*` refusals match the SQL door's class and text. | `test_load_all_types_as_of_refuse_alike` green. | **PROVEN** | Per-type refusal sentences verbatim on both doors. pins: ipi-23-mt-reader-1/C-022 |
 
 ## Gates
 
@@ -83,6 +106,8 @@ the SQL door's backticked spelling by construction (unquoted internal SQL, uncha
 | `cargo fmt --check` + `uvx ruff@0.15.22 check/format` on touched files | exit 0 |
 | sb-mt replay `--only R-DF-LOAD-META,R-DF-LOAD-META-FILES-VERSIONASOF` | both cells equal `spark-core.json` rows and columns |
 | `python3 scripts/check_ledger_grammar.py` | exit 0 |
+| r4fix `build-slot.sh local-gate.sh xo55-rd <same 6 files>` | `CB=0 R=0 T=0 U=0 L=0` — rust 13+29+22 passed; unit 273 passed 2 skipped; live 275 passed |
+| r4fix `make rust-clippy` / `make rust-panic-ban` | exit 0 / exit 0 |
 
 ## COVERAGE_ATTESTATION
 
