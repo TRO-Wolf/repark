@@ -398,10 +398,12 @@ Source comments retain only API and safety contracts; implementation narration i
   the lineage pair; `UNSERVED_METADATA_COLUMN_NAMES` is deleted. The scan passthrough
   is unchanged — `_deleted` reaching the fork's `select` activates its
   include-deleted mode, so merge-on-read delete-file rows surface marked `true`
-  while projections without `_deleted` keep today's delete filtering.
+  while projections without `_deleted` keep today's delete filtering; the scan
+  serves `_deleted` wherever the plan needs it (predicate-only, subquery,
+  expression, join legs included).
   pins: ice-metadata-cols-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005
-  pins: u10-mc-deleted-1/C-001, C-005
+  pins: u10-mc-deleted-1/C-001, C-004, C-005, C-009, C-010, C-011
 - `snapshot_metadata_table.rs` — **xo55-mt R1 (2026-09-22):** `SnapshotMetadataTableProvider`
   serves `VERSION/TIMESTAMP AS OF` on a metadata table from the fork's public snapshot-scoped
   `iceberg::inspect` constructors. `metadata_asof_mode` is the per-type ruling both Spark-door

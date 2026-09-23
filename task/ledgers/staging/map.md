@@ -1581,7 +1581,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `R-MC-DELETED` cell `[[1,true],[2,false],[3,false],[4,false]]` on both doors
   while not projecting it keeps the delete filter and `SELECT *` stays user
   columns. The unserved-token machinery is deleted and the composed refusal
-  names all five columns. Measured premise correction pinned: a metadata column
-  over a time-travel read raises `[UNRESOLVED_COLUMN]`, not `[ICE-MC-1]`.
+  names all five columns. mcdel-r2 pinned the live-Spark S1–S14 row lists
+  verbatim (predicate-only, subqueries, expressions/order/group, the empty
+  self-join) and recorded two pre-existing KNOWN DIVERGENCEs with full-message
+  pins: quoted `` `_DELETED` ``/`` `_FILE` `` refuse
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` where Spark resolves them, and metadata
+  columns over `VERSION AS OF` refuse unresolved where Spark serves them.
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
-  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013
