@@ -89,7 +89,8 @@ def test_describe_table_extended_sections(spark: ReparkSession) -> None:
     assert detail[4][2] == ""
     assert detail[5] == (
         "Table Properties",
-        "[current-snapshot-id=none,k=v,write.parquet.compression-codec=zstd]",
+        "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,k=v,"
+        "write.parquet.compression-codec=zstd]",
         "",
     )
     assert detail[6] == ("Statistics", "0 bytes, 0 rows", None)
@@ -213,7 +214,4 @@ def test_describe_table_live_matches_capture_and_repark(tmp_path: Path) -> None:
     for offset in (2, 4):
         assert repark_extended[base + offset][1] != ""
         assert live_extended[base + offset][1] != ""
-    assert "k=v" in repark_extended[base + 5][1]
-    assert "current-snapshot-id=none" in repark_extended[base + 5][1]
-    assert "k=v" in live_extended[base + 5][1]
-    assert "current-snapshot-id=none" in live_extended[base + 5][1]
+    assert repark_extended[base + 5] == live_extended[base + 5]

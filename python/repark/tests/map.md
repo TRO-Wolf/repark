@@ -6982,6 +6982,12 @@ pins: fnp-8-review/C-009, C-010
   **RP-23 (2026-09-17):** `Table Properties` carries the
   `write.parquet.compression-codec=zstd` stamp every create writes.
   pins: rp-23-pin-bump/C-001
+  **C1 SHOW CREATE (2026-09-23):** `Table Properties` renders from the shared
+  `spark_table_properties`, so the offline pin carries `format=iceberg/parquet` and
+  `format-version=2` and the live leg asserts the whole row equal to live Spark.
+- `test_show_create_table.py` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE` through
+  the facade answers one `createtab_stmt` row equal to the measured Spark 4.1.2 shape-1 text
+  (`bucket(4, id)`, NOT NULL + COMMENT column, `k=v`) with the table's real location.
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce
