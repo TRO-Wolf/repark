@@ -162,15 +162,44 @@ reader's on the same session, and the `("record_count", "bigint", False)`
 schema pin and the `append, append, delete` operations pin are unchanged.
 The class sweep (a time-travel pin whose answer equals the current answer)
 has no remaining survivor in the Python file. r6 V-001 (P2): every
-`pytest.raises` in the file now compares `getSqlState()` across the reader
-and SQL doors, and where the pair pins a recorded Spark answer the literal
-measured state is pinned too — every measured state is `None` on live Spark
-4.1.2 + Iceberg 1.11.0 (IllegalArgumentException for `versionAsOf 'nope'`,
-`timestampAsOf '2000-01-01'` and the three legacy options;
-UnsupportedOperationException — a pre-existing class divergence from
-RePark's AnalysisException, reported — for the `all_*` AS OF refusals), so
-the literal pins read `is None`. Pin count unchanged: twenty-two facade
-pins, C-001..C-022.
+`pytest.raises` in the file now pins `getSqlState()` — the paired refusals
+compare it across the reader and SQL doors, C-015 compares it pairwise
+across its three SQL spellings (no reader arm), C-011 pairs only the
+SQLSTATE beside a literal text pin, and C-012 stands alone on literal
+texts plus `getSqlState() is None`. Where a pair pins a recorded Spark
+answer the literal measured state is pinned too — every measured state is
+`None` on live Spark 4.1.2 + Iceberg 1.11.0 (IllegalArgumentException for
+`versionAsOf 'nope'`, `timestampAsOf '2000-01-01'` and the three legacy
+options; UnsupportedOperationException — a pre-existing class divergence
+from RePark's AnalysisException, reported — for the `all_*` AS OF
+refusals), so the literal pins read `is None`. Pin count unchanged:
+twenty-two facade pins, C-001..C-022.
+
+**Follow-up (2026-09-23, WO rd-r10fix, critic r7):** two findings, all
+ledger/prose-side — no assertion moved. V-001 (P2, a repeat of the r5
+class): the table rows still carried pre-r7 literals. C-001 now states
+`append, append, delete` plus the `("operation", "string", True)` field,
+with `R-DF-LOAD-META`'s `append, append, overwrite` kept in Evidence as a
+separate recorded probe replay; C-004 now spans both snapshot ids with the
+second-id `("record_count", "bigint", False)` / `sum == 3` /
+pinned!=current pins, `R-DF-LOAD-META-FILES-VERSIONASOF`'s `[2]` likewise
+marked a separate replay; C-008 now reads current
+`[[1,"a","x"],[2,"b","y"]]` with the three-row second-snapshot pin. The
+same pass rewrote the other under-stated rows: C-002 and C-007's
+`record_count` field pins, C-003 and C-016's `append, append, delete`
+multiset, C-005 and C-020's second-point `sum == 3` and pinned!=current
+guards, C-009's absolute selector rows and second-id selector, C-011's
+literal-text + paired-SQLSTATE shape, C-012's standalone literal texts +
+`is None`, C-013's second-snapshot live pins, C-014/C-017/C-021's SQLSTATE
+pairs, C-018's absolute column lists and C-022's `Cannot select snapshot`
+sentence plus SQLSTATE `None`. V-002 (P2): the module docstring, the r9fix
+paragraph above and the `python/repark/tests/map.md` entry all claimed
+every refusal/`pytest.raises` pairs class and text (or SQLSTATE) across
+doors — C-011 pairs only `getSqlState()` beside a literal text, C-012 is
+standalone literal text plus `is None`, and C-015 compares three SQL
+spellings pairwise; all three texts now say so, and the closing paragraph
+and AT-2 now scope their "every refusal"/"every clause" sentences to the
+paired pins. Pin count unchanged: twenty-two facade pins, C-001..C-022.
 
 ## Measurements (decide-then-build evidence)
 
@@ -206,28 +235,28 @@ the SQL door's backticked spelling by construction (unquoted internal SQL, uncha
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-001 | `load("mt.ns.t.snapshots")` answers the same rows and schema field names as `SELECT * FROM mt.ns.t.snapshots`, and the operations read `append, append, overwrite`. | `test_load_snapshots_equals_sql` green. | **PROVEN** | Recorded cell `R-DF-LOAD-META`: reader/SQL equality on rows and columns plus the absolute operation list. pins: ipi-23-mt-reader-1/C-001 |
-| C-002 | `load("mt.ns.t.<meta>")` equals the SQL door (rows and columns) for `files`, `history` and `refs`. | `test_load_files_history_refs_equal_sql` green. | **PROVEN** | Same seed; per-suffix reader/SQL equality. pins: ipi-23-mt-reader-1/C-002 |
-| C-003 | `read.table("mt.ns.t.snapshots")` equals the SQL door (rows and columns). | `test_table_api_snapshots_equals_sql` green. | **PROVEN** | Already green on main via `session.table`; pinned against regressions. pins: ipi-23-mt-reader-1/C-003 |
-| C-004 | `.option("versionAsOf", <first id>).load("mt.ns.t.<meta>")` equals SQL `VERSION AS OF <first id>` (rows and columns) for `files`, `snapshots`, `entries` and `manifests`. | `test_load_version_as_of_equals_sql` green. | **PROVEN** | Recorded cell `R-DF-LOAD-META-FILES-VERSIONASOF` plus the sibling scoped/current types. pins: ipi-23-mt-reader-1/C-004 |
-| C-005 | `.option("timestampAsOf", <ts>).load("mt.ns.t.files")` equals SQL `TIMESTAMP AS OF '<ts>'` (rows and columns). | `test_load_timestamp_as_of_equals_sql` green. | **PROVEN** | Same commit instant on both doors; reader/SQL equality. pins: ipi-23-mt-reader-1/C-005 |
-| C-006 | Reader AS OF refusals carry the SQL door's class and exact text: `versionAsOf 'nope'` on `.files` → `IllegalArgumentException("Cannot find matching snapshot ID or reference name for version nope")`; `timestampAsOf` before the first snapshot → `IllegalArgumentException("Cannot find a snapshot older than 2000-01-01T00:00:00+00:00")`; `versionAsOf` on `.all_files` → the SQL door's `AnalysisException` text containing `Cannot select snapshot in table: ALL_FILES`. | `test_reader_as_of_refusals_match_sql` green. | **PROVEN** | Each reader refusal asserted equal to the SQL door's class and text; the #802 sentences verbatim. pins: ipi-23-mt-reader-1/C-006 |
-| C-007 | Unknown numeric `versionAsOf` on `.files` answers empty with the SQL door's schema field names. | `test_reader_unknown_numeric_as_of_answers_empty` green. | **PROVEN** | `try_new_empty` through the reader; zero rows, equal columns. pins: ipi-23-mt-reader-1/C-007 |
-| C-008 | Near miss: `load("mt.ns.t")` with and without `versionAsOf` keeps its rows (`[[2,"b","y"],[3,"c","x"]]` current, `[[1,"a","x"],[2,"b","y"]]` at the first snapshot). | `test_load_plain_and_version_as_of_unchanged` green. | **PROVEN** | Absolute rows plus reader/SQL equality; green on main and after. pins: ipi-23-mt-reader-1/C-008 |
-| C-009 | Near miss: `load("mt.ns.t.branch_b0")`, `.tag_t0` and `.snapshot_id_<id>` equal the SQL door as they do today. | `test_load_branch_tag_snapshot_id_selectors_unchanged` green. | **PROVEN** | Selector routing untouched; reader/SQL equality per suffix. pins: ipi-23-mt-reader-1/C-009 |
+| C-001 | `load("mt.ns.t.snapshots")` answers the same rows and schema field names as `SELECT * FROM mt.ns.t.snapshots`; the commit-ordered operations read `append, append, delete`, the sorted `operation` multiset is the same, and the `select("operation")` field is `("operation", "string", True)`. | `test_load_snapshots_equals_sql` green. | **PROVEN** | Reader/SQL equality on rows and columns plus the absolute operation and field pins on this fixture; the recorded cell `R-DF-LOAD-META` — a separate live replay on the `InMemoryCatalog` probe whose DELETE committed `overwrite` — still reads `append, append, overwrite`. pins: ipi-23-mt-reader-1/C-001 |
+| C-002 | `load("mt.ns.t.<meta>")` equals the SQL door (rows and columns) for `files`, `history` and `refs`, and the reader `files` frame carries `("record_count", "bigint", False)`. | `test_load_files_history_refs_equal_sql` green. | **PROVEN** | Same seed; per-suffix reader/SQL equality plus the absolute `record_count` field pin. pins: ipi-23-mt-reader-1/C-002 |
+| C-003 | `read.table("mt.ns.t.snapshots")` equals the SQL door (rows and columns), with the sorted `operation` multiset `append, append, delete`. | `test_table_api_snapshots_equals_sql` green. | **PROVEN** | Already green on main via `session.table`; pinned against regressions with the absolute multiset. pins: ipi-23-mt-reader-1/C-003 |
+| C-004 | `.option("versionAsOf", <id>).load("mt.ns.t.<meta>")` equals SQL `VERSION AS OF <id>` (rows and columns) for `files`, `snapshots`, `entries` and `manifests` at both the first and the second snapshot id; at the second id the `files` `record_count` field is `("record_count", "bigint", False)`, the scoped rows differ from the un-pinned read, and `record_count` sums to 3. | `test_load_version_as_of_equals_sql` green. | **PROVEN** | Reader/SQL equality at both ids plus the second-id absolute pins; the recorded cell `R-DF-LOAD-META-FILES-VERSIONASOF` (`record_count` rows `[2]`) is a separate probe replay whose inventory differs from this fixture. pins: ipi-23-mt-reader-1/C-004 |
+| C-005 | `.option("timestampAsOf", <second commit instant>).load("mt.ns.t.files")` equals SQL `TIMESTAMP AS OF '<ts>'` (rows and columns); `record_count` sums to 3 and the scoped rows differ from the un-pinned read. | `test_load_timestamp_as_of_equals_sql` green. | **PROVEN** | Second-snapshot commit instant on both doors; reader/SQL equality plus the absolute sum and the pinned!=current guard. pins: ipi-23-mt-reader-1/C-005 |
+| C-006 | Reader AS OF refusals carry the SQL door's class and exact text: `versionAsOf 'nope'` on `.files` → `IllegalArgumentException("Cannot find matching snapshot ID or reference name for version nope")`; `timestampAsOf` before the first snapshot → `IllegalArgumentException("Cannot find a snapshot older than 2000-01-01T00:00:00+00:00")`; `versionAsOf` on `.all_files` → the SQL door's `AnalysisException` text containing `Cannot select snapshot in table: ALL_FILES` — with `getSqlState()` equal across doors and `None` on each. | `test_reader_as_of_refusals_match_sql` green. | **PROVEN** | Each reader refusal asserted equal to the SQL door's class and text plus the paired SQLSTATE; the #802 sentences verbatim. pins: ipi-23-mt-reader-1/C-006 |
+| C-007 | Unknown numeric `versionAsOf` on `.files` answers empty with the SQL door's schema field names, the reader frame carrying `("record_count", "bigint", False)`. | `test_reader_unknown_numeric_as_of_answers_empty` green. | **PROVEN** | `try_new_empty` through the reader; zero rows, equal columns, absolute field pin. pins: ipi-23-mt-reader-1/C-007 |
+| C-008 | Near miss: `load("mt.ns.t")` with and without `versionAsOf` keeps its rows — `[[1,"a","x"],[2,"b","y"]]` current, `[[1,"a","x"],[2,"b","y"],[3,"c","x"]]` at the second snapshot — each equal to the SQL door, and the pinned read differs from the current. | `test_load_plain_and_version_as_of_unchanged` green. | **PROVEN** | Absolute rows plus reader/SQL equality and the pinned!=current guard; green on main and after. pins: ipi-23-mt-reader-1/C-008 |
+| C-009 | Near miss: `load("mt.ns.t.branch_b0")`, `.tag_t0` and `.snapshot_id_<second id>` equal the SQL door (rows and columns) and answer `[[1,"a","x"],[2,"b","y"],[3,"c","x"]]`; the tag and snapshot-id reads differ from the un-pinned read. | `test_load_branch_tag_snapshot_id_selectors_unchanged` green. | **PROVEN** | Selector routing untouched; reader/SQL equality plus the absolute second-snapshot rows per suffix. pins: ipi-23-mt-reader-1/C-009 |
 | C-010 | Near miss: a real table `mt.ns.snapshots` reads its own rows (`[[1],[2]]`) under `load`. | `test_load_table_named_snapshots_reads_real_table` green. | **PROVEN** | Three-part names never route to metadata. pins: ipi-23-mt-reader-1/C-010 |
-| C-011 | Near miss: `load("mt.ns.t.nope")` keeps today's `AnalysisException` text (`Unsupported compound identifier 'mt.ns.t_load_nope.nope'. Expected 1, 2 or 3 parts, got 4`). | `test_load_unknown_suffix_keeps_error_text` green. | **PROVEN** | The reader's own literal, measured on main (M-3). pins: ipi-23-mt-reader-1/C-011 |
-| C-012 | Near miss: the legacy `snapshot-id` / `as-of-timestamp` / `tag` options on `load("mt.ns.t.files")` refuse with the #800 `IllegalArgumentException` texts. | `test_legacy_options_on_metadata_keep_refusal_texts` green. | **PROVEN** | Python-layer refusals fire before any engine routing. pins: ipi-23-mt-reader-1/C-012 |
-| C-013 | Live leg: on Spark 4.1.2 itself the reader answers what SQL answers for `load(t.snapshots)` and `versionAsOf` on `load(t.files)`. | `test_live_spark_reader_matches_sql` green under `REPARK_PARITY_LIVE=1`. | **PROVEN** | Goal premise re-measured on the live oracle in the gate's live leg. pins: ipi-23-mt-reader-1/C-013 |
-| C-014 | V-001: `load("mt.ns.T_CASETWIN.snapshots")` (stored lowercase) fails with the SQL door's class and full backticked text. | `test_load_case_twin_table_matches_sql_door` green. | **PROVEN** | Red-first: double-quoted vs backticked identifier; equal after the fix. pins: ipi-23-mt-reader-1/C-014 |
+| C-011 | Near miss: `load("mt.ns.t.nope")` keeps today's `AnalysisException` text as a literal pin (`Unsupported compound identifier 'mt.ns.t_load_nope.nope'. Expected 1, 2 or 3 parts, got 4`); only `getSqlState()` is compared against the SQL door's on the same spelling. | `test_load_unknown_suffix_keeps_error_text` green. | **PROVEN** | The reader's own literal, measured on main (M-3); SQLSTATE paired, text literal. pins: ipi-23-mt-reader-1/C-011 |
+| C-012 | Near miss: the legacy `snapshot-id` / `as-of-timestamp` / `tag` options on `load("mt.ns.t.files")` refuse standalone with the #800 `IllegalArgumentException` literal texts and `getSqlState()` `None` — no SQL arm. | `test_legacy_options_on_metadata_keep_refusal_texts` green. | **PROVEN** | Python-layer refusals fire before any engine routing; literal texts plus `is None`. pins: ipi-23-mt-reader-1/C-012 |
+| C-013 | Live leg: on Spark 4.1.2 itself the reader answers what SQL answers for `load(t.snapshots)` and `versionAsOf` on `load(t.files)` at the second snapshot id — sorted `operation` multiset `append, append, delete`, field `("operation", "string", True)`, `record_count` sum 3 and field `("record_count", "bigint", False)`, the pinned read differing from the un-pinned. | `test_live_spark_reader_matches_sql` green under `REPARK_PARITY_LIVE=1`. | **PROVEN** | Goal premise re-measured on the live oracle in the gate's live leg. pins: ipi-23-mt-reader-1/C-013 |
+| C-014 | V-001: `load("mt.ns.T_CASETWIN.snapshots")` (stored lowercase) fails with the SQL door's class, full backticked text and `getSqlState()`. | `test_load_case_twin_table_matches_sql_door` green. | **PROVEN** | Red-first: double-quoted vs backticked identifier; equal after the fix. pins: ipi-23-mt-reader-1/C-014 |
 | C-015 | V-002: `SELECT count(*) FROM mt.ns."missing$all_files" VERSION AS OF 1` gives the `ALL_FILES` refusal (class, sqlstate, full message), equal to the existing-table dollar and dotted spellings — implicitly the Spark refusal contract. | `test_quoted_dollar_missing_table_refuses_all_files` green. | **REJECTED** (ROUTER-EQUIVALENCE ONLY — DIVERGES FROM SPARK) | The three-spelling equality holds on RePark and stays pinned as router equivalence (red-first `TableNotFound` before the refusal-first fix); on Spark 4.1.2 both quoted-dollar spellings parse-refuse (`PARSE_SYNTAX_ERROR`, the C-019 measurement) before any `ALL_FILES` check, so the pinned equality is RePark-internal. Pre-existing divergence filed for follow-up. pins: ipi-23-mt-reader-1/C-015 |
-| C-016 | Sweep: `load("mt.ns.t.SNAPSHOTS")` equals the SQL door (rows and columns). | `test_load_uppercase_suffix_equals_sql` green. | **PROVEN** | Uppercase suffix serves on both doors. pins: ipi-23-mt-reader-1/C-016 |
-| C-017 | Sweep: missing-table and missing-namespace un-pinned loads fail with the SQL door's exact text. | `test_load_missing_parent_matches_sql_door` green. | **PROVEN** | Red-first on quoting with C-014; equal after. pins: ipi-23-mt-reader-1/C-017 |
-| C-018 | Sweep: every `all_*` table un-pinned equals the SQL door (rows and columns). | `test_load_all_types_without_as_of_equals_sql` green. | **PROVEN** | Rows relative (router equivalence); columns absolute (Spark 4.1.2, measured 2026-09-23) — all five serve via the fork on both doors. pins: ipi-23-mt-reader-1/C-018 |
+| C-016 | Sweep: `load("mt.ns.t.SNAPSHOTS")` equals the SQL door (rows and columns), with the sorted `operation` multiset `append, append, delete`. | `test_load_uppercase_suffix_equals_sql` green. | **PROVEN** | Uppercase suffix serves on both doors. pins: ipi-23-mt-reader-1/C-016 |
+| C-017 | Sweep: missing-table and missing-namespace un-pinned loads fail with the SQL door's class, exact text and `getSqlState()`. | `test_load_missing_parent_matches_sql_door` green. | **PROVEN** | Red-first on quoting with C-014; equal after. pins: ipi-23-mt-reader-1/C-017 |
+| C-018 | Sweep: every `all_*` table un-pinned equals the SQL door (rows and columns), and each column list equals the recorded Spark 4.1.2 inventory. | `test_load_all_types_without_as_of_equals_sql` green. | **PROVEN** | Rows relative (router equivalence); columns absolute (Spark 4.1.2, measured 2026-09-23) — all five serve via the fork on both doors. pins: ipi-23-mt-reader-1/C-018 |
 | C-019 | Sweep: the quoted `t$snapshots` spelling un-pinned equals the SQL door (rows and columns) — implicitly a Spark-servable parity spelling. | `test_load_quoted_dollar_spelling_equals_sql` green. | **REJECTED** (ROUTER-EQUIVALENCE ONLY — DIVERGES FROM SPARK) | Door-equality holds and stays pinned as router equivalence; Spark 4.1.2 refuses the double-quoted `"t$snapshots"` spelling on both doors — reader `IllegalArgumentException: Cannot parse identifier: sc.db."t$snapshots"`, SQL `ParseException [PARSE_SYNTAX_ERROR] Syntax error at or near '"t$snapshots"'`, SQLSTATE 42601 (measured 2026-09-23). Pre-existing divergence filed for follow-up. pins: ipi-23-mt-reader-1/C-019 |
-| C-020 | Sweep: uppercase `.FILES` with `versionAsOf` equals SQL `VERSION AS OF` (rows and columns). | `test_load_uppercase_suffix_as_of_equals_sql` green. | **PROVEN** | Case-insensitive routing on both doors. pins: ipi-23-mt-reader-1/C-020 |
-| C-021 | Sweep: missing parents and the unknown suffix with `versionAsOf` fail with the SQL door's exact three-part text. | `test_load_missing_parent_as_of_matches_sql_door` green. | **PROVEN** | Fallthrough parity on both doors. pins: ipi-23-mt-reader-1/C-021 |
-| C-022 | Sweep: the remaining four `all_*` refusals match the SQL door's class and text. | `test_load_all_types_as_of_refuse_alike` green. | **PROVEN** | Per-type refusal sentences verbatim on both doors. pins: ipi-23-mt-reader-1/C-022 |
+| C-020 | Sweep: uppercase `.FILES` with `versionAsOf` at the second snapshot id equals SQL `VERSION AS OF` (rows and columns); `record_count` sums to 3 and the scoped rows differ from the un-pinned read. | `test_load_uppercase_suffix_as_of_equals_sql` green. | **PROVEN** | Case-insensitive routing on both doors. pins: ipi-23-mt-reader-1/C-020 |
+| C-021 | Sweep: missing parents and the unknown suffix with `versionAsOf` fail with the SQL door's class, exact three-part text and `getSqlState()`. | `test_load_missing_parent_as_of_matches_sql_door` green. | **PROVEN** | Fallthrough parity on both doors. pins: ipi-23-mt-reader-1/C-021 |
+| C-022 | Sweep: the remaining four `all_*` refusals match the SQL door's class and text, each containing `Cannot select snapshot in table: <UPPER>`, with `getSqlState()` equal across doors and `None`. | `test_load_all_types_as_of_refuse_alike` green. | **PROVEN** | Per-type refusal sentences verbatim on both doors. pins: ipi-23-mt-reader-1/C-022 |
 
 ## Gates
 
@@ -259,7 +288,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py]
     - id: AT-2
       status: ATTACKED
-      evidence: The seed exercises a two-append history with a delete so pins sit mid-history; the Rust pin drives the moved provider_for_spec through read_table_at and the SQL door for one scoped case (one row, rendered batches equal) and one empty case (zero rows, schema names equal); refusals pin class plus full text on both doors.
+      evidence: The seed exercises a two-append history with a delete so pins sit mid-history; the Rust pin drives the moved provider_for_spec through read_table_at and the SQL door for one scoped case (one row, rendered batches equal) and one empty case (zero rows, schema names equal); paired refusals pin class plus full text on both doors, the standalone refusal pins carry their literal texts.
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py, crates/repark-spark/src/tests/metadata_tables_asof.rs]
     - id: AT-3
       status: ATTACKED
@@ -293,8 +322,10 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py, python/repark/tests/map.md, crates/repark-core/src/time_travel/map.md]
 ```
 
-Every clause above except C-015 and C-019 is PROVEN against the SQL door on the
-same table, and the two replay cells against recorded PySpark 4.1.2 rows; C-015
+Every clause above except C-015 and C-019 is PROVEN — the paired ones against
+the SQL door on the same table, the standalone ones (C-010's literal rows,
+C-012's literal refusal texts) against their pinned literals — and the two
+replay cells against recorded PySpark 4.1.2 rows; C-015
 and C-019 are REJECTED as parity clauses — each holds as router equivalence on
 spellings Spark 4.1.2 refuses (pre-existing divergence filed for follow-up).
 No clause is OPEN. Touched files
