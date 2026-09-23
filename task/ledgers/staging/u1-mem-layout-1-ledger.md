@@ -86,7 +86,7 @@ named pin, and restores the file byte for byte), then green on the restored tree
 | C-008 | A `file:///…` warehouse gives the same plain local location as the bare path, end to end. A `file:/…` root, normalised by `memory_warehouse_fallback_root`, gives the plain path through the registry → resolver seam. `register_memory_catalog` itself refuses a `file:/…` warehouse as a malformed location. That refusal predates this unit and is unchanged. | `mem_layout.rs::mem_layout_file_uri_warehouse_gives_the_plain_location`, `::mem_layout_single_slash_file_warehouse_root_gives_the_plain_location` | **PROVEN** | M8 (record `PathBuf::from(warehouse)` instead of the normalised root): FAILED. M9 (do not strip `file:`): FAILED. |
 | C-009 | The Q-55-6 guard pins stay green, and their files are untouched. | `cargo test -p repark-spark --lib call_orphan` | **PROVEN** | `14 passed; 0 failed`. `git diff 88b6f59f -- crates/repark-spark/src/call.rs crates/repark-spark/src/call crates/repark-spark/src/tests/call_orphan.rs crates/repark-spark/src/view_ddl crates/repark-sql/src/create_table.rs` is empty. |
 | C-010 | Every Spark-dialect create path that could reach the `repark_ctas` fallback reaches it only through `resolve_create_plan_for`, so all of them take the new layout. | The table above; grep `resolve_create_plan_for`, `resolve_table_create_location`, `repark_ctas` | **PROVEN** | The resolver has one caller (`ctas.rs:473`). `resolve_create_plan_for` has two (`ctas.rs:428`, `create_table.rs:492`). The Python writer and catalog helpers build SQL text that reaches those two. |
-| C-011 | Two memory catalogs registered on the SAME warehouse, both `CREATE TABLE ns.t`, share `<wh>/ns/t`. Ruled 2026-09-23 (orchestrator, `u1-cotenancy-guard.md` with the tick-8 addendum): the layout stays, and under `TempFallbackAllowed` `remove_orphan_files` refuses a scan path that holds another table's files. It has two rules. (a) Before listing and before a `file_list_view`, every `*.metadata.json` under the scan path at any depth, other than the swept table's current metadata file and its `metadata_log` files, is read. A different `table-uuid` refuses, and so does an unreadable file. The same uuid does not refuse. (b) In the catalog walk, a scan path inside another registered table's location and outside the swept table's own refuses. Both rules compare through `normalize_orphan_scan_path` and component-wise `Path::starts_with`. | `crates/repark-spark/src/call/remove_orphan_files.rs::refuse_scan_over_foreign_metadata`, `::refuse_scan_over_other_tables`; C-012 to C-020 | **RULED** (guard landed) | The pins below. See "Two catalogs, one warehouse". |
+| C-011 | Two memory catalogs registered on the SAME warehouse, both `CREATE TABLE ns.t`, share `<wh>/ns/t`. Ruled 2026-09-23 (orchestrator, `u1-cotenancy-guard.md` with the tick-8 addendum): the layout stays, and under `TempFallbackAllowed` `remove_orphan_files` refuses a scan path that holds another table's files. It has two rules. (a) Before listing and before a `file_list_view`, every `*.metadata.json` under the scan path at any depth, other than the swept table's current metadata file and its `metadata_log` files, is read. A different `table-uuid` refuses, and so does an unreadable file. The same uuid does not refuse. (b) In the catalog walk, a scan path inside another registered table's location and outside the swept table's own refuses. Both rules compare through `normalize_orphan_scan_path` and component-wise `Path::starts_with`. | `crates/repark-spark/src/call/remove_orphan_files.rs::refuse_scan_over_foreign_metadata`, `::refuse_scan_over_other_tables`; C-012 to C-020 | **PROVEN** (ruled 2026-09-23; the guard is proven by C-012 to C-020) | The pins below. See "Two catalogs, one warehouse". |
 | C-012 | Two memory catalogs `m1` and `m2` on one warehouse each create `ns.t` at `<wh>/ns/t` and insert a row. `CALL m1.system.remove_orphan_files(table => 'ns.t')` refuses and names `m2`'s first metadata file in sorted order. The bare path, `file:///` and `file:/` scan locations give the same refusal. The planted orphan and both rows survive. | `crates/repark-spark/src/tests/call_orphan_cotenancy.rs::call_orphan_cotenancy_two_catalogs_on_one_warehouse_refuse` | **PROVEN** | M-a (the probe returns `Ok` at once): FAILED. |
 | C-013 | Two sessions each register catalog `ice` on one warehouse. The same outcome as C-012. | `call_orphan_cotenancy.rs::call_orphan_cotenancy_two_sessions_with_one_catalog_name_refuse` | **PROVEN** | M-a: FAILED. |
 | C-014 | `location => '<wh>/ns/b/data'` swept as `ns.a` (`b` in the same catalog, its files aged 10 days) refuses and names `ice.ns.b`. `b`'s live file and row survive. | `call_orphan_cotenancy.rs::call_orphan_cotenancy_location_inside_another_table_refuses` | **PROVEN** | M-b (the inside-another-table comparison is dropped): FAILED. |
@@ -98,6 +98,54 @@ named pin, and restores the file byte for byte), then green on the restored tree
 | C-020 | Fail closed: an unreadable `00009-broken.metadata.json` under the scan path refuses and names the file. It is not deleted, and the row survives. | `call_orphan_cotenancy.rs::call_orphan_cotenancy_unreadable_metadata_file_refuses` | **PROVEN** | M-open (an unreadable file is skipped): FAILED. M-a: FAILED. |
 | C-021 | Facade: a memory table sits at `<wh>/ns/events`. The default sweep lists and deletes the 10-day orphan and keeps the 1-day one, and the table reads `[1]`. A `location` at the warehouse and at `<wh>/repark_ctas` still refuses with the unchanged shared-root text. | `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_memory_table_but_never_the_shared_root` | **PROVEN** | `15 passed` on a fresh `make develop`. The old name, with the `repark_ctas/mem/ns/events` path, failed on this branch (brief). |
 | C-022 | The Q-55-6 pins stay green. After the rebase, #807's scope fixture (`call_orphan_scope.rs::ctas` and two `namespace_dir` lines) still built `repark_ctas/ice/ns/<t>` paths, and 20 `call_orphan` pins went red. Only those paths moved to `<wh>/ns/<t>`, and no assertion changed. | `cargo test -p repark-spark --lib call_orphan` | **PROVEN** | Before the fixture change: `22 passed; 20 failed`. After it: `42 passed`. With the guard and new pins: `51 passed; 0 failed`. |
+
+## Coverage attestation
+
+```text
+COVERAGE_ATTESTATION:
+  pr_unit: u1-mem-layout-1
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: The Q-55-7 layout and both C-011 guard rules have pins.
+      artifacts: [crates/repark-spark/src/tests/mem_layout.rs, crates/repark-spark/src/tests/call_orphan_cotenancy.rs, crates/repark-core/src/session/tests/session.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Pins cover explicit and namespace locations, nested namespaces, path escapes, URI spellings, own-history metadata, stray JSON, and nested namespace scans.
+      artifacts: [C-003..C-008, C-015, C-016, C-018, C-019]
+    - id: AT-3
+      status: ATTACKED
+      evidence: C-020 refuses unreadable metadata, and every refusal pin asserts that the orphan and rows survive.
+      artifacts: [C-012..C-014, C-020]
+    - id: AT-4
+      status: ATTACKED
+      evidence: C-012 and C-013 cover two catalogs and two sessions on one warehouse.
+      artifacts: [C-012, C-013]
+    - id: AT-5
+      status: ATTACKED
+      evidence: C-007 refuses traversal before path construction; C-012 and C-014 keep the sweep within table files.
+      artifacts: [C-007, C-012, C-014]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The unrecorded TempFallbackAllowed fallback stays byte-identical, and Q-55-6 pins stay green.
+      artifacts: [mem_layout_unrecorded_temp_fallback_keeps_repark_ctas_path, cargo test -p repark-spark --lib call_orphan]
+    - id: AT-7
+      status: N/A
+      justification: The probe reads each *.metadata.json under the scan path once per CALL; it adds no loop over data files.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Cargo.toml, Cargo.lock, and the fork are untouched; resolve_create_plan_for has two callers.
+      artifacts: [crates/repark-spark/src/ctas.rs]
+    - id: AT-9
+      status: ATTACKED
+      evidence: C-012 and C-020 name the foreign metadata file; C-014 names the other table.
+      artifacts: [C-012, C-014, C-020]
+    - id: AT-10
+      status: ATTACKED
+      evidence: At d1f8fa9b, M-a 3, M-b 1, M-uuid 1, M-filter 35, M-naive 33, M-unless 2, M-norm 2, M-open 1, L-wire 3, L-ns 5, and L-off 5 pins failed.
+      artifacts: [crates/repark-spark/src/tests/call_orphan_cotenancy.rs, crates/repark-spark/src/tests/mem_layout.rs]
+```
 
 ## Two catalogs, one warehouse (measured 2026-09-23; guarded, C-011)
 

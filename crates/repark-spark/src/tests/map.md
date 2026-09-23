@@ -1,5 +1,7 @@
 # map — repark-spark/src/tests
 
+U1-MEM-LAYOUT-1 (2026-09-23): the Spark memory-layout and orphan co-tenancy test modules, their manifest entries, and moved fixture paths are recorded below.
+
 ICE-MIXED-CASE-1 (2026-09-17): `common.rs` test helper carries the case-sensitivity flag into session config — round 21b through `with_spark_case_sensitive_config(config, false)`, main's carrier. pins: ice-mixed-case-1/C-012
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
@@ -970,6 +972,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   equality-delete pin exists here.
   pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
+  **U1-MEM-LAYOUT-1 (2026-09-23):** the Q-55-6 safety guards stay green after the layout change. pins: u1-mem-layout-1/C-009
   **IPI-30 (2026-09-22):** Spark's defaults land — the bare call deletes with `older_than` at
   now minus 3 days (`call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`),
   the optional arguments are accepted (`call_remove_orphan_files_accepts_sparks_optional_arguments`,
@@ -994,10 +997,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   rows and the name-prefix sibling accept. `call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root`
   keeps the execute-path refusal at the root.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-008, C-009
+- [mem_layout.rs](mem_layout.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** CTAS, column-definition CREATE, explicit and namespace location precedence, nested namespaces, legacy fallback, path escape rejection, and file URI normalization. pins: u1-mem-layout-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
+- [call_orphan_cotenancy.rs](call_orphan_cotenancy.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** shared-warehouse catalog refusal, own-history metadata sweep, non-metadata sweep, default sweep, nested namespace guards, own-table location exception, and unreadable metadata refusal. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [call_orphan_scope.rs](call_orphan_scope.rs) — **IPI-30 guard narrowed (2026-09-22, owner
   ruling Q-55-6):** end-to-end pins on a `ReparkSession` memory catalog whose namespace has
   no `location` and whose tables carry no table `LOCATION`, so each sits under
-  `<warehouse>/repark_ctas/ice/ns/<table>`. The
+  `<warehouse>/ns/<table>` after the fixture move. The
   bare call sweeps the table's own directory (10-day orphan listed and deleted, 1-day orphan
   kept), and a sibling table in the same namespace does not block that sweep; a `location` at
   the warehouse, `repark_ctas` or `repark_ansi_ctas` refuses; a `location` holding another
@@ -1013,6 +1018,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   outside the scan location (a warehouse file, a `..` escape) is kept. Its helpers are
   `pub(super)` for `call_orphan_view.rs`.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
+  pins: u1-mem-layout-1/C-022
 - [call_orphan_view.rs](call_orphan_view.rs) — **IPI-30 view-path sweep (2026-09-23):** the
   `file_list_view` branches beyond the scope pins, on `call_orphan_scope.rs`'s helpers. Each
   orphan comes back once, sorted, in the view's own spelling. `gc.enabled = false` and an
