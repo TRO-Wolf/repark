@@ -1,4 +1,4 @@
-use datafusion::error::{DataFusionError, Result};
+use datafusion::error::Result;
 use iceberg::spec::{DataFileFormat, FormatVersion};
 
 #[allow(clippy::missing_errors_doc)]
@@ -39,13 +39,17 @@ fn parse_format(raw: &str) -> Result<DataFileFormat> {
         "parquet" => Ok(DataFileFormat::Parquet),
         "orc" => Ok(DataFileFormat::Orc),
         "avro" => Ok(DataFileFormat::Avro),
-        _ => Err(DataFusionError::Plan(format!("Invalid file format: {raw}"))),
+        _ => Err(crate::write::illegal_argument_error(format!(
+            "Invalid file format: {raw}"
+        ))),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::write::IllegalArgumentMarker;
+    use datafusion::error::DataFusionError;
 
     #[test]
     fn staging_format_beats_table_property() {
@@ -76,19 +80,25 @@ mod tests {
     #[test]
     fn unknown_staging_format_refuses_with_java_shape() {
         let error = resolve_data_format(Some("csv"), Some("parquet")).expect_err("csv option");
-        assert!(
-            error.to_string().contains("Invalid file format: csv"),
-            "{error}"
-        );
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External marker, got {error:?}");
+        };
+        let marker = inner
+            .downcast_ref::<IllegalArgumentMarker>()
+            .expect("expected an IllegalArgumentMarker");
+        assert_eq!(marker.0, "Invalid file format: csv");
     }
 
     #[test]
     fn unknown_table_property_refuses_with_java_shape() {
         let error = resolve_data_format(None, Some("delta")).expect_err("delta property");
-        assert!(
-            error.to_string().contains("Invalid file format: delta"),
-            "{error}"
-        );
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External marker, got {error:?}");
+        };
+        let marker = inner
+            .downcast_ref::<IllegalArgumentMarker>()
+            .expect("expected an IllegalArgumentMarker");
+        assert_eq!(marker.0, "Invalid file format: delta");
     }
 
     #[test]
@@ -155,9 +165,12 @@ mod tests {
         let error =
             resolve_delete_format(None, Some("csv"), DataFileFormat::Orc, FormatVersion::V2)
                 .expect_err("csv delete property");
-        assert!(
-            error.to_string().contains("Invalid file format: csv"),
-            "{error}"
-        );
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External marker, got {error:?}");
+        };
+        let marker = inner
+            .downcast_ref::<IllegalArgumentMarker>()
+            .expect("expected an IllegalArgumentMarker");
+        assert_eq!(marker.0, "Invalid file format: csv");
     }
 }

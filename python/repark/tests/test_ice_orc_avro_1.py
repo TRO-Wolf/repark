@@ -8,7 +8,7 @@ S6 rows in order; the unit ledger adopts these numbers when it lands.
 pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 pins: ice-orc-avro-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 pins: ice-orc-avro-1/C-017, C-018, C-019, C-020, C-021, C-022
-pins: ice-orc-avro-1/C-023
+pins: ice-orc-avro-1/C-023, C-025
 """
 
 from __future__ import annotations
@@ -563,6 +563,22 @@ def test_unknown_write_format_refuses(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT * FROM (VALUES (2, 'name-2')) AS t(id, name)")
     with pytest.raises(IllegalArgumentException, match="^Invalid file format: csv$"):
         frame.writeTo(table).option("write-format", "csv").append()
+    assert _snapshot_count(spark, table) == 1
+
+
+def test_unknown_delete_format_property_refuses(spark: ReparkSession) -> None:
+    """`write.delete.format.default = 'csv'` refuses a v2 merge-on-read DELETE.
+
+    pins: ice-orc-avro-1/C-025.
+    """
+    table = f"{CATALOG}.{NS}.del_fmt_bogus"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT, data STRING) USING iceberg TBLPROPERTIES "
+        f"('format-version' = '2', 'write.delete.format.default' = 'csv', {_MOR_MODES})"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES (0, 'a'), (1, 'b')")
+    with pytest.raises(IllegalArgumentException, match="^Invalid file format: csv$"):
+        spark.sql(f"DELETE FROM {table} WHERE id = 0")
     assert _snapshot_count(spark, table) == 1
 
 

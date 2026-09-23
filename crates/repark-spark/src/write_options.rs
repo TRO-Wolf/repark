@@ -252,7 +252,13 @@ mod tests {
     fn bogus_format_mirrors_spark_text() {
         let error = StatementWriteOptions::validate(vec![pair("write-format", "bogus")])
             .expect_err("bogus");
-        assert!(error.to_string().contains("Invalid file format: bogus"));
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External marker, got {error:?}");
+        };
+        let marker = inner
+            .downcast_ref::<repark_iceberg::write::IllegalArgumentMarker>()
+            .expect("expected an IllegalArgumentMarker");
+        assert_eq!(marker.0, "Invalid file format: bogus");
     }
 
     #[test]
