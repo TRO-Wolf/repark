@@ -327,6 +327,9 @@ Supported surface, for reference:
   the unguarded `DROP BRANCH nope` answers the fork's `Ref nope does not exist` where Spark
   answers `IllegalArgumentException: Branch does not exist: nope`, and RePark's parse-class
   refusal carries no `== SQL ==` caret block — both are IPI-51's.
+  Parse-class refusals written as `[CONDITION] … SQLSTATE: X` now answer `getCondition()` and
+  `getSqlState()` from that prefix like Spark; measured pins cover the INSERT BY NAME column list
+  and multi-statement parser-wrapper forms.
 
 #### REF-3 — write-audit-publish (WAP) — the `spark.wap.id` staged half — **FIXED 2026-09-21** (IPI-05)
 
@@ -1352,8 +1355,10 @@ perfectly good read.
   order, secrets redacted; `'` escapes as `\'`, backslashes pass through). `AS SERDE` refuses
   `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]` (`0A000`); a missing table refuses
   `[TABLE_OR_VIEW_NOT_FOUND]` (`42P01`); a bare `SHOW CREATE TABLE` refuses
-  `[INVALID_STATEMENT_OR_CLAUSE]` (`42601`). Views are not answered here — `V-SHOW-CREATE`
-  stays with the view lane (IPI-40).
+  `[INVALID_STATEMENT_OR_CLAUSE]` (`42601`). The byte-for-byte claim covers CREATE-text
+  answers; parse-class refusals match Spark's condition, SQLSTATE, and first line but omit the
+  `== SQL ==` caret block (IPI-51). Views are not answered here — `V-SHOW-CREATE` stays with
+  the view lane (IPI-40).
 - **Apache Spark** — the same text. *(oracle: live PySpark 4.1.2 + Iceberg 1.11,
   2026-09-23, five shapes plus the escape, OPTIONS, multi-term sort-order and
   identifier-order probes.)*

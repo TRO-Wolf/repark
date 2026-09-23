@@ -410,6 +410,21 @@ mod tests {
             .collect()
     }
 
+    fn assert_invalid_show_create_table_error(error: DataFusionError, sql: &str) {
+        assert_eq!(
+            error.to_string(),
+            format!("SQL error: ParserError(\"{INVALID_SHOW_CREATE_TABLE_MESSAGE}\")"),
+            "{sql}"
+        );
+        let DataFusionError::SQL(parser_error, _) = error else {
+            panic!("{sql} must be a DataFusion SQL error");
+        };
+        let ParserError::ParserError(message) = parser_error.as_ref() else {
+            panic!("{sql} must carry a parser error message");
+        };
+        assert_eq!(message, INVALID_SHOW_CREATE_TABLE_MESSAGE, "{sql}");
+    }
+
     #[test]
     fn spark_sql_string_literal_escapes_single_quotes_only() {
         assert_eq!(spark_sql_string_literal("v"), "'v'");
@@ -544,13 +559,7 @@ mod tests {
             let Some(Err(error)) = try_parse_show_create(sql) else {
                 panic!("{sql} must return a parse error");
             };
-            let DataFusionError::SQL(parser_error, _) = error else {
-                panic!("{sql} must be a DataFusion SQL error");
-            };
-            let ParserError::ParserError(message) = parser_error.as_ref() else {
-                panic!("{sql} must carry a parser error message");
-            };
-            assert_eq!(message, INVALID_SHOW_CREATE_TABLE_MESSAGE, "{sql}");
+            assert_invalid_show_create_table_error(error, sql);
         }
     }
 
@@ -568,13 +577,7 @@ mod tests {
             let Some(Err(error)) = try_parse_show_create(sql) else {
                 panic!("{sql} must return a parse error");
             };
-            let DataFusionError::SQL(parser_error, _) = error else {
-                panic!("{sql} must be a DataFusion SQL error");
-            };
-            let ParserError::ParserError(message) = parser_error.as_ref() else {
-                panic!("{sql} must carry a parser error message");
-            };
-            assert_eq!(message, INVALID_SHOW_CREATE_TABLE_MESSAGE, "{sql}");
+            assert_invalid_show_create_table_error(error, sql);
         }
     }
 

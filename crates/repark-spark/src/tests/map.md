@@ -1442,7 +1442,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO-C3 (2026-09-23):** nested bracket comments and line comments before or between SHOW
   CREATE TABLE keywords keep every m8 lexical and trailing form in the typed parse refusal;
   unclosed bracket comments and unrelated text stay outside the intercept.
-  pins: wo-c3/C-001
+  **WO-C3 C2:** every SHOW CREATE parse-refusal pin compares the exact parser first line and
+  RePark's complete rendered `DataFusionError` text.
+  pins: wo-c3/C-001, C-002
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

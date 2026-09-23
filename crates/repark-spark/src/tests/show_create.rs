@@ -7,6 +7,8 @@ const AS_SERDE_MESSAGE: &str = "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] SHOW CREATE
      tables. SQLSTATE: 0A000";
 const INVALID_SHOW_CREATE_TABLE_MESSAGE: &str = "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. \
      SQLSTATE: 42601";
+const INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE: &str = "SQL error: ParserError(\"[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. \
+     SQLSTATE: 42601\")";
 const MISSING_TABLE_MESSAGE: &str = "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`nope` cannot be found. Verify the \
      spelling and correctness of the schema and catalog. If you did not qualify the name with a \
      schema, verify the current_schema() output, or qualify the name with the correct schema and \
@@ -29,6 +31,19 @@ fn parse_error_message(error: DataFusionError, sql: &str) -> String {
         panic!("{sql} must carry a parser error message: {parser_error}");
     };
     message.clone()
+}
+
+fn assert_invalid_show_create_table_error(error: DataFusionError, sql: &str) {
+    assert_eq!(
+        error.to_string(),
+        INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE,
+        "{sql}"
+    );
+    assert_eq!(
+        parse_error_message(error, sql),
+        INVALID_SHOW_CREATE_TABLE_MESSAGE,
+        "{sql}"
+    );
 }
 
 fn plan_error_message(error: DataFusionError, sql: &str) -> String {
@@ -459,10 +474,7 @@ async fn show_create_table_without_a_name_is_a_loud_parse_error() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     let sql = "SHOW CREATE TABLE";
-    assert_eq!(
-        parse_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
-        INVALID_SHOW_CREATE_TABLE_MESSAGE
-    );
+    assert_invalid_show_create_table_error(execution_error(&ctx, &catalogs, sql).await, sql);
 }
 
 #[tokio::test]
@@ -477,11 +489,7 @@ async fn show_create_lexical_and_trailing_failures_stay_parse_class_errors() {
         "SHOW CREATE TABLE ice.sales.t extra",
         "SHOW CREATE TABLE ice.sales.t AS JSON",
     ] {
-        assert_eq!(
-            parse_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
-            INVALID_SHOW_CREATE_TABLE_MESSAGE,
-            "{sql}"
-        );
+        assert_invalid_show_create_table_error(execution_error(&ctx, &catalogs, sql).await, sql);
     }
 }
 
