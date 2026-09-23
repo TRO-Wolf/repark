@@ -618,6 +618,30 @@ mod tests {
     }
 
     #[test]
+    fn alter_view_tail_reports_the_missing_keyword_for_each_action() {
+        for (sql, expected) in [
+            (
+                "ALTER VIEW v SET ('k'='v')",
+                "Error during planning: could not parse `ALTER VIEW`: expected TBLPROPERTIES after SET",
+            ),
+            (
+                "ALTER VIEW v UNSET ('k')",
+                "Error during planning: could not parse `ALTER VIEW`: expected TBLPROPERTIES after UNSET",
+            ),
+            (
+                "ALTER VIEW v RENAME v2",
+                "Error during planning: could not parse `ALTER VIEW`: expected TO after RENAME",
+            ),
+        ] {
+            let error = try_parse_alter_view(sql)
+                .expect("ALTER VIEW must match")
+                .err()
+                .expect("malformed action must refuse");
+            assert_eq!(error.to_string(), expected, "{sql}");
+        }
+    }
+
+    #[test]
     fn alter_view_unsupported_shapes_do_not_match() {
         assert!(try_parse_alter_view("ALTER VIEW sc.ns.v AS SELECT 1").is_none());
         assert!(try_parse_alter_view("ALTER VIEW sc.ns.v").is_none());
