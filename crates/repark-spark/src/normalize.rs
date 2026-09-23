@@ -234,6 +234,8 @@ pub(crate) fn parse_single_normalized(
 /// # Errors
 /// Returns SQL parse error when more than one non-empty statement is present.
 pub(crate) fn refuse_multi_statement_sql(sql: &str) -> Result<()> {
+    let refusal =
+        || crate::show_create::multi_statement_refusal_error(sql, multi_statement_parse_error());
     let dialect = DatabricksDialect {};
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
         // Un-tokenizable input is not a multi-statement claim — fall through to existing paths.
@@ -243,12 +245,12 @@ pub(crate) fn refuse_multi_statement_sql(sql: &str) -> Result<()> {
         .with_tokens(tokens.clone())
         .parse_statements()
     {
-        Ok(statements) if statements.len() > 1 => Err(multi_statement_parse_error()),
+        Ok(statements) if statements.len() > 1 => Err(refusal()),
         Ok(_) => Ok(()),
         Err(_) => {
             // Fail-closed: `;` + non-ws/comment/extra-`;` content → multi-statement class refuse.
             if tokens_have_nontrailing_content_after_semicolon(&tokens) {
-                Err(multi_statement_parse_error())
+                Err(refusal())
             } else {
                 Ok(())
             }
@@ -279,7 +281,7 @@ pub(crate) fn multi_statement_parse_error() -> DataFusionError {
         Box::new(ParserError::ParserError(
             "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not \
              supported (Spark parity). Only a single statement is accepted; a trailing \
-             semicolon, whitespace, or comment after that statement is allowed"
+             semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601"
                 .to_string(),
         )),
         None,

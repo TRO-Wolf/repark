@@ -3053,6 +3053,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   **WO-C3 C4 (2026-09-23):** INSERT BY NAME with a column list and multi-statement SQL pin the
   native ParserError wrapper's exact RePark text and `PARSE_SYNTAX_ERROR` condition.
   pins: wo-c3/C-004
+  **WO-C5 (2026-09-23):** the multi-statement row pins `ParseException`,
+  `PARSE_SYNTAX_ERROR`, SQLSTATE `42601`, and the full wrapper string.
+  pins: wo-c5/C-001
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
   expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare
   SELECT/INSERT/CTAS/UPDATE/DELETE; temp-view prefer on FROM; VIEW/TEMP TABLE non-rewrite;
@@ -7008,6 +7011,10 @@ pins: fnp-8-review/C-009, C-010
   or the typed parse contract; the unclosed bracket-comment and SHOW TABLES near misses keep
   their exact current outcomes. The parse pins compare the complete no-caret RePark message.
   pins: wo-c3/C-001, C-002
+  **WO-C5 (2026-09-23):** post-head unclosed bracket comments assert `ParseException`,
+  `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full parser-wrapper message; a comment hiding
+  TABLE pins the tokenizer fall-through. The multi-statement facade refusal includes `42601`.
+  pins: wo-c5/C-001, C-002
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce

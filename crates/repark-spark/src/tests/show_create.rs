@@ -11,6 +11,10 @@ const INVALID_SHOW_CREATE_TABLE_MESSAGE: &str = "[INVALID_STATEMENT_OR_CLAUSE] T
      SQLSTATE: 42601";
 const INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE: &str = "SQL error: ParserError(\"[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. \
      SQLSTATE: 42601\")";
+const UNCLOSED_BRACKETED_COMMENT_MESSAGE: &str = "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. \
+     Please, append */ at the end of the comment. SQLSTATE: 42601";
+const UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE: &str = "SQL error: ParserError(\"[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. \
+     Please, append */ at the end of the comment. SQLSTATE: 42601\")";
 const MISSING_TABLE_MESSAGE: &str = "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`nope` cannot be found. Verify the \
      spelling and correctness of the schema and catalog. If you did not qualify the name with a \
      schema, verify the current_schema() output, or qualify the name with the correct schema and \
@@ -48,11 +52,16 @@ fn assert_invalid_show_create_table_error(error: DataFusionError, sql: &str) {
     );
 }
 
-fn plan_error_message(error: DataFusionError, sql: &str) -> String {
-    let DataFusionError::Plan(message) = error else {
+fn plan_error_message(error: &DataFusionError, sql: &str) -> String {
+    let DataFusionError::Plan(message) = &error else {
         panic!("{sql} must be a DataFusion plan error");
     };
-    message
+    assert_eq!(
+        error.to_string(),
+        format!("Error during planning: {message}"),
+        "{sql}"
+    );
+    message.clone()
 }
 
 async fn outcome(
@@ -480,7 +489,7 @@ async fn show_create_as_serde_refuses_like_spark() {
     .await;
     let sql = "SHOW CREATE TABLE ice.sales.sc2 AS SERDE";
     assert_eq!(
-        plan_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
+        plan_error_message(&execution_error(&ctx, &catalogs, sql).await, sql),
         AS_SERDE_MESSAGE
     );
 }
@@ -491,7 +500,7 @@ async fn show_create_missing_table_refuses_table_or_view_not_found() {
     let (ctx, catalogs) = setup(&wh).await;
     let sql = "SHOW CREATE TABLE ice.sales.nope";
     assert_eq!(
-        plan_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
+        plan_error_message(&execution_error(&ctx, &catalogs, sql).await, sql),
         MISSING_TABLE_MESSAGE
     );
 }
@@ -521,12 +530,70 @@ async fn show_create_lexical_and_trailing_failures_stay_parse_class_errors() {
 }
 
 #[tokio::test]
+async fn show_create_unclosed_bracketed_comments_keep_spark_parse_class() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for sql in [
+        "SHOW CREATE TABLE /* c sc.sales.t",
+        "SHOW CREATE TABLE sc.sales.t /* c",
+        "SHOW CREATE TABLE sc.sales.t /*",
+        "SHOW CREATE TABLE sc.sales.t AS SERDE /* c",
+    ] {
+        let error = execution_error(&ctx, &catalogs, sql).await;
+        assert!(
+            matches!(&error, DataFusionError::SQL(_, _)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE,
+            "{sql}"
+        );
+        assert_eq!(
+            parse_error_message(error, sql),
+            UNCLOSED_BRACKETED_COMMENT_MESSAGE,
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn show_create_comment_before_table_keyword_keeps_tokenizer_fallthrough() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let sql = "SHOW CREATE /* c TABLE sc.sales.t";
+    let error = execution_error(&ctx, &catalogs, sql).await;
+    assert!(matches!(&error, DataFusionError::SQL(_, _)));
+    assert_eq!(
+        error.to_string(),
+        "SQL error: TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 34\")"
+    );
+}
+
+#[tokio::test]
+async fn show_create_multi_statement_keeps_spark_invalid_statement_class() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let sql = "SHOW CREATE TABLE sc.sales.t; SELECT 1";
+    let error = execution_error(&ctx, &catalogs, sql).await;
+    assert!(matches!(&error, DataFusionError::SQL(_, _)));
+    assert_eq!(
+        error.to_string(),
+        INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE
+    );
+    assert_eq!(
+        parse_error_message(error, sql),
+        INVALID_SHOW_CREATE_TABLE_MESSAGE
+    );
+}
+
+#[tokio::test]
 async fn show_create_four_part_name_refuses_as_a_missing_table() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     let sql = "SHOW CREATE TABLE ice.sales.x.t";
     assert_eq!(
-        plan_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
+        plan_error_message(&execution_error(&ctx, &catalogs, sql).await, sql),
         "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`x`.`t` cannot be found. \
          Verify the spelling and correctness of the schema and catalog. If you did not qualify the \
          name with a schema, verify the current_schema() output, or qualify the name with the \
@@ -553,9 +620,8 @@ async fn show_create_table_view_keeps_its_current_analysis_refusal() {
     .await;
     let sql = "SHOW CREATE TABLE ice.sales.v";
     assert_eq!(
-        execution_error(&ctx, &catalogs, sql).await.to_string(),
-        "Error during planning: SHOW CREATE TABLE is not supported unless information_schema is \
-         enabled"
+        plan_error_message(&execution_error(&ctx, &catalogs, sql).await, sql),
+        "SHOW CREATE TABLE is not supported unless information_schema is enabled"
     );
 }
 
@@ -564,8 +630,10 @@ async fn show_create_view_keeps_its_current_unsupported_refusal() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     let sql = "SHOW CREATE VIEW ice.sales.v";
+    let error = execution_error(&ctx, &catalogs, sql).await;
+    assert!(matches!(&error, DataFusionError::NotImplemented(_)));
     assert_eq!(
-        execution_error(&ctx, &catalogs, sql).await.to_string(),
+        error.to_string(),
         "This feature is not implemented: Only `SHOW CREATE TABLE  ...` statement is supported"
     );
 }
@@ -575,10 +643,11 @@ async fn show_create_without_an_object_keeps_its_current_parse_refusal() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     let sql = "SHOW CREATE";
+    let error = execution_error(&ctx, &catalogs, sql).await;
+    assert!(matches!(&error, DataFusionError::SQL(_, _)));
     assert_eq!(
-        execution_error(&ctx, &catalogs, sql).await.to_string(),
-        "SQL error: ParserError(\"Expected: one of TABLE or TRIGGER or FUNCTION or PROCEDURE or \
-         EVENT or VIEW, found: EOF\")"
+        error.to_string(),
+        "SQL error: ParserError(\"Expected: one of TABLE or TRIGGER or FUNCTION or PROCEDURE or EVENT or VIEW, found: EOF\")"
     );
 }
 
@@ -694,9 +763,8 @@ async fn show_tblproperties_keeps_its_current_analysis_refusal() {
     .await;
     let sql = "SHOW TBLPROPERTIES ice.sales.t";
     assert_eq!(
-        execution_error(&ctx, &catalogs, sql).await.to_string(),
-        "Error during planning: SHOW [VARIABLE] is not supported unless information_schema is \
-         enabled"
+        plan_error_message(&execution_error(&ctx, &catalogs, sql).await, sql),
+        "SHOW [VARIABLE] is not supported unless information_schema is enabled"
     );
 }
 

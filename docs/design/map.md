@@ -164,7 +164,9 @@ changing a decision here means a new dated design pass, not an in-place edit.
   contract v1.2's W-0…W-2 and the v0.9 spill matrix consume, §6 risks, §7 what is not claimed.
   TT-5 (opt-in secrets flagging) is the only unit with product surface and is risk tier **high**.
 
-- [product-contract.md](product-contract.md) — **product-honesty contracts** (settled 2026-08-11)
+- [product-contract.md](product-contract.md) — **product-honesty contracts** (settled 2026-08-11);
+  **WO-C5 (2026-09-23):** Spark multi-statement refusals pin SQLSTATE `42601`, with the
+  measured `SHOW CREATE TABLE; SELECT` class called out separately.
   for three consumer-facing statements (G3-E3 / G3-E4 / G3-E7): Catalog-API-only table
   introspection (`list_tables` supported; `SHOW TABLES IN` pinned-unimplemented ST-1; bare
   `SHOW TABLES` conf-gated), each `sql()` as one eager commit boundary with no multi-statement

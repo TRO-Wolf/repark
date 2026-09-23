@@ -873,7 +873,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   covers the reader-options door.
   pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008),
   `normalize`, `local_fs_ddl`,
-  `router` (multi-statement, F-BR-2 eager DML), `decimal` (G-7b bit-exact
+  `router` (multi-statement `PARSE_SYNTAX_ERROR` / `42601`, trailing-semicolon acceptance,
+  F-BR-2 eager DML), `show_create` (unclosed-comment condition and multi-statement refusal
+  classes/texts), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names.
   `pin_literal_1_23_infers_decimal128_3_2_i128` and overflow wrap `10^38` at (38,0).

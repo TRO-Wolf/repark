@@ -10,21 +10,17 @@ async fn bug010_multi_statement_refuses_parse_class() {
         "SELECT 1; SELECT 2",
         "SELECT 1; SELECT 2;",
         "SELECT 1;\nSELECT 2",
-        // A second statement that fails to parse still refuses the whole input.
         "SELECT 1; XYZZY 2",
         "SELECT 1; NOT_A_STATEMENT",
     ] {
         let err = execute(&ctx, &catalogs, sql)
             .await
             .expect_err("multi-statement must refuse");
-        let text = err.to_string();
-        assert!(
-            text.contains("PARSE_SYNTAX_ERROR") || text.contains("multiple SQL statements"),
-            "expected multi-statement parse refuse for {sql:?}, got {text}"
-        );
-        assert!(
-            matches!(err, DataFusionError::SQL(_, _)),
-            "must be DataFusionError::SQL → ParseException, got {err:?}"
+        assert!(matches!(&err, DataFusionError::SQL(_, _)));
+        assert_eq!(
+            err.to_string(),
+            "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601\")",
+            "{sql}"
         );
     }
 }

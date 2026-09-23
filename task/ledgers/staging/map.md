@@ -24,6 +24,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `xd/show-create`.
 - [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 (2026-09-23), in flight:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
 - [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), in flight:** SHOW CREATE remediation plus the rollback of branch-local SHOW TBLPROPERTIES serving; the current analysis refusal stays pinned while SHOW TABLES and SHOW COLUMNS retain complete row and schema pins. `risk_tier: standard`. Branch `xd/show-create`.
+- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 / WO-C5 (2026-09-23), in flight:** SHOW CREATE remediation plus the rollback of branch-local SHOW TBLPROPERTIES serving; the current analysis refusal stays pinned while SHOW TABLES and SHOW COLUMNS retain complete row and schema pins. C5 pins Spark's multi-statement SQLSTATE and unclosed-comment error classes and audits refusal contracts. `risk_tier: standard`. Branch `xd/show-create`.
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the

@@ -1406,6 +1406,11 @@ pins: rp-4-fork-repin/C-005, C-006
   `spark_sql_string_literal` (`'` → `\'`; backslashes pass through — measured).
   pins: [`tests/show_create.rs`](tests/show_create.rs)
   pins: wo-c2/C-001, C-002
+  **WO-C5 (2026-09-23):** tokenizer errors for unclosed bracket comments after the SHOW CREATE
+  TABLE head map to Spark's `UNCLOSED_BRACKETED_COMMENT` / `42601` parser error; a hidden TABLE
+  keyword falls through to the tokenizer error. SHOW CREATE TABLE followed by another statement
+  keeps `INVALID_STATEMENT_OR_CLAUSE` / `42601`.
+  pins: wo-c5/C-001, C-002
 - `table_props_view.rs` — **C1 SHOW CREATE (2026-09-23):** `spark_table_properties`, the one
   Spark-visible table property list (Iceberg 1.11 `SparkTable.properties()` minus Spark's
   `TABLE_RESERVED_PROPERTIES`), shared by DESCRIBE EXTENDED `Table Properties` and SHOW CREATE

@@ -177,10 +177,11 @@ def test_native_exception_surface_shim_methods() -> None:
         ),
         (
             "SELECT 1; SELECT 2",
-            None,
+            "42601",
             'SQL error: ParserError("[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements '
             "in one call are not supported (Spark parity). Only a single statement is accepted; "
-            'a trailing semicolon, whitespace, or comment after that statement is allowed")',
+            "a trailing semicolon, whitespace, or comment after that statement is allowed. "
+            'SQLSTATE: 42601")',
         ),
     ],
 )

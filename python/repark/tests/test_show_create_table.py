@@ -18,6 +18,13 @@ INVALID_SHOW_CREATE_TABLE_MESSAGE = (
 INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE = (
     f'SQL error: ParserError("{INVALID_SHOW_CREATE_TABLE_MESSAGE}")'
 )
+UNCLOSED_BRACKETED_COMMENT_MESSAGE = (
+    "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. "
+    "Please, append */ at the end of the comment. SQLSTATE: 42601"
+)
+UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE = (
+    f'SQL error: ParserError("{UNCLOSED_BRACKETED_COMMENT_MESSAGE}")'
+)
 
 COMMENTED_SHOW_CREATE_REFUSALS = [
     ("blk_lead_unclosed", f"/* c */ SHOW CREATE TABLE `{CATALOG}.{NAMESPACE}"),
@@ -148,6 +155,46 @@ def test_show_create_unclosed_comment_keeps_the_current_parse_outcome(
         'SQL error: TokenizerError("Unexpected EOF while in a multi-line comment at Line: 1, '
         'Column: 37")'
     )
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "SHOW CREATE TABLE /* c sc.sales.t",
+        "SHOW CREATE TABLE sc.sales.t /* c",
+        "SHOW CREATE TABLE sc.sales.t /*",
+        "SHOW CREATE TABLE sc.sales.t AS SERDE /* c",
+    ],
+)
+def test_show_create_unclosed_bracketed_comment_has_spark_parse_contract(
+    spark: ReparkSession, statement: str
+) -> None:
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement).collect()
+    assert caught.value.getCondition() == "UNCLOSED_BRACKETED_COMMENT"
+    assert caught.value.getSqlState() == "42601"
+    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+
+
+def test_show_create_unclosed_comment_before_table_keyword_falls_through(
+    spark: ReparkSession,
+) -> None:
+    with pytest.raises(ParseException) as caught:
+        spark.sql("SHOW CREATE /* c TABLE sc.sales.t").collect()
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
+    assert str(caught.value) == (
+        'SQL error: TokenizerError("Unexpected EOF while in a multi-line comment at Line: 1, '
+        'Column: 34")'
+    )
+
+
+def test_show_create_multi_statement_has_spark_parse_contract(spark: ReparkSession) -> None:
+    with pytest.raises(ParseException) as caught:
+        spark.sql(f"SHOW CREATE TABLE {QUALIFIED}; SELECT 1").collect()
+    assert caught.value.getCondition() == "INVALID_STATEMENT_OR_CLAUSE"
+    assert caught.value.getSqlState() == "42601"
+    assert str(caught.value) == INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE
 
 
 def test_show_tables_comment_near_miss_matches_its_uncommented_answer(spark: ReparkSession) -> None:

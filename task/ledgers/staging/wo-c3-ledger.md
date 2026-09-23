@@ -4,7 +4,7 @@
 **Model:** gpt-5.6-terra · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
-**Retires:** this ledger moves to `../completed/` when the WO-C4 remediation commit lands.
+**Retires:** this ledger moves to `../completed/` when the WO-C5 remediation commit lands.
 
 **Why now.** The second critic for SHOW CREATE TABLE found five incomplete pins and one raw-text
 comment scanner gap. The recorded Spark 4.1.2 probes `m2.json`, `m4.json`, `m8.json`, and
@@ -80,3 +80,16 @@ COVERAGE_ATTESTATION:
 ```
 
 **WO-C4 (2026-09-23):** removed the branch-local SHOW TBLPROPERTIES parser, intercept, executor, and batch builder. The C-005 pin records the complete current refusal; SHOW TABLES, SHOW COLUMNS, `from_parts`, CREATE parsing, and the IPI-51 full-string error pin remain.
+
+**WO-C5 (2026-09-23):** the Spark multi-statement parser refusal carries SQLSTATE `42601`; SHOW CREATE TABLE multi-statement SQL keeps Spark's `INVALID_STATEMENT_OR_CLAUSE`; unclosed bracket comments after the SHOW CREATE TABLE head map to `UNCLOSED_BRACKETED_COMMENT`, while an unclosed comment before TABLE falls through to the native tokenizer error. Refusal pins in the affected Rust and Python files assert their error variant or exception type and complete message contracts.
+
+## PROPOSITION LEDGER — WO-C5 — 2026-09-23
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-006 | Spark multi-statement refusals expose SQLSTATE `42601` and retain the SQL parser error variant. | Exact router message and Python exception contract. | PROVEN | `bug010_multi_statement_refuses_parse_class`; `test_parser_wrapper_refusals_report_the_native_error_condition`. |
+| C-007 | An unclosed bracketed comment after the SHOW CREATE TABLE head returns Spark's `UNCLOSED_BRACKETED_COMMENT` parser message. | Pin the error variant, full Rust parser and rendered messages, Python type, condition, SQLSTATE, and full text. | PROVEN | `show_create_unclosed_bracketed_comments_keep_spark_parse_class`; `test_show_create_unclosed_bracketed_comment_has_spark_parse_contract`. |
+| C-008 | An unclosed comment that hides TABLE falls through to the tokenizer error, and SHOW CREATE TABLE followed by another statement keeps Spark's invalid-statement answer. | Pin both exact outcomes and their parser error class. | PROVEN | `show_create_comment_before_table_keyword_keeps_tokenizer_fallthrough`; `show_create_multi_statement_keeps_spark_invalid_statement_class`; matching facade pins. |
+| C-009 | Refusal tests touched by WO-C5 pin error variants or exception types and complete error messages. | Audit all five test files changed on the branch. | PROVEN | Updated Rust SHOW CREATE refusals and the multi-statement router pin; Python SHOW CREATE and multi-statement pins. Other checked refusals already pin the complete contract or are constructor/parser mechanism tests. |
+
+pins: wo-c5/C-006, C-007, C-008, C-009
