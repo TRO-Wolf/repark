@@ -718,6 +718,62 @@ async fn call_remove_orphan_files_file_list_view_resolves_an_aliased_scan_locati
     assert!(orphan.exists());
 }
 
+fn age_ten_days(path: &Path) {
+    let stamp = std::time::SystemTime::now() - std::time::Duration::from_hours(10 * 24);
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(path)
+        .expect("reopen")
+        .set_modified(stamp)
+        .expect("age the file");
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_listing_path_resolves_an_aliased_location() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let live = referenced_data_file(&table_dir);
+    age_ten_days(&live);
+    let table = table_dir.display().to_string();
+    let orphan_path = format!("{table}/data/orphan-file.parquet");
+
+    for location in [
+        table.clone(),
+        format!("{table}/data/.."),
+        format!("{table}/./"),
+        format!("{table}//data"),
+    ] {
+        let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+        let listed = call_rows(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'ns.t', location => '{location}')"
+            ),
+        )
+        .await
+        .expect("armed listing runs");
+        assert_eq!(listed, vec![orphan_path.clone()], "{location}");
+        assert!(!orphan.exists(), "{location}: the orphan is deleted");
+        assert!(live.exists(), "{location}: the live file is not an orphan");
+        assert_eq!(live_rows(&session, "ns.t").await, 1, "{location}");
+    }
+
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+    for location in [format!("file://{table}"), format!("file://{table}/data/..")] {
+        let listed = call_rows(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'ns.t', location => '{location}')"
+            ),
+        )
+        .await
+        .expect("armed listing runs");
+        assert_eq!(listed, Vec::<String>::new(), "{location}");
+        assert!(orphan.exists() && live.exists(), "{location}");
+    }
+}
+
 #[tokio::test]
 async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     let warehouse = TempDir::new().unwrap();

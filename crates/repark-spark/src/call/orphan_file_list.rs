@@ -324,6 +324,22 @@ fn split_uri(location: &str, maps: &UriMaps) -> UriParts {
     }
 }
 
+pub(super) fn normalize_location_path(location: &str) -> String {
+    let path_start = location_path_start(location);
+    let head = location.get(..path_start).unwrap_or_default();
+    let path = location.get(path_start..).unwrap_or_default();
+    format!("{head}{}", normalize_lexically(Path::new(path)).display())
+}
+
+fn location_path_start(location: &str) -> usize {
+    let after_scheme = scheme_end(location).map_or(0, |end| end + 1);
+    let rest = location.get(after_scheme..).unwrap_or_default();
+    match rest.strip_prefix("//") {
+        Some(after) => after_scheme + 2 + after.find('/').unwrap_or(after.len()),
+        None => after_scheme,
+    }
+}
+
 fn scheme_end(location: &str) -> Option<usize> {
     let bytes = location.as_bytes();
     if !bytes.first()?.is_ascii_alphabetic() {

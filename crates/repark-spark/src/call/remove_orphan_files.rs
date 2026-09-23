@@ -12,7 +12,7 @@ use iceberg::table::Table;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_core::{LocationPolicy, memory_warehouse_fallback_root};
 
-use super::orphan_file_list::{FileListRequest, listed_orphans};
+use super::orphan_file_list::{FileListRequest, listed_orphans, normalize_location_path};
 use super::{CallArgs, resolve_table_ident, rewrite_options};
 use crate::iceberg_err;
 
@@ -269,7 +269,7 @@ pub(super) async fn execute_remove_orphan_files(
 
     let mut action = DeleteOrphanFiles::new(table).older_than(older_than_ms);
     if let Some(location) = location {
-        action = action.location(location);
+        action = action.location(normalize_location_path(&location));
     }
     if let Some(mode) = prefix_mismatch_mode {
         action = action.prefix_mismatch_mode(mode);
