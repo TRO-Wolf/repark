@@ -642,6 +642,18 @@ mod tests {
     }
 
     #[test]
+    fn alter_view_unset_requires_the_opening_parenthesis() {
+        let error = try_parse_alter_view("ALTER VIEW v UNSET TBLPROPERTIES 'k'")
+            .expect("ALTER VIEW must match")
+            .err()
+            .expect("missing opening parenthesis must refuse");
+        assert!(
+            error.to_string().contains("Expected: (, found: 'k'"),
+            "{error}"
+        );
+    }
+
+    #[test]
     fn alter_view_unsupported_shapes_do_not_match() {
         assert!(try_parse_alter_view("ALTER VIEW sc.ns.v AS SELECT 1").is_none());
         assert!(try_parse_alter_view("ALTER VIEW sc.ns.v").is_none());
