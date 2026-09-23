@@ -610,11 +610,15 @@ mod tests {
         let Some(Err(error)) = try_parse_show_create("SHOW CREATE TABLE ice.sales.x.t") else {
             panic!("four-part SHOW CREATE TABLE name must refuse");
         };
-        let DataFusionError::Plan(message) = error else {
+        let DataFusionError::Plan(message) = &error else {
             panic!("four-part SHOW CREATE TABLE name must be an analysis error");
         };
         assert_eq!(
-            message,
+            error.to_string(),
+            format!("Error during planning: {message}")
+        );
+        assert_eq!(
+            message.as_str(),
             "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`x`.`t` cannot be found. \
              Verify the spelling and correctness of the schema and catalog. If you did not qualify \
              the name with a schema, verify the current_schema() output, or qualify the name with \
