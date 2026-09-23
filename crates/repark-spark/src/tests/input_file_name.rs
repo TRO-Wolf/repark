@@ -216,6 +216,17 @@ async fn input_file_name_in_where_keeps_every_row() {
     )
     .await;
     assert_eq!(i64s(&rows, 0), vec![2, 3, 4], "R-INPUT-FILE-NAME in WHERE");
+
+    let rows = batches(
+        &session,
+        "SELECT id FROM ice.ns.t WHERE input_file_name() = _file",
+    )
+    .await;
+    assert_eq!(
+        i64s(&rows, 0),
+        vec![2, 3, 4],
+        "WHERE compares input_file_name() to _file per row"
+    );
 }
 
 #[tokio::test]
@@ -429,7 +440,7 @@ async fn insert_around_the_trigger_keeps_todays_answers() {
     )
     .await;
     assert!(
-        error.contains("input_file_name"),
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "a non-query statement returns Ok(None) and keeps the unresolved-routine error: {error}"
     );
     assert!(
