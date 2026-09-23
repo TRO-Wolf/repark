@@ -79,9 +79,9 @@
   <div class="strip">
     <div class="stat good"><div class="k">EQUAL</div><div class="v num">607 <small>/ 718</small></div><div class="s">84.5 % of the gate</div></div>
     <div class="stat accent"><div class="k">Since 09-22</div><div class="v num">+35</div><div class="s">573 → 607, 20 RePark + 4 fork merges</div></div>
-    <div class="stat"><div class="k">Open</div><div class="v num">111</div><div class="s">in 12 units</div></div>
+    <div class="stat"><div class="k">Open</div><div class="v num">111</div><div class="s">in 12 units, + S3 path writes</div></div>
     <div class="stat"><div class="k">Already in flight</div><div class="v num">22</div><div class="s">open PRs and stacked branches</div></div>
-    <div class="stat"><div class="k">Owner decisions</div><div class="v num">7</div><div class="s">3 can shrink the gate</div></div>
+    <div class="stat"><div class="k">Owner decisions</div><div class="v num">7</div><div class="s">3 can shrink the gate · 1 made (S3 grows it)</div></div>
     <div class="stat bad"><div class="k">Regression</div><div class="v num">1</div><div class="s">REG-1, bisect owed</div></div>
   </div>
 
@@ -181,6 +181,12 @@
       <div class="cells">TP-MANIFEST-MIN-MERGE · TP-DELETE-GRANULARITY-FILE · TP-FORMAT-V1-DELETE · E-CASE-SELECT · E-CASE-PARTITION-FIELD · E-CATALOG-LISTDATABASES · E-TZ-TIMESTAMP-AS-OF · CAT-TYPE-MEMORY</div>
     </div>
     <div class="unit">
+      <header><h3>U12 · S3 path writes</h3><div class="count num">+<small> cells, recorded in step 0</small></div></header>
+      <div class="chips"><span class="chip owner">owner 09-23: in 1.5.0</span><span class="chip">opus · devin</span><span class="chip">M</span></div>
+      <p>Plain Parquet, CSV and JSON <code>df.write</code> to <code>s3://</code>. Reads reach S3 and Iceberg tables on S3 write, but the path writer is a local staging-and-rename protocol that fails before the <code>COPY</code>. Step 0 records the Spark oracle on the tier-2 scratch prefix — the <code>W-PATH-S3-*</code> cells join the gate, the only unit that grows it. Then a Rust <code>write_path</code> seam owning save mode, staging and commit for every scheme; the S3 commit shape the oracle decides; a live leg under the granted prefix.</p>
+      <div class="cells">W-PATH-S3-* (parquet · csv · json × error · ignore · overwrite · append, partitionBy, _SUCCESS, s3:// vs s3a://)</div>
+    </div>
+    <div class="unit">
       <header><h3>Carved out · Streaming</h3><div class="count num">3 <small>cells</small></div></header>
       <div class="chips"><span class="chip">owner ruling C-1, 2026-09-19</span><span class="chip">v1.6.0</span></div>
       <p>Structured streaming read and write of Iceberg tables leaves the v1.5.0 gate (card ICE-STREAMING). Not in the 718.</p>
@@ -205,7 +211,7 @@
     <tbody>
       <tr><td class="num">1</td><td>REG-1 bisect → #805, #806 → U10 READ rest</td><td>Views PR2–PR6 (V-009 pin first)</td><td>#807 → U1 layout → U2 evidence for the owner</td><td>U3 pushdown → U4 SHOW / DESCRIBE</td></tr>
       <tr><td class="num">2</td><td>U5 parser (terra) + semantics (opus)</td><td>U6 write refusals</td><td>U7 DataFrame writer</td><td>U8 SQL write tail</td></tr>
-      <tr><td class="num">3</td><td>U9 types</td><td>U11 props / edge / catalog</td><td colspan="2">Fork lane: manifest merge on commit, file-granularity deletes, variant writer, RP-49</td></tr>
+      <tr><td class="num">3</td><td>U9 types</td><td>U11 props / edge / catalog</td><td>U12 S3 path writes (oracle first)</td><td>Fork lane: manifest merge on commit, file-granularity deletes, variant writer, RP-49</td></tr>
     </tbody>
   </table></div>
   <p class="lede" style="margin-top:12px">Opus 5.5 high orchestrators; <code>opus</code>, <code>terra</code>, <code>muse</code> and <code>devin</code> executors. The seven decisions gate nothing on day 1 and everything with a name on days 2–3 — the morning-of-day-2 ask.</p>

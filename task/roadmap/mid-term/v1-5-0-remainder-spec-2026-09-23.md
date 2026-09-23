@@ -183,6 +183,22 @@ through the fork's static table). **Size M, tier opus.**
 
 **Size S–M each, tier muse; the two fork items on the fork lane.**
 
+### U12 — S3-PATH-WRITE: plain Parquet, CSV and JSON path writes to `s3://` (ruling **owner, made 2026-09-23**; cells to be recorded)
+
+Filed on 09-22 as a v1.5.1 card and moved into the 1.5.0 target by the owner on 09-23
+([s3-path-write-1-5-0.md](s3-path-write-1-5-0.md)). Today `DataFrameWriter.parquet/csv/json` is a local
+staging-and-rename protocol that fails on an `s3://` destination before the `COPY` runs, while reads and
+Iceberg tables on S3 already work. Step 0 records the Spark oracle on the tier-2 scratch prefix (four save
+modes × three formats, `partitionBy`, empty frames, `_SUCCESS`-only and foreign-object destinations,
+`s3://` vs `s3a://`, what Spark leaves behind) as **`W-PATH-S3-*` cells that join the gate inventory** —
+the only unit in this spec that grows the denominator. Then a `Session::write_path` seam in Rust owning
+the save mode, staging and commit for every scheme (the local scheme bit-for-bit as today), the S3 commit
+shape the oracle decides (direct `part-*` + `_SUCCESS` vs stage-copy-delete), save modes by LIST/DELETE,
+the read side's credential and region path reused, a live leg in the tier-2 workflow under the scratch
+prefix the role already grants (a bronze-style target is a separate IAM grant). **Size M, tier opus (the
+seam) + devin (the Python writer's retreat to a forwarder); AWS spend for the oracle and the live leg
+well under the $25 cap; the 3 GB table flag does not apply (no tables).**
+
 ### Carved out (3 cells, owner ruling C-1, 2026-09-19)
 
 `R-STREAM-READ`, `R-STREAM-READ-SKIP`, `W-STREAM-WRITE-FILESRC` — structured streaming, v1.6.0
@@ -191,7 +207,8 @@ through the fork's static table). **Size M, tier opus.**
 ### Count
 
 U0 22 · U1 (overlaps U0/U2; counted once under U0/U2) · U2 5 · U3 9 · U4 10 · U5 14 · U6 7 · U7 7 · U8 5 · U9 7
-· U10 5 · U11 8 · plus the six stats/RTP cells that need both U1 and U2 = **111**.
+· U10 5 · U11 8 · plus the six stats/RTP cells that need both U1 and U2 = **111** on today's inventory;
+U12 adds its `W-PATH-S3-*` cells to the inventory when step 0 records them.
 
 ## 2. The owner's decisions, collected
 
@@ -203,14 +220,16 @@ U0 22 · U1 (overlaps U0/U2; counted once under U0/U2) · U2 5 · U3 9 · U4 10 
 6. **`TY-VARIANT-V3`** — fork variant writer in 1.5.0 or a dated carve-out.
 7. **`CAT-TYPE-MEMORY`** — RePark's own catalog type stays as a dated extension, or refuses like Spark.
 
-Decisions 3, 6 and 7 are the only ones that can *shrink* the gate; every other item is buildable.
+Decisions 3, 6 and 7 are the only ones that can *shrink* the gate; every other item is buildable. The owner's
+09-23 decision on S3 path writes (U12) is the one that *grows* it.
 
 ## 3. Sequencing for the next run
 
 Day 1 (four lanes, Opus 5.5 high orchestrators, `opus`/`terra`/`muse`/`devin` executors): **A** REG-1 then U0's
 #805/#806 and U10 (READ, one lane); **B** U0's views PR2–PR6 (one lane); **C** #807 + U1 + U2's evidence for
-the owner (one lane); **D** U3 + U4 (one lane). Day 2: U5, U6, U7, U8. Day 3: U9, U11 and the fork items
-(manifest merge, file-granularity deletes, variant) on a fork lane. The owner's seven decisions gate nothing
+the owner (one lane); **D** U3 + U4 (one lane). Day 2: U5, U6, U7, U8. Day 3: U9, U11, **U12 (S3 path writes —
+the oracle recording first, on the tier-2 scratch prefix)** and the fork items (manifest merge,
+file-granularity deletes, variant) on a fork lane. The owner's seven decisions gate nothing
 on day 1 and everything with a name on days 2–3, so they are the morning-of-day-2 ask.
 
 ## Rules that bind every unit
