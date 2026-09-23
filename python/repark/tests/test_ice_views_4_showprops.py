@@ -137,15 +137,24 @@ def test_alter_view_set_then_show_reflects_updates(spark: ReparkSession) -> None
     assert ["j", "u"] in sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
 
 
-def test_current_catalog_and_database_resolve_the_name(spark: ReparkSession) -> None:
-    """E9 — bare and two-part names follow the current catalog/database."""
+def test_bare_and_two_part_names_do_not_follow_use(spark: ReparkSession) -> None:
+    """E9 — bare and two-part names do not follow USE.
+
+    Spark answers ``[["k","v"]]`` for both; repark resolves short names
+    through the planner defaults, which USE does not move, so the name falls
+    through to the upstream SHOW refusal. The residue is pinned, not fixed.
+    """
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     spark.sql("CREATE NAMESPACE sc.other")
     spark.catalog.setCurrentCatalog("sc")
     spark.catalog.setCurrentDatabase("ns")
-    assert _rows(spark.sql("SHOW TBLPROPERTIES v ('k')")) == [["k", "v"]]
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SHOW TBLPROPERTIES v ('k')")
+    assert SHOW_VARIABLE_UNSUPPORTED in str(caught.value)
     spark.catalog.setCurrentDatabase("other")
-    assert _rows(spark.sql("SHOW TBLPROPERTIES ns.v ('k')")) == [["k", "v"]]
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SHOW TBLPROPERTIES ns.v ('k')")
+    assert SHOW_VARIABLE_UNSUPPORTED in str(caught.value)
 
 
 def test_show_tblproperties_on_a_table_falls_through(spark: ReparkSession) -> None:
