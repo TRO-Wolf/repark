@@ -7030,6 +7030,9 @@ pins: fnp-8-review/C-009, C-010
   **DESCRIBE-COLUMN-1 (2026-09-23):** facade pins prove the three column rows for a qualified
   target and default-namespace expansion for a bare target.
   pins: describe-column-1/C-005
+  **Round 2 (2026-09-23):** the identity-partition control asserts Spark's no-blank
+  `# Partition Information` header, column-header row, source type, and nullable comment cell
+  on both plain and EXTENDED DESCRIBE.
   **RP-23 (2026-09-17):** `Table Properties` carries the
   `write.parquet.compression-codec=zstd` stamp every create writes.
   pins: rp-23-pin-bump/C-001

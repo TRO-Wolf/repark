@@ -78,6 +78,27 @@ def test_describe_table_plain_matches_spark_rows(spark: ReparkSession) -> None:
     assert _rows(spark, f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE}") == PLAIN_ROWS
 
 
+def test_describe_identity_partition_uses_spark_partition_information(
+    spark: ReparkSession,
+) -> None:
+    identity_table = "identity_partition"
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.{identity_table} (id BIGINT, data STRING) "
+        "USING iceberg PARTITIONED BY (data)"
+    )
+    expected = [
+        ("id", "bigint", None),
+        ("data", "string", None),
+        ("# Partition Information", "", ""),
+        ("# col_name", "data_type", "comment"),
+        ("data", "string", None),
+    ]
+    plain = _rows(spark, f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{identity_table}")
+    extended = _rows(spark, f"DESCRIBE TABLE EXTENDED {CATALOG}.{NAMESPACE}.{identity_table}")
+    assert plain == expected
+    assert extended[: len(expected)] == expected
+
+
 def test_describe_table_column_matches_spark_rows(spark: ReparkSession) -> None:
     """DESCRIBE TABLE column returns Spark's non-null info-name/value rows."""
     table = spark.sql(f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE} id").to_arrow()

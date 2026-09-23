@@ -1549,6 +1549,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `LIKE ''` and unmatched patterns answer the full schema with no rows, and the FROM/PARTITION
   accept refuses the literal table (`show_table_extended_parser_accepted_*`).
   pins: wo-a1b/C-003
+- `describe_owner.rs` — **DESCRIBE-COLUMN-1 round 2 (2026-09-23):** end-to-end memory-catalog
+  pins cover identity-only partition-information rows in plain and EXTENDED output, two-column
+  spec order, non-identity and unpartitioned controls, owner stamping on CREATE/CTAS/replace
+  paths, reserved lowercase `owner` refusal, case and prefix near misses, and an unowned direct
+  catalog table omitting the Owner row.
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp
