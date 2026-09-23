@@ -32,6 +32,7 @@ mod replace_columns;
 mod replace_partition_field;
 mod router;
 mod show_create;
+mod show_table_extended;
 mod sort_order_parse;
 mod spark_ast;
 pub mod spark_literal_typing;
