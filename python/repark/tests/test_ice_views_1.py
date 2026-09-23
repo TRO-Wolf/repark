@@ -745,6 +745,11 @@ def test_view_body_cte_shadows_in_derived_table(spark: ReparkSession) -> None:
             [[{"f": 7}]],
             id="named-struct-field",
         ),
+        pytest.param(
+            "SELECT array(10, 20, 30)[(SELECT id - 6 FROM a)] AS x",
+            [[20]],
+            id="subscript-index",
+        ),
     ],
 )
 def test_view_body_expression_position_qualifies(
