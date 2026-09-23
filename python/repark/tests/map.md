@@ -818,11 +818,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   option-door orc/avro, six copy-on-write DELETE / UPDATE / MERGE twins, v2
   merge-on-read delete format, the delete-format override, v3 PUFFIN, foreign ORC
   read, ORC metrics, empty Avro metrics, wide-type round trips (ORC primitives
-  plus the nested typed refusal, Avro all 13), unknown-format refusal and
-  compaction-keeps-format. 22P offline and 22P live.
+  plus the nested typed refusal, Avro all 13), unknown-format refusals (the
+  option door and the `write.delete.format.default` property) and
+  compaction-keeps-format. 24P offline; 22P live at WO3a.
   pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: ice-orc-avro-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
-  pins: ice-orc-avro-1/C-017, C-018, C-019, C-020, C-021, C-022
+  pins: ice-orc-avro-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
 - [test_ice_write_options_1_rebase.py](test_ice_write_options_1_rebase.py) —
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the write options across the paths main
   added under them. WO-DYN-01..06: dynamic `insertInto` overwrite and `INSERT OVERWRITE …

@@ -3126,8 +3126,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   (`test_reader_orc_refuses_at_the_call`, `test_reader_format_orc_refuses_at_load`) retire
   in this unit: the names now read. The writer is a new-crate write path and stays
   declared; Python never grows a reader. Iceberg ORC table files round-trip since
-  2026-09-22 (`ICE-WRITE-OPTIONS-ORC-AVRO` served); the plain-file writer refusal above
-  is unchanged.
+  2026-09-22 for primitive columns (`ICE-WRITE-OPTIONS-ORC-AVRO` served; nested
+  ARRAY/MAP/STRUCT reads stay refused, residue R-1); the plain-file writer refusal
+  above is unchanged.
 
 ### IO-ORC-SQL-1 — the SQL door over ORC paths stays with the planner
 
@@ -4069,7 +4070,10 @@ the pin rather than obeying it.
   `SELECT file_format FROM t.files` reports ORC / AVRO. The table property
   `write.format.default=orc|avro` resolves the same way at write time, so neither
   door writes a silent parquet file. Parquet (any case) proceeds; any other value
-  refuses with `Invalid file format`.
+  refuses with `Invalid file format` (IllegalArgumentException) — except a plain
+  SQL INSERT (and the `writeTo(t).append()` that lowers to one) over an unknown
+  `write.format.default`, which still refuses at the fork writer with
+  `Unsupported data file format: <name>` (ledger R-2).
 - **Apache Spark** — writes ORC / AVRO data files for those values (recorded
   `FORMAT-02` / `FORMAT-03`); `bogus` refuses with `IllegalArgumentException: Invalid
   file format: bogus`. *(oracle: recorded.)*

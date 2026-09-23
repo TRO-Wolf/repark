@@ -535,7 +535,11 @@ def test_all_types_round_trip_orc(spark: ReparkSession) -> None:
         spark.sql(f"INSERT INTO {nested} VALUES ({literal})")
         with pytest.raises(
             PySparkException,
-            match=f"ORC data-file read of nested type for field '{name}'",
+            match=(
+                "^External error: FeatureUnsupported => ORC data-file read of nested "
+                f"type for field '{name}' is not supported yet "
+                "\\(only top-level primitive/logical columns\\)$"
+            ),
         ):
             spark.sql(f"SELECT * FROM {nested}").to_arrow()
 
