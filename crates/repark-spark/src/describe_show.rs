@@ -433,7 +433,7 @@ fn describe_partition_struct_type(
     Ok(spark_ddl_type_name(&arrow_type))
 }
 
-fn describe_table_owner(ctx: &SessionContext) -> String {
+pub(crate) fn describe_table_owner(ctx: &SessionContext) -> String {
     ctx.copied_config()
         .options()
         .extensions

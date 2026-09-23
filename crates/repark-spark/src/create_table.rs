@@ -458,6 +458,7 @@ async fn execute_schema_create(
             create.format_version.as_deref(),
             format_version,
         );
+        stamp_owner(ctx, &mut properties);
         let creation = TableCreation::builder()
             .name(create.table.clone())
             .schema(create.schema)
@@ -477,12 +478,15 @@ async fn execute_schema_create(
         == Some(LocationPolicy::ServiceManagedLocation)
     {
         validate_service_managed_create(catalog.as_ref(), &create).await?;
+        let mut properties =
+            catalogs.table_creation_properties(&create.catalog, &create.properties);
+        stamp_owner(ctx, &mut properties);
         let creation = TableCreation::builder()
             .name(create.table.clone())
             .schema(create.schema)
             .partition_spec_opt(partition_spec)
             .format_version(format_version)
-            .properties(catalogs.table_creation_properties(&create.catalog, &create.properties))
+            .properties(properties)
             .build();
         catalog
             .create_table(&create.namespace, creation)
@@ -499,6 +503,9 @@ async fn execute_schema_create(
             create.location.as_deref(),
         )
         .await?;
+        let mut properties =
+            catalogs.table_creation_properties(&create.catalog, &create.properties);
+        stamp_owner(ctx, &mut properties);
         commit_staged_schema_only(
             catalog.as_ref(),
             plan,
@@ -506,7 +513,7 @@ async fn execute_schema_create(
             &create.table,
             create.schema,
             partition_spec,
-            catalogs.table_creation_properties(&create.catalog, &create.properties),
+            properties,
             format_version,
         )
         .await?;
@@ -554,6 +561,13 @@ pub(crate) fn stamp_requested_format_version(
         "2"
     };
     properties.insert("format-version".to_string(), number.to_string());
+}
+
+pub(crate) fn stamp_owner(ctx: &SessionContext, properties: &mut HashMap<String, String>) {
+    properties.insert(
+        "owner".to_string(),
+        crate::describe_show::describe_table_owner(ctx),
+    );
 }
 
 async fn validate_service_managed_create(
