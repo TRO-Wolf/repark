@@ -615,6 +615,131 @@ def test_view_body_cte_shadows_in_derived_table(spark: ReparkSession) -> None:
             [[7]],
             id="subquery-inside-cte-body",
         ),
+        pytest.param(
+            "SELECT id FROM t WHERE id IS NOT DISTINCT FROM (SELECT id - 5 FROM a)",
+            [[2]],
+            id="not-distinct-from",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE ((SELECT id FROM a) = 8) IS FALSE",
+            [[0], [1], [2]],
+            id="is-false",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE ((SELECT id FROM a) = 7) IS NOT TRUE",
+            [],
+            id="is-not-true",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE ((SELECT id FROM a) = 7) IS NOT FALSE",
+            [[0], [1], [2]],
+            id="is-not-false",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE ((SELECT id FROM a) = 7) IS UNKNOWN",
+            [],
+            id="is-unknown",
+        ),
+        pytest.param(
+            "SELECT id FROM t WHERE ((SELECT id FROM a) = 7) IS NOT UNKNOWN",
+            [[0], [1], [2]],
+            id="is-not-unknown",
+        ),
+        pytest.param(
+            "SELECT ceil((SELECT id FROM a)) AS x",
+            [[7]],
+            id="ceil",
+        ),
+        pytest.param(
+            "SELECT floor((SELECT id FROM a)) AS x",
+            [[7]],
+            id="floor",
+        ),
+        pytest.param(
+            "SELECT substring((SELECT cast(id AS string) FROM a), 1, 1) AS x",
+            [["7"]],
+            id="substring",
+        ),
+        pytest.param(
+            "SELECT position((SELECT cast(id AS string) FROM a) IN 'x7y') AS x",
+            [[2]],
+            id="position",
+        ),
+        pytest.param(
+            "SELECT overlay((SELECT cast(id AS string) FROM a) PLACING 'a' FROM 1 FOR 1) AS x",
+            [["a"]],
+            id="overlay",
+        ),
+        pytest.param(
+            "SELECT trim((SELECT cast(id AS string) FROM a)) AS x",
+            [["7"]],
+            id="trim",
+        ),
+        pytest.param(
+            "SELECT extract(YEAR FROM (SELECT date '2020-01-01' FROM a)) AS x",
+            [[2020]],
+            id="extract",
+        ),
+        pytest.param(
+            "SELECT try_cast((SELECT id FROM a) AS INT) AS x",
+            [[7]],
+            id="try-cast",
+        ),
+        pytest.param(
+            "SELECT (SELECT id FROM a)::INT AS x",
+            [[7]],
+            id="double-colon-cast",
+        ),
+        pytest.param(
+            "SELECT t.id, l.y FROM t, LATERAL (SELECT id + t.id AS y FROM a) l",
+            [[0, 7], [1, 8], [2, 9]],
+            id="lateral",
+        ),
+        pytest.param(
+            "SELECT t.id FROM (t JOIN a ON t.id + 7 = a.id)",
+            [[0]],
+            id="nested-join",
+        ),
+        pytest.param(
+            "SELECT t.id FROM t, a WHERE t.id + 7 = a.id",
+            [[0]],
+            id="comma-join",
+        ),
+        pytest.param(
+            "SELECT t.id FROM t CROSS JOIN a",
+            [[0], [1], [2]],
+            id="cross-join",
+        ),
+        pytest.param(
+            "SELECT id FROM t LEFT SEMI JOIN a ON t.id + 7 = a.id",
+            [[0]],
+            id="left-semi-join",
+        ),
+        pytest.param(
+            "SELECT id FROM t LEFT ANTI JOIN a ON t.id + 7 = a.id",
+            [[1], [2]],
+            id="left-anti-join",
+        ),
+        pytest.param(
+            "SELECT t.id FROM t JOIN t u ON t.id = u.id AND u.id < (SELECT id - 6 FROM a)",
+            [[0]],
+            id="subquery-in-join-on",
+        ),
+        pytest.param(
+            "SELECT if(id = 0, (SELECT id FROM a), id) AS x FROM t",
+            [[1], [2], [7]],
+            id="if-argument",
+        ),
+        pytest.param(
+            "SELECT array((SELECT id FROM a), 1) AS x",
+            [[[7, 1]]],
+            id="array-argument",
+        ),
+        pytest.param(
+            "SELECT max(id) + (SELECT id FROM a) AS x FROM t",
+            [[9]],
+            id="aggregate-operand",
+        ),
     ],
 )
 def test_view_body_expression_position_qualifies(
