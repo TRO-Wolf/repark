@@ -21,7 +21,7 @@ On any conflict the home wins, and above every home is
 ## 3. Build (Actor)
 
 - Exit green: **R2** in [SKILL.md](SKILL.md) and [references/04-actor.md](references/04-actor.md);
-  the [`green_commands`](binding-manifest.md) row names the gates (`make ci`, `make verify`).
+  the [`green_commands`](binding-manifest.md) row names the gates.
 - Pin **every** clause the unit touches: [docs/testing.md](../../../docs/testing.md) "Pinning a
   charter clause" — the clause table and the `pins: <unit>/C-NNN` citation are rules A and B of
   [`check_ledger_grammar.py`](../../../scripts/check_ledger_grammar.py) (`make check-ledger-grammar`).

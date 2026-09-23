@@ -95,12 +95,11 @@ These are Claude-family orchestration mechanics, **not** project rules. AGENTS.m
 is the neutral rule; this is how it maps onto Claude tiers:
 
 - Opus orchestrates and owns architecture and assembly.
-- Delegated fan-out (search, mechanical edits, narrow implementation) defaults to **Sonnet** or
-  **Haiku** — pass the tier explicitly, and brief the tier's posture: **Sonnet** is the delegated
-  implementation tier (executes well-scoped work; architecture and cross-cutting decisions stay
-  with the orchestrating session — surface ambiguity rather than inventing); **Haiku** is the
-  narrow mechanical tier (precisely specified edits; stop and hand back the moment the task needs
-  a design decision). Every tier reads the same
+- Delegated fan-out (search, mechanical edits, narrow implementation) runs on the tiers AGENTS.md
+  "Delegated work" allows — pass the tier explicitly, and brief its posture: an executor tier
+  executes well-scoped work (architecture and cross-cutting decisions stay with the orchestrating
+  session — surface ambiguity rather than inventing); a clerk tier makes precisely specified edits
+  and hands back the moment the task needs a design decision. Every tier reads the same
   [engineering method](.agents/skills/engineering-method/SKILL.md); the non-negotiables are
   identical across tiers.
 - **Do not spawn Opus sub-agents without a direct, explicit request naming Opus.**

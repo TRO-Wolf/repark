@@ -46,7 +46,11 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   missing list, an unknown engine, a missing lib directory, or a slice without a memory cap.
 - `drive.sh` — the loop. Each iteration: stop if state says DONE; compile the tick prompt (handbook
   + engine addendum + list + state + `status.sh full` + the tick instruction); run
-  `engine-<engine>.sh`; log the meter; write the digest marker `.digest-<unit>`; then wait. `WORKING` re-ticks after five seconds; `WAITING` sleeps until
+  `engine-<engine>.sh`; log the meter, and a `state file is N lines` line when the state file passes
+  200 lines (the only size rule: the handbook asks for what the next tick needs, not a line count);
+  write the digest marker `.digest-<unit>`; then wait. The tick instruction asks for the state file
+  first, then the actions, then the state file again (B14: a tick that acts first can end before it
+  writes state). `WORKING` re-ticks after five seconds; `WAITING` sleeps until
   the `status.sh quiet` fingerprint changes, a ruling or `ASK <unit>` line lands in claims, the idle
   limit (`COORDINATOR_MAX_IDLE`, 1500 s, doubling from 60 s while nothing is in flight) or the
   deadline passes. `COORDINATOR_MIN_GAP` batches wake events. Three failed ticks in a row exit 1.
@@ -110,11 +114,14 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   then pushes with an explicit lease and opens or updates the PR. The banned-trailer patterns are
   spelled with bracket classes so the tree never carries the literals the pre-push hook forbids.
 - `handbook.md` — the standing instructions every tick starts with: how ticks work, the hard rules
-  (comment ban, no Claude models, no AWS, identity and trailers, questions before rulings), the
-  toolbox, the order of work for a unit, and the rules learned from run 27.
-- `addendum-glm.md`, `addendum-glmflash.md`, `addendum-muse.md` — per-engine additions from the
-  lessons ledger, appended to the handbook for that engine only (`drive.sh` loads
-  `addendum-<engine>.md` when it exists).
+  (comment ban, Claude only through the executor launcher, no AWS, identity and trailers, questions
+  before rulings), the toolbox, the order of work for a unit, and the standing rules whose evidence
+  is in `lessons.md`. Audited 2026-09-23 against Opus 5.5: rules name tiers and launchers, never
+  model ids, and carry no incident narrative — that lives in the ledger.
+- `addendum-muse.md` — per-engine additions from the lessons ledger, appended to the handbook for
+  that engine only (`drive.sh` loads `addendum-<engine>.md` when it exists). The GLM addenda went
+  with the GLM tiers (replaced by `luna`, 2026-09-23); a trait claim written for a retired engine
+  is not carried to its successor.
 - `critic-brief-template.md` — the brief a lane fills and hands to `review.sh`.
 - `lessons.md` — the ledger: observed pattern → evidence → the instruction it became. Applied at the
   next run's start, never mid-run. Rows keep the pre-rename names; its header says how they map.
