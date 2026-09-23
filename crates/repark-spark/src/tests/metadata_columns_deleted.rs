@@ -89,112 +89,107 @@ fn i64s(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) ->
     out
 }
 
-fn pairs_i64_bool(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, bool)> {
+fn i32s(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) -> Vec<i32> {
     let mut out = Vec::new();
     for batch in batches {
-        let left = batch
-            .column(0)
+        let array = batch
+            .column(col)
             .as_any()
-            .downcast_ref::<Int64Array>()
-            .unwrap();
-        let right = batch
-            .column(1)
+            .downcast_ref::<Int32Array>()
+            .expect("int32 column");
+        out.extend((0..array.len()).map(|row| array.value(row)));
+    }
+    out
+}
+
+fn bools(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) -> Vec<bool> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let array = batch
+            .column(col)
             .as_any()
             .downcast_ref::<BooleanArray>()
-            .unwrap();
-        out.extend((0..left.len()).map(|row| (left.value(row), right.value(row))));
+            .expect("boolean column");
+        out.extend((0..array.len()).map(|row| array.value(row)));
     }
-    out.sort_unstable();
     out
+}
+
+fn strs(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) -> Vec<String> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let array = batch
+            .column(col)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("string column");
+        out.extend((0..array.len()).map(|row| array.value(row).to_string()));
+    }
+    out
+}
+
+fn sorted<T: Ord>(mut rows: Vec<T>) -> Vec<T> {
+    rows.sort_unstable();
+    rows
+}
+
+fn pairs_i64_bool(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, bool)> {
+    i64s(batches, 0)
+        .into_iter()
+        .zip(bools(batches, 1))
+        .collect()
 }
 
 fn pairs_i64_i32(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, i32)> {
-    let mut out = Vec::new();
-    for batch in batches {
-        let left = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .unwrap();
-        let right = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<Int32Array>()
-            .unwrap();
-        out.extend((0..left.len()).map(|row| (left.value(row), right.value(row))));
-    }
-    out.sort_unstable();
-    out
+    i64s(batches, 0).into_iter().zip(i32s(batches, 1)).collect()
+}
+
+fn pairs_i64_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, i64)> {
+    i64s(batches, 0).into_iter().zip(i64s(batches, 1)).collect()
 }
 
 fn pairs_i64_str(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, String)> {
-    let mut out = Vec::new();
-    for batch in batches {
-        let left = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .unwrap();
-        let right = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap();
-        out.extend((0..left.len()).map(|row| (left.value(row), right.value(row).to_string())));
-    }
-    out.sort_unstable();
-    out
+    i64s(batches, 0).into_iter().zip(strs(batches, 1)).collect()
 }
 
 fn pairs_bool_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(bool, i64)> {
-    let mut out = Vec::new();
-    for batch in batches {
-        let left = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<BooleanArray>()
-            .unwrap();
-        let right = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .unwrap();
-        out.extend((0..left.len()).map(|row| (left.value(row), right.value(row))));
-    }
-    out.sort_unstable();
-    out
+    bools(batches, 0)
+        .into_iter()
+        .zip(i64s(batches, 1))
+        .collect()
 }
 
 fn triples_i64(
     batches: &[datafusion::arrow::record_batch::RecordBatch],
 ) -> Vec<(i64, String, String)> {
-    let mut out = Vec::new();
-    for batch in batches {
-        let ids = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .unwrap();
-        let data = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap();
-        let cats = batch
-            .column(2)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap();
-        out.extend((0..ids.len()).map(|row| {
-            (
-                ids.value(row),
-                data.value(row).to_string(),
-                cats.value(row).to_string(),
-            )
-        }));
-    }
-    out.sort_unstable();
-    out
+    i64s(batches, 0)
+        .into_iter()
+        .zip(strs(batches, 1))
+        .zip(strs(batches, 2))
+        .map(|((id, data), cat)| (id, data, cat))
+        .collect()
+}
+
+fn triples_i64_i32_bool(
+    batches: &[datafusion::arrow::record_batch::RecordBatch],
+) -> Vec<(i64, i32, bool)> {
+    i64s(batches, 0)
+        .into_iter()
+        .zip(i32s(batches, 1))
+        .zip(bools(batches, 2))
+        .map(|((id, spec), deleted)| (id, spec, deleted))
+        .collect()
+}
+
+fn triples_i64_i64_bool(
+    batches: &[datafusion::arrow::record_batch::RecordBatch],
+) -> Vec<(i64, i64, bool)> {
+    i64s(batches, 0)
+        .into_iter()
+        .zip(i64s(batches, 1))
+        .zip(bools(batches, 2))
+        .map(|((left, right), deleted)| (left, right, deleted))
+        .collect()
 }
 
 fn field_names(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<String> {
@@ -254,6 +249,16 @@ async fn select_star_keeps_user_columns_on_mor_table() {
             (4, "d".to_string(), "x".to_string()),
         ],
         "R-MC-DELETED-STAR"
+    );
+    let rows = batches(&session, "SELECT * FROM ice.ns.t ORDER BY id DESC").await;
+    assert_eq!(
+        triples_i64(&rows),
+        vec![
+            (4, "d".to_string(), "x".to_string()),
+            (3, "c".to_string(), "x".to_string()),
+            (2, "b".to_string(), "y".to_string()),
+        ],
+        "R-MC-DELETED-STAR-DESC"
     );
 }
 
@@ -388,6 +393,54 @@ async fn deleted_column_in_self_join_answers_empty() {
 }
 
 #[tokio::test]
+async fn deleted_column_on_join_right_side_reaches_its_scan() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    let rows = batches(
+        &session,
+        "SELECT a.id, b.id FROM ice.ns.t a JOIN ice.ns.t b ON a.id = b.id + 1 \
+         WHERE b._deleted ORDER BY 1",
+    )
+    .await;
+    assert_eq!(
+        pairs_i64_i64(&rows),
+        vec![(2, 1)],
+        "R-MC-DELETED-JOIN-RIGHT"
+    );
+    let rows = batches(
+        &session,
+        "SELECT a.id, b.id, b._deleted FROM ice.ns.t a JOIN ice.ns.t b ON a.id = b.id + 1 \
+         ORDER BY 1",
+    )
+    .await;
+    assert_eq!(
+        triples_i64_i64_bool(&rows),
+        vec![(2, 1, true), (3, 2, false), (4, 3, false)],
+        "R-MC-DELETED-JOIN-RIGHT"
+    );
+    let schema = rows[0].schema();
+    let field = &schema.fields()[2];
+    assert_eq!(
+        field.data_type(),
+        &DataType::Boolean,
+        "R-MC-DELETED-JOIN-RIGHT"
+    );
+    assert!(!field.is_nullable(), "R-MC-DELETED-JOIN-RIGHT");
+    let rows = batches(
+        &session,
+        "SELECT a.id, b.id FROM ice.ns.t a JOIN ice.ns.t b ON a.id = b.id + 1 \
+         WHERE NOT b._deleted ORDER BY 1",
+    )
+    .await;
+    assert_eq!(
+        pairs_i64_i64(&rows),
+        vec![(3, 2), (4, 3)],
+        "R-MC-DELETED-JOIN-RIGHT"
+    );
+}
+
+#[tokio::test]
 async fn unquoted_upper_deleted_folds_to_served_name() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
@@ -475,28 +528,59 @@ async fn served_spec_id_and_deleted_answer_together() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
+    seed(&session, "ice.ns.m", "PARTITIONED BY (cat)", MOR).await;
     let rows = batches(&session, "SELECT id, _spec_id FROM ice.ns.t").await;
     assert_eq!(
-        pairs_i64_i32(&rows),
+        sorted(pairs_i64_i32(&rows)),
         vec![(2, 0), (3, 0), (4, 0)],
         "composed served columns answer together"
     );
     let rows = batches(&session, "SELECT id, _deleted FROM ice.ns.t").await;
     assert_eq!(
-        pairs_i64_bool(&rows),
+        sorted(pairs_i64_bool(&rows)),
         vec![(2, false), (3, false), (4, false)],
         "composed served columns answer together"
     );
-    let rows = batches(&session, "SELECT id, _spec_id, _deleted FROM ice.ns.t").await;
+    let rows = batches(
+        &session,
+        "SELECT id, _spec_id, _deleted FROM ice.ns.t ORDER BY id",
+    )
+    .await;
     assert_eq!(
         field_names(&rows),
         vec!["id", "_spec_id", "_deleted"],
-        "composed served columns answer together"
+        "R-MC-DELETED-SPEC-COW"
     );
     assert_eq!(
-        rows.iter()
-            .map(datafusion::arrow::record_batch::RecordBatch::num_rows)
-            .sum::<usize>(),
-        3
+        triples_i64_i32_bool(&rows),
+        vec![(2, 0, false), (3, 0, false), (4, 0, false)],
+        "R-MC-DELETED-SPEC-COW"
+    );
+    let schema = rows[0].schema();
+    assert_eq!(
+        schema.fields()[1].data_type(),
+        &DataType::Int32,
+        "R-MC-DELETED-SPEC-COW"
+    );
+    assert_eq!(
+        schema.fields()[2].data_type(),
+        &DataType::Boolean,
+        "R-MC-DELETED-SPEC-COW"
+    );
+    assert!(!schema.fields()[2].is_nullable(), "R-MC-DELETED-SPEC-COW");
+    let rows = batches(
+        &session,
+        "SELECT id, _spec_id, _deleted FROM ice.ns.m ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        field_names(&rows),
+        vec!["id", "_spec_id", "_deleted"],
+        "R-MC-DELETED-SPEC-MOR"
+    );
+    assert_eq!(
+        triples_i64_i32_bool(&rows),
+        vec![(1, 0, true), (2, 0, false), (3, 0, false), (4, 0, false)],
+        "R-MC-DELETED-SPEC-MOR"
     );
 }
