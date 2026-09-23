@@ -1,5 +1,9 @@
 use super::*;
 
+const UUID_A: &str = "8f449f4d-cfce-403f-a643-95d0a15c9634";
+const UUID_B: &str = "37b0d3c0-deb7-47ee-b787-2f92e5b79515";
+const UUID_C: &str = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
 fn info(location: &str) -> FileInfo {
     FileInfo::new(location.to_string(), 1, 0)
 }
@@ -12,13 +16,25 @@ fn local_file_io(root: &str) -> FileIO {
 #[test]
 fn numbered_metadata_files_pick_the_highest_version() {
     let files = vec![
-        info("/w/t/metadata/00002-aaaa-0000.metadata.json"),
-        info("/w/t/metadata/00010-bbbb-1111.metadata.json"),
-        info("/w/t/metadata/00003-cccc-2222.metadata.json"),
+        info(&format!("/w/t/metadata/00002-{UUID_A}.metadata.json")),
+        info(&format!("/w/t/metadata/00010-{UUID_B}.metadata.json")),
+        info(&format!("/w/t/metadata/00003-{UUID_C}.metadata.json")),
     ];
     assert_eq!(
         latest_metadata_location(&files),
-        Some("/w/t/metadata/00010-bbbb-1111.metadata.json")
+        Some(format!("/w/t/metadata/00010-{UUID_B}.metadata.json").as_str())
+    );
+}
+
+#[test]
+fn numbered_metadata_requires_a_canonical_uuid() {
+    let files = vec![
+        info("/w/t/metadata/999-.metadata.json"),
+        info(&format!("/w/t/metadata/00010-{UUID_A}.metadata.json")),
+    ];
+    assert_eq!(
+        latest_metadata_location(&files),
+        Some(format!("/w/t/metadata/00010-{UUID_A}.metadata.json").as_str())
     );
 }
 
@@ -40,8 +56,29 @@ fn names_outside_the_two_forms_are_ignored() {
         info("/w/t/metadata/5.metadata.json"),
         info("/w/t/metadata/junk.metadata.json.txt"),
         info("/w/t/metadata/abc.metadata.json"),
+        info("/w/t/metadata/999-.metadata.json"),
+        info("/w/t/metadata/12-notauuid.metadata.json"),
+        info(&format!("/w/t/metadata/+12-{UUID_A}.metadata.json")),
+        info(&format!("/w/t/metadata/-{UUID_A}.metadata.json")),
+        info("/w/t/metadata/v+3.metadata.json"),
+        info(&format!("/w/t/metadata/12-{UUID_A}-extra.metadata.json")),
+        info("/w/t/metadata/12-8f449f4d-cfce-403f-a643-95d0a15c963x.metadata.json"),
     ];
     assert_eq!(latest_metadata_location(&files), None);
+}
+
+#[test]
+fn valid_forms_still_resolve() {
+    let files = vec![
+        info(&format!("/w/t/metadata/00001-{UUID_A}.metadata.json")),
+        info("/w/t/metadata/v1.metadata.json"),
+        info("/w/t/metadata/v007.metadata.json"),
+        info("/w/t/metadata/00002-8F449F4D-CFCE-403F-A643-95D0A15C9634.metadata.json"),
+    ];
+    assert_eq!(
+        latest_metadata_location(&files),
+        Some("/w/t/metadata/v007.metadata.json")
+    );
 }
 
 #[tokio::test]
@@ -49,7 +86,11 @@ async fn version_hint_wins_over_directory_listing() {
     let dir = tempfile::tempdir().expect("tempdir");
     let metadata = dir.path().join("metadata");
     std::fs::create_dir_all(&metadata).expect("mkdir");
-    std::fs::write(metadata.join("00010-aaaa.metadata.json"), b"{}").expect("write");
+    std::fs::write(
+        metadata.join(format!("00010-{UUID_A}.metadata.json")),
+        b"{}",
+    )
+    .expect("write");
     std::fs::write(metadata.join("v3.metadata.json"), b"{}").expect("write");
     std::fs::write(metadata.join("version-hint.text"), b"3\n").expect("write");
     let root = dir.path().to_string_lossy().to_string();
@@ -65,8 +106,16 @@ async fn listing_resolves_the_highest_numbered_metadata_file() {
     let dir = tempfile::tempdir().expect("tempdir");
     let metadata = dir.path().join("metadata");
     std::fs::create_dir_all(&metadata).expect("mkdir");
-    std::fs::write(metadata.join("00002-aaaa.metadata.json"), b"{}").expect("write");
-    std::fs::write(metadata.join("00010-bbbb.metadata.json"), b"{}").expect("write");
+    std::fs::write(
+        metadata.join(format!("00002-{UUID_A}.metadata.json")),
+        b"{}",
+    )
+    .expect("write");
+    std::fs::write(
+        metadata.join(format!("00010-{UUID_B}.metadata.json")),
+        b"{}",
+    )
+    .expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
     let resolved = resolve_metadata_location(&file_io, &format!("{root}/"))
@@ -74,7 +123,7 @@ async fn listing_resolves_the_highest_numbered_metadata_file() {
         .expect("resolve");
     assert_eq!(
         resolved,
-        format!("{root}/metadata/00010-bbbb.metadata.json")
+        format!("{root}/metadata/00010-{UUID_B}.metadata.json")
     );
 }
 
@@ -83,7 +132,11 @@ async fn hinted_metadata_file_must_exist() {
     let dir = tempfile::tempdir().expect("tempdir");
     let metadata = dir.path().join("metadata");
     std::fs::create_dir_all(&metadata).expect("mkdir");
-    std::fs::write(metadata.join("00002-aaaa.metadata.json"), b"{}").expect("write");
+    std::fs::write(
+        metadata.join(format!("00002-{UUID_A}.metadata.json")),
+        b"{}",
+    )
+    .expect("write");
     std::fs::write(metadata.join("version-hint.text"), b"7\n").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
@@ -101,7 +154,11 @@ async fn unparsable_hint_falls_back_to_listing() {
     let dir = tempfile::tempdir().expect("tempdir");
     let metadata = dir.path().join("metadata");
     std::fs::create_dir_all(&metadata).expect("mkdir");
-    std::fs::write(metadata.join("00002-aaaa.metadata.json"), b"{}").expect("write");
+    std::fs::write(
+        metadata.join(format!("00002-{UUID_A}.metadata.json")),
+        b"{}",
+    )
+    .expect("write");
     std::fs::write(metadata.join("version-hint.text"), b"abc\n").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
@@ -110,7 +167,7 @@ async fn unparsable_hint_falls_back_to_listing() {
         .expect("resolve");
     assert_eq!(
         resolved,
-        format!("{root}/metadata/00002-aaaa.metadata.json")
+        format!("{root}/metadata/00002-{UUID_A}.metadata.json")
     );
 }
 
@@ -153,5 +210,6 @@ async fn missing_location_reports_the_supplied_path() {
     let error = resolve_metadata_location(&file_io, &root)
         .await
         .expect_err("must refuse");
+    assert!(matches!(error, Error::Analysis(_)));
     assert!(error.to_string().contains(&root));
 }

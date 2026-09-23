@@ -190,8 +190,10 @@ def test_load_hinted_missing_metadata_names_the_path(spark: ReparkSession, tmp_p
     location = tmp_path / "hinted-table"
     (location / "metadata").mkdir(parents=True)
     (location / "metadata" / "version-hint.text").write_text("7\n")
-    with pytest.raises(AnalysisException, match=re.escape(str(location))):
+    with pytest.raises(AnalysisException) as raised:
         spark.read.format("iceberg").load(str(location))
+    assert str(location) in str(raised.value)
+    assert "v7.metadata.json" in str(raised.value)
 
 
 def test_load_two_part_identifier_keeps_catalog_route(
