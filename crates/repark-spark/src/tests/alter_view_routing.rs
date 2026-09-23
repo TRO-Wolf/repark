@@ -312,3 +312,27 @@ async fn alter_view_rename_moves_the_view() {
             .expect("destination existence")
     );
 }
+
+#[tokio::test]
+async fn alter_view_router_refuses_statement_write_options() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let options = crate::write_options::StatementWriteOptions {
+        raw: vec![("write-format".to_string(), "parquet".to_string())],
+        ..crate::write_options::StatementWriteOptions::empty()
+    };
+    let error = crate::router::execute_with_statement_options(
+        &ctx,
+        &catalogs,
+        "ALTER VIEW ice.sales.v SET TBLPROPERTIES ('k'='v')",
+        &std::collections::HashSet::<String>::new(),
+        &options,
+    )
+    .await
+    .expect_err("ALTER VIEW cannot take statement write options")
+    .to_string();
+    assert_eq!(
+        error,
+        "Error during planning: ALTER VIEW does not support write options (write-format); they are only honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)"
+    );
+}
