@@ -69,6 +69,11 @@ live rows over two data files; Spark's recorded answer is `[[2,true],[3,true]]`.
 | `bash scripts/check_map_md.sh --base origin/main` | exit 0 |
 | `python3 scripts/check_ledger_grammar.py` | `ledger-grammar: 251 live ledgers clean (2330 clauses, 2896 pinned clause ids, 2 exception rows)` |
 | scoreboard replay `--only R-INPUT-FILE-NAME` | RePark `[[2,true],[3,true]]` = Spark `[[2,true],[3,true]]` (`out/repark-ifn1.json`, `out/spark-core.json`) |
+| r2fix: `cargo test -p repark-spark --lib input_file_name` (head) | 15 passed — the tightened pins stay green |
+| r2fix: `cargo test -p repark-spark --lib metadata_columns` (head) | 14 passed, expectations unchanged |
+| r2fix: `make rust-clippy`; `make rust-panic-ban` | both exit 0 |
+| r2fix: `bash scripts/check_map_md.sh --base origin/main`; `python3 scripts/check_ledger_grammar.py`; `comment_ban.py` | all exit 0 (`hits=0`) |
+| r2fix mutation check | bare-projection rewrite forced to `'x.parquet'` → `bare_input_file_name_projection_names_the_column` red (`left: ["x.parquet", "x.parquet", "x.parquet"]` vs the real `_file` paths); reverted uncommitted |
 
 ## COVERAGE_ATTESTATION
 
