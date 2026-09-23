@@ -21,6 +21,8 @@ async fn alter_viewless_catalog_matches_memory_missing_targets_and_redirects_tab
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
     for statement in [
         "ALTER VIEW {catalog}.sales.absent SET TBLPROPERTIES ('k'='v')",
+        "ALTER VIEW {catalog}.sales.absent UNSET TBLPROPERTIES ('k')",
+        "ALTER VIEW {catalog}.sales.absent UNSET TBLPROPERTIES IF EXISTS ('k')",
         "ALTER VIEW {catalog}.sales.absent RENAME TO {catalog}.sales.b",
     ] {
         let memory_sql = statement.replace("{catalog}", "ice");
@@ -36,12 +38,26 @@ async fn alter_viewless_catalog_matches_memory_missing_targets_and_redirects_tab
         assert!(matches!(viewless_error, DataFusionError::Plan(_)));
         let viewless_error = viewless_error.to_string();
         assert_eq!(viewless_error, memory_error.replace("`ice`", "`fault`"));
-        let expected = if statement.contains("SET TBLPROPERTIES") {
-            "Error during planning: [UNSUPPORTED_FEATURE.CATALOG_OPERATION] The feature is not supported: Catalog `fault` does not support views. SQLSTATE: 0A000"
-        } else {
+        let expected = if statement.contains("RENAME TO") {
             "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `fault`.`sales`.`absent` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+        } else {
+            "Error during planning: [UNSUPPORTED_FEATURE.CATALOG_OPERATION] The feature is not supported: Catalog `fault` does not support views. SQLSTATE: 0A000"
         };
         assert_eq!(viewless_error, expected);
+    }
+    for statement in [
+        "ALTER VIEW fault.sales.t SET TBLPROPERTIES ('k'='v')",
+        "ALTER VIEW fault.sales.t UNSET TBLPROPERTIES ('k')",
+        "ALTER VIEW fault.sales.t UNSET TBLPROPERTIES IF EXISTS ('k')",
+    ] {
+        let error = execute(&ctx, &catalogs, statement)
+            .await
+            .expect_err("table name must refuse view property update");
+        assert!(matches!(error, DataFusionError::Plan(_)));
+        assert_eq!(
+            error.to_string(),
+            "Error during planning: [UNSUPPORTED_FEATURE.CATALOG_OPERATION] The feature is not supported: Catalog `fault` does not support views. SQLSTATE: 0A000"
+        );
     }
     let error = execute(
         &ctx,

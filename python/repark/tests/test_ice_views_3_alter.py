@@ -130,6 +130,38 @@ def test_set_on_table_refuses_and_leaves_properties(spark: ReparkSession) -> Non
     ]
 
 
+@pytest.mark.parametrize("if_exists", [False, True], ids=["UNSET", "UNSET-IF-EXISTS"])
+def test_unset_on_missing_view_refuses_catalog_operation(
+    spark: ReparkSession, if_exists: bool
+) -> None:
+    """UNSET on a missing view refuses for either IF EXISTS spelling."""
+    qualifier = " IF EXISTS" if if_exists else ""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"ALTER VIEW sc.ns.missing UNSET TBLPROPERTIES{qualifier} ('k')")
+    assert str(caught.value) == f"Error during planning: {CATALOG_OPERATION_UNSUPPORTED}"
+    assert caught.value.getCondition() == "UNSUPPORTED_FEATURE.CATALOG_OPERATION"
+    assert caught.value.getSqlState() == "0A000"
+
+
+@pytest.mark.parametrize("if_exists", [False, True], ids=["UNSET", "UNSET-IF-EXISTS"])
+def test_unset_on_table_refuses_and_leaves_properties(
+    spark: ReparkSession, if_exists: bool
+) -> None:
+    """UNSET on a table name refuses and leaves its properties and rows intact."""
+    properties_before = _table_properties(spark, "sc.ns.t")
+    qualifier = " IF EXISTS" if if_exists else ""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"ALTER VIEW sc.ns.t UNSET TBLPROPERTIES{qualifier} ('k')")
+    assert str(caught.value) == f"Error during planning: {CATALOG_OPERATION_UNSUPPORTED}"
+    assert caught.value.getCondition() == "UNSUPPORTED_FEATURE.CATALOG_OPERATION"
+    assert caught.value.getSqlState() == "0A000"
+    assert _table_properties(spark, "sc.ns.t") == properties_before
+    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.t ORDER BY id"))) == [
+        [1, "a"],
+        [2, "b"],
+    ]
+
+
 def test_rename_to_existing_view_refuses(spark: ReparkSession) -> None:
     """E5 — collision answers VIEW_ALREADY_EXISTS; both views stay readable."""
     spark.sql("CREATE VIEW sc.ns.va AS SELECT id FROM sc.ns.t")
