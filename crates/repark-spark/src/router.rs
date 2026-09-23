@@ -874,11 +874,6 @@ async fn try_preparse_intercepts(
         return Some(result);
     }
     if let Some(result) =
-        crate::show_create::try_show_tblproperties_intercept(ctx, catalogs, sql).await
-    {
-        return Some(result);
-    }
-    if let Some(result) =
         crate::show_create::try_show_create_intercept(ctx, catalogs, sql, write_options).await
     {
         return Some(result);

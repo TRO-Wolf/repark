@@ -20,7 +20,6 @@ use crate::catalog_ops::{
 use crate::describe_show::{describe_partition_field, quote_namespace_name_if_needed};
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
-use crate::table_props_view::spark_table_properties;
 use crate::type_table::{SPARK_TYPE_NAME_DEPTH_FALLBACK, SPARK_TYPE_NAME_MAX_DEPTH};
 use crate::write_options::StatementWriteOptions;
 
@@ -115,20 +114,6 @@ pub(crate) fn try_parse_show_create(sql: &str) -> Option<Result<ShowCreateStatem
         &name_parts(&name),
         as_serde,
     ))
-}
-
-pub(crate) fn try_parse_show_tblproperties(sql: &str) -> Option<Result<ShowCreateStatement>> {
-    let dialect = DatabricksDialect {};
-    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
-    let mut parser = Parser::new(&dialect).with_tokens(tokens);
-    if !parser.parse_keyword(Keyword::SHOW) || !consume_word(&mut parser, "TBLPROPERTIES") {
-        return None;
-    }
-    let name = parser.parse_object_name(false).ok()?;
-    if !at_statement_end(&parser) {
-        return None;
-    }
-    Some(ShowCreateStatement::from_parts(&name_parts(&name), false))
 }
 
 fn at_statement_end(parser: &Parser) -> bool {
@@ -235,32 +220,6 @@ pub(crate) async fn try_show_create_intercept(
     }
 }
 
-pub(crate) async fn try_show_tblproperties_intercept(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    sql: &str,
-) -> Option<Result<DataFrame>> {
-    let mut statement = match try_parse_show_tblproperties(sql)? {
-        Ok(statement) => statement,
-        Err(error) => return Some(Err(error)),
-    };
-    let shadowed = statement.catalog.is_empty()
-        && statement.namespace.is_empty()
-        && resolves_in_session(ctx, &statement.table).await;
-    statement.complete_from_session(catalogs);
-    if shadowed || catalogs.get(&statement.catalog).is_none() {
-        return None;
-    }
-    match catalogs
-        .is_view(&statement.catalog, &statement.ident())
-        .await
-    {
-        Ok(true) => None,
-        Ok(false) => Some(execute_show_tblproperties(ctx, catalogs, statement).await),
-        Err(error) => Some(Err(error)),
-    }
-}
-
 async fn resolves_in_session(ctx: &SessionContext, table: &str) -> bool {
     ctx.table_provider(TableReference::Bare {
         table: table.into(),
@@ -295,28 +254,6 @@ pub(crate) async fn execute_show_create(
     ctx.read_batch(show_create_batch(text)?)
 }
 
-async fn execute_show_tblproperties(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    statement: ShowCreateStatement,
-) -> Result<DataFrame> {
-    let handle = catalog_handle(catalogs, &statement.catalog)?;
-    let table = match handle.load_table(&statement.ident()).await {
-        Ok(table) => table,
-        Err(error) if error.kind() == ErrorKind::TableNotFound => {
-            return Err(table_or_view_not_found(
-                &statement.catalog,
-                &statement.namespace,
-                &statement.table,
-            ));
-        }
-        Err(error) => return Err(iceberg_err(error)),
-    };
-    ctx.read_batch(show_tblproperties_batch(spark_table_properties(
-        table.metadata(),
-    ))?)
-}
-
 fn show_create_batch(text: String) -> Result<RecordBatch> {
     let schema = Arc::new(Schema::new(vec![Field::new(
         "createtab_stmt",
@@ -326,21 +263,6 @@ fn show_create_batch(text: String) -> Result<RecordBatch> {
     Ok(RecordBatch::try_new(
         schema,
         vec![Arc::new(StringArray::from(vec![text]))],
-    )?)
-}
-
-fn show_tblproperties_batch(rows: PropertyPairs) -> Result<RecordBatch> {
-    let (keys, values): (Vec<String>, Vec<String>) = rows.into_iter().unzip();
-    let schema = Arc::new(Schema::new(vec![
-        Field::new("key", DataType::Utf8, false),
-        Field::new("value", DataType::Utf8, false),
-    ]));
-    Ok(RecordBatch::try_new(
-        schema,
-        vec![
-            Arc::new(StringArray::from(keys)),
-            Arc::new(StringArray::from(values)),
-        ],
     )?)
 }
 
@@ -557,23 +479,6 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(parsed.table, "we-ird");
-    }
-
-    #[test]
-    fn parse_show_tblproperties_accepts_a_table_name() {
-        let parsed = try_parse_show_tblproperties("SHOW TBLPROPERTIES ice.sales.t")
-            .expect("SHOW TBLPROPERTIES must parse")
-            .expect("SHOW TBLPROPERTIES must be valid");
-        assert_eq!(
-            parsed,
-            ShowCreateStatement {
-                catalog: "ice".to_string(),
-                namespace: "sales".to_string(),
-                table: "t".to_string(),
-                as_serde: false,
-            }
-        );
-        assert!(try_parse_show_tblproperties("SHOW TABLES IN ice.sales").is_none());
     }
 
     #[test]
