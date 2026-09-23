@@ -106,7 +106,12 @@ pub(crate) async fn execute_alter_view(
     );
     let view = match handle.load_view(&ident).await {
         Ok(view) => view,
-        Err(error) if error.kind() == ErrorKind::ViewNotFound => {
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::ViewNotFound | ErrorKind::FeatureUnsupported
+            ) =>
+        {
             return alter_view_missing_target(
                 handle.as_ref(),
                 &catalog,
