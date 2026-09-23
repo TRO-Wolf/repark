@@ -53,7 +53,7 @@ def _session(name: str, warehouse: Path, max_files: str | None = None) -> Repark
 
 
 def _metadata(warehouse: Path, table: str) -> dict:
-    directory = warehouse / "repark_ctas" / CATALOG / "w" / table / "metadata"
+    directory = warehouse / "w" / table / "metadata"
     hint = directory / "version-hint.text"
     if hint.exists():
         version = hint.read_text().strip()
@@ -67,7 +67,7 @@ def _metadata(warehouse: Path, table: str) -> dict:
 
 
 def _metadata_count(warehouse: Path, table: str) -> int:
-    directory = warehouse / "repark_ctas" / CATALOG / "w" / table / "metadata"
+    directory = warehouse / "w" / table / "metadata"
     return len(list(directory.glob("*.metadata.json")))
 
 
