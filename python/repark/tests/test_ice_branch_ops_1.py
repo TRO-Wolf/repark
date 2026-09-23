@@ -379,6 +379,23 @@ def test_branch_ops_v3_lineage(spark: ReparkSession, tmp_path: Path) -> None:
     )
 
 
+def test_rollback_to_timestamp_invalid_typed_literal_keeps_full_parse_message(
+    spark: ReparkSession,
+) -> None:
+    """A malformed TIMESTAMP literal keeps the branch-operations producer message."""
+    sql = "CALL mem.system.rollback_to_timestamp('ns.ops', TIMESTAMP 'x')"
+    expected = (
+        "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP\" is invalid: "
+        "'x'. SQLSTATE: 42604"
+    )
+    with pytest.raises(ParseException) as caught:
+        spark.sql(sql).to_arrow()
+    message = str(caught.value)
+    assert message.splitlines()[0] == expected
+    assert "SQL error" not in message
+    assert "ParserError(" not in message
+
+
 def _live_rows(session: Any, sql: str) -> list[tuple[Any, Any]]:
     """Collect a live two-column row query as a sorted multiset."""
     return sorted((row["id"], row["s"]) for row in session.sql(sql).toArrow().to_pylist())

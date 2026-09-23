@@ -370,10 +370,22 @@ def test_typed_numeric_literals_are_non_null(spark: ReparkSession) -> None:
 
 def test_out_of_range_integer_suffix_raises(spark: ReparkSession) -> None:
     """L9-128Y / L9-40000S: Spark ``[INVALID_NUMERIC_LITERAL_RANGE]``."""
-    with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE"):
-        spark.sql("SELECT 128Y AS v").to_arrow()
-    with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE"):
-        spark.sql("SELECT 40000S AS v").to_arrow()
+    for sql, expected in [
+        (
+            "SELECT 128Y AS v",
+            "[INVALID_NUMERIC_LITERAL_RANGE] Numeric literal 128Y is outside the valid range",
+        ),
+        (
+            "SELECT 40000S AS v",
+            "[INVALID_NUMERIC_LITERAL_RANGE] Numeric literal 40000S is outside the valid range",
+        ),
+    ]:
+        with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE") as caught:
+            spark.sql(sql).to_arrow()
+        message = str(caught.value)
+        assert message.splitlines()[0] == expected
+        assert "SQL error" not in message
+        assert "ParserError(" not in message
 
 
 def test_signed_integer_suffix_minima_answer(spark: ReparkSession) -> None:

@@ -441,3 +441,18 @@ pub(super) async fn execute_rollback_to_timestamp(
     )?;
     ctx.read_batches(vec![batch])
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_typed_literal_maps_to_the_full_parse_message() {
+        let expected = "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP\" is invalid: 'x'. SQLSTATE: 42604";
+        let mapped = repark_core::engine_err(invalid_typed_literal("TIMESTAMP", "x"));
+        let repark_common::Error::Parse(message) = mapped else {
+            panic!("expected a Parse error");
+        };
+        assert_eq!(message, expected);
+    }
+}

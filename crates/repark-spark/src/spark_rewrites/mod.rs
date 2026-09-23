@@ -923,3 +923,19 @@ fn starts_insert_source(token: Option<&Token>) -> bool {
 }
 
 pub(crate) mod create_options;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_numeric_literal_range_maps_to_the_full_parse_message() {
+        let expected =
+            "[INVALID_NUMERIC_LITERAL_RANGE] Numeric literal 128Y is outside the valid range";
+        let mapped = repark_core::engine_err(invalid_numeric_literal_range("128Y"));
+        let repark_common::Error::Parse(message) = mapped else {
+            panic!("expected a Parse error");
+        };
+        assert_eq!(message, expected);
+    }
+}

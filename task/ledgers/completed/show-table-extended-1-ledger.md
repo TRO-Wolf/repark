@@ -4,6 +4,12 @@
 **Model:** Codex (gpt-5.6-terra) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
 **Path:** STANDARD. **risk_tier: standard.**
 
+> **Errata (2026-09-23, WO-A5):** `/tmp/xd-create-scratch/m13.json` measures the two numeric
+> suffix errors and the malformed TIMESTAMP literal on Spark 4.1.2. The TIMESTAMP producer text
+> matches. `FNP-4B-NUMERIC-RANGE-MESSAGE-1` remains a named residue: Spark strips the suffix,
+> names the type and bounds, includes advice and SQLSTATE `22003`; RePark keeps its existing
+> qualified-token producer text without SQLSTATE.
+
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 ## Plan
