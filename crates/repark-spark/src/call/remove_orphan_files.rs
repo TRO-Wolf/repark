@@ -267,11 +267,7 @@ pub(super) async fn execute_remove_orphan_files(
         return orphan_result_dataframe(ctx, &orphans);
     }
 
-    refuse_listing_an_unnormalised_table_location(&table, &table_arg)?;
-    let mut action = DeleteOrphanFiles::new(table).older_than(older_than_ms);
-    if let Some(location) = location {
-        action = action.location(normalize_location_path(&location));
-    }
+    let mut action = listing_action(table, &table_arg, location, older_than_ms)?;
     if let Some(mode) = prefix_mismatch_mode {
         action = action.prefix_mismatch_mode(mode);
     }
@@ -292,6 +288,20 @@ pub(super) async fn execute_remove_orphan_files(
         .collect();
     refuse_partial_delete(result.orphan_file_locations.len(), &failures)?;
     orphan_result_dataframe(ctx, &result.orphan_file_locations)
+}
+
+fn listing_action(
+    table: Table,
+    table_arg: &str,
+    location: Option<String>,
+    older_than_ms: i64,
+) -> Result<DeleteOrphanFiles> {
+    refuse_listing_an_unnormalised_table_location(&table, table_arg)?;
+    let action = DeleteOrphanFiles::new(table).older_than(older_than_ms);
+    Ok(match location {
+        Some(location) => action.location(normalize_location_path(&location)),
+        None => action,
+    })
 }
 
 pub(crate) fn table_location_is_normal(stored: &str) -> bool {
