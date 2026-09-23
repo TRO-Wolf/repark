@@ -30,7 +30,8 @@ def spark(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReparkSession:
 
 def _data_files(warehouse: Path, table: str) -> set[Path]:
     root = warehouse / "ns" / table
-    assert root.is_dir()
+    assert [path for path in warehouse.rglob(table) if path.is_dir()] == [root]
+    assert not (warehouse / "repark_ctas").exists()
     return set((root / "data").rglob("*.parquet"))
 
 

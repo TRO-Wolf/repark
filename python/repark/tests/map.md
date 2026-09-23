@@ -7014,6 +7014,9 @@ pins: fnp-8-review/C-009, C-010
   every 1000-row slice (the 2026-09-12 CI red: 5 vs 5 on a few-core runner), so an
   unpinned session makes the pin machine-dependent. Seed files are excluded by
   set-diff so the count is the rewrite's alone.
+  **U1-MEM-LAYOUT-1 layout-r8 (2026-09-23):** `_data_files` reads the table at
+  `<warehouse>/ns/<table>` and asserts that it is the only directory of that name anywhere under
+  the warehouse and that `<warehouse>/repark_ctas` does not exist. pins: u1-mem-layout-1/C-033
   pins: review-fix-8/C-004
   **RP-23 (2026-09-17):** 16 → 20 files — the fork's Java-style mid-stream rolling.
   pins: rp-23-pin-bump/C-002
