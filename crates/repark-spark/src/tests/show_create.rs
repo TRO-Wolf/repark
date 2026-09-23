@@ -2,7 +2,7 @@ use super::super::*;
 use super::common::*;
 
 use datafusion::arrow::array::BooleanArray;
-use datafusion::arrow::datatypes::DataType;
+use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::sql::sqlparser::parser::ParserError;
 
 const AS_SERDE_MESSAGE: &str = "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] SHOW CREATE TABLE AS SERDE is not supported for v2 \
@@ -68,22 +68,14 @@ async fn outcome(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-) -> std::result::Result<(Vec<String>, Vec<String>), String> {
+) -> std::result::Result<(Schema, Vec<String>), String> {
     let frame = execute(ctx, catalogs, sql)
         .await
         .map_err(|error| error.to_string())?;
     let batches = frame.collect().await.map_err(|error| error.to_string())?;
-    let columns = batches
+    let schema = batches
         .first()
-        .map(|batch| {
-            batch
-                .schema()
-                .fields()
-                .iter()
-                .map(|field| field.name().clone())
-                .collect()
-        })
-        .unwrap_or_default();
+        .map_or_else(Schema::empty, |batch| batch.schema().as_ref().clone());
     let mut cells = Vec::new();
     for batch in &batches {
         if let Some(texts) = batch.column(0).as_any().downcast_ref::<StringArray>() {
@@ -92,14 +84,17 @@ async fn outcome(
             }
         }
     }
-    Ok((columns, cells))
+    Ok((schema, cells))
 }
 
 async fn show_create(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str) -> String {
-    let (columns, cells) = outcome(ctx, catalogs, &format!("SHOW CREATE TABLE {table}"))
+    let (schema, cells) = outcome(ctx, catalogs, &format!("SHOW CREATE TABLE {table}"))
         .await
         .unwrap();
-    assert_eq!(columns, vec!["createtab_stmt".to_string()]);
+    assert_eq!(
+        schema,
+        Schema::new(vec![Field::new("createtab_stmt", DataType::Utf8, false)])
+    );
     assert_eq!(cells.len(), 1);
     cells.into_iter().next().unwrap()
 }
