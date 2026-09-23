@@ -46,6 +46,7 @@ pub(crate) fn try_parse_describe_metadata_table(sql: &str) -> Option<DescribeTab
         table: format!("{table}${suffix}"),
         extended,
         written_parts: parts,
+        column: None,
     })
 }
 
