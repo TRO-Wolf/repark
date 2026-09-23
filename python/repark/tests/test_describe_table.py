@@ -175,6 +175,67 @@ def test_describe_table_column_unclosed_quote_is_parse_exception(spark: ReparkSe
     )
 
 
+@pytest.mark.parametrize(
+    "_case_id,sql,near",
+    [
+        ("d_blk_lead_unclosed_quote", "/* c */ DESCRIBE sc.sales.pc 'x", "'"),
+        ("d_line_lead_unclosed_quote", "-- c\nDESCRIBE sc.sales.pc 'x", "'"),
+        ("d_blk_mid_unclosed_quote", "DESCRIBE /* c */ sc.sales.pc 'x", "'"),
+        ("d_plain_unclosed_quote", "DESCRIBE sc.sales.pc 'x", "'"),
+        ("d_blk_apos_unclosed_quote", "DESCRIBE sc.sales.pc /* it's */ 'x", "'"),
+        ("d_blk_apos_lead_unclosed_quote", "/* it's */ DESCRIBE sc.sales.pc 'x", "'"),
+        ("d_line_apos_unclosed_bt", "DESCRIBE sc.sales.pc -- it's\n`x", "`"),
+        ("d_blk_lead_unclosed_dquote", '/* c */ DESC sc.sales.pc "x', '"'),
+    ],
+    ids=lambda value: value,
+)
+def test_describe_comment_prefix_unclosed_quotes_keep_parse_messages(
+    spark: ReparkSession, _case_id: str, sql: str, near: str
+) -> None:
+    """Comment markers do not hide an unclosed DESCRIBE table quote."""
+    _assert_describe_parse_error(
+        spark,
+        sql,
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        f"[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601",
+    )
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "/* c */ DESCRIBE mem.dsns1.t1",
+        "-- c\nDESCRIBE mem.dsns1.t1",
+        "DESCRIBE /* c */ mem.dsns1.t1",
+        "/* ' */ DESCRIBE mem.dsns1.t1",
+    ],
+    ids=["d_blk_lead_ok", "d_line_lead_ok", "d_blk_mid_ok", "d_blk_quote_in_comment_only"],
+)
+def test_describe_comments_keep_valid_table_answers(spark: ReparkSession, sql: str) -> None:
+    """Comment prefixes and quote-only comments keep valid table rows."""
+    assert _rows(spark, sql) == PLAIN_ROWS
+
+
+def test_describe_namespace_unclosed_quote_keeps_non_table_path(spark: ReparkSession) -> None:
+    """An unclosed quote after NAMESPACE does not enter the table error path."""
+    with pytest.raises(ParseException) as raised:
+        spark.sql("/* c */ DESCRIBE NAMESPACE mem.dsns1 'x")
+    assert str(raised.value) == (
+        'SQL error: TokenizerError("Unterminated string literal at Line: 1, Column: 38")'
+    )
+
+
+def test_describe_unclosed_comment_keeps_tokenizer_outcome(spark: ReparkSession) -> None:
+    """An unclosed block comment stays with the tokenizer error path."""
+    with pytest.raises(ParseException) as raised:
+        spark.sql("/* c DESCRIBE mem.dsns1.t1 'x")
+    assert str(raised.value) == (
+        'SQL error: TokenizerError("Unexpected EOF while in a multi-line comment at Line: 1, '
+        'Column: 30")'
+    )
+
+
 def test_describe_table_column_partition_is_parse_exception(spark: ReparkSession) -> None:
     """A partition column clause keeps Spark's unsupported parse error."""
     table = _create_describe_error_table(spark)

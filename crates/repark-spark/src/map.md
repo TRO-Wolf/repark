@@ -1372,6 +1372,10 @@ pins: rp-4-fork-repin/C-005, C-006
   path and delegates its rows to `describe_column.rs`; the existing router intercept remains
   the only route to this table-describe executor.
   pins: describe-column-1/C-001, C-002, C-003, C-004
+  **WO-B6 (2026-09-23):** tokenizer-failure classification skips leading and intervening SQL
+  comments through `show_create::skip_sql_whitespace_and_comments` and the shared keyword helper;
+  the quote scan skips both comment forms before opening a delimiter.
+  pins: wo-b6-describe-comments/C-001, C-002
   **WO-B4 (2026-09-23):** tokenizer and table-name failures after a table DESCRIBE head stay
   on the intercept. Unquoted/backticked names parse; quoted table strings get short Spark
   parse text; four parts get the all-parts table-not-found error. Five parts stay on the
@@ -1436,6 +1440,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `comment` property is set), which is where the facade's `catalog.getTable(...).description`
   now reads the table comment.
 - `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
+  The raw keyword matcher uses the shared SQL keyword helper, which preserves nested block and
+  line-comment handling for statement pre-checks.
   for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
   for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the
   `describe_show` idiom: once the raw head is `SHOW CREATE TABLE`, lexical failures other than an

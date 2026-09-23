@@ -186,7 +186,10 @@ pub(crate) fn describe_partition_section(
     Ok(rows)
 }
 
-pub(crate) fn describe_partition_field(schema: &IcebergSchema, field: &PartitionField) -> Result<String> {
+pub(crate) fn describe_partition_field(
+    schema: &IcebergSchema,
+    field: &PartitionField,
+) -> Result<String> {
     let source = schema.field_by_id(field.source_id).ok_or_else(|| {
         DataFusionError::Plan(format!(
             "partition field `{}` refers to unknown source id {}",

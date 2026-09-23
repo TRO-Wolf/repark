@@ -293,14 +293,26 @@ fn describe_tokenizer_error(sql: &str) -> Option<Result<DescribeTable>> {
 }
 
 fn is_table_describe_text(sql: &str) -> bool {
-    let mut words = sql.split_whitespace();
-    let Some(head) = words.next() else {
+    let Some(position) = crate::show_create::skip_sql_whitespace_and_comments(sql, 0) else {
         return false;
     };
-    if !head.eq_ignore_ascii_case("DESCRIBE") && !head.eq_ignore_ascii_case("DESC") {
+    let keyword = if crate::show_create::starts_with_sql_keywords(sql, &["DESCRIBE"]) {
+        "DESCRIBE"
+    } else if crate::show_create::starts_with_sql_keywords(sql, &["DESC"]) {
+        "DESC"
+    } else {
         return false;
-    }
-    !words.next().is_some_and(is_non_table_describe_text_head)
+    };
+    let position = position + keyword.len();
+    let Some(word_start) = crate::show_create::skip_sql_whitespace_and_comments(sql, position)
+    else {
+        return false;
+    };
+    let word_end = sql[word_start..]
+        .bytes()
+        .position(|byte| !byte.is_ascii_alphanumeric() && byte != b'_')
+        .map_or(sql.len(), |offset| word_start + offset);
+    word_start == word_end || !is_non_table_describe_text_head(&sql[word_start..word_end])
 }
 
 fn is_non_table_describe_text_head(word: &str) -> bool {
@@ -312,20 +324,28 @@ fn is_non_table_describe_text_head(word: &str) -> bool {
 }
 
 fn unclosed_describe_quote(sql: &str) -> Option<char> {
-    let mut quote = None;
-    let mut characters = sql.chars().peekable();
-    while let Some(character) = characters.next() {
+    let mut quote: Option<char> = None;
+    let mut position = 0;
+    while position < sql.len() {
+        let tail = sql.get(position..)?;
+        if quote.is_none() && (tail.starts_with("/*") || tail.starts_with("--")) {
+            position = crate::show_create::skip_sql_whitespace_and_comments(sql, position)?;
+            continue;
+        }
+        let character = tail.chars().next()?;
+        let next_position = position + character.len_utf8();
         if let Some(open_quote) = quote {
             if character == open_quote {
-                if characters.peek().copied() == Some(open_quote) {
-                    characters.next();
-                } else {
-                    quote = None;
+                if sql.get(next_position..)?.starts_with(open_quote) {
+                    position = next_position + open_quote.len_utf8();
+                    continue;
                 }
+                quote = None;
             }
         } else if matches!(character, '\'' | '`' | '"') {
             quote = Some(character);
         }
+        position = next_position;
     }
     quote
 }

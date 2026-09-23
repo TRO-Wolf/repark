@@ -7034,6 +7034,10 @@ pins: fnp-8-review/C-009, C-010
   Spark text for malformed number, trailing-word, unclosed-quote, partition, and table-lexer
   forms. Backticked and EXTENDED column answers retain their exact three rows.
   pins: wo-b4-describe-errors/C-004
+  **WO-B6 (2026-09-23):** exact `ParseException` messages pin the eight quoted tokenizer failures;
+  complete table rows pin leading, intervening, and quote-only comments; the NAMESPACE and
+  unclosed block-comment cases pin the existing raw tokenizer outcomes.
+  pins: wo-b6-describe-comments/C-002, C-003, C-004
   **Round 2 (2026-09-23):** the identity-partition control asserts Spark's no-blank
   `# Partition Information` header, column-header row, source type, and nullable comment cell
   on both plain and EXTENDED DESCRIBE.
@@ -7065,6 +7069,14 @@ pins: fnp-8-review/C-009, C-010
   `str(exc)` with the bare bracketed message too. The multi-statement facade refusal includes
   `42601`.
   pins: wo-c5/C-001, C-002, C-003, C-004; wo-c10/C-001, C-003
+  **WO-A4 (2026-09-23):** the bare, commented, unclosed-comment, and multi-statement refusals
+  compare `str(exc)` with the bare bracketed message, superseding the parser-wrapper text above.
+  **WO-C5 (2026-09-23):** post-head unclosed bracket comments assert `ParseException`,
+  `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full bare parser message (WO-A4 rendering); a comment hiding
+  TABLE pins the tokenizer fall-through. The multi-statement facade refusal includes `42601`.
+  pins: wo-c5/C-001, C-002, C-003, C-004
+  **WO-B6 stack check (2026-09-23):** the complete SHOW CREATE refusal constant follows the
+  current Spark-shaped exception message after the #810 rebase.
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce

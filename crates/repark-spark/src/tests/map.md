@@ -1561,6 +1561,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   divergence; view columns return Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`, even when the
   column exists, while a plain view description still returns rows.
   pins: wo-b4-describe-errors/C-001, C-002, C-003, C-005
+  **WO-B6 (2026-09-23):** eight malformed statements with leading or embedded SQL comments keep
+  complete parser payloads; the namespace and unclosed-comment cases keep their exact tokenizer
+  errors, and comment-only quote controls remain valid.
+  pins: wo-b6-describe-comments/C-001, C-002, C-003
 - `describe_owner.rs` — **DESCRIBE-COLUMN-1 round 2 (2026-09-23):** end-to-end memory-catalog
   pins cover identity-only partition-information rows in plain and EXTENDED output, two-column
   spec order, non-identity and unpartitioned controls, owner stamping on CREATE/CTAS/replace

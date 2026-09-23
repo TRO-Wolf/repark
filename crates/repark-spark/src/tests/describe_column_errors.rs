@@ -298,6 +298,46 @@ parser_error_case!(
     end_of_input_parse_error()
 );
 parser_error_case!(
+    d_blk_lead_unclosed_quote,
+    "/* c */ DESCRIBE sc.sales.pc 'x",
+    parse_error("'")
+);
+parser_error_case!(
+    d_line_lead_unclosed_quote,
+    "-- c\nDESCRIBE sc.sales.pc 'x",
+    parse_error("'")
+);
+parser_error_case!(
+    d_blk_mid_unclosed_quote,
+    "DESCRIBE /* c */ sc.sales.pc 'x",
+    parse_error("'")
+);
+parser_error_case!(
+    d_plain_unclosed_quote,
+    "DESCRIBE sc.sales.pc 'x",
+    parse_error("'")
+);
+parser_error_case!(
+    d_blk_apos_unclosed_quote,
+    "DESCRIBE sc.sales.pc /* it's */ 'x",
+    parse_error("'")
+);
+parser_error_case!(
+    d_blk_apos_lead_unclosed_quote,
+    "/* it's */ DESCRIBE sc.sales.pc 'x",
+    parse_error("'")
+);
+parser_error_case!(
+    d_line_apos_unclosed_bt,
+    "DESCRIBE sc.sales.pc -- it's\n`x",
+    parse_error("`")
+);
+parser_error_case!(
+    d_blk_lead_unclosed_dquote,
+    "/* c */ DESC sc.sales.pc \"x",
+    parse_error("\"")
+);
+parser_error_case!(
     parser_col_unclosed_quote,
     "DESCRIBE ice.sales.dc 'id",
     parse_error("'")
@@ -454,6 +494,34 @@ parser_describe_case!(
     false,
     Some(&["id"])
 );
+
+#[test]
+fn d_blk_ns_head_unclosed_falls_through() {
+    assert!(
+        crate::describe_show::try_parse_describe_table("/* c */ DESCRIBE NAMESPACE sc.sales 'x")
+            .is_none()
+    );
+}
+
+#[test]
+fn d_unclosed_comment_falls_through() {
+    assert!(
+        crate::describe_show::try_parse_describe_table("/* c DESCRIBE sc.sales.pc 'x").is_none()
+    );
+}
+
+#[test]
+fn describe_keyword_and_quote_inside_comments_are_ignored() {
+    for sql in [
+        "/* ' */ DESCRIBE sc.sales.pc",
+        "-- ' DESC sc.sales.pc\nDESCRIBE sc.sales.pc",
+    ] {
+        assert!(
+            crate::describe_show::try_parse_describe_table(sql).is_some(),
+            "{sql}"
+        );
+    }
+}
 
 #[test]
 fn parser_near_misses_fall_through() {

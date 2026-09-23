@@ -265,6 +265,54 @@ fn describe_table_parser_refuses_time_travel_tails() {
 }
 
 #[tokio::test]
+async fn describe_tokenizer_comment_failures_keep_full_parse_messages() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    for (sql, quote) in [
+        ("/* c */ DESCRIBE sc.sales.pc 'x", "'"),
+        ("-- c\nDESCRIBE sc.sales.pc 'x", "'"),
+        ("DESCRIBE /* c */ sc.sales.pc 'x", "'"),
+        ("DESCRIBE sc.sales.pc 'x", "'"),
+        ("DESCRIBE sc.sales.pc /* it's */ 'x", "'"),
+        ("/* it's */ DESCRIBE sc.sales.pc 'x", "'"),
+        ("DESCRIBE sc.sales.pc -- it's\n`x", "`"),
+        ("/* c */ DESC sc.sales.pc \"x", "\""),
+    ] {
+        let error = execute(&ctx, &catalogs, sql).await.unwrap_err();
+        let DataFusionError::SQL(error, _) = error else {
+            panic!("{sql} must return a parser error");
+        };
+        let ParserError::ParserError(message) = error.as_ref() else {
+            panic!("{sql} must use ParserError, got {error:?}");
+        };
+        assert_eq!(
+            message,
+            &format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{quote}'. SQLSTATE: 42601"),
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn describe_non_table_and_unclosed_comment_keep_tokenizer_errors() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    for (sql, expected) in [
+        (
+            "/* c */ DESCRIBE NAMESPACE mem.dsns1 'x",
+            "SQL error: TokenizerError(\"Unterminated string literal at Line: 1, Column: 38\")",
+        ),
+        (
+            "/* c DESCRIBE mem.dsns1.t1 'x",
+            "SQL error: TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 30\")",
+        ),
+    ] {
+        let error = execute(&ctx, &catalogs, sql).await.unwrap_err();
+        assert_eq!(error.to_string(), expected, "{sql}");
+    }
+}
+
+#[tokio::test]
 async fn describe_table_parser_leaves_non_table_forms_alone() {
     for sql in [
         "DESCRIBE EXTENDED",
