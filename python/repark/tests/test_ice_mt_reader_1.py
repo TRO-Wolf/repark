@@ -8,9 +8,10 @@ Answering tests compare the reader against the SQL door on the same table
 (rows and column names) — C-010 pins the reader's rows standalone with no
 SQL arm, and the live leg C-013 compares the selected rows only
 (``_live_rows`` collects row values, not column names) beside its absolute
-field and sum pins — and, where the recorded cells measured them, the
-absolute field name, ``dataType.simpleString()``, ``nullable`` and rows of
-the reader frame; the ``all_*`` sweep additionally pins the Spark 4.1.2
+field and sum pins — and the absolute field name,
+``dataType.simpleString()``, ``nullable`` and rows of the reader frame, the
+types and nullability as the live Spark leg measures them (the recorded
+cells establish rows and column names only); the ``all_*`` sweep additionally pins the Spark 4.1.2
 column lists outright; every paired refusal compares the reader's class and
 text against the SQL door's (the missing-table quoted-dollar refusal instead
 compares three SQL spellings pairwise; the unknown-suffix refusal pairs only

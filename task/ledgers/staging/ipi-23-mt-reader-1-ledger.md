@@ -363,7 +363,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, crates/repark-spark/src/tests/metadata_tables_asof.rs, python/repark/tests/test_ice_mt_reader_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Two recorded cells replayed verbatim plus twenty-two facade pins and two Rust pins, every clause carrying a pins: citation in the test file and the touched map.md rows; C-001 asserts schema field names alongside values, and after critic r2 the recorded field type and nullability are pinned where the cells measured them.
+      evidence: Two recorded cells replayed verbatim plus twenty-two facade pins and two Rust pins, every clause carrying a pins: citation in the test file and the touched map.md rows; C-001 asserts schema field names alongside values, and after critic r2 the field type and nullability are pinned as the live Spark leg measures them (`test_live_spark_reader_matches_sql`); the recorded cells establish rows and column names only.
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py, python/repark/tests/map.md, crates/repark-core/src/time_travel/map.md]
 ```
 

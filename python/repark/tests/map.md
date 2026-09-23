@@ -7784,10 +7784,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   refusal pairing only `getSqlState()` beside its literal text, and the
   legacy-option refusals standing alone on literal texts with `getSqlState()`
   `None`.
-  **critic r2 (2026-09-23):** the recorded cells also
+  **critic r2 (2026-09-23):** the tests also
   pin the reader frame's field name, `simpleString()` and `nullable`
-  (`operation` string nullable, `record_count` bigint non-nullable) plus the absolute
-  rows; the live leg then picked the first snapshot by `committed_at`.
+  (`operation` string nullable, `record_count` bigint non-nullable, as the live
+  Spark leg measures them; the recorded cells establish rows and column names
+  only) plus the absolute rows; the live leg then picked the first snapshot by `committed_at`.
   **critic r3 (2026-09-23):** the live leg deletes the whole-file row id 3 so Spark
   always commits `delete`, and the first-snapshot files pin is `record_count`
   summing to 2 — both independent of Spark's file split; the `all_*` sweep pins
