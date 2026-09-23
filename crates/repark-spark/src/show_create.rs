@@ -20,6 +20,7 @@ use crate::catalog_ops::{
 use crate::describe_show::{describe_partition_field, quote_namespace_name_if_needed};
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
+use crate::table_props_view::spark_table_properties;
 use crate::type_table::{SPARK_TYPE_NAME_DEPTH_FALLBACK, SPARK_TYPE_NAME_MAX_DEPTH};
 use crate::write_options::StatementWriteOptions;
 
