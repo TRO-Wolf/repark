@@ -296,7 +296,7 @@ FINDING:
   id: F-IPI-23-MT-DESCRIBE-1-R6-V-001
   severity: S1
   category: AT-3
-  clause: IPI-40 V-DESCRIBE pin in test_ice_views_2_describe.py (no clause here)
+  clause: C-011, C-012
   claim: The unchanged `test_describe_missing_namespace_propagates_namespace_error` still pinned the pre-ruling `No such namespace` answer with null condition and SQLSTATE for `DESCRIBE sc.missing_ns.t`, contradicting the md-r6fix NamespaceNotFound arm; the saved green gate omitted the file.
   evidence: red at `2162a675` under a head build (`assert 'No such namespace' in text` against the 42P01 answer); Spark 4.1.2 + Iceberg 1.11.0 measured 2026-09-23 answers AnalysisException TABLE_OR_VIEW_NOT_FOUND / SQLSTATE 42P01 for `DESCRIBE sc.missing_ns.t` (and `DESC` / `DESCRIBE TABLE`), message equal to RePark's plus a `; line 1 pos N;` + unresolved-plan tail
   disposition: REMEDIATED (renamed `test_describe_missing_namespace_is_table_or_view_not_found`, re-pinned to RePark's full 42P01 text by equality plus `getCondition()` and `getSqlState()`; module docstring trued; mutation — routing `NamespaceNotFound` into `describe_view_frame` answers `NamespaceNotFound => No such namespace: NamespaceIdent(["missing_ns"])` and reds the pin, so the pin tells the arms apart)
