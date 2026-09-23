@@ -52,8 +52,6 @@ repo.
   **WO-C3 (2026-09-23):** SHOW CREATE's byte-for-byte claim applies to CREATE text; typed parse
   refusals retain the IPI-51 no-caret residue while pinning Spark's condition, SQLSTATE, and
   first line.
-  **WO-C3 C5 (2026-09-23):** SHOW TBLPROPERTIES answers the measured Spark property rows; SHOW
-  TABLE EXTENDED remains a separate declared refusal.
   **ICE-MERGE-APPEND-1 (2026-09-19):**
   single home for how repark differs from Apache Spark. **ICE-CATALOG-SESSION-1 S4 (2026-09-20):**
   NS-1 (bare `SHOW NAMESPACES`), ST-1 (`SHOW TABLES IN`), and DBT-QUALIFY-1 (one

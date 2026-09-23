@@ -76,12 +76,6 @@ def _served() -> tuple[Shape, ...]:
             None,
         ),
         Shape(
-            "S-SHOW-TBLPROPERTIES",
-            "fetch_tbl_properties",
-            f"show tblproperties {CATALOG}.{NAMESPACE}.{STEM}_survey",
-            None,
-        ),
-        Shape(
             "S-SET-CONF",
             "server_side_parameters",
             "set spark.sql.shuffle.partitions = 2",
@@ -218,6 +212,12 @@ def _refused() -> tuple[Shape, ...]:
             "R-SHOW-TABLE-EXTENDED",
             "spark__list_relations_without_caching",
             f"show table extended in {NAMESPACE} like '*'",
+            "SHOW [VARIABLE] is not supported unless information_schema is enabled",
+        ),
+        Shape(
+            "R-SHOW-TBLPROPERTIES",
+            "fetch_tbl_properties",
+            f"show tblproperties {fact}",
             "SHOW [VARIABLE] is not supported unless information_schema is enabled",
         ),
         Shape(
