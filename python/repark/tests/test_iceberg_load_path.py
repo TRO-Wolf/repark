@@ -138,6 +138,18 @@ def test_load_older_metadata_file_reads_that_version(
     assert _sorted_rows(arrow) == EXPECTED_PRE_DELETE
 
 
+def test_load_path_registers_no_catalog_table(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """A path read is static: the resolver's ``path.<name>`` ident reaches no catalog.
+
+    pins: dfload-1/C-007
+    """
+    frame = spark.read.format("iceberg").load(str(loaded["table_dir"]))
+    _assert_current(frame)
+    assert not spark.catalog.table_exists("path.events")
+
+
 def test_load_path_with_time_travel_option_refuses(
     spark: ReparkSession, loaded: dict[str, object]
 ) -> None:
