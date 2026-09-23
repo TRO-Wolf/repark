@@ -176,6 +176,30 @@ fn information(expectation: Information<'_>) -> String {
     format!("{}\n", lines.join("\n"))
 }
 
+fn managed_row(
+    table: &str,
+    location: &str,
+    properties: &str,
+    owner: Option<&str>,
+    tree: &str,
+) -> ExtendedRow {
+    (
+        "sales".to_string(),
+        table.to_string(),
+        false,
+        information(Information {
+            catalog: "ice",
+            namespace: "sales",
+            table,
+            location,
+            properties,
+            comment: None,
+            owner,
+            tree,
+        }),
+    )
+}
+
 #[tokio::test]
 async fn show_table_extended_answers_exact_partitioned_information() {
     let warehouse = TempDir::new().unwrap();
@@ -517,20 +541,12 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
     .await;
     assert_eq!(
         locations,
-        vec![(
-            "sales".to_string(),
-            "lo".to_string(),
-            false,
-            information(Information {
-                catalog: "ice",
-                namespace: "sales",
-                table: "lo",
-                location: &lo_location,
-                properties: &properties,
-                comment: None,
-                owner: None,
-                tree: "root\n |-- id: long (nullable = true)\n",
-            }),
+        vec![managed_row(
+            "lo",
+            &lo_location,
+            &properties,
+            None,
+            "root\n |-- id: long (nullable = true)\n",
         )]
     );
     let (_, owners) = show_table_extended(
@@ -541,20 +557,12 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
     .await;
     assert_eq!(
         owners,
-        vec![(
-            "sales".to_string(),
-            "ownered".to_string(),
-            false,
-            information(Information {
-                catalog: "ice",
-                namespace: "sales",
-                table: "ownered",
-                location: &ownered_location,
-                properties: &properties,
-                comment: None,
-                owner: Some("john"),
-                tree: "root\n |-- id: long (nullable = true)\n",
-            }),
+        vec![managed_row(
+            "ownered",
+            &ownered_location,
+            &properties,
+            Some("john"),
+            "root\n |-- id: long (nullable = true)\n",
         )]
     );
     let (_, nested) = show_table_extended(
@@ -565,20 +573,12 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
     .await;
     assert_eq!(
         nested,
-        vec![(
-            "sales".to_string(),
-            "nested".to_string(),
-            false,
-            information(Information {
-                catalog: "ice",
-                namespace: "sales",
-                table: "nested",
-                location: &nested_location,
-                properties: &properties,
-                comment: None,
-                owner: None,
-                tree: "root\n |-- s: struct (nullable = true)\n |    |-- x: integer (nullable = true)\n |    |-- y: array (nullable = true)\n |    |    |-- element: string (containsNull = true)\n",
-            }),
+        vec![managed_row(
+            "nested",
+            &nested_location,
+            &properties,
+            None,
+            "root\n |-- s: struct (nullable = true)\n |    |-- x: integer (nullable = true)\n |    |-- y: array (nullable = true)\n |    |    |-- element: string (containsNull = true)\n",
         )]
     );
 }
