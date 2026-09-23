@@ -76,9 +76,7 @@ def _pin_schema(table: pa.Table) -> None:
 def _sorted_rows(table: pa.Table) -> list[list[object]]:
     """Sorted full-row multiset for the ``(id, data, cat)`` fixture table."""
     rows = table.select(["id", "data", "cat"]).to_pylist()
-    return sorted(
-        [int(row["id"]), str(row["data"]), str(row["cat"])] for row in rows
-    )
+    return sorted([int(row["id"]), str(row["data"]), str(row["cat"])] for row in rows)
 
 
 def _assert_current(frame: object) -> None:
@@ -144,14 +142,10 @@ def test_load_path_with_time_travel_option_refuses(
     pins: dfload-1/C-004
     """
     with pytest.raises(AnalysisException, match=re.escape(PATH_OPTION_REFUSAL)):
-        spark.read.format("iceberg").option("snapshot-id", "1").load(
-            str(loaded["table_dir"])
-        )
+        spark.read.format("iceberg").option("snapshot-id", "1").load(str(loaded["table_dir"]))
 
 
-def test_load_missing_location_names_the_path(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
+def test_load_missing_location_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
     """A location with no resolvable metadata raises AnalysisException naming the path.
 
     pins: dfload-1/C-005
@@ -190,9 +184,7 @@ def test_load_metadata_table_identifier_keeps_catalog_route(
 
     pins: dfload-1/C-006
     """
-    with pytest.raises(
-        AnalysisException, match=r"table 'ns\.events\.snapshots' not found"
-    ):
+    with pytest.raises(AnalysisException, match=r"table 'ns\.events\.snapshots' not found"):
         spark.read.format("iceberg").load("ns.events.snapshots")
 
 
