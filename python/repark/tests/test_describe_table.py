@@ -78,6 +78,29 @@ def test_describe_table_plain_matches_spark_rows(spark: ReparkSession) -> None:
     assert _rows(spark, f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE}") == PLAIN_ROWS
 
 
+def test_describe_table_column_matches_spark_rows(spark: ReparkSession) -> None:
+    """DESCRIBE TABLE column returns Spark's non-null info-name/value rows."""
+    table = spark.sql(f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE} id").to_arrow()
+    assert table.schema.names == ["info_name", "info_value"]
+    assert [field.type for field in table.schema] == [pa.string()] * 2
+    assert [field.nullable for field in table.schema] == [False, False]
+    assert _rows(spark, f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE} id") == [
+        ("col_name", "id"),
+        ("data_type", "bigint"),
+        ("comment", "the row identifier"),
+    ]
+
+
+def test_describe_table_column_bare_name_uses_default_namespace(spark: ReparkSession) -> None:
+    """A bare DESCRIBE table name plus column resolves through session defaults."""
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}").to_arrow()
+    assert _rows(spark, f"DESCRIBE TABLE {TABLE} id") == [
+        ("col_name", "id"),
+        ("data_type", "bigint"),
+        ("comment", "the row identifier"),
+    ]
+
+
 def test_describe_table_extended_sections(spark: ReparkSession) -> None:
     """D-2: EXTENDED adds metadata and detail sections in Spark order."""
     rows = _rows(spark, f"DESCRIBE TABLE EXTENDED {CATALOG}.{NAMESPACE}.{TABLE}")

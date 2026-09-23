@@ -1,7 +1,9 @@
 use super::super::*;
 use super::common::*;
 
-use iceberg::spec::{NestedField, PrimitiveType, Schema, Transform, Type, UnboundPartitionSpec};
+use iceberg::spec::{
+    NestedField, PrimitiveType, Schema, StructType, Transform, Type, UnboundPartitionSpec,
+};
 
 async fn create_step_one_table(catalogs: &CatalogRegistry, warehouse: &str) {
     let schema = Schema::builder()
@@ -45,6 +47,52 @@ async fn create_step_one_table(catalogs: &CatalogRegistry, warehouse: &str) {
         .unwrap();
 }
 
+async fn create_describe_column_table(catalogs: &CatalogRegistry, warehouse: &str) {
+    let schema = Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![
+            std::sync::Arc::new(
+                NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Long)).with_doc("c"),
+            ),
+            std::sync::Arc::new(NestedField::optional(
+                2,
+                "data",
+                Type::Primitive(PrimitiveType::String),
+            )),
+            std::sync::Arc::new(NestedField::optional(
+                3,
+                "st",
+                Type::Struct(StructType::new(vec![
+                    std::sync::Arc::new(NestedField::optional(
+                        4,
+                        "a",
+                        Type::Primitive(PrimitiveType::Int),
+                    )),
+                    std::sync::Arc::new(NestedField::optional(
+                        5,
+                        "b",
+                        Type::Primitive(PrimitiveType::String),
+                    )),
+                ])),
+            )),
+        ])
+        .build()
+        .unwrap();
+    let location = format!("{warehouse}/sales/dc");
+    std::fs::create_dir_all(&location).unwrap();
+    catalogs["ice"]
+        .create_table(
+            &NamespaceIdent::new("sales".to_string()),
+            iceberg::TableCreation::builder()
+                .name("dc".to_string())
+                .location(location)
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .unwrap();
+}
+
 async fn describe_rows(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -78,6 +126,39 @@ async fn describe_rows(
                 names.value(index).to_string(),
                 types.value(index).to_string(),
                 (!comments.is_null(index)).then(|| comments.value(index).to_string()),
+            ));
+        }
+    }
+    rows
+}
+
+async fn describe_column_rows(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Vec<(String, String)> {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let names = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        let values = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        for index in 0..batch.num_rows() {
+            rows.push((
+                names.value(index).to_string(),
+                values.value(index).to_string(),
             ));
         }
     }
@@ -137,6 +218,47 @@ async fn describe_table_parser_accepts_short_names_for_session_completion() {
     assert!(two.extended);
 }
 
+#[test]
+fn describe_table_parser_accepts_one_column_tail() {
+    for sql in [
+        "DESCRIBE TABLE ice.sales.dc id",
+        "DESCRIBE ice.sales.dc data",
+        "DESCRIBE TABLE EXTENDED ice.sales.dc id",
+        "DESCRIBE FORMATTED ice.sales.dc id",
+        "DESCRIBE ice.sales.dc ID",
+        "DESCRIBE ice.sales.dc `id`;",
+        "DESCRIBE ice.sales.dc st.a",
+    ] {
+        assert!(
+            crate::describe_show::try_parse_describe_table(sql).is_some(),
+            "{sql} must take the describe-table path"
+        );
+    }
+}
+
+#[test]
+fn describe_table_parser_refuses_time_travel_tails() {
+    for (sql, near) in [
+        ("DESCRIBE ice.sales.dc VERSION AS OF 1", "OF"),
+        ("DESCRIBE TABLE ice.sales.dc VERSION AS OF 1", "OF"),
+        (
+            "DESCRIBE ice.sales.dc TIMESTAMP AS OF '2030-01-01 00:00:00'",
+            "OF",
+        ),
+        ("DESCRIBE ice.sales.dc FOR VERSION AS OF 1", "VERSION"),
+    ] {
+        let parsed = crate::describe_show::try_parse_describe_table(sql)
+            .expect("the time-travel tail must take the describe-table path");
+        let Err(error) = parsed else {
+            panic!("the time-travel tail must refuse");
+        };
+        assert_eq!(
+            error.to_string(),
+            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601")
+        );
+    }
+}
+
 #[tokio::test]
 async fn describe_table_parser_leaves_non_table_forms_alone() {
     for sql in [
@@ -146,12 +268,124 @@ async fn describe_table_parser_leaves_non_table_forms_alone() {
         "DESCRIBE DATABASE ice.sales",
         "DESC SCHEMA ice.sales",
         "DESCRIBE ice.sales.t1.snapshots",
-        "DESCRIBE ice.sales.t1 extra",
+        "DESCRIBE ice.sales.t1 col extra",
+        "DESCRIBE ice.sales.t1 AS JSON",
+        "DESCRIBE FUNCTION upper",
+        "DESCRIBE QUERY SELECT 1",
         "SELECT 1",
     ] {
         assert!(
             crate::describe_show::try_parse_describe_table(sql).is_none(),
             "{sql} must not take the describe-table path"
+        );
+    }
+    assert!(
+        crate::describe_show::try_parse_describe_as_json("DESCRIBE ice.sales.t1 AS JSON").is_some()
+    );
+}
+
+#[tokio::test]
+async fn describe_table_column_matches_spark_rows() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_describe_column_table(&catalogs, wh.path().to_str().unwrap()).await;
+
+    let frame = execute(&ctx, &catalogs, "DESCRIBE TABLE ice.sales.dc id")
+        .await
+        .unwrap();
+    let schema = frame.schema();
+    let fields: Vec<&str> = schema
+        .fields()
+        .iter()
+        .map(|field| field.name().as_str())
+        .collect();
+    assert_eq!(fields, vec!["info_name", "info_value"]);
+    assert!(schema.fields().iter().all(|field| !field.is_nullable()));
+
+    let id_rows = vec![
+        ("col_name".to_string(), "id".to_string()),
+        ("data_type".to_string(), "bigint".to_string()),
+        ("comment".to_string(), "c".to_string()),
+    ];
+    for sql in [
+        "DESCRIBE TABLE ice.sales.dc id",
+        "DESCRIBE ice.sales.dc id",
+        "DESCRIBE TABLE EXTENDED ice.sales.dc id",
+        "DESCRIBE FORMATTED ice.sales.dc id",
+        "DESCRIBE ice.sales.dc `id`",
+    ] {
+        assert_eq!(
+            describe_column_rows(&ctx, &catalogs, sql).await,
+            id_rows,
+            "{sql}"
+        );
+    }
+    assert_eq!(
+        describe_column_rows(&ctx, &catalogs, "DESCRIBE ice.sales.dc ID").await,
+        vec![
+            ("col_name".to_string(), "ID".to_string()),
+            ("data_type".to_string(), "bigint".to_string()),
+            ("comment".to_string(), "c".to_string()),
+        ]
+    );
+    assert_eq!(
+        describe_column_rows(&ctx, &catalogs, "DESCRIBE ice.sales.dc data").await,
+        vec![
+            ("col_name".to_string(), "data".to_string()),
+            ("data_type".to_string(), "string".to_string()),
+            ("comment".to_string(), "NULL".to_string()),
+        ]
+    );
+    assert_eq!(
+        describe_column_rows(&ctx, &catalogs, "DESCRIBE ice.sales.dc st").await,
+        vec![
+            ("col_name".to_string(), "st".to_string()),
+            (
+                "data_type".to_string(),
+                "struct<a:int,b:string>".to_string(),
+            ),
+            ("comment".to_string(), "NULL".to_string()),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn describe_table_column_refusals_match_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    create_describe_column_table(&catalogs, wh.path().to_str().unwrap()).await;
+
+    let nested = execute(&ctx, &catalogs, "DESCRIBE ice.sales.dc st.a")
+        .await
+        .expect_err("a nested describe column must refuse");
+    assert_eq!(
+        nested.to_string(),
+        "[_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support nested column: st.a."
+    );
+    let missing = execute(&ctx, &catalogs, "DESCRIBE ice.sales.dc nope")
+        .await
+        .expect_err("a missing describe column must refuse");
+    assert_eq!(
+        missing.to_string(),
+        "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with \
+         name `nope` cannot be resolved. Did you mean one of the following? [`id`, `st`, `data`]. \
+         SQLSTATE: 42703"
+    );
+    for (sql, near) in [
+        ("DESCRIBE ice.sales.dc VERSION AS OF 1", "OF"),
+        ("DESCRIBE TABLE ice.sales.dc VERSION AS OF 1", "OF"),
+        (
+            "DESCRIBE ice.sales.dc TIMESTAMP AS OF '2030-01-01 00:00:00'",
+            "OF",
+        ),
+        ("DESCRIBE ice.sales.dc FOR VERSION AS OF 1", "VERSION"),
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a describe time-travel tail must refuse");
+        assert_eq!(
+            error.to_string(),
+            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601")
         );
     }
 }
