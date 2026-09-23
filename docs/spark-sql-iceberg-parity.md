@@ -3489,6 +3489,32 @@ the pin rather than obeying it.
   naming turns out to matter elsewhere.
   pins: ice-catalog-session-1/C-025
 
+### ICE-CATALOG-MEM-LAYOUT-1 — a memory catalog's location-less create lands at `<warehouse>/<ns>/<table>` — **FIXED 2026-09-23** (Q-55-7)
+
+- **repark** — **FIXED 2026-09-23 (Q-55-7 (ii), spec §U1).** A Spark-dialect CTAS, column-def
+  `CREATE TABLE`, `CREATE OR REPLACE` of an absent table, `saveAsTable`, `writeTo(...).create()`
+  or `spark.catalog.createTable` on a catalog registered through `register_memory_catalog` (or
+  `spark.sql.catalog.<c>.type=memory|hadoop`), with no `LOCATION` and no namespace `location`,
+  lands at `<warehouse>/<ns level 1>/…/<table>`. Before, it landed at
+  `<warehouse>/repark_ctas/<catalog>/<ns>/<table>`. Precedence: table `LOCATION` > namespace
+  `location` / `location_uri` > the warehouse layout root recorded at registration > the
+  catalog's location policy. This **moves where a memory-catalog table's files land on disk**;
+  the catalog is ephemeral and persists no metadata, so no existing table is relocated. A
+  `TempFallbackAllowed` registry entry with no recorded warehouse (the `CatalogRegistry::from`
+  test helper) keeps `<root>/repark_ctas/<catalog>/<ns>/<table>` unchanged, and the ANSI door
+  (`repark_ansi_ctas`) is unchanged. Metadata file names stay `<version>-<uuid>.metadata.json`
+  rather than `v<N>.metadata.json` (follow-up; ICE-CATALOG-SESSION-HADOOP-1).
+- **Apache Spark** — Java `InMemoryCatalog` / `HadoopCatalog` place a location-less table at
+  `<warehouse>/<ns>/<table>`. *(oracle: recorded, PySpark Spark leg of the U1 MEM-LAYOUT
+  inventory, 2026-09-23 — cells `P-TABLE-STATS-*`, `P-PART-STATS-*`, `D-SHOW-CREATE*`.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/mem_layout.rs::mem_layout_ctas_lands_at_warehouse_namespace_table`,
+  `crates/repark-spark/src/tests/mem_layout.rs::mem_layout_unrecorded_temp_fallback_keeps_repark_ctas_path`,
+  `crates/repark-core/src/session/tests/session.rs::register_memory_catalog_fallback_root_is_the_warehouse`
+- **Rationale** — FIXED 2026-09-23 under ruling Q-55-7; the unit ledger is
+  `task/ledgers/staging/u1-mem-layout-1-ledger.md`. A table's own subdirectory is sweepable by
+  `remove_orphan_files`; the warehouse root is not (Q-55-6).
+
 ### ICE-MERGE-APPEND-1 — an INSERT commits through a MERGING append — **FIXED 2026-09-19 (RePark paths)**
 
 - **repark** — **FIXED 2026-09-19.** Every append commit site RePark owns commits through the
