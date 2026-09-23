@@ -414,6 +414,27 @@ mod tests {
     }
 
     #[test]
+    fn parser_error_bracket_near_misses_keep_complete_messages() {
+        for (payload, expected) in [
+            ("[", "["),
+            ("[X", "[X"),
+            (" [X] y", "ParserError(\" [X] y\")"),
+            ("", "ParserError(\"\")"),
+        ] {
+            let error = DataFusionError::SQL(
+                Box::new(ParserError::ParserError(payload.to_string())),
+                None,
+            );
+            let mapped = engine_err(error);
+            match mapped {
+                Error::Parse(message) if payload.starts_with('[') => assert_eq!(message, expected),
+                Error::Parse(message) => assert_eq!(message, format!("SQL error: {expected}")),
+                other => panic!("expected Parse error, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
     fn bracketed_parser_error_peels_context_and_diagnostic_wrappers() {
         let payload = "[PARSE_SYNTAX_ERROR] x SQLSTATE: 42601";
         let context = DataFusionError::Context(

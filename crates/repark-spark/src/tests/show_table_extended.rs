@@ -910,6 +910,15 @@ async fn show_table_extended_near_miss_probes_keep_their_exact_outcomes() {
         "SQL(TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 47\"), None)"
     );
 
+    let inter_keyword_unclosed_comment =
+        outcome(&ctx, &catalogs, "SHOW /* unclosed TABLE EXTENDED LIKE 'pc'")
+            .await
+            .expect_err("an unclosed inter-keyword comment must keep its tokenizer outcome");
+    assert_eq!(
+        format!("{inter_keyword_unclosed_comment:?}"),
+        "SQL(TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 42\"), None)"
+    );
+
     let show_tables = outcome(
         &ctx,
         &catalogs,

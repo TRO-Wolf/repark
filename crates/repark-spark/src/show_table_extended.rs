@@ -420,6 +420,91 @@ mod tests {
     }
 
     #[test]
+    fn parse_near_misses_keep_exact_answers() {
+        for (sql, expected) in [
+            (
+                "SHOW TABLE EXTENDED LIKE",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED LIKE 'x",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED LIKE 'x' PARTITION (a=1",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED LIKE 'x')",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near ')': extra input ')'. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED LIKE 'x' trailing",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near 'trailing': extra input 'trailing'. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED LIKE 'x' PARTITION (a=1) trailing",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near 'trailing': extra input 'trailing'. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+            ),
+        ] {
+            assert_parse_refusal(sql, expected);
+        }
+        assert!(
+            try_parse_show_table_extended("SHOW /* unclosed TABLE EXTENDED LIKE 'x'").is_none()
+        );
+        assert_eq!(
+            try_parse_show_table_extended("SHOW TABLE EXTENDED LIKE 'x' -- end")
+                .unwrap()
+                .unwrap(),
+            ShowTableExtended {
+                scope: None,
+                pattern: "x".to_string(),
+                has_partition: false,
+            }
+        );
+        assert_eq!(
+            try_parse_show_table_extended("SHOW TABLE EXTENDED LIKE ''")
+                .unwrap()
+                .unwrap(),
+            ShowTableExtended {
+                scope: None,
+                pattern: String::new(),
+                has_partition: false
+            }
+        );
+        assert_eq!(
+            try_parse_show_table_extended("show table extended like 'x'")
+                .unwrap()
+                .unwrap(),
+            ShowTableExtended {
+                scope: None,
+                pattern: "x".to_string(),
+                has_partition: false
+            }
+        );
+        assert_eq!(
+            try_parse_show_table_extended("SHOW TABLE EXTENDED LIKE 'x';;")
+                .unwrap()
+                .unwrap(),
+            ShowTableExtended {
+                scope: None,
+                pattern: "x".to_string(),
+                has_partition: false,
+            }
+        );
+        assert!(
+            try_parse_show_table_extended("SHOW TABLE EXTENDED IN ice.sales LIKE 'x'")
+                .unwrap()
+                .is_ok()
+        );
+        assert!(try_parse_show_table_extended("SHOW TABLE EXTENDEDX LIKE 'x'").is_none());
+    }
+
+    #[test]
     fn parse_leaves_near_misses_alone() {
         for sql in [
             "SHOW TABLES IN `x`",

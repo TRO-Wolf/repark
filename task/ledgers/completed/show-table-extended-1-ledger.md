@@ -10,6 +10,19 @@
 > names the type and bounds, includes advice and SQLSTATE `22003`; RePark keeps its existing
 > qualified-token producer text without SQLSTATE.
 
+## WO-A6 near-miss sweep
+
+| Recognizer / near miss | Pin |
+|---|---|
+| `try_parse_show_table_extended`: truncated `SHOW TABLE EXTENDED`, `... LIKE`, `IN`, unclosed pattern quote, unclosed PARTITION, extra `)`, and trailing text after LIKE or PARTITION | Existing `parse_refuses_required_syntax_shapes`; new `parse_near_misses_keep_exact_answers` |
+| `try_parse_show_table_extended`: empty pattern, lowercase keywords, terminal `--` comment, unclosed comment, and double semicolon | New `parse_near_misses_keep_exact_answers`; unclosed block-comment tokenizer detail also pinned by `show_table_extended_near_miss_probes_keep_their_exact_outcomes`. These cases were not separately measured: unmeasured pins. |
+| `try_parse_show_table_extended` wrong-case boundary, `SHOW TABLES EXTENDED`, `SHOW TABLE EXTENDEDX` | Existing `show_table_extended_near_miss_probes_keep_their_exact_outcomes`; lowercase acceptance is in `parse_near_misses_keep_exact_answers`. |
+| Comment-aware keyword scanner: inter-keyword unclosed comment, comment-ending line, and keyword near misses | Existing `comment_aware_keyword_scanner_leaves_show_table_near_misses_alone` and `show_table_extended_near_miss_probes_keep_their_exact_outcomes`; terminal line comment is in `parse_near_misses_keep_exact_answers`. |
+| `spark_parse_message` bracket prefix: `[`, `[X`, leading-space ` [X] y`, empty message | New `parser_error_bracket_near_misses_keep_complete_messages`; all were unmeasured. |
+| Router / SHOW CREATE intercept routing: wrong-case keywords, `SHOW TABLES EXTENDED`, `SHOW TABLE EXTENDEDX`, and `SHOW TABLE EXTENDED IN` | Existing `show_table_extended_near_miss_probes_keep_their_exact_outcomes` and `parse_near_misses_keep_exact_answers`. `IN` currently enters the intercept and returns a syntax refusal; full refusal is pinned by the latter. |
+
+Reported recognizer defect: `SHOW TABLE EXTENDED LIKE 'x';;` is accepted by the parser as a complete struct because `at_statement_end` stops at the first semicolon and ignores the second. Spark measurement files contain no matching result, so expected Spark behavior is unmeasured. The parser pin records RePark's current acceptance. No logic change was allowed in this sweep.
+
 ## WO-A5 follow-up audit
 
 - **V-002 strengthened:** `show_table_extended_tracks_snapshot_and_plain_information` now
