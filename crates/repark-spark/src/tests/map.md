@@ -1382,22 +1382,42 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `bucket_partitioned_table_serves_all_four_metadata_columns` serves all four metadata
   columns on a bucket table; the star pin gains the `*, _partition` leg; and the refusal
   advertises the served four.
-  **mcdel-r1 (2026-09-23):** `deleted_column_marks_merge_on_read_deleted_row` pins the
-  recorded `R-MC-DELETED` cell (`SELECT id, _deleted` = `[(1,true),(2,false),(3,false),(4,false)]`,
-  the field non-null Boolean); `not_projecting_deleted_still_filters_mor_rows` pins
-  `SELECT id` = `[2,3,4]` and `count(*)` = 3 on the same merge-on-read table;
-  `select_star_keeps_user_columns_on_mor_table` pins `*` to the three user columns;
-  `deleted_predicates_reapply_above_the_scan` pins `WHERE _deleted` / `WHERE NOT
-  _deleted` re-applied above the `Inexact` scan (RePark-internal consistency,
-  unmeasured vs Spark); `deleted_column_on_copy_on_write_marks_all_rows_false` pins
-  `[(2,false),(3,false),(4,false)]` on the copy-on-write twin;
-  `deleted_name_folds_unquoted_but_quoted_upper_stays_unknown` pins unquoted
-  `_DELETED` answering like `_deleted` while quoted `` `_DELETED` `` keeps the
-  unknown-column error; `metadata_column_over_time_travel_keeps_todays_error` pins
-  the planner's unresolved-column error for a metadata column over `VERSION AS OF`
-  (measured, not `[ICE-MC-1]` — see the ledger's premise correction).
+  The `_deleted` cluster lives in `metadata_columns_deleted.rs` (mcdel-r1).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015,
   C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
+- `metadata_columns_deleted.rs` — **mcdel-r1 (2026-09-23):** the `_deleted` pins over
+  the recorded merge-on-read seed (two appends plus one delete).
+  `deleted_column_marks_merge_on_read_deleted_row` pins the recorded
+  `R-MC-DELETED` cell (`SELECT id, _deleted` = `[(1,true),(2,false),(3,false),(4,false)]`,
+  the field non-null Boolean); `not_projecting_deleted_still_filters_mor_rows` pins
+  `SELECT id` = `[2,3,4]` and `count(*)` = 3;
+  `select_star_keeps_user_columns_on_mor_table` pins `*` to the three user columns;
+  `deleted_predicates_reapply_above_the_scan` pins `WHERE _deleted` / `WHERE NOT
+  _deleted` re-applied above the `Inexact` scan;
+  `deleted_column_on_copy_on_write_marks_all_rows_false` pins
+  `[(2,false),(3,false),(4,false)]` on the copy-on-write twin;
+  `unquoted_upper_deleted_folds_to_served_name` pins unquoted `_DELETED` answering
+  like `_deleted`; and `served_spec_id_and_deleted_answer_together` pins the composed
+  `_spec_id` + `_deleted` query answering instead of refusing.
+  **mcdel-r2 (2026-09-23, critic r1):** every pin asserts rows or the full error
+  text, never shapes — the star pin also asserts the ordered rows
+  `[(2,b,y),(3,c,x),(4,d,x)]`; the predicate pin gains the predicate-only legs
+  `WHERE _deleted` = `[1]`, `WHERE NOT _deleted` = `[2,3,4]`,
+  `WHERE _deleted OR id > 0` = `[1,2,3,4]` and `count(*) WHERE _deleted IS NOT NULL`
+  = `[3]`; `deleted_column_flows_through_subqueries` pins the filtered and pruned
+  subquery legs `[2,3,4]`; `deleted_column_in_expressions_order_and_group` pins
+  `CASE` = `[(1,D),(2,L),(3,L),(4,L)]`, `sum(CAST(_deleted AS INT))` = `[1]`,
+  `ORDER BY _deleted` = `[2,3,4,1]` and `GROUP BY` = `[(false,3),(true,1)]`;
+  `deleted_column_in_self_join_answers_empty` pins the `b._deleted` self-join `[]`.
+  Two known divergences pin RePark's full message (class, sub-class and
+  `SQLSTATE: 42703`): `quoted_upper_deleted_known_divergence` — quoted
+  `` `_DELETED` `` and `` `_FILE` `` alike refuse `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`
+  where Spark resolves the quoted upper name — and
+  `metadata_column_over_time_travel_known_divergence` — `_file` / `_deleted` over
+  `VERSION AS OF` refuse unresolved where Spark serves them (pre-existing for all
+  metadata columns).
+  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
@@ -1445,7 +1465,6 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statement (the `[UNRESOLVED_ROUTINE]` error, never `[ICE-MC-1]`).
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013
-  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)
