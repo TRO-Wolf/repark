@@ -7829,6 +7829,40 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
   C-022
+- [test_ice_mt_describe_1.py](test_ice_mt_describe_1.py) —
+  **IPI-23-MT-DESCRIBE-1 (2026-09-22):** `DESCRIBE` on an Iceberg metadata table
+  answers one row per column of the metadata table. Offline pins over a
+  one-column seed: the six recorded `R-MT-DESCRIBE` snapshots rows (C-001),
+  DESCRIBE-vs-`SELECT *` column equality across six metadata tables (C-002),
+  `TABLE` / `DESC` / upper-case / `EXTENDED` / `FORMATTED` spellings (C-003), the
+  two-part form after `USE` answering 42P01 on the facade-expanded name (C-004),
+  and the near misses — plain tables unchanged
+  (C-005), a real table named `snapshots` (C-006), a missing base naming the full
+  metadata-table name as written (C-007), an unknown suffix keeping the
+  compound-identifier error (C-008) — plus the critic-r1 refusal pins
+  (C-010..C-015: real/shadowing namespaces, missing namespace naming the full
+  name, the quoted `t$snapshots` form, the EXTENDED/FORMATTED matrix), the
+  strict-xfail `ns.t.snapshots` USE form (C-016), the written-case
+  (`missing.SNAPSHOTS` / `Missing.snapshots`) and quoted `$`-name missing-base
+  pins (C-018, C-019), the last-`$` pins for a base name containing `$`
+  (C-020: DESCRIBE of `a$b$snapshots` matches SELECT's schema; C-021: `a$b`
+  describes itself; C-022: `a$b$nonsense` keeps the 42P01 refusal),
+  plus the live snapshots leg re-measuring Spark 4.1.2.
+  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-019, C-020, C-021, C-022
+- [test_ice_views_2_describe.py](test_ice_views_2_describe.py) —
+  **IPI-40 views PR2 / V-DESCRIBE (2026-09-22):** `DESCRIBE <cat>.<ns>.<view>`
+  answers the view's stored schema — one `col_name`/`data_type`/`comment` row
+  per column, Spark type spellings, empty-string comment where the column
+  carries no doc. The near misses: a name that is neither table nor view keeps
+  the byte-exact `TABLE_OR_VIEW_NOT_FOUND` refusal, a partitioned table's
+  answer is unchanged, and `DESCRIBE EXTENDED` on a view is the same
+  columns-only answer. md-r8fix (2026-09-23): a missing namespace answers the
+  same 42P01 refusal naming the name as written (the `NamespaceNotFound` arm in
+  `describe_show.rs`), not the view probe's propagated error —
+  `test_describe_missing_namespace_is_table_or_view_not_found`, renamed from
+  `test_describe_missing_namespace_propagates_namespace_error`, whose old
+  `No such namespace` / null-condition pin predated the ruling; Spark's
+  message is RePark's plus a `; line 1 pos N;` plan tail.
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106
