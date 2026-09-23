@@ -1510,8 +1510,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   answers what SQL answers, and with `versionAsOf` / `timestampAsOf` what SQL `AS OF`
   answers — the #802 decision moved to `repark_core::time_travel::metadata_at` with two
   callers (SQL door, `read_table_at`); the un-pinned arm quotes into the router path.
-  Thirteen facade pins assert reader/SQL equality plus near misses; the two recorded
-  cells replay Spark-equal. `risk_tier: standard`. Branch
+  Twenty-two facade pins assert reader/SQL equality plus near misses and — after
+  critic r2 — the absolute recorded field type, nullability and rows where the
+  cells measured them; the two recorded cells replay Spark-equal. The Rust pin
+  `metadata_asof_nested_namespace_real_table_wins` covers the four-part
+  real-table-wins branch. `risk_tier: standard`. Branch
   `fix/ipi-23-reader-metadata-tables`.
   pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-011, C-012, C-013
+  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
+  C-022

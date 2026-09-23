@@ -36,6 +36,34 @@ reader; the quoted-`$` form with AS OF differs (reader `TableNotFound`, SQL serv
 and is reported, not fixed — `$` is not a reader spelling and the reader matches
 Spark there. No existing expected value moved.
 
+**Follow-up (2026-09-23, WO rd-r5fix, critic r2):** four findings plus a class
+sweep, all test-side. V-001 (P2): Arrow types and nullability were unpinned —
+`test_load_snapshots_equals_sql` now asserts the reader frame's
+`select("operation")` field as `("operation", "string", True)` and
+`test_load_version_as_of_equals_sql` asserts `select("record_count")` as
+`("record_count", "bigint", False)` with rows `[[2]]`, the exact Spark 4.1.2
+probe answers; the measured RePark schema matched, so no product change.
+V-002 (P2): the `metadata_at.rs` real-table-wins branch was untested —
+`metadata_asof_nested_namespace_real_table_wins` builds a two-level
+`sales.sub` namespace through the catalog API with a real `snapshots` table
+(row 77) alongside base table `sales.sub`, and asserts both the ordinary
+four-part read and the AS OF read at the real table's own snapshot id refuse
+loudly rather than serve `sales.sub` snapshot metadata (DataFusion caps
+table references at three parts, so the real table is unreachable through
+either door — the check turns a silent wrong answer into a loud refusal;
+mutation-proven: deleting the branch makes `read_metadata_path_at` route to
+the `sales.sub` snapshots provider). V-003 (P2): the live leg picked
+`sorted(snapshot ids)[0]`, which is not commit order — now
+`ORDER BY committed_at, snapshot_id LIMIT 1`, with the absolute recorded
+answers asserted (operations `["append","append","overwrite"]` sorted,
+`record_count` rows `[[2]]`, both schema fields). V-004 (P3): the "thirteen
+pins" counts here and in `map.md` now read twenty-two with C-001..C-022.
+Sweep: C-002 pins `record_count` as `bigint` non-nullable on the reader
+files frame, C-003 and C-016 pin the absolute operation multiset, C-005 pins
+the timestamp-scoped `record_count` rows `[[1],[2]]`, C-007 pins the empty
+frame's `record_count` field, C-009 pins the absolute selector rows, and
+C-020 pins the uppercase-suffix AS OF `record_count` rows `[[2]]`.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The two replay cells were recorded
@@ -152,7 +180,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, python/repark/tests/test_ice_mt_reader_1.py]
     - id: AT-10
       status: ATTACKED
-      evidence: Two recorded cells replayed verbatim plus thirteen facade pins and one Rust pin, every clause carrying a pins: citation in the test file and the touched map.md rows; C-001 asserts schema field names alongside values.
+      evidence: Two recorded cells replayed verbatim plus twenty-two facade pins and two Rust pins, every clause carrying a pins: citation in the test file and the touched map.md rows; C-001 asserts schema field names alongside values, and after critic r2 the recorded field type and nullability are pinned where the cells measured them.
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py, python/repark/tests/map.md, crates/repark-core/src/time_travel/map.md]
 ```
 
