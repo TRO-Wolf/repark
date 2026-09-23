@@ -1296,6 +1296,32 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   advertises the served four.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015,
   C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
+- `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
+  `input_file_name()` pins over the same two-append plus one-delete seed.
+  `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
+  (`[[2,true],[3,true],[4,true]]`) plus the `substr(input_file_name(),…)`
+  function-argument shape; `input_file_name_equals_file_on_every_row` pins
+  `input_file_name() = _file` per row; `input_file_name_upper_case_folds` pins
+  the `INPUT_FILE_NAME()` spelling; `input_file_name_in_where_keeps_every_row`
+  pins WHERE; `input_file_name_in_a_derived_table_equals_file` pins the inner
+  single-relation SELECT of a derived table; and
+  `bare_input_file_name_projection_names_the_column` pins the bare column name
+  `input_file_name()`. The fall-through shapes keep the unresolved-routine
+  error naming `input_file_name`:
+  `input_file_name_inside_an_aggregate_arg_falls_through`
+  (`count(DISTINCT input_file_name())`),
+  `input_file_name_with_an_argument_falls_through` (`input_file_name(1)`),
+  `input_file_name_over_a_self_join_falls_through`,
+  `input_file_name_over_values_falls_through`,
+  `input_file_name_without_from_falls_through`,
+  `input_file_name_over_a_metadata_table_falls_through` (the backticked
+  `` `ice`.`ns`.`t`.`snapshots` `` path), and
+  `input_file_name_over_a_union_all_falls_through`.
+  `a_real_column_named_input_file_name_reads_unchanged` pins that a user column
+  of that name is read normally, and `insert_around_the_trigger_keeps_todays_answers`
+  pins the input-file-name-only trigger returning `Ok(None)` for a non-query
+  statement (the unresolved-routine error, never `[ICE-MC-1]`).
+  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

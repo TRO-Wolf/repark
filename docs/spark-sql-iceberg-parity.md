@@ -13572,6 +13572,40 @@ field NAME.
   `_deleted` stays refused behind its explicit scan mode — that is the one
   remaining residue, and its refusal pin reds on purpose when it serves.
 
+### ICE-MC-IFN-1 — `input_file_name()` served over one Iceberg relation; other shapes unresolved — **BACKLOG 2026-09-23, IPI-20**
+
+- **repark** — the Spark door serves `input_file_name()` over a SELECT whose
+  sole relation is one Iceberg table: a zero-argument call (unquoted,
+  case-insensitive, no `FILTER`/`OVER`) answers the row's data-file path, the
+  same value `_file` answers, in the projection and in `WHERE`; a bare
+  projection column is named `input_file_name()`; the inner SELECT of a derived
+  table is served on its own single relation; and the call composes inside
+  scalar arguments (`substr(input_file_name(), …)`). Every other shape keeps
+  the `[UNRESOLVED_ROUTINE]` answer: a call inside a listed aggregate's
+  arguments (`count(DISTINCT input_file_name())`), a call with arguments
+  (`input_file_name(1)`), a self join, a `VALUES` or from-less SELECT, a
+  metadata-table scan (`t.snapshots`), and an outer SELECT over a `UNION ALL`.
+- **Apache Spark** — answers the served shapes identically (`true` on every row
+  of the three-row cell, `input_file_name() = _file`, the `WHERE` and derived
+  and upper-case and `substr` shapes, the bare `input_file_name()` column
+  name), and additionally answers the shapes RePark leaves unresolved: one
+  side's parquet path over a self join, `''` over `VALUES` / no `FROM`, the
+  `metadata.json` path over `t.snapshots`, the per-row path over `UNION ALL`;
+  the aggregate and arity misuses refuse typed
+  (`AGGREGATE_FUNCTION_WITH_NONDETERMINISTIC_EXPRESSION` 42845,
+  `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` 42605) where RePark reports
+  `UNRESOLVED_ROUTINE`.
+  *(oracle: recorded — probe 55l, live Spark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0, 2026-09-22.)*
+- **Pin** — `crates/repark-spark/src/tests/input_file_name.rs` (the six served
+  shapes and the seven fall-through pins, plus the real-column and non-query
+  guards).
+  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- **Rationale** — BACKLOG, served 2026-09-23 (IPI-20). The single-relation
+  rewrite is the measured cell's shape; the unresolved shapes are the recorded
+  residues, kept on their pre-existing `UNRESOLVED_ROUTINE` answer rather than
+  reclassified.
+
 ### FNP-AGG-1-18B — SQL-door `grouping` reports `int`, Spark reports `tinyint` — **FIXED 2026-09-21 (FNP-AGG-1 slice (d))**
 
 - **repark** — **FIXED 2026-09-21 (FNP-AGG-1 slice (d)).** `SELECT g, k, grouping_id(),
