@@ -1,6 +1,6 @@
 # map — repark-spark/src/call
 
-U1-MEM-LAYOUT-1 (2026-09-23): `remove_orphan_files.rs` adds fail-closed refusals, on a `TempFallbackAllowed` catalog only, for foreign metadata and scans inside another registered table. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-020
+U1-MEM-LAYOUT-1 (2026-09-23): `remove_orphan_files.rs` adds fail-closed refusals, on a `TempFallbackAllowed` catalog only, for foreign metadata and for a scan path that equals or contains another registered table's location, lies inside another table's location and outside the swept table's own, or lies inside the own location when another table's location equals it; a table located inside another table's location still sweeps paths inside its own location. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-020
 
 U1-MEM-LAYOUT-1 layout-r8 (2026-09-23): on a `TempFallbackAllowed` catalog only, `refuse_scan_over_foreign_metadata` also reads `<A>/metadata/` for every ancestor `A` of the scan path, from its parent up to the storage root when the scan lies outside the swept table's own location, or up to and including that location when the scan lies strictly inside it; a scan equal to the own location reads no ancestor (`metadata_probe_ancestors`). `orphan_file_list.rs::location_path_start` becomes `pub(super)` so the walk keeps the scan's spelling. pins: u1-mem-layout-1/C-011, C-029, C-030, C-031
 
@@ -181,7 +181,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `DeleteOrphanFiles` lists and deletes; with it, `orphan_file_list.rs` answers and the
   same partial-delete refusal applies. Registry row ORPHAN-3.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-008, C-010, C-016
-  U1-MEM-LAYOUT-1 (2026-09-23): fail-closed foreign-metadata and inside-another-table refusals, on a `TempFallbackAllowed` catalog only. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-020
+  U1-MEM-LAYOUT-1 (2026-09-23): fail-closed foreign-metadata and co-tenancy refusals, on a `TempFallbackAllowed` catalog only: a scan path inside another table's location refuses only when it lies outside the swept table's own location, or when another table's location equals the own location. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-020
   Layout-r7 (2026-09-23): on a `TempFallbackAllowed` catalog only, a scan strictly inside the swept table's own location also reads
   `<own location>/metadata/` for another table's metadata files, and the catalog walk refuses a
   scan inside the own location when another table's location equals it.

@@ -153,7 +153,7 @@ COVERAGE_ATTESTATION:
       artifacts: [mem_layout_unrecorded_temp_fallback_keeps_repark_ctas_path, cargo test -p repark-spark --lib call_orphan]
     - id: AT-7
       status: N/A
-      justification: The probe reads each *.metadata.json under the scan path once per CALL; it adds no loop over data files.
+      justification: No unbounded resource claim. Per CALL the probe lists the scan path and the `metadata/` directory of each ancestor `metadata_probe_ancestors` returns (at most the path depth), filters every listed entry by name, data files included, and reads each unlogged *.metadata.json it keeps until the first foreign one; a file reached both from the scan path and from an ancestor probe can be read twice.
     - id: AT-8
       status: ATTACKED
       evidence: Cargo.toml, Cargo.lock, and the fork are untouched; resolve_create_plan_for has two callers.
