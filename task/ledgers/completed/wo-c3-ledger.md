@@ -16,6 +16,7 @@ pushes, or rebases.
 ## Correction — 2026-09-23
 
 The WO-C3 SHOW TBLPROPERTIES row and schema claim was withdrawn when e240a800 removed the serving.
+C-004 was overstated at 96e03ac5 (a truncated wrapper was classified) and is true from this commit.
 
 ## Plan
 
@@ -32,7 +33,7 @@ The WO-C3 SHOW TBLPROPERTIES row and schema claim was withdrawn when e240a800 re
 | C-001 | A SHOW CREATE TABLE lexical failure remains the typed invalid-statement refusal when line or nested bracket comments occur before or between its keywords. | Rust pre-check and parser pins plus facade labels from m8. | PROVEN | `comment_aware_show_create_*` and `test_show_create_comments_*`; the shared scanner also replaces router's raw default-SET precheck. |
 | C-002 | SHOW CREATE parse refusals expose Spark's condition, SQLSTATE, and first line while retaining RePark's exact no-caret rendering. | Rust and facade exact-message pins; registry scope statement. | PROVEN | Exact Rust parser and rendered-error checks plus facade message equality; registry assigns the absent caret block to IPI-51. |
 | C-003 | The multi-term sort-order fixture matches the complete measured m2 CREATE text after only catalog/name/location substitution. | Exact Rust CREATE-text pin. | PROVEN | `show_create_multi_term_sort_order_matches_spark` carries the `range` property and matches the full m2 text. |
-| C-004 | ParserError-wrapped parse refusals report their bracketed condition without classifying malformed wrappers. | Facade and direct native-exception pins. | PROVEN | Facade pins cover INSERT BY NAME and multi-statement; direct parser-wrapper pins cover ordinary, lowercase, and no-prefix messages. |
+| C-004 | ParserError-wrapped parse refusals report their bracketed condition without classifying malformed wrappers. | Facade and direct native-exception pins. | PROVEN | Facade pins cover INSERT BY NAME and multi-statement; `test_parser_wrapper_condition_extraction_rejects_malformed_forms` pins ordinary, lowercase, no-prefix, and truncated-wrapper messages. |
 | C-005 | SHOW TABLES and SHOW COLUMNS near misses preserve complete Spark row shapes and Arrow field types; SHOW TBLPROPERTIES remains refused. | Exact Rust rows and schema pins. | PROVEN | SHOW TABLES and SHOW COLUMNS pin full rows and schemas; `show_tblproperties_keeps_its_current_analysis_refusal` pins SHOW TBLPROPERTIES refusal. Rows are not served in this PR; DBT-TBLPROPS-1 stays DECLARED. |
 
 ```yaml
