@@ -740,6 +740,11 @@ def test_view_body_cte_shadows_in_derived_table(spark: ReparkSession) -> None:
             [[9]],
             id="aggregate-operand",
         ),
+        pytest.param(
+            "SELECT struct((SELECT id FROM a) AS f) AS x",
+            [[{"f": 7}]],
+            id="named-struct-field",
+        ),
     ],
 )
 def test_view_body_expression_position_qualifies(
