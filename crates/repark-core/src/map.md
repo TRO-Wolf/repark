@@ -884,6 +884,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   evaluation); the root keeps the spec types plus `resolve_reader_spec` (the ONE resolver both
   SQL doors and the reader options share — `versionAsOf`/`timestampAsOf` raw strings, integer
   means seconds).
+  **IPI-23-MT-READER-1 (2026-09-22):** `read_table_at` routes a four-part metadata-table
+  name to `time_travel/metadata_at.rs` before the three-part loader, and the un-pinned
+  `read_iceberg_table` arm quotes the same shape so it rides the router path; `session.rs`
+  holds its 1000-line ceiling.
+  pins: ipi-23-mt-reader-1/C-001, C-002, C-004, C-005
   pins: ice-tt-resolve-1/C-010
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** every string resolves through the
   engine `CAST(... AS TIMESTAMP)` in the session zone; the hand parser and the AST leaf

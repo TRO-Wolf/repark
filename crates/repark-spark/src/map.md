@@ -1394,6 +1394,10 @@ pins: rp-4-fork-repin/C-005, C-006
   table, resolves the `AS OF` value on it, and registers a `SnapshotMetadataTableProvider`
   (current-table, snapshot-scoped, or empty) through the shared temp-view helper.
   pins: ref-branch-tag-wap/C-002, C-007
+  **IPI-23-MT-READER-1 (2026-09-22):** the provider decision moved down to
+  `repark_core::time_travel::metadata_at::provider_for_spec` (net deletion here); the
+  `$<meta>` span is now one of its two callers, `read_table_at` the other.
+  pins: ipi-23-mt-reader-1/C-004, C-005, C-006, C-007
   **ICE-TT-RESOLVE-1 (2026-09-19):** `parse_as_of_value` re-slices the original token stream
   (whitespace kept) so the shared evaluator receives parseable SQL; the expression evaluates
   as a constant in the session zone through `repark_core::time_travel::evaluate_sql_timestamp_asof`.

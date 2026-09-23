@@ -43,6 +43,14 @@ rewrite half (and its tests) is deferred with the phase-2 statement router — s
   SQL literals, `Utf8` scalars) resolves through the engine `CAST(... AS TIMESTAMP)` in the
   session zone; the hand parser is gone. pins: ice-tt-resolve-1/C-002
   pins: ice-tt-resolve-1/C-010
+- `metadata_at.rs` — **IPI-23-MT-READER-1 (2026-09-22):** the ONE metadata-table
+  AS OF decision both doors share. `provider_for_spec` is the #802
+  `prepare_metadata_as_of` body moved down from `repark-spark` (refuse/serve-current/
+  empty/scoped per `metadata_asof_mode`); `read_metadata_path_at` routes a four-part
+  reader name with a metadata suffix past the three-part loader (real table wins, missing
+  parent falls through to today's error), and `read_sql` quotes the un-pinned read so it
+  takes the router path `spark.sql` takes. `repark-spark`'s caller is a net deletion.
+  pins: ipi-23-mt-reader-1/C-004, C-005, C-006, C-007
 
 ## Pointers
 
