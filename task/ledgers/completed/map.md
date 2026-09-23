@@ -996,7 +996,8 @@ else. The next pickup's `make ledger-archive` files everything here under
   `SHOW CREATE TABLE`: typed class/condition/SQLSTATE refusal pins, exact near-miss outcomes,
   and lexer failures that stay on the recognized parse path. `risk_tier: standard`. Branch
   `xd/show-create`.
-- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 (2026-09-23), in flight:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
+- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), completed:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
+- [wo-c5-ledger.md](wo-c5-ledger.md) — **WO-C5 (2026-09-23), completed:** parser refusal pins for multi-statement SQL, unclosed bracket comments, tokenizer fall-through, and the refusal-test audit. `risk_tier: standard`. Branch `xd/show-create`.
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under
