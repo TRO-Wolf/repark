@@ -5,6 +5,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use iceberg::ErrorKind;
 
+const VIEW_V_NOT_FOUND: &str = "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`v` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01";
+
 async fn collected_rows(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -43,9 +45,10 @@ async fn assert_view_write_names_match(
     let full_error = execute(ctx, catalogs, statement)
         .await
         .expect_err("three-part view target must refuse");
-    let DataFusionError::Plan(expected) = full_error else {
+    let DataFusionError::Plan(full_message) = full_error else {
         panic!("expected Plan refusal, got {full_error:?}");
     };
+    assert_eq!(full_message, VIEW_V_NOT_FOUND);
     crate::use_ddl::set_session_defaults(ctx, catalogs, "ice", "sales");
     let bare = statement.replace("ice.sales.v", "v");
     let bare_error = execute(ctx, catalogs, &bare)
@@ -54,7 +57,7 @@ async fn assert_view_write_names_match(
     let DataFusionError::Plan(bare_message) = bare_error else {
         panic!("expected Plan refusal, got {bare_error:?}");
     };
-    assert_eq!(bare_message, expected);
+    assert_eq!(bare_message, VIEW_V_NOT_FOUND);
     crate::use_ddl::set_session_defaults(ctx, catalogs, "ice", "");
     let two_part = statement.replace("ice.sales.v", "sales.v");
     let two_part_error = execute(ctx, catalogs, &two_part)
@@ -63,7 +66,7 @@ async fn assert_view_write_names_match(
     let DataFusionError::Plan(two_part_message) = two_part_error else {
         panic!("expected Plan refusal, got {two_part_error:?}");
     };
-    assert_eq!(two_part_message, expected);
+    assert_eq!(two_part_message, VIEW_V_NOT_FOUND);
 }
 
 #[tokio::test]
@@ -226,6 +229,7 @@ async fn alter_viewless_catalog_matches_memory_missing_targets_and_redirects_tab
             "Error during planning: [UNSUPPORTED_FEATURE.CATALOG_OPERATION] The feature is not supported: Catalog `fault` does not support views. SQLSTATE: 0A000"
         };
         assert_eq!(viewless_error, expected);
+        assert_eq!(memory_error, expected.replace("`fault`", "`ice`"));
     }
     for statement in [
         "ALTER VIEW fault.sales.t SET TBLPROPERTIES ('k'='v')",
@@ -286,10 +290,10 @@ async fn alter_view_load_failure_propagates_without_table_probe() {
         .downcast_ref::<iceberg::Error>()
         .expect("expected an Iceberg error");
     assert_eq!(source.kind(), ErrorKind::Unexpected);
-    let error = error.to_string();
-    assert!(error.contains("injected load_view failure"), "{error}");
-    assert!(!error.contains("TABLE_OR_VIEW_NOT_FOUND"), "{error}");
-    assert!(!error.contains("CATALOG_OPERATION"), "{error}");
+    assert_eq!(
+        error.to_string(),
+        "External error: Unexpected => injected load_view failure"
+    );
     assert_eq!(table_exists_calls.load(Ordering::SeqCst), 0);
 }
 
@@ -330,8 +334,10 @@ async fn alter_view_rename_view_exists_failure_propagates_without_rename() {
         .downcast_ref::<iceberg::Error>()
         .expect("expected an Iceberg error");
     assert_eq!(source.kind(), ErrorKind::Unexpected);
-    let error = error.to_string();
-    assert!(error.contains("injected view_exists failure"), "{error}");
+    assert_eq!(
+        error.to_string(),
+        "External error: Unexpected => injected view_exists failure"
+    );
     assert_eq!(rename_calls.load(Ordering::SeqCst), 0);
 }
 
@@ -364,9 +370,10 @@ async fn alter_view_missing_rename_table_exists_failure_propagates() {
         .downcast_ref::<iceberg::Error>()
         .expect("expected an Iceberg error");
     assert_eq!(source.kind(), ErrorKind::Unexpected);
-    let error = error.to_string();
-    assert!(error.contains("injected table_exists failure"), "{error}");
-    assert!(!error.contains("TABLE_OR_VIEW_NOT_FOUND"), "{error}");
+    assert_eq!(
+        error.to_string(),
+        "External error: Unexpected => injected table_exists failure"
+    );
 }
 
 #[tokio::test]
@@ -521,10 +528,7 @@ async fn view_create_drop_and_write_guard_complete_bare_names_from_use() {
     let DataFusionError::Plan(message) = error else {
         panic!("expected Plan refusal, got {error:?}");
     };
-    assert_eq!(
-        message,
-        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`v` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
-    );
+    assert_eq!(message, VIEW_V_NOT_FOUND);
     run(&ctx, &catalogs, "DROP VIEW v").await;
     assert!(
         !catalogs["ice"]

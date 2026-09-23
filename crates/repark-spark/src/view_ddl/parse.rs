@@ -557,34 +557,50 @@ mod tests {
 
     #[test]
     fn alter_view_malformed_tails_fail_loud() {
-        assert!(
-            try_parse_alter_view("ALTER VIEW sc.ns.v SET TBLPROPERTIES")
-                .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_))))
-        );
-        assert!(
-            try_parse_alter_view("ALTER VIEW sc.ns.v RENAME TO")
-                .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_))))
-        );
-        assert!(
-            try_parse_alter_view("ALTER VIEW sc.ns.v UNSET TBLPROPERTIES 'k'")
-                .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_))))
-        );
-        assert!(
-            try_parse_alter_view("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v') extra")
-                .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_))))
-        );
-        for sql in [
-            "ALTER VIEW v SET ('k'='v')",
-            "ALTER VIEW v UNSET ('k')",
-            "ALTER VIEW v RENAME v2",
-            "ALTER VIEW v RENAME TO .",
-            "ALTER VIEW v UNSET TBLPROPERTIES ('k'",
+        for (sql, expected) in [
+            (
+                "ALTER VIEW sc.ns.v SET TBLPROPERTIES",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: (, found: EOF",
+            ),
+            (
+                "ALTER VIEW sc.ns.v RENAME TO",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: identifier, found: EOF",
+            ),
+            (
+                "ALTER VIEW sc.ns.v UNSET TBLPROPERTIES 'k'",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: (, found: 'k'",
+            ),
+            (
+                "ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v') extra",
+                "Error during planning: could not parse `ALTER VIEW` at `extra`",
+            ),
+            (
+                "ALTER VIEW v SET ('k'='v')",
+                "Error during planning: could not parse `ALTER VIEW`: expected TBLPROPERTIES after SET",
+            ),
+            (
+                "ALTER VIEW v UNSET ('k')",
+                "Error during planning: could not parse `ALTER VIEW`: expected TBLPROPERTIES after UNSET",
+            ),
+            (
+                "ALTER VIEW v RENAME v2",
+                "Error during planning: could not parse `ALTER VIEW`: expected TO after RENAME",
+            ),
+            (
+                "ALTER VIEW v RENAME TO .",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: identifier, found: .",
+            ),
+            (
+                "ALTER VIEW v UNSET TBLPROPERTIES ('k'",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: ), found: EOF",
+            ),
         ] {
-            assert!(
-                try_parse_alter_view(sql)
-                    .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_)))),
-                "{sql}"
-            );
+            let error = try_parse_alter_view(sql)
+                .expect("ALTER VIEW must match")
+                .err()
+                .expect("malformed tail must refuse");
+            assert!(matches!(error, DataFusionError::Plan(_)), "{sql}");
+            assert_eq!(error.to_string(), expected, "{sql}");
         }
     }
 

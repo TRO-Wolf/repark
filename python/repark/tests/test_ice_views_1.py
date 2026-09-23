@@ -108,6 +108,7 @@ def test_use_resolves_bare_view_write_refusal(spark: ReparkSession) -> None:
     spark.sql("USE sc.ns")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("INSERT INTO v VALUES (9)")
+    assert type(caught.value) is AnalysisException
     assert str(caught.value) == (
         "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v` "
         "cannot be found. Verify the spelling and correctness of the schema and catalog. "
@@ -125,6 +126,7 @@ def test_use_catalog_resolves_two_part_view_write_refusal(spark: ReparkSession) 
     spark.sql("USE sc")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("INSERT INTO ns.v VALUES (9)")
+    assert type(caught.value) is AnalysisException
     assert str(caught.value) == (
         "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v` "
         "cannot be found. Verify the spelling and correctness of the schema and catalog. "
