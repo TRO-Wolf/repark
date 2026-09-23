@@ -1497,13 +1497,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   partition/missing-table/missing-namespace refusals, and SHOW-family near misses that remain
   outside this parser. **WO-A4 (2026-09-23):** every parser refusal pins its SQL error variant
   and complete condition/SQLSTATE text; partition lookup pins literal wildcard absence; the
-  unclaimed SHOW TABLE(S) forms pin their current exact variants and messages. **WO-A8
-  (2026-09-23):** the leading and inter-keyword unclosed `/*` probes pin the full rendered
-  `UNCLOSED_BRACKETED_COMMENT` / `42601` text the router front door (WO-C10) answers. **WO-A5
+  unclaimed SHOW TABLE(S) forms pin their current exact variants and messages. **WO-A5
   (2026-09-23):** snapshot, alternation, case, and ambient-scope checks compare complete ordered
-  four-column row vectors.
+  four-column row vectors. **WO-A8 (2026-09-23):** every successful answer also compares the
+  complete Arrow schema (names, types, nullability); the near-miss tests moved to
+  `show_table_extended_near_miss.rs`.
   pins: wo-a1b/C-002, C-003
   pins: show-table-extended-1/C-001, C-002, C-003, C-004
+- `show_table_extended_near_miss.rs` — **WO-A8 (2026-09-23):** the SHOW TABLE EXTENDED near
+  misses, split from `show_table_extended.rs` at the file-size ceiling. Successful fall-throughs
+  (SHOW TABLES, SHOW CREATE TABLE, leading and inter-keyword comments, `;` and `; ;`) compare the
+  complete Arrow schema and every row; refusals (SHOW TABLES EXTENDED, SHOW TBLPROPERTIES, SHOW
+  TABLE, unclosed quotes after comments, `;;x`, SHOW TABLE EXTENDEDX) compare full messages. The
+  leading and inter-keyword unclosed `/*` probes pin the full rendered
+  `UNCLOSED_BRACKETED_COMMENT` / `42601` text the router front door (WO-C10) answers.
+  pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

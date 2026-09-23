@@ -5,9 +5,7 @@ use datafusion::sql::sqlparser::parser::ParserError;
 use super::super::*;
 use super::common::*;
 
-type ExtendedRow = (String, String, bool, String);
-
-const UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE: &str = "SQL error: ParserError(\"[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. Please, append */ at the end of the comment. SQLSTATE: 42601\")";
+pub(super) type ExtendedRow = (String, String, bool, String);
 
 #[derive(Clone, Copy)]
 struct Information<'a> {
@@ -21,26 +19,17 @@ struct Information<'a> {
     tree: &'a str,
 }
 
-async fn outcome(
+pub(super) async fn outcome(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-) -> std::result::Result<(Vec<String>, Vec<ExtendedRow>), DataFusionError> {
+) -> std::result::Result<(Schema, Vec<ExtendedRow>), DataFusionError> {
     let frame = execute(ctx, catalogs, sql).await?;
+    let schema = frame.schema().as_arrow().clone();
     let batches = frame.collect().await?;
-    let columns = batches
-        .first()
-        .map(|batch| {
-            batch
-                .schema()
-                .fields()
-                .iter()
-                .map(|field| field.name().clone())
-                .collect()
-        })
-        .unwrap_or_default();
     let mut rows = Vec::new();
     for batch in &batches {
+        assert_eq!(batch.schema().as_ref(), &schema, "{sql}");
         if batch.num_columns() != 4 {
             continue;
         }
@@ -65,10 +54,19 @@ async fn outcome(
             ));
         }
     }
-    Ok((columns, rows))
+    Ok((schema, rows))
 }
 
-fn assert_parse_refusal(sql: &str, error: DataFusionError, expected: &str) {
+pub(super) fn extended_schema() -> Schema {
+    Schema::new(vec![
+        Field::new("namespace", DataType::Utf8, false),
+        Field::new("tableName", DataType::Utf8, false),
+        Field::new("isTemporary", DataType::Boolean, false),
+        Field::new("information", DataType::Utf8, false),
+    ])
+}
+
+pub(super) fn assert_parse_refusal(sql: &str, error: DataFusionError, expected: &str) {
     assert_eq!(
         error.to_string(),
         format!("SQL error: ParserError({expected:?})"),
@@ -83,21 +81,7 @@ fn assert_parse_refusal(sql: &str, error: DataFusionError, expected: &str) {
     assert_eq!(message, expected, "{sql}");
 }
 
-fn assert_diagnostic_parse_refusal(sql: &str, error: DataFusionError, expected: &str) {
-    let DataFusionError::Diagnostic(diagnostic, inner) = error else {
-        panic!("{sql}: expected a diagnostic parser error, got {error:?}");
-    };
-    assert_eq!(diagnostic.message, expected, "{sql}");
-    let DataFusionError::SQL(parser_error, _) = inner.as_ref() else {
-        panic!("{sql}: expected a SQL parser error inside the diagnostic");
-    };
-    let ParserError::ParserError(message) = parser_error.as_ref() else {
-        panic!("{sql}: expected a parser message inside the diagnostic");
-    };
-    assert_eq!(message, expected, "{sql}");
-}
-
-fn assert_analysis_refusal(sql: &str, error: DataFusionError, expected: &str) {
+pub(super) fn assert_analysis_refusal(sql: &str, error: DataFusionError, expected: &str) {
     let DataFusionError::Plan(message) = error else {
         panic!("{sql}: expected a planning error");
     };
@@ -108,11 +92,13 @@ async fn show_table_extended(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-) -> (Vec<String>, Vec<ExtendedRow>) {
-    outcome(ctx, catalogs, sql).await.unwrap()
+) -> (Schema, Vec<ExtendedRow>) {
+    let (schema, rows) = outcome(ctx, catalogs, sql).await.unwrap();
+    assert_eq!(schema, extended_schema(), "{sql}");
+    (schema, rows)
 }
 
-async fn table_location(catalogs: &CatalogRegistry, table: &str) -> String {
+pub(super) async fn table_location(catalogs: &CatalogRegistry, table: &str) -> String {
     load_sales_table(catalogs, table)
         .await
         .metadata()
@@ -129,7 +115,7 @@ async fn table_snapshot_id(catalogs: &CatalogRegistry, table: &str) -> String {
         .to_string()
 }
 
-fn character_properties(pairs: &[(&str, &str)]) -> String {
+pub(super) fn character_properties(pairs: &[(&str, &str)]) -> String {
     let properties = format!(
         "[{}]",
         pairs
@@ -178,7 +164,7 @@ fn information(expectation: Information<'_>) -> String {
     format!("{}\n", lines.join("\n"))
 }
 
-fn managed_row(
+pub(super) fn managed_row(
     table: &str,
     location: &str,
     properties: &str,
@@ -238,15 +224,7 @@ async fn show_table_extended_answers_exact_partitioned_information() {
         "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc'",
     )
     .await;
-    assert_eq!(
-        columns,
-        vec![
-            "namespace".to_string(),
-            "tableName".to_string(),
-            "isTemporary".to_string(),
-            "information".to_string(),
-        ]
-    );
+    assert_eq!(columns, extended_schema());
     assert_eq!(
         rows,
         vec![("sales".to_string(), "pc".to_string(), false, expected)]
@@ -286,15 +264,7 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
         "SHOW TABLE EXTENDED FROM ice.sales LIKE 'pl'",
     )
     .await;
-    assert_eq!(
-        columns,
-        vec![
-            "namespace".to_string(),
-            "tableName".to_string(),
-            "isTemporary".to_string(),
-            "information".to_string(),
-        ]
-    );
+    assert_eq!(columns, extended_schema());
     assert_eq!(
         rows,
         vec![("sales".to_string(), "pl".to_string(), false, expected)]
@@ -758,218 +728,4 @@ async fn show_table_extended_refuses_required_error_shapes() {
             .expect_err("statement must refuse");
         assert_analysis_refusal(sql, error, expected);
     }
-}
-
-#[tokio::test]
-async fn show_table_extended_near_misses_keep_their_existing_paths() {
-    let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
-    run(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.pl (id BIGINT) USING iceberg TBLPROPERTIES ('k'='v')",
-    )
-    .await;
-    run(&ctx, &catalogs, "USE ice.sales").await;
-    let (columns, _) = outcome(&ctx, &catalogs, "SHOW TABLES IN sales")
-        .await
-        .unwrap();
-    assert_eq!(columns, vec!["namespace", "tableName", "isTemporary"]);
-    let (columns, _) = outcome(&ctx, &catalogs, "SHOW TABLES IN sales LIKE 'p*'")
-        .await
-        .unwrap();
-    assert_eq!(columns, vec!["namespace", "tableName", "isTemporary"]);
-    let tables_extended_sql = "SHOW TABLES EXTENDED IN sales LIKE '*'";
-    let tables_extended = outcome(&ctx, &catalogs, tables_extended_sql)
-        .await
-        .expect_err("SHOW TABLES EXTENDED must keep its current parser refusal");
-    assert_diagnostic_parse_refusal(
-        tables_extended_sql,
-        tables_extended,
-        "Expected: end of statement, found: EXTENDED at Line: 1, Column: 13",
-    );
-    let properties = outcome(&ctx, &catalogs, "SHOW TBLPROPERTIES ice.sales.pl")
-        .await
-        .expect_err("SHOW TBLPROPERTIES must keep its current refusal");
-    assert_analysis_refusal(
-        "SHOW TBLPROPERTIES ice.sales.pl",
-        properties,
-        "SHOW [VARIABLE] is not supported unless information_schema is enabled",
-    );
-    for sql in ["SHOW TABLE", "SHOW TABLE ice.sales.pl"] {
-        let error = outcome(&ctx, &catalogs, sql)
-            .await
-            .expect_err("SHOW TABLE must keep its current refusal");
-        assert_analysis_refusal(
-            sql,
-            error,
-            "SHOW [VARIABLE] is not supported unless information_schema is enabled",
-        );
-    }
-    let (columns, _) = outcome(&ctx, &catalogs, "SHOW CREATE TABLE ice.sales.pl")
-        .await
-        .expect("SHOW CREATE TABLE must keep its current output");
-    assert_eq!(columns, vec!["createtab_stmt"]);
-}
-
-#[tokio::test]
-async fn show_table_extended_skips_leading_and_inter_keyword_comments() {
-    let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
-    run(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.pc (id BIGINT) USING iceberg",
-    )
-    .await;
-    let expected_columns = vec![
-        "namespace".to_string(),
-        "tableName".to_string(),
-        "isTemporary".to_string(),
-        "information".to_string(),
-    ];
-    let properties = character_properties(&[
-        ("current-snapshot-id", "none"),
-        ("format", "iceberg/parquet"),
-        ("format-version", "2"),
-        ("write.parquet.compression-codec", "zstd"),
-    ]);
-    let location = table_location(&catalogs, "pc").await;
-    let expected_rows = vec![(
-        "sales".to_string(),
-        "pc".to_string(),
-        false,
-        information(Information {
-            catalog: "ice",
-            namespace: "sales",
-            table: "pc",
-            location: &location,
-            properties: &properties,
-            comment: None,
-            owner: None,
-            tree: "root\n |-- id: long (nullable = true)\n",
-        }),
-    )];
-    let (columns, rows) = outcome(
-        &ctx,
-        &catalogs,
-        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc'",
-    )
-    .await
-    .unwrap();
-    assert_eq!(columns, expected_columns);
-    assert_eq!(rows, expected_rows);
-    for sql in [
-        "/* c */ SHOW TABLE EXTENDED IN ice.sales LIKE 'pc'",
-        "-- c\nSHOW TABLE EXTENDED IN ice.sales LIKE 'pc'",
-        "SHOW/* c */TABLE /* d */ EXTENDED IN ice.sales LIKE 'pc'",
-    ] {
-        let (columns, rows) = outcome(&ctx, &catalogs, sql).await.unwrap();
-        assert_eq!(columns, expected_columns, "{sql}");
-        assert_eq!(rows, expected_rows, "{sql}");
-    }
-}
-
-#[tokio::test]
-async fn show_table_extended_refuses_unclosed_quotes_after_comments() {
-    let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
-    for sql in [
-        "/* c */ SHOW TABLE EXTENDED IN ice.sales LIKE 'pc",
-        "-- c\nSHOW TABLE EXTENDED IN ice.sales LIKE 'pc",
-        "SHOW /* c */ TABLE EXTENDED IN ice.sales LIKE 'pc",
-        "/* it's */ SHOW TABLE EXTENDED IN ice.sales LIKE 'pc",
-        "/* c */ SHOW TABLE EXTENDED IN ice.sales LIKE \"pc",
-    ] {
-        let error = outcome(&ctx, &catalogs, sql)
-            .await
-            .expect_err("an unclosed pattern quote must refuse");
-        assert_parse_refusal(
-            sql,
-            error,
-            if sql.ends_with("\"pc") {
-                "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"'. SQLSTATE: 42601"
-            } else {
-                "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601"
-            },
-        );
-    }
-}
-
-#[tokio::test]
-async fn show_table_extended_near_miss_probes_keep_their_exact_outcomes() {
-    let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
-    let single_semicolon = outcome(
-        &ctx,
-        &catalogs,
-        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc';",
-    )
-    .await
-    .unwrap();
-    let spaced_semicolons = outcome(
-        &ctx,
-        &catalogs,
-        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' ; ;",
-    )
-    .await
-    .unwrap();
-    assert_eq!(spaced_semicolons, single_semicolon);
-
-    let content_after_semicolons = outcome(
-        &ctx,
-        &catalogs,
-        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc';;x",
-    )
-    .await
-    .expect_err("content after trailing semicolons must be refused");
-    assert_eq!(
-        content_after_semicolons.to_string(),
-        "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601\")"
-    );
-
-    let unclosed_comment = outcome(
-        &ctx,
-        &catalogs,
-        "/* c SHOW TABLE EXTENDED IN ice.sales LIKE 'pc",
-    )
-    .await
-    .expect_err("the router front door must refuse an unclosed leading block comment");
-    assert_eq!(
-        unclosed_comment.to_string(),
-        UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
-    );
-
-    let inter_keyword_unclosed_comment =
-        outcome(&ctx, &catalogs, "SHOW /* unclosed TABLE EXTENDED LIKE 'pc'")
-            .await
-            .expect_err("the router front door must refuse an unclosed inter-keyword comment");
-    assert_eq!(
-        inter_keyword_unclosed_comment.to_string(),
-        UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
-    );
-
-    let show_tables = outcome(
-        &ctx,
-        &catalogs,
-        "/* c */ SHOW TABLES EXTENDED IN ice.sales LIKE 'pc'",
-    )
-    .await
-    .expect_err("SHOW TABLES EXTENDED must keep its current parser outcome");
-    assert_eq!(
-        format!("{show_tables:?}"),
-        "Diagnostic(Diagnostic { kind: Error, message: \"Expected: end of statement, found: EXTENDED at Line: 1, Column: 21\", span: Some(Span(Location(1,21)..Location(1,29))), notes: [], helps: [] }, SQL(ParserError(\"Expected: end of statement, found: EXTENDED at Line: 1, Column: 21\"), None))"
-    );
-
-    let extendedx = outcome(
-        &ctx,
-        &catalogs,
-        "SHOW TABLE EXTENDEDX IN ice.sales LIKE 'pc'",
-    )
-    .await
-    .expect_err("SHOW TABLE EXTENDEDX must keep its current planning outcome");
-    assert_eq!(
-        format!("{extendedx:?}"),
-        "Plan(\"SHOW [VARIABLE] is not supported unless information_schema is enabled\")"
-    );
 }
