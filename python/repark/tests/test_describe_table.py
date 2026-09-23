@@ -90,9 +90,11 @@ def test_describe_table_extended_sections(spark: ReparkSession) -> None:
     ]
     assert re.fullmatch(r"(?:file:)?/.+/dsns1/t1", detail[2][1])
     assert detail[2] == ("Location", detail[2][1], "")
-    assert detail[3:] == [
-        ("Provider", "iceberg", ""),
-        ("Owner", "unknown", ""),
+    assert detail[3] == ("Provider", "iceberg", "")
+    assert detail[4][0] == "Owner"
+    assert re.fullmatch(r"[A-Za-z0-9_.-]+", detail[4][1])
+    assert detail[4][2] == ""
+    assert detail[5:] == [
         (
             "Table Properties",
             "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,k=v,"
@@ -161,7 +163,7 @@ def test_describe_table_statistics_counts_written_rows(spark: ReparkSession) -> 
     properties = next(value for name, value, _ in extended if name == "Table Properties")
     assert re.fullmatch(
         r"\[current-snapshot-id=[0-9]+,format=iceberg/parquet,format-version=2,"
-        r"write.parquet.compression-codec=zstd\]",
+        r"k=v,write.parquet.compression-codec=zstd\]",
         properties,
     )
 
@@ -232,7 +234,9 @@ def test_describe_table_live_matches_capture_and_repark(tmp_path: Path) -> None:
     assert live_extended[base + 6] == ("Statistics", "0 bytes, 0 rows", None)
     assert re.fullmatch(r"(?:file:)?/.+/dsns1/t1", repark_extended[base + 2][1])
     assert re.fullmatch(r"(?:file:)?/.+/dsns1/t1", live_extended[base + 2][1])
-    assert repark_extended[base + 4] == ("Owner", "unknown", "")
+    assert repark_extended[base + 4][0] == "Owner"
+    assert re.fullmatch(r"[A-Za-z0-9_.-]+", repark_extended[base + 4][1])
+    assert repark_extended[base + 4][2] == ""
     assert live_extended[base + 4][0] == "Owner"
     assert re.fullmatch(r"[A-Za-z0-9_.-]+", live_extended[base + 4][1])
     assert live_extended[base + 4][2] == ""
