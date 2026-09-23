@@ -20,6 +20,7 @@ use repark_core::{
     parse_version_value, resolve_snapshot_id,
 };
 use repark_functions::session_time_zone::session_time_zone_from_options;
+use repark_iceberg::catalog::{MetadataAsofMode, metadata_asof_mode, snapshot_scope_refusal_text};
 
 pub mod changes;
 
@@ -184,6 +185,11 @@ async fn prepare_metadata_as_of(
 ) -> Result<Vec<Token>> {
     let metadata_type =
         MetadataTableType::try_from(metadata.metadata_suffix).map_err(DataFusionError::Plan)?;
+    if metadata_asof_mode(&metadata_type) == MetadataAsofMode::RefuseSnapshotScope {
+        return Err(DataFusionError::Plan(snapshot_scope_refusal_text(
+            &metadata_type,
+        )));
+    }
     let table = load_iceberg_table(catalogs, &metadata.base_parts).await?;
     let provider = provider_for_spec(table, metadata_type, spec, zone)?;
     register_time_travel_provider(ctx, pinned, provider)
