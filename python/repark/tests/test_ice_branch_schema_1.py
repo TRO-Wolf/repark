@@ -40,8 +40,7 @@ _NAMESPACE = "ns"
 _SEED_DDL = "(id BIGINT, data STRING, cat STRING)"
 _SEED_ROWS = "(1, 'a', 'x'), (2, 'b', 'y')"
 _TAG_REFUSAL = (
-    "Time travel option `tag` is no longer supported, "
-    "use Spark built-in `versionAsOf` instead"
+    "Time travel option `tag` is no longer supported, use Spark built-in `versionAsOf` instead"
 )
 _UNKNOWN_REF = "Cannot find matching snapshot ID or reference name for version nope"
 
