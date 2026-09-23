@@ -203,11 +203,11 @@ def test_snapshots_describe_live_matches_spark_and_repark(tmp_path: Path) -> Non
     """
     import _live_parity as live_parity
 
-    oracle = live_parity.build_spark_iceberg_engine(tmp_path / "spark-wh")
+    oracle = live_parity.build_spark_iceberg_engine(tmp_path / "spark-wh", catalog="mtdesc")
     session = oracle.session
-    session.sql("CREATE NAMESPACE IF NOT EXISTS local.dsns1")
-    session.sql("CREATE TABLE local.dsns1.t1 (id BIGINT) USING iceberg")
-    live = [tuple(row) for row in session.sql("DESCRIBE local.dsns1.t1.snapshots").collect()]
+    session.sql("CREATE NAMESPACE IF NOT EXISTS mtdesc.dsns1")
+    session.sql("CREATE TABLE mtdesc.dsns1.t1 (id BIGINT) USING iceberg")
+    live = [tuple(row) for row in session.sql("DESCRIBE mtdesc.dsns1.t1.snapshots").collect()]
     assert live == SNAPSHOT_ROWS
 
     engine = ReparkSession.builder.appName("pytest-mt-describe-1-live").getOrCreate()
