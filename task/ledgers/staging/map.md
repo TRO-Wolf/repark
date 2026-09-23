@@ -1484,7 +1484,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `older_than` is now minus 3 days, a bare call deletes); the runbook step passes
   `dry_run => true` explicitly and ORPHAN-1/ORPHAN-2 retire per owner ruling Q-55-2.
   `risk_tier: standard`. Branch `fix/proc-orphan-spark-parity`.
-  pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011, C-012
 - [ipi-07-branch-read-schema-1-ledger.md](ipi-07-branch-read-schema-1-ledger.md) —
   **IPI-07-BRANCH-READ-SCHEMA-1 (2026-09-22), in flight:** a branch read projects the
@@ -1494,3 +1494,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   BS-TAGOPT-1 flags the brief's `.option("tag")` clause against the pinned IPI-23
   refusal. `risk_tier: standard`. Branch `fix/ipi-07-branch-read-schema`.
   pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  C-010 (`file_list_view` refuses) is REJECTED since 2026-09-22, superseded by the ledger below.
+- [ipi-30-orphan-guard-narrow-1-ledger.md](ipi-30-orphan-guard-narrow-1-ledger.md) —
+  **IPI-30-ORPHAN-GUARD-NARROW-1 (2026-09-22), in flight:** owner ruling Q-55-6. The
+  `remove_orphan_files` shared-root guard now refuses only a scan path that is the CTAS
+  fallback root, a parent of it, or a directory holding another table of the catalog, so a
+  fallback table created without an explicit table `LOCATION` sweeps its own directory.
+  `file_list_view` is accepted: `dry_run` lists the
+  view's orphans verbatim, and an armed call deletes exactly those. Registry row ORPHAN-3.
+  `risk_tier: high`. Branch `fix/ipi-30-orphan-guard-narrow`.
+  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009

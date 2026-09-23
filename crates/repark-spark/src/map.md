@@ -482,10 +482,13 @@ pins: rp-4-fork-repin/C-005, C-006
   fork's maintenance actions; the shared `illegal_argument` helper maps
   procedure-layer validations to `IllegalArgumentException`). Each
   preserves Spark's result schema and count sources. Orphan removal takes Spark's defaults
-  (a bare call deletes with `older_than` at now minus 3 days), accepts Spark's optional
-  arguments except `file_list_view` — `location` reads named or positionally at index 2
+  (a bare call deletes with `older_than` at now minus 3 days), accepts every Spark argument
+  including `file_list_view` — `location` reads named or positionally at index 2
   through `call_args::CallArgs::optional_string_at`, matching Spark's parameter order —
-  and refuses shared fallback roots; on a `ServiceManagedLocation`
+  and its guards refuse a scan path that is the shared fallback root, a parent of it, or a
+  directory holding another table of the catalog, while the listing path also refuses a table
+  whose stored location is not in normal path form (**ORPHAN-3, owner ruling Q-55-6,
+  2026-09-22**; body in `call/remove_orphan_files.rs`); on a `ServiceManagedLocation`
   catalog (the `s3tables` kind) it refuses before any IO — table buckets answer
   `ListObjectsV2` 405 — naming the service's `unreferencedFileRemoval` maintenance as the
   remedy (**ORPHAN-S3TABLES-1, 2026-09-12**); rewrite-position-delete returns Spark's
@@ -528,6 +531,7 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ap-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   pins: ap-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
   pins: orphan-s3tables-1/C-001, C-002, C-004, C-005
+  pins: ipi-30-orphan-guard-narrow-1/C-003, C-005
 - [call/branch_ops.rs](call/branch_ops.rs) — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`,
   `cherrypick_snapshot`, `set_current_snapshot`, `rollback_to_timestamp` (Spark 4.1.2
   parity, oracle-pinned in `python/repark/tests/branch_ops_1_truth.json`).

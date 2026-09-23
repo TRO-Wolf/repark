@@ -22,7 +22,7 @@
 | C-007 | `prefix_listing => true` is accepted and the dry listing is unchanged. | Rust `call_remove_orphan_files_accepts_sparks_optional_arguments`. | **PROVEN** | Same loop-arm shape as C-005. |
 | C-008 | `prefix_mismatch_mode => 'IGNORE'` is accepted and the dry listing is unchanged. | Rust `call_remove_orphan_files_accepts_sparks_optional_arguments`. | **PROVEN** | Same loop-arm shape as C-005. |
 | C-009 | `equal_schemes` and `equal_authorities` maps are accepted and the dry listing is unchanged. | Rust `call_remove_orphan_files_accepts_sparks_optional_arguments` (one arm, both maps). | **PROVEN** | `equal_schemes => map('file','file'), equal_authorities => map('a','a')` lists the planted orphan with nothing moved. |
-| C-010 | `file_list_view => 'v'` still refuses `NotImplemented` naming the v1 deferral, deleting nothing. | Rust `call_remove_orphan_files_accepts_sparks_optional_arguments` (trailing refusal arm). | **PROVEN** | The refusal is `DataFusionError::NotImplemented` with "is not supported in v1" in the text; the table directory is byte-identical before and after. |
+| C-010 | `file_list_view => 'v'` still refuses `NotImplemented` naming the v1 deferral, deleting nothing. | Rust `call_remove_orphan_files_accepts_sparks_optional_arguments` (trailing refusal arm, removed 2026-09-22). | **REJECTED** (superseded 2026-09-22 by ipi-30-orphan-guard-narrow-1 C-005 / C-006) | Was proven by the NotImplemented refusal; `file_list_view` is now accepted, so the proposition no longer holds and its pin arm is gone. |
 | C-011 | Near misses refuse with their exact texts and touch nothing: a bogus `prefix_mismatch_mode`, a non-map `equal_schemes`, a quoted `stream_results`, an in-floor `older_than`, a quoted `dry_run`, and an unknown argument. | Rust `call_remove_orphan_files_near_misses_still_refuse` plus `call_remove_orphan_files_refuses_a_quoted_dry_run`. | **PROVEN** | All six messages asserted by equality; the table directory is byte-identical before and after every refused call. |
 | C-012 | The runbook orphan step passes `dry_run => true` explicitly: the driver's SQL, the guide's printed block and the mw7/mw8 pins agree. | `maintenance_sequence` orphan SQL; `test_maintenance_is_the_charters_sequence`; `test_the_runbook_runs_the_documented_procedures_in_order`; `test_the_printed_cycle_matches_the_sequence_the_engine_runs`. | **PROVEN** | All three asserts read `"dry_run => true"` on the driven and printed sides; the printed-cycle loop also pins the literal value `true` against the driver's. |
 
@@ -45,7 +45,7 @@
 
 ## Close
 
-All twelve clauses C-001…C-012 are PROVEN by pin; the attestation below covers the ten categories for the whole unit.
+All twelve clauses C-001…C-012 were PROVEN by pin; C-010 has since been superseded (REJECTED above); the attestation below covers the ten categories for the whole unit.
 
 ```text
 COVERAGE_ATTESTATION:
