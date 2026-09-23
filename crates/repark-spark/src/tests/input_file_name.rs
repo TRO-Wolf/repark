@@ -269,7 +269,7 @@ async fn input_file_name_inside_an_aggregate_arg_falls_through() {
     )
     .await;
     assert!(
-        error.contains("input_file_name"),
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "aggregate-arg shape keeps the unresolved-routine error: {error}"
     );
 }
@@ -282,7 +282,7 @@ async fn input_file_name_with_an_argument_falls_through() {
 
     let error = plan_error(&session, "SELECT input_file_name(1) FROM ice.ns.t").await;
     assert!(
-        error.contains("input_file_name"),
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "a call with arguments keeps the unresolved-routine error: {error}"
     );
 }
@@ -299,7 +299,7 @@ async fn input_file_name_over_a_self_join_falls_through() {
     )
     .await;
     assert!(
-        error.contains("input_file_name"),
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "a joined SELECT keeps the unresolved-routine error: {error}"
     );
 }
@@ -312,7 +312,7 @@ async fn input_file_name_over_values_falls_through() {
 
     let error = plan_error(&session, "SELECT input_file_name() FROM VALUES (1) AS v(a)").await;
     assert!(
-        error.contains("input_file_name"),
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "a non-Iceberg relation keeps the unresolved-routine error: {error}"
     );
 }
@@ -325,7 +325,7 @@ async fn input_file_name_without_from_falls_through() {
 
     let error = plan_error(&session, "SELECT input_file_name()").await;
     assert!(
-        error.contains("input_file_name"),
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "a from-less SELECT keeps the unresolved-routine error: {error}"
     );
 }
@@ -342,7 +342,7 @@ async fn input_file_name_over_a_metadata_table_falls_through() {
     )
     .await;
     assert!(
-        error.contains("input_file_name"),
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "a metadata-table scan keeps the unresolved-routine error: {error}"
     );
 }
@@ -360,7 +360,7 @@ async fn input_file_name_over_a_union_all_falls_through() {
     )
     .await;
     assert!(
-        error.contains("input_file_name"),
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "an outer SELECT over UNION ALL keeps the unresolved-routine error: {error}"
     );
 }
