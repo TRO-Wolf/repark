@@ -873,9 +873,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   covers the reader-options door.
   pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008),
   `normalize`, `local_fs_ddl`,
-  `router` (multi-statement `PARSE_SYNTAX_ERROR` / `42601`, trailing-semicolon acceptance,
-  F-BR-2 eager DML), `show_create` (unclosed-comment condition and multi-statement refusal
-  classes/texts), `decimal` (G-7b bit-exact
+  `router` (`bug010_multi_statement_refuses_parse_class`: multi-statement `PARSE_SYNTAX_ERROR` /
+  `42601`, trailing-semicolon acceptance, F-BR-2 eager DML), `show_create`
+  (`show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
+  `show_create_comment_before_table_keyword_keeps_tokenizer_fallthrough`, and
+  `show_create_multi_statement_keeps_spark_invalid_statement_class` pin the refusal classes
+  and texts), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names.
   `pin_literal_1_23_infers_decimal128_3_2_i128` and overflow wrap `10^38` at (38,0).
@@ -895,6 +898,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   JVM lock; cites
   `spark_door_null_keys_never_match_inner_left_semi_anti`).
 - **Sibling test modules:**
+  - [`router.rs`](router.rs) — `bug010_multi_statement_refuses_parse_class` pins the Spark
+    `PARSE_SYNTAX_ERROR` parser class and SQLSTATE `42601` for multi-statement SQL.
+    pins: wo-c5/C-001
+  - [`show_create.rs`](show_create.rs) — `show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
+    `show_create_comment_before_table_keyword_keeps_tokenizer_fallthrough`, and
+    `show_create_multi_statement_keeps_spark_invalid_statement_class` pin the error class and
+    complete parser or tokenizer messages.
+    pins: wo-c5/C-002, C-003, C-004
   `partitioned_ctas` (**IPI-51 PR6 slice 3**, 2026-09-21: U1-P10 retargeted to
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703` with backticked suggestions, plus the CREATE
   TABLE `days(ts)` pin on the inventory cell's door; both mutation-proven, the typed-column

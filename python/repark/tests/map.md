@@ -7014,7 +7014,7 @@ pins: fnp-8-review/C-009, C-010
   **WO-C5 (2026-09-23):** post-head unclosed bracket comments assert `ParseException`,
   `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full parser-wrapper message; a comment hiding
   TABLE pins the tokenizer fall-through. The multi-statement facade refusal includes `42601`.
-  pins: wo-c5/C-001, C-002
+  pins: wo-c5/C-001, C-002, C-003, C-004
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce

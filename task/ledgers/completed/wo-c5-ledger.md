@@ -42,4 +42,20 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: Exact parser classes, conditions, SQLSTATEs, and complete messages are pinned across Rust and Python entry points.
       artifacts: [crates/repark-spark/src/tests/router.rs, crates/repark-spark/src/tests/show_create.rs, python/repark/tests/test_e1_errorclass.py, python/repark/tests/test_show_create_table.py]
+    - id: AT-7
+      status: N/A
+      justification: This unit makes no performance claim and adds no data scan or background task.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The tested refusal classes preserve Spark's parser conditions and SQLSTATEs.
+      artifacts: [crates/repark-spark/src/tests/router.rs, crates/repark-spark/src/tests/show_create.rs, python/repark/tests/test_e1_errorclass.py, python/repark/tests/test_show_create_table.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The tests compare complete Rust and Python refusal messages and exception contracts.
+      artifacts: [crates/repark-spark/src/tests/router.rs, crates/repark-spark/src/tests/show_create.rs, python/repark/tests/test_e1_errorclass.py, python/repark/tests/test_show_create_table.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The named parser refusal tests exercise each behavior recorded in C-001 through C-004.
+      artifacts: [crates/repark-spark/src/tests/router.rs, crates/repark-spark/src/tests/show_create.rs, python/repark/tests/test_e1_errorclass.py, python/repark/tests/test_show_create_table.py]
+  reattested: [AT-1, AT-2, AT-3, AT-6, AT-8, AT-9, AT-10]
 ```
