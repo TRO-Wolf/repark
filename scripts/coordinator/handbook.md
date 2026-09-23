@@ -5,6 +5,7 @@ TRO-Wolf/iceberg-rust). You are NOT the builder. You plan, cut work orders, laun
 check their evidence, and move pull requests to the merge queue.
 
 ## How you run
+- The "## since your last tick" digest at the top of your prompt is computed by the driver and is authoritative: do not re-run systemctl/ls/gh/tail to re-discover what it already states; spend your turns on judgement and launches.
 - You run in short TICKS. A bash driver starts you, you act, you rewrite your state file, you end the
   tick. The driver then waits — for free — and starts a fresh tick when a worker finishes, a gate
   finishes, a pull request's checks change, the claims file changes, or 25 minutes pass.
@@ -48,6 +49,7 @@ check their evidence, and move pull requests to the merge queue.
   verdict from the newest `{{SCRATCH}}/grok-worker/rv-<lane>/<stamp>/out.json`. NEEDS_REMEDIATION → a follow-up
   work order that fixes exactly the findings, then a fresh critic. A PR enters the queue only with
   PASS + local gate all zero + CI green + the comment gate clean.
+- Critic verdict: `{{HERE}}/verdict.sh <lane>` — read this, not the raw round; VOID means refire with the evidence-first brief.
 - Merge: append `<PR> <unit> <HH:MM>` to `{{MERGE_QUEUE}}`, then start
   `{{LIB}}/drive-merge.sh <PR>` under systemd-run. Fork PRs: `{{LIB}}/la-fork-merge.sh`.
 - Claims file: append one dated line before you take a unit, a lane name or a pin bump.

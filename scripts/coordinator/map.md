@@ -45,8 +45,8 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   `COORDINATOR_*` variable set in the launcher's environment is forwarded into the unit. Refuses a
   missing list, an unknown engine, a missing lib directory, or a slice without a memory cap.
 - `drive.sh` — the loop. Each iteration: stop if state says DONE; compile the tick prompt (handbook
-  + engine addendum + list + state + `status.sh` + the claims tail + the tick instruction); run
-  `engine-<engine>.sh`; log the meter; then wait. `WORKING` re-ticks after five seconds; `WAITING` sleeps until
+  + engine addendum + list + state + `status.sh full` + the tick instruction); run
+  `engine-<engine>.sh`; log the meter; write the digest marker `.digest-<unit>`; then wait. `WORKING` re-ticks after five seconds; `WAITING` sleeps until
   the `status.sh quiet` fingerprint changes, a ruling or `ASK <unit>` line lands in claims, the idle
   limit (`COORDINATOR_MAX_IDLE`, 1500 s, doubling from 60 s while nothing is in flight) or the
   deadline passes. `COORDINATOR_MIN_GAP` batches wake events. Three failed ticks in a row exit 1.
@@ -56,6 +56,41 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
   claims lines addressed to it. `quiet` omits the time, the clone line and the merge-queue tail so
   the driver can fingerprint it; when the PR cache refreshes and `gh` fails, the previous line for
   that PR is kept rather than replaced, so a `gh` outage does not wake the driver.
+- The digest (`status.sh … full`, first block, `## since your last tick`) — measured on 2026-09-22
+  over 294 ticks: the median tick spent 9 turns and $0.45, its first 4–6 turns re-discovering the
+  world by hand, and every later turn re-reading that. The driver now computes the delta in bash so
+  the model reads about 1.5 KB and acts. It is relative to the marker `$RUN/.digest-<unit>`, one line
+  `lines=<claims lines> main=<sha> t=<epoch>` whose mtime is `t`. The driver takes `t` and the
+  claims line count just before it compiles the prompt, and writes the marker after the tick ends.
+  Anything that lands while the model is acting is therefore shown again next tick, never lost; the
+  worst case is a line the lane already saw. The block holds: main's short sha from
+  `gh api …/commits/main` (cached five minutes in `.maincache-<unit>`) and whether it moved against
+  the marker; per lane, every worker round whose `exit` is newer than the marker (`ended:` with
+  exit, hand-back `yes|no|text`, the hand-back's status and commit count, or the `meter.txt` /
+  `runs.tsv` line when there is no hand-back), active units started after `t` (`started:`), and
+  `<lane>-*.done` files newer than the marker; one `pr` line per PR with CI folded into
+  `green|red:<names>|pending:<k>`, the head's short sha and `behind_main` from `mergeStateStatus`;
+  every claims line after the marker's count that names the unit or is a ruling (with no marker,
+  or a claims file that shrank, the last 15 such lines); the claims total; free disk and memory.
+  `ended:` names a round `<family>-<lane>`, not the systemd unit, because the unit's
+  `HHMMSS` suffix is the launch time, which can differ from the round stamp. The PR lines come
+  from the same single `gh pr view` per PR as the older block, cached in `.prcache-<unit>.d`
+  beside it. `quiet` shows none of the digest's times or counts; it adds only the lane's done-file
+  names and the `pr` lines, so the fingerprint moves on a push, a CI change or a new done-file.
+  Every external call degrades to `(gh failed)` or an absent line rather than aborting.
+- `verdict.sh <lane>` — the critic-verdict reader. The longest 10 % of ticks (28+ turns, 28 % of
+  the cost) were critic verdicts and hand-backs judged by reading raw files. It picks the newest
+  round, by stamp, across `$ROOT/codex-worker/xr-<lane>/` and `$SCRATCH/grok-worker/xr-<lane>/`, and
+  prints `VERDICT PASS|NEEDS_REMEDIATION|VOID|RUNNING|NONE`, the engine, round and head the
+  critic states, `tools= turns= cost= valid=`, and one `finding <id>:` line per question (the
+  first 160 chars). Codex: the verdict word is the first word of `handback.json`'s summary, and
+  turns and tools come from the `runs.tsv` row for the lane and stamp (columns 7 and 8).
+  Grok: the first word of `out.json`'s `structuredOutput.summary`. Tools are the sum of
+  `modelUsage.*.modelCalls`, because the CLI's JSON carries no tool-call count. Cost comes from
+  `total_cost_usd`. A round is `VOID` when tools < 3, when the summary does not start with a
+  verdict word, or when the hand-back is missing, and the reason is printed. A round with no
+  `exit` file is `RUNNING`. Exit codes: 0 PASS, 1 NEEDS_REMEDIATION, 2 VOID, 3 RUNNING or NONE.
+  The head is the first sha after the word "head" in the summary, else its first 40-hex sha.
 - `engine-<name>.sh <workdir> <prompt-file> <out-dir>` — one bounded model call, writing the raw
   output plus `meter.txt`: `grok` and `glm` write turns/steps and `cost_usd` (0 when the CLI
   omits it); `muse` writes tool count and terminal state and `sol` token counts — neither reports
@@ -92,6 +127,7 @@ reads the worker's `handback.json`. Workers do not delegate; lanes do not start 
 | rule on a lane's question | `echo "$(date '+%F %H:%M') ORCHESTRATING SESSION: <unit> Q1 — …" >> <run-dir>/claims.txt` (append only, never `>`) |
 | hand a unit over | edit `list-<unit>.md`; the next tick reads it |
 | extend or cut a deadline | `date -d '2026-09-23 06:00' +%s > <run-dir>/until-<unit>` (an epoch survives midnight; `HHMM` does not) |
+| read a lane's critic verdict | `scripts/coordinator/verdict.sh <lane>`; branch on its exit code (0 PASS, 1 NEEDS_REMEDIATION, 2 VOID, 3 RUNNING or NONE) |
 | see every lane | `for u in <run-dir>/state-*.md; do head -1 "$u"; done`, or `status.sh <run-dir> <unit>` for one |
 | stop a lane now | `systemctl --user stop <unit>`; its state stays where it was |
 
