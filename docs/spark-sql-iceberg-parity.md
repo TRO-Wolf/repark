@@ -1399,6 +1399,9 @@ perfectly good read.
 - **DESCRIBE-COLUMN-1 (2026-09-23):** `DESCRIBE t col` now answers Spark's three
   `info_name`/`info_value` rows and `DESCRIBE t VERSION|TIMESTAMP AS OF` now refuses with
   `PARSE_SYNTAX_ERROR` like Spark.
+- **D-DESCRIBE-EXTENDED (2026-09-23):** A nonempty all-identity spec emits `# Partition
+  Information`, its column header, and source type/comment rows without a leading blank, while
+  other specs retain `# Partitioning` transform rows.
 - **Apache Spark** — the same shape and sections on the DataSourceV2 path. *(oracle: live
   PySpark 4.1.2, 2026-09-09, SQL-DESCRIBE-1 step-1 capture: commented `bigint` column,
   `string`, `timestamp`, `days(ts)`, one `k=v` property.)*
@@ -7812,6 +7815,9 @@ the pin rather than obeying it.
   exactly those three `write.*` keys into the table metadata. Format version, the current schema
   (`id int`, `name string`, both optional) and the empty partition spec are Spark-equal on the
   same statement.
+- **D-CREATE-DEFAULT-PROPS (2026-09-23):** Every CREATE, CTAS, and replace path stamps the
+  session owner as reserved `owner`, rejects a user lowercase `owner`, and renders it only in
+  the extended Owner row.
 - **Apache Spark** — writes the same three keys **plus**
   `write.parquet.compression-codec = zstd`, its own create-time default.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-03. This row claims the property SET the

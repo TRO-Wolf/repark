@@ -568,6 +568,9 @@ pins: rp-4-fork-repin/C-005, C-006
   properties through the catalog side map (the service-managed site takes
   `catalogs` for it).
   pins: ice-catalog-session-1/C-027
+  **D-CREATE-DEFAULT-PROPS (2026-09-23):** all three CTAS creation paths stamp the
+  session owner through the shared `create_table::stamp_owner` helper; a user-supplied,
+  exact lowercase `owner` property refuses before catalog access.
   pins: ice-write-options-1/C-001, C-003
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
   merged session write, so CTAS stamps session snapshot properties.
@@ -891,6 +894,9 @@ pins: rp-4-fork-repin/C-005, C-006
   **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `execute_schema_create` merges user
   `TBLPROPERTIES` through the catalog side map (override > user > default).
   pins: ice-catalog-session-1/C-027
+  **D-CREATE-DEFAULT-PROPS (2026-09-23):** all three column-definition creation paths
+  stamp the `DescribeOwnerConfig` session owner through `stamp_owner`; an exact lowercase
+  user `owner` property refuses before catalog access.
   **FNP-4B round 7 (2026-09-15):** angle-bracket `ARRAY<T>` maps to an Iceberg
   list with nullable `element` fields and table-unique ids from a checked
   allocator (R-16b-21 grant); bare/square-bracket forms still refuse.
@@ -1334,6 +1340,9 @@ pins: rp-4-fork-repin/C-005, C-006
   for `col_name`, uses Spark DDL type spelling, returns literal `NULL` for an absent comment,
   and owns the nested-column, missing-column, and time-travel-tail refusals.
   pins: describe-column-1/C-001, C-002, C-003, C-004
+  **D-DESCRIBE-EXTENDED (2026-09-23):** it also builds the partition section: a nonempty
+  all-identity spec emits `# Partition Information`, its column header, and source type/doc
+  rows without a blank separator; all other specs retain `# Partitioning` transform rows.
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
   SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`
@@ -1349,6 +1358,7 @@ pins: rp-4-fork-repin/C-005, C-006
   from its stored schema via `view_ddl/describe.rs`, a `ViewNotFound` keeps the
   unchanged `TABLE_OR_VIEW_NOT_FOUND` refusal, other load errors propagate.
   pins: ice-views-1/C-017
+  summary for `Statistics`, and the stored `owner` property when present).
   **DESCRIBE-COLUMN-1 (2026-09-23):** `DescribeTable` carries the optional tokenized column
   path and delegates its rows to `describe_column.rs`; the existing router intercept remains
   the only route to this table-describe executor.
@@ -1361,10 +1371,11 @@ pins: rp-4-fork-repin/C-005, C-006
   never filters the table segment of a three-part name, so `cat.ns.files` describes while a
   four-or-more-part metadata path still stays out; the router completes missing parts from
   the engine `datafusion.catalog.default_catalog` / `default_schema` (the same rule `SELECT`
-  resolves by) before the registered-catalog check. `Owner` comes from the
+  resolves by) before the registered-catalog check. `describe_table_owner` reads the
   `repark_core::DescribeOwnerConfig` session extension, installed once by
-  `ReparkSessionBuilder` (`unknown` when absent) — no environment read on the
-  query path. Table Properties redacts
+  `ReparkSessionBuilder` (`unknown` when absent), for creation-time stamping; extended
+  DESCRIBE reads the stored `owner` property and omits its row when absent. Table Properties
+  excludes `owner` and redacts
   through `repark_core::prop_key_is_secret` (widened to `pub` for this call; no second
   predicate): **deliberate Spark delta** — Spark prints `s3.access-key-id` in the clear and
   RePark redacts it; printing a credential is the worse divergence (RF-6).
