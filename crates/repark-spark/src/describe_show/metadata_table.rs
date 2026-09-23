@@ -3,7 +3,7 @@ use std::sync::Arc;
 use datafusion::arrow::array::{RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::common::TableReference;
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
@@ -13,7 +13,7 @@ use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 
 use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, table_or_view_not_found_parts};
 use crate::describe_show::DescribeTable;
-use crate::metadata_tables::canonical_metadata_table_name;
+use crate::metadata_tables::{canonical_metadata_table_name, table_exists_parts};
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
 use repark_core::CatalogRegistry;
@@ -45,6 +45,7 @@ pub(crate) fn try_parse_describe_metadata_table(sql: &str) -> Option<DescribeTab
         namespace: namespace.clone(),
         table: format!("{table}${suffix}"),
         extended,
+        written_parts: parts,
     })
 }
 
@@ -64,12 +65,13 @@ pub(crate) async fn try_describe_metadata_table(
         return None;
     }
     let handle = catalog_handle(catalogs, &describe.catalog).ok()?;
-    dollar_metadata_table(ctx, handle, describe).await
+    dollar_metadata_table(ctx, catalogs, handle, describe).await
 }
 
 #[allow(clippy::missing_errors_doc)]
 async fn dollar_metadata_table(
     ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
     handle: &Arc<dyn Catalog>,
     describe: &DescribeTable,
 ) -> Option<Result<RecordBatch>> {
@@ -78,6 +80,15 @@ async fn dollar_metadata_table(
         return None;
     }
     canonical_metadata_table_name(suffix)?;
+    match table_exists_parts(catalogs, &describe.written_parts).await {
+        Ok(true) => {
+            return Some(Err(unsupported_compound_identifier(
+                &describe.written_parts,
+            )));
+        }
+        Ok(false) => {}
+        Err(error) => return Some(Err(error)),
+    }
     let reference = TableReference::full(
         describe.catalog.clone(),
         describe.namespace.clone(),
@@ -111,6 +122,18 @@ async fn dollar_metadata_table(
     }
 }
 
+fn unsupported_compound_identifier(parts: &[String]) -> DataFusionError {
+    let name = parts
+        .iter()
+        .map(|part| format!("`{part}`"))
+        .collect::<Vec<_>>()
+        .join(".");
+    DataFusionError::Plan(format!(
+        "Unsupported compound identifier '{name}'. Expected 1, 2 or 3 parts, got {}",
+        parts.len()
+    ))
+}
+
 #[allow(clippy::missing_errors_doc)]
 fn metadata_table_describe_batch(schema: &Schema) -> Result<RecordBatch> {
     let names: Vec<String> = schema
@@ -142,6 +165,7 @@ fn metadata_table_describe_batch(schema: &Schema) -> Result<RecordBatch> {
 #[cfg(test)]
 mod tests {
     use datafusion::arrow::array::Array;
+    use iceberg::CatalogBuilder;
 
     use super::*;
 
@@ -208,5 +232,104 @@ mod tests {
             vec!["bigint", "string", "map<string,string>"]
         );
         assert!((0..3).all(|index| comments.is_null(index)));
+    }
+
+    #[tokio::test]
+    async fn describe_metadata_table_real_table_at_written_path_wins() {
+        let warehouse_dir = tempfile::TempDir::new().expect("warehouse tempdir");
+        let warehouse = warehouse_dir
+            .path()
+            .to_str()
+            .expect("utf8 warehouse")
+            .to_string();
+        let catalog: Arc<dyn Catalog> = Arc::new(
+            iceberg::memory::MemoryCatalogBuilder::default()
+                .with_storage_factory(Arc::new(iceberg::io::LocalFsStorageFactory))
+                .load(
+                    "memory",
+                    std::collections::HashMap::from([(
+                        iceberg::memory::MEMORY_CATALOG_WAREHOUSE.to_string(),
+                        warehouse.clone(),
+                    )]),
+                )
+                .await
+                .expect("memory catalog builds"),
+        );
+        catalog
+            .create_namespace(
+                &NamespaceIdent::new("ns".to_string()),
+                std::collections::HashMap::from([(
+                    "location".to_string(),
+                    format!("{warehouse}/ns"),
+                )]),
+            )
+            .await
+            .expect("ns namespace");
+        let nested = NamespaceIdent::from_vec(vec!["ns".to_string(), "t".to_string()])
+            .expect("nested ident");
+        catalog
+            .create_namespace(
+                &nested,
+                std::collections::HashMap::from([(
+                    "location".to_string(),
+                    format!("{warehouse}/ns/t"),
+                )]),
+            )
+            .await
+            .expect("nested ns.t namespace");
+        let base_location = format!("{warehouse}/ns/t_base");
+        std::fs::create_dir_all(&base_location).expect("base dir");
+        catalog
+            .create_table(
+                &NamespaceIdent::new("ns".to_string()),
+                iceberg::TableCreation::builder()
+                    .name("t".to_string())
+                    .location(base_location)
+                    .schema(one_int_schema())
+                    .build(),
+            )
+            .await
+            .expect("base table mt.ns.t");
+        let colliding_location = format!("{warehouse}/ns/t/snapshots");
+        std::fs::create_dir_all(&colliding_location).expect("colliding dir");
+        catalog
+            .create_table(
+                &nested,
+                iceberg::TableCreation::builder()
+                    .name("snapshots".to_string())
+                    .location(colliding_location)
+                    .schema(one_int_schema())
+                    .build(),
+            )
+            .await
+            .expect("real table mt.ns.t.snapshots");
+        let ctx = SessionContext::new();
+        repark_iceberg::catalog::register_iceberg_catalog(&ctx, "mt", catalog.clone())
+            .await
+            .expect("df catalog registers");
+        let catalogs = CatalogRegistry::from([("mt".to_string(), catalog)]);
+        let error = crate::execute(&ctx, &catalogs, "DESCRIBE mt.ns.t.snapshots")
+            .await
+            .expect_err("a real table at the written path must not answer metadata rows");
+        let message = error.to_string();
+        assert!(
+            message.contains("Unsupported compound identifier")
+                && message.contains("`mt`.`ns`.`t`.`snapshots`"),
+            "the colliding name answers what plain resolution answers: {message}"
+        );
+    }
+
+    fn one_int_schema() -> iceberg::spec::Schema {
+        iceberg::spec::Schema::builder()
+            .with_schema_id(0)
+            .with_fields(vec![std::sync::Arc::new(
+                iceberg::spec::NestedField::optional(
+                    1,
+                    "x",
+                    iceberg::spec::Type::Primitive(iceberg::spec::PrimitiveType::Int),
+                ),
+            )])
+            .build()
+            .expect("schema builds")
     }
 }

@@ -252,7 +252,7 @@ fn table_exists_probe_from_error(ident: &TableIdent, error: iceberg::Error) -> R
     }
 }
 
-async fn table_exists_parts(catalogs: &CatalogRegistry, parts: &[String]) -> Result<bool> {
+pub async fn table_exists_parts(catalogs: &CatalogRegistry, parts: &[String]) -> Result<bool> {
     if parts.len() < 2 {
         return Ok(false);
     }

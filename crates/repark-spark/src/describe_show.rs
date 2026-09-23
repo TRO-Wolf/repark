@@ -209,6 +209,7 @@ pub(crate) struct DescribeTable {
     pub(crate) namespace: String,
     pub(crate) table: String,
     pub(crate) extended: bool,
+    pub(crate) written_parts: Vec<String>,
 }
 
 impl DescribeTable {
@@ -254,6 +255,7 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         namespace,
         table,
         extended,
+        written_parts: Vec::new(),
     }))
 }
 
