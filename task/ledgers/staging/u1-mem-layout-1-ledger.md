@@ -71,8 +71,13 @@ the new layout.
 
 ## PROPOSITION LEDGER — U1 MEM-LAYOUT-1 — 2026-09-23
 
-Every pin below was proven red one mutation at a time (the harness applies a mutation, runs the
-named pin, and restores the file byte for byte), then green on the restored tree.
+The pins below were proven red by the mutations their rows name (the harness applies a mutation,
+runs the named pin, and restores the file byte for byte), then green on the restored tree. Where a
+row names two mutations together (M-root with M-share, M-whole-anc with M-stop), both were applied
+at once. These rows rest on other evidence, as each row states: C-009, C-021 and C-022 on green
+runs and the fixture reds they record; C-010 on a code reading; C-011 on the ruling and the rows
+it names; C-033 on one-off red calls of `_data_files`; and the C-012 half of C-019, which no
+isolated normaliser mutation reds.
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|

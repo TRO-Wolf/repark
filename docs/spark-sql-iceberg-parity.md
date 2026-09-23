@@ -3516,8 +3516,8 @@ the pin rather than obeying it.
   `crates/repark-core/src/session/tests/session.rs::register_memory_catalog_fallback_root_is_the_warehouse`,
   `crates/repark-core/src/session/tests/session.rs::configured_memory_catalog_fallback_root_is_the_warehouse`
 - **Rationale** — FIXED 2026-09-23 under ruling Q-55-7; the unit ledger is
-  `task/ledgers/staging/u1-mem-layout-1-ledger.md`. A table's own subdirectory is sweepable by
-  `remove_orphan_files`, except when another table's location equals the table's own, or lies
+  `task/ledgers/staging/u1-mem-layout-1-ledger.md`. On this `TempFallbackAllowed` catalog kind, a table's own
+  subdirectory is sweepable by `remove_orphan_files`, except when another table's location equals the table's own, or lies
   inside it and contains, equals or sits under the swept subdirectory (ORPHAN-3, ORPHAN-4); the
   warehouse root is not (Q-55-6).
 
@@ -6808,7 +6808,7 @@ the pin rather than obeying it.
   normalised path components, so the `file:/` and `file:///` spellings of a path get the bare
   path's verdict. On a `TempFallbackAllowed` catalog, a scan path that holds another table's metadata file, or
   that lies below a directory whose `metadata/` holds one, is refused too, row
-  [ORPHAN-4](#orphan-4--remove_orphan_files-refuses-a-scan-path-holding-another-tables-metadata-file-2026-09-23).
+  [ORPHAN-4](#orphan-4--on-a-tempfallbackallowed-catalog-remove_orphan_files-refuses-a-scan-path-holding-another-tables-metadata-file-2026-09-23).
   Separately, the listing path (no `file_list_view`) refuses a table whose own stored location
   is not in normal path form, described below.
   Without `file_list_view`, the `location` argument reaches the fork's listing with its path in
@@ -6891,7 +6891,7 @@ the pin rather than obeying it.
   [../task/ledgers/staging/u1-mem-layout-1-ledger.md](../task/ledgers/staging/u1-mem-layout-1-ledger.md)
   C-014, C-018, C-025.
 
-### ORPHAN-4 — `remove_orphan_files` refuses a scan path holding another table's metadata file (2026-09-23)
+### ORPHAN-4 — on a `TempFallbackAllowed` catalog, `remove_orphan_files` refuses a scan path holding another table's metadata file (2026-09-23)
 
 - **repark** — On a catalog registered through `register_memory_catalog` (or
   `spark.sql.catalog.<c>.type=memory|hadoop`), two catalogs, or two sessions that register the

@@ -1002,7 +1002,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refusal for a `..` and an `x/y` table, namespace (top level and nested) and catalog name, each
   with a recorded layout root, and names the identifier kind. pins: u1-mem-layout-1/C-007
 - [call_orphan_ancestor.rs](call_orphan_ancestor.rs) — **U1-MEM-LAYOUT-1 layout-r8 (2026-09-23):**
-  the ancestor metadata probe. `m1.ns.a` sweeping `<wh>/ns/b/data` or `<wh>/ns/b/data/sub`, where
+  the ancestor metadata probe, on memory (`TempFallbackAllowed`) catalogs. `m1.ns.a` sweeping `<wh>/ns/b/data` or `<wh>/ns/b/data/sub`, where
   `m2.ns.b` (or a second session's `ice.ns.b`) sits at `<wh>/ns/b`, refuses in all three spellings
   and through `file_list_view` with the complete message naming `<wh>/ns/b` in the scan's spelling
   (`call_orphan_ancestor_two_catalogs_sibling_data_dir_scan_refuses`,
@@ -1015,7 +1015,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   location refuses, in one catalog and across two (`…_same_catalog_scan_of_a_table_nested_in_the_own_location_refuses`,
   `…_other_catalog_scan_of_a_table_nested_in_the_own_location_refuses`).
   pins: u1-mem-layout-1/C-029, C-030, C-031, C-032, C-034
-- [call_orphan_cotenancy.rs](call_orphan_cotenancy.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** shared-warehouse catalog refusal, own-history metadata sweep, non-metadata sweep, default sweep, nested namespace guards, own-table location exception, and unreadable metadata refusal with its complete message. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
+- [call_orphan_cotenancy.rs](call_orphan_cotenancy.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** on memory (`TempFallbackAllowed`) catalogs: shared-warehouse catalog refusal, own-history metadata sweep, non-metadata sweep, default sweep, nested namespace guards, own-table location exception, and unreadable metadata refusal with its complete message. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
   **Layout-r7 (2026-09-23):** a `data/` scan of a shared `<wh>/ns/t` refuses for two catalogs,
   two sessions and two same-catalog tables on one `LOCATION`, in all three spellings and through
   `file_list_view` (`call_orphan_cotenancy_two_catalogs_data_dir_scan_refuses`,
