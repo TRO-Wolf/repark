@@ -121,14 +121,14 @@ def spark(tmp_path: Path) -> Any:
 
 
 def _seeded(session: Any, name: str) -> str:
-    """Create the two-append table, delete id 1, return its three-part name."""
+    """Create the two-append table, delete id 3, return its three-part name."""
     table = f"{CATALOG}.{NAMESPACE}.{name}"
     session.sql(
         f"CREATE TABLE {table} {SEED_DDL} USING iceberg TBLPROPERTIES ('format-version'='2')"
     )
     session.sql(f"INSERT INTO {table} VALUES {FIRST_APPEND}")
     session.sql(f"INSERT INTO {table} VALUES {SECOND_APPEND}")
-    session.sql(f"DELETE FROM {table} WHERE id = 1")
+    session.sql(f"DELETE FROM {table} WHERE id = 3")
     return table
 
 
@@ -175,7 +175,7 @@ def test_load_snapshots_equals_sql(spark: Any) -> None:
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
     operations = spark.sql(f"SELECT operation FROM {table}.snapshots ORDER BY committed_at")
-    assert [row[0] for row in operations.collect()] == ["append", "append", "overwrite"]
+    assert [row[0] for row in operations.collect()] == ["append", "append", "delete"]
     operation_frame = reader.select("operation")
     assert [
         (field.name, field.dataType.simpleString(), field.nullable)
@@ -184,7 +184,7 @@ def test_load_snapshots_equals_sql(spark: Any) -> None:
     assert sorted(row[0] for row in operation_frame.collect()) == [
         "append",
         "append",
-        "overwrite",
+        "delete",
     ]
 
 
@@ -219,7 +219,7 @@ def test_table_api_snapshots_equals_sql(spark: Any) -> None:
     assert sorted(row[0] for row in reader.select("operation").collect()) == [
         "append",
         "append",
-        "overwrite",
+        "delete",
     ]
 
 
@@ -245,7 +245,7 @@ def test_load_version_as_of_equals_sql(spark: Any) -> None:
         (field.name, field.dataType.simpleString(), field.nullable)
         for field in record_frame.schema.fields
     ] == [("record_count", "bigint", False)]
-    assert _frame_rows(record_frame) == [[2]]
+    assert sum(row[0] for row in record_frame.collect()) == 2
 
 
 def test_load_timestamp_as_of_equals_sql(spark: Any) -> None:
@@ -259,7 +259,7 @@ def test_load_timestamp_as_of_equals_sql(spark: Any) -> None:
     sql = spark.sql(f"SELECT * FROM {table}.files TIMESTAMP AS OF '{stamp}'")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
-    assert _frame_rows(reader.select("record_count")) == [[1], [2]]
+    assert sum(row[0] for row in reader.select("record_count").collect()) == 3
 
 
 def test_reader_as_of_refusals_match_sql(spark: Any) -> None:
@@ -319,7 +319,7 @@ def test_load_plain_and_version_as_of_unchanged(spark: Any) -> None:
     first = _snapshot_ids(spark, table)[0]
     current = _frame_rows(_iceberg_reader(spark).load(table))
     assert current == _frame_rows(spark.sql(f"SELECT * FROM {table}"))
-    assert current == [[2, "b", "y"], [3, "c", "x"]]
+    assert current == [[1, "a", "x"], [2, "b", "y"]]
     pinned = _frame_rows(_iceberg_reader(spark).option("versionAsOf", first).load(table))
     assert pinned == _frame_rows(spark.sql(f"SELECT * FROM {table} VERSION AS OF {first}"))
     assert pinned == [[1, "a", "x"], [2, "b", "y"]]
@@ -485,7 +485,7 @@ def test_load_uppercase_suffix_equals_sql(spark: Any) -> None:
     assert sorted(row[0] for row in reader.select("operation").collect()) == [
         "append",
         "append",
-        "overwrite",
+        "delete",
     ]
 
 
@@ -546,7 +546,7 @@ def test_load_uppercase_suffix_as_of_equals_sql(spark: Any) -> None:
     sql = spark.sql(f"SELECT * FROM {table}.FILES VERSION AS OF {first}")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
-    assert _frame_rows(reader.select("record_count")) == [[2]]
+    assert sum(row[0] for row in reader.select("record_count").collect()) == 2
 
 
 def test_load_missing_parent_as_of_matches_sql_door(spark: Any) -> None:

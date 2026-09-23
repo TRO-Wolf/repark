@@ -96,6 +96,27 @@ duplicated list item; it now closes the `metadata_tables_asof` entry.
 Sweep: every other clause's pin classification is recorded in the hand-back;
 no pin count moved (still twenty-two facade pins, C-001..C-022).
 
+**Follow-up (2026-09-23, WO rd-r7fix, critic r4):** one finding plus a class
+sweep, all test-side. V-001 (P1): the shared `_seeded` fixture deleted id 1,
+so the third snapshot's `operation` was `overwrite` when the first INSERT
+wrote one file and `delete` when it wrote two, and the per-file
+`record_count` rows depended on the same split. The fixture now deletes id 3
+— the second INSERT's own single-row file, always a whole-file delete — and
+RePark records `delete` for the third snapshot (measured on the facade;
+Spark 4.1.2 records `delete` for a whole-file delete, the r6 live-leg
+measurement). The four `overwrite` pins now read `append, append, delete`
+(C-001's ordered list and the C-001/C-003/C-016 sorted multisets), the
+first-snapshot `record_count` pins read `sum == 2` (C-004, C-020), the
+second-snapshot pin reads `sum == 3` (C-005), and C-008's current rows are
+`[[1,"a","x"],[2,"b","y"]]` under the new delete. Sweep: the remaining
+Python pins are row values, schema fields, column lists or reader/SQL
+equalities — none file-split dependent; the Rust pin file's per-snapshot
+`count(*)` rows over `files`/`data_files`/`entries`/`manifests` and its
+tag/branch/timestamp file counts are the same class, stable today only
+because each INSERT writes one file — reported to the orchestrator, not
+edited per the work order. Pin count unchanged: twenty-two facade pins,
+C-001..C-022.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The two replay cells were recorded

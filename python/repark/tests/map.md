@@ -7787,6 +7787,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   summing to 2 — both independent of Spark's file split; the `all_*` sweep pins
   the Spark 4.1.2 column lists outright (rows stay relative), and the
   quoted-dollar test is router equivalence on a spelling Spark refuses.
+  **critic r4 (2026-09-23):** the offline `_seeded` deletes the whole-file
+  row id 3 so RePark records `delete` (measured; Spark records `delete` for
+  a whole-file delete) — the operation pins read `append, append, delete`
+  and the scoped `record_count` pins read sums (2 at the first snapshot, 3
+  at the second), so no pin depends on the writer's file split.
   Near misses pin today's behaviour: plain loads, branch/tag/snapshot-id
   selectors, a real table named `snapshots`, the unknown-suffix error, and the
   #800 legacy-option refusals.

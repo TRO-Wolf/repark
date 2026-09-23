@@ -1518,7 +1518,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   marked router-equivalence-only — Spark refuses the quoted-dollar spellings
   (pre-existing divergence filed). The Rust pin
   `metadata_asof_nested_namespace_real_table_wins` covers the four-part
-  real-table-wins branch. `risk_tier: standard`. Branch
+  real-table-wins branch. **critic r4 (2026-09-23):** the offline seed
+  deletes the whole-file row id 3 and every layout-dependent pin is now an
+  invariant multiset or sum; the Rust file-count pins are reported, not
+  edited. `risk_tier: standard`. Branch
   `fix/ipi-23-reader-metadata-tables`.
   pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
