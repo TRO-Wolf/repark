@@ -6746,9 +6746,9 @@ the pin rather than obeying it.
 ### ORPHAN-3 — `remove_orphan_files` sweeps a memory-catalog table's own directory and accepts `file_list_view` (FIXED 2026-09-22)
 
 > **FIXED 2026-09-22 (owner ruling Q-55-6 under Q-55-2 full Spark parity).** The shared-root
-> guard is narrowed to the one safety property the ruling keeps: never sweep a directory that
-> holds another table's files. `file_list_view` is accepted. The old pins went RED on purpose
-> in the same change and were rewritten to Spark's answers. (The brief named this row
+> guard is narrowed to the three refusals the ruling keeps, listed under **repark** below.
+> `file_list_view` is accepted. The pins that asserted the old refusal and the old
+> `NotImplemented` were rewritten to Spark's answers. (The brief named this row
 > `ORPHAN-2`. That id already belongs to the retired dry-run-default row above, so it is filed
 > as `ORPHAN-3`.)
 
@@ -6756,19 +6756,25 @@ the pin rather than obeying it.
   at `<warehouse>/repark_ctas/<catalog>/<ns>/<table>`. `CALL <catalog>.system.remove_orphan_files(table => …)`
   now sweeps that directory. The planted 10-day-old `data/orphan-file.parquet` comes back as one
   `orphan_file_location` row and is deleted. A 1-day-old orphan gives zero rows and is kept.
-  The call still refuses a scan path (`location`, else the table location) in three cases: it
-  is the fallback root `<warehouse>/repark_ctas` or `<warehouse>/repark_ansi_ctas` under any
-  `file:` or `..` spelling, it is a parent of that root (the warehouse itself), or it equals or
-  contains another table of the same catalog. The first two keep the old
-  "shared CTAS fallback root" text. The third names the other table.
+  A sibling table in the same namespace does not block that sweep. On a `TempFallbackAllowed`
+  catalog the call still refuses a scan path (`location`, else the table location) in exactly
+  three cases: it is the fallback root `<warehouse>/repark_ctas` or
+  `<warehouse>/repark_ansi_ctas` (the pinned spellings are a trailing slash, `file:/`,
+  hostless `file://`, `file:///` and `..`), it is a parent of that root (the warehouse
+  itself), or it equals or contains the location of another table in the same catalog, in any
+  namespace including a nested one. The first two keep the old "shared CTAS fallback root"
+  text. The third names the other table.
   `file_list_view => '<view>'` reads the view's `file_path` STRING and `last_modified` TIMESTAMP
-  rows and keeps those older than `older_than` that lie under the scan path. It subtracts the
-  table's referenced files and returns each orphan path exactly as the view gave it.
-  `dry_run => true` deletes nothing. `dry_run => false` deletes exactly the listed orphans. A
-  view that does not exist answers `[TABLE_OR_VIEW_NOT_FOUND]`. One deliberate difference: the
-  under-the-scan-path test compares normalised path components where Java uses a raw string
-  `startsWith`, so a view path outside the scan location, including a `..` escape, is never a
-  candidate and is never deleted (unmeasured: no scoreboard cell lists an out-of-scope path).
+  rows and keeps those whose `last_modified` is non-null and older than `older_than` and whose
+  path lies under the scan path. It subtracts the table's referenced files and returns each
+  orphan once, sorted, exactly as the view spelled it. `dry_run => true` deletes nothing.
+  `dry_run => false` deletes exactly the listed orphans, and a delete the filesystem refuses is
+  reported. An ERROR-mode prefix conflict and a `gc.enabled` refusal fail with the same string
+  the listing path gives; IGNORE keeps a conflicting path and DELETE lists it. A view that does
+  not exist answers `[TABLE_OR_VIEW_NOT_FOUND]`. The under-the-scan-path test compares
+  normalised path components, so a view path outside the scan location, including a `..`
+  escape, is never a candidate and is never deleted (unmeasured: no scoreboard cell lists an
+  out-of-scope path, so Spark's answer for one is not recorded).
 - **Apache Spark** — P-ORPHAN-DEFAULT returns one row
   (`file:<wh>/hc/ns/t_p_orphan_default/data/orphan-file.parquet`) and the orphan is deleted.
   P-ORPHAN-DRY-RUN, -LOCATION, -PREFIX-MODE, -EQUAL-SCHEMES, -PREFIX-LISTING and
@@ -6786,14 +6792,24 @@ the pin rather than obeying it.
   `::call_remove_orphan_files_refuses_the_warehouse_and_the_fallback_root`,
   `::call_remove_orphan_files_file_list_view_dry_run_lists_the_view_orphans_verbatim`,
   `::call_remove_orphan_files_file_list_view_armed_deletes_only_the_listed_orphans`,
-  `::call_remove_orphan_files_file_list_view_near_misses_refuse`),
+  `::call_remove_orphan_files_file_list_view_near_misses_refuse`,
+  `::call_remove_orphan_files_sweeps_one_fallback_table_beside_a_sibling`,
+  `::call_remove_orphan_files_refuses_a_location_holding_a_table_of_another_namespace`,
+  `::call_remove_orphan_files_refuses_a_location_holding_a_nested_namespace_table`,
+  `::call_remove_orphan_files_file_list_view_keeps_rows_inside_the_older_than_window`,
+  `::call_remove_orphan_files_file_list_view_skips_paths_outside_the_scan_location`,
+  `::call_remove_orphan_files_file_list_view_prefix_conflicts_match_the_listing_path`,
+  `::call_remove_orphan_files_file_list_view_names_an_authority_conflict`),
+  `crates/repark-spark/src/tests/call_orphan_view.rs` (the `file_list_view` spelling, gc,
+  malformed-view, NULL-timestamp, mode, `equal_schemes`, failed-delete and policy-scope pins),
   `crates/repark-spark/src/tests/call_orphan.rs::call_orphan_shared_ctas_root_rule`, and
   `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root`
 - **Rationale** — FIXED by owner ruling Q-55-6 under Q-55-2 (full Spark parity), 2026-09-22.
   The old guard refused every table under the fallback root. It protected against two sessions
-  that share one warehouse writing the same derived directory. The narrowed guard keeps the
-  part that matters for deletion safety: it refuses only when the swept directory could hold
-  another table's files. The CTAS create location is unchanged (Q-55-7). Ledger:
+  that share one warehouse writing the same derived directory. The narrowed guard refuses in
+  exactly the three ruled cases: the fallback root itself, a parent of it, or a scan path
+  equal to or containing another registered table's location. The CTAS create location is
+  unchanged (Q-55-7). Ledger:
   [../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md](../task/ledgers/staging/ipi-30-orphan-guard-narrow-1-ledger.md).
 
 ### ORPHAN-S3TABLES-1 — `remove_orphan_files` on an S3 Tables table: the bare-bucket parser half FIXED (RP-19), the 405 listing refusal stays open
