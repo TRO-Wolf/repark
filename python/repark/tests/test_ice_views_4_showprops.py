@@ -195,10 +195,18 @@ def test_show_views_and_show_tables_unchanged(spark: ReparkSession) -> None:
     """Near-miss b — the neighboring SHOW doors answer as before."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     views = spark.sql("SHOW VIEWS IN sc.ns").to_arrow()
-    assert views.schema.names == ["namespace", "viewName", "isTemporary"]
+    assert [(field.name, field.type, field.nullable) for field in views.schema] == [
+        ("namespace", pa.string(), False),
+        ("viewName", pa.string(), False),
+        ("isTemporary", pa.bool_(), False),
+    ]
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == [["ns", "v", False]]
     tables = spark.sql("SHOW TABLES IN sc.ns").to_arrow()
-    assert tables.schema.names == ["namespace", "tableName", "isTemporary"]
+    assert [(field.name, field.type, field.nullable) for field in tables.schema] == [
+        ("namespace", pa.string(), False),
+        ("tableName", pa.string(), False),
+        ("isTemporary", pa.bool_(), False),
+    ]
     assert _rows(spark.sql("SHOW TABLES IN sc.ns")) == [["ns", "t", False]]
 
 
