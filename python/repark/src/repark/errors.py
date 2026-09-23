@@ -58,7 +58,9 @@ def _native_get_condition(self: object) -> str | None:
             message = message[len(prefix) :]
             break
     if message.startswith(_NATIVE_PARSER_ERROR_PREFIX):
-        message = message[len(_NATIVE_PARSER_ERROR_PREFIX) :]
+        wrapped_message = message[len(_NATIVE_PARSER_ERROR_PREFIX) :]
+        if wrapped_message.endswith('")'):
+            message = wrapped_message[:-2]
     if not message.startswith("["):
         return None
     closing = message.find("]")
