@@ -277,6 +277,8 @@ def test_reader_as_of_refusals_match_sql(spark: Any) -> None:
     assert str(reader_nope.value) == (
         "Cannot find matching snapshot ID or reference name for version nope"
     )
+    assert reader_nope.value.getSqlState() == sql_nope.value.getSqlState()
+    assert reader_nope.value.getSqlState() is None
     with pytest.raises(IllegalArgumentException) as sql_old:
         sql_old_query = f"SELECT count(*) FROM {table}.files TIMESTAMP AS OF '2000-01-01 00:00:00'"
         spark.sql(sql_old_query).collect()
@@ -285,6 +287,8 @@ def test_reader_as_of_refusals_match_sql(spark: Any) -> None:
         reader_old_frame.load(f"{table}.files").collect()
     assert str(reader_old.value) == str(sql_old.value)
     assert str(reader_old.value) == "Cannot find a snapshot older than 2000-01-01T00:00:00+00:00"
+    assert reader_old.value.getSqlState() == sql_old.value.getSqlState()
+    assert reader_old.value.getSqlState() is None
     first = _snapshot_ids(spark, table)[0]
     with pytest.raises(AnalysisException) as sql_all:
         spark.sql(f"SELECT count(*) FROM {table}.all_files VERSION AS OF {first}").collect()
@@ -292,6 +296,8 @@ def test_reader_as_of_refusals_match_sql(spark: Any) -> None:
         _iceberg_reader(spark).option("versionAsOf", first).load(f"{table}.all_files").collect()
     assert str(reader_all.value) == str(sql_all.value)
     assert "Cannot select snapshot in table: ALL_FILES" in str(reader_all.value)
+    assert reader_all.value.getSqlState() == sql_all.value.getSqlState()
+    assert reader_all.value.getSqlState() is None
 
 
 def test_reader_unknown_numeric_as_of_answers_empty(spark: Any) -> None:
@@ -372,10 +378,13 @@ def test_load_unknown_suffix_keeps_error_text(spark: Any) -> None:
     table = _seeded(spark, "t_load_nope")
     with pytest.raises(AnalysisException) as reader_nope:
         _iceberg_reader(spark).load(f"{table}.nope").collect()
+    with pytest.raises(AnalysisException) as sql_nope:
+        spark.sql(f"SELECT * FROM {table}.nope").collect()
     assert str(reader_nope.value) == (
         "Error during planning: Unsupported compound identifier "
         f"'{table}.nope'. Expected 1, 2 or 3 parts, got 4"
     )
+    assert reader_nope.value.getSqlState() == sql_nope.value.getSqlState()
 
 
 def test_legacy_options_on_metadata_keep_refusal_texts(spark: Any) -> None:
@@ -394,6 +403,7 @@ def test_legacy_options_on_metadata_keep_refusal_texts(spark: Any) -> None:
         with pytest.raises(IllegalArgumentException) as caught:
             _iceberg_reader(spark).option(key, value).load(f"{table}.files")
         assert str(caught.value) == message, key
+        assert caught.value.getSqlState() is None, key
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
@@ -412,9 +422,9 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
     session.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
     session.sql(f"INSERT INTO {table} VALUES (3, 'c', 'x')")
     session.sql(f"DELETE FROM {table} WHERE id = 3")
-    first = session.sql(
-        f"SELECT snapshot_id FROM {table}.snapshots ORDER BY committed_at, snapshot_id LIMIT 1"
-    ).collect()[0][0]
+    second = session.sql(
+        f"SELECT snapshot_id FROM {table}.snapshots ORDER BY committed_at, snapshot_id"
+    ).collect()[1][0]
     reader_snaps = session.read.format("iceberg").load(f"{table}.snapshots").select("operation")
     sql_snaps = session.sql(f"SELECT operation FROM {table}.snapshots ORDER BY committed_at")
     assert _live_rows(reader_snaps) == _live_rows(sql_snaps)
@@ -427,11 +437,13 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
         (field.name, field.dataType.simpleString(), field.nullable)
         for field in reader_snaps.schema.fields
     ] == [("operation", "string", True)]
-    reader_files = session.read.format("iceberg").option("versionAsOf", first)
+    reader_files = session.read.format("iceberg").option("versionAsOf", second)
     reader_files = reader_files.load(f"{table}.files").select("record_count")
-    sql_files = session.sql(f"SELECT record_count FROM {table}.files VERSION AS OF {first}")
+    sql_files = session.sql(f"SELECT record_count FROM {table}.files VERSION AS OF {second}")
     assert _live_rows(reader_files) == _live_rows(sql_files)
-    assert sum(row[0] for row in reader_files.collect()) == 2
+    assert sum(row[0] for row in reader_files.collect()) == 3
+    unpinned_files = session.read.format("iceberg").load(f"{table}.files")
+    assert _live_rows(reader_files) != _live_rows(unpinned_files.select("record_count"))
     assert [
         (field.name, field.dataType.simpleString(), field.nullable)
         for field in reader_files.schema.fields
@@ -450,6 +462,7 @@ def test_load_case_twin_table_matches_sql_door(spark: Any) -> None:
     with pytest.raises(AnalysisException) as sql_twin:
         spark.sql(f"SELECT operation FROM {twin}.snapshots").collect()
     assert str(reader_twin.value) == str(sql_twin.value)
+    assert reader_twin.value.getSqlState() == sql_twin.value.getSqlState()
 
 
 def test_quoted_dollar_missing_table_refuses_all_files(spark: Any) -> None:
@@ -509,6 +522,7 @@ def test_load_missing_parent_matches_sql_door(spark: Any) -> None:
         with pytest.raises(AnalysisException) as sql_missing:
             spark.sql(f"SELECT * FROM {name}.snapshots").collect()
         assert str(reader_missing.value) == str(sql_missing.value), name
+        assert reader_missing.value.getSqlState() == sql_missing.value.getSqlState(), name
 
 
 def test_load_all_types_without_as_of_equals_sql(spark: Any) -> None:
@@ -574,6 +588,7 @@ def test_load_missing_parent_as_of_matches_sql_door(spark: Any) -> None:
         with pytest.raises(AnalysisException) as sql_missing:
             spark.sql(f"SELECT * FROM {name} VERSION AS OF {first}").collect()
         assert str(reader_missing.value) == str(sql_missing.value), name
+        assert reader_missing.value.getSqlState() == sql_missing.value.getSqlState(), name
 
 
 def test_load_all_types_as_of_refuse_alike(spark: Any) -> None:
@@ -593,3 +608,5 @@ def test_load_all_types_as_of_refuse_alike(spark: Any) -> None:
             spark.sql(f"SELECT count(*) FROM {table}.{suffix} VERSION AS OF {first}").collect()
         assert str(reader_refusal.value) == str(sql_refusal.value), suffix
         assert f"Cannot select snapshot in table: {upper}" in str(reader_refusal.value), suffix
+        assert reader_refusal.value.getSqlState() == sql_refusal.value.getSqlState(), suffix
+        assert reader_refusal.value.getSqlState() is None, suffix
