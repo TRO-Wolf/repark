@@ -40,6 +40,7 @@ mod declared_refuse;
 mod delete_granularity;
 mod describe_show;
 mod describe_table;
+mod describe_view_routing;
 mod dml;
 mod dyn_by_name_overwrite;
 mod dyn_partition_overwrite;

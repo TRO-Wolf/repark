@@ -37,9 +37,10 @@ pins: rp-4-fork-repin/C-005, C-006
   flag Java's `SparkTable` reads. A false answer falls through unchanged.
   pins: ice-meta-delete-1/C-001, C-006
 - [view_ddl/](view_ddl/map.md) — **ICE-VIEWS-1 (2026-09-20):** view grammar,
-  execution, and the wrapper-based read path (`parse` / `execute` / `read`;
-  `describe.rs` is a PR2 stub).
-  pins: ice-views-1/C-007, C-008, C-016
+  execution, and the wrapper-based read path (`parse` / `execute` / `read`).
+  **PR2 (2026-09-22, V-DESCRIBE):** `describe.rs` answers DESCRIBE on a view
+  from its stored schema off the `TableNotFound` arm in `describe_show.rs`.
+  pins: ice-views-1/C-007, C-008, C-016, C-017
 - `router.rs` — **ICE-VIEWS-1 (2026-09-20):** pre-parse CREATE/DROP/SHOW VIEWS
   arms, the DROP VIEW match arm, INSERT/DELETE/UPDATE view write guards, the
   query-only `execute_view_body_query` (no DDL dispatch, so no `Send` cycle),
@@ -1319,6 +1320,11 @@ pins: rp-4-fork-repin/C-005, C-006
   flag; rows come from `table.metadata()` (Iceberg schema via `schema_to_arrow_schema`,
   default partition spec, location, properties plus a live `current-snapshot-id`, snapshot
   summary for `Statistics`, the session-built `Owner` below).
+  **PR2 (2026-09-22, V-DESCRIBE):** the `TableNotFound` arm of
+  `execute_describe_table` probes `load_view` before refusing — a view answers
+  from its stored schema via `view_ddl/describe.rs`, a `ViewNotFound` keeps the
+  unchanged `TABLE_OR_VIEW_NOT_FOUND` refusal, other load errors propagate.
+  pins: ice-views-1/C-017
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `ShowNamespaces.catalog` is `Option` —
   the bare form lists the session's current catalog (NS-1 FIXED).
   pins: ice-catalog-session-1/C-018

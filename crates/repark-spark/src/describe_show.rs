@@ -274,11 +274,13 @@ pub(crate) async fn execute_describe_table(
     let table = match handle.load_table(&ident).await {
         Ok(table) => table,
         Err(error) if error.kind() == ErrorKind::TableNotFound => {
-            return Err(crate::catalog_ops::table_or_view_not_found(
-                &describe.catalog,
-                &describe.namespace,
-                &describe.table,
-            ));
+            return crate::view_ddl::describe::describe_view_frame(
+                ctx,
+                handle.as_ref(),
+                &describe,
+                &ident,
+            )
+            .await;
         }
         Err(error) => return Err(iceberg_err(error)),
     };
