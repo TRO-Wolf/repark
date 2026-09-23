@@ -3,6 +3,7 @@
 mod common;
 
 mod alter;
+mod alter_view_routing;
 mod alter_write_order;
 mod apply_partitioning;
 mod branch_ops;
