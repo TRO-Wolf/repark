@@ -291,7 +291,12 @@ pub(crate) async fn execute_show_tblproperties(
     );
     let view = match handle.load_view(&ident).await {
         Ok(view) => view,
-        Err(error) if error.kind() == ErrorKind::ViewNotFound => {
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::ViewNotFound | ErrorKind::FeatureUnsupported
+            ) =>
+        {
             return show_tblproperties_missing_error(
                 handle.as_ref(),
                 &catalog,

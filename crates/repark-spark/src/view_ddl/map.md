@@ -54,7 +54,8 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `show_tblproperties_batch` (`key`/`value` rows, reserved
   `location`/`provider`/`format-version` then sorted stored properties, keyed
   misses answer Spark's sentence, missing names fail closed with
-  `TABLE_OR_VIEW_NOT_FOUND`, tables fall through).
+  `TABLE_OR_VIEW_NOT_FOUND`, tables fall through; viewless catalogs treat
+  `FeatureUnsupported` as no view and also reach the table path).
   pins: ice-views-1/C-017
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
