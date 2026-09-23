@@ -6806,7 +6806,7 @@ the pin rather than obeying it.
   where that location sits inside another table's, is swept: none of the five cases applies, and
   the metadata probe of ORPHAN-4 stops at the own location. All five compare lexically
   normalised path components, so the `file:/` and `file:///` spellings of a path get the bare
-  path's verdict. Whatever the catalog, a scan path that holds another table's metadata file, or
+  path's verdict. On a `TempFallbackAllowed` catalog, a scan path that holds another table's metadata file, or
   that lies below a directory whose `metadata/` holds one, is refused too, row
   [ORPHAN-4](#orphan-4--remove_orphan_files-refuses-a-scan-path-holding-another-tables-metadata-file-2026-09-23).
   Separately, the listing path (no `file_list_view`) refuses a table whose own stored location

@@ -1,6 +1,6 @@
 # map — repark-spark/src
 
-U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. An orphan scan refuses a path that holds another table's metadata file or lies below a directory whose `metadata/` holds one (any catalog), and a path that holds, lies inside, or shares the swept table's location with another table of the same catalog. See `tests/map.md` and `call/map.md`. pins: u1-mem-layout-1/C-002, C-011, C-014, C-020, C-025, C-029
+U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. An orphan scan refuses a path that holds another table's metadata file or lies below a directory whose `metadata/` holds one (the other table of any catalog, on a `TempFallbackAllowed` catalog), and a path that holds, lies inside, or shares the swept table's location with another table of the same catalog. See `tests/map.md` and `call/map.md`. pins: u1-mem-layout-1/C-002, C-011, C-014, C-020, C-025, C-029
 
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `merge_fragments.rs` passes the clause home scope — NOT MATCHED [BY TARGET] fragments resolve bare references against the source alias, NOT MATCHED BY SOURCE against the target alias, MATCHED/ON against both. pins: ice-mixed-case-1/C-004
 
