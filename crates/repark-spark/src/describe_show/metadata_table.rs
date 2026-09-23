@@ -75,7 +75,7 @@ async fn dollar_metadata_table(
     handle: &Arc<dyn Catalog>,
     describe: &DescribeTable,
 ) -> Option<Result<RecordBatch>> {
-    let (base, suffix) = describe.table.split_once('$')?;
+    let (base, suffix) = describe.table.rsplit_once('$')?;
     if base.is_empty() {
         return None;
     }
