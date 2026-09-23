@@ -30,18 +30,15 @@ pub(crate) struct ShowTableExtended {
 
 pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTableExtended>> {
     let dialect = DatabricksDialect {};
-    let tokens = match Tokenizer::new(&dialect, sql).tokenize() {
-        Ok(tokens) => tokens,
-        Err(_) => {
-            if !starts_with_show_table_extended(sql) {
-                return None;
-            }
-            let near = unbalanced_delimiter(sql).map_or_else(
-                || "end of input".to_string(),
-                |delimiter| format!("'{delimiter}'"),
-            );
-            return Some(Err(syntax_error_near(near, None)));
+    let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
+        if !starts_with_show_table_extended(sql) {
+            return None;
         }
+        let near = unbalanced_delimiter(sql).map_or_else(
+            || "end of input".to_string(),
+            |delimiter| format!("'{delimiter}'"),
+        );
+        return Some(Err(syntax_error_near(&near, None)));
     };
     let mut parser = Parser::new(&dialect).with_tokens(tokens);
     if !parser.parse_keywords(&[Keyword::SHOW, Keyword::TABLE, Keyword::EXTENDED]) {
@@ -275,12 +272,14 @@ fn syntax_error_at(parser: &Parser) -> DataFusionError {
 }
 
 fn syntax_error_at_token(token: &Token) -> DataFusionError {
-    syntax_error_near(token_near(token), None)
+    let near = token_near(token);
+    syntax_error_near(&near, None)
 }
 
 fn trailing_syntax_error_at(parser: &Parser) -> DataFusionError {
     let near = token_near(&parser.peek_token().token);
-    syntax_error_near(near.clone(), Some(format!("extra input {near}")))
+    let detail = format!("extra input {near}");
+    syntax_error_near(&near, Some(&detail))
 }
 
 fn token_near(token: &Token) -> String {
@@ -290,7 +289,7 @@ fn token_near(token: &Token) -> String {
     }
 }
 
-fn syntax_error_near(near: String, detail: Option<String>) -> DataFusionError {
+fn syntax_error_near(near: &str, detail: Option<&str>) -> DataFusionError {
     let detail = detail.map_or_else(String::new, |detail| format!(": {detail}"));
     DataFusionError::SQL(
         Box::new(ParserError::ParserError(format!(
@@ -315,17 +314,16 @@ fn unbalanced_delimiter(sql: &str) -> Option<char> {
     let mut active_delimiter = None;
     let mut characters = sql.chars().peekable();
     while let Some(character) = characters.next() {
-        match active_delimiter {
-            Some(delimiter) if character == delimiter => {
+        if let Some(delimiter) = active_delimiter {
+            if character == delimiter {
                 if characters.peek().is_some_and(|next| *next == delimiter) {
                     let _ = characters.next();
                 } else {
                     active_delimiter = None;
                 }
             }
-            Some(_) => {}
-            None if matches!(character, '\'' | '"' | '`') => active_delimiter = Some(character),
-            None => {}
+        } else if matches!(character, '\'' | '"' | '`') {
+            active_delimiter = Some(character);
         }
     }
     active_delimiter
