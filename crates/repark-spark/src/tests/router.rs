@@ -6,6 +6,7 @@ use super::common::*;
 fn planner_default_set_recognizer_pins_malformed_near_misses() {
     for sql in [
         "",
+        "SE",
         "SELECT datafusion.catalog.default_catalog = 'ice'",
         "SETX datafusion.catalog.default_catalog = 'ice'",
         "SET datafusion.catalog.default_catalog_extra = 'ice'",
@@ -41,6 +42,7 @@ async fn bug010_multi_statement_refuses_parse_class() {
     let (ctx, catalogs) = setup(&wh).await;
     for sql in [
         "SELECT 1; SELECT 2",
+        "select 1; select 2",
         "SELECT 1; SELECT 2;",
         "SELECT 1;\nSELECT 2",
         "SELECT 1; XYZZY 2",
@@ -54,6 +56,23 @@ async fn bug010_multi_statement_refuses_parse_class() {
             err.to_string(),
             "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601\")",
             "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn malformed_quotes_and_comments_do_not_claim_multi_statement_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for sql in ["SELECT 'unterminated; SELECT 2", "SELECT 1; /* unclosed"] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("malformed SQL must fail");
+        assert!(
+            !error
+                .to_string()
+                .contains("multiple SQL statements in one call are not supported"),
+            "{sql}: {error}"
         );
     }
 }
