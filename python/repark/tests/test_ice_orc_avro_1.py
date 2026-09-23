@@ -120,9 +120,11 @@ def _table_property(spark: ReparkSession, table: str, key: str) -> str | None:
 
 def _snapshot_appends(spark: ReparkSession, table: str) -> list[tuple[Any, Any, Any]]:
     """Return `(operation, added-records, total-records)` per snapshot in commit order."""
-    rows = spark.sql(
-        f"SELECT operation, summary FROM {table}.snapshots ORDER BY committed_at"
-    ).to_arrow().to_pylist()
+    rows = (
+        spark.sql(f"SELECT operation, summary FROM {table}.snapshots ORDER BY committed_at")
+        .to_arrow()
+        .to_pylist()
+    )
     appends = []
     for row in rows:
         summary = dict(row["summary"])
@@ -134,10 +136,14 @@ def _snapshot_appends(spark: ReparkSession, table: str) -> list[tuple[Any, Any, 
 
 def _data_formats_by_snapshot(spark: ReparkSession, table: str) -> list[str]:
     """Return live data-file formats ordered by the snapshot sequence that added them."""
-    rows = spark.sql(
-        f"SELECT data_file.file_format AS file_format FROM {table}.entries "
-        "WHERE data_file.content = 0 ORDER BY sequence_number"
-    ).to_arrow().to_pylist()
+    rows = (
+        spark.sql(
+            f"SELECT data_file.file_format AS file_format FROM {table}.entries "
+            "WHERE data_file.content = 0 ORDER BY sequence_number"
+        )
+        .to_arrow()
+        .to_pylist()
+    )
     return [str(row["file_format"]) for row in rows]
 
 
@@ -565,7 +571,7 @@ def test_unknown_write_format_refuses(spark: ReparkSession) -> None:
     spark.sql(f"CREATE TABLE {table} (id BIGINT, name STRING) USING iceberg")
     spark.sql(f"INSERT INTO {table} VALUES (0, 'name-0'), (1, 'name-1')")
     frame = spark.sql("SELECT * FROM (VALUES (2, 'name-2')) AS t(id, name)")
-    with pytest.raises(IllegalArgumentException, match="^Invalid file format: csv$"):
+    with pytest.raises(IllegalArgumentException, match=r"^Invalid file format: csv$"):
         frame.writeTo(table).option("write-format", "csv").append()
     assert _snapshot_count(spark, table) == 1
 
@@ -581,7 +587,7 @@ def test_unknown_delete_format_property_refuses(spark: ReparkSession) -> None:
         f"('format-version' = '2', 'write.delete.format.default' = 'csv', {_MOR_MODES})"
     )
     spark.sql(f"INSERT INTO {table} VALUES (0, 'a'), (1, 'b')")
-    with pytest.raises(IllegalArgumentException, match="^Invalid file format: csv$"):
+    with pytest.raises(IllegalArgumentException, match=r"^Invalid file format: csv$"):
         spark.sql(f"DELETE FROM {table} WHERE id = 0")
     assert _snapshot_count(spark, table) == 1
 
