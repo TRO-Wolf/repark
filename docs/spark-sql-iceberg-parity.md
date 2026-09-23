@@ -6805,8 +6805,10 @@ the pin rather than obeying it.
   location and another table in the same catalog has exactly that location (for example two
   tables created with one `LOCATION`). The first two keep the old "shared CTAS fallback root"
   text. The last three name the other table. A path inside the swept table's own location,
-  where that location sits inside another table's, is swept: none of the five cases applies, and
-  the metadata probe of ORPHAN-4 stops at the own location. All five compare lexically
+  where that location sits inside another table's, is not refused for that containment: none of
+  the five cases applies to that relationship alone, and the metadata probe of ORPHAN-4 stops at
+  the own location. Another case (for example a third table with exactly the own location) or a
+  probe hit still refuses it. All five compare lexically
   normalised path components, so the `file:/` and `file:///` spellings of a path get the bare
   path's verdict. On a `TempFallbackAllowed` catalog, a scan path that holds another table's metadata file, or
   that lies below a directory whose `metadata/` holds one, is refused too, row
@@ -6899,15 +6901,17 @@ the pin rather than obeying it.
   `spark.sql.catalog.<c>.type=memory|hadoop`), two catalogs, or two sessions that register the
   same catalog name, on one warehouse put a location-less `ns.t` in the same directory
   `<warehouse>/ns/t`. Each reads only its own rows. Before listing, and before reading a
-  `file_list_view`, `CALL <catalog>.system.remove_orphan_files` reads every file under the scan
-  path (`location`, else the table location), at any depth, whose name ends in
+  `file_list_view`, `CALL <catalog>.system.remove_orphan_files` reads, in sorted path order until the
+  first refusal, the files under the scan path (`location`, else the table location), at any
+  depth, whose name ends in
   `.metadata.json`, except the swept table's current metadata file and the files in its
   metadata log. A file whose `table-uuid` differs from the swept table's refuses the call,
   naming the file and both uuids and telling the user to give the table its own `LOCATION`. A
   file that cannot be read as table metadata refuses too. A file with the swept table's own
   `table-uuid` (for example a copy of an old metadata file of this table) is not a refusal, and
   the sweep treats it as an orphan like any other unreferenced file. The same filter then reads
-  `<A>/metadata/` for every ancestor `A` of the scan path, from its parent upward, spelled the
+  `<A>/metadata/` for each ancestor `A` of the scan path in order, from its parent upward, stopping
+  at the first refusal, spelled the
   way the scan path is spelled. When the scan path lies strictly inside the swept table's own
   location the walk stops at that location (inclusive); when the scan path equals that location
   there is no walk; when it lies outside that location the walk runs to the storage root
@@ -6917,12 +6921,14 @@ the pin rather than obeying it.
   `<warehouse>/ns/t`, scan `<warehouse>/ns/t/data`). A hit at any other ancestor names that
   directory (`m1.ns.a` at `<warehouse>/ns/a` sweeping `<warehouse>/ns/b/data`, where `m2.ns.b`
   sits at `<warehouse>/ns/b`, or `a.t` sweeping `<warehouse>/a/t/x/data` where another table,
-  of any catalog, sits at `<warehouse>/a/t/x`). The probe reads only `metadata/` directories, so a table nested
-  in the swept table's root does not block a sweep of the root's `data/`. A refused call deletes
+  of any catalog, sits at `<warehouse>/a/t/x`). The ancestor probes read only `metadata/` directories (the scan path
+  itself is listed at any depth), so a table nested at `<own>/x` does not block a sweep of
+  `<own>/data`, while one nested under `<own>/data` refuses it. A refused call deletes
   nothing, and the other table keeps its rows. The check runs only under this catalog kind's
   `TempFallbackAllowed` policy. The `file:/` and `file:///` spellings of the scan path give the
-  bare path's verdict. Known limit: a scan path inside the swept table's own location, where that
-  location sits inside another table's, is swept, because the walk stops at the own location
+  bare path's verdict. Known limit: the host-table relationship alone does not refuse a scan path inside
+  the swept table's own location where that location sits inside another table's, because the
+  walk stops at the own location; the other refusals above still apply to it
   (the other table writes its files under its own `data/` and `metadata/`, not under the swept
   table's).
 - **Apache Spark** — not measured. No scoreboard cell puts two catalogs or two sessions on one
