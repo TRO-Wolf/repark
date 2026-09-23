@@ -1443,7 +1443,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `SHOW TABLES` scope resolver and live Iceberg table-name listing, returns Spark's four-column
   rows sorted by stored table name, and leaves sibling SHOW statements alone. Information text
   uses `spark_table_properties`, the stored location, and `spark_tree_string`; a PARTITION tail
-  loads the matched table class before the shared partition-management refusal. Views and session
+  treats the LIKE pattern as a literal table name before the shared partition-management refusal.
+  **WO-A1b (2026-09-23):** lexer errors under the exact SHOW TABLE EXTENDED head stay typed
+  `PARSE_SYNTAX_ERROR` refusals, including an unclosed delimiter; every other head falls through.
+  The router retries that parser when literal canonicalization fails first. Views and session
   temporary views remain absent from this statement's Iceberg listing.
   pins: [`tests/show_table_extended.rs`](tests/show_table_extended.rs)
 - `spark_tree_string.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** iterative Arrow-schema port

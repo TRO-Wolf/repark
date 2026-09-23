@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use datafusion::error::DataFusionError;
+use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::ErrorKind;
 use repark_common::{Error, Result};
 use repark_iceberg::write::CommitStateUnknownError;
@@ -38,6 +39,7 @@ const COERCION_FAILED_MARKER: &str = "user-defined coercion failed with: ";
 const GROUPING_MISMATCH_HEAD: &str = "[GROUPING_ID_COLUMN_MISMATCH]";
 const GROUPING_UNSUPPORTED_HEAD: &str = "[UNSUPPORTED_GROUPING_EXPRESSION]";
 const PLAN_DISPLAY_PREFIX: &str = "Error during planning: ";
+const SPARK_PARSE_SYNTAX_ERROR_HEAD: &str = "[PARSE_SYNTAX_ERROR]";
 const SQLSTATE_MARKER: &str = "SQLSTATE: ";
 const SQLSTATE_LEN: usize = 5;
 
@@ -69,6 +71,34 @@ fn grouping_refusal_message(display: &str) -> Option<String> {
         return None;
     }
     rest.get(..state_start + SQLSTATE_LEN).map(str::to_string)
+}
+
+fn spark_parse_syntax_error_message(error: &DataFusionError) -> Option<&str> {
+    let mut current = error;
+    for _ in 0..MAX_ERROR_PEEL_DEPTH {
+        match current {
+            DataFusionError::SQL(parser_error, _) => {
+                return match parser_error.as_ref() {
+                    ParserError::ParserError(message)
+                        if message.starts_with(SPARK_PARSE_SYNTAX_ERROR_HEAD) =>
+                    {
+                        Some(message)
+                    }
+                    _ => None,
+                };
+            }
+            DataFusionError::Context(_, inner) | DataFusionError::Diagnostic(_, inner) => {
+                current = inner;
+            }
+            DataFusionError::Shared(inner) => current = inner,
+            DataFusionError::Collection(errors) => match errors.first() {
+                Some(first) => current = first,
+                None => return None,
+            },
+            _ => return None,
+        }
+    }
+    None
 }
 
 /// Classify a DataFusion error after peeling wrapper variants up to [`MAX_ERROR_PEEL_DEPTH`].
@@ -133,7 +163,10 @@ pub fn engine_err_for_sql(sql: &str, err: DataFusionError) -> Error {
 #[must_use]
 pub fn engine_err(err: DataFusionError) -> Error {
     match classify_datafusion_error(&err) {
-        EngineErrorKind::Parse => Error::Parse(err.to_string()),
+        EngineErrorKind::Parse => Error::Parse(
+            spark_parse_syntax_error_message(&err)
+                .map_or_else(|| err.to_string(), ToString::to_string),
+        ),
         EngineErrorKind::Analysis => {
             let display = err.to_string();
             Error::Analysis(
@@ -342,5 +375,15 @@ mod tests {
             panic!("expected an Analysis error, got {error:?}");
         };
         assert_eq!(text, format!("Error during planning: {payload}"));
+    }
+
+    #[test]
+    fn spark_parse_syntax_error_maps_verbatim() {
+        let payload = "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601";
+        let error = engine_err(DataFusionError::SQL(
+            Box::new(ParserError::ParserError(payload.to_string())),
+            None,
+        ));
+        assert!(matches!(error, Error::Parse(message) if message == payload));
     }
 }

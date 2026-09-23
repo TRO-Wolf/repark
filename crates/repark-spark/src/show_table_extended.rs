@@ -6,7 +6,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
-use datafusion::sql::sqlparser::parser::Parser;
+use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::spec::TableMetadata;
 use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
@@ -30,7 +30,19 @@ pub(crate) struct ShowTableExtended {
 
 pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTableExtended>> {
     let dialect = DatabricksDialect {};
-    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let tokens = match Tokenizer::new(&dialect, sql).tokenize() {
+        Ok(tokens) => tokens,
+        Err(_) => {
+            if !starts_with_show_table_extended(sql) {
+                return None;
+            }
+            let near = unbalanced_delimiter(sql).map_or_else(
+                || "end of input".to_string(),
+                |delimiter| format!("'{delimiter}'"),
+            );
+            return Some(Err(syntax_error_near(near, None)));
+        }
+    };
     let mut parser = Parser::new(&dialect).with_tokens(tokens);
     if !parser.parse_keywords(&[Keyword::SHOW, Keyword::TABLE, Keyword::EXTENDED]) {
         return None;
@@ -46,10 +58,9 @@ pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTabl
     if !parser.parse_keyword(Keyword::LIKE) {
         return Some(Err(syntax_error_at(&parser)));
     }
-    let (Token::SingleQuotedString(pattern) | Token::DoubleQuotedString(pattern)) =
-        parser.next_token().token
-    else {
-        return Some(Err(syntax_error_at(&parser)));
+    let pattern = match parser.next_token().token {
+        Token::SingleQuotedString(pattern) | Token::DoubleQuotedString(pattern) => pattern,
+        token => return Some(Err(syntax_error_at_token(&token))),
     };
     let has_partition = if parser.parse_keyword(Keyword::PARTITION) {
         if !consume_parenthesized(&mut parser) {
@@ -60,7 +71,7 @@ pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTabl
         false
     };
     if !at_statement_end(&parser) {
-        return Some(Err(syntax_error_at(&parser)));
+        return Some(Err(trailing_syntax_error_at(&parser)));
     }
     Some(Ok(ShowTableExtended {
         scope,
@@ -107,23 +118,36 @@ async fn execute_show_table_extended(
     {
         return ctx.read_batch(empty);
     }
+    if statement.has_partition {
+        let ident = TableIdent::new(
+            NamespaceIdent::new(namespace.clone()),
+            statement.pattern.clone(),
+        );
+        match handle.load_table(&ident).await {
+            Ok(_) => {
+                let display = quoted_table_display(&[
+                    catalog.clone(),
+                    namespace.clone(),
+                    statement.pattern.clone(),
+                ]);
+                return Err(partition_management_unsupported(&display));
+            }
+            Err(error) if error.kind() == ErrorKind::TableNotFound => {
+                return Err(table_or_view_not_found(
+                    &catalog,
+                    &namespace,
+                    &statement.pattern,
+                ));
+            }
+            Err(error) => return Err(iceberg_err(error)),
+        };
+    }
     let mut tables = repark_iceberg::catalog::list_table_names(handle.as_ref(), &namespace).await?;
     tables.sort();
     let matching_tables: Vec<String> = tables
         .into_iter()
         .filter(|table| filter_pattern_matches(table, &statement.pattern))
         .collect();
-    if statement.has_partition {
-        let Some(table) = matching_tables.first() else {
-            return Err(table_or_view_not_found(
-                &catalog,
-                &namespace,
-                &statement.pattern,
-            ));
-        };
-        let display = quoted_table_display(&[catalog.clone(), namespace.clone(), table.clone()]);
-        return Err(partition_management_unsupported(&display));
-    }
     let mut rows = Vec::with_capacity(matching_tables.len());
     for table_name in matching_tables {
         let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone());
@@ -247,18 +271,82 @@ fn at_statement_end(parser: &Parser) -> bool {
 }
 
 fn syntax_error_at(parser: &Parser) -> DataFusionError {
-    let near = match parser.peek_token().token {
+    syntax_error_at_token(&parser.peek_token().token)
+}
+
+fn syntax_error_at_token(token: &Token) -> DataFusionError {
+    syntax_error_near(token_near(token), None)
+}
+
+fn trailing_syntax_error_at(parser: &Parser) -> DataFusionError {
+    let near = token_near(&parser.peek_token().token);
+    syntax_error_near(near.clone(), Some(format!("extra input {near}")))
+}
+
+fn token_near(token: &Token) -> String {
+    match token {
         Token::EOF => "end of input".to_string(),
         token => format!("'{token}'"),
-    };
-    DataFusionError::Plan(format!(
-        "[PARSE_SYNTAX_ERROR] Syntax error at or near {near}. SQLSTATE: 42601"
-    ))
+    }
+}
+
+fn syntax_error_near(near: String, detail: Option<String>) -> DataFusionError {
+    let detail = detail.map_or_else(String::new, |detail| format!(": {detail}"));
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(format!(
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near {near}{detail}. SQLSTATE: 42601"
+        ))),
+        None,
+    )
+}
+
+fn starts_with_show_table_extended(sql: &str) -> bool {
+    let mut words = sql.split_whitespace();
+    matches!(
+        (words.next(), words.next(), words.next()),
+        (Some(show), Some(table), Some(extended))
+            if show.eq_ignore_ascii_case("SHOW")
+                && table.eq_ignore_ascii_case("TABLE")
+                && extended.eq_ignore_ascii_case("EXTENDED")
+    )
+}
+
+fn unbalanced_delimiter(sql: &str) -> Option<char> {
+    let mut active_delimiter = None;
+    let mut characters = sql.chars().peekable();
+    while let Some(character) = characters.next() {
+        match active_delimiter {
+            Some(delimiter) if character == delimiter => {
+                if characters.peek().is_some_and(|next| *next == delimiter) {
+                    let _ = characters.next();
+                } else {
+                    active_delimiter = None;
+                }
+            }
+            Some(_) => {}
+            None if matches!(character, '\'' | '"' | '`') => active_delimiter = Some(character),
+            None => {}
+        }
+    }
+    active_delimiter
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn assert_parse_refusal(sql: &str, expected: &str) {
+        let Some(Err(error)) = try_parse_show_table_extended(sql) else {
+            panic!("expected a parse refusal for {sql:?}");
+        };
+        let DataFusionError::SQL(parser_error, _) = error else {
+            panic!("expected a SQL parser error for {sql:?}");
+        };
+        let ParserError::ParserError(message) = parser_error.as_ref() else {
+            panic!("expected a parser message for {sql:?}");
+        };
+        assert_eq!(message, expected, "{sql}");
+    }
 
     #[test]
     fn parse_accepts_scope_like_partition_and_semicolon() {
@@ -288,26 +376,58 @@ mod tests {
     }
 
     #[test]
-    fn parse_refuses_missing_like_at_the_end() {
-        let error = try_parse_show_table_extended("SHOW TABLE EXTENDED IN ice.sales")
-            .unwrap()
-            .unwrap_err()
-            .to_string();
-        assert_eq!(
-            error,
-            "Error during planning: [PARSE_SYNTAX_ERROR] Syntax error at or near end of input. \
-             SQLSTATE: 42601"
-        );
+    fn parse_refuses_required_syntax_shapes() {
+        for (sql, expected) in [
+            (
+                "SHOW TABLE EXTENDED",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN ice.sales",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN ice.sales LIKE",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN ice.sales LIKE pc",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near 'pc'. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN ice.sales LIKE \"pc",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"'. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN `ice.sales LIKE 'pc'",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near '`'. SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' extra",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near 'extra': extra input 'extra'. \
+                 SQLSTATE: 42601",
+            ),
+            (
+                "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (cat='a'",
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+            ),
+        ] {
+            assert_parse_refusal(sql, expected);
+        }
     }
 
     #[test]
     fn parse_leaves_near_misses_alone() {
         for sql in [
-            "SHOW TABLES IN sales",
-            "SHOW TABLES EXTENDED IN sales LIKE '*'",
-            "SHOW TBLPROPERTIES sales.pl",
-            "SHOW CREATE TABLE sales.pl",
-            "SHOW TABLE EXTENSION LIKE 'pl'",
+            "SHOW TABLES IN `x`",
+            "SHOW TABLE EXTENDEDX IN a LIKE 'b'",
+            "SELECT 'SHOW TABLE EXTENDED `x'",
+            "SHOW TBLPROPERTIES `x`",
+            "SHOW CREATE TABLE `x`",
         ] {
             assert!(try_parse_show_table_extended(sql).is_none(), "{sql}");
         }

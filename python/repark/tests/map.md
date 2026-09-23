@@ -5069,7 +5069,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   still None. **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `SHOW TABLES [IN|FROM]
   [LIKE]` is implemented SQL (ST-1 FIXED). **SHOW-TABLE-EXTENDED-1 (2026-09-23):**
   `SHOW TABLE EXTENDED IN catalog.namespace LIKE pattern` answers its four-column facade shape
-  and metadata text. The remaining divergence is
+  and metadata text. **WO-A1b (2026-09-23):** its bare, unclosed-quote, existing-PARTITION, and
+  absent-PARTITION paths pin exception class, condition, SQLSTATE, and complete message.
+  The remaining divergence is
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   pins: ice-catalog-session-1/C-016
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).

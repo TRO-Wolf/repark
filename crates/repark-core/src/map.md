@@ -344,6 +344,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   verbatim (never the `Execution error: ` display); `Analysis` peels DataFusion's
   `user-defined coercion failed with: ` wrap to the `[CONDITION] … SQLSTATE: XXXXX`
   refusal payload when one is present, else keeps the full display. pins: fnp-math-1/C-004
+  **WO-A1b (2026-09-23):** a `ParserError` payload headed `[PARSE_SYNTAX_ERROR]` stays a
+  `Parse` error and renders verbatim; every other parser payload keeps the DataFusion display.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see

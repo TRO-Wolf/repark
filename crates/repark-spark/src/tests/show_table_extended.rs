@@ -1,4 +1,6 @@
 use datafusion::arrow::array::BooleanArray;
+use datafusion::error::DataFusionError;
+use datafusion::sql::sqlparser::parser::ParserError;
 
 use super::super::*;
 use super::common::*;
@@ -21,11 +23,9 @@ async fn outcome(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
-) -> std::result::Result<(Vec<String>, Vec<ExtendedRow>), String> {
-    let frame = execute(ctx, catalogs, sql)
-        .await
-        .map_err(|error| error.to_string())?;
-    let batches = frame.collect().await.map_err(|error| error.to_string())?;
+) -> std::result::Result<(Vec<String>, Vec<ExtendedRow>), DataFusionError> {
+    let frame = execute(ctx, catalogs, sql).await?;
+    let batches = frame.collect().await?;
     let columns = batches
         .first()
         .map(|batch| {
@@ -64,6 +64,37 @@ async fn outcome(
         }
     }
     Ok((columns, rows))
+}
+
+fn assert_parse_refusal(sql: &str, error: DataFusionError, expected: &str) {
+    let DataFusionError::SQL(parser_error, _) = error else {
+        panic!("{sql}: expected a SQL parser error, got {error:?}");
+    };
+    let ParserError::ParserError(message) = parser_error.as_ref() else {
+        panic!("{sql}: expected a parser message");
+    };
+    assert_eq!(message, expected, "{sql}");
+}
+
+fn assert_diagnostic_parse_refusal(sql: &str, error: DataFusionError, expected: &str) {
+    let DataFusionError::Diagnostic(diagnostic, inner) = error else {
+        panic!("{sql}: expected a diagnostic parser error, got {error:?}");
+    };
+    assert_eq!(diagnostic.message, expected, "{sql}");
+    let DataFusionError::SQL(parser_error, _) = inner.as_ref() else {
+        panic!("{sql}: expected a SQL parser error inside the diagnostic");
+    };
+    let ParserError::ParserError(message) = parser_error.as_ref() else {
+        panic!("{sql}: expected a parser message inside the diagnostic");
+    };
+    assert_eq!(message, expected, "{sql}");
+}
+
+fn assert_analysis_refusal(sql: &str, error: DataFusionError, expected: &str) {
+    let DataFusionError::Plan(message) = error else {
+        panic!("{sql}: expected a planning error");
+    };
+    assert_eq!(message, expected, "{sql}");
 }
 
 async fn show_table_extended(
@@ -218,12 +249,21 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
         owner: None,
         tree: "root\n |-- id: long (nullable = true)\n",
     });
-    let (_, rows) = show_table_extended(
+    let (columns, rows) = show_table_extended(
         &ctx,
         &catalogs,
         "SHOW TABLE EXTENDED FROM ice.sales LIKE 'pl'",
     )
     .await;
+    assert_eq!(
+        columns,
+        vec![
+            "namespace".to_string(),
+            "tableName".to_string(),
+            "isTemporary".to_string(),
+            "information".to_string(),
+        ]
+    );
     assert_eq!(
         rows,
         vec![("sales".to_string(), "pl".to_string(), false, expected)]
@@ -444,44 +484,100 @@ async fn show_table_extended_refuses_required_error_shapes() {
         "CREATE TABLE ice.sales.pc (id BIGINT, cat STRING) USING iceberg PARTITIONED BY (cat)",
     )
     .await;
-    let missing_like = outcome(&ctx, &catalogs, "SHOW TABLE EXTENDED IN ice.sales")
-        .await
-        .unwrap_err();
-    assert!(
-        missing_like
-            .contains("[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601"),
-        "{missing_like}"
-    );
-    let partition = outcome(
-        &ctx,
-        &catalogs,
-        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (cat='a')",
-    )
-    .await
-    .unwrap_err();
-    assert!(
-        partition.contains(
-            "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition \
-             command is invalid. Table `ice`.`sales`.`pc` does not support partition management. \
-             SQLSTATE: 42601"
+    for (sql, expected) in [
+        (
+            "SHOW TABLE EXTENDED",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
         ),
-        "{partition}"
-    );
-    let absent_partition = outcome(
-        &ctx,
-        &catalogs,
-        "SHOW TABLE EXTENDED IN ice.sales LIKE 'absent' PARTITION (cat='a')",
-    )
-    .await
-    .unwrap_err();
-    assert!(
-        absent_partition.contains("[TABLE_OR_VIEW_NOT_FOUND]"),
-        "{absent_partition}"
-    );
-    let namespace = outcome(&ctx, &catalogs, "SHOW TABLE EXTENDED IN ice.nope LIKE '*'")
+        (
+            "SHOW TABLE EXTENDED IN ice.sales",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE pc",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'pc'. SQLSTATE: 42601",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE \"pc",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"'. SQLSTATE: 42601",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN `ice.sales LIKE 'pc'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near '`'. SQLSTATE: 42601",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' extra",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'extra': extra input 'extra'. \
+             SQLSTATE: 42601",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (cat='a'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601",
+        ),
+    ] {
+        let error = outcome(&ctx, &catalogs, sql)
+            .await
+            .expect_err("statement must refuse");
+        assert_parse_refusal(sql, error, expected);
+    }
+
+    let partition_sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (cat='a')";
+    let partition = outcome(&ctx, &catalogs, partition_sql)
         .await
-        .unwrap_err();
-    assert!(namespace.contains("[SCHEMA_NOT_FOUND]"), "{namespace}");
+        .expect_err("partition management must refuse");
+    assert_analysis_refusal(
+        partition_sql,
+        partition,
+        "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition \
+         command is invalid. Table `ice`.`sales`.`pc` does not support partition management. \
+         SQLSTATE: 42601",
+    );
+
+    for (sql, expected) in [
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE 'absent' PARTITION (cat='a')",
+            "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`absent` cannot be found. \
+             Verify the spelling and correctness of the schema and catalog. If you did not qualify \
+             the name with a schema, verify the current_schema() output, or qualify the name with \
+             the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS \
+             or DROP TABLE IF EXISTS. SQLSTATE: 42P01",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE '*' PARTITION (cat='a')",
+            "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`*` cannot be found. \
+             Verify the spelling and correctness of the schema and catalog. If you did not qualify \
+             the name with a schema, verify the current_schema() output, or qualify the name with \
+             the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS \
+             or DROP TABLE IF EXISTS. SQLSTATE: 42P01",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.nope LIKE '*'",
+            "[SCHEMA_NOT_FOUND] The schema `ice`.`nope` cannot be found. Verify the spelling and \
+             correctness of the schema and catalog. If you did not qualify the name with a catalog, \
+             verify the current_schema() output, or qualify the name with the correct catalog. To \
+             tolerate the error on drop use DROP SCHEMA IF EXISTS. SQLSTATE: 42704",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales.x LIKE '*'",
+            "[SCHEMA_NOT_FOUND] The schema `ice`.`sales`.`x` cannot be found. Verify the spelling \
+             and correctness of the schema and catalog. If you did not qualify the name with a \
+             catalog, verify the current_schema() output, or qualify the name with the correct \
+             catalog. To tolerate the error on drop use DROP SCHEMA IF EXISTS. SQLSTATE: 42704",
+        ),
+    ] {
+        let error = outcome(&ctx, &catalogs, sql)
+            .await
+            .expect_err("statement must refuse");
+        assert_analysis_refusal(sql, error, expected);
+    }
 }
 
 #[tokio::test]
@@ -503,23 +599,35 @@ async fn show_table_extended_near_misses_keep_their_existing_paths() {
         .await
         .unwrap();
     assert_eq!(columns, vec!["namespace", "tableName", "isTemporary"]);
-    let bare = outcome(&ctx, &catalogs, "SHOW TABLE EXTENDED")
+    let tables_extended_sql = "SHOW TABLES EXTENDED IN sales LIKE '*'";
+    let tables_extended = outcome(&ctx, &catalogs, tables_extended_sql)
         .await
-        .unwrap_err();
-    assert!(bare.contains("[PARSE_SYNTAX_ERROR]"), "{bare}");
-    let tables_extended = outcome(&ctx, &catalogs, "SHOW TABLES EXTENDED IN sales LIKE '*'").await;
-    if let Ok((columns, _)) = tables_extended {
-        assert_ne!(
-            columns,
-            vec!["namespace", "tableName", "isTemporary", "information"]
-        );
-    }
+        .expect_err("SHOW TABLES EXTENDED must keep its current parser refusal");
+    assert_diagnostic_parse_refusal(
+        tables_extended_sql,
+        tables_extended,
+        "Expected: end of statement, found: EXTENDED at Line: 1, Column: 13",
+    );
     let properties = outcome(&ctx, &catalogs, "SHOW TBLPROPERTIES ice.sales.pl")
         .await
-        .unwrap_err();
-    assert!(properties.contains("SHOW [VARIABLE]"), "{properties}");
+        .expect_err("SHOW TBLPROPERTIES must keep its current refusal");
+    assert_analysis_refusal(
+        "SHOW TBLPROPERTIES ice.sales.pl",
+        properties,
+        "SHOW [VARIABLE] is not supported unless information_schema is enabled",
+    );
+    for sql in ["SHOW TABLE", "SHOW TABLE ice.sales.pl"] {
+        let error = outcome(&ctx, &catalogs, sql)
+            .await
+            .expect_err("SHOW TABLE must keep its current refusal");
+        assert_analysis_refusal(
+            sql,
+            error,
+            "SHOW [VARIABLE] is not supported unless information_schema is enabled",
+        );
+    }
     let (columns, _) = outcome(&ctx, &catalogs, "SHOW CREATE TABLE ice.sales.pl")
         .await
-        .unwrap();
+        .expect("SHOW CREATE TABLE must keep its current output");
     assert_eq!(columns, vec!["createtab_stmt"]);
 }

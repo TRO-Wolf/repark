@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkTypeError
+from repark.errors import AnalysisException, ParseException, PySparkTypeError
 from repark.spark.catalog import Catalog, CatalogMetadata, Database, Table
 
 
@@ -453,6 +453,57 @@ def test_show_table_extended_returns_spark_metadata_shape(spark: ReparkSession) 
     information = frame.collect()[0]["information"]
     assert information.startswith("Catalog: glue_catalog\n")
     assert "\nSchema: root\n" in information
+
+
+def test_show_table_extended_refusal_error_contracts(spark: ReparkSession) -> None:
+    """SHOW TABLE EXTENDED preserves Spark's typed refusal details."""
+    with pytest.raises(ParseException) as bare:
+        spark.sql("SHOW TABLE EXTENDED").to_arrow()
+    assert bare.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert bare.value.getSqlState() == "42601"
+    assert (
+        str(bare.value)
+        == "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601"
+    )
+
+    partition_sql = "SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'entity' PARTITION (name='a')"
+    with pytest.raises(AnalysisException) as partition:
+        spark.sql(partition_sql).to_arrow()
+    assert (
+        partition.value.getCondition()
+        == "INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED"
+    )
+    assert partition.value.getSqlState() == "42601"
+    assert (
+        str(partition.value) == "Error during planning: "
+        "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition "
+        "command is invalid. Table `glue_catalog`.`ns1`.`entity` does not support partition "
+        "management. SQLSTATE: 42601"
+    )
+
+    absent_sql = "SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'absent' PARTITION (name='a')"
+    with pytest.raises(AnalysisException) as absent:
+        spark.sql(absent_sql).to_arrow()
+    assert absent.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert absent.value.getSqlState() == "42P01"
+    assert (
+        str(absent.value) == "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        "`glue_catalog`.`ns1`.`absent` cannot be found. Verify the spelling and correctness "
+        "of the schema and catalog. If you did not qualify the name with a schema, verify the "
+        "current_schema() output, or qualify the name with the correct schema and catalog. To "
+        "tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. "
+        "SQLSTATE: 42P01"
+    )
+
+    unclosed_quote_sql = "SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'entity"
+    with pytest.raises(ParseException) as unclosed_quote:
+        spark.sql(unclosed_quote_sql).to_arrow()
+    assert unclosed_quote.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert unclosed_quote.value.getSqlState() == "42601"
+    assert (
+        str(unclosed_quote.value)
+        == "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601"
+    )
 
 
 def test_list_databases_location_uri_none_divergence(spark: ReparkSession) -> None:
