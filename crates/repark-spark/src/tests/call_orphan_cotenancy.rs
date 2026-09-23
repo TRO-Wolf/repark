@@ -1,11 +1,11 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use iceberg::TableIdent;
 use iceberg::table::Table;
 use repark_core::ReparkSession;
 
 use super::call_orphan_scope::{
-    call_error, call_rows, plan_message, plant, referenced_data_file, submit,
+    call_error, call_rows, plan_message, plant, referenced_data_file, register_file_list, submit,
 };
 use super::common::*;
 use crate::{SparkDialect, SparkExtension};
@@ -506,4 +506,261 @@ async fn call_orphan_cotenancy_unreadable_metadata_file_refuses() {
     );
     assert!(unreadable.exists());
     assert_eq!(ids(&session, "ice.ns.t").await, vec![1]);
+}
+
+fn walk(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(dir).expect("read dir").flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            out.extend(walk(&path));
+        } else {
+            out.push(path);
+        }
+    }
+    out.sort();
+    out
+}
+
+fn inside_own_location_refusal(
+    table_arg: &str,
+    scan: &str,
+    own_location: &str,
+    file: &str,
+    uuid: &str,
+    own_uuid: &str,
+) -> String {
+    format!(
+        "CALL remove_orphan_files refuses to sweep `{table_arg}`: path `{scan}` lies inside the \
+         swept table's own location `{own_location}`, whose metadata directory holds `{file}`, \
+         the metadata file of another table (table-uuid `{uuid}`; the swept table's is \
+         `{own_uuid}`), such as a table of another catalog or session on the same warehouse. \
+         This procedure deletes every file the swept table's own metadata does not reference, \
+         which would include that table's live files. Give the table its own LOCATION \
+         (`CREATE TABLE ... LOCATION '<path>'`), then sweep it."
+    )
+}
+
+fn shared_location_refusal(
+    table_arg: &str,
+    scan: &str,
+    own_location: &str,
+    other: &str,
+    other_location: &str,
+) -> String {
+    format!(
+        "CALL remove_orphan_files refuses to sweep `{table_arg}`: path `{scan}` lies inside the \
+         swept table's own location `{own_location}`, which table `{other}` shares at \
+         `{other_location}`. This procedure deletes every file the swept table's own metadata \
+         does not reference, which would include that table's live files. Give the table its own \
+         LOCATION (`CREATE TABLE ... LOCATION '<path>'`), then sweep it."
+    )
+}
+
+async fn assert_data_scan_refused(
+    sweeper: &ReparkSession,
+    sweeper_catalog: &str,
+    table_arg: &str,
+    table_dir: &Path,
+    expected: impl Fn(&str) -> String,
+) {
+    let orphan = plant(table_dir, "orphan-file.parquet", 10);
+    age_tree(table_dir, 10);
+    let before = walk(table_dir);
+    for scan in file_spellings(&table_dir.join("data")) {
+        let err = call_error(
+            sweeper,
+            &format!(
+                "CALL {sweeper_catalog}.system.remove_orphan_files(table => '{table_arg}', \
+                 location => '{scan}')"
+            ),
+        )
+        .await;
+        assert_eq!(plan_message(err), expected(&scan), "{scan}");
+    }
+    register_file_list(sweeper, &[(orphan.display().to_string(), 0)]).await;
+    let scan = table_dir.join("data").display().to_string();
+    let err = call_error(
+        sweeper,
+        &format!(
+            "CALL {sweeper_catalog}.system.remove_orphan_files(table => '{table_arg}', \
+             file_list_view => 'v', location => '{scan}')"
+        ),
+    )
+    .await;
+    assert_eq!(plan_message(err), expected(&scan), "file_list_view");
+    assert!(
+        orphan.exists(),
+        "a refused sweep deletes the planted orphan"
+    );
+    assert_eq!(walk(table_dir), before, "a refused sweep deletes nothing");
+}
+
+async fn assert_co_tenant_data_scan_refused(
+    sweeper: &ReparkSession,
+    sweeper_catalog: &str,
+    owner: &ReparkSession,
+    owner_catalog: &str,
+    table_dir: &Path,
+) {
+    let swept = load(sweeper, sweeper_catalog, &["ns", "t"]).await;
+    let foreign = load(owner, owner_catalog, &["ns", "t"]).await;
+    let own_files = metadata_files(&swept);
+    let first_foreign = metadata_files(&foreign)
+        .into_iter()
+        .find(|file| !own_files.contains(file))
+        .expect("the co-tenant wrote its own metadata files");
+    let own_location = swept.metadata().location().to_string();
+    let foreign_uuid = foreign.metadata().uuid().to_string();
+    let own_uuid = swept.metadata().uuid().to_string();
+    assert_eq!(own_location, table_dir.display().to_string());
+    assert_data_scan_refused(sweeper, sweeper_catalog, "ns.t", table_dir, |scan| {
+        inside_own_location_refusal(
+            "ns.t",
+            scan,
+            &own_location,
+            &first_foreign,
+            &foreign_uuid,
+            &own_uuid,
+        )
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn call_orphan_cotenancy_two_catalogs_data_dir_scan_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let session = memory_session(&warehouse, &["m1", "m2"]).await;
+    for catalog in ["m1", "m2"] {
+        submit(&session, &format!("CREATE NAMESPACE {catalog}.ns")).await;
+    }
+    create_with_row(&session, "m1.ns.t", 1).await;
+    create_with_row(&session, "m2.ns.t", 2).await;
+    let table_dir = warehouse.path().join("ns").join("t");
+
+    assert_co_tenant_data_scan_refused(&session, "m1", &session, "m2", &table_dir).await;
+    assert_eq!(ids(&session, "m1.ns.t").await, vec![1]);
+    assert_eq!(ids(&session, "m2.ns.t").await, vec![2]);
+}
+
+#[tokio::test]
+async fn call_orphan_cotenancy_two_sessions_data_dir_scan_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let first = memory_session(&warehouse, &["ice"]).await;
+    let second = memory_session(&warehouse, &["ice"]).await;
+    for session in [&first, &second] {
+        submit(session, "CREATE NAMESPACE ice.ns").await;
+    }
+    create_with_row(&first, "ice.ns.t", 1).await;
+    create_with_row(&second, "ice.ns.t", 2).await;
+    let table_dir = warehouse.path().join("ns").join("t");
+
+    assert_co_tenant_data_scan_refused(&first, "ice", &second, "ice", &table_dir).await;
+    assert_eq!(ids(&first, "ice.ns.t").await, vec![1]);
+    assert_eq!(ids(&second, "ice.ns.t").await, vec![2]);
+}
+
+#[tokio::test]
+async fn call_orphan_cotenancy_same_catalog_shared_location_data_dir_scan_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let session = memory_session(&warehouse, &["ice"]).await;
+    submit(&session, "CREATE NAMESPACE ice.ns").await;
+    submit(&session, "CREATE NAMESPACE ice.o").await;
+    create_with_row(&session, "ice.ns.t", 1).await;
+    let table_dir = warehouse.path().join("ns").join("t");
+    let location = table_dir.display().to_string();
+    submit(
+        &session,
+        &format!("CREATE TABLE ice.o.t (id INT) LOCATION '{location}'"),
+    )
+    .await;
+    submit(&session, "INSERT INTO ice.o.t VALUES (2)").await;
+
+    for (swept, other) in [("ns.t", "ice.o.t"), ("o.t", "ice.ns.t")] {
+        assert_data_scan_refused(&session, "ice", swept, &table_dir, |scan| {
+            shared_location_refusal(swept, scan, &location, other, &location)
+        })
+        .await;
+    }
+    assert_eq!(ids(&session, "ice.ns.t").await, vec![1]);
+    assert_eq!(ids(&session, "ice.o.t").await, vec![2]);
+}
+
+#[tokio::test]
+async fn call_orphan_cotenancy_lone_table_data_dir_scan_deletes_the_orphan() {
+    let warehouse = TempDir::new().unwrap();
+    let session = memory_session(&warehouse, &["ice"]).await;
+    submit(&session, "CREATE NAMESPACE ice.ns").await;
+    create_with_row(&session, "ice.ns.t", 1).await;
+    let table_dir = warehouse.path().join("ns").join("t");
+    age_tree(&table_dir, 10);
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+
+    let listed = call_rows(
+        &session,
+        &format!(
+            "CALL ice.system.remove_orphan_files(table => 'ns.t', location => '{}')",
+            table_dir.join("data").display()
+        ),
+    )
+    .await
+    .expect("a table's own data/ is sweepable");
+    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert!(!orphan.exists());
+    assert_eq!(ids(&session, "ice.ns.t").await, vec![1]);
+}
+
+#[tokio::test]
+async fn call_orphan_cotenancy_host_table_data_dir_scan_ignores_a_table_nested_in_its_root() {
+    let warehouse = TempDir::new().unwrap();
+    let session = memory_session(&warehouse, &["ice"]).await;
+    submit(&session, "CREATE NAMESPACE ice.a").await;
+    submit(&session, "CREATE NAMESPACE ice.o").await;
+    create_with_row(&session, "ice.a.t", 1).await;
+    let host_dir = warehouse.path().join("a").join("t");
+    let nested_dir = host_dir.join("x");
+    submit(
+        &session,
+        &format!(
+            "CREATE TABLE ice.o.x (id INT) LOCATION '{}'",
+            nested_dir.display()
+        ),
+    )
+    .await;
+    submit(&session, "INSERT INTO ice.o.x VALUES (2)").await;
+    age_tree(&host_dir, 10);
+    let nested_files = walk(&nested_dir);
+    let orphan = plant(&host_dir, "orphan-file.parquet", 10);
+
+    let listed = call_rows(
+        &session,
+        &format!(
+            "CALL ice.system.remove_orphan_files(table => 'a.t', location => '{}')",
+            host_dir.join("data").display()
+        ),
+    )
+    .await
+    .expect("a table nested in the swept root writes no metadata into its metadata/");
+    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert!(!orphan.exists());
+    assert_eq!(walk(&nested_dir), nested_files);
+    assert_eq!(ids(&session, "ice.a.t").await, vec![1]);
+    assert_eq!(ids(&session, "ice.o.x").await, vec![2]);
+}
+
+#[tokio::test]
+async fn call_orphan_cotenancy_fallback_root_guard_passes_a_table_dir_inside_the_root() {
+    use crate::call::remove_orphan_files::refuse_shared_temp_fallback_location;
+    let warehouse = TempDir::new().unwrap();
+    let session = memory_session(&warehouse, &["ice"]).await;
+    let policy = session.catalogs_snapshot().location_policy("ice");
+    let root = warehouse.path().join("repark_ctas");
+    for spelling in file_spellings(&root.join("ice").join("ns").join("t").join("data")) {
+        refuse_shared_temp_fallback_location(policy.as_ref(), &spelling, "ns.t")
+            .unwrap_or_else(|error| panic!("{spelling}: {error}"));
+    }
+    for spelling in file_spellings(&root) {
+        refuse_shared_temp_fallback_location(policy.as_ref(), &spelling, "ns.t")
+            .expect_err("the shared root itself is refused");
+    }
 }

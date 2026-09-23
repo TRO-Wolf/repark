@@ -92,6 +92,19 @@ pub(crate) async fn refuse_scan_over_other_tables(
                     ident.name()
                 )));
             }
+            if other_path == own && scan.starts_with(&own) {
+                return Err(DataFusionError::Plan(format!(
+                    "CALL remove_orphan_files refuses to sweep `{table_arg}`: path \
+                     `{scan_location}` lies inside the swept table's own location `{}`, which \
+                     table `{catalog_name}.{}.{}` shares at `{other_location}`. This procedure \
+                     deletes every file the swept table's own metadata does not reference, which \
+                     would include that table's live files. Give the table its own LOCATION \
+                     (`CREATE TABLE ... LOCATION '<path>'`), then sweep it.",
+                    own.display(),
+                    ident.namespace().as_ref().join("."),
+                    ident.name()
+                )));
+            }
             if scan.starts_with(&other_path) && !scan.starts_with(&own) {
                 return Err(DataFusionError::Plan(format!(
                     "CALL remove_orphan_files refuses to sweep `{table_arg}`: path \
@@ -119,6 +132,45 @@ pub(crate) async fn refuse_scan_over_foreign_metadata(
     if !matches!(policy, Some(LocationPolicy::TempFallbackAllowed { .. })) {
         return Ok(());
     }
+    let own_uuid = swept.metadata().uuid().to_string();
+    if let Some((location, read)) =
+        foreign_metadata_file(swept, &normalize_location_path(scan_location)).await?
+    {
+        return Err(foreign_metadata_refusal(
+            table_arg,
+            &format!("path `{scan_location}` holds `{location}`"),
+            read,
+            &own_uuid,
+        ));
+    }
+    let scan = normalize_orphan_scan_path(scan_location);
+    let own_location = swept.metadata().location();
+    let own = normalize_orphan_scan_path(own_location);
+    if scan == own || !scan.starts_with(&own) {
+        return Ok(());
+    }
+    let own_metadata_dir = format!(
+        "{}/metadata",
+        normalize_location_path(own_location).trim_end_matches('/')
+    );
+    if let Some((location, read)) = foreign_metadata_file(swept, &own_metadata_dir).await? {
+        return Err(foreign_metadata_refusal(
+            table_arg,
+            &format!(
+                "path `{scan_location}` lies inside the swept table's own location \
+                 `{own_location}`, whose metadata directory holds `{location}`"
+            ),
+            read,
+            &own_uuid,
+        ));
+    }
+    Ok(())
+}
+
+async fn foreign_metadata_file(
+    swept: &Table,
+    directory: &str,
+) -> Result<Option<(String, iceberg::Result<String>)>> {
     let metadata = swept.metadata();
     let own_files: HashSet<PathBuf> = swept
         .metadata_location()
@@ -131,10 +183,9 @@ pub(crate) async fn refuse_scan_over_foreign_metadata(
         )
         .map(normalize_orphan_scan_path)
         .collect();
-    let own_uuid = metadata.uuid();
     let file_io = swept.file_io();
     let mut candidates: Vec<(PathBuf, String)> = file_io
-        .list(normalize_location_path(scan_location))
+        .list(directory)
         .await
         .map_err(iceberg_err)?
         .into_iter()
@@ -148,35 +199,39 @@ pub(crate) async fn refuse_scan_over_foreign_metadata(
         .collect();
     candidates.sort();
     for (_, location) in candidates {
-        match TableMetadata::read_from(file_io, &location)
+        let read = TableMetadata::read_from(file_io, &location)
             .await
-            .map(|foreign| foreign.uuid())
-        {
-            Ok(uuid) if uuid == own_uuid => {}
-            Ok(uuid) => {
-                return Err(DataFusionError::Plan(format!(
-                    "CALL remove_orphan_files refuses to sweep `{table_arg}`: path \
-                     `{scan_location}` holds `{location}`, the metadata file of another table \
-                     (table-uuid `{uuid}`; the swept table's is `{own_uuid}`), such as a table of \
-                     another catalog or session on the same warehouse. This procedure deletes \
-                     every file the swept table's own metadata does not reference, which would \
-                     include that table's live files. Give the table its own LOCATION \
-                     (`CREATE TABLE ... LOCATION '<path>'`), then sweep it."
-                )));
-            }
-            Err(reason) => {
-                return Err(DataFusionError::Plan(format!(
-                    "CALL remove_orphan_files refuses to sweep `{table_arg}`: path \
-                     `{scan_location}` holds `{location}`, a metadata file that is not in the \
-                     swept table's metadata log and cannot be read as table metadata \
-                     ({reason}), so it may belong to another table whose live files this \
-                     procedure would delete. Give the table its own LOCATION \
-                     (`CREATE TABLE ... LOCATION '<path>'`), then sweep it."
-                )));
-            }
+            .map(|foreign| foreign.uuid().to_string());
+        if !matches!(&read, Ok(uuid) if *uuid == metadata.uuid().to_string()) {
+            return Ok(Some((location, read)));
         }
     }
-    Ok(())
+    Ok(None)
+}
+
+fn foreign_metadata_refusal(
+    table_arg: &str,
+    holder: &str,
+    read: iceberg::Result<String>,
+    own_uuid: &str,
+) -> DataFusionError {
+    DataFusionError::Plan(match read {
+        Ok(uuid) => format!(
+            "CALL remove_orphan_files refuses to sweep `{table_arg}`: {holder}, the metadata file \
+             of another table (table-uuid `{uuid}`; the swept table's is `{own_uuid}`), such as a \
+             table of another catalog or session on the same warehouse. This procedure deletes \
+             every file the swept table's own metadata does not reference, which would include \
+             that table's live files. Give the table its own LOCATION \
+             (`CREATE TABLE ... LOCATION '<path>'`), then sweep it."
+        ),
+        Err(reason) => format!(
+            "CALL remove_orphan_files refuses to sweep `{table_arg}`: {holder}, a metadata file \
+             that is not in the swept table's metadata log and cannot be read as table metadata \
+             ({reason}), so it may belong to another table whose live files this procedure would \
+             delete. Give the table its own LOCATION (`CREATE TABLE ... LOCATION '<path>'`), \
+             then sweep it."
+        ),
+    })
 }
 
 pub(crate) fn refuse_service_managed_orphan_sweep(
