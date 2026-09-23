@@ -72,7 +72,9 @@ def test_describe_absent_name_keeps_full_refusal(spark: ReparkSession) -> None:
     """Neither table nor view -> unchanged TABLE_OR_VIEW_NOT_FOUND, byte for byte."""
     with pytest.raises(AnalysisException) as caught:
         spark.sql("DESCRIBE sc.ns.definitely_absent")
-    assert TABLE_OR_VIEW_NOT_FOUND_ABSENT in str(caught.value)
+    assert str(caught.value) == f"Error during planning: {TABLE_OR_VIEW_NOT_FOUND_ABSENT}"
+    assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert caught.value.getSqlState() == "42P01"
 
 
 def test_describe_partitioned_table_unchanged(spark: ReparkSession) -> None:
