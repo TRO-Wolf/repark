@@ -3518,7 +3518,9 @@ the pin rather than obeying it.
 - **Rationale** — FIXED 2026-09-23 under ruling Q-55-7; the unit ledger is
   `task/ledgers/staging/u1-mem-layout-1-ledger.md`. On this `TempFallbackAllowed` catalog kind, a table's own
   subdirectory is sweepable by `remove_orphan_files`, except when another table's location equals the table's own, or lies
-  inside it and contains, equals or sits under the swept subdirectory (ORPHAN-3, ORPHAN-4); the
+  inside it and contains, equals or sits under the swept subdirectory (ORPHAN-3, ORPHAN-4), and
+  except when a metadata file of another table, or an unreadable one, lies under the swept path or
+  in the `metadata/` directory of one of its ancestors (the ORPHAN-4 metadata refusal); the
   warehouse root is not (Q-55-6).
 
 ### ICE-MERGE-APPEND-1 — an INSERT commits through a MERGING append — **FIXED 2026-09-19 (RePark paths)**
@@ -6907,7 +6909,8 @@ the pin rather than obeying it.
   the sweep treats it as an orphan like any other unreferenced file. The same filter then reads
   `<A>/metadata/` for every ancestor `A` of the scan path, from its parent upward, spelled the
   way the scan path is spelled. When the scan path lies strictly inside the swept table's own
-  location the walk stops at that location (inclusive); otherwise it runs to the storage root
+  location the walk stops at that location (inclusive); when the scan path equals that location
+  there is no walk; when it lies outside that location the walk runs to the storage root
   (`/`, or the bucket for an object store). A missing directory lists as empty; any other listing
   error fails the call. A hit at the own location says the path lies inside the swept table's own
   location, whose metadata directory holds the file (two catalogs or two sessions sharing

@@ -1007,8 +1007,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and through `file_list_view` with the complete message naming `<wh>/ns/b` in the scan's spelling
   (`call_orphan_ancestor_two_catalogs_sibling_data_dir_scan_refuses`,
   `…_two_sessions_sibling_data_dir_scan_refuses`). `metadata_probe_ancestors` walks from the scan's
-  parent to the storage root (`/`, `s3://bkt/`), or stops at the own location when the scan lies
-  inside it (`…_enumeration_walks_to_the_storage_root_or_the_own_location`). Near misses stay
+  parent to the storage root (`/`, `s3://bkt/`) when the scan lies outside the own location, stops at
+  the own location when the scan lies strictly inside it, and gives nothing when the scan equals it
+  (`…_enumeration_walks_to_the_storage_root_or_the_own_location`). Near misses stay
   sweepable: `m1.ns.a`'s own `data/` beside `m2.ns.b`, and `<wh>/scratch/x` with no table above it
   (`…_own_data_dir_scan_beside_another_catalog_deletes_the_orphan`,
   `…_scan_with_no_table_above_it_is_swept`). A scan inside a table nested in the swept table's own
