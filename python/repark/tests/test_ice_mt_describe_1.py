@@ -14,6 +14,7 @@ pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-00
 pins: ipi-23-mt-describe-1/C-010, C-011, C-012
 pins: ipi-23-mt-describe-1/C-013, C-014, C-015
 pins: ipi-23-mt-describe-1/C-016, C-018, C-019
+pins: ipi-23-mt-describe-1/C-020, C-021, C-022
 """
 
 from __future__ import annotations
@@ -342,6 +343,48 @@ def test_quoted_dollar_name_answers_metadata_rows(spark: Any) -> None:
     pins: ipi-23-mt-describe-1/C-013
     """
     assert _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.`{TABLE}$snapshots`") == SNAPSHOT_ROWS
+
+
+def test_dollar_in_base_splits_at_last_dollar(spark: Any) -> None:
+    """``a$b$snapshots`` splits at the last ``$``: DESCRIBE matches SELECT's schema.
+
+    pins: ipi-23-mt-describe-1/C-020
+    """
+    spark.sql(f"CREATE TABLE {CATALOG}.{NAMESPACE}.`a$b` (id BIGINT) USING iceberg")
+    spark.sql(f"INSERT INTO {CATALOG}.{NAMESPACE}.`a$b` VALUES (1)")
+    selected = spark.sql(f"SELECT * FROM {CATALOG}.{NAMESPACE}.`a$b$snapshots`").to_arrow()
+    expected = [(field.name, _ddl_name(field.type), None) for field in selected.schema]
+    described = _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.`a$b$snapshots`")
+    assert described == expected
+    assert described != _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.`a$b`")
+
+
+def test_dollar_base_describes_itself(spark: Any) -> None:
+    """DESCRIBE of the ``a$b`` base answers its own columns, not metadata rows.
+
+    pins: ipi-23-mt-describe-1/C-021
+    """
+    spark.sql(f"CREATE TABLE {CATALOG}.{NAMESPACE}.`a$b` (id BIGINT) USING iceberg")
+    assert _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.`a$b`") == [("id", "bigint", None)]
+
+
+def test_dollar_unknown_suffix_keeps_not_found(spark: Any) -> None:
+    """``a$b$nonsense`` keeps the measured TABLE_OR_VIEW_NOT_FOUND refusal.
+
+    pins: ipi-23-mt-describe-1/C-022
+    """
+    spark.sql(f"CREATE TABLE {CATALOG}.{NAMESPACE}.`a$b` (id BIGINT) USING iceberg")
+    expected = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{NAMESPACE}`.`a$b$nonsense` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.`a$b$nonsense`")
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 def test_explicit_three_part_namespace_shadowing_base_falls_through(spark: Any) -> None:
