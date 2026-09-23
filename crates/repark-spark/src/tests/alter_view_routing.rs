@@ -238,3 +238,77 @@ async fn alter_view_router_keeps_the_tail_parser_refusal() {
         "Error during planning: could not parse `ALTER VIEW`: expected TBLPROPERTIES after SET"
     );
 }
+
+#[tokio::test]
+async fn alter_view_rename_rejects_cross_catalog_and_existing_destinations() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.b AS SELECT * FROM src",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER VIEW ice.sales.v RENAME TO other.sales.b",
+    )
+    .await
+    .expect_err("cross catalog move must refuse")
+    .to_string();
+    assert_eq!(
+        error,
+        "Error during planning: Cannot move view between catalogs: from=ice and to=other"
+    );
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER VIEW ice.sales.v RENAME TO ice.sales.b",
+    )
+    .await
+    .expect_err("existing view must refuse")
+    .to_string();
+    assert_eq!(
+        error,
+        "Error during planning: [VIEW_ALREADY_EXISTS] Cannot create view sales.b because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+    );
+}
+
+#[tokio::test]
+async fn alter_view_rename_moves_the_view() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER VIEW ice.sales.v RENAME TO ice.sales.b",
+    )
+    .await;
+    let source = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    let destination = TableIdent::new(NamespaceIdent::new("sales".to_string()), "b".to_string());
+    assert!(
+        !catalogs["ice"]
+            .view_exists(&source)
+            .await
+            .expect("source existence")
+    );
+    assert!(
+        catalogs["ice"]
+            .view_exists(&destination)
+            .await
+            .expect("destination existence")
+    );
+}
