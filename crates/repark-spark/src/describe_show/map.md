@@ -22,14 +22,16 @@ with the four-part parser for names the metadata rewrite leaves untouched.
   path keeps the plain compound-identifier refusal (real table wins, via the
   shared `../metadata_tables.rs::table_exists_parts` probe — the same rule
   SELECT applies); a missing base or namespace answers TABLE_OR_VIEW_NOT_FOUND
-  naming the full four-part name, any other base error surfaces as-is, and
+  naming the name as written — the four written parts, or the written
+  `cat.ns.t$suffix` name when the `$` form was written directly — any other base
+  error surfaces as-is, and
   anything without `$` falls through to the plain path
   (no default-namespace recovery since critic r1).
   `try_parse_describe_metadata_table` parses the un-rewritten four-part form
   (missing base, `EXTENDED`/`FORMATTED`, which print the column rows only).
   `../describe_show.rs` carries the five-line hook and the router a two-line
   `or_else`; the plain path maps a missing namespace to the same 42P01 answer.
-  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-007, C-009, C-012, C-013, C-015, C-016, C-017
+  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-007, C-009, C-012, C-013, C-015, C-016, C-017, C-018, C-019
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../describe_show.rs`.
 
 ## Pointers

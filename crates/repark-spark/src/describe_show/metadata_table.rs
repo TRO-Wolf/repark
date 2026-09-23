@@ -108,12 +108,16 @@ async fn dollar_metadata_table(
                         ErrorKind::TableNotFound | ErrorKind::NamespaceNotFound
                     ) =>
                 {
-                    Some(Err(table_or_view_not_found_parts(&[
-                        describe.catalog.as_str(),
-                        describe.namespace.as_str(),
-                        base,
-                        suffix,
-                    ])))
+                    let parts: Vec<&str> = if describe.written_parts.is_empty() {
+                        vec![
+                            describe.catalog.as_str(),
+                            describe.namespace.as_str(),
+                            describe.table.as_str(),
+                        ]
+                    } else {
+                        describe.written_parts.iter().map(String::as_str).collect()
+                    };
+                    Some(Err(table_or_view_not_found_parts(&parts)))
                 }
                 Err(error) => Some(Err(iceberg_err(error))),
                 Ok(_) => Some(Err(provider_error)),
