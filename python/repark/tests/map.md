@@ -7780,7 +7780,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   against the SQL door on the same table (rows and column names; C-010 pins the
   reader's rows standalone with no SQL arm, and the live leg C-013 compares the
   selected rows only, pinning absolute fields and the `record_count` sum), each
-  paired refusal against the SQL door's class and text.
+  paired refusal against the SQL door's class and text — the unknown-suffix
+  refusal pairing only `getSqlState()` beside its literal text, and the
+  legacy-option refusals standing alone on literal texts with `getSqlState()`
+  `None`.
   **critic r2 (2026-09-23):** the recorded cells also
   pin the reader frame's field name, `simpleString()` and `nullable`
   (`operation` string nullable, `record_count` bigint non-nullable) plus the absolute
