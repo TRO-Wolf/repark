@@ -360,6 +360,27 @@ def test_alter_table_set_tblproperties_unchanged(spark: ReparkSession) -> None:
     assert _table_properties(spark, "sc.ns.t").get("k") == "v"
 
 
+def test_alter_table_set_on_view_name_answers_table_path_missing(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """ALTER TABLE sees a view as a missing table and does not change its metadata."""
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
+    metadata_files = sorted((tmp_path / "ns" / "v" / "metadata").glob("*.json"))
+    properties_before = json.loads(metadata_files[-1].read_text(encoding="utf-8"))["properties"]
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("ALTER TABLE sc.ns.v SET TBLPROPERTIES ('k'='v')")
+    assert str(caught.value) == (
+        'TableNotFound => No such table: TableIdent { namespace: NamespaceIdent(["ns"]), '
+        'name: "v" }'
+    )
+    assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
+    assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
+    metadata_files = sorted((tmp_path / "ns" / "v" / "metadata").glob("*.json"))
+    properties_after = json.loads(metadata_files[-1].read_text(encoding="utf-8"))["properties"]
+    assert properties_after == properties_before
+    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
+
+
 def test_bare_alter_view_without_verb_is_not_swallowed(spark: ReparkSession) -> None:
     """Near-miss c — ALTER VIEW with no verb keeps the engine's parse refusal."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
