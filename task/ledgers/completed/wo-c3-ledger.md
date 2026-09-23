@@ -34,10 +34,43 @@ pushes, or rebases.
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: wo-c3
+  complete: true
   categories:
     - id: AT-1
-      status: OPEN
-      evidence: Pending the Rust and facade pins for the five critic findings.
-      artifacts: []
-  complete: false
+      status: ATTACKED
+      evidence: C-001 through C-005 are PROVEN with Rust, facade, dbt, map, and registry evidence in the same branch.
+      artifacts: [crates/repark-spark/src/tests/show_create.rs, python/repark/tests/test_show_create_table.py, task/ledgers/completed/wo-c3-ledger.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: The m8 comment labels, m2 multi-term sort terms, m4 SHOW rows, and m9 parser forms exercise the changed input boundaries.
+      artifacts: [crates/repark-spark/src/show_create.rs, crates/repark-spark/src/tests/show_create.rs, python/repark/tests/test_e1_errorclass.py]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Typed parse refusals, malformed ParserError wrappers, unclosed comments, and unrelated SHOW forms retain explicit outcomes.
+      artifacts: [crates/repark-spark/src/show_create.rs, python/repark/tests/test_show_create_table.py, python/repark/tests/test_ice_error_conditions_1.py]
+    - id: AT-4
+      status: N/A
+      justification: The scanner and SHOW route use no shared mutable state, lock, task, or ordering-sensitive write.
+    - id: AT-5
+      status: N/A
+      justification: The unit has no credential, network, AWS, IAM, secret, or destructive operation surface.
+    - id: AT-6
+      status: ATTACKED
+      evidence: CREATE text, parse class, condition, SQLSTATE, error rendering, property rows, and Arrow schemas are all asserted at their entry points.
+      artifacts: [crates/repark-spark/src/tests/show_create.rs, python/repark/tests/test_show_create_table.py, python/dbt-repark/tests/test_statement_surface.py]
+    - id: AT-7
+      status: N/A
+      justification: The unit makes no performance claim and adds no data scan, background task, or unbounded allocation path.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The shared Spark-visible property list serves both SHOW CREATE and SHOW TBLPROPERTIES; m2, m4, m8, and m9 oracle shapes are pinned.
+      artifacts: [crates/repark-spark/src/table_props_view.rs, crates/repark-spark/src/show_create.rs, docs/spark-sql-iceberg-parity.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: The visible parse and property-row surfaces use exact messages, full rows, field names, and Arrow types instead of fragments.
+      artifacts: [crates/repark-spark/src/tests/show_create.rs, python/repark/tests/test_show_create_table.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The raw-keyword and partial-answer class sweeps cover the changed branch; rust-clippy, panic ban, size, map, Ruff, and comment-ban gates passed.
+      artifacts: [crates/repark-spark/src/router.rs, crates/repark-spark/src/show_create.rs, crates/repark-spark/src/tests/show_create.rs]
 ```
