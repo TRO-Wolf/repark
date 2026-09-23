@@ -199,6 +199,8 @@ FINDING:
 | `uvx ruff@0.15.22 format --check` + `ruff check` on the new test file | exit 0 |
 | critic r1 tree-gate (same four files) | `CB=0 R=0 T=0 U=1 L=1`: exactly the three V-001 red specs fail (offline 3 failed/66 passed/2 skipped; live 3 failed/68 passed); V-002, C-013/C-015 and every md-r1 pin green in both legs |
 | critic r1 `cargo clippy` workspace + panic-ban (both invocations) + `./scripts/check_rust_file_size.sh` + ruff on the test file + `check_ledger_grammar.py` + `comment_ban.py origin/main` | all exit 0 |
+| critic r3fix tree-gate (same four files) | `CB=0 R=0 T=0 U=0 L=0`: rust 62 passed; offline 69 passed, 2 skipped, 1 xfailed; live 71 passed, 1 xfailed |
+| critic r3fix `cargo clippy` workspace + panic-ban (both invocations) + `./scripts/check_rust_file_size.sh` + `check_lib_rs.py` + `check_map_md.sh --base origin/main` + ruff on the test file + `check_ledger_grammar.py` + `comment_ban.py` | all exit 0 |
 
 ## COVERAGE_ATTESTATION
 
