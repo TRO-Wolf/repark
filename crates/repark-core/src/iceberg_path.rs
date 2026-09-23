@@ -105,10 +105,30 @@ fn latest_metadata_location(files: &[FileInfo]) -> Option<&str> {
 fn metadata_file_version(name: &str) -> Option<u64> {
     let stem = name.strip_suffix(".metadata.json")?;
     if let Some(rest) = stem.strip_prefix('v') {
-        return rest.parse().ok();
+        if !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()) {
+            return rest.parse().ok();
+        }
+        return None;
     }
-    let (leading, _) = stem.split_once('-')?;
+    let (leading, uuid) = stem.split_once('-')?;
+    if leading.is_empty() || !leading.bytes().all(|b| b.is_ascii_digit()) || !is_uuid(uuid) {
+        return None;
+    }
     leading.parse().ok()
+}
+
+fn is_uuid(candidate: &str) -> bool {
+    const DASHES: [usize; 4] = [8, 13, 18, 23];
+    if candidate.len() != 36 {
+        return false;
+    }
+    candidate.bytes().enumerate().all(|(index, byte)| {
+        if DASHES.contains(&index) {
+            byte == b'-'
+        } else {
+            byte.is_ascii_hexdigit()
+        }
+    })
 }
 
 #[cfg(test)]
