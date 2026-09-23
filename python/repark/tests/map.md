@@ -3076,7 +3076,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: wo-c10/C-002
   **WO-A4 (2026-09-23):** INSERT BY NAME with a column list and multi-statement SQL pin the
   bare bracketed parser payload, `ParseException`, `PARSE_SYNTAX_ERROR`, and SQLSTATE `42601`.
-  pins: wo-c3/C-006
+  pins: wo-c5/C-001
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
   expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare
   SELECT/INSERT/CTAS/UPDATE/DELETE; temp-view prefer on FROM; VIEW/TEMP TABLE non-rewrite;
@@ -7045,13 +7045,9 @@ pins: fnp-8-review/C-009, C-010
   parser-wrapper message. The multi-statement facade refusal includes `42601`.
   pins: wo-c5/C-001, C-002, C-003, C-004; wo-c10/C-001, C-003
   **WO-C5 (2026-09-23):** post-head unclosed bracket comments assert `ParseException`,
-  `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full parser-wrapper message; a comment hiding
+  `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full bare parser message (WO-A4 rendering); a comment hiding
   TABLE pins the tokenizer fall-through. The multi-statement facade refusal includes `42601`.
   pins: wo-c5/C-001, C-002, C-003, C-004
-  **WO-C3 C7-C9 (2026-09-23):** post-head unclosed bracket comments assert `ParseException`,
-  `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full bare parser message; a comment hiding
-  TABLE pins the tokenizer fall-through. The multi-statement facade refusal includes `42601`.
-  pins: wo-c3/C-007, C-008, C-009
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce
