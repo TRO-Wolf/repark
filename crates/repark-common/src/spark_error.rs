@@ -31,6 +31,10 @@ pub enum Condition {
     WrongNumArgsWithoutSuggestion,
     InvalidConfValueTimeZone,
     CannotMergeSchemas,
+    ViewAlreadyExists,
+    ViewNotFound,
+    CreateViewColumnArityMismatchNotEnoughDataColumns,
+    CreateViewColumnArityMismatchTooManyDataColumns,
 }
 
 pub const TABLE_OR_VIEW_NOT_FOUND: Condition = Condition::TableOrViewNotFound;
@@ -73,6 +77,12 @@ pub const DATATYPE_MISMATCH_UNEXPECTED_INPUT_TYPE: Condition =
 pub const WRONG_NUM_ARGS_WITHOUT_SUGGESTION: Condition = Condition::WrongNumArgsWithoutSuggestion;
 pub const INVALID_CONF_VALUE_TIME_ZONE: Condition = Condition::InvalidConfValueTimeZone;
 pub const CANNOT_MERGE_SCHEMAS: Condition = Condition::CannotMergeSchemas;
+pub const VIEW_ALREADY_EXISTS: Condition = Condition::ViewAlreadyExists;
+pub const VIEW_NOT_FOUND: Condition = Condition::ViewNotFound;
+pub const CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS: Condition =
+    Condition::CreateViewColumnArityMismatchNotEnoughDataColumns;
+pub const CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS: Condition =
+    Condition::CreateViewColumnArityMismatchTooManyDataColumns;
 
 impl Condition {
     #[must_use]
@@ -117,14 +127,22 @@ impl Condition {
             Self::WrongNumArgsWithoutSuggestion => "WRONG_NUM_ARGS.WITHOUT_SUGGESTION",
             Self::InvalidConfValueTimeZone => "INVALID_CONF_VALUE.TIME_ZONE",
             Self::CannotMergeSchemas => "CANNOT_MERGE_SCHEMAS",
+            Self::ViewAlreadyExists => "VIEW_ALREADY_EXISTS",
+            Self::ViewNotFound => "VIEW_NOT_FOUND",
+            Self::CreateViewColumnArityMismatchNotEnoughDataColumns => {
+                "CREATE_VIEW_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS"
+            }
+            Self::CreateViewColumnArityMismatchTooManyDataColumns => {
+                "CREATE_VIEW_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS"
+            }
         }
     }
 
     #[must_use]
     pub fn sqlstate(self) -> Option<&'static str> {
         match self {
-            Self::TableOrViewNotFound => Some("42P01"),
-            Self::TableOrViewAlreadyExists => Some("42P07"),
+            Self::TableOrViewNotFound | Self::ViewNotFound => Some("42P01"),
+            Self::TableOrViewAlreadyExists | Self::ViewAlreadyExists => Some("42P07"),
             Self::NotSupportedCommandForV2Table
             | Self::UnsupportedFeatureTableOperation
             | Self::NotSupportedChangeColumn
@@ -133,7 +151,9 @@ impl Condition {
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported
             | Self::ParseSyntaxError => Some("42601"),
             Self::IncompatibleDataForTableCannotSafelyCast => Some("KD000"),
-            Self::InsertColumnArityMismatchNotEnoughDataColumns => Some("21S01"),
+            Self::InsertColumnArityMismatchNotEnoughDataColumns
+            | Self::CreateViewColumnArityMismatchNotEnoughDataColumns
+            | Self::CreateViewColumnArityMismatchTooManyDataColumns => Some("21S01"),
             Self::NotNullAssertViolation => Some("42000"),
             Self::FailedToLoadRoutine => Some("38000"),
             Self::CastInvalidInput => Some("22018"),
@@ -236,6 +256,18 @@ impl Condition {
             Self::CannotMergeSchemas => {
                 "Failed to merge ORC schemas: column `{columnName}` has conflicting types ({firstType} and {secondType})"
             }
+            Self::ViewAlreadyExists => {
+                "Cannot create view {relationName} because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects."
+            }
+            Self::ViewNotFound => {
+                "The view {relationName} cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS."
+            }
+            Self::CreateViewColumnArityMismatchNotEnoughDataColumns => {
+                "Cannot create view {viewName}, the reason is not enough data columns:\nView columns: {viewColumns}.\nData columns: {dataColumns}."
+            }
+            Self::CreateViewColumnArityMismatchTooManyDataColumns => {
+                "Cannot create view {viewName}, the reason is too many data columns:\nView columns: {viewColumns}.\nData columns: {dataColumns}."
+            }
         }
     }
 }
@@ -329,6 +361,9 @@ mod tests {
         ("configKey", "spark.sql.session.timeZone"),
         ("firstType", "Int64"),
         ("secondType", "Utf8"),
+        ("viewName", "sc.ns.va"),
+        ("viewColumns", "a, b"),
+        ("dataColumns", "id"),
     ];
 
     const ALL: &[Condition] = &[
@@ -361,11 +396,15 @@ mod tests {
         WRONG_NUM_ARGS_WITHOUT_SUGGESTION,
         INVALID_CONF_VALUE_TIME_ZONE,
         CANNOT_MERGE_SCHEMAS,
+        VIEW_ALREADY_EXISTS,
+        VIEW_NOT_FOUND,
+        CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
+        CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS,
     ];
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 29);
+        assert_eq!(ALL.len(), 33);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();
@@ -585,6 +624,96 @@ mod tests {
                 ]
             ),
             "[INVALID_CONF_VALUE.TIME_ZONE] The value 'Mars/Olympus' in the config \"spark.sql.session.timeZone\" is invalid. Cannot resolve the given timezone. SQLSTATE: 22022"
+        );
+    }
+
+    #[test]
+    fn take_view_conditions_carry_the_recorded_sqlstates() {
+        let rows: [Row<'_>; 4] = [
+            (VIEW_ALREADY_EXISTS, &[("relationName", "ns.v1")], "42P07"),
+            (VIEW_NOT_FOUND, &[("relationName", "ns.v3")], "42P01"),
+            (
+                CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
+                &[
+                    ("viewName", "sc.ns.va"),
+                    ("viewColumns", "a, b"),
+                    ("dataColumns", "id"),
+                ],
+                "21S01",
+            ),
+            (
+                CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS,
+                &[
+                    ("viewName", "sc.ns.vaf"),
+                    ("viewColumns", "a"),
+                    ("dataColumns", "id, data"),
+                ],
+                "21S01",
+            ),
+        ];
+        for (condition, params, sqlstate) in rows {
+            assert_eq!(condition.sqlstate(), Some(sqlstate));
+            let rendered = message(condition, params);
+            let head = format!("[{}] ", condition.name());
+            assert!(rendered.starts_with(&head), "missing head: {rendered}");
+            for (_, value) in params {
+                assert!(rendered.contains(value), "missing {value}: {rendered}");
+            }
+            assert!(!rendered.contains('{'), "unrendered param: {rendered}");
+            assert!(
+                rendered.ends_with(&format!(" SQLSTATE: {sqlstate}")),
+                "missing clause: {rendered}"
+            );
+        }
+    }
+
+    #[test]
+    fn view_already_exists_reproduces_the_live_probe_bytes() {
+        assert_eq!(
+            message(VIEW_ALREADY_EXISTS, &[("relationName", "ns1.v1")]),
+            "[VIEW_ALREADY_EXISTS] Cannot create view ns1.v1 because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07",
+            "pins: ice-views-1/C-010"
+        );
+    }
+
+    #[test]
+    fn view_not_found_reproduces_the_live_probe_bytes() {
+        assert_eq!(
+            message(VIEW_NOT_FOUND, &[("relationName", "ns1.missing")]),
+            "[VIEW_NOT_FOUND] The view ns1.missing cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS. SQLSTATE: 42P01",
+            "pins: ice-views-1/C-010"
+        );
+    }
+
+    #[test]
+    fn view_arity_not_enough_reproduces_the_live_probe_bytes() {
+        assert_eq!(
+            message(
+                CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
+                &[
+                    ("viewName", "sc.ns1.va"),
+                    ("viewColumns", "a, b"),
+                    ("dataColumns", "id"),
+                ]
+            ),
+            "[CREATE_VIEW_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS] Cannot create view sc.ns1.va, the reason is not enough data columns:\nView columns: a, b.\nData columns: id. SQLSTATE: 21S01",
+            "pins: ice-views-1/C-010"
+        );
+    }
+
+    #[test]
+    fn view_arity_too_many_reproduces_the_live_probe_bytes() {
+        assert_eq!(
+            message(
+                CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS,
+                &[
+                    ("viewName", "sc.ns1.vaf"),
+                    ("viewColumns", "a"),
+                    ("dataColumns", "id, data"),
+                ]
+            ),
+            "[CREATE_VIEW_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS] Cannot create view sc.ns1.vaf, the reason is too many data columns:\nView columns: a.\nData columns: id, data. SQLSTATE: 21S01",
+            "pins: ice-views-1/C-010"
         );
     }
 

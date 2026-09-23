@@ -1,5 +1,6 @@
 use super::super::*;
 
+use crate::view::{ViewDefinition, ViewTarget, create_or_replace_view};
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
@@ -153,5 +154,55 @@ async fn refuse_non_empty_namespace_drop_refuses_a_namespace_holding_a_child_nam
             .to_string()
             .contains("Namespace parent is not empty. Contains 1 child namespace(s)."),
         "got: {error}"
+    );
+}
+
+#[tokio::test]
+async fn refuse_non_empty_namespace_drop_refuses_a_view_only_namespace() {
+    let warehouse = TempDir::new().unwrap_or_else(|error| panic!("tempdir: {error}"));
+    let catalog = memory_catalog(warehouse.path().to_str().unwrap_or_else(|| {
+        panic!("warehouse path must be utf8");
+    }))
+    .await
+    .unwrap_or_else(|error| panic!("memory catalog must build: {error}"));
+    let namespace = NamespaceIdent::new("guarded".to_string());
+    catalog
+        .create_namespace(&namespace, HashMap::new())
+        .await
+        .unwrap_or_else(|error| panic!("namespace must create: {error}"));
+    let target = ViewTarget {
+        catalog_name: "sc",
+        catalog: catalog.as_ref(),
+        namespace: &namespace,
+        namespace_name: "guarded",
+        view_name: "vw",
+    };
+    create_or_replace_view(
+        &target,
+        false,
+        false,
+        ViewDefinition {
+            sql: "SELECT id FROM t".to_string(),
+            schema: single_column_schema(),
+            properties: HashMap::new(),
+            warehouse: warehouse
+                .path()
+                .to_str()
+                .unwrap_or_else(|| panic!("warehouse path must be utf8"))
+                .to_string(),
+            location_override: None,
+            default_catalog: "sc".to_string(),
+        },
+    )
+    .await
+    .unwrap_or_else(|error| panic!("view must create: {error}"));
+    let error = refuse_non_empty_namespace_drop(catalog.as_ref(), &namespace, "guarded")
+        .await
+        .expect_err("a view-only namespace must refuse the drop");
+    assert!(
+        error
+            .to_string()
+            .contains("Namespace guarded is not empty. Contains 1 view(s)."),
+        "pins: ice-views-1/C-013, got: {error}"
     );
 }

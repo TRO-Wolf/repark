@@ -158,9 +158,10 @@ class ReparkSession:
         """Run a Spark-SQL string and return a :class:`DataFrame` (PySpark ``spark.sql``).
 
         Bare / two-part table names in load-bearing free-SQL forms (``DROP TABLE``,
-        ``INSERT``, ``CREATE TABLE``, ``MERGE INTO``, ``UPDATE``, ``DELETE FROM``,
-        ``DESCRIBE``, ``SELECT``/``WITH`` FROM/JOIN) expand under the session default
-        catalog + namespace at this entry point via :meth:`resolve_table_name` — not by
+        ``DROP VIEW``, ``INSERT``, ``CREATE TABLE``, ``CREATE VIEW``, ``MERGE INTO``,
+        ``UPDATE``, ``DELETE FROM``, ``TRUNCATE TABLE``, ``DESCRIBE``,
+        ``SELECT``/``WITH`` FROM/JOIN) expand under the session default catalog +
+        namespace at this entry point via :meth:`resolve_table_name` — not by
         call-site string surgery. Auto-memory-catalog sticky alias semantics apply
         unchanged.
 
@@ -237,12 +238,14 @@ class ReparkSession:
         Statement-prefix / parsed-bounded shapes only (no freestyle body regex). Shared SSOT:
         :meth:`resolve_table_name`. Forms:
 
-        * ``DROP TABLE [IF EXISTS] name [, …]`` (sqlutils cleanup)
+        * ``DROP TABLE|VIEW [IF EXISTS] name [, …]`` (sqlutils cleanup; views mirror tables)
         * ``INSERT [OVERWRITE [TABLE] | INTO [TABLE]] name …`` (target; not DIRECTORY)
         * ``CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name …`` (durable target; not TEMP)
+        * ``CREATE [OR REPLACE] VIEW [IF NOT EXISTS] name …`` (durable target; not TEMP)
         * ``MERGE INTO target [AS a] USING source [AS b] ON …`` (target + source)
         * ``UPDATE name [alias] SET … [WHERE …]`` (target; SET body never regexed)
         * ``DELETE FROM name [alias] [WHERE …]`` (target; WHERE-subquery FROM via walker)
+        * ``TRUNCATE TABLE name`` (target; other shapes pass through)
         * ``DESCRIBE [TABLE] [EXTENDED|FORMATTED] name`` (target; temp view = its HOME)
         * ``SELECT`` / ``WITH`` … (FROM/JOIN/comma refs; a one-part temp view = its HOME)
 
@@ -257,29 +260,16 @@ class ReparkSession:
 
     def _expand_bare_table_names_in_sql_body(self, query: str) -> str:
         """Statement-form dispatch after leading trivia has been stripped."""
-        # DROP TABLE [IF EXISTS] — sqlutils.table() context manager path.
-        drop_match = _DROP_TABLE_SQL_RE.match(query)
-        if drop_match is not None:
-            if_exists, purge = drop_match.group(1) or "", " PURGE" if drop_match.group(3) else ""
-            names_blob = drop_match.group(2).strip().rstrip(";").strip()
-            if not names_blob:
-                return query
-            qualified: list[str] = []
-            for raw_name in _split_sql_table_name_list(names_blob):
-                # DROP never prefers temp-view short-circuit for one-part Iceberg tables; qualify.
-                # Temp views use dropTempView, not DROP TABLE.
-                resolved = self.resolve_table_name(raw_name, prefer_temp_view=False)
-                qualified.append(_sql_table_ref(resolved))
-            return f"DROP TABLE {if_exists}{', '.join(qualified)}{purge}"
+        drop_expanded = _expand_drop_table_or_view_sql(query, self.resolve_table_name)
+        if drop_expanded is not None:
+            return drop_expanded
 
         # MERGE INTO — target + source.
         merge_match = _MERGE_INTO_SQL_RE.match(query)
         if merge_match is not None:
             return self._expand_merge_into_sql(query, merge_match)
 
-        # CREATE VIEW / TEMP VIEW — leave the view name alone; expand the AS body only.
-        # Durable CREATE TABLE handled below.
-        view_expanded = self._try_expand_create_view_body_sql(query)
+        view_expanded = self._try_expand_create_view_sql(query)
         if view_expanded is not None:
             return view_expanded
 
@@ -300,6 +290,9 @@ class ReparkSession:
         delete_expanded = self._try_expand_delete_sql(query)
         if delete_expanded is not None:
             return delete_expanded
+        truncate_expanded = _expand_truncate_target_sql(query, self.resolve_table_name)
+        if truncate_expanded is not None:
+            return truncate_expanded
 
         describe_expanded = self._try_expand_describe_sql(query)
         if describe_expanded is not None:
@@ -311,25 +304,13 @@ class ReparkSession:
 
         return query
 
-    def _try_expand_create_view_body_sql(self, query: str) -> str | None:
-        """Expand FROM/JOIN inside ``CREATE [TEMP] VIEW … AS <query>`` bodies.
-
-        View *names* stay as written (temp views are session-local; durable view catalog
-        qualification is residual). Returns ``None`` when not a CREATE VIEW shape.
-        """
-        if _CREATE_VIEW_SQL_RE.match(query) is None:
-            return None
-        # Find the AS that introduces the view query (last structural AS before SELECT/WITH).
-        match = re.search(r"(?is)\bAS\b", query)
-        if match is None:
-            return query
-        prefix = query[: match.end()]
-        body = query[match.end() :]
-        body_trivia, body_sql = _split_leading_sql_trivia(body)
-        if _SELECT_OR_WITH_HEAD_RE.match(body_sql) is None:
-            return query
-        expanded_body = self._expand_from_join_table_refs_in_sql(body_sql)
-        return f"{prefix}{body_trivia}{expanded_body}"
+    def _try_expand_create_view_sql(self, query: str) -> str | None:
+        """Expand durable CREATE VIEW targets and TEMP VIEW bodies."""
+        if _CREATE_TEMP_VIEW_SQL_RE.match(query) is not None:
+            return _expand_temp_view_body_sql(query, self._expand_from_join_table_refs_in_sql)
+        return _expand_durable_create_view_sql(
+            query, self.resolve_table_name, self.create_namespace
+        )
 
     def _qualify_sql_table_ref(self, raw_name: str, *, prefer_temp_view: bool) -> str:
         """Resolve + quote a single table identifier for free-SQL expansion."""

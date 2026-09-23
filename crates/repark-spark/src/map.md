@@ -36,6 +36,27 @@ pins: rp-4-fork-repin/C-005, C-006
   (`spark_door_case_insensitive`, Spark's `spark.sql.caseSensitive=false` default), which is the
   flag Java's `SparkTable` reads. A false answer falls through unchanged.
   pins: ice-meta-delete-1/C-001, C-006
+- [view_ddl/](view_ddl/map.md) — **ICE-VIEWS-1 (2026-09-20):** view grammar,
+  execution, and the wrapper-based read path (`parse` / `execute` / `read`;
+  `describe.rs` is a PR2 stub).
+  pins: ice-views-1/C-007, C-008, C-016
+- `router.rs` — **ICE-VIEWS-1 (2026-09-20):** pre-parse CREATE/DROP/SHOW VIEWS
+  arms, the DROP VIEW match arm, INSERT/DELETE/UPDATE view write guards, the
+  query-only `execute_view_body_query` (no DDL dispatch, so no `Send` cycle),
+  and the CREATE VIEW straight-to-`execute_inner` skip that keeps stored bodies
+  verbatim past the time-travel/lineage rewrites. `lib.rs` wires `pub mod
+  view_ddl`; `namespace_ddl.rs` refuses DROP TABLE over a view and DROP VIEW
+  over a table; `insert_by_name.rs` takes the same write guard;
+  `describe_show.rs` exposes `tokenize_with_spans` for the view parsers.
+  R2 hardens the guard fail-closed (metadata writes refuse up front, `is_view`
+  returns a `Result`, branch selectors still fall through).
+  pins: ice-views-1/C-006, C-007, C-008, C-011, C-012, C-015, C-016
+  **WO-R3 (2026-09-22):** the query-only `execute_view_body_query` and the
+  `refuse_insert_into_view` guard move to `view_dispatch.rs` (router.rs
+  1025 → 967, under the file-size ceiling); behavior unchanged, callers
+  updated by path only. **V-001 (2026-09-22):** the `bare_name_target` bit is
+  gone — the facade's bare-name mark qualifies the name only, and the
+  tighten refusal on the CREATE VIEW catalog write is unconditional.
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `execute_merge_statement` (OUTPUT refusal, timestamp_ns cast lowering) so `execute_inner` stays under clippy's 100-line cap (run 22b).

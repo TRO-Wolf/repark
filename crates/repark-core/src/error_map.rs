@@ -6,7 +6,9 @@ use datafusion::error::DataFusionError;
 use iceberg::ErrorKind;
 use repark_common::{Error, Result};
 use repark_iceberg::write::CommitStateUnknownError;
-pub use repark_iceberg::write::{IllegalArgumentMarker, illegal_argument_error};
+#[cfg(test)]
+use repark_iceberg::write::unsupported_error;
+pub use repark_iceberg::write::{IllegalArgumentMarker, UnsupportedMarker, illegal_argument_error};
 
 use crate::object_store_s3;
 
@@ -20,6 +22,7 @@ pub(crate) enum EngineErrorKind<'a> {
     IllegalArgument,
     IllegalArgumentMarked(&'a IllegalArgumentMarker),
     ArithmeticOverflow(&'a str),
+    UnsupportedMarked(&'a UnsupportedMarker),
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
     Iceberg(&'a iceberg::Error),
     CommitStateUnknown(&'a CommitStateUnknownError),
@@ -84,9 +87,12 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
                     Some(stamped) => EngineErrorKind::CommitStateUnknown(stamped),
                     None => match inner.downcast_ref::<IllegalArgumentMarker>() {
                         Some(marker) => EngineErrorKind::IllegalArgumentMarked(marker),
-                        None => match inner.downcast_ref::<iceberg::Error>() {
-                            Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
-                            None => EngineErrorKind::Other,
+                        None => match inner.downcast_ref::<UnsupportedMarker>() {
+                            Some(marker) => EngineErrorKind::UnsupportedMarked(marker),
+                            None => match inner.downcast_ref::<iceberg::Error>() {
+                                Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
+                                None => EngineErrorKind::Other,
+                            },
                         },
                     },
                 };
@@ -140,6 +146,7 @@ pub fn engine_err(err: DataFusionError) -> Error {
         EngineErrorKind::Unsupported => Error::NotImplemented(err.to_string()),
         EngineErrorKind::IllegalArgument => Error::IllegalArgument(err.to_string()),
         EngineErrorKind::IllegalArgumentMarked(marker) => Error::IllegalArgument(marker.0.clone()),
+        EngineErrorKind::UnsupportedMarked(marker) => Error::NotImplemented(marker.0.clone()),
         EngineErrorKind::Iceberg(iceberg_error) => classify_iceberg_error(iceberg_error),
         EngineErrorKind::CommitStateUnknown(stamped) => Error::CommitStateUnknown {
             message: stamped.inner().to_string(),
@@ -212,6 +219,19 @@ mod tests {
         assert!(
             matches!(error, Error::IllegalArgument(message) if message == "Cannot use options [foo]")
         );
+    }
+
+    #[test]
+    fn unsupported_marker_maps_to_not_implemented_verbatim() {
+        let error = engine_err(unsupported_error(
+            "Creating a view is not supported by catalog: glue".to_string(),
+        ));
+        assert_eq!(
+            error.exception_class(),
+            repark_common::ErrorClass::Unsupported
+        );
+        assert!(matches!(error, Error::NotImplemented(message)
+                if message == "Creating a view is not supported by catalog: glue"));
     }
 
     #[test]

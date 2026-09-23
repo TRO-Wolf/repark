@@ -36,6 +36,10 @@ Source comments are condensed to API and safety contracts; executable behavior i
   snapshot refs over the owned fork. Named-ref commits use `commit_target` / `to_branch`.
   See [write/map.md](write/map.md).
   pins: rp-5-fork-repin/C-004
+- [view/](view/map.md) — **ICE-VIEWS-1 (2026-09-20):** the view service over the
+  fork's `Catalog` view methods (`create_or_replace_view`, `drop_catalog_view`,
+  `list_catalog_views`, schema/property/location helpers, `view_read_spec`).
+  pins: ice-views-1/C-001, C-002, C-003, C-004, C-005
 - [tests/](tests/map.md) — crate-root test modules: fork-pin proof, shared tracing harness,
   and the R91 unknown-write refuse pin.
   pins: rp-5-fork-repin/C-006
@@ -46,6 +50,7 @@ Source comments are condensed to API and safety contracts; executable behavior i
 |---|---|
 | Catalog wiring | [catalog/map.md](catalog/map.md) |
 | Write paths | [write/map.md](write/map.md) |
+| View service | [view/map.md](view/map.md) |
 | Re-export surface | `lib.rs` |
 | Span-capture in tests records nothing | `tests/tracing.rs` (one global subscriber; install via its accessors, never `set_global_default` directly) |
 

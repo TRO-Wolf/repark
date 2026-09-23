@@ -137,6 +137,17 @@ pub async fn refuse_non_empty_namespace_drop(
             tables.len()
         )));
     }
+    let views = match catalog.list_views(namespace).await {
+        Ok(views) => views,
+        Err(error) if error.kind() == iceberg::ErrorKind::FeatureUnsupported => Vec::new(),
+        Err(error) => return Err(builders::iceberg_to_datafusion(error)),
+    };
+    if !views.is_empty() {
+        return Err(DataFusionError::Plan(format!(
+            "Namespace {display} is not empty. Contains {} view(s).",
+            views.len()
+        )));
+    }
     let children = catalog
         .list_namespaces(Some(namespace))
         .await

@@ -37,6 +37,9 @@ pub(crate) async fn execute_drop_table(
         };
         let handle = catalog_handle(catalogs, catalog)?;
         let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
+        if catalogs.is_view(catalog, &ident).await? {
+            return Err(table_or_view_not_found(catalog, namespace, table));
+        }
         if if_exists && !handle.table_exists(&ident).await.map_err(iceberg_err)? {
             continue;
         }
@@ -160,18 +163,18 @@ pub(crate) fn parse_create_namespace_body(parser: &mut Parser) -> Result<CreateN
         if parser.parse_keyword(Keyword::COMMENT) {
             properties.insert(
                 "comment".to_string(),
-                parse_namespace_property_string(parser)?,
+                parse_namespace_property_string(parser, "CREATE NAMESPACE")?,
             );
         } else if parser.parse_keyword(Keyword::LOCATION) {
             properties.insert(
                 "location".to_string(),
-                parse_namespace_property_string(parser)?,
+                parse_namespace_property_string(parser, "CREATE NAMESPACE")?,
             );
         } else if parser.parse_keyword(Keyword::WITH) {
             // Spark WITH DBPROPERTIES and Trino bare WITH carry the same key/value list.
             let _consumed_kind =
                 consume_word(parser, "DBPROPERTIES") || consume_word(parser, "PROPERTIES");
-            parse_namespace_property_list(parser, &mut properties)?;
+            parse_namespace_property_list(parser, &mut properties, "CREATE NAMESPACE")?;
         } else {
             break;
         }
@@ -205,14 +208,17 @@ pub(crate) fn consume_word(parser: &mut Parser, word: &str) -> bool {
 }
 
 /// Read one property key or value token.
-pub(crate) fn parse_namespace_property_string(parser: &mut Parser) -> Result<String> {
+pub(crate) fn parse_namespace_property_string(
+    parser: &mut Parser,
+    statement: &str,
+) -> Result<String> {
     match parser.next_token().token {
         Token::Word(word) => Ok(word.value),
         Token::SingleQuotedString(value)
         | Token::DoubleQuotedString(value)
         | Token::Number(value, _) => Ok(value),
         other => Err(DataFusionError::Plan(format!(
-            "CREATE NAMESPACE: expected a property name or value, got `{other}`"
+            "{statement}: expected a property name or value, got `{other}`"
         ))),
     }
 }
@@ -221,15 +227,16 @@ pub(crate) fn parse_namespace_property_string(parser: &mut Parser) -> Result<Str
 pub(crate) fn parse_namespace_property_list(
     parser: &mut Parser,
     properties: &mut HashMap<String, String>,
+    statement: &str,
 ) -> Result<()> {
     parser.expect_token(&Token::LParen).map_err(sqlparser_err)?;
     if parser.consume_token(&Token::RParen) {
         return Ok(());
     }
     loop {
-        let key = parse_namespace_property_string(parser)?;
+        let key = parse_namespace_property_string(parser, statement)?;
         parser.expect_token(&Token::Eq).map_err(sqlparser_err)?;
-        let value = parse_namespace_property_string(parser)?;
+        let value = parse_namespace_property_string(parser, statement)?;
         properties.insert(key, value);
         if !parser.consume_token(&Token::Comma) {
             break;

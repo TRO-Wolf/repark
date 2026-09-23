@@ -298,6 +298,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   stamp (→ `Error::CommitStateUnknown` with the minted `engine.operation-id`, ICE-COMMIT-UNKNOWN-1),
   then to `IllegalArgumentMarker` (defined in repark-iceberg's `write/illegal_argument.rs` since ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19) and re-exported here unchanged; the `IllegalArgumentMarked` arm → `Error::IllegalArgument`, so the CALL options
   validation raises `IllegalArgumentException` — **ICE-RDF-OPTIONS-1 round 1, 2026-09-17**),
+  then to `UnsupportedMarker` (**ICE-VIEWS-1 R2, 2026-09-21:** the `UnsupportedMarked` arm → `Error::NotImplemented` verbatim, so a viewless CREATE/REPLACE refuses with Spark's exact bytes),
   then to a live `iceberg::Error` → classified by its
   structured `ErrorKind` (`classify_iceberg_error`, the ONE iceberg kind→class mapping — also
   the direct `iceberg_err` fold; an unstamped `CommitStateUnknown` kind maps to the same
@@ -804,6 +805,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `database_source(name)`, the `pub(crate)` lookup `refuse_source_ddl` uses to rebuild
   the D-1 refusal for a DDL plan naming a source.
   pins: cfg-2/C-012
+  **ICE-VIEWS-1 (2026-09-20):** view lookup beside table lookup (`is_view`),
+  the installed-wrapper directory (`view_wrapper_for` / `note_view_wrapper`)
+  and the nesting counter behind `view_expansion_guard`.
+  **R2 (2026-09-21):** `is_view` returns a `Result` — genuine catalog errors
+  propagate (fail-closed); `FeatureUnsupported`/`NamespaceNotFound` stay false.
+  pins: ice-views-1/C-006, C-007, C-012
 - `named_sources.rs` (+ [named_sources/](named_sources/map.md)) — **CFG-2 step 1
   (2026-09-13):** named database sources. `register_configured_sources()` (called wherever
   `register_configured_catalogs` runs) installs one `RefusingSourceCatalogProvider` per
@@ -858,6 +865,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   only `_deleted` refuses `[ICE-MC-1]`, advertising the served four.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022, C-023
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
+  so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved
   here from `session.rs` in CFG-1 step 3, next to the spec its `into_spec` builds) + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`

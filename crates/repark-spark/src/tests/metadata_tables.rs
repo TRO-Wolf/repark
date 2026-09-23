@@ -337,6 +337,8 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         "CREATE VIEW ice.sales.mt.snapshots AS SELECT 1 AS id",
         "DROP TABLE ice.sales.mt.snapshots",
         "ALTER TABLE ice.sales.mt.snapshots ADD COLUMN extra INT",
+        "INSERT INTO ice.sales.mt.snapshots SELECT 1 AS id",
+        "UPDATE ice.sales.mt.snapshots SET operation = 'x'",
     ] {
         let error = execute(&ctx, &catalogs, sql)
             .await
