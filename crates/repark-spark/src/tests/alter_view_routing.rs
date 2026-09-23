@@ -34,6 +34,12 @@ async fn alter_viewless_catalog_matches_memory_missing_targets_and_redirects_tab
             .expect_err("viewless catalog must refuse missing view")
             .to_string();
         assert_eq!(viewless_error, memory_error.replace("`ice`", "`fault`"));
+        let expected = if statement.contains("SET TBLPROPERTIES") {
+            "Error during planning: [UNSUPPORTED_FEATURE.CATALOG_OPERATION] The feature is not supported: Catalog `fault` does not support views. SQLSTATE: 0A000"
+        } else {
+            "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `fault`.`sales`.`absent` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+        };
+        assert_eq!(viewless_error, expected);
     }
     let error = execute(
         &ctx,
