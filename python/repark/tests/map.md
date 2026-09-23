@@ -89,7 +89,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` / `KD000` text (cell
   `W-UPDATE-TYPE-ERR`) and asserts the complete rendered text, `getCondition`, and
   `getSqlState`.
-  **WO-C4 (2026-09-23):** the IPI-51 full-string update-error pin remains intact.
+  **WO-C4 (2026-09-23):** SHOW TBLPROPERTIES keeps its pinned analysis refusal; the IPI-51
+  update-error pin keeps the complete rendered text.
   **WO-C3 C4 (2026-09-23):** ParserError wrappers reject ordinary and lowercase bracket text,
   while a no-prefix Spark-shaped wrapper parses its condition and SQLSTATE.
   pins: wo-c3/C-004
