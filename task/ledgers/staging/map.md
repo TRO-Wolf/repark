@@ -1525,7 +1525,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   restored.
   `risk_tier: standard`. Branch `fix/ipi-23-describe-metadata-table`.
   pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
+  C-020, C-021, C-022
 - [ipi-23-mt-reader-1-ledger.md](ipi-23-mt-reader-1-ledger.md) —
   **IPI-23-MT-READER-1 (2026-09-22), in flight:** `format("iceberg").load("c.n.t.<meta>")`
   answers what SQL answers, and with `versionAsOf` / `timestampAsOf` what SQL `AS OF`
@@ -1547,7 +1548,3 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
   C-022
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
-  C-020, C-021, C-022

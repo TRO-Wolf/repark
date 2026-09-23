@@ -14,7 +14,7 @@ resolves, plus the four-part parser for names the metadata rewrite leaves
 untouched) with a five-line hook in `describe_show.rs` (`execute_describe_table`
 before `load_table`), a two-line `or_else` in `router.rs`, and one `mod` line in
 `describe_show.rs` (moved under it 2026-09-23, `lib.rs` back to its ceiling); the facade pins
-`python/repark/tests/test_ice_mt_describe_1.py` (22 offline pins plus the live
+`python/repark/tests/test_ice_mt_describe_1.py` (25 offline pins plus the live
 snapshots leg); the DESC-1 registry row; four `map.md` files
 (`crates/repark-spark/src/`, `crates/repark-spark/src/describe_show/`,
 `python/repark/tests/`, `task/ledgers/staging/`); and

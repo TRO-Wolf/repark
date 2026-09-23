@@ -1324,7 +1324,7 @@ perfectly good read.
 - **Pin** — `python/repark/tests/test_describe_table.py` (eight offline pins plus
   `test_describe_table_live_matches_capture_and_repark`, which re-measures the capture live
   and diffs repark against it row for row); metadata tables
-  `python/repark/tests/test_ice_mt_describe_1.py` (22 offline pins plus the live snapshots
+  `python/repark/tests/test_ice_mt_describe_1.py` (25 offline pins plus the live snapshots
   leg, which re-measures the R-MT-DESCRIBE cell live)
 - **Rationale** — FIXED 2026-09-09 (SQL-DESCRIBE-1): the `ParseException: Expected: end of
   statement, found: EXTENDED` bug is closed by the router intercept. The `Table Properties`
