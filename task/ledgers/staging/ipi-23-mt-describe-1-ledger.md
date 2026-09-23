@@ -38,6 +38,12 @@ NEEDS_REMEDIATION) is remediated by md-r7fix: the missing-base/namespace 42P01
 answer now names the identifier as written — `written_parts` (case kept) on the
 un-rewritten four-part form, the parsed `catalog.namespace.t$suffix` name on the
 `$` form — and this paragraph's deleted-fallback and pin-count claims are trued.
+Critic r6 (2026-09-23, NEEDS_REMEDIATION) is remediated by md-r8fix: the
+unchanged IPI-40 missing-namespace DESCRIBE pin in
+`test_ice_views_2_describe.py` is re-pinned to the measured 42P01 answer
+(renamed `test_describe_missing_namespace_is_table_or_view_not_found`), and
+every refusal pin in the facade file now asserts the full contract — class,
+full-message equality, `getCondition()`, `getSqlState()`.
 
 ## Measurements (decide-then-build evidence)
 
@@ -77,7 +83,7 @@ lane's JVM-free loop, and is recorded in the gates table below.
 | C-005 | `DESCRIBE` of a plain two-column table still answers exactly its two column rows. | `test_plain_table_describe_unchanged` green. | **PROVEN** | Near miss pinned: `[("a","bigint",None),("b","string",None)]` unchanged from main. pins: ipi-23-mt-describe-1/C-005 |
 | C-006 | A real table named `snapshots` describes itself (`id bigint`), not a metadata table. | `test_real_table_named_snapshots_wins` green. | **PROVEN** | Near miss pinned: the rewrite's real-table-wins rule is untouched. pins: ipi-23-mt-describe-1/C-006 |
 | C-007 | `DESCRIBE mt.ns.missing.snapshots` raises `TABLE_OR_VIEW_NOT_FOUND` / `42P01` naming the full `` `mt`.`ns`.`missing`.`snapshots` `` with no `$` in the text. | `test_missing_base_not_found_names_full_name` green. | **PROVEN** | A missing base maps to `table_or_view_not_found_parts` over the full four-part name; any other provider error passes through. pins: ipi-23-mt-describe-1/C-007 |
-| C-008 | `DESCRIBE mt.ns.t.nope` keeps today's error class, SQLSTATE and text. | `test_unknown_suffix_keeps_compound_identifier_error` green. | **PROVEN** | Near miss pinned: `AnalysisException: Error during planning: Unsupported compound identifier '`mt`.`ns`.`t`.`nope`'. Expected 1, 2 or 3 parts, got 4`, recorded on main before the fix. pins: ipi-23-mt-describe-1/C-008 |
+| C-008 | `DESCRIBE mt.ns.t.nope` keeps today's error class, SQLSTATE and text. | `test_unknown_suffix_keeps_compound_identifier_error` green. | **PROVEN** | Near miss pinned: `AnalysisException`, the full `Error during planning: Unsupported compound identifier '`mt`.`ns`.`t`.`nope`'. Expected 1, 2 or 3 parts, got 4` message by equality, `getCondition()` None and `getSqlState()` None — recorded on main before the fix. pins: ipi-23-mt-describe-1/C-008 |
 | C-009 | The Rust row builder turns a three-field schema incl. a map into three rows with `comment` None. | `metadata_table_describe_batch_spells_column_rows` green. | **PROVEN** | Unit test in `crates/repark-spark/src/describe_show/metadata_table.rs` asserts names, `bigint`/`string`/`map<string,string>` spellings, null comments, and the `col_name`/`data_type`/`comment` output nullability. pins: ipi-23-mt-describe-1/C-009 |
 
 ## Critic r1 (2026-09-23) — V-001/V-002 + class sweep
@@ -155,6 +161,7 @@ a not-found differently from Spark; RePark measured on the ruled tree):
 | quoted three-part ``t$suffix``, base missing | 42P01 written `$` name `` `mt`.`ns`.`missing$snapshots` `` | 42P01 written `$` name | C-019 |
 | two-part after USE | 42P01 facade-expanded `` `mt`.`t`.`snapshots` `` | 42P01 `` `t`.`snapshots` `` | C-004 (D-1 name shape) |
 | explicit three-part, namespace missing | 42P01 `` `mt`.`t`.`snapshots` `` | 42P01 (name as written) | C-011 (D-1 family, name shape) |
+| plain three-part DESCRIBE, namespace missing (`sc.missing_ns.t`) | 42P01 name as written | 42P01 name as written + ``; line 1 pos N;`` plan tail | `test_describe_missing_namespace_is_table_or_view_not_found` (IPI-40 file, re-pinned md-r8fix) |
 | explicit three-part, table missing | 42P01 full three-part name as written | 42P01 (name as written) | C-010, C-014 |
 | four-part name where a real table occupies the written path (nested namespace) | compound-identifier error | the real table's rows | Rust `describe_metadata_table_real_table_at_written_path_wins` (D-4 gap) |
 | three-part `ns.t.snapshots` after USE | fallthrough `table 'ns.t.snapshots' not found` | six rows | C-016 strict xfail (OPEN) |
@@ -278,6 +285,92 @@ FINDING:
 |---|---|---|---|---|
 | C-018 | `DESCRIBE mt.ns.missing.SNAPSHOTS` and `DESCRIBE mt.ns.Missing.snapshots` raise the full TABLE_OR_VIEW_NOT_FOUND / SQLSTATE 42P01 message naming the parts as written — `` `mt`.`ns`.`missing`.`SNAPSHOTS` `` and `` `mt`.`ns`.`Missing`.`snapshots` ``. | `test_missing_base_not_found_names_written_case` green. | **PROVEN** | Spark 4.1.2 names the written parts (measured 2026-09-23); red at `c49ba03c` (canonicalized suffix), green after md-r7fix. pins: ipi-23-mt-describe-1/C-018 |
 | C-019 | `DESCRIBE mt.ns.`missing$snapshots`` raises the full TABLE_OR_VIEW_NOT_FOUND / SQLSTATE 42P01 message naming the written three-part name `` `mt`.`ns`.`missing$snapshots` ``. | `test_quoted_dollar_missing_base_names_written_name` green. | **PROVEN** | Spark names the `$` name as written (same measurement); red at `c49ba03c` (split `missing`.`snapshots`), green after md-r7fix. pins: ipi-23-mt-describe-1/C-019 |
+
+## Critic r6 (2026-09-23) — V-001/V-002 remediated (md-r8fix)
+
+Critic r6 at `2162a675` returned NEEDS_REMEDIATION on two findings; md-r8fix
+closes both.
+
+```yaml
+FINDING:
+  id: F-IPI-23-MT-DESCRIBE-1-R6-V-001
+  severity: S1
+  category: AT-3
+  clause: IPI-40 V-DESCRIBE pin in test_ice_views_2_describe.py (no clause here)
+  claim: The unchanged `test_describe_missing_namespace_propagates_namespace_error` still pinned the pre-ruling `No such namespace` answer with null condition and SQLSTATE for `DESCRIBE sc.missing_ns.t`, contradicting the md-r6fix NamespaceNotFound arm; the saved green gate omitted the file.
+  evidence: red at `2162a675` under a head build (`assert 'No such namespace' in text` against the 42P01 answer); Spark 4.1.2 + Iceberg 1.11.0 measured 2026-09-23 answers AnalysisException TABLE_OR_VIEW_NOT_FOUND / SQLSTATE 42P01 for `DESCRIBE sc.missing_ns.t` (and `DESC` / `DESCRIBE TABLE`), message equal to RePark's plus a `; line 1 pos N;` + unresolved-plan tail
+  disposition: REMEDIATED (renamed `test_describe_missing_namespace_is_table_or_view_not_found`, re-pinned to RePark's full 42P01 text by equality plus `getCondition()` and `getSqlState()`; module docstring trued; mutation — routing `NamespaceNotFound` into `describe_view_frame` answers `NamespaceNotFound => No such namespace: NamespaceIdent(["missing_ns"])` and reds the pin, so the pin tells the arms apart)
+```
+
+```yaml
+FINDING:
+  id: F-IPI-23-MT-DESCRIBE-1-R6-V-002
+  severity: S2
+  category: AT-6
+  clause: C-008
+  claim: C-008 claims class, SQLSTATE and text are kept, but the pin only regex-matched a message substring; the sibling refusal pins asserted the full message but not the `getCondition()`/`getSqlState()` accessors.
+  evidence: `pytest.raises(AnalysisException, match=re.escape(expected))` at `2162a675` accepted a wrong class, a changed SQLSTATE, or added text; thirteen sibling sites lacked the accessor asserts
+  disposition: REMEDIATED (C-008 now asserts `AnalysisException`, the full message by equality, `getCondition()` None, `getSqlState()` None; all fourteen refusal sites in the file share `_assert_full_refusal`, and the re-pinned view test asserts the same contract — the V-002-class sweep table below is all yes)
+```
+
+**V-001 class sweep** (a branch behaviour change an unchanged test elsewhere
+still pins the old way; grep over `python/repark/tests/`,
+`python/repark-parity/tests/`, `python/dbt-repark/tests/`, `crates/*/tests/` for
+DESCRIBE / missing-namespace / four-part / `$`-suffix / not-found pins; every
+row ran at the r8fix head):
+
+| File:line | Statement | Pins | Result at head |
+|---|---|---|---|
+| `test_ice_views_2_describe.py:110` | `DESCRIBE sc.missing_ns.t` | NamespaceNotFound arm → full 42P01 (re-pinned this round) | green |
+| `test_ice_views_2_describe.py:74,50,86,111` | `DESCRIBE` view / absent / partitioned / EXTENDED | unchanged paths | green (file: 6 passed) |
+| `test_ice_mt_describe_1.py` (whole file) | intercept, four-part refusals, two/three-part forms | full contract at every refusal site | green (23 items) |
+| `test_describe_table.py:109` | `DESCRIBE TABLE mt.ns.no_such_table` | TableNotFound arm → 42P01, unchanged | green (file) |
+| `test_describe_namespace.py:141` | `DESCRIBE NAMESPACE mt.no_such_ns` | SCHEMA_NOT_FOUND — different statement | green (file) |
+| `test_metadata_tables.py` | SELECT over `t.<meta>` / `$` names | provider resolve shared with the intercept | green (file) |
+| `test_ice_views_1.py` | view catalog door, DML-on-view refusals | unchanged | green (file) |
+| `test_ice_error_conditions_1.py` | AnalysisException accessor contract | `getCondition`/`getSqlState` parsing | green (file) |
+| `test_ice_catalog_session_1.py` | REFRESH/USE/catalog session refusals | unchanged | green (file) |
+| `test_catalog_surface_1.py` | `getTable`/`listColumns` missing → TABLE_OR_VIEW_NOT_FOUND | shared `table_or_view_not_found` text, unchanged | green (file) |
+| `test_catalog_surface.py:312` | `DESCRIBE NAMESPACE glue_catalog.no_such_ns_xyz` | SCHEMA_NOT_FOUND via the namespace statement | green |
+| `test_ice_small_parser_1.py:359,432` | REPLACE TABLE / DROP TABLE PURGE missing | `[TABLE_OR_VIEW_NOT_FOUND]` text via the shared helper | green (file) |
+| `test_dml_c_truncate.py:61` | TRUNCATE missing | shared helper text | green (file) |
+| `test_errors.py:283` | `getCondition` on a raised error | accessor contract | green (file) |
+| `test_perf_describe_1.py` | DataFrame `describe()`/`summary()` aggregate | different API — grep-hit, not this path | green (file) |
+| `python/dbt-repark/tests/test_statement_surface.py:186,233,286` | `DESCRIBE EXTENDED` three-part shape; `ALTER TABLE … RENAME` "No such namespace" | DESCRIBE-EXTENDED shape green; the RENAME row is ALTER, not DESCRIBE — confirmed non-hit by running | green (file) |
+| `python/repark-parity/tests/test_cap_1_source_file_line_cap.py` | facade line-cap incl. the describe row | unchanged | green |
+| `crates/repark-spark/src/tests/describe_view_routing.rs` | FaultCatalog DESCRIBE probes | load/view failure contract | green (`cargo test -p repark-spark --lib`, 1701 passed) |
+| `crates/repark-spark/src/tests/describe_table.rs:330,365` | missing table; unregistered catalog | unchanged | green (same run) |
+| `crates/repark-spark/src/tests/describe_show.rs` | `DESCRIBE NAMESPACE` | different statement | green (same run) |
+| `crates/repark-spark/src/describe_show/metadata_table.rs` | intercept unit tests | written-name + real-table-wins | green (same run) |
+| `crates/repark-spark/src/tests/{truncate,replace_table,purge,use_ddl,catalog_ops,call_orphan_scope}.rs` | `[TABLE_OR_VIEW_NOT_FOUND]` via the shared helper | unchanged text | green (same run) |
+| `crates/repark-sql/tests/introspection.rs:141` | ANSI `DESCRIBE ice.sales.orders` | ANSI door delegates to DataFusion — no `describe_show`/`DescribeTable` symbol in repark-sql; disjoint path | non-hit (code-verified) |
+
+**V-002 class sweep** (a refusal pin that accepts a wrong class, condition,
+SQLSTATE or longer/shorter text — every `pytest.raises` in
+`test_ice_mt_describe_1.py` plus the re-pinned view test; lines at the r8fix
+head):
+
+| Site | Class | Full-message equality | getCondition | getSqlState |
+|---|---|---|---|---|
+| `test_ice_mt_describe_1.py:170` (C-004) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:209` (C-007) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:239` (C-018, both cases) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:259` (C-019) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:273` (C-008) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:294` (C-010) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:313` (C-011) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:331,334` (C-012 ×2) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:362` (C-014) | yes | yes | yes | yes |
+| `test_ice_mt_describe_1.py:380,383,390,403` (C-015 ×4) | yes | yes | yes | yes |
+| `test_ice_views_2_describe.py:109` (re-pinned V-001) | yes | yes | yes | yes |
+
+The mt-file sites assert via `_assert_full_refusal` (message equality +
+`getCondition()` + `getSqlState()` in one helper); the view site asserts the
+same three directly. `DESCRIBE sc.missing_ns.t` difference vs Spark, named for
+the record: Spark appends ``; line 1 pos 9;`` and the unresolved
+`'DescribeRelation`/`'UnresolvedTableOrView [sc, missing_ns, t]` plan tail;
+RePark's message is the same leading text without the position/plan tail
+(RePark carries no query context), and the pin asserts RePark's full text.
 
 ## Gates
 

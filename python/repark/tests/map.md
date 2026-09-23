@@ -7842,6 +7842,20 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   pins (C-018, C-019),
   plus the live snapshots leg re-measuring Spark 4.1.2.
   pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-019
+- [test_ice_views_2_describe.py](test_ice_views_2_describe.py) —
+  **IPI-40 views PR2 / V-DESCRIBE (2026-09-22):** `DESCRIBE <cat>.<ns>.<view>`
+  answers the view's stored schema — one `col_name`/`data_type`/`comment` row
+  per column, Spark type spellings, empty-string comment where the column
+  carries no doc. The near misses: a name that is neither table nor view keeps
+  the byte-exact `TABLE_OR_VIEW_NOT_FOUND` refusal, a partitioned table's
+  answer is unchanged, and `DESCRIBE EXTENDED` on a view is the same
+  columns-only answer. md-r8fix (2026-09-23): a missing namespace answers the
+  same 42P01 refusal naming the name as written (the `NamespaceNotFound` arm in
+  `describe_show.rs`), not the view probe's propagated error —
+  `test_describe_missing_namespace_is_table_or_view_not_found`, renamed from
+  `test_describe_missing_namespace_propagates_namespace_error`, whose old
+  `No such namespace` / null-condition pin predated the ruling; Spark's
+  message is RePark's plus a `; line 1 pos N;` plan tail.
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106
