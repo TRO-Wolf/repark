@@ -120,7 +120,6 @@ async fn unqualified_metadata_table(
         describe.table.clone(),
     );
     match handle.load_table(&real).await {
-        Ok(_) => None,
         Err(error)
             if matches!(
                 error.kind(),
@@ -144,7 +143,7 @@ async fn unqualified_metadata_table(
                 Err(provider_error) => Some(Err(provider_error)),
             }
         }
-        Err(_) => None,
+        Ok(_) | Err(_) => None,
     }
 }
 
