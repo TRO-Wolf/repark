@@ -7,6 +7,7 @@ __getitem__, native exception surface shim.
 
 from __future__ import annotations
 
+import pyarrow as pa
 import pytest
 
 from repark import _native
@@ -228,17 +229,48 @@ def test_unclosed_bracketed_comment_has_spark_parse_contract(
 
 
 @pytest.mark.parametrize(
-    ("statement", "expected_rows"),
+    ("statement", "expected_schema", "expected_rows"),
     [
-        ("SELECT 1 /* a /* b */ */", [{"1": 1}]),
-        ("SELECT '/* x'", [{"/* x": "/* x"}]),
-        ("SELECT 1 -- /* x", [{"1": 1}]),
+        (
+            "SELECT ';'",
+            pa.schema([pa.field(";", pa.string(), nullable=False)]),
+            [{";": ";"}],
+        ),
+        (
+            "SELECT 1 /* ; */",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+        (
+            "SELECT 1 -- ;\n",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+        (
+            "SELECT 1 /* a /* b */ */",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+        (
+            "SELECT '/* x'",
+            pa.schema([pa.field("/* x", pa.string(), nullable=False)]),
+            [{"/* x": "/* x"}],
+        ),
+        (
+            "SELECT 1 -- /* x",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
     ],
 )
 def test_bracketed_comment_near_misses_keep_exact_single_rows(
-    spark: ReparkSession, statement: str, expected_rows: list[dict[str, int | str]]
+    spark: ReparkSession,
+    statement: str,
+    expected_schema: pa.Schema,
+    expected_rows: list[dict[str, int | str]],
 ) -> None:
     result = spark.sql(statement).to_arrow()
+    assert result.schema == expected_schema
     assert result.to_pylist() == expected_rows
 
 

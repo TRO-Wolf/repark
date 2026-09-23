@@ -27,14 +27,50 @@ fn planner_default_set_recognizer_pins_malformed_near_misses() {
     ));
 }
 
+async fn assert_single_value_answer(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    field: Field,
+    column: Arc<dyn Array>,
+) {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql:?} must answer one row: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("{sql:?} must collect: {error}"));
+    let schema = Arc::new(Schema::new(vec![field]));
+    assert_eq!(batches.len(), 1, "{sql:?}");
+    assert_eq!(batches[0].schema(), schema, "{sql:?}");
+    let expected = RecordBatch::try_new(schema, vec![column])
+        .unwrap_or_else(|error| panic!("{sql:?} expected batch: {error}"));
+    assert_eq!(batches[0], expected, "{sql:?}");
+}
+
 #[tokio::test]
 async fn semicolons_inside_literals_and_comments_do_not_trigger_multi_statement_refusal() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    for sql in ["SELECT ';'", "SELECT 1 /* ; */", "SELECT 1 -- ;\n"] {
-        execute(&ctx, &catalogs, sql)
-            .await
-            .unwrap_or_else(|error| panic!("{sql} must remain one statement: {error}"));
+    let cases: [(&str, Field, Arc<dyn Array>); 3] = [
+        (
+            "SELECT ';'",
+            Field::new("Utf8(\";\")", DataType::Utf8, false),
+            Arc::new(StringArray::from(vec![";"])),
+        ),
+        (
+            "SELECT 1 /* ; */",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+        (
+            "SELECT 1 -- ;\n",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+    ];
+    for (sql, field, column) in cases {
+        assert_single_value_answer(&ctx, &catalogs, sql, field, column).await;
     }
 }
 
@@ -94,51 +130,26 @@ async fn unclosed_bracketed_comments_use_spark_parser_contract() {
 async fn bracketed_comment_near_misses_keep_exact_single_rows() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-
-    let nested_batches = execute(&ctx, &catalogs, "SELECT 1 /* a /* b */ */")
-        .await
-        .expect("closed nested comment")
-        .collect()
-        .await
-        .expect("collect closed nested comment");
-    assert_eq!(nested_batches.len(), 1);
-    assert_eq!(nested_batches[0].num_rows(), 1);
-    let nested_values = nested_batches[0]
-        .column(0)
-        .as_any()
-        .downcast_ref::<Int32Array>()
-        .expect("nested comment result must be int32");
-    assert_eq!(nested_values.value(0), 1);
-
-    let quoted_batches = execute(&ctx, &catalogs, "SELECT '/* x'")
-        .await
-        .expect("quoted comment marker")
-        .collect()
-        .await
-        .expect("collect quoted comment marker");
-    assert_eq!(quoted_batches.len(), 1);
-    assert_eq!(quoted_batches[0].num_rows(), 1);
-    let quoted_values = quoted_batches[0]
-        .column(0)
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .expect("quoted marker result must be string");
-    assert_eq!(quoted_values.value(0), "/* x");
-
-    let line_batches = execute(&ctx, &catalogs, "SELECT 1 -- /* x")
-        .await
-        .expect("line comment marker")
-        .collect()
-        .await
-        .expect("collect line comment marker");
-    assert_eq!(line_batches.len(), 1);
-    assert_eq!(line_batches[0].num_rows(), 1);
-    let line_values = line_batches[0]
-        .column(0)
-        .as_any()
-        .downcast_ref::<Int32Array>()
-        .expect("line comment result must be int32");
-    assert_eq!(line_values.value(0), 1);
+    let cases: [(&str, Field, Arc<dyn Array>); 3] = [
+        (
+            "SELECT 1 /* a /* b */ */",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+        (
+            "SELECT '/* x'",
+            Field::new("Utf8(\"/* x\")", DataType::Utf8, false),
+            Arc::new(StringArray::from(vec!["/* x"])),
+        ),
+        (
+            "SELECT 1 -- /* x",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+    ];
+    for (sql, field, column) in cases {
+        assert_single_value_answer(&ctx, &catalogs, sql, field, column).await;
+    }
 }
 
 #[tokio::test]
