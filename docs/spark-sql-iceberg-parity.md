@@ -6764,6 +6764,14 @@ the pin rather than obeying it.
   itself), or it equals or contains the location of another table in the same catalog, in any
   namespace including a nested one. The first two keep the old "shared CTAS fallback root"
   text. The third names the other table.
+  Without `file_list_view`, the `location` argument reaches the fork's listing with its path in
+  lexical normal form (scheme and authority as given), so `<t>/data/..`, `<t>/./` and
+  `<t>//data` list the same orphans as `<t>` and never the live file; a `file://` location
+  lists nothing on the fork's local listing, canonical or not (fork behaviour, unchanged).
+  Until the fork's join normalises both sides, the listing path refuses, dry or armed, a table
+  whose own stored location is not in normal form (for example `<wh>/detour/../aliased/t`),
+  naming the location and pointing at `file_list_view`, which still sweeps it. Java lists such
+  a table; this refusal is the residue.
   `file_list_view => '<view>'` reads the view's `file_path` STRING and `last_modified` TIMESTAMP
   rows and keeps those whose `last_modified` is non-null and older than `older_than` and whose
   path lies under the scan path. It subtracts the table's referenced files, comparing URI
@@ -6807,10 +6815,13 @@ the pin rather than obeying it.
   `::call_remove_orphan_files_file_list_view_keeps_a_live_file_named_through_an_alias`,
   `::call_remove_orphan_files_file_list_view_matches_a_table_location_that_holds_an_alias`,
   `::call_remove_orphan_files_file_list_view_resolves_an_aliased_scan_location`,
-  `::call_remove_orphan_files_refuses_a_location_holding_a_table_spelled_through_an_alias`),
+  `::call_remove_orphan_files_refuses_a_location_holding_a_table_spelled_through_an_alias`,
+  `::call_remove_orphan_files_listing_path_resolves_an_aliased_location`,
+  `::call_remove_orphan_files_listing_path_refuses_a_table_location_that_holds_an_alias`),
   `crates/repark-spark/src/tests/call_orphan_view.rs` (the `file_list_view` spelling, gc,
   malformed-view, NULL-timestamp, mode, `equal_schemes`, failed-delete and policy-scope pins),
-  `crates/repark-spark/src/tests/call_orphan.rs::call_orphan_shared_ctas_root_rule`, and
+  `crates/repark-spark/src/tests/call_orphan.rs::call_orphan_shared_ctas_root_rule` and
+  `::call_remove_orphan_files_listing_path_table_location_normal_form_rule`, and
   `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root`
 - **Rationale** — FIXED by owner ruling Q-55-6 under Q-55-2 (full Spark parity), 2026-09-22.
   The old guard refused every table under the fallback root. It protected against two sessions
