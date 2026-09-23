@@ -117,6 +117,38 @@ because each INSERT writes one file — reported to the orchestrator, not
 edited per the work order. Pin count unchanged: twenty-two facade pins,
 C-001..C-022.
 
+**Follow-up (2026-09-23, WO rd-r8fix, critic r5):** one finding plus two class
+sweeps, all test/ledger-side. V-001 (P1): the offline fixture deletes id 3, so
+snapshot 3 (current) answers the same rows as snapshot 1 — every AS OF /
+selector pin at the first snapshot equalled a current read and could not tell
+a historical read from an ignored option; the second snapshot (rows id 1, 2,
+3) is the discriminating point. C-008's `versionAsOf` pin moved to the second
+snapshot id with the three-row answer `[[1,"a","x"],[2,"b","y"],[3,"c","x"]]`
+(the un-pinned current pin stays `[[1,"a","x"],[2,"b","y"]]`); C-009's `tag_t0`
+and `snapshot_id_<id>` moved to the second snapshot with the same three-row
+answer (`branch_b0` already pinned the second); C-004's reader/SQL equality
+loop now runs at both the first and the second id over the four suffixes and
+its `record_count` schema-plus-sum pin sits at the second id (`sum == 3`);
+C-020's `versionAsOf` moved to the second id (`sum == 3`). C-004, C-005, C-008,
+C-009 (tag and snapshot_id) and C-020 each also assert the pinned reader's
+rows differ from the un-pinned reader's rows, so dropping the option fails the
+test. Class sweep (a time-travel pin whose answer equals the current answer)
+over the whole file: C-001/C-002/C-003/C-010/C-016/C-018/C-019 are un-pinned
+reads, C-006/C-007/C-011/C-012/C-014/C-015/C-017/C-021/C-022 are refusal or
+error-text pins outside the class — no other survivor; the live leg C-013
+(first id on its own engine) and the Rust pin `metadata_tables_asof.rs` (`s1`
+count/sum equalities) are report-only per the work order, not edited. Ledger
+literal sweep (every expected literal in C-001..C-022 against the test at this
+head): two rows disagreed and are corrected here — C-001's `append, append,
+overwrite` (the offline fixture, delete id 3, pins operations
+`append, append, delete`; the recorded Spark cell `R-DF-LOAD-META` is a
+separate live measurement that still records `append, append, overwrite`, the
+`InMemoryCatalog` probe's DELETE committing `overwrite`) and C-008's
+`[[2,"b","y"],[3,"c","x"]]` current / first-snapshot pinned rows (current is
+`[[1,"a","x"],[2,"b","y"]]` and the pinned read now answers the three rows
+above at the second snapshot); C-004's `<first id>` is widened to both ids per
+the fix above. Pin count unchanged: twenty-two facade pins, C-001..C-022.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The two replay cells were recorded
