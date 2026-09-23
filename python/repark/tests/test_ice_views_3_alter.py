@@ -251,6 +251,19 @@ def test_rename_to_bare_target_reports_cross_catalog_move(
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
 
 
+def test_rename_to_two_part_target_reports_cross_catalog_move(spark: ReparkSession) -> None:
+    """A two-part target resolves in the default catalog and leaves the view readable."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("ALTER VIEW sc.ns.v RENAME TO ns.w")
+    assert str(caught.value) == (
+        "Error during planning: Cannot move view between catalogs: from=sc and to=datafusion"
+    )
+    assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
+    assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
+    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
+
+
 def test_alter_view_as_still_refuses(spark: ReparkSession) -> None:
     """Near-miss a — the ALTER VIEW ... AS refusal is verbatim and first."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
