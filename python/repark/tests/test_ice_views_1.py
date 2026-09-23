@@ -102,6 +102,23 @@ def test_use_resolves_show_views_and_bare_create_drop(spark: ReparkSession) -> N
     assert _rows(spark.sql("SHOW VIEWS IN ns")) == []
 
 
+def test_use_resolves_bare_view_write_refusal(spark: ReparkSession) -> None:
+    """The write guard resolves a bare view name through USE defaults."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc.ns")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("INSERT INTO v VALUES (9)")
+    assert str(caught.value) == (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v` "
+        "cannot be found. Verify the spelling and correctness of the schema and catalog. "
+        "If you did not qualify the name with a schema, verify the current_schema() output, "
+        "or qualify the name with the correct schema and catalog. To tolerate the error on "
+        "drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert caught.value.getSqlState() == "42P01"
+
+
 def test_create_view_if_not_exists_is_noop(spark: ReparkSession) -> None:
     """V-IF-NOT-EXISTS — the existing body is not replaced. pins: ice-views-1/C-004."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t WHERE id > 0")

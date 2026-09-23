@@ -316,6 +316,40 @@ async fn alter_view_bare_name_uses_session_defaults_and_commits_once() {
 }
 
 #[tokio::test]
+async fn view_create_drop_and_write_guard_complete_bare_names_from_use() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    run(&ctx, &catalogs, "CREATE VIEW v AS SELECT * FROM src").await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v".to_string());
+    assert!(
+        catalogs["ice"]
+            .view_exists(&ident)
+            .await
+            .expect("view exists")
+    );
+    let statements =
+        Parser::parse_sql(&DatabricksDialect {}, "DROP VIEW v").expect("drop view statement");
+    let Statement::Drop { names, .. } = &statements[0] else {
+        panic!("expected DROP VIEW");
+    };
+    let error = crate::view_ddl::execute::refuse_view_write_target(&ctx, &catalogs, &names[0])
+        .await
+        .expect_err("view write target must refuse");
+    assert_eq!(
+        error.to_string(),
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`v` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+    );
+    run(&ctx, &catalogs, "DROP VIEW v").await;
+    assert!(
+        !catalogs["ice"]
+            .view_exists(&ident)
+            .await
+            .expect("view removed")
+    );
+}
+
+#[tokio::test]
 async fn alter_view_router_keeps_the_tail_parser_refusal() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, catalogs) = setup(&warehouse).await;
