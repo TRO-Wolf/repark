@@ -993,13 +993,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   ruling Q-55-6):** end-to-end pins on a `ReparkSession` memory catalog whose namespace has
   no `location`, so every table sits under `<warehouse>/repark_ctas/ice/ns/<table>`. The
   bare call sweeps the table's own directory (10-day orphan listed and deleted, 1-day orphan
-  kept); a `location` at the warehouse, `repark_ctas` or `repark_ansi_ctas` refuses; a
-  `location` holding another table refuses naming it. `file_list_view` (a temp view
+  kept), and a sibling table in the same namespace does not block that sweep; a `location` at
+  the warehouse, `repark_ctas` or `repark_ansi_ctas` refuses; a `location` holding another
+  table refuses naming it, whether that table is in the same namespace, another namespace or
+  a nested one (built through the catalog API). `file_list_view` (a temp view
   registered through `create_or_replace_temp_view_from`, since the SQL door has no `CREATE
   TEMP VIEW`) lists the view's orphans verbatim under `dry_run => true`, deletes exactly
   the listed ones when armed, and refuses a missing view (`TABLE_OR_VIEW_NOT_FOUND`), a
   warehouse `location` and a non-timestamp `last_modified`.
-  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
   service-managed refusal — a real `s3tables_catalog` (dummy ARN, constructs offline)

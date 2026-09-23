@@ -76,9 +76,9 @@ fn referenced_data_file(table_dir: &Path) -> PathBuf {
         .expect("the CTAS wrote one data file")
 }
 
-async fn live_rows(session: &ReparkSession) -> usize {
+async fn live_rows(session: &ReparkSession, table: &str) -> usize {
     session
-        .sql("SELECT id FROM ice.ns.t")
+        .sql(&format!("SELECT id FROM ice.{table}"))
         .await
         .unwrap()
         .collect()
@@ -131,7 +131,11 @@ async fn call_remove_orphan_files_sweeps_a_fallback_tables_own_directory() {
         "{listed:?}"
     );
     assert!(!orphan.exists(), "the armed default run deletes the orphan");
-    assert_eq!(live_rows(&session).await, 1, "the live data file survives");
+    assert_eq!(
+        live_rows(&session, "ns.t").await,
+        1,
+        "the live data file survives"
+    );
 
     let young = plant(&table_dir, "orphan-file.parquet", 1);
     let listed = call_rows(
@@ -182,6 +186,130 @@ async fn call_remove_orphan_files_refuses_a_location_holding_another_table() {
         other_live.exists(),
         "the other table's live file is untouched"
     );
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_sweeps_one_fallback_table_beside_a_sibling() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let own_dir = ctas(&session, &warehouse, "a").await;
+    let other_dir = ctas(&session, &warehouse, "b").await;
+    let own_orphan = plant(&own_dir, "orphan-file.parquet", 10);
+    let other_orphan = plant(&other_dir, "orphan-file.parquet", 10);
+    let other_live = referenced_data_file(&other_dir);
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.a')",
+    )
+    .await
+    .expect("a sibling table in the same namespace does not block the own-directory sweep");
+    assert_eq!(listed.len(), 1, "{listed:?}");
+    assert!(
+        listed[0].ends_with("/ns/a/data/orphan-file.parquet"),
+        "{listed:?}"
+    );
+    assert!(!own_orphan.exists(), "the swept table's orphan is deleted");
+    assert!(
+        other_orphan.exists(),
+        "the sibling's orphan is not in scope"
+    );
+    assert!(other_live.exists(), "the sibling's live file is untouched");
+    assert_eq!(live_rows(&session, "ns.a").await, 1);
+    assert_eq!(live_rows(&session, "ns.b").await, 1);
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_refuses_a_location_holding_a_table_of_another_namespace() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let own_dir = ctas(&session, &warehouse, "a").await;
+    let namespace_dir = warehouse.path().join("repark_ctas").join("ice").join("ns");
+    let foreign_dir = namespace_dir.join("other");
+    submit(
+        &session,
+        &format!(
+            "CREATE NAMESPACE ice.other LOCATION '{}'",
+            foreign_dir.display()
+        ),
+    )
+    .await;
+    submit(
+        &session,
+        "CREATE TABLE ice.other.c USING iceberg AS SELECT 1 AS id",
+    )
+    .await;
+    let foreign_table = foreign_dir.join("c");
+    assert!(foreign_table.join("metadata").is_dir());
+    let own_orphan = plant(&own_dir, "orphan-file.parquet", 10);
+    let foreign_orphan = plant(&foreign_table, "orphan-file.parquet", 10);
+    let foreign_live = referenced_data_file(&foreign_table);
+
+    let err = call_rows(
+        &session,
+        &format!(
+            "CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{}')",
+            namespace_dir.display()
+        ),
+    )
+    .await
+    .expect_err("a table of another namespace inside the scan must refuse");
+    assert!(
+        err.contains("holds table `ice.other.c`"),
+        "the refusal must name the other namespace's table: {err}"
+    );
+    assert!(own_orphan.exists(), "a refused sweep deletes nothing");
+    assert!(foreign_orphan.exists(), "a refused sweep deletes nothing");
+    assert!(foreign_live.exists());
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_refuses_a_location_holding_a_nested_namespace_table() {
+    use iceberg::spec::{NestedField, PrimitiveType, Schema as IcebergSchema, Type};
+    use iceberg::{NamespaceIdent, TableCreation};
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let own_dir = ctas(&session, &warehouse, "a").await;
+    let inner_dir = own_dir.parent().unwrap().join("inner");
+    let catalog = session.catalogs_snapshot().get("ice").unwrap().clone();
+    let inner = NamespaceIdent::from_strs(["ns", "inner"]).unwrap();
+    catalog
+        .create_namespace(&inner, std::collections::HashMap::new())
+        .await
+        .unwrap();
+    let schema = IcebergSchema::builder()
+        .with_fields(vec![
+            NestedField::required(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
+        ])
+        .build()
+        .unwrap();
+    catalog
+        .create_table(
+            &inner,
+            TableCreation::builder()
+                .name("d".to_string())
+                .location(inner_dir.join("d").display().to_string())
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .unwrap();
+    let own_orphan = plant(&own_dir, "orphan-file.parquet", 10);
+
+    let err = call_rows(
+        &session,
+        &format!(
+            "CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{}')",
+            inner_dir.display()
+        ),
+    )
+    .await
+    .expect_err("a table of a nested namespace inside the scan must refuse");
+    assert!(
+        err.contains("holds table `ice.ns.inner.d`"),
+        "the refusal must name the nested table: {err}"
+    );
+    assert!(own_orphan.exists(), "a refused sweep deletes nothing");
 }
 
 #[tokio::test]
@@ -285,7 +413,11 @@ async fn call_remove_orphan_files_file_list_view_armed_deletes_only_the_listed_o
         "a file the view does not list is not a candidate"
     );
     assert!(live.exists(), "a referenced file is never an orphan");
-    assert_eq!(live_rows(&session).await, 1, "the live data file survives");
+    assert_eq!(
+        live_rows(&session, "ns.t").await,
+        1,
+        "the live data file survives"
+    );
 }
 
 #[tokio::test]
