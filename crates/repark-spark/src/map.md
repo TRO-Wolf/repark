@@ -1387,10 +1387,13 @@ pins: rp-4-fork-repin/C-005, C-006
 - `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
   for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
   for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the
-  `describe_show` idiom: bare `SHOW CREATE TABLE` refuses Spark's measured
-  `[INVALID_STATEMENT_OR_CLAUSE]`, trailing tokens `[PARSE_SYNTAX_ERROR]`, four-part names and
-  every other statement (SHOW CREATE VIEW, SHOW TABLES/COLUMNS/TBLPROPERTIES) return `None`.
-  The intercept (`try_show_create_intercept`, one router arm after the DESCRIBE TABLE arm)
+  `describe_show` idiom: once the raw head is `SHOW CREATE TABLE`, lexical failures, a missing
+  or invalid name, trailing tokens, and a non-`SERDE` `AS` word all refuse with Spark's measured
+  `[INVALID_STATEMENT_OR_CLAUSE]` / `42601`; the router applies that refusal before literal
+  canonicalization can return a tokenizer error. Four-or-more-part names refuse as
+  `[TABLE_OR_VIEW_NOT_FOUND]` / `42P01` with every part quoted. Other statements (SHOW CREATE
+  VIEW, SHOW TABLES/COLUMNS/TBLPROPERTIES) return `None`. The intercept
+  (`try_show_create_intercept`, one router arm after the DESCRIBE TABLE arm)
   completes one- and two-part names from `use_ddl::session_defaults`, falls through for
   session-shadowed bare names, unregistered catalogs, and views (lane B owns
   `V-SHOW-CREATE`); a missing table is `table_or_view_not_found`, `AS SERDE` on a table is
@@ -1402,6 +1405,7 @@ pins: rp-4-fork-repin/C-005, C-006
   the view lane calls are `render_tblproperties_clause` (empty pairs render nothing) and
   `spark_sql_string_literal` (`'` → `\'`; backslashes pass through — measured).
   pins: [`tests/show_create.rs`](tests/show_create.rs)
+  pins: wo-c2/C-001, C-002
 - `table_props_view.rs` — **C1 SHOW CREATE (2026-09-23):** `spark_table_properties`, the one
   Spark-visible table property list (Iceberg 1.11 `SparkTable.properties()` minus Spark's
   `TABLE_RESERVED_PROPERTIES`), shared by DESCRIBE EXTENDED `Table Properties` and SHOW CREATE

@@ -1431,11 +1431,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   multi-term transform sort order built through `TableCreation` (ALTER WRITE ORDERED BY only
   models identity terms), backslashes unescaped plus `OPTIONS` / TIMESTAMP_NTZ / nested NOT
   NULL / backticked columns, a backticked table name, redaction, a `USE`-completed bare name,
-  the `AS SERDE` and missing-table refusals, the bare `SHOW CREATE TABLE` parse error, the
-  near misses (view targets not answered as tables; SHOW CREATE, SHOW TABLES/COLUMNS/
-  TBLPROPERTIES not claimed), and the DESCRIBE EXTENDED `Table Properties` row equal to the
+  typed `AS SERDE`, missing-table, bare, four-part-name, malformed-quote, trailing-token, and
+  invalid-`AS` refusals; every parse refusal asserts the `DataFusionError::SQL` parser variant,
+  while analysis refusals assert `DataFusionError::Plan`, with the full measured text. Near
+  misses pin one exact current outcome each: view targets, SHOW CREATE, SHOW TABLES, SHOW
+  COLUMNS, and SHOW TBLPROPERTIES. The DESCRIBE EXTENDED `Table Properties` row is equal to the
   measured fresh-table string, and the `Comment` detail row (after `Type`, a column named
   `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
+  pins: wo-c2/C-001, C-002, C-003, C-004
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

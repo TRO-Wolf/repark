@@ -1,6 +1,43 @@
 use super::super::*;
 use super::common::*;
 
+use datafusion::sql::sqlparser::parser::ParserError;
+
+const AS_SERDE_MESSAGE: &str = "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] SHOW CREATE TABLE AS SERDE is not supported for v2 \
+     tables. SQLSTATE: 0A000";
+const INVALID_SHOW_CREATE_TABLE_MESSAGE: &str = "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. \
+     SQLSTATE: 42601";
+const MISSING_TABLE_MESSAGE: &str = "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`nope` cannot be found. Verify the \
+     spelling and correctness of the schema and catalog. If you did not qualify the name with a \
+     schema, verify the current_schema() output, or qualify the name with the correct schema and \
+     catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. \
+     SQLSTATE: 42P01";
+
+async fn execution_error(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> DataFusionError {
+    execute(ctx, catalogs, sql).await.expect_err(sql)
+}
+
+fn parse_error_message(error: DataFusionError, sql: &str) -> String {
+    let DataFusionError::SQL(parser_error, _) = error else {
+        panic!("{sql} must be a DataFusion SQL error");
+    };
+    let ParserError::ParserError(message) = parser_error.as_ref() else {
+        panic!("{sql} must carry a parser error message: {parser_error}");
+    };
+    message.clone()
+}
+
+fn plan_error_message(error: DataFusionError, sql: &str) -> String {
+    let DataFusionError::Plan(message) = error else {
+        panic!("{sql} must be a DataFusion plan error");
+    };
+    message
+}
+
 async fn outcome(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -399,15 +436,10 @@ async fn show_create_as_serde_refuses_like_spark() {
         "CREATE TABLE ice.sales.sc2 (id BIGINT, data STRING) USING iceberg",
     )
     .await;
-    let error = outcome(&ctx, &catalogs, "SHOW CREATE TABLE ice.sales.sc2 AS SERDE")
-        .await
-        .unwrap_err();
-    assert!(
-        error.contains(
-            "[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE] SHOW CREATE TABLE AS SERDE is not supported \
-             for v2 tables. SQLSTATE: 0A000"
-        ),
-        "got: {error}"
+    let sql = "SHOW CREATE TABLE ice.sales.sc2 AS SERDE";
+    assert_eq!(
+        plan_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
+        AS_SERDE_MESSAGE
     );
 }
 
@@ -415,37 +447,61 @@ async fn show_create_as_serde_refuses_like_spark() {
 async fn show_create_missing_table_refuses_table_or_view_not_found() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    let error = outcome(&ctx, &catalogs, "SHOW CREATE TABLE ice.sales.nope")
-        .await
-        .unwrap_err();
-    assert!(
-        error.contains(
-            "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`nope` cannot be found."
-        ),
-        "got: {error}"
+    let sql = "SHOW CREATE TABLE ice.sales.nope";
+    assert_eq!(
+        plan_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
+        MISSING_TABLE_MESSAGE
     );
-    assert!(error.contains("SQLSTATE: 42P01"), "got: {error}");
 }
 
 #[tokio::test]
 async fn show_create_table_without_a_name_is_a_loud_parse_error() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    let error = outcome(&ctx, &catalogs, "SHOW CREATE TABLE")
-        .await
-        .unwrap_err();
-    assert!(
-        error.contains(
-            "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not \
-             valid. SQLSTATE: 42601"
-        ),
-        "got: {error}"
+    let sql = "SHOW CREATE TABLE";
+    assert_eq!(
+        parse_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
+        INVALID_SHOW_CREATE_TABLE_MESSAGE
     );
-    assert!(!error.contains("information_schema"), "got: {error}");
 }
 
 #[tokio::test]
-async fn show_create_near_misses_keep_their_current_behaviour() {
+async fn show_create_lexical_and_trailing_failures_stay_parse_class_errors() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for sql in [
+        "SHOW CREATE TABLE `ice.sales",
+        "SHOW CREATE TABLE ice.sales.`t",
+        "SHOW CREATE TABLE ice.sales.'t",
+        "SHOW CREATE TABLE ice.sales.\"t",
+        "SHOW CREATE TABLE ice.sales.t extra",
+        "SHOW CREATE TABLE ice.sales.t AS JSON",
+    ] {
+        assert_eq!(
+            parse_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
+            INVALID_SHOW_CREATE_TABLE_MESSAGE,
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn show_create_four_part_name_refuses_as_a_missing_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let sql = "SHOW CREATE TABLE ice.sales.x.t";
+    assert_eq!(
+        plan_error_message(execution_error(&ctx, &catalogs, sql).await, sql),
+        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`x`.`t` cannot be found. \
+         Verify the spelling and correctness of the schema and catalog. If you did not qualify the \
+         name with a schema, verify the current_schema() output, or qualify the name with the \
+         correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP \
+         TABLE IF EXISTS. SQLSTATE: 42P01"
+    );
+}
+
+#[tokio::test]
+async fn show_create_table_view_keeps_its_current_analysis_refusal() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -460,31 +516,106 @@ async fn show_create_near_misses_keep_their_current_behaviour() {
         "CREATE VIEW ice.sales.v AS SELECT id FROM ice.sales.t",
     )
     .await;
-    for sql in [
-        "SHOW CREATE TABLE ice.sales.v",
-        "SHOW CREATE VIEW ice.sales.v",
-    ] {
-        if let Ok((_, cells)) = outcome(&ctx, &catalogs, sql).await {
-            assert!(
-                cells.iter().all(|cell| !cell.starts_with("CREATE TABLE")),
-                "{sql} must not be answered as a table: {cells:?}"
-            );
-        }
-    }
-    let no_object = outcome(&ctx, &catalogs, "SHOW CREATE").await.unwrap_err();
-    assert!(!no_object.contains("createtab_stmt"), "got: {no_object}");
-    for sql in [
-        "SHOW TABLES IN ice.sales",
-        "SHOW COLUMNS IN ice.sales.t",
-        "SHOW TBLPROPERTIES ice.sales.t",
-    ] {
-        if let Ok((columns, _)) = outcome(&ctx, &catalogs, sql).await {
-            assert!(
-                !columns.contains(&"createtab_stmt".to_string()),
-                "{sql} must not be claimed by SHOW CREATE: {columns:?}"
-            );
-        }
-    }
+    let sql = "SHOW CREATE TABLE ice.sales.v";
+    assert_eq!(
+        execution_error(&ctx, &catalogs, sql).await.to_string(),
+        "Error during planning: SHOW CREATE TABLE is not supported unless information_schema is \
+         enabled"
+    );
+}
+
+#[tokio::test]
+async fn show_create_view_keeps_its_current_unsupported_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let sql = "SHOW CREATE VIEW ice.sales.v";
+    assert_eq!(
+        execution_error(&ctx, &catalogs, sql).await.to_string(),
+        "This feature is not implemented: Only `SHOW CREATE TABLE  ...` statement is supported"
+    );
+}
+
+#[tokio::test]
+async fn show_create_without_an_object_keeps_its_current_parse_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let sql = "SHOW CREATE";
+    assert_eq!(
+        execution_error(&ctx, &catalogs, sql).await.to_string(),
+        "SQL error: ParserError(\"Expected: one of TABLE or TRIGGER or FUNCTION or PROCEDURE or \
+         EVENT or VIEW, found: EOF\")"
+    );
+}
+
+#[tokio::test]
+async fn show_tables_keeps_its_current_schema_and_table_name() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id BIGINT) USING iceberg TBLPROPERTIES ('k'='v')",
+    )
+    .await;
+    let sql = "SHOW TABLES IN ice.sales";
+    let (columns, namespaces) = outcome(&ctx, &catalogs, sql).await.expect(sql);
+    assert_eq!(
+        columns,
+        vec![
+            "namespace".to_string(),
+            "tableName".to_string(),
+            "isTemporary".to_string(),
+        ]
+    );
+    assert_eq!(namespaces, vec!["sales".to_string()]);
+    let batches = execute(&ctx, &catalogs, sql)
+        .await
+        .expect(sql)
+        .collect()
+        .await
+        .expect(sql);
+    let batch = batches.first().expect(sql);
+    let table_names = batch
+        .column(1)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect(sql);
+    assert_eq!(table_names.value(0), "t");
+}
+
+#[tokio::test]
+async fn show_columns_keeps_its_current_schema_and_column_name() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id BIGINT) USING iceberg TBLPROPERTIES ('k'='v')",
+    )
+    .await;
+    let sql = "SHOW COLUMNS IN ice.sales.t";
+    assert_eq!(
+        outcome(&ctx, &catalogs, sql).await.expect(sql),
+        (vec!["col_name".to_string()], vec!["id".to_string()])
+    );
+}
+
+#[tokio::test]
+async fn show_tblproperties_keeps_its_current_analysis_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (id BIGINT) USING iceberg TBLPROPERTIES ('k'='v')",
+    )
+    .await;
+    let sql = "SHOW TBLPROPERTIES ice.sales.t";
+    assert_eq!(
+        execution_error(&ctx, &catalogs, sql).await.to_string(),
+        "Error during planning: SHOW [VARIABLE] is not supported unless information_schema is \
+         enabled"
+    );
 }
 
 #[tokio::test]

@@ -24,6 +24,8 @@ use crate::table_props_view::spark_table_properties;
 use crate::type_table::{SPARK_TYPE_NAME_DEPTH_FALLBACK, SPARK_TYPE_NAME_MAX_DEPTH};
 use crate::write_options::StatementWriteOptions;
 
+const INVALID_SHOW_CREATE_TABLE_MESSAGE: &str = "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. \
+     SQLSTATE: 42601";
 const TABLE_OPTION_PREFIX: &str = "option.";
 
 type PropertyPairs = Vec<(String, String)>;
@@ -59,38 +61,47 @@ impl ShowCreateStatement {
 
 pub(crate) fn try_parse_show_create(sql: &str) -> Option<Result<ShowCreateStatement>> {
     let dialect = DatabricksDialect {};
-    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let tokens = match Tokenizer::new(&dialect, sql).tokenize() {
+        Ok(tokens) => tokens,
+        Err(_) if starts_with_show_create_table(sql) => {
+            return Some(Err(invalid_show_create_table_error()));
+        }
+        Err(_) => return None,
+    };
     let mut parser = Parser::new(&dialect).with_tokens(tokens);
     if !parser.parse_keywords(&[Keyword::SHOW, Keyword::CREATE, Keyword::TABLE]) {
         return None;
     }
     if at_statement_end(&parser) {
-        return Some(Err(parse_class_error(
-            "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not \
-             valid. SQLSTATE: 42601"
-                .to_string(),
-        )));
+        return Some(Err(invalid_show_create_table_error()));
     }
     let Ok(name) = parser.parse_object_name(false) else {
-        return Some(Err(syntax_error_at(&parser)));
+        return Some(Err(invalid_show_create_table_error()));
     };
     let as_serde = if parser.parse_keyword(Keyword::AS) {
         if !consume_word(&mut parser, "SERDE") {
-            return Some(Err(syntax_error_at(&parser)));
+            return Some(Err(invalid_show_create_table_error()));
         }
         true
     } else {
         false
     };
     if !at_statement_end(&parser) {
-        return Some(Err(syntax_error_at(&parser)));
+        return Some(Err(invalid_show_create_table_error()));
     }
     let parts = name_parts(&name);
     let (catalog, namespace, table) = match parts.as_slice() {
         [catalog, namespace, table] => (catalog.clone(), namespace.clone(), table.clone()),
         [namespace, table] => (String::new(), namespace.clone(), table.clone()),
         [table] => (String::new(), String::new(), table.clone()),
-        _ => return None,
+        [catalog, namespace, rest @ ..] => {
+            return Some(Err(table_or_view_not_found(
+                catalog,
+                namespace,
+                &rest.join("`.`"),
+            )));
+        }
+        _ => return Some(Err(invalid_show_create_table_error())),
     };
     Some(Ok(ShowCreateStatement {
         catalog,
@@ -104,14 +115,17 @@ fn at_statement_end(parser: &Parser) -> bool {
     matches!(parser.peek_token().token, Token::EOF | Token::SemiColon)
 }
 
-fn syntax_error_at(parser: &Parser) -> DataFusionError {
-    let near = match parser.peek_token().token {
-        Token::EOF => "end of input".to_string(),
-        token => format!("'{token}'"),
-    };
-    parse_class_error(format!(
-        "[PARSE_SYNTAX_ERROR] Syntax error at or near {near}. SQLSTATE: 42601"
-    ))
+pub(crate) fn starts_with_show_create_table(sql: &str) -> bool {
+    let mut words = sql.split_whitespace();
+    ["SHOW", "CREATE", "TABLE"].into_iter().all(|expected| {
+        words
+            .next()
+            .is_some_and(|word| word.eq_ignore_ascii_case(expected))
+    })
+}
+
+fn invalid_show_create_table_error() -> DataFusionError {
+    parse_class_error(INVALID_SHOW_CREATE_TABLE_MESSAGE.to_string())
 }
 
 fn parse_class_error(message: String) -> DataFusionError {
@@ -399,13 +413,13 @@ mod tests {
     #[test]
     fn parse_leaves_near_misses_alone() {
         for sql in [
-            "SHOW CREATE VIEW v",
+            "SHOW CREATE VIEW `x",
             "SHOW CREATE",
-            "SHOW TABLES",
+            "SHOW TABLES IN `x",
             "SHOW COLUMNS IN t",
             "SHOW TBLPROPERTIES t",
-            "SHOW CREATE TABLE a.b.c.d",
-            "SELECT 1",
+            "SELECT 'SHOW CREATE TABLE `x'",
+            "SHOW CREATED TABLE x",
         ] {
             assert!(try_parse_show_create(sql).is_none(), "{sql}");
         }
@@ -413,24 +427,44 @@ mod tests {
 
     #[test]
     fn parse_refuses_malformed_forms_loudly() {
-        let missing = try_parse_show_create("SHOW CREATE TABLE")
-            .unwrap()
-            .unwrap_err()
-            .to_string();
-        assert!(
-            missing.contains("[INVALID_STATEMENT_OR_CLAUSE]"),
-            "{missing}"
+        for sql in [
+            "SHOW CREATE TABLE",
+            "SHOW CREATE TABLE t EXTRA",
+            "SHOW CREATE TABLE t AS JSON",
+            "SHOW CREATE TABLE `ice.sales",
+            "SHOW CREATE TABLE ice.sales.`t",
+            "SHOW CREATE TABLE ice.sales.'t",
+            "SHOW CREATE TABLE ice.sales.\"t",
+        ] {
+            let Some(Err(error)) = try_parse_show_create(sql) else {
+                panic!("{sql} must return a parse error");
+            };
+            let DataFusionError::SQL(parser_error, _) = error else {
+                panic!("{sql} must be a DataFusion SQL error");
+            };
+            let ParserError::ParserError(message) = parser_error.as_ref() else {
+                panic!("{sql} must carry a parser error message");
+            };
+            assert_eq!(message, INVALID_SHOW_CREATE_TABLE_MESSAGE, "{sql}");
+        }
+    }
+
+    #[test]
+    fn parse_four_part_name_refuses_as_a_missing_table() {
+        let Some(Err(error)) = try_parse_show_create("SHOW CREATE TABLE ice.sales.x.t") else {
+            panic!("four-part SHOW CREATE TABLE name must refuse");
+        };
+        let DataFusionError::Plan(message) = error else {
+            panic!("four-part SHOW CREATE TABLE name must be an analysis error");
+        };
+        assert_eq!(
+            message,
+            "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`x`.`t` cannot be found. \
+             Verify the spelling and correctness of the schema and catalog. If you did not qualify \
+             the name with a schema, verify the current_schema() output, or qualify the name with \
+             the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS \
+             or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
         );
-        let trailing = try_parse_show_create("SHOW CREATE TABLE t EXTRA")
-            .unwrap()
-            .unwrap_err()
-            .to_string();
-        assert!(trailing.contains("[PARSE_SYNTAX_ERROR]"), "{trailing}");
-        let as_json = try_parse_show_create("SHOW CREATE TABLE t AS JSON")
-            .unwrap()
-            .unwrap_err()
-            .to_string();
-        assert!(as_json.contains("[PARSE_SYNTAX_ERROR]"), "{as_json}");
     }
 
     #[test]

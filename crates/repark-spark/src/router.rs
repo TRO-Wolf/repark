@@ -77,6 +77,11 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     read_only_catalogs: &HashSet<String, S>,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    if crate::show_create::starts_with_show_create_table(sql)
+        && let Some(Err(error)) = crate::show_create::try_parse_show_create(sql)
+    {
+        return Err(error);
+    }
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let verbatim =
