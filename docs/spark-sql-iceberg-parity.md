@@ -7677,8 +7677,8 @@ the pin rather than obeying it.
   therefore every `CREATE`, not the properties DDL alone — `[ctas-v3]`'s metadata, re-read
   2026-09-03, carries `write.parquet.compression-codec = zstd` on Spark and no `write.*` key at
   all on repark.
-- **Rationale** — BACKLOG. Visible to anyone reading `SHOW TBLPROPERTIES` or the metadata JSON
-  after the same DDL, so it is a row rather than a note; it is queued rather than fixed because
+- **Rationale** — BACKLOG. Visible in metadata JSON after the same DDL and through Spark's
+  `SHOW TBLPROPERTIES`; RePark keeps its separately pinned SHOW refusal. It is queued rather than fixed because
   "stamp the engine's write defaults at create" is a create-path policy decision, not a defect in
   this statement. Do not close it by copying Spark's key without deciding the policy — a stamped
   property is a value later writes read.
