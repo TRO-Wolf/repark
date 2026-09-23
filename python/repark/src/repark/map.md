@@ -38,6 +38,10 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   `getErrorClass` / `getSqlState` parse a Spark-shaped message — at most one known
   engine prefix, a column-0 `[CONDITION]` token, the last `SQLSTATE: XXXXX` in the
   text; `attach_error_condition` instance binds still win. pins: ice-error-conditions-1/C-001
+  **WO-C2 (2026-09-23):** after an `SQL error: ` prefix, the parser-error wrapper is
+  removed before reading a leading condition. Native `SHOW CREATE TABLE` parse refusals now
+  expose `INVALID_STATEMENT_OR_CLAUSE` through the same API as planning refusals.
+  pins: wo-c2/C-005
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** re-exports `CommitStateUnknownException`
   (`PySparkException` subclass, `operation_id` attribute) for the ambiguous-commit alert
   class. pins: ice-commit-unknown-1/C-002

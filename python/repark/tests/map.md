@@ -6988,6 +6988,10 @@ pins: fnp-8-review/C-009, C-010
 - `test_show_create_table.py` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE` through
   the facade answers one `createtab_stmt` row equal to the measured Spark 4.1.2 shape-1 text
   (`bucket(4, id)`, NOT NULL + COMMENT column, `k=v`) with the table's real location.
+  **WO-C2 (2026-09-23):** `AS SERDE`, a missing table, and a missing name each pin the native
+  exception class, condition, SQLSTATE, and complete RePark message; the parser-wrapper case
+  proves `ParseException.getCondition()` reads `INVALID_STATEMENT_OR_CLAUSE`.
+  pins: wo-c2/C-005
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce
