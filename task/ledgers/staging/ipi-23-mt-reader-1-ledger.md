@@ -149,6 +149,29 @@ separate live measurement that still records `append, append, overwrite`, the
 above at the second snapshot); C-004's `<first id>` is widened to both ids per
 the fix above. Pin count unchanged: twenty-two facade pins, C-001..C-022.
 
+**Follow-up (2026-09-23, WO rd-r9fix):** two findings, all test/ledger-side.
+V-001 (P1, the r5 class's live survivor): C-013 still pinned the FIRST
+snapshot, whose `files` answer after the leg's `DELETE … id = 3` equals the
+current answer — the pin could not tell a historical read from an ignored
+option. The live leg now takes the SECOND snapshot id (`ORDER BY
+committed_at, snapshot_id`, index 1): `versionAsOf` on the reader and
+`VERSION AS OF` SQL stay row-equal, `record_count` sums to 3 (measured live
+`[1, 1, 1]` against the un-pinned current `[1, 1]`, sum 2), the pinned
+reader's `record_count` rows are asserted different from the un-pinned
+reader's on the same session, and the `("record_count", "bigint", False)`
+schema pin and the `append, append, delete` operations pin are unchanged.
+The class sweep (a time-travel pin whose answer equals the current answer)
+has no remaining survivor in the Python file. r6 V-001 (P2): every
+`pytest.raises` in the file now compares `getSqlState()` across the reader
+and SQL doors, and where the pair pins a recorded Spark answer the literal
+measured state is pinned too — every measured state is `None` on live Spark
+4.1.2 + Iceberg 1.11.0 (IllegalArgumentException for `versionAsOf 'nope'`,
+`timestampAsOf '2000-01-01'` and the three legacy options;
+UnsupportedOperationException — a pre-existing class divergence from
+RePark's AnalysisException, reported — for the `all_*` AS OF refusals), so
+the literal pins read `is None`. Pin count unchanged: twenty-two facade
+pins, C-001..C-022.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The two replay cells were recorded
