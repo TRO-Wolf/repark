@@ -168,6 +168,7 @@ the SQL door's backticked spelling by construction (unquoted internal SQL, uncha
 | `python3 scripts/check_ledger_grammar.py` | exit 0 |
 | r4fix `build-slot.sh local-gate.sh xo55-rd <same 6 files>` | `CB=0 R=0 T=0 U=0 L=0` — rust 13+29+22 passed; unit 273 passed 2 skipped; live 275 passed |
 | r4fix `make rust-clippy` / `make rust-panic-ban` | exit 0 / exit 0 |
+| r6fix `build-slot.sh local-gate.sh xo55-rd <same 6 files>` | `CB=0 R=0 T=0 U=0 L=0` at `a4faadbc` — rust 13+30+22 passed; unit 273 passed 2 skipped; live 275 passed (the re-pinned live leg runs, not skips) |
 
 ## COVERAGE_ATTESTATION
 
