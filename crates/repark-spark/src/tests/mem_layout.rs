@@ -39,6 +39,15 @@ async fn layout_registry(
     namespaces: &[&[&str]],
     layout_root: Option<PathBuf>,
 ) -> CatalogRegistry {
+    named_layout_registry("mem", warehouse, namespaces, layout_root).await
+}
+
+async fn named_layout_registry(
+    name: &str,
+    warehouse: &Path,
+    namespaces: &[&[&str]],
+    layout_root: Option<PathBuf>,
+) -> CatalogRegistry {
     let catalog: Arc<dyn Catalog> = Arc::new(
         MemoryCatalogBuilder::default()
             .with_storage_factory(Arc::new(LocalFsStorageFactory))
@@ -59,9 +68,9 @@ async fn layout_registry(
             .await
             .unwrap();
     }
-    let mut catalogs = CatalogRegistry::from([("mem".to_string(), catalog)]);
+    let mut catalogs = CatalogRegistry::from([(name.to_string(), catalog)]);
     if let Some(root) = layout_root {
-        catalogs.set_warehouse_layout_root("mem", root);
+        catalogs.set_warehouse_layout_root(name, root);
     }
     catalogs
 }
@@ -71,13 +80,22 @@ async fn default_location(
     namespace: &[&str],
     table: &str,
 ) -> datafusion::error::Result<String> {
+    location_in(catalogs, "mem", namespace, table).await
+}
+
+async fn location_in(
+    catalogs: &CatalogRegistry,
+    catalog_name: &str,
+    namespace: &[&str],
+    table: &str,
+) -> datafusion::error::Result<String> {
     let ident = NamespaceIdent::from_strs(namespace.iter().copied()).unwrap();
-    let full_name = format!("mem.{}.{table}", namespace.join("."));
-    let catalog = catalogs.get("mem").unwrap().clone();
+    let full_name = format!("{catalog_name}.{}.{table}", namespace.join("."));
+    let catalog = catalogs.get(catalog_name).unwrap().clone();
     resolve_create_plan_for(
         catalog.as_ref(),
         catalogs,
-        "mem",
+        catalog_name,
         &ident,
         table,
         &full_name,
@@ -207,18 +225,75 @@ async fn mem_layout_unrecorded_temp_fallback_keeps_repark_ctas_path() {
     assert_eq!(location, expected.to_str().unwrap());
 }
 
+fn escape_refusal(kind: &str, segment: &str) -> String {
+    match segment {
+        ".." => format!("{kind} identifier \"..\" must not contain path traversal ('..')"),
+        other => format!("{kind} identifier {other:?} must not contain path separators"),
+    }
+}
+
+async fn assert_escape_refused(
+    catalogs: &CatalogRegistry,
+    catalog_name: &str,
+    namespace: &[&str],
+    table: &str,
+    expected: &str,
+) {
+    match location_in(catalogs, catalog_name, namespace, table).await {
+        Err(datafusion::error::DataFusionError::Plan(message)) => {
+            assert_eq!(message, expected, "{catalog_name}.{namespace:?}.{table}");
+        }
+        other => {
+            panic!("{catalog_name}.{namespace:?}.{table}: expected a Plan refusal, got {other:?}")
+        }
+    }
+}
+
 #[tokio::test]
 async fn mem_layout_refuses_path_escape_identifiers() {
     let wh = TempDir::new().unwrap();
-    let catalogs = layout_registry(wh.path(), &[&["ns"]], Some(wh.path().to_path_buf())).await;
+    let root = Some(wh.path().to_path_buf());
+    let catalogs = layout_registry(
+        wh.path(),
+        &[&["ns"], &[".."], &["x/y"], &["ns", ".."], &["ns", "x/y"]],
+        root.clone(),
+    )
+    .await;
     for table in ["..", "x/y"] {
-        let error = default_location(&catalogs, &["ns"], table)
-            .await
-            .expect_err("a path-escape table identifier must refuse");
-        assert!(
-            error.to_string().contains("table identifier"),
-            "{table}: {error}"
-        );
+        assert_escape_refused(
+            &catalogs,
+            "mem",
+            &["ns"],
+            table,
+            &escape_refusal("table", table),
+        )
+        .await;
+    }
+    for (namespace, segment) in [
+        (&[".."][..], ".."),
+        (&["x/y"][..], "x/y"),
+        (&["ns", ".."][..], ".."),
+        (&["ns", "x/y"][..], "x/y"),
+    ] {
+        assert_escape_refused(
+            &catalogs,
+            "mem",
+            namespace,
+            "t",
+            &escape_refusal("namespace", segment),
+        )
+        .await;
+    }
+    for name in ["..", "x/y"] {
+        let catalogs = named_layout_registry(name, wh.path(), &[&["ns"]], root.clone()).await;
+        assert_escape_refused(
+            &catalogs,
+            name,
+            &["ns"],
+            "t",
+            &escape_refusal("catalog", name),
+        )
+        .await;
     }
 }
 

@@ -998,6 +998,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   keeps the execute-path refusal at the root.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-008, C-009
 - [mem_layout.rs](mem_layout.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** CTAS, column-definition CREATE, explicit and namespace location precedence, nested namespaces, legacy fallback, path escape rejection, and file URI normalization. pins: u1-mem-layout-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
+  **Layout-r8 (2026-09-23):** `mem_layout_refuses_path_escape_identifiers` pins the complete
+  refusal for a `..` and an `x/y` table, namespace (top level and nested) and catalog name, each
+  with a recorded layout root, and names the identifier kind. pins: u1-mem-layout-1/C-007
 - [call_orphan_ancestor.rs](call_orphan_ancestor.rs) — **U1-MEM-LAYOUT-1 layout-r8 (2026-09-23):**
   the ancestor metadata probe. `m1.ns.a` sweeping `<wh>/ns/b/data` or `<wh>/ns/b/data/sub`, where
   `m2.ns.b` (or a second session's `ice.ns.b`) sits at `<wh>/ns/b`, refuses in all three spellings
