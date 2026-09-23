@@ -69,28 +69,31 @@ def test_show_tblproperties_key_cell(spark: ReparkSession) -> None:
     assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v"]]
 
 
-def test_no_key_lists_reserved_then_stored_sorted(spark: ReparkSession) -> None:
+def test_no_key_lists_reserved_then_stored_sorted(spark: ReparkSession, tmp_path: Path) -> None:
     """E1 — the reserved three plus the stored properties, compared sorted."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v', 'a'='b') AS SELECT id FROM sc.ns.t")
     rows = sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
-    location = next(value for key, value in rows if key == "location")
-    assert location.endswith("/ns/v")
     assert rows == [
         ["a", "b"],
         ["format-version", "1"],
         ["k", "v"],
-        ["location", location],
+        ["location", str(tmp_path / "ns" / "v")],
         ["provider", "iceberg"],
     ]
 
 
 def test_no_key_without_stored_properties_is_reserved_only(
     spark: ReparkSession,
+    tmp_path: Path,
 ) -> None:
     """E2 — a property-less view answers exactly the three reserved rows."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     rows = sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
-    assert [key for key, _ in rows] == ["format-version", "location", "provider"]
+    assert rows == [
+        ["format-version", "1"],
+        ["location", str(tmp_path / "ns" / "v")],
+        ["provider", "iceberg"],
+    ]
 
 
 def test_missing_key_answers_the_spark_sentence(spark: ReparkSession) -> None:
@@ -136,18 +139,17 @@ def test_missing_view_is_table_or_view_not_found(spark: ReparkSession) -> None:
         assert caught.value.getSqlState() == "42P01"
 
 
-def test_alter_view_set_then_show_reflects_updates(spark: ReparkSession) -> None:
+def test_alter_view_set_then_show_reflects_updates(spark: ReparkSession, tmp_path: Path) -> None:
     """E8 — ALTER VIEW SET TBLPROPERTIES updates what SHOW answers."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     spark.sql("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v2', 'j'='u')")
     assert _rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v2"]]
     rows = sorted(_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v")))
-    location = next(value for key, value in rows if key == "location")
     assert rows == [
         ["format-version", "1"],
         ["j", "u"],
         ["k", "v2"],
-        ["location", location],
+        ["location", str(tmp_path / "ns" / "v")],
         ["provider", "iceberg"],
     ]
 
