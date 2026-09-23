@@ -210,6 +210,7 @@ pub(crate) struct DescribeTable {
     pub(crate) table: String,
     pub(crate) extended: bool,
     pub(crate) written_parts: Vec<String>,
+    pub(crate) column: Option<Vec<String>>,
 }
 
 impl DescribeTable {
@@ -233,16 +234,17 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
     if !parser.parse_keyword(Keyword::DESCRIBE) && !parser.parse_keyword(Keyword::DESC) {
         return None;
     }
-    if matches!(&parser.peek_token().token, Token::Word(word) if is_namespace_head(word)) {
+    if matches!(&parser.peek_token().token, Token::Word(word) if is_non_table_describe_head(word)) {
         return None;
     }
     let _ = parser.parse_keyword(Keyword::TABLE);
     let extended =
         parser.parse_keyword(Keyword::EXTENDED) || consume_word(&mut parser, "FORMATTED");
     let name = parser.parse_object_name(false).ok()?;
-    if !matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
-        return None;
-    }
+    let column = match crate::describe_column::parse_describe_column_tail(&mut parser)? {
+        Ok(column) => column,
+        Err(error) => return Some(Err(error)),
+    };
     let parts = name_parts(&name);
     let (catalog, namespace, table) = match parts.as_slice() {
         [catalog, namespace, table] => (catalog.clone(), namespace.clone(), table.clone()),
@@ -256,6 +258,7 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         table,
         extended,
         written_parts: Vec::new(),
+        column,
     }))
 }
 
@@ -263,6 +266,12 @@ fn is_namespace_head(word: &Word) -> bool {
     word.value.eq_ignore_ascii_case("namespace")
         || word.value.eq_ignore_ascii_case("database")
         || word.value.eq_ignore_ascii_case("schema")
+}
+
+fn is_non_table_describe_head(word: &Word) -> bool {
+    is_namespace_head(word)
+        || word.value.eq_ignore_ascii_case("function")
+        || word.value.eq_ignore_ascii_case("query")
 }
 
 pub(crate) async fn execute_describe_table(

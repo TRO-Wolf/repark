@@ -1,5 +1,4 @@
 //! repark-spark — the Spark SQL door.
-
 mod alter;
 mod alter_write_order;
 mod append_with_options;
@@ -12,6 +11,7 @@ mod collation;
 mod column_move;
 mod create_table;
 mod ctas;
+mod describe_column;
 mod describe_show;
 mod dialect;
 mod format_version;

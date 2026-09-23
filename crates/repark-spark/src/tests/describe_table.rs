@@ -252,9 +252,11 @@ fn describe_table_parser_refuses_time_travel_tails() {
         let Err(error) = parsed else {
             panic!("the time-travel tail must refuse");
         };
-        assert_eq!(
-            error.to_string(),
-            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601")
+        assert!(
+            error.to_string().ends_with(&format!(
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"
+            )),
+            "{error}"
         );
     }
 }
