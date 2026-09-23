@@ -1514,7 +1514,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   critic-r1 refusal pins, and four near misses; registry row `DESC-1` re-ruled to
   the served behavior. Critic r4 (md-r6fix) re-pins C-004/C-011 to the 42P01
   answer, adds the C-017 real-table-wins collision pin, and records the
-  nested-namespace DESCRIBE gap as D-4.
+  nested-namespace DESCRIBE gap as D-4. Critic r5 (md-r7fix) makes the
+  missing-base answer name the identifier as written — case kept, and the `$`
+  form kept for a quoted `t$snapshots` name — pinned by C-018/C-019.
   `risk_tier: standard`. Branch `fix/ipi-23-describe-metadata-table`.
   pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009
@@ -1540,3 +1542,4 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
   C-022
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019

@@ -1303,7 +1303,9 @@ perfectly good read.
   per column of the metadata table — `col_name`, `data_type` (the Spark DDL type name),
   `comment` NULL — exactly the columns `SELECT *` returns, in the same order; a missing base
   table raises `[TABLE_OR_VIEW_NOT_FOUND]` naming the full metadata-table name as written
-  (for example `` `mt`.`ns`.`missing`.`snapshots` ``), and `EXTENDED`/`FORMATTED`
+  (for example `` `mt`.`ns`.`missing`.`snapshots` ``, identifier case kept — Spark
+  measured 2026-09-23 naming `` `mt`.`ns`.`missing`.`SNAPSHOTS` ``; a quoted
+  `` `t$snapshots` `` name keeps its written `$` form), and `EXTENDED`/`FORMATTED`
   on a metadata table print the same column rows with no extra sections (unmeasured on Spark).
   md-r6fix (2026-09-23): a missing namespace on the plain path answers the same
   `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01` message — after `USE`, the two- and three-part forms
@@ -1322,7 +1324,7 @@ perfectly good read.
 - **Pin** — `python/repark/tests/test_describe_table.py` (eight offline pins plus
   `test_describe_table_live_matches_capture_and_repark`, which re-measures the capture live
   and diffs repark against it row for row); metadata tables
-  `python/repark/tests/test_ice_mt_describe_1.py` (eight offline pins plus the live snapshots
+  `python/repark/tests/test_ice_mt_describe_1.py` (22 offline pins plus the live snapshots
   leg, which re-measures the R-MT-DESCRIBE cell live)
 - **Rationale** — FIXED 2026-09-09 (SQL-DESCRIBE-1): the `ParseException: Expected: end of
   statement, found: EXTENDED` bug is closed by the router intercept. The `Table Properties`

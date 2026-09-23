@@ -11,11 +11,10 @@ type name), `comment` NULL — exactly the columns `SELECT *` returns, in the sa
 order. `crates/repark-spark/src/describe_show/metadata_table.rs` (new: the
 `try_describe_metadata_table` intercept fed by the same `TableProvider` SELECT
 resolves, plus the four-part parser for names the metadata rewrite leaves
-untouched and the registry-defaults fallback for the facade-expanded two-part
-form) with a five-line hook in `describe_show.rs` (`execute_describe_table`
+untouched) with a five-line hook in `describe_show.rs` (`execute_describe_table`
 before `load_table`), a two-line `or_else` in `router.rs`, and one `mod` line in
 `describe_show.rs` (moved under it 2026-09-23, `lib.rs` back to its ceiling); the facade pins
-`python/repark/tests/test_ice_mt_describe_1.py` (eight offline pins plus the live
+`python/repark/tests/test_ice_mt_describe_1.py` (22 offline pins plus the live
 snapshots leg); the DESC-1 registry row; four `map.md` files
 (`crates/repark-spark/src/`, `crates/repark-spark/src/describe_show/`,
 `python/repark/tests/`, `task/ledgers/staging/`); and
@@ -34,7 +33,11 @@ the same 42P01 answer as `TableNotFound` (C-004/C-011 re-pinned to the
 facade-expanded name; D-1 narrows to the name shape), the four-part intercept
 probes the name as written so a real table wins it (new nested-namespace
 collision pin; the nested-namespace DESCRIBE gap is recorded as D-4), and the
-C-016 row plus the test docstring are corrected.
+C-016 row plus the test docstring are corrected. Critic r5 (2026-09-23,
+NEEDS_REMEDIATION) is remediated by md-r7fix: the missing-base/namespace 42P01
+answer now names the identifier as written — `written_parts` (case kept) on the
+un-rewritten four-part form, the parsed `catalog.namespace.t$suffix` name on the
+`$` form — and this paragraph's deleted-fallback and pin-count claims are trued.
 
 ## Measurements (decide-then-build evidence)
 
@@ -106,7 +109,9 @@ namespace, so the md-r1 "naming the base" rule is replaced:
 `table_or_view_not_found_parts` helper (the three-part function delegates to it,
 so the tail is shared byte-for-byte); any other base error surfaces via
 `iceberg_err`; base `Ok` keeps the provider error. A suffix spelled upper-case
-is named canonicalized (the parser normalizes before the error builds).
+was named canonicalized until md-r7fix; the answer now names the parts as
+written (C-018), and a quoted `` `t$snapshots` `` with a missing base names the
+written `$` name (C-019).
 
 **Mechanics.** R0 is red on `check-lib-rs` through main's drift, not this
 round: `origin/main` filled the repark-spark root ceiling exactly (152) with
@@ -129,7 +134,13 @@ not-found `` `sc`.`t`.`snapshots` ``; `DESCRIBE otherns.snapshots` /
 `DESCRIBE [EXTENDED] sc.nosuchns.t.snapshots` → not-found full four-part name;
 `DESCRIBE sc.db.t.nosuchmeta` → not-found full four-part name; `DESCRIBE
 sc.db.`t$snapshots`` → not-found `` `sc`.`db`.`t$snapshots` ``. SELECT gives the
-same not-found answers.
+same not-found answers. md-r7fix re-measured (same PySpark 4.1.2 + Iceberg
+1.11.0, catalog `mt`): `DESCRIBE mt.ns.missing.SNAPSHOTS`,
+`DESCRIBE mt.ns.Missing.snapshots` and `DESCRIBE EXTENDED
+mt.ns.missing.SNAPSHOTS` → AnalysisException TABLE_OR_VIEW_NOT_FOUND /
+SQLSTATE 42P01 naming the parts as written (`` `mt`.`ns`.`missing`.`SNAPSHOTS` ``,
+`` `mt`.`ns`.`Missing`.`snapshots` ``); `DESCRIBE mt.ns.`missing$snapshots`` →
+not-found naming `` `mt`.`ns`.`missing$snapshots` ``.
 
 **Sweep** (class: the intercept answers a name Spark does not resolve, or names
 a not-found differently from Spark; RePark measured on the ruled tree):
@@ -137,10 +148,11 @@ a not-found differently from Spark; RePark measured on the ruled tree):
 | Shape | RePark | Spark (§2) | Pin |
 |---|---|---|---|
 | four-part, base present (+upper) | six rows | six rows | C-001, C-003 |
-| four-part, base missing (+EXTENDED/FORMATTED) | 42P01 full four-part name | 42P01 full four-part name | C-007, C-015 |
+| four-part, base missing (+EXTENDED/FORMATTED, +upper-case suffix/base) | 42P01 name as written | 42P01 name as written | C-007, C-015, C-018 |
 | four-part, namespace missing (+EXTENDED/FORMATTED) | 42P01 full four-part name | 42P01 full four-part name | C-012, C-015 |
 | four-part, unknown suffix (+EXTENDED) | compound-identifier error | 42P01 full four-part name | C-008, C-015 (D-2, not fixed) |
-| quoted three-part ``t$suffix`` | six rows (same provider as SELECT) | 42P01 naming the `$` name | C-013 (D-3, not fixed) |
+| quoted three-part ``t$suffix``, base present | six rows (same provider as SELECT) | 42P01 naming the `$` name | C-013 (D-3, not fixed) |
+| quoted three-part ``t$suffix``, base missing | 42P01 written `$` name `` `mt`.`ns`.`missing$snapshots` `` | 42P01 written `$` name | C-019 |
 | two-part after USE | 42P01 facade-expanded `` `mt`.`t`.`snapshots` `` | 42P01 `` `t`.`snapshots` `` | C-004 (D-1 name shape) |
 | explicit three-part, namespace missing | 42P01 `` `mt`.`t`.`snapshots` `` | 42P01 (name as written) | C-011 (D-1 family, name shape) |
 | explicit three-part, table missing | 42P01 full three-part name as written | 42P01 (name as written) | C-010, C-014 |
@@ -235,6 +247,38 @@ FINDING:
   disposition: REMEDIATED (docstring now states the two-part USE form is a TABLE_OR_VIEW_NOT_FOUND refusal; C-016 proof obligation and evidence read strict xfail with `1 xfailed` in the gate; the C-011 pin name and the sweep/divergence prose were trued to the measured answers)
 ```
 
+## Critic r5 (2026-09-23) — V-001/V-002 remediated (md-r7fix)
+
+Critic r5 at `c49ba03c` returned NEEDS_REMEDIATION on two findings; md-r7fix
+closes both.
+
+```yaml
+FINDING:
+  id: F-IPI-23-MT-DESCRIBE-1-R5-V-001
+  severity: S1
+  category: AT-3
+  clause: C-007, C-018, C-019
+  claim: The missing-base 42P01 answer named the canonicalized suffix — `DESCRIBE mt.ns.missing.SNAPSHOTS` printed `missing`.`snapshots` — where Spark's TABLE_OR_VIEW_NOT_FOUND quotes the identifier as written, and the quoted `t$snapshots` form was split into a four-part name.
+  evidence: both new pins re-raised the wrong name at `c49ba03c` before the Rust change (red-first): `missing`.`snapshots` for the upper-case suffix, `missing`.`snapshots` for `missing$snapshots`; Spark 4.1.2 measured 2026-09-23 names `missing`.`SNAPSHOTS`, `Missing`.`snapshots` and `missing$snapshots` as written; re-introducing the canonical `suffix` re-reds the pins (mutation check)
+  disposition: REMEDIATED (dollar_metadata_table builds the error from describe.written_parts — the parsed catalog.namespace.t$suffix name when written_parts is empty — via table_or_view_not_found_parts; C-018 pins both written-case spellings, C-019 the quoted `$` name)
+```
+
+```yaml
+FINDING:
+  id: F-IPI-23-MT-DESCRIBE-1-R5-V-002
+  severity: S2
+  category: AT-6
+  clause: C-004
+  claim: The Scope paragraph described a registry-defaults fallback for the facade-expanded two-part form that r3fix deleted, and counted "eight offline pins".
+  evidence: no `unqualified_metadata_table` exists in the tree and C-004 pins the refusal; `pytest --collect-only -q` on the test file counts 23 items at the remediated head — 22 offline pins plus the live leg — not eight
+  disposition: REMEDIATED (Scope paragraph rewritten to the code as it is; the offline pin count states the counted 22)
+```
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-018 | `DESCRIBE mt.ns.missing.SNAPSHOTS` and `DESCRIBE mt.ns.Missing.snapshots` raise the full TABLE_OR_VIEW_NOT_FOUND / SQLSTATE 42P01 message naming the parts as written — `` `mt`.`ns`.`missing`.`SNAPSHOTS` `` and `` `mt`.`ns`.`Missing`.`snapshots` ``. | `test_missing_base_not_found_names_written_case` green. | **PROVEN** | Spark 4.1.2 names the written parts (measured 2026-09-23); red at `c49ba03c` (canonicalized suffix), green after md-r7fix. pins: ipi-23-mt-describe-1/C-018 |
+| C-019 | `DESCRIBE mt.ns.`missing$snapshots`` raises the full TABLE_OR_VIEW_NOT_FOUND / SQLSTATE 42P01 message naming the written three-part name `` `mt`.`ns`.`missing$snapshots` ``. | `test_quoted_dollar_missing_base_names_written_name` green. | **PROVEN** | Spark names the `$` name as written (same measurement); red at `c49ba03c` (split `missing`.`snapshots`), green after md-r7fix. pins: ipi-23-mt-describe-1/C-019 |
+
 ## Gates
 
 | Command | Result |
@@ -270,7 +314,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Missing base maps to TABLE_OR_VIEW_NOT_FOUND/42P01 naming the full metadata-table name as written with no `$` leak (C-007); unknown suffixes keep the compound-identifier plan error byte for byte (C-008); any other provider error passes through unchanged by construction of the match.
+      evidence: Missing base maps to TABLE_OR_VIEW_NOT_FOUND/42P01 naming the full metadata-table name as written with no `$` leak (C-007, identifier case kept per C-018; a quoted `$` name keeps the `$` per C-019); unknown suffixes keep the compound-identifier plan error byte for byte (C-008); any other provider error passes through unchanged by construction of the match.
       artifacts: [python/repark/tests/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-4
       status: ATTACKED
@@ -301,9 +345,10 @@ COVERAGE_ATTESTATION:
 ```
 
 Every md-r1 clause above is PROVEN against the recorded R-MT-DESCRIBE cell and
-the main-branch behaviors pinned beside it; critic r1 leaves only C-016 OPEN
+the main-branch behaviors pinned beside it; only C-016 stays OPEN
 (the strict xfail on `ns.t.snapshots` after USE, needing default-catalog
-recovery that is out of scope). Touched files per the Scope
+recovery that is out of scope), and md-r7fix adds the PROVEN C-018/C-019
+written-name pins. Touched files per the Scope
 paragraph; the fork, `Cargo.toml`/`Cargo.lock`, `STATUS.md`, the ANSI door,
 `time_travel.rs`, `wap.rs` and the metadata rewrite are untouched. `make verify`
 and the whole-workspace suites were not run per the work order's gate list; the

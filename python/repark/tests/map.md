@@ -7837,9 +7837,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   compound-identifier error (C-008) — plus the critic-r1 refusal pins
   (C-010..C-015: real/shadowing namespaces, missing namespace naming the full
   name, the quoted `t$snapshots` form, the EXTENDED/FORMATTED matrix), the
-  strict-xfail `ns.t.snapshots` USE form (C-016),
+  strict-xfail `ns.t.snapshots` USE form (C-016), the written-case
+  (`missing.SNAPSHOTS` / `Missing.snapshots`) and quoted `$`-name missing-base
+  pins (C-018, C-019),
   plus the live snapshots leg re-measuring Spark 4.1.2.
-  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-019
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106
