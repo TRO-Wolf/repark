@@ -27,6 +27,10 @@ PATH_OPTION_REFUSAL = (
     "format('iceberg').load(<path>) reads one pinned metadata snapshot and does not "
     "support time-travel or incremental options; got snapshot-id"
 )
+PATH_INCREMENTAL_REFUSAL = (
+    "format('iceberg').load(<path>) reads one pinned metadata snapshot and does not "
+    "support time-travel or incremental options; got start-snapshot-id"
+)
 SNAPSHOT_ID_REFUSAL = (
     "Time travel option `snapshot-id` is no longer supported, "
     "use Spark built-in `versionAsOf` instead"
@@ -145,6 +149,19 @@ def test_load_path_with_time_travel_option_refuses(
         spark.read.format("iceberg").option("snapshot-id", "1").load(str(loaded["table_dir"]))
 
 
+def test_load_path_with_incremental_option_refuses(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """An incremental window option beside a path raises the same pinned refusal.
+
+    pins: dfload-1/C-004
+    """
+    with pytest.raises(AnalysisException, match=re.escape(PATH_INCREMENTAL_REFUSAL)):
+        spark.read.format("iceberg").option("start-snapshot-id", "1").load(
+            str(loaded["table_dir"])
+        )
+
+
 def test_load_missing_location_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
     """A location with no resolvable metadata raises AnalysisException naming the path.
 
@@ -153,6 +170,32 @@ def test_load_missing_location_names_the_path(spark: ReparkSession, tmp_path: Pa
     missing = str(tmp_path / "no" / "such" / "dir")
     with pytest.raises(AnalysisException, match=re.escape(missing)):
         spark.read.format("iceberg").load(missing)
+
+
+def test_load_empty_metadata_dir_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
+    """An existing ``metadata/`` directory with no metadata files refuses naming the path.
+
+    pins: dfload-1/C-005
+    """
+    location = tmp_path / "empty-table"
+    (location / "metadata").mkdir(parents=True)
+    with pytest.raises(AnalysisException, match=re.escape(str(location))):
+        spark.read.format("iceberg").load(str(location))
+
+
+def test_load_hinted_missing_metadata_names_the_path(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """A ``version-hint.text`` naming a metadata file that does not exist refuses
+    AnalysisException naming the path, not an internal Iceberg error.
+
+    pins: dfload-1/C-003
+    """
+    location = tmp_path / "hinted-table"
+    (location / "metadata").mkdir(parents=True)
+    (location / "metadata" / "version-hint.text").write_text("7\n")
+    with pytest.raises(AnalysisException, match=re.escape(str(location))):
+        spark.read.format("iceberg").load(str(location))
 
 
 def test_load_two_part_identifier_keeps_catalog_route(
