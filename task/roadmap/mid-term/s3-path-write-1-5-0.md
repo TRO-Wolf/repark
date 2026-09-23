@@ -1,9 +1,13 @@
-# S3-PATH-WRITE-1 — plain Parquet, CSV and JSON path writes to `s3://`, a v1.5.1 card
+# S3-PATH-WRITE-1 — plain Parquet, CSV and JSON path writes to `s3://`, in the v1.5.0 target
 
 **Filed:** 2026-09-22 by the orchestrating session on the owner's ruling of the same day ("add it as a
 v1.5.1 card"), after the owner asked whether RePark can write standard Parquet objects to S3 today. It
 cannot; this card says exactly why, what closes it, and what it must not disturb. Nothing here is measured
-against Spark yet; step 0 is the measurement. The v1.5.0 gate does not wait on this card.
+against Spark yet; step 0 is the measurement.
+
+**Owner, 2026-09-23:** "add the S3 writer ability to the 1.5 target." This card is now unit **U12** of the
+v1.5.0 remainder ([v1-5-0-remainder-spec-2026-09-23.md](v1-5-0-remainder-spec-2026-09-23.md)); the
+`W-PATH-S3-*` cells recorded in step 0 join the gate inventory, and the gate waits on them.
 
 ## What is true on main today (read from the tree, 2026-09-22)
 
