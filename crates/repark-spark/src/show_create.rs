@@ -521,6 +521,7 @@ mod tests {
     #[test]
     fn parse_leaves_near_misses_alone() {
         for sql in [
+            "",
             "SHOW CREATE VIEW `x",
             "SHOW CREATE",
             "SHOW TABLES IN `x",
@@ -556,6 +557,8 @@ mod tests {
     #[test]
     fn comment_aware_show_create_prefix_leaves_m8_near_misses_alone() {
         for sql in [
+            "",
+            "   ",
             "/* c SHOW CREATE TABLE sc.sales.t",
             "SHOW TABLES IN sc.sales",
             "/* SHOW CREATE TABLE */ SELECT 1",
