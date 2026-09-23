@@ -8,6 +8,10 @@ fn info(location: &str) -> FileInfo {
     FileInfo::new(location.to_string(), 1, 0)
 }
 
+async fn resolve_supplied(file_io: &FileIO, path: &str) -> Result<String> {
+    resolve_metadata_location(file_io, path, path).await
+}
+
 fn local_file_io(root: &str) -> FileIO {
     repark_iceberg::catalog::file_io_for_location(root, &HashMap::<String, String>::new())
         .expect("file_io")
@@ -95,9 +99,7 @@ async fn version_hint_wins_over_directory_listing() {
     std::fs::write(metadata.join("version-hint.text"), b"3\n").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let resolved = resolve_metadata_location(&file_io, &root)
-        .await
-        .expect("resolve");
+    let resolved = resolve_supplied(&file_io, &root).await.expect("resolve");
     assert_eq!(resolved, format!("{root}/metadata/v3.metadata.json"));
 }
 
@@ -118,7 +120,7 @@ async fn listing_resolves_the_highest_numbered_metadata_file() {
     .expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let resolved = resolve_metadata_location(&file_io, &format!("{root}/"))
+    let resolved = resolve_supplied(&file_io, &format!("{root}/"))
         .await
         .expect("resolve");
     assert_eq!(
@@ -140,7 +142,7 @@ async fn hinted_metadata_file_must_exist() {
     std::fs::write(metadata.join("version-hint.text"), b"7\n").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let error = resolve_metadata_location(&file_io, &root)
+    let error = resolve_supplied(&file_io, &root)
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)));
@@ -162,9 +164,7 @@ async fn unparsable_hint_falls_back_to_listing() {
     std::fs::write(metadata.join("version-hint.text"), b"abc\n").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let resolved = resolve_metadata_location(&file_io, &root)
-        .await
-        .expect("resolve");
+    let resolved = resolve_supplied(&file_io, &root).await.expect("resolve");
     assert_eq!(
         resolved,
         format!("{root}/metadata/00002-{UUID_A}.metadata.json")
@@ -195,7 +195,7 @@ async fn empty_metadata_dir_reports_the_supplied_path() {
     std::fs::create_dir_all(dir.path().join("metadata")).expect("mkdir");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let error = resolve_metadata_location(&file_io, &root)
+    let error = resolve_supplied(&file_io, &root)
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)));
@@ -207,7 +207,7 @@ async fn missing_location_reports_the_supplied_path() {
     let dir = tempfile::tempdir().expect("tempdir");
     let root = format!("{}/no/such/dir", dir.path().to_string_lossy());
     let file_io = local_file_io(&root);
-    let error = resolve_metadata_location(&file_io, &root)
+    let error = resolve_supplied(&file_io, &root)
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)));
@@ -263,9 +263,7 @@ async fn nested_metadata_files_are_not_candidates() {
     std::fs::write(metadata.join("sub").join("v99.metadata.json"), b"{}").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let resolved = resolve_metadata_location(&file_io, &root)
-        .await
-        .expect("resolve");
+    let resolved = resolve_supplied(&file_io, &root).await.expect("resolve");
     assert_eq!(resolved, format!("{root}/metadata/v3.metadata.json"));
 }
 
@@ -278,7 +276,7 @@ async fn nested_metadata_files_are_not_candidates_trailing_slash() {
     std::fs::write(metadata.join("sub").join("v99.metadata.json"), b"{}").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&format!("{root}/"));
-    let resolved = resolve_metadata_location(&file_io, &format!("{root}/"))
+    let resolved = resolve_supplied(&file_io, &format!("{root}/"))
         .await
         .expect("resolve");
     assert_eq!(resolved, format!("{root}/metadata/v3.metadata.json"));
@@ -293,7 +291,7 @@ async fn nested_metadata_files_are_not_candidates_file_scheme() {
     std::fs::write(metadata.join("sub").join("v99.metadata.json"), b"{}").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&format!("file://{root}"));
-    let resolved = resolve_metadata_location(&file_io, &format!("file://{root}"))
+    let resolved = resolve_supplied(&file_io, &format!("file://{root}"))
         .await
         .expect("resolve");
     assert_eq!(resolved, format!("{root}/metadata/v3.metadata.json"));
@@ -318,9 +316,7 @@ async fn nested_numbered_metadata_is_not_a_candidate() {
     .expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let resolved = resolve_metadata_location(&file_io, &root)
-        .await
-        .expect("resolve");
+    let resolved = resolve_supplied(&file_io, &root).await.expect("resolve");
     assert_eq!(
         resolved,
         format!("{root}/metadata/00002-{UUID_A}.metadata.json")
@@ -335,7 +331,7 @@ async fn only_nested_metadata_names_the_supplied_path() {
     std::fs::write(metadata.join("sub").join("v1.metadata.json"), b"{}").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let error = resolve_metadata_location(&file_io, &root)
+    let error = resolve_supplied(&file_io, &root)
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)));
@@ -355,9 +351,7 @@ async fn non_utf8_hint_falls_back_to_listing() {
     std::fs::write(metadata.join("version-hint.text"), b"\xff\xfe3\n").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
-    let resolved = resolve_metadata_location(&file_io, &root)
-        .await
-        .expect("resolve");
+    let resolved = resolve_supplied(&file_io, &root).await.expect("resolve");
     assert_eq!(
         resolved,
         format!("{root}/metadata/00002-{UUID_A}.metadata.json")
@@ -370,9 +364,7 @@ async fn explicit_metadata_path_resolves_verbatim() {
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
     let pinned = format!("{root}/metadata/v1.metadata.json");
-    let resolved = resolve_metadata_location(&file_io, &pinned)
-        .await
-        .expect("resolve");
+    let resolved = resolve_supplied(&file_io, &pinned).await.expect("resolve");
     assert_eq!(resolved, pinned);
 }
 

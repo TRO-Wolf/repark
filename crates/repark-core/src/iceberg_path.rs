@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -15,15 +16,22 @@ impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
     pub async fn read_iceberg_path(&self, path: &str) -> Result<DataFrame> {
         refuse_file_authority(path)?;
-        let file_io =
-            repark_iceberg::catalog::file_io_for_location(path, &HashMap::<String, String>::new())
-                .map_err(engine_err)?;
-        let metadata_location = resolve_metadata_location(&file_io, path).await?;
-        let table =
-            StaticTable::from_metadata_file(&metadata_location, path_table_ident(path), file_io)
-                .await
-                .map_err(iceberg_err)?
-                .into_table();
+        refuse_relative_file_path(path)?;
+        let location = local_file_location(path);
+        let file_io = repark_iceberg::catalog::file_io_for_location(
+            &location,
+            &HashMap::<String, String>::new(),
+        )
+        .map_err(engine_err)?;
+        let metadata_location = resolve_metadata_location(&file_io, &location, path).await?;
+        let table = StaticTable::from_metadata_file(
+            &metadata_location,
+            path_table_ident(&location),
+            file_io,
+        )
+        .await
+        .map_err(iceberg_err)?
+        .into_table();
         let provider: Arc<dyn TableProvider> = Arc::new(
             IcebergStaticTableProvider::try_new_from_table(table)
                 .await
@@ -51,11 +59,42 @@ fn refuse_file_authority(path: &str) -> Result<()> {
     )))
 }
 
-async fn resolve_metadata_location(file_io: &FileIO, path: &str) -> Result<String> {
-    if path.ends_with(".metadata.json") {
-        return Ok(path.to_string());
+fn refuse_relative_file_path(path: &str) -> Result<()> {
+    let relative = path
+        .strip_prefix("file:")
+        .and_then(|rest| rest.chars().next())
+        .is_some_and(|next| next != '/');
+    if !relative {
+        return Ok(());
     }
-    let location = path.strip_suffix('/').unwrap_or(path);
+    Err(Error::IllegalArgument(format!(
+        "java.net.URISyntaxException: Relative path in absolute URI: {}",
+        path.strip_suffix('/').unwrap_or(path)
+    )))
+}
+
+fn local_file_location(path: &str) -> Cow<'_, str> {
+    let Some(rest) = path
+        .get(..5)
+        .filter(|scheme| scheme.eq_ignore_ascii_case("file:"))
+        .and_then(|_| path.get(5..))
+    else {
+        return Cow::Borrowed(path);
+    };
+    if rest.starts_with("///") {
+        return Cow::Owned(format!("file:{rest}"));
+    }
+    if rest.starts_with('/') && !rest.starts_with("//") {
+        return Cow::Owned(format!("file://{rest}"));
+    }
+    Cow::Borrowed(path)
+}
+
+async fn resolve_metadata_location(file_io: &FileIO, location: &str, path: &str) -> Result<String> {
+    if location.ends_with(".metadata.json") {
+        return Ok(location.to_string());
+    }
+    let location = location.strip_suffix('/').unwrap_or(location);
     let hint_location = format!("{location}/metadata/version-hint.text");
     if file_io.exists(&hint_location).await.map_err(iceberg_err)?
         && let Some(version) = read_version_hint(file_io, &hint_location).await?
