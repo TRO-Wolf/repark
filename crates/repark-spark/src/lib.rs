@@ -1,4 +1,5 @@
 //! repark-spark — the Spark SQL door.
+
 mod alter;
 mod alter_write_order;
 mod append_with_options;
@@ -151,6 +152,5 @@ use std::{collections::HashMap, sync::Arc};
 // The Q13 surface matrix.
 #[cfg(test)]
 mod matrix;
-
 #[cfg(test)]
 mod tests;

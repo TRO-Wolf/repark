@@ -10,8 +10,8 @@
 
 **Scope:** The Spark hand parser accepts one column identifier after a table name, returns Spark's
 three `info_name` / `info_value` rows, preserves qualified and default-namespace facade expansion,
-and refuses Spark's time-travel tails at parse altitude. The table-level DESCRIBE rows, router
-intercept, `SHOW` surfaces, and partition-information section stay unchanged.
+and refuses Spark's time-travel tails at parse altitude. Round 2 adds Spark's identity-partition
+DESCRIBE section and CREATE-family owner stamping. `SHOW` surfaces stay unchanged.
 
 ## Plan
 
@@ -19,7 +19,12 @@ intercept, `SHOW` surfaces, and partition-information section stay unchanged.
 - [x] S1: parser carrier and time-travel refusal.
 - [x] S2: column execution module and error rows.
 - [x] S3: facade expansion for one column tail.
-- [ ] S4: registry, maps, gates, and ledger retirement.
+- [x] S4: registry, maps, and B1 gates.
+- [ ] S5: red-first identity partition and owner pins.
+- [ ] S6: identity partition section.
+- [ ] S7: owner stamping and reserved-property refusal.
+- [ ] S8: Owner metadata row and property filtering.
+- [ ] S9: registry, maps, B2 gates, and ledger retirement.
 
 ## PROPOSITION LEDGER — DESCRIBE-COLUMN-1 — 2026-09-23
 
@@ -30,7 +35,7 @@ intercept, `SHOW` surfaces, and partition-information section stay unchanged.
 | C-003 | A nested path and a missing column refuse with Spark's measured class and text. | End-to-end pins cover `st.a` and `nope`, including suggestion order. | **PROVEN** | `cargo test -p repark-spark` exits 0; the refusal pin checks both measured texts. |
 | C-004 | `VERSION AS OF`, `TIMESTAMP AS OF`, and `FOR VERSION AS OF` return the measured `PARSE_SYNTAX_ERROR` near token. | Parser and session pins cover all four measured forms. | **PROVEN** | `cargo test -p repark-spark` exits 0; the parser and session pins check each near token. |
 | C-005 | The facade retains a single column tail while qualifying both a three-part and a default-namespace table name. | Python facade pins cover qualified and bare table forms. | **PROVEN** | `make develop` and `.venv/bin/python -m pytest python/repark/tests/test_describe_table.py -q` exit 0. |
-| C-006 | The parity registry and every touched map describe the delivered scope, and the required gates and comment-ban check pass. | Registry and map diffs plus recorded gate exits. | **OPEN** | Maps, size, comment-ban, Rust test, and facade test gates exit 0. The required all-targets Clippy command exits 101 on 4,853 existing `unwrap`/`expect` findings in untouched test targets; `cargo clippy -p repark-spark --lib -- -D warnings` exits 0. |
+| C-006 | The parity registry and every touched map describe the delivered scope, and the required gates and comment-ban check pass. | Registry and map diffs plus recorded gate exits. | **PROVEN** | `make rust-clippy` and `make rust-panic-ban` exit 0. Maps, size, comment-ban, Rust test, and facade test gates also exit 0. |
 
 ## Self Logic Review — SLR-001
 
@@ -44,5 +49,4 @@ text uses the existing Spark error helper; suggestions use Spark's measured simi
 `bash scripts/check_map_md.sh`, `make check-map-md`,
 `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xd-show origin/main HEAD`, and
 `.venv/bin/python -m pytest python/repark/tests/test_describe_table.py -q` exit 0.
-`cargo clippy -p repark-spark --all-targets -- -D warnings` exits 101 on unrelated existing test
-lint findings, so this ledger remains in `staging/` and S4 stays open.
+`make rust-clippy` and `make rust-panic-ban` exit 0. This ledger remains in `staging/` for Round 2.

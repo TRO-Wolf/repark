@@ -32,7 +32,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 - [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), in flight:** SHOW CREATE remediation plus the rollback of branch-local SHOW TBLPROPERTIES serving; the current analysis refusal stays pinned while SHOW TABLES and SHOW COLUMNS retain complete row and schema pins. `risk_tier: standard`. Branch `xd/show-create`.
 - [describe-column-1-ledger.md](describe-column-1-ledger.md) —
   **DESCRIBE-COLUMN-1 (2026-09-23), in flight:** Spark's one-column DESCRIBE rows and
-  parse-altitude VERSION/TIMESTAMP refusal on the Spark SQL door. `risk_tier: standard`.
+  parse-altitude VERSION/TIMESTAMP refusal on the Spark SQL door. Round 2 adds identity partition
+  rows and CREATE-family owner stamping. `risk_tier: standard`.
   Branch `xd/describe`.
   pins: describe-column-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
