@@ -651,9 +651,9 @@ mod tests {
             .err()
             .expect("missing opening parenthesis must refuse");
         assert!(matches!(error, DataFusionError::Plan(_)));
-        assert!(
-            error.to_string().contains("Expected: (, found: 'k'"),
-            "{error}"
+        assert_eq!(
+            error.to_string(),
+            "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: (, found: 'k'"
         );
     }
 

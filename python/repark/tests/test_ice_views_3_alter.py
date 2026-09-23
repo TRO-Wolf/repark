@@ -92,7 +92,7 @@ def test_unset_missing_key_without_if_exists_refuses(spark: ReparkSession) -> No
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.v UNSET TBLPROPERTIES ('nope')")
     text = str(caught.value)
-    assert "Cannot remove property that is not set: 'nope'" in text
+    assert text == "Error during planning: Cannot remove property that is not set: 'nope'"
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert "[" not in text.split("Error during planning:")[-1]
@@ -110,7 +110,7 @@ def test_set_on_missing_view_refuses_catalog_operation(spark: ReparkSession) -> 
     """E3 — SET on a missing view answers the measured catalog-operation refusal."""
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.missing SET TBLPROPERTIES ('k'='v')")
-    assert CATALOG_OPERATION_UNSUPPORTED in str(caught.value)
+    assert str(caught.value) == f"Error during planning: {CATALOG_OPERATION_UNSUPPORTED}"
     assert caught.value.getCondition() == "UNSUPPORTED_FEATURE.CATALOG_OPERATION"
     assert caught.value.getSqlState() == "0A000"
 
@@ -120,7 +120,7 @@ def test_set_on_table_refuses_and_leaves_properties(spark: ReparkSession) -> Non
     properties_before = _table_properties(spark, "sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.t SET TBLPROPERTIES ('k'='v')")
-    assert CATALOG_OPERATION_UNSUPPORTED in str(caught.value)
+    assert str(caught.value) == f"Error during planning: {CATALOG_OPERATION_UNSUPPORTED}"
     assert caught.value.getCondition() == "UNSUPPORTED_FEATURE.CATALOG_OPERATION"
     assert caught.value.getSqlState() == "0A000"
     assert _table_properties(spark, "sc.ns.t") == properties_before
@@ -136,7 +136,7 @@ def test_rename_to_existing_view_refuses(spark: ReparkSession) -> None:
     spark.sql("CREATE VIEW sc.ns.vb AS SELECT data FROM sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.va RENAME TO sc.ns.vb")
-    assert VIEW_ALREADY_EXISTS_VB in str(caught.value)
+    assert str(caught.value) == f"Error during planning: {VIEW_ALREADY_EXISTS_VB}"
     assert caught.value.getCondition() == "VIEW_ALREADY_EXISTS"
     assert caught.value.getSqlState() == "42P07"
     assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.va"))) == [[1], [2]]
@@ -147,7 +147,7 @@ def test_rename_missing_view_is_table_or_view_not_found(spark: ReparkSession) ->
     """E6 — renaming a missing name is the full PR2 TABLE_OR_VIEW_NOT_FOUND."""
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.missing RENAME TO sc.ns.w")
-    assert _table_or_view_not_found("missing") in str(caught.value)
+    assert str(caught.value) == f"Error during planning: {_table_or_view_not_found('missing')}"
     assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
     assert caught.value.getSqlState() == "42P01"
 
@@ -156,8 +156,9 @@ def test_rename_table_with_alter_view_refuses(spark: ReparkSession) -> None:
     """E7 — a table name answers the ALTER TABLE redirect; the table survives."""
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.t RENAME TO sc.ns.w")
-    assert "Cannot rename a table with ALTER VIEW. Please use ALTER TABLE instead." in str(
-        caught.value
+    assert str(caught.value) == (
+        "Error during planning: Cannot rename a table with ALTER VIEW. "
+        "Please use ALTER TABLE instead."
     )
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
@@ -173,12 +174,12 @@ def test_old_name_is_gone_after_rename(spark: ReparkSession) -> None:
     spark.sql("ALTER VIEW sc.ns.vo RENAME TO sc.ns.vr")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("DESCRIBE sc.ns.vo").collect()
-    assert _table_or_view_not_found("vo") in str(caught.value)
+    assert str(caught.value) == f"Error during planning: {_table_or_view_not_found('vo')}"
     assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
     assert caught.value.getSqlState() == "42P01"
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SELECT * FROM sc.ns.vo").collect()
-    assert "table 'sc.ns.vo' not found" in str(caught.value)
+    assert str(caught.value) == "Error during planning: table 'sc.ns.vo' not found"
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.vr"))) == [[1], [2]]
@@ -196,7 +197,9 @@ def test_rename_to_bare_target_reports_cross_catalog_move(
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.v RENAME TO w")
-    assert "Cannot move view between catalogs: from=sc and to=datafusion" in str(caught.value)
+    assert str(caught.value) == (
+        "Error during planning: Cannot move view between catalogs: from=sc and to=datafusion"
+    )
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
 
@@ -207,7 +210,10 @@ def test_alter_view_as_still_refuses(spark: ReparkSession) -> None:
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.v AS SELECT 1")
     text = str(caught.value)
-    assert "ALTER VIEW <viewName> AS is not supported. Use CREATE OR REPLACE VIEW instead" in text
+    assert text == (
+        "Error during planning: ALTER VIEW <viewName> AS is not supported. "
+        "Use CREATE OR REPLACE VIEW instead"
+    )
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert "[" not in text.split("Error during planning:")[-1]
@@ -224,6 +230,7 @@ def test_bare_alter_view_without_verb_is_not_swallowed(spark: ReparkSession) -> 
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW sc.ns.v")
+    assert str(caught.value) == 'SQL error: ParserError("Expected: AS, found: EOF")'
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
@@ -234,10 +241,20 @@ def test_alter_views_and_viewx_are_not_recognized(spark: ReparkSession) -> None:
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEWS sc.ns.v SET TBLPROPERTIES ('k'='v')")
+    assert str(caught.value) == (
+        'SQL error: ParserError("Expected: one of VIEW or TYPE or COLLATION or TABLE or INDEX '
+        "or FUNCTION or AGGREGATE or ROLE or POLICY or CONNECTOR or ICEBERG or SCHEMA or USER "
+        'or OPERATOR, found: VIEWS at Line: 1, Column: 7")'
+    )
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEWX sc.ns.v SET TBLPROPERTIES ('k'='v')")
+    assert str(caught.value) == (
+        'SQL error: ParserError("Expected: one of VIEW or TYPE or COLLATION or TABLE or INDEX '
+        "or FUNCTION or AGGREGATE or ROLE or POLICY or CONNECTOR or ICEBERG or SCHEMA or USER "
+        'or OPERATOR, found: VIEWX at Line: 1, Column: 7")'
+    )
     assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
     assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
