@@ -4,6 +4,10 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [wo-c10-ledger.md](wo-c10-ledger.md) — **WO-C10 (2026-09-23), in flight:** every non-hint
+  unclosed bracketed SQL comment reaches Spark's `UNCLOSED_BRACKETED_COMMENT` front-door
+  parser contract; exact Rust and facade pins cover measured failures, near misses, and the
+  multi-statement router near-miss audit. `risk_tier: standard`. Branch `xd/show-create`.
 - [ipi-20-input-file-name-1-ledger.md](ipi-20-input-file-name-1-ledger.md) —
   **IPI-20-INPUT-FILE-NAME-1 (2026-09-23), in flight:** `input_file_name()` on the
   Spark door — a second trigger into `prepare_metadata_column_sql` rewrites a
