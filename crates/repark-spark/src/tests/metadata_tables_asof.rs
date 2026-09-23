@@ -281,8 +281,8 @@ async fn reader_metadata_path_matches_sql_door() {
     assert_eq!(reader_names, sql_names);
     let reader_batches = reader.collect().await.unwrap();
     let sql_batches = sql.collect().await.unwrap();
-    let reader_rows: usize = reader_batches.iter().map(|batch| batch.num_rows()).sum();
-    let sql_rows: usize = sql_batches.iter().map(|batch| batch.num_rows()).sum();
+    let reader_rows: usize = reader_batches.iter().map(RecordBatch::num_rows).sum();
+    let sql_rows: usize = sql_batches.iter().map(RecordBatch::num_rows).sum();
     assert_eq!(reader_rows, 1);
     assert_eq!(sql_rows, 1);
     let rendered = datafusion::arrow::util::pretty::pretty_format_batches(&reader_batches).unwrap();
@@ -314,8 +314,8 @@ async fn reader_metadata_path_matches_sql_door() {
     assert_eq!(reader_names, sql_names);
     let reader_batches = reader.collect().await.unwrap();
     let sql_batches = sql.collect().await.unwrap();
-    let reader_rows: usize = reader_batches.iter().map(|batch| batch.num_rows()).sum();
-    let sql_rows: usize = sql_batches.iter().map(|batch| batch.num_rows()).sum();
+    let reader_rows: usize = reader_batches.iter().map(RecordBatch::num_rows).sum();
+    let sql_rows: usize = sql_batches.iter().map(RecordBatch::num_rows).sum();
     assert_eq!(reader_rows, 0);
     assert_eq!(sql_rows, 0);
 }
