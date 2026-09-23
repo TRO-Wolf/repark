@@ -156,6 +156,7 @@ fn build_schema_create(
             }
         }
     }
+    refuse_reserved_owner_property(&properties)?;
     // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
     if let Some(comment) = clauses.comment.clone() {
@@ -568,6 +569,21 @@ pub(crate) fn stamp_owner(ctx: &SessionContext, properties: &mut HashMap<String,
         "owner".to_string(),
         crate::describe_show::describe_table_owner(ctx),
     );
+}
+
+pub(crate) const RESERVED_OWNER_PROPERTY_ERROR: &str = concat!(
+    "[UNSUPPORTED_FEATURE.SET_TABLE_PROPERTY] The feature is not supported: ",
+    "owner is a reserved table property, it will be set to the current user. ",
+    "SQLSTATE: 0A000"
+);
+
+pub(crate) fn refuse_reserved_owner_property(properties: &HashMap<String, String>) -> Result<()> {
+    if properties.contains_key("owner") {
+        return Err(DataFusionError::Plan(
+            RESERVED_OWNER_PROPERTY_ERROR.to_string(),
+        ));
+    }
+    Ok(())
 }
 
 async fn validate_service_managed_create(

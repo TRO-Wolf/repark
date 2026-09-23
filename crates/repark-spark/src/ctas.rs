@@ -128,6 +128,7 @@ pub(crate) fn build_ctas(
             }
         }
     }
+    crate::create_table::refuse_reserved_owner_property(&properties)?;
     // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
     if let Some(comment) = clauses.comment.clone() {
