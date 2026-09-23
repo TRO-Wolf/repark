@@ -26,6 +26,8 @@ use crate::write_options::StatementWriteOptions;
 
 const TABLE_OPTION_PREFIX: &str = "option.";
 
+type PropertyPairs = Vec<(String, String)>;
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ShowCreateStatement {
     pub(crate) catalog: String,
@@ -208,15 +210,7 @@ fn render_create_table(
         .iter()
         .map(|field| column_ddl(field, " ", 0))
         .collect::<Result<Vec<String>>>()?;
-    let mut text = format!(
-        "CREATE TABLE {name} (\n  {})\nUSING iceberg\n",
-        columns.join(",\n  ")
-    );
     let (options, properties) = split_table_options(spark_table_properties(metadata));
-    if !options.is_empty() {
-        text.push_str("OPTIONS ");
-        text.push_str(&concat_by_multi_lines(&options));
-    }
     let partitioning = metadata
         .default_partition_spec()
         .fields()
@@ -224,24 +218,29 @@ fn render_create_table(
         .filter(|field| field.transform != Transform::Void)
         .map(|field| describe_partition_field(schema, field))
         .collect::<Result<Vec<String>>>()?;
+    let mut clauses = vec![
+        format!("CREATE TABLE {name} (\n  {})\n", columns.join(",\n  ")),
+        "USING iceberg\n".to_string(),
+    ];
+    if !options.is_empty() {
+        clauses.push(format!("OPTIONS {}", concat_by_multi_lines(&options)));
+    }
     if !partitioning.is_empty() {
-        text.push_str(&format!("PARTITIONED BY ({})\n", partitioning.join(", ")));
+        clauses.push(format!("PARTITIONED BY ({})\n", partitioning.join(", ")));
     }
     if let Some(comment) = metadata.properties().get("comment") {
-        text.push_str(&format!("COMMENT {}\n", spark_sql_string_literal(comment)));
+        clauses.push(format!("COMMENT {}\n", spark_sql_string_literal(comment)));
     }
-    text.push_str(&format!(
+    clauses.push(format!(
         "LOCATION {}\n",
         spark_sql_string_literal(metadata.location())
     ));
-    text.push_str(&render_tblproperties_clause(&properties));
-    Ok(text)
+    clauses.push(render_tblproperties_clause(&properties));
+    Ok(clauses.concat())
 }
 
-fn split_table_options(
-    pairs: Vec<(String, String)>,
-) -> (Vec<(String, String)>, Vec<(String, String)>) {
-    let options: Vec<(String, String)> = pairs
+fn split_table_options(pairs: PropertyPairs) -> (PropertyPairs, PropertyPairs) {
+    let options: PropertyPairs = pairs
         .iter()
         .filter_map(|(key, value)| {
             key.strip_prefix(TABLE_OPTION_PREFIX)
