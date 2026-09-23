@@ -249,11 +249,27 @@ async fn bare_input_file_name_projection_names_the_column() {
         vec!["input_file_name()"],
         "the bare projection column is named input_file_name()"
     );
-    let files = strings(&rows, 0);
-    assert_eq!(files.len(), 3, "three live rows");
+
+    let rewritten = strings(
+        &batches(
+            &session,
+            "SELECT input_file_name() FROM ice.ns.t ORDER BY id",
+        )
+        .await,
+        0,
+    );
+    let file_column = strings(
+        &batches(&session, "SELECT _file FROM ice.ns.t ORDER BY id").await,
+        0,
+    );
+    assert_eq!(
+        rewritten, file_column,
+        "the bare projection answers _file row by row"
+    );
+    let distinct: std::collections::HashSet<&String> = rewritten.iter().collect();
     assert!(
-        files.iter().all(|file| file.ends_with(".parquet")),
-        "every value is a parquet path: {files:?}"
+        distinct.len() >= 2,
+        "the seed spans at least two data files: {rewritten:?}"
     );
 }
 
