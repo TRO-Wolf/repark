@@ -213,20 +213,32 @@ async fn call_remove_orphan_files_refuses_the_warehouse_and_the_fallback_root() 
     assert!(orphan.exists(), "a refused sweep deletes nothing");
 }
 
-async fn file_list_view(session: &ReparkSession, entries: &[&Path]) {
-    let rows: Vec<String> = entries
+async fn register_file_list(session: &ReparkSession, rows: &[(String, i64)]) {
+    let selects: Vec<String> = rows
         .iter()
-        .map(|path| {
+        .map(|(path, seconds)| {
             format!(
-                "SELECT '{}' AS file_path, CAST(from_unixtime(0) AS TIMESTAMP) AS last_modified",
-                path.display()
+                "SELECT '{path}' AS file_path, \
+                 CAST(from_unixtime({seconds}) AS TIMESTAMP) AS last_modified"
             )
         })
         .collect();
-    let frame = session.sql(&rows.join(" UNION ALL ")).await.unwrap();
+    let frame = session.sql(&selects.join(" UNION ALL ")).await.unwrap();
     session
         .create_or_replace_temp_view_from("v", &frame)
         .unwrap();
+}
+
+async fn file_list_view(session: &ReparkSession, entries: &[&Path]) {
+    let rows: Vec<(String, i64)> = entries
+        .iter()
+        .map(|path| (path.display().to_string(), 0))
+        .collect();
+    register_file_list(session, &rows).await;
+}
+
+fn seconds_ago(days: i64) -> i64 {
+    chrono::Utc::now().timestamp() - days * 86_400
 }
 
 #[tokio::test]
@@ -274,6 +286,40 @@ async fn call_remove_orphan_files_file_list_view_armed_deletes_only_the_listed_o
     );
     assert!(live.exists(), "a referenced file is never an orphan");
     assert_eq!(live_rows(&session).await, 1, "the live data file survives");
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_keeps_rows_inside_the_older_than_window() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let old = plant(&table_dir, "orphan-old.parquet", 10);
+    let young = plant(&table_dir, "orphan-young.parquet", 10);
+    register_file_list(
+        &session,
+        &[
+            (old.display().to_string(), seconds_ago(10)),
+            (young.display().to_string(), seconds_ago(1)),
+        ],
+    )
+    .await;
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v')",
+    )
+    .await
+    .expect("armed file_list_view runs");
+    assert_eq!(
+        listed,
+        vec![old.display().to_string()],
+        "a row whose last_modified is inside the default 3-day window is not a candidate"
+    );
+    assert!(!old.exists(), "the old listed orphan is deleted");
+    assert!(
+        young.exists(),
+        "the young row is kept even though its file on disk is old: the view's timestamp rules"
+    );
 }
 
 #[tokio::test]
