@@ -1,6 +1,7 @@
 use super::super::*;
 use super::common::*;
 
+use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::spec::{
     NestedField, PrimitiveType, Schema, StructType, Transform, Type, UnboundPartitionSpec,
 };
@@ -249,14 +250,16 @@ fn describe_table_parser_refuses_time_travel_tails() {
     ] {
         let parsed = crate::describe_show::try_parse_describe_table(sql)
             .expect("the time-travel tail must take the describe-table path");
-        let Err(error) = parsed else {
-            panic!("the time-travel tail must refuse");
+        let Err(DataFusionError::SQL(error, _)) = parsed else {
+            panic!("the time-travel tail must return a SQL parser error");
         };
-        assert!(
-            error.to_string().ends_with(&format!(
-                "[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"
-            )),
-            "{error}"
+        let ParserError::ParserError(message) = error.as_ref() else {
+            panic!("the time-travel tail must return ParserError, got {error:?}");
+        };
+        assert_eq!(
+            message,
+            &format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"),
+            "{sql}"
         );
     }
 }
@@ -384,14 +387,18 @@ async fn describe_table_column_refusals_match_spark() {
         ),
         ("DESCRIBE ice.sales.dc FOR VERSION AS OF 1", "VERSION"),
     ] {
-        let error = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("a describe time-travel tail must refuse");
-        assert!(
-            error.to_string().ends_with(&format!(
-                "[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"
-            )),
-            "{error}"
+        let error = match execute(&ctx, &catalogs, sql).await {
+            Err(DataFusionError::SQL(error, _)) => error,
+            Err(error) => panic!("{sql} must return SQL parser error, got {error:?}"),
+            Ok(_) => panic!("{sql} must refuse"),
+        };
+        let ParserError::ParserError(message) = error.as_ref() else {
+            panic!("{sql} must return ParserError, got {error:?}");
+        };
+        assert_eq!(
+            message,
+            &format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"),
+            "{sql}"
         );
     }
 }
