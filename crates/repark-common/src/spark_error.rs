@@ -6,6 +6,7 @@ pub enum Condition {
     TableOrViewAlreadyExists,
     NotSupportedCommandForV2Table,
     UnresolvedColumnWithSuggestion,
+    UnresolvedColumnWithoutSuggestion,
     UnsupportedFeatureTableOperation,
     UnsupportedFeatureCatalogOperation,
     InvalidPartitionOperationPartitionManagementIsUnsupported,
@@ -42,6 +43,8 @@ pub const TABLE_OR_VIEW_NOT_FOUND: Condition = Condition::TableOrViewNotFound;
 pub const TABLE_OR_VIEW_ALREADY_EXISTS: Condition = Condition::TableOrViewAlreadyExists;
 pub const NOT_SUPPORTED_COMMAND_FOR_V2_TABLE: Condition = Condition::NotSupportedCommandForV2Table;
 pub const UNRESOLVED_COLUMN_WITH_SUGGESTION: Condition = Condition::UnresolvedColumnWithSuggestion;
+pub const UNRESOLVED_COLUMN_WITHOUT_SUGGESTION: Condition =
+    Condition::UnresolvedColumnWithoutSuggestion;
 pub const UNSUPPORTED_FEATURE_TABLE_OPERATION: Condition =
     Condition::UnsupportedFeatureTableOperation;
 pub const UNSUPPORTED_FEATURE_CATALOG_OPERATION: Condition =
@@ -95,6 +98,7 @@ impl Condition {
             Self::TableOrViewAlreadyExists => "TABLE_OR_VIEW_ALREADY_EXISTS",
             Self::NotSupportedCommandForV2Table => "NOT_SUPPORTED_COMMAND_FOR_V2_TABLE",
             Self::UnresolvedColumnWithSuggestion => "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+            Self::UnresolvedColumnWithoutSuggestion => "UNRESOLVED_COLUMN.WITHOUT_SUGGESTION",
             Self::UnsupportedFeatureTableOperation => "UNSUPPORTED_FEATURE.TABLE_OPERATION",
             Self::UnsupportedFeatureCatalogOperation => "UNSUPPORTED_FEATURE.CATALOG_OPERATION",
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported => {
@@ -152,7 +156,9 @@ impl Condition {
             | Self::UnsupportedFeatureCatalogOperation
             | Self::NotSupportedChangeColumn
             | Self::UnsupportedFeatureGeospatialDisabled => Some("0A000"),
-            Self::UnresolvedColumnWithSuggestion => Some("42703"),
+            Self::UnresolvedColumnWithSuggestion | Self::UnresolvedColumnWithoutSuggestion => {
+                Some("42703")
+            }
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported
             | Self::ParseSyntaxError => Some("42601"),
             Self::IncompatibleDataForTableCannotSafelyCast => Some("KD000"),
@@ -191,6 +197,9 @@ impl Condition {
             Self::NotSupportedCommandForV2Table => "{command} is not supported for v2 tables.",
             Self::UnresolvedColumnWithSuggestion => {
                 "A column, variable, or function parameter with name {columnName} cannot be resolved. Did you mean one of the following? [{suggestions}]."
+            }
+            Self::UnresolvedColumnWithoutSuggestion => {
+                "A column, variable, or function parameter with name {columnName} cannot be resolved. "
             }
             Self::UnsupportedFeatureTableOperation => {
                 "The feature is not supported: Table {tableName} does not support column default value. Please check the current catalog and namespace to make sure the qualified table name is expected, and also check the catalog implementation which is configured by \"spark.sql.catalog\"."
@@ -379,6 +388,7 @@ mod tests {
         TABLE_OR_VIEW_ALREADY_EXISTS,
         NOT_SUPPORTED_COMMAND_FOR_V2_TABLE,
         UNRESOLVED_COLUMN_WITH_SUGGESTION,
+        UNRESOLVED_COLUMN_WITHOUT_SUGGESTION,
         UNSUPPORTED_FEATURE_TABLE_OPERATION,
         UNSUPPORTED_FEATURE_CATALOG_OPERATION,
         INVALID_PARTITION_OPERATION_PARTITION_MANAGEMENT_IS_UNSUPPORTED,
@@ -566,6 +576,17 @@ mod tests {
                 ]
             ),
             "[CANNOT_MERGE_SCHEMAS] Failed to merge ORC schemas: column `c` has conflicting types (Int64 and Utf8)"
+        );
+    }
+
+    #[test]
+    fn unresolved_column_without_suggestion_reproduces_live_bytes() {
+        assert_eq!(
+            message(
+                UNRESOLVED_COLUMN_WITHOUT_SUGGESTION,
+                &[("columnName", "`id`")]
+            ),
+            "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter with name `id` cannot be resolved.  SQLSTATE: 42703"
         );
     }
 
