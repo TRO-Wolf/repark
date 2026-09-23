@@ -5,6 +5,7 @@ pins: dbt-1-adapter/C-001
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -25,6 +26,10 @@ class Shape(NamedTuple):
     macro: str
     statement: str
     refusal: str | None
+
+
+def _session_owner() -> str:
+    return os.environ["USER"] if "USER" in os.environ else os.environ.get("USERNAME", "unknown")
 
 
 def _names() -> dict[str, str]:
@@ -329,6 +334,7 @@ def test_show_table_extended_answers_spark_shape(
         "Type: MANAGED\n"
         f"Location: {statement_warehouse / NAMESPACE / 'extended_pin'}\n"
         "Provider: iceberg\n"
+        f"Owner: {_session_owner()}\n"
         "Table Properties: [[, c, u, r, r, e, n, t, -, s, n, a, p, s, h, o, t, -, i, d, "
         "=, n, o, n, e, ,, f, o, r, m, a, t, =, i, c, e, b, e, r, g, /, p, a, r, q, u, e, "
         "t, ,, f, o, r, m, a, t, -, v, e, r, s, i, o, n, =, 2, ,, w, r, i, t, e, ., p, a, "

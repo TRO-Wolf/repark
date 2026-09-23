@@ -26,6 +26,7 @@ Iceberg.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,10 @@ import pytest
 from repark import ReparkSession
 from repark.errors import AnalysisException, ParseException, PySparkTypeError
 from repark.spark.catalog import Catalog, CatalogMetadata, Database, Table
+
+
+def _session_owner() -> str:
+    return os.environ["USER"] if "USER" in os.environ else os.environ.get("USERNAME", "unknown")
 
 
 @pytest.fixture
@@ -458,6 +463,7 @@ def test_show_table_extended_returns_spark_metadata_shape(
         "Type: MANAGED\n"
         f"Location: {tmp_path / 'ns1' / 'entity'}\n"
         "Provider: iceberg\n"
+        f"Owner: {_session_owner()}\n"
         "Table Properties: [[, c, u, r, r, e, n, t, -, s, n, a, p, s, h, o, t, -, i, d, "
         "=, n, o, n, e, ,, f, o, r, m, a, t, =, i, c, e, b, e, r, g, /, p, a, r, q, u, e, "
         "t, ,, f, o, r, m, a, t, -, v, e, r, s, i, o, n, =, 2, ,, w, r, i, t, e, ., p, a, "
