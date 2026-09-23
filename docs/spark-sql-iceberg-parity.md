@@ -1803,13 +1803,13 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   narrowing first keeps no wide cast to strip.
   pins: types-1/C-001
 
-### TY-8 — `grouping()` answers INT and is accepted outside grouping sets
+### TY-8 — `grouping()` is accepted outside grouping sets
 
-- **repark** — `grouping(i)` under `ROLLUP`/`GROUPING SETS` answers `int32` /
-  non-null with Spark's values, and is also accepted under a plain `GROUP BY i`
-  (all zeros) and with several arguments (bitmask). All three come from DataFusion's
-  `ResolveGroupingFunction`, which hardcodes the `CAST(... AS Int32)` expansion;
-  TYPES-1 narrowed no grouping shape.
+- **repark** — `grouping(i)` under `ROLLUP`/`GROUPING SETS` answers `int8` / non-null
+  with Spark's values from repark's grouping kernel (the tinyint label closed with
+  `FNP-AGG-1-18B`). Under a plain `GROUP BY i` it is still accepted and answers a
+  constant `int8` `0` for any argument count; under grouping sets a call with more
+  than one argument raises a planning error rather than Spark's `WRONG_NUM_ARGS`.
 - **Apache Spark** — answers `int8` / non-null with the same values on the grouping-set
   shapes, raises `UNSUPPORTED_GROUPING_EXPRESSION` under a plain `GROUP BY i`, and raises
   `WRONG_NUM_ARGS` for two arguments. *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1
@@ -1817,11 +1817,10 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Pin** — `python/repark/tests/test_types_1.py::test_grouping_in_rollup_and_sets_answers_int`,
   `::test_grouping_under_plain_group_by_is_accepted`, and
   `::test_live_grouping_sets_match_on_value_with_type_carve_out`
-  (pins the `(int32, int8)` type pair so either side moving reds it).
-- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Spark parity needs a repark
-  grouping layer (tinyint answer, grouping-set-context refusal, one-arg arity); a post-rule
-  recast would couple to DataFusion's internal `__grouping_id` expansion shape, and the
-  arity is already lost after expansion.
+  (pins the `(int8, int8)` type pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4); the result type closed
+  2026-09-21 (FNP-AGG-1 slice (d), `FNP-AGG-1-18B`). The remaining divergence is the
+  grouping-set-context refusal and Spark's arity error class under a plain `GROUP BY`.
   pins: types-1/C-004
 
 ### TY-9 — `ntile` accepts a BIGINT bucket count
