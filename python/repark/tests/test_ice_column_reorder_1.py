@@ -45,7 +45,7 @@ def _catalog(test_name: str) -> str:
 
 def _table_root(warehouse: Path, catalog: str, table: str) -> Path:
     """Memory-catalog table root for a moved table."""
-    return warehouse / "repark_ctas" / catalog / _NAMESPACE / table
+    return warehouse / _NAMESPACE / table
 
 
 def _metadata_file_count(table_root: Path) -> int:

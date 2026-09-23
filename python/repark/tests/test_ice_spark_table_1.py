@@ -590,7 +590,7 @@ def test_spark_created_and_repark_created_metadata_shapes(tmp_path: Path) -> Non
         rows = _seed_rows()
         spark.sql(f"INSERT INTO {_FQ_TABLE} VALUES {_values_sql(rows[:10])}")
         spark.sql(f"INSERT INTO {_FQ_TABLE} VALUES {_values_sql(rows[10:])}")
-        twin_root = tmp_path / "twin-warehouse" / "repark_ctas" / _CATALOG / _NAMESPACE / _TABLE
+        twin_root = tmp_path / "twin-warehouse" / _NAMESPACE / _TABLE
         metadata_names = sorted(
             path.name for path in (twin_root / "metadata").glob("*.metadata.json")
         )

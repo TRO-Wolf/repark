@@ -743,20 +743,18 @@ impl ReparkSession {
             )));
         }
         let catalog = self.memory_catalog_handle(warehouse).await?;
+        let root = memory_warehouse_fallback_root(warehouse);
         // In-memory LocalFs catalogs keep the offline CTAS fallback; real warehouses fail loud.
         self.register_iceberg_catalog_with_policy(
             name,
             catalog,
-            LocationPolicy::TempFallbackAllowed {
-                root: memory_warehouse_fallback_root(warehouse),
-            },
+            LocationPolicy::TempFallbackAllowed { root: root.clone() },
         )
         .await?;
         // SEC-02 grandfather: COPY TO / CREATE EXTERNAL under this warehouse stay allowed.
-        self.catalogs
-            .write()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .note_local_warehouse_root(warehouse.to_string());
+        let mut catalogs = RwLock::write(&self.catalogs).unwrap_or_else(PoisonError::into_inner);
+        catalogs.note_local_warehouse_root(warehouse.to_string());
+        catalogs.set_warehouse_layout_root(name, root);
         Ok(())
     }
 

@@ -1,5 +1,7 @@
 # map — repark-spark/src
 
+U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. On a `TempFallbackAllowed` catalog only, an orphan scan refuses a path that holds another table's metadata file or an unreadable one, or whose ancestor walk (`call/map.md`) reaches a `metadata/` directory holding one (the other table of any catalog); and a path that holds another table of the same catalog, lies inside one outside the swept table's own location, or lies inside the swept table's own location when another table shares it. See `tests/map.md` and `call/map.md`. pins: u1-mem-layout-1/C-002, C-011, C-014, C-020, C-025, C-029
+
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `merge_fragments.rs` passes the clause home scope — NOT MATCHED [BY TARGET] fragments resolve bare references against the source alias, NOT MATCHED BY SOURCE against the target alias, MATCHED/ON against both. pins: ice-mixed-case-1/C-004
 
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): normalization stays ON (`extension.rs` carries no parser switch); the fold and fragment rewrites emit backticked stored-case spellings. pins: ice-mixed-case-1/C-001…C-006

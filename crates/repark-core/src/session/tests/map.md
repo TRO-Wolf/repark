@@ -1,5 +1,7 @@
 # map — repark-core/src/session/tests
 
+- `session.rs` — **U1-MEM-LAYOUT-1 (2026-09-23):** direct and configured memory-catalog registration preserve the warehouse fallback root and record the layout root. pins: u1-mem-layout-1/C-001
+
 ## Purpose
 
 Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.

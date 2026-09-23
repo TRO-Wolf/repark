@@ -69,6 +69,7 @@ struct CatalogEntry {
     catalog: Arc<dyn Catalog>,
     location_policy: LocationPolicy,
     table_props: HashMap<String, String>,
+    warehouse_layout_root: Option<PathBuf>,
 }
 
 const TABLE_DEFAULT_PREFIX: &str = "table-default.";
@@ -177,8 +178,22 @@ impl CatalogRegistry {
                 catalog,
                 location_policy: policy,
                 table_props: HashMap::new(),
+                warehouse_layout_root: None,
             },
         );
+    }
+
+    pub fn set_warehouse_layout_root(&mut self, name: &str, root: PathBuf) {
+        if let Some(entry) = self.entries.get_mut(name) {
+            entry.warehouse_layout_root = Some(root);
+        }
+    }
+
+    #[must_use]
+    pub fn warehouse_layout_root(&self, name: &str) -> Option<PathBuf> {
+        self.entries
+            .get(name)
+            .and_then(|entry| entry.warehouse_layout_root.clone())
     }
 
     pub fn merge_table_props(&mut self, name: &str, props: &HashMap<String, String>) {
