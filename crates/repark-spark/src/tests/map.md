@@ -854,14 +854,6 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `IllegalArgument` verbatim, the rule-1 unknown id → `IllegalArgument("Cannot find snapshot
   with ID 999")`, `all_*` → mapped `Analysis` (the UnsupportedOperationException gap
   declared) — and the empty-scan schema pin compares Arrow fields (name, data type,
-  nullability)),
-  `branch_read_schema` (**xo55-bs R1 (2026-09-22):** the R-BRANCH-SCHEMA battery — the
-  branch selector and `VERSION AS OF 'b0'` project the current schema after ADD/DROP/RENAME
-  COLUMN with `z` NULL and `WHERE z IS NULL` answering; tag, snapshot-id, and timestamp
-  pins keep the snapshot schema; unknown refs refuse verbatim; the `read_table_at` pin
-  covers the reader-options door.
-  pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008),
-  `normalize`, `local_fs_ddl`,
   nullability). **IPI-23-MT-READER-1 (2026-09-22):**
   `reader_metadata_path_matches_sql_door` calls the moved `provider_for_spec`
   through both callers — `read_table_at` and the SQL door — for one scoped and one
@@ -871,7 +863,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `sales.sub` beside base table `sales.sub` must make `read_metadata_path_at`
   fall through (both doors refuse the four-part name) instead of serving
   `sales.sub` snapshot metadata.
-  pins: ipi-23-mt-reader-1/C-004, C-007), `normalize`, `local_fs_ddl`,
+  pins: ipi-23-mt-reader-1/C-004, C-007),
+  `branch_read_schema` (**xo55-bs R1 (2026-09-22):** the R-BRANCH-SCHEMA battery — the
+  branch selector and `VERSION AS OF 'b0'` project the current schema after ADD/DROP/RENAME
+  COLUMN with `z` NULL and `WHERE z IS NULL` answering; tag, snapshot-id, and timestamp
+  pins keep the snapshot schema; unknown refs refuse verbatim; the `read_table_at` pin
+  covers the reader-options door.
+  pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008),
+  `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names.
