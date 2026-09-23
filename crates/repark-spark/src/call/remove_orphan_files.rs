@@ -48,7 +48,7 @@ pub(crate) fn refuse_shared_temp_fallback_location(
     Ok(())
 }
 
-async fn refuse_scan_over_other_tables(
+pub(crate) async fn refuse_scan_over_other_tables(
     policy: Option<&LocationPolicy>,
     catalog: &dyn Catalog,
     catalog_name: &str,
@@ -110,7 +110,7 @@ async fn refuse_scan_over_other_tables(
     Ok(())
 }
 
-async fn refuse_scan_over_foreign_metadata(
+pub(crate) async fn refuse_scan_over_foreign_metadata(
     policy: Option<&LocationPolicy>,
     swept: &Table,
     scan_location: &str,
