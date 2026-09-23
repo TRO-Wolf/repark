@@ -1504,6 +1504,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   view's orphans verbatim, and an armed call deletes exactly those. Registry row ORPHAN-3.
   `risk_tier: high`. Branch `fix/ipi-30-orphan-guard-narrow`.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+- [ipi-23-mt-describe-1-ledger.md](ipi-23-mt-describe-1-ledger.md) —
+  **IPI-23-MT-DESCRIBE-1 (2026-09-22), in flight:** `DESCRIBE [TABLE]`/`DESC` on a
+  dotted Iceberg metadata table answers one row per column of the metadata table
+  from the same provider schema `SELECT *` resolves; a missing base raises
+  `TABLE_OR_VIEW_NOT_FOUND` naming the base table, and `EXTENDED`/`FORMATTED`
+  print the column rows only. Eight facade pins replay the recorded
+  `R-MT-DESCRIBE` cell plus spelling variants, the two-part `USE` form, and four
+  near misses; registry row `DESC-1` re-ruled to the served behavior.
+  `risk_tier: standard`. Branch `fix/ipi-23-describe-metadata-table`.
+  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009
 - [ipi-23-mt-reader-1-ledger.md](ipi-23-mt-reader-1-ledger.md) —
   **IPI-23-MT-READER-1 (2026-09-22), in flight:** `format("iceberg").load("c.n.t.<meta>")`
