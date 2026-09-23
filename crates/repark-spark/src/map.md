@@ -1451,7 +1451,7 @@ pins: rp-4-fork-repin/C-005, C-006
   temporary views remain absent from this statement's Iceberg listing.
   Parser unit pins cover required syntax refusals and near misses.
   pins: wo-a1b/C-001
-  pins: [`tests/show_table_extended.rs`](tests/show_table_extended.rs)
+  See [tests/show_table_extended.rs](tests/show_table_extended.rs) for parser and end-to-end pins.
 - `spark_tree_string.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** iterative Arrow-schema port
   of the facade `StructType.treeString` layout for SHOW TABLE EXTENDED. It uses Spark type-name
   spellings and renders struct, array, and map children with a depth limit.

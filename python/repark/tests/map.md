@@ -3079,6 +3079,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: wo-c10/C-002
   **WO-A4 (2026-09-23):** INSERT BY NAME with a column list and multi-statement SQL pin the
   bare bracketed parser payload, `ParseException`, `PARSE_SYNTAX_ERROR`, and SQLSTATE `42601`.
+  **WO-A4 (2026-09-23):** INSERT BY NAME with a column list pins the bare bracketed parser
+  payload, `ParseException`, `PARSE_SYNTAX_ERROR`, and SQLSTATE `42601`.
+  pins: wo-c3/C-004
+  Multi-statement SQL pins the same facade contract.
   pins: wo-c5/C-001
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
   expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare

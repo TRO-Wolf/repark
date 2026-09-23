@@ -25,6 +25,12 @@
   Arrow rows; the branch-added parser refusal pins in `column_move.rs`, `nested_column_ddl.rs`,
   `router.rs`, `truncate.rs`, `test_e1_errorclass.py`, and `test_show_create_table.py` already
   compare complete messages.
+- **V-003 citation audit:** `crates/repark-spark/src/map.md` keeps `wo-a1b/C-001` for the lexer
+  pins and now uses an ordinary test-file pointer. `crates/repark-spark/src/tests/map.md` cites
+  `wo-a1b/C-002, C-003` for literal PARTITION and full refusal pins, and
+  `show-table-extended-1/C-001, C-002, C-003, C-004` for parser, metadata, scope, and facade/dbt
+  pins. `python/repark/tests/map.md` cites `wo-a1b/C-003` for facade refusals. Its corrected
+  INSERT BY NAME citation is `wo-c3/C-004`; its multi-statement citation remains `wo-c5/C-001`.
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
