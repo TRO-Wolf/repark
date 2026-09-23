@@ -18,6 +18,15 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/ipi-20-input-file-name`.
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013
+- [dfload-1-ledger.md](dfload-1-ledger.md) —
+  **DFLOAD-1 / U10 (2026-09-23), in flight:** `format("iceberg").load(<path>)` reads the
+  table at a filesystem path like Spark's `IcebergSource` — the contains-slash route,
+  `.metadata.json` direct, `version-hint.text` then highest-integer metadata resolution,
+  static read-only provider with no catalog registration, pinned refusal for
+  time-travel/incremental options beside a path, and the unchanged catalog route for
+  every slash-free near-miss. C-001..C-007 PROVEN. `risk_tier: standard`. Branch
+  `fix/u10-df-load-path`.
+  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the

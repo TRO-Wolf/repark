@@ -7953,3 +7953,18 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   and the `like`-escape cells go `xfail(strict)` on their owning fences (run 18c
   parser, LIT-DECIMAL-1); the BOOLEAN refusals pin green on both doors.
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [test_iceberg_load_path.py](test_iceberg_load_path.py) —
+  **U10 / R-DF-LOAD-PATH + R-DF-LOAD-METADATA-JSON (2026-09-23):**
+  `format("iceberg").load(<path>)` reads the table at a filesystem path like Spark's
+  `IcebergSource`. The fixture (create, insert three, delete one) pins `load(<location>)`
+  and `load(<location>/)` answering the current `[[2,"b","y"],[3,"c","x"]]` with BIGINT /
+  STRING Arrow types, `load(<latest metadata.json>)` the same, `load(<an older
+  metadata.json>)` the pre-delete three rows, `load(<location>)` with `snapshot-id` the
+  pinned path refusal (`format('iceberg').load(<path>) reads one pinned metadata snapshot
+  and does not support time-travel or incremental options; got snapshot-id`), and
+  `load("/no/such/dir")` an `AnalysisException` naming the path. The near-miss arm holds
+  the catalog route on `ns.events`, `mem.ns.events`, `ns.events.snapshots` (the measured
+  `table not found` refusal), `` `ns`.`events` ``, and `snapshot-id` on a catalog
+  identifier (Spark's `IllegalArgumentException` text). Both scoreboard cells replayed
+  against the lane build answer Spark's recorded rows exactly.
+  pins: dfload-1/C-001, C-002, C-004, C-005, C-006, C-007

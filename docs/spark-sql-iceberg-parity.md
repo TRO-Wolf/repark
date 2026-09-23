@@ -225,6 +225,58 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   `stringToTimestamp`, so these strings answer Spark's rows on both entries and the strict
   xfails are plain pins. pins: cast-ts-string-1/C-009
 
+#### R-DF-LOAD-PATH — `format("iceberg").load(<table location path>)` — **FIXED 2026-09-23**
+
+- **Before** — `AnalysisException: read_iceberg_table: invalid table identifier '<path>':
+  invalid unquoted segment`, because `load()` handed every argument to the catalog
+  identifier parser. *(measured 2026-09-23 on `f411192d`, probe
+  `dfload-finding.md`; scoreboard cell `R-DF-LOAD-PATH`.)*
+- **After** — an argument containing `/` takes Spark's `IcebergSource` rule: it is a
+  filesystem path, not an identifier. One trailing `/` is stripped; a table location
+  resolves `<loc>/metadata/version-hint.text` when present (its integer selects
+  `v<N>.metadata.json`), else the highest leading-integer metadata file under
+  `<loc>/metadata/` in either the `NNNNN-<uuid>` or `v<N>` form; a location with no
+  resolvable metadata raises `AnalysisException` naming the supplied path. The static
+  table reads through `IcebergStaticTableProvider` — nothing is registered in a catalog —
+  and a time-travel or incremental reader option beside a path refuses the pinned
+  `AnalysisException` (`format('iceberg').load(<path>) reads one pinned metadata snapshot
+  and does not support time-travel or incremental options; got <keys>`).
+- **Apache Spark** — `spark.read.format("iceberg").load(<table location>)` answers the
+  current snapshot `[[2,"b","y"],[3,"c","x"]]`. *(oracle: recorded live PySpark 4.1.2 +
+  iceberg-spark-runtime-4.1_2.13:1.11.0 cell `R-DF-LOAD-PATH`; replayed identical on the
+  lane build 2026-09-23.)*
+- **Pin** — `python/repark/tests/test_iceberg_load_path.py`
+  (`test_load_table_location_reads_current_rows`, `test_load_table_location_trailing_slash`,
+  `test_load_missing_location_names_the_path`, `test_load_path_with_time_travel_option_refuses`,
+  and the five near-miss pins that hold the catalog route);
+  `crates/repark-core/src/iceberg_path/tests.rs` (the picker battery).
+- **Rationale** — FIXED 2026-09-23 (dfload-1, WO dfload-r1). The `contains "/"` test is
+  Spark's own IcebergSource rule: every near-miss without `/` (`ns.t`, `cat.ns.t`,
+  `ns.t.snapshots`, `` `ns`.`t` ``, `ns.t` + `snapshot-id`) keeps the catalog route
+  untouched, and the option refusal is declared, never silently ignored.
+  pins: dfload-1/C-001, C-004, C-005, C-006
+
+#### R-DF-LOAD-METADATA-JSON — `format("iceberg").load(<file>.metadata.json)` — **FIXED 2026-09-23**
+
+- **Before** — the same invalid-identifier `AnalysisException` as R-DF-LOAD-PATH.
+  *(measured 2026-09-23 on `f411192d`, probe `dfload-finding.md`; scoreboard cell
+  `R-DF-LOAD-METADATA-JSON`.)*
+- **After** — a path ending `.metadata.json` loads that exact metadata file as a read-only
+  static table (fork `StaticTable::from_metadata_file` →
+  `IcebergStaticTableProvider::try_new_from_table`), so the pinned file's own snapshot
+  answers — the latest metadata file the current rows, an older file that version's rows.
+- **Apache Spark** — `spark.read.format("iceberg").load(<latest metadata.json>)` answers
+  the current snapshot `[[2,"b","y"],[3,"c","x"]]`. *(oracle: recorded live PySpark 4.1.2
+  + iceberg-spark-runtime-4.1_2.13:1.11.0 cell `R-DF-LOAD-METADATA-JSON`; replayed
+  identical on the lane build 2026-09-23.)*
+- **Pin** — `python/repark/tests/test_iceberg_load_path.py`
+  (`test_load_latest_metadata_file_reads_current_rows`,
+  `test_load_older_metadata_file_reads_that_version`).
+- **Rationale** — FIXED 2026-09-23 (dfload-1, WO dfload-r1). The suffix test precedes the
+  location resolution, so an explicit metadata file pins its snapshot rather than
+  re-resolving current — Spark's own order.
+  pins: dfload-1/C-002
+
 ### 2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)
 
 Supported surface, for reference:
