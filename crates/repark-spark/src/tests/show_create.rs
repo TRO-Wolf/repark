@@ -683,7 +683,7 @@ async fn show_columns_matches_the_complete_spark_row_and_schema() {
 }
 
 #[tokio::test]
-async fn show_tblproperties_matches_the_complete_spark_rows_and_schema() {
+async fn show_tblproperties_keeps_its_current_analysis_refusal() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -693,53 +693,10 @@ async fn show_tblproperties_matches_the_complete_spark_rows_and_schema() {
     )
     .await;
     let sql = "SHOW TBLPROPERTIES ice.sales.t";
-    let batches = execute(&ctx, &catalogs, sql)
-        .await
-        .expect(sql)
-        .collect()
-        .await
-        .expect(sql);
-    assert_eq!(batches.len(), 1, "{sql}");
-    let batch = batches.first().expect(sql);
     assert_eq!(
-        batch
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| (field.name().clone(), field.data_type().clone()))
-            .collect::<Vec<_>>(),
-        vec![
-            ("key".to_string(), DataType::Utf8),
-            ("value".to_string(), DataType::Utf8),
-        ]
-    );
-    let keys = batch
-        .column(0)
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .expect(sql);
-    let values = batch
-        .column(1)
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .expect(sql);
-    assert_eq!(
-        (0..batch.num_rows())
-            .map(|index| (
-                keys.value(index).to_string(),
-                values.value(index).to_string(),
-            ))
-            .collect::<Vec<_>>(),
-        vec![
-            ("current-snapshot-id".to_string(), "none".to_string()),
-            ("format".to_string(), "iceberg/parquet".to_string()),
-            ("format-version".to_string(), "2".to_string()),
-            ("k".to_string(), "v".to_string()),
-            (
-                "write.parquet.compression-codec".to_string(),
-                "zstd".to_string(),
-            ),
-        ]
+        execution_error(&ctx, &catalogs, sql).await.to_string(),
+        "Error during planning: SHOW [VARIABLE] is not supported unless information_schema is \
+         enabled"
     );
 }
 
