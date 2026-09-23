@@ -201,6 +201,27 @@ spellings pairwise; all three texts now say so, and the closing paragraph
 and AT-2 now scope their "every refusal"/"every clause" sentences to the
 paired pins. Pin count unchanged: twenty-two facade pins, C-001..C-022.
 
+**Follow-up (2026-09-23, WO rd-r11fix, critic r8):** three findings plus a
+full quantifier sweep, all prose-side — no assertion moved. V-001 (P1): the
+module docstring and the tests `map.md` entry claimed every answering test
+compares rows and column names against the SQL door — C-010 pins the
+reader's rows standalone with no SQL arm and the live leg C-013 compares the
+selected rows only (`_live_rows` collects row values, not column names)
+beside its absolute field and sum pins; both texts now name the exceptions.
+V-002 (P1): the MT-1 reader bullet in `docs/spark-sql-iceberg-parity.md`
+claimed reader refusals carry the SQL door's texts verbatim — now scoped to
+the paired refusals, with C-011's literal-text-plus-SQLSTATE shape and
+C-012's standalone literals named. V-003 (P2): the C-014 row claimed the
+"full backticked" text and the test docstring "backticks included" — both
+now state relative equality (the reader's class, text and `getSqlState()`
+equal the SQL door's on the same spelling); the red-first quoting difference
+stays in Evidence. The same sweep narrowed C-007's docstring ("the SQL
+schema" → the SQL door's column names, what `_frame_cols` asserts), AT-1's
+"each answering clause" (C-010 and C-013 named) and AT-9's "errors verbatim"
+(the unknown-suffix refusal keeps the reader's own spelling). The full sweep
+table is in the rd-r11fix hand-back. Pin count unchanged: twenty-two facade
+pins, C-001..C-022.
+
 ## Measurements (decide-then-build evidence)
 
 **M-1 — the oracle is recorded, not re-derived.** The two replay cells were recorded
@@ -248,7 +269,7 @@ the SQL door's backticked spelling by construction (unquoted internal SQL, uncha
 | C-011 | Near miss: `load("mt.ns.t.nope")` keeps today's `AnalysisException` text as a literal pin (`Unsupported compound identifier 'mt.ns.t_load_nope.nope'. Expected 1, 2 or 3 parts, got 4`); only `getSqlState()` is compared against the SQL door's on the same spelling. | `test_load_unknown_suffix_keeps_error_text` green. | **PROVEN** | The reader's own literal, measured on main (M-3); SQLSTATE paired, text literal. pins: ipi-23-mt-reader-1/C-011 |
 | C-012 | Near miss: the legacy `snapshot-id` / `as-of-timestamp` / `tag` options on `load("mt.ns.t.files")` refuse standalone with the #800 `IllegalArgumentException` literal texts and `getSqlState()` `None` — no SQL arm. | `test_legacy_options_on_metadata_keep_refusal_texts` green. | **PROVEN** | Python-layer refusals fire before any engine routing; literal texts plus `is None`. pins: ipi-23-mt-reader-1/C-012 |
 | C-013 | Live leg: on Spark 4.1.2 itself the reader answers what SQL answers for `load(t.snapshots)` and `versionAsOf` on `load(t.files)` at the second snapshot id — sorted `operation` multiset `append, append, delete`, field `("operation", "string", True)`, `record_count` sum 3 and field `("record_count", "bigint", False)`, the pinned read differing from the un-pinned. | `test_live_spark_reader_matches_sql` green under `REPARK_PARITY_LIVE=1`. | **PROVEN** | Goal premise re-measured on the live oracle in the gate's live leg. pins: ipi-23-mt-reader-1/C-013 |
-| C-014 | V-001: `load("mt.ns.T_CASETWIN.snapshots")` (stored lowercase) fails with the SQL door's class, full backticked text and `getSqlState()`. | `test_load_case_twin_table_matches_sql_door` green. | **PROVEN** | Red-first: double-quoted vs backticked identifier; equal after the fix. pins: ipi-23-mt-reader-1/C-014 |
+| C-014 | V-001: `load("mt.ns.T_CASETWIN.snapshots")` (stored lowercase) fails with the same class, text and `getSqlState()` as the SQL door on the same spelling. | `test_load_case_twin_table_matches_sql_door` green. | **PROVEN** | Red-first: double-quoted vs backticked identifier; equal after the fix. pins: ipi-23-mt-reader-1/C-014 |
 | C-015 | V-002: `SELECT count(*) FROM mt.ns."missing$all_files" VERSION AS OF 1` gives the `ALL_FILES` refusal (class, sqlstate, full message), equal to the existing-table dollar and dotted spellings — implicitly the Spark refusal contract. | `test_quoted_dollar_missing_table_refuses_all_files` green. | **REJECTED** (ROUTER-EQUIVALENCE ONLY — DIVERGES FROM SPARK) | The three-spelling equality holds on RePark and stays pinned as router equivalence (red-first `TableNotFound` before the refusal-first fix); on Spark 4.1.2 both quoted-dollar spellings parse-refuse (`PARSE_SYNTAX_ERROR`, the C-019 measurement) before any `ALL_FILES` check, so the pinned equality is RePark-internal. Pre-existing divergence filed for follow-up. pins: ipi-23-mt-reader-1/C-015 |
 | C-016 | Sweep: `load("mt.ns.t.SNAPSHOTS")` equals the SQL door (rows and columns), with the sorted `operation` multiset `append, append, delete`. | `test_load_uppercase_suffix_equals_sql` green. | **PROVEN** | Uppercase suffix serves on both doors. pins: ipi-23-mt-reader-1/C-016 |
 | C-017 | Sweep: missing-table and missing-namespace un-pinned loads fail with the SQL door's class, exact text and `getSqlState()`. | `test_load_missing_parent_matches_sql_door` green. | **PROVEN** | Red-first on quoting with C-014; equal after. pins: ipi-23-mt-reader-1/C-017 |
@@ -284,7 +305,7 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      evidence: Each answering clause walks the reader to the SQL door on the same table — rows plus schema field names on snapshots/files/history/refs (C-001/C-002), the table API (C-003), versionAsOf on four types (C-004), timestampAsOf (C-005), and the two recorded Spark cells replayed equal (rows append/append/overwrite, record_count [2]).
+      evidence: Answering clauses walk the reader to the SQL door on the same table — rows plus schema field names on snapshots/files/history/refs (C-001/C-002), the table API (C-003), versionAsOf on four types (C-004), timestampAsOf (C-005) — except C-010, which pins the reader's rows standalone, and the live C-013, which compares the selected rows only; the two recorded Spark cells replayed equal (rows append/append/overwrite, record_count [2]).
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py]
     - id: AT-2
       status: ATTACKED
@@ -314,7 +335,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, crates/repark-spark/src/time_travel.rs]
     - id: AT-9
       status: ATTACKED
-      evidence: Reader errors are the SQL door's errors verbatim (same functions, same texts); a mis-scope surfaces the router's or resolver's loud refusal, never a silent wrong table — real-table-wins and missing-parent fall through to today's texts.
+      evidence: Paired reader refusals are the SQL door's errors verbatim (same functions, same texts) — the unknown-suffix refusal keeps the reader's own unquoted spelling, pinned as a literal; a mis-scope surfaces the router's or resolver's loud refusal, never a silent wrong table — real-table-wins and missing-parent fall through to today's texts.
       artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, python/repark/tests/test_ice_mt_reader_1.py]
     - id: AT-10
       status: ATTACKED
