@@ -865,7 +865,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   nullability). **IPI-23-MT-READER-1 (2026-09-22):**
   `reader_metadata_path_matches_sql_door` calls the moved `provider_for_spec`
   through both callers — `read_table_at` and the SQL door — for one scoped and one
-  empty case (rows, rendered batches, schema names equal).
+  empty case (rows, rendered batches, schema names equal). **critic r2 (2026-09-23):**
+  `metadata_asof_nested_namespace_real_table_wins` pins the four-part
+  real-table-wins branch — a real `snapshots` table under catalog-built namespace
+  `sales.sub` beside base table `sales.sub` must make `read_metadata_path_at`
+  fall through (both doors refuse the four-part name) instead of serving
+  `sales.sub` snapshot metadata.
   pins: ipi-23-mt-reader-1/C-004, C-007), `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
