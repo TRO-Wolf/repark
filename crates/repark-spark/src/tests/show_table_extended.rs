@@ -320,18 +320,26 @@ async fn show_table_extended_keeps_v3_and_unicode_property_scalars() {
         ("write.parquet.compression-codec", "zstd"),
         ("κ", "💥"),
     ]);
+    let location = table_location(&catalogs, "v3").await;
+    let expected = information(Information {
+        catalog: "ice",
+        namespace: "sales",
+        table: "v3",
+        location: &location,
+        properties: &properties,
+        comment: None,
+        owner: None,
+        tree: "root\n |-- id: long (nullable = true)\n",
+    });
     let (_, rows) = show_table_extended(
         &ctx,
         &catalogs,
         "SHOW TABLE EXTENDED IN ice.sales LIKE 'v3'",
     )
     .await;
-    assert!(
-        rows[0]
-            .3
-            .contains(&format!("Table Properties: {properties}\n")),
-        "{}",
-        rows[0].3
+    assert_eq!(
+        rows,
+        vec![("sales".to_string(), "v3".to_string(), false, expected)]
     );
 }
 
@@ -353,17 +361,72 @@ async fn show_table_extended_lists_sorted_tables_and_excludes_views() {
         "CREATE VIEW ice.sales.vw AS SELECT id FROM ice.sales.pl",
     )
     .await;
+    let properties = character_properties(&[
+        ("current-snapshot-id", "none"),
+        ("format", "iceberg/parquet"),
+        ("format-version", "2"),
+        ("write.parquet.compression-codec", "zstd"),
+    ]);
+    let lo_location = table_location(&catalogs, "lo").await;
+    let pl_location = table_location(&catalogs, "pl").await;
+    let v3_location = table_location(&catalogs, "v3").await;
+    let expected_rows = vec![
+        (
+            "sales".to_string(),
+            "lo".to_string(),
+            false,
+            information(Information {
+                catalog: "ice",
+                namespace: "sales",
+                table: "lo",
+                location: &lo_location,
+                properties: &properties,
+                comment: None,
+                owner: None,
+                tree: "root\n |-- id: long (nullable = true)\n",
+            }),
+        ),
+        (
+            "sales".to_string(),
+            "pl".to_string(),
+            false,
+            information(Information {
+                catalog: "ice",
+                namespace: "sales",
+                table: "pl",
+                location: &pl_location,
+                properties: &properties,
+                comment: None,
+                owner: None,
+                tree: "root\n |-- id: long (nullable = true)\n",
+            }),
+        ),
+        (
+            "sales".to_string(),
+            "v3".to_string(),
+            false,
+            information(Information {
+                catalog: "ice",
+                namespace: "sales",
+                table: "v3",
+                location: &v3_location,
+                properties: &properties,
+                comment: None,
+                owner: None,
+                tree: "root\n |-- id: long (nullable = true)\n",
+            }),
+        ),
+    ];
     let (_, rows) =
         show_table_extended(&ctx, &catalogs, "SHOW TABLE EXTENDED IN ice.sales LIKE '*'").await;
-    let names: Vec<String> = rows.into_iter().map(|row| row.1).collect();
-    assert_eq!(names, vec!["lo", "pl", "v3"]);
+    assert_eq!(rows, expected_rows);
     let (_, view_rows) = show_table_extended(
         &ctx,
         &catalogs,
         "SHOW TABLE EXTENDED IN ice.sales LIKE 'vw'",
     )
     .await;
-    assert!(view_rows.is_empty());
+    assert_eq!(view_rows, Vec::<ExtendedRow>::new());
 }
 
 #[tokio::test]
@@ -437,45 +500,86 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
         "CREATE TABLE ice.sales.nested (s STRUCT<x: INT, y: ARRAY<STRING>>) USING iceberg",
     )
     .await;
+    let properties = character_properties(&[
+        ("current-snapshot-id", "none"),
+        ("format", "iceberg/parquet"),
+        ("format-version", "2"),
+        ("write.parquet.compression-codec", "zstd"),
+    ]);
+    let lo_location = table_location(&catalogs, "lo").await;
+    let ownered_location = table_location(&catalogs, "ownered").await;
+    let nested_location = table_location(&catalogs, "nested").await;
     let (_, locations) = show_table_extended(
         &ctx,
         &catalogs,
         "SHOW TABLE EXTENDED IN ice.sales LIKE 'lo'",
     )
     .await;
-    assert!(locations[0].3.contains("Type: MANAGED\n"));
-    assert!(locations[0].3.contains(&format!(
-        "Location: {}\n",
-        table_location(&catalogs, "lo").await
-    )));
+    assert_eq!(
+        locations,
+        vec![(
+            "sales".to_string(),
+            "lo".to_string(),
+            false,
+            information(Information {
+                catalog: "ice",
+                namespace: "sales",
+                table: "lo",
+                location: &lo_location,
+                properties: &properties,
+                comment: None,
+                owner: None,
+                tree: "root\n |-- id: long (nullable = true)\n",
+            }),
+        )]
+    );
     let (_, owners) = show_table_extended(
         &ctx,
         &catalogs,
         "SHOW TABLE EXTENDED IN ice.sales LIKE 'ownered'",
     )
     .await;
-    assert!(owners[0].3.contains("Provider: iceberg\nOwner: john\n"));
+    assert_eq!(
+        owners,
+        vec![(
+            "sales".to_string(),
+            "ownered".to_string(),
+            false,
+            information(Information {
+                catalog: "ice",
+                namespace: "sales",
+                table: "ownered",
+                location: &ownered_location,
+                properties: &properties,
+                comment: None,
+                owner: Some("john"),
+                tree: "root\n |-- id: long (nullable = true)\n",
+            }),
+        )]
+    );
     let (_, nested) = show_table_extended(
         &ctx,
         &catalogs,
         "SHOW TABLE EXTENDED IN ice.sales LIKE 'nested'",
     )
     .await;
-    assert!(nested[0].3.contains(" |-- s: struct (nullable = true)\n"));
-    assert!(
-        nested[0]
-            .3
-            .contains(" |    |-- x: integer (nullable = true)\n")
-    );
-    assert!(
-        nested[0]
-            .3
-            .contains(" |    |-- y: array (nullable = true)\n")
-    );
-    assert!(
-        nested[0]
-            .3
-            .contains(" |    |    |-- element: string (containsNull = true)\n")
+    assert_eq!(
+        nested,
+        vec![(
+            "sales".to_string(),
+            "nested".to_string(),
+            false,
+            information(Information {
+                catalog: "ice",
+                namespace: "sales",
+                table: "nested",
+                location: &nested_location,
+                properties: &properties,
+                comment: None,
+                owner: None,
+                tree: "root\n |-- s: struct (nullable = true)\n |    |-- x: integer (nullable = true)\n |    |-- y: array (nullable = true)\n |    |    |-- element: string (containsNull = true)\n",
+            }),
+        )]
     );
 }
 
@@ -653,7 +757,29 @@ async fn show_table_extended_skips_leading_and_inter_keyword_comments() {
         "isTemporary".to_string(),
         "information".to_string(),
     ];
-    let (columns, expected_rows) = outcome(
+    let properties = character_properties(&[
+        ("current-snapshot-id", "none"),
+        ("format", "iceberg/parquet"),
+        ("format-version", "2"),
+        ("write.parquet.compression-codec", "zstd"),
+    ]);
+    let location = table_location(&catalogs, "pc").await;
+    let expected_rows = vec![(
+        "sales".to_string(),
+        "pc".to_string(),
+        false,
+        information(Information {
+            catalog: "ice",
+            namespace: "sales",
+            table: "pc",
+            location: &location,
+            properties: &properties,
+            comment: None,
+            owner: None,
+            tree: "root\n |-- id: long (nullable = true)\n",
+        }),
+    )];
+    let (columns, rows) = outcome(
         &ctx,
         &catalogs,
         "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc'",
@@ -661,10 +787,7 @@ async fn show_table_extended_skips_leading_and_inter_keyword_comments() {
     .await
     .unwrap();
     assert_eq!(columns, expected_columns);
-    assert_eq!(expected_rows.len(), 1);
-    assert_eq!(expected_rows[0].0, "sales");
-    assert_eq!(expected_rows[0].1, "pc");
-    assert!(!expected_rows[0].2);
+    assert_eq!(rows, expected_rows);
     for sql in [
         "/* c */ SHOW TABLE EXTENDED IN ice.sales LIKE 'pc'",
         "-- c\nSHOW TABLE EXTENDED IN ice.sales LIKE 'pc'",

@@ -5088,7 +5088,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_catalog_surface.py](test_catalog_surface.py) — **G-INT INT-004** (historical bullet; current surface is the
   R-CURCAT entry above). Pins that still matter: `tableExists` / camelCase aliases /
   `clearCache`/`dropTempView`. Rowed listing: `SHOW TABLES IN` answers Spark's shape and
-  `SHOW TABLE EXTENDED IN` answers the four-column metadata shape
+  `SHOW TABLE EXTENDED IN` pins one complete four-column metadata row
   ([ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in--is-unimplemented--fixed-2026-09-20),
   fixed 2026-09-20) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).

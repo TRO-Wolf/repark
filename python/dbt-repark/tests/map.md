@@ -50,8 +50,8 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   `SELECT`, and `SHOW TABLES IN gold` answers the dbt glob shape); `R-RENAME-TWO-PART`
   keeps refusing, against a missing namespace — a missing object refuses, never the name's
   shape (DBT-QUALIFY-1 FIXED).
-  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served and pins
-  `namespace`, `tableName`, `isTemporary`, and `information`; `R-SHOW-TBLPROPERTIES` stays
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served and pins one
+  complete four-column row, including the full information text; `R-SHOW-TBLPROPERTIES` stays
   refused.
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the

@@ -40,7 +40,7 @@ def spark(tmp_path: Path) -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-catalog-surface").getOrCreate()
     session.register_memory_catalog("glue_catalog", tmp_path)
     session.sql("CREATE NAMESPACE glue_catalog.ns1")
-    session.sql("CREATE TABLE glue_catalog.ns1.entity AS SELECT 1 AS id, 'a' AS name")
+    session.sql("CREATE TABLE glue_catalog.ns1.entity (id BIGINT, name STRING) USING iceberg")
     session.sql("CREATE NAMESPACE glue_catalog.ns2")
     return session
 
@@ -446,13 +446,35 @@ def test_show_tables_in_lists_namespace_tables(spark: ReparkSession) -> None:
     assert table.column("isTemporary").to_pylist() == [False]
 
 
-def test_show_table_extended_returns_spark_metadata_shape(spark: ReparkSession) -> None:
+def test_show_table_extended_returns_spark_metadata_shape(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
     """SHOW TABLE EXTENDED returns the four Spark metadata columns."""
     frame = spark.sql("SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'entity'")
-    assert frame.columns == ["namespace", "tableName", "isTemporary", "information"]
-    information = frame.collect()[0]["information"]
-    assert information.startswith("Catalog: glue_catalog\n")
-    assert "\nSchema: root\n" in information
+    information = (
+        "Catalog: glue_catalog\n"
+        "Namespace: ns1\n"
+        "Table: entity\n"
+        "Type: MANAGED\n"
+        f"Location: {tmp_path / 'repark_ctas' / 'glue_catalog' / 'ns1' / 'entity'}\n"
+        "Provider: iceberg\n"
+        "Table Properties: [[, c, u, r, r, e, n, t, -, s, n, a, p, s, h, o, t, -, i, d, "
+        "=, n, o, n, e, ,, f, o, r, m, a, t, =, i, c, e, b, e, r, g, /, p, a, r, q, u, e, "
+        "t, ,, f, o, r, m, a, t, -, v, e, r, s, i, o, n, =, 2, ,, w, r, i, t, e, ., p, a, "
+        "r, q, u, e, t, ., c, o, m, p, r, e, s, s, i, o, n, -, c, o, d, e, c, =, z, s, t, "
+        "d, ]]\n"
+        "Schema: root\n"
+        " |-- id: long (nullable = true)\n"
+        " |-- name: string (nullable = true)\n\n"
+    )
+    assert frame.to_arrow().to_pylist() == [
+        {
+            "namespace": "ns1",
+            "tableName": "entity",
+            "isTemporary": False,
+            "information": information,
+        }
+    ]
 
 
 def test_show_table_extended_refusal_error_contracts(spark: ReparkSession) -> None:

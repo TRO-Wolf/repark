@@ -1496,12 +1496,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   measured fresh-table string, and the `Comment` detail row (after `Type`, a column named
   `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
 - `show_table_extended.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** memory-catalog end-to-end
-  pins for `SHOW TABLE EXTENDED`: exact partitioned and plain information text, property
-  redaction, v3 and Unicode property scalars, and snapshot changes, sorted matching tables
-  without views, alternation and case-insensitive LIKE, FROM and ambient scopes, LOCATION's
-  managed classification, owner, struct tree lines, missing-LIKE and
+  pins for `SHOW TABLE EXTENDED`: full four-column rows for partitioned/plain, v3 Unicode,
+  sorted tables, LOCATION, owner, and the nested schema tree; property redaction and snapshot
+  changes; alternation and case-insensitive LIKE; FROM and ambient scopes; missing-LIKE and
   partition/missing-table/missing-namespace refusals, and SHOW-family near misses that remain
-  outside this parser. **WO-A1b (2026-09-23):** every parser refusal pins its SQL error variant
+  outside this parser. **WO-A4 (2026-09-23):** every parser refusal pins its SQL error variant
   and complete condition/SQLSTATE text; partition lookup pins literal wildcard absence; the
   unclaimed SHOW TABLE(S) forms pin their current exact variants and messages.
   pins: wo-a1b/C-002, C-003
