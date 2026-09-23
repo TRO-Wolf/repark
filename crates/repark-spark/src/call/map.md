@@ -176,7 +176,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   catalog still refuses before any IO. Without `file_list_view` the fork's
   `DeleteOrphanFiles` lists and deletes; with it, `orphan_file_list.rs` answers and the
   same partial-delete refusal applies. Registry row ORPHAN-3.
-  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-008
+  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-008, C-010, C-016
 - `orphan_file_list.rs` — **IPI-30 (2026-09-22):** `file_list_view`, ported from Java
   `compareToFileList`. The view must carry `file_path` (a string) and `last_modified` (a
   timestamp); a missing view answers `TABLE_OR_VIEW_NOT_FOUND`. Candidates are the non-null
@@ -187,8 +187,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `prefix_mismatch_mode`. Orphans come back verbatim, sorted and deduplicated. `gc.enabled =
   false` refuses with the fork's text. An ERROR-mode prefix conflict builds the fork's
   `prefix_conflict_error` pairs and text and goes through the same `iceberg_err`, so both
-  paths fail with one string.
-  pins: ipi-30-orphan-guard-narrow-1/C-005, C-006, C-007, C-011
+  paths fail with one string; the `gc.enabled` refusals are built the same way.
+  pins: ipi-30-orphan-guard-narrow-1/C-005, C-006, C-007, C-011, C-012, C-013, C-014, C-015
 - `run_maintenance.rs` — **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `CALL
   <catalog>.system.run_maintenance(table => … [, dry_run => …] [, <D-1 key> => …])`.
   Inline keys overlay the stamped file policy (per-table entry, then profile) through

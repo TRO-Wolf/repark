@@ -138,22 +138,27 @@ fn prefix_conflict_error(
 
 fn refuse_gc_disabled(table: &Table) -> Result<()> {
     let properties = table.metadata().properties();
-    let enabled = match properties.get(TableProperties::PROPERTY_GC_ENABLED) {
+    let key = TableProperties::PROPERTY_GC_ENABLED;
+    let enabled = match properties.get(key) {
         None => TableProperties::PROPERTY_GC_ENABLED_DEFAULT,
-        Some(raw) => raw.parse::<bool>().map_err(|_| {
-            DataFusionError::Plan(format!(
-                "Invalid boolean value '{raw}' for table property '{}'",
-                TableProperties::PROPERTY_GC_ENABLED
-            ))
+        Some(raw) => raw.parse::<bool>().map_err(|error| {
+            iceberg_err(
+                iceberg::Error::new(
+                    iceberg::ErrorKind::DataInvalid,
+                    format!("Invalid boolean value '{raw}' for table property '{key}'"),
+                )
+                .with_source(error),
+            )
         })?,
     };
     if enabled {
         return Ok(());
     }
-    Err(DataFusionError::Plan(
+    Err(iceberg_err(iceberg::Error::new(
+        iceberg::ErrorKind::DataInvalid,
         "Cannot delete orphan files: GC is disabled (deleting files may corrupt other tables)"
             .to_string(),
-    ))
+    )))
 }
 
 async fn view_candidates(ctx: &SessionContext, request: &FileListRequest) -> Result<Vec<String>> {

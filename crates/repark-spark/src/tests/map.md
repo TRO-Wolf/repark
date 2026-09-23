@@ -1002,8 +1002,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the listed ones when armed, and refuses a missing view (`TABLE_OR_VIEW_NOT_FOUND`), a
   warehouse `location` and a non-timestamp `last_modified`. On a table under a `file:///`
   namespace location, a bare view path fails with the same prefix-conflict string as a bare
-  `location` listing, for a scheme pair and for a scheme plus authority pair.
-  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011
+  `location` listing, for a scheme pair and for a scheme plus authority pair. A view row
+  listed inside the `older_than` window is kept even when its file is old, and a view path
+  outside the scan location (a warehouse file, a `..` escape) is kept. Its helpers are
+  `pub(super)` for `call_orphan_view.rs`.
+  pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
+- [call_orphan_view.rs](call_orphan_view.rs) — **IPI-30 view-path sweep (2026-09-23):** the
+  `file_list_view` branches beyond the scope pins, on `call_orphan_scope.rs`'s helpers. Each
+  orphan comes back once, sorted, in the view's own spelling. `gc.enabled = false` and an
+  unparsable value refuse with the listing path's string. A view with no `last_modified`
+  column or a non-string `file_path` refuses. A NULL `last_modified` row is kept. IGNORE and
+  DELETE classify a scheme conflict. `equal_schemes` keys are comma-split and trimmed, and
+  `s3a` folds to `s3`. A delete the filesystem refuses (a mode-0555 directory) is reported.
+  On a `RequireExplicitLocation` catalog the other-table walk does not run.
+  pins: ipi-30-orphan-guard-narrow-1/C-005, C-007, C-008, C-012, C-014, C-015, C-016
   **ORPHAN-S3TABLES-1 (2026-09-12):** `call_remove_orphan_files_on_s3_tables_refuses_before_any_io`
   and `call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way` pin the
   service-managed refusal — a real `s3tables_catalog` (dummy ARN, constructs offline)

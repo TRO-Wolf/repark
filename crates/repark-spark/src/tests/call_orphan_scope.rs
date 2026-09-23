@@ -5,7 +5,7 @@ use repark_core::ReparkSession;
 use super::common::*;
 use crate::{SparkDialect, SparkExtension};
 
-async fn fallback_session(warehouse: &TempDir) -> ReparkSession {
+pub(super) async fn fallback_session(warehouse: &TempDir) -> ReparkSession {
     let session = ReparkSession::builder()
         .with_extension(Arc::new(SparkExtension))
         .with_sql_dialect(Arc::new(SparkDialect))
@@ -19,7 +19,7 @@ async fn fallback_session(warehouse: &TempDir) -> ReparkSession {
     session
 }
 
-async fn submit(session: &ReparkSession, sql: &str) {
+pub(super) async fn submit(session: &ReparkSession, sql: &str) {
     session
         .sql(sql)
         .await
@@ -29,7 +29,7 @@ async fn submit(session: &ReparkSession, sql: &str) {
         .unwrap_or_else(|error| panic!("{sql}: {error}"));
 }
 
-async fn ctas(session: &ReparkSession, warehouse: &TempDir, table: &str) -> PathBuf {
+pub(super) async fn ctas(session: &ReparkSession, warehouse: &TempDir, table: &str) -> PathBuf {
     submit(
         session,
         &format!("CREATE TABLE ice.ns.{table} USING iceberg AS SELECT 1 AS id"),
@@ -48,7 +48,7 @@ async fn ctas(session: &ReparkSession, warehouse: &TempDir, table: &str) -> Path
     table_dir
 }
 
-fn plant(table_dir: &Path, name: &str, age_days: u64) -> PathBuf {
+pub(super) fn plant(table_dir: &Path, name: &str, age_days: u64) -> PathBuf {
     let data_dir = table_dir.join("data");
     std::fs::create_dir_all(&data_dir).expect("data dir");
     let path = data_dir.join(name);
@@ -67,7 +67,7 @@ fn plant(table_dir: &Path, name: &str, age_days: u64) -> PathBuf {
     path
 }
 
-fn referenced_data_file(table_dir: &Path) -> PathBuf {
+pub(super) fn referenced_data_file(table_dir: &Path) -> PathBuf {
     std::fs::read_dir(table_dir.join("data"))
         .expect("data dir")
         .flatten()
@@ -76,7 +76,7 @@ fn referenced_data_file(table_dir: &Path) -> PathBuf {
         .expect("the CTAS wrote one data file")
 }
 
-async fn live_rows(session: &ReparkSession, table: &str) -> usize {
+pub(super) async fn live_rows(session: &ReparkSession, table: &str) -> usize {
     session
         .sql(&format!("SELECT id FROM ice.{table}"))
         .await
@@ -89,7 +89,7 @@ async fn live_rows(session: &ReparkSession, table: &str) -> usize {
         .sum()
 }
 
-async fn call_rows(session: &ReparkSession, sql: &str) -> Result<Vec<String>, String> {
+pub(super) async fn call_rows(session: &ReparkSession, sql: &str) -> Result<Vec<String>, String> {
     let batches = session
         .sql(sql)
         .await
@@ -341,7 +341,7 @@ async fn call_remove_orphan_files_refuses_the_warehouse_and_the_fallback_root() 
     assert!(orphan.exists(), "a refused sweep deletes nothing");
 }
 
-async fn register_file_list(session: &ReparkSession, rows: &[(String, i64)]) {
+pub(super) async fn register_file_list(session: &ReparkSession, rows: &[(String, i64)]) {
     let selects: Vec<String> = rows
         .iter()
         .map(|(path, seconds)| {
@@ -557,7 +557,10 @@ async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     assert!(orphan.exists());
 }
 
-async fn file_scheme_table(session: &ReparkSession, warehouse: &TempDir) -> (PathBuf, PathBuf) {
+pub(super) async fn file_scheme_table(
+    session: &ReparkSession,
+    warehouse: &TempDir,
+) -> (PathBuf, PathBuf) {
     let namespace_dir = warehouse.path().join("fq");
     submit(
         session,
@@ -584,7 +587,7 @@ async fn file_scheme_table(session: &ReparkSession, warehouse: &TempDir) -> (Pat
     (table_dir, live)
 }
 
-fn prefix_conflict_message(pairs: &str) -> String {
+pub(super) fn prefix_conflict_message(pairs: &str) -> String {
     format!(
         "DataInvalid => Unable to determine whether certain files are orphan. Metadata references \
          files that match listed/provided files except for authority/scheme. Please, inspect the \
