@@ -266,4 +266,32 @@ async fn router_preserves_show_parse_error_and_table_fallthrough() {
         error.to_string(),
         "Error during planning: SHOW [VARIABLE] is not supported unless information_schema is enabled"
     );
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    let rows = execute(
+        &ctx,
+        &catalogs,
+        "SHOW TBLPROPERTIES ice.sales.v ('provider')",
+    )
+    .await
+    .expect("router must answer a view")
+    .collect()
+    .await
+    .expect("collect view properties");
+    let keys = rows[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("keys");
+    let values = rows[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("values");
+    assert_eq!(keys.value(0), "provider");
+    assert_eq!(values.value(0), "iceberg");
 }
