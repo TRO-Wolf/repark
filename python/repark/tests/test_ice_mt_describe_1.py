@@ -173,8 +173,8 @@ def test_real_table_named_snapshots_wins(spark: Any) -> None:
     assert _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.snapshots") == [("id", "bigint", None)]
 
 
-def test_missing_base_not_found_names_base(spark: Any) -> None:
-    """A missing base table raises TABLE_OR_VIEW_NOT_FOUND naming the base table.
+def test_missing_base_not_found_names_full_name(spark: Any) -> None:
+    """A missing base raises TABLE_OR_VIEW_NOT_FOUND naming the full metadata-table name.
 
     pins: ipi-23-mt-describe-1/C-007
     """
@@ -232,8 +232,8 @@ def test_explicit_three_part_missing_namespace_keeps_plain_error(spark: Any) -> 
     assert str(excinfo.value) == 'NamespaceNotFound => No such namespace: NamespaceIdent(["t"])'
 
 
-def test_missing_namespace_maps_to_not_found_naming_base(spark: Any) -> None:
-    """V-002: a missing namespace answers 42P01 naming the base table, twice spelled.
+def test_missing_namespace_maps_to_not_found_naming_full_name(spark: Any) -> None:
+    """V-002: a missing namespace answers 42P01 naming the full metadata-table name, twice spelled.
 
     pins: ipi-23-mt-describe-1/C-012
     """
