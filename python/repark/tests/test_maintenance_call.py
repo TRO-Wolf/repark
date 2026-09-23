@@ -429,6 +429,7 @@ def test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root(
     )
     table_dir = tmp_path / "repark_ctas" / "mem" / "ns" / "events"
     orphan = _plant_orphan(table_dir, "orphan-file.parquet", 10)
+    young = _plant_orphan(table_dir, "orphan-young.parquet", 1)
     for location in (tmp_path, tmp_path / "repark_ctas"):
         with pytest.raises(
             (UnsupportedOperationException, PySparkException),
@@ -442,6 +443,7 @@ def test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root(
     result = spark.sql("CALL mem.system.remove_orphan_files(table => 'ns.events')").to_arrow()
     assert _orphan_names(result) == {"orphan-file.parquet"}
     assert not orphan.exists()
+    assert young.exists()
     live = spark.sql(f"SELECT id FROM {TABLE}").to_arrow()
     assert _arrow_ids(live) == [1]
 
