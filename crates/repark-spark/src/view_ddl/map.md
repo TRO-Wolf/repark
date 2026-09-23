@@ -36,7 +36,8 @@ service, and the wrapper-based read path that expands stored SQL per query.
   guard; non-query bodies refused loud.
 - `describe.rs` — **PR2 (2026-09-22, V-DESCRIBE):** `describe_view_frame`
   is the view probe on the `TableNotFound` arm of `execute_describe_table`
-  (`../describe_show.rs`): a loaded view answers, `ViewNotFound` re-arms the
+  (`../describe_show.rs`): a loaded view answers, `ViewNotFound` and
+  `FeatureUnsupported` count as no view and re-arm the
   unchanged `TABLE_OR_VIEW_NOT_FOUND` refusal (fail-closed), every other load
   error propagates through `iceberg_err`. `describe_view_rows` /
   `describe_view_batch` render the stored schema's columns ONLY —

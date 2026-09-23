@@ -16,6 +16,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `describe_view_routing.rs` — DESCRIBE routing pins table and view probe failures,
+  the viewless catalog refusal, unchanged tables, and stored view columns after
+  the source table disappears, including EXTENDED.
 - `viewless_catalog.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** the A-9 SQL-door
   battery: `test_views_refuse_on_glue_and_s3tables` drives CREATE, CREATE OR
   REPLACE (over a missing name and over an existing table) and SHOW VIEWS=[]
