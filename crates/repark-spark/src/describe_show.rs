@@ -310,16 +310,11 @@ pub(crate) async fn execute_describe_table(
     if describe.column.is_some() {
         return crate::describe_column::execute_describe_column(ctx, &describe, &table);
     }
-    let owner = describe_table_owner(ctx);
-    ctx.read_batch(describe_table_batch(&describe, &table, &owner)?)
+    ctx.read_batch(describe_table_batch(&describe, &table)?)
 }
 
-pub(crate) fn describe_table_batch(
-    describe: &DescribeTable,
-    table: &Table,
-    owner: &str,
-) -> Result<RecordBatch> {
-    let rows = describe_table_rows(describe, table, owner)?;
+pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> Result<RecordBatch> {
+    let rows = describe_table_rows(describe, table)?;
     let mut names = Vec::with_capacity(rows.len());
     let mut types = Vec::with_capacity(rows.len());
     let mut comments = Vec::with_capacity(rows.len());
@@ -346,7 +341,6 @@ pub(crate) fn describe_table_batch(
 fn describe_table_rows(
     describe: &DescribeTable,
     table: &Table,
-    owner: &str,
 ) -> Result<Vec<(String, String, Option<String>)>> {
     let metadata = table.metadata();
     let iceberg_schema = metadata.current_schema();
@@ -397,7 +391,9 @@ fn describe_table_rows(
         }
         rows.push(plain_describe_row("Location", metadata.location()));
         rows.push(plain_describe_row("Provider", "iceberg"));
-        rows.push(plain_describe_row("Owner", owner));
+        if let Some(owner) = metadata.properties().get("owner") {
+            rows.push(plain_describe_row("Owner", owner));
+        }
         rows.push(plain_describe_row(
             "Table Properties",
             &render_table_properties(metadata),

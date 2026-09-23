@@ -453,7 +453,7 @@ async fn describe_table_extended_emits_metadata_and_detail_sections() {
     create_step_one_table(&catalogs, &warehouse).await;
 
     let rows = describe_rows(&ctx, &catalogs, "DESC EXTENDED ice.sales.t1").await;
-    assert_eq!(rows.len(), 22);
+    assert_eq!(rows.len(), 21);
     assert_eq!(
         rows[6..13],
         vec![
@@ -524,18 +524,15 @@ async fn describe_table_extended_emits_metadata_and_detail_sections() {
             Some(String::new())
         )
     );
-    let (owner_name, owner_value, owner_comment) = rows[19].clone();
-    assert_eq!(owner_name, "Owner");
-    assert!(!owner_value.is_empty());
-    assert_eq!(owner_comment, Some(String::new()));
-    let (props_name, props_value, props_comment) = rows[20].clone();
+    assert!(rows.iter().all(|(name, _, _)| name != "Owner"));
+    let (props_name, props_value, props_comment) = rows[19].clone();
     assert_eq!(props_name, "Table Properties");
     assert!(props_value.starts_with('[') && props_value.ends_with(']'));
     assert!(props_value.contains("k=v"));
     assert!(props_value.contains("current-snapshot-id=none"));
     assert_eq!(props_comment, Some(String::new()));
     assert_eq!(
-        rows[21],
+        rows[20],
         (
             "Statistics".to_string(),
             "0 bytes, 0 rows".to_string(),
@@ -649,12 +646,7 @@ async fn describe_table_extended_describes_a_real_table_named_files() {
             .any(|(name, value, _)| name == "Name" && value == "ice.sales.files"),
         "extended output names the three-part table, got: {rows:?}"
     );
-    let (owner_name, owner_value, _) = rows
-        .iter()
-        .find(|(name, _, _)| name == "Owner")
-        .expect("extended output carries Owner");
-    assert_eq!(owner_name, "Owner");
-    assert!(!owner_value.is_empty());
+    assert!(rows.iter().all(|(name, _, _)| name != "Owner"));
 }
 
 #[tokio::test]
@@ -662,11 +654,29 @@ async fn describe_table_owner_is_the_session_resolved_user() {
     let first = TempDir::new().unwrap();
     let (first_ctx, first_catalogs) =
         setup_with_owner(&first, "review_fix_5_first_session_user").await;
-    create_step_one_table(&first_catalogs, first.path().to_str().unwrap()).await;
+    execute(
+        &first_ctx,
+        &first_catalogs,
+        "CREATE TABLE ice.sales.t1 (id BIGINT) USING iceberg",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
     let second = TempDir::new().unwrap();
     let (second_ctx, second_catalogs) =
         setup_with_owner(&second, "review_fix_5_second_session_user").await;
-    create_step_one_table(&second_catalogs, second.path().to_str().unwrap()).await;
+    execute(
+        &second_ctx,
+        &second_catalogs,
+        "CREATE TABLE ice.sales.t1 (id BIGINT) USING iceberg",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
 
     let first_rows = describe_rows(
         &first_ctx,
@@ -718,28 +728,16 @@ async fn describe_table_owner_resolves_in_a_production_built_session() {
         .await
         .expect("the production session creates sales");
     let catalogs = session.catalogs_snapshot();
-    let location = format!("{warehouse_path}/sales/prod_owner");
-    std::fs::create_dir_all(&location).expect("the fixture directory builds");
-    let schema = Schema::builder()
-        .with_schema_id(0)
-        .with_fields(vec![std::sync::Arc::new(NestedField::optional(
-            1,
-            "id",
-            Type::Primitive(PrimitiveType::Long),
-        ))])
-        .build()
-        .expect("the fixture schema builds");
-    catalogs["ice"]
-        .create_table(
-            &NamespaceIdent::new("sales".to_string()),
-            iceberg::TableCreation::builder()
-                .name("prod_owner".to_string())
-                .location(location)
-                .schema(schema)
-                .build(),
-        )
-        .await
-        .expect("the production catalog creates the table");
+    execute(
+        session.context(),
+        &catalogs,
+        "CREATE TABLE ice.sales.prod_owner (id BIGINT) USING iceberg",
+    )
+    .await
+    .expect("the production session creates the table")
+    .collect()
+    .await
+    .expect("the production create executes");
 
     let rows = describe_rows(
         session.context(),
