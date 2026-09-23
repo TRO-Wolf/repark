@@ -35,6 +35,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **SHOW-TABLE-EXTENDED-1 (2026-09-23), in flight:** Spark-door `SHOW TABLE EXTENDED
   [IN|FROM namespace] LIKE pattern` parses before sqlparser and answers the four-column
   Iceberg-table listing with Spark metadata text, property redaction, and schema tree output.
+- [wo-a1b-ledger.md](wo-a1b-ledger.md) —
+  **WO-A1b (2026-09-23), in flight:** follow-up exactness repair for SHOW TABLE EXTENDED:
+  typed lexer and refusal pins, literal PARTITION table resolution, and exact near-miss outcomes.
   `risk_tier: standard`. Branch `xd/show-tblprops`.
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
