@@ -114,9 +114,9 @@ fn skip_quoted_text(bytes: &[u8], mut index: usize) -> usize {
     let quote = bytes[index];
     index += 1;
     while index < bytes.len() {
-        if bytes[index] == b'\\' && index + 1 < bytes.len() {
-            index += 2;
-        } else if bytes[index] == quote && bytes.get(index + 1) == Some(&quote) {
+        let escapes_next = bytes[index] == b'\\'
+            || (bytes[index] == quote && bytes.get(index + 1) == Some(&quote));
+        if escapes_next && index + 1 < bytes.len() {
             index += 2;
         } else if bytes[index] == quote {
             return index + 1;
