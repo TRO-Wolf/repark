@@ -900,13 +900,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - **Sibling test modules:**
   - [`router.rs`](router.rs) — `bug010_multi_statement_refuses_parse_class` pins the Spark
     `PARSE_SYNTAX_ERROR` parser class and SQLSTATE `42601`; every accepted trailing-semicolon,
-    whitespace, and comment form returns the complete `SELECT 1` batch.
-    pins: wo-c5/C-001
+    whitespace, and comment form returns the complete `SELECT 1` batch. WO-C10's shared
+    unclosed-comment pins assert the complete parser text, exact near-miss rows, and the two
+    complete current IPI-51 tokenizer divergences.
+    pins: wo-c5/C-001; wo-c10/C-001, C-002, C-003, C-004
   - [`show_create.rs`](show_create.rs) — `show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
-    `show_create_comment_before_table_keyword_keeps_tokenizer_fallthrough`, and
-    `show_create_multi_statement_keeps_spark_invalid_statement_class` pin the error class and
-    complete parser or tokenizer messages.
-    pins: wo-c5/C-002, C-003, C-004
+    `show_create_unclosed_before_table_keywords_use_spark_parse_contract`, and
+    `show_create_multi_statement_keeps_spark_invalid_statement_class` pin complete parser text.
+    pins: wo-c5/C-002, C-003, C-004; wo-c10/C-001
   `partitioned_ctas` (**IPI-51 PR6 slice 3**, 2026-09-21: U1-P10 retargeted to
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703` with backticked suggestions, plus the CREATE
   TABLE `days(ts)` pin on the inventory cell's door; both mutation-proven, the typed-column

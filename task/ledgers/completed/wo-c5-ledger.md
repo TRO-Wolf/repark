@@ -1,3 +1,8 @@
+## Correction — 2026-09-23
+
+C-003's claim that an unclosed comment hiding `TABLE` falls through to the tokenizer error was
+wrong by Spark's `m12` mid-unclosed measurement. WO-C10/C-001 supersedes that claim.
+
 # Unit ledger — WO-C5 · SHOW CREATE TABLE parser refusal pins
 
 **Date:** 2026-09-23 · **Branch:** `xd/show-create` · **Base:** `origin/main`

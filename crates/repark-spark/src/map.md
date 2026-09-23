@@ -79,6 +79,12 @@ pins: rp-4-fork-repin/C-005, C-006
   `try_preparse_intercepts` gains the `SHOW [USER] FUNCTIONS IN <cat>.system`
   arm after SHOW NAMESPACES.
   pins: ice-system-functions-1/C-018, C-020
+  **WO-C10 (2026-09-23):** `execute_with_statement_options` first calls the shared unclosed
+  bracketed-comment guard before the SHOW CREATE intercept and literal canonicalization. A
+  non-hint outer comment returns `UNCLOSED_BRACKETED_COMMENT` / `42601`; nested comments,
+  quoted markers, and line markers keep their existing outcomes. An unclosed `/*+` hint falls
+  through to its existing tokenizer outcome.
+  pins: wo-c10/C-001, C-002, C-003, C-004
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
   `return` path of the rewrite — see the `time_travel.rs` row below. **V3-4:** after time
@@ -1118,7 +1124,7 @@ pins: rp-4-fork-repin/C-005, C-006
 - **FNP-8 (2026-09-07):** the executing parser selects lambda syntax only inside
   recognized higher-order calls. JSON arrows retain the session parser and its AST.
   pins: fnp-8/C-004
-- `normalize/` — token rewrites `normalize.rs` has no ceiling headroom for; see
+- `normalize/` — token rewrites and statement guards `normalize.rs` has no ceiling headroom for; see
   [normalize/map.md](normalize/map.md). `replace_table.rs` rewrites `REPLACE TABLE` to
   `CREATE OR REPLACE TABLE` **first**, before `is_create_table` gates the other rewrites, and
   carries the missing-table refusal that keeps the two spellings apart (**IPI-25**, 2026-09-20).
@@ -1129,7 +1135,8 @@ pins: rp-4-fork-repin/C-005, C-006
   (**IPI-26/27 round 1**, 2026-09-20, cell `D-X-CLUSTERED-BY`).
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
-  multi-statement refuse (BUG-010), the MoR multi-spec DML gate's resolution wrapper (BUG-001
+  the `normalize/statement_guard.rs` re-exports for multi-statement refusal (BUG-010), the MoR
+  multi-spec DML gate's resolution wrapper (BUG-001
   — predicate hoisted to `repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml`),
   the **G3-E8 subquery-predicate DML valve** (`refuse_dml_subquery_predicate` +
   `DmlSubqueryVerb`: a `WHERE` subquery is lost at DataFusion's DML planning boundary and
@@ -1406,11 +1413,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `spark_sql_string_literal` (`'` → `\'`; backslashes pass through — measured).
   pins: [`tests/show_create.rs`](tests/show_create.rs)
   pins: wo-c2/C-001, C-002
-  **WO-C5 (2026-09-23):** tokenizer errors for unclosed bracket comments after the SHOW CREATE
-  TABLE head map to Spark's `UNCLOSED_BRACKETED_COMMENT` / `42601` parser error; a hidden TABLE
-  keyword falls through to the tokenizer error. SHOW CREATE TABLE followed by another statement
-  keeps `INVALID_STATEMENT_OR_CLAUSE` / `42601`.
-  pins: wo-c5/C-002, C-003, C-004
+  **WO-C5 correction (2026-09-23):** the head-only unclosed-comment handling is superseded by
+  WO-C10's front-door rule, including a comment that hides `TABLE`. SHOW CREATE TABLE followed
+  by another statement keeps `INVALID_STATEMENT_OR_CLAUSE` / `42601`.
+  pins: wo-c5/C-002, C-003, C-004; wo-c10/C-001
 - `table_props_view.rs` — **C1 SHOW CREATE (2026-09-23):** `spark_table_properties`, the one
   Spark-visible table property list (Iceberg 1.11 `SparkTable.properties()` minus Spark's
   `TABLE_RESERVED_PROPERTIES`), shared by DESCRIBE EXTENDED `Table Properties` and SHOW CREATE
