@@ -184,6 +184,17 @@ async fn input_file_name_equals_file_on_every_row() {
         vec![(2, true), (3, true), (4, true)],
         "input_file_name() qualifies through the user's own alias"
     );
+
+    let rows = batches(
+        &session,
+        "SELECT id, input_file_name() = _file FROM ice.ns.t AS t",
+    )
+    .await;
+    assert_eq!(
+        id_bool_pairs(&rows),
+        vec![(2, true), (3, true), (4, true)],
+        "a user alias equal to the table's own name still qualifies"
+    );
 }
 
 #[tokio::test]
@@ -389,6 +400,56 @@ async fn input_file_name_over_a_union_all_falls_through() {
     assert!(
         error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "an outer SELECT over UNION ALL keeps the unresolved-routine error: {error}"
+    );
+}
+
+#[tokio::test]
+async fn input_file_name_over_a_cte_sharing_the_table_alias_falls_through() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t").await;
+
+    let error = plan_error(
+        &session,
+        "WITH c AS (SELECT id, 'x' AS _file FROM ice.ns.t) \
+         SELECT input_file_name() FROM c AS t",
+    )
+    .await;
+    assert!(
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
+        "a relation merely aliased like the Iceberg table keeps the unresolved-routine error: {error}"
+    );
+
+    let error = plan_error(
+        &session,
+        "WITH c AS (SELECT id, 'x' AS _file FROM ice.ns.t) \
+         SELECT id FROM c AS t WHERE input_file_name() = 'x'",
+    )
+    .await;
+    assert!(
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
+        "the WHERE leg of the alias collision keeps the unresolved-routine error: {error}"
+    );
+
+    let error = plan_error(
+        &session,
+        "WITH c AS (SELECT * FROM ice.ns.t) SELECT input_file_name() FROM c",
+    )
+    .await;
+    assert!(
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
+        "a CTE without an alias keeps the unresolved-routine error: {error}"
+    );
+
+    let error = plan_error(
+        &session,
+        "WITH t AS (SELECT id, 'x' AS _file FROM ice.ns.t) \
+         SELECT input_file_name() FROM t",
+    )
+    .await;
+    assert!(
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
+        "a CTE named like the table keeps the unresolved-routine error: {error}"
     );
 }
 
