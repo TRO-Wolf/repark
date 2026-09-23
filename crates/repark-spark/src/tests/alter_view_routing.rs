@@ -27,12 +27,14 @@ async fn alter_viewless_catalog_matches_memory_missing_targets_and_redirects_tab
         let viewless_sql = statement.replace("{catalog}", "fault");
         let memory_error = execute(&ctx, &catalogs, &memory_sql)
             .await
-            .expect_err("memory catalog must refuse missing view")
-            .to_string();
+            .expect_err("memory catalog must refuse missing view");
+        assert!(matches!(memory_error, DataFusionError::Plan(_)));
+        let memory_error = memory_error.to_string();
         let viewless_error = execute(&ctx, &catalogs, &viewless_sql)
             .await
-            .expect_err("viewless catalog must refuse missing view")
-            .to_string();
+            .expect_err("viewless catalog must refuse missing view");
+        assert!(matches!(viewless_error, DataFusionError::Plan(_)));
+        let viewless_error = viewless_error.to_string();
         assert_eq!(viewless_error, memory_error.replace("`ice`", "`fault`"));
         let expected = if statement.contains("SET TBLPROPERTIES") {
             "Error during planning: [UNSUPPORTED_FEATURE.CATALOG_OPERATION] The feature is not supported: Catalog `fault` does not support views. SQLSTATE: 0A000"
@@ -47,8 +49,9 @@ async fn alter_viewless_catalog_matches_memory_missing_targets_and_redirects_tab
         "ALTER VIEW fault.sales.t RENAME TO fault.sales.b",
     )
     .await
-    .expect_err("table rename must redirect")
-    .to_string();
+    .expect_err("table rename must redirect");
+    assert!(matches!(error, DataFusionError::Plan(_)));
+    let error = error.to_string();
     assert_eq!(
         error,
         "Error during planning: Cannot rename a table with ALTER VIEW. Please use ALTER TABLE instead."
@@ -77,8 +80,15 @@ async fn alter_view_load_failure_propagates_without_table_probe() {
         "ALTER VIEW fault.sales.absent RENAME TO fault.sales.b",
     )
     .await
-    .expect_err("load failure must propagate")
-    .to_string();
+    .expect_err("load failure must propagate");
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected an External error, got {error:?}");
+    };
+    let source = inner
+        .downcast_ref::<iceberg::Error>()
+        .expect("expected an Iceberg error");
+    assert_eq!(source.kind(), ErrorKind::Unexpected);
+    let error = error.to_string();
     assert!(error.contains("injected load_view failure"), "{error}");
     assert!(!error.contains("TABLE_OR_VIEW_NOT_FOUND"), "{error}");
     assert!(!error.contains("CATALOG_OPERATION"), "{error}");
@@ -114,8 +124,15 @@ async fn alter_view_rename_view_exists_failure_propagates_without_rename() {
         "ALTER VIEW fault.sales.v RENAME TO fault.sales.b",
     )
     .await
-    .expect_err("existence failure must propagate")
-    .to_string();
+    .expect_err("existence failure must propagate");
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected an External error, got {error:?}");
+    };
+    let source = inner
+        .downcast_ref::<iceberg::Error>()
+        .expect("expected an Iceberg error");
+    assert_eq!(source.kind(), ErrorKind::Unexpected);
+    let error = error.to_string();
     assert!(error.contains("injected view_exists failure"), "{error}");
     assert_eq!(rename_calls.load(Ordering::SeqCst), 0);
 }
@@ -141,8 +158,15 @@ async fn alter_view_missing_rename_table_exists_failure_propagates() {
         "ALTER VIEW fault.sales.absent RENAME TO fault.sales.b",
     )
     .await
-    .expect_err("table existence failure must propagate")
-    .to_string();
+    .expect_err("table existence failure must propagate");
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected an External error, got {error:?}");
+    };
+    let source = inner
+        .downcast_ref::<iceberg::Error>()
+        .expect("expected an Iceberg error");
+    assert_eq!(source.kind(), ErrorKind::Unexpected);
+    let error = error.to_string();
     assert!(error.contains("injected table_exists failure"), "{error}");
     assert!(!error.contains("TABLE_OR_VIEW_NOT_FOUND"), "{error}");
 }
@@ -237,8 +261,9 @@ async fn alter_view_router_keeps_the_tail_parser_refusal() {
     let (ctx, catalogs) = setup(&warehouse).await;
     let error = execute(&ctx, &catalogs, "ALTER VIEW ice.sales.v SET OTHER")
         .await
-        .expect_err("malformed SET must refuse")
-        .to_string();
+        .expect_err("malformed SET must refuse");
+    assert!(matches!(error, DataFusionError::Plan(_)));
+    let error = error.to_string();
     assert_eq!(
         error,
         "Error during planning: could not parse `ALTER VIEW`: expected TBLPROPERTIES after SET"
@@ -267,8 +292,9 @@ async fn alter_view_rename_rejects_cross_catalog_and_existing_destinations() {
         "ALTER VIEW ice.sales.v RENAME TO other.sales.b",
     )
     .await
-    .expect_err("cross catalog move must refuse")
-    .to_string();
+    .expect_err("cross catalog move must refuse");
+    assert!(matches!(error, DataFusionError::Plan(_)));
+    let error = error.to_string();
     assert_eq!(
         error,
         "Error during planning: Cannot move view between catalogs: from=ice and to=other"
@@ -279,8 +305,9 @@ async fn alter_view_rename_rejects_cross_catalog_and_existing_destinations() {
         "ALTER VIEW ice.sales.v RENAME TO ice.sales.b",
     )
     .await
-    .expect_err("existing view must refuse")
-    .to_string();
+    .expect_err("existing view must refuse");
+    assert!(matches!(error, DataFusionError::Plan(_)));
+    let error = error.to_string();
     assert_eq!(
         error,
         "Error during planning: [VIEW_ALREADY_EXISTS] Cannot create view sales.b because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
@@ -335,8 +362,9 @@ async fn alter_view_router_refuses_statement_write_options() {
         &options,
     )
     .await
-    .expect_err("ALTER VIEW cannot take statement write options")
-    .to_string();
+    .expect_err("ALTER VIEW cannot take statement write options");
+    assert!(matches!(error, DataFusionError::Plan(_)));
+    let error = error.to_string();
     assert_eq!(
         error,
         "Error during planning: ALTER VIEW does not support write options (write-format); they are only honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)"

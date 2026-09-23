@@ -456,6 +456,7 @@ mod tests {
         let Err(error) = select_unset_removals(&keys, false, &stored) else {
             panic!("must refuse")
         };
+        assert!(matches!(error, DataFusionError::Plan(_)));
         assert_eq!(
             error.to_string(),
             "Error during planning: Cannot remove property that is not set: 'nope'",

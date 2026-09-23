@@ -559,19 +559,19 @@ mod tests {
     fn alter_view_malformed_tails_fail_loud() {
         assert!(
             try_parse_alter_view("ALTER VIEW sc.ns.v SET TBLPROPERTIES")
-                .is_some_and(|parsed| parsed.is_err())
+                .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_))))
         );
         assert!(
             try_parse_alter_view("ALTER VIEW sc.ns.v RENAME TO")
-                .is_some_and(|parsed| parsed.is_err())
+                .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_))))
         );
         assert!(
             try_parse_alter_view("ALTER VIEW sc.ns.v UNSET TBLPROPERTIES 'k'")
-                .is_some_and(|parsed| parsed.is_err())
+                .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_))))
         );
         assert!(
             try_parse_alter_view("ALTER VIEW sc.ns.v SET TBLPROPERTIES ('k'='v') extra")
-                .is_some_and(|parsed| parsed.is_err())
+                .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_))))
         );
         for sql in [
             "ALTER VIEW v SET ('k'='v')",
@@ -581,7 +581,8 @@ mod tests {
             "ALTER VIEW v UNSET TBLPROPERTIES ('k'",
         ] {
             assert!(
-                try_parse_alter_view(sql).is_some_and(|parsed| parsed.is_err()),
+                try_parse_alter_view(sql)
+                    .is_some_and(|parsed| matches!(parsed, Err(DataFusionError::Plan(_)))),
                 "{sql}"
             );
         }
@@ -611,6 +612,7 @@ mod tests {
         let error = parse_alter_view_tail(&mut parser, vec!["v".to_string()])
             .err()
             .expect("unrecognized verb must refuse");
+        assert!(matches!(error, DataFusionError::Plan(_)));
         assert_eq!(
             error.to_string(),
             "Error during planning: could not parse `ALTER VIEW`: expected SET, UNSET or RENAME"
@@ -637,6 +639,7 @@ mod tests {
                 .expect("ALTER VIEW must match")
                 .err()
                 .expect("malformed action must refuse");
+            assert!(matches!(error, DataFusionError::Plan(_)));
             assert_eq!(error.to_string(), expected, "{sql}");
         }
     }
@@ -647,6 +650,7 @@ mod tests {
             .expect("ALTER VIEW must match")
             .err()
             .expect("missing opening parenthesis must refuse");
+        assert!(matches!(error, DataFusionError::Plan(_)));
         assert!(
             error.to_string().contains("Expected: (, found: 'k'"),
             "{error}"
