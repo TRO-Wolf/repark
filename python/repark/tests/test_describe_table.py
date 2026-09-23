@@ -159,7 +159,7 @@ def test_describe_table_statistics_counts_written_rows(spark: ReparkSession) -> 
     )
     extended = _rows(spark, f"DESCRIBE TABLE EXTENDED {CATALOG}.{NAMESPACE}.{TABLE}")
     statistics = next(value for name, value, _ in extended if name == "Statistics")
-    assert re.fullmatch(r"[0-9]+ bytes, 2 rows", statistics)
+    assert re.fullmatch(r"[1-9][0-9]* bytes, 2 rows", statistics)
     properties = next(value for name, value, _ in extended if name == "Table Properties")
     assert re.fullmatch(
         r"\[current-snapshot-id=[0-9]+,format=iceberg/parquet,format-version=2,"
