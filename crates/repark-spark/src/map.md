@@ -1370,7 +1370,9 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-error-conditions-1/C-011
   **IPI-23-MT-DESCRIBE-1 (2026-09-23):** the file declares the
   [`describe_show/metadata_table`](describe_show/map.md) child module (the
-  metadata-table `DESCRIBE` intercept) and carries its five-line hook.
+  metadata-table `DESCRIBE` intercept) and carries its five-line hook; the plain
+  base-load match maps `NamespaceNotFound` to the same 42P01 answer as
+  `TableNotFound` (md-r6fix).
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves
@@ -1378,6 +1380,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `table_exists` returns `DataInvalid` for a two-level namespace (not `NamespaceNotFound`).
   The "real table wins" probe on `cat.ns.tbl.snapshots` treats that as absent so the `$`
   rewrite runs; single-level `DataInvalid` and `Unexpected` stay fatal.
+  **md-r6fix (2026-09-23):** `table_exists_parts` is `pub` so the
+  `describe_show/metadata_table` intercept applies the same real-table-wins rule.
   **xo55-mt R1 (2026-09-22):** AS OF on a served metadata type rewrites (keeping the clause
   for the time-travel pass, quoting the `$` name so it re-tokenizes as one ident); only the
   five `all_*` types refuse, with Spark's `Cannot select snapshot in table` text.

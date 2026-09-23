@@ -1305,6 +1305,12 @@ perfectly good read.
   table raises `[TABLE_OR_VIEW_NOT_FOUND]` naming the full metadata-table name as written
   (for example `` `mt`.`ns`.`missing`.`snapshots` ``), and `EXTENDED`/`FORMATTED`
   on a metadata table print the same column rows with no extra sections (unmeasured on Spark).
+  md-r6fix (2026-09-23): a missing namespace on the plain path answers the same
+  `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01` message — after `USE`, the two- and three-part forms
+  name the facade-expanded name where Spark names the name as written (residue: the name
+  shape only). A real table at the written four-part path wins over the metadata intercept;
+  since plain resolution refuses every four-or-more-part name with the compound-identifier
+  error, a nested-namespace table still cannot be described (measured gap).
   One measured residue: `Table Properties` carries the engine's stored properties
   plus a live `current-snapshot-id`, while Spark stamps `format`, `format-version`, and
   `write.parquet.compression-codec` defaults at `CREATE` — the 2026-09-09 live leg matches

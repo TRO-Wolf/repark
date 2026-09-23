@@ -7826,16 +7826,20 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   C-022
 - [test_ice_mt_describe_1.py](test_ice_mt_describe_1.py) —
   **IPI-23-MT-DESCRIBE-1 (2026-09-22):** `DESCRIBE` on an Iceberg metadata table
-  answers one row per column of the metadata table. Eight offline pins over a
+  answers one row per column of the metadata table. Offline pins over a
   one-column seed: the six recorded `R-MT-DESCRIBE` snapshots rows (C-001),
   DESCRIBE-vs-`SELECT *` column equality across six metadata tables (C-002),
   `TABLE` / `DESC` / upper-case / `EXTENDED` / `FORMATTED` spellings (C-003), the
-  two-part form after `USE` (C-004), and the near misses — plain tables unchanged
+  two-part form after `USE` answering 42P01 on the facade-expanded name (C-004),
+  and the near misses — plain tables unchanged
   (C-005), a real table named `snapshots` (C-006), a missing base naming the full
   metadata-table name as written (C-007), an unknown suffix keeping the
-  compound-identifier error (C-008) —
+  compound-identifier error (C-008) — plus the critic-r1 refusal pins
+  (C-010..C-015: real/shadowing namespaces, missing namespace naming the full
+  name, the quoted `t$snapshots` form, the EXTENDED/FORMATTED matrix), the
+  strict-xfail `ns.t.snapshots` USE form (C-016),
   plus the live snapshots leg re-measuring Spark 4.1.2.
-  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106

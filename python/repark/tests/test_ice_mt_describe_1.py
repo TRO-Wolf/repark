@@ -1,9 +1,10 @@
 """md-r1 — DESCRIBE on an Iceberg metadata table answers one row per column.
 
 ``DESCRIBE cat.ns.t.<meta>`` (and ``DESCRIBE TABLE`` / ``DESC``, any metadata
-table name, the two-part form after ``USE``) answers ``col_name``,
-``data_type`` (the Spark DDL type name), ``comment`` NULL — exactly the columns
-``SELECT * FROM cat.ns.t.<meta>`` returns, in the same order.
+table name) answers ``col_name``, ``data_type`` (the Spark DDL type name),
+``comment`` NULL — exactly the columns ``SELECT * FROM cat.ns.t.<meta>``
+returns, in the same order. The two-part form after ``USE`` is a
+``TABLE_OR_VIEW_NOT_FOUND`` refusal, not rows.
 
 Oracle: cell ``R-MT-DESCRIBE`` (``sb-mt/cells_dfmerge.py``) recorded against
 live PySpark 4.1.2 + Iceberg 1.11.0 on 2026-09-22: the six snapshots rows below
@@ -229,8 +230,8 @@ def test_explicit_three_part_with_real_namespace_falls_through(spark: Any) -> No
     assert str(excinfo.value) == expected
 
 
-def test_explicit_three_part_missing_namespace_keeps_plain_error(spark: Any) -> None:
-    """V-001: an explicit three-part name answers the plain-path error, not rows.
+def test_explicit_three_part_missing_namespace_names_full_name(spark: Any) -> None:
+    """V-001: an explicit three-part name answers 42P01 naming the expanded name, not rows.
 
     pins: ipi-23-mt-describe-1/C-011
     """
