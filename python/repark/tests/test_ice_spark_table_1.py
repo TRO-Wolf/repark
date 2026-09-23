@@ -45,7 +45,7 @@ _TBLPROPERTIES = (
     "'write.target-file-size-bytes' = '268435456'"
 )
 _TWIN_TBLPROPERTIES = _TBLPROPERTIES + ", 'write.distribution-mode' = 'hash'"
-_SPARK_ONLY_PROPERTY_KEYS = ("owner",)
+_OWNER_PROPERTY_KEYS = ("owner",)
 _REPARK_ONLY_SUMMARY_KEY = "engine.operation-id"
 _SPARK_ONLY_SUMMARY_KEYS = (
     "app-id",
@@ -609,7 +609,8 @@ def test_spark_created_and_repark_created_metadata_shapes(tmp_path: Path) -> Non
     ).strip() == _ADOPTED_HINT
     spark_props = spark_doc["properties"]
     twin_props = twin_doc["properties"]
-    assert twin_props == {
+    assert isinstance(twin_props["owner"], str) and twin_props["owner"]
+    assert {key: value for key, value in twin_props.items() if key != "owner"} == {
         "write.merge.mode": "copy-on-write",
         "write.delete.mode": "copy-on-write",
         "write.update.mode": "copy-on-write",
@@ -665,7 +666,7 @@ def test_live_spark_created_table_roundtrip(tmp_path: Path) -> None:
     assert spark_meta.name == _ADOPTED_METADATA
     spark_doc = json.loads(spark_meta.read_text(encoding="utf-8"))
     props = spark_doc["properties"]
-    for key in _SPARK_ONLY_PROPERTY_KEYS:
+    for key in _OWNER_PROPERTY_KEYS:
         assert props[key], props
     assert props["write.distribution-mode"] == "hash"
     assert [s["summary"]["operation"] for s in spark_doc["snapshots"]] == [
