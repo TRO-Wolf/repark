@@ -1,5 +1,7 @@
 # map — repark-spark/src/tests
 
+U1-MEM-LAYOUT-1 (2026-09-23): the Spark memory-layout and orphan co-tenancy test modules, their manifest entries, and moved fixture paths are recorded below.
+
 ICE-MIXED-CASE-1 (2026-09-17): `common.rs` test helper carries the case-sensitivity flag into session config — round 21b through `with_spark_case_sensitive_config(config, false)`, main's carrier. pins: ice-mixed-case-1/C-012
 
 CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
@@ -979,6 +981,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   equality-delete pin exists here.
   pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
+  **U1-MEM-LAYOUT-1 (2026-09-23):** the Q-55-6 safety guards stay green after the layout change. pins: u1-mem-layout-1/C-009
   **IPI-30 (2026-09-22):** Spark's defaults land — the bare call deletes with `older_than` at
   now minus 3 days (`call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`),
   the optional arguments are accepted (`call_remove_orphan_files_accepts_sparks_optional_arguments`,
@@ -1003,10 +1006,39 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   rows and the name-prefix sibling accept. `call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root`
   keeps the execute-path refusal at the root.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-008, C-009
+- [mem_layout.rs](mem_layout.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** CTAS, column-definition CREATE, explicit and namespace location precedence, nested namespaces, legacy fallback, path escape rejection, and file URI normalization. pins: u1-mem-layout-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
+  **Layout-r8 (2026-09-23):** `mem_layout_refuses_path_escape_identifiers` pins the complete
+  refusal for a `..` and an `x/y` table, namespace (top level and nested) and catalog name, each
+  with a recorded layout root, and names the identifier kind. pins: u1-mem-layout-1/C-007
+- [call_orphan_ancestor.rs](call_orphan_ancestor.rs) — **U1-MEM-LAYOUT-1 layout-r8 (2026-09-23):**
+  the ancestor metadata probe, on memory (`TempFallbackAllowed`) catalogs. `m1.ns.a` sweeping `<wh>/ns/b/data` or `<wh>/ns/b/data/sub`, where
+  `m2.ns.b` (or a second session's `ice.ns.b`) sits at `<wh>/ns/b`, refuses in all three spellings
+  and through `file_list_view` with the complete message naming `<wh>/ns/b` in the scan's spelling
+  (`call_orphan_ancestor_two_catalogs_sibling_data_dir_scan_refuses`,
+  `…_two_sessions_sibling_data_dir_scan_refuses`). `metadata_probe_ancestors` walks from the scan's
+  parent to the storage root (`/`, `s3://bkt/`) when the scan lies outside the own location, stops at
+  the own location when the scan lies strictly inside it, and gives nothing when the scan equals it
+  (`…_enumeration_walks_to_the_storage_root_or_the_own_location`). Near misses stay
+  sweepable: `m1.ns.a`'s own `data/` beside `m2.ns.b`, and `<wh>/scratch/x` with no table above it
+  (`…_own_data_dir_scan_beside_another_catalog_deletes_the_orphan`,
+  `…_scan_with_no_table_above_it_is_swept`). A scan inside a table nested in the swept table's own
+  location refuses, in one catalog and across two (`…_same_catalog_scan_of_a_table_nested_in_the_own_location_refuses`,
+  `…_other_catalog_scan_of_a_table_nested_in_the_own_location_refuses`).
+  pins: u1-mem-layout-1/C-029, C-030, C-031, C-032, C-034
+- [call_orphan_cotenancy.rs](call_orphan_cotenancy.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** on memory (`TempFallbackAllowed`) catalogs: shared-warehouse catalog refusal, own-history metadata sweep, non-metadata sweep, default sweep, nested namespace guards, own-table location exception, and unreadable metadata refusal with its complete message. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
+  **Layout-r7 (2026-09-23):** a `data/` scan of a shared `<wh>/ns/t` refuses for two catalogs,
+  two sessions and two same-catalog tables on one `LOCATION`, in all three spellings and through
+  `file_list_view` (`call_orphan_cotenancy_two_catalogs_data_dir_scan_refuses`,
+  `…_two_sessions_data_dir_scan_refuses`, `…_same_catalog_shared_location_data_dir_scan_refuses`).
+  The near misses stay sweepable: a lone table's own `data/`
+  (`…_lone_table_data_dir_scan_deletes_the_orphan`) and a host table's `data/` with a table nested
+  in its root (`…_host_table_data_dir_scan_ignores_a_table_nested_in_its_root`). The fallback-root
+  guard passes a path inside the root (`…_fallback_root_guard_passes_a_table_dir_inside_the_root`).
+  pins: u1-mem-layout-1/C-023, C-024, C-025, C-026, C-027, C-028
 - [call_orphan_scope.rs](call_orphan_scope.rs) — **IPI-30 guard narrowed (2026-09-22, owner
   ruling Q-55-6):** end-to-end pins on a `ReparkSession` memory catalog whose namespace has
   no `location` and whose tables carry no table `LOCATION`, so each sits under
-  `<warehouse>/repark_ctas/ice/ns/<table>`. The
+  `<warehouse>/ns/<table>` after the fixture move. The
   bare call sweeps the table's own directory (10-day orphan listed and deleted, 1-day orphan
   kept), and a sibling table in the same namespace does not block that sweep; a `location` at
   the warehouse, `repark_ctas` or `repark_ansi_ctas` refuses; a `location` holding another
@@ -1022,6 +1054,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   outside the scan location (a warehouse file, a `..` escape) is kept. Its helpers are
   `pub(super)` for `call_orphan_view.rs`.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
+  pins: u1-mem-layout-1/C-022
 - [call_orphan_view.rs](call_orphan_view.rs) — **IPI-30 view-path sweep (2026-09-23):** the
   `file_list_view` branches beyond the scope pins, on `call_orphan_scope.rs`'s helpers. Each
   orphan comes back once, sorted, in the view's own spelling. `gc.enabled = false` and an
@@ -1305,6 +1338,53 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   advertises the served four.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015,
   C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
+- `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
+  `input_file_name()` pins over the same two-append plus one-delete seed.
+  `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
+  (`[[2,true],[3,true],[4,true]]`) plus the scalar-argument shape compared at
+  full value (`concat('p:', input_file_name())` against `concat('p:', _file)`
+  row by row); `input_file_name_equals_file_on_every_row` pins
+  `input_file_name() = _file` per row, bare and through the user aliases
+  `AS x` and `AS t`; `input_file_name_upper_case_folds` pins
+  the `INPUT_FILE_NAME()` spelling; `input_file_name_in_where_keeps_every_row`
+  pins WHERE on `LIKE '%.parquet'` and on `input_file_name() = _file` per row;
+  `input_file_name_in_a_derived_table_equals_file` pins the inner
+  single-relation SELECT of a derived table; and
+  `bare_input_file_name_projection_names_the_column` pins the bare column name
+  `input_file_name()` and compares the ordered projection against
+  `SELECT _file … ORDER BY id` row by row over at least two distinct paths.
+  The fall-through shapes keep the `[UNRESOLVED_ROUTINE]` error naming
+  `input_file_name`:
+  `input_file_name_inside_an_aggregate_arg_falls_through`
+  (`count(DISTINCT input_file_name())`),
+  `input_file_name_with_an_argument_falls_through` (`input_file_name(1)`),
+  `input_file_name_over_a_self_join_falls_through`,
+  `input_file_name_over_values_falls_through`,
+  `input_file_name_without_from_falls_through`,
+  `input_file_name_over_a_metadata_table_falls_through` (the backticked
+  `` `ice`.`ns`.`t`.`snapshots` `` path),
+  `input_file_name_over_a_union_all_falls_through`, and
+  `input_file_name_over_a_cte_sharing_the_table_alias_falls_through` — a CTE
+  whose outer relation merely carries the Iceberg table's name as its alias, in
+  the projection and in WHERE, a CTE without an alias, and a CTE named like the
+  table. **IPI-20-R4 (2026-09-23):**
+  `input_file_name_after_use_over_a_cte_named_like_the_table_falls_through`
+  pins that after `USE ice.ns` a CTE named `t` still wins (`input_file_name()`
+  refuses, the `_file` leg answers the CTE's `'x'` — the collector-side red is
+  pinned in `repark_core::metadata_columns::tests` since `USE` does not move
+  planner defaults in this harness);
+  `input_file_name_after_use_still_serves_the_table_by_name` pins the near
+  misses (bare, unrelated CTE, and a colliding CTE name beside the qualified
+  table) answering `_file` row by row; and
+  `input_file_name_over_a_temp_view_named_like_the_table_falls_through`
+  measures the temp-view collision (`CREATE TEMPORARY VIEW` refuses
+  `NotImplemented`; a programmatic temp view still falls through).
+  `a_real_column_named_input_file_name_reads_unchanged` pins that a user column
+  of that name is read normally, and `insert_around_the_trigger_keeps_todays_answers`
+  pins the input-file-name-only trigger returning `Ok(None)` for a non-query
+  statement (the `[UNRESOLVED_ROUTINE]` error, never `[ICE-MC-1]`).
+  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

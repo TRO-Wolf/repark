@@ -131,8 +131,17 @@ pub(crate) fn table_or_view_not_found(
     namespace: &str,
     table: &str,
 ) -> DataFusionError {
+    table_or_view_not_found_parts(&[catalog, namespace, table])
+}
+
+pub(crate) fn table_or_view_not_found_parts(parts: &[&str]) -> DataFusionError {
+    let name = parts
+        .iter()
+        .map(|part| format!("`{part}`"))
+        .collect::<Vec<_>>()
+        .join(".");
     DataFusionError::Plan(format!(
-        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `{catalog}`.`{namespace}`.`{table}` cannot \
+        "[TABLE_OR_VIEW_NOT_FOUND] The table or view {name} cannot \
          be found. Verify the spelling and correctness of the schema and catalog. \
          If you did not qualify the name with a schema, verify the current_schema() output, \
          or qualify the name with the correct schema and catalog. \

@@ -4,6 +4,20 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [ipi-20-input-file-name-1-ledger.md](ipi-20-input-file-name-1-ledger.md) —
+  **IPI-20-INPUT-FILE-NAME-1 (2026-09-23), in flight:** `input_file_name()` on the
+  Spark door — a second trigger into `prepare_metadata_column_sql` rewrites a
+  zero-argument call to `<alias>._file` inside a SELECT whose own single
+  relation is the Iceberg table by written name (an alias match alone does not
+  qualify — the CTE alias-collision pin, C-010), and collection itself is
+  CTE-aware: a one-part name matching any CTE alias in the statement is never
+  treated as the physical table (C-011) while qualified names stay collected
+  (C-012); the aggregate-arg, arity,
+  join, VALUES, metadata-table and UNION-ALL residues keep
+  `UNRESOLVED_ROUTINE`. C-001..C-013 PROVEN.
+  `risk_tier: standard`. Branch `fix/ipi-20-input-file-name`.
+  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the
@@ -1505,6 +1519,28 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: high`. Branch `fix/ipi-30-orphan-guard-narrow`.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009
+- [ipi-23-mt-describe-1-ledger.md](ipi-23-mt-describe-1-ledger.md) —
+  **IPI-23-MT-DESCRIBE-1 (2026-09-22), in flight:** `DESCRIBE [TABLE]`/`DESC` on a
+  dotted Iceberg metadata table answers one row per column of the metadata table
+  from the same provider schema `SELECT *` resolves; a missing base raises
+  `TABLE_OR_VIEW_NOT_FOUND` naming the full metadata-table name as written, and
+  `EXTENDED`/`FORMATTED` print the column rows only. Facade pins replay the recorded
+  `R-MT-DESCRIBE` cell plus spelling variants, the two-part `USE` form, the
+  critic-r1 refusal pins, and four near misses; registry row `DESC-1` re-ruled to
+  the served behavior. Critic r4 (md-r6fix) re-pins C-004/C-011 to the 42P01
+  answer, adds the C-017 real-table-wins collision pin, and records the
+  nested-namespace DESCRIBE gap as D-4. Critic r5 (md-r7fix) makes the
+  missing-base answer name the identifier as written — case kept, and the `$`
+  form kept for a quoted `t$snapshots` name — pinned by C-018/C-019. Critic r7
+  (md-r9fix) makes the `$` metadata name split at the last `$` like the pinned
+  fork's SELECT path — a base containing `$` describes its metadata table
+  (C-020), the base describes itself (C-021), and an unknown `$` suffix keeps
+  the refusal (C-022); the IPI-30 `C-009` citation the branch deleted is
+  restored.
+  `risk_tier: standard`. Branch `fix/ipi-23-describe-metadata-table`.
+  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
+  C-020, C-021, C-022
 - [ipi-23-mt-reader-1-ledger.md](ipi-23-mt-reader-1-ledger.md) —
   **IPI-23-MT-READER-1 (2026-09-22), in flight:** `format("iceberg").load("c.n.t.<meta>")`
   answers what SQL answers, and with `versionAsOf` / `timestampAsOf` what SQL `AS OF`

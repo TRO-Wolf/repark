@@ -1,6 +1,7 @@
 //! CTAS staged create/replace, service-managed writes, and create-clause refusal helpers.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
@@ -476,6 +477,7 @@ pub(crate) async fn resolve_create_plan_for(
         table,
         full_name,
         location_policy,
+        catalogs.warehouse_layout_root(catalog_name),
     )
     .await?;
     let file_io = repark_iceberg::catalog::file_io_for_location(&location, catalog.properties())?;
@@ -490,6 +492,7 @@ pub(crate) async fn resolve_table_create_location(
     table: &str,
     full_name: &str,
     policy: LocationPolicy,
+    layout_root: Option<PathBuf>,
 ) -> Result<String> {
     let namespace = catalog
         .get_namespace(namespace_ident)
@@ -507,6 +510,13 @@ pub(crate) async fn resolve_table_create_location(
     {
         let prefix = prefix.trim_end_matches('/');
         return Ok(format!("{prefix}/{table}"));
+    }
+    if let Some(mut path) = layout_root {
+        for part in namespace_ident.as_ref() {
+            path.push(part.as_str());
+        }
+        path.push(table);
+        return Ok(path.to_string_lossy().into_owned());
     }
     match policy {
         // The fallback root is resolved once at catalog registration and carried on the policy.

@@ -331,7 +331,7 @@ pub(super) fn normalize_location_path(location: &str) -> String {
     format!("{head}{}", normalize_lexically(Path::new(path)).display())
 }
 
-fn location_path_start(location: &str) -> usize {
+pub(super) fn location_path_start(location: &str) -> usize {
     let after_scheme = scheme_end(location).map_or(0, |end| end + 1);
     let rest = location.get(after_scheme..).unwrap_or_default();
     match rest.strip_prefix("//") {

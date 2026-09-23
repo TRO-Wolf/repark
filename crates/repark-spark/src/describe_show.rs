@@ -27,6 +27,8 @@ use crate::spark_type_names::spark_ddl_type_name;
 use repark_core::{CatalogRegistry, DescribeOwnerConfig, prop_key_is_secret};
 use repark_functions::iceberg_system;
 
+pub(crate) mod metadata_table;
+
 /// A parsed Spark `DESCRIBE {NAMESPACE|DATABASE|SCHEMA} [EXTENDED] catalog.namespace`.
 pub(crate) struct DescribeNamespace {
     pub(crate) catalog: String,
@@ -207,6 +209,7 @@ pub(crate) struct DescribeTable {
     pub(crate) namespace: String,
     pub(crate) table: String,
     pub(crate) extended: bool,
+    pub(crate) written_parts: Vec<String>,
 }
 
 impl DescribeTable {
@@ -252,6 +255,7 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         namespace,
         table,
         extended,
+        written_parts: Vec::new(),
     }))
 }
 
@@ -267,6 +271,11 @@ pub(crate) async fn execute_describe_table(
     describe: DescribeTable,
 ) -> Result<DataFrame> {
     let handle = catalog_handle(catalogs, &describe.catalog)?;
+    if let Some(described) =
+        metadata_table::try_describe_metadata_table(ctx, catalogs, &describe).await
+    {
+        return ctx.read_batch(described?);
+    }
     let ident = TableIdent::new(
         NamespaceIdent::new(describe.namespace.clone()),
         describe.table.clone(),
@@ -281,6 +290,13 @@ pub(crate) async fn execute_describe_table(
                 &ident,
             )
             .await;
+        }
+        Err(error) if error.kind() == ErrorKind::NamespaceNotFound => {
+            return Err(crate::catalog_ops::table_or_view_not_found(
+                &describe.catalog,
+                &describe.namespace,
+                &describe.table,
+            ));
         }
         Err(error) => return Err(iceberg_err(error)),
     };

@@ -1,5 +1,7 @@
 # map — repark-spark/src
 
+U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. On a `TempFallbackAllowed` catalog only, an orphan scan refuses a path that holds another table's metadata file or an unreadable one, or whose ancestor walk (`call/map.md`) reaches a `metadata/` directory holding one (the other table of any catalog); and a path that holds another table of the same catalog, lies inside one outside the swept table's own location, or lies inside the swept table's own location when another table shares it. See `tests/map.md` and `call/map.md`. pins: u1-mem-layout-1/C-002, C-011, C-014, C-020, C-025, C-029
+
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `merge_fragments.rs` passes the clause home scope — NOT MATCHED [BY TARGET] fragments resolve bare references against the source alias, NOT MATCHED BY SOURCE against the target alias, MATCHED/ON against both. pins: ice-mixed-case-1/C-004
 
 ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): normalization stays ON (`extension.rs` carries no parser switch); the fold and fragment rewrites emit backticked stored-case spellings. pins: ice-mixed-case-1/C-001…C-006
@@ -1368,6 +1370,11 @@ pins: rp-4-fork-repin/C-005, C-006
   TABLE only, never DATABASE or TABLES) — and the router refuses each through
   `catalog_ops::not_supported_command_for_v2_table` with Spark's recorded command string.
   pins: ice-error-conditions-1/C-011
+  **IPI-23-MT-DESCRIBE-1 (2026-09-23):** the file declares the
+  [`describe_show/metadata_table`](describe_show/map.md) child module (the
+  metadata-table `DESCRIBE` intercept) and carries its five-line hook; the plain
+  base-load match maps `NamespaceNotFound` to the same 42P01 answer as
+  `TableNotFound` (md-r6fix).
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves
@@ -1375,6 +1382,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `table_exists` returns `DataInvalid` for a two-level namespace (not `NamespaceNotFound`).
   The "real table wins" probe on `cat.ns.tbl.snapshots` treats that as absent so the `$`
   rewrite runs; single-level `DataInvalid` and `Unexpected` stay fatal.
+  **md-r6fix (2026-09-23):** `table_exists_parts` is `pub` so the
+  `describe_show/metadata_table` intercept applies the same real-table-wins rule.
   **xo55-mt R1 (2026-09-22):** AS OF on a served metadata type rewrites (keeping the clause
   for the time-travel pass, quoting the `$` name so it re-tokenizes as one ident); only the
   five `all_*` types refuse, with Spark's `Cannot select snapshot in table` text.

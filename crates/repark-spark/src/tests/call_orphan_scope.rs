@@ -35,15 +35,10 @@ pub(super) async fn ctas(session: &ReparkSession, warehouse: &TempDir, table: &s
         &format!("CREATE TABLE ice.ns.{table} USING iceberg AS SELECT 1 AS id"),
     )
     .await;
-    let table_dir = warehouse
-        .path()
-        .join("repark_ctas")
-        .join("ice")
-        .join("ns")
-        .join(table);
+    let table_dir = warehouse.path().join("ns").join(table);
     assert!(
         table_dir.join("metadata").is_dir(),
-        "a namespace without a location places {table} under the shared fallback root"
+        "a namespace without a location places {table} at <warehouse>/ns/{table}"
     );
     table_dir
 }
@@ -220,7 +215,7 @@ async fn call_remove_orphan_files_refuses_a_location_holding_another_table() {
     let own_orphan = plant(&own_dir, "orphan-file.parquet", 10);
     let other_orphan = plant(&other_dir, "orphan-file.parquet", 10);
     let other_live = referenced_data_file(&other_dir);
-    let namespace_dir = warehouse.path().join("repark_ctas").join("ice").join("ns");
+    let namespace_dir = warehouse.path().join("ns");
 
     for location in [
         namespace_dir.display().to_string(),
@@ -293,7 +288,7 @@ async fn call_remove_orphan_files_refuses_a_location_holding_a_table_of_another_
     let warehouse = TempDir::new().unwrap();
     let session = fallback_session(&warehouse).await;
     let own_dir = ctas(&session, &warehouse, "a").await;
-    let namespace_dir = warehouse.path().join("repark_ctas").join("ice").join("ns");
+    let namespace_dir = warehouse.path().join("ns");
     let foreign_dir = namespace_dir.join("other");
     submit(
         &session,
