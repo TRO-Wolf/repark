@@ -243,8 +243,7 @@ probe answer (the nested-namespace Rust pin), and the #219
 Rust change — changing one copy would split the doors. Follow-up gap: a
 non-Glue catalog's `DataInvalid` raised for another cause is read as
 not-found on both doors alike. Sweep: the test-first assertion matrix and
-the prose/literal tables are in the rd-r12fix hand-back; no prose sentence
-elsewhere claims more than its test asserts. Pin count unchanged:
+the prose/literal tables are in the rd-r12fix hand-back. Pin count unchanged:
 twenty-two facade pins, C-001..C-022.
 
 ## Measurements (decide-then-build evidence)
@@ -290,7 +289,7 @@ the SQL door's backticked spelling by construction (unquoted internal SQL, uncha
 | C-007 | Unknown numeric `versionAsOf` on `.files` answers empty with the SQL door's schema field names, the reader frame carrying `("record_count", "bigint", False)`. | `test_reader_unknown_numeric_as_of_answers_empty` green. | **PROVEN** | `try_new_empty` through the reader; zero rows, equal columns, absolute field pin. pins: ipi-23-mt-reader-1/C-007 |
 | C-008 | Near miss: `load("mt.ns.t")` with and without `versionAsOf` keeps its rows — `[[1,"a","x"],[2,"b","y"]]` current, `[[1,"a","x"],[2,"b","y"],[3,"c","x"]]` at the second snapshot — each equal to the SQL door, and the pinned read differs from the current. | `test_load_plain_and_version_as_of_unchanged` green. | **PROVEN** | Absolute rows plus reader/SQL equality and the pinned!=current guard; green on main and after. pins: ipi-23-mt-reader-1/C-008 |
 | C-009 | Near miss: `load("mt.ns.t.branch_b0")`, `.tag_t0` and `.snapshot_id_<second id>` equal the SQL door (rows and columns) and answer `[[1,"a","x"],[2,"b","y"],[3,"c","x"]]`; the tag and snapshot-id reads differ from the un-pinned read. | `test_load_branch_tag_snapshot_id_selectors_unchanged` green. | **PROVEN** | Selector routing untouched; reader/SQL equality plus the absolute second-snapshot rows per suffix. pins: ipi-23-mt-reader-1/C-009 |
-| C-010 | Near miss: a real table `mt.ns.snapshots` reads its own rows (`[[1],[2]]`) under `load`. | `test_load_table_named_snapshots_reads_real_table` green. | **PROVEN** | Three-part names never route to metadata. pins: ipi-23-mt-reader-1/C-010 |
+| C-010 | Near miss: a real table `mt.ns.snapshots` reads its own rows (`[[1],[2]]`) under `load`. | `test_load_table_named_snapshots_reads_real_table` green. | **PROVEN** | A three-part name that names a real table reads that table. pins: ipi-23-mt-reader-1/C-010 |
 | C-011 | Near miss: `load("mt.ns.t.nope")` keeps today's `AnalysisException` text as a literal pin (`Error during planning: Unsupported compound identifier 'mt.ns.t_load_nope.nope'. Expected 1, 2 or 3 parts, got 4`); only `getSqlState()` is compared against the SQL door's on the same spelling. | `test_load_unknown_suffix_keeps_error_text` green. | **PROVEN** | The reader's own literal, measured on main (M-3); SQLSTATE paired, text literal. pins: ipi-23-mt-reader-1/C-011 |
 | C-012 | Near miss: the legacy `snapshot-id` / `as-of-timestamp` / `tag` options on `load("mt.ns.t.files")` refuse standalone with the #800 `IllegalArgumentException` literal texts and `getSqlState()` `None` — no SQL arm. | `test_legacy_options_on_metadata_keep_refusal_texts` green. | **PROVEN** | Python-layer refusals fire before any engine routing; literal texts plus `is None`. pins: ipi-23-mt-reader-1/C-012 |
 | C-013 | Live leg: on Spark 4.1.2 itself the reader answers what SQL answers for `load(t.snapshots)` and `versionAsOf` on `load(t.files)` at the second snapshot id — sorted `operation` multiset `append, append, delete`, field `("operation", "string", True)`, `record_count` sum 3 and field `("record_count", "bigint", False)`, the pinned read differing from the un-pinned. | `test_live_spark_reader_matches_sql` green under `REPARK_PARITY_LIVE=1`. | **PROVEN** | Goal premise re-measured on the live oracle in the gate's live leg. pins: ipi-23-mt-reader-1/C-013 |
@@ -338,7 +337,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py, crates/repark-spark/src/tests/metadata_tables_asof.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: The 'nope'/too-old/all_* refusals assert the reader's class and text equal the SQL door's, with the #802 sentences verbatim; legacy options keep the #800 IllegalArgumentException texts; the unknown suffix keeps the reader's measured Analysis text.
+      evidence: The 'nope'/too-old/all_* refusals assert the reader's class and text equal the SQL door's, the 'nope' and too-old #802 texts pinned as literals and the all_files text by its `Cannot select snapshot in table: ALL_FILES` sentence; legacy options keep the #800 IllegalArgumentException texts; the unknown suffix keeps the reader's measured Analysis text.
       artifacts: [python/repark/tests/test_ice_mt_reader_1.py]
     - id: AT-4
       status: ATTACKED
