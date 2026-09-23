@@ -226,6 +226,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   reaching the FNP-6D Rust UDAFs through the three new `unary_aggregate_udaf` arms, and
   installing through this module's `INSTALL_NAMES`. pins: fnp-bitmap-facade-1/C-001, C-002
 - `functions_agg.py` — aggregate-function re-exports.
+- `functions_agg_1.py` — FNP-AGG-1 slice-(d) aggregate installed onto `functions.py`
+  `__all__` through this module's `install_into`: `grouping_id` over the new
+  kernel (zero or more columns; display names the Spark spelling), registered
+  for by-name resolution.
+  pins: fnp-agg-1/C-001, C-002
 - `functions_bitwise.py` — bitwise scalar wrappers.
 - `functions_arrow_udf.py` — **FNP-MISC-1 (2026-09-15):** `arrow_udf` over the pandas
   bridge (scalar / iterator / grouped forms chosen by type hints, or forced through

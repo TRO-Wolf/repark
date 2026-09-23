@@ -1,0 +1,367 @@
+{
+ "cells": [
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "GROUPING_ID_COLUMN_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "df.rollup('g','k').agg(F.grouping_id('g'))",
+   "message": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (g#0) does not match grouping columns (g#0,k#1). SQLSTATE: 42803",
+   "name": "grouping_id",
+   "root_cause": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (g#0) does not match grouping columns (g#0,k#1). SQLSTATE: 42803"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "GROUPING_ID_COLUMN_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "df.cube('g','k').agg(F.grouping_id('k'))",
+   "message": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1) does not match grouping columns (g#0,k#1). SQLSTATE: 42803",
+   "name": "grouping_id",
+   "root_cause": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1) does not match grouping columns (g#0,k#1). SQLSTATE: 42803"
+  },
+  {
+   "ansi": true,
+   "door": "python",
+   "error_condition": "GROUPING_ID_COLUMN_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "df.cube('g','k').agg(F.grouping_id('k','g'))",
+   "message": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1,g#0) does not match grouping columns (g#0,k#1). SQLSTATE: 42803",
+   "name": "grouping_id",
+   "root_cause": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1,g#0) does not match grouping columns (g#0,k#1). SQLSTATE: 42803"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "k",
+     "nullable": true,
+     "type": "string"
+    },
+    {
+     "name": "grouping_id()",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "python",
+   "expr": "df.cube('g','k').agg(F.grouping_id())",
+   "name": "grouping_id",
+   "rows": [
+    [
+     null,
+     null,
+     3
+    ],
+    [
+     null,
+     null,
+     2
+    ],
+    [
+     null,
+     "a",
+     2
+    ],
+    [
+     null,
+     "b",
+     2
+    ],
+    [
+     null,
+     "c",
+     2
+    ],
+    [
+     1,
+     null,
+     1
+    ],
+    [
+     1,
+     "a",
+     0
+    ],
+    [
+     1,
+     "b",
+     0
+    ],
+    [
+     1,
+     "c",
+     0
+    ],
+    [
+     2,
+     null,
+     1
+    ],
+    [
+     2,
+     null,
+     0
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "histogram_numeric(v, 2)",
+     "nullable": true,
+     "type": "array<struct<x:int,y:double>>"
+    }
+   ],
+   "door": "python",
+   "expr": "VALUES (30),(10),(20) histogram_numeric(v, 2) single partition",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     [
+      {
+       "row": {
+        "x": 10,
+        "y": 1.0
+       }
+      },
+      {
+       "row": {
+        "x": 25,
+        "y": 2.0
+       }
+      }
+     ]
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "histogram_numeric(v, 3)",
+     "nullable": true,
+     "type": "array<struct<x:int,y:double>>"
+    }
+   ],
+   "door": "python",
+   "expr": "VALUES 5,1,9,3,7,2,8 histogram_numeric(v,3) single partition",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     [
+      {
+       "row": {
+        "x": 1,
+        "y": 2.0
+       }
+      },
+      {
+       "row": {
+        "x": 4,
+        "y": 2.0
+       }
+      },
+      {
+       "row": {
+        "x": 8,
+        "y": 3.0
+       }
+      }
+     ]
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "histogram_numeric(v, 3)",
+     "nullable": true,
+     "type": "array<struct<x:int,y:double>>"
+    }
+   ],
+   "door": "python",
+   "expr": "VALUES 5,1,9,3,7,2,8,4,6,0 histogram_numeric(v,3) repartition(3)",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     [
+      {
+       "row": {
+        "x": 1,
+        "y": 4.0
+       }
+      },
+      {
+       "row": {
+        "x": 5,
+        "y": 3.0
+       }
+      },
+      {
+       "row": {
+        "x": 8,
+        "y": 3.0
+       }
+      }
+     ]
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "histogram_numeric(v, 2)",
+     "nullable": true,
+     "type": "array<struct<x:double,y:double>>"
+    }
+   ],
+   "door": "python",
+   "expr": "VALUES 1.0,2.0,4.0,7.0,11.0 histogram_numeric(v,2) double",
+   "name": "histogram_numeric",
+   "rows": [
+    [
+     [
+      {
+       "row": {
+        "x": 2.333333333333333,
+        "y": 3.0
+       }
+      },
+      {
+       "row": {
+        "x": 9.0,
+        "y": 2.0
+       }
+      }
+     ]
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "listagg(DISTINCT k, -)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "a,b,b,c,a,d listagg_distinct(k,'-') coalesce(1)",
+   "name": "listagg_distinct",
+   "rows": [
+    [
+     "a-b-c-d"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "listagg(DISTINCT k, -)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "a,b,b,c,a,d listagg_distinct(k,'-') repartition(2) by k",
+   "name": "listagg_distinct",
+   "rows": [
+    [
+     "a-c-d-b"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "string_agg(DISTINCT k, NULL)",
+     "nullable": true,
+     "type": "string"
+    }
+   ],
+   "door": "python",
+   "expr": "z,y,x,y string_agg_distinct(k) coalesce(1)",
+   "name": "string_agg_distinct",
+   "rows": [
+    [
+     "zyx"
+    ]
+   ]
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "GROUPING_ID_COLUMN_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, k, grouping_id(g) FROM F1 GROUP BY ROLLUP(g, k)",
+   "message": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (g#0) does not match grouping columns (g#0,k#1). SQLSTATE: 42803",
+   "name": "grouping_id",
+   "root_cause": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (g#0) does not match grouping columns (g#0,k#1). SQLSTATE: 42803"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "GROUPING_ID_COLUMN_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, k, grouping_id(k) FROM F1 GROUP BY CUBE(g, k)",
+   "message": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1) does not match grouping columns (g#0,k#1). SQLSTATE: 42803",
+   "name": "grouping_id",
+   "root_cause": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1) does not match grouping columns (g#0,k#1). SQLSTATE: 42803"
+  },
+  {
+   "ansi": true,
+   "door": "sql",
+   "error_condition": "GROUPING_ID_COLUMN_MISMATCH",
+   "error_type": "AnalysisException",
+   "expr": "SELECT g, k, grouping_id(k, g) FROM F1 GROUP BY GROUPING SETS ((g), (k), ()) ORDER BY 1, 2",
+   "message": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1,g#0) does not match grouping columns (g#0,k#1). SQLSTATE: 42803",
+   "name": "grouping_id",
+   "root_cause": "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k#1,g#0) does not match grouping columns (g#0,k#1). SQLSTATE: 42803"
+  },
+  {
+   "ansi": true,
+   "columns": [
+    {
+     "name": "g",
+     "nullable": true,
+     "type": "int"
+    },
+    {
+     "name": "grouping_id(g)",
+     "nullable": false,
+     "type": "bigint"
+    }
+   ],
+   "door": "sql",
+   "expr": "SELECT g, grouping_id(g) FROM F1 GROUP BY GROUPING SETS ((g), ()) ORDER BY 1",
+   "name": "grouping_id",
+   "rows": [
+    [
+     null,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  }
+ ],
+ "spark_version": "4.1.2"
+}

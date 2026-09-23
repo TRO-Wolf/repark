@@ -1239,3 +1239,19 @@ First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](.
   need it — neither can depend on the other. Default `false`, exactly Spark's.
   Tests are file-backed in [`merge_schema/`](merge_schema/map.md).
   pins: ipi-19-56-37-schema-evolution-write/C-004, C-012
+- **FNP-AGG-1 slice (d) (2026-09-21):** `grouping.rs` (`__repark_grouping`
+  UDAF aliased `grouping`, `grouping_id` UDAF, and the `ResolveGroupingId`
+  analyzer rule: bitmask from the plan's grouping sets, `Int8` / `Int64` out,
+  canonical `grouping(g)` display, both error classes in Spark wording; the
+  rule also normalizes the planner's qualified projection alias, rebuilding
+  the projection so the cached schema follows the renamed exprs). The custom
+  path answers Spark's `tinyint` with the unqualified display, while the
+  builtin `grouping` UDAF answers `Int32` qualified; under plain GROUP BY
+  unary `grouping()` answers constant `0` (pinned acceptance, types-1/C-004)
+  and `grouping_id` refuses with `UNSUPPORTED_GROUPING_EXPRESSION`
+  (SQLSTATE `42K0E`); pinned by the `GROUPING SETS` and cube tests
+  asserting type and name.
+  `grouping_id` args must equal the grouping columns exactly in order, else
+  `GROUPING_ID_COLUMN_MISMATCH` in Spark's message shape (R-18a-19).
+  `unqualified_name` is file-local until slice (a) lands `max_min_by.rs`.
+  pins: fnp-agg-1/C-002, C-003, C-004, C-005

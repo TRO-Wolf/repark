@@ -10,6 +10,7 @@ CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_accepta
 
 **FNP-11A D-10 (2026-09-15, orchestrator):** `test_fnp11a_temporal.py` adds `test_make_timestamp_keeps_its_frozen_signature` and the EX-FN-28 residual pin `test_make_timestamp_date_time_keywords_refused_by_the_frozen_signature`, and its cell filter skips the facade `make_timestamp(date=…)` cells; `test_functions_d.py` drops the seven implemented temporal names from its deferred census (`to_timestamp_ltz` / `to_timestamp_ntz` stay for FNP-11B); `test_fn_batch3.py` drops the `make_timestamp` stub refusal; `test_functions_split_identity.py` counts `FNP11A_EXPORTS` after the stack names; `test_functions_gt2.py` pins Spark's `'2 years'` interval string (EX-FN-19 FIXED). pins: fnp-11a/C-001, C-002
 **FNP-11B step 3 (2026-09-15, run 16a):** the deferred census is gone (`to_timestamp_ltz` / `to_timestamp_ntz` answer, presence pin in its place); `test_fn_batch3.py` answers `try_to_timestamp` instead of refusing it; the split-identity tail follows the thirteen-name installer tuple with no edit; `test_examples_functions_b.py` retires the `try_to_timestamp` refusal pin (EX-FN-20 FIXED). pins: fnp-11b/C-002, C-007
+**FNP-AGG-1 slice (d) (2026-09-21):** `test_functions_split_identity.py` counts `FNPAGG1_EXPORTS` after the window names. pins: fnp-agg-1/C-002, C-006
 
 ## Purpose
 
@@ -1621,7 +1622,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusals).
   Step 1 is red on the base tree; steps 2–4 turn the pins green in name order.
   pins: fnp-win-1/C-001, C-002, C-003, C-004, C-005, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
-- [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*`
+- [test_fnp_agg_1.py](test_fnp_agg_1.py) + `fnp_agg_1_spark_oracle.json` —
+  **FNP-AGG-1 slice (d) (2026-09-21):** the orchestrator's live PySpark 4.1.2
+  recording (2026-09-14, 202 cells over the shared frame, both ANSI settings, with
+  `signatures` for the facade names) copied verbatim; this slice pins the grouping
+  cells on both doors (value pins compare column name, Spark type, rows exactly,
+  and nullability except the VALUES group key; error pins assert Spark's own
+  condition). Grouping pins apply R-18a-9 (the `*args` branch compares by name)
+  and R-18a-10 (order-insensitive within runs tied on every sort key); the
+  SQL `tinyint` label passes unmarked (registry `FNP-AGG-1-18B` FIXED).
+  A new pin proves the Python cube reaches `ResolveGroupingId` by type.
+  pins: fnp-agg-1/C-001, C-002, C-003, C-004
+- [test_fnp_agg_1_critic.py](test_fnp_agg_1_critic.py) +
+  `fnp_agg_1_critic_spark_oracle.json` — **FNP-AGG-1 slice (d) (2026-09-21):**
+  eight live-PySpark 4.1.2 grouping cells: `grouping_id` exact-order refusals
+  on both doors, the `GROUPING SETS` value cell on the SQL door and the cube
+  `grouping_id()` value cell on the Python door; the cube cell compares rows
+  as a multiset (the plan shape shows rare nondeterministic output order,
+  another slice's seam).
+  pins: fnp-agg-1/C-002, C-003, C-004
+- [test_fnp7_try_inversions.py](test_fnp7_try_inversions.py) — **FNP-7a/7b:** twelve `try_*
   inversions. Spark 4.1.2 cells (value and Arrow type) on the two reachable doors (Spark SQL
   + facade Column API). Native ANSI `repark.sql()` does not load SparkExtension: the twelve
   names are unresolved (`UNRESOLVED_ROUTINE`, blanket since 2026-09-16).
@@ -1904,6 +1924,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   TINYINT/SMALLINT sums, `ntile(BIGINT)` and grouping acceptances (TY-7/8/9/10), and
   wrapped-year from_unixtime cells. Round 5 adds negative 3- and 4-digit-year
   from_unixtime cells (default, `yyyy`, `yy`) on both doors plus a New York cell.
+  **FNP-AGG-1 slice (d) (2026-09-21):** the grouping pins move off the
+  builtin's `Int32` to the kernel's `Int8` (values and plain-`GROUP BY`
+  acceptance unchanged; live carve-out now pins the (`int8`, `int8`) pair).
   pins: types-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
   Green implementation (2026-09-05): narrowing after `TypeCoercion` with a closing
   coercion pass, `LIMIT` fetch/skip exempt, plain-`INSERT` INT→BIGINT conform,

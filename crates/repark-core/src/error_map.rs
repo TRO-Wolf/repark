@@ -30,7 +30,10 @@ pub(crate) enum EngineErrorKind<'a> {
 pub(crate) const MAX_ERROR_PEEL_DEPTH: usize = 32;
 
 const ARITHMETIC_OVERFLOW_HEAD: &str = "[ARITHMETIC_OVERFLOW]";
+const CAUSED_BY_SEPARATOR: &str = "\ncaused by\n";
 const COERCION_FAILED_MARKER: &str = "user-defined coercion failed with: ";
+const GROUPING_MISMATCH_HEAD: &str = "[GROUPING_ID_COLUMN_MISMATCH]";
+const GROUPING_UNSUPPORTED_HEAD: &str = "[UNSUPPORTED_GROUPING_EXPRESSION]";
 const PLAN_DISPLAY_PREFIX: &str = "Error during planning: ";
 const SQLSTATE_MARKER: &str = "SQLSTATE: ";
 const SQLSTATE_LEN: usize = 5;
@@ -39,6 +42,22 @@ fn coercion_refusal_message(display: &str) -> Option<String> {
     let rest = display.split(COERCION_FAILED_MARKER).nth(1)?;
     let rest = rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest);
     if !rest.starts_with('[') {
+        return None;
+    }
+    let state_start = rest.find(SQLSTATE_MARKER)? + SQLSTATE_MARKER.len();
+    let state = rest.get(state_start..state_start + SQLSTATE_LEN)?;
+    if !state.bytes().all(|byte| byte.is_ascii_alphanumeric()) {
+        return None;
+    }
+    rest.get(..state_start + SQLSTATE_LEN).map(str::to_string)
+}
+
+fn grouping_refusal_message(display: &str) -> Option<String> {
+    let rest = display
+        .rsplit_once(CAUSED_BY_SEPARATOR)
+        .map_or(display, |(_, tail)| tail);
+    let rest = rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest);
+    if !rest.starts_with(GROUPING_MISMATCH_HEAD) && !rest.starts_with(GROUPING_UNSUPPORTED_HEAD) {
         return None;
     }
     let state_start = rest.find(SQLSTATE_MARKER)? + SQLSTATE_MARKER.len();
@@ -111,7 +130,11 @@ pub fn engine_err(err: DataFusionError) -> Error {
         EngineErrorKind::Parse => Error::Parse(err.to_string()),
         EngineErrorKind::Analysis => {
             let display = err.to_string();
-            Error::Analysis(coercion_refusal_message(&display).unwrap_or(display))
+            Error::Analysis(
+                grouping_refusal_message(&display)
+                    .or_else(|| coercion_refusal_message(&display))
+                    .unwrap_or(display),
+            )
         }
         EngineErrorKind::ArithmeticOverflow(message) => Error::Arithmetic(message.to_string()),
         EngineErrorKind::Unsupported => Error::NotImplemented(err.to_string()),
@@ -247,10 +270,57 @@ mod tests {
     }
 
     #[test]
+    fn grouping_rule_wrap_peels_to_the_bare_refusal() {
+        let payload = "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k,g) does not \
+             match grouping columns (g,k). SQLSTATE: 42803";
+        let wrapped = DataFusionError::Context(
+            "resolve_grouping_id".to_string(),
+            Box::new(DataFusionError::Plan(payload.to_string())),
+        );
+        let error = engine_err(wrapped);
+        assert!(matches!(error, Error::Analysis(text) if text == payload));
+    }
+
+    #[test]
     fn coercion_wrap_without_payload_keeps_the_full_display() {
         let display = "Execution error: Function 'last_day' user-defined coercion failed with: \
          Error during planning: unsupported type. No function matches.";
         let error = engine_err(DataFusionError::Plan(display.to_string()));
         assert!(matches!(error, Error::Analysis(text) if text.contains("No function matches")));
+    }
+
+    #[test]
+    fn grouping_unsupported_peels_without_the_rule_wrap() {
+        let payload = "[UNSUPPORTED_GROUPING_EXPRESSION] grouping()/grouping_id() can only be \
+             used with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E";
+        let error = engine_err(DataFusionError::Plan(payload.to_string()));
+        assert!(matches!(error, Error::Analysis(text) if text == payload));
+    }
+
+    #[test]
+    fn foreign_bracketed_wrap_keeps_the_full_display() {
+        let wrapped = DataFusionError::Context(
+            "lambda_rebind".to_string(),
+            Box::new(DataFusionError::Plan(
+                "[INVALID_LAMBDA_FUNCTION_CALL.NUM_ARGS_MISMATCH] Invalid lambda function \
+                 call. SQLSTATE: 42605"
+                    .to_string(),
+            )),
+        );
+        let error = engine_err(wrapped);
+        assert!(
+            matches!(error, Error::Analysis(text) if text.contains("lambda_rebind\ncaused by\n"))
+        );
+    }
+
+    #[test]
+    fn grouping_head_without_sqlstate_keeps_the_full_display() {
+        let payload = "[GROUPING_ID_COLUMN_MISMATCH] Columns of grouping_id (k) does not match \
+             grouping columns (g,k).";
+        let error = engine_err(DataFusionError::Plan(payload.to_string()));
+        let Error::Analysis(text) = error else {
+            panic!("expected an Analysis error, got {error:?}");
+        };
+        assert_eq!(text, format!("Error during planning: {payload}"));
     }
 }

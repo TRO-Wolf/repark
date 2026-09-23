@@ -1980,4 +1980,5 @@ from repark.spark import functions_byname as _fy, functions_declared as _fd, fun
 from repark.spark import functions_lambda as _fl, functions_math as _fm, functions_stack as _fk  # noqa: E402
 from repark.spark import functions_temporal as _fz, functions_try as _ft, functions_window as _fwn  # noqa: E402
 from repark.spark import functions_generators as _fg  # noqa: E402
-_x = [m.install_into(globals(), __all__) for m in (_fd, _fl, _ft, _fj, _fk, _fa, _fb, _fm, _fy, _fw, _fz, _fwn, _fg)]  # noqa: E501
+from repark.spark import functions_agg_1 as _fag1  # noqa: E402
+_x = [m.install_into(globals(), __all__) for m in (_fd, _fl, _ft, _fj, _fk, _fa, _fb, _fm, _fy, _fw, _fz, _fwn, _fg, _fag1)]  # noqa: E501

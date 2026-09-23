@@ -80,7 +80,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split writer and reader bindings into separate cohesive modules.",
     ),
     "python/repark/src/repark/spark/functions.py": (
-        1983,
+        1984,
         "Facade function exports and wrappers remain consolidated.",
         "Split by function family while preserving the public re-export surface.",
     ),

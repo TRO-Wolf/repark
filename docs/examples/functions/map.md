@@ -101,6 +101,9 @@ Both scripts carry the FNP-9/10 clause citations, which live here and not in the
 - [booleans.py](booleans.py) — `F.bool_and` / `F.bool_or` with their `F.every` /
 - [collect.py](collect.py) — `F.collect_list` / `F.array_agg` and the
 - [strings_agg.py](strings_agg.py) — `F.listagg` / `F.string_agg` joining a
+- [agg_misc.py](agg_misc.py) — `F.grouping_id` over a one-column cube
+  (FNP-AGG-1 slice (d)); slices (a), (b) and (c) extend the frame.
+  pins: fnp-agg-1/C-007
 - [grouping.py](grouping.py) — `F.grouping` inside a cube: 1 for the grand-total
 - [try_aggregates.py](try_aggregates.py) — `F.try_sum` answers NULL when the
 - [window_ranking.py](window_ranking.py) — `F.row_number`, `F.rank`, `F.dense_rank`: ties counted three ways on one grouped ordered frame.

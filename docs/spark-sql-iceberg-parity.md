@@ -1803,13 +1803,13 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   narrowing first keeps no wide cast to strip.
   pins: types-1/C-001
 
-### TY-8 — `grouping()` answers INT and is accepted outside grouping sets
+### TY-8 — `grouping()` is accepted outside grouping sets
 
-- **repark** — `grouping(i)` under `ROLLUP`/`GROUPING SETS` answers `int32` /
-  non-null with Spark's values, and is also accepted under a plain `GROUP BY i`
-  (all zeros) and with several arguments (bitmask). All three come from DataFusion's
-  `ResolveGroupingFunction`, which hardcodes the `CAST(... AS Int32)` expansion;
-  TYPES-1 narrowed no grouping shape.
+- **repark** — `grouping(i)` under `ROLLUP`/`GROUPING SETS` answers `int8` / non-null
+  with Spark's values from repark's grouping kernel (the tinyint label closed with
+  `FNP-AGG-1-18B`). Under a plain `GROUP BY i` it is still accepted and answers a
+  constant `int8` `0` for any argument count; under grouping sets a call with more
+  than one argument raises a planning error rather than Spark's `WRONG_NUM_ARGS`.
 - **Apache Spark** — answers `int8` / non-null with the same values on the grouping-set
   shapes, raises `UNSUPPORTED_GROUPING_EXPRESSION` under a plain `GROUP BY i`, and raises
   `WRONG_NUM_ARGS` for two arguments. *(oracle: live PySpark 4.1.2, 2026-09-05, TYPES-1
@@ -1817,11 +1817,10 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
 - **Pin** — `python/repark/tests/test_types_1.py::test_grouping_in_rollup_and_sets_answers_int`,
   `::test_grouping_under_plain_group_by_is_accepted`, and
   `::test_live_grouping_sets_match_on_value_with_type_carve_out`
-  (pins the `(int32, int8)` type pair so either side moving reds it).
-- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4). Spark parity needs a repark
-  grouping layer (tinyint answer, grouping-set-context refusal, one-arg arity); a post-rule
-  recast would couple to DataFusion's internal `__grouping_id` expansion shape, and the
-  arity is already lost after expansion.
+  (pins the `(int8, int8)` type pair so either side moving reds it).
+- **Rationale** — BACKLOG, filed 2026-09-05 (TYPES-1 round 4); the result type closed
+  2026-09-21 (FNP-AGG-1 slice (d), `FNP-AGG-1-18B`). The remaining divergence is the
+  grouping-set-context refusal and Spark's arity error class under a plain `GROUP BY`.
   pins: types-1/C-004
 
 ### TY-9 — `ntile` accepts a BIGINT bucket count
@@ -13468,6 +13467,22 @@ field NAME.
   (RP-45), so the RePark half serves the four ordinary columns end to end;
   `_deleted` stays refused behind its explicit scan mode — that is the one
   remaining residue, and its refusal pin reds on purpose when it serves.
+
+### FNP-AGG-1-18B — SQL-door `grouping` reports `int`, Spark reports `tinyint` — **FIXED 2026-09-21 (FNP-AGG-1 slice (d))**
+
+- **repark** — **FIXED 2026-09-21 (FNP-AGG-1 slice (d)).** `SELECT g, k, grouping_id(),
+  grouping_id(g, k), grouping(g) FROM FRAME GROUP BY CUBE(g, k)` answers the right names,
+  values and nullability with Arrow `int8` for `grouping(g)`, and the facade reports the
+  label `tinyint`: the engine-to-facade narrow-width seam this row was filed against is
+  closed at this head, so the pin passes with no xfail.
+- **Apache Spark** — the same query reports `tinyint` for `grouping(g)`.
+  *(oracle: live PySpark 4.1.2, 2026-09-14, `python/repark/tests/fnp_agg_1_spark_oracle.json`
+  SQL grouping cells.)*
+- **Pin** — `python/repark/tests/test_fnp_agg_1.py::test_sql_grouping_reports_tinyint`
+  passes unmarked.
+- **Rationale** — the row lands FIXED: the rebase onto `a3cb8012` closed LOGICAL-WIDTH-1
+  for this label, and slice (d) carries the passing pin rather than the filed xfail.
+  pins: fnp-agg-1/C-003
 
 ## 8. Drop-in disclosure rationale
 

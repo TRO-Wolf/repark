@@ -158,6 +158,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   SQL exactly like the session door.
   pins: sql-literal-typing-1/L-001
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`. pins: fn-fix-1-registry-rows/C-002
+  **FNP-AGG-1 slice (d) (2026-09-21):** `cast_unsigned_count_to_signed` moved here
+  from `function_dispatch.rs` (same body, re-exported there) so `grouping_id_call`
+  builds beside it. pins: fnp-agg-1/C-002
   **WIN-SLIDE-1 (2026-09-04):** `single_wrapped_aggregate` / `replace_wrapped_aggregate` let
   `Column.over` push a window spec INTO the one aggregate inside a scalar wrapper. `F.collect_list`
   and `F.collect_set` build Spark's empty-group semantics as
@@ -312,3 +315,10 @@ sync after changes.
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
 - **FNP-4B remediation (2026-09-15):** `expr_build.rs` / `mod.rs` added code comments removed (ruling 2026-08-26); `mod.rs` ceiling ratcheted 1040 → 1038.
+- **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames
+  `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N argument
+  columns; arity from the built args) and adds the `grouping_id` arm (n-ary,
+  possibly zero columns); `expr_build.rs` gains the `grouping_id_column`
+  binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary`
+  takes the trailing columns as a vector (exact baseline 1012).
+  pins: fnp-agg-1/C-002, C-003, C-004

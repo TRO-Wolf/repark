@@ -24,10 +24,12 @@ mod session_write_options;
 mod subquery;
 mod text_io;
 mod type_bridge;
+mod unresolved_routine;
 
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
 use repark_core::ErrorClass;
+use unresolved_routine::unresolved_routine;
 
 pub use column::PyColumn;
 pub use dataframe::PyDataFrame;
@@ -44,6 +46,12 @@ pub use exceptions::{
 #[allow(clippy::needless_pass_by_value)]
 pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
     let message = err.to_string();
+    if let Some(routine) = unresolved_routine(&message) {
+        return AnalysisException::new_err(format!(
+            "[UNRESOLVED_ROUTINE] Cannot resolve routine `{routine}` on search path \
+             [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883"
+        ));
+    }
     match err.exception_class() {
         ErrorClass::Parse => ParseException::new_err(message),
         ErrorClass::Analysis => AnalysisException::new_err(message),
@@ -148,6 +156,10 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     dataframe_fill::register(module)?;
     dataframe_stack::register(module)?;
     dataframe_stats::register(module)?;
+    module.add_function(wrap_pyfunction!(
+        column::expr_build::grouping_id_column,
+        module
+    )?)?;
     cache_budget::register(module)?;
     catalog_census::register(module)?;
     cdf_infer::register(module)?;

@@ -34,7 +34,7 @@ use expr_build::{
     percentile_approx_scalar_expr, refuse_nested_higher_order,
 };
 use function_dispatch::{
-    binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
+    call_scalar_expr, cast_unsigned_count_to_signed, nary_aggregate_udaf, unary_aggregate_udaf,
 };
 use window::{OverSpec, build_over_expression};
 
@@ -807,14 +807,13 @@ impl PyColumn {
         })
     }
 
-    /// Binary aggregate: `corr`, `covar_pop`, or `covar_samp`.
-    pub fn aggregate_binary(&self, kind: &str, other: PyColumn) -> PyResult<Self> {
+    pub fn aggregate_binary(&self, kind: &str, others: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.aggregate_binary", {
-            let udaf = binary_aggregate_udaf(kind)?;
-            let expr = udaf.call(vec![self.expr.clone(), other.expr.clone()]);
-            Ok(Self::from_expr(cast_unsigned_count_to_signed(
-                &udaf, 2, expr,
-            )))
+            let udaf = nary_aggregate_udaf(kind)?;
+            let mut args = vec![self.expr.clone()];
+            args.extend(others.iter().map(PyColumn::expr));
+            let expr = cast_unsigned_count_to_signed(&udaf, others.len() + 1, udaf.call(args));
+            Ok(Self::from_expr(expr))
         })
     }
 

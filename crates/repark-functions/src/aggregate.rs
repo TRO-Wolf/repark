@@ -21,10 +21,14 @@ use datafusion::logical_expr::{
 
 use crate::avg_groups;
 
+pub use crate::grouping::{grouping_id_udaf, grouping_udaf};
+
 /// Register repark `avg` [`AggregateUDF`] instances after `datafusion-spark` (name overwrite).
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
     let mut functions = vec![avg_udaf(), try_avg_udaf(), crate::count_if::count_if_udaf()];
+    functions.push(crate::grouping::grouping_udaf());
+    functions.push(crate::grouping::grouping_id_udaf());
     functions.extend(crate::bitmap_agg::functions());
     functions.extend(crate::spark_result_types::signed_aggregate_functions());
     functions

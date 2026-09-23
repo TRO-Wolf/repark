@@ -1077,3 +1077,17 @@ around the R6-1 home check. `temp_view.rs` additionally accepts the session's OW
 (`<home.catalog>.<home.schema>.<view>`) as that same session-local view — any other qualified
 name still refuses. Raw SQL bodies on `Session::sql` are unchanged (still DataFusion's
 live-default resolution; pinned by `set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read`).
+- **FNP-AGG-1 slice (d) (2026-09-22):** `error_map.rs` adds `grouping_refusal_message`, the
+  grouping-refusal peel. Only the `Analysis` arm of `engine_err` calls it, and
+  `unwrap_or(display)` passes the full display through when it declines. The peel reads the
+  display's final segment (after the last `caused by` separator, with a leading
+  `Error during planning: ` stripped). When that segment starts with
+  `[GROUPING_ID_COLUMN_MISMATCH]` or `[UNSUPPORTED_GROUPING_EXPRESSION]` and carries
+  `SQLSTATE: ` plus 5 alphanumeric characters, the message keeps only the text up to and
+  including those 5 characters, so the wrapper context peels off and the bare refusal remains.
+  Every other message passes through unchanged: a foreign bracketed head keeps the full
+  wrapped display, and a grouping head without a `SQLSTATE: ` segment keeps the full display.
+  pins: `grouping_rule_wrap_peels_to_the_bare_refusal`,
+  `grouping_unsupported_peels_without_the_rule_wrap`,
+  `foreign_bracketed_wrap_keeps_the_full_display`,
+  `grouping_head_without_sqlstate_keeps_the_full_display`.
