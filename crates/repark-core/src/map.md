@@ -868,10 +868,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   a rewritten Iceberg table, a zero-argument `input_file_name()` (no FILTER/OVER)
   rewrites to `<alias>._file` in the projection and WHERE, the bare projection
   item gains the alias `` `input_file_name()` ``, calls inside a listed
-  aggregate's arguments or a nested subquery stay untouched, and every other
-  shape keeps the unresolved-routine answer — including a non-query statement,
-  which returns `Ok(None)` rather than the `[ICE-MC-1]` refusal when only this
-  trigger fired.
+  aggregate's arguments stay untouched, the per-SELECT call visitor leaves a
+  query nested inside a projection or WHERE expression alone while every
+  nested SELECT is visited on its own and rewritten against its own sole
+  relation, and every other shape keeps the unresolved-routine answer —
+  including a non-query statement, which returns `Ok(None)` rather than the
+  `[ICE-MC-1]` refusal when only this trigger fired.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022, C-023
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009
