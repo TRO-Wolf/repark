@@ -38,9 +38,15 @@ async fn resolve_metadata_location(file_io: &FileIO, path: &str) -> Result<Strin
     }
     let location = path.strip_suffix('/').unwrap_or(path);
     let hint_location = format!("{location}/metadata/version-hint.text");
-    if file_io.exists(&hint_location).await.map_err(iceberg_err)? {
-        let version = read_version_hint(file_io, &hint_location, path).await?;
-        return Ok(format!("{location}/metadata/v{version}.metadata.json"));
+    if file_io.exists(&hint_location).await.map_err(iceberg_err)?
+        && let Some(version) = read_version_hint(file_io, &hint_location).await?
+    {
+        let file_name = format!("v{version}.metadata.json");
+        let hinted = format!("{location}/metadata/{file_name}");
+        if file_io.exists(&hinted).await.map_err(iceberg_err)? {
+            return Ok(hinted);
+        }
+        return Err(hinted_metadata_missing_error(path, &file_name));
     }
     let files = file_io
         .list(format!("{location}/metadata"))
@@ -51,20 +57,23 @@ async fn resolve_metadata_location(file_io: &FileIO, path: &str) -> Result<Strin
         .ok_or_else(|| no_metadata_error(path))
 }
 
-async fn read_version_hint(file_io: &FileIO, hint_location: &str, path: &str) -> Result<u64> {
+async fn read_version_hint(file_io: &FileIO, hint_location: &str) -> Result<Option<u64>> {
     let raw = file_io
         .new_input(hint_location)
         .map_err(iceberg_err)?
         .read()
         .await
         .map_err(iceberg_err)?;
-    let text = std::str::from_utf8(&raw).map_err(|_| invalid_hint_error(path))?;
-    text.trim().parse().map_err(|_| invalid_hint_error(path))
+    let Ok(text) = std::str::from_utf8(&raw) else {
+        return Ok(None);
+    };
+    Ok(text.trim().parse().ok())
 }
 
-fn invalid_hint_error(path: &str) -> Error {
+fn hinted_metadata_missing_error(path: &str, file_name: &str) -> Error {
     Error::Analysis(format!(
-        "invalid Iceberg version-hint.text under '{path}': expected a single integer"
+        "no Iceberg table found at '{path}': version-hint.text names \
+         '{file_name}', which does not exist"
     ))
 }
 
@@ -96,10 +105,7 @@ fn latest_metadata_location(files: &[FileInfo]) -> Option<&str> {
 fn metadata_file_version(name: &str) -> Option<u64> {
     let stem = name.strip_suffix(".metadata.json")?;
     if let Some(rest) = stem.strip_prefix('v') {
-        let end = rest
-            .find(|c: char| !c.is_ascii_digit())
-            .unwrap_or(rest.len());
-        return rest[..end].parse().ok();
+        return rest.parse().ok();
     }
     let (leading, _) = stem.split_once('-')?;
     leading.parse().ok()

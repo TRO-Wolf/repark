@@ -50,6 +50,7 @@ async fn version_hint_wins_over_directory_listing() {
     let metadata = dir.path().join("metadata");
     std::fs::create_dir_all(&metadata).expect("mkdir");
     std::fs::write(metadata.join("00010-aaaa.metadata.json"), b"{}").expect("write");
+    std::fs::write(metadata.join("v3.metadata.json"), b"{}").expect("write");
     std::fs::write(metadata.join("version-hint.text"), b"3\n").expect("write");
     let root = dir.path().to_string_lossy().to_string();
     let file_io = local_file_io(&root);
