@@ -100,8 +100,7 @@ async fn present_view_returns_reserved_and_stored_rows() {
         vec![
             (
                 "location".to_string(),
-                warehouse
-                    .path()
+                std::env::temp_dir()
                     .join("sales/v")
                     .to_string_lossy()
                     .into_owned()
