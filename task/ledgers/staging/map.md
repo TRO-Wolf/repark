@@ -1517,7 +1517,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   answer, adds the C-017 real-table-wins collision pin, and records the
   nested-namespace DESCRIBE gap as D-4. Critic r5 (md-r7fix) makes the
   missing-base answer name the identifier as written — case kept, and the `$`
-  form kept for a quoted `t$snapshots` name — pinned by C-018/C-019.
+  form kept for a quoted `t$snapshots` name — pinned by C-018/C-019. Critic r7
+  (md-r9fix) makes the `$` metadata name split at the last `$` like the pinned
+  fork's SELECT path — a base containing `$` describes its metadata table
+  (C-020), the base describes itself (C-021), and an unknown `$` suffix keeps
+  the refusal (C-022); the IPI-30 `C-009` citation the branch deleted is
+  restored.
   `risk_tier: standard`. Branch `fix/ipi-23-describe-metadata-table`.
   pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009
@@ -1544,3 +1549,5 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-022
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019,
+  C-020, C-021, C-022

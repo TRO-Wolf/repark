@@ -43,7 +43,13 @@ unchanged IPI-40 missing-namespace DESCRIBE pin in
 `test_ice_views_2_describe.py` is re-pinned to the measured 42P01 answer
 (renamed `test_describe_missing_namespace_is_table_or_view_not_found`), and
 every refusal pin in the facade file now asserts the full contract — class,
-full-message equality, `getCondition()`, `getSqlState()`.
+full-message equality, `getCondition()`, `getSqlState()`. Critic r7
+(2026-09-23, NEEDS_REMEDIATION) is remediated by md-r9fix: the `$` metadata
+name splits at the last `$` like the pinned fork's SELECT path —
+`rsplit_once` at `metadata_table.rs:78`, C-020 red-first with a `split_once`
+mutation check, C-021/C-022 pinning the base's own describe and the
+unknown-`$`-suffix refusal unchanged — and the IPI-30 `C-009` citation the
+branch deleted is restored.
 
 ## Measurements (decide-then-build evidence)
 
@@ -371,6 +377,63 @@ the record: Spark appends ``; line 1 pos 9;`` and the unresolved
 `'DescribeRelation`/`'UnresolvedTableOrView [sc, missing_ns, t]` plan tail;
 RePark's message is the same leading text without the position/plan tail
 (RePark carries no query context), and the pin asserts RePark's full text.
+
+## Critic r7 (2026-09-23) — V-001/V-002 remediated (md-r9fix)
+
+Critic r7 at `e12038af` returned NEEDS_REMEDIATION on two findings; md-r9fix
+closes both.
+
+```yaml
+FINDING:
+  id: F-IPI-23-MT-DESCRIBE-1-R7-V-001
+  severity: S1
+  category: AT-1
+  clause: C-020
+  claim: DESCRIBE splits a `$` metadata-table name at the first `$` where the pinned fork's SELECT path splits at the last, so a quoted base containing `$` resolves under SELECT but refuses under DESCRIBE.
+  evidence: measured at `e12038af` — `SELECT * FROM mt.ns.`a$b$snapshots`` serves the snapshots schema of base `a$b` while `DESCRIBE mt.ns.`a$b$snapshots`` raises TABLE_OR_VIEW_NOT_FOUND / SQLSTATE 42P01 naming `` `mt`.`ns`.`a$b$snapshots` ``; `metadata_table.rs:78` used `split_once('$')` where the pinned fork's `split_metadata_table_ref` (rev 604edca, `crates/integrations/datafusion/src/schema.rs:176-184`) uses `rsplit_once('$')`; the pin is red-first at `71e59075`
+  disposition: REMEDIATED (`dollar_metadata_table` splits at the last `$` via `rsplit_once` at metadata_table.rs:78 — the one call the ruling names; C-020 pins DESCRIBE's rows equal to SELECT's schema field names and DDL types in order and different from the base's own describe; mutation — restoring `split_once` re-reds the pin with the same 42P01 refusal)
+```
+
+```yaml
+FINDING:
+  id: F-IPI-23-MT-DESCRIBE-1-R7-V-002
+  severity: S3
+  category: AT-6
+  clause: C-009 (ipi-30-orphan-guard-narrow-1)
+  claim: The branch deleted the IPI-30 pin list's final `C-009` line while appending the IPI-23 staging-map entry.
+  evidence: `git diff origin/main...HEAD -- task/ledgers/staging/map.md` showed `-  C-009` after `C-008,` at the IPI-30 entry's tail
+  disposition: REMEDIATED (the `  C-009` continuation line restored byte-for-byte at `2575a6d9`; the staging-map diff now carries only the IPI-23 additions)
+```
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-020 | `DESCRIBE mt.ns.`a$b$snapshots`` answers exactly the `(col_name, data_type)` rows matching `SELECT *`'s schema of the same name in order — `comment` NULL — and differs from DESCRIBE of the `a$b` base. | `test_dollar_in_base_splits_at_last_dollar` green. | **PROVEN** | Red at `e12038af` (the first-`$` split refused 42P01), green after `c1978a4b`; restoring `split_once` re-reds it. pins: ipi-23-mt-describe-1/C-020 |
+| C-021 | `DESCRIBE mt.ns.`a$b`` describes the base table itself — `[("id","bigint",None)]` — not metadata rows. | `test_dollar_base_describes_itself` green. | **PROVEN** | Near miss: a base name containing `$` with no metadata suffix fails the canonical check under either split and takes the same plain path. pins: ipi-23-mt-describe-1/C-021 |
+| C-022 | `DESCRIBE mt.ns.`a$b$nonsense`` keeps the measured refusal — `AnalysisException`, the full TABLE_OR_VIEW_NOT_FOUND message naming `` `mt`.`ns`.`a$b$nonsense` ``, `getCondition()` `TABLE_OR_VIEW_NOT_FOUND`, `getSqlState()` `42P01`. | `test_dollar_unknown_suffix_keeps_not_found` green. | **PROVEN** | Near miss measured at `e12038af`; the unknown suffix fails the canonical check under either split and keeps the plain-path answer. pins: ipi-23-mt-describe-1/C-022 |
+
+**V-001 class sweep** (a `$` metadata-name split disagreeing with the pinned
+fork — first vs last `$`; grep over `git diff origin/main...HEAD`, all of
+`crates/repark-spark/src`, and `python/repark/src/repark` for
+`split_once('$')`, `split('$'`, `rsplit`, `find('$')`, `.partition('$')` and
+other `$` handling):
+
+| File:line | In this PR's diff | Splits at | What it splits | Action |
+|---|---|---|---|---|
+| `crates/repark-spark/src/describe_show/metadata_table.rs:78` | yes | last `$` (was first) | `describe.table` — the `t$suffix` / `a$b$snapshots` name | CHANGED to `rsplit_once` this round |
+| `crates/repark-spark/src/describe_show/metadata_table.rs:46,64` | yes | n/a — not a split | `format!("{table}${suffix}")` builds the `$` name; `describe.table.contains('$')` gates the intercept | correct under either split — unchanged |
+| `crates/repark-spark/src/time_travel.rs:169` | no | first `$` | `table` — the time-travel `$` name | follow-up gap: the same first-vs-last question exists there; NOT edited (out of scope) |
+| `crates/repark-spark/src/metadata_tables.rs:235` | no (the file's only diff is `table_exists_parts` going `pub`) | n/a — `contains('$')` guard | refuses a dotted metadata path whose parent name contains `$`, citing the fork's `split_once` | follow-up gap: the guard's stated premise predates the pinned fork's `rsplit_once`; NOT edited (out of scope) |
+| `python/repark/src/repark` | — | — | no `$` splits in facade source (binary `.so`/`.pyc` matches only) | none |
+
+**V-002 class sweep** (a branch edit deleting an existing line in a shared
+ledger/map file; `git diff origin/main...HEAD` over every file under `task/`,
+`docs/`, `python/repark/tests/map.md`, `scripts/map.md` — every `-` line):
+
+| File:line | Deleted text | Intended |
+|---|---|---|
+| `docs/spark-sql-iceberg-parity.md` DESC-1 row | "DataFusion-native tables, metadata-table suffixes, and unregistered catalogs fall through / unchanged. One measured residue: `Table Properties` carries the engine's stored properties" | yes — the DESC-1 re-rule replaces the stale fall-through claim with the served behavior |
+| `docs/spark-sql-iceberg-parity.md` DESC-1 Pin line | "and diffs repark against it row for row)" | yes — the Pin line is extended to name `test_ice_mt_describe_1.py` |
+| `task/ledgers/staging/map.md` IPI-30 tail | "  C-009" | no — V-002; restored byte-for-byte at `2575a6d9` |
 
 ## Gates
 

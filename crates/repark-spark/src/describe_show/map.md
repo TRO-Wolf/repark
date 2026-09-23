@@ -18,7 +18,9 @@ with the four-part parser for names the metadata rewrite leaves untouched.
 
 - `metadata_table.rs` — **IPI-23-MT-DESCRIBE-1 (2026-09-22; moved from
   `../describe_metadata_table.rs` 2026-09-23):** `try_describe_metadata_table`
-  serves the rewritten `$` form only; a real table at the written four-part
+  serves the rewritten `$` form only, splitting the name at the last `$` —
+  the pinned fork's `rsplit_once` rule, so a base containing `$` resolves; a
+  real table at the written four-part
   path keeps the plain compound-identifier refusal (real table wins, via the
   shared `../metadata_tables.rs::table_exists_parts` probe — the same rule
   SELECT applies); a missing base or namespace answers TABLE_OR_VIEW_NOT_FOUND
@@ -31,7 +33,7 @@ with the four-part parser for names the metadata rewrite leaves untouched.
   (missing base, `EXTENDED`/`FORMATTED`, which print the column rows only).
   `../describe_show.rs` carries the five-line hook and the router a two-line
   `or_else`; the plain path maps a missing namespace to the same 42P01 answer.
-  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-007, C-009, C-012, C-013, C-015, C-016, C-017, C-018, C-019
+  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-007, C-009, C-012, C-013, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../describe_show.rs`.
 
 ## Pointers

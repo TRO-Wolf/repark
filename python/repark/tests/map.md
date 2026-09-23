@@ -7839,9 +7839,11 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   name, the quoted `t$snapshots` form, the EXTENDED/FORMATTED matrix), the
   strict-xfail `ns.t.snapshots` USE form (C-016), the written-case
   (`missing.SNAPSHOTS` / `Missing.snapshots`) and quoted `$`-name missing-base
-  pins (C-018, C-019),
+  pins (C-018, C-019), the last-`$` pins for a base name containing `$`
+  (C-020: DESCRIBE of `a$b$snapshots` matches SELECT's schema; C-021: `a$b`
+  describes itself; C-022: `a$b$nonsense` keeps the 42P01 refusal),
   plus the live snapshots leg re-measuring Spark 4.1.2.
-  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-019
+  pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-019, C-020, C-021, C-022
 - [test_ice_views_2_describe.py](test_ice_views_2_describe.py) —
   **IPI-40 views PR2 / V-DESCRIBE (2026-09-22):** `DESCRIBE <cat>.<ns>.<view>`
   answers the view's stored schema — one `col_name`/`data_type`/`comment` row
