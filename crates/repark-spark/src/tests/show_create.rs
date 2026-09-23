@@ -589,16 +589,30 @@ async fn show_create_unclosed_bracketed_comments_keep_spark_parse_class() {
 }
 
 #[tokio::test]
-async fn show_create_comment_before_table_keyword_keeps_tokenizer_fallthrough() {
+async fn show_create_unclosed_before_table_keywords_use_spark_parse_contract() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    let sql = "SHOW CREATE /* c TABLE sc.sales.t";
-    let error = execution_error(&ctx, &catalogs, sql).await;
-    assert!(matches!(&error, DataFusionError::SQL(_, _)));
-    assert_eq!(
-        error.to_string(),
-        "SQL error: TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 34\")"
-    );
+    for sql in [
+        "SHOW CREATE /* c TABLE sc.sales.t",
+        "SHOW /* c CREATE TABLE sc.sales.t",
+        "/* c SHOW CREATE TABLE sc.sales.t",
+    ] {
+        let error = execution_error(&ctx, &catalogs, sql).await;
+        assert!(
+            matches!(&error, DataFusionError::SQL(_, _)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE,
+            "{sql}"
+        );
+        assert_eq!(
+            parse_error_message(error, sql),
+            UNCLOSED_BRACKETED_COMMENT_MESSAGE,
+            "{sql}"
+        );
+    }
 }
 
 #[tokio::test]

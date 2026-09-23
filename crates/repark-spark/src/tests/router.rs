@@ -2,6 +2,8 @@
 use super::super::*;
 use super::common::*;
 
+const UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE: &str = "SQL error: ParserError(\"[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. Please, append */ at the end of the comment. SQLSTATE: 42601\")";
+
 #[test]
 fn planner_default_set_recognizer_pins_malformed_near_misses() {
     for sql in [
@@ -61,20 +63,121 @@ async fn bug010_multi_statement_refuses_parse_class() {
 }
 
 #[tokio::test]
-async fn malformed_quotes_and_comments_do_not_claim_multi_statement_refusal() {
+async fn unclosed_bracketed_comments_use_spark_parser_contract() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    for sql in ["SELECT 'unterminated; SELECT 2", "SELECT 1; /* unclosed"] {
+    for sql in [
+        "SELECT 1; /* unclosed",
+        "SELECT 1 /* c",
+        "/* c",
+        "SHOW TABLES IN sc.sales /* c",
+        "SELECT 1 /* a /* b */",
+        "SELECT 1 /*",
+        "SELECT 1;; /* c",
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("unclosed comment must refuse");
+        assert!(
+            matches!(&error, DataFusionError::SQL(_, _)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE,
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn bracketed_comment_near_misses_keep_exact_single_rows() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+
+    let nested_batches = execute(&ctx, &catalogs, "SELECT 1 /* a /* b */ */")
+        .await
+        .expect("closed nested comment")
+        .collect()
+        .await
+        .expect("collect closed nested comment");
+    assert_eq!(nested_batches.len(), 1);
+    assert_eq!(nested_batches[0].num_rows(), 1);
+    let nested_values = nested_batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("nested comment result must be int32");
+    assert_eq!(nested_values.value(0), 1);
+
+    let quoted_batches = execute(&ctx, &catalogs, "SELECT '/* x'")
+        .await
+        .expect("quoted comment marker")
+        .collect()
+        .await
+        .expect("collect quoted comment marker");
+    assert_eq!(quoted_batches.len(), 1);
+    assert_eq!(quoted_batches[0].num_rows(), 1);
+    let quoted_values = quoted_batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("quoted marker result must be string");
+    assert_eq!(quoted_values.value(0), "/* x");
+
+    let line_batches = execute(&ctx, &catalogs, "SELECT 1 -- /* x")
+        .await
+        .expect("line comment marker")
+        .collect()
+        .await
+        .expect("collect line comment marker");
+    assert_eq!(line_batches.len(), 1);
+    assert_eq!(line_batches[0].num_rows(), 1);
+    let line_values = line_batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("line comment result must be int32");
+    assert_eq!(line_values.value(0), 1);
+}
+
+#[tokio::test]
+async fn malformed_multi_statement_near_misses_keep_exact_outcomes() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+
+    let unclosed = execute(&ctx, &catalogs, "SELECT 1; /* unclosed")
+        .await
+        .expect_err("unclosed comment must refuse");
+    assert!(matches!(&unclosed, DataFusionError::SQL(_, _)));
+    assert_eq!(
+        unclosed.to_string(),
+        UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+    );
+
+    let mut actual = Vec::new();
+    for sql in [
+        "SELECT 'unterminated; SELECT 2",
+        "SELECT /*+ BROADCAST(t) 1",
+    ] {
         let error = execute(&ctx, &catalogs, sql)
             .await
             .expect_err("malformed SQL must fail");
         assert!(
-            !error
-                .to_string()
-                .contains("multiple SQL statements in one call are not supported"),
-            "{sql}: {error}"
+            matches!(&error, DataFusionError::SQL(_, _)),
+            "{sql}: {error:?}"
         );
+        actual.push(error.to_string());
     }
+    assert_eq!(
+        actual,
+        vec![
+            "SQL error: TokenizerError(\"Unterminated string literal at Line: 1, Column: 8\")"
+                .to_string(),
+            "SQL error: TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 26\")"
+                .to_string(),
+        ]
+    );
 }
 
 /// BUG-010 oracle boundary: trailing `;` / whitespace / comments after a single statement OK.

@@ -28,7 +28,9 @@ pub(crate) mod create_clauses;
 pub(crate) mod replace_table;
 pub(crate) mod statement_guard;
 
-pub(crate) use statement_guard::{multi_statement_parse_error, refuse_multi_statement_sql};
+pub(crate) use statement_guard::{
+    multi_statement_parse_error, refuse_multi_statement_sql, refuse_unclosed_bracketed_comment,
+};
 
 /// True when the statement's first keyword token is `MERGE`.
 pub(crate) fn starts_with_merge(sql: &str) -> bool {

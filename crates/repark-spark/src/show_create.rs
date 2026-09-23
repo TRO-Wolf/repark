@@ -26,8 +26,6 @@ use crate::write_options::StatementWriteOptions;
 
 const INVALID_SHOW_CREATE_TABLE_MESSAGE: &str = "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. \
      SQLSTATE: 42601";
-const UNCLOSED_BRACKETED_COMMENT_MESSAGE: &str = "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. \
-     Please, append */ at the end of the comment. SQLSTATE: 42601";
 const TABLE_OPTION_PREFIX: &str = "option.";
 
 type PropertyPairs = Vec<(String, String)>;
@@ -87,14 +85,6 @@ pub(crate) fn try_parse_show_create(sql: &str) -> Option<Result<ShowCreateStatem
     let dialect = DatabricksDialect {};
     let tokens = match Tokenizer::new(&dialect, sql).tokenize() {
         Ok(tokens) => tokens,
-        Err(error)
-            if error.message == "Unexpected EOF while in a multi-line comment"
-                && starts_with_show_create_table(sql) =>
-        {
-            return Some(Err(parse_class_error(
-                UNCLOSED_BRACKETED_COMMENT_MESSAGE.to_string(),
-            )));
-        }
         Err(_) if starts_with_show_create_table(sql) => {
             return Some(Err(invalid_show_create_table_error()));
         }

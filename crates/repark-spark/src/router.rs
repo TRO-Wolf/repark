@@ -77,6 +77,7 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     read_only_catalogs: &HashSet<String, S>,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    crate::normalize::refuse_unclosed_bracketed_comment(sql)?;
     if crate::show_create::starts_with_show_create_table(sql)
         && let Some(Err(error)) = crate::show_create::try_parse_show_create(sql)
     {

@@ -30,6 +30,14 @@ from repark.spark.types import (
     YearMonthIntervalType,
 )
 
+UNCLOSED_BRACKETED_COMMENT_MESSAGE = (
+    "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. "
+    "Please, append */ at the end of the comment. SQLSTATE: 42601"
+)
+UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE = (
+    f'SQL error: ParserError("{UNCLOSED_BRACKETED_COMMENT_MESSAGE}")'
+)
+
 
 @pytest.fixture
 def spark() -> ReparkSession:
@@ -196,6 +204,42 @@ def test_parser_wrapper_refusals_report_the_native_error_condition(
     assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
     assert caught.value.getSqlState() == expected_sql_state
     assert str(caught.value) == expected_text
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "SELECT 1 /* c",
+        "SELECT 1; /* unclosed",
+        "/* c",
+        "SELECT 1 /* a /* b */",
+        "SELECT 1 /*",
+        "SHOW TABLES IN default /* c",
+    ],
+)
+def test_unclosed_bracketed_comment_has_spark_parse_contract(
+    spark: ReparkSession, statement: str
+) -> None:
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement).collect()
+    assert caught.value.getCondition() == "UNCLOSED_BRACKETED_COMMENT"
+    assert caught.value.getSqlState() == "42601"
+    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+
+
+@pytest.mark.parametrize(
+    ("statement", "expected_rows"),
+    [
+        ("SELECT 1 /* a /* b */ */", [{"1": 1}]),
+        ("SELECT '/* x'", [{"/* x": "/* x"}]),
+        ("SELECT 1 -- /* x", [{"1": 1}]),
+    ],
+)
+def test_bracketed_comment_near_misses_keep_exact_single_rows(
+    spark: ReparkSession, statement: str, expected_rows: list[dict[str, int | str]]
+) -> None:
+    result = spark.sql(statement).to_arrow()
+    assert result.to_pylist() == expected_rows
 
 
 def test_engine_analysis_error_has_surface_methods(spark: ReparkSession) -> None:
