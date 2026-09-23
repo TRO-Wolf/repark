@@ -28,6 +28,7 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   at the bottom of the module pin every row's name, SQLSTATE, and template. Clippy-clean sqlstate() match (merged same-SQLSTATE arms), if-let in substitute, and a test-module Row alias. pins: ice-error-conditions-1/C-010
   **ICE-VIEWS-1 (2026-09-20):** `VIEW_ALREADY_EXISTS` / `VIEW_NOT_FOUND` /
   `CREATE_VIEW_COLUMN_ARITY_MISMATCH` (both directions) rows with unit pins.
+  **IPI-40 ALTER VIEW (2026-09-23):** `UNSUPPORTED_FEATURE.CATALOG_OPERATION` refuses view property changes on catalogs without view support with SQLSTATE `0A000`.
   pins: ice-views-1/C-010
 
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
