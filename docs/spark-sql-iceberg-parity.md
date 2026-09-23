@@ -1330,6 +1330,37 @@ perfectly good read.
   statement, found: EXTENDED` bug is closed by the router intercept. The `Table Properties`
   engine-defaults delta stays DECLARED residue on this row until engine `CREATE` stamps
   Spark's defaults.
+- **C1 SHOW CREATE (2026-09-23)** — the `Table Properties` residue is closed: the row now
+  renders from the shared Spark-visible property list (`table_props_view.rs`), so a fresh
+  table answers Spark's measured
+  `[current-snapshot-id=none,format=iceberg/parquet,format-version=2,write.parquet.compression-codec=zstd]`
+  (`format` / `format-version` synthesized as Iceberg's `SparkTable.properties()` does,
+  `owner` / `comment` never listed); the live leg asserts the row equal to Spark.
+
+#### SHOW-CREATE-1 — `SHOW CREATE TABLE` answers Spark's CREATE text for Iceberg tables — **FIXED 2026-09-23**
+
+- **Before** — `SHOW CREATE TABLE t` fell through to DataFusion and failed with `SHOW CREATE
+  TABLE is not supported unless information_schema is enabled` (cells `D-SHOW-CREATE`,
+  `D-SHOW-CREATE-PLAIN`).
+- **repark** — `SHOW CREATE TABLE [cat.][ns.]t` on an Iceberg table in a registered catalog
+  answers one `createtab_stmt` row, byte for byte Spark 4.1.2 + Iceberg 1.11
+  `ShowCreateTableExec`: columns in Spark DDL spelling (NOT NULL, `COMMENT`, nested
+  `STRUCT<a: T …>`), `USING iceberg`, `OPTIONS` from `option.*` keys, `PARTITIONED BY` in the
+  `# Partitioning` transform text, `COMMENT`, `LOCATION`, and `TBLPROPERTIES` from the same
+  property list DESCRIBE EXTENDED prints (`sort-order`, `identifier-fields` in Java `HashSet`
+  order, secrets redacted; `'` escapes as `\'`, backslashes pass through). `AS SERDE` refuses
+  `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]` (`0A000`); a missing table refuses
+  `[TABLE_OR_VIEW_NOT_FOUND]` (`42P01`); a bare `SHOW CREATE TABLE` refuses
+  `[INVALID_STATEMENT_OR_CLAUSE]` (`42601`). Views are not answered here — `V-SHOW-CREATE`
+  stays with the view lane (IPI-40).
+- **Apache Spark** — the same text. *(oracle: live PySpark 4.1.2 + Iceberg 1.11,
+  2026-09-23, five shapes plus the escape, OPTIONS, multi-term sort-order and
+  identifier-order probes.)*
+- **Pin** — `crates/repark-spark/src/tests/show_create.rs`,
+  `python/repark/tests/test_show_create_table.py`
+- **Rationale** — FIXED 2026-09-23 (C1). Unmeasured choices: Spark's reserved keys beyond the
+  measured `owner` / `comment`, void partition fields dropped from `PARTITIONED BY`, and the
+  `VOID` / `VARIANT` spellings follow the Spark 4.1 / Iceberg 1.11 source.
 
 #### ST-1 — `SHOW TABLES IN …` is unimplemented — **FIXED 2026-09-20**
 

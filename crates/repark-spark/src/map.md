@@ -1375,6 +1375,39 @@ pins: rp-4-fork-repin/C-005, C-006
   metadata-table `DESCRIBE` intercept) and carries its five-line hook; the plain
   base-load match maps `NamespaceNotFound` to the same 42P01 answer as
   `TableNotFound` (md-r6fix).
+  **C1 SHOW CREATE (2026-09-23):** `Table Properties` renders from
+  `table_props_view::spark_table_properties` (`[k=v,…]` unchanged), so the row now carries
+  Iceberg's synthesized `format` / `format-version` / `sort-order` / `identifier-fields` and
+  drops the reserved `owner` / `comment` / `provider` / `location` keys, matching the live
+  Spark 4.1.2 row for a fresh table. `describe_partition_field` is `pub(crate)` so
+  `show_create.rs` reuses the `# Partitioning` transform text.
+- `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
+  for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
+  for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the
+  `describe_show` idiom: bare `SHOW CREATE TABLE` refuses Spark's measured
+  `[INVALID_STATEMENT_OR_CLAUSE]`, trailing tokens `[PARSE_SYNTAX_ERROR]`, four-part names and
+  every other statement (SHOW CREATE VIEW, SHOW TABLES/COLUMNS/TBLPROPERTIES) return `None`.
+  The intercept (`try_show_create_intercept`, one router arm after the DESCRIBE TABLE arm)
+  completes one- and two-part names from `use_ddl::session_defaults`, falls through for
+  session-shadowed bare names, unregistered catalogs, and views (lane B owns
+  `V-SHOW-CREATE`); a missing table is `table_or_view_not_found`, `AS SERDE` on a table is
+  `NOT_SUPPORTED_COMMAND_FOR_V2_TABLE`. Layout: columns in Spark `DataType.sql` spelling
+  (`MAP<K, V>`, `STRUCT<a: T NOT NULL COMMENT '…'>`, primitives via `spark_ddl_type_name`
+  upper-cased, uuid `STRING`, fixed `BINARY`), `USING iceberg`, `OPTIONS` from `option.*`
+  keys (which also drop same-named keys from TBLPROPERTIES), `PARTITIONED BY` minus void
+  fields, `COMMENT`, `LOCATION`, then `render_tblproperties_clause`. The two shared helpers
+  the view lane calls are `render_tblproperties_clause` (empty pairs render nothing) and
+  `spark_sql_string_literal` (`'` → `\'`; backslashes pass through — measured).
+  pins: [`tests/show_create.rs`](tests/show_create.rs)
+- `table_props_view.rs` — **C1 SHOW CREATE (2026-09-23):** `spark_table_properties`, the one
+  Spark-visible table property list (Iceberg 1.11 `SparkTable.properties()` minus Spark's
+  `TABLE_RESERVED_PROPERTIES`), shared by DESCRIBE EXTENDED `Table Properties` and SHOW CREATE
+  TABLE: `format` = `iceberg/<write.format.default or parquet>`, `current-snapshot-id` (or
+  `none`), `format-version`, `sort-order` (Iceberg `DescribeSortOrderVisitor` text —
+  `bucket(N, c)`, `truncate(c, W)`, `days(c)` …, `ASC|DESC NULLS FIRST|LAST`, joined by
+  `, `), `identifier-fields` (`[a,b]` in Java `HashSet` iteration order, measured
+  `[zz,a,id]`), then every stored key outside the Iceberg and Spark reserved sets;
+  `prop_key_is_secret` keys redact; sorted by key.
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves
@@ -1494,6 +1527,7 @@ part of that section's pin — changing either one changes both.
 | ORDER BY / eager-command passthrough semantics | `spark_ast.rs` |
 | Temporal / unit-less `RANGE` window-frame semantics | `window_range.rs` |
 | Namespace introspection rendering | `describe_show.rs` |
+| `SHOW CREATE TABLE` text / Spark-visible table properties | `show_create.rs` / `table_props_view.rs` |
 | Time-travel span scanning | `time_travel.rs` (pin half: `repark-core/src/time_travel.rs`) |
 | See what this door ships vs deliberately does NOT | `matrix.rs` (the Q13 surface matrix) |
 

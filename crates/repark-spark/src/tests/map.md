@@ -1420,6 +1420,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `k=v` stays clear. The parser leaves-alone list drops one-part names (D-3 retires that
   refusal; temp-view fall-through stays pinned end to end).
   pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
+- `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE` end to end on the
+  memory catalog against the live Spark 4.1.2 measurements (the table's real location
+  substituted): shape 1 (NOT NULL + column COMMENT, `bucket(4, id)`, `k=v`), shape 2 plain →
+  after INSERT (live snapshot id) → after `WRITE ORDERED BY id` (`sort-order`,
+  `write.distribution-mode`), shape 3 rich types with `PARTITIONED BY (data, days(ts),
+  truncate(3, data), years(d), bucket(8, id))`, table COMMENT and `'it\'s'` (the nested
+  `st.y` doc is set through `apply_schema_changes` because CREATE cannot parse a nested
+  field COMMENT yet), shape 5 `identifier-fields`, Java `HashSet` order `[zz,a,id]`, a
+  multi-term transform sort order built through `TableCreation` (ALTER WRITE ORDERED BY only
+  models identity terms), backslashes unescaped plus `OPTIONS` / TIMESTAMP_NTZ / nested NOT
+  NULL / backticked columns, a backticked table name, redaction, a `USE`-completed bare name,
+  the `AS SERDE` and missing-table refusals, the bare `SHOW CREATE TABLE` parse error, the
+  near misses (view targets not answered as tables; SHOW CREATE, SHOW TABLES/COLUMNS/
+  TBLPROPERTIES not claimed), and the DESCRIBE EXTENDED `Table Properties` row equal to the
+  measured fresh-table string.
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp
