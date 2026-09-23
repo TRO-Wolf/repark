@@ -5,6 +5,188 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use iceberg::ErrorKind;
 
+async fn collected_rows(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: &str,
+) -> Vec<(i32, String)> {
+    let batches = execute(ctx, catalogs, statement)
+        .await
+        .expect("query must plan")
+        .collect()
+        .await
+        .expect("query must collect");
+    batches
+        .iter()
+        .flat_map(|batch| {
+            let ids = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int32Array>()
+                .expect("ids");
+            let names = batch
+                .column(1)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .expect("names");
+            (0..batch.num_rows())
+                .map(move |index| (ids.value(index), names.value(index).to_string()))
+        })
+        .collect()
+}
+
+async fn assert_view_write_names_match(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: &str,
+) {
+    let full_error = execute(ctx, catalogs, statement)
+        .await
+        .expect_err("three-part view target must refuse");
+    let DataFusionError::Plan(expected) = full_error else {
+        panic!("expected Plan refusal, got {full_error:?}");
+    };
+    crate::use_ddl::set_session_defaults(ctx, catalogs, "ice", "sales");
+    let bare = statement.replace("ice.sales.v", "v");
+    let bare_error = execute(ctx, catalogs, &bare)
+        .await
+        .expect_err("bare view target must refuse");
+    let DataFusionError::Plan(bare_message) = bare_error else {
+        panic!("expected Plan refusal, got {bare_error:?}");
+    };
+    assert_eq!(bare_message, expected);
+    crate::use_ddl::set_session_defaults(ctx, catalogs, "ice", "");
+    let two_part = statement.replace("ice.sales.v", "sales.v");
+    let two_part_error = execute(ctx, catalogs, &two_part)
+        .await
+        .expect_err("two-part view target must refuse");
+    let DataFusionError::Plan(two_part_message) = two_part_error else {
+        panic!("expected Plan refusal, got {two_part_error:?}");
+    };
+    assert_eq!(two_part_message, expected);
+}
+
+#[tokio::test]
+async fn insert_view_names_match_and_bare_table_commits() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    assert_view_write_names_match(&ctx, &catalogs, "INSERT INTO ice.sales.v VALUES (9, 'd')").await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "ice", "sales");
+    run(&ctx, &catalogs, "INSERT INTO src VALUES (9, 'd')").await;
+    assert_eq!(
+        collected_rows(&ctx, &catalogs, "SELECT * FROM src ORDER BY id").await,
+        vec![
+            (1, "a".into()),
+            (2, "b".into()),
+            (3, "c".into()),
+            (9, "d".into())
+        ]
+    );
+}
+
+#[tokio::test]
+async fn insert_by_name_view_names_match_and_table_control_commits() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.src AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    assert_view_write_names_match(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.v BY NAME SELECT 9 AS id, 'd' AS name",
+    )
+    .await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "ice", "sales");
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "INSERT INTO src BY NAME SELECT 9 AS id, 'd' AS name",
+    )
+    .await
+    .expect_err("bare BY NAME retains its three-part requirement");
+    let DataFusionError::Plan(message) = error else {
+        panic!("expected Plan refusal, got {error:?}");
+    };
+    assert_eq!(
+        message,
+        "INSERT INTO src BY NAME needs a three-part Iceberg table name, got `src`"
+    );
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.src BY NAME SELECT 9 AS id, 'd' AS name",
+    )
+    .await;
+    assert_eq!(
+        collected_rows(&ctx, &catalogs, "SELECT * FROM ice.sales.src ORDER BY id").await,
+        vec![
+            (1, "a".into()),
+            (2, "b".into()),
+            (3, "c".into()),
+            (9, "d".into())
+        ]
+    );
+}
+
+#[tokio::test]
+async fn delete_view_names_match_and_bare_table_rows_change() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    assert_view_write_names_match(&ctx, &catalogs, "DELETE FROM ice.sales.v WHERE id = 1").await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "ice", "sales");
+    run(&ctx, &catalogs, "DELETE FROM src WHERE id = 1").await;
+    assert_eq!(
+        collected_rows(&ctx, &catalogs, "SELECT * FROM src ORDER BY id").await,
+        vec![(2, "b".into()), (3, "c".into())]
+    );
+}
+
+#[tokio::test]
+async fn update_view_names_match_and_bare_table_rows_change() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v AS SELECT * FROM src",
+    )
+    .await;
+    assert_view_write_names_match(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.v SET id = 9 WHERE id = 1",
+    )
+    .await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "ice", "sales");
+    run(&ctx, &catalogs, "UPDATE src SET id = 9 WHERE id = 1").await;
+    assert_eq!(
+        collected_rows(&ctx, &catalogs, "SELECT * FROM src ORDER BY id").await,
+        vec![(2, "b".into()), (3, "c".into()), (9, "a".into())]
+    );
+}
+
 #[tokio::test]
 async fn alter_viewless_catalog_matches_memory_missing_targets_and_redirects_tables() {
     let warehouse = TempDir::new().expect("temp warehouse");

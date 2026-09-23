@@ -119,6 +119,44 @@ def test_use_resolves_bare_view_write_refusal(spark: ReparkSession) -> None:
     assert caught.value.getSqlState() == "42P01"
 
 
+def test_use_catalog_resolves_two_part_view_write_refusal(spark: ReparkSession) -> None:
+    """A two-part view write resolves the current catalog and leaves data intact."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("INSERT INTO ns.v VALUES (9)")
+    assert str(caught.value) == (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v` "
+        "cannot be found. Verify the spelling and correctness of the schema and catalog. "
+        "If you did not qualify the name with a schema, verify the current_schema() output, "
+        "or qualify the name with the correct schema and catalog. To tolerate the error on "
+        "drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert caught.value.getSqlState() == "42P01"
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0], [1], [2]]
+    assert _rows(spark.sql("SELECT * FROM sc.ns.t ORDER BY id")) == [
+        [0, "d0"],
+        [1, "d1"],
+        [2, "d2"],
+    ]
+
+
+@pytest.mark.parametrize("use_name,table_name", [("sc.ns", "t"), ("sc", "ns.t")])
+def test_use_resolves_table_insert(
+    spark: ReparkSession, use_name: str, table_name: str
+) -> None:
+    """A table write resolves the current catalog and namespace."""
+    spark.sql(f"USE {use_name}")
+    spark.sql(f"INSERT INTO {table_name} VALUES (9, 'd9')")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.t ORDER BY id")) == [
+        [0, "d0"],
+        [1, "d1"],
+        [2, "d2"],
+        [9, "d9"],
+    ]
+
+
 def test_create_view_if_not_exists_is_noop(spark: ReparkSession) -> None:
     """V-IF-NOT-EXISTS — the existing body is not replaced. pins: ice-views-1/C-004."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t WHERE id > 0")
