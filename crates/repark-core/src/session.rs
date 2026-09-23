@@ -21,7 +21,7 @@ use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension}
 use crate::session_owner::{session_owner_snapshot, with_session_owner};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::temp_view::{TempViewHome, build_temp_view_home};
-use crate::time_travel::{self, TimeTravelOpts};
+use crate::time_travel::{self, TimeTravelOpts, metadata_at};
 // Test-only re-exports follow the production imports.
 #[cfg(test)]
 pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
@@ -845,7 +845,7 @@ impl ReparkSession {
             .await
             .map_err(engine_err)?;
         match spec {
-            None => self.sql(&format!("SELECT * FROM {table_name}")).await,
+            None => self.sql(&metadata_at::read_sql(table_name, &parts)).await,
             Some(spec) => {
                 let catalogs = self.catalogs_snapshot();
                 time_travel::read_table_at(self.context(), &catalogs, &parts, &spec, &zone)

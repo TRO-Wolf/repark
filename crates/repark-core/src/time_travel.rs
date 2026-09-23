@@ -17,6 +17,7 @@ use crate::catalog_state::CatalogRegistry;
 use crate::illegal_argument_error;
 
 pub mod incremental;
+pub mod metadata_at;
 mod sql_ast;
 mod sql_eval;
 mod sql_text;
@@ -323,6 +324,11 @@ pub async fn read_table_at(
     spec: &TimeTravelSpec,
     zone: &SessionTimeZone,
 ) -> Result<DataFrame> {
+    if let Some(frame) =
+        metadata_at::read_metadata_path_at(ctx, catalogs, table_parts, spec, zone).await?
+    {
+        return Ok(frame);
+    }
     let table = load_iceberg_table(catalogs, table_parts).await?;
     let provider: Arc<dyn TableProvider> = match spec {
         TimeTravelSpec::Incremental { from, to } => {
