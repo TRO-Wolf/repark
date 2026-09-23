@@ -261,31 +261,33 @@ async fn show_create_multi_term_sort_order_matches_spark() {
         direction,
         null_order,
     };
-    let sort_order = SortOrder::builder()
-        .with_order_id(1)
-        .with_fields(vec![
-            term(
-                1,
-                Transform::Identity,
-                SortDirection::Descending,
-                NullOrder::Last,
-            ),
-            term(
-                2,
-                Transform::Bucket(4),
-                SortDirection::Ascending,
-                NullOrder::First,
-            ),
-            term(3, Transform::Day, SortDirection::Ascending, NullOrder::Last),
-            term(
-                2,
-                Transform::Truncate(3),
-                SortDirection::Ascending,
-                NullOrder::First,
-            ),
-        ])
-        .build_unbound()
-        .unwrap();
+    let fields = vec![
+        term(
+            1,
+            Transform::Identity,
+            SortDirection::Descending,
+            NullOrder::Last,
+        ),
+        term(
+            2,
+            Transform::Bucket(4),
+            SortDirection::Ascending,
+            NullOrder::First,
+        ),
+        term(3, Transform::Day, SortDirection::Ascending, NullOrder::Last),
+        term(
+            2,
+            Transform::Truncate(3),
+            SortDirection::Ascending,
+            NullOrder::First,
+        ),
+    ];
+    let mut builder = SortOrder::builder();
+    builder.with_order_id(1);
+    for field in fields {
+        builder.with_sort_field(field);
+    }
+    let sort_order = builder.build_unbound().unwrap();
     let at = format!("{}/sales/m2", wh.path().to_str().unwrap());
     catalogs["ice"]
         .create_table(
@@ -303,7 +305,7 @@ async fn show_create_multi_term_sort_order_matches_spark() {
     assert!(
         text.contains(
             "  'sort-order' = 'id DESC NULLS LAST, bucket(4, data) ASC NULLS FIRST, \
-             days(ts) ASC NULLS LAST, truncate(data, 3) ASC NULLS FIRST'\n"
+             days(ts) ASC NULLS LAST, truncate(data, 3) ASC NULLS FIRST',\n"
         ),
         "got: {text}"
     );
