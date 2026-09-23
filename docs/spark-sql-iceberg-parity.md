@@ -1537,13 +1537,15 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
   surfaces (same reading as `ST-1`); the adapter keeps reading them rather than parsing
   `DESCRIBE` text, which is now Spark-shaped but still a diagnostic report, not a contract.
 
-#### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` and `SHOW TABLE EXTENDED` refuse through the same path
+#### DBT-TBLPROPS-1 — table `SHOW TBLPROPERTIES` and `SHOW TABLE EXTENDED` refuse
 
-- **repark** — both `SHOW TBLPROPERTIES cat.ns.t` and `SHOW TABLE EXTENDED IN ns LIKE '*'` refuse
+- **repark** — on a table, both `SHOW TBLPROPERTIES cat.ns.t` and
+  `SHOW TABLE EXTENDED IN ns LIKE '*'` refuse
   with the **identical** message, `AnalysisException: Error during planning: SHOW [VARIABLE] is
   not supported unless information_schema is enabled`. They are one row rather than two because
-  the mechanism and the message are the same: neither reaches a `SHOW`-family implementation, and
-  both land on the `information_schema` guard. dbt's `fetch_tbl_properties` therefore has no
+  the mechanism and the message are the same for tables: both land on the
+  `information_schema` guard. A view answers `SHOW TBLPROPERTIES` (IPI-40 PR4;
+  D-VIEW-SHOWPROPS-1). dbt's table `fetch_tbl_properties` therefore has no
   source, and `list_relations_without_caching` has no first attempt — `dbt-spark` tries
   `SHOW TABLE EXTENDED` first and falls back to `SHOW TABLES IN`, which is refused separately by
   `ST-1`, so **both** of its listing paths are closed and the adapter overrides the Python method
@@ -1556,9 +1558,8 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 - **Pin** —
   `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]`
   and `[R-SHOW-TABLE-EXTENDED]`
-- **Rationale** — DECLARED, same family as `NS-1` / `ST-1`: RePark has no `SHOW`-family
-  information surface. The facade `Catalog` is the supported listing surface, and the adapter
-  uses it.
+- **Rationale** — DECLARED for tables, same family as `NS-1` / `ST-1`. The facade `Catalog`
+  is the supported table listing surface, and the adapter uses it.
 
 #### DBT-CREATENS-1 — namespace DDL refuses a one-part name
 
