@@ -10,6 +10,22 @@
 > names the type and bounds, includes advice and SQLSTATE `22003`; RePark keeps its existing
 > qualified-token producer text without SQLSTATE.
 
+## WO-A5 follow-up audit
+
+- **V-002 strengthened:** `show_table_extended_tracks_snapshot_and_plain_information` now
+  compares the post-INSERT complete row. `show_table_extended_filters_alternation_case_and_ambient_scope`
+  now compares complete ordered rows for alternation, case folding, and ambient scope.
+- **V-002 checked and left:** `show_table_extended_answers_exact_partitioned_information`,
+  `show_table_extended_keeps_v3_and_unicode_property_scalars`,
+  `show_table_extended_lists_sorted_tables_and_excludes_views`,
+  `show_table_extended_reports_location_management_owner_and_tree`, and
+  `show_table_extended_skips_leading_and_inter_keyword_comments` already compare whole rows.
+  The three SHOW TABLE EXTENDED refusal helpers, the SHOW TBLPROPERTIES refusal, and the
+  near-miss probes already compare full messages. The facade and dbt row pins compare whole
+  Arrow rows; the branch-added parser refusal pins in `column_move.rs`, `nested_column_ddl.rs`,
+  `router.rs`, `truncate.rs`, `test_e1_errorclass.py`, and `test_show_create_table.py` already
+  compare complete messages.
+
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 ## Plan

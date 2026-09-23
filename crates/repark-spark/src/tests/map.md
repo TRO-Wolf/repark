@@ -1502,7 +1502,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   partition/missing-table/missing-namespace refusals, and SHOW-family near misses that remain
   outside this parser. **WO-A4 (2026-09-23):** every parser refusal pins its SQL error variant
   and complete condition/SQLSTATE text; partition lookup pins literal wildcard absence; the
-  unclaimed SHOW TABLE(S) forms pin their current exact variants and messages.
+  unclaimed SHOW TABLE(S) forms pin their current exact variants and messages. **WO-A5
+  (2026-09-23):** snapshot, alternation, case, and ambient-scope checks compare complete ordered
+  four-column row vectors.
   pins: wo-a1b/C-002, C-003
   pins: show-table-extended-1/C-001, C-002, C-003, C-004
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's

@@ -312,17 +312,14 @@ async fn show_table_extended_tracks_snapshot_and_plain_information() {
     )
     .await;
     assert_eq!(
-        rows[0].3,
-        information(Information {
-            catalog: "ice",
-            namespace: "sales",
-            table: "pl",
-            location: &location,
-            properties: &snapshot_properties,
-            comment: None,
-            owner: None,
-            tree: "root\n |-- id: long (nullable = true)\n",
-        })
+        rows,
+        vec![managed_row(
+            "pl",
+            &location,
+            &snapshot_properties,
+            None,
+            "root\n |-- id: long (nullable = true)\n",
+        )]
     );
 }
 
@@ -465,6 +462,15 @@ async fn show_table_extended_filters_alternation_case_and_ambient_scope() {
         )
         .await;
     }
+    let properties = character_properties(&[
+        ("current-snapshot-id", "none"),
+        ("format", "iceberg/parquet"),
+        ("format-version", "2"),
+        ("write.parquet.compression-codec", "zstd"),
+    ]);
+    let lo_location = table_location(&catalogs, "lo").await;
+    let pl_location = table_location(&catalogs, "pl").await;
+    let tree = "root\n |-- id: long (nullable = true)\n";
     let (_, rows) = show_table_extended(
         &ctx,
         &catalogs,
@@ -472,8 +478,11 @@ async fn show_table_extended_filters_alternation_case_and_ambient_scope() {
     )
     .await;
     assert_eq!(
-        rows.into_iter().map(|row| row.1).collect::<Vec<_>>(),
-        vec!["lo", "pl"]
+        rows,
+        vec![
+            managed_row("lo", &lo_location, &properties, None, tree),
+            managed_row("pl", &pl_location, &properties, None, tree),
+        ]
     );
     let (_, rows) = show_table_extended(
         &ctx,
@@ -481,11 +490,16 @@ async fn show_table_extended_filters_alternation_case_and_ambient_scope() {
         "SHOW TABLE EXTENDED IN ice.sales LIKE 'PL'",
     )
     .await;
-    assert_eq!(rows[0].1, "pl");
+    assert_eq!(
+        rows,
+        vec![managed_row("pl", &pl_location, &properties, None, tree)]
+    );
     run(&ctx, &catalogs, "USE ice.sales").await;
     let (_, rows) = show_table_extended(&ctx, &catalogs, "SHOW TABLE EXTENDED LIKE 'pl'").await;
-    assert_eq!(rows[0].0, "sales");
-    assert_eq!(rows[0].1, "pl");
+    assert_eq!(
+        rows,
+        vec![managed_row("pl", &pl_location, &properties, None, tree)]
+    );
 }
 
 #[tokio::test]
