@@ -107,6 +107,42 @@ async fn location(catalogs: &CatalogRegistry, table: &str) -> String {
         .to_string()
 }
 
+async fn describe_extended_rows(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> (Schema, Vec<(String, String, String)>) {
+    let batches = execute(ctx, catalogs, &format!("DESCRIBE TABLE EXTENDED {table}"))
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let schema = batches
+        .first()
+        .map_or_else(Schema::empty, |batch| batch.schema().as_ref().clone());
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let columns = (0..3)
+            .map(|index| {
+                batch
+                    .column(index)
+                    .as_any()
+                    .downcast_ref::<StringArray>()
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+        for index in 0..batch.num_rows() {
+            rows.push((
+                columns[0].value(index).to_string(),
+                columns[1].value(index).to_string(),
+                columns[2].value(index).to_string(),
+            ));
+        }
+    }
+    (schema, rows)
+}
+
 async fn snapshot_id(catalogs: &CatalogRegistry, table: &str) -> i64 {
     load_sales_table(catalogs, table)
         .await
@@ -773,36 +809,35 @@ async fn describe_extended_table_properties_row_matches_spark_for_a_fresh_table(
         "CREATE TABLE ice.sales.de (id BIGINT, data STRING) USING iceberg PARTITIONED BY (data)",
     )
     .await;
-    let batches = execute(&ctx, &catalogs, "DESCRIBE TABLE EXTENDED ice.sales.de")
-        .await
-        .unwrap()
-        .collect()
-        .await
-        .unwrap();
-    let mut properties = None;
-    for batch in &batches {
-        let names = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap();
-        let values = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap();
-        for index in 0..batch.num_rows() {
-            if names.value(index) == "Table Properties" {
-                properties = Some(values.value(index).to_string());
-            }
-        }
-    }
+    let (schema, rows) = describe_extended_rows(&ctx, &catalogs, "ice.sales.de").await;
     assert_eq!(
-        properties.as_deref(),
-        Some(
+        schema,
+        Schema::new(vec![
+            Field::new("col_name", DataType::Utf8, false),
+            Field::new("data_type", DataType::Utf8, false),
+            Field::new("comment", DataType::Utf8, true),
+        ])
+    );
+    let column_end = rows
+        .iter()
+        .position(|(name, _, _)| name.is_empty() || name.starts_with('#'))
+        .unwrap();
+    assert_eq!(
+        &rows[..column_end],
+        &[
+            ("id".to_string(), "bigint".to_string(), String::new()),
+            ("data".to_string(), "string".to_string(), String::new())
+        ]
+    );
+    assert_eq!(
+        rows.iter().find(|(name, _, _)| name == "Table Properties"),
+        Some(&(
+            "Table Properties".to_string(),
             "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,\
              write.parquet.compression-codec=zstd]"
-        )
+                .to_string(),
+            String::new(),
+        ))
     );
 }
 
@@ -816,46 +851,56 @@ async fn describe_extended_carries_the_table_comment_as_its_own_row() {
         "CREATE TABLE ice.sales.doc (Comment STRING) USING iceberg COMMENT 'tab''le doc'",
     )
     .await;
-    let batches = execute(&ctx, &catalogs, "DESCRIBE TABLE EXTENDED ice.sales.doc")
-        .await
-        .unwrap()
-        .collect()
-        .await
-        .unwrap();
-    let mut names = Vec::new();
-    let mut values = Vec::new();
-    for batch in &batches {
-        let name_column = batch
-            .column(0)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap();
-        let value_column = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .unwrap();
-        for index in 0..batch.num_rows() {
-            names.push(name_column.value(index).to_string());
-            values.push(value_column.value(index).to_string());
-        }
-    }
-    let detail = names
-        .iter()
-        .position(|name| name == "# Detailed Table Information")
-        .unwrap();
+    let (schema, rows) = describe_extended_rows(&ctx, &catalogs, "ice.sales.doc").await;
     assert_eq!(
-        names[detail + 1..detail + 5],
-        ["Name", "Type", "Comment", "Location"]
+        schema,
+        Schema::new(vec![
+            Field::new("col_name", DataType::Utf8, false),
+            Field::new("data_type", DataType::Utf8, false),
+            Field::new("comment", DataType::Utf8, true),
+        ])
     );
-    assert_eq!(values[detail + 3], "tab'le doc");
-    let properties = names
+    let column_end = rows
         .iter()
-        .position(|name| name == "Table Properties")
+        .position(|(name, _, _)| name.is_empty() || name.starts_with('#'))
         .unwrap();
     assert_eq!(
-        values[properties],
-        "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,\
-         write.parquet.compression-codec=zstd]"
+        &rows[..column_end],
+        &[("Comment".to_string(), "string".to_string(), String::new())]
+    );
+    let detail = rows
+        .iter()
+        .position(|(name, _, _)| name == "# Detailed Table Information")
+        .unwrap();
+    assert_eq!(
+        &rows[detail + 1..detail + 5],
+        &[
+            (
+                "Name".to_string(),
+                "ice.sales.doc".to_string(),
+                String::new()
+            ),
+            ("Type".to_string(), "MANAGED".to_string(), String::new()),
+            (
+                "Comment".to_string(),
+                "tab'le doc".to_string(),
+                String::new()
+            ),
+            (
+                "Location".to_string(),
+                location(&catalogs, "doc").await,
+                String::new(),
+            ),
+        ]
+    );
+    assert_eq!(
+        rows.iter().find(|(name, _, _)| name == "Table Properties"),
+        Some(&(
+            "Table Properties".to_string(),
+            "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,\
+             write.parquet.compression-codec=zstd]"
+                .to_string(),
+            String::new(),
+        ))
     );
 }

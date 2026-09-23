@@ -1449,9 +1449,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   while analysis refusals assert `DataFusionError::Plan`, with the full measured text. Near
   misses preserve the current view-target and SHOW CREATE outcomes. SHOW TABLES and SHOW
   COLUMNS compare complete Spark rows and schemas; SHOW TBLPROPERTIES keeps its pinned refusal.
-  The DESCRIBE EXTENDED `Table Properties`
-  row is equal to the measured fresh-table string, and the `Comment` detail row (after `Type`, a
-  column named `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
+  DESCRIBE EXTENDED pins its complete Arrow schema, full column-section triples, the fresh-table
+  `Table Properties` triple, and the table `Comment` triple. The detail rows `Name`, `Type`,
+  `Comment`, and `Location` are compared as complete triples, with `Location` taken from metadata.
   pins: wo-c2/C-001, C-002, C-003, C-004
   **WO-C3 (2026-09-23):** nested bracket comments and line comments before or between SHOW
   CREATE TABLE keywords keep every m8 lexical and trailing form in the typed parse refusal;
