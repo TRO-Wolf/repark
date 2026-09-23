@@ -1504,6 +1504,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   view's orphans verbatim, and an armed call deletes exactly those. Registry row ORPHAN-3.
   `risk_tier: high`. Branch `fix/ipi-30-orphan-guard-narrow`.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009
 - [ipi-23-mt-describe-1-ledger.md](ipi-23-mt-describe-1-ledger.md) —
   **IPI-23-MT-DESCRIBE-1 (2026-09-22), in flight:** `DESCRIBE [TABLE]`/`DESC` on a
   dotted Iceberg metadata table answers one row per column of the metadata table
