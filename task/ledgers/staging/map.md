@@ -36,6 +36,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   rows and CREATE-family owner stamping. `risk_tier: standard`.
   Branch `xd/describe`.
   pins: describe-column-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [wo-b4-describe-errors-ledger.md](wo-b4-describe-errors-ledger.md) —
+  **WO-B4 (2026-09-23), in flight:** every malformed input after `DESCRIBE` or `DESC` and a
+  table target retains Spark 4.1.2's parser class, condition, SQLSTATE, and first-line text;
+  four-part table and column-resolution contracts stay typed; non-table DESCRIBE forms fall
+  through. `risk_tier: standard`. Branch `xd/describe`.
+  pins: wo-b4-describe-errors/C-001, C-002, C-003, C-004, C-005
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the
