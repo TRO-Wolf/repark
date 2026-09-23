@@ -44,6 +44,7 @@ pub use spark_typed::{
     suffix_literal_udf,
 };
 mod table_props_ddl;
+mod table_props_view;
 mod time_travel;
 mod time_window;
 mod truncate;
