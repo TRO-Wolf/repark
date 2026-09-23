@@ -515,7 +515,7 @@ async fn view_create_drop_and_write_guard_complete_bare_names_from_use() {
     let Statement::Drop { names, .. } = &statements[0] else {
         panic!("expected DROP VIEW");
     };
-    let error = crate::view_ddl::execute::refuse_view_write_target(&catalogs, &names[0])
+    let error = crate::view_ddl::execute::refuse_view_write_target(&ctx, &catalogs, &names[0])
         .await
         .expect_err("view write target must refuse");
     let DataFusionError::Plan(message) = error else {
@@ -570,7 +570,7 @@ async fn bare_alter_view_without_namespace_refuses_and_write_guard_falls_through
         panic!("expected table name");
     };
     assert!(matches!(
-        crate::view_ddl::execute::refuse_view_write_target(&catalogs, name).await,
+        crate::view_ddl::execute::refuse_view_write_target(&ctx, &catalogs, name).await,
         Ok(())
     ));
 }
