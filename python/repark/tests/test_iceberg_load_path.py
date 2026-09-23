@@ -157,7 +157,7 @@ def test_load_older_metadata_file_reads_that_version(
 def test_load_path_registers_no_catalog_table(
     spark: ReparkSession, loaded: dict[str, object]
 ) -> None:
-    """A path read is static: the resolver's ``path.<name>`` ident reaches no catalog.
+    """A path read registers nothing: every listed catalog, namespace, table, temp view holds.
 
     pins: dfload-1/C-007
     """

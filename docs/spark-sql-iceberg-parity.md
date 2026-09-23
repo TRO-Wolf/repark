@@ -244,7 +244,11 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   table reads through `IcebergStaticTableProvider` — nothing is registered in a catalog —
   and a time-travel or incremental reader option beside a path refuses the pinned
   `AnalysisException` (`format('iceberg').load(<path>) reads one pinned metadata snapshot
-  and does not support time-travel or incremental options; got <keys>`).
+  and does not support time-travel or incremental options; got <keys>`). A `file://`
+  argument with a non-empty authority (`file://tmp/…`, `file://localhost/…`) refuses
+  `IllegalArgumentException` `Wrong FS: <arg>/metadata, expected: file:///` (the argument
+  verbatim when it ends `.metadata.json`) before any FileIO is built, while `file:///<abs>`
+  reads. *(Spark text measured on live Spark 3.5 + Iceberg, WO dfload-r5.)*
 - **Apache Spark** — `spark.read.format("iceberg").load(<table location>)` answers the
   current snapshot `[[2,"b","y"],[3,"c","x"]]`. *(oracle: recorded live PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0 cell `R-DF-LOAD-PATH`; replayed identical on the
@@ -258,7 +262,7 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   Spark's own IcebergSource rule: every near-miss without `/` (`ns.t`, `cat.ns.t`,
   `ns.t.snapshots`, `` `ns`.`t` ``, `ns.t` + `snapshot-id`) keeps the catalog route
   untouched, and the option refusal is declared, never silently ignored.
-  pins: dfload-1/C-001, C-004, C-005, C-006
+  pins: dfload-1/C-001, C-004, C-005, C-006, C-008
 
 #### R-DF-LOAD-METADATA-JSON — `format("iceberg").load(<file>.metadata.json)` — **FIXED 2026-09-23**
 
