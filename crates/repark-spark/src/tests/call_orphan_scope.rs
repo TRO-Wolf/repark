@@ -1,0 +1,334 @@
+use std::path::{Path, PathBuf};
+
+use repark_core::ReparkSession;
+
+use super::common::*;
+use crate::{SparkDialect, SparkExtension};
+
+async fn fallback_session(warehouse: &TempDir) -> ReparkSession {
+    let session = ReparkSession::builder()
+        .with_extension(Arc::new(SparkExtension))
+        .with_sql_dialect(Arc::new(SparkDialect))
+        .build()
+        .unwrap();
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    submit(&session, "CREATE NAMESPACE ice.ns").await;
+    session
+}
+
+async fn submit(session: &ReparkSession, sql: &str) {
+    session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"));
+}
+
+async fn ctas(session: &ReparkSession, warehouse: &TempDir, table: &str) -> PathBuf {
+    submit(
+        session,
+        &format!("CREATE TABLE ice.ns.{table} USING iceberg AS SELECT 1 AS id"),
+    )
+    .await;
+    let table_dir = warehouse
+        .path()
+        .join("repark_ctas")
+        .join("ice")
+        .join("ns")
+        .join(table);
+    assert!(
+        table_dir.join("metadata").is_dir(),
+        "a namespace without a location places {table} under the shared fallback root"
+    );
+    table_dir
+}
+
+fn plant(table_dir: &Path, name: &str, age_days: u64) -> PathBuf {
+    let data_dir = table_dir.join("data");
+    std::fs::create_dir_all(&data_dir).expect("data dir");
+    let path = data_dir.join(name);
+    std::fs::write(&path, b"PAR1junk").expect("write orphan");
+    let stamp = std::time::SystemTime::now() - std::time::Duration::from_secs(age_days * 86_400);
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(&path)
+        .expect("reopen orphan")
+        .set_times(
+            std::fs::FileTimes::new()
+                .set_modified(stamp)
+                .set_accessed(stamp),
+        )
+        .expect("age the orphan");
+    path
+}
+
+fn referenced_data_file(table_dir: &Path) -> PathBuf {
+    std::fs::read_dir(table_dir.join("data"))
+        .expect("data dir")
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| path.extension().is_some_and(|ext| ext == "parquet"))
+        .expect("the CTAS wrote one data file")
+}
+
+async fn live_rows(session: &ReparkSession) -> usize {
+    session
+        .sql("SELECT id FROM ice.ns.t")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap()
+        .iter()
+        .map(RecordBatch::num_rows)
+        .sum()
+}
+
+async fn call_rows(session: &ReparkSession, sql: &str) -> Result<Vec<String>, String> {
+    let batches = session
+        .sql(sql)
+        .await
+        .map_err(|error| error.to_string())?
+        .collect()
+        .await
+        .map_err(|error| error.to_string())?;
+    let mut out = Vec::new();
+    for batch in &batches {
+        assert_eq!(batch.schema().field(0).name(), "orphan_file_location");
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("string column");
+        for index in 0..column.len() {
+            out.push(column.value(index).to_string());
+        }
+    }
+    Ok(out)
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_sweeps_a_fallback_tables_own_directory() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.t')",
+    )
+    .await
+    .expect("a table's own directory under the fallback root is sweepable");
+    assert_eq!(listed.len(), 1, "one row per orphan, got {listed:?}");
+    assert!(
+        listed[0].ends_with("/ns/t/data/orphan-file.parquet"),
+        "{listed:?}"
+    );
+    assert!(!orphan.exists(), "the armed default run deletes the orphan");
+    assert_eq!(live_rows(&session).await, 1, "the live data file survives");
+
+    let young = plant(&table_dir, "orphan-file.parquet", 1);
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.t')",
+    )
+    .await
+    .expect("young sweep runs");
+    assert!(
+        listed.is_empty(),
+        "a 1-day-old orphan is inside the default 3-day window: {listed:?}"
+    );
+    assert!(young.exists(), "the young orphan is kept");
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_refuses_a_location_holding_another_table() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let own_dir = ctas(&session, &warehouse, "a").await;
+    let other_dir = ctas(&session, &warehouse, "b").await;
+    let own_orphan = plant(&own_dir, "orphan-file.parquet", 10);
+    let other_orphan = plant(&other_dir, "orphan-file.parquet", 10);
+    let other_live = referenced_data_file(&other_dir);
+    let namespace_dir = warehouse.path().join("repark_ctas").join("ice").join("ns");
+
+    for location in [
+        namespace_dir.display().to_string(),
+        other_dir.display().to_string(),
+        format!("file://{}", namespace_dir.display()),
+    ] {
+        let err = call_rows(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'ns.a', location => '{location}')"
+            ),
+        )
+        .await
+        .expect_err("a location holding another table's files must refuse");
+        assert!(
+            err.contains("ice.ns.b") && err.contains("CALL remove_orphan_files refuses"),
+            "the refusal must name the other table: {err}"
+        );
+    }
+    assert!(own_orphan.exists(), "a refused sweep deletes nothing");
+    assert!(other_orphan.exists(), "a refused sweep deletes nothing");
+    assert!(
+        other_live.exists(),
+        "the other table's live file is untouched"
+    );
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_refuses_the_warehouse_and_the_fallback_root() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+
+    for location in [
+        warehouse.path().display().to_string(),
+        warehouse.path().join("repark_ctas").display().to_string(),
+        warehouse
+            .path()
+            .join("repark_ansi_ctas")
+            .display()
+            .to_string(),
+    ] {
+        let err = call_rows(
+            &session,
+            &format!(
+                "CALL ice.system.remove_orphan_files(table => 'ns.t', location => '{location}')"
+            ),
+        )
+        .await
+        .expect_err("the warehouse and the fallback root never sweep");
+        assert!(err.contains("shared CTAS fallback root"), "{err}");
+    }
+    assert!(orphan.exists(), "a refused sweep deletes nothing");
+}
+
+async fn file_list_view(session: &ReparkSession, entries: &[&Path]) {
+    let rows: Vec<String> = entries
+        .iter()
+        .map(|path| {
+            format!(
+                "SELECT '{}' AS file_path, CAST(from_unixtime(0) AS TIMESTAMP) AS last_modified",
+                path.display()
+            )
+        })
+        .collect();
+    let frame = session.sql(&rows.join(" UNION ALL ")).await.unwrap();
+    session
+        .create_or_replace_temp_view_from("v", &frame)
+        .unwrap();
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_dry_run_lists_the_view_orphans_verbatim() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let live = referenced_data_file(&table_dir);
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+    file_list_view(&session, &[&live, &orphan]).await;
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(\
+             table => 'ns.t', dry_run => true, file_list_view => 'v')",
+    )
+    .await
+    .expect("file_list_view is accepted");
+    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert!(orphan.exists(), "dry_run deletes nothing");
+    assert!(live.exists());
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_armed_deletes_only_the_listed_orphans() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let live = referenced_data_file(&table_dir);
+    let listed_orphan = plant(&table_dir, "orphan-listed.parquet", 10);
+    let unlisted_orphan = plant(&table_dir, "orphan-unlisted.parquet", 10);
+    file_list_view(&session, &[&live, &listed_orphan]).await;
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v')",
+    )
+    .await
+    .expect("armed file_list_view runs");
+    assert_eq!(listed, vec![listed_orphan.display().to_string()]);
+    assert!(!listed_orphan.exists(), "the listed orphan is deleted");
+    assert!(
+        unlisted_orphan.exists(),
+        "a file the view does not list is not a candidate"
+    );
+    assert!(live.exists(), "a referenced file is never an orphan");
+    assert_eq!(live_rows(&session).await, 1, "the live data file survives");
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+
+    let err = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(\
+             table => 'ns.t', dry_run => true, file_list_view => 'no_such_view')",
+    )
+    .await
+    .expect_err("a missing view refuses");
+    assert!(
+        err.contains("[TABLE_OR_VIEW_NOT_FOUND]") && err.contains("`no_such_view`"),
+        "Spark answers table or view not found: {err}"
+    );
+    assert!(orphan.exists());
+
+    file_list_view(&session, &[&orphan]).await;
+    let err = call_rows(
+        &session,
+        &format!(
+            "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v', \
+             location => '{}')",
+            warehouse.path().display()
+        ),
+    )
+    .await
+    .expect_err("the warehouse root refuses in file_list_view mode too");
+    assert!(err.contains("shared CTAS fallback root"), "{err}");
+    assert!(orphan.exists());
+
+    let frame = session
+        .sql(&format!(
+            "SELECT '{}' AS file_path, 0 AS last_modified",
+            orphan.display()
+        ))
+        .await
+        .unwrap();
+    session
+        .create_or_replace_temp_view_from("untimed", &frame)
+        .unwrap();
+    let err = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'untimed')",
+    )
+    .await
+    .expect_err("a view without a timestamp last_modified refuses");
+    assert!(
+        err.contains("Invalid last_modified column") && err.contains("is not a timestamp"),
+        "{err}"
+    );
+    assert!(orphan.exists());
+}

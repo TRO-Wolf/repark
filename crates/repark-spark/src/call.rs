@@ -1,21 +1,19 @@
 //! Spark Iceberg `CALL catalog.system.<proc>(…)` maintenance procedure router.
 
-use std::collections::HashMap;
-use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Int32Array, Int64Array, RecordBatch, StringArray};
+use datafusion::arrow::array::{Int32Array, Int64Array, RecordBatch};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{Expr, Function};
-use iceberg::maintenance::{DeleteOrphanFiles, PrefixMismatchMode, RewritePositionDeleteFiles};
+use datafusion::sql::sqlparser::ast::Function;
+use iceberg::maintenance::RewritePositionDeleteFiles;
 use iceberg::transaction::{
     ApplyTransactionAction, CleanupReport, ExpireSnapshotsCleanup, Transaction,
 };
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
-use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
+use repark_core::CatalogRegistry;
 
 use crate::call_args::{CallArgs, bind, expr_as_i64_array};
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
@@ -28,10 +26,12 @@ mod changelog;
 mod compute_partition_stats;
 mod compute_table_stats;
 mod create_changelog_view;
+mod orphan_file_list;
 mod params;
 mod plan_partitioning;
 mod plan_partitioning_bytes;
 mod plan_partitioning_score;
+pub(crate) mod remove_orphan_files;
 mod rewrite_data_files;
 mod rewrite_manifests;
 pub(crate) mod rewrite_options;
@@ -39,6 +39,8 @@ mod rewrite_table_path;
 mod rewrite_where;
 mod run_maintenance;
 mod run_maintenance_apply;
+
+use remove_orphan_files::{execute_remove_orphan_files, now_millis, s3_tables_orphan_sweep_reason};
 
 const SUPPORTED_PROCEDURES: &[&str] = &[
     "add_files",
@@ -428,259 +430,6 @@ async fn execute_rewrite_position_delete_files(
         ],
     )?;
     ctx.read_batches(vec![batch])
-}
-
-// === remove_orphan_files ===
-
-/// Java enforces a 24-hour orphan sweep floor at the procedure layer; the fork action does not.
-const ORPHAN_OLDER_THAN_FLOOR_MS: i64 = 24 * 60 * 60 * 1000;
-
-/// Refuse to sweep a table sitting in the shared CTAS temp-fallback root.
-pub(crate) fn refuse_shared_temp_fallback_location(
-    policy: Option<&LocationPolicy>,
-    table_location: &str,
-    table_arg: &str,
-) -> Result<()> {
-    let Some(LocationPolicy::TempFallbackAllowed { root }) = policy else {
-        return Ok(());
-    };
-    let scan = normalize_orphan_scan_path(table_location);
-    for segment in ["repark_ctas", "repark_ansi_ctas"] {
-        let mut fallback_root = root.clone();
-        fallback_root.push(segment);
-        let fallback_root = normalize_lexically(&fallback_root);
-        if scan_hits_fallback(&scan, &fallback_root) {
-            return Err(DataFusionError::Plan(format!(
-                "CALL remove_orphan_files refuses to sweep `{table_arg}`: path `{table_location}` \
-                 sits in or contains the shared CTAS fallback root `{}`. That path is derived \
-                 from the catalog, namespace and table NAME alone, so any other process using \
-                 the same names writes to the same directory — and this procedure deletes \
-                 whatever the table's own metadata does not reference, which would include \
-                 another session's live files. Re-create the namespace with an explicit location \
-                 (`CREATE NAMESPACE <catalog>.<namespace> LOCATION '<path>'`) so the table owns \
-                 its directory, then sweep it.",
-                fallback_root.display()
-            )));
-        }
-    }
-    Ok(())
-}
-
-pub(crate) fn refuse_service_managed_orphan_sweep(
-    policy: Option<&LocationPolicy>,
-    catalog_name: &str,
-    table_arg: &str,
-) -> Result<()> {
-    if matches!(policy, Some(LocationPolicy::ServiceManagedLocation)) {
-        return Err(DataFusionError::Plan(s3_tables_orphan_sweep_reason(
-            catalog_name,
-            table_arg,
-        )));
-    }
-    Ok(())
-}
-
-fn s3_tables_orphan_sweep_reason(catalog_name: &str, table_arg: &str) -> String {
-    format!(
-        "CALL remove_orphan_files refuses to sweep `{table_arg}`: catalog `{catalog_name}` \
-         is an S3 Tables catalog and table buckets do not support listing — the bucket \
-         answers ListObjectsV2 with 405 MethodNotAllowed — so no listing-based orphan sweep \
-         can run there. S3 Tables removes unreferenced files itself through the table \
-         bucket's maintenance configuration: enable `unreferencedFileRemoval` in \
-         PutTableBucketMaintenanceConfiguration instead of running this procedure."
-    )
-}
-
-fn normalize_orphan_scan_path(location: &str) -> PathBuf {
-    normalize_lexically(&memory_warehouse_fallback_root(location))
-}
-
-fn normalize_lexically(path: &Path) -> PathBuf {
-    let mut out = PathBuf::new();
-    for component in path.components() {
-        match component {
-            Component::CurDir => {}
-            Component::ParentDir => {
-                out.pop();
-            }
-            other => out.push(other),
-        }
-    }
-    out
-}
-
-fn scan_hits_fallback(scan: &Path, fallback_root: &Path) -> bool {
-    scan.starts_with(fallback_root) || fallback_root.starts_with(scan)
-}
-
-/// Wall-clock millis since the epoch, for the `older_than` floor.
-fn now_millis() -> Result<i64> {
-    let since_epoch = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|_| {
-            DataFusionError::Execution(
-                "system clock is before the Unix epoch, so the remove_orphan_files floor cannot \
-                 be evaluated — refusing rather than deleting against an unknown cutoff"
-                    .to_string(),
-            )
-        })?;
-    i64::try_from(since_epoch.as_millis()).map_err(|_| {
-        DataFusionError::Execution(
-            "system clock is beyond the representable millisecond range — refusing rather than \
-             deleting against an unknown cutoff"
-                .to_string(),
-        )
-    })
-}
-
-/// Spark's one-column output: one ROW PER ORPHAN, not a summary count.
-fn orphan_result_dataframe(ctx: &SessionContext, locations: &[String]) -> Result<DataFrame> {
-    let schema = Arc::new(Schema::new(vec![Field::new(
-        "orphan_file_location",
-        DataType::Utf8,
-        false,
-    )]));
-    let batch = RecordBatch::try_new(
-        schema,
-        vec![Arc::new(StringArray::from(locations.to_vec()))],
-    )?;
-    ctx.read_batches(vec![batch])
-}
-
-async fn execute_remove_orphan_files(
-    ctx: &SessionContext,
-    catalog: Arc<dyn Catalog>,
-    catalog_name: &str,
-    policy: Option<LocationPolicy>,
-    args: &CallArgs,
-) -> Result<DataFrame> {
-    args.reject_unknown_named(&[
-        "table",
-        "older_than",
-        "location",
-        "dry_run",
-        "max_concurrent_deletes",
-        "file_list_view",
-        "equal_schemes",
-        "equal_authorities",
-        "prefix_mismatch_mode",
-        "prefix_listing",
-        "stream_results",
-    ])?;
-    args.reject_excess_positional(4)?;
-    if args.has_named("file_list_view") {
-        return Err(DataFusionError::NotImplemented(
-            "CALL remove_orphan_files argument `file_list_view` is not supported in v1 \
-             (supported: table, older_than, location, dry_run, max_concurrent_deletes, \
-             equal_schemes, equal_authorities, prefix_mismatch_mode, prefix_listing, \
-             stream_results)"
-                .to_string(),
-        ));
-    }
-
-    let table_arg = args.require_string("table", 0)?;
-    refuse_service_managed_orphan_sweep(policy.as_ref(), catalog_name, &table_arg)?;
-
-    let older_than_ms = match args.optional_timestamp_ms("older_than", Some(1))? {
-        Some(cutoff) => cutoff,
-        None => now_millis()? - 3 * 86_400_000,
-    };
-
-    // Java's floor, same threshold, same reason (see ORPHAN_OLDER_THAN_FLOOR_MS).
-    let floor_ms = now_millis()? - ORPHAN_OLDER_THAN_FLOOR_MS;
-    if older_than_ms > floor_ms {
-        return Err(DataFusionError::Plan(
-            "CALL remove_orphan_files refuses an `older_than` less than 24 hours in the past. A \
-             short interval can delete files an in-flight commit has written but not yet \
-             referenced, which corrupts the table. This matches Apache Spark's own floor."
-                .to_string(),
-        ));
-    }
-
-    let location = args.optional_string_at("location", Some(2))?;
-    let dry_run = args.optional_bool("dry_run", Some(3))?.unwrap_or(false);
-    args.optional_i64("max_concurrent_deletes", None)?;
-    args.optional_bool("stream_results", None)?;
-    args.optional_bool("prefix_listing", None)?;
-    let prefix_mismatch_mode = match args.optional_string("prefix_mismatch_mode")? {
-        Some(raw) => Some(
-            PrefixMismatchMode::from_string(&raw)
-                .map_err(|error| DataFusionError::Plan(error.message().to_string()))?,
-        ),
-        None => None,
-    };
-    let equal_schemes = orphan_string_map(args, "equal_schemes")?;
-    let equal_authorities = orphan_string_map(args, "equal_authorities")?;
-
-    let ident = resolve_table_ident(catalog_name, &table_arg)?;
-    let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
-    refuse_shared_temp_fallback_location(policy.as_ref(), table.metadata().location(), &table_arg)?;
-    if let Some(scan_location) = location.as_deref() {
-        refuse_shared_temp_fallback_location(policy.as_ref(), scan_location, &table_arg)?;
-    }
-
-    let mut action = DeleteOrphanFiles::new(table).older_than(older_than_ms);
-    if let Some(location) = location {
-        action = action.location(location);
-    }
-    if let Some(mode) = prefix_mismatch_mode {
-        action = action.prefix_mismatch_mode(mode);
-    }
-    if let Some(schemes) = equal_schemes {
-        action = action.equal_schemes(schemes);
-    }
-    if let Some(authorities) = equal_authorities {
-        action = action.equal_authorities(authorities);
-    }
-    if dry_run {
-        // The fork returns the full orphan list regardless of the deleter.
-        action = action.delete_with(|_path| Box::pin(async { Ok(()) }));
-    }
-    let result = action.execute().await.map_err(iceberg_err)?;
-
-    // Never report a partial delete as a success.
-    if let Some(first) = result.delete_failures.first() {
-        return Err(DataFusionError::Execution(format!(
-            "CALL remove_orphan_files deleted {deleted} of {total} orphan files; {failed} could \
-             not be removed. First failure: `{path}` — {error}. Re-run to retry the remainder.",
-            deleted = result.orphan_file_locations.len() - result.delete_failures.len(),
-            total = result.orphan_file_locations.len(),
-            failed = result.delete_failures.len(),
-            path = first.path,
-            error = first.error,
-        )));
-    }
-
-    orphan_result_dataframe(ctx, &result.orphan_file_locations)
-}
-
-fn orphan_string_map(args: &CallArgs, name: &str) -> Result<Option<HashMap<String, String>>> {
-    let Some(expr) = args.named.get(name) else {
-        return Ok(None);
-    };
-    let Expr::Function(function) = expr else {
-        return Err(DataFusionError::Plan(format!(
-            "CALL remove_orphan_files argument `{name}` must be map(k, v, …), got {expr}"
-        )));
-    };
-    if !function.name.to_string().eq_ignore_ascii_case("map") {
-        return Err(DataFusionError::Plan(format!(
-            "CALL remove_orphan_files argument `{name}` must be map(k, v, …), got {expr}"
-        )));
-    }
-    let mut out = HashMap::new();
-    for (key, value) in
-        rewrite_options::pairs_from_map_args(&function.args, "remove_orphan_files", name)?
-    {
-        let Some(value) = value else {
-            return Err(DataFusionError::Plan(format!(
-                "CALL remove_orphan_files argument `{name}` value for `{key}` must be a string \
-                 literal, got NULL"
-            )));
-        };
-        out.insert(key, value);
-    }
-    Ok(Some(out))
 }
 
 // === rollback_to_snapshot ===

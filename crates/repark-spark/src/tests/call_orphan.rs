@@ -437,26 +437,6 @@ async fn call_remove_orphan_files_accepts_sparks_optional_arguments() {
             "{argument} runs dry, nothing moves"
         );
     }
-    let err = execute(
-        &ctx,
-        &catalogs,
-        "CALL ice.system.remove_orphan_files(\
-             table => 'sales.args', dry_run => true, file_list_view => 'v')",
-    )
-    .await
-    .expect_err("file_list_view still refuses");
-    assert!(
-        matches!(err, DataFusionError::NotImplemented(_)),
-        "file_list_view refuses NotImplemented, got: {err}"
-    );
-    assert_eq!(
-        err.to_string(),
-        "This feature is not implemented: CALL remove_orphan_files argument \
-         `file_list_view` is not supported in v1 (supported: table, older_than, location, \
-         dry_run, max_concurrent_deletes, equal_schemes, equal_authorities, \
-         prefix_mismatch_mode, prefix_listing, stream_results)"
-    );
-    assert_eq!(files_under(&table_dir), before);
 }
 
 #[tokio::test]
@@ -658,24 +638,19 @@ async fn call_remove_orphan_files_refuses_a_quoted_dry_run() {
     assert_eq!(files_under(&table_dir), before);
 }
 
-/// MW-3: the shared-CTAS-root rule, pinned directly.
 #[test]
 fn call_orphan_shared_ctas_root_rule() {
     use repark_core::LocationPolicy;
 
-    use crate::call::refuse_shared_temp_fallback_location;
+    use crate::call::remove_orphan_files::refuse_shared_temp_fallback_location;
 
     let policy = LocationPolicy::TempFallbackAllowed {
         root: std::path::PathBuf::from("/scratch"),
     };
 
-    // Under the fallback root: refused, and the message names the hazard rather than the symptom.
-    let err = refuse_shared_temp_fallback_location(
-        Some(&policy),
-        "/scratch/repark_ctas/mem/ns/events",
-        "ns.events",
-    )
-    .expect_err("a table in the shared CTAS root must refuse");
+    let err =
+        refuse_shared_temp_fallback_location(Some(&policy), "/scratch/repark_ctas", "ns.events")
+            .expect_err("the shared CTAS root itself must refuse");
     let message = err.to_string();
     assert!(message.contains("shared CTAS fallback root"), "{message}");
     assert!(
@@ -683,64 +658,53 @@ fn call_orphan_shared_ctas_root_rule() {
         "the refusal must tell the caller how to get out of it: {message}"
     );
 
-    // A namespace that owns its location is untouched, even under the SAME temp root.
+    for own in [
+        "/scratch/repark_ctas/mem/ns/events",
+        "/scratch/repark_ctas/mem/ns/events/data",
+        "file:///scratch/repark_ctas/mem/ns/events",
+        "/scratch/repark_ansi_ctas/ice/ns/t",
+    ] {
+        refuse_shared_temp_fallback_location(Some(&policy), own, "ns.events")
+            .unwrap_or_else(|err| panic!("a table's own directory is sweepable: {own}: {err}"));
+    }
+
     refuse_shared_temp_fallback_location(Some(&policy), "/scratch/my-warehouse/ns/events", "x")
         .expect("an owned location under the same root is fine");
-
-    // A sibling directory that merely starts with the same characters is not under the root.
     refuse_shared_temp_fallback_location(Some(&policy), "/scratch/repark_ctas_other/t", "x")
         .expect("prefix similarity is not containment");
 
-    // The remote policies never reach the fallback at all.
     for remote in [
         LocationPolicy::RequireExplicitLocation,
         LocationPolicy::ServiceManagedLocation,
     ] {
-        refuse_shared_temp_fallback_location(Some(&remote), "/scratch/repark_ctas/mem/ns/t", "x")
+        refuse_shared_temp_fallback_location(Some(&remote), "/scratch/repark_ctas", "x")
             .expect("a remote catalog assigns real locations; the rule must not fire");
     }
-    refuse_shared_temp_fallback_location(None, "/scratch/repark_ctas/mem/ns/t", "x")
+    refuse_shared_temp_fallback_location(None, "/scratch/repark_ctas", "x")
         .expect("no policy, no rule");
 
-    // Parent of the fallback tree (the warehouse itself) would list repark_ctas recursively.
-    let err = refuse_shared_temp_fallback_location(Some(&policy), "/scratch", "owned.t")
-        .expect_err("a parent of the fallback root must refuse");
-    assert!(
-        err.to_string().contains("shared CTAS fallback root"),
-        "{err}"
-    );
-
-    refuse_shared_temp_fallback_location(
-        Some(&policy),
-        "file:///scratch/repark_ctas/mem/ns/events",
-        "x",
-    )
-    .expect_err("file:// aliases must refuse");
-    refuse_shared_temp_fallback_location(
-        Some(&policy),
-        "/scratch/owned/../repark_ctas/mem/ns/events",
-        "x",
-    )
-    .expect_err("lexically equivalent .. paths must refuse");
-    refuse_shared_temp_fallback_location(Some(&policy), "/scratch/repark_ansi_ctas/ice/ns/t", "x")
-        .expect_err("the ANSI fallback prefix must refuse");
-    refuse_shared_temp_fallback_location(
-        Some(&policy),
-        "file:/scratch/repark_ctas/mem/ns/events",
-        "x",
-    )
-    .expect_err("file:/ (one slash) must refuse — FileIO lists it as /scratch/repark_ctas");
-    refuse_shared_temp_fallback_location(
-        Some(&policy),
-        "file://scratch/repark_ctas/mem/ns/events",
-        "x",
-    )
-    .expect_err("hostless file://path must refuse — FileIO treats it as absolute");
+    for root_alias in [
+        "/scratch",
+        "/",
+        "/scratch/repark_ctas/",
+        "file:///scratch/repark_ctas",
+        "/scratch/owned/../repark_ctas",
+        "/scratch/repark_ansi_ctas",
+        "file:/scratch/repark_ctas",
+        "file://scratch/repark_ctas",
+        "/scratch/repark_ctas/mem/..",
+    ] {
+        let err = refuse_shared_temp_fallback_location(Some(&policy), root_alias, "owned.t")
+            .expect_err("the fallback root, its aliases and its parents must refuse");
+        assert!(
+            err.to_string().contains("shared CTAS fallback root"),
+            "{root_alias}: {err}"
+        );
+    }
 }
 
-/// A13: CALL `location` pointing at the fallback tree must refuse on the execute path.
 #[tokio::test]
-async fn call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root() {
+async fn call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root() {
     use std::sync::Arc;
 
     use repark_core::ReparkSession;
@@ -783,7 +747,7 @@ async fn call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root
             fallback.display()
         ))
         .await
-        .expect_err("CALL location under the fallback root must refuse");
+        .expect_err("CALL location at the fallback root must refuse");
     assert!(
         err.to_string().contains("shared CTAS fallback root"),
         "{err}"
