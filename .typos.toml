@@ -31,6 +31,8 @@ edc38c6a = "edc38c6a"
 41e25ba2 = "41e25ba2"
 c81ba043 = "c81ba043"
 23ba2e53 = "23ba2e53"
+ede508c6 = "ede508c6"
+fo = "fo"           # lane name xo55-fo (fork order hook) in the run-27 reports
 _preapare_args_for_sample = "_preapare_args_for_sample" # verbatim PySpark name: the sample overload shim is misspelled upstream
 
 [default.extend-words]
