@@ -99,7 +99,7 @@ def test_alter_to_the_current_version_is_a_no_op(tmp_path: Path) -> None:
     try:
         session.register_memory_catalog("ice", tmp_path)
         _seed_v2(session)
-        warehouse = tmp_path / "repark_ctas" / "ice" / "sales" / "up" / "metadata"
+        warehouse = tmp_path / "sales" / "up" / "metadata"
         session.sql("ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '2')").collect()
         before = sorted(path.name for path in warehouse.glob("*.metadata.json"))
         session.sql(_UPGRADE).collect()
