@@ -32,10 +32,13 @@ SELECT of a derived table answers `f = _f`, the bare projection column is named
 `VALUES`/no FROM → `''`, `t.snapshots` → the metadata.json path, UNION ALL →
 per-row path. RePark main answers every shape `UNRESOLVED_ROUTINE` 42883.
 
-**M-2 — the seed shape behind the cell.** A format-v2 `PARTITIONED BY (cat)`
-table with two appends (`(1,'a','x'),(2,'b','y'),(4,'d','x')` then `(3,'c','x')`)
-and one delete (`id = 1`) — three live rows over two data files, so per-row
-`input_file_name() = _file` crosses files.
+**M-2 — the seed shape behind the battery.** A format-v2
+`PARTITIONED BY (cat)` table with two appends
+(`(1,'a','x'),(2,'b','y'),(4,'d','x')` then `(3,'c','x')`) and one delete
+(`id = 1`) — three live rows over two data files, so per-row
+`input_file_name() = _file` crosses files. The scoreboard cell's own `base3`
+seeds `(1,'a','x'),(2,'b','y')` then `(3,'c','x')` with the same delete — two
+live rows over two data files; Spark's recorded answer is `[[2,true],[3,true]]`.
 
 ## PROPOSITION LEDGER — IPI-20-INPUT-FILE-NAME-1 — 2026-09-23
 
@@ -59,13 +62,13 @@ and one delete (`id = 1`) — three live rows over two data files, so per-row
 | `cargo test -p repark-spark --lib input_file_name` (head) | 15 passed |
 | `cargo test -p repark-spark --lib metadata_columns` (head) | 14 passed, expectations unchanged |
 | `python3 /tmp/oc-worker/_lib/comment_ban.py /tmp/xo55-ifn origin/main HEAD` | exit 0 (`hits=0`) |
-| `bash /tmp/oc-worker/_lib/build-slot.sh /tmp/oc-worker/_lib/local-gate.sh xo55-ifn …` | pending — filled at hand-back |
-| `make rust-clippy` | pending |
-| `make rust-panic-ban` | pending |
-| `make check-rust-file-size` | pending |
-| `bash scripts/check_map_md.sh --base origin/main` | pending |
-| `python3 scripts/check_ledger_grammar.py` | pending |
-| scoreboard replay `--only R-INPUT-FILE-NAME` | pending |
+| `bash /tmp/oc-worker/_lib/build-slot.sh /tmp/oc-worker/_lib/local-gate.sh xo55-ifn …` | `CB=0 R=0 T=0 U=0 L=0` — release rc=0; `input_file_name` 15/15, `metadata_columns` 14/14, `repark-core --lib` 683 passed; facade unit 55 passed; parity live 55 passed |
+| `make rust-clippy` | exit 0 — workspace `--all-targets`, `-D warnings`, clean |
+| `make rust-panic-ban` | exit 0 — both clippy invocations (`--lib --bins --exclude repark-python`, then `repark-python --lib`) clean |
+| `make check-rust-file-size` | `rust-file-size: 822 files clean (default ceiling 1000; 38 exceptions)` |
+| `bash scripts/check_map_md.sh --base origin/main` | exit 0 |
+| `python3 scripts/check_ledger_grammar.py` | `ledger-grammar: 251 live ledgers clean (2330 clauses, 2896 pinned clause ids, 2 exception rows)` |
+| scoreboard replay `--only R-INPUT-FILE-NAME` | RePark `[[2,true],[3,true]]` = Spark `[[2,true],[3,true]]` (`out/repark-ifn1.json`, `out/spark-core.json`) |
 
 ## COVERAGE_ATTESTATION
 
