@@ -894,6 +894,16 @@ async fn try_preparse_intercepts(
     if let Some(result) = try_describe_table_intercept(ctx, catalogs, sql, write_options).await {
         return Some(result);
     }
+    if let Some(result) = crate::show_table_extended::try_show_table_extended_intercept(
+        ctx,
+        catalogs,
+        sql,
+        write_options,
+    )
+    .await
+    {
+        return Some(result);
+    }
     if let Some(result) =
         crate::show_create::try_show_create_intercept(ctx, catalogs, sql, write_options).await
     {

@@ -1488,6 +1488,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO-C3 C5 (updated by WO-C4 and WO-C7, 2026-09-23):** SHOW TABLES and SHOW COLUMNS compare
   complete Spark rows and Arrow schemas; SHOW TBLPROPERTIES keeps its full pinned analysis refusal.
   pins: wo-c3/C-001, C-002, C-003, C-005
+  the `AS SERDE` and missing-table refusals, the bare `SHOW CREATE TABLE` parse error, the
+  near misses (view targets not answered as tables; SHOW CREATE, SHOW TABLES/COLUMNS/
+  TBLPROPERTIES not claimed), and the DESCRIBE EXTENDED `Table Properties` row equal to the
+  measured fresh-table string, and the `Comment` detail row (after `Type`, a column named
+  `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
+- `show_table_extended.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** memory-catalog end-to-end
+  pins for `SHOW TABLE EXTENDED`: exact partitioned and plain information text, property
+  redaction and snapshot changes, sorted matching tables without views, alternation and
+  case-insensitive LIKE, FROM and ambient scopes, LOCATION's managed classification, owner,
+  struct tree lines, missing-LIKE and partition/missing-table/missing-namespace refusals, and
+  SHOW-family near misses that remain outside this parser.
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

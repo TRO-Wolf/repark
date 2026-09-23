@@ -1432,6 +1432,23 @@ pins: rp-4-fork-repin/C-005, C-006
   keywords, and the `TABLES` / `TABLE_x` word-boundary near misses, so removing the `\r` stop,
   case folding, or either identifier-continuation check fails a test.
   pins: wo-c3/C-001
+  **WO-C5 (2026-09-23):** tokenizer errors for unclosed bracket comments after the SHOW CREATE
+  TABLE head map to Spark's `UNCLOSED_BRACKETED_COMMENT` / `42601` parser error; a hidden TABLE
+  keyword falls through to the tokenizer error. SHOW CREATE TABLE followed by another statement
+  keeps `INVALID_STATEMENT_OR_CLAUSE` / `42601`.
+  pins: wo-c5/C-002, C-003, C-004
+  pins: wo-c5/C-001, C-002
+- `show_table_extended.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** token parser and executor
+  for `SHOW TABLE EXTENDED [IN|FROM namespace] LIKE 'pattern' [PARTITION (...)]`; it reuses the
+  `SHOW TABLES` scope resolver and live Iceberg table-name listing, returns Spark's four-column
+  rows sorted by stored table name, and leaves sibling SHOW statements alone. Information text
+  uses `spark_table_properties`, the stored location, and `spark_tree_string`; a PARTITION tail
+  loads the matched table class before the shared partition-management refusal. Views and session
+  temporary views remain absent from this statement's Iceberg listing.
+  pins: [`tests/show_table_extended.rs`](tests/show_table_extended.rs)
+- `spark_tree_string.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** iterative Arrow-schema port
+  of the facade `StructType.treeString` layout for SHOW TABLE EXTENDED. It uses Spark type-name
+  spellings and renders struct, array, and map children with a depth limit.
 - `table_props_view.rs` — **C1 SHOW CREATE (2026-09-23):** `spark_table_properties`, the one
   Spark-visible table property list (Iceberg 1.11 `SparkTable.properties()` minus Spark's
   `TABLE_RESERVED_PROPERTIES`), shared by DESCRIBE EXTENDED `Table Properties` and SHOW CREATE
