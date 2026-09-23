@@ -13,13 +13,17 @@ comment scanner gap. The recorded Spark 4.1.2 probes `m2.json`, `m4.json`, `m8.j
 **Not in this unit:** STATUS, views, `describe_show.rs`, Cargo files, version changes, AWS commands,
 pushes, or rebases.
 
+## Correction — 2026-09-23
+
+The WO-C3 SHOW TBLPROPERTIES row and schema claim was withdrawn when e240a800 removed the serving.
+
 ## Plan
 
 - [x] Replace the raw SHOW CREATE prefix split with a nested-comment-aware scanner and sweep matching raw keyword checks.
 - [x] Pin full RePark refusal text and narrow the SHOW CREATE parity claim for IPI-51's caret-block residue.
 - [x] Pin the complete multi-term sort-order CREATE text from the measured m2 answer.
 - [x] Pin ParserError condition extraction for the measured INSERT BY NAME and multi-statement shapes.
-- [x] Pin complete SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES rows and Arrow types.
+- [x] Pin SHOW TABLES and SHOW COLUMNS rows and Arrow types; SHOW TBLPROPERTIES refusal stays pinned.
 
 ## PROPOSITION LEDGER — WO-C3 — 2026-09-23
 
@@ -29,7 +33,7 @@ pushes, or rebases.
 | C-002 | SHOW CREATE parse refusals expose Spark's condition, SQLSTATE, and first line while retaining RePark's exact no-caret rendering. | Rust and facade exact-message pins; registry scope statement. | PROVEN | Exact Rust parser and rendered-error checks plus facade message equality; registry assigns the absent caret block to IPI-51. |
 | C-003 | The multi-term sort-order fixture matches the complete measured m2 CREATE text after only catalog/name/location substitution. | Exact Rust CREATE-text pin. | PROVEN | `show_create_multi_term_sort_order_matches_spark` carries the `range` property and matches the full m2 text. |
 | C-004 | ParserError-wrapped parse refusals report their bracketed condition without classifying malformed wrappers. | Facade and direct native-exception pins. | PROVEN | Facade pins cover INSERT BY NAME and multi-statement; direct parser-wrapper pins cover ordinary, lowercase, and no-prefix messages. |
-| C-005 | SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES near misses preserve complete Spark row shapes and Arrow field types. | Exact Rust rows and schema pins. | PROVEN | SHOW TABLES and SHOW COLUMNS pin full rows and schemas; SHOW TBLPROPERTIES now serves the shared property rows and schema. |
+| C-005 | SHOW TABLES and SHOW COLUMNS near misses preserve complete Spark row shapes and Arrow field types; SHOW TBLPROPERTIES remains refused. | Exact Rust rows and schema pins. | PROVEN | SHOW TABLES and SHOW COLUMNS pin full rows and schemas; `show_tblproperties_keeps_its_current_analysis_refusal` pins SHOW TBLPROPERTIES refusal. Rows are not served in this PR; DBT-TBLPROPS-1 stays DECLARED. |
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -63,7 +67,7 @@ COVERAGE_ATTESTATION:
       justification: The unit makes no performance claim and adds no data scan, background task, or unbounded allocation path.
     - id: AT-8
       status: ATTACKED
-      evidence: The shared Spark-visible property list serves both SHOW CREATE and SHOW TBLPROPERTIES; m2, m4, m8, and m9 oracle shapes are pinned.
+      evidence: The shared Spark-visible property list serves SHOW CREATE only; SHOW TBLPROPERTIES is refused by `show_tblproperties_keeps_its_current_analysis_refusal`.
       artifacts: [crates/repark-spark/src/table_props_view.rs, crates/repark-spark/src/show_create.rs, docs/spark-sql-iceberg-parity.md]
     - id: AT-9
       status: ATTACKED
