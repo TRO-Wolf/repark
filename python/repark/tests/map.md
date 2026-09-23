@@ -7027,6 +7027,9 @@ pins: fnp-8-review/C-009, C-010
   the capture on live Spark 4.1.2. It pins the stable rows and complete property string; the
   catalog-specific name and dynamic location and owner each have full expected values or shapes.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **DESCRIBE-COLUMN-1 (2026-09-23):** facade pins prove the three column rows for a qualified
+  target and default-namespace expansion for a bare target.
+  pins: describe-column-1/C-005
   **RP-23 (2026-09-17):** `Table Properties` carries the
   `write.parquet.compression-codec=zstd` stamp every create writes.
   pins: rp-23-pin-bump/C-001

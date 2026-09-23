@@ -1396,6 +1396,9 @@ perfectly good read.
   `write.parquet.compression-codec` defaults at `CREATE` — the 2026-09-09 live leg matches
   19 of 22 rows byte for byte, differing only on `Name` (catalog), `Location` (path), and
   `Table Properties` (those defaults).
+- **DESCRIBE-COLUMN-1 (2026-09-23):** `DESCRIBE t col` now answers Spark's three
+  `info_name`/`info_value` rows and `DESCRIBE t VERSION|TIMESTAMP AS OF` now refuses with
+  `PARSE_SYNTAX_ERROR` like Spark.
 - **Apache Spark** — the same shape and sections on the DataSourceV2 path. *(oracle: live
   PySpark 4.1.2, 2026-09-09, SQL-DESCRIBE-1 step-1 capture: commented `bigint` column,
   `string`, `timestamp`, `days(ts)`, one `k=v` property.)*

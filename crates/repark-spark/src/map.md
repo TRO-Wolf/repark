@@ -1329,6 +1329,11 @@ pins: rp-4-fork-repin/C-005, C-006
   [`../../../task/g5br-range-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-g5br-range-residuals-ledger.md),
   [`../../../task/z4-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-z4-residuals-ledger.md),
   [`../../../task/w4-z-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-w4-z-residuals-ledger.md).
+- `describe_column.rs` — **DESCRIBE-COLUMN-1 (2026-09-23):** token-tail parser and column
+  executor for `DESCRIBE [TABLE] [EXTENDED|FORMATTED] t col`. It preserves the caller spelling
+  for `col_name`, uses Spark DDL type spelling, returns literal `NULL` for an absent comment,
+  and owns the nested-column, missing-column, and time-travel-tail refusals.
+  pins: describe-column-1/C-001, C-002, C-003, C-004
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
   SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`
@@ -1344,6 +1349,10 @@ pins: rp-4-fork-repin/C-005, C-006
   from its stored schema via `view_ddl/describe.rs`, a `ViewNotFound` keeps the
   unchanged `TABLE_OR_VIEW_NOT_FOUND` refusal, other load errors propagate.
   pins: ice-views-1/C-017
+  **DESCRIBE-COLUMN-1 (2026-09-23):** `DescribeTable` carries the optional tokenized column
+  path and delegates its rows to `describe_column.rs`; the existing router intercept remains
+  the only route to this table-describe executor.
+  pins: describe-column-1/C-001, C-002, C-003, C-004
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `ShowNamespaces.catalog` is `Option` —
   the bare form lists the session's current catalog (NS-1 FIXED).
   pins: ice-catalog-session-1/C-018
@@ -1482,7 +1491,11 @@ pins: rp-4-fork-repin/C-005, C-006
   five `all_*` types refuse, with Spark's `Cannot select snapshot in table` text.
 - `time_travel.rs` — I1 SQL-text rewrite to snapshot-pinned providers. `PinnedViews` releases every
   statement-owned registration after planning; reader-option views remain owned by their frame.
-  The shared `repark_core::time_travel::next_temp_view_name` counter prevents collisions. Pins:
+  The shared `repark_core::time_travel::next_temp_view_name` counter prevents collisions.
+  **DESCRIBE-COLUMN-1 (2026-09-23):** a leading `DESCRIBE|DESC` stays out of the time-travel
+  span scan so the dialect parser owns `VERSION|TIMESTAMP AS OF` refusals.
+  pins: describe-column-1/C-004
+  Pins:
   `tests/time_travel.rs::time_travel_temp_views_do_not_survive_a_successful_statement`,
   `…::time_travel_temp_views_do_not_survive_a_failed_statement`, and
   `…::time_travel_statement_pins_never_collide_with_a_reader_options_view`.

@@ -1457,6 +1457,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   missing tables raise `[TABLE_OR_VIEW_NOT_FOUND]`; temp views and unregistered catalogs fall
   through; secrets redact in `Table Properties`.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **DESCRIBE-COLUMN-1 (2026-09-23):** parser and session pins cover top-level column rows,
+  no-comment `NULL`, EXTENDED/FORMATTED, struct type text, caller spelling, backticks, nested
+  and missing-column refusals, time-travel-tail parse refusals, and every named near miss.
+  pins: describe-column-1/C-001, C-002, C-003, C-004
   **REVIEW-FIX-5 (2026-09-10):** the parser takes one- and two-part names (missing parts
   complete from the session defaults in the router) and no longer filters a three-part table
   named like a metadata table, while four-part metadata paths still stay out; a real
