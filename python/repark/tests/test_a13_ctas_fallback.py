@@ -12,7 +12,11 @@ from pathlib import Path
 from repark import ReparkSession
 
 
-def _fallback_table_dir(root: Path, catalog: str, namespace: str, table: str) -> Path:
+def _table_dir(root: Path, namespace: str, table: str) -> Path:
+    return root / namespace / table
+
+
+def _shared_fallback_dir(root: Path, catalog: str, namespace: str, table: str) -> Path:
     return root / "repark_ctas" / catalog / namespace / table
 
 
@@ -28,8 +32,9 @@ def test_location_less_ctas_writes_under_the_warehouse(tmp_path: Path) -> None:
         spark.sql(f"CREATE TABLE {catalog}.{namespace}.{table} USING iceberg AS SELECT 1 AS id")
         rows = spark.sql(f"SELECT id FROM {catalog}.{namespace}.{table}").to_arrow()
         assert rows.column("id").to_pylist() == [1]
-        assert _fallback_table_dir(tmp_path, catalog, namespace, table).exists()
-        shared = _fallback_table_dir(Path(tempfile.gettempdir()), catalog, namespace, table)
+        assert _table_dir(tmp_path, namespace, table).exists()
+        assert not _shared_fallback_dir(tmp_path, catalog, namespace, table).exists()
+        shared = _shared_fallback_dir(Path(tempfile.gettempdir()), catalog, namespace, table)
         assert not shared.exists(), f"process-temp shared root must stay unused: {shared}"
     finally:
         spark.stop()
@@ -54,10 +59,12 @@ def test_two_warehouses_do_not_share_a_location_less_table(tmp_path: Path) -> No
         ids_b = spark_b.sql("SELECT id FROM mem.ns.events").to_arrow().column("id").to_pylist()
         assert ids_a == [1]
         assert ids_b == [2]
-        assert _fallback_table_dir(warehouse_a, "mem", "ns", "events").exists()
-        assert _fallback_table_dir(warehouse_b, "mem", "ns", "events").exists()
-        assert not _fallback_table_dir(warehouse_a, "mem", "ns", "events").samefile(
-            _fallback_table_dir(warehouse_b, "mem", "ns", "events")
+        assert _table_dir(warehouse_a, "ns", "events").exists()
+        assert _table_dir(warehouse_b, "ns", "events").exists()
+        assert not _shared_fallback_dir(warehouse_a, "mem", "ns", "events").exists()
+        assert not _shared_fallback_dir(warehouse_b, "mem", "ns", "events").exists()
+        assert not _table_dir(warehouse_a, "ns", "events").samefile(
+            _table_dir(warehouse_b, "ns", "events")
         )
     finally:
         spark_a.stop()

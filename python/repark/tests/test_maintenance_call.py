@@ -430,22 +430,22 @@ def test_positional_rollback_args(spark: ReparkSession, multi_snapshot: dict[str
     assert _arrow_ids(after) == multi_snapshot["ids_s1"]
 
 
-def test_remove_orphan_files_sweeps_a_fallback_table_but_never_the_shared_root(
+def test_remove_orphan_files_sweeps_a_memory_table_but_never_the_shared_root(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """Owner ruling Q-55-6: a fallback table's own directory is sweepable; the root is not.
+    """Owner ruling Q-55-6: a memory table's own directory is sweepable; the root is not.
 
-    ``register_memory_catalog`` carries a ``TempFallbackAllowed`` policy, so a namespace created
-    with no ``location`` places its tables at ``<warehouse>/repark_ctas/<catalog>/<ns>/<table>``.
+    ``register_memory_catalog`` records the warehouse as the layout root, so a namespace created
+    with no ``location`` places its tables at ``<warehouse>/<ns>/<table>``, as Spark does.
     Sweeping that table's own directory runs like Spark: the 10-day-old orphan is listed and
     deleted. A ``location`` at the shared root or at the warehouse still refuses, deleting nothing.
 
-    pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-004
+    pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-004; u1-mem-layout-1/C-021
     """
     spark.sql(
         f"CREATE TABLE {TABLE} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
     )
-    table_dir = tmp_path / "repark_ctas" / "mem" / "ns" / "events"
+    table_dir = tmp_path / "ns" / "events"
     orphan = _plant_orphan(table_dir, "orphan-file.parquet", 10)
     young = _plant_orphan(table_dir, "orphan-young.parquet", 1)
     for location in (tmp_path, tmp_path / "repark_ctas"):

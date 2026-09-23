@@ -147,9 +147,9 @@ spark.sql(
 spark.sql("SELECT * FROM local.sales.orders ORDER BY id").show()
 ```
 
-A namespace created without `LOCATION` still writes under that warehouse
-(`…/repark_ctas/local/sales/<table>`). Pass `LOCATION` when the table should own a
-subdirectory of its own. Unpartitioned CTAS from a parquet-read temp view conforms
+A namespace created without `LOCATION` still writes under that warehouse, at
+`<warehouse>/sales/<table>` — the layout Spark's in-memory and Hadoop catalogs use. Pass
+`LOCATION` on the table or the namespace to place it anywhere else. Unpartitioned CTAS from a parquet-read temp view conforms
 Utf8View/BinaryView batches to the table schema (registry `CTAS-VIEW-1`).
 
 ```text

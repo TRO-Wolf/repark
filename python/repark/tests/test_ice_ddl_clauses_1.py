@@ -284,7 +284,7 @@ def test_alter_table_set_location_moves_the_metadata_location(spark: Any, tmp_pa
     """Cell ``D-SET-LOCATION``: the metadata location moves; files are not moved."""
     table = _create(spark, "t_set_location")
     spark.sql(f"INSERT INTO {table} VALUES (1, 'a')")
-    old_table = tmp_path / "wh" / "repark_ctas" / CATALOG / NAMESPACE / "t_set_location"
+    old_table = tmp_path / "wh" / NAMESPACE / "t_set_location"
     pre_move = sorted(old_table.rglob("*.parquet"))
     assert len(pre_move) == 1
     moved = tmp_path / "moved" / "t_set_location"
