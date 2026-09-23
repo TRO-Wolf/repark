@@ -4,13 +4,17 @@
 ``read.table``) answers what SQL ``SELECT * FROM <cat>.<ns>.<t>.<meta>``
 answers, and with ``versionAsOf`` / ``timestampAsOf`` what SQL
 ``SELECT * FROM …​.<meta> VERSION AS OF`` / ``TIMESTAMP AS OF`` answers.
-Every answering test compares the reader against the SQL door on the same
-table (rows and column names) and, where the recorded cells measured them,
-the absolute field name, ``dataType.simpleString()``, ``nullable`` and rows
-of the reader frame; the ``all_*`` sweep additionally pins the Spark 4.1.2
+Answering tests compare the reader against the SQL door on the same table
+(rows and column names) — C-010 pins the reader's rows standalone with no
+SQL arm, and the live leg C-013 compares the selected rows only
+(``_live_rows`` collects row values, not column names) beside its absolute
+field and sum pins — and, where the recorded cells measured them, the
+absolute field name, ``dataType.simpleString()``, ``nullable`` and rows of
+the reader frame; the ``all_*`` sweep additionally pins the Spark 4.1.2
 column lists outright; every paired refusal compares the reader's class and
 text against the SQL door's (the missing-table quoted-dollar refusal instead
-compares three SQL spellings pairwise). Near misses pin today's behaviour:
+compares three SQL spellings pairwise; the unknown-suffix refusal pairs only
+``getSqlState()`` beside a literal text). Near misses pin today's behaviour:
 plain loads, branch/tag/snapshot-id selectors, a real table named
 ``snapshots``, the unknown-suffix error (literal text; only ``getSqlState()``
 is paired), and the legacy-option refusals (standalone literal texts with
@@ -304,7 +308,7 @@ def test_reader_as_of_refusals_match_sql(spark: Any) -> None:
 
 
 def test_reader_unknown_numeric_as_of_answers_empty(spark: Any) -> None:
-    """Unknown numeric ``versionAsOf`` answers empty with the SQL schema.
+    """Unknown numeric ``versionAsOf`` answers empty with the SQL door's column names.
 
     pins: ipi-23-mt-reader-1/C-007
     """
@@ -454,7 +458,8 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
 
 
 def test_load_case_twin_table_matches_sql_door(spark: Any) -> None:
-    """V-001: a case-twin table fails like the SQL door, backticks included.
+    """V-001: a case-twin table fails like the SQL door — equal class, text and
+    ``getSqlState()``.
 
     pins: ipi-23-mt-reader-1/C-014
     """
