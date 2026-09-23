@@ -7,6 +7,8 @@ use super::common::*;
 
 type ExtendedRow = (String, String, bool, String);
 
+const UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE: &str = "SQL error: ParserError(\"[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. Please, append */ at the end of the comment. SQLSTATE: 42601\")";
+
 #[derive(Clone, Copy)]
 struct Information<'a> {
     catalog: &'a str,
@@ -932,19 +934,19 @@ async fn show_table_extended_near_miss_probes_keep_their_exact_outcomes() {
         "/* c SHOW TABLE EXTENDED IN ice.sales LIKE 'pc",
     )
     .await
-    .expect_err("an unclosed block comment must keep its tokenizer outcome");
+    .expect_err("the router front door must refuse an unclosed leading block comment");
     assert_eq!(
-        format!("{unclosed_comment:?}"),
-        "SQL(TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 47\"), None)"
+        unclosed_comment.to_string(),
+        UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
     );
 
     let inter_keyword_unclosed_comment =
         outcome(&ctx, &catalogs, "SHOW /* unclosed TABLE EXTENDED LIKE 'pc'")
             .await
-            .expect_err("an unclosed inter-keyword comment must keep its tokenizer outcome");
+            .expect_err("the router front door must refuse an unclosed inter-keyword comment");
     assert_eq!(
-        format!("{inter_keyword_unclosed_comment:?}"),
-        "SQL(TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 42\"), None)"
+        inter_keyword_unclosed_comment.to_string(),
+        UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
     );
 
     let show_tables = outcome(
