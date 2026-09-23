@@ -323,6 +323,52 @@ async fn call_remove_orphan_files_file_list_view_keeps_rows_inside_the_older_tha
 }
 
 #[tokio::test]
+async fn call_remove_orphan_files_file_list_view_skips_paths_outside_the_scan_location() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let inside = plant(&table_dir, "orphan-inside.parquet", 10);
+    let outside = plant(
+        &warehouse.path().join("outside"),
+        "orphan-outside.parquet",
+        10,
+    );
+    let escaped = table_dir.parent().unwrap().join("escape.parquet");
+    std::fs::write(&escaped, b"PAR1junk").unwrap();
+    let escape_spelling = format!("{}/../escape.parquet", table_dir.display());
+    register_file_list(
+        &session,
+        &[
+            (inside.display().to_string(), 0),
+            (outside.display().to_string(), 0),
+            (escape_spelling, 0),
+        ],
+    )
+    .await;
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v')",
+    )
+    .await
+    .expect("armed file_list_view runs");
+    assert_eq!(
+        listed,
+        vec![inside.display().to_string()],
+        "a view path outside the scan location is never a candidate"
+    );
+    assert!(!inside.exists(), "the in-scope orphan is deleted");
+    assert!(
+        outside.exists(),
+        "a path outside the table directory is kept"
+    );
+    assert!(
+        escaped.exists(),
+        "a `..` spelling that leaves the table directory is kept"
+    );
+}
+
+#[tokio::test]
 async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     let warehouse = TempDir::new().unwrap();
     let session = fallback_session(&warehouse).await;

@@ -6767,8 +6767,8 @@ the pin rather than obeying it.
   `dry_run => true` deletes nothing. `dry_run => false` deletes exactly the listed orphans. A
   view that does not exist answers `[TABLE_OR_VIEW_NOT_FOUND]`. One deliberate difference: the
   under-the-scan-path test compares normalised path components where Java uses a raw string
-  `startsWith`, so a `..` escape or a name-prefix sibling is never a candidate. The pinned
-  cells answer the same either way.
+  `startsWith`, so a view path outside the scan location, including a `..` escape, is never a
+  candidate and is never deleted (unmeasured: no scoreboard cell lists an out-of-scope path).
 - **Apache Spark** — P-ORPHAN-DEFAULT returns one row
   (`file:<wh>/hc/ns/t_p_orphan_default/data/orphan-file.parquet`) and the orphan is deleted.
   P-ORPHAN-DRY-RUN, -LOCATION, -PREFIX-MODE, -EQUAL-SCHEMES, -PREFIX-LISTING and
