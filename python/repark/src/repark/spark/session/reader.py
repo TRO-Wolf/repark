@@ -8,6 +8,7 @@ from typing import Any
 
 from repark.spark.session import (
     _funcs as _session_funcs,
+    reader_iceberg_path as _reader_iceberg_path,
     reader_incremental as _reader_incremental,
     reader_orc as _reader_orc,
     reader_support as _reader_support,
@@ -454,6 +455,8 @@ class DataFrameReader:
         if fmt == "iceberg":
             if effective_path is None:
                 raise AnalysisException("Iceberg load requires a table identifier argument")
+            if "/" in str(effective_path):
+                return _reader_iceberg_path.load_iceberg_path(self, str(effective_path))
             # spark.table() / read.table() still prefer temp views; format("iceberg").load
             # must not silent-shadow a catalog table with a same-name temp view.
             # Time-travel options + residual denylist already applied above.

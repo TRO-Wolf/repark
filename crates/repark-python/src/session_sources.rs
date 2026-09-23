@@ -82,11 +82,31 @@ pub fn read_iceberg_incremental(
     })
 }
 
+#[pyfunction]
+pub fn read_iceberg_path(
+    py: Python<'_>,
+    session: PyRef<'_, PyReparkSession>,
+    path: &str,
+) -> PyResult<PyDataFrame> {
+    fenced_span!("py.read", "PyReparkSession.read_iceberg_path", {
+        let inner: &PyReparkSession = &session;
+        let df = py
+            .detach(|| {
+                inner
+                    .runtime
+                    .block_on(inner.session.read_iceberg_path(path))
+            })
+            .map_err(to_py_err)?;
+        Ok(PyDataFrame::new(df, Arc::clone(&inner.runtime)))
+    })
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sources, module)?)?;
     module.add_function(wrap_pyfunction!(session_source, module)?)?;
     module.add_function(wrap_pyfunction!(session_source_ping, module)?)?;
     module.add_function(wrap_pyfunction!(read_iceberg_incremental, module)?)?;
+    module.add_function(wrap_pyfunction!(read_iceberg_path, module)?)?;
     Ok(())
 }
 
