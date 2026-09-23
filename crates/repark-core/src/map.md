@@ -865,8 +865,33 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `_spec_id` beside an unserved name refuses naming the unserved one.
   **WO-R3 (2026-09-22):** `_partition` joins the served set as a NULLABLE union struct;
   only `_deleted` refuses `[ICE-MC-1]`, advertising the served four.
+  **IPI-20 (2026-09-23):** an unquoted `input_file_name` word followed by `(`
+  is a second trigger into the same path; inside a SELECT whose own single
+  relation IS the rewritten Iceberg table — `sole_input_file_name_relation`
+  accepts a `TableFactor::Table` only when its written name is a rewrite's
+  original, so a relation merely aliased like the table (a CTE or derived
+  relation carrying the table's name as its alias) does not qualify — a
+  zero-argument `input_file_name()` (no FILTER/OVER)
+  rewrites to `<alias>._file` in the projection and WHERE, the bare projection
+  item gains the alias `` `input_file_name()` ``, calls inside a listed
+  aggregate's arguments stay untouched, the per-SELECT call visitor leaves a
+  query nested inside a projection or WHERE expression alone while every
+  nested SELECT is visited on its own and rewritten against its own single
+  relation, and every other shape keeps the unresolved-routine answer —
+  including a non-query statement, which returns `Ok(None)` rather than the
+  `[ICE-MC-1]` refusal when only this trigger fired. The wildcard path's
+  `sole_rewritten_relation` keeps main's alias fallback untouched — the two
+  helpers differ on purpose. **IPI-20-R4 (2026-09-23):** collection itself is
+  CTE-aware — every `With` clause in the statement (nested ones included)
+  contributes its alias names, and a one-part `TableFactor::Table` matching a
+  CTE name on the planner's own fold (unquoted folds case-insensitively,
+  quoted stays exact) is never treated as the physical table and falls
+  through unrewritten; qualified names are never CTE references and stay
+  collected.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022, C-023
+  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
+  C-012, C-013
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
@@ -886,6 +911,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   evaluation); the root keeps the spec types plus `resolve_reader_spec` (the ONE resolver both
   SQL doors and the reader options share — `versionAsOf`/`timestampAsOf` raw strings, integer
   means seconds).
+  **IPI-23-MT-READER-1 (2026-09-22):** `read_table_at` routes a four-part metadata-table
+  name to `time_travel/metadata_at.rs` before the three-part loader, and the un-pinned
+  `read_iceberg_table` arm quotes the same shape so it rides the router path; `session.rs`
+  holds its 1000-line ceiling.
+  pins: ipi-23-mt-reader-1/C-001, C-002, C-004, C-005
   pins: ice-tt-resolve-1/C-010
   **ICE-TT-RESOLVE-1 round 3 (2026-09-19):** every string resolves through the
   engine `CAST(... AS TIMESTAMP)` in the session zone; the hand parser and the AST leaf

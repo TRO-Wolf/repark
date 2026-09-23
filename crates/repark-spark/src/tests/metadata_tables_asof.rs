@@ -227,3 +227,198 @@ async fn metadata_asof_served_per_type() {
         );
     }
 }
+
+#[tokio::test]
+async fn metadata_asof_nested_namespace_real_table_wins() {
+    use repark_core::time_travel::{TimeTravelSpec, read_table_at};
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.sub (id INT) USING iceberg",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.sub VALUES (1)").await;
+    let namespace = NamespaceIdent::from_strs(["sales", "sub"]).expect("nested namespace");
+    catalogs["ice"]
+        .create_namespace(&namespace, HashMap::new())
+        .await
+        .expect("create nested namespace");
+    let schema = iceberg::spec::Schema::builder()
+        .with_fields(vec![
+            iceberg::spec::NestedField::required(
+                1,
+                "id",
+                iceberg::spec::Type::Primitive(iceberg::spec::PrimitiveType::Int),
+            )
+            .into(),
+        ])
+        .build()
+        .expect("real table schema");
+    catalogs["ice"]
+        .create_table(
+            &namespace,
+            TableCreation::builder()
+                .name("snapshots".to_string())
+                .schema(schema)
+                .build(),
+        )
+        .await
+        .expect("create real snapshots table");
+    let provider = iceberg_datafusion::IcebergTableProvider::try_new(
+        catalogs["ice"].clone(),
+        namespace.clone(),
+        "snapshots",
+    )
+    .await
+    .expect("provider for the real table");
+    ctx.register_table("nested_snapshots", Arc::new(provider))
+        .expect("register real table for seeding");
+    run(&ctx, &catalogs, "INSERT INTO nested_snapshots VALUES (77)").await;
+    ctx.deregister_table("nested_snapshots")
+        .expect("drop seed registration");
+    let ident = TableIdent::new(namespace, "snapshots".into());
+    let real_snapshot = catalogs["ice"]
+        .load_table(&ident)
+        .await
+        .expect("load real table")
+        .metadata()
+        .current_snapshot_id()
+        .expect("real table snapshot");
+    let ordinary = execute(&ctx, &catalogs, "SELECT * FROM ice.sales.sub.snapshots")
+        .await
+        .expect_err("four-part read must refuse, not serve sales.sub snapshots");
+    assert!(
+        ordinary
+            .to_string()
+            .contains("Unsupported compound identifier"),
+        "got: {ordinary}"
+    );
+    let zone = repark_core::SessionTimeZone::default();
+    let parts = ["ice", "sales", "sub", "snapshots"]
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let routed = repark_core::time_travel::metadata_at::read_metadata_path_at(
+        &ctx,
+        &catalogs,
+        &parts,
+        &TimeTravelSpec::SnapshotId(real_snapshot),
+        &zone,
+    )
+    .await
+    .expect("real-table path must not error");
+    assert!(
+        routed.is_none(),
+        "a real table at the full path must fall through, not serve sales.sub snapshots"
+    );
+    let as_of = read_table_at(
+        &ctx,
+        &catalogs,
+        &parts,
+        &TimeTravelSpec::SnapshotId(real_snapshot),
+        &zone,
+    )
+    .await
+    .expect_err("the AS OF read must refuse, not serve sales.sub snapshots");
+    assert!(
+        as_of
+            .to_string()
+            .contains("three-part catalog.namespace.table"),
+        "got: {as_of}"
+    );
+}
+
+#[tokio::test]
+async fn reader_metadata_path_matches_sql_door() {
+    use repark_core::time_travel::{TimeTravelSpec, read_table_at};
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.m (id INT) USING iceberg",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.m SELECT 1 AS id").await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "m".into());
+    let first = catalogs["ice"]
+        .load_table(&ident)
+        .await
+        .unwrap()
+        .metadata()
+        .current_snapshot_id()
+        .expect("first snapshot");
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.m SELECT 2 AS id").await;
+    let zone = repark_core::SessionTimeZone::default();
+    let parts = ["ice", "sales", "m", "files"]
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let spec = TimeTravelSpec::SnapshotId(first);
+    let reader = read_table_at(&ctx, &catalogs, &parts, &spec, &zone)
+        .await
+        .unwrap();
+    let sql = execute(
+        &ctx,
+        &catalogs,
+        &format!("SELECT * FROM ice.sales.m.files VERSION AS OF {first}"),
+    )
+    .await
+    .unwrap();
+    let reader_names: Vec<String> = reader
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    let sql_names: Vec<String> = sql
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(reader_names, sql_names);
+    let reader_batches = reader.collect().await.unwrap();
+    let sql_batches = sql.collect().await.unwrap();
+    let reader_rows: usize = reader_batches.iter().map(RecordBatch::num_rows).sum();
+    let sql_rows: usize = sql_batches.iter().map(RecordBatch::num_rows).sum();
+    assert_eq!(reader_rows, 1);
+    assert_eq!(sql_rows, 1);
+    let rendered = datafusion::arrow::util::pretty::pretty_format_batches(&reader_batches).unwrap();
+    let expected = datafusion::arrow::util::pretty::pretty_format_batches(&sql_batches).unwrap();
+    assert_eq!(rendered.to_string(), expected.to_string());
+    let missing = TimeTravelSpec::SnapshotId(999);
+    let reader = read_table_at(&ctx, &catalogs, &parts, &missing, &zone)
+        .await
+        .unwrap();
+    let sql = execute(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM ice.sales.m.files VERSION AS OF 999",
+    )
+    .await
+    .unwrap();
+    let reader_names: Vec<String> = reader
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    let sql_names: Vec<String> = sql
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(reader_names, sql_names);
+    let reader_batches = reader.collect().await.unwrap();
+    let sql_batches = sql.collect().await.unwrap();
+    let reader_rows: usize = reader_batches.iter().map(RecordBatch::num_rows).sum();
+    let sql_rows: usize = sql_batches.iter().map(RecordBatch::num_rows).sum();
+    assert_eq!(reader_rows, 0);
+    assert_eq!(sql_rows, 0);
+}

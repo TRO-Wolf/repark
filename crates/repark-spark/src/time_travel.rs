@@ -10,6 +10,7 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::inspect::MetadataTableType;
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
+use repark_core::time_travel::metadata_at::provider_for_spec;
 use repark_core::time_travel::{
     RefSelector, TimeTravelSpec, evaluate_sql_timestamp_asof, next_temp_view_name,
     selector_time_travel_refusal,
@@ -19,10 +20,7 @@ use repark_core::{
     parse_version_value, resolve_snapshot_id,
 };
 use repark_functions::session_time_zone::session_time_zone_from_options;
-use repark_iceberg::catalog::{
-    MetadataAsofMode, SnapshotMetadataTableProvider, metadata_asof_mode,
-    snapshot_scope_refusal_text,
-};
+use repark_iceberg::catalog::{MetadataAsofMode, metadata_asof_mode, snapshot_scope_refusal_text};
 
 pub mod changes;
 
@@ -193,20 +191,8 @@ async fn prepare_metadata_as_of(
         )));
     }
     let table = load_iceberg_table(catalogs, &metadata.base_parts).await?;
-    if metadata_asof_mode(&metadata_type) == MetadataAsofMode::ServeCurrent {
-        resolve_snapshot_id(table.metadata(), spec, zone)?;
-        let provider = SnapshotMetadataTableProvider::try_new_current(table, metadata_type)?;
-        return register_time_travel_provider(ctx, pinned, Arc::new(provider));
-    }
-    if let TimeTravelSpec::SnapshotId(snapshot_id) = spec
-        && table.metadata().snapshot_by_id(*snapshot_id).is_none()
-    {
-        let provider = SnapshotMetadataTableProvider::try_new_empty(table, metadata_type)?;
-        return register_time_travel_provider(ctx, pinned, Arc::new(provider));
-    }
-    let resolved = resolve_snapshot_id(table.metadata(), spec, zone)?;
-    let provider = SnapshotMetadataTableProvider::try_new_scoped(table, metadata_type, resolved)?;
-    register_time_travel_provider(ctx, pinned, Arc::new(provider))
+    let provider = provider_for_spec(table, metadata_type, spec, zone)?;
+    register_time_travel_provider(ctx, pinned, provider)
 }
 
 fn register_time_travel_provider(

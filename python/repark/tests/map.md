@@ -7778,6 +7778,57 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   keeps refusing and unknown refs refuse verbatim. The live tier re-derives the cells
   on Spark 4.1.2 and cross-reads the adopted table.
   pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [test_ice_mt_reader_1.py](test_ice_mt_reader_1.py) —
+  **IPI-23-MT-READER-1 (2026-09-22):** `format("iceberg").load("c.n.t.<meta>")` answers
+  what SQL `SELECT * FROM c.n.t.<meta>` answers, and with `versionAsOf` / `timestampAsOf`
+  what SQL `VERSION AS OF` / `TIMESTAMP AS OF` answers — each reader answer asserted
+  against the SQL door on the same table (rows and column names; C-010 pins the
+  reader's rows standalone with no SQL arm, and the live leg C-013 compares the
+  selected rows only, pinning absolute fields and the `record_count` sum), each
+  paired refusal against the SQL door's class and text — the unknown-suffix
+  refusal pairing only `getSqlState()` beside its literal text, and the
+  legacy-option refusals standing alone on literal texts with `getSqlState()`
+  `None`.
+  **critic r2 (2026-09-23):** the tests also
+  pin the reader frame's field name, `simpleString()` and `nullable`
+  (`operation` string nullable, `record_count` bigint non-nullable, as the live
+  Spark leg measures them; the recorded cells establish rows and column names
+  only) plus the absolute rows; the live leg then picked the first snapshot by `committed_at`.
+  **critic r3 (2026-09-23):** the live leg deletes the whole-file row id 3 so Spark
+  always commits `delete`, and the first-snapshot files pin is `record_count`
+  summing to 2 — both independent of Spark's file split; the `all_*` sweep pins
+  the Spark 4.1.2 column lists outright (rows stay relative), and the
+  quoted-dollar test is router equivalence on a spelling Spark refuses.
+  **critic r4 (2026-09-23):** the offline `_seeded` deletes the whole-file
+  row id 3 so RePark records `delete` (measured; Spark records `delete` for
+  a whole-file delete) — the operation pins read `append, append, delete`
+  and the scoped `record_count` pins read sums (2 at the first snapshot, 3
+  at the second), so no pin depends on the writer's file split.
+  **critic r5 (2026-09-23):** the same delete makes the first snapshot answer
+  the current rows, so every `versionAsOf` / selector pin moved to the second
+  snapshot (three rows, `record_count` sum 3; C-004's equality loop covers
+  both ids) and each pinned read also asserts `!=` the un-pinned read
+  (C-009's `branch_b0` excepted — tag and snapshot-id only).
+  **rd-r9fix (2026-09-23):** the class's last survivor moves — the live leg
+  now pins the second snapshot by `committed_at, snapshot_id` order
+  (`record_count` sum 3, asserted `!=` the un-pinned read's rows), and every
+  `pytest.raises` pins `getSqlState()` — paired across the reader and SQL
+  doors (the quoted-dollar refusal compares three SQL spellings pairwise),
+  the unknown-suffix refusal pairing only the SQLSTATE beside its literal
+  text, the legacy-option refusals standalone on `is None` — `is None`
+  where the pinned text is the recorded Spark answer (all measured
+  live-Spark states `None`). Near misses pin today's behaviour: plain loads,
+  branch/tag/snapshot-id
+  selectors, a real table named `snapshots`, the unknown-suffix error, and the
+  #800 legacy-option refusals.
+  The live leg replays the reader/SQL equality on live Spark 4.1.2 under
+  `REPARK_PARITY_LIVE=1`.
+  **rd-r12fix (2026-09-23):** C-008 gains the `_frame_cols` equality beside each
+  `_frame_rows` compare, so the rows-and-column-names claim above now holds of
+  every answering test outside the named C-010/C-013 exceptions.
+  pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
+  C-022
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) —
   **FNP-MATH-1 step 1 (2026-09-15, run 16a):** 137 recorded PySpark 4.1.2 cells
   in four named blocks, copied verbatim, never re-recorded. Block `o245` (106
