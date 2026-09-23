@@ -106,9 +106,8 @@ it does **not** build the native module. See [docs/testing.md](docs/testing.md).
 PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which carries
 the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the canonical
 fast gate. Tool versions are pinned identically in the Makefile and the workflows, and CI-enforced
-tools never silently skip locally (uvx provisions the pinned tool on demand). A delegated unit on
-the shared build box runs the scoped local gate instead and lets CI's required checks run this
-roster ("Delegated-agent standing rules", Gates).
+tools never silently skip locally (uvx provisions the pinned tool on demand). A delegated unit
+runs the scoped local gate instead ("Delegated-agent standing rules", Gates).
 
 ## Hard rules (non-negotiable)
 
@@ -406,12 +405,12 @@ never relax them.
 - **Workspace validity:** commits MUST pass the installed hooks; verify hooks fire before
   the first commit in any worktree. A hook bypass or non-firing-hook workspace is a
   slate-failing violation.
-- **Gates:** CI's required checks are the gate — they run `make verify`'s content, the facade
-  suite, the parity harness and the security/workflow gates. Locally a delegated unit runs only
-  what CI cannot: the comment gate, the release native, `cargo test -p` for the crates it touched
-  and its own pytest files, offline and live — never the whole-workspace suite on the shared build
-  box (owner, 2026-09-18). STOP / report-only units gate too. Check REAL exit codes (never a
-  pipe's); lint only via the Makefile's pinned toolchain targets.
+- **Gates:** CI's required checks are the gate (`make verify`'s content, the facade suite, the
+  parity harness, the security/workflow gates). Locally a delegated unit runs only what CI cannot:
+  the comment gate, the release native, `cargo test -p` for the crates it touched, its own pytest
+  files offline and live — never the whole-workspace suite on the shared box (owner, 2026-09-18).
+  STOP / report-only units gate too. Check REAL exit codes (never a pipe's); lint only via the
+  Makefile's pinned toolchain targets.
 - **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
   directory's `map.md` in the same pull request; `move`d to `completed/` in the unit's last commit.
   Ledger presence is a gate item.
@@ -435,12 +434,11 @@ Single-agent-in-the-main-thread is the default. The orchestrating agent owns arc
 assembly; delegated fan-out is for **search, mechanical edits, and narrow, well-scoped
 implementation**, never for architectural judgement. Every delegated unit inherits the standing
 rules above and the approval boundaries in "Destructive / outward-facing operations" — a delegated
-unit may narrow those, never relax them. The tier policy is a project rule and lives here: a
-delegated unit runs on the executor tiers the owner has approved for the current campaign —
-non-Claude executors by default, a Claude Opus round only for a step the orchestrating session
-names as hard and logs as such; Sonnet and Haiku are not used in any role (owner, 2026-09-20).
-How a given tool launches a tier (flags, launchers, hand-back files) is **tool mechanics**, recorded
-in the relevant tool adapter ([CLAUDE.md](CLAUDE.md) / [.agents/](.agents/map.md)), not here.
+unit may narrow those, never relax them. The tier policy lives here: delegated units run on the
+executor tiers the owner has approved for the campaign — non-Claude executors by default, a Claude
+Opus round only for a step the orchestrating session names as hard and logs; Sonnet and Haiku in
+no role (owner, 2026-09-20). How a tool launches a tier is **tool mechanics**, recorded in the
+tool adapter ([CLAUDE.md](CLAUDE.md) / [.agents/](.agents/map.md)), not here.
 
 ## Process governance (SEPMO)
 
