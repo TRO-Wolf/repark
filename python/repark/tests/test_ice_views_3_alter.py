@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -75,7 +76,9 @@ def test_alter_view_unset_tblproperties_cell(spark: ReparkSession) -> None:
     """V-ALTER-UNSET — UNSET removes the stored property; the view still reads."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     spark.sql("ALTER VIEW sc.ns.v UNSET TBLPROPERTIES ('k')")
-    assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
+    frame = spark.sql("SELECT * FROM sc.ns.v")
+    assert [(field.name, field.type) for field in frame.to_arrow().schema] == [("id", pa.int64())]
+    assert sorted(_rows(frame)) == [[1], [2]]
 
 
 def test_alter_view_set_tblproperties_and_rename_cell(spark: ReparkSession) -> None:
@@ -84,7 +87,9 @@ def test_alter_view_set_tblproperties_and_rename_cell(spark: ReparkSession) -> N
     spark.sql("CREATE VIEW sc.ns.va AS SELECT id FROM sc.ns.te")
     spark.sql("ALTER VIEW sc.ns.va SET TBLPROPERTIES ('k'='v')")
     spark.sql("ALTER VIEW sc.ns.va RENAME TO sc.ns.vb")
-    assert _rows(spark.sql("SELECT * FROM sc.ns.vb")) == []
+    frame = spark.sql("SELECT * FROM sc.ns.vb")
+    assert [(field.name, field.type) for field in frame.to_arrow().schema] == [("id", pa.int64())]
+    assert _rows(frame) == []
 
 
 def test_set_overwrites_existing_property_and_adds_another(
