@@ -31,7 +31,7 @@ pub(crate) struct ShowTableExtended {
 pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTableExtended>> {
     let dialect = DatabricksDialect {};
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
-        if !starts_with_show_table_extended(sql) {
+        if !crate::show_create::starts_with_sql_keywords(sql, &["SHOW", "TABLE", "EXTENDED"]) {
             return None;
         }
         let near = unbalanced_delimiter(sql).map_or_else(
@@ -299,31 +299,32 @@ fn syntax_error_near(near: &str, detail: Option<&str>) -> DataFusionError {
     )
 }
 
-fn starts_with_show_table_extended(sql: &str) -> bool {
-    let mut words = sql.split_whitespace();
-    matches!(
-        (words.next(), words.next(), words.next()),
-        (Some(show), Some(table), Some(extended))
-            if show.eq_ignore_ascii_case("SHOW")
-                && table.eq_ignore_ascii_case("TABLE")
-                && extended.eq_ignore_ascii_case("EXTENDED")
-    )
-}
-
 fn unbalanced_delimiter(sql: &str) -> Option<char> {
     let mut active_delimiter = None;
-    let mut characters = sql.chars().peekable();
-    while let Some(character) = characters.next() {
+    let bytes = sql.as_bytes();
+    let mut position = 0;
+    while let Some(byte) = bytes.get(position) {
         if let Some(delimiter) = active_delimiter {
-            if character == delimiter {
-                if characters.peek().is_some_and(|next| *next == delimiter) {
-                    let _ = characters.next();
+            if *byte == delimiter as u8 {
+                if bytes.get(position + 1) == Some(byte) {
+                    position += 2;
                 } else {
                     active_delimiter = None;
+                    position += 1;
                 }
+            } else {
+                position += 1;
             }
-        } else if matches!(character, '\'' | '"' | '`') {
-            active_delimiter = Some(character);
+        } else if bytes
+            .get(position..)
+            .is_some_and(|tail| tail.starts_with(b"--") || tail.starts_with(b"/*"))
+        {
+            position = crate::show_create::skip_sql_whitespace_and_comments(sql, position)?;
+        } else if matches!(*byte, b'\'' | b'"' | b'`') {
+            active_delimiter = Some(char::from(*byte));
+            position += 1;
+        } else {
+            position += 1;
         }
     }
     active_delimiter
