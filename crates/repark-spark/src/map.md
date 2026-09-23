@@ -1368,6 +1368,9 @@ pins: rp-4-fork-repin/C-005, C-006
   TABLE only, never DATABASE or TABLES) — and the router refuses each through
   `catalog_ops::not_supported_command_for_v2_table` with Spark's recorded command string.
   pins: ice-error-conditions-1/C-011
+  **IPI-23-MT-DESCRIBE-1 (2026-09-23):** the file declares the
+  [`describe_show/metadata_table`](describe_show/map.md) child module (the
+  metadata-table `DESCRIBE` intercept) and carries its five-line hook.
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
   19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
   `MetadataTableType` at pin `5e7b2e4`); **RP-42:** fork #332 ports the scan, so it serves
