@@ -917,3 +917,40 @@ async fn alter_view_update_and_rename_failures_propagate() {
     );
     assert_eq!(view.metadata().properties().get("j"), None);
 }
+
+#[tokio::test]
+async fn alter_view_unset_missing_key_refuses_without_update() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, mut catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v') AS SELECT * FROM src",
+    )
+    .await;
+    let update_calls = Arc::new(AtomicUsize::new(0));
+    let catalog = Arc::new(FaultCatalog {
+        inner: catalogs["ice"].clone(),
+        table_failure: None,
+        view_failure: None,
+        view_calls: Arc::new(AtomicUsize::new(0)),
+        faults: ViewFaults {
+            update_view_calls: Some(update_calls.clone()),
+            ..ViewFaults::default()
+        },
+    });
+    register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER VIEW fault.sales.v UNSET TBLPROPERTIES ('k', 'nope')",
+    )
+    .await
+    .expect_err("missing key must refuse");
+    assert!(matches!(error, DataFusionError::Plan(_)));
+    assert_eq!(
+        error.to_string(),
+        "Error during planning: Cannot remove property that is not set: 'nope'"
+    );
+    assert_eq!(update_calls.load(Ordering::SeqCst), 0);
+}
