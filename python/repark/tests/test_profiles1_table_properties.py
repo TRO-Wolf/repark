@@ -29,9 +29,9 @@ def spark(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReparkSession:
 
 
 def _data_files(warehouse: Path, table: str) -> set[Path]:
-    roots = list((warehouse / "repark_ctas" / "mem" / "ns").rglob(table))
-    assert len(roots) == 1
-    return set((roots[0] / "data").rglob("*.parquet"))
+    root = warehouse / "ns" / table
+    assert root.is_dir()
+    return set((root / "data").rglob("*.parquet"))
 
 
 def _merge_rewrite(spark: ReparkSession, warehouse: Path, table: str, props: str) -> int:
