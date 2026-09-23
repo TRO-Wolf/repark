@@ -1019,24 +1019,18 @@ else. The next pickup's `make ledger-archive` files everything here under
   **WO-A1b (2026-09-23), completed:** follow-up exactness repair for SHOW TABLE EXTENDED:
   typed lexer and refusal pins, literal PARTITION table resolution, and exact near-miss outcomes.
   `risk_tier: standard`. Branch `xd/show-tblprops`.
-- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 (2026-09-23), in flight:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
 - [wo-b4-describe-errors-ledger.md](wo-b4-describe-errors-ledger.md) —
-  **WO-B4 (2026-09-23), in flight:** every malformed input after `DESCRIBE` or `DESC` and a
+  **WO-B4 (2026-09-23), completed:** every malformed input after `DESCRIBE` or `DESC` and a
   table target retains Spark 4.1.2's parser class, condition, SQLSTATE, and first-line text;
   four-part table and column-resolution contracts stay typed; non-table DESCRIBE forms fall
   through. `risk_tier: standard`. Branch `xd/describe`.
   pins: wo-b4-describe-errors/C-001, C-002, C-003, C-004, C-005
 - [wo-b6-describe-comments-ledger.md](wo-b6-describe-comments-ledger.md) —
-  **WO-B6 (2026-09-23), in flight:** DESCRIBE tokenizer-failure classification skips SQL comments
+  **WO-B6 (2026-09-23), completed:** DESCRIBE tokenizer-failure classification skips SQL comments
   with the shared Spark scanner; quote scans ignore comment contents, and non-table and unclosed
   block-comment failures retain their measured RePark outcomes. `risk_tier: standard`.
   Branch `xd/describe`.
   pins: wo-b6-describe-comments/C-001, C-002, C-003, C-004
-- [wo-c2-ledger.md](wo-c2-ledger.md) — **WO-C2 (2026-09-23), completed:** critic repair for
-  `SHOW CREATE TABLE`: typed class/condition/SQLSTATE refusal pins, exact near-miss outcomes,
-  and lexer failures that stay on the recognized parse path. `risk_tier: standard`. Branch
-  `xd/show-create`.
-- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 (2026-09-23), in flight:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under
