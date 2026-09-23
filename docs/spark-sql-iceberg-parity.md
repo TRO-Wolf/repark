@@ -13575,7 +13575,9 @@ field NAME.
 ### ICE-MC-IFN-1 — `input_file_name()` served over one Iceberg relation; other shapes unresolved — **BACKLOG 2026-09-23, IPI-20**
 
 - **repark** — the Spark door serves `input_file_name()` over a SELECT whose
-  sole relation is one Iceberg table: a zero-argument call (unquoted,
+  own single relation IS one Iceberg table — matched by the table's written
+  name, so a relation that merely carries the same alias does not count: a
+  zero-argument call (unquoted,
   case-insensitive, no `FILTER`/`OVER`) answers the row's data-file path, the
   same value `_file` answers, in the projection and in `WHERE`; a bare
   projection column is named `input_file_name()`; the inner SELECT of a derived
@@ -13584,7 +13586,9 @@ field NAME.
   the `[UNRESOLVED_ROUTINE]` answer: a call inside a listed aggregate's
   arguments (`count(DISTINCT input_file_name())`), a call with arguments
   (`input_file_name(1)`), a self join, a `VALUES` or from-less SELECT, a
-  metadata-table scan (`t.snapshots`), and an outer SELECT over a `UNION ALL`.
+  metadata-table scan (`t.snapshots`), an outer SELECT over a `UNION ALL`, and
+  an outer SELECT over a CTE — including one merely aliased like the Iceberg
+  table (`WITH c AS (… ice.ns.t …) … FROM c AS t`).
 - **Apache Spark** — answers the served shapes identically (`true` on every row
   of the three-row cell, `input_file_name() = _file`, the `WHERE` and derived
   and upper-case and `substr` shapes, the bare `input_file_name()` column
@@ -13598,9 +13602,10 @@ field NAME.
   *(oracle: recorded — probe 55l, live Spark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0, 2026-09-22.)*
 - **Pin** — `crates/repark-spark/src/tests/input_file_name.rs` (the six served
-  shapes and the seven fall-through pins, plus the real-column and non-query
-  guards).
-  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  shapes and the fall-through pins — including the CTE alias-collision pins —
+  plus the real-column and non-query guards).
+  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - **Rationale** — BACKLOG, served 2026-09-23 (IPI-20). The single-relation
   rewrite is the measured cell's shape; the unresolved shapes are the recorded
   residues, kept on their pre-existing `UNRESOLVED_ROUTINE` answer rather than

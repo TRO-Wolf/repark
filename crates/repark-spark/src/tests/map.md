@@ -1301,7 +1301,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
   (`[[2,true],[3,true],[4,true]]`) plus the `substr(input_file_name(),…)`
   function-argument shape; `input_file_name_equals_file_on_every_row` pins
-  `input_file_name() = _file` per row; `input_file_name_upper_case_folds` pins
+  `input_file_name() = _file` per row, bare and through the user aliases
+  `AS x` and `AS t`; `input_file_name_upper_case_folds` pins
   the `INPUT_FILE_NAME()` spelling; `input_file_name_in_where_keeps_every_row`
   pins WHERE on `LIKE '%.parquet'` and on `input_file_name() = _file` per row;
   `input_file_name_in_a_derived_table_equals_file` pins the inner
@@ -1318,13 +1319,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `input_file_name_over_values_falls_through`,
   `input_file_name_without_from_falls_through`,
   `input_file_name_over_a_metadata_table_falls_through` (the backticked
-  `` `ice`.`ns`.`t`.`snapshots` `` path), and
-  `input_file_name_over_a_union_all_falls_through`.
+  `` `ice`.`ns`.`t`.`snapshots` `` path),
+  `input_file_name_over_a_union_all_falls_through`, and
+  `input_file_name_over_a_cte_sharing_the_table_alias_falls_through` — a CTE
+  whose outer relation merely carries the Iceberg table's name as its alias, in
+  the projection and in WHERE, a CTE without an alias, and a CTE named like the
+  table.
   `a_real_column_named_input_file_name_reads_unchanged` pins that a user column
   of that name is read normally, and `insert_around_the_trigger_keeps_todays_answers`
   pins the input-file-name-only trigger returning `Ok(None)` for a non-query
   statement (the `[UNRESOLVED_ROUTINE]` error, never `[ICE-MC-1]`).
-  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
+  C-010
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

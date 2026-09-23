@@ -14,7 +14,12 @@ single-relation SELECT's projection and WHERE; the Rust battery
 `crates/repark-spark/src/tests/input_file_name.rs` plus `tests/mod.rs`; the new
 `ICE-MC-IFN-1` registry row; the `crates/repark-core/src/map.md` and
 `crates/repark-spark/src/tests/map.md` lockstep rows; the `staging/map.md` row;
-and this ledger. The fork, every `Cargo.toml`, `Cargo.lock`, `STATUS.md`,
+and this ledger. Round 3 adds the private `sole_input_file_name_relation`
+helper behind `sole_relation_qualifier`: it accepts the SELECT's single
+`TableFactor::Table` only when the written name is a rewrite's `original` — an
+alias match against the statement-wide rewrite list no longer authorizes the
+rewrite (the wildcard path's `sole_rewritten_relation` keeps main's alias
+fallback untouched). The fork, every `Cargo.toml`, `Cargo.lock`, `STATUS.md`,
 `crates/repark-functions/`, `crates/repark-sql/` and the ANSI door are
 untouched; no code comment added anywhere.
 
@@ -53,6 +58,17 @@ live rows over two data files; Spark's recorded answer is `[[2,true],[3,true]]`.
 | C-007 | The recorded residues keep today's `UNRESOLVED_ROUTINE`-class error whose text names `input_file_name`: `count(DISTINCT input_file_name())`, `input_file_name(1)`, self join `t a JOIN t b`, `FROM VALUES (1) AS v(a)`, no FROM, `` `ice`.`ns`.`t`.`snapshots` ``, and an outer SELECT over a UNION ALL derived table. | The seven `*_falls_through` tests green on base and after the change. | **PROVEN** | Probe 55l residues stay refused at this layer; every pin asserts the `[UNRESOLVED_ROUTINE]` class and text naming `input_file_name` (measured on HEAD: all seven answer `[UNRESOLVED_ROUTINE] Cannot resolve routine `input_file_name` … SQLSTATE: 42883`). Green on base (they assert today's error) and still green. pins: ipi-20-input-file-name-1/C-007 |
 | C-008 | A real user column named `input_file_name` (`CREATE TABLE … (id INT, input_file_name STRING)`) is read unchanged — the trigger requires the following `(`. | `a_real_column_named_input_file_name_reads_unchanged` green. | **PROVEN** | The bare word never enters the rewrite path; the column answers `x`. Green on base and after. pins: ipi-20-input-file-name-1/C-008 |
 | C-009 | With only the `input_file_name(` trigger fired, a non-query statement returns `Ok(None)` rather than the `[ICE-MC-1]` refusal: `INSERT INTO t2 SELECT id, 'x' FROM t` still lands three rows and `INSERT INTO t2 SELECT id, input_file_name() FROM t` fails with `[UNRESOLVED_ROUTINE]` naming `input_file_name`, never `[ICE-MC-1]`. | `insert_around_the_trigger_keeps_todays_answers` green. | **PROVEN** | The WO's trigger ruling for the non-query shape; measured on HEAD the second leg answers `[UNRESOLVED_ROUTINE] … SQLSTATE: 42883`. Green on base (the second leg already errors `UNRESOLVED_ROUTINE`) and still green. pins: ipi-20-input-file-name-1/C-009 |
+| C-010 | An outer SELECT whose single relation merely carries the Iceberg table's name as its alias does not authorize the rewrite: `WITH c AS (SELECT id, 'x' AS _file FROM ice.ns.t) SELECT input_file_name() FROM c AS t` fails `[UNRESOLVED_ROUTINE]` naming `input_file_name` (projection leg and `WHERE input_file_name() = 'x'` leg), as do `WITH c AS (SELECT * FROM ice.ns.t) SELECT input_file_name() FROM c` and `WITH t AS (…) SELECT input_file_name() FROM t`; the near misses `FROM ice.ns.t`, `… AS t`, `… AS x` and the derived-table inner SELECT still serve `_file` row by row. | `input_file_name_over_a_cte_sharing_the_table_alias_falls_through` plus the `AS t` leg of `input_file_name_equals_file_on_every_row` green. | **PROVEN** | Round-3 critic finding V-001: on the pre-fix head the collision query answered the CTE's `'x'` (`a refused query must fail: [RecordBatch { … StringArray ["x"] … }]`); the fix matches the relation's written name to a rewrite's `original` — measured at `pre_visit_select` the name is always the original (the temp `replacement` is stamped later at `pre_visit_table_factor`; a `replacement`-only match reds all six served tests). The no-alias and CTE-named-`t` legs refused on the pre-fix head too (no alias → no `by_alias` hit; `find("t")` ≠ `ice.ns.t`). pins: ipi-20-input-file-name-1/C-010 |
+
+**Follow-up gap (outside this PR, per the WO ruling):** main's wildcard
+expansion shares the alias-scope fallback — `sole_rewritten_relation` and
+`select_touches_rewrite` accept a relation whose alias matches a rewrite
+entry's alias (`by_alias`), so `WITH c AS (SELECT id AS x FROM ice.ns.t)
+SELECT * FROM c AS t` expands `*` to the entry's user columns (`t.id`,
+`t.data`, `t.cat`) rather than the CTE's own columns. Filed for a later unit;
+`sole_rewritten_relation`, `select_touches_rewrite`, `by_alias` and
+`expand_wildcards` are explicitly untouched here and the `metadata_columns.rs`
+test expectations stand.
 
 ## Gates
 
@@ -74,6 +90,11 @@ live rows over two data files; Spark's recorded answer is `[[2,true],[3,true]]`.
 | r2fix: `make rust-clippy`; `make rust-panic-ban` | both exit 0 |
 | r2fix: `bash scripts/check_map_md.sh --base origin/main`; `python3 scripts/check_ledger_grammar.py`; `comment_ban.py` | all exit 0 (`hits=0`) |
 | r2fix mutation check | bare-projection rewrite forced to `'x.parquet'` → `bare_input_file_name_projection_names_the_column` red (`left: ["x.parquet", "x.parquet", "x.parquet"]` vs the real `_file` paths); reverted uncommitted |
+| r3fix: `cargo test -p repark-spark --lib input_file_name` (pre-fix, tests-only commit) | `input_file_name_over_a_cte_sharing_the_table_alias_falls_through` RED — `a refused query must fail: [RecordBatch { … StringArray ["x"] … }]`, the CTE value instead of a refusal; 15 green |
+| r3fix: `cargo test -p repark-spark --lib input_file_name` (head) | 16 passed |
+| r3fix: `cargo test -p repark-spark --lib metadata_columns` (head) | 14 passed, expectations unchanged |
+| r3fix mutation check | alias fallback restored in `sole_input_file_name_relation` → the CTE collision test red again (`a refused query must fail: [RecordBatch { … StringArray ["x"] … }]`); reverted uncommitted |
+| r3fix name-at-visit measurement | `replacement`-only match in `sole_input_file_name_relation` → all six served tests red (`UNRESOLVED_ROUTINE`); the SELECT carries the rewrite's `original` name at `pre_visit_select`, so only `find(name)` is kept |
 
 ## COVERAGE_ATTESTATION
 
@@ -92,7 +113,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/tests/input_file_name.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: The rewrite requires a sole rewritten Iceberg relation, a zero-argument unquoted call, no FILTER and no OVER; the per-SELECT call visitor does not descend into a blocking aggregate's arguments or a query nested inside a projection/WHERE expression, and every nested SELECT is visited on its own and rewritten against its own sole relation; a real column of the same name (C-008) and a non-query statement (C-009) prove the trigger stays narrow.
+      evidence: The rewrite requires the SELECT's own single relation to be the Iceberg table by written name (C-010 — an alias match alone does not qualify), a zero-argument unquoted call, no FILTER and no OVER; the per-SELECT call visitor does not descend into a blocking aggregate's arguments or a query nested inside a projection/WHERE expression, and every nested SELECT is visited on its own and rewritten against its own sole relation; a real column of the same name (C-008) and a non-query statement (C-009) prove the trigger stays narrow.
       artifacts: [crates/repark-core/src/metadata_columns.rs]
     - id: AT-4
       status: ATTACKED
