@@ -14,7 +14,7 @@ resolves, plus the four-part parser for names the metadata rewrite leaves
 untouched and the registry-defaults fallback for the facade-expanded two-part
 form) with a five-line hook in `describe_show.rs` (`execute_describe_table`
 before `load_table`), a two-line `or_else` in `router.rs`, and one `mod` line in
-`describe_show.rs`; the facade pins
+`describe_show.rs` (moved under it 2026-09-23, `lib.rs` back to its ceiling); the facade pins
 `python/repark/tests/test_ice_mt_describe_1.py` (eight offline pins plus the live
 snapshots leg); the DESC-1 registry row; four `map.md` files
 (`crates/repark-spark/src/`, `crates/repark-spark/src/describe_show/`,
@@ -24,7 +24,11 @@ door, `time_travel.rs`, `wap.rs` and the metadata rewrite itself are untouched;
 no code comment added anywhere. Critic r1 (2026-09-23) adds the three-way
 base-load match in `dollar_metadata_table` (V-002), six facade pins (C-010..C-015:
 three V-001 red specs, V-002, two sweep pins), and its section; V-001 stays OPEN
-pending the orchestrator ruling.
+pending the orchestrator ruling. Critic r3fix (2026-09-23) applies the Spark
+rulings: the recovery is deleted (V-001 option (a)), the four-part not-found
+names the full name via `table_or_view_not_found_parts`, C-004/C-007/C-012/C-015
+are re-pinned, C-016 is a strict xfail, and the module move resolves the ceiling
+without touching `check_lib_rs.py`.
 
 ## Measurements (decide-then-build evidence)
 
@@ -60,10 +64,10 @@ lane's JVM-free loop, and is recorded in the gates table below.
 | C-001 | `DESCRIBE mt.ns.t.snapshots` answers the six R-MT-DESCRIBE rows exactly (names, Spark DDL type strings, `comment` None), in order, with `col_name`/`data_type` non-nullable and `comment` nullable. | `test_snapshots_describe_matches_spark_rows` green. | **PROVEN** | Recorded cell `R-MT-DESCRIBE`; the live leg re-measures Spark and diffs repark row for row. pins: ipi-23-mt-describe-1/C-001 |
 | C-002 | For `snapshots`, `files`, `history`, `refs`, `manifests`, `entries`: DESCRIBE's `col_name` list equals the column names of `SELECT * FROM mt.ns.t.<meta>` and each `data_type` equals the Spark DDL name of that column's Arrow type. | `test_describe_columns_match_select_star` green for all six. | **PROVEN** | DESCRIBE builds its batch from the same provider schema SELECT resolves, so the equality holds by construction; pinned per meta table. pins: ipi-23-mt-describe-1/C-002 |
 | C-003 | `DESCRIBE TABLE mt.ns.t.snapshots`, `DESC mt.ns.t.SNAPSHOTS`, `DESCRIBE EXTENDED …` and `DESCRIBE TABLE FORMATTED …` answer C-001's rows. | `test_table_and_desc_upper_spellings_match` green. | **PROVEN** | Upper-case suffixes normalize through the rewrite or the canonical suffix; EXTENDED/FORMATTED print the column rows only per the work-order ruling (unmeasured on Spark). pins: ipi-23-mt-describe-1/C-003 |
-| C-004 | After `USE mt.ns`, `DESCRIBE t.snapshots` answers C-001's rows. | `test_two_part_after_use_matches` green. | **PROVEN** | The two-part form resolves the base table in the session default namespace once the literal `namespace.table` reading misses. pins: ipi-23-mt-describe-1/C-004 |
+| C-004 | After `USE mt.ns`, `DESCRIBE t.snapshots` takes the plain path (`NamespaceNotFound ns=["t"]`, no SQLSTATE). | `test_two_part_after_use_is_plain_not_found` green. | **PROVEN** | Re-ruled by Spark measurement: Spark answers not-found `` `t`.`snapshots` ``; RePark names the facade-expanded name (D-1). pins: ipi-23-mt-describe-1/C-004 |
 | C-005 | `DESCRIBE` of a plain two-column table still answers exactly its two column rows. | `test_plain_table_describe_unchanged` green. | **PROVEN** | Near miss pinned: `[("a","bigint",None),("b","string",None)]` unchanged from main. pins: ipi-23-mt-describe-1/C-005 |
 | C-006 | A real table named `snapshots` describes itself (`id bigint`), not a metadata table. | `test_real_table_named_snapshots_wins` green. | **PROVEN** | Near miss pinned: the rewrite's real-table-wins rule is untouched. pins: ipi-23-mt-describe-1/C-006 |
-| C-007 | `DESCRIBE mt.ns.missing.snapshots` raises `TABLE_OR_VIEW_NOT_FOUND` / `42P01` naming the base table `missing` with no `$` in the text. | `test_missing_base_not_found_names_base` green. | **PROVEN** | A missing base maps to today's `table_or_view_not_found(catalog, namespace, base)`; any other provider error passes through. pins: ipi-23-mt-describe-1/C-007 |
+| C-007 | `DESCRIBE mt.ns.missing.snapshots` raises `TABLE_OR_VIEW_NOT_FOUND` / `42P01` naming the full `` `mt`.`ns`.`missing`.`snapshots` `` with no `$` in the text. | `test_missing_base_not_found_names_base` green. | **PROVEN** | A missing base maps to `table_or_view_not_found_parts` over the full four-part name; any other provider error passes through. pins: ipi-23-mt-describe-1/C-007 |
 | C-008 | `DESCRIBE mt.ns.t.nope` keeps today's error class, SQLSTATE and text. | `test_unknown_suffix_keeps_compound_identifier_error` green. | **PROVEN** | Near miss pinned: `AnalysisException: Error during planning: Unsupported compound identifier '`mt`.`ns`.`t`.`nope`'. Expected 1, 2 or 3 parts, got 4`, recorded on main before the fix. pins: ipi-23-mt-describe-1/C-008 |
 | C-009 | The Rust row builder turns a three-field schema incl. a map into three rows with `comment` None. | `metadata_table_describe_batch_spells_column_rows` green. | **PROVEN** | Unit test in `crates/repark-spark/src/describe_show/metadata_table.rs` asserts names, `bigint`/`string`/`map<string,string>` spellings, null comments, and the `col_name`/`data_type`/`comment` output nullability. pins: ipi-23-mt-describe-1/C-009 |
 
@@ -76,27 +80,26 @@ sweep table records every name shape. The COVERAGE_ATTESTATION below covers the
 md-r1 clauses C-001..C-009; the critic-r1 clauses C-010..C-015 are tracked in
 this section.
 
-**V-001 (P1) — OPEN.** `unqualified_metadata_table` recovers explicit three-part
-names through the session default namespace: after `USE mt.ns`,
-`DESCRIBE mt.otherns.snapshots` and `DESCRIBE mt.t.snapshots` return the six
-snapshots rows while `SELECT * FROM mt.otherns.snapshots` is table-not-found
-(both measured at R0). The prescribed engine-side bool (catalog omitted as
-written) cannot work: the facade expands the two-part form to
-``DESCRIBE `mt`.`t`.`snapshots` `` before the engine, byte-identical to the
-explicit three-part form (measured via `_expand_bare_table_names_in_sql`), so no
-engine gate can keep the §4.4 two-part pin green while the explicit form falls
-through. Red specs C-010/C-011/C-014 pin the required errors; the ruling (drop
-§4.4, declare the corner, or open the facade expansion) is with the orchestrator.
+**V-001 (P1) — REMEDIATED as option (a).** Spark measures (2026-09-23, §2 table
+below) that `DESCRIBE t.snapshots` after `USE` is TABLE_OR_VIEW_NOT_FOUND, so
+the md-r1 §4.4 two-part recovery answered a name Spark does not resolve: the
+recovery (`unqualified_metadata_table`) is deleted, and after `USE mt.ns` the
+two-part form, `DESCRIBE mt.t.snapshots` and `DESCRIBE mt.otherns.snapshots`
+all take the plain path. RePark names the facade-expanded
+`` `mt`.`t`.`snapshots` `` (missing namespace: `NamespaceNotFound`, no SQLSTATE
+— the plain path carries none) where Spark names `` `t`.`snapshots` `` with
+42P01: known divergence D-1, facade- and plain-path-owned, not fixed here. The
+r2fix red specs C-010/C-011/C-014 are green unchanged.
 
-**V-002 (P2) — REMEDIATED.** `dollar_metadata_table` mapped only
-`ErrorKind::TableNotFound` to `table_or_view_not_found`, so
-`DESCRIBE mt.nosuchns.t.snapshots` answered `failed to resolve schema: nosuchns`
-(measured at R0, both spellings). The base-load match is now three-way:
-`TableNotFound | NamespaceNotFound` maps to `table_or_view_not_found(catalog,
-namespace, base)`; any other base error surfaces via the plain path's
-`iceberg_err` mapping; base `Ok` keeps the provider error. The Spark answer for
-the missing-namespace form is UNMEASURED; the 42P01 mapping follows the md-r1 §3
-rule that an absent base names the base table.
+**V-002 (P2) — REMEDIATED, re-ruled to the full name.** Spark measures
+TABLE_OR_VIEW_NOT_FOUND naming the full four-part name for a missing base or
+namespace, so the md-r1 "naming the base" rule is replaced:
+`TableNotFound | NamespaceNotFound` on the base load answers 42P01 naming
+`` `catalog`.`namespace`.`base`.`suffix` `` via the new
+`table_or_view_not_found_parts` helper (the three-part function delegates to it,
+so the tail is shared byte-for-byte); any other base error surfaces via
+`iceberg_err`; base `Ok` keeps the provider error. A suffix spelled upper-case
+is named canonicalized (the parser normalizes before the error builds).
 
 **Mechanics.** R0 is red on `check-lib-rs` through main's drift, not this
 round: `origin/main` filled the repark-spark root ceiling exactly (152) with
@@ -104,32 +107,48 @@ round: `origin/main` filled the repark-spark root ceiling exactly (152) with
 takes the tree to 153. Both files that can resolve it (`lib.rs`,
 `check_lib_rs.py`) are outside this round's file list, the pre-commit hook
 blocks every commit while the tree is red, and `--no-verify` is forbidden, so
-this round's work is verified on the tree and handed back uncommitted. No new
+this round's work is verified on the tree and handed back uncommitted. Resolved
+2026-09-23 by moving the module under `describe_show/` (`lib.rs` 152, no
+`check_lib_rs.py` edit); the r2fix tree was committed as the move commit. No new
 file was added, so no `map.md` change is owed.
 
-**Sweep** (class: the intercept claims or misreports a name the plain DESCRIBE
-path owns; measured on the V-002 tree):
+**Spark answers (§2, measured 2026-09-23, PySpark 4.1.2 + Iceberg 1.11.0,
+`sc.db.t` + `sc.db.otherns` + `sc.otherns`):** `USE sc.db` then `DESCRIBE
+t.snapshots` → not-found `` `t`.`snapshots` ``; `DESCRIBE sc.t.snapshots` →
+not-found `` `sc`.`t`.`snapshots` ``; `DESCRIBE otherns.snapshots` /
+`sc.otherns.snapshots` → not-found (name as written); `DESCRIBE db.t.snapshots`
+→ six rows; `DESCRIBE sc.db.t.snapshots` / `sc.db.t.SNAPSHOTS` → six rows;
+`DESCRIBE [EXTENDED] sc.db.missing.snapshots` → not-found full four-part name;
+`DESCRIBE [EXTENDED] sc.nosuchns.t.snapshots` → not-found full four-part name;
+`DESCRIBE sc.db.t.nosuchmeta` → not-found full four-part name; `DESCRIBE
+sc.db.`t$snapshots`` → not-found `` `sc`.`db`.`t$snapshots` ``. SELECT gives the
+same not-found answers.
 
-| Shape | Answer | Pin |
-|---|---|---|
-| two-part after USE | six rows | C-004 (mechanism pending V-001 ruling) |
-| two-part without USE | `NamespaceNotFound ns=["t"]` | none (ruling-dependent, OPEN) |
-| explicit three-part, real table exists | describes the real table | C-006 |
-| explicit three-part, namespace exists, table missing | six rows (wrong) | C-010 red spec (OPEN) |
-| explicit three-part, namespace missing | six rows (wrong) | C-011 red spec (OPEN) |
-| explicit three-part, namespace named like a default-namespace table | six rows (wrong) | C-014 red spec (OPEN) |
-| four-part, base present | six rows | C-001 |
-| four-part, base missing | 42P01 naming base | C-007 |
-| four-part, namespace missing | 42P01 naming base | C-012 |
-| four-part, unknown suffix | compound-identifier error | C-008 |
-| four-part, upper-case suffix | six rows | C-003 |
-| quoted three-part ``t$suffix`` | six rows (same provider as SELECT) | C-013 |
-| EXTENDED/FORMATTED of base-missing | 42P01 naming base | C-015 |
-| EXTENDED of unknown suffix | compound-identifier error | C-015 |
-| EXTENDED of upper-case suffix | six rows | C-015 |
-| FORMATTED of namespace-missing | 42P01 naming base | C-015 |
-| temp view named like base + two-part after USE | expansion ignores the view, six rows | none (V-001-dependent, OPEN) |
-| SELECT counterpart of the V-001 shape | table-not-found | critic-measured, no pin (read path) |
+**Sweep** (class: the intercept answers a name Spark does not resolve, or names
+a not-found differently from Spark; RePark measured on the ruled tree):
+
+| Shape | RePark | Spark (§2) | Pin |
+|---|---|---|---|
+| four-part, base present (+upper) | six rows | six rows | C-001, C-003 |
+| four-part, base missing (+EXTENDED/FORMATTED) | 42P01 full four-part name | 42P01 full four-part name | C-007, C-015 |
+| four-part, namespace missing (+EXTENDED/FORMATTED) | 42P01 full four-part name | 42P01 full four-part name | C-012, C-015 |
+| four-part, unknown suffix (+EXTENDED) | compound-identifier error | 42P01 full four-part name | C-008, C-015 (D-2, not fixed) |
+| quoted three-part ``t$suffix`` | six rows (same provider as SELECT) | 42P01 naming the `$` name | C-013 (D-3, not fixed) |
+| two-part after USE | `NamespaceNotFound ns=["t"]` | not-found `` `t`.`snapshots` `` | C-004 (D-1, not fixed) |
+| explicit three-part, namespace missing | `NamespaceNotFound ns=["t"]` | not-found (name as written) | C-011 (D-1 family, not fixed) |
+| explicit three-part, table missing | 42P01 full three-part name as written | not-found (name as written) | C-010, C-014 |
+| three-part `ns.t.snapshots` after USE | fallthrough `table 'ns.t.snapshots' not found` | six rows | C-016 strict xfail (OPEN) |
+| two-part without USE | `NamespaceNotFound ns=["t"]` | unmeasured | none (plain path, settled) |
+| temp view named like base + two-part | `NamespaceNotFound` (view ignored) | unmeasured | none (plain path, settled) |
+| plain table / real table named `snapshots` | unchanged | — | C-005, C-006 |
+
+**Known divergences (not fixed here):** D-1 — RePark names the facade-expanded
+name and the plain path reports a missing namespace without SQLSTATE, where
+Spark answers 42P01 on the name as written (two-part after USE, explicit
+three-part with missing namespace). D-2 — unknown metadata suffix keeps the
+plain compound-identifier error instead of Spark's 42P01. D-3 — quoted
+``t$snapshots`` answers metadata rows (agreeing with RePark's SELECT) instead of
+Spark's not-found.
 
 ```yaml
 FINDING:
@@ -139,7 +158,7 @@ FINDING:
   clause: C-010, C-011, C-014
   claim: Explicit three-part DESCRIBE names take default-namespace recovery and answer metadata rows for tables that do not exist, while SELECT on the same name is table-not-found.
   evidence: R0 `DESCRIBE mt.otherns.snapshots` and `DESCRIBE mt.t.snapshots` answer six rows after USE mt.ns; `SELECT * FROM mt.otherns.snapshots` raises table-not-found; facade expansion of the two-part form is byte-identical to the explicit form so no engine gate separates them
-  disposition: OPEN (ruling with the orchestrator; red specs test_explicit_three_part_with_real_namespace_falls_through, test_explicit_three_part_missing_namespace_keeps_plain_error, test_explicit_three_part_namespace_shadowing_base_falls_through)
+  disposition: REMEDIATED as option (a) (default-namespace recovery deleted; the two-part and explicit three-part forms take the plain path; pinned by test_two_part_after_use_is_plain_not_found plus the three red specs, green unchanged; D-1 recorded above)
 ```
 
 ```yaml
@@ -150,19 +169,20 @@ FINDING:
   clause: C-012
   claim: A missing namespace on a four-part DESCRIBE leaked the provider error `failed to resolve schema` instead of 42P01 naming the base table.
   evidence: R0 `DESCRIBE mt.nosuchns.t.snapshots` and the EXTENDED spelling both raised `failed to resolve schema: nosuchns`; post-fix both raise the full TABLE_OR_VIEW_NOT_FOUND message naming `mt`.`nosuchns`.`t`
-  disposition: REMEDIATED (three-way base-load match in dollar_metadata_table; pinned by test_missing_namespace_maps_to_not_found_naming_base; Spark's missing-namespace answer is UNMEASURED)
+  disposition: REMEDIATED (three-way base-load match in dollar_metadata_table naming the full four-part name via table_or_view_not_found_parts; pinned by test_missing_namespace_maps_to_not_found_naming_base and the C-015 matrix)
 ```
 
 ## PROPOSITION LEDGER — IPI-23-MT-DESCRIBE-1 critic r1 — 2026-09-23
 
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |---|---|---|---|---|
-| C-010 | After `USE mt.ns` with table `mt.ns.otherns` and namespace `mt.otherns` present and no table `mt.otherns.snapshots`, `DESCRIBE mt.otherns.snapshots` raises the full TABLE_OR_VIEW_NOT_FOUND message naming `` `mt`.`otherns`.`snapshots` ``. | `test_explicit_three_part_with_real_namespace_falls_through` green. | **OPEN** | Red at R0 (`DID NOT RAISE`, six rows); needs the V-001 ruling. pins: ipi-23-mt-describe-1/C-010 |
-| C-011 | After `USE mt.ns` with table `mt.ns.t`, `DESCRIBE mt.t.snapshots` raises exactly the plain-path error `NamespaceNotFound => No such namespace: NamespaceIdent(["t"])`, never rows. | `test_explicit_three_part_missing_namespace_keeps_plain_error` green. | **OPEN** | Red at R0 (`DID NOT RAISE`, six rows); needs the V-001 ruling. pins: ipi-23-mt-describe-1/C-011 |
-| C-012 | `DESCRIBE mt.nosuchns.t.snapshots` and `DESCRIBE EXTENDED mt.nosuchns.t.snapshots` raise 42P01 naming `` `mt`.`nosuchns`.`t` ``. | `test_missing_namespace_maps_to_not_found_naming_base` green. | **PROVEN** | Three-way base-load match; Spark's form UNMEASURED. pins: ipi-23-mt-describe-1/C-012 |
+| C-010 | After `USE mt.ns` with table `mt.ns.otherns` and namespace `mt.otherns` present and no table `mt.otherns.snapshots`, `DESCRIBE mt.otherns.snapshots` raises the full TABLE_OR_VIEW_NOT_FOUND message naming `` `mt`.`otherns`.`snapshots` ``. | `test_explicit_three_part_with_real_namespace_falls_through` green. | **PROVEN** | Recovery deleted; the plain path answers. pins: ipi-23-mt-describe-1/C-010 |
+| C-011 | After `USE mt.ns` with table `mt.ns.t`, `DESCRIBE mt.t.snapshots` raises exactly the plain-path error `NamespaceNotFound => No such namespace: NamespaceIdent(["t"])`, never rows. | `test_explicit_three_part_missing_namespace_keeps_plain_error` green. | **PROVEN** | Recovery deleted; the plain path answers (D-1 family). pins: ipi-23-mt-describe-1/C-011 |
+| C-012 | `DESCRIBE mt.nosuchns.t.snapshots` and `DESCRIBE EXTENDED mt.nosuchns.t.snapshots` raise 42P01 naming the full `` `mt`.`nosuchns`.`t`.`snapshots` ``. | `test_missing_namespace_maps_to_not_found_naming_base` green. | **PROVEN** | Three-way base-load match over the full four-part name. pins: ipi-23-mt-describe-1/C-012 |
 | C-013 | `DESCRIBE mt.ns.`t$snapshots`` answers the six snapshots rows. | `test_quoted_dollar_name_answers_metadata_rows` green. | **PROVEN** | Same provider as SELECT by construction. pins: ipi-23-mt-describe-1/C-013 |
-| C-014 | After `USE mt.ns` with namespace `mt.t` present, `DESCRIBE mt.t.snapshots` raises the full TABLE_OR_VIEW_NOT_FOUND message naming `` `mt`.`t`.`snapshots` ``. | `test_explicit_three_part_namespace_shadowing_base_falls_through` green. | **OPEN** | Red (`DID NOT RAISE`, six rows); same V-001 class as C-010. pins: ipi-23-mt-describe-1/C-014 |
-| C-015 | EXTENDED/FORMATTED of base-missing, unknown-suffix, upper-case-suffix, and namespace-missing four-part names match their plain answers. | `test_four_part_extended_formatted_matrix` green. | **PROVEN** | All five matrix rows measured and pinned. pins: ipi-23-mt-describe-1/C-015 |
+| C-014 | After `USE mt.ns` with namespace `mt.t` present, `DESCRIBE mt.t.snapshots` raises the full TABLE_OR_VIEW_NOT_FOUND message naming `` `mt`.`t`.`snapshots` ``. | `test_explicit_three_part_namespace_shadowing_base_falls_through` green. | **PROVEN** | Recovery deleted; the plain path answers. pins: ipi-23-mt-describe-1/C-014 |
+| C-015 | EXTENDED/FORMATTED of base-missing, unknown-suffix, upper-case-suffix, and namespace-missing four-part names match their plain answers. | `test_four_part_extended_formatted_matrix` green. | **PROVEN** | All five matrix rows measured and pinned; missing names are full four-part. pins: ipi-23-mt-describe-1/C-015 |
+| C-016 | After `USE mt.ns`, `DESCRIBE ns.t.snapshots` answers the six snapshots rows. | `test_namespaced_table_meta_after_use_answers_rows` green. | **OPEN** | Strict xfail: RePark fallthrough errors `table 'ns.t.snapshots' not found`; serving it needs default-catalog recovery, out of scope. pins: ipi-23-mt-describe-1/C-016 |
 
 ## Gates
 
@@ -228,8 +248,9 @@ COVERAGE_ATTESTATION:
 ```
 
 Every md-r1 clause above is PROVEN against the recorded R-MT-DESCRIBE cell and
-the main-branch behaviors pinned beside it; critic r1 leaves C-010/C-011/C-014
-OPEN pending the V-001 ruling with red specs filed. Touched files per the Scope
+the main-branch behaviors pinned beside it; critic r1 leaves only C-016 OPEN
+(the strict xfail on `ns.t.snapshots` after USE, needing default-catalog
+recovery that is out of scope). Touched files per the Scope
 paragraph; the fork, `Cargo.toml`/`Cargo.lock`, `STATUS.md`, the ANSI door,
 `time_travel.rs`, `wap.rs` and the metadata rewrite are untouched. `make verify`
 and the whole-workspace suites were not run per the work order's gate list; the
