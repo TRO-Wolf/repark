@@ -11,7 +11,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 
-use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, table_or_view_not_found};
+use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, table_or_view_not_found_parts};
 use crate::describe_show::DescribeTable;
 use crate::metadata_tables::canonical_metadata_table_name;
 use crate::namespace_ddl::consume_word;
@@ -60,11 +60,11 @@ pub(crate) async fn try_describe_metadata_table(
     catalogs: &CatalogRegistry,
     describe: &DescribeTable,
 ) -> Option<Result<RecordBatch>> {
-    let handle = catalog_handle(catalogs, &describe.catalog).ok()?;
-    if describe.table.contains('$') {
-        return dollar_metadata_table(ctx, handle, describe).await;
+    if !describe.table.contains('$') {
+        return None;
     }
-    unqualified_metadata_table(ctx, catalogs, handle, describe).await
+    let handle = catalog_handle(catalogs, &describe.catalog).ok()?;
+    dollar_metadata_table(ctx, handle, describe).await
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -97,63 +97,17 @@ async fn dollar_metadata_table(
                         ErrorKind::TableNotFound | ErrorKind::NamespaceNotFound
                     ) =>
                 {
-                    Some(Err(table_or_view_not_found(
-                        &describe.catalog,
-                        &describe.namespace,
+                    Some(Err(table_or_view_not_found_parts(&[
+                        describe.catalog.as_str(),
+                        describe.namespace.as_str(),
                         base,
-                    )))
+                        suffix,
+                    ])))
                 }
                 Err(error) => Some(Err(iceberg_err(error))),
                 Ok(_) => Some(Err(provider_error)),
             }
         }
-    }
-}
-
-#[allow(clippy::missing_errors_doc)]
-async fn unqualified_metadata_table(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    handle: &Arc<dyn Catalog>,
-    describe: &DescribeTable,
-) -> Option<Result<RecordBatch>> {
-    let suffix = canonical_metadata_table_name(&describe.table)?;
-    if describe.namespace.is_empty() {
-        return None;
-    }
-    let (default_catalog, default_namespace) = catalogs.current_defaults();
-    if default_catalog != describe.catalog || default_namespace.is_empty() {
-        return None;
-    }
-    let real = TableIdent::new(
-        NamespaceIdent::new(describe.namespace.clone()),
-        describe.table.clone(),
-    );
-    match handle.load_table(&real).await {
-        Err(error)
-            if matches!(
-                error.kind(),
-                ErrorKind::TableNotFound | ErrorKind::NamespaceNotFound
-            ) =>
-        {
-            let base = TableIdent::new(
-                NamespaceIdent::new(default_namespace.clone()),
-                describe.namespace.clone(),
-            );
-            if handle.load_table(&base).await.is_err() {
-                return None;
-            }
-            let reference = TableReference::full(
-                describe.catalog.clone(),
-                default_namespace,
-                format!("{}${suffix}", describe.namespace),
-            );
-            match ctx.table_provider(reference).await {
-                Ok(provider) => Some(metadata_table_describe_batch(&provider.schema())),
-                Err(provider_error) => Some(Err(provider_error)),
-            }
-        }
-        Ok(_) | Err(_) => None,
     }
 }
 
