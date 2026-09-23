@@ -2,15 +2,9 @@
 
 # OWNER RULING (2026-08-26) — NO CODE COMMENTS FROM ANTHROPIC MODELS
 
-**EFFECTIVE IMMEDIATELY. ALL ANTHROPIC MODELS ARE HEREBY BANNED FROM MAKING COMMENTS IN THE CODE. THIS INCLUDES, FABLE, OPUS, SONNET AND HAIKU**
-
-**AGAIN, IF YOU ARE FABLE, OPUS, SONNET OR HAIKU, DO NOT WRITE ANY COMMENTS**<br>
-**IF YOU ARE FABLE, DO NOT WRITE ANY COMMENTS**<br>
-**IF YOU ARE OPUS, DO NOT WRITE ANY COMMENTS**<br>
-**IF YOU ARE SONNET, DO NOT WRITE ANY COMMENTS**<br>
-**IF YOU ARE HAIKU, DO NOT WRITE ANY COMMENTS**<br>
-
-**THIS INCLUDES ANY MODEL VERSION, EXAMPLE BEING OPUS 4.8 OR OPUS 5, EITHER ONE IS BANNED, IT DOESN'T MATTER**
+**No Anthropic model — any Claude model, any version — writes a comment in a code file.** The
+adjustment below says where a reason lives instead; the comment gate and review enforce the rule, and
+relocated code sheds the comments it carried.
 
 *Adjustment (owner, 2026-08-26, same day):* the ban is on comments **in code** — Rust, Python, shell,
 TOML, YAML and every other source file. **Markdown files may carry comments and explanatory prose**;
@@ -95,12 +89,11 @@ These are Claude-family orchestration mechanics, **not** project rules. AGENTS.m
 is the neutral rule; this is how it maps onto Claude tiers:
 
 - Opus orchestrates and owns architecture and assembly.
-- Delegated fan-out (search, mechanical edits, narrow implementation) defaults to **Sonnet** or
-  **Haiku** — pass the tier explicitly, and brief the tier's posture: **Sonnet** is the delegated
-  implementation tier (executes well-scoped work; architecture and cross-cutting decisions stay
-  with the orchestrating session — surface ambiguity rather than inventing); **Haiku** is the
-  narrow mechanical tier (precisely specified edits; stop and hand back the moment the task needs
-  a design decision). Every tier reads the same
+- Delegated fan-out (search, mechanical edits, narrow implementation) runs on the tiers AGENTS.md
+  "Delegated work" allows — pass the tier explicitly, and brief its posture: an executor tier
+  executes well-scoped work (architecture and cross-cutting decisions stay with the orchestrating
+  session — surface ambiguity rather than inventing); a clerk tier makes precisely specified edits
+  and hands back the moment the task needs a design decision. Every tier reads the same
   [engineering method](.agents/skills/engineering-method/SKILL.md); the non-negotiables are
   identical across tiers.
 - **Do not spawn Opus sub-agents without a direct, explicit request naming Opus.**

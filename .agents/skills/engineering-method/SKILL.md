@@ -187,7 +187,7 @@ A task is NOT done until every box is checked:
 - [ ] Null / empty / edge cases are handled AND tested.
 - [ ] No new warnings or errors in logs; no unintended changes outside the target files.
 - [ ] Imports and dependencies are correct and actually used — no orphaned imports.
-- [ ] **Verification commands clean** (canonical list in Language-Specific Rules): `make verify`, or individually Rust `cargo check`, `cargo clippy --all-targets --workspace -- -D warnings`, `cargo fmt --check`, `cargo test --workspace` (**never** `--all-features` — see [AGENTS.md](../../../AGENTS.md) "PyO3 build notes"). Python `uv run --package <pkg> ruff check .`, `... ruff format --check .`, `... pytest`.
+- [ ] **Verification commands clean** (canonical list in Language-Specific Rules; a delegated unit on the shared build box runs the scoped local gate and lets CI run this roster — AGENTS.md "Delegated-agent standing rules"): `make verify`, or individually Rust `cargo check`, `cargo clippy --all-targets --workspace -- -D warnings`, `cargo fmt --check`, `cargo test --workspace` (**never** `--all-features` — see [AGENTS.md](../../../AGENTS.md) "PyO3 build notes"). Python `uv run --package <pkg> ruff check .`, `... ruff format --check .`, `... pytest`.
 
 Diff behavior between `main` and your changes when relevant. Ask: "Would a staff engineer reviewing this approve of it — including the tests?" **Never mark a task complete without proving it works.**
 

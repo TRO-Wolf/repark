@@ -1,2 +1,0 @@
-- You tend to fix exactly the hole a critic names and leave its siblings: apply the CLASS SWEEP rule every time, and say the class in your state file.
-- Before you re-run a tool, re-derive its arguments from your state file — do not copy the previous command line.

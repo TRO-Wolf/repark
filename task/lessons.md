@@ -276,3 +276,15 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DO apply the existing code-comment ban to every model, including OpenAI models.** The owner
   extended the ban when resuming the parked Spark units. Preserve existing comments and required
   documentation; put new rationale in Markdown.
+
+## 2026-09-23 — prompt audit: tier policy in the spine, delegated gate = scoped local + CI
+
+- **DO keep the tier policy in AGENTS.md "Delegated work"** (approved executor tiers; no Sonnet or
+  Haiku in any role — owner, 2026-09-20; Opus only on a named request). CLAUDE.md keeps launch
+  mechanics only, so the adapter never carries a project rule the spine lacks.
+- **DO gate a delegated unit with the scoped local gate and CI's required checks** (owner,
+  2026-09-18); the SEPMO `green_commands` row records the whole-workspace roster as the CI-only
+  exception with its residual gap. `make verify` / `make preflight` remain the developer's roster.
+- **DON'T write an instruction as a diff against its previous version** ("now", "replaces",
+  "unchanged"), pin a model id where a tier name will do, or restate an enforced rule five times;
+  a literal reader reconciles every copy on every turn.
