@@ -362,7 +362,7 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
     assert sorted(row[0] for row in reader_snaps.collect()) == [
         "append",
         "append",
-        "overwrite",
+        "delete",
     ]
     assert [
         (field.name, field.dataType.simpleString(), field.nullable)
@@ -372,7 +372,7 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
     reader_files = reader_files.load(f"{table}.files").select("record_count")
     sql_files = session.sql(f"SELECT record_count FROM {table}.files VERSION AS OF {first}")
     assert _live_rows(reader_files) == _live_rows(sql_files)
-    assert _live_rows(reader_files) == [[2]]
+    assert _live_rows(reader_files) == [[1], [1]]
     assert [
         (field.name, field.dataType.simpleString(), field.nullable)
         for field in reader_files.schema.fields

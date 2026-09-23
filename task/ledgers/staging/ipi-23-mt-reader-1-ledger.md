@@ -54,9 +54,17 @@ either door — the check turns a silent wrong answer into a loud refusal;
 mutation-proven: deleting the branch makes `read_metadata_path_at` route to
 the `sales.sub` snapshots provider). V-003 (P2): the live leg picked
 `sorted(snapshot ids)[0]`, which is not commit order — now
-`ORDER BY committed_at, snapshot_id LIMIT 1`, with the absolute recorded
-answers asserted (operations `["append","append","overwrite"]` sorted,
-`record_count` rows `[[2]]`, both schema fields). V-004 (P3): the "thirteen
+`ORDER BY committed_at, snapshot_id LIMIT 1`, with the absolute answers
+asserted on the live engine (operations `["append","append","delete"]`
+sorted, `record_count` rows `[[1],[1]]`, both schema fields). The live
+engine answers differ from the recorded probe cells on the same
+statements — the probe's `sc` catalog was `InMemoryCatalog` under
+`local[1]` (DELETE commits `overwrite`; one file of two records) while
+the live leg's `livemt` catalog is `hadoop` under `local[2]` (DELETE
+commits `delete` — a COW-shaped commit, verified via the snapshot
+summary's `deleted-data-files` with zero position deletes, even with
+explicit `write.delete.mode=copy-on-write`; two files of one record
+each). V-004 (P3): the "thirteen
 pins" counts here and in `map.md` now read twenty-two with C-001..C-022.
 Sweep: C-002 pins `record_count` as `bigint` non-nullable on the reader
 files frame, C-003 and C-016 pin the absolute operation multiset, C-005 pins
