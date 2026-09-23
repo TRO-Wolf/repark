@@ -147,6 +147,8 @@ def test_load_path_with_time_travel_option_refuses(
     """
     with pytest.raises(AnalysisException, match=re.escape(PATH_OPTION_REFUSAL)):
         spark.read.format("iceberg").option("snapshot-id", "1").load(str(loaded["table_dir"]))
+    with pytest.raises(AnalysisException, match=re.escape(PATH_OPTION_REFUSAL)):
+        spark.read.format("iceberg").option("SNAPSHOT-ID", "1").load(str(loaded["table_dir"]))
 
 
 def test_load_path_with_incremental_option_refuses(
