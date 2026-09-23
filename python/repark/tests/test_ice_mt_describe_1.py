@@ -12,6 +12,7 @@ with no partition section and no blank rows. The live leg re-measures that cell.
 pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 pins: ipi-23-mt-describe-1/C-010, C-011, C-012
 pins: ipi-23-mt-describe-1/C-013, C-014, C-015
+pins: ipi-23-mt-describe-1/C-016
 """
 
 from __future__ import annotations
@@ -140,13 +141,15 @@ def test_table_and_desc_upper_spellings_match(spark: Any) -> None:
     assert _rows(spark, f"DESCRIBE TABLE FORMATTED {target}") == SNAPSHOT_ROWS
 
 
-def test_two_part_after_use_matches(spark: Any) -> None:
-    """After USE, the two-part form answers test 1's rows.
+def test_two_part_after_use_is_plain_not_found(spark: Any) -> None:
+    """Q1(a): after USE, the two-part form takes the plain path, not recovery.
 
     pins: ipi-23-mt-describe-1/C-004
     """
     spark.sql(f"USE {CATALOG}.{NAMESPACE}")
-    assert _rows(spark, f"DESCRIBE {TABLE}.snapshots") == SNAPSHOT_ROWS
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"DESCRIBE {TABLE}.snapshots")
+    assert str(excinfo.value) == 'NamespaceNotFound => No such namespace: NamespaceIdent(["t"])'
 
 
 def test_plain_table_describe_unchanged(spark: Any) -> None:
@@ -179,7 +182,7 @@ def test_missing_base_not_found_names_base(spark: Any) -> None:
         spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.missing.snapshots")
     text = str(excinfo.value)
     assert "[TABLE_OR_VIEW_NOT_FOUND]" in text
-    assert f"`{CATALOG}`.`{NAMESPACE}`.`missing`" in text
+    assert f"`{CATALOG}`.`{NAMESPACE}`.`missing`.`snapshots`" in text
     assert "$" not in text
     assert "42P01" in text
 
@@ -236,7 +239,7 @@ def test_missing_namespace_maps_to_not_found_naming_base(spark: Any) -> None:
     """
     expected = (
         "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
-        f"`{CATALOG}`.`nosuchns`.`{TABLE}` cannot be found. Verify the spelling and "
+        f"`{CATALOG}`.`nosuchns`.`{TABLE}`.`snapshots` cannot be found. Verify the spelling and "
         "correctness of the schema and catalog. If you did not qualify the name with a "
         "schema, verify the current_schema() output, or qualify the name with the correct "
         "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
@@ -285,7 +288,7 @@ def test_four_part_extended_formatted_matrix(spark: Any) -> None:
     """
     missing = (
         "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
-        f"`{CATALOG}`.`{NAMESPACE}`.`missing` cannot be found. Verify the spelling and "
+        f"`{CATALOG}`.`{NAMESPACE}`.`missing`.`snapshots` cannot be found. Verify the spelling and "
         "correctness of the schema and catalog. If you did not qualify the name with a "
         "schema, verify the current_schema() output, or qualify the name with the correct "
         "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
@@ -308,7 +311,7 @@ def test_four_part_extended_formatted_matrix(spark: Any) -> None:
     assert _rows(spark, f"DESCRIBE EXTENDED {upper}") == SNAPSHOT_ROWS
     absent_ns = (
         "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
-        f"`{CATALOG}`.`nosuchns`.`{TABLE}` cannot be found. Verify the spelling and "
+        f"`{CATALOG}`.`nosuchns`.`{TABLE}`.`snapshots` cannot be found. Verify the spelling and "
         "correctness of the schema and catalog. If you did not qualify the name with a "
         "schema, verify the current_schema() output, or qualify the name with the correct "
         "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
@@ -317,6 +320,19 @@ def test_four_part_extended_formatted_matrix(spark: Any) -> None:
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE TABLE FORMATTED {CATALOG}.nosuchns.{TABLE}.snapshots")
     assert str(excinfo.value) == absent_ns
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="AnalysisException: Error during planning: table 'ns.t.snapshots' not found",
+)
+def test_namespaced_table_meta_after_use_answers_rows(spark: Any) -> None:
+    """Spark answers rows for the namespace-qualified meta name after USE.
+
+    pins: ipi-23-mt-describe-1/C-016
+    """
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}")
+    assert _rows(spark, f"DESCRIBE {NAMESPACE}.{TABLE}.snapshots") == SNAPSHOT_ROWS
 
 
 @pytest.mark.skipif(not LIVE, reason=LIVE_SKIP)
