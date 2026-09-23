@@ -518,9 +518,12 @@ async fn view_create_drop_and_write_guard_complete_bare_names_from_use() {
     let error = crate::view_ddl::execute::refuse_view_write_target(&catalogs, &names[0])
         .await
         .expect_err("view write target must refuse");
+    let DataFusionError::Plan(message) = error else {
+        panic!("expected Plan refusal, got {error:?}");
+    };
     assert_eq!(
-        error.to_string(),
-        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`v` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+        message,
+        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`v` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
     );
     run(&ctx, &catalogs, "DROP VIEW v").await;
     assert!(
