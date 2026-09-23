@@ -1537,29 +1537,24 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
   surfaces (same reading as `ST-1`); the adapter keeps reading them rather than parsing
   `DESCRIBE` text, which is now Spark-shaped but still a diagnostic report, not a contract.
 
-#### DBT-TBLPROPS-1 — table `SHOW TBLPROPERTIES` and `SHOW TABLE EXTENDED` refuse
+#### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` refuses; `SHOW TABLE EXTENDED` answers
 
-- **repark** — on a table, both `SHOW TBLPROPERTIES cat.ns.t` and
-  `SHOW TABLE EXTENDED IN ns LIKE '*'` refuse
-  with the **identical** message, `AnalysisException: Error during planning: SHOW [VARIABLE] is
-  not supported unless information_schema is enabled`. They are one row rather than two because
-  the mechanism and the message are the same for tables: both land on the
-  `information_schema` guard. A view answers `SHOW TBLPROPERTIES` (IPI-40 PR4;
-  D-VIEW-SHOWPROPS-1). dbt's table `fetch_tbl_properties` therefore has no
-  source, and `list_relations_without_caching` has no first attempt — `dbt-spark` tries
-  `SHOW TABLE EXTENDED` first and falls back to `SHOW TABLES IN`, which is refused separately by
-  `ST-1`, so **both** of its listing paths are closed and the adapter overrides the Python method
-  instead. Table properties remain readable from the table metadata, and
-  `ALTER TABLE … SET TBLPROPERTIES` is accepted.
-- **Apache Spark** — `SHOW TBLPROPERTIES` lists the table's properties; `SHOW TABLE EXTENDED`
-  returns schema, provider and detail text per relation (on a v2 Iceberg table Spark itself
-  refuses this one — SPARK-33393 — which is why dbt-spark carries the fallback).
-  *(oracle: documented — the claim here is the refusal form, not a value.)*
+- **repark** — **2026-09-23:** `SHOW TABLE EXTENDED IN ns LIKE '*'` now answers Spark's
+  four-column rows for Iceberg tables: `namespace`, `tableName`, `isTemporary`, and `information`.
+  It does not list session temporary views; that is the remaining residue. `SHOW TBLPROPERTIES
+  cat.ns.t` still refuses with `AnalysisException: Error during planning: SHOW [VARIABLE] is not
+  supported unless information_schema is enabled` on a table until the next slice; a view answers
+  `SHOW TBLPROPERTIES` (IPI-40 PR4; D-VIEW-SHOWPROPS-1). The existing dbt adapter
+  `list_relations_without_caching` override is unchanged.
+- **Apache Spark** — Spark 4.1.2 answers `SHOW TABLE EXTENDED` on an Iceberg v2 table with its
+  four-column relation detail row (measured 2026-09-23). `SHOW TBLPROPERTIES` lists the table's
+  properties.
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]`
-  and `[R-SHOW-TABLE-EXTENDED]`
-- **Rationale** — DECLARED for tables, same family as `NS-1` / `ST-1`. The facade `Catalog`
-  is the supported table listing surface, and the adapter uses it.
+  `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-SHOW-TABLE-EXTENDED]`,
+  `test_show_table_extended_answers_spark_shape`, and
+  `test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]`
+- **Rationale** — `SHOW TBLPROPERTIES` remains DECLARED for the next slice. `SHOW TABLE EXTENDED`
+  now serves catalog Iceberg tables, while session temporary views remain outside its row set.
 
 #### DBT-CREATENS-1 — namespace DDL refuses a one-part name
 
