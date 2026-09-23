@@ -20,7 +20,12 @@ pub(crate) async fn describe_view_frame(
 ) -> Result<DataFrame> {
     let view = match catalog.load_view(ident).await {
         Ok(view) => view,
-        Err(error) if error.kind() == ErrorKind::ViewNotFound => {
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::ViewNotFound | ErrorKind::FeatureUnsupported
+            ) =>
+        {
             return Err(table_or_view_not_found(
                 &describe.catalog,
                 &describe.namespace,
