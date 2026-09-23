@@ -29,7 +29,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   DataFusion variant and the wrapped Iceberg error kind.
   the source table disappears, including EXTENDED.
 - `alter_view_routing.rs` — ALTER VIEW pins viewless catalog refusals, error propagation, and property update counts.
-- `show_tblproperties_routing.rs` — SHOW TBLPROPERTIES pins viewless catalog fallback to a table and error routing.
+- `show_tblproperties_routing.rs` — SHOW TBLPROPERTIES pins the complete view row set, warehouse location, Arrow schema, viewless catalog fallback, and error routing.
 - `viewless_catalog.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** the A-9 SQL-door
   battery: `test_views_refuse_on_glue_and_s3tables` drives CREATE, CREATE OR
   REPLACE (over a missing name and over an existing table) and SHOW VIEWS=[]
