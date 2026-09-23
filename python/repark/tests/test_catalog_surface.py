@@ -446,6 +446,15 @@ def test_show_tables_in_lists_namespace_tables(spark: ReparkSession) -> None:
     assert table.column("isTemporary").to_pylist() == [False]
 
 
+def test_show_table_extended_returns_spark_metadata_shape(spark: ReparkSession) -> None:
+    """SHOW TABLE EXTENDED returns the four Spark metadata columns."""
+    frame = spark.sql("SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'entity'")
+    assert frame.columns == ["namespace", "tableName", "isTemporary", "information"]
+    information = frame.collect()[0]["information"]
+    assert information.startswith("Catalog: glue_catalog\n")
+    assert "\nSchema: root\n" in information
+
+
 def test_list_databases_location_uri_none_divergence(spark: ReparkSession) -> None:
     """Pin for registry row FA-2 (docs/spark-sql-iceberg-parity.md §5) — semantics live there."""
     spark.catalog.setCurrentCatalog("glue_catalog")

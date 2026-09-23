@@ -76,6 +76,12 @@ def _served() -> tuple[Shape, ...]:
             None,
         ),
         Shape(
+            "S-SHOW-TABLE-EXTENDED",
+            "spark__list_relations_without_caching",
+            f"show table extended in {NAMESPACE} like '*'",
+            None,
+        ),
+        Shape(
             "S-SET-CONF",
             "server_side_parameters",
             "set spark.sql.shuffle.partitions = 2",
@@ -209,12 +215,6 @@ def _refused() -> tuple[Shape, ...]:
             "expected a two-part `catalog.namespace` name",
         ),
         Shape(
-            "R-SHOW-TABLE-EXTENDED",
-            "spark__list_relations_without_caching",
-            f"show table extended in {NAMESPACE} like '*'",
-            "SHOW [VARIABLE] is not supported unless information_schema is enabled",
-        ),
-        Shape(
             "R-SHOW-TBLPROPERTIES",
             "fetch_tbl_properties",
             f"show tblproperties {fact}",
@@ -292,6 +292,12 @@ def test_describe_extended_answers_spark_shape(seeded_session: Any) -> None:
     assert rows[0]["col_name"] == "survey_id"
     assert rows[0]["data_type"] == "string"
     assert any(row["col_name"] == "Provider" and row["data_type"] == "iceberg" for row in rows)
+
+
+def test_show_table_extended_answers_spark_shape(seeded_session: Any) -> None:
+    """SHOW TABLE EXTENDED returns Spark's four-column table listing shape."""
+    shown = seeded_session.sql(f"show table extended in {NAMESPACE} like '*'").to_arrow()
+    assert shown.column_names == ["namespace", "tableName", "isTemporary", "information"]
 
 
 def test_facade_schema_answers_spark_type_spellings(seeded_session: Any) -> None:

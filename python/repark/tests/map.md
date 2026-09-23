@@ -5067,7 +5067,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   AST forbids `_namespace_exists` on `get_database`), `locationUri` equals
   `probe_namespace_location_via_describe` on one memory session, FA-2 `listDatabases`
   still None. **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `SHOW TABLES [IN|FROM]
-  [LIKE]` is implemented SQL (ST-1 FIXED); the remaining divergence is
+  [LIKE]` is implemented SQL (ST-1 FIXED). **SHOW-TABLE-EXTENDED-1 (2026-09-23):**
+  `SHOW TABLE EXTENDED IN catalog.namespace LIKE pattern` answers its four-column facade shape
+  and metadata text. The remaining divergence is
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   pins: ice-catalog-session-1/C-016
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
@@ -5080,7 +5082,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `pyspark`→`repark.spark` smoke, top-level shim identity.
 - [test_catalog_surface.py](test_catalog_surface.py) — **G-INT INT-004** (historical bullet; current surface is the
   R-CURCAT entry above). Pins that still matter: `tableExists` / camelCase aliases /
-  `clearCache`/`dropTempView`.   Rowed listing: `SHOW TABLES IN` answers Spark's shape
+  `clearCache`/`dropTempView`. Rowed listing: `SHOW TABLES IN` answers Spark's shape and
+  `SHOW TABLE EXTENDED IN` answers the four-column metadata shape
   ([ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in--is-unimplemented--fixed-2026-09-20),
   fixed 2026-09-20) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).

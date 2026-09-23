@@ -24,8 +24,8 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 ## Contents
 
 - `conftest.py` — the two `sys.path` entries above.
-- `test_statement_surface.py` — 30 cases: every statement shape dbt emits, run through
-  `repark.sql()` on a memory catalog. Seventeen served, eleven refused with the exact message
+- `test_statement_surface.py` — every statement shape dbt emits, run through
+  `repark.sql()` on a memory catalog. The served and refused sets assert the exact message
   (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
   the `CLUSTERED BY (…) INTO n BUCKETS` CTAS shape moved to served under IPI-26/27 round 1,
   2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform; the `LOCATION`,
@@ -50,6 +50,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   `SELECT`, and `SHOW TABLES IN gold` answers the dbt glob shape); `R-RENAME-TWO-PART`
   keeps refusing, against a missing namespace — a missing object refuses, never the name's
   shape (DBT-QUALIFY-1 FIXED).
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served and pins
+  `namespace`, `tableName`, `isTemporary`, and `information`; `R-SHOW-TBLPROPERTIES` stays
+  refused.
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row
