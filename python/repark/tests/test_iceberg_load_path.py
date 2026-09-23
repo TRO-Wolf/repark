@@ -157,9 +157,7 @@ def test_load_path_with_incremental_option_refuses(
     pins: dfload-1/C-004
     """
     with pytest.raises(AnalysisException, match=re.escape(PATH_INCREMENTAL_REFUSAL)):
-        spark.read.format("iceberg").option("start-snapshot-id", "1").load(
-            str(loaded["table_dir"])
-        )
+        spark.read.format("iceberg").option("start-snapshot-id", "1").load(str(loaded["table_dir"]))
 
 
 def test_load_missing_location_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
@@ -183,9 +181,7 @@ def test_load_empty_metadata_dir_names_the_path(spark: ReparkSession, tmp_path: 
         spark.read.format("iceberg").load(str(location))
 
 
-def test_load_hinted_missing_metadata_names_the_path(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
+def test_load_hinted_missing_metadata_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
     """A ``version-hint.text`` naming a metadata file that does not exist refuses
     AnalysisException naming the path, not an internal Iceberg error.
 
