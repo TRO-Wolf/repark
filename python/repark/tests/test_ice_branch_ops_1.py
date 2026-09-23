@@ -385,7 +385,7 @@ def test_rollback_to_timestamp_invalid_typed_literal_keeps_full_parse_message(
     """A malformed TIMESTAMP literal keeps the branch-operations producer message."""
     sql = "CALL mem.system.rollback_to_timestamp('ns.ops', TIMESTAMP 'x')"
     expected = (
-        "[INVALID_TYPED_LITERAL] The value of the typed literal \"TIMESTAMP\" is invalid: "
+        '[INVALID_TYPED_LITERAL] The value of the typed literal "TIMESTAMP" is invalid: '
         "'x'. SQLSTATE: 42604"
     )
     with pytest.raises(ParseException) as caught:
