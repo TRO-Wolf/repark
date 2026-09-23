@@ -17,7 +17,8 @@ overwrite``) and ``R-DF-LOAD-META-FILES-VERSIONASOF``
 ``sb-mt``; the live tier replays the reader/SQL equality on live Spark.
 
 pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
-pins: ipi-23-mt-reader-1/C-008, C-009, C-010, C-011, C-012, C-013
+pins: ipi-23-mt-reader-1/C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015
+pins: ipi-23-mt-reader-1/C-016, C-017, C-018, C-019, C-020, C-021, C-022
 """
 
 from __future__ import annotations
@@ -317,3 +318,155 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
     reader_files = reader_files.load(f"{table}.files").select("record_count")
     sql_files = session.sql(f"SELECT record_count FROM {table}.files VERSION AS OF {first}")
     assert _live_rows(reader_files) == _live_rows(sql_files)
+
+
+def test_load_case_twin_table_matches_sql_door(spark: Any) -> None:
+    """V-001: a case-twin table fails like the SQL door, backticks included.
+
+    pins: ipi-23-mt-reader-1/C-014
+    """
+    _seeded(spark, "t_casetwin")
+    twin = f"{CATALOG}.{NAMESPACE}.T_CASETWIN"
+    with pytest.raises(AnalysisException) as reader_twin:
+        _iceberg_reader(spark).load(f"{twin}.snapshots").collect()
+    with pytest.raises(AnalysisException) as sql_twin:
+        spark.sql(f"SELECT operation FROM {twin}.snapshots").collect()
+    assert str(reader_twin.value) == str(sql_twin.value)
+
+
+def test_quoted_dollar_missing_table_refuses_all_files(spark: Any) -> None:
+    """V-002: the missing-table dollar spelling refuses before the load.
+
+    pins: ipi-23-mt-reader-1/C-015
+    """
+    table = _seeded(spark, "t_dollar_refuse")
+    first = _snapshot_ids(spark, table)[0]
+    missing_query = (
+        f'SELECT count(*) FROM {CATALOG}.{NAMESPACE}."missing$all_files" VERSION AS OF 1'
+    )
+    existing_query = (
+        f'SELECT count(*) FROM {CATALOG}.{NAMESPACE}."t_dollar_refuse$all_files" VERSION AS OF 1'
+    )
+    with pytest.raises(AnalysisException) as missing:
+        spark.sql(missing_query).collect()
+    with pytest.raises(AnalysisException) as existing_dollar:
+        spark.sql(existing_query).collect()
+    with pytest.raises(AnalysisException) as existing_dotted:
+        spark.sql(f"SELECT count(*) FROM {table}.all_files VERSION AS OF {first}").collect()
+    assert str(missing.value) == str(existing_dollar.value)
+    assert str(missing.value) == str(existing_dotted.value)
+    assert missing.value.getSqlState() == existing_dollar.value.getSqlState()
+    assert missing.value.getSqlState() == existing_dotted.value.getSqlState()
+    assert "Cannot select snapshot in table: ALL_FILES" in str(missing.value)
+
+
+def test_load_uppercase_suffix_equals_sql(spark: Any) -> None:
+    """Sweep: an uppercase suffix serves on both doors alike.
+
+    pins: ipi-23-mt-reader-1/C-016
+    """
+    table = _seeded(spark, "t_upper_suffix")
+    reader = _iceberg_reader(spark).load(f"{table}.SNAPSHOTS")
+    sql = spark.sql(f"SELECT * FROM {table}.SNAPSHOTS")
+    assert _frame_rows(reader) == _frame_rows(sql)
+    assert _frame_cols(reader) == _frame_cols(sql)
+
+
+def test_load_missing_parent_matches_sql_door(spark: Any) -> None:
+    """Sweep: missing table and missing namespace fail alike on both doors.
+
+    pins: ipi-23-mt-reader-1/C-017
+    """
+    _seeded(spark, "t_missing_parent")
+    missing_table = f"{CATALOG}.{NAMESPACE}.missing"
+    missing_ns = f"{CATALOG}.nope.t_missing_parent"
+    for name in (missing_table, missing_ns):
+        with pytest.raises(AnalysisException) as reader_missing:
+            _iceberg_reader(spark).load(f"{name}.snapshots").collect()
+        with pytest.raises(AnalysisException) as sql_missing:
+            spark.sql(f"SELECT * FROM {name}.snapshots").collect()
+        assert str(reader_missing.value) == str(sql_missing.value), name
+
+
+def test_load_all_types_without_as_of_equals_sql(spark: Any) -> None:
+    """Sweep: every ``all_*`` table serves on both doors alike.
+
+    pins: ipi-23-mt-reader-1/C-018
+    """
+    table = _seeded(spark, "t_all_noasof")
+    spellings = (
+        "all_files",
+        "all_data_files",
+        "all_delete_files",
+        "all_entries",
+        "all_manifests",
+    )
+    for suffix in spellings:
+        reader = _iceberg_reader(spark).load(f"{table}.{suffix}")
+        sql = spark.sql(f"SELECT * FROM {table}.{suffix}")
+        assert _frame_rows(reader) == _frame_rows(sql), suffix
+        assert _frame_cols(reader) == _frame_cols(sql), suffix
+
+
+def test_load_quoted_dollar_spelling_equals_sql(spark: Any) -> None:
+    """Sweep: the quoted ``t$suffix`` spelling serves on both doors alike.
+
+    pins: ipi-23-mt-reader-1/C-019
+    """
+    _seeded(spark, "t_dollar_nosof")
+    reader = _iceberg_reader(spark).load(f'{CATALOG}.{NAMESPACE}."t_dollar_nosof$snapshots"')
+    sql = spark.sql(f'SELECT * FROM {CATALOG}.{NAMESPACE}."t_dollar_nosof$snapshots"')
+    assert _frame_rows(reader) == _frame_rows(sql)
+    assert _frame_cols(reader) == _frame_cols(sql)
+
+
+def test_load_uppercase_suffix_as_of_equals_sql(spark: Any) -> None:
+    """Sweep: an uppercase suffix with ``versionAsOf`` serves on both doors.
+
+    pins: ipi-23-mt-reader-1/C-020
+    """
+    table = _seeded(spark, "t_upper_asof")
+    first = _snapshot_ids(spark, table)[0]
+    reader = _iceberg_reader(spark).option("versionAsOf", first).load(f"{table}.FILES")
+    sql = spark.sql(f"SELECT * FROM {table}.FILES VERSION AS OF {first}")
+    assert _frame_rows(reader) == _frame_rows(sql)
+    assert _frame_cols(reader) == _frame_cols(sql)
+
+
+def test_load_missing_parent_as_of_matches_sql_door(spark: Any) -> None:
+    """Sweep: missing parents and unknown suffix fail alike with AS OF.
+
+    pins: ipi-23-mt-reader-1/C-021
+    """
+    table = _seeded(spark, "t_missing_asof")
+    first = _snapshot_ids(spark, table)[0]
+    names = (
+        f"{CATALOG}.{NAMESPACE}.missing.files",
+        f"{CATALOG}.nope.t_missing_asof.files",
+        f"{table}.nope",
+    )
+    for name in names:
+        with pytest.raises(AnalysisException) as reader_missing:
+            _iceberg_reader(spark).option("versionAsOf", first).load(name).collect()
+        with pytest.raises(AnalysisException) as sql_missing:
+            spark.sql(f"SELECT * FROM {name} VERSION AS OF {first}").collect()
+        assert str(reader_missing.value) == str(sql_missing.value), name
+
+
+def test_load_all_types_as_of_refuse_alike(spark: Any) -> None:
+    """Sweep: every ``all_*`` refusal matches the SQL door's class and text.
+
+    pins: ipi-23-mt-reader-1/C-022
+    """
+    table = _seeded(spark, "t_all_asof")
+    first = _snapshot_ids(spark, table)[0]
+    spellings = ("all_data_files", "all_delete_files", "all_entries", "all_manifests")
+    for suffix in spellings:
+        upper = suffix.upper()
+        with pytest.raises(AnalysisException) as reader_refusal:
+            reader_pinned = _iceberg_reader(spark).option("versionAsOf", first)
+            reader_pinned.load(f"{table}.{suffix}").collect()
+        with pytest.raises(AnalysisException) as sql_refusal:
+            spark.sql(f"SELECT count(*) FROM {table}.{suffix} VERSION AS OF {first}").collect()
+        assert str(reader_refusal.value) == str(sql_refusal.value), suffix
+        assert f"Cannot select snapshot in table: {upper}" in str(reader_refusal.value), suffix
