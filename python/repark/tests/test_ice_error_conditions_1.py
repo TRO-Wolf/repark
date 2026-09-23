@@ -82,6 +82,12 @@ def test_condition_parser_strips_each_known_prefix(prefix: str) -> None:
             "PARSE_SYNTAX_ERROR",
             "42601",
         ),
+        ('ParserError("[FOO] x', None, None),
+        ('SQL error: ParserError("[FOO] x SQLSTATE: 42601', None, "42601"),
+        ('ParserError([FOO] x")', None, None),
+        ('ParserError("[FOO] x") trailing', None, None),
+        ('ParserError("")', None, None),
+        ('SQL error: ParserError("[FOO] x SQLSTATE: 42601")', "FOO", "42601"),
     ],
 )
 def test_parser_wrapper_condition_extraction_rejects_malformed_forms(
