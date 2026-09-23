@@ -1499,7 +1499,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **IPI-30-ORPHAN-GUARD-NARROW-1 (2026-09-22), in flight:** owner ruling Q-55-6. The
   `remove_orphan_files` shared-root guard now refuses only a scan path that is the CTAS
   fallback root, a parent of it, or a directory holding another table of the catalog, so a
-  fallback table sweeps its own directory. `file_list_view` is accepted: `dry_run` lists the
+  fallback table created without an explicit table `LOCATION` sweeps its own directory.
+  `file_list_view` is accepted: `dry_run` lists the
   view's orphans verbatim, and an armed call deletes exactly those. Registry row ORPHAN-3.
   `risk_tier: high`. Branch `fix/ipi-30-orphan-guard-narrow`.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,

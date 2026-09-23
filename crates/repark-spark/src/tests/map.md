@@ -984,14 +984,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ipi-30-orphan-1/C-001, C-002, C-003, C-004
   pins: ipi-30-orphan-1/C-005, C-006, C-007, C-008, C-009, C-011
   **IPI-30 guard narrowed (2026-09-22, owner ruling Q-55-6):** `call_orphan_shared_ctas_root_rule`
-  now accepts a table's own directory under `<root>/repark_ctas` and refuses only the root, its
+  now accepts the own directory of a table created without an explicit table `LOCATION` under
+  `<root>/repark_ctas` and refuses only the root, its
   `file:` / `..` / trailing-slash / ANSI aliases, and its parents; the remote and no-policy
   rows and the name-prefix sibling accept. `call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root`
   keeps the execute-path refusal at the root.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-008, C-009
 - [call_orphan_scope.rs](call_orphan_scope.rs) — **IPI-30 guard narrowed (2026-09-22, owner
   ruling Q-55-6):** end-to-end pins on a `ReparkSession` memory catalog whose namespace has
-  no `location`, so every table sits under `<warehouse>/repark_ctas/ice/ns/<table>`. The
+  no `location` and whose tables carry no table `LOCATION`, so each sits under
+  `<warehouse>/repark_ctas/ice/ns/<table>`. The
   bare call sweeps the table's own directory (10-day orphan listed and deleted, 1-day orphan
   kept), and a sibling table in the same namespace does not block that sweep; a `location` at
   the warehouse, `repark_ctas` or `repark_ansi_ctas` refuses; a `location` holding another

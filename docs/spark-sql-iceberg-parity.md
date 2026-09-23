@@ -6752,8 +6752,9 @@ the pin rather than obeying it.
 > `ORPHAN-2`. That id already belongs to the retired dry-run-default row above, so it is filed
 > as `ORPHAN-3`.)
 
-- **repark** — On a memory catalog, a namespace created without `location` places each table
-  at `<warehouse>/repark_ctas/<catalog>/<ns>/<table>`. `CALL <catalog>.system.remove_orphan_files(table => …)`
+- **repark** — On a memory catalog, a table created without an explicit table `LOCATION` in a
+  namespace created without `location` sits at `<warehouse>/repark_ctas/<catalog>/<ns>/<table>`.
+  `CALL <catalog>.system.remove_orphan_files(table => …)`
   now sweeps that directory. The planted 10-day-old `data/orphan-file.parquet` comes back as one
   `orphan_file_location` row and is deleted. A 1-day-old orphan gives zero rows and is kept.
   A sibling table in the same namespace does not block that sweep. On a `TempFallbackAllowed`
