@@ -730,6 +730,32 @@ fn call_orphan_shared_ctas_root_rule() {
     );
 }
 
+#[test]
+fn call_remove_orphan_files_listing_path_table_location_normal_form_rule() {
+    use crate::call::remove_orphan_files::table_location_is_normal;
+    for normal in [
+        "/wh/t",
+        "/wh/t/",
+        "file:///wh/t",
+        "file:///wh/t/",
+        "s3://bucket/t",
+        "s3://bucket/",
+        "s3://bucket",
+    ] {
+        assert!(table_location_is_normal(normal), "{normal}");
+    }
+    for aliased in [
+        "/wh/detour/../t",
+        "/wh/./t",
+        "/wh//t",
+        "/wh/t//",
+        "file:///wh/detour/../t",
+        "s3://bucket/x/../t",
+    ] {
+        assert!(!table_location_is_normal(aliased), "{aliased}");
+    }
+}
+
 #[tokio::test]
 async fn call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root() {
     use std::sync::Arc;

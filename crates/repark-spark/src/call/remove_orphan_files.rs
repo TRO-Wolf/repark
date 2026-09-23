@@ -267,6 +267,7 @@ pub(super) async fn execute_remove_orphan_files(
         return orphan_result_dataframe(ctx, &orphans);
     }
 
+    refuse_listing_an_unnormalised_table_location(&table, &table_arg)?;
     let mut action = DeleteOrphanFiles::new(table).older_than(older_than_ms);
     if let Some(location) = location {
         action = action.location(normalize_location_path(&location));
@@ -291,6 +292,25 @@ pub(super) async fn execute_remove_orphan_files(
         .collect();
     refuse_partial_delete(result.orphan_file_locations.len(), &failures)?;
     orphan_result_dataframe(ctx, &result.orphan_file_locations)
+}
+
+pub(crate) fn table_location_is_normal(stored: &str) -> bool {
+    let normal = normalize_location_path(stored);
+    normal == stored || normal == stored.strip_suffix('/').unwrap_or(stored)
+}
+
+fn refuse_listing_an_unnormalised_table_location(table: &Table, table_arg: &str) -> Result<()> {
+    let stored = table.metadata().location();
+    if table_location_is_normal(stored) {
+        return Ok(());
+    }
+    let normal = normalize_location_path(stored);
+    Err(DataFusionError::Plan(format!(
+        "CALL remove_orphan_files refuses to list `{table_arg}`: its location `{stored}` is not \
+         in normal path form (`{normal}`), and the listing path cannot yet match the files it \
+         lists against the table's own references safely, so a live file could be taken for an \
+         orphan. Pass `file_list_view => '<view>'` to sweep this table instead."
+    )))
 }
 
 async fn delete_listed_orphans(table: &Table, orphans: &[String]) -> Result<()> {

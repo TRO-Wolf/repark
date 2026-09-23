@@ -775,6 +775,61 @@ async fn call_remove_orphan_files_listing_path_resolves_an_aliased_location() {
 }
 
 #[tokio::test]
+async fn call_remove_orphan_files_listing_path_refuses_a_table_location_that_holds_an_alias() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let wh = warehouse.path().display().to_string();
+    std::fs::create_dir_all(warehouse.path().join("detour")).unwrap();
+    submit(
+        &session,
+        &format!("CREATE NAMESPACE ice.al LOCATION '{wh}/detour/../aliased'"),
+    )
+    .await;
+    submit(
+        &session,
+        "CREATE TABLE ice.al.t USING iceberg AS SELECT 1 AS id",
+    )
+    .await;
+    let table_dir = warehouse.path().join("aliased").join("t");
+    let live = referenced_data_file(&table_dir);
+    age_ten_days(&live);
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+    let expected = format!(
+        "CALL remove_orphan_files refuses to list `al.t`: its location \
+         `{wh}/detour/../aliased/t` is not in normal path form (`{wh}/aliased/t`), and the \
+         listing path cannot yet match the files it lists against the table's own references \
+         safely, so a live file could be taken for an orphan. Pass `file_list_view => '<view>'` \
+         to sweep this table instead."
+    );
+
+    for arguments in [
+        "table => 'al.t', dry_run => true".to_string(),
+        "table => 'al.t'".to_string(),
+        format!("table => 'al.t', location => '{wh}/aliased/t'"),
+    ] {
+        let err = call_error(
+            &session,
+            &format!("CALL ice.system.remove_orphan_files({arguments})"),
+        )
+        .await;
+        assert_eq!(plan_message(err), expected, "{arguments}");
+        assert!(live.exists() && orphan.exists(), "{arguments}");
+    }
+
+    file_list_view(&session, &[&live, &orphan]).await;
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'al.t', dry_run => true, \
+         file_list_view => 'v')",
+    )
+    .await
+    .expect("file_list_view still sweeps the table");
+    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert!(live.exists());
+    assert_eq!(live_rows(&session, "al.t").await, 1);
+}
+
+#[tokio::test]
 async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     let warehouse = TempDir::new().unwrap();
     let session = fallback_session(&warehouse).await;
