@@ -177,6 +177,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   Rust seam fix plus cache-view conformance, oracle-cell pins, registry row.
   `risk_tier: standard`. Branch `feat/decimal-cache-1`.
   pins: decimal-cache-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [describe-column-1-ledger.md](describe-column-1-ledger.md) —
+  **DESCRIBE-COLUMN-1 (2026-09-23), in flight:** Spark's one-column DESCRIBE rows and
+  parse-altitude VERSION/TIMESTAMP refusal on the Spark SQL door. Round 2 adds identity partition
+  rows and CREATE-family owner stamping. `risk_tier: standard`.
+  Branch `xd/describe`.
+  pins: describe-column-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [df-eager-1-ledger.md](df-eager-1-ledger.md) —
   **DF-EAGER-1 step 1 (2026-09-09), in flight:** `.eager()` / `.compute()` / `.lazy()` on the
   facade DataFrame. Step 1 only: the red-first pins in

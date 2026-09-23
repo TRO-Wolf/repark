@@ -1339,7 +1339,7 @@ pins: rp-4-fork-repin/C-005, C-006
   executor for `DESCRIBE [TABLE] [EXTENDED|FORMATTED] t col`. It preserves the caller spelling
   for `col_name`, uses Spark DDL type spelling, returns literal `NULL` for an absent comment,
   and owns the nested-column, missing-column, and time-travel-tail refusals.
-  pins: describe-column-1/C-001, C-002, C-003, C-004
+  pins: describe-column-1/C-001, C-002, C-003, C-004, C-006
   **D-DESCRIBE-EXTENDED (2026-09-23):** it also builds the partition section: a nonempty
   all-identity spec emits `# Partition Information`, its column header, and source type/doc
   rows without a blank separator; all other specs retain `# Partitioning` transform rows.
