@@ -17,7 +17,7 @@ pushes, or rebases.
 
 - [x] Replace the raw SHOW CREATE prefix split with a nested-comment-aware scanner and sweep matching raw keyword checks.
 - [x] Pin full RePark refusal text and narrow the SHOW CREATE parity claim for IPI-51's caret-block residue.
-- [ ] Pin the complete multi-term sort-order CREATE text from the measured m2 answer.
+- [x] Pin the complete multi-term sort-order CREATE text from the measured m2 answer.
 - [ ] Pin ParserError condition extraction for the measured INSERT BY NAME and multi-statement shapes.
 - [ ] Pin complete SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES rows and Arrow types.
 
@@ -27,7 +27,7 @@ pushes, or rebases.
 |---|---|---|---|---|
 | C-001 | A SHOW CREATE TABLE lexical failure remains the typed invalid-statement refusal when line or nested bracket comments occur before or between its keywords. | Rust pre-check and parser pins plus facade labels from m8. | PROVEN | `comment_aware_show_create_*` and `test_show_create_comments_*`; the shared scanner also replaces router's raw default-SET precheck. |
 | C-002 | SHOW CREATE parse refusals expose Spark's condition, SQLSTATE, and first line while retaining RePark's exact no-caret rendering. | Rust and facade exact-message pins; registry scope statement. | PROVEN | Exact Rust parser and rendered-error checks plus facade message equality; registry assigns the absent caret block to IPI-51. |
-| C-003 | The multi-term sort-order fixture matches the complete measured m2 CREATE text after only catalog/name/location substitution. | Exact Rust CREATE-text pin. | OPEN | `write.distribution-mode=range` is part of Spark's output. |
+| C-003 | The multi-term sort-order fixture matches the complete measured m2 CREATE text after only catalog/name/location substitution. | Exact Rust CREATE-text pin. | PROVEN | `show_create_multi_term_sort_order_matches_spark` carries the `range` property and matches the full m2 text. |
 | C-004 | ParserError-wrapped parse refusals report their bracketed condition without classifying malformed wrappers. | Facade and direct native-exception pins. | OPEN | INSERT BY NAME and multi-statement text remains owned elsewhere. |
 | C-005 | SHOW TABLES, SHOW COLUMNS, and SHOW TBLPROPERTIES near misses preserve complete Spark row shapes and Arrow field types. | Exact Rust rows and schema pins. | OPEN | No view behavior changes. |
 

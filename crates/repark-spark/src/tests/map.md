@@ -1444,7 +1444,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   unclosed bracket comments and unrelated text stay outside the intercept.
   **WO-C3 C2:** every SHOW CREATE parse-refusal pin compares the exact parser first line and
   RePark's complete rendered `DataFusionError` text.
-  pins: wo-c3/C-001, C-002
+  **WO-C3 C3:** the multi-term m2 sort fixture now includes `write.distribution-mode=range` and
+  compares its entire measured CREATE statement; related SHOW CREATE tests compare complete
+  answers rather than fragments.
+  pins: wo-c3/C-001, C-002, C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

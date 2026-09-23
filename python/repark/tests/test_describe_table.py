@@ -136,9 +136,10 @@ def test_describe_table_properties_redacted(spark: ReparkSession) -> None:
     )
     extended = _rows(spark, f"DESCRIBE TABLE EXTENDED {CATALOG}.{NAMESPACE}.creds")
     properties = next(value for name, value, _ in extended if name == "Table Properties")
-    assert "*********(redacted)" in properties
-    assert "hunter2" not in properties
-    assert "k=v" in properties
+    assert properties == (
+        "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,k=v,"
+        "secret_token=*********(redacted),write.parquet.compression-codec=zstd]"
+    )
 
 
 def test_describe_table_statistics_counts_written_rows(spark: ReparkSession) -> None:

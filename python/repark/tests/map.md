@@ -6985,6 +6985,9 @@ pins: fnp-8-review/C-009, C-010
   **C1 SHOW CREATE (2026-09-23):** `Table Properties` renders from the shared
   `spark_table_properties`, so the offline pin carries `format=iceberg/parquet` and
   `format-version=2` and the live leg asserts the whole row equal to live Spark.
+  **WO-C3 C3 (2026-09-23):** the secret-property pin compares the complete known property value,
+  including the redacted secret, rather than fragments.
+  pins: wo-c3/C-003
 - `test_show_create_table.py` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE` through
   the facade answers one `createtab_stmt` row equal to the measured Spark 4.1.2 shape-1 text
   (`bucket(4, id)`, NOT NULL + COMMENT column, `k=v`) with the table's real location.

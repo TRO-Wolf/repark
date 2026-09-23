@@ -271,11 +271,15 @@ async fn show_create_identifier_fields_follow_java_hash_set_order() {
         "ALTER TABLE ice.sales.h1 SET IDENTIFIER FIELDS id, zz, a",
     )
     .await;
-    let text = show_create(&ctx, &catalogs, "ice.sales.h1").await;
-    assert!(
-        text.contains("  'identifier-fields' = '[zz,a,id]',\n"),
-        "got: {text}"
+    let expected = format!(
+        "CREATE TABLE ice.sales.h1 (\n  zz BIGINT NOT NULL,\n  id BIGINT NOT NULL,\n  \
+         a STRING NOT NULL)\nUSING iceberg\nLOCATION '{}'\nTBLPROPERTIES (\n  \
+         'current-snapshot-id' = 'none',\n  'format' = 'iceberg/parquet',\n  \
+         'format-version' = '2',\n  'identifier-fields' = '[zz,a,id]',\n  \
+         'write.parquet.compression-codec' = 'zstd')\n",
+        location(&catalogs, "h1").await
     );
+    assert_eq!(show_create(&ctx, &catalogs, "ice.sales.h1").await, expected);
 }
 
 #[tokio::test]
@@ -346,21 +350,27 @@ async fn show_create_multi_term_sort_order_matches_spark() {
             &NamespaceIdent::new("sales".to_string()),
             TableCreation::builder()
                 .name("m2".to_string())
-                .location(at)
+                .location(at.clone())
                 .schema(schema)
                 .sort_order(sort_order)
+                .properties(std::collections::HashMap::from([(
+                    "write.distribution-mode".to_string(),
+                    "range".to_string(),
+                )]))
                 .build(),
         )
         .await
         .unwrap();
-    let text = show_create(&ctx, &catalogs, "ice.sales.m2").await;
-    assert!(
-        text.contains(
-            "  'sort-order' = 'id DESC NULLS LAST, bucket(4, data) ASC NULLS FIRST, \
-             days(ts) ASC NULLS LAST, truncate(data, 3) ASC NULLS FIRST',\n"
-        ),
-        "got: {text}"
+    let expected = format!(
+        "CREATE TABLE ice.sales.m2 (\n  id BIGINT,\n  data STRING,\n  ts TIMESTAMP)\n\
+         USING iceberg\nLOCATION '{at}'\nTBLPROPERTIES (\n  'current-snapshot-id' = 'none',\n  \
+         'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  \
+         'sort-order' = 'id DESC NULLS LAST, bucket(4, data) ASC NULLS FIRST, \
+         days(ts) ASC NULLS LAST, truncate(data, 3) ASC NULLS FIRST',\n  \
+         'write.distribution-mode' = 'range',\n  \
+         'write.parquet.compression-codec' = 'zstd')\n"
     );
+    assert_eq!(show_create(&ctx, &catalogs, "ice.sales.m2").await, expected);
 }
 
 #[tokio::test]
@@ -397,10 +407,16 @@ async fn show_create_quotes_a_table_name_that_needs_backticks() {
         "CREATE TABLE ice.sales.`we-ird` (id BIGINT) USING iceberg",
     )
     .await;
-    let text = show_create(&ctx, &catalogs, "ice.sales.`we-ird`").await;
-    assert!(
-        text.starts_with("CREATE TABLE ice.sales.`we-ird` (\n  id BIGINT)\nUSING iceberg\n"),
-        "got: {text}"
+    let expected = format!(
+        "CREATE TABLE ice.sales.`we-ird` (\n  id BIGINT)\nUSING iceberg\nLOCATION '{}'\n\
+         TBLPROPERTIES (\n  'current-snapshot-id' = 'none',\n  \
+         'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  \
+         'write.parquet.compression-codec' = 'zstd')\n",
+        location(&catalogs, "we-ird").await
+    );
+    assert_eq!(
+        show_create(&ctx, &catalogs, "ice.sales.`we-ird`").await,
+        expected
     );
 }
 
@@ -415,12 +431,18 @@ async fn show_create_redacts_a_secret_looking_property() {
          TBLPROPERTIES ('my.secret'='hunter2')",
     )
     .await;
-    let text = show_create(&ctx, &catalogs, "ice.sales.creds").await;
-    assert!(
-        text.contains("  'my.secret' = '*********(redacted)',\n"),
-        "got: {text}"
+    let expected = format!(
+        "CREATE TABLE ice.sales.creds (\n  id BIGINT)\nUSING iceberg\nLOCATION '{}'\n\
+         TBLPROPERTIES (\n  'current-snapshot-id' = 'none',\n  \
+         'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  \
+         'my.secret' = '*********(redacted)',\n  \
+         'write.parquet.compression-codec' = 'zstd')\n",
+        location(&catalogs, "creds").await
     );
-    assert!(!text.contains("hunter2"), "got: {text}");
+    assert_eq!(
+        show_create(&ctx, &catalogs, "ice.sales.creds").await,
+        expected
+    );
 }
 
 #[tokio::test]
@@ -434,11 +456,14 @@ async fn show_create_resolves_a_session_qualified_name() {
     )
     .await;
     run(&ctx, &catalogs, "USE ice.sales").await;
-    let text = show_create(&ctx, &catalogs, "sc5").await;
-    assert!(
-        text.starts_with("CREATE TABLE ice.sales.sc5 (\n"),
-        "got: {text}"
+    let expected = format!(
+        "CREATE TABLE ice.sales.sc5 (\n  id BIGINT)\nUSING iceberg\nLOCATION '{}'\n\
+         TBLPROPERTIES (\n  'current-snapshot-id' = 'none',\n  \
+         'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  \
+         'write.parquet.compression-codec' = 'zstd')\n",
+        location(&catalogs, "sc5").await
     );
+    assert_eq!(show_create(&ctx, &catalogs, "sc5").await, expected);
 }
 
 #[tokio::test]
@@ -716,9 +741,9 @@ async fn describe_extended_carries_the_table_comment_as_its_own_row() {
         .iter()
         .position(|name| name == "Table Properties")
         .unwrap();
-    assert!(
-        !values[properties].contains("comment="),
-        "{}",
-        values[properties]
+    assert_eq!(
+        values[properties],
+        "[current-snapshot-id=none,format=iceberg/parquet,format-version=2,\
+         write.parquet.compression-codec=zstd]"
     );
 }
