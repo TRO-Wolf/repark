@@ -985,6 +985,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
+  **WO-A4 (2026-09-23):** the malformed dotted `AFTER` route maps its complete parser payload through
+  `engine_err` without a DataFusion wrapper.
   pins: ice-column-reorder-1/C-001, C-002
 - [identifier_fields.rs](identifier_fields.rs) — **WO-IDENTIFIERS (2026-09-21):**
   end to end over `common::setup`:

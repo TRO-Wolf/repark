@@ -181,16 +181,16 @@ def test_native_exception_surface_shim_methods() -> None:
         (
             "INSERT INTO t (id) BY NAME SELECT 1 AS id",
             "42601",
-            'SQL error: ParserError("[PARSE_SYNTAX_ERROR] BY NAME cannot be combined with an '
-            'explicit column list. SQLSTATE: 42601")',
+            "[PARSE_SYNTAX_ERROR] BY NAME cannot be combined with an explicit column list. "
+            "SQLSTATE: 42601",
         ),
         (
             "SELECT 1; SELECT 2",
             "42601",
-            'SQL error: ParserError("[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements '
+            "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements "
             "in one call are not supported (Spark parity). Only a single statement is accepted; "
             "a trailing semicolon, whitespace, or comment after that statement is allowed. "
-            'SQLSTATE: 42601")',
+            "SQLSTATE: 42601",
         ),
     ],
 )

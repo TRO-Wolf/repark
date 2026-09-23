@@ -30,7 +30,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `fix/u10-df-load-path`.
   pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 / WO-C5 (2026-09-23), in flight:** SHOW CREATE remediation plus the rollback of branch-local SHOW TBLPROPERTIES serving; the current analysis refusal stays pinned while SHOW TABLES and SHOW COLUMNS retain complete row and schema pins. C5 pins Spark's multi-statement SQLSTATE and unclosed-comment error classes and audits refusal contracts. `risk_tier: standard`. Branch `xd/show-create`.
-- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), in flight:** SHOW CREATE remediation plus the rollback of branch-local SHOW TBLPROPERTIES serving; the current analysis refusal stays pinned while SHOW TABLES and SHOW COLUMNS retain complete row and schema pins. `risk_tier: standard`. Branch `xd/show-create`.
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the

@@ -102,6 +102,12 @@ async fn bug010_multi_statement_refuses_parse_class() {
             "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601\")",
             "{sql}"
         );
+        let mapped = repark_core::engine_err(err);
+        assert_eq!(
+            mapped.to_string(),
+            "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601",
+            "{sql}"
+        );
     }
 }
 

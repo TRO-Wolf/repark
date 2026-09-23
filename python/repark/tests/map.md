@@ -3074,6 +3074,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `/*` inside a double-quoted string, a backticked alias, backslash-escaped single and double
   quotes, and a closed comment after a `\r`-ended line comment.
   pins: wo-c10/C-002
+  **WO-A4 (2026-09-23):** INSERT BY NAME with a column list and multi-statement SQL pin the
+  bare bracketed parser payload, `ParseException`, `PARSE_SYNTAX_ERROR`, and SQLSTATE `42601`.
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
   expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare
   SELECT/INSERT/CTAS/UPDATE/DELETE; temp-view prefer on FROM; VIEW/TEMP TABLE non-rewrite;

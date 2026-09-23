@@ -39,7 +39,6 @@ const COERCION_FAILED_MARKER: &str = "user-defined coercion failed with: ";
 const GROUPING_MISMATCH_HEAD: &str = "[GROUPING_ID_COLUMN_MISMATCH]";
 const GROUPING_UNSUPPORTED_HEAD: &str = "[UNSUPPORTED_GROUPING_EXPRESSION]";
 const PLAN_DISPLAY_PREFIX: &str = "Error during planning: ";
-const SPARK_PARSE_SYNTAX_ERROR_HEAD: &str = "[PARSE_SYNTAX_ERROR]";
 const SQLSTATE_MARKER: &str = "SQLSTATE: ";
 const SQLSTATE_LEN: usize = 5;
 
@@ -73,18 +72,16 @@ fn grouping_refusal_message(display: &str) -> Option<String> {
     rest.get(..state_start + SQLSTATE_LEN).map(str::to_string)
 }
 
-fn spark_parse_syntax_error_message(error: &DataFusionError) -> Option<&str> {
+fn spark_parse_message(error: &DataFusionError) -> String {
     let mut current = error;
     for _ in 0..MAX_ERROR_PEEL_DEPTH {
         match current {
             DataFusionError::SQL(parser_error, _) => {
                 return match parser_error.as_ref() {
-                    ParserError::ParserError(message)
-                        if message.starts_with(SPARK_PARSE_SYNTAX_ERROR_HEAD) =>
-                    {
-                        Some(message)
+                    ParserError::ParserError(message) if message.starts_with('[') => {
+                        message.clone()
                     }
-                    _ => None,
+                    _ => error.to_string(),
                 };
             }
             DataFusionError::Context(_, inner) | DataFusionError::Diagnostic(_, inner) => {
@@ -93,12 +90,12 @@ fn spark_parse_syntax_error_message(error: &DataFusionError) -> Option<&str> {
             DataFusionError::Shared(inner) => current = inner,
             DataFusionError::Collection(errors) => match errors.first() {
                 Some(first) => current = first,
-                None => return None,
+                None => return error.to_string(),
             },
-            _ => return None,
+            _ => return error.to_string(),
         }
     }
-    None
+    error.to_string()
 }
 
 /// Classify a DataFusion error after peeling wrapper variants up to [`MAX_ERROR_PEEL_DEPTH`].
@@ -163,10 +160,7 @@ pub fn engine_err_for_sql(sql: &str, err: DataFusionError) -> Error {
 #[must_use]
 pub fn engine_err(err: DataFusionError) -> Error {
     match classify_datafusion_error(&err) {
-        EngineErrorKind::Parse => Error::Parse(
-            spark_parse_syntax_error_message(&err)
-                .map_or_else(|| err.to_string(), ToString::to_string),
-        ),
+        EngineErrorKind::Parse => Error::Parse(spark_parse_message(&err)),
         EngineErrorKind::Analysis => {
             let display = err.to_string();
             Error::Analysis(
@@ -378,12 +372,68 @@ mod tests {
     }
 
     #[test]
-    fn spark_parse_syntax_error_maps_verbatim() {
-        let payload = "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601";
+    fn bracketed_parser_error_maps_verbatim() {
+        let payload = "[PARSE_SYNTAX_ERROR] x SQLSTATE: 42601";
         let error = engine_err(DataFusionError::SQL(
             Box::new(ParserError::ParserError(payload.to_string())),
             None,
         ));
         assert!(matches!(error, Error::Parse(message) if message == payload));
+    }
+
+    #[test]
+    fn unbracketed_parser_error_keeps_its_datafusion_display() {
+        let error = DataFusionError::SQL(
+            Box::new(ParserError::ParserError("Expected: x".to_string())),
+            None,
+        );
+        let expected = error.to_string();
+        let mapped = engine_err(error);
+        assert!(matches!(mapped, Error::Parse(message) if message == expected));
+    }
+
+    #[test]
+    fn bracketed_tokenizer_error_keeps_its_datafusion_display() {
+        let error = DataFusionError::SQL(
+            Box::new(ParserError::TokenizerError("[X] y".to_string())),
+            None,
+        );
+        let expected = error.to_string();
+        let mapped = engine_err(error);
+        assert!(matches!(mapped, Error::Parse(message) if message == expected));
+    }
+
+    #[test]
+    fn lowercase_bracketed_parser_error_maps_verbatim() {
+        let payload = "[lowercase] x";
+        let error = engine_err(DataFusionError::SQL(
+            Box::new(ParserError::ParserError(payload.to_string())),
+            None,
+        ));
+        assert!(matches!(error, Error::Parse(message) if message == payload));
+    }
+
+    #[test]
+    fn bracketed_parser_error_peels_context_and_diagnostic_wrappers() {
+        let payload = "[PARSE_SYNTAX_ERROR] x SQLSTATE: 42601";
+        let context = DataFusionError::Context(
+            "context".to_string(),
+            Box::new(DataFusionError::SQL(
+                Box::new(ParserError::ParserError(payload.to_string())),
+                None,
+            )),
+        );
+        let diagnostic = DataFusionError::Diagnostic(
+            Box::new(datafusion::common::Diagnostic::new_error(
+                "diagnostic",
+                None,
+            )),
+            Box::new(DataFusionError::SQL(
+                Box::new(ParserError::ParserError(payload.to_string())),
+                None,
+            )),
+        );
+        assert!(matches!(engine_err(context), Error::Parse(message) if message == payload));
+        assert!(matches!(engine_err(diagnostic), Error::Parse(message) if message == payload));
     }
 }
