@@ -30,3 +30,44 @@
 | C-003 | Rust and facade refusal pins assert the typed full error contract, and each swept test has one exact outcome. | Targeted Rust, facade, dbt, and structural gates. | **PROVEN** | Requested Rust, facade, dbt, structural, comment-ban, and `make verify` gates pass. |
 
 VERDICT: 3 clauses, 3 PROVEN, 0 OPEN, 0 REJECTED.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: wo-a1b
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: C-001 through C-003 are PROVEN by parser, Rust end-to-end, and facade pins.
+      artifacts: [crates/repark-spark/src/show_table_extended.rs, crates/repark-spark/src/tests/show_table_extended.rs, python/repark/tests/test_catalog_surface.py]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Parser pins cover delimiter failures and near misses; integration pins cover literal wildcard lookup and sibling SHOW paths.
+      artifacts: [crates/repark-spark/src/show_table_extended.rs, crates/repark-spark/src/tests/show_table_extended.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Rust and facade pins assert typed refusal outcomes with conditions, SQLSTATE values, and complete messages.
+      artifacts: [crates/repark-spark/src/tests/show_table_extended.rs, python/repark/tests/test_catalog_surface.py]
+    - id: AT-4
+      status: N/A
+      justification: This parser and rendering unit adds no shared state, concurrency, locks, or ordering-sensitive writes.
+    - id: AT-5
+      status: N/A
+      justification: This parser and rendering unit uses no credentials or network and performs no destructive operation.
+    - id: AT-6
+      status: ATTACKED
+      evidence: C-001 through C-003 pin parser and refusal behavior at Rust and facade entry points.
+      artifacts: [crates/repark-spark/src/show_table_extended.rs, crates/repark-spark/src/tests/show_table_extended.rs, python/repark/tests/test_catalog_surface.py]
+    - id: AT-7
+      status: N/A
+      justification: The clauses make no performance claim and add no scan or background task.
+    - id: AT-8
+      status: N/A
+      justification: The clauses make no dependency or version compatibility claim.
+    - id: AT-9
+      status: N/A
+      justification: The clauses make no public API or migration claim.
+    - id: AT-10
+      status: N/A
+      justification: The clauses make no observability or operational behavior claim.
+```
