@@ -335,8 +335,8 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, crates/repark-spark/src/time_travel.rs]
     - id: AT-9
       status: ATTACKED
-      evidence: Paired reader refusals are the SQL door's errors verbatim (same functions, same texts) — the unknown-suffix refusal keeps the reader's own unquoted spelling, pinned as a literal; a mis-scope surfaces the router's or resolver's loud refusal, never a silent wrong table — real-table-wins and missing-parent fall through to today's texts.
-      artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, python/repark/tests/test_ice_mt_reader_1.py]
+      evidence: Paired reader refusals carry the SQL door's class and `getSqlState()`; the refusal text is asserted equal only where a test pairs it — C-006, C-014, C-017, C-021 and C-022 reader-vs-SQL, C-015 pairwise across its three SQL spellings — while C-011 pins the reader's own literal text beside the paired SQLSTATE and C-012 stands alone on literals. A real table wins over the metadata route when the probe answers it exists (the nested-namespace Rust pin `metadata_asof_nested_namespace_real_table_wins`); a `DataInvalid` probe on a multi-level namespace counts as "no such table", the same rule the SQL door has used since #219 (`metadata_tables.rs`), so reader and SQL door probe alike.
+      artifacts: [crates/repark-core/src/time_travel/metadata_at.rs, crates/repark-spark/src/tests/metadata_tables_asof.rs, python/repark/tests/test_ice_mt_reader_1.py]
     - id: AT-10
       status: ATTACKED
       evidence: Two recorded cells replayed verbatim plus twenty-two facade pins and two Rust pins, every clause carrying a pins: citation in the test file and the touched map.md rows; C-001 asserts schema field names alongside values, and after critic r2 the recorded field type and nullability are pinned where the cells measured them.
