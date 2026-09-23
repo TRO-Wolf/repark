@@ -5,12 +5,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Expr as SqlExpr, Ident, ObjectName, ObjectNamePart, Select, SelectItem,
-    SelectItemQualifiedWildcardKind, Statement, TableAlias, TableFactor, VisitMut, VisitorMut,
+    Expr as SqlExpr, Function, FunctionArguments, Ident, ObjectName, ObjectNamePart, Query, Select,
+    SelectItem, SelectItemQualifiedWildcardKind, Statement, TableAlias, TableFactor, VisitMut,
+    VisitorMut,
 };
 use datafusion::sql::sqlparser::dialect::Dialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+use iceberg::metadata_columns::RESERVED_COL_NAME_FILE;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::catalog::{
     METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, UNSERVED_METADATA_COLUMN_NAMES,
@@ -77,6 +79,40 @@ fn canonical_token_in(value: &str, quoted: bool, names: &[&'static str]) -> Opti
     })
 }
 
+const INPUT_FILE_NAME: &str = "input_file_name";
+
+const INPUT_FILE_NAME_BLOCKING_AGGREGATES: [&str; 11] = [
+    "count",
+    "sum",
+    "avg",
+    "min",
+    "max",
+    "collect_list",
+    "collect_set",
+    "first",
+    "last",
+    "any_value",
+    "approx_count_distinct",
+];
+
+fn sql_mentions_input_file_name_call(sql: &str, dialect: &dyn Dialect) -> bool {
+    let Ok(tokens) = Tokenizer::new(dialect, sql).tokenize() else {
+        return false;
+    };
+    tokens.iter().enumerate().any(|(index, token)| {
+        let Token::Word(word) = token else {
+            return false;
+        };
+        if word.quote_style.is_some() || !word.value.eq_ignore_ascii_case(INPUT_FILE_NAME) {
+            return false;
+        }
+        tokens[index + 1..]
+            .iter()
+            .find(|next| !matches!(next, Token::Whitespace(_)))
+            .is_some_and(|next| matches!(next, Token::LParen))
+    })
+}
+
 fn first_unserved_metadata_column(sql: &str, dialect: &dyn Dialect) -> Option<&'static str> {
     let tokens = Tokenizer::new(dialect, sql).tokenize().ok()?;
     tokens.iter().find_map(|token| match token {
@@ -119,7 +155,8 @@ pub async fn prepare_metadata_column_sql(
 ) -> Result<Option<String>> {
     let mentions_served = sql_mentions_metadata_columns(sql, dialect);
     let unserved = first_unserved_metadata_column(sql, dialect);
-    if !mentions_served && unserved.is_none() {
+    let mentions_metadata = mentions_served || unserved.is_some();
+    if !mentions_metadata && !sql_mentions_input_file_name_call(sql, dialect) {
         return Ok(None);
     }
     let Ok(mut statements) = Parser::parse_sql(dialect, sql) else {
@@ -130,7 +167,11 @@ pub async fn prepare_metadata_column_sql(
     }
     let statement = &mut statements[0];
     if !matches!(statement, Statement::Query(_)) {
-        return Err(refuse("a non-query statement"));
+        return if mentions_metadata {
+            Err(refuse("a non-query statement"))
+        } else {
+            Ok(None)
+        };
     }
 
     let mut collector = CollectTables::default();
@@ -268,6 +309,7 @@ impl VisitorMut for RewriteMetadataColumns {
         {
             self.failure = Some(error);
         }
+        self.rewrite_input_file_names(select);
         ControlFlow::Continue(())
     }
 
@@ -332,6 +374,41 @@ impl RewriteMetadataColumns {
         Ok(())
     }
 
+    fn rewrite_input_file_names(&self, select: &mut Select) {
+        let Some(qualifier) = self.sole_relation_qualifier(select) else {
+            return;
+        };
+        let mut visitor = InputFileNameCalls {
+            qualifier: &qualifier,
+            blocked: 0,
+        };
+        for item in &mut select.projection {
+            if let SelectItem::UnnamedExpr(SqlExpr::Function(function)) = item
+                && is_input_file_name_call(function)
+            {
+                *item = SelectItem::ExprWithAlias {
+                    expr: input_file_name_expr(&qualifier),
+                    alias: Ident::with_quote('`', "input_file_name()"),
+                };
+                continue;
+            }
+            let _ = item.visit(&mut visitor);
+        }
+        let _ = select.selection.visit(&mut visitor);
+    }
+
+    fn sole_relation_qualifier(&self, select: &Select) -> Option<Ident> {
+        let entry = self.sole_rewritten_relation(select)?;
+        let qualifier = match &select.from.first()?.relation {
+            TableFactor::Table {
+                alias: Some(table_alias),
+                ..
+            } => table_alias.name.clone(),
+            _ => entry.alias.clone(),
+        };
+        Some(qualifier)
+    }
+
     fn sole_rewritten_relation(&self, select: &Select) -> Option<&Rewrite> {
         if select.from.len() != 1 {
             return None;
@@ -365,6 +442,85 @@ impl RewriteMetadataColumns {
             })
         })
     }
+}
+
+struct InputFileNameCalls<'a> {
+    qualifier: &'a Ident,
+    blocked: usize,
+}
+
+impl VisitorMut for InputFileNameCalls<'_> {
+    type Break = std::convert::Infallible;
+
+    fn pre_visit_query(&mut self, _query: &mut Query) -> ControlFlow<Self::Break> {
+        self.blocked += 1;
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_query(&mut self, _query: &mut Query) -> ControlFlow<Self::Break> {
+        self.blocked -= 1;
+        ControlFlow::Continue(())
+    }
+
+    fn pre_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
+        let SqlExpr::Function(function) = expr else {
+            return ControlFlow::Continue(());
+        };
+        if self.blocked == 0 && is_input_file_name_call(function) {
+            *expr = input_file_name_expr(self.qualifier);
+        } else if is_blocking_aggregate(&function.name) {
+            self.blocked += 1;
+        }
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_expr(&mut self, expr: &mut SqlExpr) -> ControlFlow<Self::Break> {
+        if let SqlExpr::Function(function) = expr
+            && is_blocking_aggregate(&function.name)
+        {
+            self.blocked -= 1;
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+fn single_ident(name: &ObjectName) -> Option<&Ident> {
+    match name.0.as_slice() {
+        [part] => part.as_ident(),
+        _ => None,
+    }
+}
+
+fn is_input_file_name_call(function: &Function) -> bool {
+    single_ident(&function.name).is_some_and(|ident| {
+        ident.quote_style.is_none() && ident.value.eq_ignore_ascii_case(INPUT_FILE_NAME)
+    }) && matches!(
+        &function.args,
+        FunctionArguments::List(list)
+            if list.args.is_empty()
+                && list.clauses.is_empty()
+                && list.duplicate_treatment.is_none()
+    ) && matches!(&function.parameters, FunctionArguments::None)
+        && function.filter.is_none()
+        && function.null_treatment.is_none()
+        && function.over.is_none()
+        && function.within_group.is_empty()
+        && !function.uses_odbc_syntax
+}
+
+fn is_blocking_aggregate(name: &ObjectName) -> bool {
+    name.0
+        .last()
+        .and_then(ObjectNamePart::as_ident)
+        .is_some_and(|ident| {
+            INPUT_FILE_NAME_BLOCKING_AGGREGATES
+                .iter()
+                .any(|aggregate| ident.value.eq_ignore_ascii_case(aggregate))
+        })
+}
+
+fn input_file_name_expr(qualifier: &Ident) -> SqlExpr {
+    SqlExpr::CompoundIdentifier(vec![qualifier.clone(), Ident::new(RESERVED_COL_NAME_FILE)])
 }
 
 fn last_ident(name: &ObjectName) -> Option<Ident> {
