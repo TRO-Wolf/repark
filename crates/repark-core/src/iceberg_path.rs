@@ -14,6 +14,7 @@ use crate::{ReparkSession, engine_err, iceberg_err};
 impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
     pub async fn read_iceberg_path(&self, path: &str) -> Result<DataFrame> {
+        refuse_file_authority(path)?;
         let file_io =
             repark_iceberg::catalog::file_io_for_location(path, &HashMap::<String, String>::new())
                 .map_err(engine_err)?;
@@ -30,6 +31,24 @@ impl ReparkSession {
         );
         self.context().read_table(provider).map_err(engine_err)
     }
+}
+
+fn refuse_file_authority(path: &str) -> Result<()> {
+    let has_authority = path
+        .strip_prefix("file://")
+        .and_then(|rest| rest.chars().next())
+        .is_some_and(|next| next != '/');
+    if !has_authority {
+        return Ok(());
+    }
+    let named = if path.ends_with(".metadata.json") {
+        path.to_string()
+    } else {
+        format!("{}/metadata", path.strip_suffix('/').unwrap_or(path))
+    };
+    Err(Error::IllegalArgument(format!(
+        "Wrong FS: {named}, expected: file:///"
+    )))
 }
 
 async fn resolve_metadata_location(file_io: &FileIO, path: &str) -> Result<String> {
