@@ -107,8 +107,16 @@ def test_describe_missing_table_analysis_exception(spark: ReparkSession) -> None
     """D-4: a missing table raises AnalysisException with Spark's condition text."""
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.no_such_table")
-    assert "[TABLE_OR_VIEW_NOT_FOUND]" in str(excinfo.value)
-    assert f"`{CATALOG}`.`{NAMESPACE}`.`no_such_table`" in str(excinfo.value)
+    assert excinfo.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert excinfo.value.getSqlState() == "42P01"
+    assert str(excinfo.value) == (
+        "Error during planning: "
+        f"[TABLE_OR_VIEW_NOT_FOUND] The table or view `{CATALOG}`.`{NAMESPACE}`."
+        "`no_such_table` cannot be found. Verify the spelling and correctness of the schema and "
+        "catalog. If you did not qualify the name with a schema, verify the current_schema() "
+        "output, or qualify the name with the correct schema and catalog. To tolerate the error "
+        "on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
 
 
 def test_describe_temp_view_falls_through(spark: ReparkSession) -> None:
