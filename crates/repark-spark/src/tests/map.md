@@ -1451,8 +1451,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `describe_table.rs` — **SQL-DESCRIBE-1 (2026-09-09):** `DESCRIBE|DESC [TABLE]
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
   step-1 live capture (commented `bigint` column, `string`, `timestamp`, `days(ts)`,
-  `k=v`). Parser accepts the plain/extended/formatted spellings and leaves namespace forms,
-  four-or-more-part metadata paths, and trailing shapes alone; plain rows match the capture
+  `k=v`). Parser accepts the plain/extended/formatted spellings and leaves namespace forms
+  alone; plain rows match the capture
   verbatim; extended adds the metadata and detail sections (`FORMATTED` byte-identical);
   missing tables raise `[TABLE_OR_VIEW_NOT_FOUND]`; temp views and unregistered catalogs fall
   through; secrets redact in `Table Properties`.
@@ -1463,7 +1463,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: describe-column-1/C-001, C-002, C-003, C-004
   **REVIEW-FIX-5 (2026-09-10):** the parser takes one- and two-part names (missing parts
   complete from the session defaults in the router) and no longer filters a three-part table
-  named like a metadata table, while four-part metadata paths still stay out; a real
+  named like a metadata table, while five-part metadata paths still stay out; a real
   `ice.sales.files` table describes; `Owner` persists the creator session's owner across two
   sessions in one process and in a production-built session, while direct unowned tables omit
   the row; short names return
@@ -1550,6 +1550,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `LIKE ''` and unmatched patterns answer the full schema with no rows, and the FROM/PARTITION
   accept refuses the literal table (`show_table_extended_parser_accepted_*`).
   pins: wo-a1b/C-003
+  **WO-B4 (2026-09-23):** the old non-table fallthrough battery keeps only forms that remain
+  outside the table intercept; malformed table and column forms belong to
+  `describe_column_errors.rs`.
+  pins: wo-b4-describe-errors/C-002
+- `describe_column_errors.rs` — **WO-B4 (2026-09-23):** one parser pin and one session pin
+  cover every measured malformed table-name and column-tail row: exact `DataFusionError::SQL`
+  parser payloads, parser-class route, condition text, four-part table-not-found, nested-column
+  errors, answer rows, and non-table fallthrough. The five-part and view-column current
+  outcomes are exact declared divergences.
+  pins: wo-b4-describe-errors/C-001, C-002, C-003, C-005
 - `describe_owner.rs` — **DESCRIBE-COLUMN-1 round 2 (2026-09-23):** end-to-end memory-catalog
   pins cover identity-only partition-information rows in plain and EXTENDED output, two-column
   spec order, non-identity and unpartitioned controls, owner stamping on CREATE/CTAS/replace

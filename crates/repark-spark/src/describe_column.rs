@@ -5,7 +5,7 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::keywords::Keyword;
-use datafusion::sql::sqlparser::parser::Parser;
+use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::Token;
 use iceberg::spec::{PartitionField, Schema as IcebergSchema, Transform};
 use iceberg::table::Table;
@@ -18,43 +18,106 @@ use crate::spark_type_names::spark_ddl_type_name;
 
 pub(crate) fn parse_describe_column_tail(
     parser: &mut Parser,
+    sql: &str,
 ) -> Option<Result<Option<Vec<String>>>> {
     match parser.peek_token().token {
         Token::EOF | Token::SemiColon => Some(Ok(None)),
         _ => {
-            let column_name = parser.parse_object_name(false).ok()?;
+            let token = parser.peek_token().token.clone();
+            let column_name = match parser.parse_object_name(false) {
+                Ok(column_name) => column_name,
+                Err(_) => return Some(Err(describe_column_token_parse_error(&token, sql))),
+            };
             if !column_name.0.iter().all(|part| {
                 part.as_ident()
                     .is_some_and(|ident| ident.quote_style.is_none_or(|quote| quote == '`'))
             }) {
-                return None;
+                return Some(Err(describe_token_parse_error(&token)));
             }
             let column = name_parts(&column_name);
             match column.as_slice() {
+                [word]
+                    if word.eq_ignore_ascii_case("PARTITION")
+                        && matches!(parser.peek_token().token, Token::LParen) =>
+                {
+                    Some(Err(describe_partition_parse_error()))
+                }
                 [word]
                     if (word.eq_ignore_ascii_case("VERSION")
                         || word.eq_ignore_ascii_case("TIMESTAMP"))
                         && parser.parse_keyword(Keyword::AS)
                         && consume_word(parser, "OF") =>
                 {
-                    Some(Err(describe_column_parse_error("OF")))
+                    Some(Err(describe_parse_error("OF")))
                 }
                 [word] if word.eq_ignore_ascii_case("FOR") && consume_word(parser, "VERSION") => {
-                    Some(Err(describe_column_parse_error("VERSION")))
+                    Some(Err(describe_parse_error("VERSION")))
                 }
                 _ if matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) => {
                     Some(Ok(Some(column)))
                 }
-                _ => None,
+                _ => Some(Err(describe_token_parse_error(&parser.peek_token().token))),
             }
         }
     }
 }
 
-fn describe_column_parse_error(near: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"
-    ))
+pub(crate) fn describe_parse_error(near: &str) -> DataFusionError {
+    describe_parse_error_with_detail(near, false)
+}
+
+pub(crate) fn describe_end_of_input_parse_error() -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601"
+                .to_string(),
+        )),
+        None,
+    )
+}
+
+pub(crate) fn describe_token_parse_error(token: &Token) -> DataFusionError {
+    let near = token.to_string();
+    let has_extra_input = !matches!(token, Token::Comma | Token::DoubleQuotedString(_))
+        && !matches!(token, Token::Word(word) if word.quote_style == Some('"'));
+    describe_parse_error_with_detail(&near, has_extra_input)
+}
+
+fn describe_column_token_parse_error(token: &Token, sql: &str) -> DataFusionError {
+    if sql.trim_end().ends_with('.') {
+        describe_end_of_input_parse_error()
+    } else {
+        describe_token_parse_error(token)
+    }
+}
+
+fn describe_partition_parse_error() -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(
+            "[UNSUPPORTED_FEATURE.DESC_TABLE_COLUMN_PARTITION] The feature is not supported: \
+             DESC TABLE COLUMN for a specific partition. SQLSTATE: 0A000"
+                .to_string(),
+        )),
+        None,
+    )
+}
+
+pub(crate) fn describe_parse_error_with_extra_input(near: &str) -> DataFusionError {
+    describe_parse_error_with_detail(near, true)
+}
+
+fn describe_parse_error_with_detail(near: &str, has_extra_input: bool) -> DataFusionError {
+    let detail = if has_extra_input {
+        format!("Syntax error at or near '{near}': extra input '{near}'.")
+    } else {
+        format!("Syntax error at or near '{near}'.")
+    };
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(format!(
+            "[PARSE_SYNTAX_ERROR] {detail} SQLSTATE: 42601"
+        ))),
+        None,
+    )
 }
 
 pub(crate) fn execute_describe_column(
@@ -148,13 +211,17 @@ fn describe_column_batch(describe: &DescribeTable, table: &Table) -> Result<Reco
     let column = describe.column.as_deref().ok_or_else(|| {
         DataFusionError::Internal("describe column execution needs a column path".to_string())
     })?;
-    let [column_name] = column else {
-        return Err(DataFusionError::Plan(format!(
-            "[_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support nested column: {}.",
-            column.join(".")
-        )));
-    };
     let iceberg_schema = table.metadata().current_schema();
+    let column_name = match column {
+        [column_name] => column_name,
+        [_, _] => {
+            return Err(DataFusionError::Plan(format!(
+                "[_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support nested column: {}.",
+                column.join(".")
+            )));
+        }
+        _ => return Err(nested_describe_column_error(column, iceberg_schema)?),
+    };
     let fields = iceberg_schema.as_struct().fields();
     let Some((index, field)) = fields
         .iter()
@@ -189,6 +256,27 @@ fn describe_column_batch(describe: &DescribeTable, table: &Table) -> Result<Reco
             ])),
         ],
     )?)
+}
+
+fn nested_describe_column_error(
+    column: &[String],
+    schema: &IcebergSchema,
+) -> Result<DataFusionError> {
+    let base_name = column[..column.len() - 1].join(".");
+    let field = schema
+        .field_by_name_case_insensitive(&base_name)
+        .ok_or_else(|| {
+            DataFusionError::Plan(format!(
+                "[_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support nested column: {}.",
+                column.join(".")
+            ))
+        })?;
+    let arrow_type = iceberg::arrow::type_to_arrow_type(&field.field_type).map_err(iceberg_err)?;
+    Ok(DataFusionError::Plan(format!(
+        "[INVALID_EXTRACT_BASE_FIELD_TYPE] Can't extract a value from \"{base_name}\". Need a \
+         complex type [STRUCT, ARRAY, MAP] but got \"{}\". SQLSTATE: 42000",
+        spark_ddl_type_name(&arrow_type).to_ascii_uppercase(),
+    )))
 }
 
 fn unresolved_describe_column_error(

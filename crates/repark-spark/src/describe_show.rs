@@ -18,7 +18,7 @@ use regex::RegexBuilder;
 
 use crate::catalog_ops::{
     catalog_handle, iceberg_err, name_parts, partition_management_unsupported,
-    quoted_table_display, resolve_namespace,
+    quoted_table_display, resolve_namespace, table_or_view_not_found_parts,
 };
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
@@ -227,7 +227,10 @@ impl DescribeTable {
 
 pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable>> {
     let dialect = DatabricksDialect {};
-    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let tokens = match Tokenizer::new(&dialect, sql).tokenize() {
+        Ok(tokens) => tokens,
+        Err(_) => return describe_tokenizer_error(sql),
+    };
     let mut parser = Parser::new(&dialect).with_tokens(tokens);
     if !parser.parse_keyword(Keyword::DESCRIBE) && !parser.parse_keyword(Keyword::DESC) {
         return None;
@@ -235,11 +238,27 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
     if matches!(&parser.peek_token().token, Token::Word(word) if is_non_table_describe_head(word)) {
         return None;
     }
+    if try_parse_describe_as_json(sql).is_some() {
+        return None;
+    }
     let _ = parser.parse_keyword(Keyword::TABLE);
     let extended =
         parser.parse_keyword(Keyword::EXTENDED) || consume_word(&mut parser, "FORMATTED");
-    let name = parser.parse_object_name(false).ok()?;
-    let column = match crate::describe_column::parse_describe_column_tail(&mut parser)? {
+    if extended && matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
+        return None;
+    }
+    let token = parser.peek_token().token.clone();
+    let name = match parser.parse_object_name(false) {
+        Ok(name) => name,
+        Err(_) => return Some(Err(describe_table_name_parse_error(&token, sql))),
+    };
+    if !name.0.iter().all(|part| {
+        part.as_ident()
+            .is_some_and(|ident| ident.quote_style.is_none_or(|quote| quote == '`'))
+    }) {
+        return Some(Err(describe_table_name_token_parse_error(&token)));
+    }
+    let column = match crate::describe_column::parse_describe_column_tail(&mut parser, sql)? {
         Ok(column) => column,
         Err(error) => return Some(Err(error)),
     };
@@ -248,6 +267,10 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         [catalog, namespace, table] => (catalog.clone(), namespace.clone(), table.clone()),
         [namespace, table] => (String::new(), namespace.clone(), table.clone()),
         [table] => (String::new(), String::new(), table.clone()),
+        [_, _, _, _] => {
+            let written: Vec<&str> = parts.iter().map(String::as_str).collect();
+            return Some(Err(table_or_view_not_found_parts(&written)));
+        }
         _ => return None,
     };
     Some(Ok(DescribeTable {
@@ -258,6 +281,78 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         written_parts: Vec::new(),
         column,
     }))
+}
+
+fn describe_tokenizer_error(sql: &str) -> Option<Result<DescribeTable>> {
+    if !is_table_describe_text(sql) {
+        return None;
+    }
+    let error = match unclosed_describe_quote(sql) {
+        Some(quote) => crate::describe_column::describe_parse_error(&quote.to_string()),
+        None => crate::describe_column::describe_end_of_input_parse_error(),
+    };
+    Some(Err(error))
+}
+
+fn is_table_describe_text(sql: &str) -> bool {
+    let mut words = sql.split_whitespace();
+    let Some(head) = words.next() else {
+        return false;
+    };
+    if !head.eq_ignore_ascii_case("DESCRIBE") && !head.eq_ignore_ascii_case("DESC") {
+        return false;
+    }
+    !words.next().is_some_and(is_non_table_describe_text_head)
+}
+
+fn is_non_table_describe_text_head(word: &str) -> bool {
+    word.eq_ignore_ascii_case("namespace")
+        || word.eq_ignore_ascii_case("database")
+        || word.eq_ignore_ascii_case("schema")
+        || word.eq_ignore_ascii_case("function")
+        || word.eq_ignore_ascii_case("query")
+}
+
+fn unclosed_describe_quote(sql: &str) -> Option<char> {
+    let mut quote = None;
+    let mut characters = sql.chars().peekable();
+    while let Some(character) = characters.next() {
+        match quote {
+            Some(open_quote) if character == open_quote => {
+                if characters.peek().copied() == Some(open_quote) {
+                    characters.next();
+                } else {
+                    quote = None;
+                }
+            }
+            Some(_) => {}
+            None if matches!(character, '\'' | '`' | '"') => quote = Some(character),
+            None => {}
+        }
+    }
+    quote
+}
+
+fn describe_table_name_parse_error(token: &Token, sql: &str) -> DataFusionError {
+    if sql.trim_end().ends_with('.') {
+        return crate::describe_column::describe_parse_error_with_extra_input(".");
+    }
+    if matches!(token, Token::EOF | Token::LParen) {
+        return crate::describe_column::describe_end_of_input_parse_error();
+    }
+    crate::describe_column::describe_token_parse_error(token)
+}
+
+fn describe_table_name_token_parse_error(token: &Token) -> DataFusionError {
+    match token {
+        Token::SingleQuotedString(_) | Token::DoubleQuotedString(_) => {
+            crate::describe_column::describe_parse_error(&token.to_string())
+        }
+        Token::Word(word) if word.quote_style == Some('"') => {
+            crate::describe_column::describe_parse_error(&token.to_string())
+        }
+        _ => crate::describe_column::describe_token_parse_error(token),
+    }
 }
 
 fn is_namespace_head(word: &Word) -> bool {

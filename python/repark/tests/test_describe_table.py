@@ -10,7 +10,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, ParseException
 
 LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live describe oracle is skipped (CI is JVM-free)"
@@ -59,9 +59,35 @@ def spark(tmp_path: Path) -> ReparkSession:
 
 
 def _rows(spark: ReparkSession, sql: str) -> list[tuple[str, str, str | None]]:
+    """Return the Arrow rows for one DESCRIBE statement."""
     table = spark.sql(sql).to_arrow()
     columns = [table.column(name).to_pylist() for name in table.schema.names]
     return list(zip(*columns, strict=True))
+
+
+def _create_describe_error_table(spark: ReparkSession) -> str:
+    """Create the measured DESCRIBE error fixture table."""
+    table = "describe_errors"
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.{table} "
+        "(id BIGINT, s STRUCT<a: INT>, `we ird` STRING) USING iceberg"
+    )
+    return table
+
+
+def _assert_describe_parse_error(
+    spark: ReparkSession,
+    sql: str,
+    condition: str,
+    sqlstate: str,
+    message: str,
+) -> None:
+    """Assert one Spark-shaped DESCRIBE parse error."""
+    with pytest.raises(ParseException) as raised:
+        spark.sql(sql)
+    assert raised.value.getCondition() == condition
+    assert raised.value.getSqlState() == sqlstate
+    assert str(raised.value) == message
 
 
 def test_describe_table_plain_matches_spark_rows(spark: ReparkSession) -> None:
@@ -109,6 +135,87 @@ def test_describe_table_column_matches_spark_rows(spark: ReparkSession) -> None:
         ("col_name", "id"),
         ("data_type", "bigint"),
         ("comment", "the row identifier"),
+    ]
+
+
+def test_describe_table_column_number_is_parse_exception(spark: ReparkSession) -> None:
+    """A numeric column tail keeps Spark's parse error class and text."""
+    table = _create_describe_error_table(spark)
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} 1",
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near '1': extra input '1'. SQLSTATE: 42601",
+    )
+
+
+def test_describe_table_column_trailing_word_is_parse_exception(spark: ReparkSession) -> None:
+    """A trailing column word keeps Spark's parse error class and text."""
+    table = _create_describe_error_table(spark)
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} id extra",
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near 'extra': extra input 'extra'. "
+        "SQLSTATE: 42601",
+    )
+
+
+def test_describe_table_column_unclosed_quote_is_parse_exception(spark: ReparkSession) -> None:
+    """An unclosed column quote keeps Spark's lexer parse error class and text."""
+    table = _create_describe_error_table(spark)
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} 'id",
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601",
+    )
+
+
+def test_describe_table_column_partition_is_parse_exception(spark: ReparkSession) -> None:
+    """A partition column clause keeps Spark's unsupported parse error."""
+    table = _create_describe_error_table(spark)
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} PARTITION (id=1) id",
+        "UNSUPPORTED_FEATURE.DESC_TABLE_COLUMN_PARTITION",
+        "0A000",
+        "[UNSUPPORTED_FEATURE.DESC_TABLE_COLUMN_PARTITION] The feature is not supported: "
+        "DESC TABLE COLUMN for a specific partition. SQLSTATE: 0A000",
+    )
+
+
+def test_describe_table_unclosed_table_quote_is_parse_exception(spark: ReparkSession) -> None:
+    """An unclosed table quote keeps Spark's lexer parse error class and text."""
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE '{CATALOG}.{NAMESPACE}.{TABLE}",
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601",
+    )
+
+
+def test_describe_table_backtick_column_matches_spark_rows(spark: ReparkSession) -> None:
+    """A backticked column keeps its embedded space in DESCRIBE rows."""
+    table = _create_describe_error_table(spark)
+    assert _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} `we ird`") == [
+        ("col_name", "we ird"),
+        ("data_type", "string"),
+        ("comment", "NULL"),
+    ]
+
+
+def test_describe_table_extended_column_matches_plain_rows(spark: ReparkSession) -> None:
+    """EXTENDED DESCRIBE with a column keeps the three column rows only."""
+    table = _create_describe_error_table(spark)
+    assert _rows(spark, f"DESCRIBE EXTENDED {CATALOG}.{NAMESPACE}.{table} id") == [
+        ("col_name", "id"),
+        ("data_type", "bigint"),
+        ("comment", "NULL"),
     ]
 
 

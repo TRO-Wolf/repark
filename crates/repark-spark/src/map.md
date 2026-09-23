@@ -74,6 +74,10 @@ pins: rp-4-fork-repin/C-005, C-006
   ShowColumns}` arms route to `use_ddl`; the `DESCRIBE TABLE` intercept skips the Iceberg
   path when a bare name resolves as a session table, so temp views keep winning.
   pins: ice-catalog-session-1/C-015, C-016, C-017
+  **WO-B4 (2026-09-23):** `execute_with_statement_options` checks a typed malformed
+  DESCRIBE result before literal canonicalization. Unterminated table or column quotes then
+  retain the Spark parser-class payload instead of leaking a generic lexer message.
+  pins: wo-b4-describe-errors/C-001, C-002, C-004
   **ICE-CATALOG-SESSION-1 S5 (2026-09-20):** the `REFRESH` pre-parse intercept routes to
   `use_ddl::execute_refresh`, beside the extracted `DESCRIBE TABLE` helper.
   pins: ice-catalog-session-1/C-019
@@ -1343,12 +1347,17 @@ pins: rp-4-fork-repin/C-005, C-006
   **D-DESCRIBE-EXTENDED (2026-09-23):** it also builds the partition section: a nonempty
   all-identity spec emits `# Partition Information`, its column header, and source type/doc
   rows without a blank separator; all other specs retain `# Partitioning` transform rows.
+  **WO-B4 (2026-09-23):** malformed column tails retain the Spark parse route after a table
+  name. Token shape selects the measured short or `extra input` text; unclosed quotes and
+  partition clauses are typed parser errors. Three-or-more-part column paths resolve the base
+  field type for Spark's `INVALID_EXTRACT_BASE_FIELD_TYPE` text.
+  pins: wo-b4-describe-errors/C-001, C-003
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
   SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`
   (live-Spark-4.1.2-pinned rows, `bigint` via `spark_type_names`, secret redaction shared
-  with the namespace path). The table parser leaves namespace forms, zero- and four-or-more-
-  part names alone; the router arm only shadows registered catalogs, so
+  with the namespace path). The table parser leaves namespace forms and five-or-more-part
+  names alone; the router arm only shadows registered catalogs, so
   temp views and DataFusion-native tables fall through. `EXTENDED` and `FORMATTED` share one
   flag; rows come from `table.metadata()` (Iceberg schema via `schema_to_arrow_schema`,
   default partition spec, location, properties plus a live `current-snapshot-id`, snapshot
@@ -1363,13 +1372,18 @@ pins: rp-4-fork-repin/C-005, C-006
   path and delegates its rows to `describe_column.rs`; the existing router intercept remains
   the only route to this table-describe executor.
   pins: describe-column-1/C-001, C-002, C-003, C-004
+  **WO-B4 (2026-09-23):** tokenizer and table-name failures after a table DESCRIBE head stay
+  on the intercept. Unquoted/backticked names parse; quoted table strings get short Spark
+  parse text; four parts get the all-parts table-not-found error. Five parts stay on the
+  existing DataFusion fallthrough, pinned as a divergence.
+  pins: wo-b4-describe-errors/C-002, C-003
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `ShowNamespaces.catalog` is `Option` —
   the bare form lists the session's current catalog (NS-1 FIXED).
   pins: ice-catalog-session-1/C-018
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
   **REVIEW-FIX-5 (2026-09-10):** the table parser takes one-, two-, and three-part names and
   never filters the table segment of a three-part name, so `cat.ns.files` describes while a
-  four-or-more-part metadata path still stays out; the router completes missing parts from
+  five-or-more-part metadata path still stays out; the router completes missing parts from
   the engine `datafusion.catalog.default_catalog` / `default_schema` (the same rule `SELECT`
   resolves by) before the registered-catalog check. `describe_table_owner` reads the
   `repark_core::DescribeOwnerConfig` session extension, installed once by
@@ -1542,6 +1556,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `v2_json_preparse` / `v2_tail_preparse` and their `v2_command_outcome` helper, next to
   `not_supported_command_for_v2_table`. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
   is the single home of Spark's `[TABLE_OR_VIEW_NOT_FOUND]` text for a three-part name, condition
+  `reregister*` provider invalidation. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
+  is the single home of Spark's `[TABLE_OR_VIEW_NOT_FOUND]` text for a table-name part list, condition
   and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs`,
   `namespace_ddl/purge.rs` and `namespace_ddl.rs` DROP all answer through it, so they cannot
   drift apart. **IPI-51 (2026-09-20):** `table_or_view_already_exists` is the sibling home of

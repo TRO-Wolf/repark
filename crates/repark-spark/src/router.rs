@@ -83,6 +83,11 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     {
         return Err(error);
     }
+    if let Some(Err(error)) = describe_show::try_parse_describe_table(sql) {
+        return Err(error);
+    }
+        return Err(error);
+    }
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let verbatim =
