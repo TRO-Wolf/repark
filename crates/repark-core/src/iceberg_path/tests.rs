@@ -445,3 +445,205 @@ async fn file_localhost_metadata_file_refuses_wrong_fs() {
     let message = file_authority_refusal(&argument).await;
     assert_eq!(message, format!("Wrong FS: {argument}, expected: file:///"));
 }
+
+async fn file_relative_refusal(argument: &str) -> String {
+    let session = crate::ReparkSession::new().expect("ReparkSession");
+    let error = session
+        .read_iceberg_path(argument)
+        .await
+        .expect_err("must refuse");
+    match error {
+        Error::IllegalArgument(message) => message,
+        other => panic!("expected IllegalArgument, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn file_relative_location_refuses_uri_syntax() {
+    let (_dir, root) = authority_table_root();
+    let argument = format!("file:{}", root.trim_start_matches('/'));
+    let message = file_relative_refusal(&argument).await;
+    assert_eq!(
+        message,
+        format!("java.net.URISyntaxException: Relative path in absolute URI: {argument}")
+    );
+}
+
+#[tokio::test]
+async fn file_relative_location_trailing_slash_refuses_uri_syntax() {
+    let (_dir, root) = authority_table_root();
+    let argument = format!("file:{}", root.trim_start_matches('/'));
+    let message = file_relative_refusal(&format!("{argument}/")).await;
+    assert_eq!(
+        message,
+        format!("java.net.URISyntaxException: Relative path in absolute URI: {argument}")
+    );
+}
+
+#[tokio::test]
+async fn file_relative_metadata_file_refuses_uri_syntax() {
+    let (_dir, root) = authority_table_root();
+    let argument = format!(
+        "file:{}/metadata/v1.metadata.json",
+        root.trim_start_matches('/')
+    );
+    let message = file_relative_refusal(&argument).await;
+    assert_eq!(
+        message,
+        format!("java.net.URISyntaxException: Relative path in absolute URI: {argument}")
+    );
+}
+
+async fn session_with_rows() -> (tempfile::TempDir, crate::ReparkSession, String) {
+    use iceberg::TableCreation;
+    use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
+
+    let warehouse = tempfile::tempdir().expect("tempdir");
+    let root = warehouse.path().to_string_lossy().to_string();
+    let session = crate::ReparkSession::new().expect("ReparkSession");
+    session
+        .register_memory_catalog("ice", &root)
+        .await
+        .expect("catalog");
+    let handle = session
+        .catalogs_snapshot()
+        .get("ice")
+        .cloned()
+        .expect("handle");
+    let namespace = NamespaceIdent::new("db".to_string());
+    handle
+        .create_namespace(&namespace, HashMap::new())
+        .await
+        .expect("namespace");
+    let schema = Schema::builder()
+        .with_fields(vec![
+            NestedField::required(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
+        ])
+        .build()
+        .expect("schema");
+    let table_root = format!("{root}/db/p");
+    let creation = TableCreation::builder()
+        .name("p".to_string())
+        .location(table_root.clone())
+        .schema(schema)
+        .properties(HashMap::new())
+        .build();
+    handle
+        .create_table(&namespace, creation)
+        .await
+        .expect("table");
+    session
+        .refresh_catalog_provider("ice")
+        .await
+        .expect("refresh");
+    session
+        .sql("INSERT INTO ice.db.p VALUES (1), (2)")
+        .await
+        .expect("insert")
+        .collect()
+        .await
+        .expect("collect");
+    (warehouse, session, table_root)
+}
+
+async fn read_ids(session: &crate::ReparkSession, argument: &str) -> Vec<i64> {
+    let batches = session
+        .read_iceberg_path(argument)
+        .await
+        .expect("read")
+        .collect()
+        .await
+        .expect("collect");
+    let mut ids: Vec<i64> = batches
+        .iter()
+        .flat_map(|batch| {
+            batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<datafusion::arrow::array::Int64Array>()
+                .expect("Int64 id")
+                .values()
+                .to_vec()
+        })
+        .collect();
+    ids.sort_unstable();
+    ids
+}
+
+fn latest_metadata_file(table_root: &str) -> String {
+    let mut names: Vec<String> = std::fs::read_dir(format!("{table_root}/metadata"))
+        .expect("read_dir")
+        .map(|entry| {
+            entry
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .to_string()
+        })
+        .filter(|name| name.ends_with(".metadata.json"))
+        .collect();
+    names.sort();
+    format!(
+        "{table_root}/metadata/{}",
+        names.last().expect("metadata file")
+    )
+}
+
+#[tokio::test]
+async fn file_single_slash_location_reads_rows() {
+    let (_dir, session, table_root) = session_with_rows().await;
+    assert_eq!(
+        read_ids(&session, &format!("file:{table_root}")).await,
+        vec![1, 2]
+    );
+}
+
+#[tokio::test]
+async fn file_upper_case_single_slash_location_reads_rows() {
+    let (_dir, session, table_root) = session_with_rows().await;
+    assert_eq!(
+        read_ids(&session, &format!("FILE:{table_root}")).await,
+        vec![1, 2]
+    );
+}
+
+#[tokio::test]
+async fn file_mixed_case_empty_authority_location_reads_rows() {
+    let (_dir, session, table_root) = session_with_rows().await;
+    assert_eq!(
+        read_ids(&session, &format!("fIlE://{table_root}")).await,
+        vec![1, 2]
+    );
+}
+
+#[tokio::test]
+async fn file_single_slash_latest_metadata_file_reads_rows() {
+    let (_dir, session, table_root) = session_with_rows().await;
+    let latest = latest_metadata_file(&table_root);
+    assert_eq!(
+        read_ids(&session, &format!("file:{latest}")).await,
+        vec![1, 2]
+    );
+}
+
+#[tokio::test]
+async fn file_triple_slash_location_reads_rows() {
+    let (_dir, session, table_root) = session_with_rows().await;
+    assert_eq!(
+        read_ids(&session, &format!("file://{table_root}")).await,
+        vec![1, 2]
+    );
+}
+
+#[tokio::test]
+async fn file_single_slash_missing_location_names_the_supplied_argument() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let argument = format!("file:{}/no/such/dir", dir.path().to_string_lossy());
+    let session = crate::ReparkSession::new().expect("ReparkSession");
+    let error = session
+        .read_iceberg_path(&argument)
+        .await
+        .expect_err("must refuse");
+    assert!(matches!(error, Error::Analysis(_)), "{error:?}");
+    assert!(error.to_string().contains(&argument), "{error}");
+}

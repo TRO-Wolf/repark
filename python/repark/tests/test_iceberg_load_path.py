@@ -329,3 +329,50 @@ def test_load_file_authority_metadata_file_refuses_wrong_fs(
     with pytest.raises(IllegalArgumentException) as raised:
         spark.read.format("iceberg").load(argument)
     assert str(raised.value) == f"Wrong FS: {argument}{WRONG_FS_EXPECTED}"
+
+
+def test_load_file_single_slash_location_reads_current_rows(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file:/<abs>")`` and ``load("FILE:/<abs>")`` read like ``file:///<abs>``.
+
+    pins: dfload-1/C-009
+    """
+    _assert_current(spark.read.format("iceberg").load(f"file:{loaded['table_dir']}"))
+    _assert_current(spark.read.format("iceberg").load(f"FILE:{loaded['table_dir']}"))
+
+
+def test_load_file_single_slash_latest_metadata_file_reads_current_rows(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file:/<abs>/metadata/<latest>.metadata.json")`` reads the current snapshot.
+
+    pins: dfload-1/C-009
+    """
+    latest = loaded["metadata_files"][-1]
+    _assert_current(spark.read.format("iceberg").load(f"file:{latest}"))
+
+
+def test_load_file_four_slash_location_reads_current_rows(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file:////<abs>")`` keeps reading the current snapshot.
+
+    pins: dfload-1/C-009
+    """
+    _assert_current(spark.read.format("iceberg").load(f"file:///{loaded['table_dir']}"))
+
+
+def test_load_file_relative_location_refuses_uri_syntax(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file:tmp/...")`` refuses Spark's relative-path URISyntaxException text.
+
+    pins: dfload-1/C-009
+    """
+    argument = "file:" + str(loaded["table_dir"]).lstrip("/")
+    with pytest.raises(IllegalArgumentException) as raised:
+        spark.read.format("iceberg").load(argument)
+    assert str(raised.value) == (
+        f"java.net.URISyntaxException: Relative path in absolute URI: {argument}"
+    )
