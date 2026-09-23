@@ -1299,8 +1299,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
-  (`[[2,true],[3,true],[4,true]]`) plus the `substr(input_file_name(),…)`
-  function-argument shape; `input_file_name_equals_file_on_every_row` pins
+  (`[[2,true],[3,true],[4,true]]`) plus the scalar-argument shape compared at
+  full value (`concat('p:', input_file_name())` against `concat('p:', _file)`
+  row by row); `input_file_name_equals_file_on_every_row` pins
   `input_file_name() = _file` per row, bare and through the user aliases
   `AS x` and `AS t`; `input_file_name_upper_case_folds` pins
   the `INPUT_FILE_NAME()` spelling; `input_file_name_in_where_keeps_every_row`
@@ -1324,13 +1325,24 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `input_file_name_over_a_cte_sharing_the_table_alias_falls_through` — a CTE
   whose outer relation merely carries the Iceberg table's name as its alias, in
   the projection and in WHERE, a CTE without an alias, and a CTE named like the
-  table.
+  table. **IPI-20-R4 (2026-09-23):**
+  `input_file_name_after_use_over_a_cte_named_like_the_table_falls_through`
+  pins that after `USE ice.ns` a CTE named `t` still wins (`input_file_name()`
+  refuses, the `_file` leg answers the CTE's `'x'` — the collector-side red is
+  pinned in `repark_core::metadata_columns::tests` since `USE` does not move
+  planner defaults in this harness);
+  `input_file_name_after_use_still_serves_the_table_by_name` pins the near
+  misses (bare, unrelated CTE, and a colliding CTE name beside the qualified
+  table) answering `_file` row by row; and
+  `input_file_name_over_a_temp_view_named_like_the_table_falls_through`
+  measures the temp-view collision (`CREATE TEMPORARY VIEW` refuses
+  `NotImplemented`; a programmatic temp view still falls through).
   `a_real_column_named_input_file_name_reads_unchanged` pins that a user column
   of that name is read normally, and `insert_around_the_trigger_keeps_todays_answers`
   pins the input-file-name-only trigger returning `Ok(None)` for a non-query
   statement (the `[UNRESOLVED_ROUTINE]` error, never `[ICE-MC-1]`).
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010
+  C-010, C-011, C-012, C-013
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

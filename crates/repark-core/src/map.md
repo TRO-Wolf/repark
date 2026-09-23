@@ -879,10 +879,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   including a non-query statement, which returns `Ok(None)` rather than the
   `[ICE-MC-1]` refusal when only this trigger fired. The wildcard path's
   `sole_rewritten_relation` keeps main's alias fallback untouched — the two
-  helpers differ on purpose.
+  helpers differ on purpose. **IPI-20-R4 (2026-09-23):** collection itself is
+  CTE-aware — every `With` clause in the statement (nested ones included)
+  contributes its alias names, and a one-part `TableFactor::Table` matching a
+  CTE name on the planner's own fold (unquoted folds case-insensitively,
+  quoted stays exact) is never treated as the physical table and falls
+  through unrewritten; qualified names are never CTE references and stay
+  collected.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022, C-023
-  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010
+  pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
+  C-012, C-013
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`

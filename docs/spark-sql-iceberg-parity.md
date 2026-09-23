@@ -13588,7 +13588,11 @@ field NAME.
   (`input_file_name(1)`), a self join, a `VALUES` or from-less SELECT, a
   metadata-table scan (`t.snapshots`), an outer SELECT over a `UNION ALL`, and
   an outer SELECT over a CTE — including one merely aliased like the Iceberg
-  table (`WITH c AS (… ice.ns.t …) … FROM c AS t`).
+  table (`WITH c AS (… ice.ns.t …) … FROM c AS t`). Collection is CTE-aware:
+  a one-part name matching any CTE alias in the statement (nested `With`
+  clauses included, compared on the planner's own fold) is never treated as
+  the physical table and falls through unrewritten, while a qualified name is
+  never a CTE reference and stays collected.
 - **Apache Spark** — answers the served shapes identically (`true` on every row
   of the three-row cell, `input_file_name() = _file`, the `WHERE` and derived
   and upper-case and `substr` shapes, the bare `input_file_name()` column
@@ -13603,9 +13607,10 @@ field NAME.
   iceberg-spark-runtime-4.1_2.13:1.11.0, 2026-09-22.)*
 - **Pin** — `crates/repark-spark/src/tests/input_file_name.rs` (the six served
   shapes and the fall-through pins — including the CTE alias-collision pins —
-  plus the real-column and non-query guards).
+  plus the real-column and non-query guards) and
+  `crates/repark-core/src/metadata_columns.rs` (the collector-side CTE pins).
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010
+  C-010, C-011, C-012, C-013
 - **Rationale** — BACKLOG, served 2026-09-23 (IPI-20). The single-relation
   rewrite is the measured cell's shape; the unresolved shapes are the recorded
   residues, kept on their pre-existing `UNRESOLVED_ROUTINE` answer rather than
