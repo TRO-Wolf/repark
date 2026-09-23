@@ -1398,7 +1398,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `[(2,false),(3,false),(4,false)]` on the copy-on-write twin;
   `unquoted_upper_deleted_folds_to_served_name` pins unquoted `_DELETED` answering
   like `_deleted`; and `served_spec_id_and_deleted_answer_together` pins the composed
-  `_spec_id` + `_deleted` query answering instead of refusing.
+  `_spec_id` + `_deleted` query answering instead of refusing (full rows since mcdel-r3).
   **mcdel-r2 (2026-09-23, critic r1):** every pin asserts rows or the full error
   text, never shapes — the star pin also asserts the ordered rows
   `[(2,b,y),(3,c,x),(4,d,x)]`; the predicate pin gains the predicate-only legs
@@ -1416,6 +1416,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `metadata_column_over_time_travel_known_divergence` — `_file` / `_deleted` over
   `VERSION AS OF` refuse unresolved where Spark serves them (pre-existing for all
   metadata columns).
+  **mcdel-r3 (2026-09-23, Sol critic r2):** the row helpers no longer sort, so every
+  `ORDER BY` pin asserts row order and the star pin gains the `ORDER BY id DESC` leg
+  `[(4,d,x),(3,c,x),(2,b,y)]`; `served_spec_id_and_deleted_answer_together` asserts the
+  full `(id, _spec_id, _deleted)` rows on the copy-on-write table
+  `[(2,0,false),(3,0,false),(4,0,false)]` and the merge-on-read table
+  `[(1,0,true),(2,0,false),(3,0,false),(4,0,false)]`; and
+  `deleted_column_on_join_right_side_reaches_its_scan` pins the discriminating joins
+  `ON a.id = b.id + 1` — `WHERE b._deleted` = `[(2,1)]`, projected `b._deleted` =
+  `[(2,1,true),(3,2,false),(4,3,false)]`, `WHERE NOT b._deleted` = `[(3,2),(4,3)]`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door

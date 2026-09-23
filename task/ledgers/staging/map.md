@@ -1587,6 +1587,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: quoted `` `_DELETED` ``/`` `_FILE` `` refuse
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` where Spark resolves them, and metadata
   columns over `VERSION AS OF` refuse unresolved where Spark serves them.
+  mcdel-r3 pinned the live-Spark P1–P8 rows in order: the composed
+  `_spec_id` + `_deleted` rows on both tables, the discriminating
+  `a.id = b.id + 1` joins that prove the right-side `_deleted` reaches its scan,
+  and the `SELECT *` rows under `ORDER BY id` and `ORDER BY id DESC`.
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013
