@@ -1497,7 +1497,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
 - `show_table_extended.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** memory-catalog end-to-end
   pins for `SHOW TABLE EXTENDED`: full four-column rows for partitioned/plain, v3 Unicode,
-  sorted tables, LOCATION, owner, and the nested schema tree; property redaction and snapshot
+  sorted tables, LOCATION, owner, and nested/deep schema trees; property redaction and snapshot
   changes; alternation and case-insensitive LIKE; FROM and ambient scopes; missing-LIKE and
   partition/missing-table/missing-namespace refusals, and SHOW-family near misses that remain
   outside this parser. **WO-A4 (2026-09-23):** every parser refusal pins its SQL error variant

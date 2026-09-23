@@ -538,6 +538,14 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
         "CREATE TABLE ice.sales.nested (s STRUCT<x: INT, y: ARRAY<STRING>>) USING iceberg",
     )
     .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.deep (m MAP<STRING, STRUCT<a: BIGINT, b: ARRAY<DOUBLE>>>, n \
+         ARRAY<STRUCT<z: STRING>>, d DECIMAL(10,2), ts TIMESTAMP, tn TIMESTAMP_NTZ, bi BINARY, \
+         dt DATE, bo BOOLEAN, f FLOAT) USING iceberg",
+    )
+    .await;
     let properties = character_properties(&[
         ("current-snapshot-id", "none"),
         ("format", "iceberg/parquet"),
@@ -547,6 +555,7 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
     let lo_location = table_location(&catalogs, "lo").await;
     let ownered_location = table_location(&catalogs, "ownered").await;
     let nested_location = table_location(&catalogs, "nested").await;
+    let deep_location = table_location(&catalogs, "deep").await;
     let (_, locations) = show_table_extended(
         &ctx,
         &catalogs,
@@ -593,6 +602,40 @@ async fn show_table_extended_reports_location_management_owner_and_tree() {
             &properties,
             None,
             "root\n |-- s: struct (nullable = true)\n |    |-- x: integer (nullable = true)\n |    |-- y: array (nullable = true)\n |    |    |-- element: string (containsNull = true)\n",
+        )]
+    );
+    let (_, deep) = show_table_extended(
+        &ctx,
+        &catalogs,
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'deep'",
+    )
+    .await;
+    assert_eq!(
+        deep,
+        vec![managed_row(
+            "deep",
+            &deep_location,
+            &properties,
+            None,
+            concat!(
+                "root\n",
+                " |-- m: map (nullable = true)\n",
+                " |    |-- key: string\n",
+                " |    |-- value: struct (valueContainsNull = true)\n",
+                " |    |    |-- a: long (nullable = true)\n",
+                " |    |    |-- b: array (nullable = true)\n",
+                " |    |    |    |-- element: double (containsNull = true)\n",
+                " |-- n: array (nullable = true)\n",
+                " |    |-- element: struct (containsNull = true)\n",
+                " |    |    |-- z: string (nullable = true)\n",
+                " |-- d: decimal(10,2) (nullable = true)\n",
+                " |-- ts: timestamp (nullable = true)\n",
+                " |-- tn: timestamp_ntz (nullable = true)\n",
+                " |-- bi: binary (nullable = true)\n",
+                " |-- dt: date (nullable = true)\n",
+                " |-- bo: boolean (nullable = true)\n",
+                " |-- f: float (nullable = true)\n",
+            ),
         )]
     );
 }

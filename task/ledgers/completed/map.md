@@ -940,6 +940,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   **SHOW-TABLE-EXTENDED-1 (2026-09-23), completed:** Spark-door `SHOW TABLE EXTENDED
   [IN|FROM namespace] LIKE pattern` parses before sqlparser and answers the four-column
   Iceberg-table listing with Spark metadata text, property redaction, and schema tree output.
+  **WO-A5 (2026-09-23):** the recorded Spark deep-schema tree now has an exact Rust pin.
   `risk_tier: standard`. Branch `xd/show-tblprops`.
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 - [sql-harden-1-cutover-shapes-ledger.md](sql-harden-1-cutover-shapes-ledger.md) — Unit ledger — SQL-HARDEN-1 · the cutover pipeline cutover Iceberg SQL shapes
