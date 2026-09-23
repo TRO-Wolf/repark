@@ -6766,7 +6766,11 @@ the pin rather than obeying it.
   text. The third names the other table.
   `file_list_view => '<view>'` reads the view's `file_path` STRING and `last_modified` TIMESTAMP
   rows and keeps those whose `last_modified` is non-null and older than `older_than` and whose
-  path lies under the scan path. It subtracts the table's referenced files and returns each
+  path lies under the scan path. It subtracts the table's referenced files, comparing URI
+  paths after `.` and `..` segments are resolved and repeated `/` collapse on both sides, so an
+  alias of a live file (`<data>/../data/<f>`, `<data>/./<f>`, `<data>//<f>`) is never an orphan.
+  This follows the ruling that Java builds both sides through Hadoop `Path.toUri()`, which
+  normalises the URI (unmeasured: no scoreboard cell lists an aliased path). It returns each
   orphan once, sorted, exactly as the view spelled it. `dry_run => true` deletes nothing.
   `dry_run => false` deletes exactly the listed orphans, and a delete the filesystem refuses is
   reported. An ERROR-mode prefix conflict and a `gc.enabled` refusal fail with the same string

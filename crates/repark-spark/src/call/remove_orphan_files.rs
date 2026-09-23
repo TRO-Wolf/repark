@@ -122,7 +122,7 @@ pub(super) fn normalize_orphan_scan_path(location: &str) -> PathBuf {
     normalize_lexically(&memory_warehouse_fallback_root(location))
 }
 
-fn normalize_lexically(path: &Path) -> PathBuf {
+pub(super) fn normalize_lexically(path: &Path) -> PathBuf {
     let mut out = PathBuf::new();
     for component in path.components() {
         match component {

@@ -1,4 +1,5 @@
 use std::collections::{BTreeSet, HashMap};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use datafusion::arrow::array::{Array, AsArray, RecordBatch};
@@ -11,7 +12,7 @@ use iceberg::spec::TableProperties;
 use iceberg::table::Table;
 use repark_common::spark_error;
 
-use super::remove_orphan_files::normalize_orphan_scan_path;
+use super::remove_orphan_files::{normalize_lexically, normalize_orphan_scan_path};
 use crate::iceberg_err;
 
 pub(super) struct FileListRequest {
@@ -46,11 +47,11 @@ pub(super) async fn listed_orphans(
         schemes: equal_schemes_with_defaults(&request.equal_schemes),
         authorities: flatten_map(&request.equal_authorities),
     };
-    let mut valid_by_path: HashMap<String, Vec<UriParts>> = HashMap::new();
+    let mut valid_by_path: HashMap<PathBuf, Vec<UriParts>> = HashMap::new();
     for location in &referenced {
         let valid = split_uri(location, &maps);
         valid_by_path
-            .entry(valid.path.clone())
+            .entry(normalize_lexically(Path::new(&valid.path)))
             .or_default()
             .push(valid);
     }
@@ -59,7 +60,7 @@ pub(super) async fn listed_orphans(
     let mut authority_conflicts = BTreeSet::new();
     for candidate in candidates {
         let actual = split_uri(&candidate, &maps);
-        let Some(valid) = valid_by_path.get(&actual.path) else {
+        let Some(valid) = valid_by_path.get(&normalize_lexically(Path::new(&actual.path))) else {
             orphans.insert(candidate);
             continue;
         };

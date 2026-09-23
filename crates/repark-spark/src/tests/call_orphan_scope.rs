@@ -501,6 +501,90 @@ async fn call_remove_orphan_files_file_list_view_skips_paths_outside_the_scan_lo
 }
 
 #[tokio::test]
+async fn call_remove_orphan_files_file_list_view_keeps_a_live_file_named_through_an_alias() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let live = referenced_data_file(&table_dir);
+    let live_name = live.file_name().unwrap().to_str().unwrap().to_string();
+    let data_dir = table_dir.join("data");
+    let aliases = [
+        format!("file://{}/../data/{live_name}", data_dir.display()),
+        format!("{}/./{live_name}", data_dir.display()),
+        format!("{}//{live_name}", data_dir.display()),
+    ];
+    for (index, alias) in aliases.into_iter().enumerate() {
+        let orphan = plant(&table_dir, &format!("orphan-{index}.parquet"), 10);
+        register_file_list(
+            &session,
+            &[(alias.clone(), 0), (orphan.display().to_string(), 0)],
+        )
+        .await;
+        let listed = call_rows(
+            &session,
+            "CALL ice.system.remove_orphan_files(table => 'ns.t', file_list_view => 'v')",
+        )
+        .await
+        .expect("armed file_list_view runs");
+        assert_eq!(listed, vec![orphan.display().to_string()], "{alias}");
+        assert!(!orphan.exists(), "{alias}: the real orphan is deleted");
+        assert!(
+            live.exists(),
+            "{alias}: an alias of the live file is the live file"
+        );
+        assert_eq!(live_rows(&session, "ns.t").await, 1, "{alias}");
+    }
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_matches_a_table_location_that_holds_an_alias() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    std::fs::create_dir_all(warehouse.path().join("detour")).unwrap();
+    submit(
+        &session,
+        &format!(
+            "CREATE NAMESPACE ice.al LOCATION '{}/detour/../aliased'",
+            warehouse.path().display()
+        ),
+    )
+    .await;
+    submit(
+        &session,
+        "CREATE TABLE ice.al.t USING iceberg AS SELECT 1 AS id",
+    )
+    .await;
+    let catalog = session.catalogs_snapshot().get("ice").unwrap().clone();
+    let table = catalog
+        .load_table(&iceberg::TableIdent::from_strs(["al", "t"]).unwrap())
+        .await
+        .unwrap();
+    assert!(
+        table.metadata().location().contains("/detour/../aliased/t"),
+        "the table's own metadata spells its location through `..`: {}",
+        table.metadata().location()
+    );
+    let table_dir = warehouse.path().join("aliased").join("t");
+    let live = referenced_data_file(&table_dir);
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+    file_list_view(&session, &[&live, &orphan]).await;
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'al.t', file_list_view => 'v')",
+    )
+    .await
+    .expect("armed file_list_view runs");
+    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert!(!orphan.exists());
+    assert!(
+        live.exists(),
+        "the canonical spelling of a file the metadata names through `..` is referenced"
+    );
+    assert_eq!(live_rows(&session, "al.t").await, 1);
+}
+
+#[tokio::test]
 async fn call_remove_orphan_files_file_list_view_near_misses_refuse() {
     let warehouse = TempDir::new().unwrap();
     let session = fallback_session(&warehouse).await;
