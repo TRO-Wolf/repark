@@ -180,6 +180,10 @@ and measured-parity contract would grow `call.rs` beyond its exact
   same partial-delete refusal applies. Registry row ORPHAN-3.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-003, C-004, C-008, C-010, C-016
   U1-MEM-LAYOUT-1 (2026-09-23): fail-closed foreign-metadata and inside-another-table refusals. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-020
+  Layout-r7 (2026-09-23): a scan strictly inside the swept table's own location also reads
+  `<own location>/metadata/` for another table's metadata files, and the catalog walk refuses a
+  scan inside the own location when another table's location equals it.
+  pins: u1-mem-layout-1/C-023, C-024, C-025
 - `orphan_file_list.rs` — **IPI-30 (2026-09-22):** `file_list_view`, ported from Java
   `compareToFileList`. The view must carry `file_path` (a string) and `last_modified` (a
   timestamp); a missing view answers `TABLE_OR_VIEW_NOT_FOUND`. Candidates are the non-null

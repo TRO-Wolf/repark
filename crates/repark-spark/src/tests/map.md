@@ -998,7 +998,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   keeps the execute-path refusal at the root.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-008, C-009
 - [mem_layout.rs](mem_layout.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** CTAS, column-definition CREATE, explicit and namespace location precedence, nested namespaces, legacy fallback, path escape rejection, and file URI normalization. pins: u1-mem-layout-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
-- [call_orphan_cotenancy.rs](call_orphan_cotenancy.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** shared-warehouse catalog refusal, own-history metadata sweep, non-metadata sweep, default sweep, nested namespace guards, own-table location exception, and unreadable metadata refusal. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
+- [call_orphan_cotenancy.rs](call_orphan_cotenancy.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** shared-warehouse catalog refusal, own-history metadata sweep, non-metadata sweep, default sweep, nested namespace guards, own-table location exception, and unreadable metadata refusal with its complete message. pins: u1-mem-layout-1/C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
+  **Layout-r7 (2026-09-23):** a `data/` scan of a shared `<wh>/ns/t` refuses for two catalogs,
+  two sessions and two same-catalog tables on one `LOCATION`, in all three spellings and through
+  `file_list_view` (`call_orphan_cotenancy_two_catalogs_data_dir_scan_refuses`,
+  `…_two_sessions_data_dir_scan_refuses`, `…_same_catalog_shared_location_data_dir_scan_refuses`).
+  The near misses stay sweepable: a lone table's own `data/`
+  (`…_lone_table_data_dir_scan_deletes_the_orphan`) and a host table's `data/` with a table nested
+  in its root (`…_host_table_data_dir_scan_ignores_a_table_nested_in_its_root`). The fallback-root
+  guard passes a path inside the root (`…_fallback_root_guard_passes_a_table_dir_inside_the_root`).
+  pins: u1-mem-layout-1/C-023, C-024, C-025, C-026, C-027, C-028
 - [call_orphan_scope.rs](call_orphan_scope.rs) — **IPI-30 guard narrowed (2026-09-22, owner
   ruling Q-55-6):** end-to-end pins on a `ReparkSession` memory catalog whose namespace has
   no `location` and whose tables carry no table `LOCATION`, so each sits under
