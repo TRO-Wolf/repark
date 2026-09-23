@@ -19,7 +19,6 @@ pins: ipi-23-mt-describe-1/C-016, C-018, C-019
 from __future__ import annotations
 
 import os
-import re
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +66,18 @@ def _rows(session: Any, sql: str) -> list[tuple[str, str, str | None]]:
     table = session.sql(sql).to_arrow()
     columns = [table.column(name).to_pylist() for name in table.schema.names]
     return list(zip(*columns, strict=True))
+
+
+def _assert_full_refusal(
+    excinfo: pytest.ExceptionInfo[AnalysisException],
+    expected: str,
+    condition: str | None,
+    sqlstate: str | None,
+) -> None:
+    """Assert an exception's full message text, Spark condition, and SQLSTATE."""
+    assert str(excinfo.value) == expected
+    assert excinfo.value.getCondition() == condition
+    assert excinfo.value.getSqlState() == sqlstate
 
 
 def _ddl_name(data_type: pa.DataType) -> str:
@@ -158,7 +169,7 @@ def test_two_part_after_use_is_plain_not_found(spark: Any) -> None:
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {TABLE}.snapshots")
-    assert str(excinfo.value) == expected
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 def test_plain_table_describe_unchanged(spark: Any) -> None:
@@ -187,13 +198,18 @@ def test_missing_base_not_found_names_full_name(spark: Any) -> None:
 
     pins: ipi-23-mt-describe-1/C-007
     """
+    expected = (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{NAMESPACE}`.`missing`.`snapshots` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.missing.snapshots")
-    text = str(excinfo.value)
-    assert "[TABLE_OR_VIEW_NOT_FOUND]" in text
-    assert f"`{CATALOG}`.`{NAMESPACE}`.`missing`.`snapshots`" in text
-    assert "$" not in text
-    assert "42P01" in text
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
+    assert "$" not in str(excinfo.value)
 
 
 def test_missing_base_not_found_names_written_case(spark: Any) -> None:
@@ -222,7 +238,9 @@ def test_missing_base_not_found_names_written_case(spark: Any) -> None:
     for sql, name in cases:
         with pytest.raises(AnalysisException) as excinfo:
             spark.sql(sql)
-        assert str(excinfo.value) == template.format(name=name)
+        _assert_full_refusal(
+            excinfo, template.format(name=name), "TABLE_OR_VIEW_NOT_FOUND", "42P01"
+        )
 
 
 def test_quoted_dollar_missing_base_names_written_name(spark: Any) -> None:
@@ -240,7 +258,7 @@ def test_quoted_dollar_missing_base_names_written_name(spark: Any) -> None:
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.`missing$snapshots`")
-    assert str(excinfo.value) == expected
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 def test_unknown_suffix_keeps_compound_identifier_error(spark: Any) -> None:
@@ -249,11 +267,12 @@ def test_unknown_suffix_keeps_compound_identifier_error(spark: Any) -> None:
     pins: ipi-23-mt-describe-1/C-008
     """
     expected = (
-        f"Unsupported compound identifier '`{CATALOG}`.`{NAMESPACE}`.`{TABLE}`.`nope`'. "
-        "Expected 1, 2 or 3 parts, got 4"
+        "Error during planning: Unsupported compound identifier "
+        f"'`{CATALOG}`.`{NAMESPACE}`.`{TABLE}`.`nope`'. Expected 1, 2 or 3 parts, got 4"
     )
-    with pytest.raises(AnalysisException, match=re.escape(expected)):
+    with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.{TABLE}.nope")
+    _assert_full_refusal(excinfo, expected, None, None)
 
 
 def test_explicit_three_part_with_real_namespace_falls_through(spark: Any) -> None:
@@ -274,7 +293,7 @@ def test_explicit_three_part_with_real_namespace_falls_through(spark: Any) -> No
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.otherns.snapshots")
-    assert str(excinfo.value) == expected
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 def test_explicit_three_part_missing_namespace_names_full_name(spark: Any) -> None:
@@ -293,7 +312,7 @@ def test_explicit_three_part_missing_namespace_names_full_name(spark: Any) -> No
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.{TABLE}.snapshots")
-    assert str(excinfo.value) == expected
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 def test_missing_namespace_maps_to_not_found_naming_full_name(spark: Any) -> None:
@@ -311,10 +330,10 @@ def test_missing_namespace_maps_to_not_found_naming_full_name(spark: Any) -> Non
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.nosuchns.{TABLE}.snapshots")
-    assert str(excinfo.value) == expected
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE EXTENDED {CATALOG}.nosuchns.{TABLE}.snapshots")
-    assert str(excinfo.value) == expected
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 def test_quoted_dollar_name_answers_metadata_rows(spark: Any) -> None:
@@ -342,7 +361,7 @@ def test_explicit_three_part_namespace_shadowing_base_falls_through(spark: Any) 
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.{TABLE}.snapshots")
-    assert str(excinfo.value) == expected
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 def test_four_part_extended_formatted_matrix(spark: Any) -> None:
@@ -360,17 +379,17 @@ def test_four_part_extended_formatted_matrix(spark: Any) -> None:
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE EXTENDED {CATALOG}.{NAMESPACE}.missing.snapshots")
-    assert str(excinfo.value) == missing
+    _assert_full_refusal(excinfo, missing, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE TABLE FORMATTED {CATALOG}.{NAMESPACE}.missing.snapshots")
-    assert str(excinfo.value) == missing
+    _assert_full_refusal(excinfo, missing, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
     unknown = (
         "Error during planning: Unsupported compound identifier "
         f"'`{CATALOG}`.`{NAMESPACE}`.`{TABLE}`.`nope`'. Expected 1, 2 or 3 parts, got 4"
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE EXTENDED {CATALOG}.{NAMESPACE}.{TABLE}.nope")
-    assert str(excinfo.value) == unknown
+    _assert_full_refusal(excinfo, unknown, None, None)
     upper = f"{CATALOG}.{NAMESPACE}.{TABLE}.SNAPSHOTS"
     assert _rows(spark, f"DESCRIBE EXTENDED {upper}") == SNAPSHOT_ROWS
     absent_ns = (
@@ -383,7 +402,7 @@ def test_four_part_extended_formatted_matrix(spark: Any) -> None:
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE TABLE FORMATTED {CATALOG}.nosuchns.{TABLE}.snapshots")
-    assert str(excinfo.value) == absent_ns
+    _assert_full_refusal(excinfo, absent_ns, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 @pytest.mark.xfail(
