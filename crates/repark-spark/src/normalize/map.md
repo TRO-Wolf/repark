@@ -46,6 +46,11 @@ here and is re-exported in one line.
   then scans outer unclosed comments while ignoring quoted text and line comments. It keeps an
   unclosed `/*+` hint on its existing path and returns Spark's parser condition otherwise.
   pins: wo-c10/C-001, C-002, C-003
+  WO-C11 (2026-09-23): the inline test module pins `outermost_unclosed_bracketed_comment`,
+  `skip_quoted_text` and `skip_line_comment` to exact indexes, so removing any quote kind,
+  escape form, line break, nesting push or pop fails a test. The doubled-quote escape and the
+  end-of-input escape guard only change `skip_quoted_text`'s resume index.
+  pins: wo-c10/C-002
 
 ## Pointers
 

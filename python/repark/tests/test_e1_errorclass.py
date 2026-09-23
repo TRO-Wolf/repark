@@ -274,6 +274,47 @@ def test_bracketed_comment_near_misses_keep_exact_single_rows(
     assert result.to_pylist() == expected_rows
 
 
+@pytest.mark.parametrize(
+    ("statement", "expected_schema", "expected_rows"),
+    [
+        (
+            'SELECT "/* x"',
+            pa.schema([pa.field("/* x", pa.string(), nullable=False)]),
+            [{"/* x": "/* x"}],
+        ),
+        (
+            "SELECT 1 AS `/* x`",
+            pa.schema([pa.field("/* x", pa.int32(), nullable=False)]),
+            [{"/* x": 1}],
+        ),
+        (
+            "SELECT 'a\\'/* x'",
+            pa.schema([pa.field("a'/* x", pa.string(), nullable=False)]),
+            [{"a'/* x": "a'/* x"}],
+        ),
+        (
+            'SELECT "a\\"/* x"',
+            pa.schema([pa.field('a"/* x', pa.string(), nullable=False)]),
+            [{'a"/* x': 'a"/* x'}],
+        ),
+        (
+            "SELECT 1 --c\r/* x */",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+    ],
+)
+def test_quote_escape_and_carriage_return_near_misses_keep_exact_single_rows(
+    spark: ReparkSession,
+    statement: str,
+    expected_schema: pa.Schema,
+    expected_rows: list[dict[str, int | str]],
+) -> None:
+    result = spark.sql(statement).to_arrow()
+    assert result.schema == expected_schema
+    assert result.to_pylist() == expected_rows
+
+
 def test_engine_analysis_error_has_surface_methods(spark: ReparkSession) -> None:
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SELECT * FROM __no_such_table__")

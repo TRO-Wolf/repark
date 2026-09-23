@@ -153,6 +153,37 @@ async fn bracketed_comment_near_misses_keep_exact_single_rows() {
 }
 
 #[tokio::test]
+async fn quote_escape_and_carriage_return_near_misses_keep_exact_single_rows() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let cases: [(&str, Field, Arc<dyn Array>); 4] = [
+        (
+            "SELECT 1 AS `/* x`",
+            Field::new("/* x", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+        (
+            "SELECT 'a\\'/* x'",
+            Field::new("Utf8(\"a'/* x\")", DataType::Utf8, false),
+            Arc::new(StringArray::from(vec!["a'/* x"])),
+        ),
+        (
+            "SELECT \"a\\\"/* x\"",
+            Field::new("Utf8(\"a\"/* x\")", DataType::Utf8, false),
+            Arc::new(StringArray::from(vec!["a\"/* x"])),
+        ),
+        (
+            "SELECT 1 --c\r/* x */",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+    ];
+    for (sql, field, column) in cases {
+        assert_single_value_answer(&ctx, &catalogs, sql, field, column).await;
+    }
+}
+
+#[tokio::test]
 async fn malformed_multi_statement_near_misses_keep_exact_outcomes() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

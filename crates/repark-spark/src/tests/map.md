@@ -904,6 +904,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
     unclosed-comment pins assert the complete parser text, exact near-miss rows, and the two
     complete current IPI-51 tokenizer divergences.
     pins: wo-c5/C-001; wo-c10/C-001, C-002, C-003, C-004
+    WO-C11 (2026-09-23): `assert_single_value_answer` compares the complete schema and batch
+    for the semicolon, comment-marker, backticked-alias, backslash-escape and `\r` near
+    misses. The escaped quotes reach the comment scanner because the front-door tokenizer
+    reads `\` literally, so those rows fail if its quote or escape branch is removed.
+    pins: wo-c10/C-002
   - [`show_create.rs`](show_create.rs) — `show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
     `show_create_unclosed_before_table_keywords_use_spark_parse_contract`, and
     `show_create_multi_statement_keeps_spark_invalid_statement_class` pin complete parser text.

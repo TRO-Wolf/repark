@@ -3060,6 +3060,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ParseException`, `UNCLOSED_BRACKETED_COMMENT`, SQLSTATE `42601`, and the full wrapper
   text. The three lexer near misses pin their exact single rows.
   pins: wo-c10/C-001, C-002, C-003
+  **WO-C11 (2026-09-23):** the lexer near misses, now with the three semicolon forms, pin the
+  complete Arrow schema (name, type, nullability) and rows measured on Spark 4.1.2;
+  `test_quote_escape_and_carriage_return_near_misses_keep_exact_single_rows` does the same for
+  `/*` inside a double-quoted string, a backticked alias, backslash-escaped single and double
+  quotes, and a closed comment after a `\r`-ended line comment.
+  pins: wo-c10/C-002
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
   expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare
   SELECT/INSERT/CTAS/UPDATE/DELETE; temp-view prefer on FROM; VIEW/TEMP TABLE non-rewrite;

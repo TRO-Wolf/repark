@@ -149,3 +149,95 @@ pub(crate) fn multi_statement_parse_error() -> DataFusionError {
         None,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{outermost_unclosed_bracketed_comment, skip_line_comment, skip_quoted_text};
+
+    #[test]
+    fn outermost_unclosed_comment_skips_every_quote_kind() {
+        assert_eq!(outermost_unclosed_bracketed_comment("SELECT '/* x'"), None);
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT \"/* x\""),
+            None
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 AS `/* x`"),
+            None
+        );
+        assert_eq!(outermost_unclosed_bracketed_comment("SELECT \"/* x"), None);
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 AS `/* x"),
+            None
+        );
+    }
+
+    #[test]
+    fn outermost_unclosed_comment_honours_backslash_escapes() {
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 'a\\'/* x'"),
+            None
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT \"a\\\"/* x\""),
+            None
+        );
+    }
+
+    #[test]
+    fn outermost_unclosed_comment_ends_line_comments_at_either_line_break() {
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 -- /* x"),
+            None
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 --c\r/* x"),
+            Some(13)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 --c\n/* x"),
+            Some(13)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 --c\r/* x */"),
+            None
+        );
+    }
+
+    #[test]
+    fn outermost_unclosed_comment_tracks_nesting_depth() {
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 /* a /* b */"),
+            Some(9)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 /* a */ /* b"),
+            Some(17)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 /* a /* b */ */"),
+            None
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 /* ' */ /* x"),
+            Some(17)
+        );
+    }
+
+    #[test]
+    fn skip_quoted_text_answers_the_exact_resume_index() {
+        assert_eq!(skip_quoted_text(b"'a' b", 0), 3);
+        assert_eq!(skip_quoted_text(b"'a''b' c", 0), 6);
+        assert_eq!(skip_quoted_text(b"'a\\'b' c", 0), 6);
+        assert_eq!(skip_quoted_text(b"'a\\", 0), 3);
+        assert_eq!(skip_quoted_text(b"'/* x", 0), 5);
+        assert_eq!(skip_quoted_text(b"`a\"b` c", 0), 5);
+    }
+
+    #[test]
+    fn skip_line_comment_answers_the_exact_resume_index() {
+        assert_eq!(skip_line_comment(b"--c\r/*", 0), 4);
+        assert_eq!(skip_line_comment(b"--c\n/*", 0), 4);
+        assert_eq!(skip_line_comment(b"-- /* x", 0), 7);
+    }
+}
