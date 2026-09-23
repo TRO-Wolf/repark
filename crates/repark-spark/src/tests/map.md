@@ -1439,6 +1439,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   measured fresh-table string, and the `Comment` detail row (after `Type`, a column named
   `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
   pins: wo-c2/C-001, C-002, C-003, C-004
+  **WO-C3 (2026-09-23):** nested bracket comments and line comments before or between SHOW
+  CREATE TABLE keywords keep every m8 lexical and trailing form in the typed parse refusal;
+  unclosed bracket comments and unrelated text stay outside the intercept.
+  pins: wo-c3/C-001
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

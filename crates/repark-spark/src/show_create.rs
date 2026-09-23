@@ -116,12 +116,66 @@ fn at_statement_end(parser: &Parser) -> bool {
 }
 
 pub(crate) fn starts_with_show_create_table(sql: &str) -> bool {
-    let mut words = sql.split_whitespace();
-    ["SHOW", "CREATE", "TABLE"].into_iter().all(|expected| {
-        words
-            .next()
-            .is_some_and(|word| word.eq_ignore_ascii_case(expected))
-    })
+    let mut position = 0;
+    for expected in ["SHOW", "CREATE", "TABLE"] {
+        let Some(keyword_start) = skip_sql_whitespace_and_comments(sql, position) else {
+            return false;
+        };
+        let keyword_end = keyword_start + expected.len();
+        let Some(keyword) = sql.get(keyword_start..keyword_end) else {
+            return false;
+        };
+        if !keyword.eq_ignore_ascii_case(expected)
+            || sql
+                .as_bytes()
+                .get(keyword_end)
+                .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+        {
+            return false;
+        }
+        position = keyword_end;
+    }
+    true
+}
+
+pub(crate) fn skip_sql_whitespace_and_comments(sql: &str, mut position: usize) -> Option<usize> {
+    let bytes = sql.as_bytes();
+    loop {
+        while bytes
+            .get(position)
+            .is_some_and(|byte| byte.is_ascii_whitespace())
+        {
+            position += 1;
+        }
+        let tail = bytes.get(position..)?;
+        if tail.starts_with(b"--") {
+            position += 2;
+            while let Some(byte) = bytes.get(position) {
+                position += 1;
+                if matches!(byte, b'\n' | b'\r') {
+                    break;
+                }
+            }
+            continue;
+        }
+        if !tail.starts_with(b"/*") {
+            return Some(position);
+        }
+        position += 2;
+        let mut depth = 1;
+        while depth > 0 {
+            let tail = bytes.get(position..)?;
+            if tail.starts_with(b"/*") {
+                depth += 1;
+                position += 2;
+            } else if tail.starts_with(b"*/") {
+                depth -= 1;
+                position += 2;
+            } else {
+                position += 1;
+            }
+        }
+    }
 }
 
 fn invalid_show_create_table_error() -> DataFusionError {
@@ -422,6 +476,81 @@ mod tests {
             "SHOW CREATED TABLE x",
         ] {
             assert!(try_parse_show_create(sql).is_none(), "{sql}");
+        }
+    }
+
+    #[test]
+    fn comment_aware_show_create_prefix_matches_m8_keyword_forms() {
+        for sql in [
+            "/* c */ SHOW CREATE TABLE `sc.sales",
+            "SHOW /* c */ CREATE TABLE `sc.sales",
+            "SHOW CREATE /* c */ TABLE `sc.sales",
+            "SHOW CREATE TABLE /* c */ `sc.sales",
+            "-- c\nSHOW CREATE TABLE `sc.sales",
+            "SHOW -- c\nCREATE TABLE `sc.sales",
+            "/* c */ SHOW CREATE TABLE sc.sales.t extra",
+            "SHOW /* c */ CREATE TABLE sc.sales.t extra",
+            "/* c */ SHOW CREATE TABLE",
+            "/* c */ SHOW CREATE TABLE sc.sales.t",
+            "SHOW /* c */ CREATE TABLE sc.sales.t",
+            "/* a /* b */ c */ SHOW CREATE TABLE `sc.sales",
+        ] {
+            assert!(starts_with_show_create_table(sql), "{sql}");
+        }
+    }
+
+    #[test]
+    fn comment_aware_show_create_prefix_leaves_m8_near_misses_alone() {
+        for sql in [
+            "/* c SHOW CREATE TABLE sc.sales.t",
+            "SHOW TABLES IN sc.sales",
+            "/* SHOW CREATE TABLE */ SELECT 1",
+            "-- SHOW CREATE TABLE\nSELECT 1",
+            "SELECT '/* */ SHOW CREATE TABLE `x'",
+            "SHOW/**/CREATED TABLE x",
+            "SHOW CREATE VIEW `x",
+        ] {
+            assert!(!starts_with_show_create_table(sql), "{sql}");
+            assert!(try_parse_show_create(sql).is_none(), "{sql}");
+        }
+    }
+
+    #[test]
+    fn comment_aware_show_create_parser_matches_m8_forms() {
+        let plain = try_parse_show_create("SHOW CREATE TABLE sc.sales.t")
+            .expect("plain statement must parse")
+            .expect("plain statement must be valid");
+        for sql in [
+            "/* c */ SHOW CREATE TABLE sc.sales.t",
+            "SHOW /* c */ CREATE TABLE sc.sales.t",
+        ] {
+            let parsed = try_parse_show_create(sql)
+                .expect("commented statement must parse")
+                .expect("commented statement must be valid");
+            assert_eq!(parsed, plain, "{sql}");
+        }
+        for sql in [
+            "/* c */ SHOW CREATE TABLE `sc.sales",
+            "SHOW /* c */ CREATE TABLE `sc.sales",
+            "SHOW CREATE /* c */ TABLE `sc.sales",
+            "SHOW CREATE TABLE /* c */ `sc.sales",
+            "-- c\nSHOW CREATE TABLE `sc.sales",
+            "SHOW -- c\nCREATE TABLE `sc.sales",
+            "/* c */ SHOW CREATE TABLE sc.sales.t extra",
+            "SHOW /* c */ CREATE TABLE sc.sales.t extra",
+            "/* c */ SHOW CREATE TABLE",
+            "/* a /* b */ c */ SHOW CREATE TABLE `sc.sales",
+        ] {
+            let Some(Err(error)) = try_parse_show_create(sql) else {
+                panic!("{sql} must return a parse error");
+            };
+            let DataFusionError::SQL(parser_error, _) = error else {
+                panic!("{sql} must be a DataFusion SQL error");
+            };
+            let ParserError::ParserError(message) = parser_error.as_ref() else {
+                panic!("{sql} must carry a parser error message");
+            };
+            assert_eq!(message, INVALID_SHOW_CREATE_TABLE_MESSAGE, "{sql}");
         }
     }
 

@@ -657,24 +657,20 @@ enum PlannerDefaultSide {
 }
 
 fn planner_default_set_side(sql: &str) -> Option<PlannerDefaultSide> {
-    let mut body = sql.trim_start();
-    loop {
-        if let Some(rest) = body.strip_prefix("--") {
-            let end = rest.find('\n').map_or(rest.len(), |index| index + 1);
-            body = rest[end..].trim_start();
-        } else if let Some(after_open) = body.strip_prefix("/*") {
-            let end = after_open.find("*/")?;
-            body = after_open[end + 2..].trim_start();
-        } else {
-            break;
-        }
-    }
-    let head = body.get(..3)?;
+    let keyword_start = crate::show_create::skip_sql_whitespace_and_comments(sql, 0)?;
+    let keyword_end = keyword_start + 3;
+    let head = sql.get(keyword_start..keyword_end)?;
     if !head.eq_ignore_ascii_case("set") {
         return None;
     }
-    let after_keyword = body[3..].strip_prefix(|char: char| char.is_whitespace())?;
-    let after_keyword = after_keyword.trim_start();
+    if sql
+        .as_bytes()
+        .get(keyword_end)
+        .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+    {
+        return None;
+    }
+    let key_start = crate::show_create::skip_sql_whitespace_and_comments(sql, keyword_end)?;
     for (key, side) in [
         (
             "datafusion.catalog.default_catalog",
@@ -685,11 +681,13 @@ fn planner_default_set_side(sql: &str) -> Option<PlannerDefaultSide> {
             PlannerDefaultSide::Namespace,
         ),
     ] {
-        if let Some(tail) = after_keyword.get(key.len()..)
-            && after_keyword
-                .get(..key.len())
-                .is_some_and(|head| head.eq_ignore_ascii_case(key))
-            && tail.trim_start().starts_with('=')
+        let key_end = key_start + key.len();
+        if sql
+            .get(key_start..key_end)
+            .is_some_and(|head| head.eq_ignore_ascii_case(key))
+            && crate::show_create::skip_sql_whitespace_and_comments(sql, key_end)
+                .and_then(|equals| sql.get(equals..))
+                .is_some_and(|tail| tail.starts_with('='))
         {
             return Some(side);
         }

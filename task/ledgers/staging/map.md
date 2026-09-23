@@ -22,6 +22,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `SHOW CREATE TABLE`: typed class/condition/SQLSTATE refusal pins, exact near-miss outcomes,
   and lexer failures that stay on the recognized parse path. `risk_tier: standard`. Branch
   `xd/show-create`.
+- [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 (2026-09-23), in flight:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the

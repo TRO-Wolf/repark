@@ -11,6 +11,29 @@ CATALOG = "mem"
 NAMESPACE = "scns1"
 TABLE = "sc1"
 QUALIFIED = f"{CATALOG}.{NAMESPACE}.{TABLE}"
+INVALID_SHOW_CREATE_TABLE_MESSAGE = (
+    "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. "
+    "SQLSTATE: 42601"
+)
+INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE = (
+    f'SQL error: ParserError("{INVALID_SHOW_CREATE_TABLE_MESSAGE}")'
+)
+
+COMMENTED_SHOW_CREATE_REFUSALS = [
+    ("blk_lead_unclosed", f"/* c */ SHOW CREATE TABLE `{CATALOG}.{NAMESPACE}"),
+    ("blk_mid_unclosed", f"SHOW /* c */ CREATE TABLE `{CATALOG}.{NAMESPACE}"),
+    ("blk_mid2_unclosed", f"SHOW CREATE /* c */ TABLE `{CATALOG}.{NAMESPACE}"),
+    ("blk_after_table_unclosed", f"SHOW CREATE TABLE /* c */ `{CATALOG}.{NAMESPACE}"),
+    ("line_lead_unclosed", f"-- c\nSHOW CREATE TABLE `{CATALOG}.{NAMESPACE}"),
+    ("line_mid_unclosed", f"SHOW -- c\nCREATE TABLE `{CATALOG}.{NAMESPACE}"),
+    (
+        "nested_blk_unclosed",
+        f"/* a /* b */ c */ SHOW CREATE TABLE `{CATALOG}.{NAMESPACE}",
+    ),
+    ("blk_lead_trailing", f"/* c */ SHOW CREATE TABLE {QUALIFIED} extra"),
+    ("blk_mid_trailing", f"SHOW /* c */ CREATE TABLE {QUALIFIED} extra"),
+    ("blk_lead_bare", "/* c */ SHOW CREATE TABLE"),
+]
 
 
 @pytest.fixture
@@ -83,7 +106,52 @@ def test_show_create_without_a_name_has_spark_error_contract(spark: ReparkSessio
         spark.sql("SHOW CREATE TABLE").collect()
     assert caught.value.getCondition() == "INVALID_STATEMENT_OR_CLAUSE"
     assert caught.value.getSqlState() == "42601"
+    assert str(caught.value) == (INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE)
+
+
+@pytest.mark.parametrize(
+    ("label", "statement"),
+    [
+        ("blk_lead_ok", f"/* c */ SHOW CREATE TABLE {QUALIFIED}"),
+        ("blk_mid_ok", f"SHOW /* c */ CREATE TABLE {QUALIFIED}"),
+    ],
+)
+def test_show_create_comments_match_the_uncommented_answer(
+    spark: ReparkSession, label: str, statement: str
+) -> None:
+    expected = spark.sql(f"SHOW CREATE TABLE {QUALIFIED}")
+    actual = spark.sql(statement)
+    assert actual.columns == expected.columns, label
+    assert actual.collect() == expected.collect(), label
+
+
+@pytest.mark.parametrize(("label", "statement"), COMMENTED_SHOW_CREATE_REFUSALS)
+def test_show_create_comments_keep_the_spark_parse_contract(
+    spark: ReparkSession, label: str, statement: str
+) -> None:
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement).collect()
+    assert caught.value.getCondition() == "INVALID_STATEMENT_OR_CLAUSE", label
+    assert caught.value.getSqlState() == "42601", label
+    assert str(caught.value) == INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE, label
+
+
+def test_show_create_unclosed_comment_keeps_the_current_parse_outcome(
+    spark: ReparkSession,
+) -> None:
+    statement = f"/* c SHOW CREATE TABLE {QUALIFIED}"
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement).collect()
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
     assert str(caught.value) == (
-        'SQL error: ParserError("[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW '
-        'CREATE TABLE is not valid. SQLSTATE: 42601")'
+        'SQL error: TokenizerError("Unexpected EOF while in a multi-line comment at Line: 1, '
+        'Column: 37")'
     )
+
+
+def test_show_tables_comment_near_miss_matches_its_uncommented_answer(spark: ReparkSession) -> None:
+    expected = spark.sql(f"SHOW TABLES IN {CATALOG}.{NAMESPACE}")
+    actual = spark.sql(f"/* c */ SHOW TABLES IN {CATALOG}.{NAMESPACE}")
+    assert actual.columns == expected.columns
+    assert actual.collect() == expected.collect()

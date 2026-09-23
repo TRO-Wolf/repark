@@ -6992,6 +6992,10 @@ pins: fnp-8-review/C-009, C-010
   exception class, condition, SQLSTATE, and complete RePark message; the parser-wrapper case
   proves `ParseException.getCondition()` reads `INVALID_STATEMENT_OR_CLAUSE`.
   pins: wo-c2/C-005
+  **WO-C3 (2026-09-23):** every m8 commented SHOW CREATE label pins the unchanged CREATE answer
+  or the typed parse contract; the unclosed bracket-comment and SHOW TABLES near misses keep
+  their exact current outcomes.
+  pins: wo-c3/C-001
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce
