@@ -296,6 +296,8 @@ FINDING:
 | critic r1 `cargo clippy` workspace + panic-ban (both invocations) + `./scripts/check_rust_file_size.sh` + ruff on the test file + `check_ledger_grammar.py` + `comment_ban.py origin/main` | all exit 0 |
 | critic r3fix tree-gate (same four files) | `CB=0 R=0 T=0 U=0 L=0`: rust 62 passed; offline 69 passed, 2 skipped, 1 xfailed; live 71 passed, 1 xfailed |
 | critic r3fix `cargo clippy` workspace + panic-ban (both invocations) + `./scripts/check_rust_file_size.sh` + `check_lib_rs.py` + `check_map_md.sh --base origin/main` + ruff on the test file + `check_ledger_grammar.py` + `comment_ban.py` | all exit 0 |
+| md-r7fix local-gate (same four files) at the r7fix head | `CB=0 R=0 T=0 U=0 L=0`: rust 63 passed; offline 71 passed, 2 skipped, 1 xfailed; live 73 passed, 1 xfailed |
+| md-r7fix `make rust-clippy` + `make rust-panic-ban` + `make check-rust-file-size` + `check_lib_rs.py` + `check_map_md.sh --base origin/main` + `check_ledger_grammar.py` + `comment_ban.py` + ruff format/check on the test file | all exit 0 |
 
 ## COVERAGE_ATTESTATION
 
