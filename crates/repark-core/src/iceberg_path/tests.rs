@@ -375,3 +375,74 @@ async fn explicit_metadata_path_resolves_verbatim() {
         .expect("resolve");
     assert_eq!(resolved, pinned);
 }
+
+async fn file_authority_refusal(argument: &str) -> String {
+    let session = crate::ReparkSession::new().expect("ReparkSession");
+    let error = session
+        .read_iceberg_path(argument)
+        .await
+        .err()
+        .expect("must refuse");
+    match error {
+        Error::IllegalArgument(message) => message,
+        other => panic!("expected IllegalArgument, got {other:?}"),
+    }
+}
+
+fn authority_table_root() -> (tempfile::TempDir, String) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let metadata = dir.path().join("metadata");
+    std::fs::create_dir_all(&metadata).expect("mkdir");
+    std::fs::write(metadata.join("v1.metadata.json"), b"{}").expect("write");
+    let root = dir.path().to_string_lossy().to_string();
+    (dir, root)
+}
+
+#[tokio::test]
+async fn file_authority_location_refuses_wrong_fs() {
+    let (_dir, root) = authority_table_root();
+    let relative = root.trim_start_matches('/');
+    let message = file_authority_refusal(&format!("file://{relative}")).await;
+    assert_eq!(
+        message,
+        format!("Wrong FS: file://{relative}/metadata, expected: file:///")
+    );
+}
+
+#[tokio::test]
+async fn file_authority_location_trailing_slash_refuses_wrong_fs() {
+    let (_dir, root) = authority_table_root();
+    let relative = root.trim_start_matches('/');
+    let message = file_authority_refusal(&format!("file://{relative}/")).await;
+    assert_eq!(
+        message,
+        format!("Wrong FS: file://{relative}/metadata, expected: file:///")
+    );
+}
+
+#[tokio::test]
+async fn file_authority_metadata_file_refuses_wrong_fs() {
+    let (_dir, root) = authority_table_root();
+    let relative = root.trim_start_matches('/');
+    let argument = format!("file://{relative}/metadata/v1.metadata.json");
+    let message = file_authority_refusal(&argument).await;
+    assert_eq!(message, format!("Wrong FS: {argument}, expected: file:///"));
+}
+
+#[tokio::test]
+async fn file_localhost_location_refuses_wrong_fs() {
+    let (_dir, root) = authority_table_root();
+    let message = file_authority_refusal(&format!("file://localhost{root}")).await;
+    assert_eq!(
+        message,
+        format!("Wrong FS: file://localhost{root}/metadata, expected: file:///")
+    );
+}
+
+#[tokio::test]
+async fn file_localhost_metadata_file_refuses_wrong_fs() {
+    let (_dir, root) = authority_table_root();
+    let argument = format!("file://localhost{root}/metadata/v1.metadata.json");
+    let message = file_authority_refusal(&argument).await;
+    assert_eq!(message, format!("Wrong FS: {argument}, expected: file:///"));
+}

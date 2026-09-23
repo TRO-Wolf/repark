@@ -6,7 +6,7 @@ table location whose current metadata resolves through ``version-hint.text`` or 
 highest-numbered metadata file under ``<location>/metadata``. Near-miss identifiers keep
 the catalog route untouched. Arrow ``to_arrow`` pins carry value AND type (docs/testing.md).
 
-pins: dfload-1/C-001, C-002, C-004, C-005, C-006
+pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 """
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ PATH_INCREMENTAL_REFUSAL = (
     "format('iceberg').load(<path>) reads one pinned metadata snapshot and does not "
     "support time-travel or incremental options; got start-snapshot-id"
 )
+WRONG_FS_EXPECTED = ", expected: file:///"
 SNAPSHOT_ID_REFUSAL = (
     "Time travel option `snapshot-id` is no longer supported, "
     "use Spark built-in `versionAsOf` instead"
@@ -81,6 +82,21 @@ def _sorted_rows(table: pa.Table) -> list[list[object]]:
     """Sorted full-row multiset for the ``(id, data, cat)`` fixture table."""
     rows = table.select(["id", "data", "cat"]).to_pylist()
     return sorted([int(row["id"]), str(row["data"]), str(row["cat"])] for row in rows)
+
+
+def _registration_inventory(spark: ReparkSession) -> dict[str, object]:
+    """Every catalog, namespace, table and temp view the session can list."""
+    catalogs = sorted(c.name for c in spark.catalog.listCatalogs())
+    namespaces = sorted(d.name for d in spark.catalog.listDatabases())
+    tables = {ns: sorted(t.name for t in spark.catalog.listTables(ns)) for ns in namespaces}
+    temp_views = sorted(t.name for t in spark.catalog.listTables())
+    return {
+        "catalogs": catalogs,
+        "namespaces": namespaces,
+        "tables": tables,
+        "temp_views": temp_views,
+        "temp_view_names": sorted(spark.list_temp_view_names()),
+    }
 
 
 def _assert_current(frame: object) -> None:
@@ -145,8 +161,10 @@ def test_load_path_registers_no_catalog_table(
 
     pins: dfload-1/C-007
     """
+    before = _registration_inventory(spark)
     frame = spark.read.format("iceberg").load(str(loaded["table_dir"]))
     _assert_current(frame)
+    assert _registration_inventory(spark) == before
     assert not spark.catalog.table_exists("path.events")
 
 
@@ -263,3 +281,51 @@ def test_load_identifier_snapshot_id_keeps_spark_refusal(
     """
     with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
         spark.read.format("iceberg").option("snapshot-id", "1").load("ns.events")
+
+
+def test_load_file_scheme_location_reads_current_rows(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file:///<abs>")`` and ``load("file:///<abs>/")`` read the current snapshot.
+
+    pins: dfload-1/C-008
+    """
+    _assert_current(spark.read.format("iceberg").load(f"file://{loaded['table_dir']}"))
+    _assert_current(spark.read.format("iceberg").load(f"file://{loaded['table_dir']}/"))
+
+
+def test_load_file_scheme_latest_metadata_file_reads_current_rows(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file:///<abs>/metadata/<latest>.metadata.json")`` reads the current snapshot.
+
+    pins: dfload-1/C-008
+    """
+    latest = loaded["metadata_files"][-1]
+    _assert_current(spark.read.format("iceberg").load(f"file://{latest}"))
+
+
+def test_load_file_authority_location_refuses_wrong_fs(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file://tmp/...")`` refuses Spark's Wrong FS text naming ``<arg>/metadata``.
+
+    pins: dfload-1/C-008
+    """
+    argument = "file://" + str(loaded["table_dir"]).lstrip("/")
+    with pytest.raises(IllegalArgumentException) as raised:
+        spark.read.format("iceberg").load(argument)
+    assert str(raised.value) == f"Wrong FS: {argument}/metadata{WRONG_FS_EXPECTED}"
+
+
+def test_load_file_authority_metadata_file_refuses_wrong_fs(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file://tmp/.../<latest>.metadata.json")`` refuses Wrong FS naming the argument.
+
+    pins: dfload-1/C-008
+    """
+    argument = "file://" + str(loaded["metadata_files"][-1]).lstrip("/")
+    with pytest.raises(IllegalArgumentException) as raised:
+        spark.read.format("iceberg").load(argument)
+    assert str(raised.value) == f"Wrong FS: {argument}{WRONG_FS_EXPECTED}"
