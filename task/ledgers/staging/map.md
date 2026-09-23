@@ -30,24 +30,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `fix/u10-df-load-path`.
   pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), in flight:** SHOW CREATE remediation plus the rollback of branch-local SHOW TBLPROPERTIES serving; the current analysis refusal stays pinned while SHOW TABLES and SHOW COLUMNS retain complete row and schema pins. `risk_tier: standard`. Branch `xd/show-create`.
-- [../completed/describe-column-1-ledger.md](../completed/describe-column-1-ledger.md) —
-  **DESCRIBE-COLUMN-1 (2026-09-23), in flight:** Spark's one-column DESCRIBE rows and
-  parse-altitude VERSION/TIMESTAMP refusal on the Spark SQL door. Round 2 adds identity partition
-  rows and CREATE-family owner stamping. `risk_tier: standard`.
-  Branch `xd/describe`.
-  pins: describe-column-1/C-001, C-002, C-003, C-004, C-005, C-006
-- [../completed/wo-b4-describe-errors-ledger.md](../completed/wo-b4-describe-errors-ledger.md) —
-  **WO-B4 (2026-09-23), in flight:** every malformed input after `DESCRIBE` or `DESC` and a
-  table target retains Spark 4.1.2's parser class, condition, SQLSTATE, and first-line text;
-  four-part table and column-resolution contracts stay typed; non-table DESCRIBE forms fall
-  through. `risk_tier: standard`. Branch `xd/describe`.
-  pins: wo-b4-describe-errors/C-001, C-002, C-003, C-004, C-005
-- [wo-b6-describe-comments-ledger.md](wo-b6-describe-comments-ledger.md) —
-  **WO-B6 (2026-09-23), in flight:** DESCRIBE tokenizer-failure classification skips SQL comments
-  with the shared Spark scanner; quote scans ignore comment contents, and non-table and unclosed
-  block-comment failures retain their measured RePark outcomes. `risk_tier: standard`.
-  Branch `xd/describe`.
-  pins: wo-b6-describe-comments/C-001, C-002, C-003, C-004
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the
