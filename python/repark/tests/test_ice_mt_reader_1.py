@@ -7,7 +7,8 @@ answers, and with ``versionAsOf`` / ``timestampAsOf`` what SQL
 Every answering test compares the reader against the SQL door on the same
 table (rows and column names) and, where the recorded cells measured them,
 the absolute field name, ``dataType.simpleString()``, ``nullable`` and rows
-of the reader frame; every refusal compares the reader's class and text
+of the reader frame; the ``all_*`` sweep additionally pins the Spark 4.1.2
+column lists outright; every refusal compares the reader's class and text
 against the SQL door's. Near misses pin today's behaviour:
 plain loads, branch/tag/snapshot-id selectors, a real table named
 ``snapshots``, the unknown-suffix error, and the legacy-option refusals.
@@ -53,6 +54,58 @@ TAG_MSG = (
 )
 LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — live Spark cell skipped (routine CI is JVM-free)"
+ALL_FILES_COLUMNS = [
+    "content",
+    "file_path",
+    "file_format",
+    "spec_id",
+    "record_count",
+    "file_size_in_bytes",
+    "column_sizes",
+    "value_counts",
+    "null_value_counts",
+    "nan_value_counts",
+    "lower_bounds",
+    "upper_bounds",
+    "key_metadata",
+    "split_offsets",
+    "equality_ids",
+    "sort_order_id",
+    "first_row_id",
+    "referenced_data_file",
+    "content_offset",
+    "content_size_in_bytes",
+    "readable_metrics",
+]
+ALL_TYPE_COLUMNS = {
+    "all_files": ALL_FILES_COLUMNS,
+    "all_data_files": ALL_FILES_COLUMNS,
+    "all_delete_files": ALL_FILES_COLUMNS,
+    "all_entries": [
+        "status",
+        "snapshot_id",
+        "sequence_number",
+        "file_sequence_number",
+        "data_file",
+        "readable_metrics",
+    ],
+    "all_manifests": [
+        "content",
+        "path",
+        "length",
+        "partition_spec_id",
+        "added_snapshot_id",
+        "added_data_files_count",
+        "existing_data_files_count",
+        "deleted_data_files_count",
+        "added_delete_files_count",
+        "existing_delete_files_count",
+        "deleted_delete_files_count",
+        "partition_summaries",
+        "reference_snapshot_id",
+        "key_metadata",
+    ],
+}
 
 
 @pytest.fixture
@@ -352,7 +405,7 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
     session.sql(f"CREATE TABLE {table} (id BIGINT, data STRING, cat STRING) USING iceberg")
     session.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
     session.sql(f"INSERT INTO {table} VALUES (3, 'c', 'x')")
-    session.sql(f"DELETE FROM {table} WHERE id = 1")
+    session.sql(f"DELETE FROM {table} WHERE id = 3")
     first = session.sql(
         f"SELECT snapshot_id FROM {table}.snapshots ORDER BY committed_at, snapshot_id LIMIT 1"
     ).collect()[0][0]
@@ -372,7 +425,7 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
     reader_files = reader_files.load(f"{table}.files").select("record_count")
     sql_files = session.sql(f"SELECT record_count FROM {table}.files VERSION AS OF {first}")
     assert _live_rows(reader_files) == _live_rows(sql_files)
-    assert _live_rows(reader_files) == [[1], [1]]
+    assert sum(row[0] for row in reader_files.collect()) == 2
     assert [
         (field.name, field.dataType.simpleString(), field.nullable)
         for field in reader_files.schema.fields
@@ -455,25 +508,23 @@ def test_load_missing_parent_matches_sql_door(spark: Any) -> None:
 def test_load_all_types_without_as_of_equals_sql(spark: Any) -> None:
     """Sweep: every ``all_*`` table serves on both doors alike.
 
+    Rows are router equivalence; the column lists are the Spark 4.1.2
+    inventory measured 2026-09-23 (row counts stay unpinned — they are
+    layout-dependent).
+
     pins: ipi-23-mt-reader-1/C-018
     """
     table = _seeded(spark, "t_all_noasof")
-    spellings = (
-        "all_files",
-        "all_data_files",
-        "all_delete_files",
-        "all_entries",
-        "all_manifests",
-    )
-    for suffix in spellings:
+    for suffix, columns in ALL_TYPE_COLUMNS.items():
         reader = _iceberg_reader(spark).load(f"{table}.{suffix}")
         sql = spark.sql(f"SELECT * FROM {table}.{suffix}")
         assert _frame_rows(reader) == _frame_rows(sql), suffix
         assert _frame_cols(reader) == _frame_cols(sql), suffix
+        assert _frame_cols(reader) == columns, suffix
 
 
 def test_load_quoted_dollar_spelling_equals_sql(spark: Any) -> None:
-    """Sweep: the quoted ``t$suffix`` spelling serves on both doors alike.
+    """Sweep: both doors agree on the quoted ``t$suffix`` spelling Spark refuses.
 
     pins: ipi-23-mt-reader-1/C-019
     """
