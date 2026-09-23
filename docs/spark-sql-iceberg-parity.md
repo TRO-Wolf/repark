@@ -233,10 +233,13 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   `dfload-finding.md`; scoreboard cell `R-DF-LOAD-PATH`.)*
 - **After** — an argument containing `/` takes Spark's `IcebergSource` rule: it is a
   filesystem path, not an identifier. One trailing `/` is stripped; a table location
-  resolves `<loc>/metadata/version-hint.text` when present (its integer selects
-  `v<N>.metadata.json`), else the highest leading-integer metadata file under
-  `<loc>/metadata/` in either the `NNNNN-<uuid>` or `v<N>` form; a location with no
-  resolvable metadata raises `AnalysisException` naming the supplied path. The static
+  resolves `<loc>/metadata/version-hint.text` when present — a bare integer selects
+  `v<N>.metadata.json`, which must exist else `AnalysisException` names the path and the
+  hinted file, while a non-integer hint falls through, like
+  `HadoopTableOperations.findVersion` — else the highest leading-integer metadata file
+  under `<loc>/metadata/` in either the `NNNNN-<uuid>` or `v<N>` form (the `v` stem is a
+  whole integer); a location with no resolvable metadata raises `AnalysisException`
+  naming the supplied path. The static
   table reads through `IcebergStaticTableProvider` — nothing is registered in a catalog —
   and a time-travel or incremental reader option beside a path refuses the pinned
   `AnalysisException` (`format('iceberg').load(<path>) reads one pinned metadata snapshot
