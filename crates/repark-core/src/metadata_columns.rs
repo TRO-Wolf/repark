@@ -398,7 +398,7 @@ impl RewriteMetadataColumns {
     }
 
     fn sole_relation_qualifier(&self, select: &Select) -> Option<Ident> {
-        let entry = self.sole_rewritten_relation(select)?;
+        let entry = self.sole_input_file_name_relation(select)?;
         let qualifier = match &select.from.first()?.relation {
             TableFactor::Table {
                 alias: Some(table_alias),
@@ -407,6 +407,20 @@ impl RewriteMetadataColumns {
             _ => entry.alias.clone(),
         };
         Some(qualifier)
+    }
+
+    fn sole_input_file_name_relation(&self, select: &Select) -> Option<&Rewrite> {
+        if select.from.len() != 1 {
+            return None;
+        }
+        let from = select.from.first()?;
+        if !from.joins.is_empty() {
+            return None;
+        }
+        match &from.relation {
+            TableFactor::Table { name, .. } => self.find(name),
+            _ => None,
+        }
     }
 
     fn sole_rewritten_relation(&self, select: &Select) -> Option<&Rewrite> {
