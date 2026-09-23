@@ -16,22 +16,24 @@ while :; do
   [ "$ST" = DONE ] && { say "state is DONE — driver exits"; exit 0; }
   LATE=0; past_until && LATE=1
   N=$(( $(ls $RUN/ticks-$UNIT | wc -l) + 1 )); T=$RUN/ticks-$UNIT/$(printf '%03d' $N); mkdir -p $T
+  D0=$(date +%s); DL=$(cat $RUN/claims.txt 2>/dev/null | wc -l)
   {
     handbook $HERE/handbook.md; echo
     [ -f $HERE/addendum-$ENGINE.md ] && { echo "# ADDENDUM FOR THIS ENGINE (from earlier runs' evidence)"; cat $HERE/addendum-$ENGINE.md; echo; }
     echo "# YOUR UNIT LIST"; cat $RUN/list-$UNIT.md; echo
     echo "# YOUR STATE FILE ($STATE) — you wrote this at the end of your last tick"; cat $STATE; echo
     $HERE/status.sh $RUN $UNIT full; echo
-    echo "# claims file tail ($RUN/claims.txt)"; tail -c 2500 $RUN/claims.txt 2>/dev/null; echo
     echo "# THIS TICK"
     echo "Tick $N of unit $UNIT. Your coordinator scratch directory is $WD. Tick output directory: $T."
     [ $LATE = 1 ] && echo "THE RUN'S FINISH TIME HAS PASSED: launch nothing new; write $RUN/report-$UNIT.md from your state and the evidence, then set STATUS: DONE."
     echo "Do the next actions now, then REWRITE $STATE in full (first line STATUS: WORKING, WAITING or DONE; then LANES:, PRS:, then your notes) and end the tick. Never wait inside a tick for a worker, a build gate or CI — the driver waits for you at no cost and wakes you when the world changes."
   } > $T/prompt.md
+  DM=$(cat $RUN/.maincache-$UNIT 2>/dev/null); DM=${DM:--}
   CL0=$(grep -cE "^[0-9: -]+ ORCHESTRATING SESSION|^[0-9: -]+ ASK $UNIT" $RUN/claims.txt 2>/dev/null)
   say "tick $N start (state=$ST late=$LATE)"
   S0=$(date +%s); $HERE/engine-$ENGINE.sh $WD $T/prompt.md $T; RC=$?
   say "tick $N end rc=$RC secs=$(( $(date +%s) - S0 )) $(cat $T/meter.txt 2>/dev/null | tr '\n' ' ')"
+  echo "lines=$DL main=$DM t=$D0" > $RUN/.digest-$UNIT; touch -d @$D0 $RUN/.digest-$UNIT
   if [ $RC -ne 0 ]; then FAILS=$((FAILS+1)); [ $FAILS -ge 3 ] && { say "three failed ticks in a row — driver exits 1"; exit 1; }; sleep 60; continue; fi
   FAILS=0
   ST=$(grep -m1 '^STATUS:' $STATE | awk '{print $2}')
