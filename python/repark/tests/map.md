@@ -3084,6 +3084,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pins: wo-c3/C-004
   Multi-statement SQL pins the same facade contract.
   pins: wo-c5/C-001
+  **WO-A4 (2026-09-23):** the bracketed-payload rendering supersedes the wrapper text above:
+  INSERT BY NAME with a column list and multi-statement SQL compare `str(exc)` with the bare
+  bracketed parser message. **WO-A8 (2026-09-23):** the six unclosed bracketed comments the
+  router front door (WO-C10) refuses compare `str(exc)` with the bare
+  `UNCLOSED_BRACKETED_COMMENT` message.
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
   expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare
   SELECT/INSERT/CTAS/UPDATE/DELETE; temp-view prefer on FROM; VIEW/TEMP TABLE non-rewrite;
@@ -5079,7 +5084,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   still None. **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `SHOW TABLES [IN|FROM]
   [LIKE]` is implemented SQL (ST-1 FIXED). **SHOW-TABLE-EXTENDED-1 (2026-09-23):**
   `SHOW TABLE EXTENDED IN catalog.namespace LIKE pattern` answers its four-column facade shape
-  and metadata text. **WO-A1b (2026-09-23):** its bare, unclosed-quote, existing-PARTITION, and
+  and metadata text, with `Location` at `<warehouse>/ns1/entity` (MEM-LAYOUT-1 layout).
+  **WO-A1b (2026-09-23):** its bare, unclosed-quote, existing-PARTITION, and
   absent-PARTITION paths pin exception class, condition, SQLSTATE, and complete message.
   pins: wo-a1b/C-003
   The remaining divergence is
@@ -7053,10 +7059,8 @@ pins: fnp-8-review/C-009, C-010
   `TABLE` forms assert `ParseException`, `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full
   parser-wrapper message. The multi-statement facade refusal includes `42601`.
   pins: wo-c5/C-001, C-002, C-003, C-004; wo-c10/C-001, C-003
-  **WO-C5 (2026-09-23):** post-head unclosed bracket comments assert `ParseException`,
-  `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full bare parser message (WO-A4 rendering); a comment hiding
-  TABLE pins the tokenizer fall-through. The multi-statement facade refusal includes `42601`.
-  pins: wo-c5/C-001, C-002, C-003, C-004
+  **WO-A4 (2026-09-23):** the bare, commented, unclosed-comment, and multi-statement refusals
+  compare `str(exc)` with the bare bracketed message, superseding the parser-wrapper text above.
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce

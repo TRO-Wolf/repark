@@ -35,9 +35,6 @@ UNCLOSED_BRACKETED_COMMENT_MESSAGE = (
     "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. "
     "Please, append */ at the end of the comment. SQLSTATE: 42601"
 )
-UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE = (
-    f'SQL error: ParserError("{UNCLOSED_BRACKETED_COMMENT_MESSAGE}")'
-)
 
 
 @pytest.fixture
@@ -225,7 +222,7 @@ def test_unclosed_bracketed_comment_has_spark_parse_contract(
         spark.sql(statement).collect()
     assert caught.value.getCondition() == "UNCLOSED_BRACKETED_COMMENT"
     assert caught.value.getSqlState() == "42601"
-    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_MESSAGE
 
 
 @pytest.mark.parametrize(

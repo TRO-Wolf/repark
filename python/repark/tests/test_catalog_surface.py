@@ -456,7 +456,7 @@ def test_show_table_extended_returns_spark_metadata_shape(
         "Namespace: ns1\n"
         "Table: entity\n"
         "Type: MANAGED\n"
-        f"Location: {tmp_path / 'repark_ctas' / 'glue_catalog' / 'ns1' / 'entity'}\n"
+        f"Location: {tmp_path / 'ns1' / 'entity'}\n"
         "Provider: iceberg\n"
         "Table Properties: [[, c, u, r, r, e, n, t, -, s, n, a, p, s, h, o, t, -, i, d, "
         "=, n, o, n, e, ,, f, o, r, m, a, t, =, i, c, e, b, e, r, g, /, p, a, r, q, u, e, "
