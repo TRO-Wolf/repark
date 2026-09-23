@@ -11,9 +11,7 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, Tokenizer, Word};
-use iceberg::spec::{
-    PartitionField, Schema as IcebergSchema, TableMetadata, Transform, Type as IcebergType,
-};
+use iceberg::spec::{Schema as IcebergSchema, TableMetadata, Type as IcebergType};
 use iceberg::table::Table;
 use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use regex::RegexBuilder;
@@ -368,17 +366,10 @@ fn describe_table_rows(
         ));
     }
     let spec = metadata.default_partition_spec();
-    if !spec.fields().is_empty() {
-        rows.push(blank_describe_row());
-        rows.push(section_describe_row("# Partitioning"));
-        for (index, field) in spec.fields().iter().enumerate() {
-            rows.push((
-                format!("Part {index}"),
-                describe_partition_field(iceberg_schema, field)?,
-                Some(String::new()),
-            ));
-        }
-    }
+    rows.extend(crate::describe_column::describe_partition_section(
+        iceberg_schema,
+        spec,
+    )?);
     if describe.extended {
         rows.push(blank_describe_row());
         rows.push(section_describe_row("# Metadata Columns"));
@@ -430,29 +421,6 @@ fn section_describe_row(header: &str) -> (String, String, Option<String>) {
 
 fn plain_describe_row(name: &str, value: &str) -> (String, String, Option<String>) {
     (name.to_string(), value.to_string(), Some(String::new()))
-}
-
-pub(crate) fn describe_partition_field(
-    schema: &IcebergSchema,
-    field: &PartitionField,
-) -> Result<String> {
-    let source = schema.field_by_id(field.source_id).ok_or_else(|| {
-        DataFusionError::Plan(format!(
-            "partition field `{}` refers to unknown source id {}",
-            field.name, field.source_id
-        ))
-    })?;
-    Ok(match &field.transform {
-        Transform::Identity => source.name.clone(),
-        Transform::Year => format!("years({})", source.name),
-        Transform::Month => format!("months({})", source.name),
-        Transform::Day => format!("days({})", source.name),
-        Transform::Hour => format!("hours({})", source.name),
-        Transform::Bucket(width) => format!("bucket({width}, {})", source.name),
-        Transform::Truncate(width) => format!("truncate({width}, {})", source.name),
-        Transform::Void => format!("void({})", source.name),
-        Transform::Unknown => format!("unknown({})", source.name),
-    })
 }
 
 fn describe_partition_struct_type(

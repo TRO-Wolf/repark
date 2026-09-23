@@ -7,6 +7,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::Token;
+use iceberg::spec::{PartitionField, Schema as IcebergSchema, Transform};
 use iceberg::table::Table;
 use repark_common::spark_error;
 
@@ -62,6 +63,85 @@ pub(crate) fn execute_describe_column(
     table: &Table,
 ) -> Result<DataFrame> {
     ctx.read_batch(describe_column_batch(describe, table)?)
+}
+
+pub(crate) fn describe_partition_section(
+    schema: &IcebergSchema,
+    spec: &iceberg::spec::PartitionSpec,
+) -> Result<Vec<(String, String, Option<String>)>> {
+    let fields = spec.fields();
+    if fields.is_empty() {
+        return Ok(Vec::new());
+    }
+    if fields
+        .iter()
+        .all(|field| matches!(&field.transform, Transform::Identity))
+    {
+        let mut rows = vec![
+            (
+                "# Partition Information".to_string(),
+                String::new(),
+                Some(String::new()),
+            ),
+            (
+                "# col_name".to_string(),
+                "data_type".to_string(),
+                Some("comment".to_string()),
+            ),
+        ];
+        for field in fields {
+            let source = schema.field_by_id(field.source_id).ok_or_else(|| {
+                DataFusionError::Plan(format!(
+                    "partition field `{}` refers to unknown source id {}",
+                    field.name, field.source_id
+                ))
+            })?;
+            let arrow_type =
+                iceberg::arrow::type_to_arrow_type(&source.field_type).map_err(iceberg_err)?;
+            rows.push((
+                source.name.clone(),
+                spark_ddl_type_name(&arrow_type),
+                source.doc.clone(),
+            ));
+        }
+        return Ok(rows);
+    }
+    let mut rows = vec![
+        (String::new(), String::new(), Some(String::new())),
+        (
+            "# Partitioning".to_string(),
+            String::new(),
+            Some(String::new()),
+        ),
+    ];
+    for (index, field) in fields.iter().enumerate() {
+        rows.push((
+            format!("Part {index}"),
+            describe_partition_field(schema, field)?,
+            Some(String::new()),
+        ));
+    }
+    Ok(rows)
+}
+
+pub(crate) fn describe_partition_field(schema: &IcebergSchema, field: &PartitionField) -> Result<String> {
+    let source = schema.field_by_id(field.source_id).ok_or_else(|| {
+        DataFusionError::Plan(format!(
+            "partition field `{}` refers to unknown source id {}",
+            field.name, field.source_id
+        ))
+    })?;
+    Ok(match &field.transform {
+        Transform::Identity => source.name.clone(),
+        Transform::Year => format!("years({})", source.name),
+        Transform::Month => format!("months({})", source.name),
+        Transform::Day => format!("days({})", source.name),
+        Transform::Hour => format!("hours({})", source.name),
+        Transform::Bucket(width) => format!("bucket({width}, {})", source.name),
+        Transform::Truncate(width) => format!("truncate({width}, {})", source.name),
+        Transform::Void => format!("void({})", source.name),
+        Transform::Unknown => format!("unknown({})", source.name),
+    })
 }
 
 fn describe_column_batch(describe: &DescribeTable, table: &Table) -> Result<RecordBatch> {

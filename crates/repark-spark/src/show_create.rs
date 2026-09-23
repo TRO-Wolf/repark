@@ -17,7 +17,8 @@ use crate::catalog_ops::{
     catalog_handle, iceberg_err, name_parts, not_supported_command_for_v2_table,
     table_or_view_not_found,
 };
-use crate::describe_show::{describe_partition_field, quote_namespace_name_if_needed};
+use crate::describe_column::describe_partition_field;
+use crate::describe_show::quote_namespace_name_if_needed;
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
 use crate::table_props_view::spark_table_properties;
