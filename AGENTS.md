@@ -2,9 +2,15 @@
 
 # OWNER RULING (2026-08-26) — NO CODE COMMENTS FROM ANTHROPIC MODELS
 
-**No Anthropic model — any Claude model, any version — writes a comment in a code file.** The
-adjustment below says where a reason lives instead; the comment gate and review enforce the rule, and
-relocated code sheds the comments it carried.
+**EFFECTIVE IMMEDIATELY. ALL ANTHROPIC MODELS ARE HEREBY BANNED FROM MAKING COMMENTS IN THE CODE. THIS INCLUDES, FABLE, OPUS, SONNET AND HAIKU**
+
+**AGAIN, IF YOU ARE FABLE, OPUS, SONNET OR HAIKU, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE FABLE, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE OPUS, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE SONNET, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE HAIKU, DO NOT WRITE ANY COMMENTS**<br>
+
+**THIS INCLUDES ANY MODEL VERSION, EXAMPLE BEING OPUS 4.8 OR OPUS 5, EITHER ONE IS BANNED, IT DOESN'T MATTER**
 
 *Adjustment (owner, 2026-08-26, same day):* the ban is on comments **in code** — Rust, Python, shell,
 TOML, YAML and every other source file. **Markdown files may carry comments and explanatory prose**;
@@ -131,7 +137,7 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   ("Spark parity", "fixed #n") pins *every* class it names, per user entry point, on the Arrow path
   (`collect`/`to_arrow`, value AND type — never only `show`); one representative case is not the
   claim. Full contract: [docs/testing.md](docs/testing.md).
-- **`map.md` in every directory, updated in the same pull request.** CI gate:
+- **`map.md` in every directory, updated in the same change.** CI gate:
   `scripts/check_map_md.sh`; the hook warns. New directory → new `map.md`, no judgment call. Maps
   are **hand-written**: there is no generator, and the one piece of `map.md` automation
   (`check_manifest.py`'s crate-root consistency rule) only *checks* that a map exists and agrees
@@ -278,7 +284,7 @@ it is what keeps a live document from silently accumulating a closed campaign's 
 |---|---|---|
 | **contract** | [AGENTS.md](AGENTS.md), [docs/testing.md](docs/testing.md), [PROJECT.md](PROJECT.md) | permanent; amended deliberately, never as a passenger on another change |
 | **state** | [STATUS.md](STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) | trued up at every unit close **and** at pickup; git is their history, so they carry no changelog section |
-| **navigation** | every `map.md` | lockstep with the directory's content, in the same pull request |
+| **navigation** | every `map.md` | lockstep with the directory's content, in the same commit |
 | **campaign** | [briefs/](briefs/map.md), [docs/design/](docs/design/map.md) | amended in place, dated; frozen and archived to [docs/history/](docs/history/map.md) when the campaign closes |
 | **ledger** | [task/ledgers/](task/ledgers/map.md): `staging/<unit>-ledger.md` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<unit>-ledger.md` | the directory is the status. Append-only in `staging/` while the unit runs (a charter stays until the event it names); `move`d to `completed/` in the unit's last commit and frozen; filed to `archive/` by `make ledger-archive` at the next pickup, immutable. A campaign's `docs/history/` folder links to its ledgers in the monthly archive; the folders archived before 2026-08-23 keep theirs |
 | **skill** | [.agents/skills/](.agents/skills/map.md) | versioned with the procedure it records; a rule measured and **declined** is written down so nobody re-litigates it |
@@ -404,13 +410,11 @@ never relax them.
 - **Workspace validity:** commits MUST pass the installed hooks; verify hooks fire before
   the first commit in any worktree. A hook bypass or non-firing-hook workspace is a
   slate-failing violation.
-- **Gates:** CI's required checks are the gate. A delegated unit runs locally only what CI
-  cannot — the comment gate, the release native, `cargo test -p` for touched crates, its own pytest
-  files offline and live — never the whole-workspace suite on the shared box (owner, 2026-09-18).
-  STOP / report-only units gate too; check REAL exit codes (never a pipe's); lint only via the
-  Makefile's pinned toolchain targets.
+- **Gates:** every unit gates, including STOP / report-only units: the scoped local gate (comment
+  gate, release native, `cargo test -p` touched crates, own pytests) plus CI's required checks —
+  never the whole-workspace suite locally (owner, 2026-09-18); REAL exit codes; Makefile-pinned lint.
 - **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
-  directory's `map.md` in the same pull request; `move`d to `completed/` in the unit's last commit.
+  directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit.
   Ledger presence is a gate item.
 - **Oracles:** oracle/differential test files are NAMED deliverables per unit; live-oracle
   output recorded verbatim; hand-computed expectations are not an oracle. Divergences get
@@ -432,11 +436,9 @@ Single-agent-in-the-main-thread is the default. The orchestrating agent owns arc
 assembly; delegated fan-out is for **search, mechanical edits, and narrow, well-scoped
 implementation**, never for architectural judgement. Every delegated unit inherits the standing
 rules above and the approval boundaries in "Destructive / outward-facing operations" — a delegated
-unit may narrow those, never relax them. The tier policy lives here: delegated units run on the
-executor tiers the owner has approved for the campaign — non-Claude executors by default, a Claude
-Opus round only for a step the orchestrating session names as hard and logs; Sonnet and Haiku in
-no role (owner, 2026-09-20). Launch mechanics stay in the tool adapters ([CLAUDE.md](CLAUDE.md),
-[.agents/](.agents/map.md)).
+unit may narrow those, never relax them. Tier policy: delegated units run on the owner-approved
+executor tiers — non-Claude by default, a logged Claude Opus round only for a hard step, Sonnet and
+Haiku in no role (owner, 2026-09-20); launch mechanics live in [CLAUDE.md](CLAUDE.md).
 
 ## Process governance (SEPMO)
 

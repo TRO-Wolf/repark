@@ -2,9 +2,15 @@
 
 # OWNER RULING (2026-08-26) — NO CODE COMMENTS FROM ANTHROPIC MODELS
 
-**No Anthropic model — any Claude model, any version — writes a comment in a code file.** The
-adjustment below says where a reason lives instead; the comment gate and review enforce the rule, and
-relocated code sheds the comments it carried.
+**EFFECTIVE IMMEDIATELY. ALL ANTHROPIC MODELS ARE HEREBY BANNED FROM MAKING COMMENTS IN THE CODE. THIS INCLUDES, FABLE, OPUS, SONNET AND HAIKU**
+
+**AGAIN, IF YOU ARE FABLE, OPUS, SONNET OR HAIKU, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE FABLE, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE OPUS, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE SONNET, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE HAIKU, DO NOT WRITE ANY COMMENTS**<br>
+
+**THIS INCLUDES ANY MODEL VERSION, EXAMPLE BEING OPUS 4.8 OR OPUS 5, EITHER ONE IS BANNED, IT DOESN'T MATTER**
 
 *Adjustment (owner, 2026-08-26, same day):* the ban is on comments **in code** — Rust, Python, shell,
 TOML, YAML and every other source file. **Markdown files may carry comments and explanatory prose**;
