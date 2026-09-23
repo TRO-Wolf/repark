@@ -1302,7 +1302,8 @@ perfectly good read.
   2026-09-22 (IPI-23 / R-MT-DESCRIBE): `DESCRIBE [TABLE]|DESC cat.ns.t.<meta>` answers one row
   per column of the metadata table — `col_name`, `data_type` (the Spark DDL type name),
   `comment` NULL — exactly the columns `SELECT *` returns, in the same order; a missing base
-  table raises `[TABLE_OR_VIEW_NOT_FOUND]` naming the base table, and `EXTENDED`/`FORMATTED`
+  table raises `[TABLE_OR_VIEW_NOT_FOUND]` naming the full metadata-table name as written
+  (for example `` `mt`.`ns`.`missing`.`snapshots` ``), and `EXTENDED`/`FORMATTED`
   on a metadata table print the same column rows with no extra sections (unmeasured on Spark).
   One measured residue: `Table Properties` carries the engine's stored properties
   plus a live `current-snapshot-id`, while Spark stamps `format`, `format-version`, and
