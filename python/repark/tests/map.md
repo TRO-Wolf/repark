@@ -7777,8 +7777,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **IPI-23-MT-READER-1 (2026-09-22):** `format("iceberg").load("c.n.t.<meta>")` answers
   what SQL `SELECT * FROM c.n.t.<meta>` answers, and with `versionAsOf` / `timestampAsOf`
   what SQL `VERSION AS OF` / `TIMESTAMP AS OF` answers — each reader answer asserted
-  against the SQL door on the same table (rows and column names), each refusal against
-  the SQL door's class and text. **critic r2 (2026-09-23):** the recorded cells also
+  against the SQL door on the same table (rows and column names), each paired refusal
+  against the SQL door's class and text. **critic r2 (2026-09-23):** the recorded cells also
   pin the reader frame's field name, `simpleString()` and `nullable`
   (`operation` string nullable, `record_count` bigint non-nullable) plus the absolute
   rows; the live leg then picked the first snapshot by `committed_at`.
@@ -7795,12 +7795,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   **critic r5 (2026-09-23):** the same delete makes the first snapshot answer
   the current rows, so every `versionAsOf` / selector pin moved to the second
   snapshot (three rows, `record_count` sum 3; C-004's equality loop covers
-  both ids) and each pinned read also asserts `!=` the un-pinned read.
+  both ids) and each pinned read also asserts `!=` the un-pinned read
+  (C-009's `branch_b0` excepted — tag and snapshot-id only).
   **rd-r9fix (2026-09-23):** the class's last survivor moves — the live leg
   now pins the second snapshot by `committed_at, snapshot_id` order
   (`record_count` sum 3, asserted `!=` the un-pinned read's rows), and every
-  `pytest.raises` compares `getSqlState()` across the reader and SQL doors,
-  `is None` where the pinned text is the recorded Spark answer (all measured
+  `pytest.raises` pins `getSqlState()` — paired across the reader and SQL
+  doors (the quoted-dollar refusal compares three SQL spellings pairwise),
+  the unknown-suffix refusal pairing only the SQLSTATE beside its literal
+  text, the legacy-option refusals standalone on `is None` — `is None`
+  where the pinned text is the recorded Spark answer (all measured
   live-Spark states `None`). Near misses pin today's behaviour: plain loads,
   branch/tag/snapshot-id
   selectors, a real table named `snapshots`, the unknown-suffix error, and the
