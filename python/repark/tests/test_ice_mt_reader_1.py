@@ -5,8 +5,10 @@
 answers, and with ``versionAsOf`` / ``timestampAsOf`` what SQL
 ``SELECT * FROM …​.<meta> VERSION AS OF`` / ``TIMESTAMP AS OF`` answers.
 Every answering test compares the reader against the SQL door on the same
-table (rows and column names); every refusal compares the reader's class
-and text against the SQL door's. Near misses pin today's behaviour:
+table (rows and column names) and, where the recorded cells measured them,
+the absolute field name, ``dataType.simpleString()``, ``nullable`` and rows
+of the reader frame; every refusal compares the reader's class and text
+against the SQL door's. Near misses pin today's behaviour:
 plain loads, branch/tag/snapshot-id selectors, a real table named
 ``snapshots``, the unknown-suffix error, and the legacy-option refusals.
 
@@ -121,6 +123,16 @@ def test_load_snapshots_equals_sql(spark: Any) -> None:
     assert _frame_cols(reader) == _frame_cols(sql)
     operations = spark.sql(f"SELECT operation FROM {table}.snapshots ORDER BY committed_at")
     assert [row[0] for row in operations.collect()] == ["append", "append", "overwrite"]
+    operation_frame = reader.select("operation")
+    assert [
+        (field.name, field.dataType.simpleString(), field.nullable)
+        for field in operation_frame.schema.fields
+    ] == [("operation", "string", True)]
+    assert sorted(row[0] for row in operation_frame.collect()) == [
+        "append",
+        "append",
+        "overwrite",
+    ]
 
 
 def test_load_files_history_refs_equal_sql(spark: Any) -> None:
@@ -134,6 +146,11 @@ def test_load_files_history_refs_equal_sql(spark: Any) -> None:
         sql = spark.sql(f"SELECT * FROM {table}.{suffix}")
         assert _frame_rows(reader) == _frame_rows(sql), suffix
         assert _frame_cols(reader) == _frame_cols(sql), suffix
+    files_fields = [
+        (field.name, field.dataType.simpleString(), field.nullable)
+        for field in _iceberg_reader(spark).load(f"{table}.files").schema.fields
+    ]
+    assert ("record_count", "bigint", False) in files_fields
 
 
 def test_table_api_snapshots_equals_sql(spark: Any) -> None:
@@ -146,6 +163,11 @@ def test_table_api_snapshots_equals_sql(spark: Any) -> None:
     sql = spark.sql(f"SELECT * FROM {table}.snapshots")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
+    assert sorted(row[0] for row in reader.select("operation").collect()) == [
+        "append",
+        "append",
+        "overwrite",
+    ]
 
 
 def test_load_version_as_of_equals_sql(spark: Any) -> None:
@@ -160,6 +182,17 @@ def test_load_version_as_of_equals_sql(spark: Any) -> None:
         sql = spark.sql(f"SELECT * FROM {table}.{suffix} VERSION AS OF {first}")
         assert _frame_rows(reader) == _frame_rows(sql), suffix
         assert _frame_cols(reader) == _frame_cols(sql), suffix
+    record_frame = (
+        _iceberg_reader(spark)
+        .option("versionAsOf", first)
+        .load(f"{table}.files")
+        .select("record_count")
+    )
+    assert [
+        (field.name, field.dataType.simpleString(), field.nullable)
+        for field in record_frame.schema.fields
+    ] == [("record_count", "bigint", False)]
+    assert _frame_rows(record_frame) == [[2]]
 
 
 def test_load_timestamp_as_of_equals_sql(spark: Any) -> None:
@@ -173,6 +206,7 @@ def test_load_timestamp_as_of_equals_sql(spark: Any) -> None:
     sql = spark.sql(f"SELECT * FROM {table}.files TIMESTAMP AS OF '{stamp}'")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
+    assert _frame_rows(reader.select("record_count")) == [[1], [2]]
 
 
 def test_reader_as_of_refusals_match_sql(spark: Any) -> None:
@@ -217,6 +251,10 @@ def test_reader_unknown_numeric_as_of_answers_empty(spark: Any) -> None:
     assert _frame_rows(reader) == []
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
+    assert ("record_count", "bigint", False) in [
+        (field.name, field.dataType.simpleString(), field.nullable)
+        for field in reader.schema.fields
+    ]
 
 
 def test_load_plain_and_version_as_of_unchanged(spark: Any) -> None:
@@ -243,11 +281,17 @@ def test_load_branch_tag_snapshot_id_selectors_unchanged(spark: Any) -> None:
     first, second = _snapshot_ids(spark, table)[:2]
     spark.sql(f"ALTER TABLE {table} CREATE TAG t0 AS OF VERSION {first}")
     spark.sql(f"ALTER TABLE {table} CREATE BRANCH b0 AS OF VERSION {second}")
+    expected = {
+        "branch_b0": [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"]],
+        "tag_t0": [[1, "a", "x"], [2, "b", "y"]],
+        f"snapshot_id_{first}": [[1, "a", "x"], [2, "b", "y"]],
+    }
     for suffix in ("branch_b0", "tag_t0", f"snapshot_id_{first}"):
         reader = _iceberg_reader(spark).load(f"{table}.{suffix}")
         sql = spark.sql(f"SELECT * FROM {table}.{suffix}")
         assert _frame_rows(reader) == _frame_rows(sql), suffix
         assert _frame_cols(reader) == _frame_cols(sql), suffix
+        assert _frame_rows(reader) == expected[suffix], suffix
 
 
 def test_load_table_named_snapshots_reads_real_table(spark: Any) -> None:
@@ -309,15 +353,30 @@ def test_live_spark_reader_matches_sql(tmp_path: Path) -> None:
     session.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
     session.sql(f"INSERT INTO {table} VALUES (3, 'c', 'x')")
     session.sql(f"DELETE FROM {table} WHERE id = 1")
-    live_ids = session.sql(f"SELECT snapshot_id FROM {table}.snapshots").collect()
-    first = sorted(row[0] for row in live_ids)[0]
+    first = session.sql(
+        f"SELECT snapshot_id FROM {table}.snapshots ORDER BY committed_at, snapshot_id LIMIT 1"
+    ).collect()[0][0]
     reader_snaps = session.read.format("iceberg").load(f"{table}.snapshots").select("operation")
-    sql_snaps = session.sql(f"SELECT operation FROM {table}.snapshots")
+    sql_snaps = session.sql(f"SELECT operation FROM {table}.snapshots ORDER BY committed_at")
     assert _live_rows(reader_snaps) == _live_rows(sql_snaps)
+    assert sorted(row[0] for row in reader_snaps.collect()) == [
+        "append",
+        "append",
+        "overwrite",
+    ]
+    assert [
+        (field.name, field.dataType.simpleString(), field.nullable)
+        for field in reader_snaps.schema.fields
+    ] == [("operation", "string", True)]
     reader_files = session.read.format("iceberg").option("versionAsOf", first)
     reader_files = reader_files.load(f"{table}.files").select("record_count")
     sql_files = session.sql(f"SELECT record_count FROM {table}.files VERSION AS OF {first}")
     assert _live_rows(reader_files) == _live_rows(sql_files)
+    assert _live_rows(reader_files) == [[2]]
+    assert [
+        (field.name, field.dataType.simpleString(), field.nullable)
+        for field in reader_files.schema.fields
+    ] == [("record_count", "bigint", False)]
 
 
 def test_load_case_twin_table_matches_sql_door(spark: Any) -> None:
@@ -370,6 +429,11 @@ def test_load_uppercase_suffix_equals_sql(spark: Any) -> None:
     sql = spark.sql(f"SELECT * FROM {table}.SNAPSHOTS")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
+    assert sorted(row[0] for row in reader.select("operation").collect()) == [
+        "append",
+        "append",
+        "overwrite",
+    ]
 
 
 def test_load_missing_parent_matches_sql_door(spark: Any) -> None:
@@ -431,6 +495,7 @@ def test_load_uppercase_suffix_as_of_equals_sql(spark: Any) -> None:
     sql = spark.sql(f"SELECT * FROM {table}.FILES VERSION AS OF {first}")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
+    assert _frame_rows(reader.select("record_count")) == [[2]]
 
 
 def test_load_missing_parent_as_of_matches_sql_door(spark: Any) -> None:
