@@ -3,8 +3,9 @@
 ``DESCRIBE <catalog>.<ns>.<view>`` answers from the view's stored schema:
 column rows only, Spark type spellings, and an empty-string comment where the
 column carries no doc. The ``TABLE_OR_VIEW_NOT_FOUND`` refusal stays the
-fail-closed fall-through for a name that is neither a table nor a view, and
-non-``TableNotFound`` load errors keep propagating untouched.
+fail-closed answer for a name that is neither a table nor a view and for a
+missing namespace; other non-``TableNotFound`` load errors keep propagating
+untouched.
 """
 
 from __future__ import annotations
@@ -20,6 +21,15 @@ from repark.errors import AnalysisException
 
 TABLE_OR_VIEW_NOT_FOUND_ABSENT = (
     "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`definitely_absent` "
+    "cannot be found. Verify the spelling and correctness of the schema and "
+    "catalog. If you did not qualify the name with a schema, verify the "
+    "current_schema() output, or qualify the name with the correct schema and "
+    "catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+    "TABLE IF EXISTS. SQLSTATE: 42P01"
+)
+
+TABLE_OR_VIEW_NOT_FOUND_MISSING_NAMESPACE = (
+    "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`missing_ns`.`t` "
     "cannot be found. Verify the spelling and correctness of the schema and "
     "catalog. If you did not qualify the name with a schema, verify the "
     "current_schema() output, or qualify the name with the correct schema and "
@@ -92,17 +102,17 @@ def test_describe_partitioned_table_unchanged(spark: ReparkSession) -> None:
     ]
 
 
-def test_describe_missing_namespace_propagates_namespace_error(
+def test_describe_missing_namespace_is_table_or_view_not_found(
     spark: ReparkSession,
 ) -> None:
-    """A non-TableNotFound load error is not rerouted into the view probe."""
+    """A missing namespace answers the plain 42P01 refusal, not the view probe's error."""
     with pytest.raises(AnalysisException) as caught:
         spark.sql("DESCRIBE sc.missing_ns.t")
-    text = str(caught.value)
-    assert "No such namespace" in text
-    assert "TABLE_OR_VIEW_NOT_FOUND" not in text
-    assert caught.value.getCondition() is None
-    assert caught.value.getSqlState() is None
+    assert (
+        str(caught.value) == f"Error during planning: {TABLE_OR_VIEW_NOT_FOUND_MISSING_NAMESPACE}"
+    )
+    assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert caught.value.getSqlState() == "42P01"
 
 
 def test_describe_extended_view_is_columns_only(spark: ReparkSession) -> None:
