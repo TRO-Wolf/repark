@@ -2,6 +2,39 @@
 use super::super::*;
 use super::common::*;
 
+#[test]
+fn planner_default_set_recognizer_pins_malformed_near_misses() {
+    for sql in [
+        "",
+        "SELECT datafusion.catalog.default_catalog = 'ice'",
+        "SETX datafusion.catalog.default_catalog = 'ice'",
+        "SET datafusion.catalog.default_catalog_extra = 'ice'",
+        "/* unclosed SET datafusion.catalog.default_catalog = 'ice'",
+    ] {
+        assert!(
+            crate::router::planner_default_set_side(sql).is_none(),
+            "{sql}"
+        );
+    }
+    assert!(matches!(
+        crate::router::planner_default_set_side(
+            "-- lead\nSeT/* comment */datafusion.catalog.default_catalog /* c */ = 'ice'"
+        ),
+        Some(crate::router::PlannerDefaultSide::Catalog)
+    ));
+}
+
+#[tokio::test]
+async fn semicolons_inside_literals_and_comments_do_not_trigger_multi_statement_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for sql in ["SELECT ';'", "SELECT 1 /* ; */", "SELECT 1 -- ;\n"] {
+        execute(&ctx, &catalogs, sql)
+            .await
+            .unwrap_or_else(|error| panic!("{sql} must remain one statement: {error}"));
+    }
+}
+
 #[tokio::test]
 async fn bug010_multi_statement_refuses_parse_class() {
     let wh = TempDir::new().unwrap();

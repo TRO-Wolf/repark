@@ -651,12 +651,12 @@ async fn try_refresh_intercept(
 }
 
 #[derive(Clone, Copy)]
-enum PlannerDefaultSide {
+pub(crate) enum PlannerDefaultSide {
     Catalog,
     Namespace,
 }
 
-fn planner_default_set_side(sql: &str) -> Option<PlannerDefaultSide> {
+pub(crate) fn planner_default_set_side(sql: &str) -> Option<PlannerDefaultSide> {
     let keyword_start = crate::show_create::skip_sql_whitespace_and_comments(sql, 0)?;
     let keyword_end = keyword_start + 3;
     let head = sql.get(keyword_start..keyword_end)?;
