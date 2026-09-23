@@ -898,6 +898,34 @@ async fn show_table_extended_refuses_unclosed_quotes_after_comments() {
 async fn show_table_extended_near_miss_probes_keep_their_exact_outcomes() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let single_semicolon = outcome(
+        &ctx,
+        &catalogs,
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc';",
+    )
+    .await
+    .unwrap();
+    let spaced_semicolons = outcome(
+        &ctx,
+        &catalogs,
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' ; ;",
+    )
+    .await
+    .unwrap();
+    assert_eq!(spaced_semicolons, single_semicolon);
+
+    let content_after_semicolons = outcome(
+        &ctx,
+        &catalogs,
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc';;x",
+    )
+    .await
+    .expect_err("content after trailing semicolons must be refused");
+    assert_eq!(
+        content_after_semicolons.to_string(),
+        "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601\")"
+    );
+
     let unclosed_comment = outcome(
         &ctx,
         &catalogs,
