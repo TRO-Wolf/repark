@@ -381,8 +381,7 @@ async fn file_authority_refusal(argument: &str) -> String {
     let error = session
         .read_iceberg_path(argument)
         .await
-        .err()
-        .expect("must refuse");
+        .expect_err("must refuse");
     match error {
         Error::IllegalArgument(message) => message,
         other => panic!("expected IllegalArgument, got {other:?}"),
