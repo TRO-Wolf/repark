@@ -2,7 +2,6 @@
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -25,7 +24,7 @@ use futures::channel::mpsc;
 use futures::{SinkExt, Stream, StreamExt, TryStreamExt};
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::expr::Predicate;
-use iceberg::spec::{DataFile, DataFileFormat, FormatVersion, ManifestContentType};
+use iceberg::spec::{DataFile, FormatVersion, ManifestContentType};
 use iceberg::table::Table;
 
 use iceberg::Catalog;
@@ -216,14 +215,6 @@ pub enum MergeMode {
 
 /// Resolve the merge mode and reject unsupported formats before any IO.
 fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "MERGE INTO writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
     match table.metadata().properties().get(MERGE_MODE_PROP) {
         None => return Ok(MergeMode::CopyOnWrite),
         Some(mode) if mode.trim().eq_ignore_ascii_case("copy-on-write") => {
@@ -241,13 +232,11 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
     let format_version = table.metadata().format_version();
     if format_version < FormatVersion::V2 {
         return Err(DataFusionError::NotImplemented(format!(
-            "merge-on-read MERGE INTO writes Parquet position deletes on V2 and deletion vectors \
+            "merge-on-read MERGE INTO writes position deletes on V2 and deletion vectors \
              on V3 (this table is {format_version:?}; V1 has no delete files) — use \
              write.merge.mode = 'copy-on-write' instead"
         )));
     }
-    // pins: mw-9-delete-granularity/C-004 — refuse unknown granularity BEFORE any data write
-    // so a MATCHED UPDATE cannot orphan parquet (same class as the V2/format gate above).
     crate::write::position_delete::parse_delete_granularity(
         table
             .metadata()
@@ -502,7 +491,6 @@ async fn plan_and_commit(
     }
 }
 
-/// The copy-on-write arm: discover affected files, rewrite plus insert, then Parquet write.
 async fn plan_and_commit_cow(
     ctx: &SessionContext,
     catalog: &Arc<dyn Catalog>,
@@ -1395,9 +1383,7 @@ pub(super) fn cast_one_batch_to_write_schema(
     Ok(RecordBatch::try_new(write_schema.clone(), columns)?)
 }
 
-/// Write batches as Parquet data files through iceberg's writer stack, unpartitioned (v1).
-/// # Errors
-/// Returns a DataFusion error if the table is not Parquet-default, writer setup fails, or a batch
+#[allow(clippy::missing_errors_doc)]
 pub async fn write_data_files(table: &Table, batches: Vec<RecordBatch>) -> Result<Vec<DataFile>> {
     write_data_files_with_concurrency(table, batches, WriteConcurrency::default()).await
 }
@@ -1418,9 +1404,7 @@ pub async fn write_data_files_with_concurrency(
     .await
 }
 
-/// Stream batches into unpartitioned Parquet writers as the source produces each batch.
-/// # Errors
-/// Returns a DataFusion error if the table is not Parquet-default or the writer/source fails.
+#[allow(clippy::missing_errors_doc)]
 pub async fn write_data_files_from_stream<S>(table: &Table, stream: S) -> Result<Vec<DataFile>>
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
@@ -1451,14 +1435,6 @@ where
     let conformed = stream.map(move |item| {
         conform_batch_retaining_unmapped_columns(&write_schema, &write_default_columns, &item?)
     });
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "MERGE INTO writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
     let build_writer =
         || async { session_staging::build_unpartitioned_data_file_writer(table).await };
     crate::write::distribution::drive_unpartitioned(table, conformed, max_concurrent, build_writer)

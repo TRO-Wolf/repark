@@ -474,6 +474,11 @@ both tables with the script baselines (backtick-disclosure retire). pins: fnp-4b
 - `test_cap_1_source_file_line_cap.py` — **ICE-WRITER-METRICS-1 (2026-09-20):**
   `write/merge/mod.rs` 1761 → 1756 in both tables (the name-matched Parquet builder moves to
   `write/writer_props`). pins: ice-writer-metrics-1/C-001
+- `test_cap_1_source_file_line_cap.py` — **ICE-ORC-AVRO-1 CI repair (2026-09-22):**
+  mirror rows ratchet `write/append.rs` 1816 → 1804 and `write/merge/mod.rs`
+  1654 → 1630 with `scripts/check_rust_file_size.py`, shrink-only, after the unit
+  deleted the Parquet-only format gates from both files and REM4 dropped the
+  stale `plan_and_commit_cow` Parquet-write doc line.
   **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. The approved Rust exception count is 36 since CSV-INFER-PERF-1 retired `session.rs`.
 - `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. WRITE-DISTRIBUTION-2 (2026-09-06): `write/append.rs` 1884 → 1883 in both tables. DFCORE-1 (2026-09-07): `dataframe/core.py` row 6302 → 5954 and `dataframe/joins_columns.py` row 1239 → 1238 with the script baseline. pins: dfcore-1/C-007
 - `test_cap_1_source_file_line_cap.py` — DFCORE-2 (2026-09-07): `dataframe/core.py` row 5954 → 5263 with the script baseline; the two new UDF projection modules carry no row. pins: dfcore-2/C-006

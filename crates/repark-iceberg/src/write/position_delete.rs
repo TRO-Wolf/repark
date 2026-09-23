@@ -6,6 +6,7 @@ use std::sync::Arc;
 use datafusion::arrow::array::{ArrayRef, Int64Array, RecordBatch, StringArray};
 use datafusion::error::{DataFusionError, Result};
 use futures::stream::{self, StreamExt};
+use iceberg::arrow::FieldMatchMode;
 use iceberg::spec::{
     DataContentType, DataFile, DataFileFormat, ManifestContentType, MetricsConfig, PartitionKey,
     PartitionSpec, Struct,
@@ -14,11 +15,11 @@ use iceberg::table::Table;
 use iceberg::writer::base_writer::position_delete_writer::{
     PositionDeleteFileWriterBuilder, PositionDeleteWriterConfig,
 };
-use iceberg::writer::file_writer::ParquetWriterBuilder;
 use iceberg::writer::file_writer::location_generator::{
     DefaultFileNameGenerator, DefaultLocationGenerator,
 };
 use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
+use iceberg::writer::file_writer::{AnyFileWriterBuilder, ParquetWriterBuilder};
 use iceberg::writer::{IcebergWriter, IcebergWriterBuilder};
 use iceberg::{Catalog, TableIdent};
 use uuid::Uuid;
@@ -77,9 +78,6 @@ pub(crate) fn parse_delete_granularity(raw: Option<&str>) -> Result<DeleteGranul
     )))
 }
 
-/// Write real Parquet position-delete file(s) for `pairs`, each stamped with the `(spec_id, partition)`
-/// # Errors
-/// Returns a DataFusion error if the writer cannot be built or a pair is not live in the snapshot.
 pub(crate) async fn write_position_deletes(
     table: &Table,
     pairs: &[PositionDeletePair],
@@ -261,22 +259,50 @@ async fn write_position_deletes_for_partition(
     builder_spec: Option<PartitionSpec>,
     staging: &crate::write::write_options::WriterStagingOverrides,
 ) -> Result<Vec<DataFile>> {
+    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
+    let data_format = crate::write::data_format::resolve_data_format(
+        staging.write_format.as_deref(),
+        Some(table_props.write_format_default.as_str()),
+    )?;
+    let delete_format = crate::write::data_format::resolve_delete_format(
+        staging.delete_format.as_deref(),
+        table
+            .metadata()
+            .properties()
+            .get("write.delete.format.default")
+            .map(String::as_str),
+        data_format,
+        table.metadata().format_version(),
+    )?;
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
     let file_name_generator = DefaultFileNameGenerator::new(
         "pos-del".to_string(),
         Some(Uuid::new_v4().to_string()),
-        DataFileFormat::Parquet,
+        delete_format,
     );
-    let parquet_builder = ParquetWriterBuilder::new(
-        position_delete_writer_properties_for(table, staging)?,
-        config.schema().clone(),
-    )
-    .with_metrics_config(
-        MetricsConfig::for_position_delete_table(table.metadata()).map_err(iceberg_err)?,
-    );
+    let file_writer_builder = if delete_format == DataFileFormat::Parquet {
+        AnyFileWriterBuilder::Parquet(Box::new(
+            ParquetWriterBuilder::new(
+                position_delete_writer_properties_for(table, staging)?,
+                config.schema().clone(),
+            )
+            .with_metrics_config(
+                MetricsConfig::for_position_delete_table(table.metadata()).map_err(iceberg_err)?,
+            ),
+        ))
+    } else {
+        AnyFileWriterBuilder::for_format(
+            delete_format,
+            config.schema().clone(),
+            table.metadata().properties(),
+            MetricsConfig::for_position_delete_table(table.metadata()).map_err(iceberg_err)?,
+            FieldMatchMode::Id,
+        )
+        .map_err(iceberg_err)?
+    };
     let rolling_builder = RollingFileWriterBuilder::new_with_default_file_size(
-        parquet_builder,
+        file_writer_builder,
         table.file_io().clone(),
         location_generator,
         file_name_generator,

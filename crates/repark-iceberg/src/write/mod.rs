@@ -10,6 +10,7 @@ pub use commit_target::commit_append_to;
 pub mod concurrency;
 pub(crate) mod conflict_filter;
 pub(crate) mod conform;
+pub mod data_format;
 pub(crate) mod distribution;
 pub(crate) mod file_order;
 pub mod file_scoped_rewrite;

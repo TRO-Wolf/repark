@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::sync::{Arc, atomic::AtomicBool, atomic::Ordering};
 
 use datafusion::arrow::array::RecordBatch;
@@ -6,7 +5,7 @@ use datafusion::error::{DataFusionError, Result};
 use futures::channel::mpsc;
 use futures::{Stream, StreamExt};
 use iceberg::arrow::schema_to_arrow_schema;
-use iceberg::spec::{DataFile, DataFileFormat};
+use iceberg::spec::DataFile;
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, TableIdent};
@@ -26,14 +25,12 @@ pub(crate) use super::append_fanout_serial::{
 
 /// Append record batches to an Iceberg table — the sanctioned add-only commit path.
 /// # Errors
-/// A missing table surfaces the catalog load error; a non-Parquet default is `NotImplemented`.
 pub async fn append(
     catalog: &Arc<dyn Catalog>,
     table_ident: &TableIdent,
     batches: Vec<RecordBatch>,
 ) -> Result<Table> {
     let table = catalog.load_table(table_ident).await.map_err(iceberg_err)?;
-    reject_unsupported_append(&table)?;
 
     let current_schema = table.metadata().current_schema();
     let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
@@ -52,20 +49,6 @@ pub async fn append(
     commit_append(catalog, &table, new_files).await
 }
 
-/// The one remaining append scope gate, checked before any IO: only Parquet data files are written.
-fn reject_unsupported_append(table: &Table) -> Result<()> {
-    let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    if file_format != DataFileFormat::Parquet {
-        return Err(DataFusionError::NotImplemented(format!(
-            "append writes only Parquet data files yet (table default is {file_format})"
-        )));
-    }
-    Ok(())
-}
-
-/// Write batches as identity-partitioned Parquet files, sibling of `write_data_files`.
 /// # Errors
 /// A batch with a missing, extra, or duplicate column (unless the missing column carries an
 /// Iceberg `write-default`), an uncastable/overflowing value, or a NULL
@@ -260,6 +243,7 @@ mod tests {
     use std::collections::{HashMap, HashSet};
     use std::future::Future;
     use std::pin::Pin;
+    use std::str::FromStr;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use datafusion::arrow::array::{Array, Int32Array, Int64Array, StringArray, StringViewArray};
@@ -269,8 +253,9 @@ mod tests {
     use iceberg::io::LocalFsStorageFactory;
     use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
     use iceberg::spec::{
-        DataContentType, DataFileBuilder, Datum, Literal, ManifestContentType, NestedField,
-        Operation, PrimitiveType, Schema, Struct, Transform, Type, UnboundPartitionSpec,
+        DataContentType, DataFileBuilder, DataFileFormat, Datum, Literal, ManifestContentType,
+        NestedField, Operation, PrimitiveType, Schema, Struct, Transform, Type,
+        UnboundPartitionSpec,
     };
     use iceberg::{CatalogBuilder, Namespace, NamespaceIdent, TableCommit, TableCreation};
     use tempfile::TempDir;
@@ -1450,7 +1435,7 @@ mod tests {
 
     /// PIN P13.
     #[tokio::test]
-    async fn append_non_parquet_default_rejected() {
+    async fn append_non_parquet_default_writes_table_format() {
         let warehouse = TempDir::new().expect("temp warehouse");
         let catalog = memory_catalog(&warehouse).await;
         let ident = create_table(
@@ -1462,18 +1447,21 @@ mod tests {
         )
         .await;
 
-        let error = append(&catalog, &ident, vec![consumer_batch(&[Some(1)], &[None])])
+        append(&catalog, &ident, vec![consumer_batch(&[Some(1)], &[None])])
             .await
-            .expect_err("a non-Parquet default must be rejected");
-        assert!(
-            matches!(error, DataFusionError::NotImplemented(_)),
-            "expected NotImplemented, got: {error}"
+            .expect("avro append lands");
+        assert_eq!(
+            snapshot_count(&catalog, &ident).await,
+            1,
+            "one append lands"
         );
-        assert!(
-            error.to_string().contains("avro"),
-            "the error must name the table's format, got: {error}"
+        let files = live_data_files(&catalog, &ident).await;
+        assert_eq!(files.len(), 1, "one data file lands");
+        assert_eq!(files[0].file_format(), DataFileFormat::Avro);
+        assert_eq!(
+            read_back_sorted(&catalog, &ident).await,
+            vec![(Some(1), None)],
         );
-        assert_eq!(snapshot_count(&catalog, &ident).await, 0, "nothing lands");
     }
 
     /// PIN P14.

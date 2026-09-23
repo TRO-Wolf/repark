@@ -11,6 +11,7 @@ pub struct StatementWriteOptions {
     pub raw: Vec<(String, String)>,
     pub snapshot_extra: Vec<(String, String)>,
     pub write_format: Option<String>,
+    pub delete_format: Option<String>,
     pub target_file_size_bytes: Option<u64>,
     pub codec: Option<String>,
     pub level: Option<String>,
@@ -117,6 +118,7 @@ impl StatementWriteOptions {
             }
             match key.as_str() {
                 "write-format" => options.write_format = Some(validate_write_format(&value)?),
+                "delete-format" => options.delete_format = Some(value),
                 "target-file-size-bytes" => {
                     options.target_file_size_bytes =
                         Some(repark_iceberg::write::parse_target_file_size(&value)?);
@@ -154,11 +156,10 @@ pub(crate) fn is_merge_schema_key(key: &str) -> bool {
 fn validate_write_format(raw: &str) -> Result<String> {
     match raw.to_ascii_lowercase().as_str() {
         "parquet" => Ok("parquet".to_string()),
-        "orc" | "avro" => Err(DataFusionError::NotImplemented(format!(
-            "write-format {raw:?} has no RePark Iceberg writer — only parquet is written \
-             (ICE-WRITE-OPTIONS-1 ORC/AVRO declared 2026-09-17)"
+        "orc" | "avro" => Ok(raw.to_ascii_lowercase()),
+        _ => Err(repark_iceberg::write::illegal_argument_error(format!(
+            "Invalid file format: {raw}"
         ))),
-        _ => Err(DataFusionError::Plan(format!("Invalid file format: {raw}"))),
     }
 }
 
@@ -241,17 +242,23 @@ mod tests {
     }
 
     #[test]
-    fn orc_refuses_naming_the_registry_row() {
-        let error =
-            StatementWriteOptions::validate(vec![pair("write-format", "orc")]).expect_err("orc");
-        assert!(error.to_string().contains("ICE-WRITE-OPTIONS-1"));
+    fn orc_writes_naming_the_normalised_value() {
+        let options =
+            StatementWriteOptions::validate(vec![pair("write-format", "orc")]).expect("orc");
+        assert_eq!(options.write_format.as_deref(), Some("orc"));
     }
 
     #[test]
     fn bogus_format_mirrors_spark_text() {
         let error = StatementWriteOptions::validate(vec![pair("write-format", "bogus")])
             .expect_err("bogus");
-        assert!(error.to_string().contains("Invalid file format: bogus"));
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External marker, got {error:?}");
+        };
+        let marker = inner
+            .downcast_ref::<repark_iceberg::write::IllegalArgumentMarker>()
+            .expect("expected an IllegalArgumentMarker");
+        assert_eq!(marker.0, "Invalid file format: bogus");
     }
 
     #[test]

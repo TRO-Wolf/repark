@@ -1298,6 +1298,19 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Run 22b (2026-09-18): §19 records the rebase over #682 / #687 / #678 (Q-22b-WO-1..5,
   the constraint-2 table, red-first and gates).
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
+- [ice-orc-avro-1-ledger.md](ice-orc-avro-1-ledger.md) —
+  **ICE-ORC-AVRO-1 (2026-09-22), in flight:** ORC and Avro Iceberg data files
+  (IPI-41 RePark half) — the `write-format` / `delete-format` options and the
+  `write.format.default` / `write.delete.format.default` properties resolve to a
+  real format on every owned builder site (RP-47 bump `604edca0`); the 13
+  inventory cells plus the delete-format, metrics, wide-type, refusal and
+  compaction cells, red-first in `test_ice_orc_avro_1.py` (24P offline; 22P live
+  at WO3a). Registry `ICE-WRITE-OPTIONS-ORC-AVRO` retires to SERVED; `IO-ORC-1`
+  keeps its plain-file writer refusal. `risk_tier: standard`. Branch
+  `fix/ice-orc-avro-1`.
+  pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  pins: ice-orc-avro-1/C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  pins: ice-orc-avro-1/C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-025
 - [ice-v3-write-default-1-ledger.md](ice-v3-write-default-1-ledger.md) —
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17), in flight:** omitted columns on every
   Iceberg write path fill from the schema field's `write_default` in Rust, in

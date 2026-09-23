@@ -84,6 +84,21 @@ repark-core's error map.
   beating both, and an override beating a gzip data property — and reverting
   `delete_compression_with` to the data property alone reds it in-crate.
   pins: ice-session-write-conf-1/C-050
+- `data_format.rs` — **IPI-41 WO1 (2026-09-22):** the format-resolution seam both write
+  doors route through. `resolve_data_format(staging_format, table_default)` returns the
+  per-write `write-format` option when present, else the `write.format.default` table
+  property, else parquet. `resolve_delete_format(staging_format, table_property,
+  data_format, format_version)` returns PUFFIN on format-version 3 before consulting any
+  setting, else the per-write `delete-format` option, else the
+  `write.delete.format.default` property, else the resolved DATA format. The vocabulary is
+  parquet/orc/avro case-insensitively; any other string refuses with
+  `Invalid file format: {name}` (IllegalArgumentException), the same shape
+  `validate_write_format` uses. Callers pass
+  `staging.write_format` / `staging.delete_format` (`WriterStagingOverrides`) with the raw
+  property values from `table.metadata().properties()`; WO2 routed the five builder
+  sites through them (unpartitioned staging, partitioned fanout, partitioned lineage,
+  unpartitioned MERGE, position deletes), and WO3a opened `validate_write_format` to
+  orc/avro. pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-025
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
@@ -797,7 +812,9 @@ repark-core's error map.
   carries the target `branch` (`Some(name)` when the statement named `<table>.branch_<name>`), and the executor scans that ref's snapshot and commits on it;
   and its executor is comment-free per the ban (it plans the identity SELECT over the pinned
   scratch, then COW-rewrites or writes MoR deletes; errors are planning, write or commit
-  failures, plus `NotImplemented` for non-Parquet or non-V2 MoR).
+  failures, plus `NotImplemented` for non-V2 MoR; data files follow the write-format option
+  over `write.format.default`, v2 MoR writes position deletes per `write.delete.format.default`
+  over the data format, v3 writes deletion vectors).
   `try_allowed_plain_update` joins `plain::try_allowed_plain_identity` as an owned identity
   route (see `predicate_dml/map.md`). pins: ice-session-write-conf-1/C-038
 - `position_delete.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**

@@ -87,12 +87,12 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split property, rename, and schema-evolution operation families.",
     ),
     "crates/repark-iceberg/src/write/append.rs": (
-        1816,
+        1804,
         "Append planning, file writing, and commit assembly share one entry module.",
         "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1654,
+        1630,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
         "Split plan preparation from COW and MOR execution modules.",
     ),

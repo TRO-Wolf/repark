@@ -1,14 +1,14 @@
-use std::str::FromStr;
 use std::sync::Arc;
 
 use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::error::{DataFusionError, Result};
 use futures::{Stream, StreamExt, TryStreamExt};
-use iceberg::arrow::schema_to_arrow_schema;
+use iceberg::arrow::{FieldMatchMode, schema_to_arrow_schema};
 use iceberg::spec::{DataFile, DataFileFormat, PartitionKey, Struct};
 use iceberg::table::Table;
 use iceberg::writer::base_writer::data_file_writer::DataFileWriterBuilder;
+use iceberg::writer::file_writer::AnyFileWriterBuilder;
 use iceberg::writer::file_writer::location_generator::{
     DefaultFileNameGenerator, DefaultLocationGenerator,
 };
@@ -85,15 +85,30 @@ async fn build_unpartitioned_data_file_writer_with(
     staging: &WriterStagingOverrides,
 ) -> Result<impl IcebergWriter + use<>> {
     let table_props = table.metadata().table_properties().map_err(iceberg_err)?;
-    let file_format =
-        DataFileFormat::from_str(&table_props.write_format_default).map_err(iceberg_err)?;
-    let parquet_builder = crate::write::writer_props::name_matched_parquet_builder(table, staging)?;
+    let file_format = crate::write::data_format::resolve_data_format(
+        staging.write_format.as_deref(),
+        Some(table_props.write_format_default.as_str()),
+    )?;
+    let file_writer_builder = if file_format == DataFileFormat::Parquet {
+        AnyFileWriterBuilder::Parquet(Box::new(
+            crate::write::writer_props::name_matched_parquet_builder(table, staging)?,
+        ))
+    } else {
+        AnyFileWriterBuilder::for_format(
+            file_format,
+            crate::write::merge::row_lineage::iceberg_parquet_schema(table)?,
+            table.metadata().properties(),
+            crate::write::writer_props::metrics_config_for(table)?,
+            FieldMatchMode::Name,
+        )
+        .map_err(iceberg_err)?
+    };
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
     let file_name_generator =
         DefaultFileNameGenerator::new(Uuid::new_v4().to_string(), None, file_format);
     let rolling_builder = RollingFileWriterBuilder::new(
-        parquet_builder,
+        file_writer_builder,
         crate::write::writer_props::target_file_size_with(table, staging.target_file_size_bytes)?,
         table.file_io().clone(),
         location_generator,

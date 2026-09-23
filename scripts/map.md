@@ -2,6 +2,7 @@
 
 xo55-mt R1 (2026-09-22): `check_rust_file_size.py` ratchets `repark-spark/src/metadata_tables.rs` 1062 → 1059 (the blanket AS OF refusal folds into the shared rule-3 helper), shrink-only.
 IPI-51 PR10 (2026-09-22): `check_lib_rs.py` gains the `repark-spark` 152 row for `mod update_cast;` (measured 151, one past the default 150). pins: ipi-51/W-UPDATE-TYPE-ERR
+IPI-41 WO2a/WO2b (2026-09-22): `check_rust_file_size.py` ratchets `write/append.rs` 1816 → 1804 (the append format gate and its comment lines leave when the site routes through `resolve_data_format`) and `write/merge/mod.rs` 1654 → 1630 (the MERGE format gates leave; REM4 drops the stale `plan_and_commit_cow` Parquet-write doc line), both shrink-only. pins: ice-orc-avro-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 IPI-26/27 round 3 (2026-09-21): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1444 → 1389 (the `REPLACE PARTITION FIELD` parser moves to the sibling `replace_partition_field.rs`, which also takes the transform-LHS form), shrink-only.
 M8-STARTSWITH-1 (2026-09-21): startswith adds pub mod spark_startswith plus one register_all chain link; root file measured 181, fits under the standing repark-functions ceiling 182 with no raise.
 

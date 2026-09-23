@@ -264,29 +264,33 @@ def test_write_format_parquet(spark: ReparkSession) -> None:
     assert set(_data_suffixes(spark, table)) == {"parquet"}
 
 
-def test_write_format_orc_refuses(spark: ReparkSession) -> None:
-    """FORMAT-02: orc has no RePark writer — a typed refusal naming the registry row."""
-    _seed(spark, "fmt_orc")
+def test_write_format_orc_writes(spark: ReparkSession) -> None:
+    """FORMAT-02: write-format orc lands ORC data files."""
+    spark.sql(f"CREATE TABLE {CATALOG}.{NS}.fmt_orc (id BIGINT, name STRING) USING iceberg")
     table = f"{CATALOG}.{NS}.fmt_orc"
-    with pytest.raises(UnsupportedOperationException, match="ICE-WRITE-OPTIONS-1"):
-        _frame(spark).writeTo(table).option("write-format", "orc").append()
-    assert _snapshot_count(spark, table) == 1
+    _frame(spark).writeTo(table).option("write-format", "orc").append()
+    assert set(_data_suffixes(spark, table)) == {"orc"}
+    formats = spark.sql(f"SELECT file_format FROM {table}.files").to_arrow().to_pylist()
+    assert formats
+    assert {str(row["file_format"]) for row in formats} == {"ORC"}
 
 
-def test_write_format_avro_refuses(spark: ReparkSession) -> None:
-    """FORMAT-03: avro has no RePark writer — a typed refusal naming the registry row."""
-    _seed(spark, "fmt_avro")
+def test_write_format_avro_writes(spark: ReparkSession) -> None:
+    """FORMAT-03: write-format avro lands AVRO data files."""
+    spark.sql(f"CREATE TABLE {CATALOG}.{NS}.fmt_avro (id BIGINT, name STRING) USING iceberg")
     table = f"{CATALOG}.{NS}.fmt_avro"
-    with pytest.raises(UnsupportedOperationException, match="ICE-WRITE-OPTIONS-1"):
-        _frame(spark).writeTo(table).option("write-format", "avro").append()
-    assert _snapshot_count(spark, table) == 1
+    _frame(spark).writeTo(table).option("write-format", "avro").append()
+    assert set(_data_suffixes(spark, table)) == {"avro"}
+    formats = spark.sql(f"SELECT file_format FROM {table}.files").to_arrow().to_pylist()
+    assert formats
+    assert {str(row["file_format"]) for row in formats} == {"AVRO"}
 
 
 def test_write_format_bogus_refuses(spark: ReparkSession) -> None:
     """FORMAT-04: an unknown format is refused like Spark's IllegalArgumentException."""
     _seed(spark, "fmt_bogus")
     table = f"{CATALOG}.{NS}.fmt_bogus"
-    with pytest.raises(AnalysisException, match="Invalid file format"):
+    with pytest.raises(IllegalArgumentException, match=r"^Invalid file format: bogus$"):
         _frame(spark).writeTo(table).option("write-format", "bogus").append()
     assert "Invalid file format" in _fixture_cell("FORMAT-04-bogus")["error"]["message"]
 
