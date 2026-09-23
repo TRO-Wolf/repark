@@ -158,7 +158,14 @@ def _table_properties(inner: Any, token: dict[str, Any], resolved: str) -> dict[
 
 
 def _table_comment(inner: Any, token: dict[str, Any], resolved: str) -> str | None:
-    return _table_properties(inner, token, resolved).get("comment")
+    in_detail = False
+    for row in _describe_extended_rows(inner, token, resolved):
+        head = row[0] if row else ""
+        if head == "# Detailed Table Information":
+            in_detail = True
+        elif in_detail and head == "Comment" and len(row) >= 2 and isinstance(row[1], str):
+            return row[1]
+    return None
 
 
 def _partition_source_columns(inner: Any, token: dict[str, Any], resolved: str) -> set[str]:

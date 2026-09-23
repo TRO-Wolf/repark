@@ -1381,6 +1381,9 @@ pins: rp-4-fork-repin/C-005, C-006
   drops the reserved `owner` / `comment` / `provider` / `location` keys, matching the live
   Spark 4.1.2 row for a fresh table. `describe_partition_field` is `pub(crate)` so
   `show_create.rs` reuses the `# Partitioning` transform text.
+  The detail block gains Spark's measured `Comment` row (after `Type`, only when the stored
+  `comment` property is set), which is where the facade's `catalog.getTable(...).description`
+  now reads the table comment.
 - `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
   for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
   for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the

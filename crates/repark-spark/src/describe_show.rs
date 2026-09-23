@@ -389,6 +389,9 @@ fn describe_table_rows(
             ),
         ));
         rows.push(plain_describe_row("Type", "MANAGED"));
+        if let Some(comment) = metadata.properties().get("comment") {
+            rows.push(plain_describe_row("Comment", comment));
+        }
         rows.push(plain_describe_row("Location", metadata.location()));
         rows.push(plain_describe_row("Provider", "iceberg"));
         rows.push(plain_describe_row("Owner", owner));

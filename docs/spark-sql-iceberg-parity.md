@@ -1335,7 +1335,8 @@ perfectly good read.
   table answers Spark's measured
   `[current-snapshot-id=none,format=iceberg/parquet,format-version=2,write.parquet.compression-codec=zstd]`
   (`format` / `format-version` synthesized as Iceberg's `SparkTable.properties()` does,
-  `owner` / `comment` never listed); the live leg asserts the row equal to Spark.
+  `owner` / `comment` never listed); the live leg asserts the row equal to Spark. A table
+  comment prints as Spark's own `Comment` detail row after `Type`.
 
 #### SHOW-CREATE-1 — `SHOW CREATE TABLE` answers Spark's CREATE text for Iceberg tables — **FIXED 2026-09-23**
 

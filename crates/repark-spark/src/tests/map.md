@@ -1434,7 +1434,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the `AS SERDE` and missing-table refusals, the bare `SHOW CREATE TABLE` parse error, the
   near misses (view targets not answered as tables; SHOW CREATE, SHOW TABLES/COLUMNS/
   TBLPROPERTIES not claimed), and the DESCRIBE EXTENDED `Table Properties` row equal to the
-  measured fresh-table string.
+  measured fresh-table string, and the `Comment` detail row (after `Type`, a column named
+  `Comment` notwithstanding) with no `comment=` left in `Table Properties`.
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

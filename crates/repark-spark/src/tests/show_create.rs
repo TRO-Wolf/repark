@@ -529,3 +529,57 @@ async fn describe_extended_table_properties_row_matches_spark_for_a_fresh_table(
         )
     );
 }
+
+#[tokio::test]
+async fn describe_extended_carries_the_table_comment_as_its_own_row() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.doc (Comment STRING) USING iceberg COMMENT 'tab''le doc'",
+    )
+    .await;
+    let batches = execute(&ctx, &catalogs, "DESCRIBE TABLE EXTENDED ice.sales.doc")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let mut names = Vec::new();
+    let mut values = Vec::new();
+    for batch in &batches {
+        let name_column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        let value_column = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        for index in 0..batch.num_rows() {
+            names.push(name_column.value(index).to_string());
+            values.push(value_column.value(index).to_string());
+        }
+    }
+    let detail = names
+        .iter()
+        .position(|name| name == "# Detailed Table Information")
+        .unwrap();
+    assert_eq!(
+        names[detail + 1..detail + 5],
+        ["Name", "Type", "Comment", "Location"]
+    );
+    assert_eq!(values[detail + 3], "tab'le doc");
+    let properties = names
+        .iter()
+        .position(|name| name == "Table Properties")
+        .unwrap();
+    assert!(
+        !values[properties].contains("comment="),
+        "{}",
+        values[properties]
+    );
+}
