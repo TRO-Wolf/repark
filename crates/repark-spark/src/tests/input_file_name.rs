@@ -147,13 +147,34 @@ async fn input_file_name_like_parquet_answers_true_on_every_row() {
 
     let rows = batches(
         &session,
-        "SELECT id, substr(input_file_name(), 1, 7) = substr(_file, 1, 7) FROM ice.ns.t",
+        "SELECT id, concat('p:', input_file_name()) = concat('p:', _file) FROM ice.ns.t",
     )
     .await;
     assert_eq!(
         id_bool_pairs(&rows),
         vec![(2, true), (3, true), (4, true)],
-        "R-INPUT-FILE-NAME inside a function argument"
+        "R-INPUT-FILE-NAME inside a function argument compares the full path"
+    );
+
+    let rewritten = strings(
+        &batches(
+            &session,
+            "SELECT concat('p:', input_file_name()) FROM ice.ns.t ORDER BY id",
+        )
+        .await,
+        0,
+    );
+    let prefixed = strings(
+        &batches(
+            &session,
+            "SELECT concat('p:', _file) FROM ice.ns.t ORDER BY id",
+        )
+        .await,
+        0,
+    );
+    assert_eq!(
+        rewritten, prefixed,
+        "a scalar argument preserves the full _file value row by row"
     );
 }
 
@@ -450,6 +471,91 @@ async fn input_file_name_over_a_cte_sharing_the_table_alias_falls_through() {
     assert!(
         error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "a CTE named like the table keeps the unresolved-routine error: {error}"
+    );
+}
+
+#[tokio::test]
+async fn input_file_name_after_use_over_a_cte_named_like_the_table_falls_through() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t").await;
+    run(&session, "USE ice.ns").await;
+
+    let error = plan_error(
+        &session,
+        "WITH t AS (SELECT id, 'x' AS _file FROM ice.ns.t) \
+         SELECT input_file_name() FROM t",
+    )
+    .await;
+    assert!(
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
+        "a CTE named like the defaulted table keeps the unresolved-routine error: {error}"
+    );
+
+    let rows = batches(
+        &session,
+        "WITH t AS (SELECT id, 'x' AS _file FROM ice.ns.t WHERE id = 2) SELECT _file FROM t",
+    )
+    .await;
+    assert_eq!(
+        strings(&rows, 0),
+        vec!["x".to_string()],
+        "the CTE's _file column wins over the physical table's"
+    );
+}
+
+#[tokio::test]
+async fn input_file_name_after_use_still_serves_the_table_by_name() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t").await;
+    run(&session, "USE ice.ns").await;
+
+    let expected = strings(
+        &batches(&session, "SELECT _file FROM ice.ns.t ORDER BY id").await,
+        0,
+    );
+    for sql in [
+        "SELECT input_file_name() FROM ice.ns.t ORDER BY id",
+        "WITH c AS (SELECT 1 AS one) SELECT input_file_name() FROM ice.ns.t ORDER BY id",
+        "WITH t AS (SELECT 1 AS one) SELECT input_file_name() FROM ice.ns.t ORDER BY id",
+    ] {
+        let answered = strings(&batches(&session, sql).await, 0);
+        assert_eq!(
+            answered, expected,
+            "{sql} must still answer the physical _file values row by row"
+        );
+    }
+}
+
+#[tokio::test]
+async fn input_file_name_over_a_temp_view_named_like_the_table_falls_through() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t").await;
+    run(&session, "USE ice.ns").await;
+
+    let error = plan_error(&session, "CREATE TEMPORARY VIEW t AS SELECT 1 AS id").await;
+    assert!(
+        error.contains("not implemented") || error.contains("not supported"),
+        "the SQL door refuses CREATE TEMPORARY VIEW outright: {error}"
+    );
+
+    let frame = session.sql("SELECT 1 AS id").await.unwrap();
+    session
+        .create_or_replace_temp_view_from("t", &frame)
+        .unwrap();
+
+    let error = plan_error(&session, "SELECT input_file_name() FROM t").await;
+    assert!(
+        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
+        "a temp view named like the table is not served: {error}"
+    );
+
+    let error = plan_error(&session, "SELECT _file FROM t").await;
+    assert!(
+        !error.is_empty(),
+        "a _file read over the temp view must not silently answer: {error}"
     );
 }
 

@@ -174,7 +174,12 @@ pub async fn prepare_metadata_column_sql(
         };
     }
 
-    let mut collector = CollectTables::default();
+    let mut cte_names = CollectCteNames::default();
+    let _ = statement.visit(&mut cte_names);
+    let mut collector = CollectTables {
+        names: Vec::new(),
+        cte_names: cte_names.names,
+    };
     let _ = statement.visit(&mut collector);
     if collector.names.is_empty() {
         return Ok(None);
@@ -229,8 +234,37 @@ pub async fn prepare_metadata_column_sql(
 }
 
 #[derive(Default)]
+struct CollectCteNames {
+    names: Vec<String>,
+}
+
+impl VisitorMut for CollectCteNames {
+    type Break = std::convert::Infallible;
+
+    fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
+        if let Some(with) = &query.with {
+            for cte in &with.cte_tables {
+                self.names.push(normalized_ident_value(&cte.alias.name));
+            }
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+#[derive(Default)]
 struct CollectTables {
     names: Vec<ObjectName>,
+    cte_names: Vec<String>,
+}
+
+impl CollectTables {
+    fn is_cte_reference(&self, name: &ObjectName) -> bool {
+        single_ident(name).is_some_and(|ident| {
+            self.cte_names
+                .iter()
+                .any(|cte| *cte == normalized_ident_value(ident))
+        })
+    }
 }
 
 impl VisitorMut for CollectTables {
@@ -248,6 +282,7 @@ impl VisitorMut for CollectTables {
         } = table_factor
             && args.is_none()
             && version.is_none()
+            && !self.is_cte_reference(name)
             && !self.names.iter().any(|seen| seen == name)
         {
             self.names.push(name.clone());
@@ -549,6 +584,14 @@ fn ident_eq(ident: &Ident, other: &str) -> bool {
     }
 }
 
+fn normalized_ident_value(ident: &Ident) -> String {
+    if ident.quote_style.is_some() {
+        ident.value.clone()
+    } else {
+        ident.value.to_ascii_lowercase()
+    }
+}
+
 fn object_name_values(name: &ObjectName) -> Vec<String> {
     name.0
         .iter()
@@ -571,4 +614,246 @@ fn resolve_table_ident(ctx: &SessionContext, name: &ObjectName) -> Option<(Strin
     let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
     let table_leaf = parts[parts.len() - 1].clone();
     Some((parts[0].clone(), TableIdent::new(namespace, table_leaf)))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use datafusion::prelude::SessionContext;
+    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use iceberg::io::LocalFsStorageFactory;
+    use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
+    use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
+    use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation};
+    use tempfile::TempDir;
+
+    use super::{MetadataColumnPins, TEMP_VIEW_PREFIX, prepare_metadata_column_sql};
+    use crate::catalog_state::{CatalogRegistry, LocationPolicy};
+
+    async fn defaulted_iceberg_table() -> (SessionContext, CatalogRegistry, TempDir) {
+        let warehouse = TempDir::new().unwrap();
+        let root = warehouse.path().to_str().unwrap().to_string();
+        let catalog: Arc<dyn Catalog> = Arc::new(
+            MemoryCatalogBuilder::default()
+                .with_storage_factory(Arc::new(LocalFsStorageFactory))
+                .load(
+                    "memory",
+                    HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), root.clone())]),
+                )
+                .await
+                .unwrap(),
+        );
+        let schema = Schema::builder()
+            .with_fields(vec![
+                NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            ])
+            .build()
+            .unwrap();
+        for namespace in ["public", "ns"] {
+            let ident = NamespaceIdent::new(namespace.to_string());
+            catalog
+                .create_namespace(&ident, HashMap::new())
+                .await
+                .unwrap();
+            let creation = TableCreation::builder()
+                .name("t".to_string())
+                .location(format!("{root}/{namespace}/t"))
+                .schema(schema.clone())
+                .properties(HashMap::new())
+                .build();
+            catalog.create_table(&ident, creation).await.unwrap();
+        }
+        let mut catalogs = CatalogRegistry::new();
+        catalogs.insert(
+            "datafusion".to_string(),
+            catalog,
+            LocationPolicy::TempFallbackAllowed {
+                root: warehouse.path().to_path_buf(),
+            },
+        );
+        (SessionContext::new(), catalogs, warehouse)
+    }
+
+    async fn prepared(
+        ctx: &SessionContext,
+        catalogs: &CatalogRegistry,
+        sql: &str,
+    ) -> Option<String> {
+        let mut pinned = MetadataColumnPins::default();
+        prepare_metadata_column_sql(ctx, catalogs, sql, &GenericDialect, &mut pinned)
+            .await
+            .unwrap()
+    }
+
+    fn temp_view_count(rewritten: &str) -> usize {
+        rewritten.matches(TEMP_VIEW_PREFIX).count()
+    }
+
+    #[tokio::test]
+    async fn a_one_part_cte_name_is_never_collected_as_the_table() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let rewritten = prepared(
+            &ctx,
+            &catalogs,
+            "WITH t AS (SELECT id, 'x' AS _file FROM datafusion.public.t) \
+             SELECT input_file_name() FROM t",
+        )
+        .await
+        .expect("the qualified reference inside the CTE still rewrites");
+        assert!(
+            rewritten.ends_with("FROM t"),
+            "the outer one-part CTE reference must not become the physical table: {rewritten}"
+        );
+        assert_eq!(
+            temp_view_count(&rewritten),
+            1,
+            "only the qualified reference collects the table: {rewritten}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_metadata_column_projection_over_a_cte_is_never_served_from_the_table() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let rewritten = prepared(
+            &ctx,
+            &catalogs,
+            "WITH t AS (SELECT id, 'x' AS _file FROM datafusion.public.t) SELECT _file FROM t",
+        )
+        .await
+        .expect("the qualified reference inside the CTE still rewrites");
+        assert!(
+            rewritten.ends_with("FROM t"),
+            "the outer _file projection must resolve on the CTE: {rewritten}"
+        );
+        assert_eq!(temp_view_count(&rewritten), 1, "{rewritten}");
+    }
+
+    #[tokio::test]
+    async fn a_one_part_name_matching_no_cte_is_still_collected() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let rewritten = prepared(
+            &ctx,
+            &catalogs,
+            "WITH c AS (SELECT 1 AS one) SELECT input_file_name() FROM t",
+        )
+        .await
+        .expect("a bare name without a matching CTE still resolves to the table");
+        assert_eq!(
+            temp_view_count(&rewritten),
+            1,
+            "the physical table stays rewritten: {rewritten}"
+        );
+        assert!(
+            rewritten.contains("._file"),
+            "input_file_name() rewrites onto the served table: {rewritten}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_qualified_name_matching_a_cte_is_still_collected() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let rewritten = prepared(
+            &ctx,
+            &catalogs,
+            "WITH t AS (SELECT 1 AS one) SELECT input_file_name() FROM datafusion.public.t",
+        )
+        .await
+        .expect("a qualified name is never a CTE reference");
+        assert_eq!(
+            temp_view_count(&rewritten),
+            1,
+            "the qualified table stays rewritten: {rewritten}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_two_part_name_matching_a_cte_is_still_collected() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let rewritten = prepared(
+            &ctx,
+            &catalogs,
+            "WITH t AS (SELECT 1 AS one) SELECT input_file_name() FROM ns.t",
+        )
+        .await
+        .expect("a two-part name is never a CTE reference");
+        assert_eq!(
+            temp_view_count(&rewritten),
+            1,
+            "the two-part table stays rewritten: {rewritten}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_nested_cte_reference_inside_another_cte_is_never_collected() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let rewritten = prepared(
+            &ctx,
+            &catalogs,
+            "WITH t AS (SELECT id FROM datafusion.public.t), u AS (SELECT * FROM t) \
+             SELECT input_file_name() FROM u",
+        )
+        .await
+        .expect("the qualified reference inside the first CTE still rewrites");
+        assert!(
+            rewritten.ends_with("FROM u"),
+            "the outer CTE reference must not become the physical table: {rewritten}"
+        );
+        assert_eq!(
+            temp_view_count(&rewritten),
+            1,
+            "the nested one-part reference stays on the CTE: {rewritten}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_cte_reference_inside_a_subquery_is_never_collected() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let rewritten = prepared(
+            &ctx,
+            &catalogs,
+            "WITH t AS (SELECT id FROM datafusion.public.t) \
+             SELECT input_file_name() FROM (SELECT * FROM t) AS dt",
+        )
+        .await
+        .expect("the qualified reference inside the CTE still rewrites");
+        assert_eq!(
+            temp_view_count(&rewritten),
+            1,
+            "the subquery's one-part reference stays on the CTE: {rewritten}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_quoted_reference_matches_the_unquoted_cte_after_folding() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        assert!(
+            prepared(
+                &ctx,
+                &catalogs,
+                "WITH T AS (SELECT 1 AS one) SELECT input_file_name() FROM `t`",
+            )
+            .await
+            .is_none(),
+            "a quoted one-part reference still resolves to the CTE"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_quoted_cte_alias_does_not_shield_a_differently_folded_table() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let rewritten = prepared(
+            &ctx,
+            &catalogs,
+            "WITH `T` AS (SELECT 1 AS one) SELECT input_file_name() FROM t",
+        )
+        .await
+        .expect("an unquoted reference cannot reach a quoted CTE alias");
+        assert_eq!(
+            temp_view_count(&rewritten),
+            1,
+            "the physical table stays rewritten: {rewritten}"
+        );
+    }
 }
