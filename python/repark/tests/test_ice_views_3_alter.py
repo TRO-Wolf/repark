@@ -166,9 +166,9 @@ def test_bare_missing_view_after_use_keeps_e3_refusal(spark: ReparkSession) -> N
     assert caught.value.getSqlState() == "0A000"
 
 
-def test_bare_view_without_use_refuses_catalog_operation(spark: ReparkSession) -> None:
+def test_bare_view_without_use_refuses_catalog_operation() -> None:
     """A bare view name resolves in the default catalog and refuses view writes."""
-    spark.catalog.setCurrentCatalog("spark_catalog")
+    spark = ReparkSession.builder.appName("pytest-ice-views-3-no-use").getOrCreate()
     with pytest.raises(AnalysisException) as caught:
         spark.sql("ALTER VIEW v SET TBLPROPERTIES ('k'='v')")
     assert str(caught.value) == (
