@@ -6987,9 +6987,8 @@ pins: fnp-8-review/C-009, C-010
   `days(ts)`, `k=v`). Eight offline pins (plain rows, extended sections, FORMATTED identity,
   missing-table `AnalysisException`, temp-view fall-through, property redaction, Statistics
   after a write, the owner `show(truncate=False)` call) plus the live leg, which re-measures
-  the capture on live
-  Spark 4.1.2 and diffs repark row for row (19 of 22 byte-identical; `Name`, `Location`,
-  and `Table Properties` engine defaults differ by construction).
+  the capture on live Spark 4.1.2. It pins the stable rows and complete property string; the
+  catalog-specific name and dynamic location and owner each have full expected values or shapes.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   **RP-23 (2026-09-17):** `Table Properties` carries the
   `write.parquet.compression-codec=zstd` stamp every create writes.
@@ -7011,6 +7010,8 @@ pins: fnp-8-review/C-009, C-010
   or the typed parse contract; the unclosed bracket-comment and SHOW TABLES near misses keep
   their exact current outcomes. The parse pins compare the complete no-caret RePark message.
   pins: wo-c3/C-001, C-002
+  **WO-C7 (2026-09-23):** the output pins the complete Arrow schema and single full CREATE row;
+  commented forms and the SHOW TABLES near miss compare complete schemas and rows.
   **WO-C5 (2026-09-23):** post-head unclosed bracket comments assert `ParseException`,
   `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full parser-wrapper message; a comment hiding
   TABLE pins the tokenizer fall-through. The multi-statement facade refusal includes `42601`.
