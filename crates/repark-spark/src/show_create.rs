@@ -495,12 +495,27 @@ mod tests {
         let parsed = try_parse_show_create("SHOW CREATE TABLE sales.t AS SERDE;")
             .unwrap()
             .unwrap();
-        assert!(parsed.as_serde);
-        assert!(parsed.catalog.is_empty());
+        assert_eq!(
+            parsed,
+            ShowCreateStatement {
+                catalog: String::new(),
+                namespace: "sales".to_string(),
+                table: "t".to_string(),
+                as_serde: true,
+            }
+        );
         let parsed = try_parse_show_create("SHOW CREATE TABLE `we-ird`")
             .unwrap()
             .unwrap();
-        assert_eq!(parsed.table, "we-ird");
+        assert_eq!(
+            parsed,
+            ShowCreateStatement {
+                catalog: String::new(),
+                namespace: String::new(),
+                table: "we-ird".to_string(),
+                as_serde: false,
+            }
+        );
     }
 
     #[test]
