@@ -1554,6 +1554,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   outside the table intercept; malformed table and column forms belong to
   `describe_column_errors.rs`.
   pins: wo-b4-describe-errors/C-002
+  **DESCRIBE-COLUMN-1 (2026-09-23):** a CREATE-made table's `information` carries the session
+  `Owner:` line between `Provider:` and `Table Properties:`.
+  pins: describe-column-1/C-007
 - `describe_column_errors.rs` — **WO-B4 (2026-09-23):** one parser pin and one session pin
   cover every measured malformed table-name and column-tail row: exact `DataFusionError::SQL`
   parser payloads, parser-class route, condition text, four-part table-not-found, nested-column
