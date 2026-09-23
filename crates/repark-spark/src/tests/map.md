@@ -1500,6 +1500,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   managed classification, owner, struct tree lines, missing-LIKE and
   partition/missing-table/missing-namespace refusals, and SHOW-family near misses that remain
   outside this parser.
+  pins: show-table-extended-1/C-001, C-002, C-003, C-004
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp
