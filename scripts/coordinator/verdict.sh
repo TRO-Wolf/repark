@@ -5,14 +5,14 @@ set -uo pipefail
 L=$1
 
 NEWEST=$( {
-  ls -d $ROOT/codex-worker/xr-$L/*/ 2>/dev/null | sed 's|^|codex |'
-  ls -d $SCRATCH/grok-worker/xr-$L/*/ 2>/dev/null | sed 's|^|grok |'
+  ls -d $ROOT/codex-worker/xr-$L/*/ $ROOT/codex-worker/rv-$L/*/ 2>/dev/null | sed 's|^|codex |'
+  ls -d $SCRATCH/grok-worker/xr-$L/*/ $SCRATCH/grok-worker/rv-$L/*/ 2>/dev/null | sed 's|^|grok |'
 } | awk '{n=split($2,a,"/"); print a[n-1], $0}' | sort | tail -1 | cut -d' ' -f2-)
 
 if [ -z "$NEWEST" ]; then
   echo "VERDICT NONE"
   echo "engine=- round=- head=-"
-  echo "tools=- turns=- cost=- valid=no: no critic round for xr-$L"
+  echo "tools=- turns=- cost=- valid=no: no critic round for xr-$L or rv-$L"
   exit 3
 fi
 ENGINE=${NEWEST%% *}; D=${NEWEST#* }; D=${D%/}; S=$(basename $D)
@@ -26,7 +26,8 @@ fi
 
 TOOLS=-; TURNS=-; COST=-; SUMMARY=; QS=; WHY=
 if [ $ENGINE = codex ]; then
-  ROW=$(awk -F'\t' -v s="$S" -v l="xr-$L" '$1 == l && $2 == s {r=$0} END {print r}' $ROOT/codex-worker/runs.tsv 2>/dev/null)
+  RL=$(basename "$(dirname "${D%/}")")
+  ROW=$(awk -F'\t' -v s="$S" -v l="$RL" '$1 == l && $2 == s {r=$0} END {print r}' $ROOT/codex-worker/runs.tsv 2>/dev/null)
   [ -n "$ROW" ] && { TURNS=$(cut -f7 <<< "$ROW"); TOOLS=$(cut -f8 <<< "$ROW"); }
   if [ -f $D/handback.json ] && jq -e 'type == "object"' $D/handback.json >/dev/null 2>&1; then
     SUMMARY=$(jq -r '.summary // ""' $D/handback.json)
