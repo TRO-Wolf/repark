@@ -363,3 +363,15 @@ async fn non_utf8_hint_falls_back_to_listing() {
         format!("{root}/metadata/00002-{UUID_A}.metadata.json")
     );
 }
+
+#[tokio::test]
+async fn explicit_metadata_path_resolves_verbatim() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path().to_string_lossy().to_string();
+    let file_io = local_file_io(&root);
+    let pinned = format!("{root}/metadata/v1.metadata.json");
+    let resolved = resolve_metadata_location(&file_io, &pinned)
+        .await
+        .expect("resolve");
+    assert_eq!(resolved, pinned);
+}

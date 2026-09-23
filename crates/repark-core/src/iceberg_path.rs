@@ -48,10 +48,14 @@ async fn resolve_metadata_location(file_io: &FileIO, path: &str) -> Result<Strin
         }
         return Err(hinted_metadata_missing_error(path, &file_name));
     }
-    let files = file_io
-        .list(format!("{location}/metadata"))
+    let metadata_dir = format!("{location}/metadata");
+    let files: Vec<FileInfo> = file_io
+        .list(&metadata_dir)
         .await
-        .map_err(iceberg_err)?;
+        .map_err(iceberg_err)?
+        .into_iter()
+        .filter(|file| is_direct_child(&file.location, &metadata_dir))
+        .collect();
     latest_metadata_location(&files)
         .map(str::to_string)
         .ok_or_else(|| no_metadata_error(path))
@@ -89,6 +93,15 @@ fn path_table_ident(path: &str) -> TableIdent {
     let base = trimmed.rsplit('/').next().unwrap_or(trimmed);
     let name = base.strip_suffix(".metadata.json").unwrap_or(base);
     TableIdent::new(NamespaceIdent::new("path".to_string()), name.to_string())
+}
+
+fn is_direct_child(location: &str, dir: &str) -> bool {
+    let dir = dir.strip_prefix("file://").unwrap_or(dir);
+    location
+        .strip_prefix("file://")
+        .unwrap_or(location)
+        .rsplit_once('/')
+        .is_some_and(|(parent, _)| parent == dir)
 }
 
 fn latest_metadata_location(files: &[FileInfo]) -> Option<&str> {
