@@ -268,6 +268,13 @@ async fn describe_table_load_failure_never_probes_view() {
     let error = execute(&ctx, &catalogs, "DESCRIBE fault.sales.absent")
         .await
         .expect_err("load_table failure must propagate");
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected an External error, got {error:?}");
+    };
+    let source = inner
+        .downcast_ref::<iceberg::Error>()
+        .expect("expected an Iceberg error");
+    assert_eq!(source.kind(), ErrorKind::Unexpected);
     assert!(error.to_string().contains("injected load_table failure"));
     assert_eq!(view_calls.load(Ordering::SeqCst), 0);
 }
@@ -287,6 +294,13 @@ async fn describe_view_load_failure_keeps_original_error() {
     let error = execute(&ctx, &catalogs, "DESCRIBE fault.sales.absent")
         .await
         .expect_err("load_view failure must propagate");
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected an External error, got {error:?}");
+    };
+    let source = inner
+        .downcast_ref::<iceberg::Error>()
+        .expect("expected an Iceberg error");
+    assert_eq!(source.kind(), ErrorKind::Unexpected);
     let message = error.to_string();
     assert!(message.contains("injected load_view failure"), "{message}");
     assert!(!message.contains("TABLE_OR_VIEW_NOT_FOUND"), "{message}");
@@ -309,12 +323,14 @@ async fn describe_viewless_catalog_matches_memory_absence_and_keeps_tables() {
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
     let memory_error = execute(&ctx, &catalogs, "DESCRIBE ice.sales.absent")
         .await
-        .expect_err("memory catalog missing name must refuse")
-        .to_string();
+        .expect_err("memory catalog missing name must refuse");
     let viewless_error = execute(&ctx, &catalogs, "DESCRIBE fault.sales.absent")
         .await
-        .expect_err("viewless catalog missing name must refuse")
-        .to_string();
+        .expect_err("viewless catalog missing name must refuse");
+    assert!(matches!(&memory_error, DataFusionError::Plan(_)));
+    assert!(matches!(&viewless_error, DataFusionError::Plan(_)));
+    let memory_error = memory_error.to_string();
+    let viewless_error = viewless_error.to_string();
     assert_eq!(viewless_error, memory_error.replace("`ice`", "`fault`"));
     assert!(viewless_error.contains("TABLE_OR_VIEW_NOT_FOUND"));
     assert_eq!(

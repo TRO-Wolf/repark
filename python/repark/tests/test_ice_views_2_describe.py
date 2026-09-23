@@ -101,6 +101,8 @@ def test_describe_missing_namespace_propagates_namespace_error(
     text = str(caught.value)
     assert "No such namespace" in text
     assert "TABLE_OR_VIEW_NOT_FOUND" not in text
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
 
 
 def test_describe_extended_view_is_columns_only(spark: ReparkSession) -> None:
