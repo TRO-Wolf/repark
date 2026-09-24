@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use repark_core::writer_layout::{
     TableWriteRequest, WriterAction, WriterLayout, WriterRefusal, missing_column_message,
+    missing_column_name,
 };
 
 use crate::AnalysisException;
@@ -16,7 +17,8 @@ fn missing_column_error(py: Python<'_>, column: &str, tree: &str) -> PyErr {
     let raised = AnalysisException::new_err(missing_column_message(column, tree));
     let value = raised.value(py);
     let params = PyDict::new(py);
-    for (key, item) in [("i", column), ("schema", tree)] {
+    let name = missing_column_name(column);
+    for (key, item) in [("i", name.as_str()), ("schema", tree)] {
         if let Err(failure) = params.set_item(key, item) {
             tracing::warn!(error = %failure, "writer plan param set failed");
         }

@@ -1,7 +1,7 @@
 use crate::write::writer_partitioning::WriterLayout;
 use crate::write::writer_plan::{
     WriterAction, WriterPlan, WriterRefusal, WriterRequest, WriterStatement,
-    missing_column_message, plan_writer,
+    missing_column_message, missing_column_name, plan_writer,
 };
 
 fn strings(values: &[&str]) -> Vec<String> {
@@ -145,6 +145,39 @@ fn the_missing_column_message_is_spark_legacy_3060_text() {
         missing_column_message("nope", tree),
         "Couldn't find column nope in:\nroot\n |-- id: long (nullable = true)\n"
     );
+}
+
+#[test]
+fn the_missing_column_message_backticks_only_a_dotted_name() {
+    let nested = "root\n |-- id: long (nullable = true)\n |-- s: struct (nullable = true)\n |    \
+                  |-- a: integer (nullable = true)\n |    |-- b: string (nullable = true)\n";
+    assert_eq!(
+        missing_column_message("s.a", nested),
+        "Couldn't find column `s.a` in:\nroot\n |-- id: long (nullable = true)\n |-- s: struct \
+         (nullable = true)\n |    |-- a: integer (nullable = true)\n |    |-- b: string \
+         (nullable = true)\n"
+    );
+    assert_eq!(
+        missing_column_message("s.zz", nested),
+        "Couldn't find column `s.zz` in:\nroot\n |-- id: long (nullable = true)\n |-- s: struct \
+         (nullable = true)\n |    |-- a: integer (nullable = true)\n |    |-- b: string \
+         (nullable = true)\n"
+    );
+    for (column, name) in [
+        ("nope", "nope"),
+        ("a.b", "`a.b`"),
+        ("a.`b", "`a.`b`"),
+        (".a", "`.a`"),
+        ("a.", "`a.`"),
+        ("my col", "my col"),
+        ("select", "select"),
+        ("1a", "1a"),
+        ("12", "12"),
+        ("a`b", "a`b"),
+        ("", ""),
+    ] {
+        assert_eq!(missing_column_name(column), name, "{column}");
+    }
 }
 
 #[test]

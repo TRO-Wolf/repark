@@ -63,6 +63,9 @@ async fn table_with(
             NestedField::optional(2, "data", Type::Primitive(PrimitiveType::String)).into(),
             NestedField::optional(3, "cat", Type::Primitive(PrimitiveType::String)).into(),
             NestedField::optional(4, "ts", Type::Primitive(PrimitiveType::Timestamp)).into(),
+            NestedField::optional(5, "y", Type::Primitive(PrimitiveType::Date)).into(),
+            NestedField::optional(6, "m", Type::Primitive(PrimitiveType::Timestamp)).into(),
+            NestedField::optional(7, "h", Type::Primitive(PrimitiveType::Timestamp)).into(),
         ])
         .build()
         .expect("schema");
@@ -158,6 +161,40 @@ async fn a_mismatched_layout_refuses_with_spark_requirement_text() {
         "requirement failed: The provided partitioning or clustering columns do not match the \
          existing table's.\n - provided: identity(cat), bucket(4, id)\n - table: identity(cat), \
          days(ts), truncate(3, data)"
+    );
+}
+
+#[tokio::test]
+async fn the_table_side_drops_void_fields_and_names_time_transforms_like_spark() {
+    let warehouse = TempDir::new().expect("tempdir");
+    let (_catalog, voided) = table_with(
+        &warehouse,
+        &[("cat", Transform::Void), ("id", Transform::Bucket(4))],
+    )
+    .await;
+    let error =
+        check_layout_matches_table(&voided, &bucketed(8, &["id"])).expect_err("mismatch refuses");
+    assert_eq!(
+        illegal_argument_text(&error),
+        "requirement failed: The provided partitioning or clustering columns do not match the \
+         existing table's.\n - provided: bucket(8, id)\n - table: bucket(4, id)"
+    );
+    let warehouse = TempDir::new().expect("tempdir");
+    let (_catalog, timed) = table_with(
+        &warehouse,
+        &[
+            ("y", Transform::Year),
+            ("m", Transform::Month),
+            ("h", Transform::Hour),
+        ],
+    )
+    .await;
+    let error =
+        check_layout_matches_table(&timed, &bucketed(4, &["id"])).expect_err("mismatch refuses");
+    assert_eq!(
+        illegal_argument_text(&error),
+        "requirement failed: The provided partitioning or clustering columns do not match the \
+         existing table's.\n - provided: bucket(4, id)\n - table: years(y), months(m), hours(h)"
     );
 }
 

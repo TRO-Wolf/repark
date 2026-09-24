@@ -103,7 +103,9 @@ repark-core's error map.
   error mode with Spark's already-exists text. On every create-or-replace arm a bucket column
   absent from the frame (case-folded unless the session is case-sensitive) is
   `WriterRefusal::MissingBucketColumn`, rendered as `_LEGACY_ERROR_TEMP_3060` by
-  `missing_column_message` before the existence refusal. Pins: `../tests/writer_plan.rs`.
+  `missing_column_message` before the existence refusal; `missing_column_name` is Spark's
+  rendering of the name (backticks when it contains a `.`, no escaping), also the `i`
+  parameter. Pins: `../tests/writer_plan.rs`.
   pins: u7-write-df/C-015, C-018
 - `set_location.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   `set_table_location` applies the fork's `update_location` action

@@ -62,8 +62,18 @@ impl From<repark_common::Error> for WriterRefusal {
 }
 
 #[must_use]
+pub fn missing_column_name(column: &str) -> String {
+    if column.contains('.') {
+        format!("`{column}`")
+    } else {
+        column.to_string()
+    }
+}
+
+#[must_use]
 pub fn missing_column_message(column: &str, schema_tree: &str) -> String {
-    format!("Couldn't find column {column} in:\n{schema_tree}")
+    let name = missing_column_name(column);
+    format!("Couldn't find column {name} in:\n{schema_tree}")
 }
 
 fn missing_bucket_column(request: &WriterRequest<'_>) -> Option<String> {

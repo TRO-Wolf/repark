@@ -3,7 +3,7 @@ use repark_common::Error;
 use repark_iceberg::write::WriterRequest;
 pub use repark_iceberg::write::{
     WriterAction, WriterLayout, WriterRefusal, WriterStatement, missing_column_message,
-    save_target_names_table,
+    missing_column_name, save_target_names_table,
 };
 
 use crate::session::ReparkSession;

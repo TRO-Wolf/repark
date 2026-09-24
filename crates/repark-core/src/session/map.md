@@ -35,7 +35,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `writer_layout.rs` — **U7 PR1 (2026-09-24), round 2:** `ReparkSession::plan_table_write`,
   the one entry the Python binding calls, so `repark-python` keeps no `repark-iceberg` edge
   (the module is public and re-exports the kernel's `WriterAction`, `WriterLayout`,
-  `WriterRefusal`, `WriterStatement`, `missing_column_message` and `save_target_names_table`).
+  `WriterRefusal`, `WriterStatement`, `missing_column_message`, `missing_column_name` and
+  `save_target_names_table`).
   It probes `table_exists` for a qualified name, runs `repark_iceberg::write::plan_writer`, and
   when the plan asks, splits the catalog-qualified name and runs
   `check_layout_matches_catalog_table` before returning the statement.

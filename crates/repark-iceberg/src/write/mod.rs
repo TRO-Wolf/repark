@@ -152,7 +152,7 @@ pub use writer_partitioning::{
 };
 pub use writer_plan::{
     WriterAction, WriterPlan, WriterRefusal, WriterRequest, WriterStatement,
-    missing_column_message, plan_writer,
+    missing_column_message, missing_column_name, plan_writer,
 };
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,

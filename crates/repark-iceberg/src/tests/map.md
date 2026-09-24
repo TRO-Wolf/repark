@@ -58,12 +58,15 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   matching catalog table passing, and `decide_save_target` across every mode, existence,
   path and default-format cell. Round 2: the path relation for URI, trailing-slash,
   doubled-slash, `s3://`, relative and one-segment paths, and `save_target_names_table`.
-  pins: u7-write-df/C-006, C-014
+  Round 3: a void field dropped from the table side and `years`/`months`/`hours` named, as
+  Spark measured them (`bucket_existing_void_append`, `bucket_existing_time_append`).
+  pins: u7-write-df/C-005, C-006, C-014
 - `writer_plan.rs` — **U7 PR1 round 2 (2026-09-24):** `plan_writer` pins: the `saveAsTable`
   statement for every mode and existence with and without buckets, Spark's already-exists
   text, the missing bucket column on every create-or-replace arm (and not on an existing
-  append), a case-sensitive session keeping `ID`, the `_LEGACY_ERROR_TEMP_3060` text, and the
-  `save()` statements with their layout check. pins: u7-write-df/C-015, C-018
+  append), a case-sensitive session keeping `ID`, the `_LEGACY_ERROR_TEMP_3060` text (round 3:
+  the name backticked when it contains a `.`, and only then), and the `save()` statements with
+  their layout check. pins: u7-write-df/C-015, C-018
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.
