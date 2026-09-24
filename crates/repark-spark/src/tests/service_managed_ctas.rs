@@ -756,3 +756,48 @@ async fn ctas_custom_location_on_service_managed_catalog_refuses_loud() {
         "the refusal precedes any catalog write"
     );
 }
+
+#[tokio::test]
+async fn service_managed_create_and_ctas_stamp_the_session_owner() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, svc) = setup_service_managed(&wh, CommitInjection::None).await;
+    let mut owner = repark_core::DescribeOwnerConfig::default();
+    owner.owner = "svc_owner".to_string();
+    ctx.state_ref()
+        .write()
+        .config_mut()
+        .options_mut()
+        .extensions
+        .insert(owner);
+    for sql in [
+        "CREATE TABLE svc.sales.owned_ctas USING iceberg AS SELECT * FROM src",
+        "CREATE TABLE svc.sales.owned_schema (id BIGINT) USING iceberg",
+    ] {
+        execute(&ctx, &catalogs, sql)
+            .await
+            .unwrap_or_else(|error| panic!("{sql} must plan: {error}"))
+            .collect()
+            .await
+            .unwrap_or_else(|error| panic!("{sql} must execute: {error}"));
+    }
+    assert_eq!(
+        svc.create_table_calls(),
+        2,
+        "both creates are service-managed"
+    );
+    for table in ["owned_ctas", "owned_schema"] {
+        let loaded = catalogs["svc"]
+            .load_table(&sales_ident(table))
+            .await
+            .unwrap();
+        assert_eq!(
+            loaded
+                .metadata()
+                .properties()
+                .get("owner")
+                .map(String::as_str),
+            Some("svc_owner"),
+            "{table} must store the session owner"
+        );
+    }
+}

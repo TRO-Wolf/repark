@@ -952,6 +952,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas_service_managed_plain_ctas_records_append` (`[append]`). The first two go red
   when the `ctas.or_replace` branch in `execute_ctas_service_managed` is reverted.
   pins: ice-rtas-ops-2/C-019
+  **WO-B14 (2026-09-24):** `service_managed_create_and_ctas_stamp_the_session_owner` installs
+  a session owner and checks the stored `owner` of a service-managed CTAS and a
+  service-managed schema CREATE; removing either stamp turns it red.
   **IPI-26/27 round 2 (2026-09-20):**
   `ctas_custom_location_on_service_managed_catalog_refuses_loud` pins that a CTAS
   `LOCATION` on a service-managed catalog refuses naming the clause, with zero
