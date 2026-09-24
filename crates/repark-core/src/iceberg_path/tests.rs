@@ -767,3 +767,165 @@ async fn hint_at_java_int_max_selects_that_file() {
         format!("{root}/metadata/v2147483647.metadata.json")
     );
 }
+
+#[test]
+fn numbered_form_keeps_the_u64_range() {
+    assert_eq!(
+        metadata_file_version(&format!("4294967296-{UUID_A}.metadata.json")),
+        Some(4_294_967_296)
+    );
+    assert_eq!(
+        metadata_file_version(&format!("18446744073709551615-{UUID_A}.metadata.json")),
+        Some(u64::MAX)
+    );
+    assert_eq!(
+        metadata_file_version(&format!("18446744073709551616-{UUID_A}.metadata.json")),
+        None
+    );
+    let files = vec![
+        info(&format!("/w/t/metadata/00002-{UUID_A}.metadata.json")),
+        info(&format!("/w/t/metadata/4294967296-{UUID_B}.metadata.json")),
+    ];
+    assert_eq!(
+        latest_metadata_location(&files),
+        Some(format!("/w/t/metadata/4294967296-{UUID_B}.metadata.json").as_str())
+    );
+}
+
+#[tokio::test]
+async fn file_mixed_case_single_slash_location_reads_rows() {
+    let (_dir, session, table_root) = session_with_rows().await;
+    assert_eq!(
+        read_ids(&session, &format!("fIlE:{table_root}")).await,
+        vec![1, 2]
+    );
+}
+
+async fn resolve_with_hint(hint: &str) -> String {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let metadata = dir.path().join("metadata");
+    std::fs::create_dir_all(&metadata).expect("mkdir");
+    std::fs::write(metadata.join("v0.metadata.json"), b"{}").expect("write");
+    std::fs::write(metadata.join("v2.metadata.json"), b"{}").expect("write");
+    std::fs::write(metadata.join("version-hint.text"), hint.as_bytes()).expect("write");
+    let root = dir.path().to_string_lossy().to_string();
+    let file_io = local_file_io(&root);
+    resolve_supplied(&file_io, &root)
+        .await
+        .expect("resolve")
+        .replace(&root, "<root>")
+}
+
+#[tokio::test]
+async fn hint_zero_selects_v0() {
+    assert_eq!(
+        resolve_with_hint("0").await,
+        "<root>/metadata/v0.metadata.json"
+    );
+}
+
+#[tokio::test]
+async fn hint_below_java_int_range_falls_back_to_listing() {
+    assert_eq!(
+        resolve_with_hint("-1").await,
+        "<root>/metadata/v2.metadata.json"
+    );
+}
+
+#[tokio::test]
+async fn hint_beyond_u64_falls_back_to_listing() {
+    assert_eq!(
+        resolve_with_hint("99999999999999999999").await,
+        "<root>/metadata/v2.metadata.json"
+    );
+}
+
+#[test]
+fn numbered_form_zero_is_a_candidate() {
+    assert_eq!(
+        metadata_file_version(&format!("00000-{UUID_A}.metadata.json")),
+        Some(0)
+    );
+}
+
+#[test]
+fn uuid_suffix_length_and_case_edges() {
+    let short = &UUID_A[..35];
+    assert_eq!(
+        metadata_file_version(&format!("7-{short}.metadata.json")),
+        None
+    );
+    assert_eq!(
+        metadata_file_version(&format!("7-{UUID_A}0.metadata.json")),
+        None
+    );
+    assert_eq!(
+        metadata_file_version("7-8F449f4d-CFce-403F-a643-95D0a15c9634.metadata.json"),
+        Some(7)
+    );
+}
+
+#[test]
+fn upper_case_v_prefix_is_not_a_candidate() {
+    assert_eq!(metadata_file_version("V3.metadata.json"), None);
+}
+
+#[tokio::test]
+async fn file_authority_two_trailing_slashes_keeps_one() {
+    let (_dir, root) = authority_table_root();
+    let relative = root.trim_start_matches('/');
+    let message = file_authority_refusal(&format!("file://{relative}//")).await;
+    assert_eq!(
+        message,
+        format!("Wrong FS: file://{relative}//metadata, expected: file:///")
+    );
+}
+
+#[tokio::test]
+async fn upper_case_file_authority_is_not_refused_wrong_fs() {
+    let (_dir, root) = authority_table_root();
+    let relative = root.trim_start_matches('/');
+    let session = crate::ReparkSession::new().expect("ReparkSession");
+    for argument in [
+        format!("FILE://{relative}"),
+        format!("File://localhost{root}"),
+    ] {
+        let error = session
+            .read_iceberg_path(&argument)
+            .await
+            .expect_err("must refuse");
+        assert!(matches!(error, Error::Analysis(_)), "{error:?}");
+        assert_eq!(error.to_string(), no_metadata_message(&argument));
+    }
+}
+
+#[tokio::test]
+async fn upper_case_relative_file_path_is_not_refused_uri_syntax() {
+    let (_dir, root) = authority_table_root();
+    let relative = root.trim_start_matches('/');
+    let session = crate::ReparkSession::new().expect("ReparkSession");
+    for argument in [format!("File:{relative}"), format!("FILE:{relative}")] {
+        let error = session
+            .read_iceberg_path(&argument)
+            .await
+            .expect_err("must refuse");
+        assert!(matches!(error, Error::Analysis(_)), "{error:?}");
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "Error during planning: malformed storage location `{argument}`: a `:` before \
+                 the first `/` looks like a mistyped URI scheme — did you mean `scheme://…`? \
+                 RePark supports `s3://`, `s3a://`, `file://`, or a bare absolute filesystem path"
+            )
+        );
+    }
+}
+
+#[tokio::test]
+async fn file_upper_case_empty_authority_location_reads_rows() {
+    let (_dir, session, table_root) = session_with_rows().await;
+    assert_eq!(
+        read_ids(&session, &format!("FILE://{table_root}")).await,
+        vec![1, 2]
+    );
+}
