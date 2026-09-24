@@ -134,14 +134,6 @@ fn refuse(kind: &str) -> DataFusionError {
     ))
 }
 
-fn refuse_reserved_name_collision(conflicting: &[String]) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "Table column names conflict with names reserved for Iceberg metadata columns: [{}]. \
-         Please, use ALTER TABLE statements to rename the conflicting table columns.",
-        conflicting.join(", ")
-    ))
-}
-
 #[allow(clippy::missing_errors_doc)]
 pub async fn prepare_metadata_column_sql(
     ctx: &SessionContext,
@@ -193,14 +185,6 @@ pub async fn prepare_metadata_column_sql(
             continue;
         };
         let user_names = metadata_columns_user_field_names(&table);
-        let conflicting: Vec<String> = user_names
-            .iter()
-            .filter(|name| referenced.contains(&name.as_str()))
-            .cloned()
-            .collect();
-        if !conflicting.is_empty() {
-            return Err(refuse_reserved_name_collision(&conflicting));
-        }
         let provider = MetadataColumnsTableProvider::try_new(table)?;
         let temp_name = next_temp_view_name();
         let _ = ctx.deregister_table(temp_name.as_str());

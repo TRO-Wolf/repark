@@ -48,6 +48,7 @@ pub fn is_served_metadata_column(name: &str) -> bool {
 pub struct MetadataColumnsTableProvider {
     table: Table,
     schema: SchemaRef,
+    user_field_count: usize,
 }
 
 impl MetadataColumnsTableProvider {
@@ -56,8 +57,35 @@ impl MetadataColumnsTableProvider {
         let user = schema_to_arrow_schema(table.metadata().current_schema())
             .map_err(iceberg_to_datafusion)?;
         let schema = Arc::new(append_metadata_fields(&user, &table)?);
-        Ok(Self { table, schema })
+        Ok(Self {
+            table,
+            schema,
+            user_field_count: user.fields().len(),
+        })
     }
+
+    fn reserved_user_fields_read(&self, projection: Option<&Vec<usize>>) -> Vec<String> {
+        let mut indices: Vec<usize> = match projection {
+            None => (0..self.user_field_count).collect(),
+            Some(indices) => indices.clone(),
+        };
+        indices.sort_unstable();
+        indices.dedup();
+        indices
+            .into_iter()
+            .filter(|index| *index < self.user_field_count)
+            .map(|index| self.schema.field(index).name().clone())
+            .filter(|name| is_served_metadata_column(name))
+            .collect()
+    }
+}
+
+fn refuse_reserved_name_collision(conflicting: &[String]) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "Table column names conflict with names reserved for Iceberg metadata columns: [{}]. \
+         Please, use ALTER TABLE statements to rename the conflicting table columns.",
+        conflicting.join(", ")
+    ))
 }
 
 fn metadata_field(name: &str, data_type: DataType, field_id: i32, nullable: bool) -> Field {
@@ -162,6 +190,10 @@ impl TableProvider for MetadataColumnsTableProvider {
         _filters: &[Expr],
         limit: Option<usize>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
+        let conflicting = self.reserved_user_fields_read(projection);
+        if !conflicting.is_empty() {
+            return Err(refuse_reserved_name_collision(&conflicting));
+        }
         let output_schema = match projection {
             None => Arc::clone(&self.schema),
             Some(indices) => Arc::new(self.schema.project(indices)?),
