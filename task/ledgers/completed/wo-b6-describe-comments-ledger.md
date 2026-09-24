@@ -24,7 +24,7 @@ forms and nested block-comment behavior.
 |---|---|---|---|---|
 | C-001 | The DESCRIBE tokenizer-failure pre-check skips leading and between-keyword SQL comments with the shared scanner, and excludes known non-table heads. | Rust classifier tests and full-message session pins. | PROVEN | `d_blk_ns_head_unclosed_falls_through`, valid comment pins, and the session error tests. |
 | C-002 | The unclosed-quote scan ignores quote characters inside line and nested block comments and preserves doubled quote handling. | Eight full-string parser pins plus comment-only quote controls. | PROVEN | Rust and Python pins cover all eight m11 quote cells; valid comment rows include a quote-only block comment. |
-| C-003 | An unclosed block comment and an unclosed quote after `DESCRIBE NAMESPACE` stay on RePark's prior tokenizer path. | Full-string RePark outcome pins and classifier fallthrough assertions. | PROVEN | Rust and Python assert the exact `TokenizerError` text for both inputs. |
+| C-003 | An unclosed block comment and an unclosed quote after `DESCRIBE NAMESPACE` stay off the DESCRIBE table error path. | Classifier fallthrough assertions, plus the front-door refusal for the unclosed comment. | PROVEN | `d_blk_ns_head_unclosed_falls_through` and `d_unclosed_comment_falls_through` assert the fall-through. WO-B10 replaced the two `TokenizerError` text pins: the unclosed comment answers PR C's `[UNCLOSED_BRACKETED_COMMENT]` / `42601` front-door refusal, pinned in full, and the NAMESPACE answer is a measured Spark divergence that stays unpinned. |
 | C-004 | Valid leading, intervening, and quote-only comments preserve complete DESCRIBE table rows. | Exact Python Arrow-row assertions. | PROVEN | `test_describe_comments_keep_valid_table_answers` pins all four cases. |
 
 ```yaml
@@ -61,7 +61,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/describe_show.rs]
     - id: AT-8
       status: ATTACKED
-      evidence: The non-table and unclosed-comment tests pin the existing tokenizer messages.
+      evidence: The non-table and unclosed-comment inputs are pinned as classifier fall-through; the unclosed comment's full front-door refusal is pinned (WO-B10).
       artifacts: [crates/repark-spark/src/tests/describe_table.rs]
     - id: AT-9
       status: N/A

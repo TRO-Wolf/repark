@@ -1019,6 +1019,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   **WO-A1b (2026-09-23), completed:** follow-up exactness repair for SHOW TABLE EXTENDED:
   typed lexer and refusal pins, literal PARTITION table resolution, and exact near-miss outcomes.
   `risk_tier: standard`. Branch `xd/show-tblprops`.
+- [wo-b10-describe-sweep-ledger.md](wo-b10-describe-sweep-ledger.md) —
+  **WO-B10 (2026-09-23), completed:** DESCRIBE-COLUMN-1 class sweep after the restack onto PR A:
+  four-part metadata-table names go to the #806 path, measured near misses pin full Arrow
+  schemas, tokenizer-text pins give way to the front-door refusal, and every scanner branch
+  has a killing test. `risk_tier: standard`. Branch `xd/describe`.
+  pins: wo-b10-describe-sweep/C-001, C-002, C-003, C-004, C-005, C-006
 - [wo-b4-describe-errors-ledger.md](wo-b4-describe-errors-ledger.md) —
   **WO-B4 (2026-09-23), completed:** every malformed input after `DESCRIBE` or `DESC` and a
   table target retains Spark 4.1.2's parser class, condition, SQLSTATE, and first-line text;

@@ -6,7 +6,6 @@ U1-MEM-LAYOUT-1 (2026-09-23): `check_rust_file_size.py` ratchets `repark-spark/s
 
 C1 SHOW CREATE (2026-09-23): `check_lib_rs.py` raises `repark-spark` 152 → 154 for `mod show_create;` and `mod table_props_view;` (measured 154).
 SHOW-TABLE-EXTENDED-1 (2026-09-23): `check_lib_rs.py` raises `repark-spark` 154 → 156 for `mod show_table_extended;` and `mod spark_tree_string;` (measured 156) after C1 SHOW CREATE raised it 152 → 154.
-C1 SHOW CREATE (2026-09-23): `check_lib_rs.py` raises `repark-spark` 152 → 154 for `mod show_create;` and `mod table_props_view;` (measured 154).
 DESCRIBE-COLUMN-1 formatting follow-up (2026-09-23): Ruff condenses the
 `session_core.py` describe-tail regex, and `check_lib_py.py` ratchets its exact
 baseline from 2327 to 2325.

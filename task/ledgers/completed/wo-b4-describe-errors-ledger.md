@@ -33,8 +33,9 @@ DESCRIBE forms on their existing parser paths.
 ## Self Logic Review — SLR-001
 
 The intercept returns typed parser errors before literal normalization. An unmatched quote therefore cannot take the
-generic lexer path. Four-part names use the catalog's existing all-parts not-found builder. Five-part names and
-DESCRIBE-on-view column tails remain explicit current-behaviour pins.
+generic lexer path. Four-part names use the catalog's existing all-parts not-found builder, except that a last part
+naming a metadata table with no column tail leaves the name to the #806 metadata-table path (WO-B10). Five-part
+names remain an explicit current-behaviour pin; DESCRIBE-on-view column tails match Spark 4.1.2 (measured by WO-B10).
 
 ## Validation (2026-09-23)
 

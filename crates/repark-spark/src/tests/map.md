@@ -1452,7 +1452,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   [EXTENDED|FORMATTED] catalog.namespace.table` against a memory-catalog table built like the
   step-1 live capture (commented `bigint` column, `string`, `timestamp`, `days(ts)`,
   `k=v`). Parser accepts the plain/extended/formatted spellings and leaves namespace forms
-  alone; plain rows match the capture
+  and four-part metadata paths alone; plain rows match the capture
   verbatim; extended adds the metadata and detail sections (`FORMATTED` byte-identical);
   missing tables raise `[TABLE_OR_VIEW_NOT_FOUND]`; temp views and unregistered catalogs fall
   through; secrets redact in `Table Properties`.
@@ -1463,7 +1463,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: describe-column-1/C-001, C-002, C-003, C-004
   **REVIEW-FIX-5 (2026-09-10):** the parser takes one- and two-part names (missing parts
   complete from the session defaults in the router) and no longer filters a three-part table
-  named like a metadata table, while five-part metadata paths still stay out; a real
+  named like a metadata table, while four-part metadata paths still stay out; a real
   `ice.sales.files` table describes; `Owner` persists the creator session's owner across two
   sessions in one process and in a production-built session, while direct unowned tables omit
   the row; short names return
@@ -1562,17 +1562,29 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   parser payloads, parser-class route, condition text, four-part table-not-found, nested-column
   errors, answer rows, and non-table fallthrough. Five-part names remain an exact declared
   divergence; view columns return Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`, even when the
-  column exists, while a plain view description still returns rows.
+  column exists. Column answers assert the full `info_name` / `info_value` Arrow schema.
   pins: wo-b4-describe-errors/C-001, C-002, C-003, C-005
   **WO-B6 (2026-09-23):** eight malformed statements with leading or embedded SQL comments keep
-  complete parser payloads; the namespace and unclosed-comment cases keep their exact tokenizer
-  errors, and comment-only quote controls remain valid.
+  complete parser payloads; the namespace and unclosed-comment cases fall through the table
+  classifier, and comment-only quote controls remain valid.
   pins: wo-b6-describe-comments/C-001, C-002, C-003
 - `describe_owner.rs` — **DESCRIBE-COLUMN-1 round 2 (2026-09-23):** end-to-end memory-catalog
   pins cover identity-only partition-information rows in plain and EXTENDED output, two-column
   spec order, non-identity and unpartitioned controls, owner stamping on CREATE/CTAS/replace
   paths, reserved lowercase `owner` refusal, case and prefix near misses, and an unowned direct
-  catalog table omitting the Owner row.
+  catalog table omitting the Owner row. **WO-B10 (2026-09-23):** every answer asserts the full
+  Arrow schema; the owner refusal covers CREATE OR REPLACE and OPTIONS, and identity partition
+  rows carry the source comment in spec order.
+  pins: wo-b10-describe-sweep/C-002, C-005
+- `describe_near_miss.rs` — **WO-B10 (2026-09-23):** near misses of every arm B adds, each
+  measured on Spark 4.1.2 and pinned with its full Arrow schema and rows or its full refusal:
+  four-part metadata-suffix names (parser yields; backticked facade form answers the six
+  snapshots rows), missing-base, unknown-suffix, and non-metadata column-tail four-part names
+  (42P01 naming the written parts); comments, whitespace, `;;`, and lowercase around a column
+  tail; keyword and quoted column names; table-path tokenizer failures; non-table tokenizer
+  fall-throughs; the unclosed-comment front-door refusal; plain view rows; and one unit case
+  per branch of `unclosed_describe_quote` and `is_table_describe_text`.
+  pins: wo-b10-describe-sweep/C-001, C-002, C-003, C-004
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

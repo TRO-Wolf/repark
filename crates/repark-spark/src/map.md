@@ -572,10 +572,10 @@ pins: rp-4-fork-repin/C-005, C-006
   properties through the catalog side map (the service-managed site takes
   `catalogs` for it).
   pins: ice-catalog-session-1/C-027
+  pins: ice-write-options-1/C-001, C-003
   **D-CREATE-DEFAULT-PROPS (2026-09-23):** all three CTAS creation paths stamp the
   session owner through the shared `create_table::stamp_owner` helper; a user-supplied,
   exact lowercase `owner` property refuses before catalog access.
-  pins: ice-write-options-1/C-001, C-003
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
   merged session write, so CTAS stamps session snapshot properties.
   **ICE-MERGE-APPEND-1 (2026-09-19):** the staged-table append commits through
@@ -1350,44 +1350,49 @@ pins: rp-4-fork-repin/C-005, C-006
   **WO-B4 (2026-09-23):** malformed column tails retain the Spark parse route after a table
   name. Token shape selects the measured short or `extra input` text; unclosed quotes and
   partition clauses are typed parser errors. Three-or-more-part column paths resolve the base
-  field type for Spark's `INVALID_EXTRACT_BASE_FIELD_TYPE` text.
+  field type for Spark's `INVALID_EXTRACT_BASE_FIELD_TYPE` text. Tokenizer failures after a
+  table DESCRIBE head answer the parse error at the unclosed quote.
   pins: wo-b4-describe-errors/C-001, C-003
+  **WO-B6 (2026-09-23):** tokenizer-failure classification skips leading and intervening SQL
+  comments through `show_create::skip_sql_whitespace_and_comments` and the shared keyword helper;
+  the quote scan skips both comment forms outside a quote and treats comment markers inside a
+  quote as text.
+  pins: wo-b6-describe-comments/C-001, C-002
+  pins: wo-b10-describe-sweep/C-004
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
   SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`
   (live-Spark-4.1.2-pinned rows, `bigint` via `spark_type_names`, secret redaction shared
-  with the namespace path). The table parser leaves namespace forms and five-or-more-part
-  names alone; the router arm only shadows registered catalogs, so
+  with the namespace path). The table parser leaves namespace forms, four-part names whose
+  last part names a metadata table with no column tail, and five-or-more-part names alone; the router arm only shadows registered catalogs, so
   temp views and DataFusion-native tables fall through. `EXTENDED` and `FORMATTED` share one
   flag; rows come from `table.metadata()` (Iceberg schema via `schema_to_arrow_schema`,
   default partition spec, location, properties plus a live `current-snapshot-id`, snapshot
-  summary for `Statistics`, the session-built `Owner` below).
+  summary for `Statistics`, and the stored `owner` property when present).
   **PR2 (2026-09-22, V-DESCRIBE):** the `TableNotFound` arm of
   `execute_describe_table` probes `load_view` before refusing — a view answers
   from its stored schema via `view_ddl/describe.rs`, a `ViewNotFound` keeps the
   unchanged `TABLE_OR_VIEW_NOT_FOUND` refusal, other load errors propagate.
   pins: ice-views-1/C-017
-  summary for `Statistics`, and the stored `owner` property when present).
   **DESCRIBE-COLUMN-1 (2026-09-23):** `DescribeTable` carries the optional tokenized column
   path and delegates its rows to `describe_column.rs`; the existing router intercept remains
   the only route to this table-describe executor.
   pins: describe-column-1/C-001, C-002, C-003, C-004
-  **WO-B6 (2026-09-23):** tokenizer-failure classification skips leading and intervening SQL
-  comments through `show_create::skip_sql_whitespace_and_comments` and the shared keyword helper;
-  the quote scan skips both comment forms before opening a delimiter.
-  pins: wo-b6-describe-comments/C-001, C-002
-  **WO-B4 (2026-09-23):** tokenizer and table-name failures after a table DESCRIBE head stay
-  on the intercept. Unquoted/backticked names parse; quoted table strings get short Spark
-  parse text; four parts get the all-parts table-not-found error. Five parts stay on the
-  existing DataFusion fallthrough, pinned as a divergence.
+  **WO-B4 (2026-09-23):** table-name failures after a table DESCRIBE head stay on the
+  intercept. Unquoted/backticked names parse; quoted table strings get short Spark parse text;
+  four parts get the all-parts table-not-found error unless the last part names a metadata
+  table and no column tail follows (WO-B10: `describe_show/metadata_table.rs` answers). Five
+  parts stay on the existing DataFusion fallthrough, pinned as a divergence. WO-B10 restated
+  these describe rows to the current behaviour.
   pins: wo-b4-describe-errors/C-002, C-003
+  pins: wo-b10-describe-sweep/C-001, C-006
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `ShowNamespaces.catalog` is `Option` —
   the bare form lists the session's current catalog (NS-1 FIXED).
   pins: ice-catalog-session-1/C-018
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006
   **REVIEW-FIX-5 (2026-09-10):** the table parser takes one-, two-, and three-part names and
   never filters the table segment of a three-part name, so `cat.ns.files` describes while a
-  five-or-more-part metadata path still stays out; the router completes missing parts from
+  four-or-more-part metadata path still stays out; the router completes missing parts from
   the engine `datafusion.catalog.default_catalog` / `default_schema` (the same rule `SELECT`
   resolves by) before the registered-catalog check. `describe_table_owner` reads the
   `repark_core::DescribeOwnerConfig` session extension, installed once by
@@ -1440,8 +1445,6 @@ pins: rp-4-fork-repin/C-005, C-006
   `comment` property is set), which is where the facade's `catalog.getTable(...).description`
   now reads the table comment.
 - `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE <name> [AS SERDE]`
-  The raw keyword matcher uses the shared SQL keyword helper, which preserves nested block and
-  line-comment handling for statement pre-checks.
   for Iceberg tables, answering Spark 4.1.2 + Iceberg 1.11 `ShowCreateTableExec` text byte
   for byte (one Utf8 `createtab_stmt` row ending in one `\n`). Token-level parser in the
   `describe_show` idiom: once the raw head is `SHOW CREATE TABLE`, lexical failures other than an
@@ -1522,11 +1525,7 @@ pins: rp-4-fork-repin/C-005, C-006
   five `all_*` types refuse, with Spark's `Cannot select snapshot in table` text.
 - `time_travel.rs` — I1 SQL-text rewrite to snapshot-pinned providers. `PinnedViews` releases every
   statement-owned registration after planning; reader-option views remain owned by their frame.
-  The shared `repark_core::time_travel::next_temp_view_name` counter prevents collisions.
-  **DESCRIBE-COLUMN-1 (2026-09-23):** a leading `DESCRIBE|DESC` stays out of the time-travel
-  span scan so the dialect parser owns `VERSION|TIMESTAMP AS OF` refusals.
-  pins: describe-column-1/C-004
-  Pins:
+  The shared `repark_core::time_travel::next_temp_view_name` counter prevents collisions. Pins:
   `tests/time_travel.rs::time_travel_temp_views_do_not_survive_a_successful_statement`,
   `…::time_travel_temp_views_do_not_survive_a_failed_statement`, and
   `…::time_travel_statement_pins_never_collide_with_a_reader_options_view`.

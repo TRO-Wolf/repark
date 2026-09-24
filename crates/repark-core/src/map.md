@@ -346,10 +346,6 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   refusal payload when one is present, else keeps the full display. pins: fnp-math-1/C-004
   **WO-A4 (2026-09-23):** a bracketed `ParserError::ParserError` payload stays a `Parse` error
   and renders verbatim; unbracketed payloads and other parser variants keep the DataFusion display.
-  **WO-B4 (2026-09-23):** the `Parse` arm removes DataFusion's SQL/parser display wrappers
-  only when their payload starts with a Spark bracketed condition. DESCRIBE parser refusals
-  then keep their exact condition, SQLSTATE, and text at the facade boundary.
-  pins: wo-b4-describe-errors/C-004
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see
