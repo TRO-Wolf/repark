@@ -27,8 +27,10 @@ Spark 4.1.2 refuses `SHOW TABLE EXTENDED IN sc.ns LIKE 'x';;x` with `[PARSE_SYNT
 
 ## WO-A8 front-door alignment
 
-- The router front door (WO-C10) answers every unclosed `/*` with `UNCLOSED_BRACKETED_COMMENT` /
-  `42601` before this parser runs. The two end-to-end unclosed-comment probes pin that full
+- The router front door (WO-C10) answers an unclosed `/*` with `UNCLOSED_BRACKETED_COMMENT` /
+  `42601` before this parser runs: leading, inter-keyword and trailing forms are pinned by
+  `show_table_extended_near_miss_probes_keep_their_exact_outcomes` and
+  `show_table_extended_scanner_stops_at_an_unterminated_block_comment`. The two end-to-end unclosed-comment probes pin that full
   rendered text; no SHOW TABLE EXTENDED pin claims a tokenizer outcome for an unclosed comment.
 - The near-miss tests moved to `tests/show_table_extended_near_miss.rs`. Their successful
   fall-throughs compare the complete Arrow schema and every row, and every SHOW TABLE EXTENDED
@@ -60,13 +62,15 @@ Spark 4.1.2 refuses `SHOW TABLE EXTENDED IN sc.ns LIKE 'x';;x` with `[PARSE_SYNT
   (`wo-c5/C-001`) citations stay on the base rows.
 - **V-005 provenance:** C-001 and C-003 cite `/tmp/xo-xo-opus61/measure/u4a_live.json`; C-002
   cites that measurement and `/tmp/xd-create-scratch/m13.json`; C-004 is facade-derived with the
-  recorded `DBT-TBLPROPS-1` leg. The deep tree now has a complete exact Rust row pin.
+  recorded `DBT-TBLPROPS-1` leg. The deep tree now has a complete Rust row pin whose tree lines
+  match `/tmp/xd-create-scratch/m13.json` key `ste_deep`; the row omits Spark's `Owner:` line
+  (residue R-U4-16).
 
 **Retires:** this ledger moves to `../completed/` when the unit's last commit lands.
 
 ## Plan
 
-- Add red Rust pins for the parsed grammar, four-column result, exact information text, scope,
+- Add red Rust pins for the parsed grammar, four-column result, information text, scope,
   error, filtering, property, and schema-tree cases.
 - Add the token-level parser and route it before sqlparser.
 - Build the metadata text from the shared Spark property view and the Arrow schema.
@@ -85,7 +89,7 @@ Spark 4.1.2 refuses `SHOW TABLE EXTENDED IN sc.ns LIKE 'x';;x` with `[PARSE_SYNT
 | Clause | Proposition | Proof obligation | Verdict | Evidence |
 |---|---|---|---|---|
 | C-001 | The Spark dialect recognizes only `SHOW TABLE EXTENDED [IN\|FROM namespace] LIKE 'pattern' [PARTITION (...)]` before sqlparser. | Parser and near-miss pins. | **PROVEN** | Spark 4.1.2's recorded leg `/tmp/xo-xo-opus61/measure/u4a_live.json` keys `ste_from`, `ste_no_in`, `ste_no_like`, and `ste_partition_spec` shows the measured grammar boundary. Facade-derived parser pins cover the remaining keyword and delimiter permutations. pins: show-table-extended-1/C-001 |
-| C-002 | The executor returns Spark's four columns and exact Iceberg metadata text, including sorted table names, property redaction, Unicode scalar splitting, snapshot changes, and the schema tree. | Memory-catalog end-to-end rows and exact-string pins. | **PROVEN** | Spark 4.1.2's `/tmp/xo-xo-opus61/measure/u4a_live.json` keys `ste_plain`, `ste_after_insert`, `ste_all_star`, `ste_location`, and `ste_v3` record the primitive rows. `/tmp/xd-create-scratch/m13.json` keys `ste_nested` and `ste_deep` match the nested and deep tree lines. `tests/show_table_extended.rs` pins both trees. pins: show-table-extended-1/C-002 |
+| C-002 | The executor returns Spark's four columns and Spark's Iceberg metadata text line for line except Spark's session-user `Owner:` line, which RePark prints only when the table carries an `owner` property (residue R-U4-16), including sorted table names, property redaction, Unicode scalar splitting, snapshot changes, and the schema tree. | Memory-catalog end-to-end rows and exact-string pins. | **PROVEN** | Spark 4.1.2's `/tmp/xo-xo-opus61/measure/u4a_live.json` keys `ste_plain`, `ste_after_insert`, `ste_all_star`, `ste_location`, and `ste_v3` record the primitive rows. `/tmp/xd-create-scratch/m13.json` keys `ste_nested` and `ste_deep` match the nested and deep tree lines. `tests/show_table_extended.rs` pins both trees. Every recorded Spark row carries `Owner: john`; the RePark pins (e.g. `show_table_extended_tracks_snapshot_and_plain_information`) omit it, which is R-U4-16. pins: show-table-extended-1/C-002 |
 | C-003 | Scope resolution and refusal behavior match the stated Spark surface without widening to views or session temporary views. | Ambient, missing namespace, partition, filtering, alternation, case, and view pins. | **PROVEN** | Spark 4.1.2's recorded `/tmp/xo-xo-opus61/measure/u4a_live.json` keys `ste_alt`, `ste_case`, `ste_from`, `ste_missing_ns`, `ste_partition_spec`, `ste_temp`, and `ste_view` show the scoped outcomes. The Rust pins cover the same rows and refusals. Session temporary views remain the named residue. pins: show-table-extended-1/C-003 |
 | C-004 | The facade and dbt statement surfaces expose the four-column result, while `SHOW TBLPROPERTIES` remains refused and the registry states the measured boundary. | Targeted Python/dbt pins and requested repository gates. | **PROVEN** | Facade-derived: `test_catalog_surface.py` and `test_statement_surface.py` pin whole four-column Arrow rows. The recorded `DBT-TBLPROPS-1` leg in `docs/spark-sql-iceberg-parity.md` retains `R-SHOW-TBLPROPERTIES` as the deliberate RePark refusal. pins: show-table-extended-1/C-004 |
 
@@ -117,7 +121,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-spark/src/show_table_extended.rs, task/ledgers/staging/show-table-extended-1-ledger.md]
     - id: AT-6
       status: ATTACKED
-      evidence: Existing SHOW statement paths remain pinned, and the new parser intercept appears only after the exact token grammar recognizes it.
+      evidence: Existing SHOW statement paths remain pinned. The intercept claims a statement only when its head is exactly `SHOW TABLE EXTENDED`; a truncated or malformed tail after that head returns the Spark parse error (`parse_refuses_required_syntax_shapes`, `parse_leaves_near_misses_alone`).
       artifacts: [crates/repark-spark/src/tests/show_table_extended.rs]
     - id: AT-7
       status: N/A
@@ -132,7 +136,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_catalog_surface.py, python/dbt-repark/tests/test_statement_surface.py]
     - id: AT-10
       status: ATTACKED
-      evidence: The end-to-end test module covers every new parser branch, and the facade/dbt pins verify the public entry points.
+      evidence: The parser unit tests in `show_table_extended.rs` and the end-to-end modules `tests/show_table_extended.rs` and `tests/show_table_extended_near_miss.rs` enter the parser branches; WO-A10 to WO-A13 hand mutations fail named tests. The facade/dbt pins verify the public entry points.
       artifacts: [crates/repark-spark/src/tests/show_table_extended.rs, python/repark/tests/test_catalog_surface.py, python/dbt-repark/tests/test_statement_surface.py]
 ```
 

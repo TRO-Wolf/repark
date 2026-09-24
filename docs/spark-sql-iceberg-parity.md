@@ -1541,7 +1541,9 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 
 - **repark** — **2026-09-23:** `SHOW TABLE EXTENDED IN ns LIKE '*'` now answers Spark's
   four-column rows for Iceberg tables: `namespace`, `tableName`, `isTemporary`, and `information`.
-  It does not list session temporary views; that is the remaining residue. `SHOW TBLPROPERTIES
+  It does not list session temporary views; that is the remaining residue. RePark omits Spark's
+  `Owner:` line (residue R-U4-16); owner stamping lands with the DESCRIBE owner-stamp PR.
+  `SHOW TBLPROPERTIES
   cat.ns.t` still refuses with `AnalysisException: Error during planning: SHOW [VARIABLE] is not
   supported unless information_schema is enabled` on a table until the next slice; a view answers
   `SHOW TBLPROPERTIES` (IPI-40 PR4; D-VIEW-SHOWPROPS-1). The existing dbt adapter
