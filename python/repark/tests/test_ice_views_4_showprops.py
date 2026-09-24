@@ -22,7 +22,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, ParseException
 
 SHOW_VARIABLE_UNSUPPORTED = "SHOW [VARIABLE] is not supported unless information_schema is enabled"
 SHOW_NAME_PARSE_ERROR = (
@@ -282,5 +282,15 @@ def test_show_tblproperties_requires_a_name(spark: ReparkSession) -> None:
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SHOW TBLPROPERTIES")
     assert str(caught.value) == f"Error during planning: {SHOW_NAME_PARSE_ERROR}"
+    assert caught.value.getCondition() == NO_CONDITION
+    assert caught.value.getSqlState() == NO_CONDITION
+
+
+def test_unterminated_key_falls_through_to_the_tokenizer_refusal(spark: ReparkSession) -> None:
+    """Near-miss f — an untokenizable tail falls through; TokenizerError text stays unpinned."""
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
+    with pytest.raises(ParseException) as caught:
+        spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k")
+    assert type(caught.value) is ParseException
     assert caught.value.getCondition() == NO_CONDITION
     assert caught.value.getSqlState() == NO_CONDITION
