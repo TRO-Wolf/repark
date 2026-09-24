@@ -308,3 +308,15 @@ def test_unterminated_key_falls_through_to_the_tokenizer_refusal(spark: ReparkSe
     assert type(caught.value) is ParseException
     assert caught.value.getCondition() == NO_CONDITION
     assert caught.value.getSqlState() == NO_CONDITION
+
+
+def test_unclosed_backtick_name_falls_through_to_the_tokenizer_refusal(
+    spark: ReparkSession,
+) -> None:
+    """Near-miss g — a quote-free untokenizable tail reaches the recognizer and falls through."""
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
+    with pytest.raises(ParseException) as caught:
+        spark.sql("SHOW TBLPROPERTIES `sc.ns.v")
+    assert type(caught.value) is ParseException
+    assert caught.value.getCondition() == NO_CONDITION
+    assert caught.value.getSqlState() == NO_CONDITION
