@@ -88,6 +88,8 @@ and measured-parity contract would grow `call.rs` beyond its exact
   ancestry at commit). A duplicate WAP cherry-pick refuses with Java's
   `Duplicate request ...` text since RP-26 (fork #293 reordered its cherry-pick
   validation WAP-first; FIXED residue `ICE-BRANCH-OPS-1-R-001` beside registry REF-6).
+  **WO-A5 (2026-09-23):** the `INVALID_TYPED_LITERAL` producer has a direct `engine_err`
+  pin for its complete bracketed parse message.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-007, C-010
   pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - `rewrite_data_files.rs` — **rewrite_data_files options (2026-08-31):** v2 `where` is wired

@@ -30,11 +30,13 @@ second reading of `file_format` beside dbt-spark's.
   reasons a subclass could not work around: `SparkRelation.__post_init__` raises when `database`
   is set, and `SparkRelation.render()` raises when database and schema are both included. RePark
   needs all three parts.
-- `impl.py` — `ReparkAdapter`. Only the surfaces RePark refuses are overridden:
-  `list_relations_without_caching` (no `SHOW TABLES IN`, registry `ST-1`),
-  `get_columns_in_relation` and `parse_columns_from_information` (`DESCRIBE EXTENDED` answers
-  Arrow spellings, registry `DBT-DESC-1`), `_get_columns_for_catalog` (same reason, for
-  `dbt docs`), and `get_relation`, which un-does dbt-spark's nulling of the database.
+- `impl.py` — `ReparkAdapter`. It overrides:
+  `list_relations_without_caching` (lists live table names through the facade `Catalog`; a
+  missing namespace lists empty),
+  `get_columns_in_relation` and `parse_columns_from_information` (the adapter reads column
+  types from the facade schema, not `DESCRIBE EXTENDED` text, registry `DBT-DESC-1`),
+  `_get_columns_for_catalog` (same reason, for `dbt docs`), and `get_relation`, which un-does
+  dbt-spark's nulling of the database.
   pins: dbt-1-adapter/C-002
 
 ## I want to...

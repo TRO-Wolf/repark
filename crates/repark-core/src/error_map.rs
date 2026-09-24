@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use datafusion::error::DataFusionError;
+use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::ErrorKind;
 use repark_common::{Error, Result};
 use repark_iceberg::write::CommitStateUnknownError;
@@ -71,6 +72,32 @@ fn grouping_refusal_message(display: &str) -> Option<String> {
     rest.get(..state_start + SQLSTATE_LEN).map(str::to_string)
 }
 
+fn spark_parse_message(error: &DataFusionError) -> String {
+    let mut current = error;
+    for _ in 0..MAX_ERROR_PEEL_DEPTH {
+        match current {
+            DataFusionError::SQL(parser_error, _) => {
+                return match parser_error.as_ref() {
+                    ParserError::ParserError(message) if message.starts_with('[') => {
+                        message.clone()
+                    }
+                    _ => error.to_string(),
+                };
+            }
+            DataFusionError::Context(_, inner) | DataFusionError::Diagnostic(_, inner) => {
+                current = inner;
+            }
+            DataFusionError::Shared(inner) => current = inner,
+            DataFusionError::Collection(errors) => match errors.first() {
+                Some(first) => current = first,
+                None => return error.to_string(),
+            },
+            _ => return error.to_string(),
+        }
+    }
+    error.to_string()
+}
+
 /// Classify a DataFusion error after peeling wrapper variants up to [`MAX_ERROR_PEEL_DEPTH`].
 pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorKind<'_> {
     let mut current = error;
@@ -133,7 +160,7 @@ pub fn engine_err_for_sql(sql: &str, err: DataFusionError) -> Error {
 #[must_use]
 pub fn engine_err(err: DataFusionError) -> Error {
     match classify_datafusion_error(&err) {
-        EngineErrorKind::Parse => Error::Parse(err.to_string()),
+        EngineErrorKind::Parse => Error::Parse(spark_parse_message(&err)),
         EngineErrorKind::Analysis => {
             let display = err.to_string();
             Error::Analysis(
@@ -342,5 +369,92 @@ mod tests {
             panic!("expected an Analysis error, got {error:?}");
         };
         assert_eq!(text, format!("Error during planning: {payload}"));
+    }
+
+    #[test]
+    fn bracketed_parser_error_maps_verbatim() {
+        let payload = "[PARSE_SYNTAX_ERROR] x SQLSTATE: 42601";
+        let error = engine_err(DataFusionError::SQL(
+            Box::new(ParserError::ParserError(payload.to_string())),
+            None,
+        ));
+        assert!(matches!(error, Error::Parse(message) if message == payload));
+    }
+
+    #[test]
+    fn unbracketed_parser_error_keeps_its_datafusion_display() {
+        let error = DataFusionError::SQL(
+            Box::new(ParserError::ParserError("Expected: x".to_string())),
+            None,
+        );
+        let expected = error.to_string();
+        let mapped = engine_err(error);
+        assert!(matches!(mapped, Error::Parse(message) if message == expected));
+    }
+
+    #[test]
+    fn bracketed_tokenizer_error_keeps_its_datafusion_display() {
+        let error = DataFusionError::SQL(
+            Box::new(ParserError::TokenizerError("[X] y".to_string())),
+            None,
+        );
+        let expected = error.to_string();
+        let mapped = engine_err(error);
+        assert!(matches!(mapped, Error::Parse(message) if message == expected));
+    }
+
+    #[test]
+    fn lowercase_bracketed_parser_error_maps_verbatim() {
+        let payload = "[lowercase] x";
+        let error = engine_err(DataFusionError::SQL(
+            Box::new(ParserError::ParserError(payload.to_string())),
+            None,
+        ));
+        assert!(matches!(error, Error::Parse(message) if message == payload));
+    }
+
+    #[test]
+    fn parser_error_bracket_near_misses_keep_complete_messages() {
+        for (payload, expected) in [
+            ("[", "["),
+            ("[X", "[X"),
+            (" [X] y", "ParserError(\" [X] y\")"),
+            ("", "ParserError(\"\")"),
+        ] {
+            let error = DataFusionError::SQL(
+                Box::new(ParserError::ParserError(payload.to_string())),
+                None,
+            );
+            let mapped = engine_err(error);
+            match mapped {
+                Error::Parse(message) if payload.starts_with('[') => assert_eq!(message, expected),
+                Error::Parse(message) => assert_eq!(message, format!("SQL error: {expected}")),
+                other => panic!("expected Parse error, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn bracketed_parser_error_peels_context_and_diagnostic_wrappers() {
+        let payload = "[PARSE_SYNTAX_ERROR] x SQLSTATE: 42601";
+        let context = DataFusionError::Context(
+            "context".to_string(),
+            Box::new(DataFusionError::SQL(
+                Box::new(ParserError::ParserError(payload.to_string())),
+                None,
+            )),
+        );
+        let diagnostic = DataFusionError::Diagnostic(
+            Box::new(datafusion::common::Diagnostic::new_error(
+                "diagnostic",
+                None,
+            )),
+            Box::new(DataFusionError::SQL(
+                Box::new(ParserError::ParserError(payload.to_string())),
+                None,
+            )),
+        );
+        assert!(matches!(engine_err(context), Error::Parse(message) if message == payload));
+        assert!(matches!(engine_err(diagnostic), Error::Parse(message) if message == payload));
     }
 }

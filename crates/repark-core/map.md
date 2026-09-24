@@ -127,6 +127,9 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `src/error_map.rs` — DataFusion/iceberg error folds into `repark_common::Error`; public
   `engine_err` (the single `DataFusionError → Error` classifier) plus `engine_err_for_sql`
   (the `sql_with` choke point: unknown-routine messages reshape before classification).
+  **WO-A4 (2026-09-23):** bracketed `ParserError::ParserError` payloads preserve their raw
+  message while the error remains parse-class; other parser variants and unbracketed payloads
+  keep DataFusion text.
 - `src/unknown_routine.rs` — **UNRESOLVED-ROUTINE-1 (2026-09-16):** string-level
   reshape of DataFusion's `Invalid function 'dotted.name'` and
   `table function 'name' not found` into Spark's `UNRESOLVED_ROUTINE`,

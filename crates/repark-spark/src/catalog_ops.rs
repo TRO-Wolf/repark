@@ -179,6 +179,47 @@ pub(crate) fn not_supported_command_for_v2_table(command: &str) -> DataFusionErr
     ))
 }
 
+fn v2_command_outcome(refused: Result<()>, command: &str) -> Result<DataFrame> {
+    refused?;
+    Err(not_supported_command_for_v2_table(command))
+}
+
+pub(crate) fn v2_json_preparse(
+    sql: &str,
+    refuse_options: impl Fn(&str) -> Result<()>,
+) -> Option<Result<DataFrame>> {
+    crate::describe_show::try_parse_describe_as_json(sql)?;
+    Some(v2_command_outcome(
+        refuse_options("DESCRIBE TABLE"),
+        "DESCRIBE TABLE AS JSON",
+    ))
+}
+
+pub(crate) fn v2_tail_preparse(
+    sql: &str,
+    refuse_options: impl Fn(&str) -> Result<()>,
+) -> Option<Result<DataFrame>> {
+    if crate::describe_show::try_parse_set_serde(sql).is_some() {
+        return Some(v2_command_outcome(
+            refuse_options("ALTER TABLE"),
+            "ALTER TABLE ... SET [SERDE|SERDEPROPERTIES]",
+        ));
+    }
+    if crate::describe_show::try_parse_msck_repair(sql).is_some() {
+        return Some(v2_command_outcome(
+            refuse_options("MSCK REPAIR TABLE"),
+            "MSCK REPAIR TABLE",
+        ));
+    }
+    if crate::describe_show::try_parse_analyze_table(sql).is_some() {
+        return Some(v2_command_outcome(
+            refuse_options("ANALYZE TABLE"),
+            "ANALYZE TABLE",
+        ));
+    }
+    None
+}
+
 pub(crate) fn quoted_table_display(parts: &[String]) -> String {
     parts
         .iter()

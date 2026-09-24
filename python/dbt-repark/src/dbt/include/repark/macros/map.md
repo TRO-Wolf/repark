@@ -24,8 +24,8 @@ pins: dbt-1-adapter/C-002, dbt-1-adapter/C-004
   three-part relation — and the SQL door serves it, so an override would remove nothing and no
   test could red it. The dead override was deleted; the inherited statement is pinned at
   `test_served_shapes_run[S-DROP-SCHEMA]`.
-  | `repark__get_columns_in_relation` | routes to the adapter's Python method so no caller can fall through to `spark__`'s `describe extended`, which answers Arrow spellings (`DBT-DESC-1`). |
-  | `repark__get_columns_in_relation_raw` | refuses loudly for the same reason, instead of returning a wrong-typed table. |
+  | `repark__get_columns_in_relation` | routes to the adapter's Python method, which reads column types from the facade schema, so no caller falls through to `spark__`'s `describe extended` text (`DBT-DESC-1`). |
+  | `repark__get_columns_in_relation_raw` | refuses loudly for the same reason, pointing the caller at `adapter.get_columns_in_relation`. |
   | `repark__create_temporary_view` | RePark has no temporary views (`DBT-TEMPVIEW-1`). |
   | `repark__create_view_as` | RePark refuses `create or replace view` (`DBT-VIEW-1`). |
   | `repark__alter_column_comment` | `alter column … comment` is refused (`DBT-COLCOMMENT-1`). |

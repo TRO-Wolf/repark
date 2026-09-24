@@ -142,11 +142,11 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-write-options-1/C-014
   **IPI-51 PR5 (2026-09-20):** `try_preparse_intercepts` gains the four v2-command
   intercepts — DESCRIBE AS JSON ahead of the describe-table arm, SET SERDE / MSCK REPAIR /
-  ANALYZE TABLE after SHOW PARTITIONS — through `v2_json_preparse` / `v2_tail_preparse`
-  helpers in the `show_partitions_preparse` shape, each refusing through the shared
-  `v2_command_outcome` helper so the write-options gate still runs first. The DESCRIBE
-  NAMESPACE arm moves into `describe_namespace_preparse` so the function holds clippy's
-  line cap.
+  ANALYZE TABLE after SHOW PARTITIONS — through `crate::catalog_ops::v2_json_preparse` /
+  `v2_tail_preparse` (in `catalog_ops.rs`, in the `show_partitions_preparse` shape), each
+  refusing through the shared `v2_command_outcome` helper so the write-options gate still runs
+  first. The DESCRIBE NAMESPACE arm moves into `describe_namespace_preparse` so the function
+  holds clippy's line cap.
   pins: ice-error-conditions-1/C-011
   **IPI-26/27 round 2 (2026-09-20):** `COMMENT ON TABLE` and the two-name Hive
   `CHANGE COLUMN` are true pre-parse intercepts
@@ -1432,6 +1432,33 @@ pins: rp-4-fork-repin/C-005, C-006
   keywords, and the `TABLES` / `TABLE_x` word-boundary near misses, so removing the `\r` stop,
   case folding, or either identifier-continuation check fails a test.
   pins: wo-c3/C-001
+- `show_table_extended.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** token parser and executor
+  for `SHOW TABLE EXTENDED [IN|FROM namespace] LIKE 'pattern' [PARTITION (...)]`; it reuses the
+  `SHOW TABLES` scope resolver and live Iceberg table-name listing, returns Spark's four-column
+  rows sorted by stored table name, and leaves sibling SHOW statements alone. Information text
+  uses `spark_table_properties`, the stored location, and `spark_tree_string`; a PARTITION tail
+  treats the LIKE pattern as a literal table name before the shared partition-management refusal.
+  **WO-A1b (2026-09-23):** lexer errors under the exact SHOW TABLE EXTENDED head stay typed
+  `PARSE_SYNTAX_ERROR` refusals, including an unclosed quote or backtick; every other head falls
+  through. An unclosed `/*` never reaches this parser end to end: the router front door (WO-C10)
+  answers `UNCLOSED_BRACKETED_COMMENT` / `42601` first.
+  When literal canonicalization fails, the router maps the error through `refusal_or`, which
+  answers this parser's refusal for a SHOW TABLE EXTENDED head. Views and session
+  temporary views remain absent from this statement's Iceberg listing.
+  Parser unit pins cover required syntax refusals and near misses. **WO-A11 (2026-09-23):** the
+  quote scanner closes on every matching delimiter; a doubled delimiter is a close followed by a
+  reopen. The PARTITION spec ends at its first `)`; a nested `(` refuses
+  `PARSE_SYNTAX_ERROR` near `'('` (Spark 4.1.2). **WO-A12 (2026-09-23):** the spec is checked token by token as
+  `identifier [= non-empty value run] {, ...}`; the first token that breaks the shape refuses
+  near itself, EOF keeps end of input. **WO-A13 (2026-09-23):** once the spec and statement end parse, the
+  first key without `= value` refuses `INVALID_SQL_SYNTAX.EMPTY_PARTITION_VALUE` / `42000` with the
+  key backticked as written (Spark 4.1.2). **WO-A15 (2026-09-24):** a word right after `PARTITION` refuses
+  near that word with `: missing '('`, as Spark 4.1.2 does.
+  pins: wo-a1b/C-001
+  See [tests/show_table_extended.rs](tests/show_table_extended.rs) for parser and end-to-end pins.
+- `spark_tree_string.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** iterative Arrow-schema port
+  of the facade `StructType.treeString` layout for SHOW TABLE EXTENDED. It uses Spark type-name
+  spellings and renders struct, array, and map children with a depth limit.
 - `table_props_view.rs` — **C1 SHOW CREATE (2026-09-23):** `spark_table_properties`, the one
   Spark-visible table property list (Iceberg 1.11 `SparkTable.properties()` minus Spark's
   `TABLE_RESERVED_PROPERTIES`), shared by DESCRIBE EXTENDED `Table Properties` and SHOW CREATE
@@ -1487,7 +1514,9 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ipi-07-branch-read-schema-1/C-001, C-003, C-004, C-005, C-006, C-008
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
-  `reregister*` provider invalidation. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
+  `reregister*` provider invalidation. It is also the home of the v2-command intercepts
+  `v2_json_preparse` / `v2_tail_preparse` and their `v2_command_outcome` helper, next to
+  `not_supported_command_for_v2_table`. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
   is the single home of Spark's `[TABLE_OR_VIEW_NOT_FOUND]` text for a three-part name, condition
   and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs`,
   `namespace_ddl/purge.rs` and `namespace_ddl.rs` DROP all answer through it, so they cannot

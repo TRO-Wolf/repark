@@ -262,12 +262,15 @@ async fn nested_ddl_refuses_double_quoted_names_and_known_paths_spark_shaped() {
             matches!(&refused, DataFusionError::Context(_, inner) if matches!(**inner, DataFusionError::SQL(_, _))),
             "{sql}: {refused}"
         );
-        assert!(
-            refused.to_string().contains(
-                "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"x.y\"'. SQLSTATE: 42601"
-            ),
-            "{sql}: {refused}"
+        let mapped = repark_core::engine_err(refused);
+        let repark_common::Error::Parse(message) = &mapped else {
+            panic!("{sql}: expected a Parse error, got {mapped:?}");
+        };
+        assert_eq!(
+            message, "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"x.y\"'. SQLSTATE: 42601",
+            "{sql}"
         );
+        assert_eq!(mapped.to_string(), *message, "{sql}");
     }
     let duplicate = execute(
         &ctx,

@@ -714,7 +714,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ice-error-conditions-1/C-011; ICE-VIEWS-1 (2026-09-20):
   `truncate_view_is_expect_table_not_view` namespace-qualifies its fixture SQL
   (`CREATE VIEW ice.sales.v_trunc ...` / `TRUNCATE TABLE ice.sales.v_trunc`);
-  assertions unchanged),
+  assertions unchanged; WO-A10 (2026-09-23): the leading-`IF EXISTS` and missing-`TABLE`
+  refusals destructure `repark_common::Error::Analysis` and compare the complete
+  `Error during planning: [PARSE_SYNTAX_ERROR] ...` text — the current class, where Spark
+  4.1.2 raises `ParseException`),
   `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
   MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-004, C-005, C-006, C-007),
@@ -907,7 +910,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
     `PARSE_SYNTAX_ERROR` parser class and SQLSTATE `42601`; every accepted trailing-semicolon,
     whitespace, and comment form returns the complete `SELECT 1` batch. WO-C10's shared
     unclosed-comment pins assert the complete parser text, exact near-miss rows, and the two
-    complete current IPI-51 tokenizer divergences.
+    complete current IPI-51 tokenizer divergences. WO-A10 (2026-09-23): the mapped multi-statement
+    refusal destructures `repark_common::Error::Parse` before comparing its complete text.
     pins: wo-c5/C-001; wo-c10/C-001, C-002, C-003, C-004
     WO-C11 (2026-09-23): `assert_single_value_answer` compares the complete schema and batch
     for the semicolon, comment-marker, backticked-alias, backslash-escape and `\r` near
@@ -964,6 +968,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (a child added after the write reads `NULL`) needs fork PR #292.
   `forkwrite_list_insert_reads_back` pins the list-column `INSERT` read-back, green since
   RP-29 (fork #295 F-LIST-INSERT-1).
+  **WO-A10 (2026-09-23):** the double-quoted-path refusal destructures
+  `repark_common::Error::Parse` before comparing the complete text.
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
   **Round 3 (2026-09-18, run 22b):** `nested_add_comment_takes_a_double_quoted_string_spark_shaped`
   adds `s.d COMMENT "x.y"`, `s.e COMMENT "c"` and `s.f COMMENT "x.y" FIRST` and reads the
@@ -985,6 +991,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
+  **WO-A4 (2026-09-23):** the malformed dotted `AFTER` route maps its complete parser payload through
+  `engine_err` without a DataFusion wrapper. **WO-A10 (2026-09-23):** it destructures
+  `repark_common::Error::Parse` before comparing the complete text.
   pins: ice-column-reorder-1/C-001, C-002
 - [identifier_fields.rs](identifier_fields.rs) — **WO-IDENTIFIERS (2026-09-21):**
   end to end over `common::setup`:
@@ -1488,6 +1497,54 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO-C3 C5 (updated by WO-C4 and WO-C7, 2026-09-23):** SHOW TABLES and SHOW COLUMNS compare
   complete Spark rows and Arrow schemas; SHOW TBLPROPERTIES keeps its full pinned analysis refusal.
   pins: wo-c3/C-001, C-002, C-003, C-005
+- `show_table_extended.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** memory-catalog end-to-end
+  pins for `SHOW TABLE EXTENDED`: full four-column rows for partitioned/plain, v3 Unicode,
+  sorted tables, LOCATION, owner, and nested/deep schema trees; property redaction and snapshot
+  changes; alternation and case-insensitive LIKE; FROM and ambient scopes; missing-LIKE and
+  partition/missing-table/missing-namespace refusals; the SHOW-family near misses live in
+  `show_table_extended_near_miss.rs`. **WO-A4 (2026-09-23):** every parser refusal pins its SQL
+  error variant and complete condition/SQLSTATE text; partition lookup pins literal wildcard
+  absence. **WO-A5
+  (2026-09-23):** snapshot, alternation, case, and ambient-scope checks compare complete ordered
+  four-column row vectors. **WO-A8 (2026-09-23):** every successful answer also compares the
+  complete Arrow schema (names, types, nullability).
+  pins: wo-a1b/C-002, C-003
+  pins: show-table-extended-1/C-001, C-002, C-003, C-004
+- `show_table_extended_near_miss.rs` — **WO-A8 (2026-09-23):** the SHOW TABLE EXTENDED near
+  misses, split from `show_table_extended.rs` at the file-size ceiling. Successful fall-throughs
+  (SHOW TABLES, SHOW CREATE TABLE, leading and inter-keyword comments, `;` and `; ;`) compare the
+  complete Arrow schema and every row; refusals (SHOW TABLES EXTENDED, SHOW TBLPROPERTIES, SHOW
+  TABLE, unclosed quotes after comments, `;;x`, SHOW TABLE EXTENDEDX) compare full messages. The
+  `;;x` refusal and the leading and inter-keyword unclosed `/*` probes go through
+  `assert_parse_refusal`: the SQL / ParserError variants, the rendered display, and the bare
+  `UNCLOSED_BRACKETED_COMMENT` / `42601` message the router front door (WO-C10) answers.
+  **WO-A10 (2026-09-23):** the scanner
+  branches of `unbalanced_delimiter` and the bare `PARTITION` path each have a parser-level pin
+  (`try_parse_show_table_extended`) and an end-to-end pin (`assert_parse_refusal` plus
+  `repark_common::Error::Parse`), with a balanced near miss that keeps its exact rows or refusal:
+  doubled `'`, `"` and backtick before an unclosed quote; `/*` and `--` inside an open quote; a
+  quote inside `--` and nested `/* */` comments; an unterminated trailing `/*` (parser: end of
+  input; router front door: `UNCLOSED_BRACKETED_COMMENT`); `PARTITION` with no parentheses.
+  Each of these scanner refusals equals the Spark 4.1.2 condition and message head. **WO-A11
+  (2026-09-23):** a nested `(` in the PARTITION spec (closed, unclosed, ambient scope) refuses near
+  `'('` at both levels; `(cat='a')` and `(cat='(')` keep the partition-management refusal and
+  `(cat='a'` keeps end of input. **WO-A12 (2026-09-23):** `()`, `(a=1,)`, `(,a=1)`, `(=1)`, `(a=)`,
+  `(1=1)` and `('a'=1)` refuse at Spark 4.1.2's token on both levels; `(a=1, b='x')`, `(a=-1)` and
+  `(a=DATE '2020-01-01')` keep the partition-management refusal. **WO-A13 (2026-09-23):** `(a)`, `(a, b)`,
+  `(b=1, a)`, `(a, b=1)`, `(a, B)`, `(A)`, `` (`A`) `` and `` (`x y`) `` refuse Spark's
+  `EMPTY_PARTITION_VALUE` text for the first value-less key on both levels; `(a) garbage` keeps the
+  trailing `extra input` refusal; `(select=1)` keeps the partition-management refusal. Residue
+  guards: `residue_r_u4_13` (`(a=1 b=2)`, Spark refuses near 'b') and `residue_r_u4_14` (`(a b)`,
+  Spark appends `: extra input 'b'`) pin RePark's current answers. **WO-A15 (2026-09-24):** every arm of the
+  statement and PARTITION scanners has a pin against `spark-4.1.2-a15-measured.json`
+  (`show_table_extended_scanner_arms_*`); `residue_a15_in_string`, `residue_a15_in_like` and
+  `residue_a15_extendedx` guard RePark's current answers where the statement head differs from
+  Spark. `PARTITION a=1`, `PARTITION select` and `PARTITION a` refuse near the word with
+  `: missing '('`. **WO-A16 (2026-09-24):** every parser-level accept also has an end-to-end
+  schema-and-rows pin: `-- end`, lowercase and `;;` forms answer the plain statement's rows,
+  `LIKE ''` and unmatched patterns answer the full schema with no rows, and the FROM/PARTITION
+  accept refuses the literal table (`show_table_extended_parser_accepted_*`).
+  pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

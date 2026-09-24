@@ -14,7 +14,9 @@ path stay in `spark_literals.rs`.
   `skip_whitespace`, `matching_paren`) and the pre-existing rewrite families:
   numeric suffixes (**FNP-4B**), `0x` hex identifiers, FROM-less `DELETE`, DROP
   TEMPORARY, wildcard `EXCEPT`, the INSERT `PARTITION (…) (cols)` order swap,
-  and call-base struct field access.
+  and call-base struct field access. **WO-A5 (2026-09-23):** the
+  `INVALID_NUMERIC_LITERAL_RANGE` producer has a direct `engine_err` pin for its complete
+  bracketed parse message.
 - `create_options.rs` — **D-5 (2026-09-21):** the `OPTIONS` → `TBLPROPERTIES`
   seam. Recognizes `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)]
   USING iceberg` and rewrites its single well-formed `OPTIONS (k=v, …)` clause

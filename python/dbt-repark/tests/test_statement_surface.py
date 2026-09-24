@@ -76,6 +76,12 @@ def _served() -> tuple[Shape, ...]:
             None,
         ),
         Shape(
+            "S-SHOW-TABLE-EXTENDED",
+            "spark__list_relations_without_caching",
+            f"show table extended in {NAMESPACE} like '*'",
+            None,
+        ),
+        Shape(
             "S-SET-CONF",
             "server_side_parameters",
             "set spark.sql.shuffle.partitions = 2",
@@ -209,12 +215,6 @@ def _refused() -> tuple[Shape, ...]:
             "expected a two-part `catalog.namespace` name",
         ),
         Shape(
-            "R-SHOW-TABLE-EXTENDED",
-            "spark__list_relations_without_caching",
-            f"show table extended in {NAMESPACE} like '*'",
-            "SHOW [VARIABLE] is not supported unless information_schema is enabled",
-        ),
-        Shape(
             "R-SHOW-TBLPROPERTIES",
             "fetch_tbl_properties",
             f"show tblproperties {fact}",
@@ -249,11 +249,17 @@ def _refused() -> tuple[Shape, ...]:
 
 
 @pytest.fixture(scope="module")
-def seeded_session(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Any]:
+def statement_warehouse(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Create the warehouse shared by the statement-surface session."""
+    return tmp_path_factory.mktemp("dbt1-statement-surface")
+
+
+@pytest.fixture(scope="module")
+def seeded_session(statement_warehouse: Path) -> Iterator[Any]:
     """A memory-catalog session holding the S6 silver fixture the gold models join."""
     from repark import ReparkSession
 
-    warehouse: Path = tmp_path_factory.mktemp("dbt1-statement-surface")
+    warehouse = statement_warehouse
     session = ReparkSession.builder.appName("dbt-1-statement-surface").getOrCreate()
     session.register_memory_catalog(CATALOG, warehouse)
     session.sql(f"CREATE NAMESPACE {CATALOG}.{NAMESPACE} LOCATION '{warehouse / NAMESPACE}'")
@@ -282,6 +288,22 @@ def test_refused_shapes_fail_loud(seeded_session: Any, shape: Shape) -> None:
     assert shape.refusal in str(caught.value)
 
 
+def test_show_tblproperties_table_refusal_is_exact(seeded_session: Any) -> None:
+    """R-SHOW-TBLPROPERTIES pins the exact class, condition, SQLSTATE and full refusal text."""
+    from repark.errors import AnalysisException
+
+    fact = f"{CATALOG}.{NAMESPACE}.{STEM}_survey"
+    with pytest.raises(AnalysisException) as caught:
+        seeded_session.sql(f"show tblproperties {fact}").to_arrow()
+    assert type(caught.value) is AnalysisException
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
+    assert str(caught.value) == (
+        "Error during planning: SHOW [VARIABLE] is not supported unless information_schema "
+        "is enabled"
+    )
+
+
 def test_describe_extended_answers_spark_shape(seeded_session: Any) -> None:
     """Three-part DESCRIBE EXTENDED answers Spark shape since SQL-DESCRIBE-1."""
     described = seeded_session.sql(
@@ -292,6 +314,37 @@ def test_describe_extended_answers_spark_shape(seeded_session: Any) -> None:
     assert rows[0]["col_name"] == "survey_id"
     assert rows[0]["data_type"] == "string"
     assert any(row["col_name"] == "Provider" and row["data_type"] == "iceberg" for row in rows)
+
+
+def test_show_table_extended_answers_spark_shape(
+    seeded_session: Any, statement_warehouse: Path
+) -> None:
+    """SHOW TABLE EXTENDED returns Spark's four-column table listing shape."""
+    seeded_session.sql(f"CREATE TABLE {CATALOG}.{NAMESPACE}.extended_pin (id BIGINT) USING iceberg")
+    shown = seeded_session.sql(f"show table extended in {NAMESPACE} like 'extended_pin'").to_arrow()
+    information = (
+        f"Catalog: {CATALOG}\n"
+        f"Namespace: {NAMESPACE}\n"
+        "Table: extended_pin\n"
+        "Type: MANAGED\n"
+        f"Location: {statement_warehouse / NAMESPACE / 'extended_pin'}\n"
+        "Provider: iceberg\n"
+        "Table Properties: [[, c, u, r, r, e, n, t, -, s, n, a, p, s, h, o, t, -, i, d, "
+        "=, n, o, n, e, ,, f, o, r, m, a, t, =, i, c, e, b, e, r, g, /, p, a, r, q, u, e, "
+        "t, ,, f, o, r, m, a, t, -, v, e, r, s, i, o, n, =, 2, ,, w, r, i, t, e, ., p, a, "
+        "r, q, u, e, t, ., c, o, m, p, r, e, s, s, i, o, n, -, c, o, d, e, c, =, z, s, t, "
+        "d, ]]\n"
+        "Schema: root\n"
+        " |-- id: long (nullable = true)\n\n"
+    )
+    assert shown.to_pylist() == [
+        {
+            "namespace": NAMESPACE,
+            "tableName": "extended_pin",
+            "isTemporary": False,
+            "information": information,
+        }
+    ]
 
 
 def test_facade_schema_answers_spark_type_spellings(seeded_session: Any) -> None:

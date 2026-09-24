@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, PySparkTypeError
+from repark.errors import AnalysisException, ParseException, PySparkTypeError
 from repark.spark.catalog import Catalog, CatalogMetadata, Database, Table
 
 
@@ -40,7 +40,7 @@ def spark(tmp_path: Path) -> ReparkSession:
     session = ReparkSession.builder.appName("pytest-catalog-surface").getOrCreate()
     session.register_memory_catalog("glue_catalog", tmp_path)
     session.sql("CREATE NAMESPACE glue_catalog.ns1")
-    session.sql("CREATE TABLE glue_catalog.ns1.entity AS SELECT 1 AS id, 'a' AS name")
+    session.sql("CREATE TABLE glue_catalog.ns1.entity (id BIGINT, name STRING) USING iceberg")
     session.sql("CREATE NAMESPACE glue_catalog.ns2")
     return session
 
@@ -444,6 +444,88 @@ def test_show_tables_in_lists_namespace_tables(spark: ReparkSession) -> None:
     assert table.column("namespace").to_pylist() == ["ns1"]
     assert table.column("tableName").to_pylist() == ["entity"]
     assert table.column("isTemporary").to_pylist() == [False]
+
+
+def test_show_table_extended_returns_spark_metadata_shape(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """SHOW TABLE EXTENDED returns the four Spark metadata columns."""
+    frame = spark.sql("SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'entity'")
+    information = (
+        "Catalog: glue_catalog\n"
+        "Namespace: ns1\n"
+        "Table: entity\n"
+        "Type: MANAGED\n"
+        f"Location: {tmp_path / 'ns1' / 'entity'}\n"
+        "Provider: iceberg\n"
+        "Table Properties: [[, c, u, r, r, e, n, t, -, s, n, a, p, s, h, o, t, -, i, d, "
+        "=, n, o, n, e, ,, f, o, r, m, a, t, =, i, c, e, b, e, r, g, /, p, a, r, q, u, e, "
+        "t, ,, f, o, r, m, a, t, -, v, e, r, s, i, o, n, =, 2, ,, w, r, i, t, e, ., p, a, "
+        "r, q, u, e, t, ., c, o, m, p, r, e, s, s, i, o, n, -, c, o, d, e, c, =, z, s, t, "
+        "d, ]]\n"
+        "Schema: root\n"
+        " |-- id: long (nullable = true)\n"
+        " |-- name: string (nullable = true)\n\n"
+    )
+    assert frame.to_arrow().to_pylist() == [
+        {
+            "namespace": "ns1",
+            "tableName": "entity",
+            "isTemporary": False,
+            "information": information,
+        }
+    ]
+
+
+def test_show_table_extended_refusal_error_contracts(spark: ReparkSession) -> None:
+    """SHOW TABLE EXTENDED preserves Spark's typed refusal details."""
+    with pytest.raises(ParseException) as bare:
+        spark.sql("SHOW TABLE EXTENDED").to_arrow()
+    assert bare.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert bare.value.getSqlState() == "42601"
+    assert (
+        str(bare.value)
+        == "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601"
+    )
+
+    partition_sql = "SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'entity' PARTITION (name='a')"
+    with pytest.raises(AnalysisException) as partition:
+        spark.sql(partition_sql).to_arrow()
+    assert (
+        partition.value.getCondition()
+        == "INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED"
+    )
+    assert partition.value.getSqlState() == "42601"
+    assert (
+        str(partition.value) == "Error during planning: "
+        "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition "
+        "command is invalid. Table `glue_catalog`.`ns1`.`entity` does not support partition "
+        "management. SQLSTATE: 42601"
+    )
+
+    absent_sql = "SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'absent' PARTITION (name='a')"
+    with pytest.raises(AnalysisException) as absent:
+        spark.sql(absent_sql).to_arrow()
+    assert absent.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert absent.value.getSqlState() == "42P01"
+    assert (
+        str(absent.value) == "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        "`glue_catalog`.`ns1`.`absent` cannot be found. Verify the spelling and correctness "
+        "of the schema and catalog. If you did not qualify the name with a schema, verify the "
+        "current_schema() output, or qualify the name with the correct schema and catalog. To "
+        "tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. "
+        "SQLSTATE: 42P01"
+    )
+
+    unclosed_quote_sql = "SHOW TABLE EXTENDED IN glue_catalog.ns1 LIKE 'entity"
+    with pytest.raises(ParseException) as unclosed_quote:
+        spark.sql(unclosed_quote_sql).to_arrow()
+    assert unclosed_quote.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert unclosed_quote.value.getSqlState() == "42601"
+    assert (
+        str(unclosed_quote.value)
+        == "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601"
+    )
 
 
 def test_list_databases_location_uri_none_divergence(spark: ReparkSession) -> None:

@@ -24,9 +24,12 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 ## Contents
 
 - `conftest.py` — the two `sys.path` entries above.
-- `test_statement_surface.py` — 30 cases: every statement shape dbt emits, run through
-  `repark.sql()` on a memory catalog. Seventeen served, eleven refused with the exact message
-  (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
+- `test_statement_surface.py` — every statement shape dbt emits, run through
+  `repark.sql()` on a memory catalog. `test_served_shapes_run` asserts that each served shape
+  returns an Arrow result; `test_refused_shapes_fail_loud` asserts that each refused shape raises a
+  `PySparkException` whose text contains the message the ledger records, and
+  `test_show_tblproperties_table_refusal_is_exact` pins `R-SHOW-TBLPROPERTIES` exactly (class,
+  condition, SQLSTATE and full text) (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
   the `CLUSTERED BY (…) INTO n BUCKETS` CTAS shape moved to served under IPI-26/27 round 1,
   2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform; the `LOCATION`,
   table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served under IPI-26/27
@@ -44,12 +47,17 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   pins: dbt-1-adapter/C-001
   pins: sql-set-door-1/C-005
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20, re-measured after the current-catalog flip):**
-  twenty served, eight refused — `R-SHOW-DATABASES`, `R-DESCRIBE-TWO-PART` and
+  `R-SHOW-DATABASES`, `R-DESCRIBE-TWO-PART` and
   `R-SHOW-TABLES` move to served (a registered memory catalog becomes the current catalog,
   so `gold` resolves: bare `SHOW NAMESPACES` lists it, two-part `DESCRIBE` resolves like
   `SELECT`, and `SHOW TABLES IN gold` answers the dbt glob shape); `R-RENAME-TWO-PART`
   keeps refusing, against a missing namespace — a missing object refuses, never the name's
   shape (DBT-QUALIFY-1 FIXED).
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served, and
+  `test_show_table_extended_answers_spark_shape` compares every column name and value of the one
+  four-column row (`to_pylist()`), including the full information text; `R-SHOW-TBLPROPERTIES` stays
+  refused, pinned exactly by `test_show_tblproperties_table_refusal_is_exact` (`AnalysisException`,
+  condition `None`, SQLSTATE `None`, full `Error during planning: SHOW [VARIABLE] ...` text).
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row

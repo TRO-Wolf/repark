@@ -276,16 +276,14 @@ def test_tblpropertiesx_is_not_recognized(spark: ReparkSession) -> None:
     )
 
 
-def test_show_table_extended_falls_through(spark: ReparkSession) -> None:
-    """Near-miss d — SHOW TABLE EXTENDED retains the upstream refusal."""
-    with pytest.raises(AnalysisException) as caught:
+def test_show_table_extended_unquoted_pattern_is_a_parse_error(spark: ReparkSession) -> None:
+    """Near-miss d — an unquoted LIKE pattern is Spark's PARSE_SYNTAX_ERROR near the identifier."""
+    with pytest.raises(ParseException) as caught:
         spark.sql("SHOW TABLE EXTENDED IN sc.ns LIKE t")
-    _assert_refusal(
-        caught.value,
-        f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}",
-        NO_CONDITION,
-        NO_CONDITION,
-    )
+    assert type(caught.value) is ParseException
+    assert str(caught.value) == "[PARSE_SYNTAX_ERROR] Syntax error at or near 't'. SQLSTATE: 42601"
+    assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert caught.value.getSqlState() == "42601"
 
 
 def test_show_tblproperties_requires_a_name(spark: ReparkSession) -> None:

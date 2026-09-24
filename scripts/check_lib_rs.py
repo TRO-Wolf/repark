@@ -65,12 +65,16 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "sanctioned file-backed test module (`#[cfg(test)] mod tests;` -> src/tests.rs)",
     ),
     "repark-spark": (
-        154,
+        156,
         "`mod insert_arity;` (IPI-51 PR9, the short-VALUES arity router intercept) and "
         "`mod update_cast;` (IPI-51 PR10 W-UPDATE-TYPE-ERR) take the root one line past "
         "the default (measured 151); `mod show_create;` and `mod table_props_view;` "
         "(C1 SHOW CREATE TABLE and the shared Spark-visible table properties) add two "
         "(measured 154); "
+        "`mod show_table_extended;` (SHOW TABLE EXTENDED parser and executor) adds one "
+        "(measured 155); "
+        "`mod spark_tree_string;` (SHOW TABLE EXTENDED schema tree renderer) adds one "
+        "(measured 156); "
         "RATCHET: if module decls consolidate",
     ),
     "repark-ta": (

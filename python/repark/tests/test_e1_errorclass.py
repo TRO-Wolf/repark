@@ -35,9 +35,6 @@ UNCLOSED_BRACKETED_COMMENT_MESSAGE = (
     "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. "
     "Please, append */ at the end of the comment. SQLSTATE: 42601"
 )
-UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE = (
-    f'SQL error: ParserError("{UNCLOSED_BRACKETED_COMMENT_MESSAGE}")'
-)
 
 
 @pytest.fixture
@@ -181,16 +178,16 @@ def test_native_exception_surface_shim_methods() -> None:
         (
             "INSERT INTO t (id) BY NAME SELECT 1 AS id",
             "42601",
-            'SQL error: ParserError("[PARSE_SYNTAX_ERROR] BY NAME cannot be combined with an '
-            'explicit column list. SQLSTATE: 42601")',
+            "[PARSE_SYNTAX_ERROR] BY NAME cannot be combined with an explicit column list. "
+            "SQLSTATE: 42601",
         ),
         (
             "SELECT 1; SELECT 2",
             "42601",
-            'SQL error: ParserError("[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements '
+            "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements "
             "in one call are not supported (Spark parity). Only a single statement is accepted; "
             "a trailing semicolon, whitespace, or comment after that statement is allowed. "
-            'SQLSTATE: 42601")',
+            "SQLSTATE: 42601",
         ),
     ],
 )
@@ -225,7 +222,7 @@ def test_unclosed_bracketed_comment_has_spark_parse_contract(
         spark.sql(statement).collect()
     assert caught.value.getCondition() == "UNCLOSED_BRACKETED_COMMENT"
     assert caught.value.getSqlState() == "42601"
-    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_MESSAGE
 
 
 @pytest.mark.parametrize(

@@ -936,6 +936,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   PySpark 4.1.2 classic oracle; eight `SES-*` registry rows filed.
   `risk_tier: standard`. Branch `feat/session-surface-1`.
   pins: session-surface-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [show-table-extended-1-ledger.md](show-table-extended-1-ledger.md) —
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23), completed:** Spark-door `SHOW TABLE EXTENDED
+  [IN|FROM namespace] LIKE pattern` parses before sqlparser and answers the four-column
+  Iceberg-table listing with Spark metadata text, property redaction, and schema tree output.
+  **WO-A5 (2026-09-23):** the recorded Spark deep-schema tree now has an exact Rust pin.
+  `risk_tier: standard`. Branch `xd/show-tblprops`.
 - [sql-describe-1-ledger.md](sql-describe-1-ledger.md) — Unit ledger — SQL-DESCRIBE-1 · `DESCRIBE [TABLE] [EXTENDED|FORMATTED]` on Iceberg tables (step 1: measurement)
 - [sql-harden-1-cutover-shapes-ledger.md](sql-harden-1-cutover-shapes-ledger.md) — Unit ledger — SQL-HARDEN-1 · the cutover pipeline cutover Iceberg SQL shapes
 - [sql-harden-2-cow-shapes-ledger.md](sql-harden-2-cow-shapes-ledger.md) — Unit ledger — SQL-HARDEN-2 · copy-on-write cutover shapes
@@ -1003,6 +1009,10 @@ else. The next pickup's `make ledger-archive` files everything here under
   `xd/show-create`.
 - [wo-c3-ledger.md](wo-c3-ledger.md) — **WO-C3 / WO-C4 (2026-09-23), completed:** second-critic remediation for SHOW CREATE TABLE: nested SQL-comment recognition, full parse-refusal rendering pins, the measured multi-term CREATE text, ParserError extraction coverage, and complete neighboring SHOW rows and Arrow schemas. `risk_tier: standard`. Branch `xd/show-create`.
 - [wo-c5-ledger.md](wo-c5-ledger.md) — **WO-C5 (2026-09-23), completed:** parser refusal pins for multi-statement SQL, unclosed bracket comments after the SHOW CREATE TABLE head, and the refusal-test audit. Its C-003 claim that a comment hiding `TABLE` falls through to the tokenizer error is superseded by WO-C10: the front door answers `UNCLOSED_BRACKETED_COMMENT`. `risk_tier: standard`. Branch `xd/show-create`.
+- [wo-a1b-ledger.md](wo-a1b-ledger.md) —
+  **WO-A1b (2026-09-23), completed:** follow-up exactness repair for SHOW TABLE EXTENDED:
+  typed lexer and refusal pins, literal PARTITION table resolution, and exact near-miss outcomes.
+  `risk_tier: standard`. Branch `xd/show-tblprops`.
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under

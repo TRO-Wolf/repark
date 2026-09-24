@@ -87,7 +87,8 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let verbatim =
         crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
-    let canonical = crate::spark_literals::canonicalize_verbatim(sql, verbatim)?;
+    let canonical = crate::spark_literals::canonicalize_verbatim(sql, verbatim)
+        .map_err(|error| crate::show_table_extended::refusal_or(sql, error))?;
     let canonical_sql = canonical.as_ref();
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
@@ -538,49 +539,6 @@ fn show_partitions_preparse(
     }
 }
 
-fn v2_command_outcome(refused: Result<()>, command: &str) -> Result<DataFrame> {
-    refused?;
-    Err(crate::catalog_ops::not_supported_command_for_v2_table(
-        command,
-    ))
-}
-
-fn v2_json_preparse(
-    sql: &str,
-    refuse_options: impl Fn(&str) -> Result<()>,
-) -> Option<Result<DataFrame>> {
-    describe_show::try_parse_describe_as_json(sql)?;
-    Some(v2_command_outcome(
-        refuse_options("DESCRIBE TABLE"),
-        "DESCRIBE TABLE AS JSON",
-    ))
-}
-
-fn v2_tail_preparse(
-    sql: &str,
-    refuse_options: impl Fn(&str) -> Result<()>,
-) -> Option<Result<DataFrame>> {
-    if describe_show::try_parse_set_serde(sql).is_some() {
-        return Some(v2_command_outcome(
-            refuse_options("ALTER TABLE"),
-            "ALTER TABLE ... SET [SERDE|SERDEPROPERTIES]",
-        ));
-    }
-    if describe_show::try_parse_msck_repair(sql).is_some() {
-        return Some(v2_command_outcome(
-            refuse_options("MSCK REPAIR TABLE"),
-            "MSCK REPAIR TABLE",
-        ));
-    }
-    if describe_show::try_parse_analyze_table(sql).is_some() {
-        return Some(v2_command_outcome(
-            refuse_options("ANALYZE TABLE"),
-            "ANALYZE TABLE",
-        ));
-    }
-    None
-}
-
 async fn describe_namespace_preparse(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -888,10 +846,20 @@ async fn try_preparse_intercepts(
     if let Some(outcome) = describe_namespace_preparse(ctx, catalogs, sql, parsed_ddl).await {
         return Some(outcome);
     }
-    if let Some(outcome) = v2_json_preparse(sql, parsed_ddl) {
+    if let Some(outcome) = crate::catalog_ops::v2_json_preparse(sql, parsed_ddl) {
         return Some(outcome);
     }
     if let Some(result) = try_describe_table_intercept(ctx, catalogs, sql, write_options).await {
+        return Some(result);
+    }
+    if let Some(result) = crate::show_table_extended::try_show_table_extended_intercept(
+        ctx,
+        catalogs,
+        sql,
+        write_options,
+    )
+    .await
+    {
         return Some(result);
     }
     if let Some(result) =
@@ -922,7 +890,7 @@ async fn try_preparse_intercepts(
     if let Some(outcome) = show_partitions_preparse(sql, parsed_ddl) {
         return Some(outcome);
     }
-    if let Some(outcome) = v2_tail_preparse(sql, parsed_ddl) {
+    if let Some(outcome) = crate::catalog_ops::v2_tail_preparse(sql, parsed_ddl) {
         return Some(outcome);
     }
     if let Some(result) = try_use_default_intercept(ctx, catalogs, sql).await {

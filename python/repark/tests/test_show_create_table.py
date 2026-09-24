@@ -16,15 +16,9 @@ INVALID_SHOW_CREATE_TABLE_MESSAGE = (
     "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. "
     "SQLSTATE: 42601"
 )
-INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE = (
-    f'SQL error: ParserError("{INVALID_SHOW_CREATE_TABLE_MESSAGE}")'
-)
 UNCLOSED_BRACKETED_COMMENT_MESSAGE = (
     "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. "
     "Please, append */ at the end of the comment. SQLSTATE: 42601"
-)
-UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE = (
-    f'SQL error: ParserError("{UNCLOSED_BRACKETED_COMMENT_MESSAGE}")'
 )
 
 COMMENTED_SHOW_CREATE_REFUSALS = [
@@ -117,7 +111,7 @@ def test_show_create_without_a_name_has_spark_error_contract(spark: ReparkSessio
         spark.sql("SHOW CREATE TABLE").collect()
     assert caught.value.getCondition() == "INVALID_STATEMENT_OR_CLAUSE"
     assert caught.value.getSqlState() == "42601"
-    assert str(caught.value) == (INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE)
+    assert str(caught.value) == INVALID_SHOW_CREATE_TABLE_MESSAGE
 
 
 @pytest.mark.parametrize(
@@ -146,7 +140,7 @@ def test_show_create_comments_keep_the_spark_parse_contract(
         spark.sql(statement).collect()
     assert caught.value.getCondition() == "INVALID_STATEMENT_OR_CLAUSE", label
     assert caught.value.getSqlState() == "42601", label
-    assert str(caught.value) == INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE, label
+    assert str(caught.value) == INVALID_SHOW_CREATE_TABLE_MESSAGE, label
 
 
 @pytest.mark.parametrize(
@@ -167,7 +161,7 @@ def test_show_create_unclosed_bracketed_comment_has_spark_parse_contract(
         spark.sql(statement).collect()
     assert caught.value.getCondition() == "UNCLOSED_BRACKETED_COMMENT"
     assert caught.value.getSqlState() == "42601"
-    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_MESSAGE
 
 
 def test_show_create_multi_statement_has_spark_parse_contract(spark: ReparkSession) -> None:
@@ -175,7 +169,7 @@ def test_show_create_multi_statement_has_spark_parse_contract(spark: ReparkSessi
         spark.sql(f"SHOW CREATE TABLE {QUALIFIED}; SELECT 1").collect()
     assert caught.value.getCondition() == "INVALID_STATEMENT_OR_CLAUSE"
     assert caught.value.getSqlState() == "42601"
-    assert str(caught.value) == INVALID_SHOW_CREATE_TABLE_RENDERED_MESSAGE
+    assert str(caught.value) == INVALID_SHOW_CREATE_TABLE_MESSAGE
 
 
 def test_show_tables_comment_near_miss_matches_its_uncommented_answer(spark: ReparkSession) -> None:
