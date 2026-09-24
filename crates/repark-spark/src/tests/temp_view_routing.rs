@@ -236,6 +236,7 @@ impl repark_core::TempViewSession for StubTempViews {
     }
 
     fn resolve_temp_view_home_ref(&self, name: &str) -> repark_common::Result<Option<Vec<String>>> {
+        let name = name.trim_matches('"');
         Ok(self
             .existing
             .iter()
@@ -417,4 +418,142 @@ async fn temp_view_write_body_refuses_before_registering() {
         "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601"
     );
     assert!(stub.registered().is_empty());
+}
+
+impl StubTempViews {
+    fn dropped(&self) -> Vec<String> {
+        self.dropped
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+}
+
+async fn string_rows(frame: datafusion::prelude::DataFrame) -> Vec<Vec<Option<String>>> {
+    let batches = frame.collect().await.expect("collect frame");
+    let mut rows = Vec::new();
+    for batch in &batches {
+        for row in 0..batch.num_rows() {
+            let cells = batch
+                .columns()
+                .iter()
+                .map(|column| {
+                    if column.is_null(row) {
+                        return None;
+                    }
+                    Some(
+                        datafusion::arrow::util::display::array_value_to_string(column, row)
+                            .expect("render cell"),
+                    )
+                })
+                .collect();
+            rows.push(cells);
+        }
+    }
+    rows
+}
+
+#[tokio::test]
+async fn bare_drop_view_of_a_temp_name_drops_the_temp_view() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let stub = StubTempViews::with_existing(&["src"]);
+    run_with_session(&ctx, &catalogs, "DROP VIEW src", &stub)
+        .await
+        .expect("a temp view drop succeeds");
+    assert_eq!(stub.dropped(), vec!["\"src\"".to_string()]);
+    run_with_session(
+        &ctx,
+        &catalogs,
+        "DROP VIEW `datafusion`.`public`.`src`",
+        &stub,
+    )
+    .await
+    .expect("the home-qualified spelling drops the temp view");
+    assert_eq!(stub.dropped().len(), 2);
+}
+
+#[tokio::test]
+async fn qualified_drop_view_falls_through_to_the_catalog() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let stub = StubTempViews::with_existing(&["src"]);
+    let error = run_with_session(&ctx, &catalogs, "DROP VIEW ice.sales.src", &stub)
+        .await
+        .expect_err("the catalog has no view src");
+    let DataFusionError::Plan(message) = error else {
+        panic!("expected Plan, got {error:?}");
+    };
+    assert!(message.starts_with("[VIEW_NOT_FOUND] The view sales.src cannot be found."));
+    assert!(stub.dropped().is_empty());
+    let error = run_with_session(&ctx, &catalogs, "DROP VIEW missing_view", &stub)
+        .await
+        .expect_err("a bare non-temp name is the catalog drop");
+    assert!(matches!(error, DataFusionError::Plan(_)), "{error:?}");
+    assert!(stub.dropped().is_empty());
+}
+
+#[tokio::test]
+async fn describe_of_a_temp_view_answers_null_comments() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let stub = StubTempViews::with_existing(&["src"]);
+    for sql in ["DESCRIBE src", "DESCRIBE TABLE EXTENDED src"] {
+        let frame = run_with_session(&ctx, &catalogs, sql, &stub)
+            .await
+            .expect("DESCRIBE of a temp view answers");
+        let schema = frame.schema().as_arrow().clone();
+        assert!(schema.field(2).is_nullable(), "{sql}");
+        assert_eq!(
+            string_rows(frame).await,
+            vec![
+                vec![Some("id".to_string()), Some("int".to_string()), None],
+                vec![Some("name".to_string()), Some("string".to_string()), None],
+            ],
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn show_views_appends_temp_rows_after_catalog_rows() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.cv AS SELECT * FROM src",
+    )
+    .await
+    .expect("catalog view")
+    .collect()
+    .await
+    .expect("collect create view");
+    let stub = StubTempViews::with_existing(&["tv", "atv"]);
+    let frame = run_with_session(&ctx, &catalogs, "SHOW VIEWS IN ice.sales", &stub)
+        .await
+        .expect("SHOW VIEWS answers");
+    assert_eq!(
+        string_rows(frame).await,
+        vec![
+            vec![
+                Some("sales".into()),
+                Some("cv".into()),
+                Some("false".into())
+            ],
+            vec![Some(String::new()), Some("atv".into()), Some("true".into())],
+            vec![Some(String::new()), Some("tv".into()), Some("true".into())],
+        ]
+    );
+    let frame = run_with_session(&ctx, &catalogs, "SHOW VIEWS LIKE 't*'", &stub)
+        .await
+        .expect("session-scope SHOW VIEWS answers");
+    assert_eq!(
+        string_rows(frame).await,
+        vec![vec![
+            Some(String::new()),
+            Some("tv".into()),
+            Some("true".into())
+        ]]
+    );
 }

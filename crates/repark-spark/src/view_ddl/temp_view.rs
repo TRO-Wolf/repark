@@ -120,7 +120,12 @@ pub(crate) async fn replanning_temp_view(
     )
     .await?;
     let references = direct_temp_view_references(frame.logical_plan())?;
-    let dependencies = temp_home_dependencies(frame.logical_plan(), &definition.home)?;
+    let mut dependencies = temp_home_dependencies(frame.logical_plan(), &definition.home)?;
+    for reference in &references {
+        if !dependencies.contains(reference) {
+            dependencies.push(reference.clone());
+        }
+    }
     let temp_homes = captured
         .into_inner()
         .unwrap_or_else(PoisonError::into_inner);
