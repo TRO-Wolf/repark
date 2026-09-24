@@ -26,7 +26,20 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   failing `table_exists`, `view_exists`, `rename_view` and `update_view`.
 - `alter_view_routing.rs` — ALTER VIEW pins viewless catalog refusals, error propagation, and property update counts. `alter_view_bare_name_uses_session_defaults_and_commits_once` pins one bare SET commit after USE; `view_create_drop_and_write_guard_complete_bare_names_from_use` pins CREATE, DROP, and the exact Plan variant and text of the write guard after USE. The four write-route tests pin bare and two-part view refusals against the same three-part Plan text, with bare table controls and committed rows. The empty-namespace test pins the bare ALTER VIEW Plan text, unchanged properties, and the write guard's `Ok(())` fallthrough. **r2b (2026-09-23):** every error pin is variant plus the full text with `==` (`VIEW_V_NOT_FOUND` for all three write legs; the injected External errors as `External error: Unexpected => injected … failure`). New branch pins: unknown catalog and four-part names for ALTER source, RENAME target and DROP; an empty current namespace refusing CREATE, DROP and a bare RENAME target; one-part SHOW VIEWS IN after USE; the SQL-reachable commit error (`version.history.num-entries`=-1); `update_view`/`rename_view` failures propagating for SET, UNSET and RENAME; UNSET's missing-key refusal at the router with zero updates; a backtick-quoted verb not matching; UNSET's non-key token refusal.
 - `view_use_resolution.rs` — **IPI-40 PR3 r2b (2026-09-23):** USE resolution per view entry point on the engine: bare and two-part ALTER VIEW SET/UNSET/RENAME, two-part CREATE and DROP after `USE ice`, and SHOW VIEWS IN with a one-part namespace after USE and an explicit `cat.ns` under a different current catalog. Each is killed by reverting its own call site to DataFusion's `ctx` defaults.
-- `show_tblproperties_routing.rs` — SHOW TBLPROPERTIES pins the complete view row set, warehouse location, Arrow schema, viewless catalog fallback, and error routing. `bare_name_completes_from_use_session_defaults` pins the same rows for a bare name after `use_ddl::set_session_defaults(ice, sales)`; it goes red if completion reads DataFusion's `default_catalog`.
+- `show_tblproperties_routing.rs` — SHOW TBLPROPERTIES pins the complete view row set, warehouse location, Arrow schema, viewless catalog fallback, and error routing. `bare_name_completes_from_use_session_defaults` pins the same rows for a bare name after `use_ddl::set_session_defaults(ice, sales)`; it goes red if completion reads DataFusion's `default_catalog`. `commented_view_hides_comment_in_listing_and_key_lookup` (PR5 r2) pins a commented view's full listing without `comment` and the `('comment')` miss row.
+- `show_create_view_routing.rs` — **IPI-40 PR5 (2026-09-24, V-SHOW-CREATE):** `SHOW CREATE
+  TABLE` on a view through the router. It pins the v1 and v2 texts, including the Arrow schema
+  and the metadata location. It pins bare and two-part names after USE, the stored body
+  verbatim (a bare `t` stays unqualified) and backslash-escaped quotes in a column doc and a
+  view comment. Near misses keep the answers of main d4caca39, whose view arm is `Ok(true) => None`
+  (`/tmp/xb-views5/target/probe5/r5/m01-main-equivalence.log`): `AS SERDE` on a view (the `Diagnostic`-wrapped
+  parser error at column 32), and a bare name shadowed by a session table (the
+  `information_schema` refusal). `load_view` returning `ViewNotFound` or `FeatureUnsupported`
+  answers the full `TABLE_OR_VIEW_NOT_FOUND` text for `fault`. Any other load failure, and a
+  `view_exists` failure (pinned at `try_show_create_intercept` and through the router), keeps
+  its Iceberg kind with the full public `External error: …` text. A view with no SQL
+  representation (created through the catalog API) and an unregistered catalog passed to
+  `execute_show_create_view` each pin their complete `Plan` text. pins: ice-views-1/C-017
 - `viewless_catalog.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** the A-9 SQL-door
   battery: `test_views_refuse_on_glue_and_s3tables` drives CREATE, CREATE OR
   REPLACE (over a missing name and over an existing table) and SHOW VIEWS=[]
@@ -1647,8 +1660,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   NULL / backticked columns, a backticked table name, redaction, a `USE`-completed bare name,
   typed `AS SERDE`, missing-table, bare, four-part-name, malformed-quote, trailing-token, and
   invalid-`AS` refusals; every parse refusal asserts the `DataFusionError::SQL` parser variant,
-  while analysis refusals assert `DataFusionError::Plan`, with the full measured text. Near
-  misses preserve the current view-target and SHOW CREATE outcomes. SHOW TABLES and SHOW
+  while analysis refusals assert `DataFusionError::Plan`, with the full measured text. A view
+  target answers its `CREATE VIEW` text (`show_create_table_on_a_view_answers_the_view_text`,
+  IPI-40 PR5); `SHOW CREATE VIEW` keeps its current refusal. SHOW TABLES and SHOW
   COLUMNS compare complete Spark rows and Arrow schemas; SHOW TBLPROPERTIES keeps its pinned refusal.
   DESCRIBE EXTENDED pins its complete Arrow schema, full column-section triples, the fresh-table
   `Table Properties` triple, and the table `Comment` triple. The detail rows `Name`, `Type`,
