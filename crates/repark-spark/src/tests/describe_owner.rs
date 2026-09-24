@@ -302,6 +302,38 @@ async fn identity_partition_rows_carry_the_source_comment_in_spec_order() {
 }
 
 #[tokio::test]
+async fn identity_partition_rows_quote_only_names_that_need_quoting() {
+    let warehouse = TempDir::new().expect("warehouse must create");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    execute_statement(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.`we ird t` (id BIGINT, `we ird` STRING) USING iceberg PARTITIONED BY (`we ird`, id)",
+    )
+    .await;
+
+    assert_eq!(
+        describe_rows(&ctx, &catalogs, "DESCRIBE ice.sales.`we ird t`").await,
+        vec![
+            ("id".to_string(), "bigint".to_string(), None),
+            ("we ird".to_string(), "string".to_string(), None),
+            (
+                "# Partition Information".to_string(),
+                String::new(),
+                Some(String::new()),
+            ),
+            (
+                "# col_name".to_string(),
+                "data_type".to_string(),
+                Some("comment".to_string()),
+            ),
+            ("`we ird`".to_string(), "string".to_string(), None),
+            ("id".to_string(), "bigint".to_string(), None),
+        ]
+    );
+}
+
+#[tokio::test]
 async fn non_identity_and_unpartitioned_describe_sections_keep_existing_shapes() {
     let warehouse = TempDir::new().expect("warehouse must create");
     let (ctx, catalogs) = setup(&warehouse).await;

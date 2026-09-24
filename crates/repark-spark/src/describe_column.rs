@@ -282,7 +282,7 @@ pub(crate) fn describe_partition_section(
             let arrow_type =
                 iceberg::arrow::type_to_arrow_type(&source.field_type).map_err(iceberg_err)?;
             rows.push((
-                source.name.clone(),
+                crate::describe_show::quote_namespace_name_if_needed(&source.name),
                 spark_ddl_type_name(&arrow_type),
                 source.doc.clone(),
             ));
