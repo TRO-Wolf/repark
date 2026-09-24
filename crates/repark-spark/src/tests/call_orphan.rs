@@ -899,7 +899,7 @@ async fn call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way() {
 }
 
 #[test]
-fn call_remove_orphan_files_qualifies_only_a_bare_absolute_path() {
+fn call_remove_orphan_files_qualifies_only_a_location_starting_with_slash() {
     use crate::call::remove_orphan_files::qualify_local_path;
     assert_eq!(qualify_local_path("/tmp/a"), "file:/tmp/a");
     for unchanged in [
@@ -909,6 +909,8 @@ fn call_remove_orphan_files_qualifies_only_a_bare_absolute_path() {
         "memory:/a",
         "a/relative",
         "",
+        "C:\\tmp\\a",
+        "C:/tmp/a",
     ] {
         assert_eq!(qualify_local_path(unchanged), unchanged);
     }

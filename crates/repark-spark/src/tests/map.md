@@ -1021,9 +1021,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   equality-delete pin exists here.
   pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
-  **R5 (2026-09-24):** `call_remove_orphan_files_qualifies_only_a_bare_absolute_path` pins
+  **R5 (2026-09-24):** `call_remove_orphan_files_qualifies_only_a_location_starting_with_slash` pins
   `/tmp/a` to `file:/tmp/a` and its near misses (`file:/`, `file:///`, `s3://`, `memory:/`,
-  relative, empty) unchanged; `call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`
+  relative, empty, `C:\tmp\a`, `C:/tmp/a`) unchanged; `call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`
   pins the listing output `file:<path>` with the orphan deleted from disk;
   `call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified` pins the view
   branch's unqualified output. The listing assertions in `call_orphan_ancestor.rs`,

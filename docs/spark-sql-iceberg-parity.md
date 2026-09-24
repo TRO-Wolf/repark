@@ -7015,12 +7015,13 @@ the pin rather than obeying it.
   `CALL <catalog>.system.remove_orphan_files(table => …)`
   now sweeps that directory. The planted 10-day-old `data/orphan-file.parquet` comes back as one
   `orphan_file_location` row and is deleted. A 1-day-old orphan gives zero rows and is kept.
-  Since 2026-09-24 the listing path (no `file_list_view`) prints an orphan whose location is a
-  scheme-less absolute path as `file:<path>`, the way Java's Hadoop listing qualifies a local
-  file, and still deletes the unqualified path
+  Since 2026-09-24 the listing path (no `file_list_view`) prints an orphan whose location
+  starts with `/` as `file:<path>`, the way Java's Hadoop listing qualifies a local file, and
+  still deletes the unqualified path
   (`call_orphan.rs::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`);
-  a location that already carries a scheme, or is not absolute, prints unchanged
-  (`call_orphan.rs::call_remove_orphan_files_qualifies_only_a_bare_absolute_path`), and the
+  every other location prints unchanged, including one that already carries a scheme, a
+  relative path and a Windows drive path such as `C:\…` or `C:/…`
+  (`call_orphan.rs::call_remove_orphan_files_qualifies_only_a_location_starting_with_slash`), and the
   `file_list_view` path prints the view's spelling unqualified
   (`call_orphan.rs::call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified`).
   What Spark prints for a table whose location is spelled `file:///` is not measured.
@@ -7108,7 +7109,7 @@ the pin rather than obeying it.
   malformed-view, NULL-timestamp, mode, `equal_schemes`, failed-delete and policy-scope pins),
   `crates/repark-spark/src/tests/call_orphan.rs::call_orphan_shared_ctas_root_rule`,
   `::call_remove_orphan_files_listing_path_table_location_normal_form_rule`,
-  `::call_remove_orphan_files_qualifies_only_a_bare_absolute_path`,
+  `::call_remove_orphan_files_qualifies_only_a_location_starting_with_slash`,
   `::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path` and
   `::call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified`, and
   `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_memory_table_but_never_the_shared_root`

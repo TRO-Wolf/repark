@@ -1,6 +1,6 @@
 > **Errata (2026-09-24, R5).** The C-004 `remove_orphan_files` output row now reads
 > `[{orphan_file_location: file:<table>/data/ds=2026-09-13/orphan-000.parquet}]`: the listing
-> path prints a scheme-less absolute orphan path as `file:<path>`, the Hadoop-listing form.
+> path prints an orphan location that starts with `/` as `file:<path>`, the Hadoop-listing form.
 > Red test: `python/repark/tests/test_ice_spark_table_1.py::test_spark_created_fixture_adopted_merged_and_maintained`.
 
 # Unit ledger — ICE-SPARK-TABLE-1 · RePark writes into a Spark-created table — step 1
