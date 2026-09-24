@@ -1,6 +1,7 @@
 //! Pins the destructive `CALL system.remove_orphan_files` surface and its safety defaults.
 
 use super::super::*;
+use super::call_orphan_scope::{call_rows, ctas, fallback_session, plant, register_file_list};
 use super::common::*;
 
 /// The procedure executes with an explicit cutoff and returns its result schema.
@@ -895,4 +896,56 @@ async fn call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way() {
         );
         assert_orphan_s3_tables_refusal(&err, "ns.t");
     }
+}
+
+#[test]
+fn call_remove_orphan_files_qualifies_only_a_bare_absolute_path() {
+    use crate::call::remove_orphan_files::qualify_local_path;
+    assert_eq!(qualify_local_path("/tmp/a"), "file:/tmp/a");
+    for unchanged in [
+        "file:/tmp/a",
+        "file:///tmp/a",
+        "s3://b/a",
+        "memory:/a",
+        "a/relative",
+        "",
+    ] {
+        assert_eq!(qualify_local_path(unchanged), unchanged);
+    }
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.t', dry_run => false)",
+    )
+    .await
+    .expect("armed listing");
+    assert_eq!(listed, vec![format!("file:{}", orphan.display())]);
+    assert!(!orphan.exists());
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+    register_file_list(&session, &[(orphan.display().to_string(), 0)]).await;
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(\
+             table => 'ns.t', dry_run => false, file_list_view => 'v')",
+    )
+    .await
+    .expect("armed view sweep");
+    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert!(!orphan.exists());
 }
