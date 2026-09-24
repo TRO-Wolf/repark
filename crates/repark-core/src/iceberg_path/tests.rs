@@ -639,3 +639,76 @@ async fn file_single_slash_missing_location_names_the_supplied_argument() {
     assert!(matches!(error, Error::Analysis(_)), "{error:?}");
     assert!(error.to_string().contains(&argument), "{error}");
 }
+
+#[test]
+fn v_form_versions_beyond_java_int_are_not_candidates() {
+    assert_eq!(metadata_file_version("v2147483648.metadata.json"), None);
+    assert_eq!(
+        metadata_file_version("v2147483647.metadata.json"),
+        Some(2_147_483_647)
+    );
+    let files = vec![
+        info("/w/t/metadata/v1.metadata.json"),
+        info("/w/t/metadata/v2.metadata.json"),
+        info("/w/t/metadata/v2147483648.metadata.json"),
+    ];
+    assert_eq!(
+        latest_metadata_location(&files),
+        Some("/w/t/metadata/v2.metadata.json")
+    );
+}
+
+#[test]
+fn v_form_java_int_max_is_the_highest_candidate() {
+    let files = vec![
+        info("/w/t/metadata/v1.metadata.json"),
+        info("/w/t/metadata/v2.metadata.json"),
+        info("/w/t/metadata/v2147483647.metadata.json"),
+        info("/w/t/metadata/v2147483648.metadata.json"),
+    ];
+    assert_eq!(
+        latest_metadata_location(&files),
+        Some("/w/t/metadata/v2147483647.metadata.json")
+    );
+}
+
+#[test]
+fn v_form_u64_overflow_stays_ignored() {
+    assert_eq!(
+        metadata_file_version("v99999999999999999999.metadata.json"),
+        None
+    );
+    let files = vec![
+        info("/w/t/metadata/v2.metadata.json"),
+        info("/w/t/metadata/v99999999999999999999.metadata.json"),
+    ];
+    assert_eq!(
+        latest_metadata_location(&files),
+        Some("/w/t/metadata/v2.metadata.json")
+    );
+}
+
+#[tokio::test]
+async fn hint_beyond_java_int_falls_back_to_listing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let metadata = dir.path().join("metadata");
+    std::fs::create_dir_all(&metadata).expect("mkdir");
+    std::fs::write(metadata.join("v1.metadata.json"), b"{}").expect("write");
+    std::fs::write(metadata.join("v2.metadata.json"), b"{}").expect("write");
+    std::fs::write(metadata.join("version-hint.text"), b"2147483648").expect("write");
+    let root = dir.path().to_string_lossy().to_string();
+    let file_io = local_file_io(&root);
+    let resolved = resolve_supplied(&file_io, &root).await.expect("resolve");
+    assert_eq!(resolved, format!("{root}/metadata/v2.metadata.json"));
+}
+
+#[tokio::test]
+async fn relative_file_path_keeps_one_of_two_trailing_slashes() {
+    let (_dir, root) = authority_table_root();
+    let argument = format!("file:{}", root.trim_start_matches('/'));
+    let message = file_relative_refusal(&format!("{argument}//")).await;
+    assert_eq!(
+        message,
+        format!("java.net.URISyntaxException: Relative path in absolute URI: {argument}/")
+    );
+}

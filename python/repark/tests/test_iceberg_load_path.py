@@ -12,6 +12,7 @@ pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 from __future__ import annotations
 
 import re
+import shutil
 from pathlib import Path
 
 import pyarrow as pa
@@ -85,15 +86,23 @@ def _sorted_rows(table: pa.Table) -> list[list[object]]:
 
 
 def _registration_inventory(spark: ReparkSession) -> dict[str, object]:
-    """Every catalog, namespace, table and temp view the session can list."""
+    """Every catalog, its namespaces and their tables, and every temp view the session lists."""
+    current = spark.catalog.currentCatalog()
     catalogs = sorted(c.name for c in spark.catalog.listCatalogs())
-    namespaces = sorted(d.name for d in spark.catalog.listDatabases())
-    tables = {ns: sorted(t.name for t in spark.catalog.listTables(ns)) for ns in namespaces}
+    per_catalog: dict[str, dict[str, list[str]]] = {}
+    try:
+        for catalog in catalogs:
+            spark.catalog.setCurrentCatalog(catalog)
+            namespaces = sorted(d.name for d in spark.catalog.listDatabases())
+            per_catalog[catalog] = {
+                ns: sorted(t.name for t in spark.catalog.listTables(ns)) for ns in namespaces
+            }
+    finally:
+        spark.catalog.setCurrentCatalog(current)
     temp_views = sorted(t.name for t in spark.catalog.listTables())
     return {
         "catalogs": catalogs,
-        "namespaces": namespaces,
-        "tables": tables,
+        "tables": per_catalog,
         "temp_views": temp_views,
         "temp_view_names": sorted(spark.list_temp_view_names()),
     }
@@ -376,3 +385,30 @@ def test_load_file_relative_location_refuses_uri_syntax(
     assert str(raised.value) == (
         f"java.net.URISyntaxException: Relative path in absolute URI: {argument}"
     )
+
+
+def test_load_file_relative_location_two_trailing_slashes_keeps_one(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``load("file:tmp/...//")`` refuses naming the argument with exactly one trailing ``/``.
+
+    pins: dfload-1/C-009
+    """
+    argument = "file:" + str(loaded["table_dir"]).lstrip("/")
+    with pytest.raises(IllegalArgumentException) as raised:
+        spark.read.format("iceberg").load(f"{argument}//")
+    assert str(raised.value) == (
+        f"java.net.URISyntaxException: Relative path in absolute URI: {argument}/"
+    )
+
+
+def test_load_v_form_beyond_java_int_is_not_a_candidate(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """A ``v2147483648.metadata.json`` copy of the create snapshot never wins the listing.
+
+    pins: dfload-1/C-010
+    """
+    table_dir = loaded["table_dir"]
+    shutil.copy(loaded["metadata_files"][0], table_dir / "metadata" / "v2147483648.metadata.json")
+    _assert_current(spark.read.format("iceberg").load(str(table_dir)))
