@@ -12,6 +12,13 @@ async fn resolve_supplied(file_io: &FileIO, path: &str) -> Result<String> {
     resolve_metadata_location(file_io, path, path).await
 }
 
+fn no_metadata_message(path: &str) -> String {
+    format!(
+        "no Iceberg table found at '{path}': expected metadata files under \
+         '<location>/metadata' or a '<location>/metadata/version-hint.text'"
+    )
+}
+
 fn local_file_io(root: &str) -> FileIO {
     repark_iceberg::catalog::file_io_for_location(root, &HashMap::<String, String>::new())
         .expect("file_io")
@@ -146,9 +153,13 @@ async fn hinted_metadata_file_must_exist() {
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)));
-    let message = error.to_string();
-    assert!(message.contains(&root));
-    assert!(message.contains("v7.metadata.json"));
+    assert_eq!(
+        error.to_string(),
+        format!(
+            "no Iceberg table found at '{root}': version-hint.text names \
+             'v7.metadata.json', which does not exist"
+        )
+    );
 }
 
 #[tokio::test]
@@ -199,7 +210,7 @@ async fn empty_metadata_dir_reports_the_supplied_path() {
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)));
-    assert!(error.to_string().contains(&root));
+    assert_eq!(error.to_string(), no_metadata_message(&root));
 }
 
 #[tokio::test]
@@ -211,7 +222,7 @@ async fn missing_location_reports_the_supplied_path() {
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)));
-    assert!(error.to_string().contains(&root));
+    assert_eq!(error.to_string(), no_metadata_message(&root));
 }
 
 #[test]
@@ -335,7 +346,7 @@ async fn only_nested_metadata_names_the_supplied_path() {
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)));
-    assert!(error.to_string().contains(&root));
+    assert_eq!(error.to_string(), no_metadata_message(&root));
 }
 
 #[tokio::test]
@@ -637,7 +648,7 @@ async fn file_single_slash_missing_location_names_the_supplied_argument() {
         .await
         .expect_err("must refuse");
     assert!(matches!(error, Error::Analysis(_)), "{error:?}");
-    assert!(error.to_string().contains(&argument), "{error}");
+    assert_eq!(error.to_string(), no_metadata_message(&argument));
 }
 
 #[test]
