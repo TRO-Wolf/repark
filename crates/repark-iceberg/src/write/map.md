@@ -1153,3 +1153,14 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   before the merge. The residue is atomicity: a failure between the two leaves a
   widened schema and no rows, which is Spark's behaviour too.
   pins: ipi-19-56-37-schema-evolution-write/C-001, C-003, C-005
+
+## U6 WRITE-REFUSALS (2026-09-24) — MERGE type changes
+
+- `schema_evolution.rs` — `evolve_merge_schema` is the MERGE seam. For each
+  source column whose primitive type differs from the matched table column, it
+  issues the fork's `update_column(<table name>, <source type>)`, then the union.
+  This is what Spark's `MERGE WITH SCHEMA EVOLUTION` asks Iceberg to do, so the
+  fork's promotion rule answers: `int → long` widens, `long → int` refuses.
+  `type_change_err` maps the fork's `DataInvalid` `Cannot change column type: …`
+  to `IllegalArgumentMarker`, on apply and on commit, for both seams.
+  pins: u6-write-refusals/C-006, C-007

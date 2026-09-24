@@ -547,14 +547,23 @@ def test_sql_set_carries_the_merge_schema_conf(spark: ReparkSession) -> None:
         spark.conf.unset(MERGE_SCHEMA_CONF)
 
 
-def test_positional_insert_values_never_evolves(spark: ReparkSession) -> None:
-    """pins: ipi-19-56-37-schema-evolution-write/C-013"""
+def test_positional_insert_values_follows_the_property(spark: ReparkSession) -> None:
+    """pins: u6-write-refusals/C-009"""
     table = _create(spark, "pos_values", accept_any=True)
+    plain = _create(spark, "pos_values_plain")
     spark.conf.set(MERGE_SCHEMA_CONF, "true")
     try:
+        spark.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x')")
         with pytest.raises(AnalysisException) as caught:
-            spark.sql(f"INSERT INTO {table} VALUES (1, 'a', 'x', 5)")
+            spark.sql(f"INSERT INTO {plain} VALUES (9, 'z')")
     finally:
         spark.conf.unset(MERGE_SCHEMA_CONF)
-    assert "Field col1 not found in source schema" not in str(caught.value)
-    assert _schema(spark, table) == BASE_SCHEMA
+    assert _schema(spark, table) == [
+        *BASE_SCHEMA,
+        ("col1", "int32", True),
+        ("col2", "string", True),
+        ("col3", "string", True),
+    ]
+    assert caught.value.getCondition() == "INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS"
+    assert caught.value.getSqlState() == "21S01"
+    assert _schema(spark, plain) == BASE_SCHEMA

@@ -40,6 +40,11 @@ impl StatementWriteOptions {
         })
     }
 
+    #[must_use]
+    pub fn carries_only_merge_schema(&self) -> bool {
+        self.raw.iter().all(|(key, _)| is_merge_schema_key(key))
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub fn refuse_if_non_empty(&self, context: &str) -> Result<()> {
         let keys: Vec<&str> = self

@@ -2068,3 +2068,49 @@ The FNP-8 aggregate literal-width test inspects execution batches for values and
 Its optimized physical field is not the public Arrow schema. Public aggregate nullability is
 pinned through Column, SQL, and F.expr in `test_fnp_8_sql_door.py` and the recorded/live oracle
 matrix; those exports declare the analyzed logical schema.
+
+## U6 WRITE-REFUSALS (2026-09-24)
+
+- `accept_any_refusals.rs` — the Spark door on accept-any-schema tables and
+  `MERGE WITH SCHEMA EVOLUTION`: every refusal pinned as
+  `repark_common::Error::IllegalArgument` with the exact message, the near misses
+  pinned on schema and rows. Sources are DataFusion views, because this door has
+  no temporary-view home.
+  pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `accept_any_refusals.rs`, critic r1 remediation (2026-09-24): the spelling of an
+  added column across positional, `BY NAME`, quoted, `UNION`, reference, literal
+  and overwrite sources, plus the mixed-case match that adds nothing (C-010).
+  Also the `BY NAME` overwrite with an extra column, both arms (C-011); an
+  upper-case unknown alias on four doors (C-012); and the repeated-name refusals,
+  where an exact repeat pins `repark_common::Error::Iceberg` by message suffix
+  (C-013). `REPLACE INTO` is never written (C-014).
+  pins: u6-write-refusals/C-010, C-011, C-012, C-013, C-014
+- `accept_any_routing.rs` — `FlakyLoadCatalog` wraps the `ice` memory catalog
+  under the name `flaky` and fails its next `load_table` once. The routing
+  check must surface that failure. Under the old `.ok()` fallback, the
+  positional path reloaded the table and wrote the row. A missing table keeps
+  the positional `not found` answer.
+  pins: u6-write-refusals/C-014
+- `accept_any_naming.rs` (critic r2 remediation, 2026-09-24) — per-item naming on
+  the view `hsrc` (`common::setup` already owns `src`). Under the conf, an added
+  column is named from the statement for the critic's h1, h2 and h9 and for
+  star-over-derived, CTE and `VALUES` shapes (C-015). Without it, the measured
+  expression renderings refuse `Field <Spark name> not found in source schema`,
+  and a plain table's `BY NAME` names `upper(data)` in `EXTRA_COLUMNS` (C-016).
+  An underivable name refuses `NotImplemented` and leaves schema and rows
+  alone (C-017). An empty positional or `BY NAME` overwrite wipes, adding
+  `NewC` first under the conf (C-018). The helpers it shares are `pub(super)`
+  in `accept_any_refusals.rs`.
+  pins: u6-write-refusals/C-015, C-016, C-017, C-018
+- `accept_any_naming.rs`, critic r3 disposition (2026-09-24,
+  `target/probe-u6-r3fix/spark.out`):
+  - Column-alias lists name the added column and its row `[9, NULL, NULL, z]`:
+    `WITH c(id, NewC)`, `(SELECT 9, 'z') AS v(id, NewC)`, `VALUES … AS v(id,
+    NewC)` and `c AS x(id, Other)`. Without the conf the same four refuse
+    `Field NewC …` / `Field Other …` (C-015, C-016).
+  - `SELECT *, *` and `hsrc.*, hsrc.*` refuse `Invalid schema: multiple fields
+    for name id: 0 and 2` on append, `BY NAME` and overwrite, with and without
+    the conf (C-013).
+  - A typed-suffix refusal never quotes the internal marker (C-017).
+  - Plain-table arms of the empty `BY NAME` overwrite wipe (C-018).
+  pins: u6-write-refusals/C-013, C-015, C-016, C-017, C-018

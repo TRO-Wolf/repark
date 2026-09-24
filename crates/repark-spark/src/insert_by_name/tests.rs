@@ -1,4 +1,5 @@
 use super::*;
+use datafusion::sql::sqlparser::ast::SetExpr;
 
 fn targets() -> Vec<String> {
     ["first_name", "last_name", "n"]
@@ -7,24 +8,34 @@ fn targets() -> Vec<String> {
         .collect()
 }
 
+fn source(display: &str, resolved: String, item: usize) -> SourceName {
+    SourceName {
+        display: display.to_string(),
+        column: resolved.clone(),
+        resolved,
+        item: Some(item),
+        underived: None,
+    }
+}
+
 fn named(names: &[&str]) -> Vec<SourceName> {
     names
         .iter()
-        .map(|name| SourceName {
-            display: (*name).to_string(),
-            resolved: (*name).to_ascii_lowercase(),
-        })
+        .enumerate()
+        .map(|(item, name)| source(name, name.to_ascii_lowercase(), item))
         .collect()
 }
 
 fn named_verbatim(names: &[&str]) -> Vec<SourceName> {
     names
         .iter()
-        .map(|name| SourceName {
-            display: (*name).to_string(),
-            resolved: (*name).to_string(),
-        })
+        .enumerate()
+        .map(|(item, name)| source(name, (*name).to_string(), item))
         .collect()
+}
+
+fn syntactic_source_names(source: &Query, case_sensitive: bool) -> Option<Vec<SourceName>> {
+    source_names::named_items(source_names::query_items(source, case_sensitive)?)
 }
 
 const TABLE: &str = "`sc`.`ns`.`bn`";
@@ -226,7 +237,8 @@ fn build_projection_sql_reorders_and_null_fills() {
             ]
         ),
         "SELECT `first_name` AS `first_name`, NULL AS `last_name`, `n` AS `n` FROM \
-         (SELECT last_name, first_name, n FROM s) AS _repark_by_name_src"
+         (SELECT last_name AS `last_name`, first_name AS `first_name`, n AS `n` FROM s) AS \
+         _repark_by_name_src"
     );
 }
 
@@ -369,4 +381,144 @@ fn parse_projection_query_round_trips() {
     )
     .expect("parses");
     assert!(matches!(query.body.as_ref(), SetExpr::Select(_)));
+}
+
+#[test]
+fn syntactic_names_use_the_spark_literal_spelling() {
+    let source = parse_query("SELECT 9, 'Z', 9 AS id, 1.50, 'q' AS cat");
+    let names = syntactic_source_names(&source, false).expect("syntactic");
+    assert_eq!(
+        names
+            .iter()
+            .map(|name| (name.display.as_str(), name.resolved.as_str()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("9", "9"),
+            ("Z", "z"),
+            ("id", "id"),
+            ("1.50", "1.50"),
+            ("cat", "cat")
+        ]
+    );
+}
+
+#[test]
+fn syntactic_names_decline_other_literals() {
+    let source = parse_query("SELECT 9, 1e3");
+    assert!(syntactic_source_names(&source, false).is_none());
+}
+
+#[test]
+fn source_from_clause_names_every_source_column() {
+    let source = parse_query("VALUES (1, 'a')");
+    assert_eq!(
+        source_from_clause(&source, &named(&["col1", "col2"])),
+        "FROM (VALUES (1, 'a')) AS _repark_by_name_src(`col1`, `col2`)"
+    );
+}
+
+#[test]
+fn source_from_clause_aliases_the_leftmost_select_with_the_resolved_names() {
+    let source = parse_query("SELECT 9, 'z' AS NewC UNION ALL SELECT 8, 'y'");
+    let names = syntactic_source_names(&source, false).expect("syntactic");
+    assert_eq!(
+        names
+            .iter()
+            .map(|name| (name.display.as_str(), name.resolved.as_str()))
+            .collect::<Vec<_>>(),
+        vec![("9", "9"), ("NewC", "newc")]
+    );
+    assert_eq!(
+        source_from_clause(&source, &names),
+        "FROM (SELECT 9 AS `9`, 'z' AS `newc` UNION ALL SELECT 8, 'y') AS _repark_by_name_src"
+    );
+}
+
+#[test]
+fn syntactic_names_decline_a_union_by_name() {
+    let source = parse_query("SELECT 9 AS id UNION ALL BY NAME SELECT 8 AS id");
+    assert!(syntactic_source_names(&source, false).is_none());
+}
+
+fn rendered(sql: &str) -> Vec<(String, Option<String>)> {
+    let source = parse_query(sql);
+    let items = source_names::query_items(&source, false).expect("items");
+    let planner: Vec<String> = (0..8).map(|index| format!("p{index}")).collect();
+    let width = items.len();
+    source_names::place(items, &planner[..width])
+        .expect("placed")
+        .into_iter()
+        .map(|name| (name.display, name.underived))
+        .collect()
+}
+
+#[test]
+fn unaliased_expressions_take_the_spark_rendering() {
+    assert_eq!(
+        rendered("SELECT upper(t.DATA), -1, id <> 1, a || 'x' || 'y' FROM t"),
+        vec![
+            ("upper(DATA)".to_string(), None),
+            ("-1".to_string(), None),
+            ("(NOT (id = 1))".to_string(), None),
+            ("concat(concat(a, x), y)".to_string(), None),
+        ]
+    );
+}
+
+#[test]
+fn an_expression_without_a_measured_rendering_stays_underived() {
+    assert_eq!(
+        rendered("SELECT ceil(1.2), upper(s.a), 1e3, 007 FROM t"),
+        vec![
+            ("p0".to_string(), Some("CEIL(1.2)".to_string())),
+            ("p1".to_string(), Some("upper(s.a)".to_string())),
+            ("p2".to_string(), Some("1e3".to_string())),
+            ("p3".to_string(), Some("007".to_string())),
+        ]
+    );
+}
+
+#[test]
+fn a_star_takes_the_planner_columns_between_the_statement_names() {
+    let source = parse_query("SELECT 'z' AS NewC, *, upper(data) FROM t");
+    let items = source_names::query_items(&source, false).expect("items");
+    let planner = ["newc", "id", "data", "upper(t.data)"].map(ToString::to_string);
+    let names = source_names::place(items, &planner).expect("placed");
+    assert_eq!(
+        names
+            .iter()
+            .map(|name| (
+                name.display.as_str(),
+                name.column.as_str(),
+                name.item,
+                name.underived.is_some()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("NewC", "newc", Some(0), false),
+            ("id", "id", Some(1), false),
+            ("data", "data", Some(1), false),
+            ("upper(data)", "upper(data)", Some(2), false),
+        ]
+    );
+    assert_eq!(
+        source_from_clause(&source, &names),
+        "FROM (SELECT 'z' AS `newc`, *, upper(data) AS `upper(data)` FROM t) AS \
+         _repark_by_name_src"
+    );
+}
+
+#[test]
+fn a_star_over_a_derived_table_takes_the_inner_statement_names() {
+    let source = parse_query("SELECT * FROM (SELECT 9 AS id, 'z' AS NewC) AS v");
+    let items = source_names::query_items(&source, false).expect("items");
+    let planner = ["id", "newc"].map(ToString::to_string);
+    let names = source_names::place(items, &planner).expect("placed");
+    assert_eq!(
+        names
+            .iter()
+            .map(|name| (name.display.as_str(), name.column.as_str()))
+            .collect::<Vec<_>>(),
+        vec![("id", "id"), ("NewC", "newc")]
+    );
 }

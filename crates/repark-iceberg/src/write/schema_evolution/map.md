@@ -19,3 +19,11 @@ that every schema-evolving write in RePark goes through.
   **The union adds no snapshot** — that is the fact the two-commit shape rests
   on, and it is pinned here rather than argued in prose.
   pins: ipi-19-56-37-schema-evolution-write/C-001, C-003, C-005
+
+## U6 WRITE-REFUSALS (2026-09-24)
+
+- `tests.rs` — `evolve_merge_schema` refuses narrowing and a non-promotable
+  change with the Java text as an `IllegalArgumentMarker` and leaves the table
+  unchanged; it widens a promotable column and adds the new one. The union's
+  own type conflict now refuses as an `IllegalArgumentMarker` too.
+  pins: u6-write-refusals/C-006, C-007, C-008

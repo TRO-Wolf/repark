@@ -1835,3 +1835,32 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   unparsable numeric suffix refuses `IllegalArgumentException` naming the selector, never
   table-not-found, and `branch_`/`tag_` behaviour is unchanged.
   pins: ice-metadata-cols-1/C-011, C-012, C-013, C-014
+
+## U6 WRITE-REFUSALS (2026-09-24) — by-name writes on accept-any-schema tables
+
+- `router.rs` — `execute_insert_routed` now receives every `INSERT`, overwrite
+  included, and first asks
+  `insert_by_name::evolution::routes_positional_by_name`. A positional append or
+  overwrite with no column list and no `PARTITION` clause, whose target is an
+  Iceberg table carrying `write.spark.accept-any-schema=true`, runs through
+  `execute_insert_by_name` as if it said `BY NAME`. Spark skips its output
+  resolution for such a table, so Iceberg resolves the write by name. A table
+  without the property keeps the positional path unchanged.
+- `write_options.rs` — `carries_only_merge_schema` says whether the statement's
+  options are all merge-schema keys. A positional INSERT with any other option
+  stays positional, because the by-name append refuses those options.
+  pins: u6-write-refusals/C-001, C-004
+- Critic r1 remediation (2026-09-24): `routes_positional_by_name` now returns
+  `Result<bool>`, and `execute_insert_routed` propagates it with `?`. A failed
+  table load now surfaces as the error instead of reading as "no property".
+  Before, the positional path could then reload the table and write
+  positionally. A tag selector, a missing table or a missing namespace still
+  keeps the positional path and its own answer. The `PARTITION (…)` and
+  `REPLACE INTO` exclusions are measured, and they are listed in residue R-3
+  of the ledger.
+  pins: u6-write-refusals/C-014
+- `insert_overwrite.rs`, critic r2 remediation (2026-09-24):
+  `assert_empty_overwrite_types_assignment_compatible` takes `null_assignable`.
+  The by-name door passes `true`, so a NULL-typed column no longer blocks the
+  wipe Spark performs. The positional door passes `false` and is unchanged.
+  pins: u6-write-refusals/C-018
