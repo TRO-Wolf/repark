@@ -1537,13 +1537,15 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
   surfaces (same reading as `ST-1`); the adapter keeps reading them rather than parsing
   `DESCRIBE` text, which is now Spark-shaped but still a diagnostic report, not a contract.
 
-#### DBT-TBLPROPS-1 — `SHOW TBLPROPERTIES` and `SHOW TABLE EXTENDED` refuse through the same path
+#### DBT-TBLPROPS-1 — table `SHOW TBLPROPERTIES` and `SHOW TABLE EXTENDED` refuse
 
-- **repark** — both `SHOW TBLPROPERTIES cat.ns.t` and `SHOW TABLE EXTENDED IN ns LIKE '*'` refuse
+- **repark** — on a table, both `SHOW TBLPROPERTIES cat.ns.t` and
+  `SHOW TABLE EXTENDED IN ns LIKE '*'` refuse
   with the **identical** message, `AnalysisException: Error during planning: SHOW [VARIABLE] is
   not supported unless information_schema is enabled`. They are one row rather than two because
-  the mechanism and the message are the same: neither reaches a `SHOW`-family implementation, and
-  both land on the `information_schema` guard. dbt's `fetch_tbl_properties` therefore has no
+  the mechanism and the message are the same for tables: both land on the
+  `information_schema` guard. A view answers `SHOW TBLPROPERTIES` (IPI-40 PR4;
+  D-VIEW-SHOWPROPS-1). dbt's table `fetch_tbl_properties` therefore has no
   source, and `list_relations_without_caching` has no first attempt — `dbt-spark` tries
   `SHOW TABLE EXTENDED` first and falls back to `SHOW TABLES IN`, which is refused separately by
   `ST-1`, so **both** of its listing paths are closed and the adapter overrides the Python method
@@ -1556,9 +1558,8 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 - **Pin** —
   `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]`
   and `[R-SHOW-TABLE-EXTENDED]`
-- **Rationale** — DECLARED, same family as `NS-1` / `ST-1`: RePark has no `SHOW`-family
-  information surface. The facade `Catalog` is the supported listing surface, and the adapter
-  uses it.
+- **Rationale** — DECLARED for tables, same family as `NS-1` / `ST-1`. The facade `Catalog`
+  is the supported table listing surface, and the adapter uses it.
 
 #### DBT-CREATENS-1 — namespace DDL refuses a one-part name
 
@@ -1635,6 +1636,22 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
   bridge cannot carry a condition beginning with `_LEGACY_`. The ALTER TABLE missing-target
   answer and SELECT missing-relation answer are engine-wide paths. View DDL does not own them,
   and this PR does not change them.
+
+#### D-VIEW-SHOWPROPS-1 — SHOW TBLPROPERTIES on a view: declared residues
+
+- **repark** — `SHOW TBLPROPERTIES sc.ns.v` returns the complete reserved and stored property set, with `location = <fixture warehouse>/ns/v`. The no-key pin compares the complete sorted row set because row order differs from Spark (R-PR4-ORDER). A missing three-part name, with or without a key, raises the complete compact `[TABLE_OR_VIEW_NOT_FOUND]` message with condition `TABLE_OR_VIEW_NOT_FOUND` and SQLSTATE `42P01`; its text has no Spark logical-plan tail. After `USE sc.ns`, a missing bare name (`SHOW TBLPROPERTIES nope ('k')`) raises ``AnalysisException: Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`nope` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01`` with condition `TABLE_OR_VIEW_NOT_FOUND` and SQLSTATE `42P01`; Spark's answer for a missing short name was not measured.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0 returns P-SP-ALL in this exact order: `[["location","<wh>/ns/v_t_p_sp_all"],["provider","iceberg"],["a","b"],["format-version","1"],["k","v"]]`; P-SP-ALL-NOPROPS: `[["location","<wh>/ns/v_t_p_sp_all_noprops"],["provider","iceberg"],["format-version","1"]]`; P-SP-AFTER-SET: `[["location","<wh>/ns/v_t_p_sp_after_set"],["provider","iceberg"],["j","u"],["format-version","1"],["k","v2"]]`. P-SP-MISSING-VIEW and P-SP-MISSING-VIEW-KEY raise `AnalysisException`, condition `TABLE_OR_VIEW_NOT_FOUND`, SQLSTATE `42P01`, with the full `msg` captured in the oracle JSON: the `Verify the spelling...` and `To tolerate...` lines are followed by `SQLSTATE: 42P01; line 1 pos 19;` and a `ShowTableProperties` / `UnresolvedTableOrView` plan tail. The location uses the same warehouse-relative `ns/<view>` shape in both engines; no location residue was measured. *(oracle: `/tmp/oc-worker/run27/ticks-xo-opus3/064/spark-showprops.json`, P-SP-ALL, P-SP-ALL-NOPROPS, P-SP-AFTER-SET, P-SP-BARE-NAME, P-SP-TWO-PART, P-SP-MISSING-VIEW, P-SP-MISSING-VIEW-KEY.)*
+  Exact Spark missing-name messages from the measured oracle:
+
+  ~~~json
+  {
+    "P-SP-MISSING-VIEW": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`nope_t_p_sp_missing_view` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01; line 1 pos 19;\n'ShowTableProperties [key#179, value#180]\n+- 'UnresolvedTableOrView [sc, ns, nope_t_p_sp_missing_view], SHOW TBLPROPERTIES, true",
+    "P-SP-MISSING-VIEW-KEY": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`nope_t_p_sp_missing_view_key` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01; line 1 pos 19;\n'ShowTableProperties k, [key#191, value#192]\n+- 'UnresolvedTableOrView [sc, ns, nope_t_p_sp_missing_view_key], SHOW TBLPROPERTIES, true"
+  }
+  ~~~
+- **EQUAL** — P-SP-BARE-NAME (`USE sc.ns; SHOW TBLPROPERTIES v ('k')`) and P-SP-TWO-PART (`USE sc; SHOW TBLPROPERTIES ns.v ('k')`) each return `[["k","v"]]` in both engines: short names complete from the `USE` session defaults.
+- **Pin** — `python/repark/tests/test_ice_views_4_showprops.py::test_no_key_lists_reserved_then_stored_sorted`, `::test_no_key_without_stored_properties_is_reserved_only`, `::test_alter_view_set_then_show_reflects_updates`, `::test_bare_and_two_part_names_follow_use`, `::test_missing_view_is_table_or_view_not_found`, and `::test_bare_missing_name_after_use_is_table_or_view_not_found`; `crates/repark-spark/src/tests/show_tblproperties_routing.rs::present_view_returns_reserved_and_stored_rows` and `::bare_name_completes_from_use_session_defaults`.
+- **Rationale** — DECLARED. Spark's no-key order follows Java map iteration and is not the property-set contract (R-PR4-ORDER). The missing-name condition and SQLSTATE agree; the compact RePark diagnostic omits Spark's plan context.
 
 ## 3. Identifier resolution (DECLARED)
 

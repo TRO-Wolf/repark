@@ -18,7 +18,8 @@ use repark_iceberg::view::{
 use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, table_or_view_not_found};
 use crate::describe_show::filter_pattern_matches;
 use crate::view_ddl::parse::{
-    AlterViewAction, AlterViewStatement, CreateViewStatement, ShowViewsStatement,
+    AlterViewAction, AlterViewStatement, CreateViewStatement, ShowTblpropertiesStatement,
+    ShowViewsStatement,
 };
 use crate::view_ddl::read::{plan_prepared_body, prepare_view_body_sql};
 
@@ -271,6 +272,129 @@ pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<Reco
     )?)
 }
 
+const SHOW_TBLPROPERTIES_RESERVED: [&str; 3] = ["location", "provider", "format-version"];
+
+pub(crate) async fn execute_show_tblproperties(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: ShowTblpropertiesStatement,
+) -> Option<Result<DataFrame>> {
+    let Ok((catalog, namespace_name, view_name)) = complete_view_name(catalogs, &statement.name)
+    else {
+        return None;
+    };
+    let Ok(handle) = catalog_handle(catalogs, &catalog) else {
+        return None;
+    };
+    let ident = TableIdent::new(
+        NamespaceIdent::new(namespace_name.clone()),
+        view_name.clone(),
+    );
+    let view = match handle.load_view(&ident).await {
+        Ok(view) => view,
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::ViewNotFound | ErrorKind::FeatureUnsupported
+            ) =>
+        {
+            return show_tblproperties_missing_error(
+                handle.as_ref(),
+                &catalog,
+                &namespace_name,
+                &view_name,
+                &ident,
+            )
+            .await
+            .map(Err);
+        }
+        Err(error) => return Some(Err(iceberg_err(error))),
+    };
+    let rows = show_tblproperties_rows(
+        &view,
+        statement.key.as_deref(),
+        &catalog,
+        &namespace_name,
+        &view_name,
+    );
+    Some(show_tblproperties_batch(&rows).and_then(|batch| ctx.read_batch(batch)))
+}
+
+async fn show_tblproperties_missing_error(
+    handle: &dyn Catalog,
+    catalog: &str,
+    namespace_name: &str,
+    view_name: &str,
+    ident: &TableIdent,
+) -> Option<DataFusionError> {
+    match handle.table_exists(ident).await {
+        Ok(true) => None,
+        Ok(false) => Some(table_or_view_not_found(catalog, namespace_name, view_name)),
+        Err(error) => Some(iceberg_err(error)),
+    }
+}
+
+fn show_tblproperties_rows(
+    view: &iceberg::view::View,
+    key: Option<&str>,
+    catalog: &str,
+    namespace_name: &str,
+    view_name: &str,
+) -> Vec<(String, String)> {
+    let metadata = view.metadata();
+    let mut rows = vec![
+        ("location".to_string(), metadata.location().to_string()),
+        ("provider".to_string(), "iceberg".to_string()),
+        (
+            "format-version".to_string(),
+            (metadata.format_version() as u8).to_string(),
+        ),
+    ];
+    let mut stored = metadata
+        .properties()
+        .iter()
+        .filter(|(name, _)| !SHOW_TBLPROPERTIES_RESERVED.contains(&name.as_str()))
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect::<Vec<_>>();
+    stored.sort();
+    rows.extend(stored);
+    match key {
+        Some(key) => {
+            let value = rows.iter().find(|(name, _)| name == key).map_or_else(
+                || {
+                    format!(
+                        "View {catalog}.{namespace_name}.{view_name} does not have \
+                         property: {key}"
+                    )
+                },
+                |(_, value)| value.clone(),
+            );
+            vec![(key.to_string(), value)]
+        }
+        None => rows,
+    }
+}
+
+pub(crate) fn show_tblproperties_batch(rows: &[(String, String)]) -> Result<RecordBatch> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("key", DataType::Utf8, false),
+        Field::new("value", DataType::Utf8, false),
+    ]));
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(StringArray::from(
+                rows.iter().map(|(key, _)| key.as_str()).collect::<Vec<_>>(),
+            )),
+            Arc::new(StringArray::from(
+                rows.iter()
+                    .map(|(_, value)| value.as_str())
+                    .collect::<Vec<_>>(),
+            )),
+        ],
+    )?)
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn refuse_view_write_target(
     _ctx: &SessionContext,
@@ -492,5 +616,68 @@ mod tests {
         let removals = select_unset_removals(&keys, true, &stored)
             .unwrap_or_else(|error| panic!("selection must succeed: {error}"));
         assert!(removals.is_empty());
+    }
+
+    #[test]
+    fn show_tblproperties_rows_reserve_then_sort_stored() {
+        let view = stored_view(stored(&[("k", "v"), ("a", "b"), ("provider", "fake")]));
+        let rows = show_tblproperties_rows(&view, None, "sc", "ns", "v");
+        assert_eq!(
+            rows,
+            vec![
+                ("location".to_string(), "memory://ns/v".to_string()),
+                ("provider".to_string(), "iceberg".to_string()),
+                ("format-version".to_string(), "1".to_string()),
+                ("a".to_string(), "b".to_string()),
+                ("k".to_string(), "v".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn show_tblproperties_rows_keyed_hits_and_misses() {
+        let view = stored_view(stored(&[("k", "v")]));
+        assert_eq!(
+            show_tblproperties_rows(&view, Some("provider"), "sc", "ns", "v"),
+            vec![("provider".to_string(), "iceberg".to_string())]
+        );
+        assert_eq!(
+            show_tblproperties_rows(&view, Some("K"), "sc", "ns", "v"),
+            vec![(
+                "K".to_string(),
+                "View sc.ns.v does not have property: K".to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn show_tblproperties_batch_carries_non_nullable_key_value_strings() {
+        let batch = show_tblproperties_batch(&[
+            ("k".to_string(), "v".to_string()),
+            ("a".to_string(), "b".to_string()),
+        ])
+        .unwrap_or_else(|error| panic!("batch must build: {error}"));
+        let schema = batch.schema();
+        assert_eq!(schema.fields().len(), 2);
+        for (field, expected) in schema.fields().iter().zip(["key", "value"]) {
+            assert_eq!(field.name(), expected);
+            assert_eq!(field.data_type(), &DataType::Utf8);
+            assert!(!field.is_nullable());
+        }
+        let keys = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap_or_else(|| panic!("key column must be Utf8"));
+        let values = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap_or_else(|| panic!("value column must be Utf8"));
+        assert_eq!(keys.iter().collect::<Vec<_>>(), vec![Some("k"), Some("a")]);
+        assert_eq!(
+            values.iter().collect::<Vec<_>>(),
+            vec![Some("v"), Some("b")]
+        );
     }
 }

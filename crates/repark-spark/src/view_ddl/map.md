@@ -46,6 +46,25 @@ service, and the wrapper-based read path that expands stored SQL per query.
   registered catalog and before `create_or_replace_view` — a bare-name-marked
   target is still a catalog write, and CREATE OR REPLACE shares this site —
   so the refusal precedes any viewless-catalog refusal.
+- `parse.rs` + `execute.rs` + the router arm — **PR4 (2026-09-22,
+  V-SHOW-TBLPROPERTIES):** `try_parse_show_tblproperties` (quoted, unquoted
+  and dotted keys; a quoted key ends at the string; a tail that tokenizes but
+  does not parse refuses with the parser's `Plan` text; a tail the tokenizer
+  rejects, such as an unclosed backtick, returns `None` and falls through to
+  the ordinary path, which answers the tokenizer error; on the Spark SQL
+  front door an unterminated quote is rejected earlier, by the literal
+  canonicalizer; other SHOW forms stay `None`),
+  the `try_preparse_intercepts` arm after `try_parse_alter_view` that falls
+  through on `None`, and `execute_show_tblproperties` /
+  `show_tblproperties_batch` (`key`/`value` rows, reserved
+  `location`/`provider`/`format-version` then sorted stored properties, keyed
+  misses answer Spark's sentence, missing names fail closed with
+  `TABLE_OR_VIEW_NOT_FOUND`, tables fall through; viewless catalogs treat
+  `FeatureUnsupported` as no view and take the same table/missing split).
+  **PR4 r2 (2026-09-23):** bare and two-part names complete through
+  `complete_view_name(catalogs, …)` from `use_ddl::session_defaults`, so
+  they follow `USE` like ALTER VIEW.
+  pins: ice-views-1/C-017
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
   defaults with aliases applied; `table_names` stays tables-only);
@@ -61,8 +80,7 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `describe_view_batch` render the stored schema's columns ONLY —
   `spark_ddl_type_name` spellings, a doc-less column renders `""` (the table
   path renders null), no blank/`# Partitioning`/`# Metadata Columns` trailer,
-  and EXTENDED is the same columns-only answer. SHOW CREATE /
-  SHOW TBLPROPERTIES stay later PRs.
+  and EXTENDED is the same columns-only answer. SHOW CREATE stays a later PR.
   pins: ice-views-1/C-017
 
 ## Pointers
