@@ -64,6 +64,62 @@ fn parquet_files_under(root: &Path) -> Vec<String> {
     files
 }
 
+async fn seed_position_tables(session: &ReparkSession) {
+    seed_values(
+        session,
+        "ice.ns.ndel",
+        "id BIGINT, _deleted STRING",
+        "(1, 'u1'), (2, 'u2')",
+    )
+    .await;
+    seed_values(
+        session,
+        "ice.ns.ndel2",
+        "id BIGINT, _deleted STRING",
+        "(2, 'u2'), (3, 'u3')",
+    )
+    .await;
+    seed_values(
+        session,
+        "ice.ns.pl",
+        "id BIGINT, v STRING",
+        "(1, 'a'), (2, 'b')",
+    )
+    .await;
+}
+
+async fn assert_unread_collision_answers(
+    session: &ReparkSession,
+    wh: &TempDir,
+    index: usize,
+    column: &str,
+) {
+    let table = format!("ice.ns.n{index}");
+    run(
+        session,
+        &format!(
+            "CREATE TABLE {table} (id BIGINT, {column} STRING) USING iceberg \
+             TBLPROPERTIES ('format-version' = '2')"
+        ),
+    )
+    .await;
+    run(session, &format!("INSERT INTO {table} VALUES (1, 'u1')")).await;
+    if column == "_spec_id" {
+        let rows = batches(session, &format!("SELECT id, _file FROM {table}")).await;
+        assert_eq!(field_names(&rows), vec!["id", "_file"], "{column}");
+        assert_eq!(i64s(&rows, 0), vec![1], "{column}");
+        assert_eq!(
+            strs(&rows, 1),
+            parquet_files_under(&wh.path().join("ns").join(format!("n{index}"))),
+            "{column}"
+        );
+    } else {
+        let rows = batches(session, &format!("SELECT id, _spec_id FROM {table}")).await;
+        assert_eq!(field_names(&rows), vec!["id", "_spec_id"], "{column}");
+        assert_eq!(pairs_i64_i32(&rows), vec![(1, 0)], "{column}");
+    }
+}
+
 fn reserved_name_collision(names: &str) -> String {
     format!(
         "Error during planning: Table column names conflict with names reserved for Iceberg \
@@ -235,30 +291,7 @@ async fn reserved_name_near_misses_still_answer() {
         .iter()
         .enumerate()
     {
-        let table = format!("ice.ns.n{index}");
-        run(
-            &session,
-            &format!(
-                "CREATE TABLE {table} (id BIGINT, {column} STRING) USING iceberg \
-                 TBLPROPERTIES ('format-version' = '2')"
-            ),
-        )
-        .await;
-        run(&session, &format!("INSERT INTO {table} VALUES (1, 'u1')")).await;
-        if *column == "_spec_id" {
-            let rows = batches(&session, &format!("SELECT id, _file FROM {table}")).await;
-            assert_eq!(field_names(&rows), vec!["id", "_file"], "{column}");
-            assert_eq!(i64s(&rows, 0), vec![1], "{column}");
-            assert_eq!(
-                strs(&rows, 1),
-                parquet_files_under(&wh.path().join("ns").join(format!("n{index}"))),
-                "{column}"
-            );
-        } else {
-            let rows = batches(&session, &format!("SELECT id, _spec_id FROM {table}")).await;
-            assert_eq!(field_names(&rows), vec!["id", "_spec_id"], "{column}");
-            assert_eq!(pairs_i64_i32(&rows), vec![(1, 0)], "{column}");
-        }
+        assert_unread_collision_answers(&session, &wh, index, column).await;
     }
     seed_user_columns(&session, "ice.ns.near_two", &["_pos", "_file"], "").await;
     let rows = batches(
@@ -508,46 +541,38 @@ async fn reserved_word_positions_follow_spark() {
 async fn reserved_name_join_positions() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
-    seed_values(
-        &session,
-        "ice.ns.ndel",
-        "id BIGINT, _deleted STRING",
-        "(1, 'u1'), (2, 'u2')",
-    )
-    .await;
-    seed_values(
-        &session,
-        "ice.ns.ndel2",
-        "id BIGINT, _deleted STRING",
-        "(2, 'u2'), (3, 'u3')",
-    )
-    .await;
-    seed_values(
-        &session,
-        "ice.ns.pl",
-        "id BIGINT, v STRING",
-        "(1, 'a'), (2, 'b')",
-    )
-    .await;
-    assert_eq!(
-        plan_error(
-            &session,
+    seed_position_tables(&session).await;
+    for (row, sql, expected) in [
+        (
+            "J4",
             "SELECT id FROM ice.ns.ndel JOIN ice.ns.ndel2 USING (_deleted) ORDER BY id",
-        )
-        .await,
-        "Error during planning: [AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: \
-         [`ndel`.`id`, `ndel2`.`id`]. SQLSTATE: 42704",
-        "J4"
-    );
-    assert_eq!(
-        plan_error(
-            &session,
+            "Error during planning: [AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: \
+             [`ndel`.`id`, `ndel2`.`id`]. SQLSTATE: 42704"
+                .to_string(),
+        ),
+        (
+            "J4B",
             "SELECT ndel.id FROM ice.ns.ndel JOIN ice.ns.ndel2 USING (_deleted) ORDER BY 1",
-        )
-        .await,
-        reserved_name_collision("_deleted"),
-        "J4B"
-    );
+            reserved_name_collision("_deleted"),
+        ),
+        (
+            "J5M",
+            "SELECT id, _spec_id FROM ice.ns.ndel JOIN ice.ns.pl USING (id) ORDER BY id",
+            "Error during planning: [AMBIGUOUS_REFERENCE] Reference `_spec_id` is ambiguous, \
+             could be: [`ndel`.`_spec_id`, `pl`.`_spec_id`]. SQLSTATE: 42704"
+                .to_string(),
+        ),
+        (
+            "J6M",
+            "SELECT *, ndel._spec_id FROM ice.ns.ndel JOIN ice.ns.pl USING (id) ORDER BY id",
+            "Error during planning: [ICE-MC-1] a metadata column (_file, _pos, _spec_id, \
+             _partition, _deleted) over a wildcard over more than one relation is not served; \
+             name the columns explicitly on a table relation"
+                .to_string(),
+        ),
+    ] {
+        assert_eq!(plan_error(&session, sql).await, expected, "{row}: {sql}");
+    }
     for (row, sql, ids) in [
         (
             "J5",
@@ -600,47 +625,13 @@ async fn reserved_name_join_positions() {
     .await;
     assert_eq!(field_names(&rows), vec!["id", "_spec_id"], "J8M");
     assert_eq!(pairs_i64_i32(&rows), vec![(1, 0), (2, 0)], "J8M");
-    assert_eq!(
-        plan_error(
-            &session,
-            "SELECT id, _spec_id FROM ice.ns.ndel JOIN ice.ns.pl USING (id) ORDER BY id",
-        )
-        .await,
-        "Error during planning: [AMBIGUOUS_REFERENCE] Reference `_spec_id` is ambiguous, could be: \
-         [`ndel`.`_spec_id`, `pl`.`_spec_id`]. SQLSTATE: 42704",
-        "J5M"
-    );
-    assert_eq!(
-        plan_error(
-            &session,
-            "SELECT *, ndel._spec_id FROM ice.ns.ndel JOIN ice.ns.pl USING (id) ORDER BY id",
-        )
-        .await,
-        "Error during planning: [ICE-MC-1] a metadata column (_file, _pos, _spec_id, _partition, \
-         _deleted) over a wildcard over more than one relation is not served; name the columns \
-         explicitly on a table relation",
-        "J6M"
-    );
 }
 
 #[tokio::test]
 async fn reserved_name_query_positions() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
-    seed_values(
-        &session,
-        "ice.ns.ndel",
-        "id BIGINT, _deleted STRING",
-        "(1, 'u1'), (2, 'u2')",
-    )
-    .await;
-    seed_values(
-        &session,
-        "ice.ns.pl",
-        "id BIGINT, v STRING",
-        "(1, 'a'), (2, 'b')",
-    )
-    .await;
+    seed_position_tables(&session).await;
     for (row, sql) in [
         (
             "N1",
@@ -688,15 +679,38 @@ async fn reserved_name_query_positions() {
             "{row}: {sql}"
         );
     }
-    assert_eq!(
-        plan_error(
-            &session,
+    for (row, sql, expected) in [
+        (
+            "N11",
             "SELECT id, e FROM ice.ns.ndel LATERAL VIEW explode(array(_deleted)) t AS e ORDER BY id",
-        )
-        .await,
-        "This feature is not implemented: LATERAL VIEWS",
-        "N11"
-    );
+            "This feature is not implemented: LATERAL VIEWS",
+        ),
+        (
+            "N13",
+            "SELECT t.*, t._spec_id FROM ice.ns.ndel t ORDER BY id",
+            "Error during planning: Projections require unique expression names but the \
+             expression \"t._spec_id\" at position 4 and \"t._spec_id\" at position 6 have the \
+             same name. Consider aliasing (\"AS\") one of them.",
+        ),
+    ] {
+        assert_eq!(plan_error(&session, sql).await, expected, "{row}: {sql}");
+    }
+    for (row, sql, expected) in [
+        (
+            "N11",
+            "SELECT id, e FROM ice.ns.ndel LATERAL VIEW explode(array(_deleted)) t AS e ORDER BY id",
+            "This feature is not implemented: LATERAL VIEWS",
+        ),
+        (
+            "N13",
+            "SELECT t.*, t._spec_id FROM ice.ns.ndel t ORDER BY id",
+            "Error during planning: Projections require unique expression names but the \
+             expression \"t._spec_id\" at position 4 and \"t._spec_id\" at position 6 have the \
+             same name. Consider aliasing (\"AS\") one of them.",
+        ),
+    ] {
+        assert_eq!(plan_error(&session, sql).await, expected, "{row}: {sql}");
+    }
     let rows = batches(&session, "SELECT t.* FROM ice.ns.ndel t ORDER BY id").await;
     assert_eq!(field_names(&rows), vec!["id", "_deleted"], "N12");
     assert_eq!(
@@ -704,31 +718,29 @@ async fn reserved_name_query_positions() {
         vec![(1, "u1".to_string()), (2, "u2".to_string())],
         "N12"
     );
-    assert_eq!(
-        plan_error(
-            &session,
-            "SELECT t.*, t._spec_id FROM ice.ns.ndel t ORDER BY id",
-        )
-        .await,
-        "Error during planning: Projections require unique expression names but the expression \
-         \"t._spec_id\" at position 4 and \"t._spec_id\" at position 6 have the same name. Consider \
-         aliasing (\"AS\") one of them.",
-        "N13"
-    );
-    let rows = batches(
-        &session,
-        "SELECT id FROM ice.ns.pl WHERE id IN (SELECT id FROM ice.ns.ndel) ORDER BY id",
-    )
-    .await;
-    assert_eq!(field_names(&rows), vec!["id"], "N17");
-    assert_eq!(i64s(&rows, 0), vec![1, 2], "N17");
-    let rows = batches(
-        &session,
-        "SELECT id FROM ice.ns.ndel UNION ALL SELECT id FROM ice.ns.pl ORDER BY 1",
-    )
-    .await;
-    assert_eq!(field_names(&rows), vec!["id"], "N18");
-    assert_eq!(i64s(&rows, 0), vec![1, 1, 2, 2], "N18");
+}
+
+#[tokio::test]
+async fn reserved_name_query_positions_that_answer() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed_position_tables(&session).await;
+    for (row, sql, ids) in [
+        (
+            "N17",
+            "SELECT id FROM ice.ns.pl WHERE id IN (SELECT id FROM ice.ns.ndel) ORDER BY id",
+            vec![1, 2],
+        ),
+        (
+            "N18",
+            "SELECT id FROM ice.ns.ndel UNION ALL SELECT id FROM ice.ns.pl ORDER BY 1",
+            vec![1, 1, 2, 2],
+        ),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(field_names(&rows), vec!["id"], "{row}: {sql}");
+        assert_eq!(i64s(&rows, 0), ids, "{row}: {sql}");
+    }
     let rows = batches(
         &session,
         "SELECT id, count(*) OVER (PARTITION BY id) FROM ice.ns.ndel WHERE _spec_id = 0 \
