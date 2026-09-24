@@ -56,6 +56,9 @@ service, and the wrapper-based read path that expands stored SQL per query.
   misses answer Spark's sentence, missing names fail closed with
   `TABLE_OR_VIEW_NOT_FOUND`, tables fall through; viewless catalogs treat
   `FeatureUnsupported` as no view and also reach the table path).
+  **PR4 r2 (2026-09-23):** bare and two-part names complete through
+  `complete_view_name(catalogs, …)` from `use_ddl::session_defaults`, so
+  they follow `USE` like ALTER VIEW.
   pins: ice-views-1/C-017
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
