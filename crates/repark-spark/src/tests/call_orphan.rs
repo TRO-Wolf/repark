@@ -906,6 +906,7 @@ fn call_remove_orphan_files_qualifies_only_a_location_starting_with_slash() {
         ("/var/a", "file:/var/a"),
         ("/", "file:/"),
         ("//host/a", "file://host/a"),
+        ("/tmp/../a/", "file:/tmp/../a/"),
     ] {
         assert_eq!(qualify_local_path(location), qualified);
     }
@@ -918,6 +919,9 @@ fn call_remove_orphan_files_qualifies_only_a_location_starting_with_slash() {
         "",
         "C:\\tmp\\a",
         "C:/tmp/a",
+        "\\\\host\\a",
+        " /tmp/a",
+        "./a",
     ] {
         assert_eq!(qualify_local_path(unchanged), unchanged);
     }
