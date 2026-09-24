@@ -146,7 +146,9 @@ pins: rp-4-fork-repin/C-005, C-006
   helpers in the `show_partitions_preparse` shape, each refusing through the shared
   `v2_command_outcome` helper so the write-options gate still runs first. The DESCRIBE
   NAMESPACE arm moves into `describe_namespace_preparse` so the function holds clippy's
-  line cap.
+  line cap. **WO-A17 (2026-09-24):** the three v2-command helpers moved to `catalog_ops.rs`;
+  `try_preparse_intercepts` calls `crate::catalog_ops::v2_json_preparse` / `v2_tail_preparse` at
+  the same two points, so the routing order is unchanged and `router.rs` stays under its ceiling.
   pins: ice-error-conditions-1/C-011
   **IPI-26/27 round 2 (2026-09-20):** `COMMENT ON TABLE` and the two-name Hive
   `CHANGE COLUMN` are true pre-parse intercepts
@@ -1514,7 +1516,9 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ipi-07-branch-read-schema-1/C-001, C-003, C-004, C-005, C-006, C-008
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
-  `reregister*` provider invalidation. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
+  `reregister*` provider invalidation. **WO-A17 (2026-09-24):** also home of the v2-command intercepts
+  `v2_json_preparse` / `v2_tail_preparse` and their `v2_command_outcome` helper, next to
+  `not_supported_command_for_v2_table` (moved from `router.rs`, behaviour unchanged). **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
   is the single home of Spark's `[TABLE_OR_VIEW_NOT_FOUND]` text for a three-part name, condition
   and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs`,
   `namespace_ddl/purge.rs` and `namespace_ddl.rs` DROP all answer through it, so they cannot
