@@ -181,9 +181,7 @@ def _partition_source_columns(inner: Any, token: dict[str, Any], resolved: str) 
             in_partition_information = head == "# Partition Information"
             continue
         if in_partition_information:
-            if not head:
-                in_partition_information = False
-            elif isinstance(head, str):
+            if isinstance(head, str):
                 names.add(head.strip().strip('`"'))
             continue
         if in_partitioning and head:

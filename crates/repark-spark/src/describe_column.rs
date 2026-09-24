@@ -73,7 +73,7 @@ pub(crate) fn describe_tokenizer_error(sql: &str) -> Option<Result<DescribeTable
     Some(Err(error))
 }
 
-fn is_table_describe_text(sql: &str) -> bool {
+pub(crate) fn is_table_describe_text(sql: &str) -> bool {
     let Some(position) = skip_sql_whitespace_and_comments(sql, 0) else {
         return false;
     };
@@ -103,7 +103,7 @@ fn is_non_table_describe_text_head(word: &str) -> bool {
         || word.eq_ignore_ascii_case("query")
 }
 
-fn unclosed_describe_quote(sql: &str) -> Option<char> {
+pub(crate) fn unclosed_describe_quote(sql: &str) -> Option<char> {
     let mut quote: Option<char> = None;
     let mut position = 0;
     while position < sql.len() {
@@ -116,10 +116,6 @@ fn unclosed_describe_quote(sql: &str) -> Option<char> {
         let next_position = position + character.len_utf8();
         if let Some(open_quote) = quote {
             if character == open_quote {
-                if sql.get(next_position..)?.starts_with(open_quote) {
-                    position = next_position + open_quote.len_utf8();
-                    continue;
-                }
                 quote = None;
             }
         } else if matches!(character, '\'' | '`' | '"') {

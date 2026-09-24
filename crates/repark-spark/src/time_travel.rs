@@ -32,13 +32,6 @@ pub fn sql_has_time_travel(sql: &str) -> bool {
     let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
         return false;
     };
-    let first = tokens
-        .iter()
-        .find(|token| !matches!(token, Token::Whitespace(_) | Token::EOF));
-    if matches!(first, Some(Token::Word(word)) if word.value.eq_ignore_ascii_case("DESCRIBE") || word.value.eq_ignore_ascii_case("DESC"))
-    {
-        return false;
-    }
     match find_pinned_spans(&tokens) {
         Err(_) => true,
         Ok(spans) => !spans.is_empty(),
