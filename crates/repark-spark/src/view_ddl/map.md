@@ -38,6 +38,10 @@ service, and the wrapper-based read path that expands stored SQL per query.
   reads `use_ddl::session_defaults(catalogs)`; one-part SHOW VIEWS IN reads its
   catalog from the same defaults. A bare name with no current namespace uses
   `TABLE_OR_VIEW_NOT_FOUND`, as `use_ddl::complete_name` does.
+  Unit tests (r2b): `parse.rs` pins every malformed ALTER VIEW tail by its full
+  Plan text (several say `could not parse CREATE NAMESPACE`, because the tail reuses the
+  namespace property helpers); `execute.rs` pins the commit refusal for a key both set and
+  removed.
   The tighten refusal runs unconditionally once `catalog_handle` resolves a
   registered catalog and before `create_or_replace_view` — a bare-name-marked
   target is still a catalog write, and CREATE OR REPLACE shares this site —
