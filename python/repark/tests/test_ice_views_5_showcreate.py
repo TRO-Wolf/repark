@@ -5,9 +5,11 @@ the stored column names (with ``COMMENT`` for a documented column), the view
 comment, the reserved plus stored properties sorted by key without ``comment``,
 and the stored SQL text verbatim. Measured against Spark 4.1.2 + Iceberg 1.11.0
 (``/tmp/oc-worker/qe/probe/p2.json`` keys ``C.show_create`` and
-``C.v2.show_create``). Near misses keep the answers of main 970ac11a
-(``target/probe5/r4/nearmiss-main-970ac11a.json``); #816 changed the no-name and
-trailing-token text to the bare ``INVALID_SHOW_CREATE_TABLE`` string pinned below.
+``C.v2.show_create``). Near misses keep the answers of main d4caca39
+(``target/probe5/r5/nearmiss-main-d4caca39.json``). #816 changed the no-name and
+trailing-token answer to the bare ``[INVALID_STATEMENT_OR_CLAUSE]`` message (condition
+``INVALID_STATEMENT_OR_CLAUSE``, SQLSTATE ``42601``), pinned in full below as
+``INVALID_STATEMENT_SHOW_CREATE``.
 Unmeasured residues: D-VIEW-SHOWCREATE-1.
 
 pins: ice-views-1/C-017
@@ -28,7 +30,7 @@ V2_DDL = (
     "CREATE VIEW sc.ns.v2 (i COMMENT 'the id', d) COMMENT 'view doc' "
     "TBLPROPERTIES ('k'='v') AS SELECT id, data FROM sc.ns.t"
 )
-INVALID_SHOW_CREATE_TABLE = (
+INVALID_STATEMENT_SHOW_CREATE = (
     "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. "
     "SQLSTATE: 42601"
 )
@@ -172,7 +174,7 @@ def test_session_temp_view_shadowing_a_bare_name_falls_through(spark: ReparkSess
 
 
 def test_view_as_serde_keeps_the_main_parse_error(spark: ReparkSession) -> None:
-    """Near miss — ``AS SERDE`` on a view keeps main 970ac11a's answer (Spark's is unmeasured)."""
+    """Near miss — ``AS SERDE`` on a view keeps main d4caca39's answer (Spark's is unmeasured)."""
     spark.sql(V2_DDL)
     with pytest.raises(ParseException) as caught:
         spark.sql("SHOW CREATE TABLE sc.ns.v2 AS SERDE")
@@ -198,7 +200,7 @@ def test_malformed_forms_keep_the_parse_error(spark: ReparkSession, sql: str) ->
     _assert_error(
         caught.value,
         ParseException,
-        INVALID_SHOW_CREATE_TABLE,
+        INVALID_STATEMENT_SHOW_CREATE,
         "INVALID_STATEMENT_OR_CLAUSE",
         "42601",
     )
