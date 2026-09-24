@@ -110,9 +110,14 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   namespace and the temp names captured at CREATE, conforms the answer to the
   creation columns by name (Spark's up-cast widening, else
   INCOMPATIBLE_VIEW_SCHEMA_CHANGE / CANNOT_UP_CAST_DATATYPE), answers
-  TABLE_OR_VIEW_NOT_FOUND for a dropped temp dependency, shares the
-  `VIEW_NESTED_DEPTH_LIMIT` counter, and refuses CREATE OR REPLACE cycles with
-  RECURSIVE_VIEW; `temp_view_column_comments` feeds DESCRIBE.
+  TABLE_OR_VIEW_NOT_FOUND for a dropped temp dependency, shares the session's
+  nested-view counter and refuses the 101st nested temp view with Spark's
+  `VIEW_EXCEED_MAX_NESTED_DEPTH` (54K00) naming that view, and refuses CREATE OR
+  REPLACE cycles with RECURSIVE_VIEW (the cycle walk keeps a 4096-view budget,
+  refused with `VIEW_NESTED_DEPTH_LIMIT`); the direct-reference walk is one pass,
+  because `LogicalPlanBuilder::scan` inlines every view provider that carries a
+  plan; `temp_view_column_comments` feeds DESCRIBE. PR6b3b module unit tests pin
+  the cycle-walk budget and the inlined-reference walk.
   pins: ice-views-1/C-018
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored

@@ -84,20 +84,26 @@ impl TableProvider for ReplanningTempView {
     ) -> Result<Arc<dyn ExecutionPlan>> {
         let guard = self.catalogs.view_expansion_guard();
         if guard.level() > MAX_VIEW_EXPANSION_DEPTH {
-            return Err(nested_depth_refusal());
+            let depth = MAX_VIEW_EXPANSION_DEPTH.to_string();
+            return Err(DataFusionError::Plan(spark_error::message(
+                spark_error::VIEW_EXCEED_MAX_NESTED_DEPTH,
+                &[
+                    ("viewName", self.definition.display.as_str()),
+                    ("maxNestedDepth", depth.as_str()),
+                ],
+            )));
         }
         refuse_dropped_dependency(&self.ctx, &self.dependencies)?;
-        let frame = plan_definition(
+        let frame = Box::pin(plan_definition(
             &self.ctx,
             &self.catalogs,
             &self.definition,
             &TempHomes::Captured(&self.temp_homes),
-        )
+        ))
         .await?;
         let frame = conform_to_creation_schema(frame, &self.schema, &self.definition.display)?;
-        ViewTable::new(frame.logical_plan().clone(), None)
-            .scan(state, projection, filters, limit)
-            .await
+        let view = ViewTable::new(frame.logical_plan().clone(), None);
+        Box::pin(view.scan(state, projection, filters, limit)).await
     }
 }
 
@@ -294,29 +300,19 @@ fn registered_view_summary(provider: &dyn TableProvider) -> Option<RegisteredTem
 
 fn direct_temp_view_references(plan: &LogicalPlan) -> Result<Vec<Vec<String>>> {
     let mut references: Vec<Vec<String>> = Vec::new();
-    let mut pending = vec![plan.clone()];
-    let mut visits = 0_usize;
-    while let Some(next) = pending.pop() {
-        visits += 1;
-        if visits > MAX_TEMP_VIEW_WALK {
-            return Err(nested_depth_refusal());
-        }
-        next.apply_with_subqueries(|node| {
-            if let LogicalPlan::TableScan(scan) = node
-                && let Ok(provider) = source_as_provider(&scan.source)
+    plan.apply_with_subqueries(|node| {
+        if let LogicalPlan::TableScan(scan) = node
+            && let Ok(provider) = source_as_provider(&scan.source)
+        {
+            let any: &dyn Any = provider.as_ref();
+            if let Some(view) = any.downcast_ref::<ReplanningTempView>()
+                && !references.contains(&view.definition.home)
             {
-                let any: &dyn Any = provider.as_ref();
-                if let Some(view) = any.downcast_ref::<ReplanningTempView>() {
-                    if !references.contains(&view.definition.home) {
-                        references.push(view.definition.home.clone());
-                    }
-                } else if let Some(inner) = provider.get_logical_plan() {
-                    pending.push(inner.into_owned());
-                }
+                references.push(view.definition.home.clone());
             }
-            Ok(TreeNodeRecursion::Continue)
-        })?;
-    }
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })?;
     Ok(references)
 }
 
@@ -391,29 +387,29 @@ fn conform_to_creation_schema(
     creation: &SchemaRef,
     display: &str,
 ) -> Result<DataFrame> {
-    let columns = frame.schema().columns();
-    let fields = frame.schema().fields().clone();
-    let unchanged = fields.len() == creation.fields().len()
-        && fields
-            .iter()
-            .zip(creation.fields())
-            .all(|(now, then)| now.name() == then.name() && now.data_type() == then.data_type());
+    let pairs = frame
+        .schema()
+        .columns()
+        .into_iter()
+        .zip(frame.schema().fields().iter().cloned())
+        .collect::<Vec<_>>();
+    let unchanged = pairs.len() == creation.fields().len()
+        && pairs.iter().zip(creation.fields()).all(|((_, now), then)| {
+            now.name() == then.name() && now.data_type() == then.data_type()
+        });
     if unchanged {
         return Ok(frame);
     }
     let mut projection = Vec::with_capacity(creation.fields().len());
     for field in creation.fields() {
-        let matches = fields
+        let matches = pairs
             .iter()
-            .enumerate()
             .filter(|(_, now)| now.name().eq_ignore_ascii_case(field.name()))
-            .map(|(position, _)| position)
             .collect::<Vec<_>>();
-        let [position] = matches.as_slice() else {
+        let [(column, now)] = matches.as_slice() else {
             let actual = matches
                 .iter()
-                .filter_map(|position| fields.get(*position))
-                .map(|now| backticked(now.name()))
+                .map(|(_, now)| backticked(now.name()))
                 .collect::<Vec<_>>()
                 .join(", ");
             let actual = format!("[{actual}]");
@@ -427,11 +423,6 @@ fn conform_to_creation_schema(
                     ("suggestion", "CREATE OR REPLACE TEMPORARY VIEW"),
                 ],
             )));
-        };
-        let (Some(column), Some(now)) = (columns.get(*position), fields.get(*position)) else {
-            return Err(DataFusionError::Internal(
-                "temporary view column lookup out of range".to_string(),
-            ));
         };
         let expr = Expr::Column(column.clone());
         let expr = if now.data_type() == field.data_type() {
@@ -492,4 +483,100 @@ fn can_up_cast(from: &DataType, to: &DataType) -> bool {
             .position(|candidate| candidate == data_type)
     };
     matches!((rank(from), rank(to)), (Some(from), Some(to)) if from < to)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datafusion::arrow::datatypes::Schema;
+
+    const WALK_REFUSAL: &str = "Error during planning: [VIEW_NESTED_DEPTH_LIMIT] View resolution exceeded the maximum nested depth of 100";
+
+    fn home(index: usize) -> Vec<String> {
+        vec![
+            "datafusion".to_string(),
+            "public".to_string(),
+            format!("v{index}"),
+        ]
+    }
+
+    fn chained_view(
+        ctx: &SessionContext,
+        index: usize,
+        references: Vec<Vec<String>>,
+    ) -> ReplanningTempView {
+        ReplanningTempView {
+            ctx: ctx.clone(),
+            catalogs: CatalogRegistry::new(),
+            definition: TempViewDefinition {
+                home: home(index),
+                display: format!("`v{index}`"),
+                sql: "SELECT 1".to_string(),
+                catalog: String::new(),
+                namespace: NamespaceIdent::new(String::new()),
+                aliases: Vec::new(),
+            },
+            temp_homes: HashMap::new(),
+            references,
+            dependencies: Vec::new(),
+            schema: Arc::new(Schema::empty()),
+        }
+    }
+
+    fn register_chain(ctx: &SessionContext, length: usize) {
+        for index in 0..length {
+            let references = if index == 0 {
+                Vec::new()
+            } else {
+                vec![home(index - 1)]
+            };
+            let view = chained_view(ctx, index, references);
+            ctx.register_table(
+                TableReference::full("datafusion", "public", format!("v{index}")),
+                Arc::new(view),
+            )
+            .unwrap_or_else(|error| panic!("register v{index}: {error}"));
+        }
+    }
+
+    #[test]
+    fn references_are_found_through_an_inlined_temp_view_scan() {
+        let ctx = SessionContext::new();
+        let view = ctx
+            .read_table(Arc::new(chained_view(&ctx, 7, Vec::new())))
+            .unwrap_or_else(|error| panic!("scan the view: {error}"));
+        let wrapped = ctx
+            .read_table(view.into_view())
+            .unwrap_or_else(|error| panic!("wrap the view: {error}"));
+        assert!(matches!(
+            wrapped.logical_plan(),
+            LogicalPlan::SubqueryAlias(_)
+        ));
+        let references = direct_temp_view_references(wrapped.logical_plan())
+            .unwrap_or_else(|error| panic!("walk: {error}"));
+        assert_eq!(references, vec![home(7)]);
+    }
+
+    #[tokio::test]
+    async fn cycle_walk_accepts_a_chain_within_its_visit_budget() {
+        let ctx = SessionContext::new();
+        register_chain(&ctx, MAX_TEMP_VIEW_WALK);
+        let target = chained_view(&ctx, usize::MAX, vec![home(MAX_TEMP_VIEW_WALK - 1)]);
+        refuse_recursive_temp_view(&ctx, &target)
+            .await
+            .unwrap_or_else(|error| panic!("chain within budget: {error}"));
+    }
+
+    #[tokio::test]
+    async fn cycle_walk_refuses_past_its_visit_budget() {
+        let ctx = SessionContext::new();
+        register_chain(&ctx, MAX_TEMP_VIEW_WALK + 2);
+        let target = chained_view(&ctx, usize::MAX, vec![home(MAX_TEMP_VIEW_WALK + 1)]);
+        let error = refuse_recursive_temp_view(&ctx, &target)
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("chain past budget must refuse"));
+        assert!(matches!(error, DataFusionError::Plan(_)), "{error:?}");
+        assert_eq!(error.to_string(), WALK_REFUSAL);
+    }
 }

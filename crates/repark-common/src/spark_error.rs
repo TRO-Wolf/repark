@@ -43,6 +43,7 @@ pub enum Condition {
     RecursiveView,
     IncompatibleViewSchemaChange,
     CannotUpCastDatatype,
+    ViewExceedMaxNestedDepth,
 }
 
 pub const TABLE_OR_VIEW_NOT_FOUND: Condition = Condition::TableOrViewNotFound;
@@ -101,6 +102,7 @@ pub const IDENTIFIER_TOO_MANY_NAME_PARTS: Condition = Condition::IdentifierTooMa
 pub const RECURSIVE_VIEW: Condition = Condition::RecursiveView;
 pub const INCOMPATIBLE_VIEW_SCHEMA_CHANGE: Condition = Condition::IncompatibleViewSchemaChange;
 pub const CANNOT_UP_CAST_DATATYPE: Condition = Condition::CannotUpCastDatatype;
+pub const VIEW_EXCEED_MAX_NESTED_DEPTH: Condition = Condition::ViewExceedMaxNestedDepth;
 
 impl Condition {
     #[must_use]
@@ -161,6 +163,7 @@ impl Condition {
             Self::RecursiveView => "RECURSIVE_VIEW",
             Self::IncompatibleViewSchemaChange => "INCOMPATIBLE_VIEW_SCHEMA_CHANGE",
             Self::CannotUpCastDatatype => "CANNOT_UP_CAST_DATATYPE",
+            Self::ViewExceedMaxNestedDepth => "VIEW_EXCEED_MAX_NESTED_DEPTH",
         }
     }
 
@@ -175,6 +178,7 @@ impl Condition {
             Self::RecursiveView => Some("42K0H"),
             Self::IncompatibleViewSchemaChange => Some("51024"),
             Self::CannotUpCastDatatype => Some("42846"),
+            Self::ViewExceedMaxNestedDepth => Some("54K00"),
             Self::NotSupportedCommandForV2Table
             | Self::UnsupportedFeatureTableOperation
             | Self::UnsupportedFeatureCatalogOperation
@@ -327,6 +331,9 @@ impl Condition {
             Self::CannotUpCastDatatype => {
                 "Cannot up cast {expression} from {sourceType} to {targetType}.\n{details}"
             }
+            Self::ViewExceedMaxNestedDepth => {
+                "The depth of view {viewName} exceeds the maximum view resolution depth ({maxNestedDepth}).\nAnalysis is aborted to avoid errors. If you want to work around this, please try to increase the value of \"spark.sql.view.maxNestedViewDepth\"."
+            }
         }
     }
 }
@@ -436,6 +443,7 @@ mod tests {
         ("sourceType", "\"STRING\""),
         ("targetType", "\"INT\""),
         ("details", "The type path of the target object is:"),
+        ("maxNestedDepth", "100"),
     ];
 
     const ALL: &[Condition] = &[
@@ -480,11 +488,12 @@ mod tests {
         RECURSIVE_VIEW,
         INCOMPATIBLE_VIEW_SCHEMA_CHANGE,
         CANNOT_UP_CAST_DATATYPE,
+        VIEW_EXCEED_MAX_NESTED_DEPTH,
     ];
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 40);
+        assert_eq!(ALL.len(), 41);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();
@@ -910,6 +919,13 @@ mod tests {
                 ]
             ),
             "[CANNOT_UP_CAST_DATATYPE] Cannot up cast x3.id from \"STRING\" to \"INT\".\nThe type path of the target object is:\n\nYou can either add an explicit cast to the input data or choose a higher precision type of the field in the target object SQLSTATE: 42846"
+        );
+        assert_eq!(
+            message(
+                VIEW_EXCEED_MAX_NESTED_DEPTH,
+                &[("viewName", "`d0`"), ("maxNestedDepth", "100")]
+            ),
+            "[VIEW_EXCEED_MAX_NESTED_DEPTH] The depth of view `d0` exceeds the maximum view resolution depth (100).\nAnalysis is aborted to avoid errors. If you want to work around this, please try to increase the value of \"spark.sql.view.maxNestedViewDepth\". SQLSTATE: 54K00"
         );
     }
 
