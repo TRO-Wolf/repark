@@ -308,6 +308,16 @@ impl ReparkSession {
     }
 }
 
+impl crate::dialect::TempViewSession for ReparkSession {
+    fn create_or_replace_temp_view_from(&self, name: &str, frame: &DataFrame) -> Result<()> {
+        ReparkSession::create_or_replace_temp_view_from(self, name, frame)
+    }
+
+    fn resolve_temp_view_home_ref(&self, name: &str) -> Result<Option<Vec<String>>> {
+        ReparkSession::resolve_temp_view_home_ref(self, name)
+    }
+}
+
 fn conform_batches_to_schema(
     schema: &SchemaRef,
     batches: &[RecordBatch],

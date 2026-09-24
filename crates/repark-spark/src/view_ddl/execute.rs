@@ -5,11 +5,11 @@ use datafusion::arrow::array::{BooleanArray, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
-use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::ObjectName;
+use datafusion::prelude::{DataFrame, Expr, SessionContext};
+use datafusion::sql::sqlparser::ast::{Ident, ObjectName};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 use repark_common::spark_error;
-use repark_core::{CatalogRegistry, LocationPolicy};
+use repark_core::{CatalogRegistry, LocationPolicy, TempViewSession};
 use repark_iceberg::view::{
     ViewDefinition, ViewTarget, create_or_replace_view, drop_catalog_view, list_catalog_views,
     split_view_properties, view_schema_for_output,
@@ -18,10 +18,17 @@ use repark_iceberg::view::{
 use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, table_or_view_not_found};
 use crate::describe_show::filter_pattern_matches;
 use crate::view_ddl::parse::{
-    AlterViewAction, AlterViewStatement, CreateViewStatement, ShowTblpropertiesStatement,
+    AlterViewAction, AlterViewStatement, CreateTempViewStatement, CreateViewStatement,
+    ShowTblpropertiesStatement,
     ShowViewsStatement,
 };
-use crate::view_ddl::read::{plan_prepared_body, prepare_view_body_sql};
+use crate::view_ddl::read::{
+    plan_prepared_body, prepare_temp_view_body_sql, prepare_view_body_sql,
+};
+
+pub(crate) const NO_TEMP_VIEW_HOME: &str = "CREATE TEMPORARY VIEW needs a session: this SQL \
+     door runs without a session-local temp-view home, so it cannot register a temporary view. \
+     Run the statement through ReparkSession::sql";
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn execute_create_view(
@@ -67,6 +74,122 @@ pub(crate) async fn execute_create_view(
     )
     .await?;
     ctx.read_empty()
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn route_create_temp_view(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    parsed: Result<CreateTempViewStatement>,
+    write_options: &crate::write_options::StatementWriteOptions,
+    temp_views: Option<&dyn TempViewSession>,
+) -> Result<DataFrame> {
+    let statement = parsed?;
+    write_options.refuse_if_non_empty("CREATE TEMPORARY VIEW")?;
+    execute_create_temp_view(ctx, catalogs, statement, temp_views).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_create_temp_view(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: CreateTempViewStatement,
+    temp_views: Option<&dyn TempViewSession>,
+) -> Result<DataFrame> {
+    let Some(temp_views) = temp_views else {
+        return Err(DataFusionError::NotImplemented(
+            NO_TEMP_VIEW_HOME.to_string(),
+        ));
+    };
+    let (catalog, namespace_name) = crate::use_ddl::session_defaults(catalogs);
+    let namespace = NamespaceIdent::new(namespace_name);
+    let (prepared, pins) = prepare_temp_view_body_sql(
+        ctx,
+        catalogs,
+        &catalog,
+        &namespace,
+        &statement.body_sql,
+        temp_views,
+    )
+    .await?;
+    let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
+    let display = format!("`{}`", statement.name.value.replace('`', "``"));
+    let frame = apply_temp_view_aliases(frame, &statement.aliases, &display)?;
+    let name = temp_view_name_arg(&statement.name);
+    if !statement.or_replace
+        && temp_views
+            .resolve_temp_view_home_ref(&name)
+            .map_err(temp_view_err)?
+            .is_some()
+    {
+        return Err(DataFusionError::Plan(spark_error::message(
+            spark_error::TEMP_TABLE_OR_VIEW_ALREADY_EXISTS,
+            &[("relationName", display.as_str())],
+        )));
+    }
+    temp_views
+        .create_or_replace_temp_view_from(&name, &frame)
+        .map_err(temp_view_err)?;
+    ctx.read_empty()
+}
+
+fn apply_temp_view_aliases(
+    frame: DataFrame,
+    aliases: &[(String, Option<String>)],
+    display: &str,
+) -> Result<DataFrame> {
+    if aliases.is_empty() {
+        return Ok(frame);
+    }
+    let columns = frame.schema().columns();
+    if aliases.len() != columns.len() {
+        let backticked = |name: &str| format!("`{}`", name.replace('`', "``"));
+        let view_columns = aliases
+            .iter()
+            .map(|(alias, _)| backticked(alias))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let data_columns = columns
+            .iter()
+            .map(|column| backticked(&column.name))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let condition = if aliases.len() > columns.len() {
+            spark_error::CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS
+        } else {
+            spark_error::CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS
+        };
+        return Err(DataFusionError::Plan(spark_error::message(
+            condition,
+            &[
+                ("viewName", display),
+                ("viewColumns", view_columns.as_str()),
+                ("dataColumns", data_columns.as_str()),
+            ],
+        )));
+    }
+    let projection = columns
+        .into_iter()
+        .zip(aliases)
+        .map(|(column, (alias, _))| Expr::Column(column).alias(alias))
+        .collect::<Vec<_>>();
+    frame.select(projection)
+}
+
+pub(crate) fn temp_view_name_arg(ident: &Ident) -> String {
+    if ident.quote_style.is_some() {
+        format!("\"{}\"", ident.value.replace('"', "\"\""))
+    } else {
+        ident.value.clone()
+    }
+}
+
+#[allow(clippy::needless_pass_by_value)]
+pub(crate) fn temp_view_err(error: repark_common::Error) -> DataFusionError {
+    match error {
+        repark_common::Error::Analysis(message) => DataFusionError::Plan(message),
+        other => DataFusionError::External(Box::new(other)),
+    }
 }
 
 #[allow(clippy::missing_errors_doc)]

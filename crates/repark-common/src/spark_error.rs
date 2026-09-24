@@ -37,6 +37,9 @@ pub enum Condition {
     ViewNotFound,
     CreateViewColumnArityMismatchNotEnoughDataColumns,
     CreateViewColumnArityMismatchTooManyDataColumns,
+    TempTableOrViewAlreadyExists,
+    TempViewNameTooManyNameParts,
+    IdentifierTooManyNameParts,
 }
 
 pub const TABLE_OR_VIEW_NOT_FOUND: Condition = Condition::TableOrViewNotFound;
@@ -89,6 +92,9 @@ pub const CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS: Condition =
     Condition::CreateViewColumnArityMismatchNotEnoughDataColumns;
 pub const CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS: Condition =
     Condition::CreateViewColumnArityMismatchTooManyDataColumns;
+pub const TEMP_TABLE_OR_VIEW_ALREADY_EXISTS: Condition = Condition::TempTableOrViewAlreadyExists;
+pub const TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS: Condition = Condition::TempViewNameTooManyNameParts;
+pub const IDENTIFIER_TOO_MANY_NAME_PARTS: Condition = Condition::IdentifierTooManyNameParts;
 
 impl Condition {
     #[must_use]
@@ -143,6 +149,9 @@ impl Condition {
             Self::CreateViewColumnArityMismatchTooManyDataColumns => {
                 "CREATE_VIEW_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS"
             }
+            Self::TempTableOrViewAlreadyExists => "TEMP_TABLE_OR_VIEW_ALREADY_EXISTS",
+            Self::TempViewNameTooManyNameParts => "TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS",
+            Self::IdentifierTooManyNameParts => "IDENTIFIER_TOO_MANY_NAME_PARTS",
         }
     }
 
@@ -150,7 +159,10 @@ impl Condition {
     pub fn sqlstate(self) -> Option<&'static str> {
         match self {
             Self::TableOrViewNotFound | Self::ViewNotFound => Some("42P01"),
-            Self::TableOrViewAlreadyExists | Self::ViewAlreadyExists => Some("42P07"),
+            Self::TableOrViewAlreadyExists
+            | Self::ViewAlreadyExists
+            | Self::TempTableOrViewAlreadyExists => Some("42P07"),
+            Self::TempViewNameTooManyNameParts => Some("428EK"),
             Self::NotSupportedCommandForV2Table
             | Self::UnsupportedFeatureTableOperation
             | Self::UnsupportedFeatureCatalogOperation
@@ -160,7 +172,8 @@ impl Condition {
                 Some("42703")
             }
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported
-            | Self::ParseSyntaxError => Some("42601"),
+            | Self::ParseSyntaxError
+            | Self::IdentifierTooManyNameParts => Some("42601"),
             Self::IncompatibleDataForTableCannotSafelyCast => Some("KD000"),
             Self::InsertColumnArityMismatchNotEnoughDataColumns
             | Self::CreateViewColumnArityMismatchNotEnoughDataColumns
@@ -186,6 +199,7 @@ impl Condition {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn template(self) -> &'static str {
         match self {
             Self::TableOrViewNotFound => {
@@ -285,6 +299,15 @@ impl Condition {
             Self::CreateViewColumnArityMismatchTooManyDataColumns => {
                 "Cannot create view {viewName}, the reason is too many data columns:\nView columns: {viewColumns}.\nData columns: {dataColumns}."
             }
+            Self::TempTableOrViewAlreadyExists => {
+                "Cannot create the temporary view {relationName} because it already exists.\nChoose a different name, drop or replace the existing view."
+            }
+            Self::TempViewNameTooManyNameParts => {
+                "CREATE TEMPORARY VIEW or the corresponding Dataset APIs only accept single-part view names, but got: {actualName}."
+            }
+            Self::IdentifierTooManyNameParts => {
+                "{identifier} is not a valid identifier as it has more than {limit} name parts."
+            }
         }
     }
 }
@@ -381,6 +404,9 @@ mod tests {
         ("viewName", "sc.ns.va"),
         ("viewColumns", "a, b"),
         ("dataColumns", "id"),
+        ("actualName", "`a`.`b`"),
+        ("identifier", "`a`.`b`.`c`"),
+        ("limit", "2"),
     ];
 
     const ALL: &[Condition] = &[
@@ -419,11 +445,14 @@ mod tests {
         VIEW_NOT_FOUND,
         CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
         CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS,
+        TEMP_TABLE_OR_VIEW_ALREADY_EXISTS,
+        TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS,
+        IDENTIFIER_TOO_MANY_NAME_PARTS,
     ];
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 35);
+        assert_eq!(ALL.len(), 38);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();
@@ -790,6 +819,31 @@ mod tests {
         let text = error.to_string();
         assert!(text.starts_with("[TABLE_OR_VIEW_NOT_FOUND]"), "{text}");
         assert!(text.contains("SQLSTATE: 42P01"), "{text}");
+    }
+
+    #[test]
+    fn temp_view_rows_reproduce_the_measured_spark_bytes() {
+        assert_eq!(
+            message(
+                TEMP_TABLE_OR_VIEW_ALREADY_EXISTS,
+                &[("relationName", "`v`")]
+            ),
+            "[TEMP_TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create the temporary view `v` because it already exists.\nChoose a different name, drop or replace the existing view. SQLSTATE: 42P07"
+        );
+        assert_eq!(
+            message(
+                TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS,
+                &[("actualName", "`a`.`b`")]
+            ),
+            "[TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS] CREATE TEMPORARY VIEW or the corresponding Dataset APIs only accept single-part view names, but got: `a`.`b`. SQLSTATE: 428EK"
+        );
+        assert_eq!(
+            message(
+                IDENTIFIER_TOO_MANY_NAME_PARTS,
+                &[("identifier", "`sc`.`ns`.`q`"), ("limit", "2")]
+            ),
+            "[IDENTIFIER_TOO_MANY_NAME_PARTS] `sc`.`ns`.`q` is not a valid identifier as it has more than 2 name parts. SQLSTATE: 42601"
+        );
     }
 
     #[test]

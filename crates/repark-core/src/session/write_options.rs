@@ -55,6 +55,7 @@ impl ReparkSession {
             self.session_time_zone().as_ref().clone(),
         );
         cx.overwrite_intent = overwrite_intent;
+        cx.temp_views = Some(self);
         dialect
             .execute_with_write_options(cx, query, options)
             .await

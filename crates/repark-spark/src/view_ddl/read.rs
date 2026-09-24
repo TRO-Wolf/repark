@@ -9,12 +9,12 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    Ident, ObjectName, ObjectNamePart, Query, Statement, VisitMut, VisitorMut,
+    Ident, ObjectName, ObjectNamePart, Query, SetExpr, Statement, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
-use repark_core::CatalogRegistry;
+use repark_core::{CatalogRegistry, TempViewSession};
 use repark_iceberg::catalog::iceberg_to_datafusion;
 use repark_iceberg::view::{ViewReadSpec, view_read_spec};
 
@@ -178,9 +178,59 @@ pub(crate) async fn prepare_view_body_sql(
         sql = rewritten;
     }
     let qualified =
-        qualify_view_body_refs(catalogs, stored_catalog, stored_namespace, &sql).await?;
+        qualify_view_body_refs(catalogs, stored_catalog, stored_namespace, &sql, None).await?;
     Ok((qualified, pins))
 }
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn prepare_temp_view_body_sql(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    current_catalog: &str,
+    current_namespace: &NamespaceIdent,
+    body_sql: &str,
+    temp_views: &dyn TempViewSession,
+) -> Result<(String, PinnedViews)> {
+    refuse_write_query_body(body_sql)?;
+    let mut pins = PinnedViews::default();
+    let mut sql = body_sql.to_string();
+    if sql_has_time_travel(&sql)
+        && let Some(rewritten) = prepare_time_travel_sql(ctx, catalogs, &sql, &mut pins).await?
+    {
+        sql = rewritten;
+    }
+    let qualified = qualify_view_body_refs(
+        catalogs,
+        current_catalog,
+        current_namespace,
+        &sql,
+        Some(temp_views),
+    )
+    .await?;
+    Ok((qualified, pins))
+}
+
+fn refuse_write_query_body(body_sql: &str) -> Result<()> {
+    let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, body_sql) else {
+        return Ok(());
+    };
+    let writes = statements.iter().any(|statement| match statement {
+        Statement::Query(query) => matches!(
+            query.body.as_ref(),
+            SetExpr::Insert(_) | SetExpr::Update(_) | SetExpr::Delete(_) | SetExpr::Merge(_)
+        ),
+        _ => false,
+    });
+    if writes {
+        return Err(DataFusionError::Plan(
+            TEMP_VIEW_WRITE_BODY_REFUSAL.to_string(),
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) const TEMP_VIEW_WRITE_BODY_REFUSAL: &str = "a temporary view body must be a query: \
+     `WITH ... INSERT/UPDATE/DELETE/MERGE` is a write statement, not a view definition";
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn plan_prepared_body(
@@ -223,6 +273,7 @@ async fn qualify_view_body_refs(
     stored_catalog: &str,
     stored_namespace: &NamespaceIdent,
     sql: &str,
+    temp_views: Option<&dyn TempViewSession>,
 ) -> Result<String> {
     let statements = Parser::parse_sql(&DatabricksDialect {}, sql).map_err(|error| {
         DataFusionError::Plan(format!("could not parse a stored view body: {error}"))
@@ -240,9 +291,10 @@ async fn qualify_view_body_refs(
             "a view body must hold a single query statement".to_string(),
         ));
     }
-    let Some(handle) = catalogs.get(stored_catalog) else {
+    let handle = catalogs.get(stored_catalog);
+    if handle.is_none() && temp_views.is_none() {
         return Ok(sql.to_string());
-    };
+    }
     let mut candidates = Vec::new();
     let mut scopes = CteScopes { levels: Vec::new() };
     if let Statement::Query(query) = &mut statement {
@@ -257,6 +309,19 @@ async fn qualify_view_body_refs(
     distinct.dedup();
     let mut qualified: HashMap<Vec<String>, ObjectName> = HashMap::new();
     for parts in distinct {
+        let Some(original) = candidates
+            .iter()
+            .find(|candidate| name_parts(candidate) == parts)
+        else {
+            continue;
+        };
+        if let Some(home) = temp_view_home_name(temp_views, original)? {
+            qualified.insert(parts, home);
+            continue;
+        }
+        let Some(handle) = handle else {
+            continue;
+        };
         let (namespace, table) = match parts.as_slice() {
             [table] => (stored_namespace.clone(), table.clone()),
             [namespace, table] => (NamespaceIdent::new(namespace.clone()), table.clone()),
@@ -265,12 +330,6 @@ async fn qualify_view_body_refs(
         if !reference_is_catalog_object(handle.as_ref(), &namespace, &table).await? {
             continue;
         }
-        let Some(original) = candidates
-            .iter()
-            .find(|candidate| name_parts(candidate) == parts)
-        else {
-            continue;
-        };
         qualified.insert(
             parts,
             qualify_object_name(original, stored_catalog, stored_namespace),
@@ -288,6 +347,29 @@ async fn qualify_view_body_refs(
         });
     }
     Ok(statement.to_string())
+}
+
+fn temp_view_home_name(
+    temp_views: Option<&dyn TempViewSession>,
+    name: &ObjectName,
+) -> Result<Option<ObjectName>> {
+    let Some(temp_views) = temp_views else {
+        return Ok(None);
+    };
+    let [ObjectNamePart::Identifier(ident)] = name.0.as_slice() else {
+        return Ok(None);
+    };
+    let home = temp_views
+        .resolve_temp_view_home_ref(&crate::view_ddl::execute::temp_view_name_arg(ident))
+        .map_err(crate::view_ddl::execute::temp_view_err)?;
+    Ok(home.map(|segments| {
+        ObjectName(
+            segments
+                .into_iter()
+                .map(|segment| ObjectNamePart::Identifier(Ident::with_quote('"', segment)))
+                .collect(),
+        )
+    }))
 }
 
 struct ScopedRelations<'a, F: FnMut(&mut ObjectName)> {

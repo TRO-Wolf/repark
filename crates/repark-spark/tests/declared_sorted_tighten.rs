@@ -443,17 +443,39 @@ async fn select_into_iceberg_catalog_over_tightened_source_refuses() {
 }
 
 #[tokio::test]
-async fn session_scoped_temp_view_refuses_and_select_into_stays_allowed() {
+async fn session_scoped_temp_view_serves_and_select_into_stays_allowed() {
     let (_dir, session) = ddl_sink_session().await;
-    let error = session
+    session
         .sql("CREATE TEMPORARY VIEW session_v AS SELECT * FROM tight")
         .await
-        .err()
-        .unwrap_or_else(|| panic!("session TEMPORARY VIEW must refuse until PR3 wires it"));
-    assert!(
-        error.to_string().contains("Temporary views not supported"),
-        "keeps the PR3 refusal: {error}"
+        .expect("a session TEMPORARY VIEW over a tightened source must serve")
+        .collect()
+        .await
+        .expect("collect create temporary view");
+    let served = session
+        .sql("SELECT symbol, ts, close FROM session_v ORDER BY symbol, ts")
+        .await
+        .expect("the temporary view must read back")
+        .collect()
+        .await
+        .expect("collect temporary view");
+    let expected = nullable_sorted_rows(4);
+    assert_eq!(
+        served
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        expected.num_rows()
     );
+    let served = datafusion::arrow::compute::concat_batches(&served[0].schema(), &served)
+        .expect("concat served batches");
+    for index in 0..expected.num_columns() {
+        assert_eq!(
+            served.column(index).as_ref(),
+            expected.column(index).as_ref(),
+            "column {index}"
+        );
+    }
     session
         .sql("SELECT * INTO session_t FROM tight")
         .await
