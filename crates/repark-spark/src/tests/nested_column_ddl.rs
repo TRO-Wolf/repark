@@ -392,6 +392,55 @@ fn type_change_refusal_cases() -> Vec<(&'static str, String)> {
     ]
 }
 
+fn spark_only_target_refusal_cases() -> Vec<(&'static str, String)> {
+    [
+        ("st.a TYPE TINYINT", "`st`.`a`", "INT", "TINYINT"),
+        ("st.a TYPE tinyint", "`st`.`a`", "INT", "TINYINT"),
+        ("st.a TYPE SMALLINT", "`st`.`a`", "INT", "SMALLINT"),
+        ("st.b TYPE SMALLINT", "`st`.`b`", "BIGINT", "SMALLINT"),
+        ("st.b TYPE TINYINT", "`st`.`b`", "BIGINT", "TINYINT"),
+        ("st.a TYPE VARCHAR(10)", "`st`.`a`", "INT", "VARCHAR(10)"),
+        ("st.a TYPE CHAR(5)", "`st`.`a`", "INT", "CHAR(5)"),
+        ("st.a TYPE CHARACTER(5)", "`st`.`a`", "INT", "CHAR(5)"),
+        ("st.s TYPE VARCHAR(10)", "`st`.`s`", "STRING", "VARCHAR(10)"),
+        ("st.s TYPE varchar(10)", "`st`.`s`", "STRING", "VARCHAR(10)"),
+        ("st.s TYPE CHAR(5)", "`st`.`s`", "STRING", "CHAR(5)"),
+        (
+            "st.inner TYPE VARCHAR(10)",
+            "`st`.`inner`",
+            "STRUCT<x: INT>",
+            "VARCHAR(10)",
+        ),
+        (
+            "arr.element TYPE TINYINT",
+            "`arr`.`element`",
+            "INT",
+            "TINYINT",
+        ),
+        ("ki.key TYPE SMALLINT", "`ki`.`key`", "INT", "SMALLINT"),
+        ("kl.value TYPE SMALLINT", "`kl`.`value`", "INT", "SMALLINT"),
+    ]
+    .into_iter()
+    .map(|(clause, column, from, to)| (clause, not_supported_change(column, from, to)))
+    .chain([
+        (
+            "st.zz TYPE TINYINT",
+            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+             function parameter with name `st`.`zz` cannot be resolved. Did you mean one of the \
+             following? [`id`, `st`, `arr`, `arrl`, `arrs`, `arrd`, `ki`, `kl`, `ks`, `kf`]. \
+             SQLSTATE: 42703"
+                .to_string(),
+        ),
+        (
+            "st.a.q TYPE VARCHAR(10)",
+            "Error during planning: [INVALID_FIELD_NAME] Field name `st`.`a`.`q` is invalid: \
+             `st`.`a` is not a struct. SQLSTATE: 42000"
+                .to_string(),
+        ),
+    ])
+    .collect()
+}
+
 fn type_change_path_refusal_cases() -> Vec<(&'static str, String)> {
     vec![
         (
@@ -434,7 +483,8 @@ async fn nested_alter_column_type_refuses_each_pair_like_spark() {
         .current_schema_id();
     let cases = type_change_refusal_cases()
         .into_iter()
-        .chain(type_change_path_refusal_cases());
+        .chain(type_change_path_refusal_cases())
+        .chain(spark_only_target_refusal_cases());
     for (clause, expected) in cases {
         let sql = format!("ALTER TABLE ice.sales.types ALTER COLUMN {clause}");
         let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
@@ -487,24 +537,110 @@ async fn nested_alter_column_type_accepts_the_pairs_spark_accepts() {
 }
 
 #[tokio::test]
+async fn nested_alter_column_type_refuses_unsized_and_sized_targets_as_parse_errors() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, TYPE_CHANGE_CREATE).await;
+    let schema_id = load_sales_table(&catalogs, "types")
+        .await
+        .metadata()
+        .current_schema_id();
+    let missing_size = |name: &str| {
+        format!(
+            "[DATATYPE_MISSING_SIZE] DataType \"{name}\" requires a length parameter, for \
+             example \"{name}\"(10). Please specify the length. SQLSTATE: 42K01"
+        )
+    };
+    let unsupported = |name: &str| {
+        format!("[UNSUPPORTED_DATATYPE] Unsupported data type \"{name}\". SQLSTATE: 0A000")
+    };
+    for (sql, expected) in [
+        (
+            "types ALTER COLUMN st.s TYPE VARCHAR",
+            missing_size("VARCHAR"),
+        ),
+        (
+            "types ALTER COLUMN st.s TYPE varchar",
+            missing_size("VARCHAR"),
+        ),
+        ("types ALTER COLUMN st.s TYPE CHAR", missing_size("CHAR")),
+        (
+            "types ALTER COLUMN st.s TYPE Character",
+            missing_size("CHARACTER"),
+        ),
+        (
+            "nope ALTER COLUMN st.s TYPE VARCHAR",
+            missing_size("VARCHAR"),
+        ),
+        (
+            "types ALTER COLUMN st.a TYPE tinyint(3)",
+            unsupported("TINYINT(3)"),
+        ),
+        (
+            "types ALTER COLUMN st.a TYPE SMALLINT(2)",
+            unsupported("SMALLINT(2)"),
+        ),
+        ("types ALTER COLUMN st.a TYPE INT(3)", unsupported("INT(3)")),
+        (
+            "types ALTER COLUMN st.a TYPE INTEGER(3)",
+            unsupported("INTEGER(3)"),
+        ),
+        (
+            "types ALTER COLUMN st.a TYPE BIGINT(5)",
+            unsupported("BIGINT(5)"),
+        ),
+        (
+            "types ALTER COLUMN st.a TYPE FLOAT(10)",
+            unsupported("FLOAT(10)"),
+        ),
+        (
+            "types ALTER COLUMN st.a TYPE DOUBLE(5)",
+            unsupported("DOUBLE(5)"),
+        ),
+        (
+            "types ALTER COLUMN st.a TYPE TIMESTAMP(3)",
+            unsupported("TIMESTAMP(3)"),
+        ),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.{sql}");
+        let refused = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        assert!(
+            matches!(&refused, DataFusionError::Context(_, inner) if matches!(**inner, DataFusionError::SQL(_, _))),
+            "{sql}: {refused}"
+        );
+        let mapped = repark_core::engine_err(refused);
+        let repark_common::Error::Parse(message) = &mapped else {
+            panic!("{sql}: expected a Parse error, got {mapped:?}");
+        };
+        assert_eq!(*message, expected, "{sql}");
+    }
+    assert_eq!(
+        load_sales_table(&catalogs, "types")
+            .await
+            .metadata()
+            .current_schema_id(),
+        schema_id
+    );
+}
+
+#[tokio::test]
 async fn nested_alter_column_type_on_a_missing_table_is_table_or_view_not_found() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    let error = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.nope ALTER COLUMN st.a TYPE BIGINT",
-    )
-    .await
-    .expect_err("a missing table must refuse");
-    assert_eq!(
-        error.to_string(),
-        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view \
-         `ice`.`sales`.`nope` cannot be found. Verify the spelling and correctness of the schema \
-         and catalog. If you did not qualify the name with a schema, verify the current_schema() \
-         output, or qualify the name with the correct schema and catalog. To tolerate the error \
-         on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
-    );
+    for target in ["BIGINT", "TINYINT"] {
+        let sql = format!("ALTER TABLE ice.sales.nope ALTER COLUMN st.a TYPE {target}");
+        let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        assert_eq!(
+            error.to_string(),
+            "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view \
+             `ice`.`sales`.`nope` cannot be found. Verify the spelling and correctness of the \
+             schema and catalog. If you did not qualify the name with a schema, verify the \
+             current_schema() output, or qualify the name with the correct schema and catalog. \
+             To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. \
+             SQLSTATE: 42P01",
+            "{sql}"
+        );
+    }
 }
 
 #[tokio::test]

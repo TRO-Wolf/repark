@@ -1,6 +1,8 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{AlterColumnOperation, DataType as SqlDataType, Ident};
+use datafusion::sql::sqlparser::ast::{
+    AlterColumnOperation, DataType as SqlDataType, ExactNumberInfo, Ident, TimezoneInfo,
+};
 use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
@@ -13,7 +15,7 @@ use repark_iceberg::write::alter::{
 };
 use repark_iceberg::write::nested_column::{
     ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, nested_add_refusal,
-    nested_required_add_refusal, resolve_nested_type_change,
+    nested_required_add_refusal, nested_spark_only_type_refusal, resolve_nested_type_change,
 };
 
 use crate::alter::table_parts_to_ident;
@@ -100,10 +102,13 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
         Ok(None) => None,
         Ok(Some(operation)) => Some(match names.double_quoted {
             Some(quoted) => Err(verbatim_parser_error(syntax_error_near(&quoted))),
-            None => Ok(NestedColumnDdl {
-                table_parts,
-                operation,
-            }),
+            None => match target_type_parse_refusal(&operation) {
+                Some(message) => Err(verbatim_parser_error(message)),
+                None => Ok(NestedColumnDdl {
+                    table_parts,
+                    operation,
+                }),
+            },
         }),
         Err(error) => Some(Err(parser_error(error))),
     }
@@ -275,6 +280,50 @@ fn parse_alter_column_type(
     Ok(Some(NestedColumnOperation::AlterType { path, data_type }))
 }
 
+fn target_type_parse_refusal(operation: &NestedColumnOperation) -> Option<String> {
+    let NestedColumnOperation::AlterType { data_type, .. } = operation else {
+        return None;
+    };
+    match data_type {
+        SqlDataType::Varchar(None) | SqlDataType::Char(None) | SqlDataType::Character(None) => {
+            Some(format!(
+                "[DATATYPE_MISSING_SIZE] DataType \"{data_type}\" requires a length parameter, \
+                 for example \"{data_type}\"(10). Please specify the length. SQLSTATE: 42K01"
+            ))
+        }
+        SqlDataType::TinyInt(Some(_))
+        | SqlDataType::SmallInt(Some(_))
+        | SqlDataType::Int(Some(_))
+        | SqlDataType::Integer(Some(_))
+        | SqlDataType::BigInt(Some(_))
+        | SqlDataType::Float(ExactNumberInfo::Precision(_))
+        | SqlDataType::Double(ExactNumberInfo::Precision(_))
+        | SqlDataType::Timestamp(Some(_), TimezoneInfo::None) => Some(format!(
+            "[UNSUPPORTED_DATATYPE] Unsupported data type \"{data_type}\". SQLSTATE: 0A000"
+        )),
+        _ => None,
+    }
+}
+
+fn spark_only_target_type(data_type: &SqlDataType) -> Option<String> {
+    match data_type {
+        SqlDataType::TinyInt(_) => Some("TINYINT".to_string()),
+        SqlDataType::SmallInt(_) => Some("SMALLINT".to_string()),
+        SqlDataType::Varchar(Some(length)) => Some(format!("VARCHAR({length})")),
+        SqlDataType::Char(Some(length)) | SqlDataType::Character(Some(length)) => {
+            Some(format!("CHAR({length})"))
+        }
+        _ => None,
+    }
+}
+
+fn nested_type_error(refusal: NestedTypeRefusal) -> DataFusionError {
+    match refusal {
+        NestedTypeRefusal::Analysis(message) => DataFusionError::Plan(message),
+        NestedTypeRefusal::Unsupported(message) => DataFusionError::Execution(message),
+    }
+}
+
 fn path_change_for_add(
     column: &NestedAddColumn,
     timestamp_type: SparkTimestampType,
@@ -311,19 +360,20 @@ pub(crate) async fn execute_nested_column_ddl(
     })?;
     match &ddl.operation {
         NestedColumnOperation::AlterType { path, data_type } => {
-            let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
-            let to = sql_type_to_iceberg_with_timestamp_type(data_type, timestamp_type)?;
             let table_name = crate::catalog_ops::quoted_table_display(&ddl.table_parts);
             let schema = table.metadata().current_schema();
-            let resolved = match resolve_nested_type_change(schema, &table_name, path, &to) {
-                Ok(resolved) => resolved,
-                Err(NestedTypeRefusal::Analysis(message)) => {
-                    return Err(DataFusionError::Plan(message));
-                }
-                Err(NestedTypeRefusal::Unsupported(message)) => {
-                    return Err(DataFusionError::Execution(message));
-                }
-            };
+            if let Some(to_type) = spark_only_target_type(data_type) {
+                return Err(nested_type_error(nested_spark_only_type_refusal(
+                    schema,
+                    &table_name,
+                    path,
+                    &to_type,
+                )));
+            }
+            let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
+            let to = sql_type_to_iceberg_with_timestamp_type(data_type, timestamp_type)?;
+            let resolved = resolve_nested_type_change(schema, &table_name, path, &to)
+                .map_err(nested_type_error)?;
             let operation = AlterColumnOperation::SetDataType {
                 data_type: data_type.clone(),
                 using: None,

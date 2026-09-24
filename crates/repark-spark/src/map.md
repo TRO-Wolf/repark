@@ -1120,6 +1120,15 @@ pins: rp-4-fork-repin/C-005, C-006
   table maps to `catalog_ops::table_or_view_not_found` for every nested form, not the raw
   `TableNotFound`.
   pins: ice-nested-evo-1/C-027, C-029
+  **WO U5 PR1 round 3 (2026-09-24):** the TYPE target is decided from the SQL type before it
+  is lowered to Iceberg, since the shared lowering folds TINYINT/SMALLINT into `int` and
+  CHAR/VARCHAR into `string`. `target_type_parse_refusal` answers bare CHAR/CHARACTER/VARCHAR
+  with `DATATYPE_MISSING_SIZE`, and a width on an integer, FLOAT, DOUBLE or TIMESTAMP with
+  `UNSUPPORTED_DATATYPE`. Both are verbatim ParseExceptions raised before the table loads.
+  `spark_only_target_type` sends TINYINT, SMALLINT, CHAR(n) and VARCHAR(n) to
+  `nested_spark_only_type_refusal`, which raises `NOT_SUPPORTED_CHANGE_COLUMN` with Spark's
+  name after the path resolves.
+  pins: ice-nested-evo-1/C-032, C-033
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

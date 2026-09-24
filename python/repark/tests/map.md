@@ -795,6 +795,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   missing-namespace, refused-property, accepted-property DESCRIBE and lone `IF` / `EXISTS`
   UNSET pins do the same for their answers.
   pins: ice-nested-evo-1/C-027, C-029, C-030, C-031
+  **Round 3 (2026-09-24):** the refusal table now repeats every Rust-pinned C-027 pair. It adds
+  the measured TINYINT/SMALLINT/CHAR(n)/CHARACTER(n)/VARCHAR(n) targets, which answer
+  NOT_SUPPORTED_CHANGE_COLUMN with Spark's type name.
+  `test_nested_alter_column_type_target_parse_refusals_match_spark` pins the
+  DATATYPE_MISSING_SIZE and UNSUPPORTED_DATATYPE ParseExceptions. The missing-table test runs a
+  TINYINT target too.
+  pins: ice-nested-evo-1/C-027, C-032, C-033, C-034
 - [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
   [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
   [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) +

@@ -138,9 +138,10 @@ def test_alter_namespace_properties_update_extended_describe(spark: ReparkSessio
 
 
 _TYPES_TABLE = (
-    "CREATE TABLE sc.ns.types (id INT, st STRUCT<a: INT, b: BIGINT, s: STRING, c: BIGINT>, "
+    "CREATE TABLE sc.ns.types (id INT, st STRUCT<a: INT, b: BIGINT, s: STRING, c: BIGINT, "
+    "dec: DECIMAL(9,2), inner: STRUCT<x: INT>, d: DATE, ts: TIMESTAMP, f: BOOLEAN>, "
     "arr ARRAY<INT>, arrl ARRAY<BIGINT>, arrs ARRAY<STRING>, arrd ARRAY<BIGINT>, "
-    "ki MAP<INT, INT>, kl MAP<BIGINT, INT>, ks MAP<STRING, INT>) USING iceberg"
+    "ki MAP<INT, INT>, kl MAP<BIGINT, INT>, ks MAP<STRING, INT>, kf MAP<FLOAT, INT>) USING iceberg"
 )
 
 
@@ -244,7 +245,7 @@ def _unsupported(message: str) -> str:
             AnalysisException,
             "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or "
             "function parameter with name `st`.`zz` cannot be resolved. Did you mean one of the "
-            "following? [`id`, `st`, `arr`, `arrl`, `arrs`, `arrd`, `ki`, `kl`, `ks`]. "
+            "following? [`id`, `st`, `arr`, `arrl`, `arrs`, `arrd`, `ki`, `kl`, `ks`, `kf`]. "
             "SQLSTATE: 42703",
             "UNRESOLVED_COLUMN.WITH_SUGGESTION",
             "42703",
@@ -258,6 +259,226 @@ def _unsupported(message: str) -> str:
             "INVALID_FIELD_NAME",
             "42000",
             id="map-key-case",
+        ),
+        pytest.param(
+            "kf.key TYPE DOUBLE",
+            PySparkException,
+            _unsupported("Cannot update map keys: map<float, int>"),
+            None,
+            None,
+            id="map-key-float-to-double",
+        ),
+        pytest.param(
+            "ki.key TYPE DOUBLE",
+            PySparkException,
+            _unsupported("Cannot change column type: ki.key: int -> double"),
+            None,
+            None,
+            id="map-key-int-to-double",
+        ),
+        pytest.param(
+            "st.dec TYPE DOUBLE",
+            AnalysisException,
+            _not_supported("`st`.`dec`", "DECIMAL(9,2)", "DOUBLE"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="decimal-to-double",
+        ),
+        pytest.param(
+            "st.a TYPE DECIMAL(10,0)",
+            PySparkException,
+            _unsupported("Cannot change column type: st.a: int -> decimal(10, 0)"),
+            None,
+            None,
+            id="int-to-decimal-10",
+        ),
+        pytest.param(
+            "st.a TYPE DECIMAL(9,0)",
+            AnalysisException,
+            _not_supported("`st`.`a`", "INT", "DECIMAL(9,0)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="int-to-decimal-9",
+        ),
+        pytest.param(
+            "st.inner TYPE STRING",
+            AnalysisException,
+            _not_supported("`st`.`inner`", "STRUCT<x: INT>", "STRING"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="struct-field-struct-to-string",
+        ),
+        pytest.param(
+            "st.d TYPE TIMESTAMP",
+            PySparkException,
+            _unsupported("Cannot change column type: st.d: date -> timestamptz"),
+            None,
+            None,
+            id="date-to-timestamp",
+        ),
+        pytest.param(
+            "st.ts TYPE BIGINT",
+            PySparkException,
+            _unsupported("Cannot change column type: st.ts: timestamptz -> long"),
+            None,
+            None,
+            id="timestamp-to-bigint",
+        ),
+        pytest.param(
+            "st.a TYPE FLOAT",
+            PySparkException,
+            _unsupported("Cannot change column type: st.a: int -> float"),
+            None,
+            None,
+            id="int-to-float",
+        ),
+        pytest.param(
+            "st.f TYPE STRING",
+            PySparkException,
+            _unsupported("Cannot change column type: st.f: boolean -> string"),
+            None,
+            None,
+            id="boolean-to-string",
+        ),
+        pytest.param(
+            "st.a TYPE TINYINT",
+            AnalysisException,
+            _not_supported("`st`.`a`", "INT", "TINYINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="int-to-tinyint",
+        ),
+        pytest.param(
+            "st.a TYPE tinyint",
+            AnalysisException,
+            _not_supported("`st`.`a`", "INT", "TINYINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="int-to-lower-tinyint",
+        ),
+        pytest.param(
+            "st.a TYPE SMALLINT",
+            AnalysisException,
+            _not_supported("`st`.`a`", "INT", "SMALLINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="int-to-smallint",
+        ),
+        pytest.param(
+            "st.b TYPE SMALLINT",
+            AnalysisException,
+            _not_supported("`st`.`b`", "BIGINT", "SMALLINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="bigint-to-smallint",
+        ),
+        pytest.param(
+            "st.b TYPE TINYINT",
+            AnalysisException,
+            _not_supported("`st`.`b`", "BIGINT", "TINYINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="bigint-to-tinyint",
+        ),
+        pytest.param(
+            "st.a TYPE VARCHAR(10)",
+            AnalysisException,
+            _not_supported("`st`.`a`", "INT", "VARCHAR(10)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="int-to-varchar",
+        ),
+        pytest.param(
+            "st.a TYPE CHAR(5)",
+            AnalysisException,
+            _not_supported("`st`.`a`", "INT", "CHAR(5)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="int-to-char",
+        ),
+        pytest.param(
+            "st.a TYPE CHARACTER(5)",
+            AnalysisException,
+            _not_supported("`st`.`a`", "INT", "CHAR(5)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="int-to-character",
+        ),
+        pytest.param(
+            "st.s TYPE VARCHAR(10)",
+            AnalysisException,
+            _not_supported("`st`.`s`", "STRING", "VARCHAR(10)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="string-to-varchar",
+        ),
+        pytest.param(
+            "st.s TYPE varchar(10)",
+            AnalysisException,
+            _not_supported("`st`.`s`", "STRING", "VARCHAR(10)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="string-to-lower-varchar",
+        ),
+        pytest.param(
+            "st.s TYPE CHAR(5)",
+            AnalysisException,
+            _not_supported("`st`.`s`", "STRING", "CHAR(5)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="string-to-char",
+        ),
+        pytest.param(
+            "st.inner TYPE VARCHAR(10)",
+            AnalysisException,
+            _not_supported("`st`.`inner`", "STRUCT<x: INT>", "VARCHAR(10)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="struct-to-varchar",
+        ),
+        pytest.param(
+            "arr.element TYPE TINYINT",
+            AnalysisException,
+            _not_supported("`arr`.`element`", "INT", "TINYINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="list-int-to-tinyint",
+        ),
+        pytest.param(
+            "ki.key TYPE SMALLINT",
+            AnalysisException,
+            _not_supported("`ki`.`key`", "INT", "SMALLINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="map-key-int-to-smallint",
+        ),
+        pytest.param(
+            "kl.value TYPE SMALLINT",
+            AnalysisException,
+            _not_supported("`kl`.`value`", "INT", "SMALLINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="map-value-int-to-smallint",
+        ),
+        pytest.param(
+            "st.zz TYPE TINYINT",
+            AnalysisException,
+            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or "
+            "function parameter with name `st`.`zz` cannot be resolved. Did you mean one of the "
+            "following? [`id`, `st`, `arr`, `arrl`, `arrs`, `arrd`, `ki`, `kl`, `ks`, `kf`]. "
+            "SQLSTATE: 42703",
+            "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+            "42703",
+            id="missing-field-tinyint",
+        ),
+        pytest.param(
+            "st.a.q TYPE VARCHAR(10)",
+            AnalysisException,
+            "Error during planning: [INVALID_FIELD_NAME] Field name `st`.`a`.`q` is invalid: "
+            "`st`.`a` is not a struct. SQLSTATE: 42000",
+            "INVALID_FIELD_NAME",
+            "42000",
+            id="not-a-struct-varchar",
         ),
     ],
 )
@@ -281,9 +502,12 @@ def test_nested_alter_column_type_refusals_match_spark(
     assert _current_schema(_metadata(tmp_path, "types")) == before
 
 
-def test_nested_alter_column_type_on_a_missing_table_matches_spark(spark: ReparkSession) -> None:
+@pytest.mark.parametrize("target", ["BIGINT", "TINYINT"])
+def test_nested_alter_column_type_on_a_missing_table_matches_spark(
+    spark: ReparkSession, target: str
+) -> None:
     with pytest.raises(AnalysisException) as caught:
-        spark.sql("ALTER TABLE sc.ns.nope ALTER COLUMN st.a TYPE BIGINT")
+        spark.sql(f"ALTER TABLE sc.ns.nope ALTER COLUMN st.a TYPE {target}")
     assert type(caught.value) is AnalysisException
     assert str(caught.value) == (
         "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`nope` "
@@ -294,6 +518,132 @@ def test_nested_alter_column_type_on_a_missing_table_matches_spark(spark: Repark
     )
     assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
     assert caught.value.getSqlState() == "42P01"
+
+
+def _missing_size(name: str) -> str:
+    return (
+        f'[DATATYPE_MISSING_SIZE] DataType "{name}" requires a length parameter, for example '
+        f'"{name}"(10). Please specify the length. SQLSTATE: 42K01'
+    )
+
+
+def _unsupported_datatype(name: str) -> str:
+    return f'[UNSUPPORTED_DATATYPE] Unsupported data type "{name}". SQLSTATE: 0A000'
+
+
+@pytest.mark.parametrize(
+    ("statement", "message", "condition", "sql_state"),
+    [
+        pytest.param(
+            "types ALTER COLUMN st.s TYPE VARCHAR",
+            _missing_size("VARCHAR"),
+            "DATATYPE_MISSING_SIZE",
+            "42K01",
+            id="varchar",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.s TYPE varchar",
+            _missing_size("VARCHAR"),
+            "DATATYPE_MISSING_SIZE",
+            "42K01",
+            id="lower-varchar",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.s TYPE CHAR",
+            _missing_size("CHAR"),
+            "DATATYPE_MISSING_SIZE",
+            "42K01",
+            id="char",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.s TYPE Character",
+            _missing_size("CHARACTER"),
+            "DATATYPE_MISSING_SIZE",
+            "42K01",
+            id="character",
+        ),
+        pytest.param(
+            "nope ALTER COLUMN st.s TYPE VARCHAR",
+            _missing_size("VARCHAR"),
+            "DATATYPE_MISSING_SIZE",
+            "42K01",
+            id="varchar-missing-table",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE tinyint(3)",
+            _unsupported_datatype("TINYINT(3)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="tinyint-width",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE SMALLINT(2)",
+            _unsupported_datatype("SMALLINT(2)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="smallint-width",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE INT(3)",
+            _unsupported_datatype("INT(3)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="int-width",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE INTEGER(3)",
+            _unsupported_datatype("INTEGER(3)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="integer-width",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE BIGINT(5)",
+            _unsupported_datatype("BIGINT(5)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="bigint-width",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE FLOAT(10)",
+            _unsupported_datatype("FLOAT(10)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="float-precision",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE DOUBLE(5)",
+            _unsupported_datatype("DOUBLE(5)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="double-precision",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE TIMESTAMP(3)",
+            _unsupported_datatype("TIMESTAMP(3)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="timestamp-precision",
+        ),
+    ],
+)
+def test_nested_alter_column_type_target_parse_refusals_match_spark(
+    spark: ReparkSession,
+    tmp_path: Path,
+    statement: str,
+    message: str,
+    condition: str,
+    sql_state: str,
+) -> None:
+    spark.sql(_TYPES_TABLE)
+    before = _current_schema(_metadata(tmp_path, "types"))
+    with pytest.raises(ParseException) as caught:
+        spark.sql(f"ALTER TABLE sc.ns.{statement}")
+    assert type(caught.value) is ParseException
+    assert str(caught.value) == message
+    assert caught.value.getCondition() == condition
+    assert caught.value.getSqlState() == sql_state
+    assert _current_schema(_metadata(tmp_path, "types")) == before
 
 
 @pytest.mark.parametrize(

@@ -1055,6 +1055,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   mixed-case promotions and a map value, then reads the committed types.
   `…_on_a_missing_table_is_table_or_view_not_found` pins the missing table.
   pins: ice-nested-evo-1/C-027, C-029
+  **Round 3 (2026-09-24):** `spark_only_target_refusal_cases` extends the same table with the
+  measured TINYINT/SMALLINT/CHAR(n)/CHARACTER(n)/VARCHAR(n) targets on struct fields, a list
+  element, a map key and a map value, plus two path refusals that still come first.
+  `…_refuses_unsized_and_sized_targets_as_parse_errors` pins the DATATYPE_MISSING_SIZE and
+  UNSUPPORTED_DATATYPE ParseException texts, including one on a missing table. The
+  missing-table test also runs a TINYINT target.
+  pins: ice-nested-evo-1/C-032, C-033
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

@@ -728,6 +728,11 @@ repark-core's error map.
   renders Java's `Type.toString` (`decimal(9, 2)`, `map<int, int>`), which the fork's Display
   does not.
   pins: ice-nested-evo-1/C-027, C-029
+  **Round 3 (2026-09-24):** `nested_spark_only_type_refusal` resolves the same path and
+  answers `NOT_SUPPORTED_CHANGE_COLUMN` with a caller-supplied Spark target name. It serves
+  targets Iceberg has no type for (TINYINT, SMALLINT, CHAR(n), VARCHAR(n)), which Spark never
+  up-casts to.
+  pins: ice-nested-evo-1/C-032
 - `nested_type_sql.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the one token
   rewrite both doors run on a nested column type: a struct child's `NOT NULL` becomes the
   struct-field option `OPTIONS(repark_not_null=TRUE)` (the only struct-field suffix

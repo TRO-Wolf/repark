@@ -352,17 +352,43 @@ pub fn not_supported_change_column(
     from: &Type,
     to: &Type,
 ) -> String {
+    not_supported_change_column_to(table_name, column_name, from, &spark_sql_type(to))
+}
+
+fn not_supported_change_column_to(
+    table_name: &str,
+    column_name: &str,
+    from: &Type,
+    to_type: &str,
+) -> String {
     let from_type = spark_sql_type(from);
-    let to_type = spark_sql_type(to);
     spark_error::message(
         spark_error::NOT_SUPPORTED_CHANGE_COLUMN,
         &[
             ("tableName", table_name),
             ("columnName", column_name),
             ("fromType", from_type.as_str()),
-            ("toType", to_type.as_str()),
+            ("toType", to_type),
         ],
     )
+}
+
+#[must_use]
+pub fn nested_spark_only_type_refusal(
+    schema: &Schema,
+    table_name: &str,
+    path: &[String],
+    to_type: &str,
+) -> NestedTypeRefusal {
+    match resolve_nested_path(schema, path) {
+        Ok(resolved) => NestedTypeRefusal::Analysis(not_supported_change_column_to(
+            table_name,
+            &quoted_path(&resolved.names),
+            resolved.field_type,
+            to_type,
+        )),
+        Err(refusal) => refusal,
+    }
 }
 
 #[expect(
