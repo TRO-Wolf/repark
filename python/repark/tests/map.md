@@ -7979,7 +7979,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `file:///<abs>/metadata/<latest>` reading, the `file://<authority>` Wrong FS refusal,
   `file:/<abs>`, `FILE:/<abs>`, `fIlE:/<abs>`, `file:/<abs>/metadata/<latest>` and `file:////<abs>` reading,
   and the `file:<relative>` `URISyntaxException` refusal with one and with two trailing
-  slashes. A `v2147483648.metadata.json` copy of the create snapshot never wins the
+  slashes. A `v2147483648.metadata.json` copy of the create snapshot does not win the
   listing. Both scoreboard cells replayed against the lane build answer Spark's recorded
   rows exactly.
   pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
