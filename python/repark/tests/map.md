@@ -8121,3 +8121,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
     `PySparkException` by message suffix; the class is residue R-7 (C-013).
   - `REPLACE INTO` refuses `ParseException` (C-014).
   pins: u6-write-refusals/C-010, C-011, C-012, C-013, C-014
+  Critic r2 remediation (2026-09-24), measured by
+  `target/probe-u6-r2fix/spark*.out`:
+  - h1, h2, h9 and a star over a derived table add columns under Spark's names
+    (`NewC`, `upper(data)`) with Spark's rows (C-015).
+  - h3, h5, h6 and three rendered expressions refuse with Spark's full message
+    (C-016).
+  - An underivable name raises `UnsupportedOperationException` before any
+    evolution (C-017).
+  - Empty positional overwrites wipe, and under the conf they add `NewC` first
+    (C-018).
+  pins: u6-write-refusals/C-015, C-016, C-017, C-018

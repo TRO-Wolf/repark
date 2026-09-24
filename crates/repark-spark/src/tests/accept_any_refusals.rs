@@ -1,11 +1,16 @@
 use super::super::*;
 use super::common::*;
 
-const ACCEPT_ANY: &str = "CREATE TABLE ice.sales.t (id BIGINT, data STRING, cat STRING) USING iceberg \
+pub(super) const ACCEPT_ANY: &str = "CREATE TABLE ice.sales.t (id BIGINT, data STRING, cat STRING) USING iceberg \
                           TBLPROPERTIES ('write.spark.accept-any-schema'='true')";
-const PLAIN: &str = "CREATE TABLE ice.sales.t (id BIGINT, data STRING, cat STRING) USING iceberg";
+pub(super) const PLAIN: &str =
+    "CREATE TABLE ice.sales.t (id BIGINT, data STRING, cat STRING) USING iceberg";
 
-async fn door(wh: &TempDir, create: &str, merge_schema: bool) -> (SessionContext, CatalogRegistry) {
+pub(super) async fn door(
+    wh: &TempDir,
+    create: &str,
+    merge_schema: bool,
+) -> (SessionContext, CatalogRegistry) {
     let (ctx, catalogs) = setup(wh).await;
     if merge_schema {
         ctx.state_ref()
@@ -19,7 +24,7 @@ async fn door(wh: &TempDir, create: &str, merge_schema: bool) -> (SessionContext
     (ctx, catalogs)
 }
 
-async fn refusal(
+pub(super) async fn refusal(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
@@ -34,7 +39,7 @@ async fn refusal(
     repark_core::engine_err(error)
 }
 
-async fn assert_illegal_argument(
+pub(super) async fn assert_illegal_argument(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
@@ -47,7 +52,7 @@ async fn assert_illegal_argument(
     );
 }
 
-async fn register_view(ctx: &SessionContext, name: &str, query: &str) {
+pub(super) async fn register_view(ctx: &SessionContext, name: &str, query: &str) {
     ctx.sql(&format!("CREATE VIEW {name} AS {query}"))
         .await
         .expect("view plan")
@@ -56,7 +61,7 @@ async fn register_view(ctx: &SessionContext, name: &str, query: &str) {
         .expect("view");
 }
 
-async fn column_types(catalogs: &CatalogRegistry) -> Vec<(String, String)> {
+pub(super) async fn column_types(catalogs: &CatalogRegistry) -> Vec<(String, String)> {
     let table = catalogs["ice"]
         .load_table(&TableIdent::from_strs(["sales", "t"]).expect("ident"))
         .await
@@ -71,7 +76,7 @@ async fn column_types(catalogs: &CatalogRegistry) -> Vec<(String, String)> {
         .collect()
 }
 
-async fn sorted_rows(ctx: &SessionContext, catalogs: &CatalogRegistry) -> Vec<String> {
+pub(super) async fn sorted_rows(ctx: &SessionContext, catalogs: &CatalogRegistry) -> Vec<String> {
     let batches = execute(ctx, catalogs, "SELECT * FROM ice.sales.t")
         .await
         .expect("select")
@@ -90,7 +95,7 @@ async fn sorted_rows(ctx: &SessionContext, catalogs: &CatalogRegistry) -> Vec<St
     lines
 }
 
-fn base_types() -> Vec<(String, String)> {
+pub(super) fn base_types() -> Vec<(String, String)> {
     vec![
         ("id".to_string(), "long".to_string()),
         ("data".to_string(), "string".to_string()),
@@ -399,7 +404,7 @@ async fn column_names_after(merge_schema: bool, statements: &[&str]) -> Vec<(Str
     column_types(&catalogs).await
 }
 
-fn base_plus(added: &[(&str, &str)]) -> Vec<(String, String)> {
+pub(super) fn base_plus(added: &[(&str, &str)]) -> Vec<(String, String)> {
     let mut expected = base_types();
     expected.extend(
         added
@@ -409,7 +414,7 @@ fn base_plus(added: &[(&str, &str)]) -> Vec<(String, String)> {
     expected
 }
 
-const SEED: &str = "INSERT INTO ice.sales.t SELECT 1 AS id, 'a' AS data, 'x' AS cat";
+pub(super) const SEED: &str = "INSERT INTO ice.sales.t SELECT 1 AS id, 'a' AS data, 'x' AS cat";
 
 type SpellingCase = (
     &'static [&'static str],
@@ -548,7 +553,7 @@ async fn an_unknown_upper_case_alias_is_named_in_its_source_spelling() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 1);
 }
 
-async fn assert_invalid_schema(
+pub(super) async fn assert_invalid_schema(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,

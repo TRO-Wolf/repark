@@ -1859,3 +1859,8 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   `REPLACE INTO` exclusions are measured, and they are listed in residue R-3
   of the ledger.
   pins: u6-write-refusals/C-014
+- `insert_overwrite.rs`, critic r2 remediation (2026-09-24):
+  `assert_empty_overwrite_types_assignment_compatible` takes `null_assignable`.
+  The by-name door passes `true`, so a NULL-typed column no longer blocks the
+  wipe Spark performs. The positional door passes `false` and is unchanged.
+  pins: u6-write-refusals/C-018

@@ -86,6 +86,10 @@ plus the two commits.
   - `SourceUnion` names each source column for the union: a matched column
     takes the table's spelling, and a new column takes the source's display
     spelling (`NewC`, not the folded `newc`). Matching stays case-insensitive.
+    *Narrowed (2026-09-24, critic r2 V-001):* the display spelling is Spark's
+    name only for the shapes `source_names.rs` names from the statement text
+    (U6 round 3 below, C-015). A column behind a star over a RePark view keeps
+    the planner's lowercase spelling (R-6).
   - `refuse_duplicate_sources` runs before any evolution. An exact repeat
     refuses with Iceberg's `Invalid schema: multiple fields for name …`. A
     case-folded repeat of a table column refuses `Multiple entries with same
@@ -96,7 +100,7 @@ plus the two commits.
     missing table or namespace keeps the positional path; any other load
     failure surfaces (C-014).
   pins: u6-write-refusals/C-010, C-011, C-012, C-013, C-014
-- `source_names.rs` — `syntactic_source_names` and `normalize_ident`, moved out
+- `source_names.rs` (superseded by the round-3 entry below) — `syntactic_source_names` and `normalize_ident`, moved out
   of `../insert_by_name.rs` to keep it under the size ceiling. An unaliased
   integer or single-quoted literal is named by its text, as Spark names it.
   The names come from the leftmost `SELECT` of a positional set operation
@@ -113,3 +117,57 @@ plus the two commits.
 - `tests.rs` — pins for the literal spelling, the aliased `FROM` clause and the
   `UNION` arm naming.
   pins: u6-write-refusals/C-002, C-005, C-006, C-010
+
+## U6 WRITE-REFUSALS round 3 (2026-09-24, critic r2 V-001..V-003)
+
+Before this round, one projection item that was not a bare identifier, alias or
+literal sent the whole list to the planner. DataFusion's names then reached the
+refusal text and the Iceberg metadata (`upper(datafusion.public.src.data)`,
+`Int64(-1)`, `column1`, and `newc` for an alias `NewC`). Names are now derived
+per item.
+
+- `source_names.rs` — `query_items` names each item of the leftmost `SELECT`
+  (or `col1..colN` for a leftmost `VALUES`, also inside a positional set
+  operation):
+  - an alias, an identifier, and `CAST(<column> AS <type>)` or a parenthesized
+    column take the column's own spelling;
+  - any other expression takes `spark_names::expression_name`;
+  - a plain `*` or `<alias>.*` over one derived table or CTE takes the inner
+    statement's names, or its column-alias list when it has one;
+  - any other star stays open. The planner fills it, and its columns count as
+    Spark's only when every `FROM` relation is a named table or view.
+  `probe_source_names` skips the planner when every item is named. Otherwise
+  `place` lays the planner's columns under the items. That needs at most one open
+  star; with more, every column is planner-named. Each `SourceName` keeps
+  `column`, the planner-side name the projection addresses, apart from
+  `resolved`, the match key. When RePark cannot derive Spark's name for a
+  column, the column carries `underived`. `refuse_underived` then refuses it
+  `NotImplemented` before any evolution, unless the table already has a column
+  of that name. `aliased_source` aliases only the non-star items, so a star
+  keeps the planner's columns.
+  pins: u6-write-refusals/C-015, C-016, C-017
+- `spark_names.rs` — Spark's rendering of an unaliased expression, measured
+  item by item (`target/probe-u6-r2fix/spark*.out`):
+  - an integer or plain decimal keeps its text, and a negative literal folds
+    (`-1`; `-0.0` renders `0.0`);
+  - strings are unquoted, booleans lowercase, and `NULL` stays `NULL`;
+  - a nested column drops its qualifier only when that qualifier is a `FROM`
+    relation;
+  - binary operators render as `(l op r)`, `<>` as `(NOT (l = r))`, and `||` as
+    `concat(l, r)`;
+  - unary minus renders `(- x)`, and `NOT` / `IS [NOT] NULL` are parenthesized;
+  - ten functions whose Spark name is the lower-cased call render as
+    `name(args)`.
+  Anything else stays underived: `CASE`, `substr` (Spark adds default
+  arguments), `ceil` (`CEIL`), an exponent literal, or a nested `CAST`. Those
+  are residue R-9.
+  pins: u6-write-refusals/C-015, C-016
+- `../insert_by_name.rs` — calls `refuse_underived` before `columns_to_add`. The
+  projection addresses `SourceName::column`, and any leftmost `VALUES` takes the
+  derived-table column list. The empty-overwrite type guard passes
+  `null_assignable = true`: a NULL-typed column (a by-name fill or the
+  source's own `NULL`) is assignable, as Spark's is. `INSERT OVERWRITE t SELECT
+  9 AS id WHERE false` wipes, and under the conf it adds the new column first.
+  pins: u6-write-refusals/C-018
+- `tests.rs` — the rendering, underived, star-placement and derived-star pins.
+  pins: u6-write-refusals/C-015, C-017

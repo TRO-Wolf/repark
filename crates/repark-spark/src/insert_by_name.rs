@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{ObjectName, Query, SetExpr, Statement, TableObject};
+use datafusion::sql::sqlparser::ast::{ObjectName, Query, Statement, TableObject};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
@@ -12,7 +12,7 @@ use repark_core::CatalogRegistry;
 
 use crate::catalog_ops::{name_parts, namespace_schema_name, reregister};
 use crate::parse_single_normalized;
-use source_names::syntactic_source_names;
+use source_names::probe_source_names;
 
 enum TargetFill {
     Source(usize),
@@ -78,6 +78,7 @@ pub(crate) async fn execute_insert_by_name(
     let case_sensitive = case_sensitive_insert(ctx);
     let source_names = probe_source_names(ctx, catalogs, source, case_sensitive).await?;
     let table_display = display_table_name(&catalog_name, &table);
+    source_names::refuse_underived(&table, &source_names, &table_display, case_sensitive)?;
     let evolution_plan =
         evolution::columns_to_add(ctx, &table, &source_names, case_sensitive, write_options)?;
     let table = if let Some(union) = evolution_plan {
@@ -132,6 +133,7 @@ pub(crate) async fn execute_insert_by_name(
                 &type_table_sql,
                 &query,
                 &[],
+                true,
             )
             .await?;
             if !dynamic {
@@ -321,6 +323,9 @@ fn display_table_name(catalog_name: &str, table: &iceberg::table::Table) -> Stri
 struct SourceName {
     display: String,
     resolved: String,
+    column: String,
+    item: Option<usize>,
+    underived: Option<String>,
 }
 
 async fn projection_is_empty(
@@ -471,42 +476,6 @@ fn cannot_find_data(table: &str, name: &str) -> DataFusionError {
     ))
 }
 
-async fn probe_source_names(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    source: &Query,
-    case_sensitive: bool,
-) -> Result<Vec<SourceName>> {
-    if let SetExpr::Values(values) = source.body.as_ref() {
-        let Some(first) = values.rows.first() else {
-            return Err(DataFusionError::Plan(
-                "INSERT INTO … BY NAME needs a SELECT or VALUES source".to_string(),
-            ));
-        };
-        return Ok((1..=first.len())
-            .map(|index| SourceName {
-                display: format!("col{index}"),
-                resolved: format!("col{index}"),
-            })
-            .collect());
-    }
-    if let Some(names) = syntactic_source_names(source, case_sensitive) {
-        return Ok(names);
-    }
-    let probe_sql = format!("SELECT * FROM ({source}) AS _repark_by_name_src LIMIT 0");
-    let frame = crate::spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
-    Ok(frame
-        .schema()
-        .as_arrow()
-        .fields()
-        .iter()
-        .map(|field| SourceName {
-            display: field.name().clone(),
-            resolved: field.name().clone(),
-        })
-        .collect())
-}
-
 fn match_source_to_target(
     targets: &[String],
     sources: &[SourceName],
@@ -605,7 +574,7 @@ fn build_projection_sql(
         .map(|(target, fill)| match fill {
             TargetFill::Source(index) => format!(
                 "{} AS {}",
-                quote_name(&sources[*index].resolved),
+                quote_name(&sources[*index].column),
                 quote_name(target)
             ),
             TargetFill::Null => format!("NULL AS {}", quote_name(target)),
@@ -617,7 +586,7 @@ fn build_projection_sql(
 }
 
 fn source_from_clause(source: &Query, sources: &[SourceName]) -> String {
-    if !matches!(source.body.as_ref(), SetExpr::Values(_)) {
+    if !source_names::leftmost_is_values(source) {
         return format!(
             "FROM ({}) AS _repark_by_name_src",
             source_names::aliased_source(source, sources)
@@ -625,7 +594,7 @@ fn source_from_clause(source: &Query, sources: &[SourceName]) -> String {
     }
     let aliases = sources
         .iter()
-        .map(|name| quote_name(&name.resolved))
+        .map(|name| quote_name(&name.column))
         .collect::<Vec<_>>()
         .join(", ");
     format!("FROM ({source}) AS _repark_by_name_src({aliases})")
@@ -933,6 +902,7 @@ pub(crate) fn token_span_offsets(
 
 pub(crate) mod evolution;
 mod source_names;
+mod spark_names;
 
 #[cfg(test)]
 mod tests;

@@ -100,6 +100,7 @@ pub(crate) async fn execute_insert_overwrite(
                 &type_table_sql,
                 source,
                 &insert.columns,
+                false,
             )
             .await?;
             // Re-probe immediately before the wipe.
@@ -645,6 +646,7 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
     table_sql: &str,
     source: &datafusion::sql::sqlparser::ast::Query,
     columns: &[datafusion::sql::sqlparser::ast::ObjectName],
+    null_assignable: bool,
 ) -> Result<()> {
     let source_df = spark_ast::execute_passthrough(
         ctx,
@@ -699,6 +701,9 @@ pub(crate) async fn assert_empty_overwrite_types_assignment_compatible(
 
     for (index, target_type) in target_types.iter().enumerate() {
         let source_type = source_schema.field(index).data_type();
+        if null_assignable && source_type == &DataType::Null {
+            continue;
+        }
         if !assignment_types_compatible(source_type, target_type) {
             return Err(DataFusionError::Plan(format!(
                 "INSERT OVERWRITE empty source column {index} type {source_type} is not \

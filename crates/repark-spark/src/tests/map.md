@@ -2091,3 +2091,14 @@ matrix; those exports declare the analyzed logical schema.
   positional path reloaded the table and wrote the row. A missing table keeps
   the positional `not found` answer.
   pins: u6-write-refusals/C-014
+- `accept_any_naming.rs` (critic r2 remediation, 2026-09-24) — per-item naming on
+  the view `hsrc` (`common::setup` already owns `src`). Under the conf, an added
+  column is named from the statement for the critic's h1, h2 and h9 and for
+  star-over-derived, CTE and `VALUES` shapes (C-015). Without it, the measured
+  expression renderings refuse `Field <Spark name> not found in source schema`,
+  and a plain table's `BY NAME` names `upper(data)` in `EXTRA_COLUMNS` (C-016).
+  An underivable name refuses `NotImplemented` and leaves schema and rows
+  alone (C-017). An empty positional or `BY NAME` overwrite wipes, adding
+  `NewC` first under the conf (C-018). The helpers it shares are `pub(super)`
+  in `accept_any_refusals.rs`.
+  pins: u6-write-refusals/C-015, C-016, C-017, C-018
