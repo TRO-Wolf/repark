@@ -17,7 +17,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
-- `write_options.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits
+- `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
+  `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
+  pins: ice-views-1/C-018
+  **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits
   `trim_iceberg_caches()`, which settles the moka cache before it counts. pins: ice-catalog-cache-1/C-012
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
   its crate-private body, the session's one statement funnel (spill SET intercept, cache
@@ -29,7 +32,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.
-- `temp_views.rs` — **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
+- `temp_views.rs` — **IPI-40 PR6 (2026-09-24):** implements `dialect::TempViewSession` for
+  `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`,
+  `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.
+  pins: ice-views-1/C-018
+  **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
   the choke-point fix pushed that file past its ceiling. The old exception then retired under the
   prior default; CAP-1 records the file again at its exact source-size baseline. Holds
   `create_or_replace_temp_view`

@@ -246,7 +246,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `dynamic_flatten` is the same rewrite. Depth-3 pin: 4 passes, 10 walks, 3
   expansions, 20 fields visited.
   pins: perf-dynflatten-1-measure/C-002
-- `lib.rs` — **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` returns
+- `lib.rs` — **IPI-40 PR6 (2026-09-24):** re-exports `TempViewSession` beside
+  `EngineContext` / `SqlDialect`. pins: ice-views-1/C-018
+  **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` returns
   `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
   false, so an H-3 number can never come from a debug build.
   pins: perf-dynflatten-1-measure/C-002
@@ -747,6 +749,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
   door is guarded like the two SQL doors). `SqlDialect::on_session_built` (default no-op)
   runs from `ReparkSessionBuilder::build` after extension `register` (F-Y10-1).
+  **IPI-40 PR6 (2026-09-24):** `TempViewSession` (`create_or_replace_temp_view_from`,
+  `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names`, `drop_temp_view`) is
+  the session's temp-view seam; `EngineContext::temp_views` carries it (None from `new`, set by
+  the session's statement funnel), so a dialect can register, list and drop session temp views
+  without owning the session. pins: ice-views-1/C-018
   `#[async_trait(?Send)]`
   — rustc 1.96 HRTB + iceberg `Catalog` in `CatalogRegistry`; session awaits in place.
 - `range_table.rs` (+ [range_table/](range_table/map.md)) — **RANGE-TVF-ID-1

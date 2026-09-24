@@ -4,11 +4,15 @@
 
 Spark-door view DDL: the pre-parse seam that intercepts view statements before
 DataFusion mis-routes them, the execution path over the `repark-iceberg` view
-service, and the wrapper-based read path that expands stored SQL per query.
+service, the wrapper-based read path that expands stored SQL per query, and
+(IPI-40 PR6) session temporary views: the SQL `CREATE [OR REPLACE] TEMPORARY
+VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
 
 ## Contents
 
 - `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe` / `show_create`.
+- `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe` /
+  `temp_parse` / `temp_ddl` / `temp_view`.
 - `parse.rs` — grammar only: `CREATE [OR REPLACE] [IF NOT EXISTS] VIEW` with
   alias/COMMENT/TBLPROPERTIES forms and verbatim body capture,
   `is_create_view_statement` (the durable head sniff the router skip uses),
@@ -16,7 +20,12 @@ service, and the wrapper-based read path that expands stored SQL per query.
   and **PR3 (2026-09-22)** `try_parse_alter_view` for `ALTER VIEW` …
   `SET TBLPROPERTIES`, `UNSET TBLPROPERTIES [IF EXISTS]` and `RENAME TO`
   (anything else after the name, `AS` included, stays `None`; a recognised
-  verb with a malformed tail is `Some(Err)`). TEMPORARY forms never match.
+  verb with a malformed tail is `Some(Err)`). TEMPORARY forms never match
+  here — they are `temp_parse.rs`'s. The helpers both parsers share
+  (`unquoted_head_words`, `consume_head_word`, `split_view_statement`,
+  `parse_view_clauses`) are `pub(super)`. **PR6a2:** a bare `SHOW VIEWS
+  [LIKE]` parses with an empty namespace (the old "requires an explicit
+  namespace" refusal is gone; the executor answers the current namespace).
   Unit tests per form. The facade still prefixes one-part targets with
   `/* repark:bare-name */`; the engine never reads the mark — it only
   records that the user spelled the name bare (V-001, 2026-09-22).
@@ -34,6 +43,14 @@ service, and the wrapper-based read path that expands stored SQL per query.
   fail-closed since R2: metadata-table writes refuse up front, `is_view` is a
   `Result`, and names that cannot be views (branch selectors) fall through to
   the table path). pins: ice-views-1/C-017
+  **IPI-40 PR6:** `route_create_temp_view` / `execute_create_temp_view` plan
+  the temp body under the session defaults, refuse
+  TEMP_TABLE_OR_VIEW_ALREADY_EXISTS for a plain CREATE on an existing name,
+  check RECURSIVE_VIEW and register through `TempViewSession` (a session-less
+  door refuses with `NO_TEMP_VIEW_HOME`); `execute_show_views_with` lists
+  catalog rows then temp rows `["", name, true]`, LIKE on both, and a bare
+  SHOW VIEWS reads the current namespace (`show_view_rows_batch`).
+  pins: ice-views-1/C-018
   Name completion for CREATE, DROP, ALTER, RENAME targets, and the write guard
   reads `use_ddl::session_defaults(catalogs)`; one-part SHOW VIEWS IN reads its
   catalog from the same defaults. A bare name with no current namespace uses
@@ -67,12 +84,47 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `complete_view_name(catalogs, …)` from `use_ddl::session_defaults`, so
   they follow `USE` like ALTER VIEW.
   pins: ice-views-1/C-017
+- `temp_parse.rs` — **IPI-40 PR6** grammar for `CREATE [OR REPLACE] [GLOBAL]
+  TEMP|TEMPORARY VIEW`: `try_parse_create_temp_view` (verbatim body, column
+  aliases with COMMENT, view COMMENT accepted) and the Spark-measured parse
+  refusals as ParseException-class `DataFusionError::SQL` (`spark_parse_error`):
+  PARSE_SYNTAX_ERROR for a body that does not open a query, the legacy IF NOT
+  EXISTS / OR REPLACE + IF NOT EXISTS / TBLPROPERTIES texts,
+  TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS (two parts) and
+  IDENTIFIER_TOO_MANY_NAME_PARTS (three or more); GLOBAL refuses as
+  `NotImplemented` (`GLOBAL_TEMP_VIEW_REFUSAL`). Split out of `parse.rs`
+  after the PR4 rebase (PR6b1). pins: ice-views-1/C-018
+- `temp_ddl.rs` — **IPI-40 PR6** the session dispatcher
+  `route_temp_view_statement`, called from `router.rs::execute_in_session`
+  after canonicalization: CREATE TEMPORARY VIEW always; with a session
+  attached, DROP TABLE / DROP VIEW (any IF EXISTS / PURGE form) of a
+  registered temp name — a bare name or the temp HOME-qualified name the
+  facade emits — drops it through `TempViewSession::drop_temp_view`, so
+  one-part names are temp-first; DESCRIBE [TABLE] [EXTENDED] of a temp view
+  answers Spark rows with an Arrow NULL comment (alias COMMENT clauses kept); SHOW
+  VIEWS appends the session's temp rows. Every other target falls through to
+  the catalog arms unchanged. pins: ice-views-1/C-018
+- `temp_view.rs` — **IPI-40 PR6** `ReplanningTempView`, the provider behind
+  a SQL temp view (registered through `create_or_replace_temp_view_from`): it
+  re-plans the stored body at every scan under the creation-time catalog and
+  namespace and the temp names captured at CREATE, conforms the answer to the
+  creation columns by name (Spark's up-cast widening, else
+  INCOMPATIBLE_VIEW_SCHEMA_CHANGE / CANNOT_UP_CAST_DATATYPE), answers
+  TABLE_OR_VIEW_NOT_FOUND for a dropped temp dependency, shares the
+  `VIEW_NESTED_DEPTH_LIMIT` counter, and refuses CREATE OR REPLACE cycles with
+  RECURSIVE_VIEW; `temp_view_column_comments` feeds DESCRIBE.
+  pins: ice-views-1/C-018
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored
   defaults with aliases applied; `table_names` stays tables-only);
   `ensure_view_wrappers`; time-travel prepare plus stored-namespace
   qualification with CTE shadowing; the 100-deep `VIEW_NESTED_DEPTH_LIMIT`
-  guard; non-query bodies refused loud.
+  guard; non-query bodies refused loud. **PR6:** `prepare_view_body_sql_with`
+  takes a `TempHomes` source (none for durable views, the live session at
+  temp-view CREATE, the captured map at re-plan) so bare temp names qualify
+  to their home first; `refuse_write_query_body` answers PARSE_SYNTAX_ERROR
+  for a `WITH … INSERT/UPDATE/DELETE/MERGE` temp body; `nested_depth_refusal`
+  is shared with `temp_view.rs`.
 - `describe.rs` — **PR2 (2026-09-22, V-DESCRIBE):** `describe_view_frame`
   is the view probe on the `TableNotFound` arm of `execute_describe_table`
   (`../describe_show.rs`): a loaded view answers, `ViewNotFound` and
@@ -100,6 +152,9 @@ service, and the wrapper-based read path that expands stored SQL per query.
   catalog refuses with `catalog_handle`'s. **r2 (2026-09-24):** the renderer has
   no property filter of its own. Residues: D-VIEW-SHOWCREATE-1.
   pins: ice-views-1/C-017
+  and EXTENDED is the same columns-only answer. SHOW CREATE stays a later PR.
+  **PR6a2:** `describe_rows_batch` is the shared batch builder the temp-view
+  DESCRIBE in `temp_ddl.rs` reuses. pins: ice-views-1/C-017
 
 ## Pointers
 
