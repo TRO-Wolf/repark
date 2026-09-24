@@ -221,8 +221,8 @@ def test_bare_missing_name_after_use_is_table_or_view_not_found(spark: ReparkSes
     )
 
 
-def test_bare_name_without_use_resolves_in_the_registry_default(spark: ReparkSession) -> None:
-    """Near-miss — without USE a bare name resolves in spark_catalog.default."""
+def test_bare_name_without_use_falls_through(spark: ReparkSession) -> None:
+    """Near-miss — without USE the namespace default is empty, so a bare name falls through."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SHOW TBLPROPERTIES v ('k')")
