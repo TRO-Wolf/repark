@@ -451,7 +451,7 @@ class ReparkSession:
             return None
         raw_table = query[name_start:name_end]
         rest = query[name_end:]
-        if rest.strip(" ;") and not re.fullmatch(r"\s+(?:`[^`]+`|[A-Za-z_]\w*)(?:\s*;)?\s*", rest):
+        if rest.strip().strip(";") and not re.fullmatch(r"\s+(`[^`]+`|[A-Za-z_]\w*)\s*;?\s*", rest):
             return None
         head = raw_table.split(".", 1)[0].strip()
         if head.upper() in {"NAMESPACE", "DATABASE", "SCHEMA"} and (

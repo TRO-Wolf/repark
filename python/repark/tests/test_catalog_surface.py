@@ -50,6 +50,32 @@ def spark(tmp_path: Path) -> ReparkSession:
     return session
 
 
+@pytest.mark.parametrize(
+    "ddl,table,expected",
+    [
+        (
+            "(id BIGINT, cat STRING COMMENT 'the cat', x INT) USING iceberg "
+            "PARTITIONED BY (cat, id)",
+            "ic",
+            [("id", True), ("cat", True), ("x", False)],
+        ),
+        (
+            "(id BIGINT, `we ird` STRING) USING iceberg PARTITIONED BY (`we ird`)",
+            "`we ird t`",
+            [("id", False), ("we ird", True)],
+        ),
+    ],
+    ids=["two_identity", "spaced_identity"],
+)
+def test_list_columns_flags_every_identity_partition_source(
+    spark: ReparkSession, ddl: str, table: str, expected: list[tuple[str, bool]]
+) -> None:
+    """Every identity-partition source column reads back isPartition like Spark 4.1.2."""
+    spark.sql(f"CREATE TABLE glue_catalog.ns1.{table} {ddl}")
+    columns = spark.catalog.listColumns(f"glue_catalog.ns1.{table}")
+    assert [(column.name, column.isPartition) for column in columns] == expected
+
+
 # Methods already on the facade: tableExists / dropTempView / clearCache
 
 
