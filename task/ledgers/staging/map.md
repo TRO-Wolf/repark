@@ -46,10 +46,13 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (this PR) is the catalog door and the read path on the memory catalog:
   `CREATE [OR REPLACE] VIEW`, `DROP VIEW`, `SHOW VIEWS`, `SELECT` from views,
   the D-9 error contract, and the A-9 viewless refusals. C-001..C-016 PROVEN;
-  C-017 (PR2: DESCRIBE / SHOW CREATE / SHOW TBLPROPERTIES / ALTER VIEW) and
-  C-018 (PR3: SQL temporary views, dbt follow-up) stay OPEN.
+  C-017 (PR2: DESCRIBE / SHOW CREATE / SHOW TBLPROPERTIES / ALTER VIEW) stays
+  OPEN; C-018 PROVEN by IPI-40 PR6 (2026-09-24): SQL session temporary views,
+  temp-first DROP, temp DESCRIBE and SHOW VIEWS, the dbt SQL door pins
+  (DBT-TEMPVIEW-1 retired, DBT-INCREMENTAL-1 registered; dbt
+  `materialized='view'` stays refused and is not claimed).
   `risk_tier: standard`. Branch `fix/ipi-40-views-1`.
-  pins: ice-views-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  pins: ice-views-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018
 - [ice-error-conditions-1-ledger.md](ice-error-conditions-1-ledger.md) —
   **ICE-ERROR-CONDITIONS-1 (2026-09-20), in flight:** IPI-51 PR1 — the native
   error-condition parser only: PyO3 exceptions report `getCondition`/`getErrorClass`/
