@@ -877,6 +877,9 @@ async fn temp_view_statements_with_a_trailing_statement_refuse_as_the_catalog_do
         "DESCRIBE EXTENDED src; SELECT 1",
         "SHOW VIEWS; SELECT 1",
         "SHOW VIEWS IN ice.sales; SELECT 1",
+        "CREATE VIEW ice.sales.d1; DROP TABLE ice.sales.t AS SELECT 1 AS id",
+        "CREATE TEMPORARY VIEW h1; DROP TABLE ice.sales.t AS SELECT 1 AS id",
+        "CREATE TEMPORARY VIEW h2 (a); SELECT 1 AS id",
     ] {
         let error = run_with_session(&ctx, &catalogs, sql, &stub)
             .await

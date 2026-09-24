@@ -457,14 +457,19 @@ def _trailing_statement_refusal(spark: ReparkSession, statement: str) -> ParseEx
         "DESCRIBE EXTENDED tv; SELECT 1",
         "SHOW VIEWS; SELECT 1",
         "SHOW VIEWS IN sc.ns; SELECT 1",
+        "CREATE VIEW sc.ns.d1; DROP TABLE sc.ns.t AS SELECT 1 AS id",
+        "CREATE TEMPORARY VIEW h1; DROP TABLE sc.ns.t AS SELECT 1 AS id",
+        "CREATE TEMPORARY VIEW h2 (a); SELECT 1 AS id",
     ],
 )
 def test_temp_view_statements_with_a_trailing_statement_refuse(
     spark: ReparkSession, statement: str
 ) -> None:
-    """A second statement after DESCRIBE or SHOW VIEWS refuses as it does for a catalog table."""
+    """A second statement after a temp-view statement refuses as the catalog path does."""
     spark.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT id FROM sc.ns.t")
     _trailing_statement_refusal(spark, statement)
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == [["", "tv", True]]
+    assert spark.catalog.tableExists("sc.ns.t") is True
 
 
 @pytest.mark.parametrize(

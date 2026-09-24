@@ -8,6 +8,7 @@ use repark_common::spark_error;
 
 use crate::catalog_ops::sqlparser_err;
 use crate::namespace_ddl::consume_word;
+use crate::normalize::multi_statement_parse_error;
 use crate::view_ddl::parse::{
     consume_head_word, parse_view_clauses, split_view_statement, unquoted_head_words,
 };
@@ -48,6 +49,9 @@ pub(crate) fn try_parse_create_temp_view(sql: &str) -> Option<Result<CreateTempV
 
 fn parse_create_temp_view_after_head(sql: &str) -> Result<CreateTempViewStatement> {
     let parts = split_view_statement(sql, "CREATE TEMPORARY VIEW")?;
+    if parts.header.contains(&Token::SemiColon) {
+        return Err(multi_statement_parse_error());
+    }
     refuse_non_query_body(parts.body_head.as_ref())?;
     let mut parser = Parser::new(&DatabricksDialect {}).with_tokens(parts.header);
     parse_create_temp_view_header(&mut parser, parts.body_sql)
