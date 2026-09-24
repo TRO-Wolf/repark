@@ -14,6 +14,7 @@ use repark_common::spark_error;
 use crate::catalog_ops::{iceberg_err, name_parts};
 use crate::describe_show::DescribeTable;
 use crate::namespace_ddl::consume_word;
+use crate::show_create::{skip_sql_whitespace_and_comments, starts_with_sql_keywords};
 use crate::spark_type_names::spark_ddl_type_name;
 
 pub(crate) fn parse_describe_column_tail(
@@ -58,6 +59,96 @@ pub(crate) fn parse_describe_column_tail(
                 _ => Err(describe_token_parse_error(&parser.peek_token().token)),
             }
         }
+    }
+}
+
+pub(crate) fn describe_tokenizer_error(sql: &str) -> Option<Result<DescribeTable>> {
+    if !is_table_describe_text(sql) {
+        return None;
+    }
+    let error = match unclosed_describe_quote(sql) {
+        Some(quote) => describe_parse_error(&quote.to_string()),
+        None => describe_end_of_input_parse_error(),
+    };
+    Some(Err(error))
+}
+
+fn is_table_describe_text(sql: &str) -> bool {
+    let Some(position) = skip_sql_whitespace_and_comments(sql, 0) else {
+        return false;
+    };
+    let keyword = if starts_with_sql_keywords(sql, &["DESCRIBE"]) {
+        "DESCRIBE"
+    } else if starts_with_sql_keywords(sql, &["DESC"]) {
+        "DESC"
+    } else {
+        return false;
+    };
+    let position = position + keyword.len();
+    let Some(word_start) = skip_sql_whitespace_and_comments(sql, position) else {
+        return false;
+    };
+    let word_end = sql[word_start..]
+        .bytes()
+        .position(|byte| !byte.is_ascii_alphanumeric() && byte != b'_')
+        .map_or(sql.len(), |offset| word_start + offset);
+    word_start == word_end || !is_non_table_describe_text_head(&sql[word_start..word_end])
+}
+
+fn is_non_table_describe_text_head(word: &str) -> bool {
+    word.eq_ignore_ascii_case("namespace")
+        || word.eq_ignore_ascii_case("database")
+        || word.eq_ignore_ascii_case("schema")
+        || word.eq_ignore_ascii_case("function")
+        || word.eq_ignore_ascii_case("query")
+}
+
+fn unclosed_describe_quote(sql: &str) -> Option<char> {
+    let mut quote: Option<char> = None;
+    let mut position = 0;
+    while position < sql.len() {
+        let tail = sql.get(position..)?;
+        if quote.is_none() && (tail.starts_with("/*") || tail.starts_with("--")) {
+            position = skip_sql_whitespace_and_comments(sql, position)?;
+            continue;
+        }
+        let character = tail.chars().next()?;
+        let next_position = position + character.len_utf8();
+        if let Some(open_quote) = quote {
+            if character == open_quote {
+                if sql.get(next_position..)?.starts_with(open_quote) {
+                    position = next_position + open_quote.len_utf8();
+                    continue;
+                }
+                quote = None;
+            }
+        } else if matches!(character, '\'' | '`' | '"') {
+            quote = Some(character);
+        }
+        position = next_position;
+    }
+    quote
+}
+
+pub(crate) fn describe_table_name_parse_error(token: &Token, sql: &str) -> DataFusionError {
+    if sql.trim_end().ends_with('.') {
+        return describe_parse_error_with_extra_input(".");
+    }
+    if matches!(token, Token::EOF | Token::LParen) {
+        return describe_end_of_input_parse_error();
+    }
+    describe_token_parse_error(token)
+}
+
+pub(crate) fn describe_table_name_token_parse_error(token: &Token) -> DataFusionError {
+    match token {
+        Token::SingleQuotedString(_) | Token::DoubleQuotedString(_) => {
+            describe_parse_error(&token.to_string())
+        }
+        Token::Word(word) if word.quote_style == Some('"') => {
+            describe_parse_error(&token.to_string())
+        }
+        _ => describe_token_parse_error(token),
     }
 }
 

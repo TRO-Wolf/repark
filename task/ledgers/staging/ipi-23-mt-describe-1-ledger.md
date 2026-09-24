@@ -89,7 +89,7 @@ lane's JVM-free loop, and is recorded in the gates table below.
 | C-005 | `DESCRIBE` of a plain two-column table still answers exactly its two column rows. | `test_plain_table_describe_unchanged` green. | **PROVEN** | Near miss pinned: `[("a","bigint",None),("b","string",None)]` unchanged from main. pins: ipi-23-mt-describe-1/C-005 |
 | C-006 | A real table named `snapshots` describes itself (`id bigint`), not a metadata table. | `test_real_table_named_snapshots_wins` green. | **PROVEN** | Near miss pinned: the rewrite's real-table-wins rule is untouched. pins: ipi-23-mt-describe-1/C-006 |
 | C-007 | `DESCRIBE mt.ns.missing.snapshots` raises `TABLE_OR_VIEW_NOT_FOUND` / `42P01` naming the full `` `mt`.`ns`.`missing`.`snapshots` `` with no `$` in the text. | `test_missing_base_not_found_names_full_name` green. | **PROVEN** | A missing base maps to `table_or_view_not_found_parts` over the full four-part name; any other provider error passes through. pins: ipi-23-mt-describe-1/C-007 |
-| C-008 | `DESCRIBE mt.ns.t.nope` keeps today's error class, SQLSTATE and text. | `test_unknown_suffix_keeps_compound_identifier_error` green. | **PROVEN** | Near miss pinned: `AnalysisException`, the full `Error during planning: Unsupported compound identifier '`mt`.`ns`.`t`.`nope`'. Expected 1, 2 or 3 parts, got 4` message by equality, `getCondition()` None and `getSqlState()` None — recorded on main before the fix. pins: ipi-23-mt-describe-1/C-008 |
+| C-008 | `DESCRIBE mt.ns.t.nope` raises Spark's `TABLE_OR_VIEW_NOT_FOUND` / `42P01` naming the full `` `mt`.`ns`.`t`.`nope` ``. | `test_unknown_suffix_is_not_found_naming_full_name` green. | **PROVEN** | Spark 4.1.2 answers 42P01 with the full four-part name (D-2); describe-column-1 fixes it — its four-part arm in `try_parse_describe_table` answers `table_or_view_not_found_parts` over the written parts when the last part is not a metadata-table name. The pin asserts `AnalysisException`, the full message by equality, `getCondition()` `TABLE_OR_VIEW_NOT_FOUND` and `getSqlState()` `42P01`. pins: ipi-23-mt-describe-1/C-008 |
 | C-009 | The Rust row builder turns a three-field schema incl. a map into three rows with `comment` None. | `metadata_table_describe_batch_spells_column_rows` green. | **PROVEN** | Unit test in `crates/repark-spark/src/describe_show/metadata_table.rs` asserts names, `bigint`/`string`/`map<string,string>` spellings, null comments, and the `col_name`/`data_type`/`comment` output nullability. pins: ipi-23-mt-describe-1/C-009 |
 
 ## Critic r1 (2026-09-23) — V-001/V-002 + class sweep
@@ -162,7 +162,7 @@ a not-found differently from Spark; RePark measured on the ruled tree):
 | four-part, base present (+upper) | six rows | six rows | C-001, C-003 |
 | four-part, base missing (+EXTENDED/FORMATTED, +upper-case suffix/base) | 42P01 name as written | 42P01 name as written | C-007, C-015, C-018 |
 | four-part, namespace missing (+EXTENDED/FORMATTED) | 42P01 full four-part name | 42P01 full four-part name | C-012, C-015 |
-| four-part, unknown suffix (+EXTENDED) | compound-identifier error | 42P01 full four-part name | C-008, C-015 (D-2, not fixed) |
+| four-part, unknown suffix (+EXTENDED) | 42P01 full four-part name | 42P01 full four-part name | C-008, C-015 (D-2, fixed by describe-column-1) |
 | quoted three-part ``t$suffix``, base present | six rows (same provider as SELECT) | 42P01 naming the `$` name | C-013 (D-3, not fixed) |
 | quoted three-part ``t$suffix``, base missing | 42P01 written `$` name `` `mt`.`ns`.`missing$snapshots` `` | 42P01 written `$` name | C-019 |
 | two-part after USE | 42P01 facade-expanded `` `mt`.`t`.`snapshots` `` | 42P01 `` `t`.`snapshots` `` | C-004 (D-1 name shape) |
@@ -179,13 +179,15 @@ a not-found differently from Spark; RePark measured on the ruled tree):
 name where Spark names the name as written; since md-r6fix both legs answer
 TABLE_OR_VIEW_NOT_FOUND / 42P01, so the residue is the name shape only
 (two-part after USE, explicit three-part with missing namespace). D-2 —
-unknown metadata suffix keeps the plain compound-identifier error instead of
-Spark's 42P01. D-3 — quoted
+fixed by describe-column-1: an unknown metadata suffix answers Spark's 42P01
+naming the full four-part name (C-008, C-015). D-3 — quoted
 ``t$snapshots`` answers metadata rows (agreeing with RePark's SELECT) instead of
 Spark's not-found. D-4 — plain DESCRIBE cannot describe a nested-namespace
-table: a four-or-more-part name answers the compound-identifier plan error even
-when a real table occupies the path (measured `mt.ns.sub.plain`; the r6fix
-collision pin defers to that same answer rather than claiming the name).
+table: a four-part name whose last part is not a metadata-table name answers
+TABLE_OR_VIEW_NOT_FOUND / 42P01 naming the four parts as written even when a
+real table occupies the path (`mt.ns.sub.plain`); a four-part name ending in a
+metadata-table name (the r6fix collision pin, C-017) and any five-or-more-part
+name keep the compound-identifier plan error.
 
 ```yaml
 FINDING:
@@ -476,7 +478,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-3
       status: ATTACKED
-      evidence: Missing base maps to TABLE_OR_VIEW_NOT_FOUND/42P01 naming the full metadata-table name as written with no `$` leak (C-007, identifier case kept per C-018; a quoted `$` name keeps the `$` per C-019); unknown suffixes keep the compound-identifier plan error byte for byte (C-008); any other provider error passes through unchanged by construction of the match.
+      evidence: Missing base maps to TABLE_OR_VIEW_NOT_FOUND/42P01 naming the full metadata-table name as written with no `$` leak (C-007, identifier case kept per C-018; a quoted `$` name keeps the `$` per C-019); unknown suffixes answer Spark's 42P01 naming the full four-part name (C-008, re-pinned by describe-column-1); any other provider error passes through unchanged by construction of the match.
       artifacts: [python/repark/tests/test_ice_mt_describe_1.py, crates/repark-spark/src/describe_show/metadata_table.rs]
     - id: AT-4
       status: ATTACKED
