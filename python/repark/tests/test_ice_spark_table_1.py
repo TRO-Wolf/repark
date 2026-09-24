@@ -486,7 +486,7 @@ def _assert_maintenance_outputs(outputs: dict[str, pa.Table], planted: Path) -> 
         }
     ], data_files
     orphans = outputs["remove_orphan_files"].to_pylist()
-    assert orphans == [{"orphan_file_location": str(planted)}], orphans
+    assert orphans == [{"orphan_file_location": f"file:{planted}"}], orphans
     assert not planted.exists()
     deletes = outputs["rewrite_position_delete_files"].to_pylist()
     assert deletes == [
