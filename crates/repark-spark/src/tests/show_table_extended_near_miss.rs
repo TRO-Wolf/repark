@@ -581,3 +581,79 @@ async fn show_table_extended_well_formed_partition_specs_keep_the_partition_refu
         );
     }
 }
+
+const PARTITION_MANAGEMENT_UNSUPPORTED: &str = "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition command is invalid. Table `ice`.`sales`.`pc` does not support partition management. SQLSTATE: 42601";
+
+#[tokio::test]
+async fn show_table_extended_valueless_partition_key_refuses_with_spark_empty_partition_value() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    for (spec, key) in [
+        ("(a)", "a"),
+        ("(a, b)", "a"),
+        ("(b=1, a)", "a"),
+        ("(a, b=1)", "a"),
+        ("(a, B)", "a"),
+        ("(A)", "A"),
+        ("(`A`)", "A"),
+        ("(`x y`)", "x y"),
+    ] {
+        let sql = format!("SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION {spec}");
+        let expected = format!(
+            "[INVALID_SQL_SYNTAX.EMPTY_PARTITION_VALUE] Invalid SQL syntax: Partition key `{key}` \
+             must set value. SQLSTATE: 42000"
+        );
+        assert_scanner_refusal(&sql, &expected);
+        assert_end_to_end_refusal(&ctx, &catalogs, &sql, &expected).await;
+    }
+}
+
+#[tokio::test]
+async fn show_table_extended_trailing_token_outranks_a_valueless_partition_key() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (a) garbage";
+    let expected = "[PARSE_SYNTAX_ERROR] Syntax error at or near 'garbage': extra input 'garbage'. \
+         SQLSTATE: 42601";
+    assert_scanner_refusal(sql, expected);
+    assert_end_to_end_refusal(&ctx, &catalogs, sql, expected).await;
+}
+
+#[tokio::test]
+async fn show_table_extended_keyword_partition_key_keeps_the_partition_refusal() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (select=1)";
+    assert_scanner_accepts(sql, &["ice", "sales"], "pc", true);
+    let refused = outcome(&ctx, &catalogs, sql)
+        .await
+        .expect_err("a partition clause on an existing table refuses");
+    assert_analysis_refusal(sql, refused, PARTITION_MANAGEMENT_UNSUPPORTED);
+}
+
+#[tokio::test]
+async fn show_table_extended_residue_r_u4_13_space_separated_values_keep_the_partition_refusal() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (a=1 b=2)";
+    assert_scanner_accepts(sql, &["ice", "sales"], "pc", true);
+    let refused = outcome(&ctx, &catalogs, sql)
+        .await
+        .expect_err("a partition clause on an existing table refuses");
+    assert_analysis_refusal(sql, refused, PARTITION_MANAGEMENT_UNSUPPORTED);
+}
+
+#[tokio::test]
+async fn show_table_extended_residue_r_u4_14_stray_key_token_keeps_the_bare_head_line() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (a b)";
+    let expected = "[PARSE_SYNTAX_ERROR] Syntax error at or near 'b'. SQLSTATE: 42601";
+    assert_scanner_refusal(sql, expected);
+    assert_end_to_end_refusal(&ctx, &catalogs, sql, expected).await;
+}

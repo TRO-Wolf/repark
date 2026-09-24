@@ -1531,7 +1531,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `'('` at both levels; `(cat='a')` and `(cat='(')` keep the partition-management refusal and
   `(cat='a'` keeps end of input. **WO-A12 (2026-09-23):** `()`, `(a=1,)`, `(,a=1)`, `(=1)`, `(a=)`,
   `(1=1)` and `('a'=1)` refuse at Spark 4.1.2's token on both levels; `(a=1, b='x')`, `(a=-1)` and
-  `(a=DATE '2020-01-01')` keep the partition-management refusal.
+  `(a=DATE '2020-01-01')` keep the partition-management refusal. **WO-A13 (2026-09-23):** `(a)`, `(a, b)`,
+  `(b=1, a)`, `(a, b=1)`, `(a, B)`, `(A)`, `` (`A`) `` and `` (`x y`) `` refuse Spark's
+  `EMPTY_PARTITION_VALUE` text for the first value-less key on both levels; `(a) garbage` keeps the
+  trailing `extra input` refusal; `(select=1)` keeps the partition-management refusal. Residue
+  guards: `residue_r_u4_13` (`(a=1 b=2)`, Spark refuses near 'b') and `residue_r_u4_14` (`(a b)`,
+  Spark appends `: extra input 'b'`) pin RePark's current answers.
   pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal

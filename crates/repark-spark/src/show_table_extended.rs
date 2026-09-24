@@ -60,17 +60,20 @@ pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTabl
         Token::SingleQuotedString(pattern) | Token::DoubleQuotedString(pattern) => pattern,
         token => return Some(Err(syntax_error_at_token(&token))),
     };
-    let has_partition = if parser.parse_keyword(Keyword::PARTITION) {
+    let (has_partition, valueless_key) = if parser.parse_keyword(Keyword::PARTITION) {
         match consume_partition_spec(&mut parser) {
-            Ok(true) => true,
-            Ok(false) => return Some(Err(syntax_error_at(&parser))),
+            Ok(PartitionSpec::Closed { valueless_key }) => (true, valueless_key),
+            Ok(PartitionSpec::Unclosed) => return Some(Err(syntax_error_at(&parser))),
             Err(error) => return Some(Err(error)),
         }
     } else {
-        false
+        (false, None)
     };
     if !at_statement_end(&parser) {
         return Some(Err(trailing_syntax_error_at(&parser)));
+    }
+    if let Some(key) = valueless_key {
+        return Some(Err(empty_partition_value(&key)));
     }
     Some(Ok(ShowTableExtended {
         scope,
@@ -258,34 +261,53 @@ fn spark_character_properties(table: &TableMetadata) -> String {
     )
 }
 
-fn consume_partition_spec(parser: &mut Parser) -> Result<bool> {
+enum PartitionSpec {
+    Unclosed,
+    Closed { valueless_key: Option<String> },
+}
+
+fn consume_partition_spec(parser: &mut Parser) -> Result<PartitionSpec> {
     if !parser.consume_token(&Token::LParen) {
-        return Ok(false);
+        return Ok(PartitionSpec::Unclosed);
     }
+    let mut valueless_key = None;
     loop {
-        match parser.next_token().token {
-            Token::Word(_) => {}
-            Token::EOF => return Ok(false),
+        let key = match parser.next_token().token {
+            Token::Word(word) => word.value,
+            Token::EOF => return Ok(PartitionSpec::Unclosed),
             token => return Err(syntax_error_at_token(&token)),
-        }
+        };
         let mut delimiter = parser.next_token().token;
         if delimiter == Token::Eq {
             match parser.next_token().token {
-                Token::EOF => return Ok(false),
+                Token::EOF => return Ok(PartitionSpec::Unclosed),
                 token @ (Token::Comma | Token::LParen | Token::RParen) => {
                     return Err(syntax_error_at_token(&token));
                 }
                 _ => {}
             }
             delimiter = next_partition_value_delimiter(parser);
+        } else if valueless_key.is_none() {
+            valueless_key = Some(key);
         }
         match delimiter {
             Token::Comma => {}
-            Token::RParen => return Ok(true),
-            Token::EOF => return Ok(false),
+            Token::RParen => return Ok(PartitionSpec::Closed { valueless_key }),
+            Token::EOF => return Ok(PartitionSpec::Unclosed),
             token => return Err(syntax_error_at_token(&token)),
         }
     }
+}
+
+fn empty_partition_value(key: &str) -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(format!(
+            "[INVALID_SQL_SYNTAX.EMPTY_PARTITION_VALUE] Invalid SQL syntax: Partition key `{}` must \
+             set value. SQLSTATE: 42000",
+            key.replace('`', "``")
+        ))),
+        None,
+    )
 }
 
 fn next_partition_value_delimiter(parser: &mut Parser) -> Token {
