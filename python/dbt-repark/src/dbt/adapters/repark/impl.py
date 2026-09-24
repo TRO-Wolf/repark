@@ -49,10 +49,8 @@ class ReparkAdapter(SparkAdapter):
     def list_relations_without_caching(self, schema_relation: BaseRelation) -> list[BaseRelation]:
         """Live table names from the RePark catalog.
 
-        ``SHOW TABLES IN`` is unimplemented and ``SHOW TABLE EXTENDED`` needs
-        ``information_schema`` (registry ST-1), so the facade ``Catalog`` is the listing
-        surface. A namespace that does not exist lists empty, which is what dbt asks of
-        this method before it creates one.
+        The facade ``Catalog`` is the listing surface. A namespace that does not exist lists
+        empty, which is what dbt asks of this method before it creates one.
         """
         database = schema_relation.database
         schema = schema_relation.schema
