@@ -217,6 +217,10 @@ impl repark_core::TempViewSession for StubTempViews {
         Ok(())
     }
 
+    fn temp_view_home(&self) -> repark_common::Result<Vec<String>> {
+        Ok(vec!["datafusion".to_string(), "public".to_string()])
+    }
+
     fn resolve_temp_view_home_ref(&self, name: &str) -> repark_common::Result<Option<Vec<String>>> {
         Ok(self
             .existing

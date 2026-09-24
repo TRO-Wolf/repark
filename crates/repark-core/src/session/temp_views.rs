@@ -316,6 +316,10 @@ impl crate::dialect::TempViewSession for ReparkSession {
     fn resolve_temp_view_home_ref(&self, name: &str) -> Result<Option<Vec<String>>> {
         ReparkSession::resolve_temp_view_home_ref(self, name)
     }
+
+    fn temp_view_home(&self) -> Result<Vec<String>> {
+        ReparkSession::temp_view_home(self)
+    }
 }
 
 fn conform_batches_to_schema(

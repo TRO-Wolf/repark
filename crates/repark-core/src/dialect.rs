@@ -31,6 +31,8 @@ pub trait TempViewSession: Send + Sync {
     ) -> repark_common::Result<()>;
 
     fn resolve_temp_view_home_ref(&self, name: &str) -> repark_common::Result<Option<Vec<String>>>;
+
+    fn temp_view_home(&self) -> repark_common::Result<Vec<String>>;
 }
 
 impl<'a> EngineContext<'a> {

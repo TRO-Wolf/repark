@@ -5,7 +5,7 @@ use datafusion::arrow::array::{BooleanArray, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
-use datafusion::prelude::{DataFrame, Expr, SessionContext};
+use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{Ident, ObjectName};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 use repark_common::spark_error;
@@ -22,8 +22,9 @@ use crate::view_ddl::parse::{
     ShowTblpropertiesStatement,
     ShowViewsStatement,
 };
-use crate::view_ddl::read::{
-    plan_prepared_body, prepare_temp_view_body_sql, prepare_view_body_sql,
+use crate::view_ddl::read::{plan_prepared_body, prepare_view_body_sql};
+use crate::view_ddl::temp_view::{
+    TempViewDefinition, refuse_recursive_temp_view, replanning_temp_view,
 };
 
 pub(crate) const NO_TEMP_VIEW_HOME: &str = "CREATE TEMPORARY VIEW needs a session: this SQL \
@@ -102,19 +103,17 @@ pub(crate) async fn execute_create_temp_view(
         ));
     };
     let (catalog, namespace_name) = crate::use_ddl::session_defaults(catalogs);
-    let namespace = NamespaceIdent::new(namespace_name);
-    let (prepared, pins) = prepare_temp_view_body_sql(
-        ctx,
-        catalogs,
-        &catalog,
-        &namespace,
-        &statement.body_sql,
-        temp_views,
-    )
-    .await?;
-    let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
-    let display = format!("`{}`", statement.name.value.replace('`', "``"));
-    let frame = apply_temp_view_aliases(frame, &statement.aliases, &display)?;
+    let mut home = temp_views.temp_view_home().map_err(temp_view_err)?;
+    home.push(temp_view_home_segment(&statement.name));
+    let definition = TempViewDefinition {
+        home,
+        display: format!("`{}`", statement.name.value.replace('`', "``")),
+        sql: statement.body_sql,
+        catalog,
+        namespace: NamespaceIdent::new(namespace_name),
+        aliases: statement.aliases,
+    };
+    let view = replanning_temp_view(ctx, catalogs, definition, temp_views).await?;
     let name = temp_view_name_arg(&statement.name);
     if !statement.or_replace
         && temp_views
@@ -124,56 +123,23 @@ pub(crate) async fn execute_create_temp_view(
     {
         return Err(DataFusionError::Plan(spark_error::message(
             spark_error::TEMP_TABLE_OR_VIEW_ALREADY_EXISTS,
-            &[("relationName", display.as_str())],
+            &[("relationName", view.display())],
         )));
     }
+    refuse_recursive_temp_view(ctx, &view).await?;
+    let frame = ctx.read_table(view)?;
     temp_views
         .create_or_replace_temp_view_from(&name, &frame)
         .map_err(temp_view_err)?;
     ctx.read_empty()
 }
 
-fn apply_temp_view_aliases(
-    frame: DataFrame,
-    aliases: &[(String, Option<String>)],
-    display: &str,
-) -> Result<DataFrame> {
-    if aliases.is_empty() {
-        return Ok(frame);
+pub(crate) fn temp_view_home_segment(ident: &Ident) -> String {
+    if ident.quote_style.is_some() {
+        ident.value.clone()
+    } else {
+        ident.value.to_ascii_lowercase()
     }
-    let columns = frame.schema().columns();
-    if aliases.len() != columns.len() {
-        let backticked = |name: &str| format!("`{}`", name.replace('`', "``"));
-        let view_columns = aliases
-            .iter()
-            .map(|(alias, _)| backticked(alias))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let data_columns = columns
-            .iter()
-            .map(|column| backticked(&column.name))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let condition = if aliases.len() > columns.len() {
-            spark_error::CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS
-        } else {
-            spark_error::CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS
-        };
-        return Err(DataFusionError::Plan(spark_error::message(
-            condition,
-            &[
-                ("viewName", display),
-                ("viewColumns", view_columns.as_str()),
-                ("dataColumns", data_columns.as_str()),
-            ],
-        )));
-    }
-    let projection = columns
-        .into_iter()
-        .zip(aliases)
-        .map(|(column, (alias, _))| Expr::Column(column).alias(alias))
-        .collect::<Vec<_>>();
-    frame.select(projection)
 }
 
 pub(crate) fn temp_view_name_arg(ident: &Ident) -> String {

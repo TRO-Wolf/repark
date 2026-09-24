@@ -40,6 +40,7 @@ pub enum Condition {
     TempTableOrViewAlreadyExists,
     TempViewNameTooManyNameParts,
     IdentifierTooManyNameParts,
+    RecursiveView,
 }
 
 pub const TABLE_OR_VIEW_NOT_FOUND: Condition = Condition::TableOrViewNotFound;
@@ -95,6 +96,7 @@ pub const CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS: Condition =
 pub const TEMP_TABLE_OR_VIEW_ALREADY_EXISTS: Condition = Condition::TempTableOrViewAlreadyExists;
 pub const TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS: Condition = Condition::TempViewNameTooManyNameParts;
 pub const IDENTIFIER_TOO_MANY_NAME_PARTS: Condition = Condition::IdentifierTooManyNameParts;
+pub const RECURSIVE_VIEW: Condition = Condition::RecursiveView;
 
 impl Condition {
     #[must_use]
@@ -152,6 +154,7 @@ impl Condition {
             Self::TempTableOrViewAlreadyExists => "TEMP_TABLE_OR_VIEW_ALREADY_EXISTS",
             Self::TempViewNameTooManyNameParts => "TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS",
             Self::IdentifierTooManyNameParts => "IDENTIFIER_TOO_MANY_NAME_PARTS",
+            Self::RecursiveView => "RECURSIVE_VIEW",
         }
     }
 
@@ -163,6 +166,7 @@ impl Condition {
             | Self::ViewAlreadyExists
             | Self::TempTableOrViewAlreadyExists => Some("42P07"),
             Self::TempViewNameTooManyNameParts => Some("428EK"),
+            Self::RecursiveView => Some("42K0H"),
             Self::NotSupportedCommandForV2Table
             | Self::UnsupportedFeatureTableOperation
             | Self::UnsupportedFeatureCatalogOperation
@@ -308,6 +312,7 @@ impl Condition {
             Self::IdentifierTooManyNameParts => {
                 "{identifier} is not a valid identifier as it has more than {limit} name parts."
             }
+            Self::RecursiveView => "Recursive view {viewIdent} detected (cycle: {newPath}).",
         }
     }
 }
@@ -407,6 +412,8 @@ mod tests {
         ("actualName", "`a`.`b`"),
         ("identifier", "`a`.`b`.`c`"),
         ("limit", "2"),
+        ("viewIdent", "`a`"),
+        ("newPath", "`a` -> `b` -> `a`"),
     ];
 
     const ALL: &[Condition] = &[
@@ -448,6 +455,7 @@ mod tests {
         TEMP_TABLE_OR_VIEW_ALREADY_EXISTS,
         TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS,
         IDENTIFIER_TOO_MANY_NAME_PARTS,
+        RECURSIVE_VIEW,
     ];
 
     #[test]
@@ -843,6 +851,13 @@ mod tests {
                 &[("identifier", "`sc`.`ns`.`q`"), ("limit", "2")]
             ),
             "[IDENTIFIER_TOO_MANY_NAME_PARTS] `sc`.`ns`.`q` is not a valid identifier as it has more than 2 name parts. SQLSTATE: 42601"
+        );
+        assert_eq!(
+            message(
+                RECURSIVE_VIEW,
+                &[("viewIdent", "`a`"), ("newPath", "`a` -> `b` -> `a`")]
+            ),
+            "[RECURSIVE_VIEW] Recursive view `a` detected (cycle: `a` -> `b` -> `a`). SQLSTATE: 42K0H"
         );
     }
 

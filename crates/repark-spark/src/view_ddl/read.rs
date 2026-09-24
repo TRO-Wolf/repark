@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::ops::ControlFlow;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use datafusion::catalog::{SchemaProvider, TableProvider};
@@ -140,10 +140,7 @@ async fn expand_view_body(
 ) -> Result<LogicalPlan> {
     let guard = catalogs.view_expansion_guard();
     if guard.level() > MAX_VIEW_EXPANSION_DEPTH {
-        return Err(DataFusionError::Plan(format!(
-            "[VIEW_NESTED_DEPTH_LIMIT] View resolution exceeded the maximum nested depth of \
-             {MAX_VIEW_EXPANSION_DEPTH}"
-        )));
+        return Err(nested_depth_refusal());
     }
     let stored_catalog = spec
         .default_catalog
@@ -162,6 +159,13 @@ async fn expand_view_body(
     Ok(frame.logical_plan().clone())
 }
 
+pub(crate) fn nested_depth_refusal() -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[VIEW_NESTED_DEPTH_LIMIT] View resolution exceeded the maximum nested depth of \
+         {MAX_VIEW_EXPANSION_DEPTH}"
+    ))
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn prepare_view_body_sql(
     ctx: &SessionContext,
@@ -169,6 +173,26 @@ pub(crate) async fn prepare_view_body_sql(
     stored_catalog: &str,
     stored_namespace: &NamespaceIdent,
     body_sql: &str,
+) -> Result<(String, PinnedViews)> {
+    prepare_view_body_sql_with(
+        ctx,
+        catalogs,
+        stored_catalog,
+        stored_namespace,
+        body_sql,
+        &TempHomes::None,
+    )
+    .await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn prepare_view_body_sql_with(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    stored_catalog: &str,
+    stored_namespace: &NamespaceIdent,
+    body_sql: &str,
+    temp_homes: &TempHomes<'_>,
 ) -> Result<(String, PinnedViews)> {
     let mut pins = PinnedViews::default();
     let mut sql = body_sql.to_string();
@@ -178,39 +202,13 @@ pub(crate) async fn prepare_view_body_sql(
         sql = rewritten;
     }
     let qualified =
-        qualify_view_body_refs(catalogs, stored_catalog, stored_namespace, &sql, None).await?;
+        qualify_view_body_refs(catalogs, stored_catalog, stored_namespace, &sql, temp_homes)
+            .await?;
     Ok((qualified, pins))
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub(crate) async fn prepare_temp_view_body_sql(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    current_catalog: &str,
-    current_namespace: &NamespaceIdent,
-    body_sql: &str,
-    temp_views: &dyn TempViewSession,
-) -> Result<(String, PinnedViews)> {
-    refuse_write_query_body(body_sql)?;
-    let mut pins = PinnedViews::default();
-    let mut sql = body_sql.to_string();
-    if sql_has_time_travel(&sql)
-        && let Some(rewritten) = prepare_time_travel_sql(ctx, catalogs, &sql, &mut pins).await?
-    {
-        sql = rewritten;
-    }
-    let qualified = qualify_view_body_refs(
-        catalogs,
-        current_catalog,
-        current_namespace,
-        &sql,
-        Some(temp_views),
-    )
-    .await?;
-    Ok((qualified, pins))
-}
-
-fn refuse_write_query_body(body_sql: &str) -> Result<()> {
+pub(crate) fn refuse_write_query_body(body_sql: &str) -> Result<()> {
     let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, body_sql) else {
         return Ok(());
     };
@@ -273,7 +271,7 @@ async fn qualify_view_body_refs(
     stored_catalog: &str,
     stored_namespace: &NamespaceIdent,
     sql: &str,
-    temp_views: Option<&dyn TempViewSession>,
+    temp_homes: &TempHomes<'_>,
 ) -> Result<String> {
     let statements = Parser::parse_sql(&DatabricksDialect {}, sql).map_err(|error| {
         DataFusionError::Plan(format!("could not parse a stored view body: {error}"))
@@ -292,7 +290,7 @@ async fn qualify_view_body_refs(
         ));
     }
     let handle = catalogs.get(stored_catalog);
-    if handle.is_none() && temp_views.is_none() {
+    if handle.is_none() && matches!(temp_homes, TempHomes::None) {
         return Ok(sql.to_string());
     }
     let mut candidates = Vec::new();
@@ -315,7 +313,7 @@ async fn qualify_view_body_refs(
         else {
             continue;
         };
-        if let Some(home) = temp_view_home_name(temp_views, original)? {
+        if let Some(home) = temp_view_home_name(temp_homes, original)? {
             qualified.insert(parts, home);
             continue;
         }
@@ -349,19 +347,43 @@ async fn qualify_view_body_refs(
     Ok(statement.to_string())
 }
 
+pub(crate) enum TempHomes<'a> {
+    None,
+    Live {
+        session: &'a dyn TempViewSession,
+        captured: &'a Mutex<HashMap<String, Vec<String>>>,
+    },
+    Captured(&'a HashMap<String, Vec<String>>),
+}
+
 fn temp_view_home_name(
-    temp_views: Option<&dyn TempViewSession>,
+    temp_homes: &TempHomes<'_>,
     name: &ObjectName,
 ) -> Result<Option<ObjectName>> {
-    let Some(temp_views) = temp_views else {
-        return Ok(None);
-    };
     let [ObjectNamePart::Identifier(ident)] = name.0.as_slice() else {
         return Ok(None);
     };
-    let home = temp_views
-        .resolve_temp_view_home_ref(&crate::view_ddl::execute::temp_view_name_arg(ident))
-        .map_err(crate::view_ddl::execute::temp_view_err)?;
+    let home = match temp_homes {
+        TempHomes::None => None,
+        TempHomes::Captured(homes) => homes
+            .get(&crate::view_ddl::execute::temp_view_home_segment(ident))
+            .cloned(),
+        TempHomes::Live { session, captured } => {
+            let home = session
+                .resolve_temp_view_home_ref(&crate::view_ddl::execute::temp_view_name_arg(ident))
+                .map_err(crate::view_ddl::execute::temp_view_err)?;
+            if let Some(segments) = &home {
+                captured
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .insert(
+                        crate::view_ddl::execute::temp_view_home_segment(ident),
+                        segments.clone(),
+                    );
+            }
+            home
+        }
+    };
     Ok(home.map(|segments| {
         ObjectName(
             segments
