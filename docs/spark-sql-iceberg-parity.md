@@ -13927,11 +13927,18 @@ field NAME.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
   u10-mc-deleted-1/C-001
 - **Residue** — `R-MC-RESERVED-NAME-SCAN` (KNOWN DIVERGENCE, U10-MC-DELETED-1):
-  on a table whose own schema carries a reserved metadata name, Spark refuses
-  every scan, including `SELECT *`, `DELETE` and a query naming only other metadata
-  columns; RePark refuses only a query that names the colliding metadata
-  column. A `WHERE`-only reference refuses with the same RePark text, where Spark
+  on a table whose own schema carries a reserved metadata name, both engines
+  refuse a query that names the colliding column (the bracket lists the named
+  colliding columns in the table's declaration order), and both answer a query
+  that names none. Three shapes stay divergent: Spark refuses `SELECT *` and the
+  copy-on-write `DELETE` with the reserved-name text where RePark serves them, and
+  a `WHERE`-only reference refuses with RePark's reserved-name text where Spark
   prints `Invalid schema: multiple fields for name _deleted: 2 and 2147483644`.
+  Residue candidate `R-MC-RESERVED-NAME-JOIN`: in a join where only the other
+  table carries the user column, `SELECT p.id, p._deleted FROM p JOIN uc u …`
+  refuses on RePark, while Spark answers `[[1,true],[2,false],[3,false]]`.
+  *(oracle: live Spark 4.1.2 + Iceberg 1.11 probes `mcdcol`, `mcdjoin`,
+  `mcdorder`, `mcdfile`, recorded in the u10-mc-deleted-1 ledger M-10 and M-12.)*
 - **Rationale** — BACKLOG, filed 2026-09-20 (ICE-METADATA-COLS-1, IPI-20 PR-1).
   The fork unit is MERGED (metadata columns + scan modes) and the pin bumped
   (RP-45), so the RePark half serves the four ordinary columns end to end;

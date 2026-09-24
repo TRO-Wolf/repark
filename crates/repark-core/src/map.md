@@ -928,18 +928,26 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (`UNSERVED_METADATA_COLUMN_NAMES`, the unserved scan and its refusal) is deleted,
   and the composed refusal message now names all five served columns. A metadata
   column over a time-travel read keeps the planner's unresolved-column error — the
-  pinned static provider does not advertise metadata columns (a KNOWN DIVERGENCE:
-  Spark serves them; pre-existing for every metadata column).
+  pinned static provider does not advertise metadata columns (RePark refuses every
+  metadata column there; KNOWN DIVERGENCE for `_file` and `_deleted`, which Spark was
+  measured serving — the other names are unmeasured on Spark).
   **mcdel-r4 (2026-09-23):** before registering a table's temp view,
   `prepare_metadata_column_sql` refuses when the statement names a served metadata
   column (its canonical tokens, `referenced_metadata_names`) that the table's user
   schema also carries: `Table column names conflict with names reserved for Iceberg
   metadata columns: [<names>]. Please, use ALTER TABLE statements to rename the
-  conflicting table columns.` (Spark's text, as `DataFusionError::Plan`, names in
-  table-schema order) instead of leaking `__repark_mc_N` in a duplicate-field
-  schema error. A statement that does not name the colliding column (`SELECT *`,
-  `DELETE`, another metadata column) is still served — KNOWN DIVERGENCE
-  `R-MC-RESERVED-NAME-SCAN`: Spark refuses every scan of such a table.
+  conflicting table columns.` (Spark's text, as `DataFusionError::Plan`) instead of
+  leaking `__repark_mc_N` in a duplicate-field schema error. A statement that does
+  not name the colliding column is still served.
+  **mcdel-r5 (2026-09-23):** measured on both engines — the bracket lists the
+  colliding names the statement references in the table's declaration order,
+  whatever the query order (`(id, _pos, _file)` → `[_pos, _file]`), and a query naming
+  no colliding column (another metadata column, a plain `SELECT id`) answers on Spark
+  too. Still divergent (`R-MC-RESERVED-NAME-SCAN`): Spark refuses `SELECT *` and the
+  copy-on-write `DELETE` and prints a different `WHERE`-shape error. Because the check
+  keys on the statement's tokens rather than the relation, a join naming `p._deleted`
+  beside a table `uc` whose user schema has `_deleted` refuses, where Spark answers
+  (residue candidate `R-MC-RESERVED-NAME-JOIN`).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
@@ -947,7 +955,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
   so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved

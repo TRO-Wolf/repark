@@ -1587,8 +1587,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   verbatim (predicate-only, subqueries, expressions/order/group, the empty
   self-join) and recorded two pre-existing KNOWN DIVERGENCEs with full-message
   pins: quoted `` `_DELETED` ``/`` `_FILE` `` refuse
-  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` where Spark resolves them, and metadata
-  columns over `VERSION AS OF` refuse unresolved where Spark serves them.
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` where Spark resolves quoted `` `_DELETED` ``
+  (quoted `` `_FILE` `` unmeasured on Spark), and `_file` / `_deleted` over
+  `VERSION AS OF` refuse unresolved where Spark was measured serving them.
   mcdel-r3 pinned the live-Spark P1–P8 rows in order: the composed
   `_spec_id` + `_deleted` rows on both tables, the discriminating
   `a.id = b.id + 1` joins that prove the right-side `_deleted` reaches its scan,
@@ -1599,6 +1600,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   metadata columns on such a table stay served: KNOWN DIVERGENCE
   `R-MC-RESERVED-NAME-SCAN` (C-015). It also trues up the `ICE-MC-FILEPOS-1` registry
   row and the predecessor ledger.
+  mcdel-r5 measured the collision rule on both engines (M-12). The bracket lists the
+  referenced colliding names in the table's declaration order. A query naming no
+  colliding column answers on Spark too, so C-015 now keeps only the divergent
+  `SELECT *`, copy-on-write `DELETE` and `WHERE` shapes. Near misses are pinned for
+  all five names, and the join case is recorded as residue candidate
+  `R-MC-RESERVED-NAME-JOIN` (C-016).
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016

@@ -1412,10 +1412,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Two known divergences pin RePark's full message (class, sub-class and
   `SQLSTATE: 42703`): `quoted_upper_deleted_known_divergence` — quoted
   `` `_DELETED` `` and `` `_FILE` `` alike refuse `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`
-  where Spark resolves the quoted upper name — and
-  `metadata_column_over_time_travel_known_divergence` — `_file` / `_deleted` over
-  `VERSION AS OF` refuse unresolved where Spark serves them (pre-existing for all
-  metadata columns).
+  where Spark resolves quoted `` `_DELETED` `` (quoted `` `_FILE` `` is unmeasured on
+  Spark) — and `metadata_column_over_time_travel_known_divergence` — `_file` /
+  `_deleted` over `VERSION AS OF` refuse unresolved where Spark was measured serving
+  them.
   **mcdel-r3 (2026-09-23, Sol critic r2):** the row helpers no longer sort, so every
   `ORDER BY` pin asserts row order and the star pin gains the `ORDER BY id DESC` leg
   `[(4,d,x),(3,c,x),(2,b,y)]`; `served_spec_id_and_deleted_answer_together` asserts the
@@ -1439,8 +1439,23 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `reserved_name_near_misses_still_answer` — a user `deleted` column beside `_deleted`
   answers `[(u1,true),(u2,false),(u3,false)]`, and a user `_file` column with only
   `id, _deleted` named answers `[(1,false),(2,false),(3,false)]`.
+  **mcdel-r5 (2026-09-23, Sol critic r4):** every row below is measured on Spark 4.1.2
+  (ledger M-12). `every_served_metadata_name_collision_refuses` pins the declaration-order
+  bracket: `(id, _pos, _file)` refuses `[_pos, _file]` for both query orders and `[_file]`
+  for `SELECT id, _file`; `(id, _file, _pos)` refuses `[_file, _pos]` for both orders;
+  `(id, _spec_id, _deleted, _file)` refuses `[_spec_id, _deleted, _file]` and
+  `[_deleted, _file]`. `reserved_name_near_misses_still_answer` loops
+  `METADATA_COLUMN_NAMES`: for each name `c`, `(id, c STRING)` with `(1,'u1')` answers
+  `SELECT id, _spec_id` = `[(1,0)]` (`SELECT id, _file` = one `.parquet` row for
+  `_spec_id`); it also pins `(id, _pos, _file)` answering `SELECT id, _spec_id` and
+  `SELECT id`, the user-`_file` table's `_pos` = `[(1,0),(2,1),(3,2)]`,
+  `WHERE _spec_id = 0` = `[1,2,3]` and its divergent `SELECT *` rows.
+  `reserved_name_collision_in_a_join` pins the join shapes: `p._deleted` beside
+  `uc (id, _deleted STRING)` refuses `[_deleted]` (KNOWN DIVERGENCE, residue candidate
+  `R-MC-RESERVED-NAME-JOIN`: Spark answers `[(1,true),(2,false),(3,false)]`), and the
+  `u._deleted` shapes refuse on both engines.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
