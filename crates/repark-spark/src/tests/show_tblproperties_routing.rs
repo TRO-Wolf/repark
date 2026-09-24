@@ -3,6 +3,7 @@ use super::common::*;
 use super::describe_view_routing::{FaultCatalog, ViewFaults, ViewlessCatalog, register_catalog};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use datafusion::prelude::DataFrame;
 use iceberg::ErrorKind;
 
 use crate::view_ddl::execute::execute_show_tblproperties;
@@ -41,20 +42,23 @@ fn assert_iceberg_error(error: &DataFusionError, kind: ErrorKind, message: &str)
     assert_eq!(source.to_string(), message);
 }
 
-#[tokio::test]
-async fn present_view_returns_reserved_and_stored_rows() {
-    let warehouse = TempDir::new().expect("temp warehouse");
-    let (ctx, catalogs) = setup(&warehouse).await;
-    run(
-        &ctx,
-        &catalogs,
-        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v', 'a'='b') AS SELECT * FROM src",
-    )
-    .await;
-    let frame = execute_show_tblproperties(&ctx, &catalogs, statement("ice", "v"))
-        .await
-        .expect("view must be handled")
-        .expect("view must answer");
+fn reserved_and_stored_rows() -> Vec<(String, String)> {
+    vec![
+        (
+            "location".to_string(),
+            std::env::temp_dir()
+                .join("sales/v")
+                .to_string_lossy()
+                .into_owned(),
+        ),
+        ("provider".to_string(), "iceberg".to_string()),
+        ("format-version".to_string(), "1".to_string()),
+        ("a".to_string(), "b".to_string()),
+        ("k".to_string(), "v".to_string()),
+    ]
+}
+
+async fn show_rows(frame: DataFrame) -> Vec<(String, String)> {
     let batches = frame.collect().await.expect("collect view properties");
     assert_eq!(
         batches[0]
@@ -72,7 +76,7 @@ async fn present_view_returns_reserved_and_stored_rows() {
             ("value", &DataType::Utf8, false)
         ]
     );
-    let rows = batches
+    batches
         .iter()
         .flat_map(|batch| {
             let keys = batch
@@ -94,23 +98,46 @@ async fn present_view_returns_reserved_and_stored_rows() {
                 })
                 .collect::<Vec<_>>()
         })
-        .collect::<Vec<_>>();
-    assert_eq!(
-        rows,
-        vec![
-            (
-                "location".to_string(),
-                std::env::temp_dir()
-                    .join("sales/v")
-                    .to_string_lossy()
-                    .into_owned()
-            ),
-            ("provider".to_string(), "iceberg".to_string()),
-            ("format-version".to_string(), "1".to_string()),
-            ("a".to_string(), "b".to_string()),
-            ("k".to_string(), "v".to_string()),
-        ]
-    );
+        .collect()
+}
+
+#[tokio::test]
+async fn present_view_returns_reserved_and_stored_rows() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v', 'a'='b') AS SELECT * FROM src",
+    )
+    .await;
+    let frame = execute_show_tblproperties(&ctx, &catalogs, statement("ice", "v"))
+        .await
+        .expect("view must be handled")
+        .expect("view must answer");
+    assert_eq!(show_rows(frame).await, reserved_and_stored_rows());
+}
+
+#[tokio::test]
+async fn bare_name_completes_from_use_session_defaults() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.v TBLPROPERTIES ('k'='v', 'a'='b') AS SELECT * FROM src",
+    )
+    .await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "ice", "sales");
+    let bare = ShowTblpropertiesStatement {
+        name: vec!["v".to_string()],
+        key: None,
+    };
+    let frame = execute_show_tblproperties(&ctx, &catalogs, bare)
+        .await
+        .expect("bare view must be handled")
+        .expect("bare view must answer");
+    assert_eq!(show_rows(frame).await, reserved_and_stored_rows());
 }
 
 #[tokio::test]
