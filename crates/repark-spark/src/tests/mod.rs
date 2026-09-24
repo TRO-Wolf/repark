@@ -89,6 +89,7 @@ mod service_managed_ctas;
 mod session_write_conf;
 mod session_write_conf_removals;
 mod show_create;
+mod show_create_view_routing;
 mod show_table_extended;
 mod show_table_extended_near_miss;
 mod show_tblproperties_routing;

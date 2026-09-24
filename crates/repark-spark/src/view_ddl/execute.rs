@@ -334,7 +334,7 @@ async fn show_tblproperties_missing_error(
     }
 }
 
-fn show_tblproperties_rows(
+pub(crate) fn show_tblproperties_rows(
     view: &iceberg::view::View,
     key: Option<&str>,
     catalog: &str,
