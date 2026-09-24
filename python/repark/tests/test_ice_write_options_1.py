@@ -828,3 +828,18 @@ def test_table_level_gzip_with_option_codec_refuses(spark: ReparkSession, tmp_pa
         _frame(spark).writeTo(table).option("compression-codec", "gzip").append()
     assert _snapshot_count(spark, table) == before
     assert sorted(tmp_path.rglob("*.parquet")) == files_before
+
+
+def test_metadata_json_lists_snapshots_in_sequence_order(spark: ReparkSession, tmp_path: Path) -> None:
+    """RP-48 (2026-09-24): the newest metadata JSON lists snapshots by sequence number, head last."""
+    _seed(spark, "snap_order")
+    table = f"{CATALOG}.{NS}.snap_order"
+    for _ in range(3):
+        _frame(spark).write.format("iceberg").insertInto(table)
+    metas = sorted(tmp_path.rglob("snap_order/metadata/*.metadata.json"))
+    assert metas, "no metadata found for snap_order"
+    meta = json.loads(metas[-1].read_text(encoding="utf-8"))
+    sequence_numbers = [snapshot["sequence-number"] for snapshot in meta["snapshots"]]
+    assert len(sequence_numbers) == 4
+    assert sequence_numbers == sorted(sequence_numbers)
+    assert meta["snapshots"][-1]["snapshot-id"] == meta["current-snapshot-id"]
