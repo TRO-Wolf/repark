@@ -3,8 +3,8 @@
 Spark's IcebergSource rule: a ``load`` argument containing ``/`` is a filesystem path —
 a ``*.metadata.json`` path pins that metadata file's snapshot, and any other path is a
 table location whose current metadata resolves through ``version-hint.text`` or the
-highest-numbered metadata file under ``<location>/metadata``. Near-miss identifiers keep
-the catalog route untouched. Arrow ``to_arrow`` pins carry value AND type (docs/testing.md).
+highest-numbered metadata file under ``<location>/metadata``. The pinned near-miss
+identifiers take the catalog route. Arrow ``to_arrow`` pins carry value AND type (docs/testing.md).
 
 pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 """
@@ -185,7 +185,7 @@ def test_load_older_metadata_file_reads_that_version(
 def test_load_path_registers_no_catalog_table(
     spark: ReparkSession, loaded: dict[str, object]
 ) -> None:
-    """A path read registers nothing: every listed catalog, namespace, table, temp view holds.
+    """A path read leaves no registration behind: the inventory is equal after collection.
 
     pins: dfload-1/C-007
     """
@@ -265,7 +265,7 @@ def test_load_hinted_missing_metadata_names_the_path(spark: ReparkSession, tmp_p
 def test_load_two_part_identifier_keeps_catalog_route(
     spark: ReparkSession, loaded: dict[str, object]
 ) -> None:
-    """``load("ns.events")`` resolves under the current catalog, never the path branch.
+    """``load("ns.events")`` resolves under the current catalog, not the path branch.
 
     pins: dfload-1/C-006
     """
@@ -433,7 +433,7 @@ def test_load_file_relative_location_two_trailing_slashes_keeps_one(
 def test_load_v_form_beyond_java_int_is_not_a_candidate(
     spark: ReparkSession, loaded: dict[str, object]
 ) -> None:
-    """A ``v2147483648.metadata.json`` copy of the create snapshot never wins the listing.
+    """A ``v2147483648.metadata.json`` copy of the create snapshot does not win the listing.
 
     pins: dfload-1/C-010
     """
