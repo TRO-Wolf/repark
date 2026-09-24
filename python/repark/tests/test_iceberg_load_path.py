@@ -438,3 +438,95 @@ def test_load_v_form_beyond_java_int_is_not_a_candidate(
     table_dir = loaded["table_dir"]
     shutil.copy(loaded["metadata_files"][0], table_dir / "metadata" / "v2147483648.metadata.json")
     _assert_current(spark.read.format("iceberg").load(str(table_dir)))
+
+
+def test_load_path_option_refuses_before_resolution(spark: ReparkSession, tmp_path: Path) -> None:
+    """The option refusal wins over a location that would refuse for missing metadata.
+
+    pins: dfload-1/C-004
+    """
+    missing = str(tmp_path / "no" / "such" / "dir")
+    with pytest.raises(AnalysisException) as raised:
+        spark.read.format("iceberg").option("snapshot-id", "1").load(missing)
+    assert str(raised.value) == PATH_OPTION_REFUSAL.format(keys="snapshot-id")
+
+
+@pytest.mark.parametrize("key", ["foo", "split-size"])
+def test_load_path_ignores_an_unrelated_option(
+    spark: ReparkSession, loaded: dict[str, object], key: str
+) -> None:
+    """An option outside the refused sets and the semantic gate is ignored beside a path.
+
+    pins: dfload-1/C-004
+    """
+    _assert_current(spark.read.format("iceberg").option(key, "1").load(str(loaded["table_dir"])))
+
+
+@pytest.mark.parametrize("key", ["compression", "mergeSchema"])
+def test_load_path_semantic_gate_refuses_first(
+    spark: ReparkSession, loaded: dict[str, object], key: str
+) -> None:
+    """The reader's semantic-option gate refuses its keys before the path door runs.
+
+    pins: dfload-1/C-004
+    """
+    with pytest.raises(AnalysisException) as raised:
+        spark.read.format("iceberg").option(key, "1").load(str(loaded["table_dir"]))
+    assert str(raised.value) == (
+        f"reader option '{key}' is not supported by repark yet "
+        "(would silently change load semantics if ignored)"
+    )
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "message"),
+    [
+        (
+            "as-of-timestamp",
+            "1",
+            "Time travel option `as-of-timestamp` (in millis) is no longer supported, "
+            "use Spark built-in `timestampAsOf` instead (properly formatted timestamp)",
+        ),
+        (
+            "tag",
+            "main",
+            "Time travel option `tag` is no longer supported, "
+            "use Spark built-in `versionAsOf` instead",
+        ),
+        ("versionAsOf", "1", "Cannot find snapshot with ID 1"),
+        ("timestampAsOf", "1", "Cannot find a snapshot older than 1970-01-01T00:00:01+00:00"),
+    ],
+)
+def test_load_identifier_travel_option_keeps_catalog_route(
+    spark: ReparkSession, loaded: dict[str, object], key: str, value: str, message: str
+) -> None:
+    """Catalog time-travel options on ``ns.events`` keep the catalog route's own answers.
+
+    pins: dfload-1/C-006
+    """
+    with pytest.raises(IllegalArgumentException) as raised:
+        spark.read.format("iceberg").option(key, value).load("ns.events")
+    assert str(raised.value) == message
+
+
+def test_load_identifier_branch_keeps_catalog_route(
+    spark: ReparkSession, loaded: dict[str, object]
+) -> None:
+    """``branch=main`` on ``ns.events`` reads the current rows through the catalog route.
+
+    pins: dfload-1/C-006
+    """
+    _assert_current(spark.read.format("iceberg").option("branch", "main").load("ns.events"))
+
+
+@pytest.mark.parametrize("selector", ["history", "files"])
+def test_load_metadata_table_selectors_keep_catalog_route(
+    spark: ReparkSession, loaded: dict[str, object], selector: str
+) -> None:
+    """``ns.events.<selector>`` keeps the catalog route's measured table-not-found refusal.
+
+    pins: dfload-1/C-006
+    """
+    with pytest.raises(AnalysisException) as raised:
+        spark.read.format("iceberg").load(f"ns.events.{selector}")
+    assert str(raised.value) == f"Error during planning: table 'ns.events.{selector}' not found"
