@@ -349,3 +349,32 @@ async fn merge_output_clause_refuses_with_the_full_text() {
         "This feature is not implemented: MERGE OUTPUT/RETURNING clauses are not supported"
     );
 }
+
+#[tokio::test]
+async fn bare_show_views_propagates_a_namespace_probe_failure() {
+    let (warehouse, ctx, mut catalogs, session) = real_session().await;
+    let catalog = Arc::new(super::describe_view_routing::FaultCatalog {
+        inner: catalogs["ice"].clone(),
+        table_failure: None,
+        view_failure: None,
+        view_calls: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+        faults: super::describe_view_routing::ViewFaults {
+            namespace_exists_failure: Some(iceberg::ErrorKind::Unexpected),
+            ..super::describe_view_routing::ViewFaults::default()
+        },
+    });
+    super::describe_view_routing::register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
+    crate::use_ddl::set_session_defaults(&ctx, &catalogs, "fault", "sales");
+    let error = real_refusal(&ctx, &catalogs, &session, "SHOW VIEWS").await;
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected External, got {error:?}");
+    };
+    let source = inner
+        .downcast_ref::<iceberg::Error>()
+        .expect("expected Iceberg error");
+    assert_eq!(source.kind(), iceberg::ErrorKind::Unexpected);
+    assert_eq!(
+        source.to_string(),
+        "Unexpected => injected namespace_exists failure"
+    );
+}

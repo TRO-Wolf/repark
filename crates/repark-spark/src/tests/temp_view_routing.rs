@@ -674,6 +674,7 @@ async fn a_replaced_temp_view_home_refuses_every_temp_statement_as_analysis() {
         "DROP VIEW `datafusion`.`public`.`src`",
         "DESCRIBE src",
         "SHOW VIEWS",
+        "CREATE TEMPORARY VIEW v AS SELECT 1 AS id",
     ] {
         let error = session_error(sql, &BrokenHomeTempViews).await;
         assert!(

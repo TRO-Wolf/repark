@@ -111,6 +111,7 @@ pub(super) struct ViewFaults {
     pub(super) update_view_calls: Option<Arc<AtomicUsize>>,
     pub(super) update_view_failure: Option<ErrorKind>,
     pub(super) rename_view_failure: Option<ErrorKind>,
+    pub(super) namespace_exists_failure: Option<ErrorKind>,
 }
 
 #[async_trait::async_trait]
@@ -138,6 +139,9 @@ impl Catalog for FaultCatalog {
     }
 
     async fn namespace_exists(&self, namespace: &NamespaceIdent) -> iceberg::Result<bool> {
+        if let Some(kind) = self.faults.namespace_exists_failure {
+            return Err(Error::new(kind, "injected namespace_exists failure"));
+        }
         self.inner.namespace_exists(namespace).await
     }
 
