@@ -337,6 +337,7 @@ def test_remove_orphan_files_defaults_older_than_to_three_days(
     assert result.schema.field("orphan_file_location").type == pa.string()
     assert not result.schema.field("orphan_file_location").nullable
     assert _orphan_names(result) == {"orphan-old.parquet"}
+    assert result.column("orphan_file_location").to_pylist() == [f"file:{old}"]
     assert not old.exists()
     assert young.exists()
     live = spark.sql("SELECT id FROM mem.owned.events").to_arrow()

@@ -7016,8 +7016,8 @@ the pin rather than obeying it.
   now sweeps that directory. The planted 10-day-old `data/orphan-file.parquet` comes back as one
   `orphan_file_location` row and is deleted. A 1-day-old orphan gives zero rows and is kept.
   Since 2026-09-24 the listing path (no `file_list_view`) prints an orphan whose location
-  starts with `/` as `file:<path>`, the way Java's Hadoop listing qualifies a local file, and
-  still deletes the unqualified path
+  starts with `/` as `file:<path>`, the way Java's Hadoop listing qualifies a local file; the
+  qualification touches only the printed rows, and the orphan is still deleted from disk
   (`call_orphan.rs::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`);
   every other location prints unchanged, including one that already carries a scheme, a
   relative path and a Windows drive path such as `C:\…` or `C:/…`

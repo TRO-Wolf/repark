@@ -190,8 +190,9 @@ and measured-parity contract would grow `call.rs` beyond its exact
   pins: u1-mem-layout-1/C-023, C-024, C-025
   R5 (2026-09-24): the listing branch prints each orphan through `qualify_local_path`, which
   prefixes `file:` to a string that starts with `/` and returns every other string unchanged,
-  as Java's Hadoop listing prints a local file; `DeleteOrphanFiles` still deletes the
-  unqualified path, and the `file_list_view` branch prints the view's spelling unqualified.
+  as Java's Hadoop listing prints a local file; it runs after `DeleteOrphanFiles` has deleted,
+  so only the printed rows change and the orphan is still removed from disk, and the
+  `file_list_view` branch prints the view's spelling unqualified.
   Red tests: `tests/call_orphan.rs::call_remove_orphan_files_qualifies_only_a_location_starting_with_slash`,
   `::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`,
   `::call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified`.
