@@ -811,10 +811,12 @@ async fn show_namespaces_intercept_shadows_no_other_statement() {
     let error = execute(&ctx, &catalogs, "SHOW ALL")
         .await
         .expect_err("SHOW ALL stays DataFusion-owned");
-    let message = error.to_string();
-    assert!(
-        !message.contains("SHOW NAMESPACES") && !message.contains("unknown catalog"),
-        "SHOW ALL must keep DataFusion's own refusal, got: {message}"
+    let DataFusionError::Plan(message) = error else {
+        panic!("SHOW ALL must keep DataFusion's own Plan refusal, got {error:?}");
+    };
+    assert_eq!(
+        message,
+        "SHOW [VARIABLE] is not supported unless information_schema is enabled"
     );
     let views = execute(&ctx, &catalogs, "SHOW VIEWS")
         .await

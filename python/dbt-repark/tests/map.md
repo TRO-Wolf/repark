@@ -82,6 +82,8 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   pins inverted to success — the description lands as the `comment` property and
   the table lands under `location_root` with readable rows — while the `OPTIONS`,
   `clustered_by`, and column-documentation refusal pins hold.
+  **IPI-40 PR6 r2 (2026-09-24):** the incremental and snapshot refusals pin the complete
+  `DBT-INCREMENTAL-1` compilation-error text dbt reports, macro trail included.
 - `test_aws_acceptance_gold.py` — the Glue gold leg, gated on `REPARK_AWS_ACCEPTANCE=1` and
   the same env variables as `python/repark/tests/test_aws_acceptance.py`. It writes to
   `testing_repark_acceptance` and nowhere else. **The orchestrator runs it; a unit agent never

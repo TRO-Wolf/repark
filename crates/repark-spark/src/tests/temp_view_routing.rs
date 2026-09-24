@@ -494,12 +494,18 @@ async fn qualified_drop_view_falls_through_to_the_catalog() {
     let DataFusionError::Plan(message) = error else {
         panic!("expected Plan, got {error:?}");
     };
-    assert!(message.starts_with("[VIEW_NOT_FOUND] The view sales.src cannot be found."));
+    assert_eq!(
+        message,
+        "[VIEW_NOT_FOUND] The view sales.src cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS. SQLSTATE: 42P01"
+    );
     assert!(stub.dropped().is_empty());
     let error = run_with_session(&ctx, &catalogs, "DROP VIEW missing_view", &stub)
         .await
         .expect_err("a bare non-temp name is the catalog drop");
-    assert!(matches!(error, DataFusionError::Plan(_)), "{error:?}");
+    let DataFusionError::Plan(message) = error else {
+        panic!("expected Plan, got {error:?}");
+    };
+    assert_eq!(message, "unknown catalog `spark_catalog`");
     assert!(stub.dropped().is_empty());
 }
 

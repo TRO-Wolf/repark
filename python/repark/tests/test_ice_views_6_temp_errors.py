@@ -156,6 +156,8 @@ def test_temp_view_statements_refuse_statement_write_options(
         f"{PLAN}{context} does not support write options (write-format); they are only "
         "honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)"
     )
+    assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
+    assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert _rows(spark.sql("SHOW VIEWS")) == [["", "tv", True]]
 
 
@@ -261,6 +263,8 @@ def test_held_temp_view_frame_refuses_after_a_catalog_replaces_the_home(tmp_path
         held.collect()
     assert type(caught.value) is AnalysisException
     assert str(caught.value) == f"{PLAN}failed to resolve schema: public"
+    assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
+    assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
 
 
 def test_merge_output_clause_refuses_with_the_full_text(spark: ReparkSession) -> None:
@@ -336,8 +340,9 @@ def test_up_cast_rule_refuses_each_other_class(
 
 def test_four_part_temp_view_name_refuses(spark: ReparkSession) -> None:
     """IDENTIFIER_TOO_MANY_NAME_PARTS covers every name of three or more parts."""
-    with pytest.raises(AnalysisException) as caught:
+    with pytest.raises(ParseException) as caught:
         spark.sql("CREATE TEMPORARY VIEW a.b.c.d AS SELECT 1 AS id")
+    assert type(caught.value) is ParseException
     assert str(caught.value) == (
         "[IDENTIFIER_TOO_MANY_NAME_PARTS] `a`.`b`.`c`.`d` is not a valid identifier as it has "
         "more than 2 name parts. SQLSTATE: 42601"
@@ -357,8 +362,9 @@ def test_four_part_temp_view_name_refuses(spark: ReparkSession) -> None:
 )
 def test_with_write_bodies_refuse_at_their_verb(spark: ReparkSession, body: str, verb: str) -> None:
     """Each WITH ... INSERT/UPDATE/DELETE/MERGE body is PARSE_SYNTAX_ERROR at its verb."""
-    with pytest.raises(AnalysisException) as caught:
+    with pytest.raises(ParseException) as caught:
         spark.sql(f"CREATE TEMPORARY VIEW vw AS WITH s AS (SELECT 9 AS id) {body}")
+    assert type(caught.value) is ParseException
     assert str(caught.value) == (
         f"[PARSE_SYNTAX_ERROR] Syntax error at or near '{verb}'. SQLSTATE: 42601"
     )
@@ -400,6 +406,8 @@ def test_temp_views_are_session_scoped(spark: ReparkSession) -> None:
     assert str(caught.value) == (
         "Error during planning: table 'spark_catalog.default.scoped' not found"
     )
+    assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
+    assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert _rows(spark.sql("SHOW VIEWS")) == [["", "scoped", True]]
 
 

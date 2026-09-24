@@ -120,6 +120,14 @@ async fn real_refusal(
         .unwrap_or_else(|| panic!("{sql} must refuse"))
 }
 
+fn assert_plan_text(error: &DataFusionError, expected: &str) {
+    assert!(
+        matches!(error.find_root(), DataFusionError::Plan(_)),
+        "{expected}: {error:?}"
+    );
+    assert_eq!(error.to_string(), expected);
+}
+
 const TABLE_OR_VIEW_NOT_FOUND_TAIL: &str = " cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01";
 
 #[tokio::test]
@@ -175,9 +183,9 @@ async fn temp_view_read_time_refusals_carry_the_full_text() {
     )
     .await;
     let error = real_refusal(&ctx, &catalogs, &session, "SELECT * FROM y").await;
-    assert_eq!(
-        error.to_string(),
-        "Error during planning: [INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view `y` has an incompatible schema change and column k cannot be resolved. Expected 1 columns named k but got [].\nPlease try to re-create the view by running: CREATE OR REPLACE TEMPORARY VIEW. SQLSTATE: 51024"
+    assert_plan_text(
+        &error,
+        "Error during planning: [INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view `y` has an incompatible schema change and column k cannot be resolved. Expected 1 columns named k but got [].\nPlease try to re-create the view by running: CREATE OR REPLACE TEMPORARY VIEW. SQLSTATE: 51024",
     );
     real_ok(
         &ctx,
@@ -187,17 +195,17 @@ async fn temp_view_read_time_refusals_carry_the_full_text() {
     )
     .await;
     let error = real_refusal(&ctx, &catalogs, &session, "SELECT * FROM y").await;
-    assert_eq!(
-        error.to_string(),
-        "Error during planning: [CANNOT_UP_CAST_DATATYPE] Cannot up cast x.id from \"STRING\" to \"INT\".\nThe type path of the target object is:\n\nYou can either add an explicit cast to the input data or choose a higher precision type of the field in the target object SQLSTATE: 42846"
+    assert_plan_text(
+        &error,
+        "Error during planning: [CANNOT_UP_CAST_DATATYPE] Cannot up cast x.id from \"STRING\" to \"INT\".\nThe type path of the target object is:\n\nYou can either add an explicit cast to the input data or choose a higher precision type of the field in the target object SQLSTATE: 42846",
     );
     real_ok(&ctx, &catalogs, &session, "DROP VIEW x").await;
     let error = real_refusal(&ctx, &catalogs, &session, "SELECT * FROM y").await;
-    assert_eq!(
-        error.to_string(),
-        format!(
+    assert_plan_text(
+        &error,
+        &format!(
             "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `x`{TABLE_OR_VIEW_NOT_FOUND_TAIL}"
-        )
+        ),
     );
 }
 
@@ -227,7 +235,7 @@ async fn temp_view_create_time_refusals_carry_the_full_text() {
         ),
     ] {
         let error = real_refusal(&ctx, &catalogs, &session, sql).await;
-        assert_eq!(error.to_string(), expected, "{sql}");
+        assert_plan_text(&error, expected);
     }
     real_ok(
         &ctx,
@@ -243,9 +251,9 @@ async fn temp_view_create_time_refusals_carry_the_full_text() {
         "CREATE TEMPORARY VIEW v AS SELECT 1 AS id",
     )
     .await;
-    assert_eq!(
-        error.to_string(),
-        "Error during planning: [TEMP_TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create the temporary view `v` because it already exists.\nChoose a different name, drop or replace the existing view. SQLSTATE: 42P07"
+    assert_plan_text(
+        &error,
+        "Error during planning: [TEMP_TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create the temporary view `v` because it already exists.\nChoose a different name, drop or replace the existing view. SQLSTATE: 42P07",
     );
     let error = real_refusal(
         &ctx,
@@ -254,9 +262,9 @@ async fn temp_view_create_time_refusals_carry_the_full_text() {
         "CREATE OR REPLACE TEMPORARY VIEW v AS SELECT * FROM v",
     )
     .await;
-    assert_eq!(
-        error.to_string(),
-        "Error during planning: [RECURSIVE_VIEW] Recursive view `v` detected (cycle: `v` -> `v`). SQLSTATE: 42K0H"
+    assert_plan_text(
+        &error,
+        "Error during planning: [RECURSIVE_VIEW] Recursive view `v` detected (cycle: `v` -> `v`). SQLSTATE: 42K0H",
     );
 }
 
@@ -279,9 +287,9 @@ async fn temp_view_over_a_dropped_catalog_table_refuses_at_read() {
     .await;
     real_ok(&ctx, &catalogs, &session, "DROP TABLE ice.sales.gone").await;
     let error = real_refusal(&ctx, &catalogs, &session, "SELECT * FROM w").await;
-    assert_eq!(
-        error.to_string(),
-        "Error during planning: table 'ice.sales.gone' not found"
+    assert_plan_text(
+        &error,
+        "Error during planning: table 'ice.sales.gone' not found",
     );
 }
 
@@ -308,9 +316,9 @@ async fn held_temp_view_frame_refuses_after_a_catalog_replaces_the_home() {
         Arc::new(datafusion::catalog::MemoryCatalogProvider::new()),
     );
     let error = held.collect().await.expect_err("the home schema is gone");
-    assert_eq!(
-        error.to_string(),
-        "Error during planning: failed to resolve schema: public"
+    assert_plan_text(
+        &error,
+        "Error during planning: failed to resolve schema: public",
     );
 }
 
@@ -375,7 +383,15 @@ async fn temp_view_create_with_a_trailing_statement_registers_nothing() {
     )
     .await;
     assert!(matches!(error, DataFusionError::Plan(_)), "{error:?}");
-    real_refusal(&ctx, &catalogs, &session, "SELECT * FROM vm").await;
+    assert_plan_text(
+        &error,
+        "Error during planning: a stored view body must hold exactly one statement",
+    );
+    let error = real_refusal(&ctx, &catalogs, &session, "SELECT * FROM vm").await;
+    assert_plan_text(
+        &error,
+        "Error during planning: table 'datafusion.public.vm' not found",
+    );
     real_ok(
         &ctx,
         &catalogs,

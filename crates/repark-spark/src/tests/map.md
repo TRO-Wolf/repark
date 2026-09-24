@@ -35,7 +35,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   relation, `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` and `RECURSIVE_VIEW`, a dropped catalog table
   under a temp view, a held frame after a catalog replaces the temp home, and the MERGE OUTPUT
   refusal that moved to `merge.rs`; a bare SHOW VIEWS keeps the Iceberg error when the
-  current namespace's existence probe fails. pins: ice-views-1/C-018
+  current namespace's existence probe fails. Every Plan-class pin checks the root variant
+  beside the complete text (PR6 r2). pins: ice-views-1/C-018
 - `temp_view_routing.rs` — **IPI-40 PR6 (2026-09-24):** Rust pins for the
   temporary-view door: the CREATE TEMPORARY VIEW parser branches (heads, verbatim
   bodies, near misses, GLOBAL and the Spark-measured parse refusals as full
@@ -47,7 +48,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   NULL comments and SHOW VIEWS temp rows. The error-path pins (PR6b3a/b3b) add a
   `TempViewSession` whose home a catalog replaced (DROP, DESCRIBE, SHOW VIEWS and CREATE
   refuse with the session's text), malformed heads, clauses and SHOW VIEWS as full plan text,
-  and statement write options refused on every temp statement. pins: ice-views-1/C-018
+  and statement write options refused on every temp statement. Since PR6 r2 the
+  trailing-statement pins assert the complete multi-statement `PARSE_SYNTAX_ERROR` text on
+  every temp and catalog door, DROP included, and the qualified and bare catalog DROP
+  fall-throughs pin their complete texts. pins: ice-views-1/C-018
 - `view_use_resolution.rs` — **IPI-40 PR3 r2b (2026-09-23):** USE resolution per view entry point on the engine: bare and two-part ALTER VIEW SET/UNSET/RENAME, two-part CREATE and DROP after `USE ice`, and SHOW VIEWS IN with a one-part namespace after USE and an explicit `cat.ns` under a different current catalog. Each is killed by reverting its own call site to DataFusion's `ctx` defaults.
 - `show_tblproperties_routing.rs` — SHOW TBLPROPERTIES pins the complete view row set, warehouse location, Arrow schema, viewless catalog fallback, and error routing. `bare_name_completes_from_use_session_defaults` pins the same rows for a bare name after `use_ddl::set_session_defaults(ice, sales)`; it goes red if completion reads DataFusion's `default_catalog`. `commented_view_hides_comment_in_listing_and_key_lookup` (PR5 r2) pins a commented view's full listing without `comment` and the `('comment')` miss row.
 - `show_create_view_routing.rs` — **IPI-40 PR5 (2026-09-24, V-SHOW-CREATE):** `SHOW CREATE
@@ -704,7 +708,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ice-error-conditions-1/C-011), `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
   PARTITIONS refuses stamped, and SHOW NAMESPACES / SHOW FUNCTIONS keep their intercepts;
   since IPI-40 PR6a2 the SHOW NAMESPACES shadowing pin asserts that bare `SHOW VIEWS` answers
-  its `namespace`/`viewName`/`isTemporary` frame while `SHOW ALL` keeps DataFusion's refusal.
+  its `namespace`/`viewName`/`isTemporary` frame while `SHOW ALL` keeps DataFusion's refusal,
+  pinned as its complete Plan text since PR6 r2.
   pins: ice-error-conditions-1/C-011), `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
@@ -1616,7 +1621,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   table) answering `_file` row by row; and
   `input_file_name_over_a_temp_view_named_like_the_table_falls_through`
   measures the temp-view collision (since IPI-40 PR6 the view is created
-  through the SQL door's `CREATE TEMPORARY VIEW`, and it still falls through).
+  through the SQL door's `CREATE TEMPORARY VIEW`, and it still falls through; since PR6 r2
+  the `[UNRESOLVED_ROUTINE]` and `_file` refusals are pinned as complete texts).
   `a_real_column_named_input_file_name_reads_unchanged` pins that a user column
   of that name is read normally, and `insert_around_the_trigger_keeps_todays_answers`
   pins the input-file-name-only trigger returning `Ok(None)` for a non-query
