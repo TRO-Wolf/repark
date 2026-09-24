@@ -830,8 +830,10 @@ def test_table_level_gzip_with_option_codec_refuses(spark: ReparkSession, tmp_pa
     assert sorted(tmp_path.rglob("*.parquet")) == files_before
 
 
-def test_metadata_json_lists_snapshots_in_sequence_order(spark: ReparkSession, tmp_path: Path) -> None:
-    """RP-48 (2026-09-24): the newest metadata JSON lists snapshots by sequence number, head last."""
+def test_metadata_json_lists_snapshots_in_sequence_order(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """RP-48 (2026-09-24): the newest metadata JSON lists snapshots by sequence, head last."""
     _seed(spark, "snap_order")
     table = f"{CATALOG}.{NS}.snap_order"
     for _ in range(3):
