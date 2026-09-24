@@ -31,6 +31,7 @@ mod ref_ddl;
 mod replace_columns;
 mod replace_partition_field;
 mod router;
+mod show_create;
 mod sort_order_parse;
 mod spark_ast;
 pub mod spark_literal_typing;
@@ -44,6 +45,7 @@ pub use spark_typed::{
     suffix_literal_udf,
 };
 mod table_props_ddl;
+mod table_props_view;
 mod time_travel;
 mod time_window;
 mod truncate;

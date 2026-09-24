@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Token rewrites that `../normalize.rs` calls but does not have the file-size headroom to hold.
-`../normalize.rs` sits close to the 1000-line ceiling, so a new rewrite lands here and is called
-from `parse_single_normalized` in one line.
+Token rewrites and statement guards that `../normalize.rs` calls but does not have the file-size
+headroom to hold. `../normalize.rs` sits close to the 1000-line ceiling, so a new helper lands
+here and is re-exported in one line.
 
 ## Contents
 
@@ -41,6 +41,16 @@ from `parse_single_normalized` in one line.
   holds `strip_create_table_using`, moved here from `../normalize.rs` (comments shed
   in the move) to keep that file at its ceiling. Unit pins are inline in the module;
   the parse-level pins sit beside round 1's in `../tests/ice_ddl_clauses_1.rs`.
+- `statement_guard.rs` — **WO-C10 (2026-09-23):** shared multi-statement refusal plus the
+  front-door unclosed bracketed-comment guard. The guard tokenizes with `DatabricksDialect`,
+  then scans outer unclosed comments while ignoring quoted text and line comments. It keeps an
+  unclosed `/*+` hint on its existing path and returns Spark's parser condition otherwise.
+  pins: wo-c10/C-001, C-002, C-003
+  WO-C11 (2026-09-23): the inline test module pins `outermost_unclosed_bracketed_comment`,
+  `skip_quoted_text` and `skip_line_comment` to exact indexes, so removing any quote kind,
+  escape form, line break, nesting push or pop fails a test. The doubled-quote escape and the
+  end-of-input escape guard only change `skip_quoted_text`'s resume index.
+  pins: wo-c10/C-002
 
 ## Pointers
 

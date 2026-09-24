@@ -26,6 +26,11 @@ use crate::merge;
 pub(crate) mod clustered_by;
 pub(crate) mod create_clauses;
 pub(crate) mod replace_table;
+pub(crate) mod statement_guard;
+
+pub(crate) use statement_guard::{
+    multi_statement_parse_error, refuse_multi_statement_sql, refuse_unclosed_bracketed_comment,
+};
 
 /// True when the statement's first keyword token is `MERGE`.
 pub(crate) fn starts_with_merge(sql: &str) -> bool {
@@ -226,64 +231,6 @@ pub(crate) fn parse_single_normalized(
     } else {
         Ok(None)
     }
-}
-
-// === Multi-statement and merge-on-read DML safety gates ================================.
-
-/// Refuse multiple statements.
-/// # Errors
-/// Returns SQL parse error when more than one non-empty statement is present.
-pub(crate) fn refuse_multi_statement_sql(sql: &str) -> Result<()> {
-    let dialect = DatabricksDialect {};
-    let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
-        // Un-tokenizable input is not a multi-statement claim — fall through to existing paths.
-        return Ok(());
-    };
-    match Parser::new(&dialect)
-        .with_tokens(tokens.clone())
-        .parse_statements()
-    {
-        Ok(statements) if statements.len() > 1 => Err(multi_statement_parse_error()),
-        Ok(_) => Ok(()),
-        Err(_) => {
-            // Fail-closed: `;` + non-ws/comment/extra-`;` content → multi-statement class refuse.
-            if tokens_have_nontrailing_content_after_semicolon(&tokens) {
-                Err(multi_statement_parse_error())
-            } else {
-                Ok(())
-            }
-        }
-    }
-}
-
-/// True when a `;` token is followed later by any non-whitespace, non-`;`, non-EOF token.
-pub(crate) fn tokens_have_nontrailing_content_after_semicolon(tokens: &[Token]) -> bool {
-    let mut saw_semicolon = false;
-    for token in tokens {
-        match token {
-            Token::EOF => break,
-            Token::Whitespace(_) => {}
-            Token::SemiColon => {
-                saw_semicolon = true;
-            }
-            _ if saw_semicolon => return true,
-            _ => {}
-        }
-    }
-    false
-}
-
-/// Parse-class error matching Spark's multi-statement refuse (error class `PARSE_SYNTAX_ERROR`).
-pub(crate) fn multi_statement_parse_error() -> DataFusionError {
-    DataFusionError::SQL(
-        Box::new(ParserError::ParserError(
-            "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not \
-             supported (Spark parity). Only a single statement is accepted; a trailing \
-             semicolon, whitespace, or comment after that statement is allowed"
-                .to_string(),
-        )),
-        None,
-    )
 }
 
 // The valve verb enum is owned by repark-iceberg beside the position-delete path it gates.

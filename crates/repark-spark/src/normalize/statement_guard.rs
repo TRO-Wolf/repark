@@ -1,0 +1,243 @@
+use datafusion::error::{DataFusionError, Result};
+use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::parser::{Parser, ParserError};
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+
+const UNCLOSED_BRACKETED_COMMENT_MESSAGE: &str = "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. \
+     Please, append */ at the end of the comment. SQLSTATE: 42601";
+
+pub(crate) fn refuse_multi_statement_sql(sql: &str) -> Result<()> {
+    let refusal =
+        || crate::show_create::multi_statement_refusal_error(sql, multi_statement_parse_error());
+    let dialect = DatabricksDialect {};
+    let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
+        return Ok(());
+    };
+    match Parser::new(&dialect)
+        .with_tokens(tokens.clone())
+        .parse_statements()
+    {
+        Ok(statements) if statements.len() > 1 => Err(refusal()),
+        Ok(_) => Ok(()),
+        Err(_) => {
+            if tokens_have_nontrailing_content_after_semicolon(&tokens) {
+                Err(refusal())
+            } else {
+                Ok(())
+            }
+        }
+    }
+}
+
+pub(crate) fn tokens_have_nontrailing_content_after_semicolon(tokens: &[Token]) -> bool {
+    let mut saw_semicolon = false;
+    for token in tokens {
+        match token {
+            Token::EOF => break,
+            Token::Whitespace(_) => {}
+            Token::SemiColon => {
+                saw_semicolon = true;
+            }
+            _ if saw_semicolon => return true,
+            _ => {}
+        }
+    }
+    false
+}
+
+pub(crate) fn refuse_unclosed_bracketed_comment(sql: &str) -> Result<()> {
+    if !sql.contains("/*") {
+        return Ok(());
+    }
+    let dialect = DatabricksDialect {};
+    let Err(error) = Tokenizer::new(&dialect, sql).tokenize() else {
+        return Ok(());
+    };
+    if error.message != "Unexpected EOF while in a multi-line comment" {
+        return Ok(());
+    }
+    let Some(opener) = outermost_unclosed_bracketed_comment(sql) else {
+        return Ok(());
+    };
+    if sql.as_bytes().get(opener + 2) == Some(&b'+') {
+        return Ok(());
+    }
+    Err(unclosed_bracketed_comment_error())
+}
+
+pub(crate) fn unclosed_bracketed_comment_error() -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(
+            UNCLOSED_BRACKETED_COMMENT_MESSAGE.to_string(),
+        )),
+        None,
+    )
+}
+
+fn outermost_unclosed_bracketed_comment(sql: &str) -> Option<usize> {
+    let bytes = sql.as_bytes();
+    let mut openers = Vec::new();
+    let mut index = 0;
+    while index < bytes.len() {
+        if !openers.is_empty() {
+            if bytes.get(index..index + 2) == Some(b"/*") {
+                openers.push(index);
+                index += 2;
+            } else if bytes.get(index..index + 2) == Some(b"*/") {
+                openers.pop();
+                index += 2;
+            } else {
+                index += 1;
+            }
+            continue;
+        }
+        match bytes[index] {
+            b'\'' | b'"' | b'`' => {
+                index = skip_quoted_text(bytes, index);
+            }
+            b'-' if bytes.get(index + 1) == Some(&b'-') => {
+                index = skip_line_comment(bytes, index);
+            }
+            b'/' if bytes.get(index + 1) == Some(&b'*') => {
+                openers.push(index);
+                index += 2;
+            }
+            _ => {
+                index += 1;
+            }
+        }
+    }
+    openers.first().copied()
+}
+
+fn skip_quoted_text(bytes: &[u8], mut index: usize) -> usize {
+    let quote = bytes[index];
+    index += 1;
+    while index < bytes.len() {
+        let escapes_next = bytes[index] == b'\\'
+            || (bytes[index] == quote && bytes.get(index + 1) == Some(&quote));
+        if escapes_next && index + 1 < bytes.len() {
+            index += 2;
+        } else if bytes[index] == quote {
+            return index + 1;
+        } else {
+            index += 1;
+        }
+    }
+    index
+}
+
+fn skip_line_comment(bytes: &[u8], mut index: usize) -> usize {
+    index += 2;
+    while index < bytes.len() {
+        if matches!(bytes[index], b'\n' | b'\r') {
+            return index + 1;
+        }
+        index += 1;
+    }
+    index
+}
+
+pub(crate) fn multi_statement_parse_error() -> DataFusionError {
+    DataFusionError::SQL(
+        Box::new(ParserError::ParserError(
+            "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not \
+             supported (Spark parity). Only a single statement is accepted; a trailing \
+             semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601"
+                .to_string(),
+        )),
+        None,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{outermost_unclosed_bracketed_comment, skip_line_comment, skip_quoted_text};
+
+    #[test]
+    fn outermost_unclosed_comment_skips_every_quote_kind() {
+        assert_eq!(outermost_unclosed_bracketed_comment("SELECT '/* x'"), None);
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT \"/* x\""),
+            None
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 AS `/* x`"),
+            None
+        );
+        assert_eq!(outermost_unclosed_bracketed_comment("SELECT \"/* x"), None);
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 AS `/* x"),
+            None
+        );
+    }
+
+    #[test]
+    fn outermost_unclosed_comment_honours_backslash_escapes() {
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 'a\\'/* x'"),
+            None
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT \"a\\\"/* x\""),
+            None
+        );
+    }
+
+    #[test]
+    fn outermost_unclosed_comment_ends_line_comments_at_either_line_break() {
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 -- /* x"),
+            None
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 --c\r/* x"),
+            Some(13)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 --c\n/* x"),
+            Some(13)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 --c\r/* x */"),
+            None
+        );
+    }
+
+    #[test]
+    fn outermost_unclosed_comment_tracks_nesting_depth() {
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 /* a /* b */"),
+            Some(9)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 /* a */ /* b"),
+            Some(17)
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 /* a /* b */ */"),
+            None
+        );
+        assert_eq!(
+            outermost_unclosed_bracketed_comment("SELECT 1 /* ' */ /* x"),
+            Some(17)
+        );
+    }
+
+    #[test]
+    fn skip_quoted_text_answers_the_exact_resume_index() {
+        assert_eq!(skip_quoted_text(b"'a' b", 0), 3);
+        assert_eq!(skip_quoted_text(b"'a''b' c", 0), 6);
+        assert_eq!(skip_quoted_text(b"'a\\'b' c", 0), 6);
+        assert_eq!(skip_quoted_text(b"'a\\", 0), 3);
+        assert_eq!(skip_quoted_text(b"'/* x", 0), 5);
+        assert_eq!(skip_quoted_text(b"`a\"b` c", 0), 5);
+    }
+
+    #[test]
+    fn skip_line_comment_answers_the_exact_resume_index() {
+        assert_eq!(skip_line_comment(b"--c\r/*", 0), 4);
+        assert_eq!(skip_line_comment(b"--c\n/*", 0), 4);
+        assert_eq!(skip_line_comment(b"-- /* x", 0), 7);
+    }
+}

@@ -148,6 +148,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `createTable` DDL spells arrays `ARRAY<INT>` recursively plus `NOT NULL`
   (**FNP-4B round 7 (2026-09-15):** the one-line R-16b-21 grant; nothing else in
   this file changed). pins: catalog-surface-1/C-001…C-006, C-009
+  **C1 SHOW CREATE (2026-09-23):** `_table_comment` reads the `Comment` row of the
+  `# Detailed Table Information` block (Spark's measured spelling) — the shared
+  Spark-visible `Table Properties` list no longer carries the reserved `comment` key.
 - `column.py` — lazy expression objects, type gates, aliases, field access, generators,
   aggregates, windows, casts, and Spark-compatible operator behavior. Column identity
   metadata preserves join and duplicate-name semantics.

@@ -873,7 +873,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   covers the reader-options door.
   pins: ipi-07-branch-read-schema-1/C-001, C-002, C-003, C-004, C-005, C-006, C-008),
   `normalize`, `local_fs_ddl`,
-  `router` (multi-statement, F-BR-2 eager DML), `decimal` (G-7b bit-exact
+  `router` (`bug010_multi_statement_refuses_parse_class`: multi-statement `PARSE_SYNTAX_ERROR` /
+  `42601`, trailing-semicolon acceptance, F-BR-2 eager DML), `show_create`
+  (`show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
+  `show_create_unclosed_before_table_keywords_use_spark_parse_contract`, and
+  `show_create_multi_statement_keeps_spark_invalid_statement_class` pin the refusal classes
+  and texts), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names.
   `pin_literal_1_23_infers_decimal128_3_2_i128` and overflow wrap `10^38` at (38,0).
@@ -893,6 +898,24 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   JVM lock; cites
   `spark_door_null_keys_never_match_inner_left_semi_anti`).
 - **Sibling test modules:**
+  - [`router.rs`](router.rs) — `bug010_multi_statement_refuses_parse_class` pins the Spark
+    `PARSE_SYNTAX_ERROR` parser class and SQLSTATE `42601`; every accepted trailing-semicolon,
+    whitespace, and comment form returns the complete `SELECT 1` batch. WO-C10's shared
+    unclosed-comment pins assert the complete parser text, exact near-miss rows, and the two
+    complete current IPI-51 tokenizer divergences.
+    pins: wo-c5/C-001; wo-c10/C-001, C-002, C-003, C-004
+    WO-C11 (2026-09-23): `assert_single_value_answer` compares the complete schema and batch
+    for the semicolon, comment-marker, backticked-alias, backslash-escape and `\r` near
+    misses. The escaped quotes reach the comment scanner because the front-door tokenizer
+    reads `\` literally, so those rows fail if its quote or escape branch is removed.
+    pins: wo-c10/C-002
+    `planner_default_set_recognizer_pins_malformed_near_misses` also pins `SETdatafusion…` (no
+    word boundary) and a mixed-case key with a `\r`-ended comment before `=`. The underscore
+    boundary after `SET` is unobservable: neither key starts with `_`.
+  - [`show_create.rs`](show_create.rs) — `show_create_unclosed_bracketed_comments_keep_spark_parse_class`,
+    `show_create_unclosed_before_table_keywords_use_spark_parse_contract`, and
+    `show_create_multi_statement_keeps_spark_invalid_statement_class` pin complete parser text.
+    pins: wo-c5/C-002, C-003, C-004; wo-c10/C-001
   `partitioned_ctas` (**IPI-51 PR6 slice 3**, 2026-09-21: U1-P10 retargeted to
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` / `42703` with backticked suggestions, plus the CREATE
   TABLE `days(ts)` pin on the inventory cell's door; both mutation-proven, the typed-column
@@ -1420,6 +1443,37 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `k=v` stays clear. The parser leaves-alone list drops one-part names (D-3 retires that
   refusal; temp-view fall-through stays pinned end to end).
   pins: review-fix-5/C-001, C-002, C-003, C-004, C-006
+- `show_create.rs` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE` end to end on the
+  memory catalog against the live Spark 4.1.2 measurements (the table's real location
+  substituted): shape 1 (NOT NULL + column COMMENT, `bucket(4, id)`, `k=v`), shape 2 plain →
+  after INSERT (live snapshot id) → after `WRITE ORDERED BY id` (`sort-order`,
+  `write.distribution-mode`), shape 3 rich types with `PARTITIONED BY (data, days(ts),
+  truncate(3, data), years(d), bucket(8, id))`, table COMMENT and `'it\'s'` (the nested
+  `st.y` doc is set through `apply_schema_changes` because CREATE cannot parse a nested
+  field COMMENT yet), shape 5 `identifier-fields`, Java `HashSet` order `[zz,a,id]`, a
+  multi-term transform sort order built through `TableCreation` (ALTER WRITE ORDERED BY only
+  models identity terms), backslashes unescaped plus `OPTIONS` / TIMESTAMP_NTZ / nested NOT
+  NULL / backticked columns, a backticked table name, redaction, a `USE`-completed bare name,
+  typed `AS SERDE`, missing-table, bare, four-part-name, malformed-quote, trailing-token, and
+  invalid-`AS` refusals; every parse refusal asserts the `DataFusionError::SQL` parser variant,
+  while analysis refusals assert `DataFusionError::Plan`, with the full measured text. Near
+  misses preserve the current view-target and SHOW CREATE outcomes. SHOW TABLES and SHOW
+  COLUMNS compare complete Spark rows and Arrow schemas; SHOW TBLPROPERTIES keeps its pinned refusal.
+  DESCRIBE EXTENDED pins its complete Arrow schema, full column-section triples, the fresh-table
+  `Table Properties` triple, and the table `Comment` triple. The detail rows `Name`, `Type`,
+  `Comment`, and `Location` are compared as complete triples, with `Location` taken from metadata.
+  pins: wo-c2/C-001, C-002, C-003, C-004
+  **WO-C3 (2026-09-23):** nested bracket comments and line comments before or between SHOW
+  CREATE TABLE keywords keep every m8 lexical and trailing form in the typed parse refusal;
+  unclosed bracket comments and unrelated text stay outside the intercept.
+  **WO-C3 C2:** every SHOW CREATE parse-refusal pin compares the exact parser first line and
+  RePark's complete rendered `DataFusionError` text.
+  **WO-C3 C3:** the multi-term m2 sort fixture now includes `write.distribution-mode=range` and
+  compares its entire measured CREATE statement; related SHOW CREATE tests compare complete
+  answers rather than fragments.
+  **WO-C3 C5 (updated by WO-C4 and WO-C7, 2026-09-23):** SHOW TABLES and SHOW COLUMNS compare
+  complete Spark rows and Arrow schemas; SHOW TBLPROPERTIES keeps its full pinned analysis refusal.
+  pins: wo-c3/C-001, C-002, C-003, C-005
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

@@ -2,31 +2,231 @@
 use super::super::*;
 use super::common::*;
 
+const UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE: &str = "SQL error: ParserError(\"[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. Please, append */ at the end of the comment. SQLSTATE: 42601\")";
+
+#[test]
+fn planner_default_set_recognizer_pins_malformed_near_misses() {
+    for sql in [
+        "",
+        "SE",
+        "SELECT datafusion.catalog.default_catalog = 'ice'",
+        "SETX datafusion.catalog.default_catalog = 'ice'",
+        "SET datafusion.catalog.default_catalog_extra = 'ice'",
+        "/* unclosed SET datafusion.catalog.default_catalog = 'ice'",
+        "SETdatafusion.catalog.default_catalog = 'ice'",
+    ] {
+        assert!(
+            crate::router::planner_default_set_side(sql).is_none(),
+            "{sql}"
+        );
+    }
+    assert!(matches!(
+        crate::router::planner_default_set_side(
+            "-- lead\nSeT/* comment */datafusion.catalog.default_catalog /* c */ = 'ice'"
+        ),
+        Some(crate::router::PlannerDefaultSide::Catalog)
+    ));
+    assert!(matches!(
+        crate::router::planner_default_set_side(
+            "set DataFusion.Catalog.Default_Schema --c\r= 'sales'"
+        ),
+        Some(crate::router::PlannerDefaultSide::Namespace)
+    ));
+}
+
+async fn assert_single_value_answer(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    field: Field,
+    column: Arc<dyn Array>,
+) {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql:?} must answer one row: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("{sql:?} must collect: {error}"));
+    let schema = Arc::new(Schema::new(vec![field]));
+    assert_eq!(batches.len(), 1, "{sql:?}");
+    assert_eq!(batches[0].schema(), schema, "{sql:?}");
+    let expected = RecordBatch::try_new(schema, vec![column])
+        .unwrap_or_else(|error| panic!("{sql:?} expected batch: {error}"));
+    assert_eq!(batches[0], expected, "{sql:?}");
+}
+
+#[tokio::test]
+async fn semicolons_inside_literals_and_comments_do_not_trigger_multi_statement_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let cases: [(&str, Field, Arc<dyn Array>); 3] = [
+        (
+            "SELECT ';'",
+            Field::new("Utf8(\";\")", DataType::Utf8, false),
+            Arc::new(StringArray::from(vec![";"])),
+        ),
+        (
+            "SELECT 1 /* ; */",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+        (
+            "SELECT 1 -- ;\n",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+    ];
+    for (sql, field, column) in cases {
+        assert_single_value_answer(&ctx, &catalogs, sql, field, column).await;
+    }
+}
+
 #[tokio::test]
 async fn bug010_multi_statement_refuses_parse_class() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     for sql in [
         "SELECT 1; SELECT 2",
+        "select 1; select 2",
         "SELECT 1; SELECT 2;",
         "SELECT 1;\nSELECT 2",
-        // A second statement that fails to parse still refuses the whole input.
         "SELECT 1; XYZZY 2",
         "SELECT 1; NOT_A_STATEMENT",
     ] {
         let err = execute(&ctx, &catalogs, sql)
             .await
             .expect_err("multi-statement must refuse");
-        let text = err.to_string();
-        assert!(
-            text.contains("PARSE_SYNTAX_ERROR") || text.contains("multiple SQL statements"),
-            "expected multi-statement parse refuse for {sql:?}, got {text}"
-        );
-        assert!(
-            matches!(err, DataFusionError::SQL(_, _)),
-            "must be DataFusionError::SQL → ParseException, got {err:?}"
+        assert!(matches!(&err, DataFusionError::SQL(_, _)));
+        assert_eq!(
+            err.to_string(),
+            "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601\")",
+            "{sql}"
         );
     }
+}
+
+#[tokio::test]
+async fn unclosed_bracketed_comments_use_spark_parser_contract() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for sql in [
+        "SELECT 1; /* unclosed",
+        "SELECT 1 /* c",
+        "/* c",
+        "SHOW TABLES IN sc.sales /* c",
+        "SELECT 1 /* a /* b */",
+        "SELECT 1 /*",
+        "SELECT 1;; /* c",
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("unclosed comment must refuse");
+        assert!(
+            matches!(&error, DataFusionError::SQL(_, _)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE,
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn bracketed_comment_near_misses_keep_exact_single_rows() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let cases: [(&str, Field, Arc<dyn Array>); 3] = [
+        (
+            "SELECT 1 /* a /* b */ */",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+        (
+            "SELECT '/* x'",
+            Field::new("Utf8(\"/* x\")", DataType::Utf8, false),
+            Arc::new(StringArray::from(vec!["/* x"])),
+        ),
+        (
+            "SELECT 1 -- /* x",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+    ];
+    for (sql, field, column) in cases {
+        assert_single_value_answer(&ctx, &catalogs, sql, field, column).await;
+    }
+}
+
+#[tokio::test]
+async fn quote_escape_and_carriage_return_near_misses_keep_exact_single_rows() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let cases: [(&str, Field, Arc<dyn Array>); 4] = [
+        (
+            "SELECT 1 AS `/* x`",
+            Field::new("/* x", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+        (
+            "SELECT 'a\\'/* x'",
+            Field::new("Utf8(\"a'/* x\")", DataType::Utf8, false),
+            Arc::new(StringArray::from(vec!["a'/* x"])),
+        ),
+        (
+            "SELECT \"a\\\"/* x\"",
+            Field::new("Utf8(\"a\"/* x\")", DataType::Utf8, false),
+            Arc::new(StringArray::from(vec!["a\"/* x"])),
+        ),
+        (
+            "SELECT 1 --c\r/* x */",
+            Field::new("Int64(1)", DataType::Int32, false),
+            Arc::new(Int32Array::from(vec![1])),
+        ),
+    ];
+    for (sql, field, column) in cases {
+        assert_single_value_answer(&ctx, &catalogs, sql, field, column).await;
+    }
+}
+
+#[tokio::test]
+async fn malformed_multi_statement_near_misses_keep_exact_outcomes() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+
+    let unclosed = execute(&ctx, &catalogs, "SELECT 1; /* unclosed")
+        .await
+        .expect_err("unclosed comment must refuse");
+    assert!(matches!(&unclosed, DataFusionError::SQL(_, _)));
+    assert_eq!(
+        unclosed.to_string(),
+        UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+    );
+
+    let mut actual = Vec::new();
+    for sql in [
+        "SELECT 'unterminated; SELECT 2",
+        "SELECT /*+ BROADCAST(t) 1",
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("malformed SQL must fail");
+        assert!(
+            matches!(&error, DataFusionError::SQL(_, _)),
+            "{sql}: {error:?}"
+        );
+        actual.push(error.to_string());
+    }
+    assert_eq!(
+        actual,
+        vec![
+            "SQL error: TokenizerError(\"Unterminated string literal at Line: 1, Column: 8\")"
+                .to_string(),
+            "SQL error: TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 26\")"
+                .to_string(),
+        ]
+    );
 }
 
 /// BUG-010 oracle boundary: trailing `;` / whitespace / comments after a single statement OK.
@@ -34,6 +234,12 @@ async fn bug010_multi_statement_refuses_parse_class() {
 async fn bug010_trailing_semicolon_whitespace_comments_allowed() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
+    let expected = execute(&ctx, &catalogs, "SELECT 1")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
     for sql in [
         "SELECT 1;",
         "SELECT 1;  ",
@@ -47,12 +253,13 @@ async fn bug010_trailing_semicolon_whitespace_comments_allowed() {
         "SELECT 1; /* only comment after */",
         "-- lead\nSELECT 1;",
     ] {
-        execute(&ctx, &catalogs, sql)
+        let actual = execute(&ctx, &catalogs, sql)
             .await
             .unwrap_or_else(|err| panic!("single-stmt trailing form must pass: {sql:?}: {err}"))
             .collect()
             .await
             .unwrap_or_else(|err| panic!("collect failed for {sql:?}: {err}"));
+        assert_eq!(actual, expected, "{sql}");
     }
 }
 

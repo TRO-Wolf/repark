@@ -107,7 +107,7 @@ information_schema is enabled") — set the conf on the builder; nothing else en
 
 | Claim | Pin |
 |---|---|
-| Spark door: genuine multi-statement refuses as parse class (`PARSE_SYNTAX_ERROR` / "multiple SQL statements") | `crates/repark-spark/src/tests/router.rs::bug010_multi_statement_refuses_parse_class` |
+| Spark door: genuine multi-statement refuses as parse class (`PARSE_SYNTAX_ERROR` / `42601`); SHOW CREATE TABLE followed by another statement uses `INVALID_STATEMENT_OR_CLAUSE` / `42601` | `crates/repark-spark/src/tests/router.rs::bug010_multi_statement_refuses_parse_class`; `crates/repark-spark/src/tests/show_create.rs::show_create_multi_statement_keeps_spark_invalid_statement_class` |
 | Spark door: trailing `;` / whitespace / comments after one statement allowed | `crates/repark-spark/src/tests/router.rs::bug010_trailing_semicolon_whitespace_comments_allowed` |
 | ANSI door: two statements refuse with `[PARSE_SYNTAX_ERROR]` and "multiple SQL statements" | `crates/repark-sql/src/guards/tests.rs::two_statements_refuse_with_parse_syntax_error_class` |
 | ANSI door: trailing noise after one statement allowed | `crates/repark-sql/src/guards/tests.rs::single_statement_with_trailing_noise_is_allowed` |

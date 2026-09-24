@@ -37,6 +37,8 @@ _NATIVE_MESSAGE_PREFIXES = (
     "SQL error: ",
 )
 
+_NATIVE_PARSER_ERROR_PREFIX = 'ParserError("'
+
 _NATIVE_CONDITION_PATTERN = re.compile(r"[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*")
 
 _NATIVE_SQLSTATE_PATTERN = re.compile(r"SQLSTATE:\s*([A-Z0-9]{5})")
@@ -55,6 +57,10 @@ def _native_get_condition(self: object) -> str | None:
         if message.startswith(prefix):
             message = message[len(prefix) :]
             break
+    if message.startswith(_NATIVE_PARSER_ERROR_PREFIX):
+        wrapped_message = message[len(_NATIVE_PARSER_ERROR_PREFIX) :]
+        if wrapped_message.endswith('")'):
+            message = wrapped_message[:-2]
     if not message.startswith("["):
         return None
     closing = message.find("]")

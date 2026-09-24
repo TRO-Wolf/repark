@@ -7,6 +7,7 @@ __getitem__, native exception surface shim.
 
 from __future__ import annotations
 
+import pyarrow as pa
 import pytest
 
 from repark import _native
@@ -28,6 +29,14 @@ from repark.spark.types import (
     DayTimeIntervalType,
     StructType,
     YearMonthIntervalType,
+)
+
+UNCLOSED_BRACKETED_COMMENT_MESSAGE = (
+    "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. "
+    "Please, append */ at the end of the comment. SQLSTATE: 42601"
+)
+UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE = (
+    f'SQL error: ParserError("{UNCLOSED_BRACKETED_COMMENT_MESSAGE}")'
 )
 
 
@@ -164,6 +173,146 @@ def test_native_exception_surface_shim_methods() -> None:
             __import__("repark.errors", fromlist=[exception_type.__name__]),
             exception_type.__name__,
         )
+
+
+@pytest.mark.parametrize(
+    ("statement", "expected_sql_state", "expected_text"),
+    [
+        (
+            "INSERT INTO t (id) BY NAME SELECT 1 AS id",
+            "42601",
+            'SQL error: ParserError("[PARSE_SYNTAX_ERROR] BY NAME cannot be combined with an '
+            'explicit column list. SQLSTATE: 42601")',
+        ),
+        (
+            "SELECT 1; SELECT 2",
+            "42601",
+            'SQL error: ParserError("[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements '
+            "in one call are not supported (Spark parity). Only a single statement is accepted; "
+            "a trailing semicolon, whitespace, or comment after that statement is allowed. "
+            'SQLSTATE: 42601")',
+        ),
+    ],
+)
+def test_parser_wrapper_refusals_report_the_native_error_condition(
+    spark: ReparkSession,
+    statement: str,
+    expected_sql_state: str | None,
+    expected_text: str,
+) -> None:
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement).collect()
+    assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert caught.value.getSqlState() == expected_sql_state
+    assert str(caught.value) == expected_text
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "SELECT 1 /* c",
+        "SELECT 1; /* unclosed",
+        "/* c",
+        "SELECT 1 /* a /* b */",
+        "SELECT 1 /*",
+        "SHOW TABLES IN default /* c",
+    ],
+)
+def test_unclosed_bracketed_comment_has_spark_parse_contract(
+    spark: ReparkSession, statement: str
+) -> None:
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement).collect()
+    assert caught.value.getCondition() == "UNCLOSED_BRACKETED_COMMENT"
+    assert caught.value.getSqlState() == "42601"
+    assert str(caught.value) == UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+
+
+@pytest.mark.parametrize(
+    ("statement", "expected_schema", "expected_rows"),
+    [
+        (
+            "SELECT ';'",
+            pa.schema([pa.field(";", pa.string(), nullable=False)]),
+            [{";": ";"}],
+        ),
+        (
+            "SELECT 1 /* ; */",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+        (
+            "SELECT 1 -- ;\n",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+        (
+            "SELECT 1 /* a /* b */ */",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+        (
+            "SELECT '/* x'",
+            pa.schema([pa.field("/* x", pa.string(), nullable=False)]),
+            [{"/* x": "/* x"}],
+        ),
+        (
+            "SELECT 1 -- /* x",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+    ],
+)
+def test_bracketed_comment_near_misses_keep_exact_single_rows(
+    spark: ReparkSession,
+    statement: str,
+    expected_schema: pa.Schema,
+    expected_rows: list[dict[str, int | str]],
+) -> None:
+    result = spark.sql(statement).to_arrow()
+    assert result.schema == expected_schema
+    assert result.to_pylist() == expected_rows
+
+
+@pytest.mark.parametrize(
+    ("statement", "expected_schema", "expected_rows"),
+    [
+        (
+            'SELECT "/* x"',
+            pa.schema([pa.field("/* x", pa.string(), nullable=False)]),
+            [{"/* x": "/* x"}],
+        ),
+        (
+            "SELECT 1 AS `/* x`",
+            pa.schema([pa.field("/* x", pa.int32(), nullable=False)]),
+            [{"/* x": 1}],
+        ),
+        (
+            "SELECT 'a\\'/* x'",
+            pa.schema([pa.field("a'/* x", pa.string(), nullable=False)]),
+            [{"a'/* x": "a'/* x"}],
+        ),
+        (
+            'SELECT "a\\"/* x"',
+            pa.schema([pa.field('a"/* x', pa.string(), nullable=False)]),
+            [{'a"/* x': 'a"/* x'}],
+        ),
+        (
+            "SELECT 1 --c\r/* x */",
+            pa.schema([pa.field("1", pa.int32(), nullable=False)]),
+            [{"1": 1}],
+        ),
+    ],
+)
+def test_quote_escape_and_carriage_return_near_misses_keep_exact_single_rows(
+    spark: ReparkSession,
+    statement: str,
+    expected_schema: pa.Schema,
+    expected_rows: list[dict[str, int | str]],
+) -> None:
+    result = spark.sql(statement).to_arrow()
+    assert result.schema == expected_schema
+    assert result.to_pylist() == expected_rows
 
 
 def test_engine_analysis_error_has_surface_methods(spark: ReparkSession) -> None:

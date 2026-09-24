@@ -327,6 +327,9 @@ Supported surface, for reference:
   the unguarded `DROP BRANCH nope` answers the fork's `Ref nope does not exist` where Spark
   answers `IllegalArgumentException: Branch does not exist: nope`, and RePark's parse-class
   refusal carries no `== SQL ==` caret block — both are IPI-51's.
+  Parse-class refusals written as `[CONDITION] … SQLSTATE: X` now answer `getCondition()` and
+  `getSqlState()` from that prefix like Spark; measured pins cover the INSERT BY NAME column list
+  and multi-statement parser-wrapper forms.
 
 #### REF-3 — write-audit-publish (WAP) — the `spark.wap.id` staged half — **FIXED 2026-09-21** (IPI-05)
 
@@ -1330,6 +1333,40 @@ perfectly good read.
   statement, found: EXTENDED` bug is closed by the router intercept. The `Table Properties`
   engine-defaults delta stays DECLARED residue on this row until engine `CREATE` stamps
   Spark's defaults.
+- **C1 SHOW CREATE (2026-09-23)** — the `Table Properties` residue is closed: the row now
+  renders from the shared Spark-visible property list (`table_props_view.rs`), so a fresh
+  table answers Spark's measured
+  `[current-snapshot-id=none,format=iceberg/parquet,format-version=2,write.parquet.compression-codec=zstd]`
+  (`format` / `format-version` synthesized as Iceberg's `SparkTable.properties()` does,
+  `owner` / `comment` never listed); the live leg asserts the row equal to Spark. A table
+  comment prints as Spark's own `Comment` detail row after `Type`.
+
+#### SHOW-CREATE-1 — `SHOW CREATE TABLE` answers Spark's CREATE text for Iceberg tables — **FIXED 2026-09-23**
+
+- **Before** — `SHOW CREATE TABLE t` fell through to DataFusion and failed with `SHOW CREATE
+  TABLE is not supported unless information_schema is enabled` (cells `D-SHOW-CREATE`,
+  `D-SHOW-CREATE-PLAIN`).
+- **repark** — `SHOW CREATE TABLE [cat.][ns.]t` on an Iceberg table in a registered catalog
+  answers one `createtab_stmt` row, byte for byte Spark 4.1.2 + Iceberg 1.11
+  `ShowCreateTableExec`: columns in Spark DDL spelling (NOT NULL, `COMMENT`, nested
+  `STRUCT<a: T …>`), `USING iceberg`, `OPTIONS` from `option.*` keys, `PARTITIONED BY` in the
+  `# Partitioning` transform text, `COMMENT`, `LOCATION`, and `TBLPROPERTIES` from the same
+  property list DESCRIBE EXTENDED prints (`sort-order`, `identifier-fields` in Java `HashSet`
+  order, secrets redacted; `'` escapes as `\'`, backslashes pass through). `AS SERDE` refuses
+  `[NOT_SUPPORTED_COMMAND_FOR_V2_TABLE]` (`0A000`); a missing table refuses
+  `[TABLE_OR_VIEW_NOT_FOUND]` (`42P01`); a bare `SHOW CREATE TABLE` refuses
+  `[INVALID_STATEMENT_OR_CLAUSE]` (`42601`). The byte-for-byte claim covers CREATE-text
+  answers; parse-class refusals match Spark's condition, SQLSTATE, and first line but omit the
+  `== SQL ==` caret block (IPI-51). Views are not answered here — `V-SHOW-CREATE` stays with
+  the view lane (IPI-40).
+- **Apache Spark** — the same text. *(oracle: live PySpark 4.1.2 + Iceberg 1.11,
+  2026-09-23, five shapes plus the escape, OPTIONS, multi-term sort-order and
+  identifier-order probes.)*
+- **Pin** — `crates/repark-spark/src/tests/show_create.rs`,
+  `python/repark/tests/test_show_create_table.py`
+- **Rationale** — FIXED 2026-09-23 (C1). Unmeasured choices: Spark's reserved keys beyond the
+  measured `owner` / `comment`, void partition fields dropped from `PARTITIONED BY`, and the
+  `VOID` / `VARIANT` spellings follow the Spark 4.1 / Iceberg 1.11 source.
 
 #### ST-1 — `SHOW TABLES IN …` is unimplemented — **FIXED 2026-09-20**
 
@@ -7640,8 +7677,8 @@ the pin rather than obeying it.
   therefore every `CREATE`, not the properties DDL alone — `[ctas-v3]`'s metadata, re-read
   2026-09-03, carries `write.parquet.compression-codec = zstd` on Spark and no `write.*` key at
   all on repark.
-- **Rationale** — BACKLOG. Visible to anyone reading `SHOW TBLPROPERTIES` or the metadata JSON
-  after the same DDL, so it is a row rather than a note; it is queued rather than fixed because
+- **Rationale** — BACKLOG. Visible in metadata JSON after the same DDL and through Spark's
+  `SHOW TBLPROPERTIES`; RePark keeps its separately pinned SHOW refusal. It is queued rather than fixed because
   "stamp the engine's write defaults at create" is a create-path policy decision, not a defect in
   this statement. Do not close it by copying Spark's key without deciding the policy — a stamped
   property is a value later writes read.

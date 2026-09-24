@@ -83,6 +83,7 @@ mod run_maintenance;
 mod service_managed_ctas;
 mod session_write_conf;
 mod session_write_conf_removals;
+mod show_create;
 mod sort_order_parse;
 mod spark_dialect;
 mod spark_string_literals;

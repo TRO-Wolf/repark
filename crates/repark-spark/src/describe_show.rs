@@ -24,7 +24,7 @@ use crate::catalog_ops::{
 };
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
-use repark_core::{CatalogRegistry, DescribeOwnerConfig, prop_key_is_secret};
+use repark_core::{CatalogRegistry, DescribeOwnerConfig};
 use repark_functions::iceberg_system;
 
 pub(crate) mod metadata_table;
@@ -389,6 +389,9 @@ fn describe_table_rows(
             ),
         ));
         rows.push(plain_describe_row("Type", "MANAGED"));
+        if let Some(comment) = metadata.properties().get("comment") {
+            rows.push(plain_describe_row("Comment", comment));
+        }
         rows.push(plain_describe_row("Location", metadata.location()));
         rows.push(plain_describe_row("Provider", "iceberg"));
         rows.push(plain_describe_row("Owner", owner));
@@ -417,7 +420,10 @@ fn plain_describe_row(name: &str, value: &str) -> (String, String, Option<String
     (name.to_string(), value.to_string(), Some(String::new()))
 }
 
-fn describe_partition_field(schema: &IcebergSchema, field: &PartitionField) -> Result<String> {
+pub(crate) fn describe_partition_field(
+    schema: &IcebergSchema,
+    field: &PartitionField,
+) -> Result<String> {
     let source = schema.field_by_id(field.source_id).ok_or_else(|| {
         DataFusionError::Plan(format!(
             "partition field `{}` refers to unknown source id {}",
@@ -459,25 +465,9 @@ fn describe_table_owner(ctx: &SessionContext) -> String {
 }
 
 fn render_table_properties(metadata: &TableMetadata) -> String {
-    let mut merged: HashMap<String, String> = metadata.properties().clone();
-    merged.insert(
-        "current-snapshot-id".to_string(),
-        metadata
-            .current_snapshot_id()
-            .map_or_else(|| "none".to_string(), |id| id.to_string()),
-    );
-    let mut pairs: Vec<(&String, &String)> = merged.iter().collect();
-    pairs.sort_by(|left, right| left.0.cmp(right.0));
-    let rendered: Vec<String> = pairs
-        .iter()
-        .map(|(key, value)| {
-            let shown = if prop_key_is_secret(key) {
-                REDACTION_REPLACEMENT_TEXT
-            } else {
-                value.as_str()
-            };
-            format!("{key}={shown}")
-        })
+    let rendered: Vec<String> = crate::table_props_view::spark_table_properties(metadata)
+        .into_iter()
+        .map(|(key, value)| format!("{key}={value}"))
         .collect();
     format!("[{}]", rendered.join(","))
 }

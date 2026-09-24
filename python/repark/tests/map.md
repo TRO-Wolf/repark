@@ -87,7 +87,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_update_type_cannot_safely_cast_stamped_message_parses` builds
   `AnalysisException` from `Error during planning: ` plus the catalogue
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` / `KD000` text (cell
-  `W-UPDATE-TYPE-ERR`) and asserts `getCondition` and `getSqlState`.
+  `W-UPDATE-TYPE-ERR`) and asserts the complete rendered text, `getCondition`, and
+  `getSqlState`.
+  **WO-C4 (2026-09-23):** SHOW TBLPROPERTIES keeps its pinned analysis refusal; the IPI-51
+  update-error pin keeps the complete rendered text.
+  **WO-C3 C4 (2026-09-23):** ParserError wrappers reject ordinary and lowercase bracket text,
+  while a no-prefix Spark-shaped wrapper parses its condition and SQLSTATE.
+  pins: wo-c3/C-004
   pins: ice-error-conditions-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-011, C-012
 - [test_ice_catalog_session_1.py](test_ice_catalog_session_1.py) +
@@ -3044,6 +3050,22 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   invalid-constructor pins mirror DayTime (`123` / `(YEAR, 321)` — C7-Q-001);
   getitem closed-slice Spark substr value pin
   (`test_column_getitem_slice_substr_spark_semantics` — C7-L-001).
+  **WO-C3 C4 (2026-09-23):** INSERT BY NAME with a column list and multi-statement SQL pin the
+  native ParserError wrapper's exact RePark text and `PARSE_SYNTAX_ERROR` condition.
+  pins: wo-c3/C-004
+  **WO-C5 (2026-09-23):** the multi-statement row pins `ParseException`,
+  `PARSE_SYNTAX_ERROR`, SQLSTATE `42601`, and the full wrapper string.
+  pins: wo-c5/C-001
+  **WO-C10 (2026-09-23):** six non-hint unclosed bracketed comments pin
+  `ParseException`, `UNCLOSED_BRACKETED_COMMENT`, SQLSTATE `42601`, and the full wrapper
+  text. The three lexer near misses pin their exact single rows.
+  pins: wo-c10/C-001, C-002, C-003
+  **WO-C11 (2026-09-23):** the lexer near misses, now with the three semicolon forms, pin the
+  complete Arrow schema (name, type, nullability) and rows measured on Spark 4.1.2;
+  `test_quote_escape_and_carriage_return_near_misses_keep_exact_single_rows` does the same for
+  `/*` inside a double-quoted string, a backticked alias, backslash-escaped single and double
+  quotes, and a closed comment after a `\r`-ended line comment.
+  pins: wo-c10/C-002
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
   expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare
   SELECT/INSERT/CTAS/UPDATE/DELETE; temp-view prefer on FROM; VIEW/TEMP TABLE non-rewrite;
@@ -6975,13 +6997,36 @@ pins: fnp-8-review/C-009, C-010
   `days(ts)`, `k=v`). Eight offline pins (plain rows, extended sections, FORMATTED identity,
   missing-table `AnalysisException`, temp-view fall-through, property redaction, Statistics
   after a write, the owner `show(truncate=False)` call) plus the live leg, which re-measures
-  the capture on live
-  Spark 4.1.2 and diffs repark row for row (19 of 22 byte-identical; `Name`, `Location`,
-  and `Table Properties` engine defaults differ by construction).
+  the capture on live Spark 4.1.2. It pins the stable rows and complete property string; the
+  catalog-specific name and dynamic location and owner each have full expected values or shapes.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   **RP-23 (2026-09-17):** `Table Properties` carries the
   `write.parquet.compression-codec=zstd` stamp every create writes.
   pins: rp-23-pin-bump/C-001
+  **C1 SHOW CREATE (2026-09-23):** `Table Properties` renders from the shared
+  `spark_table_properties`, so the offline pin carries `format=iceberg/parquet` and
+  `format-version=2` and the live leg asserts the whole row equal to live Spark.
+  **WO-C3 C3 (2026-09-23):** the secret-property pin compares the complete known property value,
+  including the redacted secret, rather than fragments.
+  pins: wo-c3/C-003
+- `test_show_create_table.py` — **C1 SHOW CREATE (2026-09-23):** `SHOW CREATE TABLE` through
+  the facade answers one `createtab_stmt` row equal to the measured Spark 4.1.2 shape-1 text
+  (`bucket(4, id)`, NOT NULL + COMMENT column, `k=v`) with the table's real location.
+  **WO-C2 (2026-09-23):** `AS SERDE`, a missing table, and a missing name each pin the native
+  exception class, condition, SQLSTATE, and complete RePark message; the parser-wrapper case
+  proves `ParseException.getCondition()` reads `INVALID_STATEMENT_OR_CLAUSE`.
+  pins: wo-c2/C-005
+  **WO-C3 (2026-09-23):** every m8 commented SHOW CREATE label pins the unchanged CREATE answer
+  or the typed parse contract; the unclosed bracket-comment and SHOW TABLES near misses keep
+  their exact current outcomes. The parse pins compare the complete no-caret RePark message.
+  pins: wo-c3/C-001, C-002
+  **WO-C7 (2026-09-23):** the output pins the complete Arrow schema and single full CREATE row;
+  commented forms and the SHOW TABLES near miss compare complete schemas and rows.
+  **WO-C5 correction (2026-09-23):** the tokenizer fall-through for a comment hiding `TABLE`
+  is superseded by WO-C10. **WO-C10 (2026-09-23):** post-head forms plus lead and hidden-
+  `TABLE` forms assert `ParseException`, `UNCLOSED_BRACKETED_COMMENT`, `42601`, and the full
+  parser-wrapper message. The multi-statement facade refusal includes `42601`.
+  pins: wo-c5/C-001, C-002, C-003, C-004; wo-c10/C-001, C-003
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce
