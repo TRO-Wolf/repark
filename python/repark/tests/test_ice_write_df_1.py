@@ -67,7 +67,13 @@ def _operations(spark: ReparkSession, table: str = _T) -> list[str]:
 
 
 def _summaries(spark: ReparkSession, table: str = _T) -> list[dict[str, str]]:
-    keys = ("added-records", "deleted-records", "total-records", "added-data-files")
+    keys = (
+        "added-records",
+        "deleted-records",
+        "total-records",
+        "added-data-files",
+        "deleted-data-files",
+    )
     rows = spark.sql(f"SELECT summary FROM {table}.snapshots ORDER BY committed_at").collect()
     return [{k: v for k, v in dict(row[0]).items() if k in keys} for row in rows]
 
@@ -95,6 +101,8 @@ def _assert_state(spark: ReparkSession, cell: str, table: str = _T) -> None:
     expected = _MEASURED[cell]
     assert _rows(spark, table) == expected["rows"]
     assert _operations(spark, table) == expected["operations"]
+    if "summaries" in expected:
+        assert _summaries(spark, table) == expected["summaries"]
     assert _specs(spark, table) == expected["specs"]
     assert _partitioning(spark, table) == expected["partitioning"]
     if "partition_info" in expected:
@@ -110,6 +118,7 @@ def _assert_error(raised: BaseException, cell: str, root: Path | None = None) ->
     assert str(raised) == message
     if expected["condition"] is not None:
         assert raised.getCondition() == expected["condition"]  # type: ignore[attr-defined]
+    assert raised.getSqlState() == expected["sqlstate"]  # type: ignore[attr-defined]
 
 
 def _assert_recorded(spark: ReparkSession, cell: str) -> None:
@@ -545,7 +554,7 @@ def test_output_spec_id_current_and_absent_land_under_the_current_spec(
     )
     assert _specs(spark) == _MEASURED["spec_id_current"]["specs"]
     _frame(spark).write.format("iceberg").mode("append").saveAsTable(_T)
-    assert _specs(spark) == [[0, 1], [1, 4]]
+    _assert_state(spark, "spec_id_current_then_absent")
 
 
 def test_near_misses_keep_their_paths(spark: ReparkSession, tmp_path: Path) -> None:

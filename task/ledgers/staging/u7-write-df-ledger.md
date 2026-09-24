@@ -111,6 +111,23 @@ residual below. Spark's answers:
 - The identity partition columns of `ctas_part_upper` and `create_part_upper` sit under
   DESCRIBE's `# Partition Information` (`partition_info ["cat"]`), not in `Part N` rows.
 
+**M-5 — round 3** (critic r2 V-001..V-004; `target/probe-u7-r2fix/sprobe.py`, `sprobe2.py` on
+the same Spark under `jvm-lock.sh`, `rprobe.py` on the rebuilt wheel). Six shapes join the
+oracle. Spark's answers:
+- The 3060 text and its `i` parameter wrap the bucket column in backticks when the name
+  contains a `.`, and only then, without escaping: `` `s.a` `` (a nested field of
+  `s STRUCT<a: INT, b: STRING>`, never resolved), `` `s.zz` ``, `` `a.b` ``, `` `a.`b` ``,
+  `` `.a` ``, `` `a.` ``; `nope`, `my col`, `select`, `1a`, `12`, `_x`, `a$`, ``a`b``, `é`
+  and the empty name stay bare.
+- A format-version 1 table `PARTITIONED BY (cat, bucket(4, id))` with `cat` dropped (a void
+  field) answers `bucketBy(8, 'id')` append with `- table: bucket(4, id)`; a table
+  `PARTITIONED BY (years(y), months(m), hours(h))` answers `- table: years(y), months(m),
+  hours(h)`.
+- A write without `output-spec-id` after one with the current id lands under spec 1 again
+  (`specs [[0, 1], [1, 4]]`).
+RePark answered all six equal except the void table, which it cannot create (format-version 1
+is a declared refusal); the Rust kernel test builds that spec directly.
+
 ## Clauses
 
 | Clause | Proposition | Evidence | Verdict | Notes |
@@ -119,20 +136,20 @@ residual below. Spark's answers:
 | C-002 | `mode("overwrite").save(name)` is a whole-table overwrite with `deleted-records=3` (cell `W-DF-SAVE-OVERWRITE-NAME`). | `test_save_name_overwrites_like_the_recorded_cell`; replay. | **PROVEN** | Static by-name `INSERT OVERWRITE`, as Spark's `OverwriteByExpression(true)`. |
 | C-003 | On a missing table, append and overwrite refuse `TABLE_OR_VIEW_NOT_FOUND` with Spark's relation text; error and ignore create the table (with `partitionBy`). | `test_save_name_on_a_missing_table_refuses_in_write_modes`, `test_save_name_creates_a_missing_table_in_create_modes`. | **PROVEN** | Kernel `decide_save_target`; text from `repark_common::spark_error`. |
 | C-004 | On an existing table, the error modes of `save(name)` and `saveAsTable` refuse `TABLE_OR_VIEW_ALREADY_EXISTS` `` `u7`.`t` ``, ignore is a no-op, and `option("path", name).save()` routes the same way. | `test_save_name_on_an_existing_table_refuses_in_error_mode`, `test_save_reads_the_name_from_the_path_option`, `test_error_mode_and_bucketed_save_answer_spark_text`. | **PROVEN** | Messages equal Spark's byte for byte (round 2 added `saveAsTable`). |
-| C-005 | On an existing table, a `save(name)` append or overwrite and a `saveAsTable` append (bucketed or not) check the `partitionBy`/`bucketBy` layout against the table's partitioning as Spark's transform list, else `IllegalArgumentException` `requirement failed: …`; no layout means no check. | `test_save_name_refuses_a_partitioning_that_differs_from_the_table`, `test_save_name_with_a_matching_partitioning_appends`, `test_save_as_table_append_checks_a_partition_by_layout`, `test_save_as_table_append_refuses_a_different_partition_by`; Rust `tests/writer_partitioning.rs`, `tests/writer_plan.rs`. | **PROVEN** | M2 red. A `saveAsTable` overwrite without `bucketBy` is the listed RTAS residue. |
+| C-005 | On an existing table, a `save(name)` append or overwrite and a `saveAsTable` append (bucketed or not) check the `partitionBy`/`bucketBy` layout against the table's partitioning as Spark's transform list, else `IllegalArgumentException` `requirement failed: …`; no layout means no check. | `test_save_name_refuses_a_partitioning_that_differs_from_the_table`, `test_save_name_with_a_matching_partitioning_appends`, `test_save_as_table_append_checks_a_partition_by_layout`, `test_save_as_table_append_refuses_a_different_partition_by`, `test_layout_mismatch_renders_time_transforms`; Rust `tests/writer_partitioning.rs` (void fields dropped, years/months/hours named: `the_table_side_drops_void_fields_and_names_time_transforms_like_spark`), `tests/writer_plan.rs`. | **PROVEN** | M2, M16 and M17 red. A `saveAsTable` overwrite without `bucketBy` is the listed RTAS residue. |
 | C-006 | A path target: append and overwrite refuse `TABLE_OR_VIEW_NOT_FOUND` naming the path split at its last `/` (every other character kept, an empty name rendered ``` `` ```); create modes and a default-format `save()` keep the declared refusal. | `test_save_to_a_real_path_refuses_with_spark_path_relation`, `test_save_path_relations_split_at_the_last_slash`, `test_save_to_a_real_path_in_create_mode_is_a_declared_refusal`, `test_examples_io_session.py::test_save_default_format_refuses` (unchanged, green); Rust `path_relations_split_at_the_last_slash_like_iceberg_path_identifier`. | **PROVEN** | Registry `ICE-WRITE-DF-SAVE-1` (DECLARED part). |
 | C-007 | `bucketBy(4, "id").saveAsTable` on a new table creates spec `id_bucket bucket[4] id` and writes one append; with `partitionBy` the bucket is last; `ID` resolves; overwrite is RTAS (`overwrite` snapshot). | `test_bucket_by_creates_a_bucket_partitioned_table`, `test_bucket_by_new_table_shapes`; replay. | **PROVEN** | M9 red. |
 | C-008 | `sortBy` or a multi-column bucket refuses with Spark's `Cannot convert transform…` text and creates or replaces nothing. | `test_bucket_by_shapes_iceberg_cannot_convert_refuse`, `test_bucketed_overwrite_of_two_columns_leaves_the_table`, `test_io_bucket_cluster_1.py::test_bucket_by_sort_by_save_as_table_refuses_like_iceberg`. | **PROVEN** | M5 red. R-1 pin retired. |
-| C-009 | Bucketed saveAsTable on an existing table: append checks the layout, overwrite replaces (RTAS, next spec id), error refuses with Spark's text and ignore skips; a bucketed `save()` refuses `_LEGACY_ERROR_TEMP_1312`. | `test_bucket_by_existing_unbucketed_table`, `test_bucket_by_existing_bucketed_table`, `test_bucket_by_existing_partitioned_table`, `test_bucket_by_existing_table_overwrite_with_partition_by`, `test_error_mode_and_bucketed_save_answer_spark_text`, `test_layout_mismatch_renders_every_table_transform`. | **PROVEN** | M3 red on the save-target arm. |
+| C-009 | Bucketed saveAsTable on an existing table: append checks the layout, overwrite replaces (RTAS, next spec id), error refuses with Spark's text and ignore skips; a bucketed `save()` refuses `_LEGACY_ERROR_TEMP_1312`. | `test_bucket_by_existing_unbucketed_table`, `test_bucket_by_existing_bucketed_table`, `test_bucket_by_existing_partitioned_table`, `test_bucket_by_existing_table_overwrite_with_partition_by`, `test_error_mode_and_bucketed_save_answer_spark_text`, `test_layout_mismatch_renders_every_table_transform`, `test_layout_mismatch_renders_time_transforms`. | **PROVEN** | M3 red on the save-target arm. |
 | C-010 | `output-spec-id=<old id>` stages data files under that spec on every option-carrying writer; `.files` reports them there (cell `W-DF-OPT-OUTPUT-SPEC-ID`). | `test_output_spec_id_writes_under_the_old_spec`, `test_output_spec_id_reaches_every_writer`, `test_output_spec_id_writes_partitioned_files_under_an_old_partitioned_spec`; Rust `tests/output_spec.rs`. | **PROVEN** | M1 and M7 red. |
 | C-011 | An unknown or negative id refuses `IllegalArgumentException` `Output spec id <n> is not a valid spec id for table`, even when the frame is empty; a non-integer or padded value refuses `NumberFormatException` `For input string: "<v>"`; `+0` parses; nothing is committed on a refusal and the current id writes normally. | `test_output_spec_id_refusals`, `test_output_spec_id_parses_like_java_integer`, `test_an_unknown_output_spec_id_refuses_a_write_that_stages_nothing`, `test_output_spec_id_current_and_absent_land_under_the_current_spec`. | **PROVEN** | `NumberFormatException` is a native leaf under `IllegalArgumentException`, as in PySpark. |
 | C-012 | Near misses keep their paths: a parquet or csv `save(path)`, a `saveAsTable` without `bucketBy`, and a write without the option (current spec). | `test_near_misses_keep_their_paths`, `test_output_spec_id_current_and_absent_land_under_the_current_spec`; the 2883-test writer sweep. | **PROVEN** | The only pre-existing pin changed is R-1 (C-008). |
 | C-013 | SQL twins: `CLUSTERED BY` joins `PARTITIONED BY` last, multi-column and sorted runs refuse with Spark's text, and partition columns fold case only under a case-insensitive session. | `test_sql_door_bucket_clauses`, `test_sql_door_bucket_refusals`, `test_sql_door_create_resolves_partition_columns_case_free`; `clustered_by` and `normalize::tests` units. | **PROVEN** | M4, M5 and M6 red. |
-| C-014 | The Rust kernels carry in-crate pins: staging view, parse and validate refusals, layout rendering and comparison, save-target matrix, path relation, staged-spec dispatch. | `crates/repark-iceberg/src/tests/output_spec.rs` (7), `tests/writer_partitioning.rs` (9). | **PROVEN** | `cargo test -p repark-iceberg --lib -- tests::output_spec tests::writer_partitioning tests::writer_plan`: 22 passed. |
-| C-015 | A bucket column absent from the frame raises `_LEGACY_ERROR_TEMP_3060` `Couldn't find column <c> in:\n<printSchema tree>` on every create-or-replace arm of `saveAsTable` (after `INVALID_BUCKET_COUNT`, before the existence check); an append onto an existing table answers the layout mismatch. | `test_a_missing_bucket_column_on_a_new_table_is_legacy_3060`, `test_a_missing_bucket_column_on_an_existing_table`, `test_bucket_count_precedes_the_missing_column`, `test_bucket_by_existing_partitioned_table`, `test_io_bucket_cluster_1.py::test_bucket_by_missing_column_refused`; Rust `tests/writer_plan.rs`. | **PROVEN** | Ruling Q1. The tree is `repark_spark::spark_tree_string` over the frame's analyzed Arrow schema. |
+| C-014 | The Rust kernels carry in-crate pins: staging view, parse and validate refusals, layout rendering and comparison, save-target matrix, path relation, staged-spec dispatch. | `crates/repark-iceberg/src/tests/output_spec.rs` (7), `tests/writer_partitioning.rs` (10), `tests/writer_plan.rs` (7). | **PROVEN** | `cargo test -p repark-iceberg --lib -- tests::output_spec tests::writer_partitioning tests::writer_plan`: 24 passed. |
+| C-015 | A bucket column absent from the frame raises `_LEGACY_ERROR_TEMP_3060` `Couldn't find column <c> in:\n<printSchema tree>` on every create-or-replace arm of `saveAsTable` (after `INVALID_BUCKET_COUNT`, before the existence check), `<c>` and parameter `i` backticked when the name contains a `.` (a nested field is never resolved); an append onto an existing table answers the layout mismatch. | `test_a_missing_bucket_column_on_a_new_table_is_legacy_3060`, `test_a_dotted_bucket_column_is_backticked_in_legacy_3060`, `test_a_missing_bucket_column_on_an_existing_table`, `test_bucket_count_precedes_the_missing_column`, `test_bucket_by_existing_partitioned_table`, `test_io_bucket_cluster_1.py::test_bucket_by_missing_column_refused`; Rust `tests/writer_plan.rs` (`the_missing_column_message_backticks_only_a_dotted_name`). | **PROVEN** | Ruling Q1. M18 red. The tree is `repark_spark::spark_tree_string` over the frame's analyzed Arrow schema. |
 | C-016 | With `output-spec-id` the writer follows the staged spec: a replacing write resolves the id in the replacement metadata (bucketed RTAS, `createOrReplace()`, `replace()`), a CTAS in its own, and a dynamic overwrite replaces the partitions of the staged spec (everything when that spec is unpartitioned). | `test_output_spec_id_on_a_replacing_write_resolves_in_the_replacement`, `test_output_spec_id_on_a_create_and_an_unknown_replacement_spec`, `test_dynamic_overwrite_replaces_partitions_of_the_staged_spec`, `test_dynamic_overwrite_of_an_unpartitioned_staged_spec_replaces_everything`; Rust `a_partitioned_writer_follows_an_unpartitioned_output_spec`, `the_staged_spec_decides_whether_a_dynamic_overwrite_replaces_partitions`. | **PROVEN** | V-002 (row 2 kept) and V-003 (no `DataInvalid` text). |
 | C-017 | The `CLUSTERED BY` rewrite tries every unquoted `CLUSTERED` before the `AS` boundary, so a column named `clustered` keeps the clause; `SORTED BY (c ASC)` refuses like an unqualified sort. | `test_a_column_named_clustered_keeps_the_bucket_clause`, `test_sorted_by_ordering_in_a_clustered_clause`; Rust `a_column_named_clustered_does_not_hide_the_bucket_clause`, `an_ascending_sort_refuses_like_an_unqualified_one`. | **PROVEN** | `SORTED BY (c DESC)` is the listed parse-text residue. |
-| C-018 | The statement decision is one Rust kernel for `saveAsTable` and `save()`; the facade composes the SQL for the kernel's answer and decides no statement from the mode, the bucket state or the target spelling. | `crates/repark-iceberg/src/tests/writer_plan.rs` (6); `writer_save.py` calls `writer_plan` / `writer_target_is_table` only. | **PROVEN** | V-007. |
+| C-018 | The statement decision is one Rust kernel for `saveAsTable` and `save()`; the facade composes the SQL for the kernel's answer and decides no statement from the mode, the bucket state or the target spelling. | `crates/repark-iceberg/src/tests/writer_plan.rs` (7); `writer_save.py` calls `writer_plan` / `writer_target_is_table` only. | **PROVEN** | V-007. |
 
 ## Mutation (step 6, `target/probe-u7-pr1/mutate.py`, `mutation.txt`)
 
@@ -154,6 +171,11 @@ Round 2 (`target/probe-u7-r1fix/mutation.txt`), one per [S1] fix:
 - **M13 (V-005):** the path is collapsed and trimmed before the split. `path_relations_split_at_the_last_slash_like_iceberg_path_identifier` goes red: `` `file://tmp/probe/a`.b ``.
 - **M14 (V-006):** the parse refusal is an `IllegalArgumentMarker` again. `output_spec_id_parses_like_java_integer_parse_int` goes red: `expected a NumberFormatMarker, got IllegalArgumentMarker`.
 - **M15 (V-002):** the dynamic scope is keyed on the table's current spec again (rebuilt wheel). `test_dynamic_overwrite_replaces_partitions_of_the_staged_spec` goes red: rows `[[7,g,x],[8,h,w]]` against `[[2,b,y],[7,g,x],[8,h,w]]`.
+
+Round 3 (`target/probe-u7-r2fix/mutation.txt`):
+- **M16 (V-002):** `table_transforms` renders a void field as `void(c)`. `the_table_side_drops_void_fields_and_names_time_transforms_like_spark` goes red.
+- **M17 (V-002):** `hours(c)` is rendered `hour(c)`. The same test goes red.
+- **M18 (V-001):** `missing_column_name` returns the raw name. `the_missing_column_message_backticks_only_a_dotted_name` goes red.
 
 ## Out of scope (observed, not worked)
 
@@ -186,15 +208,20 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: The four recorded cells are pinned verbatim and replay EQUAL on every observation;
-        98 of the 100 measured oracle shapes are cited by a test and compared by class, text
-        and state (the two `SORTED BY … DESC` shapes by class only); the two uncited ones are
-        the Out-of-scope evidence `rtas_sql_spec0_on_partitioned` (non-bucketed RTAS) and
-        `save_s3` (no S3 filesystem in the probe).
+        103 of the 106 measured oracle shapes are cited by a test and compared by class, text,
+        sqlstate and state — rows, operations, snapshot summaries (added/deleted records and
+        data files, total records), `.files` specs, partitioning and partition information
+        (the two `SORTED BY … DESC` shapes by class only); the three uncited ones are the
+        Out-of-scope evidence `rtas_sql_spec0_on_partitioned` (non-bucketed RTAS), `save_s3`
+        (no S3 filesystem in the probe) and `bucket_existing_void_append` (a format-version 1
+        table RePark cannot create; its text is the Rust expectation in
+        `the_table_side_drops_void_fields_and_names_time_transforms_like_spark`).
       artifacts: [python/repark/tests/test_ice_write_df_1.py, python/repark/tests/test_ice_write_df_1_edges.py, python/repark/tests/ice_write_df_1_spark_oracle.json]
     - id: AT-2
       status: ATTACKED
       evidence: The oracle is live Spark 4.1.2 + Iceberg 1.11.0 (scoreboard record plus step-1
-        probes under jvm-lock.sh); no expected value is derived from RePark output.
+        probes under jvm-lock.sh, round 3 adding six shapes); no expected value is derived from
+        RePark output or typed in beside the oracle.
       artifacts: [python/repark/tests/ice_write_df_1_spark_oracle.json]
     - id: AT-3
       status: ATTACKED
@@ -214,7 +241,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/u7-write-df-ledger.md]
     - id: AT-6
       status: ATTACKED
-      evidence: Nine step-6 mutations and six round-2 mutations, each red on its named test
+      evidence: Nine step-6 mutations, six round-2 and three round-3 mutations, each red on its named test
         (section Mutation).
       artifacts: [crates/repark-iceberg/src/tests/output_spec.rs, crates/repark-spark/src/normalize/clustered_by.rs]
     - id: AT-7

@@ -63,6 +63,33 @@ def test_a_missing_bucket_column_on_a_new_table_is_legacy_3060(
 
 
 @pytest.mark.parametrize(
+    ("cell", "schema", "column"),
+    [
+        ("bucketBy_new_nested_col", "id BIGINT, s STRUCT<a: INT, b: STRING>", "s.a"),
+        ("bucketBy_new_nested_missing", "id BIGINT, s STRUCT<a: INT, b: STRING>", "s.zz"),
+        ("bucketBy_new_dotted_missing", "id BIGINT, data STRING, cat STRING", "a.b"),
+    ],
+)
+def test_a_dotted_bucket_column_is_backticked_in_legacy_3060(
+    spark: ReparkSession, cell: str, schema: str, column: str
+) -> None:
+    """A bucket column naming a nested field is not found, and a dotted name is backticked.
+
+    pins: u7-write-df/C-015
+    """
+    rows = [(1, (1, "q"))] if "STRUCT" in schema else [(7, "g", "x"), (8, "h", "w")]
+    frame = spark.createDataFrame(rows, schema)
+    with pytest.raises(AnalysisException) as raised:
+        frame.write.format("iceberg").bucketBy(4, column).saveAsTable(_T)
+    _assert_error(raised.value, cell)
+    assert raised.value.getMessageParameters() == {  # type: ignore[attr-defined]
+        "i": f"`{column}`",
+        "schema": str(raised.value).split(":\n", 1)[1],
+    }
+    assert not spark.catalog.tableExists(_T)
+
+
+@pytest.mark.parametrize(
     ("cell", "mode", "error_type"),
     [
         ("bucket_unbucketed_missing_append", "append", IllegalArgumentException),
@@ -148,6 +175,23 @@ def test_layout_mismatch_renders_every_table_transform(spark: ReparkSession) -> 
         ).saveAsTable(_T)
     _assert_error(raised.value, "bucket_existing_partitioned_append")
     assert _rows(spark) == []
+
+
+def test_layout_mismatch_renders_time_transforms(spark: ReparkSession) -> None:
+    """The table side names years, months and hours as Spark does.
+
+    pins: u7-write-df/C-009
+    """
+    columns = "id BIGINT, y DATE, m TIMESTAMP, h TIMESTAMP"
+    spark.sql(
+        f"CREATE TABLE {_T} ({columns}) USING iceberg "
+        "PARTITIONED BY (years(y), months(m), hours(h))"
+    )
+    frame = spark.createDataFrame([(1, None, None, None)], columns)
+    with pytest.raises(IllegalArgumentException) as raised:
+        frame.write.format("iceberg").bucketBy(4, "id").mode("append").saveAsTable(_T)
+    _assert_error(raised.value, "bucket_existing_time_append")
+    _assert_state(spark, "bucket_existing_time_append")
 
 
 @pytest.mark.parametrize(

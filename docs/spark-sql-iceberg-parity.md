@@ -3133,7 +3133,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   overwrite mode it is Spark's RTAS, one `overwrite` snapshot. On an existing table the error
   and ignore modes answer as before; append compares the writer's layout with the table's
   partitioning as Spark's transforms (`identity(c)`, `bucket(n, c)`, `sorted_bucket(c, n, s)`,
-  `days(ts)`, `truncate(w, c)`, void fields dropped) and refuses a difference with
+  `years(c)`, `months(c)`, `days(c)`, `hours(c)`, `truncate(w, c)`, void fields dropped —
+  measured round 3 on a format-version 1 table whose dropped field became void) and refuses a difference with
   `IllegalArgumentException` `requirement failed: The provided partitioning or clustering
   columns do not match the existing table's.` naming both lists; overwrite replaces the table
   with the bucketed spec (RTAS, the next spec id). A multi-column bucket or any `sortBy`
@@ -3143,7 +3144,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   catalog: every create-or-replace arm (a missing table in any mode, and an existing table in
   overwrite, error or ignore mode, before the existence check) raises `AnalysisException`
   `_LEGACY_ERROR_TEMP_3060` `Couldn't find column <c> in:\n<the frame's printSchema tree>`
-  (parameters `i`, `schema`), after `INVALID_BUCKET_COUNT`; an append onto an existing table
+  (parameters `i`, `schema`), after `INVALID_BUCKET_COUNT`; `<c>` and `i` wrap the name in
+  backticks when it contains a `.` and only then, with no escaping (round 3, measured: `` `s.a` ``
+  for a nested field, which a bucket column never resolves to, `` `a.b` ``, `` `a.`b` ``, while
+  `my col`, `select`, `1a`, `12` and ``a`b`` stay bare); an append onto an existing table
   answers the layout mismatch (`provided: bucket(4, nope)`). The error mode on an existing
   table raises Spark's `TABLE_OR_VIEW_ALREADY_EXISTS` text `Cannot create table or view
   `<namespace>`.`<name>` because it already exists.…`, bucketed or not. The decisions are Rust
@@ -3184,10 +3188,15 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_error_mode_and_bucketed_save_answer_spark_text`,
   `::test_bucketed_overwrite_of_two_columns_leaves_the_table`,
   `::test_layout_mismatch_renders_every_table_transform`,
+  `::test_layout_mismatch_renders_time_transforms`,
+  `::test_a_dotted_bucket_column_is_backticked_in_legacy_3060`,
   `::test_a_column_named_clustered_keeps_the_bucket_clause`,
   `::test_sorted_by_ordering_in_a_clustered_clause`,
   `::test_a_mixed_partition_spec_describes_as_part_rows`; in-crate
-  `crates/repark-iceberg/src/tests/writer_plan.rs`.
+  `crates/repark-iceberg/src/tests/writer_plan.rs` (with
+  `the_missing_column_message_backticks_only_a_dotted_name`) and
+  `tests/writer_partitioning.rs::the_table_side_drops_void_fields_and_names_time_transforms_like_spark`
+  (the void shape, since RePark creates only format-version 2 tables).
 - **Rationale** — DECLARED 2026-09-14 (Ruling R-1: Iceberg has no Hive bucketing, so a bucketed
   `saveAsTable` refused `NOT_IMPLEMENTED`). **Narrowed 2026-09-24 (U7 PR1):** the R-1 premise
   compared against Spark's session catalog; the scoreboard record on an Iceberg catalog shows

@@ -185,15 +185,18 @@ def test_bucket_by_sort_by_save_as_table_refuses_like_iceberg(spark: ReparkSessi
     """A sorted bucketed saveAsTable refuses as Spark's Iceberg catalog does (R-1 retired).
 
     The recorded ``bucketBy_saveAsTable`` cell ran on Spark's Hive session catalog; on an
-    Iceberg catalog Spark cannot convert ``sorted_bucket`` into a partition transform.
+    Iceberg catalog Spark cannot convert ``sorted_bucket`` into a partition transform. The
+    frame and the expected text are the U7 oracle shape ``bucketBy_new_sortBy``.
     pins: u7-write-df/C-008
     """
-    frame = _kv_frame(spark)
-    with pytest.raises(IllegalArgumentException) as raised:
-        frame.write.bucketBy(2, "a").sortBy("b").saveAsTable("bk_t")
-    assert str(raised.value) == (
-        "Cannot convert transform with more than one column reference: sorted_bucket(a, 2, b)"
+    frame = spark.createDataFrame(
+        [(7, "g", "x"), (8, "h", "w")], "id BIGINT, data STRING, cat STRING"
     )
+    with pytest.raises(IllegalArgumentException) as raised:
+        frame.write.bucketBy(4, "id").sortBy("data").saveAsTable("bk_t")
+    expected = _U7_MEASURED["bucketBy_new_sortBy"]["error"]
+    assert type(raised.value).__name__ == expected["type"]
+    assert str(raised.value) == expected["message"]
     assert not spark.catalog.tableExists("bk_t")
 
 

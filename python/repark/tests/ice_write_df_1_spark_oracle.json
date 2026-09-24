@@ -1,5 +1,5 @@
 {
- "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory",
+ "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`",
  "seed": "t (id BIGINT, data STRING, cat STRING) seeded (1,'a','x'),(2,'b','y'),(3,'c','x'); frame [(7,'g','x'),(8,'h','w')]",
  "recorded": {
   "W-DF-SAVE-NAME": {
@@ -3803,6 +3803,159 @@
    ],
    "partitioning": [
     "bucket(4, clustered)"
+   ],
+   "partition_info": []
+  },
+  "bucketBy_new_nested_col": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column `s.a` in:\nroot\n |-- id: long (nullable = true)\n |-- s: struct (nullable = true)\n |    |-- a: integer (nullable = true)\n |    |-- b: string (nullable = true)\n"
+   }
+  },
+  "bucketBy_new_nested_missing": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column `s.zz` in:\nroot\n |-- id: long (nullable = true)\n |-- s: struct (nullable = true)\n |    |-- a: integer (nullable = true)\n |    |-- b: string (nullable = true)\n"
+   }
+  },
+  "bucketBy_new_dotted_missing": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column `a.b` in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "spec_id_current_then_absent": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "7"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "bucket_existing_void_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(8, id)\n - table: bucket(4, id)"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "total-records": "1"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ],
+   "partition_info": []
+  },
+  "bucket_existing_time_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(4, id)\n - table: years(y), months(m), hours(h)"
+   },
+   "rows": [],
+   "operations": [],
+   "summaries": [],
+   "specs": [],
+   "partitioning": [
+    "years(y)",
+    "months(m)",
+    "hours(h)"
    ],
    "partition_info": []
   }

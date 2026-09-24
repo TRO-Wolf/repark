@@ -393,7 +393,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `sorted_bucket` refusal, pins: u7-write-df/C-008; **round 2** repins
   `test_bucket_by_missing_column_refused` on Ruling Q1 — Spark's Iceberg-catalog
   `_LEGACY_ERROR_TEMP_3060` for a new table and the layout mismatch for an existing append,
-  read from `ice_write_df_1_spark_oracle.json`, pins: u7-write-df/C-015). V2 `clusterBy` chains and refuses the `partitionedBy` conflict at
+  read from `ice_write_df_1_spark_oracle.json`, pins: u7-write-df/C-015; **round 3** reads the
+  sorted-bucket refusal from the U7 oracle shape `bucketBy_new_sortBy`, on its frame). V2 `clusterBy` chains and refuses the `partitionedBy` conflict at
   create/replace/createOrReplace and the Iceberg clustering record at create — where
   Spark answered `None` by writing a non-Iceberg session-catalog table (declared,
   registry IO-CLUSTER-1). Red on base `8cd6d1e6`: 13 of 14 pins
@@ -872,7 +873,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   and case-free partition columns. Round 2 (2026-09-24): `_assert_error` compares class,
   text and condition on every refusal (the non-integer id is `NumberFormatException`),
   `_assert_state` adds DESCRIBE's `# Partition Information` rows where measured, and the
-  `ctas_part_upper` skip is gone. pins: u7-write-df/C-001, C-002, C-003, C-004, C-005,
+  `ctas_part_upper` skip is gone. Round 3 (2026-09-24): `_assert_error` adds the SQLSTATE,
+  `_assert_state` the measured snapshot summaries (with `deleted-data-files`), and the
+  current-then-absent `output-spec-id` state is read from `spec_id_current_then_absent`. pins: u7-write-df/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
@@ -882,7 +885,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   the multi-column RTAS and the days/truncate mismatch, the non-bucketed `saveAsTable`
   `partitionBy` check, `output-spec-id` on dynamic, replacing, create and empty writes, the
   path relation for URI and slash spellings, the `CLUSTERED BY` scan (`clustered` column,
-  `ASC`, the two `DESC` residues by class) and a mixed spec's `Part N` rows.
+  `ASC`, the two `DESC` residues by class) and a mixed spec's `Part N` rows. Round 3
+  (2026-09-24): a dotted or nested bucket column backticked in the 3060 text and `i`, and the
+  years/months/hours mismatch.
   pins: u7-write-df/C-004, C-005, C-006, C-008, C-009, C-011, C-013, C-015, C-016, C-017
 - [ice_write_df_1_spark_oracle.json](ice_write_df_1_spark_oracle.json) — **U7 PR1
   (2026-09-24):** the oracle `test_ice_write_df_1.py` reads: `recorded` copies the four
@@ -892,7 +897,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (2026-09-24) adds 39 shapes from `target/probe-u7-r1fix/sprobe.py` and `sprobe2.py` (the
   probe directory rendered `<root>`) and a `partition_info` observation (DESCRIBE's
   `# Partition Information` column names), re-measured for `ctas_part_upper` and
-  `create_part_upper`.
+  `create_part_upper`. Round 3 (2026-09-24) adds six shapes from
+  `target/probe-u7-r2fix/sprobe.py`: the nested and dotted 3060 names, the current-then-absent
+  `output-spec-id` state, and the void and time-transform mismatches (the void one, a
+  format-version 1 table, is the Rust kernel test's expectation).
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect
   `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and
