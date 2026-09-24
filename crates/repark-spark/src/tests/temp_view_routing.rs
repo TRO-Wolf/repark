@@ -604,3 +604,227 @@ async fn qualified_drop_table_falls_through_to_the_catalog() {
         .expect("table existence");
     assert!(!exists);
 }
+
+const BROKEN_HOME: &str = "no session-local temp-view home";
+
+struct BrokenHomeTempViews;
+
+impl repark_core::TempViewSession for BrokenHomeTempViews {
+    fn create_or_replace_temp_view_from(
+        &self,
+        _name: &str,
+        _frame: &datafusion::prelude::DataFrame,
+    ) -> repark_common::Result<()> {
+        Err(repark_common::Error::Analysis(BROKEN_HOME.to_string()))
+    }
+
+    fn resolve_temp_view_home_ref(
+        &self,
+        _name: &str,
+    ) -> repark_common::Result<Option<Vec<String>>> {
+        Err(repark_common::Error::Analysis(BROKEN_HOME.to_string()))
+    }
+
+    fn temp_view_home(&self) -> repark_common::Result<Vec<String>> {
+        Err(repark_common::Error::Analysis(BROKEN_HOME.to_string()))
+    }
+
+    fn list_temp_view_names(&self) -> repark_common::Result<Vec<String>> {
+        Err(repark_common::Error::Analysis(BROKEN_HOME.to_string()))
+    }
+
+    fn drop_temp_view(&self, _name: &str) -> repark_common::Result<bool> {
+        Err(repark_common::Error::Analysis(BROKEN_HOME.to_string()))
+    }
+}
+
+async fn session_error(sql: &str, stub: &dyn repark_core::TempViewSession) -> DataFusionError {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    crate::router::execute_in_session(
+        &ctx,
+        &catalogs,
+        sql,
+        &std::collections::HashSet::<String>::new(),
+        &crate::write_options::StatementWriteOptions::empty(),
+        Some(stub),
+    )
+    .await
+    .err()
+    .unwrap_or_else(|| panic!("{sql} must refuse"))
+}
+
+#[tokio::test]
+async fn a_replaced_temp_view_home_refuses_every_temp_statement_as_analysis() {
+    for sql in [
+        "DROP VIEW src",
+        "DROP TABLE src",
+        "DROP VIEW `datafusion`.`public`.`src`",
+        "DESCRIBE src",
+        "SHOW VIEWS",
+    ] {
+        let error = session_error(sql, &BrokenHomeTempViews).await;
+        assert!(
+            matches!(error, DataFusionError::Plan(_)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            format!("Error during planning: {BROKEN_HOME}"),
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn malformed_temp_view_heads_refuse_with_the_full_plan_text() {
+    let stub = StubTempViews::with_existing(&[]);
+    for (sql, expected) in [
+        (
+            "(CREATE TEMPORARY VIEW v AS SELECT 1 AS id",
+            "Error during planning: could not parse `CREATE TEMPORARY VIEW`: expected CREATE",
+        ),
+        (
+            "CREATE OR REPLACE \"x\" TEMPORARY VIEW v AS SELECT 1 AS id",
+            "Error during planning: could not parse `CREATE TEMPORARY VIEW`: expected TEMPORARY",
+        ),
+        (
+            "CREATE TEMPORARY ( VIEW v AS SELECT 1 AS id",
+            "Error during planning: could not parse `CREATE TEMPORARY VIEW`: expected VIEW",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v SELECT 1",
+            "Error during planning: could not parse `CREATE TEMPORARY VIEW`: expected AS with the view query, got `CREATE TEMPORARY VIEW v SELECT 1`",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v AS",
+            "Error during planning: could not parse `CREATE TEMPORARY VIEW`: the view query after AS is empty",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v AS ;",
+            "Error during planning: could not parse `CREATE TEMPORARY VIEW`: the view query after AS is empty",
+        ),
+    ] {
+        let error = session_error(sql, &stub).await;
+        assert!(
+            matches!(error, DataFusionError::Plan(_)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(error.to_string(), expected, "{sql}");
+    }
+    assert!(stub.registered().is_empty());
+}
+
+#[tokio::test]
+async fn malformed_temp_view_clauses_refuse_with_the_full_plan_text() {
+    let stub = StubTempViews::with_existing(&[]);
+    for (sql, expected) in [
+        (
+            "CREATE TEMPORARY VIEW AS SELECT 1 AS id",
+            "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: identifier, found: EOF",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v (, i) AS SELECT 1 AS id",
+            "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: identifier, found: ,",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v (i AS SELECT 1 AS id",
+            "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: ), found: EOF",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v COMMENT 5 AS SELECT 1 AS id",
+            "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: literal string, found: 5",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v TBLPROPERTIES ('k') AS SELECT 1 AS id",
+            "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: =, found: )",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v extra AS SELECT 1 AS id",
+            "Error during planning: could not parse `CREATE TEMPORARY VIEW` at `extra`",
+        ),
+    ] {
+        let error = session_error(sql, &stub).await;
+        assert!(
+            matches!(error, DataFusionError::Plan(_)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(error.to_string(), expected, "{sql}");
+    }
+    assert!(stub.registered().is_empty());
+}
+
+#[tokio::test]
+async fn malformed_show_views_refuses_through_the_session_door() {
+    let stub = StubTempViews::with_existing(&["tv"]);
+    for (sql, expected) in [
+        (
+            "SHOW VIEWS LIKE",
+            "Error during planning: SHOW VIEWS … LIKE needs a quoted pattern (e.g. SHOW VIEWS IN cat.ns LIKE 'v*')",
+        ),
+        (
+            "SHOW VIEWS IN a.b.c",
+            "Error during planning: expected a two-part `IN <catalog.namespace>` name, got `a.b.c`",
+        ),
+        (
+            "SHOW VIEWS IN ice.sales extra",
+            "Error during planning: could not parse `SHOW VIEWS` at `extra` — the supported form is SHOW VIEWS IN <catalog.namespace> [LIKE] ['pattern']",
+        ),
+        (
+            "SHOW VIEWS IN ice.",
+            "Error during planning: could not parse CREATE NAMESPACE: sql parser error: Expected: identifier, found: EOF",
+        ),
+    ] {
+        let error = session_error(sql, &stub).await;
+        assert!(
+            matches!(error, DataFusionError::Plan(_)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(error.to_string(), expected, "{sql}");
+    }
+}
+
+#[tokio::test]
+async fn temp_view_statements_refuse_statement_write_options() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let stub = StubTempViews::with_existing(&["src"]);
+    let options = crate::write_options::StatementWriteOptions {
+        raw: vec![("write-format".to_string(), "parquet".to_string())],
+        ..crate::write_options::StatementWriteOptions::empty()
+    };
+    for (sql, context) in [
+        ("DROP VIEW src", "DROP VIEW"),
+        ("DROP TABLE src", "DROP TABLE"),
+        ("DESCRIBE src", "DESCRIBE TABLE"),
+        (
+            "CREATE OR REPLACE TEMPORARY VIEW v2 AS SELECT 1 AS id",
+            "CREATE TEMPORARY VIEW",
+        ),
+    ] {
+        let error = crate::router::execute_in_session(
+            &ctx,
+            &catalogs,
+            sql,
+            &std::collections::HashSet::<String>::new(),
+            &options,
+            Some(&stub),
+        )
+        .await
+        .err()
+        .unwrap_or_else(|| panic!("{sql} must refuse write options"));
+        assert!(
+            matches!(error, DataFusionError::Plan(_)),
+            "{sql}: {error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "Error during planning: {context} does not support write options (write-format); they are only honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)"
+            ),
+            "{sql}"
+        );
+    }
+    assert!(stub.dropped().is_empty());
+    assert!(stub.registered().is_empty());
+}
