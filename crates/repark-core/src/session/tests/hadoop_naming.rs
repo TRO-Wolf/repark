@@ -8,15 +8,15 @@ use tempfile::TempDir;
 
 use crate::ReparkSession;
 
-async fn configured_session(catalog_type: &str, warehouse: &Path) -> ReparkSession {
-    let session = ReparkSession::builder()
-        .config("spark.sql.catalog.ice.type", catalog_type)
-        .config(
-            "spark.sql.catalog.ice.warehouse",
-            warehouse.to_str().unwrap(),
-        )
-        .build()
-        .unwrap();
+async fn configured_session(props: &[(&str, &str)], warehouse: &Path) -> ReparkSession {
+    let mut builder = ReparkSession::builder().config(
+        "spark.sql.catalog.ice.warehouse",
+        warehouse.to_str().unwrap(),
+    );
+    for (prop, value) in props {
+        builder = builder.config(format!("spark.sql.catalog.ice.{prop}"), *value);
+    }
+    let session = builder.build().unwrap();
     session.register_configured_catalogs().await.unwrap();
     session
 }
@@ -63,20 +63,76 @@ fn metadata_file_names(warehouse: &Path) -> BTreeSet<String> {
         .collect()
 }
 
-#[tokio::test]
-async fn hadoop_type_catalog_writes_hadoop_metadata_names() {
-    let warehouse = TempDir::new().unwrap();
-    let session = configured_session("hadoop", warehouse.path()).await;
-    create_table_and_insert_twice(&session).await;
-    let names = metadata_file_names(warehouse.path());
-    let metadata_json: BTreeSet<&str> = names
+fn metadata_json_names(names: &BTreeSet<String>) -> Vec<&str> {
+    names
         .iter()
         .map(String::as_str)
         .filter(|name| name.ends_with(".metadata.json"))
-        .collect();
+        .collect()
+}
+
+fn is_lower_hex_group(group: &str, length: usize) -> bool {
+    group.len() == length
+        && group
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn is_uuid_metadata_name(name: &str, version: &str) -> bool {
+    let Some(stem) = name.strip_suffix(".metadata.json") else {
+        return false;
+    };
+    let Some((prefix, uuid)) = stem.split_once('-') else {
+        return false;
+    };
+    let groups: Vec<&str> = uuid.split('-').collect();
+    prefix == version
+        && groups.len() == 5
+        && groups
+            .iter()
+            .zip([8, 4, 4, 4, 12])
+            .all(|(group, length)| is_lower_hex_group(group, length))
+}
+
+fn assert_uuid_metadata_names(warehouse: &Path) {
+    let names = metadata_file_names(warehouse);
+    assert!(!names.contains("version-hint.text"), "{names:?}");
+    let metadata_json = metadata_json_names(&names);
+    assert_eq!(metadata_json.len(), 3, "{names:?}");
+    for (name, version) in metadata_json.iter().zip(["00000", "00001", "00002"]) {
+        assert!(is_uuid_metadata_name(name, version), "{name} in {names:?}");
+    }
+    let uuids: BTreeSet<&str> = metadata_json.iter().map(|name| &name[6..]).collect();
+    assert_eq!(uuids.len(), 3, "{names:?}");
+}
+
+#[test]
+fn uuid_metadata_name_check_rejects_near_misses() {
+    let good = "00001-0a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d.metadata.json";
+    assert!(is_uuid_metadata_name(good, "00001"));
+    for bad in [
+        "v1.metadata.json",
+        "00001-0a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d.metadata.json.gz",
+        "1-0a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d.metadata.json",
+        "00001-0A1B2C3D-4e5f-4a6b-8c7d-0e1f2a3b4c5d.metadata.json",
+        "00001-0a1b2c3d-4e5f-4a6b-8c7d.metadata.json",
+        "00001-0a1b2c3d4e5f4a6b8c7d0e1f2a3b4c5d.metadata.json",
+        "00001-fixed.metadata.json",
+    ] {
+        assert!(!is_uuid_metadata_name(bad, "00001"), "{bad}");
+    }
+    assert!(!is_uuid_metadata_name(good, "00002"));
+}
+
+#[tokio::test]
+async fn hadoop_type_catalog_writes_hadoop_metadata_names() {
+    let warehouse = TempDir::new().unwrap();
+    let session = configured_session(&[("type", "hadoop")], warehouse.path()).await;
+    create_table_and_insert_twice(&session).await;
+    let names = metadata_file_names(warehouse.path());
     assert_eq!(
-        metadata_json,
-        BTreeSet::from(["v1.metadata.json", "v2.metadata.json", "v3.metadata.json"]),
+        metadata_json_names(&names),
+        ["v1.metadata.json", "v2.metadata.json", "v3.metadata.json"],
         "{names:?}"
     );
     assert!(names.contains("version-hint.text"), "{names:?}");
@@ -86,19 +142,48 @@ async fn hadoop_type_catalog_writes_hadoop_metadata_names() {
 }
 
 #[tokio::test]
+async fn hadoop_type_with_explicit_uuid_naming_keeps_uuid_metadata_names() {
+    let warehouse = TempDir::new().unwrap();
+    let session = configured_session(
+        &[("type", "hadoop"), ("metadata-naming", "uuid")],
+        warehouse.path(),
+    )
+    .await;
+    create_table_and_insert_twice(&session).await;
+    assert_uuid_metadata_names(warehouse.path());
+}
+
+#[tokio::test]
 async fn memory_type_catalog_keeps_uuid_metadata_names() {
     let warehouse = TempDir::new().unwrap();
-    let session = configured_session("memory", warehouse.path()).await;
+    let session = configured_session(&[("type", "memory")], warehouse.path()).await;
     create_table_and_insert_twice(&session).await;
-    let names = metadata_file_names(warehouse.path());
-    assert!(!names.contains("version-hint.text"), "{names:?}");
-    assert!(!names.contains("v1.metadata.json"), "{names:?}");
-    assert_eq!(
-        names
-            .iter()
-            .filter(|name| name.ends_with(".metadata.json"))
-            .count(),
-        3,
-        "{names:?}"
-    );
+    assert_uuid_metadata_names(warehouse.path());
+}
+
+#[tokio::test]
+async fn in_memory_catalog_impl_keeps_uuid_metadata_names() {
+    let warehouse = TempDir::new().unwrap();
+    let session = configured_session(
+        &[(
+            "catalog-impl",
+            "org.apache.iceberg.inmemory.InMemoryCatalog",
+        )],
+        warehouse.path(),
+    )
+    .await;
+    create_table_and_insert_twice(&session).await;
+    assert_uuid_metadata_names(warehouse.path());
+}
+
+#[tokio::test]
+async fn direct_memory_registration_keeps_uuid_metadata_names() {
+    let warehouse = TempDir::new().unwrap();
+    let session = ReparkSession::new().unwrap();
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    create_table_and_insert_twice(&session).await;
+    assert_uuid_metadata_names(warehouse.path());
 }
