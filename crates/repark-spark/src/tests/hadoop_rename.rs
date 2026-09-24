@@ -70,3 +70,25 @@ async fn memory_type_rename_still_succeeds() {
     run(&session, "ALTER TABLE ice.db.t RENAME TO ice.db.u").await;
     assert_eq!(row_count(&session, "ice.db.u").await, 2);
 }
+
+#[tokio::test]
+async fn hadoop_type_staged_create_still_writes_uuid_names_divergence() {
+    let warehouse = TempDir::new().unwrap();
+    let session = configured_session("hadoop", warehouse.path()).await;
+    create_and_insert_twice(&session).await;
+    let names: Vec<String> = std::fs::read_dir(warehouse.path().join("db/t/metadata"))
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    assert!(
+        !names.iter().any(|name| name == "version-hint.text"),
+        "{names:?}"
+    );
+    let mut versions: Vec<&str> = names
+        .iter()
+        .filter(|name| name.ends_with(".metadata.json"))
+        .map(|name| name.split('-').next().unwrap())
+        .collect();
+    versions.sort_unstable();
+    assert_eq!(versions, ["00000", "00001", "00002"], "{names:?}");
+}

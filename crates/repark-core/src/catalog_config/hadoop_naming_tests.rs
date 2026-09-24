@@ -93,3 +93,17 @@ fn near_miss_hadoop_types_are_still_refused() {
         );
     }
 }
+
+#[test]
+fn bare_hadoop_catalog_value_adds_no_metadata_naming() {
+    let config = HashMap::from([
+        ("spark.sql.catalog.h".to_string(), "hadoop".to_string()),
+        (
+            "spark.sql.catalog.h.warehouse".to_string(),
+            "/tmp/wh".to_string(),
+        ),
+    ]);
+    let spec = single_spec(&config);
+    assert_eq!(spec.kind, CatalogKind::Memory);
+    assert!(!spec.props.contains_key(NAMING), "{spec:?}");
+}

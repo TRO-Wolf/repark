@@ -215,3 +215,64 @@ fn rename_error_mapping_keeps_the_engine_error_class() {
     )));
     assert!(matches!(unexpected, Error::Iceberg(_)), "{unexpected:?}");
 }
+
+#[tokio::test]
+async fn memory_arm_forwards_only_metadata_naming_to_the_fork_builder() {
+    for (props, expected) in [
+        (
+            vec![
+                ("type", "hadoop"),
+                ("s3.region", "us-east-1"),
+                ("x-extra", "1"),
+            ],
+            HashMap::from([("metadata-naming".to_string(), "hadoop".to_string())]),
+        ),
+        (
+            vec![
+                ("type", "memory"),
+                ("s3.region", "us-east-1"),
+                ("x-extra", "1"),
+            ],
+            HashMap::new(),
+        ),
+    ] {
+        let warehouse = TempDir::new().unwrap();
+        let session = configured_session(&props, warehouse.path()).await;
+        let handle = session.catalog_handle("ice").unwrap();
+        assert_eq!(handle.properties(), &expected, "{props:?}");
+    }
+}
+
+#[tokio::test]
+async fn memory_registration_keeps_fallback_root_and_local_write_root() {
+    let hadoop = TempDir::new().unwrap();
+    let hadoop_session = configured_session(&[("type", "hadoop")], hadoop.path()).await;
+    let direct = TempDir::new().unwrap();
+    let direct_session = ReparkSession::new().unwrap();
+    direct_session
+        .register_memory_catalog("ice", direct.path().to_str().unwrap())
+        .await
+        .unwrap();
+    for (session, warehouse) in [(&hadoop_session, &hadoop), (&direct_session, &direct)] {
+        let catalogs = session.catalogs_snapshot();
+        let warehouse_text = warehouse.path().to_str().unwrap();
+        assert!(
+            catalogs
+                .local_warehouse_roots()
+                .iter()
+                .any(|root| root == warehouse_text),
+            "{:?}",
+            catalogs.local_warehouse_roots()
+        );
+        match catalogs.location_policy("ice") {
+            Some(crate::LocationPolicy::TempFallbackAllowed { root }) => {
+                assert_eq!(root, warehouse.path());
+            }
+            other => panic!("expected TempFallbackAllowed, got {other:?}"),
+        }
+        assert_eq!(
+            catalogs.warehouse_layout_root("ice"),
+            Some(warehouse.path().to_path_buf())
+        );
+    }
+}
