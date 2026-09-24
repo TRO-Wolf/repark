@@ -463,7 +463,10 @@ pub(super) async fn execute_remove_orphan_files(
     listed_orphan_dataframe(ctx, &result.orphan_file_locations)
 }
 
-fn listed_orphan_dataframe(ctx: &SessionContext, locations: &[String]) -> Result<DataFrame> {
+pub(crate) fn listed_orphan_dataframe(
+    ctx: &SessionContext,
+    locations: &[String],
+) -> Result<DataFrame> {
     let qualified: Vec<String> = locations
         .iter()
         .map(|location| qualify_local_path(location))
