@@ -625,6 +625,9 @@ TableFactor::Table … else`, `_ => None`) are not mutated.
 ## Gates
 
 mcdel-r12 run, logs under `/tmp/xo58-mcd-r12probe/logs/gate-*.log`.
+mcdel-r13 edits markdown only (this ledger, `ice-metadata-cols-1-ledger.md`,
+`task/ledgers/staging/map.md`). It re-ran the comment ban, the ledger grammar and the
+map-md check, each exit 0; the cargo and pytest rows below are the r12 run.
 
 | Command | Result |
 |---|---|

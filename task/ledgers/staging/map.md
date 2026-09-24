@@ -1613,7 +1613,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   mcdel-r7 made every answer leg assert its field names and full rows (C-012), and
   measured and pinned the join and query positions (M-17). It also recorded the
   qualified-wildcard silent wrong answer as residue candidate
-  `R-MC-QUALIFIED-WILDCARD` (C-018, M-18), pinned as RePark's current answer.
+  `R-MC-QUALIFIED-WILDCARD` (C-018, M-18), pinned as RePark's answer at that time.
+  mcdel-r8 fixed it and withdrew the candidate (C-018 FIXED, M-20). mcdel-r9 scoped each
+  wildcard to its own SELECT (C-019, M-21). mcdel-r10 and mcdel-r11 removed three
+  unreachable arms and saved the mutation sweep (M-22). mcdel-r12 recorded that
+  reserved-name refusals share Spark's text but not its class (residue
+  `R-MC-RESERVED-NAME-CLASS`) and pinned the comma-join `input_file_name()` refusal
+  (C-020, residue `R-MC-IFN-COMMA-JOIN`). mcdel-r13 corrected the ledger header: the
+  registry row, the current base `970ac11a` and the per-round model.
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
