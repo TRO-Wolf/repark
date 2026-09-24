@@ -184,14 +184,14 @@ def test_a_catalog_over_the_temp_view_home_refuses_temp_statements(
 
 
 def test_qualified_drop_view_near_miss_without_a_temp_view(spark: ReparkSession) -> None:
-    """DROP VIEW sc.ns.v with no temp view is main's catalog drop (nearmiss-b3a)."""
+    """DROP VIEW sc.ns.v with no temp view is main's catalog drop (nearmiss-rebase, 54e2da6a)."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     spark.sql("DROP VIEW sc.ns.v")
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == []
 
 
 def test_qualified_drop_table_near_miss_without_a_temp_view(spark: ReparkSession) -> None:
-    """DROP TABLE sc.ns.t with no temp view is main's catalog drop (nearmiss-b3a)."""
+    """DROP TABLE sc.ns.t with no temp view is main's catalog drop (nearmiss-rebase, 54e2da6a)."""
     spark.sql("DROP TABLE sc.ns.t")
     assert spark.catalog.tableExists("sc.ns.t") is False
 
