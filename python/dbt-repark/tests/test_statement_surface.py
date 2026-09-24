@@ -288,6 +288,22 @@ def test_refused_shapes_fail_loud(seeded_session: Any, shape: Shape) -> None:
     assert shape.refusal in str(caught.value)
 
 
+def test_show_tblproperties_table_refusal_is_exact(seeded_session: Any) -> None:
+    """R-SHOW-TBLPROPERTIES pins the exact class, condition, SQLSTATE and full refusal text."""
+    from repark.errors import AnalysisException
+
+    fact = f"{CATALOG}.{NAMESPACE}.{STEM}_survey"
+    with pytest.raises(AnalysisException) as caught:
+        seeded_session.sql(f"show tblproperties {fact}").to_arrow()
+    assert type(caught.value) is AnalysisException
+    assert caught.value.getCondition() is None
+    assert caught.value.getSqlState() is None
+    assert str(caught.value) == (
+        "Error during planning: SHOW [VARIABLE] is not supported unless information_schema "
+        "is enabled"
+    )
+
+
 def test_describe_extended_answers_spark_shape(seeded_session: Any) -> None:
     """Three-part DESCRIBE EXTENDED answers Spark shape since SQL-DESCRIBE-1."""
     described = seeded_session.sql(

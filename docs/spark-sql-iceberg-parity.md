@@ -1554,7 +1554,9 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 - **Pin** —
   `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-SHOW-TABLE-EXTENDED]`,
   `test_show_table_extended_answers_spark_shape`, and
-  `test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]`
+  `test_show_tblproperties_table_refusal_is_exact` (exact class, condition, SQLSTATE and full
+  text; `test_refused_shapes_fail_loud[R-SHOW-TBLPROPERTIES]` checks that the text contains the
+  recorded message)
 - **Rationale** — `SHOW TBLPROPERTIES` remains DECLARED for the next slice. `SHOW TABLE EXTENDED`
   now serves catalog Iceberg tables, while session temporary views remain outside its row set.
 
