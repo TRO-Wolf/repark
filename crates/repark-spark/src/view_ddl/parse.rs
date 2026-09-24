@@ -799,24 +799,66 @@ mod tests {
         assert_eq!(parsed.name, vec!["ns", "v"]);
     }
 
+    fn show_tblproperties_refusal(sql: &str) -> DataFusionError {
+        match try_parse_show_tblproperties(sql) {
+            Some(Err(error)) => error,
+            Some(Ok(_)) => panic!("must refuse: {sql}"),
+            None => panic!("must match: {sql}"),
+        }
+    }
+
     #[test]
-    fn show_tblproperties_malformed_tails_fail_loud() {
-        assert!(
-            try_parse_show_tblproperties("SHOW TBLPROPERTIES")
-                .is_some_and(|parsed| parsed.is_err())
-        );
-        assert!(
-            try_parse_show_tblproperties("SHOW TBLPROPERTIES v (")
-                .is_some_and(|parsed| parsed.is_err())
-        );
-        assert!(
-            try_parse_show_tblproperties("SHOW TBLPROPERTIES v ('k') extra")
-                .is_some_and(|parsed| parsed.is_err())
-        );
-        assert!(
-            try_parse_show_tblproperties("SHOW TBLPROPERTIES v 'k'")
-                .is_some_and(|parsed| parsed.is_err())
-        );
+    fn show_tblproperties_malformed_tokenized_tails_refuse_with_parser_text() {
+        for (sql, expected) in [
+            (
+                "SHOW TBLPROPERTIES",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: \
+                 Expected: identifier, found: EOF",
+            ),
+            (
+                "SHOW TBLPROPERTIES v (",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: \
+                 Expected: identifier, found: EOF",
+            ),
+            (
+                "SHOW TBLPROPERTIES v (,)",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: \
+                 Expected: identifier, found: ,",
+            ),
+            (
+                "SHOW TBLPROPERTIES v ('k'",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: \
+                 Expected: ), found: EOF",
+            ),
+            (
+                "SHOW TBLPROPERTIES v ('k') extra",
+                "Error during planning: could not parse `SHOW TBLPROPERTIES` at `extra`",
+            ),
+            (
+                "SHOW TBLPROPERTIES v 'k'",
+                "Error during planning: could not parse `SHOW TBLPROPERTIES` at `'k'`",
+            ),
+        ] {
+            let error = show_tblproperties_refusal(sql);
+            assert!(
+                matches!(error, DataFusionError::Plan(_)),
+                "{sql}: {error:?}"
+            );
+            assert_eq!(error.to_string(), expected, "{sql}");
+        }
+    }
+
+    #[test]
+    fn show_tblproperties_tokenizer_failure_falls_through() {
+        for sql in ["SHOW TBLPROPERTIES v ('k", "SHOW TBLPROPERTIES `v"] {
+            assert!(
+                Tokenizer::new(&DatabricksDialect {}, sql)
+                    .tokenize()
+                    .is_err(),
+                "{sql}"
+            );
+            assert!(try_parse_show_tblproperties(sql).is_none(), "{sql}");
+        }
     }
 
     #[test]
@@ -826,5 +868,7 @@ mod tests {
         assert!(try_parse_show_tblproperties("SHOW TBLPROPERTIESX sc.ns.v").is_none());
         assert!(try_parse_show_tblproperties("SHOW COLUMNS IN sc.ns.t").is_none());
         assert!(try_parse_show_tblproperties("SELECT 1").is_none());
+        assert!(try_parse_show_tblproperties("SHOW TBLPROPERTIE v").is_none());
+        assert!(try_parse_show_tblproperties("SHOW TABLE EXTENDED IN sc.ns LIKE 'v'").is_none());
     }
 }
