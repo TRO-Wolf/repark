@@ -73,8 +73,12 @@ async fn alter_column_move_dotted_after_reference_keeps_bare_spark_parse_message
     .await
     .expect_err("dotted AFTER reference must refuse");
     let mapped = repark_core::engine_err(error);
+    let repark_common::Error::Parse(message) = &mapped else {
+        panic!("expected a Parse error, got {mapped:?}");
+    };
     assert_eq!(
-        mapped.to_string(),
+        message,
         "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601"
     );
+    assert_eq!(mapped.to_string(), *message);
 }

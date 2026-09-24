@@ -6,7 +6,7 @@ use super::super::*;
 use super::common::*;
 use super::show_table_extended::*;
 
-const UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE: &str = "SQL error: ParserError(\"[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. Please, append */ at the end of the comment. SQLSTATE: 42601\")";
+const UNCLOSED_BRACKETED_COMMENT_MESSAGE: &str = "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. Please, append */ at the end of the comment. SQLSTATE: 42601";
 
 async fn answer_batch(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> RecordBatch {
     let frame = execute(ctx, catalogs, sql).await.expect(sql);
@@ -223,37 +223,35 @@ async fn show_table_extended_near_miss_probes_keep_their_exact_outcomes() {
     assert_eq!(single_semicolon, expected);
     assert_eq!(spaced_semicolons, expected);
 
-    let content_after_semicolons = outcome(
-        &ctx,
-        &catalogs,
-        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc';;x",
-    )
-    .await
-    .expect_err("content after trailing semicolons must be refused");
-    assert_eq!(
-        content_after_semicolons.to_string(),
-        "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601\")"
+    let content_after_semicolons_sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc';;x";
+    let content_after_semicolons = outcome(&ctx, &catalogs, content_after_semicolons_sql)
+        .await
+        .expect_err("content after trailing semicolons must be refused");
+    assert_parse_refusal(
+        content_after_semicolons_sql,
+        content_after_semicolons,
+        "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601",
     );
 
-    let unclosed_comment = outcome(
-        &ctx,
-        &catalogs,
-        "/* c SHOW TABLE EXTENDED IN ice.sales LIKE 'pc",
-    )
-    .await
-    .expect_err("the router front door must refuse an unclosed leading block comment");
-    assert_eq!(
-        unclosed_comment.to_string(),
-        UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+    let unclosed_comment_sql = "/* c SHOW TABLE EXTENDED IN ice.sales LIKE 'pc";
+    let unclosed_comment = outcome(&ctx, &catalogs, unclosed_comment_sql)
+        .await
+        .expect_err("the router front door must refuse an unclosed leading block comment");
+    assert_parse_refusal(
+        unclosed_comment_sql,
+        unclosed_comment,
+        UNCLOSED_BRACKETED_COMMENT_MESSAGE,
     );
 
+    let inter_keyword_unclosed_comment_sql = "SHOW /* unclosed TABLE EXTENDED LIKE 'pc'";
     let inter_keyword_unclosed_comment =
-        outcome(&ctx, &catalogs, "SHOW /* unclosed TABLE EXTENDED LIKE 'pc'")
+        outcome(&ctx, &catalogs, inter_keyword_unclosed_comment_sql)
             .await
             .expect_err("the router front door must refuse an unclosed inter-keyword comment");
-    assert_eq!(
-        inter_keyword_unclosed_comment.to_string(),
-        UNCLOSED_BRACKETED_COMMENT_RENDERED_MESSAGE
+    assert_parse_refusal(
+        inter_keyword_unclosed_comment_sql,
+        inter_keyword_unclosed_comment,
+        UNCLOSED_BRACKETED_COMMENT_MESSAGE,
     );
 
     let show_tables = outcome(

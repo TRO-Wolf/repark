@@ -294,7 +294,7 @@ async fn truncate_never_written_table_commits_delete_snapshot() {
 }
 
 #[tokio::test]
-async fn truncate_if_exists_before_name_keeps_full_spark_parse_message() {
+async fn truncate_if_exists_before_name_keeps_its_planning_wrapped_parse_message() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -307,10 +307,14 @@ async fn truncate_if_exists_before_name_keeps_full_spark_parse_message() {
         .await
         .expect_err("Spark parse-rejects IF EXISTS");
     let mapped = repark_core::engine_err(error);
+    let repark_common::Error::Analysis(message) = &mapped else {
+        panic!("expected the current Analysis error, got {mapped:?}");
+    };
     assert_eq!(
-        mapped.to_string(),
+        message,
         "Error during planning: [PARSE_SYNTAX_ERROR] Syntax error at or near 'IF'. SQLSTATE: 42601"
     );
+    assert_eq!(mapped.to_string(), *message);
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 3);
 }
 
@@ -336,7 +340,7 @@ async fn truncate_if_exists_after_name_parse_fails_and_does_not_wipe() {
 }
 
 #[tokio::test]
-async fn truncate_without_table_keyword_keeps_full_spark_parse_message() {
+async fn truncate_without_table_keyword_keeps_its_planning_wrapped_parse_message() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -349,9 +353,13 @@ async fn truncate_without_table_keyword_keeps_full_spark_parse_message() {
         .await
         .expect_err("missing TABLE must refuse");
     let mapped = repark_core::engine_err(error);
+    let repark_common::Error::Analysis(message) = &mapped else {
+        panic!("expected the current Analysis error, got {mapped:?}");
+    };
     assert_eq!(
-        mapped.to_string(),
+        message,
         "Error during planning: [PARSE_SYNTAX_ERROR] Syntax error at or near identifier: missing 'TABLE'. SQLSTATE: 42601"
     );
+    assert_eq!(mapped.to_string(), *message);
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 3);
 }

@@ -714,7 +714,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ice-error-conditions-1/C-011; ICE-VIEWS-1 (2026-09-20):
   `truncate_view_is_expect_table_not_view` namespace-qualifies its fixture SQL
   (`CREATE VIEW ice.sales.v_trunc ...` / `TRUNCATE TABLE ice.sales.v_trunc`);
-  assertions unchanged),
+  assertions unchanged; WO-A10 (2026-09-23): the leading-`IF EXISTS` and missing-`TABLE`
+  refusals destructure `repark_common::Error::Analysis` and compare the complete
+  `Error during planning: [PARSE_SYNTAX_ERROR] ...` text — the current class, where Spark
+  4.1.2 raises `ParseException`),
   `merge`, `merge_nmbs` (DML-A NMBS COW+MOR, Arrow types, hunt cells: NULL keys,
   MATCHED-predicate miss, extra file, source-empty UPDATE, NMBS-only dup source;
   pins: dml-a-merge-not-matched-by-source/C-001, C-002, C-003, C-004, C-005, C-006, C-007),
@@ -907,7 +910,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
     `PARSE_SYNTAX_ERROR` parser class and SQLSTATE `42601`; every accepted trailing-semicolon,
     whitespace, and comment form returns the complete `SELECT 1` batch. WO-C10's shared
     unclosed-comment pins assert the complete parser text, exact near-miss rows, and the two
-    complete current IPI-51 tokenizer divergences.
+    complete current IPI-51 tokenizer divergences. WO-A10 (2026-09-23): the mapped multi-statement
+    refusal destructures `repark_common::Error::Parse` before comparing its complete text.
     pins: wo-c5/C-001; wo-c10/C-001, C-002, C-003, C-004
     WO-C11 (2026-09-23): `assert_single_value_answer` compares the complete schema and batch
     for the semicolon, comment-marker, backticked-alias, backslash-escape and `\r` near
@@ -964,6 +968,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (a child added after the write reads `NULL`) needs fork PR #292.
   `forkwrite_list_insert_reads_back` pins the list-column `INSERT` read-back, green since
   RP-29 (fork #295 F-LIST-INSERT-1).
+  **WO-A10 (2026-09-23):** the double-quoted-path refusal destructures
+  `repark_common::Error::Parse` before comparing the complete text.
   pins: ice-nested-evo-1/C-006, C-007, C-008, C-009, C-010, C-011, C-012
   **Round 3 (2026-09-18, run 22b):** `nested_add_comment_takes_a_double_quoted_string_spark_shaped`
   adds `s.d COMMENT "x.y"`, `s.e COMMENT "c"` and `s.f COMMENT "x.y" FIRST` and reads the
@@ -986,7 +992,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
   **WO-A4 (2026-09-23):** the malformed dotted `AFTER` route maps its complete parser payload through
-  `engine_err` without a DataFusion wrapper.
+  `engine_err` without a DataFusion wrapper. **WO-A10 (2026-09-23):** it destructures
+  `repark_common::Error::Parse` before comparing the complete text.
   pins: ice-column-reorder-1/C-001, C-002
 - [identifier_fields.rs](identifier_fields.rs) — **WO-IDENTIFIERS (2026-09-21):**
   end to end over `common::setup`:
@@ -1511,6 +1518,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   TABLE, unclosed quotes after comments, `;;x`, SHOW TABLE EXTENDEDX) compare full messages. The
   leading and inter-keyword unclosed `/*` probes pin the full rendered
   `UNCLOSED_BRACKETED_COMMENT` / `42601` text the router front door (WO-C10) answers.
+  **WO-A10 (2026-09-23):** the `;;x` and unclosed-comment refusals go through
+  `assert_parse_refusal` (the SQL / ParserError variants and the bare message).
   pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
