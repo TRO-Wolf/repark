@@ -187,3 +187,31 @@ async fn direct_memory_registration_keeps_uuid_metadata_names() {
     create_table_and_insert_twice(&session).await;
     assert_uuid_metadata_names(warehouse.path());
 }
+
+#[test]
+fn rename_error_mapping_keeps_the_engine_error_class() {
+    use iceberg::ErrorKind;
+    use repark_common::Error;
+    use repark_iceberg::write::unsupported_message_error;
+
+    let refusal = crate::engine_err(unsupported_message_error(iceberg::Error::new(
+        ErrorKind::FeatureUnsupported,
+        "Cannot rename Hadoop tables",
+    )));
+    assert!(
+        matches!(&refusal, Error::NotImplemented(message) if message == "Cannot rename Hadoop tables"),
+        "{refusal:?}"
+    );
+    let missing = iceberg::Error::new(ErrorKind::TableNotFound, "Table does not exist: db.t");
+    let rendered = missing.to_string();
+    let missing = crate::engine_err(unsupported_message_error(missing));
+    assert!(
+        matches!(&missing, Error::Analysis(message) if *message == rendered),
+        "{missing:?}"
+    );
+    let unexpected = crate::engine_err(unsupported_message_error(iceberg::Error::new(
+        ErrorKind::Unexpected,
+        "metadata write failed",
+    )));
+    assert!(matches!(unexpected, Error::Iceberg(_)), "{unexpected:?}");
+}
