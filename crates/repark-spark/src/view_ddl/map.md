@@ -10,8 +10,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
 
 ## Contents
 
-- `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe` / `show_create`.
-- `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe` /
+- `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe` / `show_create` /
   `temp_parse` / `temp_ddl` / `temp_view`.
 - `parse.rs` — grammar only: `CREATE [OR REPLACE] [IF NOT EXISTS] VIEW` with
   alias/COMMENT/TBLPROPERTIES forms and verbatim body capture,
