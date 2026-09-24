@@ -250,6 +250,27 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
   false, so an H-3 number can never come from a debug build.
   pins: perf-dynflatten-1-measure/C-002
+  **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list at
+  the exact 155-line baseline; the stale half-comment above the `error_map` re-export
+  (its note is already carried by `session.rs`'s own line) was the line shed for it.
+- `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
+  R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
+  `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the
+  engine door. A path ending `.metadata.json` loads that exact file through the fork's
+  `StaticTable::from_metadata_file`; any other path is a table location that strips one
+  trailing `/`, prefers `<loc>/metadata/version-hint.text` (`v<N>.metadata.json`), else
+  lists the direct children of `<loc>/metadata/` for the highest leading-integer metadata
+  file in either the `NNNNN-<uuid>` or `v<N>` form, with `v<N>` and hint versions bounded
+  to the Java `int` range. Lower-case `file://<authority>` and `file:<relative>` arguments
+  refuse Spark's texts before any I/O, and `file:/abs`-style spellings read as
+  `file:///abs`. A location with no resolvable metadata raises `Error::Analysis` naming the
+  supplied path. The `FileIO` comes from
+  `repark_iceberg::catalog::file_io_for_location` on the normalised spelling
+  (scheme-selected local fs / s3 / s3a),
+  the read-only static table feeds `IcebergStaticTableProvider::try_new_from_table`, and
+  the provider goes straight to `SessionContext::read_table` — no registration is left
+  behind and no time-travel or incremental option reaches the path route.
+  pins: dfload-1/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010
 - `plan_canonical.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-15, round 4):** the
   expression-canonicalization half of the hash, split out when the expression
   family outgrew `plan_introspect.rs`. `RelTable` numbers scans and subquery

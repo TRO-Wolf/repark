@@ -8,6 +8,7 @@ from typing import Any
 
 from repark.spark.session import (
     _funcs as _session_funcs,
+    reader_iceberg_path as _reader_iceberg_path,
     reader_incremental as _reader_incremental,
     reader_orc as _reader_orc,
     reader_support as _reader_support,
@@ -408,10 +409,10 @@ class DataFrameReader:
         * ``format("parquet").load(path)`` ≡ ``.parquet(path)``
         * ``format("csv"|"json").load(path)`` ≡ ``.csv`` / ``.json``
         * ``format("parquet").option("path", p).load()`` uses the option when ``path`` is omitted
-        * ``format("iceberg").load(table_identifier)`` reads the **catalog** Iceberg table
-          (PySpark Iceberg convention: ``load`` takes the table name, not a filesystem path).
-          Bare names resolve under current catalog/NS with **no** temp-view prefer
-          (unlike :meth:`table` / ``spark.table``)
+        * ``format("iceberg").load(arg)``: an ``arg`` containing ``/`` is a path read as a static
+          read-only table (an absolute table location, or a ``*.metadata.json`` pinning that file);
+          any other ``arg`` is a catalog table identifier. Bare names resolve under current
+          catalog/NS with **no** temp-view prefer (unlike :meth:`table` / ``spark.table``)
         * missing/unknown format → :class:`~repark.errors.AnalysisException`
         * empty format is **not** Spark's default-parquet: call ``format(...)`` first
           (disclosed divergence — Spark uses ``spark.sql.sources.default``)
@@ -454,6 +455,8 @@ class DataFrameReader:
         if fmt == "iceberg":
             if effective_path is None:
                 raise AnalysisException("Iceberg load requires a table identifier argument")
+            if "/" in str(effective_path):
+                return _reader_iceberg_path.load_iceberg_path(self, str(effective_path))
             # spark.table() / read.table() still prefer temp views; format("iceberg").load
             # must not silent-shadow a catalog table with a same-name temp view.
             # Time-travel options + residual denylist already applied above.

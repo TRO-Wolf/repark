@@ -7953,3 +7953,33 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   and the `like`-escape cells go `xfail(strict)` on their owning fences (run 18c
   parser, LIT-DECIMAL-1); the BOOLEAN refusals pin green on both doors.
   pins: fnp-math-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+- [test_iceberg_load_path.py](test_iceberg_load_path.py) —
+  **U10 / R-DF-LOAD-PATH + R-DF-LOAD-METADATA-JSON (2026-09-23):**
+  `format("iceberg").load(<path>)` reads the table at a filesystem path like Spark's
+  `IcebergSource`. The fixture (create, insert three, delete one) pins `load(<location>)`
+  and `load(<location>/)` answering the current `[[2,"b","y"],[3,"c","x"]]` with BIGINT /
+  STRING Arrow types, `load(<latest metadata.json>)` the same, `load(<an older
+  metadata.json>)` the pre-delete three rows, `load(<location>)` with each of the ten
+  time-travel and incremental keys (written literally, plus `SNAPSHOT-ID` and `Snapshot-Id`) the pinned path
+  refusal (`format('iceberg').load(<path>) reads one pinned metadata snapshot and does not
+  support time-travel or incremental options; got <key>`), two keys named sorted
+  (`got start-timestamp, tag`), the refusal winning over a missing location, the semantic
+  gate refusing `compression` / `mergeSchema` first, `foo` / `split-size` ignored, and
+  `load("/no/such/dir")`, an empty `metadata/` dir and a hint naming a missing file an
+  `AnalysisException` naming the path. Every refusal pin compares the complete exception
+  string (`str(raised.value) ==`). The near-miss arm holds
+  the catalog route on `ns.events`, `mem.ns.events`, `ns.events.snapshots` (the measured
+  `table not found` refusal, also for `history` and `files`), `` `ns`.`events` ``, and
+  every time-travel option on a catalog identifier (`snapshot-id`, `as-of-timestamp`, `tag`
+  with Spark's `IllegalArgumentException` texts, `versionAsOf` / `timestampAsOf` with the
+  catalog route's own refusals, `branch=main` reading). `test_load_path_registers_no_catalog_table`
+  compares `_registration_inventory` (every listed catalog's namespaces and tables, the
+  temp views, and the restored `currentCatalog()`) before and after a path load, with the
+  non-default `mem` made current first. The `file:` families pin `file:///<abs>` and
+  `file:///<abs>/metadata/<latest>` reading, the `file://<authority>` Wrong FS refusal,
+  `file:/<abs>`, `FILE:/<abs>`, `fIlE:/<abs>`, `file:/<abs>/metadata/<latest>` and `file:////<abs>` reading,
+  and the `file:<relative>` `URISyntaxException` refusal with one and with two trailing
+  slashes. A `v2147483648.metadata.json` copy of the create snapshot does not win the
+  listing. Both scoreboard cells replayed against the lane build answer Spark's recorded
+  rows exactly.
+  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
