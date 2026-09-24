@@ -362,3 +362,18 @@ def test_comment_set_through_alter_view_stays_hidden(spark: ReparkSession, tmp_p
     assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.vc ('comment')")) == [
         ["comment", "View sc.ns.vc does not have property: comment"]
     ]
+
+
+def test_commented_view_describe_matches_spark(spark: ReparkSession) -> None:
+    """p2 C.v2.describe — the commented view's DESCRIBE rows, with Arrow schema."""
+    spark.sql(COMMENTED_VIEW_DDL)
+    table = spark.sql("DESCRIBE sc.ns.vc").to_arrow()
+    assert [(field.name, field.type, field.nullable) for field in table.schema] == [
+        ("col_name", pa.string(), False),
+        ("data_type", pa.string(), False),
+        ("comment", pa.string(), True),
+    ]
+    assert [list(row.values()) for row in table.to_pylist()] == [
+        ["i", "bigint", "the id"],
+        ["d", "string", ""],
+    ]
