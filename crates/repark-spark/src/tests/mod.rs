@@ -68,6 +68,7 @@ mod merge_nmbs;
 mod metadata_columns;
 mod metadata_columns_deleted;
 mod metadata_columns_reserved;
+mod metadata_columns_scope;
 mod metadata_tables;
 mod metadata_tables_asof;
 mod namespace_ddl;

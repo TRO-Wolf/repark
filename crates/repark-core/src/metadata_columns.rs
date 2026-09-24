@@ -946,4 +946,46 @@ mod tests {
             assert_eq!(normalized(&rewritten), expected, "{sql}");
         }
     }
+
+    #[tokio::test]
+    async fn a_wildcard_resolves_only_against_its_own_select() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let exists = "EXISTS (SELECT 1 FROM datafusion.public.t WHERE _spec_id = 0)";
+        let rewritten = "EXISTS (SELECT 1 FROM __repark_mc_N t WHERE _spec_id = 0)";
+        for (sql, expected) in [
+            ("SELECT * FROM other t WHERE", "SELECT * FROM other t WHERE"),
+            (
+                "SELECT t.* FROM other t WHERE",
+                "SELECT t.* FROM other t WHERE",
+            ),
+            (
+                "SELECT t.* FROM (SELECT id FROM other) t WHERE",
+                "SELECT t.* FROM (SELECT id FROM other) t WHERE",
+            ),
+            (
+                "WITH t AS (SELECT id FROM other) SELECT t.* FROM t WHERE",
+                "WITH t AS (SELECT id FROM other) SELECT t.* FROM t WHERE",
+            ),
+            (
+                "SELECT * FROM other t JOIN other u ON t.id = u.id WHERE",
+                "SELECT * FROM other t JOIN other u ON t.id = u.id WHERE",
+            ),
+        ] {
+            let out = prepared(&ctx, &catalogs, &format!("{sql} {exists}"))
+                .await
+                .expect("the subquery routes the statement");
+            assert_eq!(normalized(&out), format!("{expected} {rewritten}"), "{sql}");
+        }
+        let out = prepared(
+            &ctx,
+            &catalogs,
+            "SELECT * FROM datafusion.public.t t WHERE t._spec_id = 0 AND EXISTS (SELECT * FROM other t)",
+        )
+        .await
+        .expect("a metadata column routes the statement");
+        assert_eq!(
+            normalized(&out),
+            "SELECT t.id FROM __repark_mc_N t WHERE t._spec_id = 0 AND EXISTS (SELECT * FROM other t)"
+        );
+    }
 }
