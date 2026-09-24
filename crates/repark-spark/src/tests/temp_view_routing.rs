@@ -841,3 +841,99 @@ async fn temp_view_statements_refuse_statement_write_options() {
     assert!(stub.dropped().is_empty());
     assert!(stub.registered().is_empty());
 }
+
+fn assert_parse_syntax_error(error: &DataFusionError, sql: &str) {
+    let DataFusionError::SQL(inner, _) = error else {
+        panic!("{sql}: expected a SQL parse error, got {error:?}");
+    };
+    let ParserError::ParserError(message) = inner.as_ref() else {
+        panic!("{sql}: expected ParserError, got {inner:?}");
+    };
+    assert!(
+        message.starts_with("[PARSE_SYNTAX_ERROR] "),
+        "{sql}: {message}"
+    );
+}
+
+#[tokio::test]
+async fn temp_view_statements_with_a_trailing_statement_refuse_as_the_catalog_does() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT CAST(1 AS INT) AS id",
+    )
+    .await
+    .expect("catalog table")
+    .collect()
+    .await
+    .expect("collect create table");
+    let stub = StubTempViews::with_existing(&["src"]);
+    for sql in [
+        "DESCRIBE ice.sales.t; SELECT 1",
+        "DESCRIBE src; SELECT 1",
+        "DESC TABLE src; SELECT 1",
+        "DESCRIBE EXTENDED src; SELECT 1",
+        "SHOW VIEWS; SELECT 1",
+        "SHOW VIEWS IN ice.sales; SELECT 1",
+    ] {
+        let error = run_with_session(&ctx, &catalogs, sql, &stub)
+            .await
+            .expect_err("a trailing statement must not be dropped");
+        assert_parse_syntax_error(&error, sql);
+    }
+    for sql in ["DROP VIEW src; SELECT 1", "DROP TABLE src; SELECT 1"] {
+        let temp = run_with_session(&ctx, &catalogs, sql, &stub)
+            .await
+            .expect_err("a trailing statement must not be dropped");
+        let catalog_sql = sql.replace("src", "ice.sales.t");
+        let catalog = run_with_session(&ctx, &catalogs, &catalog_sql, &stub)
+            .await
+            .expect_err("the catalog drop refuses the same statement");
+        assert_eq!(
+            std::mem::discriminant(&temp),
+            std::mem::discriminant(&catalog),
+            "{sql}: {temp:?} vs {catalog:?}"
+        );
+    }
+    assert!(stub.dropped().is_empty());
+    for sql in [
+        "DESCRIBE src",
+        "DESCRIBE src;",
+        "DESCRIBE src ;",
+        "DESCRIBE src;;",
+        "DESC TABLE src;",
+        "DESCRIBE EXTENDED src;",
+    ] {
+        let frame = run_with_session(&ctx, &catalogs, sql, &stub)
+            .await
+            .unwrap_or_else(|error| panic!("{sql} answers: {error}"));
+        assert_eq!(
+            string_rows(frame).await,
+            vec![
+                vec![Some("id".to_string()), Some("int".to_string()), None],
+                vec![Some("name".to_string()), Some("string".to_string()), None],
+            ],
+            "{sql}"
+        );
+    }
+    for sql in ["SHOW VIEWS;", "SHOW VIEWS IN ice.sales;"] {
+        let frame = run_with_session(&ctx, &catalogs, sql, &stub)
+            .await
+            .unwrap_or_else(|error| panic!("{sql} answers: {error}"));
+        assert_eq!(
+            string_rows(frame).await,
+            vec![vec![
+                Some(String::new()),
+                Some("src".into()),
+                Some("true".into())
+            ]],
+            "{sql}"
+        );
+    }
+    run_with_session(&ctx, &catalogs, "DROP VIEW src;", &stub)
+        .await
+        .expect("a trailing semicolon still drops the temp view");
+    assert_eq!(stub.dropped(), vec!["\"src\"".to_string()]);
+}

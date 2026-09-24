@@ -363,3 +363,28 @@ async fn bare_show_views_propagates_a_namespace_probe_failure() {
         "Unexpected => injected namespace_exists failure"
     );
 }
+
+#[tokio::test]
+async fn temp_view_create_with_a_trailing_statement_registers_nothing() {
+    let (_warehouse, ctx, catalogs, session) = real_session().await;
+    let error = real_refusal(
+        &ctx,
+        &catalogs,
+        &session,
+        "CREATE TEMPORARY VIEW vm AS SELECT 1 AS id; SELECT 2",
+    )
+    .await;
+    assert!(matches!(error, DataFusionError::Plan(_)), "{error:?}");
+    real_refusal(&ctx, &catalogs, &session, "SELECT * FROM vm").await;
+    real_ok(
+        &ctx,
+        &catalogs,
+        &session,
+        "CREATE TEMPORARY VIEW vs AS SELECT 1 AS id;",
+    )
+    .await;
+    let batches = real_run(&ctx, &catalogs, &session, "SELECT * FROM vs")
+        .await
+        .expect("a trailing semicolon still registers the view");
+    assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
+}

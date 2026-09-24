@@ -9,6 +9,8 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use repark_core::{CatalogRegistry, TempViewSession};
 
 use crate::namespace_ddl::consume_word;
+use crate::normalize::refuse_multi_statement_sql;
+use crate::normalize::statement_guard::tokens_have_nontrailing_content_after_semicolon;
 use crate::spark_type_names::spark_ddl_type_name;
 use crate::view_ddl::describe::describe_rows_batch;
 use crate::view_ddl::execute::{
@@ -44,6 +46,9 @@ pub(crate) async fn route_temp_view_statement(
         return None;
     }
     let parsed = try_parse_show_views(sql)?;
+    if let Err(error) = refuse_multi_statement_sql(sql) {
+        return Some(Err(error));
+    }
     Some(match (parsed, temp_views.list_temp_view_names()) {
         (Ok(statement), Ok(names)) => {
             execute_show_views_with(ctx, catalogs, statement, names).await
@@ -155,6 +160,9 @@ async fn describe_temp_view(
 
 fn parse_describe_target(sql: &str) -> Option<ObjectName> {
     let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
+    if tokens_have_nontrailing_content_after_semicolon(&tokens) {
+        return None;
+    }
     let mut parser = Parser::new(&DatabricksDialect {}).with_tokens(tokens);
     if !parser.parse_keyword(Keyword::DESCRIBE) && !parser.parse_keyword(Keyword::DESC) {
         return None;

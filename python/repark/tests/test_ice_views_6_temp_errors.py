@@ -20,7 +20,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession, Row
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException, ParseException, UnsupportedOperationException
 
 UNSTRUCTURED_CONDITION: None = None
 UNSTRUCTURED_SQLSTATE: None = None
@@ -437,3 +437,75 @@ def test_a_ninety_nine_view_dataframe_chain_reads(spark: ReparkSession) -> None:
     for level in range(1, 100):
         spark.table(f"f{level - 1}").createOrReplaceTempView(f"f{level}")
     assert spark.table("f99").collect() == [Row(id=1)]
+
+
+def _trailing_statement_refusal(spark: ReparkSession, statement: str) -> ParseException:
+    """Run a statement followed by a second one; it must refuse as a parse error."""
+    with pytest.raises(ParseException) as caught:
+        spark.sql(statement).collect()
+    assert type(caught.value) is ParseException
+    assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    return caught.value
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "DESCRIBE sc.ns.t; SELECT 1",
+        "DESCRIBE tv; SELECT 1",
+        "DESC TABLE tv; SELECT 1",
+        "DESCRIBE EXTENDED tv; SELECT 1",
+        "SHOW VIEWS; SELECT 1",
+        "SHOW VIEWS IN sc.ns; SELECT 1",
+    ],
+)
+def test_temp_view_statements_with_a_trailing_statement_refuse(
+    spark: ReparkSession, statement: str
+) -> None:
+    """A second statement after DESCRIBE or SHOW VIEWS refuses as it does for a catalog table."""
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT id FROM sc.ns.t")
+    _trailing_statement_refusal(spark, statement)
+
+
+@pytest.mark.parametrize(
+    "statement",
+    ["DESCRIBE tv", "DESCRIBE tv;", "DESCRIBE tv ;", "DESC TABLE tv;", "DESCRIBE EXTENDED tv;"],
+)
+def test_describe_temp_view_with_trailing_semicolons_answers(
+    spark: ReparkSession, statement: str
+) -> None:
+    """Trailing semicolons alone keep the temp-view DESCRIBE rows."""
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT id FROM sc.ns.t")
+    assert _rows(spark.sql(statement)) == [["id", "bigint", None]]
+
+
+def test_show_views_with_a_trailing_semicolon_answers(spark: ReparkSession) -> None:
+    """SHOW VIEWS; keeps its catalog and temp rows."""
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT id FROM sc.ns.t")
+    assert _rows(spark.sql("SHOW VIEWS;")) == [["", "tv", True]]
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns;")) == [["", "tv", True]]
+
+
+@pytest.mark.parametrize("statement", ["DROP VIEW tv; SELECT 1", "DROP TABLE tv; SELECT 1"])
+def test_drop_with_a_trailing_statement_keeps_the_temp_view(
+    spark: ReparkSession, statement: str
+) -> None:
+    """A trailing statement after DROP refuses as the catalog DROP does and drops nothing."""
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT id FROM sc.ns.t")
+    temp = _analysis_refusal(spark, statement)
+    catalog = _analysis_refusal(spark, statement.replace("tv", "sc.ns.t"))
+    assert type(temp) is type(catalog)
+    assert temp.getCondition() == catalog.getCondition()
+    assert _rows(spark.sql("SHOW VIEWS")) == [["", "tv", True]]
+    spark.sql("DROP VIEW tv;")
+    assert _rows(spark.sql("SHOW VIEWS")) == []
+
+
+def test_create_temp_view_with_a_trailing_statement_registers_nothing(
+    spark: ReparkSession,
+) -> None:
+    """A two-statement body refuses at CREATE and leaves no view; a trailing semicolon registers."""
+    _analysis_refusal(spark, "CREATE TEMPORARY VIEW vm AS SELECT 1 AS id; SELECT 2")
+    assert _rows(spark.sql("SHOW VIEWS")) == []
+    spark.sql("CREATE TEMPORARY VIEW vs AS SELECT 1 AS id;")
+    assert _rows(spark.sql("SELECT * FROM vs")) == [[1]]
