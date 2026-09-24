@@ -230,11 +230,11 @@ fn resolve_nested_path<'a>(
 pub fn resolve_column_path(
     schema: &Schema,
     path: &[String],
-) -> std::result::Result<String, NestedTypeRefusal> {
+) -> std::result::Result<Vec<String>, NestedTypeRefusal> {
     let resolved = resolve_nested_path(schema, path)?;
     match resolved.key_of {
         Some(map) => Err(map_key_refusal(map)),
-        None => Ok(resolved.names.join(".")),
+        None => Ok(resolved.names),
     }
 }
 

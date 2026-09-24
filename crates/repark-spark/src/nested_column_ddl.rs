@@ -72,7 +72,7 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
     let table_parts = name_parts(&parser.parse_object_name(false).ok()?);
     let mut names = NameParser {
         parser,
-        double_quoted: None,
+        quoted_near: None,
     };
     let operation = if names.parser.parse_keyword(Keyword::ADD) {
         if !(names.parser.parse_keyword(Keyword::COLUMN)
@@ -97,18 +97,18 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
         .parser
         .parse_keywords(&[Keyword::ALTER, Keyword::COLUMN])
     {
-        parse_alter_column(&mut names, true)
-    } else if names.parser.parse_keyword(Keyword::CHANGE)
-        || names.parser.parse_keyword(Keyword::ALTER)
-    {
-        let _ = names.parser.parse_keyword(Keyword::COLUMN);
-        parse_alter_column(&mut names, false)
+        parse_alter_column(&mut names, true, false)
+    } else if names.parser.parse_keyword(Keyword::CHANGE) {
+        let hive_change = names.parser.parse_keyword(Keyword::COLUMN);
+        parse_alter_column(&mut names, false, hive_change)
+    } else if names.parser.parse_keyword(Keyword::ALTER) {
+        parse_alter_column(&mut names, false, false)
     } else {
         return None;
     };
     match operation {
         Ok(None) => None,
-        Ok(Some(operation)) => Some(match names.double_quoted {
+        Ok(Some(operation)) => Some(match names.quoted_near {
             Some(quoted) => Err(verbatim_parser_error(syntax_error_near(&quoted))),
             None => match target_type_parse_refusal(&operation) {
                 Some(message) => Err(verbatim_parser_error(message)),
@@ -131,14 +131,22 @@ fn verbatim_parser_error(message: String) -> DataFusionError {
 
 struct NameParser<'a> {
     parser: Parser<'a>,
-    double_quoted: Option<Ident>,
+    quoted_near: Option<String>,
 }
 
 impl NameParser<'_> {
     fn name(&mut self) -> ParseResult<String> {
+        self.part(false)
+    }
+
+    fn part(&mut self, after_period: bool) -> ParseResult<String> {
         let ident = self.parser.parse_identifier()?;
-        if ident.quote_style == Some('"') && self.double_quoted.is_none() {
-            self.double_quoted = Some(ident.clone());
+        if self.quoted_near.is_none() {
+            self.quoted_near = match ident.quote_style {
+                Some('\'') if after_period => Some(Token::Period.to_string()),
+                Some('"' | '\'') => Some(ident.to_string()),
+                _ => None,
+            };
         }
         Ok(ident.value)
     }
@@ -146,7 +154,7 @@ impl NameParser<'_> {
     fn column_path(&mut self) -> ParseResult<Vec<String>> {
         let mut path = vec![self.name()?];
         while self.parser.consume_token(&Token::Period) {
-            path.push(self.name()?);
+            path.push(self.part(true)?);
         }
         Ok(path)
     }
@@ -276,6 +284,7 @@ fn parse_drop_columns(names: &mut NameParser<'_>) -> ParseResult<Option<NestedCo
 fn parse_alter_column(
     names: &mut NameParser<'_>,
     type_allowed: bool,
+    hive_change: bool,
 ) -> ParseResult<Option<NestedColumnOperation>> {
     let path = match names.column_path() {
         Ok(path) => path,
@@ -285,16 +294,37 @@ fn parse_alter_column(
     if names.parser.parse_keyword(Keyword::COMMENT) {
         return parse_comment_specs(names, path).map(Some);
     }
-    if !type_allowed || !names.parser.parse_keyword(Keyword::TYPE) {
-        return Ok(None);
+    if type_allowed && names.parser.parse_keyword(Keyword::TYPE) {
+        if path.len() < 2 {
+            return top_level_type_tail(&mut names.parser);
+        }
+        let data_type = names.parser.parse_data_type()?;
+        let data_type = parse_unparameterized_type_parameters(&mut names.parser, data_type)?;
+        expect_end(&mut names.parser)?;
+        return Ok(Some(NestedColumnOperation::AlterType { path, data_type }));
     }
-    if path.len() < 2 {
-        return top_level_type_tail(&mut names.parser);
+    if !hive_change && column_action_then_comment(&mut names.parser) {
+        return Err(syntax_error_at(&names.parser));
     }
-    let data_type = names.parser.parse_data_type()?;
-    let data_type = parse_unparameterized_type_parameters(&mut names.parser, data_type)?;
-    expect_end(&mut names.parser)?;
-    Ok(Some(NestedColumnOperation::AlterType { path, data_type }))
+    Ok(None)
+}
+
+fn column_action_then_comment(parser: &mut Parser<'_>) -> bool {
+    let action = if parser.parse_keywords(&[Keyword::SET, Keyword::DEFAULT]) {
+        parser.parse_expr().is_ok()
+    } else if parser.parse_keyword(Keyword::AFTER) {
+        parser.parse_identifier().is_ok()
+    } else {
+        parser.parse_keywords(&[Keyword::SET, Keyword::NOT, Keyword::NULL])
+            || parser.parse_keywords(&[Keyword::DROP, Keyword::NOT, Keyword::NULL])
+            || parser.parse_keywords(&[Keyword::DROP, Keyword::DEFAULT])
+            || parser.parse_keyword(Keyword::FIRST)
+    };
+    if action && parser.parse_keyword(Keyword::COMMENT) {
+        parser.prev_token();
+        return true;
+    }
+    false
 }
 
 fn parse_comment_specs(
@@ -303,31 +333,70 @@ fn parse_comment_specs(
 ) -> ParseResult<NestedColumnOperation> {
     let mut specs = vec![(first, comment_literal(&mut names.parser)?)];
     while names.parser.consume_token(&Token::Comma) {
-        let path = names.column_path()?;
+        let path = list_column_path(names)?;
         if !names.parser.parse_keyword(Keyword::COMMENT) {
-            return Ok(NestedColumnOperation::MixedCommentList(path));
+            return spec_without_comment(&names.parser, path);
         }
         specs.push((path, comment_literal(&mut names.parser)?));
     }
     let _ = names.parser.consume_token(&Token::SemiColon);
     match names.parser.peek_token().token {
         Token::EOF => Ok(NestedColumnOperation::Comment(specs)),
-        extra => Err(ParserError::ParserError(format!(
-            "[PARSE_SYNTAX_ERROR] Syntax error at or near '{extra}': extra input '{extra}'. \
-             SQLSTATE: 42601"
-        ))),
+        extra => Err(extra_input(&extra)),
     }
+}
+
+fn list_column_path(names: &mut NameParser<'_>) -> ParseResult<Vec<String>> {
+    names.column_path().map_err(|_| {
+        names.parser.prev_token();
+        syntax_error_or_end(&names.parser)
+    })
+}
+
+fn spec_without_comment(
+    parser: &Parser<'_>,
+    path: Vec<String>,
+) -> ParseResult<NestedColumnOperation> {
+    match parser.peek_token().token {
+        Token::Word(word)
+            if matches!(
+                word.keyword,
+                Keyword::TYPE | Keyword::SET | Keyword::DROP | Keyword::FIRST | Keyword::AFTER
+            ) =>
+        {
+            Ok(NestedColumnOperation::MixedCommentList(path))
+        }
+        Token::EOF | Token::Comma | Token::SemiColon => Err(ParserError::ParserError(
+            "Operation not allowed: ALTER TABLE table ALTER COLUMN requires a TYPE, a SET/DROP, \
+             a COMMENT, or a FIRST/AFTER."
+                .into(),
+        )),
+        extra => Err(extra_input(&extra)),
+    }
+}
+
+fn extra_input(extra: &Token) -> ParserError {
+    ParserError::ParserError(format!(
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near '{extra}': extra input '{extra}'. \
+         SQLSTATE: 42601"
+    ))
+}
+
+fn syntax_error_or_end(parser: &Parser<'_>) -> ParserError {
+    if parser.peek_token().token == Token::EOF {
+        return ParserError::ParserError(
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601".into(),
+        );
+    }
+    syntax_error_at(parser)
 }
 
 fn comment_literal(parser: &mut Parser<'_>) -> ParseResult<String> {
     match parser.next_token().token {
         Token::SingleQuotedString(doc) | Token::DoubleQuotedString(doc) => Ok(doc),
-        Token::EOF => Err(ParserError::ParserError(
-            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601".into(),
-        )),
         _ => {
             parser.prev_token();
-            Err(syntax_error_at(parser))
+            Err(syntax_error_or_end(parser))
         }
     }
 }
@@ -454,19 +523,51 @@ fn path_change_for_add(
 }
 
 fn column_doc_changes(
-    schema: &iceberg::spec::Schema,
+    table: &iceberg::table::Table,
+    catalog_name: &str,
     specs: &[(Vec<String>, String)],
 ) -> Result<Vec<SchemaChange>> {
-    specs
+    let schema = table.metadata().current_schema();
+    let resolved = specs
         .iter()
-        .map(|(path, doc)| {
-            resolve_column_path(schema, path).map(|name| SchemaChange::UpdateColumnDoc {
-                name,
-                doc: Some(doc.clone()),
-            })
-        })
+        .map(|(path, _)| resolve_column_path(schema, path))
         .collect::<std::result::Result<Vec<_>, _>>()
-        .map_err(nested_type_error)
+        .map_err(nested_type_error)?;
+    if let Some(column) = repeated_column(&resolved) {
+        return Err(DataFusionError::Plan(format!(
+            "[NOT_SUPPORTED_CHANGE_SAME_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported \
+             for changing {}'s column {} including its nested fields multiple times in \
+             the same command. SQLSTATE: 0A000",
+            full_table_name(catalog_name, table.identifier()),
+            crate::catalog_ops::quoted_table_display(column)
+        )));
+    }
+    Ok(resolved
+        .iter()
+        .zip(specs)
+        .map(|(names, (_, doc))| SchemaChange::UpdateColumnDoc {
+            name: names.join("."),
+            doc: Some(doc.clone()),
+        })
+        .collect())
+}
+
+fn full_table_name(catalog_name: &str, ident: &iceberg::TableIdent) -> String {
+    let mut parts = vec![catalog_name.to_string()];
+    parts.extend(ident.namespace().iter().cloned());
+    parts.push(ident.name().to_string());
+    crate::catalog_ops::quoted_table_display(&parts)
+}
+
+fn repeated_column(paths: &[Vec<String>]) -> Option<&[String]> {
+    paths.iter().enumerate().find_map(|(index, path)| {
+        paths.iter().skip(index + 1).find_map(|other| {
+            path.iter()
+                .zip(other)
+                .all(|(left, right)| left == right)
+                .then_some(std::cmp::min_by_key(path, other, |parts| parts.len()).as_slice())
+        })
+    })
 }
 
 fn mixed_comment_list(path: &[String]) -> DataFusionError {
@@ -526,7 +627,7 @@ pub(crate) async fn execute_nested_column_ddl(
                 .map_err(iceberg_err)?;
         }
         NestedColumnOperation::Comment(specs) => {
-            let changes = column_doc_changes(table.metadata().current_schema(), specs)?;
+            let changes = column_doc_changes(&table, &catalog_name, specs)?;
             apply_schema_changes_on_table(handle.as_ref(), &table, &changes)
                 .await
                 .map_err(iceberg_err)?;

@@ -738,6 +738,10 @@ repark-core's error map.
   step refuses with the shared `map_key_refusal` (`Unsupported table change: Cannot update map
   keys: map<…>`), which `resolve_nested_type_change` now also uses.
   pins: ice-nested-evo-1/C-038
+  **Round 2 (2026-09-24):** `resolve_column_path` returns the schema-cased parts, not a dotted
+  name. The Spark door compares them to refuse a repeated column and joins them for
+  `UpdateColumnDoc`.
+  pins: ice-nested-evo-1/C-040
 - `nested_type_sql.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the one token
   rewrite both doors run on a nested column type: a struct child's `NOT NULL` becomes the
   struct-field option `OPTIONS(repark_not_null=TRUE)` (the only struct-field suffix

@@ -1083,6 +1083,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   not-implemented text, with no doc written. The near misses (top-level TYPE, the hive
   `CHANGE COLUMN a a <type> COMMENT`, DROP NOT NULL, FIRST) keep their routes.
   pins: ice-nested-evo-1/C-037, C-038, C-039
+  **Round 2 (2026-09-24):** a repeated column or a column with its field (top level, case
+  variant, backquoted, struct, `element`, `value`, three specs, `CHANGE`, bare `ALTER`) refuses
+  `NOT_SUPPORTED_CHANGE_SAME_COLUMN` with one schema kept. An unresolved path in the same list
+  wins, and a four-spec list commits in one schema. The malformed table adds the action-then-
+  `COMMENT` forms, a numeric and single-quoted list path, `extra input`, `Operation not
+  allowed`, the trailing comma and every mixed action.
+  `single_quoted_column_names_are_parse_errors_like_spark` covers ADD, ADD COLUMNS, DROP,
+  RENAME and TYPE.
+  pins: ice-nested-evo-1/C-040, C-041, C-042, C-043
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

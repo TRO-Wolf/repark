@@ -791,6 +791,11 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   condition and SQLSTATE for each measured refusal and that the schema is unchanged; the map
   key, missing table and unchanged top-level TYPE / hive CHANGE routes are pinned beside it.
   pins: ice-nested-evo-1/C-037, C-038, C-039
+  **Round 2 (2026-09-24):** the refusal table adds the repeated column (exact, case variant,
+  struct with its field), the action-then-`COMMENT` forms, a single-quoted name, list `extra
+  input`, the list `Operation not allowed` text and two mixed lists. Each row also asserts that no
+  metadata file was written. A two-spec list writes exactly one new metadata file.
+  pins: ice-nested-evo-1/C-040, C-041, C-042, C-043
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET

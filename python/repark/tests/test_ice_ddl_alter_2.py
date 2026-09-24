@@ -7,10 +7,21 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, ParseException, PySparkException
+from repark.errors import (
+    AnalysisException,
+    ParseException,
+    PySparkException,
+    UnsupportedOperationException,
+)
 
 _COMMENT_TABLE = (
     "CREATE TABLE sc.ns.ac (id BIGINT, data STRING, cat STRING, st STRUCT<x: INT>) USING iceberg"
+)
+
+_SAME_COLUMN = (
+    "Error during planning: [NOT_SUPPORTED_CHANGE_SAME_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN "
+    "is not supported for changing `sc`.`ns`.`ac`'s column {column} including its nested fields "
+    "multiple times in the same command. SQLSTATE: 0A000"
 )
 
 
@@ -38,6 +49,10 @@ def _current_schema(metadata: dict[str, Any]) -> dict[str, Any]:
         if schema["schema-id"] == schema_id:
             return schema
     raise AssertionError(f"no current schema {schema_id}")
+
+
+def _metadata_files(warehouse: Path, table: str) -> int:
+    return len(list(warehouse.rglob(f"ns/{table}/metadata/*.metadata.json")))
 
 
 def _docs(warehouse: Path) -> dict[str, str | None]:
@@ -79,7 +94,9 @@ def test_alter_column_comment_takes_the_dbt_statement_shapes(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
     spark.sql(_COMMENT_TABLE)
+    files = _metadata_files(tmp_path, "ac")
     spark.sql("ALTER TABLE sc.ns.ac ALTER COLUMN data COMMENT 'a', st.x COMMENT 'b'")
+    assert _metadata_files(tmp_path, "ac") == files + 1
     indent = "\n              "
     spark.sql(f"alter table sc.ns.ac alter column{indent}data{indent}comment 'it\\'s dbt';")
     spark.sql(f"alter table sc.ns.ac change column{indent}cat{indent}comment 'q';")
@@ -168,6 +185,108 @@ def test_alter_column_comment_takes_the_dbt_statement_shapes(
             id="type-then-comment",
         ),
         pytest.param(
+            "data SET NOT NULL COMMENT 'x'",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'COMMENT'. SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="set-not-null-then-comment",
+        ),
+        pytest.param(
+            "data DROP NOT NULL COMMENT 'x'",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'COMMENT'. SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="drop-not-null-then-comment",
+        ),
+        pytest.param(
+            "data SET DEFAULT 'a' COMMENT 'x'",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'COMMENT'. SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="set-default-then-comment",
+        ),
+        pytest.param(
+            "data FIRST COMMENT 'x'",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'COMMENT'. SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="first-then-comment",
+        ),
+        pytest.param(
+            "'data' COMMENT 'x'",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near ''data''. SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="single-quoted-name",
+        ),
+        pytest.param(
+            "data COMMENT 'a', cat garbage",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'garbage': extra input 'garbage'. "
+            "SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="list-extra-input",
+        ),
+        pytest.param(
+            "data COMMENT 'a', cat",
+            ParseException,
+            'SQL error: ParserError("Operation not allowed: ALTER TABLE table ALTER COLUMN '
+            'requires a TYPE, a SET/DROP, a COMMENT, or a FIRST/AFTER.")',
+            None,
+            None,
+            id="list-spec-without-action",
+        ),
+        pytest.param(
+            "data COMMENT 'a', cat TYPE STRING",
+            UnsupportedOperationException,
+            "This feature is not implemented: ALTER TABLE … ALTER COLUMN mixes COMMENT with "
+            "another change for `cat` in one column list; only a list of COMMENT changes is "
+            "supported, so split the statement",
+            None,
+            None,
+            id="mixed-list-type",
+        ),
+        pytest.param(
+            "data COMMENT 'a', cat FIRST",
+            UnsupportedOperationException,
+            "This feature is not implemented: ALTER TABLE … ALTER COLUMN mixes COMMENT with "
+            "another change for `cat` in one column list; only a list of COMMENT changes is "
+            "supported, so split the statement",
+            None,
+            None,
+            id="mixed-list-first",
+        ),
+        pytest.param(
+            "data COMMENT 'dup', data COMMENT 'dup2'",
+            AnalysisException,
+            _SAME_COLUMN.format(column="`data`"),
+            "NOT_SUPPORTED_CHANGE_SAME_COLUMN",
+            "0A000",
+            id="repeated-column",
+        ),
+        pytest.param(
+            "Data COMMENT 'c1', data COMMENT 'c2'",
+            AnalysisException,
+            _SAME_COLUMN.format(column="`data`"),
+            "NOT_SUPPORTED_CHANGE_SAME_COLUMN",
+            "0A000",
+            id="repeated-column-case",
+        ),
+        pytest.param(
+            "st COMMENT 'p', st.x COMMENT 'c'",
+            AnalysisException,
+            _SAME_COLUMN.format(column="`st`"),
+            "NOT_SUPPORTED_CHANGE_SAME_COLUMN",
+            "0A000",
+            id="repeated-parent-and-field",
+        ),
+        pytest.param(
             "\"data\" COMMENT 'dq'",
             ParseException,
             "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"data\"'. SQLSTATE: 42601",
@@ -188,6 +307,7 @@ def test_alter_column_comment_refusals_match_spark(
 ) -> None:
     spark.sql(_COMMENT_TABLE)
     before = _current_schema(_metadata(tmp_path, "ac"))
+    files = _metadata_files(tmp_path, "ac")
     with pytest.raises(PySparkException) as caught:
         spark.sql(f"ALTER TABLE sc.ns.ac ALTER COLUMN {clause}")
     assert type(caught.value) is expected_type
@@ -195,6 +315,7 @@ def test_alter_column_comment_refusals_match_spark(
     assert caught.value.getCondition() == condition
     assert caught.value.getSqlState() == sql_state
     assert _current_schema(_metadata(tmp_path, "ac")) == before
+    assert _metadata_files(tmp_path, "ac") == files
 
 
 def test_alter_column_comment_on_a_map_key_matches_spark(

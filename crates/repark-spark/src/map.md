@@ -1153,6 +1153,18 @@ pins: rp-4-fork-repin/C-005, C-006
   `MixedCommentList`, refused as not implemented. The hive `CHANGE COLUMN a a <type>` form
   falls through to `router/hive_change_column.rs` unchanged.
   pins: ice-nested-evo-1/C-037, C-038, C-039
+  **PR2a round 2 (2026-09-24):** `column_doc_changes` resolves every path first, then
+  `repeated_column` refuses a list whose resolved paths are equal or nest (a column and a field
+  under it) with `NOT_SUPPORTED_CHANGE_SAME_COLUMN`. The shorter path is named, against the
+  three-part table name. `column_action_then_comment` raises `PARSE_SYNTAX_ERROR` near
+  `COMMENT` after `SET`/`DROP NOT NULL`, `SET`/`DROP DEFAULT`, `FIRST` or `AFTER` on every
+  spelling except the hive `CHANGE COLUMN` (`hive_change`). In a COMMENT list,
+  `spec_without_comment` keeps `MixedCommentList` for a `TYPE`/`SET`/`DROP`/`FIRST`/`AFTER`
+  action. End of input, `,` or `;` gives Spark's `Operation not allowed` text, any other token
+  `extra input`, and `list_column_path` answers a path that does not parse near its token.
+  `NameParser` records single-quoted names beside double-quoted ones (`quoted_near`), near
+  `'.'` after a period.
+  pins: ice-nested-evo-1/C-040, C-041, C-042, C-043
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

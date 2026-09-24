@@ -4746,7 +4746,11 @@ the pin rather than obeying it.
   `TABLE_OR_VIEW_NOT_FOUND`, and `COMMENT NULL`, a number, a missing literal, a trailing token or
   `TYPE … COMMENT` raise Spark's `PARSE_SYNTAX_ERROR`. `dbt-repark` inherits
   `spark__alter_column_comment`, so `persist_docs.columns` lands each description as the field
-  doc. A list that mixes `COMMENT` with another column change is refused as not implemented.
+  doc. A list that names one column twice, or a column and a field under it, raises
+  `NOT_SUPPORTED_CHANGE_SAME_COLUMN`. `SET`/`DROP NOT NULL`, `SET`/`DROP DEFAULT`, `FIRST` or
+  `AFTER` followed by `COMMENT` raises `PARSE_SYNTAX_ERROR` near `COMMENT`. A list that mixes
+  `COMMENT` with another column change is refused as not implemented, where Spark accepts it
+  (residue R-U5-MIXED-COMMENT-LIST in the `ice-nested-evo-1` ledger).
 - **Apache Spark** — sets the column comment on an Iceberg table. *(oracle: recorded live —
   Spark 4.1.2 + Iceberg 1.11.0 scoreboard cell `D-ALTER-COMMENT` and the WO U5 PR2 probes.)*
 - **Pin** —
