@@ -1672,7 +1672,9 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
   comment; `TBLPROPERTIES` with the reserved `location` / `provider` / `format-version` rows and
   the stored properties except `comment`, sorted by key; then `AS`, the stored SQL text
   verbatim, and a newline. The measured v1 and v2 cells are EQUAL (`V-SHOW-CREATE`), and so is
-  the view after `ALTER VIEW … SET TBLPROPERTIES ('comment'='x')`, which renders `COMMENT 'x'`. Five shapes
+  the view after `ALTER VIEW … SET TBLPROPERTIES ('comment'='x')`, which renders `COMMENT 'x'`.
+  So is a view after `SET TBLPROPERTIES ('a'='1', 'z'='2')`: `a` sorts before `format-version`
+  and `z` after `provider`. After `UNSET TBLPROPERTIES ('k')` the `k` line is gone. Five shapes
   have no Spark measurement, and their answers are pinned. (1) `USE sc.ns; SHOW CREATE TABLE v2` and
   `USE sc; SHOW CREATE TABLE ns.v2` answer the same fully qualified `sc.ns.v2` text as the
   three-part form. (2) A `'` in a column doc or the view comment renders as `\'`
@@ -1688,14 +1690,16 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
 - **Apache Spark** — the v1 and v2 answers byte for byte, with `location` taken from the view's
   metadata. *(oracle: `/tmp/oc-worker/qe/probe/p2.json`, keys `C.show_create` and
   `C.v2.show_create`, Spark 4.1.2 + Iceberg 1.11.0; the `COMMENT 'x'` text after the ALTER is
-  `/tmp/xb-views5/target/probe5/p5.json` key `vc.after_set.show_create`.)* No oracle probes short
+  `/tmp/xb-views5/target/probe5/p5.json` key `vc.after_set.show_create`; the SET / UNSET texts are
+  `/tmp/xb-views5/target/probe5/r4/p5b.json` keys `vs.show_create.1` and `vs.show_create.2`.)* No oracle probes short
   names, quote escaping in views, `AS SERDE` on a view, bare-name bodies, or a version with no
   SQL representation.
 - **Pin** — `python/repark/tests/test_ice_views_5_showcreate.py::test_show_create_table_on_view`,
   `::test_show_create_table_on_plain_view`, `::test_bare_name_follows_use`,
   `::test_two_part_name_follows_use`, `::test_quotes_in_column_doc_and_view_comment`,
   `::test_view_as_serde_keeps_the_main_parse_error`, `::test_stored_body_is_rendered_verbatim` and
-  `::test_comment_set_through_alter_view_renders`;
+  `::test_comment_set_through_alter_view_renders` and
+  `::test_properties_set_and_unset_after_creation_render_sorted`;
   `crates/repark-spark/src/tests/show_create_view_routing.rs` (shape 5:
   `::show_create_view_without_a_sql_representation_is_a_plan_error`).
 - **Rationale** — DECLARED. Short names follow the P-SP-BARE-NAME / P-SP-TWO-PART precedent
