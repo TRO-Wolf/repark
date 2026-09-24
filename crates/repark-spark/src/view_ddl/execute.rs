@@ -279,7 +279,8 @@ pub(crate) async fn execute_show_tblproperties(
     catalogs: &CatalogRegistry,
     statement: ShowTblpropertiesStatement,
 ) -> Option<Result<DataFrame>> {
-    let Ok((catalog, namespace_name, view_name)) = complete_view_name(ctx, &statement.name) else {
+    let Ok((catalog, namespace_name, view_name)) = complete_view_name(catalogs, &statement.name)
+    else {
         return None;
     };
     let Ok(handle) = catalog_handle(catalogs, &catalog) else {
