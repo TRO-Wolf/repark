@@ -1491,10 +1491,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `UNION`, `JOIN … ON` / `USING` and `EXISTS` positions refuse `[_deleted]`; unrouted
   `SELECT *` over a `USING` join, `SELECT t.*` and `NATURAL JOIN` answer (KNOWN
   DIVERGENCE); non-reading joins and subqueries answer. RePark's error texts are pinned
-  for J4, J5M, J6M, N11 (LATERAL VIEW) and N13.
-  `qualified_wildcard_under_another_alias_expands_every_provider_field` pins X1–X3: `x.*`
-  under an alias other than the table name expands to every provider field and returns
-  the deleted row (KNOWN DIVERGENCE, residue candidate `R-MC-QUALIFIED-WILDCARD`).
+  for J4, J5M, J6M and N11 (LATERAL VIEW); N13 refuses `[_deleted]` since mcdel-r8.
+  **mcdel-r8 (2026-09-24):** `qualified_wildcard_under_another_alias_serves_user_columns`
+  (renamed from `…_expands_every_provider_field`) pins X1–X3, B1, B2, K1, W1–W5, Q1 and
+  Q2 with Spark's answers: `x.*` or `*` under a FROM alias serves the user columns
+  (`[(2,b,y),(3,c,x),(4,d,x)]`, plus `p` / `s`) and no deleted row.
+  `qualified_wildcard_near_misses_keep_their_answers` pins D1, C1, P1–P3 (a derived
+  table, a CTE, a rewritten or non-Iceberg join partner) and the M1/M2 error strings.
   pins: u10-mc-deleted-1/C-012, C-014, C-015, C-016, C-017, C-018
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.

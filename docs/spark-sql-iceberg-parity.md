@@ -13945,15 +13945,15 @@ field NAME.
 
   The mcdel-r5 residue candidate `R-MC-RESERVED-NAME-JOIN` is closed: the join
   answers Spark's `[[1,true],[2,false],[3,false]]`.
-  Residue candidate `R-MC-QUALIFIED-WILDCARD` (KNOWN DIVERGENCE, a silent wrong
-  answer): in a statement that names a metadata column, a qualified wildcard
-  `x.*` whose alias differs from the table name expands to every metadata column
-  too. On a merge-on-read table, the projected `_deleted` then returns the
-  deleted rows (`SELECT x.* FROM t x WHERE x._spec_id = 0` answers ids
-  `[1,2,3,4]` where Spark answers `[2,3,4]` with user columns only).
+  The mcdel-r7 residue candidate `R-MC-QUALIFIED-WILDCARD` is fixed and withdrawn
+  (mcdel-r8, u10-mc-deleted-1 C-018). A qualified wildcard `x.*` under a FROM alias,
+  and a bare `*` over one aliased relation, expand to the user columns, as on
+  Spark. Before the fix, a statement that named a metadata column widened `x.*` to
+  every metadata column, and on merge-on-read tables returned the deleted rows.
   *(oracle: live Spark 4.1.2 + Iceberg 1.11 probes `mcdcol`, `mcdjoin`,
   `mcdorder`, `mcdfile`, `mcdalias`, `mcdclassn`, `mcdjoinpos`, `mcdqualmor`,
-  recorded in the u10-mc-deleted-1 ledger M-10, M-12, M-14, M-15, M-17 and M-18.)*
+  `mcdqualfix`, recorded in the u10-mc-deleted-1 ledger M-10, M-12, M-14, M-15, M-17,
+  M-18 and M-20.)*
 - **Rationale** — BACKLOG, filed 2026-09-20 (ICE-METADATA-COLS-1, IPI-20 PR-1).
   The fork unit is MERGED (metadata columns + scan modes) and the pin bumped
   (RP-45), so the RePark half serves the four ordinary columns end to end;

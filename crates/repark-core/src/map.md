@@ -954,6 +954,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `referenced_metadata_names` only routes a statement onto the rewrite; a reserved
   word used as an alias, CTE name or table alias answers, and the join above now
   answers Spark's rows.
+  **mcdel-r8 (2026-09-24):** `expand_wildcards` resolves a qualified wildcard through
+  `qualified_rewrite` — first this SELECT's aliased FROM relations (joins included),
+  qualifying by the alias as written, then the rewrite's own alias — and qualifies a
+  bare `*` by `sole_relation_alias`. So `x.*` under a FROM alias expands to the user
+  columns instead of every provider field, which had returned deleted rows on
+  merge-on-read tables. The unit leg
+  `a_qualified_wildcard_under_a_from_alias_expands_to_user_columns` pins the rewritten
+  SQL.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
@@ -961,7 +969,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
   so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved
