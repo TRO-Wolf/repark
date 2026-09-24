@@ -167,13 +167,14 @@ Two spellings, and the difference between them matters:
 
 ```python
 spark.table("local.sales.orders")                              # temp views win on a bare name
-spark.read.format("iceberg").load("local.sales.orders")        # catalog only, never a temp view
+spark.read.format("iceberg").load("local.sales.orders")        # catalog table, never a temp view
 ```
 
 Both return the same rows here. `spark.table` prefers a temp view when the name is unqualified,
-which is what PySpark does; `format("iceberg").load(...)` is catalog-only, so it cannot be shadowed
-by a same-named view — reach for it when a script creates views and reads tables in the same
-namespace.
+which is what PySpark does; `format("iceberg").load(<name>)` resolves names only in the catalog,
+so it cannot be shadowed by a same-named view — reach for it when a script creates views and reads
+tables in the same namespace. An argument containing `/` is instead read as a path: an absolute
+table location, or a `*.metadata.json` file in it.
 
 ## Writing
 
