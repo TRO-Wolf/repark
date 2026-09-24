@@ -27,8 +27,8 @@ V2_DDL = (
     "TBLPROPERTIES ('k'='v') AS SELECT id, data FROM sc.ns.t"
 )
 INVALID_SHOW_CREATE_TABLE = (
-    'SQL error: ParserError("[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: '
-    'SHOW CREATE TABLE is not valid. SQLSTATE: 42601")'
+    "[INVALID_STATEMENT_OR_CLAUSE] The statement or clause: SHOW CREATE TABLE is not valid. "
+    "SQLSTATE: 42601"
 )
 SHOW_CREATE_UNSUPPORTED = (
     "Error during planning: SHOW CREATE TABLE is not supported unless information_schema is enabled"
