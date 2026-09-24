@@ -30,6 +30,7 @@ PATH_OPTION_REFUSAL = (
 PATH_REFUSED_OPTIONS = [
     ("snapshot-id", "1", "snapshot-id"),
     ("SNAPSHOT-ID", "1", "snapshot-id"),
+    ("Snapshot-Id", "1", "snapshot-id"),
     ("as-of-timestamp", "1", "as-of-timestamp"),
     ("branch", "main", "branch"),
     ("tag", "main", "tag"),
@@ -369,12 +370,13 @@ def test_load_file_authority_metadata_file_refuses_wrong_fs(
 def test_load_file_single_slash_location_reads_current_rows(
     spark: ReparkSession, loaded: dict[str, object]
 ) -> None:
-    """``load("file:/<abs>")`` and ``load("FILE:/<abs>")`` read like ``file:///<abs>``.
+    """``file:/<abs>``, ``FILE:/<abs>`` and ``fIlE:/<abs>`` read like ``file:///<abs>``.
 
     pins: dfload-1/C-009
     """
     _assert_current(spark.read.format("iceberg").load(f"file:{loaded['table_dir']}"))
     _assert_current(spark.read.format("iceberg").load(f"FILE:{loaded['table_dir']}"))
+    _assert_current(spark.read.format("iceberg").load(f"fIlE:{loaded['table_dir']}"))
 
 
 def test_load_file_single_slash_latest_metadata_file_reads_current_rows(
