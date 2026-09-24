@@ -22,12 +22,13 @@ Two routes could give RePark a dbt path:
 1. an **in-process adapter** whose connection runs compiled SQL through `repark.sql()`;
 2. a **Spark-Thrift-compatible endpoint** so unmodified `dbt-spark` connects over the wire.
 
-Route 2 was rejected on measurement, not on cost. The refusals DBT-1 measured are in the
-**statement surface**, not the transport: `show table extended`, `show tables in`, `show
+Route 2 was rejected on measurement, not on cost. The refusals DBT-1 measured (2026-09-04) were
+in the **statement surface**, not the transport: `show table extended`, `show tables in`, `show
 databases`, `show tblproperties`, two-part `describe extended`, `create or replace view`,
-`create or replace temporary view` and `alter column … comment` are all refused by
-`repark.sql()`. A Thrift endpoint would deliver those statements faithfully and collect exactly
-the same errors, so it buys a wire protocol and no working model. The measured table is
+`create or replace temporary view` and `alter column … comment` were all refused by
+`repark.sql()` then. A Thrift endpoint would deliver those statements faithfully and collect
+exactly the same errors, so it buys a wire protocol and no working model. The current served and
+refused split is the measured table,
 [tests/test_statement_surface.py](tests/test_statement_surface.py), which is the pin, not prose.
 
 Inside route 1 the adapter **subclasses `dbt-spark`'s `SparkAdapter`** and declares
