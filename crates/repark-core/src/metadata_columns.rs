@@ -405,15 +405,7 @@ impl RewriteMetadataColumns {
             written_qualifier(relation).is_some_and(|written| ident_eq(qualifier, &written.value))
         })?;
         let entry = self.rewrite_for_relation(relation)?;
-        let aliased = matches!(relation, TableFactor::Table { alias: Some(_), .. });
-        Some((
-            entry,
-            if aliased {
-                qualifier.clone()
-            } else {
-                entry.alias.clone()
-            },
-        ))
+        Some((entry, qualifier.clone()))
     }
 
     fn rewrite_input_file_names(&self, select: &mut Select) {
@@ -530,10 +522,6 @@ fn select_relations(select: &Select) -> impl Iterator<Item = &TableFactor> {
 fn written_qualifier(relation: &TableFactor) -> Option<Ident> {
     match relation {
         TableFactor::Table {
-            alias: Some(table_alias),
-            ..
-        }
-        | TableFactor::Derived {
             alias: Some(table_alias),
             ..
         } => Some(table_alias.name.clone()),
