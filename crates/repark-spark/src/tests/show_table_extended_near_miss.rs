@@ -283,6 +283,7 @@ const NEAR_SINGLE_QUOTE: &str = "[PARSE_SYNTAX_ERROR] Syntax error at or near ''
 const NEAR_DOUBLE_QUOTE: &str =
     "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"'. SQLSTATE: 42601";
 const NEAR_BACKTICK: &str = "[PARSE_SYNTAX_ERROR] Syntax error at or near '`'. SQLSTATE: 42601";
+const NEAR_LEFT_PAREN: &str = "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601";
 const NEAR_END_OF_INPUT: &str =
     "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601";
 
@@ -494,4 +495,46 @@ async fn show_table_extended_partition_keyword_without_parentheses_refuses() {
     let sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION";
     assert_scanner_refusal(sql, NEAR_END_OF_INPUT);
     assert_end_to_end_refusal(&ctx, &catalogs, sql, NEAR_END_OF_INPUT).await;
+}
+
+#[tokio::test]
+async fn show_table_extended_partition_spec_refuses_a_nested_parenthesis() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    for sql in [
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (a=(1))",
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (a=(1)",
+        "SHOW TABLE EXTENDED LIKE 'pc' PARTITION (a=(1))",
+    ] {
+        assert_scanner_refusal(sql, NEAR_LEFT_PAREN);
+        assert_end_to_end_refusal(&ctx, &catalogs, sql, NEAR_LEFT_PAREN).await;
+    }
+}
+
+#[tokio::test]
+async fn show_table_extended_partition_spec_near_misses_keep_their_answers() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    for sql in [
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (cat='a')",
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (cat='(')",
+    ] {
+        assert_scanner_accepts(sql, &["ice", "sales"], "pc", true);
+        let refused = outcome(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a partition clause on an existing table refuses");
+        assert_analysis_refusal(
+            sql,
+            refused,
+            "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition \
+             command is invalid. Table `ice`.`sales`.`pc` does not support partition management. \
+             SQLSTATE: 42601",
+        );
+    }
+    let unclosed_sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION (cat='a'";
+    assert_scanner_refusal(unclosed_sql, NEAR_END_OF_INPUT);
+    assert_end_to_end_refusal(&ctx, &catalogs, unclosed_sql, NEAR_END_OF_INPUT).await;
 }

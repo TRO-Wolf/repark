@@ -1446,7 +1446,8 @@ pins: rp-4-fork-repin/C-005, C-006
   temporary views remain absent from this statement's Iceberg listing.
   Parser unit pins cover required syntax refusals and near misses. **WO-A11 (2026-09-23):** the
   quote scanner closes on every matching delimiter; a doubled delimiter is a close followed by a
-  reopen.
+  reopen. The PARTITION spec ends at its first `)`; a nested `(` refuses
+  `PARSE_SYNTAX_ERROR` near `'('` (Spark 4.1.2).
   pins: wo-a1b/C-001
   See [tests/show_table_extended.rs](tests/show_table_extended.rs) for parser and end-to-end pins.
 - `spark_tree_string.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** iterative Arrow-schema port

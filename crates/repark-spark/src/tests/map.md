@@ -1526,7 +1526,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   doubled `'`, `"` and backtick before an unclosed quote; `/*` and `--` inside an open quote; a
   quote inside `--` and nested `/* */` comments; an unterminated trailing `/*` (parser: end of
   input; router front door: `UNCLOSED_BRACKETED_COMMENT`); `PARTITION` with no parentheses.
-  Every refusal equals the Spark 4.1.2 condition and message head (WO-A10).
+  Every refusal equals the Spark 4.1.2 condition and message head (WO-A10). **WO-A11
+  (2026-09-23):** a nested `(` in the PARTITION spec (closed, unclosed, ambient scope) refuses near
+  `'('` at both levels; `(cat='a')` and `(cat='(')` keep the partition-management refusal and
+  `(cat='a'` keeps end of input.
   pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal

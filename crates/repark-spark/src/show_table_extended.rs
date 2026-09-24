@@ -60,10 +60,11 @@ pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTabl
         token => return Some(Err(syntax_error_at_token(&token))),
     };
     let has_partition = if parser.parse_keyword(Keyword::PARTITION) {
-        if !consume_parenthesized(&mut parser) {
-            return Some(Err(syntax_error_at(&parser)));
+        match consume_partition_spec(&mut parser) {
+            Ok(true) => true,
+            Ok(false) => return Some(Err(syntax_error_at(&parser))),
+            Err(error) => return Some(Err(error)),
         }
-        true
     } else {
         false
     };
@@ -247,20 +248,18 @@ fn spark_character_properties(table: &TableMetadata) -> String {
     )
 }
 
-fn consume_parenthesized(parser: &mut Parser) -> bool {
+fn consume_partition_spec(parser: &mut Parser) -> Result<bool> {
     if !parser.consume_token(&Token::LParen) {
-        return false;
+        return Ok(false);
     }
-    let mut depth = 1_usize;
-    while depth > 0 {
+    loop {
         match parser.next_token().token {
-            Token::LParen => depth += 1,
-            Token::RParen => depth -= 1,
-            Token::EOF => return false,
+            Token::RParen => return Ok(true),
+            Token::EOF => return Ok(false),
+            Token::LParen => return Err(syntax_error_at_token(&Token::LParen)),
             _ => {}
         }
     }
-    true
 }
 
 fn at_statement_end(parser: &Parser) -> bool {
