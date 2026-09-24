@@ -937,6 +937,31 @@ fn call_remove_orphan_files_qualifies_only_a_location_starting_with_slash() {
 }
 
 #[tokio::test]
+async fn call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locations() {
+    use crate::call::remove_orphan_files::listed_orphan_dataframe;
+    let cases = [
+        ("/tmp/a/x.parquet", "file:/tmp/a/x.parquet"),
+        ("s3://b/k.parquet", "s3://b/k.parquet"),
+        ("file:/tmp/y.parquet", "file:/tmp/y.parquet"),
+        ("rel/z.parquet", "rel/z.parquet"),
+        ("", ""),
+        ("C:\\w\\d.parquet", "C:\\w\\d.parquet"),
+        ("C:/w/d.parquet", "C:/w/d.parquet"),
+        ("\\\\srv\\share\\d.parquet", "\\\\srv\\share\\d.parquet"),
+    ];
+    let locations: Vec<String> = cases.iter().map(|(input, _)| input.to_string()).collect();
+    let batches = listed_orphan_dataframe(&SessionContext::new(), &locations)
+        .expect("listing rows")
+        .collect()
+        .await
+        .expect("collect listing rows");
+    let field = Field::new("orphan_file_location", DataType::Utf8, false);
+    assert_eq!(batches[0].schema().as_ref(), &Schema::new(vec![field]));
+    let expected: Vec<&str> = cases.iter().map(|(_, output)| *output).collect();
+    assert_eq!(orphan_locations(&batches), expected);
+}
+
+#[tokio::test]
 async fn call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path() {
     let warehouse = TempDir::new().unwrap();
     let session = fallback_session(&warehouse).await;
