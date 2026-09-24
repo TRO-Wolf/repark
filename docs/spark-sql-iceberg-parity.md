@@ -13887,42 +13887,86 @@ field NAME.
   F-001). Read path, untouched by the write unit; fork-or-adoption attribution
   is open before any fix.
 
-### ICE-MC-FILEPOS-1 — `_file`, `_pos`, `_spec_id`, `_partition` answer Spark-equal; `_deleted` refuses `[ICE-MC-1]` — **BACKLOG 2026-09-20, IPI-20**
+### ICE-MC-FILEPOS-1 — `_file`, `_pos`, `_spec_id`, `_partition`, `_deleted` answer Spark-equal — **BACKLOG 2026-09-20, IPI-20; `_deleted` served 2026-09-23 (U10-MC-DELETED-1)**
 
 - **repark** — the Spark door serves `_file` (the data-file path, `string`),
   `_pos` (the 0-based file ordinal, `bigint`), `_spec_id` (an `int`, the
   per-file spec constant; recorded `R-MC-SPEC-ID` / `R-MC-SPEC-ID-EVOLVED`
-  answer `[[2,0],[3,0],[4,0]]`) and `_partition` (the partition struct,
+  answer `[[2,0],[3,0],[4,0]]`), `_partition` (the partition struct,
   NULL on unpartitioned tables; recorded `R-MC-PARTITION`
   `[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]`, `R-MC-PARTITION-UNPART`
   `[[2,null],[3,null],[4,null]]`, `R-MC-SPEC-ID-EVO`
-  `[[1,0,[["cat",null]]],[2,1,[["cat","y"]]]]`) on Iceberg reads: `SELECT *`
-  keeps user columns only. `_deleted` alone is not yet served and still
-  refuses with a typed `AnalysisException` carrying `[ICE-MC-1]` and naming
-  the column — never the raw `No field named`. The ANSI door serves no
-  metadata columns.
-- **Apache Spark** — answers the ten served cells (the five R-MC-FILE/POS
+  `[[1,0,[["cat",null]]],[2,1,[["cat","y"]]]]`) and `_deleted` (a non-null
+  `boolean`; recorded `R-MC-DELETED` on the merge-on-read seed answers
+  `[[1,true],[2,false],[3,false],[4,false]]` — projecting it reads the
+  deleted rows back with `true`, not projecting it keeps the delete filter)
+  on Iceberg reads: `SELECT *` keeps user columns only. A metadata-column
+  query whose scan reads a user column named like a served metadata column
+  refuses with Spark's text `Table column names conflict with names
+  reserved for Iceberg metadata columns: [<names>]. Please, use ALTER TABLE
+  statements to rename the conflicting table columns.`, the names in the table's
+  declaration order. A reserved word used as an alias, CTE name, table alias,
+  literal or struct field is not such a read and answers. The ANSI door serves
+  no metadata columns.
+- **Apache Spark** — answers the eleven served cells (the five R-MC-FILE/POS
   values plus `R-MC-SPEC-ID` / `R-MC-SPEC-ID-EVOLVED` `[[2,0],[3,0],[4,0]]`,
-  `R-MC-PARTITION`, `R-MC-PARTITION-UNPART`, `R-MC-SPEC-ID-EVO` with the
-  values above) and serves only `_deleted` where RePark refuses.
-  *(oracle: recorded — the IPI-20 inventory cells, live Spark 4.1.2 +
-  iceberg-spark-runtime-4.1_2.13:1.11.0.)*
+  `R-MC-PARTITION`, `R-MC-PARTITION-UNPART`, `R-MC-SPEC-ID-EVO` and
+  `R-MC-DELETED` with the values above).
+  *(oracle: recorded — the IPI-20 inventory cells and the U10-MC-DELETED-1
+  probes, live Spark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0.)*
 - **Pin** — `crates/repark-spark/src/tests/metadata_columns.rs`
   (`file_and_pos_answer_spark`, `pos_is_the_file_position_after_a_merge_on_read_delete`,
   `select_star_excludes_every_served_metadata_column`,
-  `unserved_metadata_columns_refuse_with_a_typed_error`,
   `served_names_fold_and_composed_shapes_refuse`, `spec_id_answers_zero_on_a_single_spec_table`,
   `spec_id_reports_each_rows_own_spec_after_evolution`, `partition_struct_answers_spark`,
   `partition_is_null_on_an_unpartitioned_table`, `spec_id_and_partition_answer_after_evolution`,
-  `bucket_partitioned_table_serves_all_four_metadata_columns`) plus
-  `python/repark/tests/test_ice_metadata_cols_1.py` (the nine verbatim cell
-  replays, the star pin and the refusal pin).
-  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  `bucket_partitioned_table_serves_all_four_metadata_columns`),
+  `crates/repark-spark/src/tests/metadata_columns_deleted.rs` (the `_deleted`
+  cluster, from `deleted_column_marks_merge_on_read_deleted_row`),
+  `crates/repark-spark/src/tests/metadata_columns_reserved.rs` (the reserved-name
+  collision and alias-position pins) plus
+  `python/repark/tests/test_ice_metadata_cols_1.py` (the verbatim cell
+  replays, the star pin, the `_deleted` pins and the collision pin).
+  pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
+  u10-mc-deleted-1/C-001
+- **Residue** — `R-MC-RESERVED-NAME-SCAN` (KNOWN DIVERGENCE, U10-MC-DELETED-1):
+  on a table whose own schema carries a reserved metadata name, both engines
+  refuse a query whose metadata-column scan reads the colliding user column and
+  answer one whose scans do not. That holds in the `GROUP BY`, `HAVING`, `ORDER BY`,
+  window, `IN`/scalar-subquery and `UNION` positions and in `JOIN … ON` / `USING`
+  joins that do not read it. Still divergent:
+  - shapes RePark never routes to the metadata-column scan, which RePark serves
+    and Spark refuses: `SELECT *`, `SELECT t.*`, `SELECT *` over a `USING` join,
+    `NATURAL JOIN`, and the copy-on-write `DELETE`;
+  - filter-bound reads — `WHERE`, `JOIN … ON`, `JOIN … USING (_deleted)`,
+    `EXISTS`: both refuse, but RePark uses the reserved-name text where Spark
+    prints `Invalid schema: multiple fields for name _deleted: 2 and 2147483644`;
+  - `LATERAL VIEW`, which RePark does not implement.
+
+  `R-MC-RESERVED-NAME-CLASS` (KNOWN DIVERGENCE, IPI-51): where both engines refuse
+  with the reserved-name text, the class differs. Spark raises
+  `org.apache.iceberg.exceptions.ValidationException` through `Py4JJavaError`, and
+  RePark raises `AnalysisException` with an `Error during planning: ` prefix.
+
+  The mcdel-r5 residue candidate `R-MC-RESERVED-NAME-JOIN` is closed: the join
+  answers Spark's `[[1,true],[2,false],[3,false]]`.
+  The mcdel-r7 residue candidate `R-MC-QUALIFIED-WILDCARD` is fixed and withdrawn
+  (mcdel-r8, u10-mc-deleted-1 C-018). A qualified wildcard `x.*` under a FROM alias,
+  and a bare `*` over one aliased relation, expand to the user columns, as on
+  Spark. Before the fix, a statement that named a metadata column widened `x.*` to
+  every metadata column, and on merge-on-read tables returned the deleted rows.
+  mcdel-r9 (C-019) scopes that expansion to the wildcard's own SELECT. A plain
+  relation, CTE or derived table that shares the Iceberg table's alias in another
+  scope keeps its own columns, where it had lost the ones the Iceberg table lacks.
+  *(oracle: live Spark 4.1.2 + Iceberg 1.11 probes `mcdcol`, `mcdjoin`,
+  `mcdorder`, `mcdfile`, `mcdalias`, `mcdclassn`, `mcdjoinpos`, `mcdqualmor`,
+  `mcdqualfix`, `mcdscope`, recorded in the u10-mc-deleted-1 ledger M-10, M-12, M-14,
+  M-15, M-17, M-18, M-20 and M-21.)*
 - **Rationale** — BACKLOG, filed 2026-09-20 (ICE-METADATA-COLS-1, IPI-20 PR-1).
   The fork unit is MERGED (metadata columns + scan modes) and the pin bumped
   (RP-45), so the RePark half serves the four ordinary columns end to end;
-  `_deleted` stays refused behind its explicit scan mode — that is the one
-  remaining residue, and its refusal pin reds on purpose when it serves.
+  U10-MC-DELETED-1 serves `_deleted` through the fork's include-deleted scan
+  mode, closing the refusal that was the one remaining residue here.
 
 ### ICE-MC-IFN-1 — `input_file_name()` served over one Iceberg relation; other shapes unresolved — **BACKLOG 2026-09-23, IPI-20**
 

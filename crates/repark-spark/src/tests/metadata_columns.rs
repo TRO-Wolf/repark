@@ -114,6 +114,19 @@ fn i64s(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) ->
     out
 }
 
+fn bools(batches: &[datafusion::arrow::record_batch::RecordBatch], col: usize) -> Vec<bool> {
+    let mut out = Vec::new();
+    for batch in batches {
+        let array = batch
+            .column(col)
+            .as_any()
+            .downcast_ref::<BooleanArray>()
+            .unwrap();
+        out.extend((0..array.len()).map(|row| array.value(row)));
+    }
+    out
+}
+
 fn pairs_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, i64)> {
     let mut out = Vec::new();
     for batch in batches {
@@ -562,6 +575,7 @@ async fn served_names_fold_and_composed_shapes_refuse() {
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
 
     let upper = batches(&session, "SELECT id, _POS FROM ice.ns.t").await;
+    assert_eq!(field_names(&upper), vec!["id", "_pos"], "field names");
     assert_eq!(
         pairs_i64(&upper),
         vec![(2, 0), (3, 0), (4, 0)],
@@ -569,37 +583,60 @@ async fn served_names_fold_and_composed_shapes_refuse() {
     );
 
     let quoted = batches(&session, "SELECT id, `_pos` FROM ice.ns.t").await;
+    assert_eq!(field_names(&quoted), vec!["id", "_pos"], "field names");
     assert_eq!(
         pairs_i64(&quoted),
         vec![(2, 0), (3, 0), (4, 0)],
         "backtick `_pos` resolves exact"
     );
 
-    let aliased = batches(&session, "SELECT x._pos FROM ice.ns.t AS x").await;
-    let mut ordinals = i64s(&aliased, 0);
-    ordinals.sort_unstable();
-    assert_eq!(ordinals, vec![0, 0, 0], "compound ident through an alias");
-
-    let error = plan_error(&session, "SELECT `_deleted` FROM ice.ns.t").await;
-    assert!(
-        error.contains("[ICE-MC-1]"),
-        "backtick unserved refuses typed: {error}"
+    let aliased = batches(
+        &session,
+        "SELECT x.id, x._pos FROM ice.ns.t AS x ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        field_names(&aliased),
+        vec!["id", "_pos"],
+        "compound ident through an alias"
     );
-    assert!(
-        error.contains("_deleted"),
-        "backtick unserved names the column: {error}"
+    assert_eq!(
+        pairs_i64(&aliased),
+        vec![(2, 0), (3, 0), (4, 0)],
+        "compound ident through an alias"
+    );
+
+    let quoted_deleted = batches(&session, "SELECT id, `_deleted` FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(
+        field_names(&quoted_deleted),
+        vec!["id", "_deleted"],
+        "backtick `_deleted` resolves exact"
+    );
+    assert_eq!(
+        i64s(&quoted_deleted, 0)
+            .into_iter()
+            .zip(bools(&quoted_deleted, 1))
+            .collect::<Vec<_>>(),
+        vec![(2, false), (3, false), (4, false)],
+        "backtick `_deleted` resolves exact"
     );
 
     let error = plan_error(&session, "DELETE FROM ice.ns.t WHERE _file IS NOT NULL").await;
-    assert!(
-        error.contains("[ICE-MC-1]"),
-        "metadata over a non-query refuses typed: {error}"
+    assert_eq!(
+        error,
+        "Error during planning: [ICE-MC-1] a metadata column (_file, _pos, _spec_id, \
+         _partition, _deleted) over a non-query statement is not served; name the columns \
+         explicitly on a table relation",
+        "metadata over a non-query refuses typed"
     );
 
     let error = plan_error(&session, "SELECT *, _file FROM ice.ns.t, ice.ns.t").await;
-    assert!(
-        error.contains("[ICE-MC-1]"),
-        "star over two relations refuses typed: {error}"
+    assert_eq!(
+        error,
+        "Error during planning: [ICE-MC-1] a metadata column (_file, _pos, _spec_id, \
+         _partition, _deleted) over a wildcard over more than one relation is not served; \
+         name the columns explicitly on a table relation",
+        "star over two relations refuses typed"
     );
 }
 
@@ -625,50 +662,4 @@ async fn file_and_row_id_answer_together_on_a_format_v3_table() {
         "R-MC-V3-BOTH: {files:?}"
     );
     assert_eq!(ordinals, vec![0, 1], "R-MC-V3-BOTH");
-}
-
-#[tokio::test]
-async fn unserved_metadata_columns_refuse_with_a_typed_error() {
-    let wh = TempDir::new().unwrap();
-    let session = session(&wh).await;
-    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
-    for column in ["_deleted"] {
-        let error = plan_error(&session, &format!("SELECT {column} FROM ice.ns.t")).await;
-        assert!(
-            error.contains("[ICE-MC-1]"),
-            "{column} must refuse typed, got: {error}"
-        );
-        assert!(
-            !error.contains("No field named"),
-            "{column} must not leak the raw planner error, got: {error}"
-        );
-        assert!(
-            error.contains(column),
-            "{column} refusal must name the column, got: {error}"
-        );
-        assert!(
-            error.contains("this layer serves (_file, _pos, _spec_id, _partition)"),
-            "{column} refusal must advertise the served four, got: {error}"
-        );
-    }
-}
-
-#[tokio::test]
-async fn served_spec_id_beside_an_unserved_column_names_the_unserved_one() {
-    let wh = TempDir::new().unwrap();
-    let session = session(&wh).await;
-    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
-    let error = plan_error(&session, "SELECT id, _spec_id, _deleted FROM ice.ns.t").await;
-    assert!(
-        error.contains("[ICE-MC-1]"),
-        "composed refusal stays typed, got: {error}"
-    );
-    assert!(
-        error.contains("metadata column _deleted is not yet served"),
-        "composed refusal must name _deleted, got: {error}"
-    );
-    assert!(
-        !error.contains("metadata column _spec_id"),
-        "composed refusal must not blame _spec_id, got: {error}"
-    );
 }

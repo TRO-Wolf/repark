@@ -15,8 +15,7 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::metadata_columns::RESERVED_COL_NAME_FILE;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_iceberg::catalog::{
-    METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, UNSERVED_METADATA_COLUMN_NAMES,
-    metadata_columns_user_field_names,
+    METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, metadata_columns_user_field_names,
 };
 
 use crate::catalog_state::CatalogRegistry;
@@ -50,23 +49,27 @@ impl MetadataColumnPins {
 
 #[must_use]
 pub fn sql_mentions_metadata_columns(sql: &str, dialect: &dyn Dialect) -> bool {
+    !referenced_metadata_names(sql, dialect).is_empty()
+}
+
+fn referenced_metadata_names(sql: &str, dialect: &dyn Dialect) -> Vec<&'static str> {
     let Ok(tokens) = Tokenizer::new(dialect, sql).tokenize() else {
-        return false;
+        return Vec::new();
     };
-    tokens.iter().any(|token| match token {
-        Token::Word(word) => {
-            canonical_metadata_token(&word.value, word.quote_style.is_some()).is_some()
+    let mut names = Vec::new();
+    for token in &tokens {
+        if let Token::Word(word) = token
+            && let Some(name) = canonical_metadata_token(&word.value, word.quote_style.is_some())
+            && !names.contains(&name)
+        {
+            names.push(name);
         }
-        _ => false,
-    })
+    }
+    names
 }
 
 fn canonical_metadata_token(value: &str, quoted: bool) -> Option<&'static str> {
     canonical_token_in(value, quoted, &METADATA_COLUMN_NAMES)
-}
-
-fn canonical_unserved_token(value: &str, quoted: bool) -> Option<&'static str> {
-    canonical_token_in(value, quoted, &UNSERVED_METADATA_COLUMN_NAMES)
 }
 
 fn canonical_token_in(value: &str, quoted: bool, names: &[&'static str]) -> Option<&'static str> {
@@ -113,14 +116,6 @@ fn sql_mentions_input_file_name_call(sql: &str, dialect: &dyn Dialect) -> bool {
     })
 }
 
-fn first_unserved_metadata_column(sql: &str, dialect: &dyn Dialect) -> Option<&'static str> {
-    let tokens = Tokenizer::new(dialect, sql).tokenize().ok()?;
-    tokens.iter().find_map(|token| match token {
-        Token::Word(word) => canonical_unserved_token(&word.value, word.quote_style.is_some()),
-        _ => None,
-    })
-}
-
 fn canonical_metadata_ident(ident: &Ident) -> Option<&'static str> {
     canonical_metadata_token(&ident.value, ident.quote_style.is_some())
 }
@@ -134,14 +129,8 @@ fn fold_metadata_ident(ident: &mut Ident) {
 
 fn refuse(kind: &str) -> DataFusionError {
     DataFusionError::Plan(format!(
-        "[ICE-MC-1] a metadata column (_file, _pos, _spec_id, _partition) over {kind} \
+        "[ICE-MC-1] a metadata column (_file, _pos, _spec_id, _partition, _deleted) over {kind} \
          is not served; name the columns explicitly on a table relation"
-    ))
-}
-
-fn refuse_unserved(name: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "[ICE-MC-1] metadata column {name} is not yet served; this layer serves (_file, _pos, _spec_id, _partition)"
     ))
 }
 
@@ -153,10 +142,9 @@ pub async fn prepare_metadata_column_sql(
     dialect: &dyn Dialect,
     pinned: &mut MetadataColumnPins,
 ) -> Result<Option<String>> {
-    let mentions_served = sql_mentions_metadata_columns(sql, dialect);
-    let unserved = first_unserved_metadata_column(sql, dialect);
-    let mentions_metadata = mentions_served || unserved.is_some();
-    if !mentions_metadata && !sql_mentions_input_file_name_call(sql, dialect) {
+    let referenced = referenced_metadata_names(sql, dialect);
+    let mentions_served = !referenced.is_empty();
+    if !mentions_served && !sql_mentions_input_file_name_call(sql, dialect) {
         return Ok(None);
     }
     let Ok(mut statements) = Parser::parse_sql(dialect, sql) else {
@@ -167,7 +155,7 @@ pub async fn prepare_metadata_column_sql(
     }
     let statement = &mut statements[0];
     if !matches!(statement, Statement::Query(_)) {
-        return if mentions_metadata {
+        return if mentions_served {
             Err(refuse("a non-query statement"))
         } else {
             Ok(None)
@@ -217,9 +205,6 @@ pub async fn prepare_metadata_column_sql(
     }
     if rewrites.is_empty() {
         return Ok(None);
-    }
-    if let Some(name) = unserved {
-        return Err(refuse_unserved(name));
     }
 
     let mut visitor = RewriteMetadataColumns {
@@ -308,10 +293,11 @@ impl RewriteMetadataColumns {
         self.rewrites.iter().find(|entry| &entry.original == name)
     }
 
-    fn by_alias(&self, ident: &Ident) -> Option<&Rewrite> {
-        self.rewrites
-            .iter()
-            .find(|entry| ident_eq(ident, &entry.alias.value))
+    fn rewrite_for_relation(&self, relation: &TableFactor) -> Option<&Rewrite> {
+        let TableFactor::Table { name, .. } = relation else {
+            return None;
+        };
+        self.find(name)
     }
 }
 
@@ -372,9 +358,11 @@ impl RewriteMetadataColumns {
             match item {
                 SelectItem::Wildcard(options) => match sole {
                     Some(entry) => {
+                        let qualifier =
+                            sole_relation_alias(select).unwrap_or_else(|| entry.alias.clone());
                         for column in &entry.user_names {
                             expanded.push(SelectItem::UnnamedExpr(SqlExpr::CompoundIdentifier(
-                                vec![entry.alias.clone(), Ident::new(column.clone())],
+                                vec![qualifier.clone(), Ident::new(column.clone())],
                             )));
                         }
                     }
@@ -388,12 +376,15 @@ impl RewriteMetadataColumns {
                         SelectItemQualifiedWildcardKind::ObjectName(name) => last_ident(name),
                         SelectItemQualifiedWildcardKind::Expr(_) => None,
                     };
-                    match prefix.as_ref().and_then(|ident| self.by_alias(ident)) {
-                        Some(entry) => {
+                    match prefix
+                        .as_ref()
+                        .and_then(|ident| self.qualified_rewrite(select, ident))
+                    {
+                        Some((entry, qualifier)) => {
                             for column in &entry.user_names {
                                 expanded.push(SelectItem::UnnamedExpr(
                                     SqlExpr::CompoundIdentifier(vec![
-                                        entry.alias.clone(),
+                                        qualifier.clone(),
                                         Ident::new(column.clone()),
                                     ]),
                                 ));
@@ -407,6 +398,14 @@ impl RewriteMetadataColumns {
         }
         select.projection = expanded;
         Ok(())
+    }
+
+    fn qualified_rewrite(&self, select: &Select, qualifier: &Ident) -> Option<(&Rewrite, Ident)> {
+        let relation = select_relations(select).find(|relation| {
+            written_qualifier(relation).is_some_and(|written| ident_eq(qualifier, &written.value))
+        })?;
+        let entry = self.rewrite_for_relation(relation)?;
+        Some((entry, qualifier.clone()))
     }
 
     fn rewrite_input_file_names(&self, select: &mut Select) {
@@ -466,30 +465,11 @@ impl RewriteMetadataColumns {
         if !from.joins.is_empty() {
             return None;
         }
-        match &from.relation {
-            TableFactor::Table { name, alias, .. } => self.find(name).or_else(|| {
-                alias
-                    .as_ref()
-                    .and_then(|table_alias| self.by_alias(&table_alias.name))
-            }),
-            _ => None,
-        }
+        self.rewrite_for_relation(&from.relation)
     }
 
     fn select_touches_rewrite(&self, select: &Select) -> bool {
-        select.from.iter().any(|from| {
-            let mut relations = vec![&from.relation];
-            relations.extend(from.joins.iter().map(|join| &join.relation));
-            relations.into_iter().any(|relation| match relation {
-                TableFactor::Table { name, alias, .. } => {
-                    self.find(name).is_some()
-                        || alias
-                            .as_ref()
-                            .is_some_and(|table_alias| self.by_alias(&table_alias.name).is_some())
-                }
-                _ => false,
-            })
-        })
+        select_relations(select).any(|relation| self.rewrite_for_relation(relation).is_some())
     }
 }
 
@@ -530,6 +510,33 @@ impl VisitorMut for InputFileNameCalls<'_> {
             self.blocked -= 1;
         }
         ControlFlow::Continue(())
+    }
+}
+
+fn select_relations(select: &Select) -> impl Iterator<Item = &TableFactor> {
+    select.from.iter().flat_map(|from| {
+        std::iter::once(&from.relation).chain(from.joins.iter().map(|join| &join.relation))
+    })
+}
+
+fn written_qualifier(relation: &TableFactor) -> Option<Ident> {
+    match relation {
+        TableFactor::Table {
+            alias: Some(table_alias),
+            ..
+        } => Some(table_alias.name.clone()),
+        TableFactor::Table { name, .. } => last_ident(name),
+        _ => None,
+    }
+}
+
+fn sole_relation_alias(select: &Select) -> Option<Ident> {
+    match &select.from.first()?.relation {
+        TableFactor::Table {
+            alias: Some(table_alias),
+            ..
+        } => Some(table_alias.name.clone()),
+        _ => None,
     }
 }
 
@@ -854,6 +861,131 @@ mod tests {
             temp_view_count(&rewritten),
             1,
             "the physical table stays rewritten: {rewritten}"
+        );
+    }
+
+    fn normalized(rewritten: &str) -> String {
+        let mut parts = rewritten.split(TEMP_VIEW_PREFIX);
+        let mut out = parts.next().unwrap_or_default().to_string();
+        for part in parts {
+            out.push_str(TEMP_VIEW_PREFIX);
+            out.push('N');
+            out.push_str(part.trim_start_matches(|c: char| c.is_ascii_digit()));
+        }
+        out
+    }
+
+    #[tokio::test]
+    async fn a_qualified_wildcard_under_a_from_alias_expands_to_user_columns() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        for (sql, expected) in [
+            (
+                "SELECT x.* FROM datafusion.public.t x WHERE x._spec_id = 0",
+                "SELECT x.id FROM __repark_mc_N x WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT X.* FROM datafusion.public.t x WHERE x._spec_id = 0",
+                "SELECT X.id FROM __repark_mc_N x WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT * FROM datafusion.public.t x WHERE x._spec_id = 0",
+                "SELECT x.id FROM __repark_mc_N x WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT t.* FROM datafusion.public.t t WHERE t._spec_id = 0",
+                "SELECT t.id FROM __repark_mc_N t WHERE t._spec_id = 0",
+            ),
+            (
+                "SELECT t.*, t._pos FROM datafusion.public.t",
+                "SELECT t.id, t._pos FROM __repark_mc_N t",
+            ),
+            (
+                "SELECT q.*, x.id FROM datafusion.public.t x JOIN datafusion.ns.t q ON x.id = q.id \
+                 WHERE x._spec_id = 0",
+                "SELECT q.id, x.id FROM __repark_mc_N x JOIN __repark_mc_N q ON x.id = q.id \
+                 WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT q.*, x.id FROM datafusion.public.t x JOIN other q ON x.id = q.id \
+                 WHERE x._spec_id = 0",
+                "SELECT q.*, x.id FROM __repark_mc_N x JOIN other q ON x.id = q.id \
+                 WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT x.* FROM (SELECT id FROM datafusion.public.t WHERE _spec_id = 0) x",
+                "SELECT x.* FROM (SELECT id FROM __repark_mc_N t WHERE _spec_id = 0) x",
+            ),
+            (
+                "WITH x AS (SELECT id FROM datafusion.public.t WHERE _spec_id = 0) SELECT x.* FROM x",
+                "WITH x AS (SELECT id FROM __repark_mc_N t WHERE _spec_id = 0) SELECT x.* FROM x",
+            ),
+            (
+                "SELECT y.* FROM datafusion.public.t x WHERE x._spec_id = 0",
+                "SELECT y.* FROM __repark_mc_N x WHERE x._spec_id = 0",
+            ),
+        ] {
+            let rewritten = prepared(&ctx, &catalogs, sql)
+                .await
+                .expect("a metadata column routes the statement");
+            assert_eq!(normalized(&rewritten), expected, "{sql}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_wildcard_resolves_only_against_its_own_select() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let exists = "EXISTS (SELECT 1 FROM datafusion.public.t WHERE _spec_id = 0)";
+        let rewritten = "EXISTS (SELECT 1 FROM __repark_mc_N t WHERE _spec_id = 0)";
+        for (sql, expected) in [
+            ("SELECT * FROM other t WHERE", "SELECT * FROM other t WHERE"),
+            (
+                "SELECT t.* FROM other t WHERE",
+                "SELECT t.* FROM other t WHERE",
+            ),
+            (
+                "SELECT t.* FROM (SELECT id FROM other) t WHERE",
+                "SELECT t.* FROM (SELECT id FROM other) t WHERE",
+            ),
+            (
+                "WITH t AS (SELECT id FROM other) SELECT t.* FROM t WHERE",
+                "WITH t AS (SELECT id FROM other) SELECT t.* FROM t WHERE",
+            ),
+            (
+                "SELECT * FROM other t JOIN other u ON t.id = u.id WHERE",
+                "SELECT * FROM other t JOIN other u ON t.id = u.id WHERE",
+            ),
+        ] {
+            let out = prepared(&ctx, &catalogs, &format!("{sql} {exists}"))
+                .await
+                .expect("the subquery routes the statement");
+            assert_eq!(normalized(&out), format!("{expected} {rewritten}"), "{sql}");
+        }
+        let out = prepared(
+            &ctx,
+            &catalogs,
+            "SELECT * FROM datafusion.public.t t WHERE t._spec_id = 0 AND EXISTS (SELECT * FROM other t)",
+        )
+        .await
+        .expect("a metadata column routes the statement");
+        assert_eq!(
+            normalized(&out),
+            "SELECT t.id FROM __repark_mc_N t WHERE t._spec_id = 0 AND EXISTS (SELECT * FROM other t)"
+        );
+    }
+
+    #[tokio::test]
+    async fn input_file_name_over_a_comma_join_is_left_unresolved() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let out = prepared(
+            &ctx,
+            &catalogs,
+            "SELECT input_file_name() FROM datafusion.public.t a, datafusion.ns.t b",
+        )
+        .await
+        .expect("the input_file_name trigger routes the statement");
+        assert_eq!(
+            normalized(&out),
+            "SELECT input_file_name() FROM __repark_mc_N a, __repark_mc_N b"
         );
     }
 }

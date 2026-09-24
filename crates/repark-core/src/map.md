@@ -890,10 +890,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   call it.
   pins: v3-4-serve-lineage-columns/C-002, C-003, C-011, C-012, C-013, C-014, C-015, C-016
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `prepare_metadata_column_sql`
-  rewrites queries that name `_file` / `_pos` / `_spec_id` / `_partition` onto a `MetadataColumnsTableProvider` temp
+  rewrites queries that name `_file` / `_pos` / `_spec_id` / `_partition` / `_deleted` onto a `MetadataColumnsTableProvider` temp
   view (qualified/aliased FROM, unquoted case-fold, schema-order `*` expand serves user
-  columns only). `_deleted` refuses `[ICE-MC-1]` naming the
-  column — unserved-and-declared at the fork pin, never the raw `No field named`. Only the
+  columns only). Only the
   Spark door calls it; the ANSI door does not serve metadata columns in this unit.
   **WO-R2 (2026-09-22):** both refusal strings advertise the served three; a served
   `_spec_id` beside an unserved name refuses naming the unserved one.
@@ -922,12 +921,74 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   quoted stays exact) is never treated as the physical table and falls
   through unrewritten; qualified names are never CTE references and stay
   collected.
+  **WO-R3 (2026-09-22):** `_partition` joins the served set as a NULLABLE union struct.
+  **mcdel-r1 (2026-09-23):** `_deleted` joins the served set — the projected name
+  reaches the pinned fork unchanged, whose include-deleted scan mode marks
+  merge-on-read deleted rows `true`; the unserved-token machinery
+  (`UNSERVED_METADATA_COLUMN_NAMES`, the unserved scan and its refusal) is deleted,
+  and the composed refusal message now names all five served columns. A metadata
+  column over a time-travel read keeps the planner's unresolved-column error — the
+  pinned static provider does not advertise metadata columns (RePark refuses every
+  metadata column there; KNOWN DIVERGENCE for `_file` and `_deleted`, which Spark was
+  measured serving — the other names are unmeasured on Spark).
+  **mcdel-r4 (2026-09-23):** before registering a table's temp view,
+  `prepare_metadata_column_sql` refuses when the statement names a served metadata
+  column (its canonical tokens, `referenced_metadata_names`) that the table's user
+  schema also carries: `Table column names conflict with names reserved for Iceberg
+  metadata columns: [<names>]. Please, use ALTER TABLE statements to rename the
+  conflicting table columns.` (Spark's text, as `DataFusionError::Plan`) instead of
+  leaking `__repark_mc_N` in a duplicate-field schema error. A statement that does
+  not name the colliding column is still served.
+  **mcdel-r5 (2026-09-23):** measured on both engines — the bracket lists the
+  colliding names the statement references in the table's declaration order,
+  whatever the query order (`(id, _pos, _file)` → `[_pos, _file]`), and a query naming
+  no colliding column (another metadata column, a plain `SELECT id`) answers on Spark
+  too. Still divergent (`R-MC-RESERVED-NAME-SCAN`): Spark refuses `SELECT *` and the
+  copy-on-write `DELETE` and prints a different `WHERE`-shape error. Because the check
+  keys on the statement's tokens rather than the relation, a join naming `p._deleted`
+  beside a table `uc` whose user schema has `_deleted` refuses, where Spark answers
+  (residue candidate `R-MC-RESERVED-NAME-JOIN`).
+  **mcdel-r6 (2026-09-23):** the collision check left this file. It now runs in
+  `MetadataColumnsTableProvider::scan` (`repark-iceberg`) on the columns the scan
+  reads, so the token check described in the mcdel-r4/r5 notes is gone.
+  `referenced_metadata_names` only routes a statement onto the rewrite; a reserved
+  word used as an alias, CTE name or table alias answers, and the join above now
+  answers Spark's rows.
+  **mcdel-r8 (2026-09-24):** `expand_wildcards` resolves a qualified wildcard through
+  `qualified_rewrite` — first this SELECT's aliased FROM relations (joins included),
+  qualifying by the alias as written, then the rewrite's own alias — and qualifies a
+  bare `*` by `sole_relation_alias`. So `x.*` under a FROM alias expands to the user
+  columns instead of every provider field, which had returned deleted rows on
+  merge-on-read tables. The unit leg
+  `a_qualified_wildcard_under_a_from_alias_expands_to_user_columns` pins the rewritten
+  SQL.
+  **mcdel-r9 (2026-09-24):** the statement-global `by_alias` is removed. Each
+  per-SELECT decision (`sole_rewritten_relation`, `qualified_rewrite`,
+  `select_touches_rewrite`) reads only this SELECT's relations (`select_relations`,
+  `written_qualifier`). A relation counts as rewritten only through
+  `rewrite_for_relation`: a `TableFactor::Table` whose name is a rewrite's original
+  (mcdel-r10 removed the unreachable replacement-name match, the Derived arm of
+  `written_qualifier` and `qualified_rewrite`'s unaliased `entry.alias` branch; the
+  qualifier is always used as written). So a plain table, CTE or derived table sharing the
+  Iceberg table's alias in another scope keeps its own columns; the unit leg
+  `a_wildcard_resolves_only_against_its_own_select` pins it.
+  **mcdel-r11 (2026-09-24):** the unit leg
+  `input_file_name_over_a_comma_join_is_left_unresolved` pins
+  `sole_input_file_name_relation`'s `from.len() != 1` guard: `input_file_name()` over
+  `FROM a, b` is left untouched (the `[UNRESOLVED_ROUTINE]` residue). The mutation sweep
+  that found the gap is saved in `/tmp/xo58-mcd-r11probe/mutations-r11.json`.
+  **mcdel-r12 (2026-09-24):** that leg asserts only the rewritten SQL. The refusal itself
+  (class and full `[UNRESOLVED_ROUTINE]` text, residue `R-MC-IFN-COMMA-JOIN`) is pinned at
+  the Spark door by `input_file_name_over_a_v3_comma_join_is_an_unresolved_routine`
+  (`crates/repark-spark/src/tests/input_file_name.rs`).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
-  C-018, C-019, C-020, C-021, C-022, C-023
+  C-018, C-019, C-020, C-021, C-022
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
   C-012, C-013
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
   so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved

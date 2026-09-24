@@ -1467,6 +1467,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   merged in as C-015..C-018: `_spec_id` values, evolution, star, refusal strings.
   **WO-R3 (2026-09-22):** merged in as C-019..C-023 — `_partition` joins the
   served set as a NULLABLE union struct; only `_deleted` still refuses.
+  **U10-MC-DELETED-1 (2026-09-23):** `_deleted` is served; C-023 is REJECTED
+  (SUPERSEDED by u10-mc-deleted-1/C-001), with supersession notes on C-007, C-008 and C-018.
   Ready for the departure move to `completed/`.
   `risk_tier: standard`. Branch `fix/ice-metadata-cols-1`.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
@@ -1573,3 +1575,52 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   pins: ipi-23-mt-reader-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021,
   C-022
+- [u10-mc-deleted-1-ledger.md](u10-mc-deleted-1-ledger.md) —
+  **U10-MC-DELETED-1 (2026-09-23), in flight:** `_deleted` joins the served
+  metadata-column set as a non-null Boolean after `_partition` — the projected
+  name reaches the pinned fork's include-deleted scan mode, so
+  `SELECT id, _deleted` on a merge-on-read table answers the recorded
+  `R-MC-DELETED` cell `[[1,true],[2,false],[3,false],[4,false]]` on both doors
+  while not projecting it keeps the delete filter and `SELECT *` stays user
+  columns. The unserved-token machinery is deleted and the composed refusal
+  names all five columns. mcdel-r2 pinned the live-Spark S1–S14 row lists
+  verbatim (predicate-only, subqueries, expressions/order/group, the empty
+  self-join) and recorded two pre-existing KNOWN DIVERGENCEs with full-message
+  pins: quoted `` `_DELETED` ``/`` `_FILE` `` refuse
+  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` where Spark resolves quoted `` `_DELETED` ``
+  (quoted `` `_FILE` `` unmeasured on Spark), and `_file` / `_deleted` over
+  `VERSION AS OF` refuse unresolved where Spark was measured serving them.
+  mcdel-r3 pinned the live-Spark P1–P8 rows in order: the composed
+  `_spec_id` + `_deleted` rows on both tables, the discriminating
+  `a.id = b.id + 1` joins that prove the right-side `_deleted` reaches its scan,
+  and the `SELECT *` rows under `ORDER BY id` and `ORDER BY id DESC`.
+  mcdel-r4 asserts the merge-on-read types beside the copy-on-write ones and
+  refuses a named metadata column that the table schema also carries with Spark's
+  reserved-name text (C-014, all five names). `SELECT *`, `DELETE` and other
+  metadata columns on such a table stay served: KNOWN DIVERGENCE
+  `R-MC-RESERVED-NAME-SCAN` (C-015). It also trues up the `ICE-MC-FILEPOS-1` registry
+  row and the predecessor ledger.
+  mcdel-r5 measured the collision rule on both engines (M-12). The bracket lists the
+  referenced colliding names in the table's declaration order. A query naming no
+  colliding column answers on Spark too, so C-015 now keeps only the divergent
+  `SELECT *`, copy-on-write `DELETE` and `WHERE` shapes. Near misses are pinned for
+  all five names, and the join case is recorded as residue candidate
+  `R-MC-RESERVED-NAME-JOIN` (C-016).
+  mcdel-r6 moved the collision check to the scan's read columns (Spark's rule,
+  M-14). Aliases, CTE names, table aliases and the join now answer like Spark
+  (C-016 PROVEN, C-017), and the class-N positions were measured on both engines
+  (M-15). The pins live in `metadata_columns_reserved.rs`.
+  mcdel-r7 made every answer leg assert its field names and full rows (C-012), and
+  measured and pinned the join and query positions (M-17). It also recorded the
+  qualified-wildcard silent wrong answer as residue candidate
+  `R-MC-QUALIFIED-WILDCARD` (C-018, M-18), pinned as RePark's answer at that time.
+  mcdel-r8 fixed it and withdrew the candidate (C-018 FIXED, M-20). mcdel-r9 scoped each
+  wildcard to its own SELECT (C-019, M-21). mcdel-r10 and mcdel-r11 removed three
+  unreachable arms and saved the mutation sweep (M-22). mcdel-r12 recorded that
+  reserved-name refusals share Spark's text but not its class (residue
+  `R-MC-RESERVED-NAME-CLASS`) and pinned the comma-join `input_file_name()` refusal
+  (C-020, residue `R-MC-IFN-COMMA-JOIN`). mcdel-r13 corrected the ledger header: the
+  registry row, the current base `970ac11a` and the per-round model.
+  `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
+  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020

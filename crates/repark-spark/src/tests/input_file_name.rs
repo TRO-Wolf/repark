@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, BooleanArray, Int64Array, StringArray};
-use repark_core::ReparkSession;
+use repark_core::{ErrorClass, ReparkSession};
 use tempfile::TempDir;
 
+use super::metadata_columns_deleted::refusal;
 use crate::{SparkDialect, SparkExtension};
 
 async fn session(wh: &TempDir) -> ReparkSession {
@@ -12,6 +13,7 @@ async fn session(wh: &TempDir) -> ReparkSession {
     let session = ReparkSession::builder()
         .with_extension(Arc::new(SparkExtension))
         .with_sql_dialect(Arc::new(SparkDialect))
+        .config("repark.sql.allowCreateFormatVersion3", "true")
         .build()
         .unwrap();
     session
@@ -360,6 +362,35 @@ async fn input_file_name_over_a_self_join_falls_through() {
     assert!(
         error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
         "a joined SELECT keeps the unresolved-routine error: {error}"
+    );
+}
+
+#[tokio::test]
+async fn input_file_name_over_a_v3_comma_join_is_an_unresolved_routine() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    run(
+        &session,
+        "CREATE TABLE ice.ns.t3 (id BIGINT, data STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    run(&session, "INSERT INTO ice.ns.t3 VALUES (1, 'a'), (2, 'b')").await;
+
+    let error = refusal(
+        &session,
+        "SELECT input_file_name() LIKE '%.parquet' AS f FROM ice.ns.t3 a, ice.ns.t3 b",
+    )
+    .await;
+    assert_eq!(
+        (error.exception_class(), error.to_string()),
+        (
+            ErrorClass::Analysis,
+            "[UNRESOLVED_ROUTINE] Cannot resolve routine `input_file_name` on search path \
+             [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. \
+             SQLSTATE: 42883; line 1 pos 7"
+                .to_string()
+        ),
     );
 }
 
