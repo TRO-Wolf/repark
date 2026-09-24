@@ -58,6 +58,10 @@ pins: ice-error-conditions-1/C-011
   about 1.9× the measured debug cost of the derived `SetExpr::clone` (17,216 B per `UNION`
   level); at 8 KiB the 1,000-branch pins crash (mutation proof, ledger Run 22b).
   pins: ice-mixed-case-1/C-022
+  **IPI-40 PR6 (2026-09-24):** `GrownStack` and `on_grown_stack_with(red_zone, segment, future)`
+  are public through `column_resolution` (`on_grown_stack` passes one value for both) so
+  repark-spark's re-planning temp-view scan grows the stack the same way; removing that wrapper
+  overflows the 100-level temp-view chain pins. pins: ice-views-1/C-018
 - `tests.rs` — the battery below.
 
 ## Purpose
