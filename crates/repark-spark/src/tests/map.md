@@ -1519,7 +1519,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   leading and inter-keyword unclosed `/*` probes pin the full rendered
   `UNCLOSED_BRACKETED_COMMENT` / `42601` text the router front door (WO-C10) answers.
   **WO-A10 (2026-09-23):** the `;;x` and unclosed-comment refusals go through
-  `assert_parse_refusal` (the SQL / ParserError variants and the bare message).
+  `assert_parse_refusal` (the SQL / ParserError variants and the bare message). The scanner
+  branches of `unbalanced_delimiter` and the bare `PARTITION` path each have a parser-level pin
+  (`try_parse_show_table_extended`) and an end-to-end pin (`assert_parse_refusal` plus
+  `repark_common::Error::Parse`), with a balanced near miss that keeps its exact rows or refusal:
+  doubled `'`, `"` and backtick before an unclosed quote; `/*` and `--` inside an open quote; a
+  quote inside `--` and nested `/* */` comments; an unterminated trailing `/*` (parser: end of
+  input; router front door: `UNCLOSED_BRACKETED_COMMENT`); `PARTITION` with no parentheses.
+  Every refusal equals the Spark 4.1.2 condition and message head (WO-A10).
   pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal

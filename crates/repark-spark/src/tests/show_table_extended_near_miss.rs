@@ -278,3 +278,220 @@ async fn show_table_extended_near_miss_probes_keep_their_exact_outcomes() {
         "Plan(\"SHOW [VARIABLE] is not supported unless information_schema is enabled\")"
     );
 }
+
+const NEAR_SINGLE_QUOTE: &str = "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601";
+const NEAR_DOUBLE_QUOTE: &str =
+    "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"'. SQLSTATE: 42601";
+const NEAR_BACKTICK: &str = "[PARSE_SYNTAX_ERROR] Syntax error at or near '`'. SQLSTATE: 42601";
+const NEAR_END_OF_INPUT: &str =
+    "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601";
+
+fn assert_scanner_refusal(sql: &str, expected: &str) {
+    let Some(Err(error)) = crate::show_table_extended::try_parse_show_table_extended(sql) else {
+        panic!("{sql}: expected a SHOW TABLE EXTENDED parse refusal");
+    };
+    assert_parse_refusal(sql, error, expected);
+}
+
+fn assert_scanner_accepts(sql: &str, scope: &[&str], pattern: &str, has_partition: bool) {
+    let Some(Ok(parsed)) = crate::show_table_extended::try_parse_show_table_extended(sql) else {
+        panic!("{sql}: expected a SHOW TABLE EXTENDED parse");
+    };
+    assert_eq!(
+        parsed,
+        crate::show_table_extended::ShowTableExtended {
+            scope: Some(scope.iter().map(|part| (*part).to_string()).collect()),
+            pattern: pattern.to_string(),
+            has_partition,
+        },
+        "{sql}"
+    );
+}
+
+async fn assert_end_to_end_refusal(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    expected: &str,
+) {
+    let error = outcome(ctx, catalogs, sql)
+        .await
+        .expect_err("the statement must refuse");
+    assert_parse_refusal(sql, error, expected);
+    let mapped = repark_core::engine_err(
+        outcome(ctx, catalogs, sql)
+            .await
+            .expect_err("the statement must refuse again"),
+    );
+    let repark_common::Error::Parse(message) = &mapped else {
+        panic!("{sql}: expected a Parse error, got {mapped:?}");
+    };
+    assert_eq!(message, expected, "{sql}");
+}
+
+async fn seed_pc(ctx: &SessionContext, catalogs: &CatalogRegistry) -> (Schema, Vec<ExtendedRow>) {
+    run(
+        ctx,
+        catalogs,
+        "CREATE TABLE ice.sales.pc (id BIGINT) USING iceberg",
+    )
+    .await;
+    let properties = character_properties(&[
+        ("current-snapshot-id", "none"),
+        ("format", "iceberg/parquet"),
+        ("format-version", "2"),
+        ("write.parquet.compression-codec", "zstd"),
+    ]);
+    let location = table_location(catalogs, "pc").await;
+    (
+        extended_schema(),
+        vec![managed_row(
+            "pc",
+            &location,
+            &properties,
+            None,
+            "root\n |-- id: long (nullable = true)\n",
+        )],
+    )
+}
+
+#[tokio::test]
+async fn show_table_extended_refuses_doubled_delimiters_before_an_unclosed_quote() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    for (sql, expected) in [
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE 'p''c",
+            NEAR_SINGLE_QUOTE,
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE \"p\"\"c",
+            NEAR_DOUBLE_QUOTE,
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.`sa``les` LIKE 'pc",
+            NEAR_SINGLE_QUOTE,
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.`sa``les LIKE 'pc'",
+            NEAR_BACKTICK,
+        ),
+    ] {
+        assert_scanner_refusal(sql, expected);
+        assert_end_to_end_refusal(&ctx, &catalogs, sql, expected).await;
+    }
+}
+
+#[tokio::test]
+async fn show_table_extended_balanced_doubled_delimiters_keep_their_answers() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    for (sql, pattern) in [
+        ("SHOW TABLE EXTENDED IN ice.sales LIKE 'p''c'", "p'c"),
+        ("SHOW TABLE EXTENDED IN ice.sales LIKE \"p\"\"c\"", "p\"c"),
+    ] {
+        assert_scanner_accepts(sql, &["ice", "sales"], pattern, false);
+        assert_eq!(
+            outcome(&ctx, &catalogs, sql).await.unwrap(),
+            (extended_schema(), Vec::new()),
+            "{sql}"
+        );
+    }
+    let backtick_sql = "SHOW TABLE EXTENDED IN ice.`sa``les` LIKE 'pc'";
+    assert_scanner_accepts(backtick_sql, &["ice", "sa`les"], "pc", false);
+    let missing_schema = outcome(&ctx, &catalogs, backtick_sql)
+        .await
+        .expect_err("the doubled-backtick namespace does not exist");
+    assert_analysis_refusal(
+        backtick_sql,
+        missing_schema,
+        "[SCHEMA_NOT_FOUND] The schema `ice`.`sa`les` cannot be found. Verify the spelling and \
+         correctness of the schema and catalog. If you did not qualify the name with a catalog, \
+         verify the current_schema() output, or qualify the name with the correct catalog. To \
+         tolerate the error on drop use DROP SCHEMA IF EXISTS. SQLSTATE: 42704",
+    );
+}
+
+#[tokio::test]
+async fn show_table_extended_scanner_keeps_comment_markers_inside_open_quotes() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    for sql in [
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'p/*c",
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'p--c",
+    ] {
+        assert_scanner_refusal(sql, NEAR_SINGLE_QUOTE);
+        assert_end_to_end_refusal(&ctx, &catalogs, sql, NEAR_SINGLE_QUOTE).await;
+    }
+    for (sql, pattern) in [
+        ("SHOW TABLE EXTENDED IN ice.sales LIKE 'p/*c'", "p/*c"),
+        ("SHOW TABLE EXTENDED IN ice.sales LIKE 'p--c'", "p--c"),
+    ] {
+        assert_scanner_accepts(sql, &["ice", "sales"], pattern, false);
+        assert_eq!(
+            outcome(&ctx, &catalogs, sql).await.unwrap(),
+            (extended_schema(), Vec::new()),
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn show_table_extended_scanner_skips_quotes_inside_comments() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let expected = seed_pc(&ctx, &catalogs).await;
+    for sql in [
+        "-- it's\nSHOW TABLE EXTENDED IN ice.sales LIKE \"pc",
+        "/* a /* it's */ b */ SHOW TABLE EXTENDED IN ice.sales LIKE \"pc",
+    ] {
+        assert_scanner_refusal(sql, NEAR_DOUBLE_QUOTE);
+        assert_end_to_end_refusal(&ctx, &catalogs, sql, NEAR_DOUBLE_QUOTE).await;
+    }
+    for sql in [
+        "-- it's\nSHOW TABLE EXTENDED IN ice.sales LIKE \"pc\"",
+        "/* a /* it's */ b */ SHOW TABLE EXTENDED IN ice.sales LIKE \"pc\"",
+    ] {
+        assert_scanner_accepts(sql, &["ice", "sales"], "pc", false);
+        assert_eq!(
+            outcome(&ctx, &catalogs, sql).await.unwrap(),
+            expected,
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn show_table_extended_scanner_stops_at_an_unterminated_block_comment() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let expected = seed_pc(&ctx, &catalogs).await;
+    let open_sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' /* open";
+    assert_scanner_refusal(open_sql, NEAR_END_OF_INPUT);
+    assert_end_to_end_refusal(
+        &ctx,
+        &catalogs,
+        open_sql,
+        UNCLOSED_BRACKETED_COMMENT_MESSAGE,
+    )
+    .await;
+    let closed_sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' /* closed */";
+    assert_scanner_accepts(closed_sql, &["ice", "sales"], "pc", false);
+    assert_eq!(
+        outcome(&ctx, &catalogs, closed_sql).await.unwrap(),
+        expected
+    );
+}
+
+#[tokio::test]
+async fn show_table_extended_partition_keyword_without_parentheses_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION";
+    assert_scanner_refusal(sql, NEAR_END_OF_INPUT);
+    assert_end_to_end_refusal(&ctx, &catalogs, sql, NEAR_END_OF_INPUT).await;
+}
