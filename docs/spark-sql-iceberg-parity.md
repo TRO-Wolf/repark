@@ -1677,8 +1677,9 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
   `USE sc; SHOW CREATE TABLE ns.v2` answer the same fully qualified `sc.ns.v2` text as the
   three-part form. (2) A `'` in a column doc or the view comment renders as `\'`
   (`spark_sql_string_literal`, measured for tables only). (3) `SHOW CREATE TABLE sc.ns.v2 AS
-  SERDE` keeps main's answer (measured at a6e8bcda, and at 4b1688f2 in
-  `/tmp/xb-views5/target/probe5/nearmiss-main.json`): `ParseException`, text `SQL error: ParserError("Expected:
+  SERDE` keeps the answer of main 970ac11a (key `NM-view-as-serde` in
+  `/tmp/xb-views5/target/probe5/r4/nearmiss-main-970ac11a.json`; the same text was measured
+  earlier at a6e8bcda and 4b1688f2): `ParseException`, text `SQL error: ParserError("Expected:
   end of statement, found: AS at Line: 1, Column: 28")`, condition and SQLSTATE null.
   (4) A view body that uses a bare table name (`SELECT id FROM t`) renders that stored text,
   not the namespace-qualified form that the read path plans. (5) A view whose current version

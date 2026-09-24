@@ -5,7 +5,9 @@ the stored column names (with ``COMMENT`` for a documented column), the view
 comment, the reserved plus stored properties sorted by key without ``comment``,
 and the stored SQL text verbatim. Measured against Spark 4.1.2 + Iceberg 1.11.0
 (``/tmp/oc-worker/qe/probe/p2.json`` keys ``C.show_create`` and
-``C.v2.show_create``). Near misses keep the answers measured on main a6e8bcda.
+``C.v2.show_create``). Near misses keep the answers of main 970ac11a
+(``target/probe5/r4/nearmiss-main-970ac11a.json``); #816 changed the no-name and
+trailing-token text to the bare ``INVALID_SHOW_CREATE_TABLE`` string pinned below.
 Unmeasured residues: D-VIEW-SHOWCREATE-1.
 
 pins: ice-views-1/C-017
