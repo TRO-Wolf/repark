@@ -826,6 +826,9 @@ async fn try_preparse_intercepts(
     if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
         return Some(refused);
     }
+    if let Some(refused) = crate::table_props_ddl::unset_tblproperties_if_refusal(sql) {
+        return Some(Err(refused));
+    }
     if let Some(parsed) = try_parse_alter_namespace(sql) {
         return Some(
             match parsed.and_then(|ddl| parsed_ddl("ALTER NAMESPACE").map(|()| ddl)) {

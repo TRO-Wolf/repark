@@ -1,7 +1,8 @@
-use iceberg::spec::{NestedFieldRef, PrimitiveType, Schema, Type};
+use iceberg::spec::{MapType, NestedFieldRef, PrimitiveType, Schema, StructType, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Result};
+use repark_common::spark_error;
 
 use super::alter::ColumnPosition;
 use super::column_move::{top_level_names, unresolved_column};
@@ -139,6 +140,278 @@ pub fn nested_add_refusal(schema: &Schema, changes: &[ColumnPathChange]) -> Opti
                 )
             })
     })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NestedTypeRefusal {
+    Analysis(String),
+    Unsupported(String),
+}
+
+struct ResolvedNestedPath<'a> {
+    names: Vec<String>,
+    field_type: &'a Type,
+    key_of: Option<&'a MapType>,
+}
+
+fn quoted_path(parts: &[String]) -> String {
+    parts
+        .iter()
+        .map(|part| format!("`{part}`"))
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn invalid_field_name(path: &[String], resolved: &[String]) -> NestedTypeRefusal {
+    NestedTypeRefusal::Analysis(format!(
+        "[INVALID_FIELD_NAME] Field name {} is invalid: {} is not a struct. SQLSTATE: 42000",
+        quoted_path(path),
+        quoted_path(resolved)
+    ))
+}
+
+fn struct_child<'a>(fields: &'a StructType, part: &str) -> Option<&'a NestedFieldRef> {
+    fields
+        .fields()
+        .iter()
+        .find(|field| field.name.eq_ignore_ascii_case(part))
+}
+
+fn resolve_nested_path<'a>(
+    schema: &'a Schema,
+    path: &[String],
+) -> std::result::Result<ResolvedNestedPath<'a>, NestedTypeRefusal> {
+    let unresolved = || {
+        NestedTypeRefusal::Analysis(unresolved_column(&path.join("."), &top_level_names(schema)))
+    };
+    let Some((first, rest)) = path.split_first() else {
+        return Err(unresolved());
+    };
+    let root = struct_child(schema.as_struct(), first).ok_or_else(unresolved)?;
+    let mut resolved = ResolvedNestedPath {
+        names: vec![root.name.clone()],
+        field_type: root.field_type.as_ref(),
+        key_of: None,
+    };
+    for part in rest {
+        let (name, field_type, key_of) = match (resolved.field_type, part.as_str()) {
+            (Type::Struct(fields), _) => {
+                let child = struct_child(fields, part).ok_or_else(unresolved)?;
+                (child.name.clone(), child.field_type.as_ref(), None)
+            }
+            (Type::Map(map), "key") => (
+                "key".to_string(),
+                map.key_field.field_type.as_ref(),
+                Some(map),
+            ),
+            (Type::Map(map), "value") => (
+                "value".to_string(),
+                map.value_field.field_type.as_ref(),
+                None,
+            ),
+            (Type::List(list), "element") => (
+                "element".to_string(),
+                list.element_field.field_type.as_ref(),
+                None,
+            ),
+            _ => return Err(invalid_field_name(path, &resolved.names)),
+        };
+        resolved.names.push(name);
+        resolved.field_type = field_type;
+        resolved.key_of = key_of;
+    }
+    Ok(resolved)
+}
+
+fn iceberg_type_name(field_type: &Type) -> String {
+    match field_type {
+        Type::Primitive(PrimitiveType::Decimal { precision, scale }) => {
+            format!("decimal({precision}, {scale})")
+        }
+        Type::Primitive(PrimitiveType::Fixed(length)) => format!("fixed[{length}]"),
+        Type::Primitive(primitive) => primitive.to_string(),
+        Type::Struct(fields) => {
+            let children = fields
+                .fields()
+                .iter()
+                .map(|field| {
+                    let optional = if field.required {
+                        "required"
+                    } else {
+                        "optional"
+                    };
+                    let doc = field
+                        .doc
+                        .as_deref()
+                        .map_or_else(String::new, |doc| format!(" ({doc})"));
+                    format!(
+                        "{}: {}: {optional} {}{doc}",
+                        field.id,
+                        field.name,
+                        iceberg_type_name(&field.field_type)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("struct<{children}>")
+        }
+        Type::List(list) => format!(
+            "list<{}>",
+            iceberg_type_name(&list.element_field.field_type)
+        ),
+        Type::Map(map) => format!(
+            "map<{}, {}>",
+            iceberg_type_name(&map.key_field.field_type),
+            iceberg_type_name(&map.value_field.field_type)
+        ),
+        Type::Variant => "variant".to_string(),
+    }
+}
+
+fn numeric_rank(primitive: &PrimitiveType) -> Option<u8> {
+    match primitive {
+        PrimitiveType::Int => Some(0),
+        PrimitiveType::Long => Some(1),
+        PrimitiveType::Float => Some(2),
+        PrimitiveType::Double => Some(3),
+        _ => None,
+    }
+}
+
+fn integral_as_decimal(primitive: &PrimitiveType) -> Option<(u32, u32)> {
+    match primitive {
+        PrimitiveType::Int => Some((10, 0)),
+        PrimitiveType::Long => Some((20, 0)),
+        PrimitiveType::Decimal { precision, scale } => Some((*precision, *scale)),
+        _ => None,
+    }
+}
+
+fn decimal_holds(wide: (u32, u32), narrow: (u32, u32)) -> bool {
+    let (wide_precision, wide_scale) = wide;
+    let (narrow_precision, narrow_scale) = narrow;
+    wide_precision.saturating_sub(wide_scale) >= narrow_precision.saturating_sub(narrow_scale)
+        && wide_scale >= narrow_scale
+}
+
+fn is_timestamp(primitive: &PrimitiveType) -> bool {
+    matches!(
+        primitive,
+        PrimitiveType::Timestamp
+            | PrimitiveType::Timestamptz
+            | PrimitiveType::TimestampNs
+            | PrimitiveType::TimestamptzNs
+    )
+}
+
+fn spark_can_up_cast(from: &PrimitiveType, to: &PrimitiveType) -> bool {
+    use PrimitiveType as P;
+    if spark_sql_primitive(from) == spark_sql_primitive(to) || matches!(to, P::String) {
+        return true;
+    }
+    if matches!(from, P::Decimal { .. }) || matches!(to, P::Decimal { .. }) {
+        return matches!(
+            (integral_as_decimal(from), integral_as_decimal(to)),
+            (Some(narrow), Some(wide)) if decimal_holds(wide, narrow)
+        );
+    }
+    if is_timestamp(to) && (matches!(from, P::Date) || is_timestamp(from)) {
+        return true;
+    }
+    matches!(
+        (from, to),
+        (P::Timestamptz, P::Long) | (P::Long, P::Timestamptz)
+    ) || matches!(
+        (numeric_rank(from), numeric_rank(to)),
+        (Some(narrow), Some(wide)) if narrow < wide
+    )
+}
+
+fn iceberg_promotion_allowed(from: &PrimitiveType, to: &PrimitiveType) -> bool {
+    match (from, to) {
+        (PrimitiveType::Int, PrimitiveType::Long)
+        | (PrimitiveType::Float, PrimitiveType::Double) => true,
+        (
+            PrimitiveType::Decimal {
+                precision: from_precision,
+                scale: from_scale,
+            },
+            PrimitiveType::Decimal {
+                precision: to_precision,
+                scale: to_scale,
+            },
+        ) => from_scale == to_scale && from_precision <= to_precision,
+        _ => false,
+    }
+}
+
+#[must_use]
+pub fn not_supported_change_column(
+    table_name: &str,
+    column_name: &str,
+    from: &Type,
+    to: &Type,
+) -> String {
+    let from_type = spark_sql_type(from);
+    let to_type = spark_sql_type(to);
+    spark_error::message(
+        spark_error::NOT_SUPPORTED_CHANGE_COLUMN,
+        &[
+            ("tableName", table_name),
+            ("columnName", column_name),
+            ("fromType", from_type.as_str()),
+            ("toType", to_type.as_str()),
+        ],
+    )
+}
+
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "round comment ban: the refusal variants are recorded in the unit ledger"
+)]
+pub fn resolve_nested_type_change(
+    schema: &Schema,
+    table_name: &str,
+    path: &[String],
+    to: &Type,
+) -> std::result::Result<String, NestedTypeRefusal> {
+    let resolved = resolve_nested_path(schema, path)?;
+    let dotted = resolved.names.join(".");
+    let refuse_analysis = || {
+        NestedTypeRefusal::Analysis(not_supported_change_column(
+            table_name,
+            &quoted_path(&resolved.names),
+            resolved.field_type,
+            to,
+        ))
+    };
+    let (from_primitive, to_primitive) = match (resolved.field_type, to) {
+        (Type::Primitive(from_primitive), Type::Primitive(to_primitive)) => {
+            (from_primitive, to_primitive)
+        }
+        (_, Type::Primitive(_)) => return Err(refuse_analysis()),
+        _ => return Ok(dotted),
+    };
+    if from_primitive == to_primitive {
+        return Ok(dotted);
+    }
+    if !spark_can_up_cast(from_primitive, to_primitive) {
+        return Err(refuse_analysis());
+    }
+    if !iceberg_promotion_allowed(from_primitive, to_primitive) {
+        return Err(NestedTypeRefusal::Unsupported(format!(
+            "Unsupported table change: Cannot change column type: {dotted}: {} -> {}",
+            iceberg_type_name(resolved.field_type),
+            iceberg_type_name(to)
+        )));
+    }
+    match resolved.key_of {
+        Some(map) => Err(NestedTypeRefusal::Unsupported(format!(
+            "Unsupported table change: Cannot update map keys: {}",
+            iceberg_type_name(&Type::Map(map.clone()))
+        ))),
+        None => Ok(dotted),
+    }
 }
 
 #[expect(

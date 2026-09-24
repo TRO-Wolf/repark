@@ -289,29 +289,191 @@ async fn nested_alter_column_type_updates_map_value_metadata() {
     ));
 }
 
+const TYPE_CHANGE_CREATE: &str = "CREATE TABLE ice.sales.types (id INT, st STRUCT<a: INT, \
+    b: BIGINT, s: STRING, c: BIGINT, dec: DECIMAL(9,2), inner: STRUCT<x: INT>>, arr ARRAY<INT>, \
+    arrl ARRAY<BIGINT>, arrs ARRAY<STRING>, arrd ARRAY<BIGINT>, ki MAP<INT, INT>, \
+    kl MAP<BIGINT, INT>, ks MAP<STRING, INT>, kf MAP<FLOAT, INT>) USING iceberg";
+
+fn not_supported_change(column: &str, from: &str, to: &str) -> String {
+    format!(
+        "Error during planning: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is \
+         not supported for changing `ice`.`sales`.`types`'s column {column} with type \"{from}\" \
+         to {column} with type \"{to}\". SQLSTATE: 0A000"
+    )
+}
+
+fn unsupported_change(message: &str) -> String {
+    format!("Execution error: Unsupported table change: {message}")
+}
+
+fn type_change_refusal_cases() -> Vec<(&'static str, String)> {
+    vec![
+        (
+            "ki.key TYPE BIGINT",
+            unsupported_change("Cannot update map keys: map<int, int>"),
+        ),
+        (
+            "kf.key TYPE DOUBLE",
+            unsupported_change("Cannot update map keys: map<float, int>"),
+        ),
+        (
+            "ki.key TYPE DOUBLE",
+            unsupported_change("Cannot change column type: ki.key: int -> double"),
+        ),
+        (
+            "kl.key TYPE STRING",
+            unsupported_change("Cannot change column type: kl.key: long -> string"),
+        ),
+        (
+            "ks.key TYPE BIGINT",
+            not_supported_change("`ks`.`key`", "STRING", "BIGINT"),
+        ),
+        (
+            "kl.key TYPE INT",
+            not_supported_change("`kl`.`key`", "BIGINT", "INT"),
+        ),
+        (
+            "st.b TYPE STRING",
+            unsupported_change("Cannot change column type: st.b: long -> string"),
+        ),
+        (
+            "st.s TYPE BIGINT",
+            not_supported_change("`st`.`s`", "STRING", "BIGINT"),
+        ),
+        (
+            "ST.C TYPE INT",
+            not_supported_change("`st`.`c`", "BIGINT", "INT"),
+        ),
+        (
+            "st.dec TYPE DOUBLE",
+            not_supported_change("`st`.`dec`", "DECIMAL(9,2)", "DOUBLE"),
+        ),
+        (
+            "st.a TYPE DECIMAL(10,0)",
+            unsupported_change("Cannot change column type: st.a: int -> decimal(10, 0)"),
+        ),
+        (
+            "st.a TYPE DECIMAL(9,0)",
+            not_supported_change("`st`.`a`", "INT", "DECIMAL(9,0)"),
+        ),
+        (
+            "st.inner TYPE STRING",
+            not_supported_change("`st`.`inner`", "STRUCT<x: INT>", "STRING"),
+        ),
+        (
+            "arrl.element TYPE STRING",
+            unsupported_change("Cannot change column type: arrl.element: long -> string"),
+        ),
+        (
+            "arrs.element TYPE BIGINT",
+            not_supported_change("`arrs`.`element`", "STRING", "BIGINT"),
+        ),
+        (
+            "arrd.element TYPE INT",
+            not_supported_change("`arrd`.`element`", "BIGINT", "INT"),
+        ),
+        (
+            "st.zz TYPE BIGINT",
+            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+             function parameter with name `st`.`zz` cannot be resolved. Did you mean one of the \
+             following? [`id`, `st`, `arr`, `arrl`, `arrs`, `arrd`, `ki`, `kl`, `ks`, `kf`]. \
+             SQLSTATE: 42703"
+                .to_string(),
+        ),
+        (
+            "ki.KEY TYPE BIGINT",
+            "Error during planning: [INVALID_FIELD_NAME] Field name `ki`.`KEY` is invalid: `ki` \
+             is not a struct. SQLSTATE: 42000"
+                .to_string(),
+        ),
+        (
+            "st.a.q TYPE BIGINT",
+            "Error during planning: [INVALID_FIELD_NAME] Field name `st`.`a`.`q` is invalid: \
+             `st`.`a` is not a struct. SQLSTATE: 42000"
+                .to_string(),
+        ),
+    ]
+}
+
 #[tokio::test]
-async fn nested_alter_column_type_refuses_map_key_like_spark() {
+async fn nested_alter_column_type_refuses_each_pair_like_spark() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    run(
-        &ctx,
-        &catalogs,
-        "CREATE TABLE ice.sales.map_key_type (id BIGINT, m MAP<STRING, INT>) USING iceberg",
-    )
-    .await;
+    run(&ctx, &catalogs, TYPE_CHANGE_CREATE).await;
+    let schema_id = load_sales_table(&catalogs, "types")
+        .await
+        .metadata()
+        .current_schema_id();
+    let cases = type_change_refusal_cases();
+    for (clause, expected) in cases {
+        let sql = format!("ALTER TABLE ice.sales.types ALTER COLUMN {clause}");
+        let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        assert_eq!(error.to_string(), expected, "{sql}");
+    }
+    assert_eq!(
+        load_sales_table(&catalogs, "types")
+            .await
+            .metadata()
+            .current_schema_id(),
+        schema_id
+    );
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_accepts_the_pairs_spark_accepts() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, TYPE_CHANGE_CREATE).await;
+    for clause in [
+        "ki.key TYPE INT",
+        "st.a TYPE BIGINT",
+        "ST.INNER.X TYPE BIGINT",
+        "arr.element TYPE BIGINT",
+        "ki.value TYPE BIGINT",
+    ] {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("ALTER TABLE ice.sales.types ALTER COLUMN {clause}"),
+        )
+        .await;
+    }
+    let table = load_sales_table(&catalogs, "types").await;
+    let schema = table.metadata().current_schema();
+    for (path, expected) in [
+        ("ki.key", PrimitiveType::Int),
+        ("st.a", PrimitiveType::Long),
+        ("st.inner.x", PrimitiveType::Long),
+        ("arr.element", PrimitiveType::Long),
+        ("ki.value", PrimitiveType::Long),
+    ] {
+        let field = schema.field_by_name(path).unwrap();
+        assert_eq!(
+            field.field_type.as_ref(),
+            &Type::Primitive(expected),
+            "{path}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_on_a_missing_table_is_table_or_view_not_found() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
     let error = execute(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.map_key_type ALTER COLUMN m.key TYPE BIGINT",
+        "ALTER TABLE ice.sales.nope ALTER COLUMN st.a TYPE BIGINT",
     )
     .await
-    .expect_err("map keys cannot change type");
-    assert!(matches!(error, DataFusionError::Plan(_)));
+    .expect_err("a missing table must refuse");
     assert_eq!(
         error.to_string(),
-        "Error during planning: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported for \
-         changing `ice`.`sales`.`map_key_type`'s column `m`.`key` with type \"STRING\" to \
-         `m`.`key` with type \"BIGINT\". SQLSTATE: 0A000"
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view \
+         `ice`.`sales`.`nope` cannot be found. Verify the spelling and correctness of the schema \
+         and catalog. If you did not qualify the name with a schema, verify the current_schema() \
+         output, or qualify the name with the correct schema and catalog. To tolerate the error \
+         on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
     );
 }
 

@@ -1011,6 +1011,12 @@ pins: rp-4-fork-repin/C-005, C-006
   emits the sentinel SET form; a missing key is a metadata no-op, and the prior bare spelling
   keeps its route.
   pins: ice-nested-evo-1/C-025, C-028
+  **WO U5 PR1 round 2 (2026-09-24):** the rewrite drops only an `IF` that `EXISTS` immediately
+  follows (`table_props_ddl::unset_if_exists_pair`); a lone `IF` or `EXISTS` stays in the
+  stream and refuses through `table_props_ddl::unset_tblproperties_if_refusal`.
+  `next_significant` / `is_word_keyword` are `pub(crate)` for it. The file ratchets
+  1384 → 1382.
+  pins: ice-nested-evo-1/C-031
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** Spark's Hive-style
   `REPLACE COLUMNS` — one `DropColumn` per current top-level column, then one `AddColumn` per
   listed column, so the fork's `UpdateSchema` assigns every column a **fresh** id from
@@ -1062,6 +1068,11 @@ pins: rp-4-fork-repin/C-005, C-006
   is captured — `SET IDENTIFIER` (no FIELDS), parenthesized, dangling-comma and trailing-token
   variants keep the stock parser fall-through. 4 in-module tests +
   [`tests/identifier_fields.rs`](tests/identifier_fields.rs).
+  **WO U5 PR1 round 2 (2026-09-24):** `unset_if_exists_pair` (the `IF EXISTS` span the UNSET
+  rewrite drops) and `unset_tblproperties_if_refusal`, a router pre-parse intercept placed after
+  `refuse_unsupported_alter_sql`. It gives Spark's `PARSE_SYNTAX_ERROR` for a lone `IF`
+  (`missing 'EXISTS'`, or `end of input`) and for a leading `EXISTS` (`extra input`).
+  pins: ice-nested-evo-1/C-031
 - `nested_column_ddl.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** the nested-path `ALTER TABLE`
   pre-parse (`try_parse_nested_column_ddl` / `execute_nested_column_ddl`, wired in `router.rs`
   ahead of the column-move intercept): `ADD COLUMN[S] s.c T [NOT NULL] [COMMENT '…']
@@ -1095,9 +1106,20 @@ pins: rp-4-fork-repin/C-005, C-006
   **WO U5 PR1 (2026-09-24):** `ALTER COLUMN <dotted-path> TYPE <primitive>` captures struct,
   list-element, and map-value paths. It reuses `alter::schema_change_from_alter_column` before
   committing through `apply_schema_changes_on_table`, so the Iceberg metadata owns the promoted
-  type. A map key keeps Spark's `NOT_SUPPORTED_CHANGE_COLUMN` refusal; top-level and non-TYPE
-  forms fall through unchanged.
-  pins: ice-nested-evo-1/C-024, C-027, C-028
+  type. Top-level and non-TYPE forms fall through unchanged.
+  pins: ice-nested-evo-1/C-024, C-028
+  **WO U5 PR1 round 2 (2026-09-24):** before the commit, the target type goes through
+  `repark_iceberg::write::nested_column::resolve_nested_type_change`, which answers per
+  from→to pair as Spark measured. A pair Spark's `canUpCast` rejects raises
+  `NOT_SUPPORTED_CHANGE_COLUMN` (Plan) with Spark SQL type names. An up-castable non-promotion
+  raises `Unsupported table change: Cannot change column type: …` (Execution). A promotion on a
+  map key raises `Unsupported table change: Cannot update map keys: map<…>` (Execution). The
+  same promotion on a struct field or list element commits, and a same-type map key is a
+  no-op. The resolved (schema-cased) path is what gets committed. The same resolver refuses
+  bad paths with `INVALID_FIELD_NAME` or `UNRESOLVED_COLUMN.WITH_SUGGESTION`, and a missing
+  table maps to `catalog_ops::table_or_view_not_found` for every nested form, not the raw
+  `TableNotFound`.
+  pins: ice-nested-evo-1/C-027, C-029
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,
@@ -1167,6 +1189,16 @@ pins: rp-4-fork-repin/C-005, C-006
   `Catalog::update_namespace`. The normal DESCRIBE path then renders Spark's sorted `Properties`
   row.
   pins: ice-nested-evo-1/C-026
+  **WO U5 PR1 round 2 (2026-09-24):** the ALTER form has its own property-list parser
+  (`parse_alter_property_list`), which follows Spark's `propertyList` grammar: optional `=`,
+  dotted or word keys, and string, numeric or boolean values with booleans lower-cased. The
+  CREATE form keeps the shared `parse_namespace_property_list`.
+  `refuse_alter_namespace_properties` runs Spark's checks in Spark's order: `DUPLICATE_KEY`,
+  then missing values, then the reserved `location` / `owner`
+  (`UNSUPPORTED_FEATURE.SET_NAMESPACE_PROPERTY`). All of these are ParseExceptions and fire
+  before the namespace lookup. A missing namespace answers
+  `repark_iceberg::catalog::schema_not_found` with Spark's single-part `nope` rendering.
+  pins: ice-nested-evo-1/C-030
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
   into the positional `router::execute_in_session` call, passing `cx.temp_views` through since
   IPI-40 PR6; `#[async_trait(?Send)]` matches the

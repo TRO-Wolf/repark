@@ -786,9 +786,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET
-  DBPROPERTIES / SET PROPERTIES rendering and key order, the map-key refusal's exact class,
-  condition, SQLSTATE, and full message, and the unchanged top-level TYPE route.
-  pins: ice-nested-evo-1/C-024, C-025, C-026, C-027, C-028
+  DBPROPERTIES / SET PROPERTIES rendering and key order, and the unchanged top-level TYPE
+  route.
+  pins: ice-nested-evo-1/C-024, C-025, C-026, C-028
+  **Round 2 (2026-09-24):** `test_nested_alter_column_type_refusals_match_spark` pins the exact
+  class, full message, condition and SQLSTATE of each measured nested TYPE pair and path
+  refusal, and that the committed schema is unchanged. The missing-table,
+  missing-namespace, refused-property, accepted-property DESCRIBE and lone `IF` / `EXISTS`
+  UNSET pins do the same for their answers.
+  pins: ice-nested-evo-1/C-027, C-029, C-030, C-031
 - [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
   [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
   [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) +

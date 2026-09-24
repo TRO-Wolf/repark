@@ -694,8 +694,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `namespace_ddl` (`IF NOT EXISTS` create-new / same / conflicting / no-location behavior;
   ICE-DROP-NS-1: non-empty drop refuses on every spelling, empty drops, missing is
   SCHEMA_NOT_FOUND; WO U5 PR1: SET DBPROPERTIES and SET PROPERTIES update the catalog and
-  DESCRIBE EXTENDED renders the measured sorted Properties row. pins: ice-drop-ns-1/C-002,
-  C-004, C-008; ice-nested-evo-1/C-026),
+  DESCRIBE EXTENDED renders the measured sorted Properties row; round 2: a missing namespace is
+  SCHEMA_NOT_FOUND `nope` on three spellings, every Spark-refused property shape pins its full
+  ParseException text with the properties unchanged, and the accepted shapes render Spark's
+  Comment and Properties rows. pins: ice-drop-ns-1/C-002, C-004, C-008;
+  ice-nested-evo-1/C-026, C-030),
   `alter` (WO U5 PR1: bare UNSET and UNSET IF EXISTS on a missing key both preserve table
   metadata. pins: ice-nested-evo-1/C-025, C-028),
   `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
@@ -1040,9 +1043,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ice-nested-evo-1/C-014, C-015, C-016, C-019
   **WO U5 PR1 (2026-09-24):** the three `nested_alter_column_type_updates_*_metadata` tests
   load the committed Iceberg schema after struct, list-element, and map-value promotion. The
-  map-key test pins Plan, condition, SQLSTATE, and the full Spark-shaped message. The parser
-  test keeps top-level TYPE and column-move forms on their prior paths.
-  pins: ice-nested-evo-1/C-024, C-027, C-028
+  parser test keeps top-level TYPE and column-move forms on their prior paths.
+  pins: ice-nested-evo-1/C-024, C-028
+  **WO U5 PR1 round 2 (2026-09-24):** `nested_alter_column_type_refuses_each_pair_like_spark`
+  is one table over map keys, struct fields and list elements. It pins the full message of each
+  measured pair (analysis refusal, Iceberg non-promotion, map-key promotion) and each path
+  refusal (INVALID_FIELD_NAME, UNRESOLVED_COLUMN), with the schema id unchanged.
+  `…_accepts_the_pairs_spark_accepts` commits the same-type map key, the struct, list and
+  mixed-case promotions and a map value, then reads the committed types.
+  `…_on_a_missing_table_is_table_or_view_not_found` pins the missing table.
+  pins: ice-nested-evo-1/C-027, C-029
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).
@@ -1809,6 +1819,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   with one parser case per branch of the partition-only scan; a doubled-backtick column names
   itself re-escaped in Spark's suggestion order.
   pins: wo-b10-describe-sweep/C-007, C-008, C-009
+- `unset_tblproperties.rs` — **WO U5 PR1 round 2 (2026-09-24):**
+  `unset_tblproperties_takes_only_the_if_exists_pair` pins Spark's full `PARSE_SYNTAX_ERROR`
+  text for `IF (…)`, `if (…)`, `EXISTS (…)`, `exists IF (…)` and a trailing `IF`, with the
+  properties unchanged, and shows that a lower-case `if exists` still unsets. A sibling
+  module because `tests/alter.rs` sits at its exact ceiling.
+  pins: ice-nested-evo-1/C-031
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

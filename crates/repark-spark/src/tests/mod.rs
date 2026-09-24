@@ -104,6 +104,7 @@ mod temp_view_routing;
 mod time_travel;
 mod transform_overwrite;
 mod truncate;
+mod unset_tblproperties;
 mod update_cast;
 mod use_ddl;
 mod v3_cow;

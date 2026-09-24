@@ -3,6 +3,10 @@ use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
+use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::keywords::Keyword;
+use datafusion::sql::sqlparser::parser::ParserError;
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::spec::{NestedField, PrimitiveType, Schema, StructType, Type};
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
@@ -10,11 +14,50 @@ use repark_core::CatalogRegistry;
 use repark_iceberg::write::alter::starts_with_alter;
 
 use crate::alter::{
-    Sig, collect_name_parts, is_period_at, table_parts_to_ident, tokenize_significant, word_at,
-    word_eq,
+    Sig, collect_name_parts, is_period_at, is_word_keyword, next_significant, table_parts_to_ident,
+    tokenize_significant, word_at, word_eq,
 };
 use crate::column_move::parse_column_path;
 use crate::{catalog_handle, iceberg_err, reregister};
+
+pub(crate) fn unset_if_exists_pair(tokens: &[Token], tblprops: usize) -> Option<[usize; 2]> {
+    let at = next_significant(tokens, tblprops + 1)?;
+    let next = next_significant(tokens, at + 1)?;
+    (is_word_keyword(&tokens[at], Keyword::IF) && is_word_keyword(&tokens[next], Keyword::EXISTS))
+        .then_some([at, next])
+}
+
+pub(crate) fn unset_tblproperties_if_refusal(sql: &str) -> Option<DataFusionError> {
+    if !starts_with_alter(sql) {
+        return None;
+    }
+    let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
+    let significant = tokens
+        .iter()
+        .filter(|token| !matches!(token, Token::Whitespace(_)))
+        .collect::<Vec<_>>();
+    let after = significant.windows(2).position(|pair| {
+        is_word_keyword(pair[0], Keyword::UNSET) && is_word_keyword(pair[1], Keyword::TBLPROPERTIES)
+    })? + 2;
+    let first = *significant.get(after)?;
+    let message = if is_word_keyword(first, Keyword::EXISTS) {
+        format!("Syntax error at or near '{first}': extra input '{first}'")
+    } else if is_word_keyword(first, Keyword::IF) {
+        match significant.get(after + 1) {
+            Some(next) if is_word_keyword(next, Keyword::EXISTS) => return None,
+            None | Some(Token::EOF) => "Syntax error at or near end of input".to_string(),
+            Some(next) => format!("Syntax error at or near '{next}': missing 'EXISTS'"),
+        }
+    } else {
+        return None;
+    };
+    Some(DataFusionError::SQL(
+        Box::new(ParserError::ParserError(format!(
+            "[PARSE_SYNTAX_ERROR] {message}. SQLSTATE: 42601"
+        ))),
+        None,
+    ))
+}
 
 #[derive(Debug)]
 pub(crate) struct IdentifierFieldsDdl {

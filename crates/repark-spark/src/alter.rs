@@ -402,11 +402,9 @@ pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
     let mut out = Vec::with_capacity(tokens.len() + 8);
     let mut depth: i32 = 0;
     let mut seen_open = false;
+    let if_exists = crate::table_props_ddl::unset_if_exists_pair(tokens, tblprops);
     for (i, token) in tokens.iter().enumerate() {
-        if i > tblprops
-            && !seen_open
-            && matches!(token, Token::Word(word) if matches!(word.keyword, Keyword::IF | Keyword::EXISTS))
-        {
+        if if_exists.is_some_and(|pair| pair.contains(&i)) {
             continue;
         }
         if i == unset {
@@ -667,7 +665,7 @@ fn trim_ws_tokens(tokens: Vec<Token>) -> Vec<Token> {
     out
 }
 
-fn next_significant(tokens: &[Token], from: usize) -> Option<usize> {
+pub(crate) fn next_significant(tokens: &[Token], from: usize) -> Option<usize> {
     tokens
         .iter()
         .enumerate()
@@ -676,7 +674,7 @@ fn next_significant(tokens: &[Token], from: usize) -> Option<usize> {
         .map(|(index, _)| index)
 }
 
-fn is_word_keyword(token: &Token, keyword: Keyword) -> bool {
+pub(crate) fn is_word_keyword(token: &Token, keyword: Keyword) -> bool {
     matches!(token, Token::Word(word) if word.keyword == keyword)
 }
 

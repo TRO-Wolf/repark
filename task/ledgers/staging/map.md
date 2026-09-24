@@ -191,7 +191,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   required-child refusal). Fork half F-NESTED-EVO-1 (fork PR #292). `risk_tier: high`.
   Branch `fix/ice-nested-evo-1`. **WO U5 PR1 (2026-09-24):** nested TYPE promotion,
   UNSET TBLPROPERTIES IF EXISTS, and namespace SET properties are recorded in C-024 through
-  C-028.
+  C-028. Round 2 (2026-09-24) narrows C-027 to the per-pair rule and adds C-029 (nested path
+  resolution), C-030 (namespace property grammar and SCHEMA_NOT_FOUND) and C-031 (UNSET `IF`
+  without `EXISTS`).
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

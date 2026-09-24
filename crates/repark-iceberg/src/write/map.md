@@ -717,6 +717,17 @@ repark-core's error map.
   (`NOT NULL`, `COMMENT`, backticked names that need it). It reuses `column_move.rs`'s
   `unresolved_column` / `top_level_names` (now `pub(super)`). 2 more in-module tests.
   pins: ice-nested-evo-1/C-019
+  **WO U5 PR1 round 2 (2026-09-24):** `resolve_nested_type_change` is the nested `ALTER COLUMN
+  … TYPE` pre-check. It walks the path the way Spark does: struct steps case-insensitive,
+  `key` / `value` / `element` exact, and anything else `INVALID_FIELD_NAME` or
+  `UNRESOLVED_COLUMN`. It then answers the from→to pair in Spark's order, returning a
+  `NestedTypeRefusal::Analysis` (`not_supported_change_column`, Spark SQL type names) when
+  `canUpCast` fails. An `Unsupported` refusal carries Iceberg Java's `Cannot change column
+  type: …` when the pair is not an Iceberg promotion, or `Cannot update map keys: map<…>` for a
+  promotion on a map key. Otherwise it returns the resolved dotted path. `iceberg_type_name`
+  renders Java's `Type.toString` (`decimal(9, 2)`, `map<int, int>`), which the fork's Display
+  does not.
+  pins: ice-nested-evo-1/C-027, C-029
 - `nested_type_sql.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the one token
   rewrite both doors run on a nested column type: a struct child's `NOT NULL` becomes the
   struct-field option `OPTIONS(repark_not_null=TRUE)` (the only struct-field suffix

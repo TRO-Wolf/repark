@@ -1,5 +1,7 @@
 # map — scripts/
 
+WO U5 PR1 round 2 (2026-09-24): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1384 → 1382. The UNSET `IF EXISTS` span moves to `table_props_ddl::unset_if_exists_pair`. Shrink-only. pins: ice-nested-evo-1/C-031
+
 PR-B hadoop naming (2026-09-24): `check_rust_file_size.py` ratchets `repark-core/src/catalog_config.rs` 1007 → 1006 (bare-value kind resolution moves to `catalog_kind.rs` beside the hadoop-naming helpers), shrink-only.
 
 U1-MEM-LAYOUT-1 (2026-09-23): `check_rust_file_size.py` ratchets `repark-spark/src/tests/ctas.rs` 1361 → 1357 (the A13 door pin's path shortens under the new layout), shrink-only; layout-r8 changes no baseline. The map lockstep and ledger grammar checks cover the memory-catalog layout pins.

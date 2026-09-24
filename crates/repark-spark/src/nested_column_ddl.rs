@@ -5,18 +5,19 @@ use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::Token;
-use iceberg::spec::Type;
-use repark_common::spark_error;
+use iceberg::ErrorKind;
 use repark_core::CatalogRegistry;
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 use repark_iceberg::write::alter::{
     ColumnPosition, SchemaChange, apply_schema_changes_on_table, starts_with_alter,
 };
 use repark_iceberg::write::nested_column::{
-    ColumnPathChange, apply_column_path_changes, nested_add_refusal, nested_required_add_refusal,
+    ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, nested_add_refusal,
+    nested_required_add_refusal, resolve_nested_type_change,
 };
 
 use crate::alter::table_parts_to_ident;
+use crate::catalog_ops::table_or_view_not_found;
 use crate::create_table::sql_type_to_iceberg_with_timestamp_type;
 use crate::{catalog_handle, iceberg_err, name_parts, reregister};
 
@@ -294,42 +295,6 @@ fn path_change_for_add(
     })
 }
 
-fn map_key_type_refusal(
-    table: &iceberg::table::Table,
-    table_parts: &[String],
-    path: &[String],
-    data_type: &SqlDataType,
-) -> Option<DataFusionError> {
-    let (leaf, parent) = path.split_last()?;
-    if !leaf.eq_ignore_ascii_case("key") {
-        return None;
-    }
-    let field = table
-        .metadata()
-        .current_schema()
-        .field_by_name_case_insensitive(&parent.join("."))?;
-    let Type::Map(map) = field.field_type.as_ref() else {
-        return None;
-    };
-    let table_name = crate::catalog_ops::quoted_table_display(table_parts);
-    let column_name = path
-        .iter()
-        .map(|part| format!("`{part}`"))
-        .collect::<Vec<_>>()
-        .join(".");
-    let from_type = map.key_field.field_type.to_string().to_ascii_uppercase();
-    let to_type = data_type.to_string().to_ascii_uppercase();
-    Some(DataFusionError::Plan(spark_error::message(
-        spark_error::NOT_SUPPORTED_CHANGE_COLUMN,
-        &[
-            ("tableName", table_name.as_str()),
-            ("columnName", column_name.as_str()),
-            ("fromType", from_type.as_str()),
-            ("toType", to_type.as_str()),
-        ],
-    )))
-}
-
 pub(crate) async fn execute_nested_column_ddl(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -337,20 +302,35 @@ pub(crate) async fn execute_nested_column_ddl(
 ) -> Result<DataFrame> {
     let (catalog_name, ident) = table_parts_to_ident(catalogs, &ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
-    let table = handle.load_table(&ident).await.map_err(iceberg_err)?;
+    let namespace = crate::namespace_schema_name(ident.namespace());
+    let table = handle.load_table(&ident).await.map_err(|error| {
+        if error.kind() == ErrorKind::TableNotFound {
+            return table_or_view_not_found(&catalog_name, &namespace, ident.name());
+        }
+        iceberg_err(error)
+    })?;
     match &ddl.operation {
         NestedColumnOperation::AlterType { path, data_type } => {
-            if let Some(error) = map_key_type_refusal(&table, &ddl.table_parts, path, data_type) {
-                return Err(error);
-            }
             let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
+            let to = sql_type_to_iceberg_with_timestamp_type(data_type, timestamp_type)?;
+            let table_name = crate::catalog_ops::quoted_table_display(&ddl.table_parts);
+            let schema = table.metadata().current_schema();
+            let resolved = match resolve_nested_type_change(schema, &table_name, path, &to) {
+                Ok(resolved) => resolved,
+                Err(NestedTypeRefusal::Analysis(message)) => {
+                    return Err(DataFusionError::Plan(message));
+                }
+                Err(NestedTypeRefusal::Unsupported(message)) => {
+                    return Err(DataFusionError::Execution(message));
+                }
+            };
             let operation = AlterColumnOperation::SetDataType {
                 data_type: data_type.clone(),
                 using: None,
                 had_set: false,
             };
             let change: SchemaChange = crate::alter::schema_change_from_alter_column(
-                &Ident::new(path.join(".")),
+                &Ident::new(resolved),
                 &operation,
                 timestamp_type,
             )?;
@@ -399,7 +379,6 @@ pub(crate) async fn execute_nested_column_ddl(
                 .map_err(iceberg_err)?;
         }
     }
-    let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, handle.clone(), &catalog_name, &namespace).await?;
     ctx.read_empty()
 }
