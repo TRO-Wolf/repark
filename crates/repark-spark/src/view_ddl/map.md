@@ -48,10 +48,12 @@ service, and the wrapper-based read path that expands stored SQL per query.
   so the refusal precedes any viewless-catalog refusal.
 - `parse.rs` + `execute.rs` + the router arm — **PR4 (2026-09-22,
   V-SHOW-TBLPROPERTIES):** `try_parse_show_tblproperties` (quoted, unquoted
-  and dotted keys; a tail that tokenizes but does not parse refuses with the
-  parser's `Plan` text; a tail the tokenizer rejects, such as an unterminated
-  quoted key, returns `None` and falls through to the ordinary path, which
-  answers the tokenizer error; other SHOW forms stay `None`),
+  and dotted keys; a quoted key ends at the string; a tail that tokenizes but
+  does not parse refuses with the parser's `Plan` text; a tail the tokenizer
+  rejects, such as an unclosed backtick, returns `None` and falls through to
+  the ordinary path, which answers the tokenizer error; a tail with an
+  unterminated quote never gets here, because the front-door literal
+  canonicalizer rejects it first; other SHOW forms stay `None`),
   the `try_preparse_intercepts` arm after `try_parse_alter_view` that falls
   through on `None`, and `execute_show_tblproperties` /
   `show_tblproperties_batch` (`key`/`value` rows, reserved
