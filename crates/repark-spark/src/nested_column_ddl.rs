@@ -1,13 +1,17 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{DataType as SqlDataType, Ident};
+use datafusion::sql::sqlparser::ast::{AlterColumnOperation, DataType as SqlDataType, Ident};
 use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::Token;
+use iceberg::spec::Type;
+use repark_common::spark_error;
 use repark_core::CatalogRegistry;
 use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
-use repark_iceberg::write::alter::{ColumnPosition, starts_with_alter};
+use repark_iceberg::write::alter::{
+    ColumnPosition, SchemaChange, apply_schema_changes_on_table, starts_with_alter,
+};
 use repark_iceberg::write::nested_column::{
     ColumnPathChange, apply_column_path_changes, nested_add_refusal, nested_required_add_refusal,
 };
@@ -35,6 +39,10 @@ pub(crate) enum NestedColumnOperation {
     Drop {
         paths: Vec<Vec<String>>,
         if_exists: bool,
+    },
+    AlterType {
+        path: Vec<String>,
+        data_type: SqlDataType,
     },
 }
 
@@ -79,6 +87,11 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
             return None;
         }
         parse_drop_columns(&mut names)
+    } else if names
+        .parser
+        .parse_keywords(&[Keyword::ALTER, Keyword::COLUMN])
+    {
+        parse_alter_column_type(&mut names)
     } else {
         return None;
     };
@@ -246,6 +259,21 @@ fn parse_drop_columns(names: &mut NameParser<'_>) -> ParseResult<Option<NestedCo
     Ok(Some(NestedColumnOperation::Drop { paths, if_exists }))
 }
 
+fn parse_alter_column_type(
+    names: &mut NameParser<'_>,
+) -> ParseResult<Option<NestedColumnOperation>> {
+    let path = names.column_path()?;
+    if path.len() < 2 {
+        return Ok(None);
+    }
+    if !names.parser.parse_keyword(Keyword::TYPE) {
+        return Ok(None);
+    }
+    let data_type = names.parser.parse_data_type()?;
+    expect_end(&mut names.parser)?;
+    Ok(Some(NestedColumnOperation::AlterType { path, data_type }))
+}
+
 fn path_change_for_add(
     column: &NestedAddColumn,
     timestamp_type: SparkTimestampType,
@@ -266,6 +294,42 @@ fn path_change_for_add(
     })
 }
 
+fn map_key_type_refusal(
+    table: &iceberg::table::Table,
+    table_parts: &[String],
+    path: &[String],
+    data_type: &SqlDataType,
+) -> Option<DataFusionError> {
+    let (leaf, parent) = path.split_last()?;
+    if !leaf.eq_ignore_ascii_case("key") {
+        return None;
+    }
+    let field = table
+        .metadata()
+        .current_schema()
+        .field_by_name_case_insensitive(&parent.join("."))?;
+    let Type::Map(map) = field.field_type.as_ref() else {
+        return None;
+    };
+    let table_name = crate::catalog_ops::quoted_table_display(table_parts);
+    let column_name = path
+        .iter()
+        .map(|part| format!("`{part}`"))
+        .collect::<Vec<_>>()
+        .join(".");
+    let from_type = map.key_field.field_type.to_string().to_ascii_uppercase();
+    let to_type = data_type.to_string().to_ascii_uppercase();
+    Some(DataFusionError::Plan(spark_error::message(
+        spark_error::NOT_SUPPORTED_CHANGE_COLUMN,
+        &[
+            ("tableName", table_name.as_str()),
+            ("columnName", column_name.as_str()),
+            ("fromType", from_type.as_str()),
+            ("toType", to_type.as_str()),
+        ],
+    )))
+}
+
 pub(crate) async fn execute_nested_column_ddl(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -274,40 +338,67 @@ pub(crate) async fn execute_nested_column_ddl(
     let (catalog_name, ident) = table_parts_to_ident(catalogs, &ddl.table_parts)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let table = handle.load_table(&ident).await.map_err(iceberg_err)?;
-    let changes = match &ddl.operation {
+    match &ddl.operation {
+        NestedColumnOperation::AlterType { path, data_type } => {
+            if let Some(error) = map_key_type_refusal(&table, &ddl.table_parts, path, data_type) {
+                return Err(error);
+            }
+            let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
+            let operation = AlterColumnOperation::SetDataType {
+                data_type: data_type.clone(),
+                using: None,
+                had_set: false,
+            };
+            let change: SchemaChange = crate::alter::schema_change_from_alter_column(
+                &Ident::new(path.join(".")),
+                &operation,
+                timestamp_type,
+            )?;
+            apply_schema_changes_on_table(handle.as_ref(), &table, &[change])
+                .await
+                .map_err(iceberg_err)?;
+        }
         NestedColumnOperation::Add(columns) => {
             let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
-            columns
+            let changes = columns
                 .iter()
                 .map(|column| path_change_for_add(column, timestamp_type))
-                .collect::<Result<Vec<_>>>()?
+                .collect::<Result<Vec<_>>>()?;
+            if let Some(message) = nested_add_refusal(table.metadata().current_schema(), &changes) {
+                return Err(DataFusionError::Plan(message));
+            }
+            if let Some(message) = nested_required_add_refusal(&changes) {
+                return Err(DataFusionError::Execution(message));
+            }
+            apply_column_path_changes(handle.as_ref(), &table, &changes)
+                .await
+                .map_err(iceberg_err)?;
         }
-        NestedColumnOperation::Rename { from, to } => vec![ColumnPathChange::Rename {
-            path: from.join("."),
-            to: to.clone(),
-        }],
+        NestedColumnOperation::Rename { from, to } => {
+            let changes = vec![ColumnPathChange::Rename {
+                path: from.join("."),
+                to: to.clone(),
+            }];
+            apply_column_path_changes(handle.as_ref(), &table, &changes)
+                .await
+                .map_err(iceberg_err)?;
+        }
         NestedColumnOperation::Drop { paths, if_exists } => {
             let schema = table.metadata().current_schema();
-            paths
+            let changes = paths
                 .iter()
                 .map(|path| path.join("."))
                 .filter(|name| !*if_exists || schema.field_by_name_case_insensitive(name).is_some())
                 .map(|path| ColumnPathChange::Drop { path })
-                .collect()
+                .collect::<Vec<_>>();
+            if changes.is_empty() {
+                return ctx.read_empty();
+            }
+            apply_column_path_changes(handle.as_ref(), &table, &changes)
+                .await
+                .map_err(iceberg_err)?;
         }
-    };
-    if changes.is_empty() {
-        return ctx.read_empty();
     }
-    if let Some(message) = nested_add_refusal(table.metadata().current_schema(), &changes) {
-        return Err(DataFusionError::Plan(message));
-    }
-    if let Some(message) = nested_required_add_refusal(&changes) {
-        return Err(DataFusionError::Execution(message));
-    }
-    apply_column_path_changes(handle.as_ref(), &table, &changes)
-        .await
-        .map_err(iceberg_err)?;
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, handle.clone(), &catalog_name, &namespace).await?;
     ctx.read_empty()

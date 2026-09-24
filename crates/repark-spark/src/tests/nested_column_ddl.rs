@@ -2,7 +2,7 @@ use super::super::*;
 use super::common::*;
 use datafusion::arrow::array::{Array, AsArray, RecordBatch};
 use datafusion::arrow::util::display::array_value_to_string;
-use iceberg::spec::{NestedFieldRef, Type};
+use iceberg::spec::{NestedFieldRef, PrimitiveType, Type};
 use tempfile::TempDir;
 
 const NESTED_CREATE: &str = "CREATE TABLE ice.sales.nested (id INT, s STRUCT<a: INT, b: STRING>, \
@@ -206,6 +206,116 @@ async fn nested_required_child_refuses_and_keeps_the_schema() {
 }
 
 #[tokio::test]
+async fn nested_alter_column_type_updates_struct_metadata() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.struct_type (id BIGINT, st STRUCT<a: INT>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.struct_type ALTER COLUMN st.a TYPE BIGINT",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "struct_type").await;
+    let field = table
+        .metadata()
+        .current_schema()
+        .field_by_name("st.a")
+        .unwrap();
+    assert!(matches!(
+        field.field_type.as_ref(),
+        Type::Primitive(PrimitiveType::Long)
+    ));
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_updates_list_element_metadata() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.list_type (id BIGINT, arr ARRAY<INT>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.list_type ALTER COLUMN arr.element TYPE BIGINT",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "list_type").await;
+    let field = table
+        .metadata()
+        .current_schema()
+        .field_by_name("arr.element")
+        .unwrap();
+    assert!(matches!(
+        field.field_type.as_ref(),
+        Type::Primitive(PrimitiveType::Long)
+    ));
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_updates_map_value_metadata() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.map_type (id BIGINT, m MAP<STRING, INT>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.map_type ALTER COLUMN m.value TYPE BIGINT",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "map_type").await;
+    let field = table
+        .metadata()
+        .current_schema()
+        .field_by_name("m.value")
+        .unwrap();
+    assert!(matches!(
+        field.field_type.as_ref(),
+        Type::Primitive(PrimitiveType::Long)
+    ));
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_refuses_map_key_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.map_key_type (id BIGINT, m MAP<STRING, INT>) USING iceberg",
+    )
+    .await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.map_key_type ALTER COLUMN m.key TYPE BIGINT",
+    )
+    .await
+    .expect_err("map keys cannot change type");
+    assert!(matches!(error, DataFusionError::Plan(_)));
+    assert_eq!(
+        error.to_string(),
+        "Error during planning: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported for \
+         changing `ice`.`sales`.`map_key_type`'s column `m`.`key` with type \"STRING\" to \
+         `m`.`key` with type \"BIGINT\". SQLSTATE: 0A000"
+    );
+}
+
+#[tokio::test]
 async fn nested_ddl_refuses_malformed_paths_spark_shaped() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
@@ -349,6 +459,8 @@ fn nested_parse_leaves_top_level_forms_to_the_existing_path() {
         "ALTER TABLE ice.sales.t ADD COLUMNS (c STRING, d INT)",
         "ALTER TABLE ice.sales.t DROP COLUMN c",
         "ALTER TABLE ice.sales.t RENAME COLUMN c TO d",
+        "ALTER TABLE ice.sales.t ALTER COLUMN id TYPE BIGINT",
+        "ALTER TABLE ice.sales.t ALTER COLUMN st TYPE STRING",
         "ALTER TABLE ice.sales.t ALTER COLUMN s.b FIRST",
         "SELECT s.a FROM ice.sales.t",
     ] {
@@ -363,6 +475,7 @@ fn nested_parse_leaves_top_level_forms_to_the_existing_path() {
         "ALTER TABLE ice.sales.t ADD COLUMN m.value.q MAP<STRING, STRUCT<z: INT>>",
         "ALTER TABLE ice.sales.t DROP COLUMNS (s.b, c)",
         "ALTER TABLE ice.sales.t RENAME COLUMN s.a TO a2",
+        "ALTER TABLE ice.sales.t ALTER COLUMN s.a TYPE BIGINT",
         "ALTER TABLE ice.sales.t ADD COLUMN s.d INT COMMENT \"x.y\" FIRST",
     ] {
         assert!(

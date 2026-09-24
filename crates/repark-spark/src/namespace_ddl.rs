@@ -106,6 +106,12 @@ pub(crate) struct CreateNamespace {
     properties: HashMap<String, String>,
 }
 
+pub(crate) struct AlterNamespace {
+    catalog: String,
+    namespace: String,
+    properties: HashMap<String, String>,
+}
+
 /// CREATE NAMESPACE with COMMENT, LOCATION, and WITH properties maps to `create_namespace`.
 pub(crate) async fn execute_create_namespace(
     ctx: &SessionContext,
@@ -133,6 +139,71 @@ pub(crate) async fn execute_create_namespace(
         .map_err(iceberg_err)?;
     reregister(ctx, handle.clone(), &create.catalog, &namespace).await?;
     ctx.read_empty()
+}
+
+pub(crate) async fn execute_alter_namespace(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    alter: AlterNamespace,
+) -> Result<DataFrame> {
+    let handle = catalog_handle(catalogs, &alter.catalog)?;
+    let ident = NamespaceIdent::new(alter.namespace.clone());
+    let mut properties = handle
+        .get_namespace(&ident)
+        .await
+        .map_err(iceberg_err)?
+        .properties()
+        .clone();
+    properties.extend(alter.properties);
+    handle
+        .update_namespace(&ident, properties)
+        .await
+        .map_err(iceberg_err)?;
+    reregister(ctx, handle.clone(), &alter.catalog, &alter.namespace).await?;
+    ctx.read_empty()
+}
+
+pub(crate) fn try_parse_alter_namespace(sql: &str) -> Option<Result<AlterNamespace>> {
+    let dialect = DatabricksDialect {};
+    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let mut parser = Parser::new(&dialect).with_tokens(tokens);
+    if !parser.parse_keyword(Keyword::ALTER) {
+        return None;
+    }
+    let is_namespace = parser.parse_keyword(Keyword::SCHEMA)
+        || parser.parse_keyword(Keyword::DATABASE)
+        || consume_word(&mut parser, "NAMESPACE");
+    if !is_namespace {
+        return None;
+    }
+    let name = match parser.parse_object_name(false) {
+        Ok(name) => name,
+        Err(error) => return Some(Err(sqlparser_err(error))),
+    };
+    if !parser.parse_keyword(Keyword::SET)
+        || !(consume_word(&mut parser, "DBPROPERTIES") || consume_word(&mut parser, "PROPERTIES"))
+    {
+        return None;
+    }
+    Some(parse_alter_namespace_body(&mut parser, name))
+}
+
+fn parse_alter_namespace_body(parser: &mut Parser, name: ObjectName) -> Result<AlterNamespace> {
+    let (catalog, namespace) = resolve_namespace(&name)?;
+    let mut properties = HashMap::new();
+    parse_namespace_property_list(parser, &mut properties, "ALTER NAMESPACE")?;
+    let trailing = parser.peek_token().token;
+    if !matches!(trailing, Token::EOF | Token::SemiColon) {
+        return Err(DataFusionError::Plan(format!(
+            "unsupported ALTER NAMESPACE clause near `{trailing}` (supported: \
+             catalog.namespace SET [DBPROPERTIES|PROPERTIES] ('key' = 'value', …))"
+        )));
+    }
+    Ok(AlterNamespace {
+        catalog,
+        namespace,
+        properties,
+    })
 }
 
 /// Parse Spark CREATE NAMESPACE|SCHEMA|DATABASE with COMMENT, LOCATION, and WITH properties.

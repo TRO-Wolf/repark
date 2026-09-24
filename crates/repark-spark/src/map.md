@@ -1007,6 +1007,10 @@ pins: rp-4-fork-repin/C-005, C-006
   angle depth alongside paren depth, so commas inside `STRUCT<…>` / `MAP<…>` no
   longer split the column list (cells `D-ADD-COL-STRUCT`, `D-X-ADD-COL-MAP-KEY-STRUCT`);
   `ShiftRight` closes two levels for nested `>>`.
+  **WO U5 PR1 (2026-09-24):** `rewrite_unset_tblproperties` removes `IF EXISTS` before it
+  emits the sentinel SET form; a missing key is a metadata no-op, and the prior bare spelling
+  keeps its route.
+  pins: ice-nested-evo-1/C-025, C-028
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** Spark's Hive-style
   `REPLACE COLUMNS` — one `DropColumn` per current top-level column, then one `AddColumn` per
   listed column, so the fork's `UpdateSchema` assigns every column a **fresh** id from
@@ -1088,6 +1092,12 @@ pins: rp-4-fork-repin/C-005, C-006
   becomes the child's `doc`, as Spark measured (round 2 had scanned the whole statement and
   refused it).
   pins: ice-nested-evo-1/C-021
+  **WO U5 PR1 (2026-09-24):** `ALTER COLUMN <dotted-path> TYPE <primitive>` captures struct,
+  list-element, and map-value paths. It reuses `alter::schema_change_from_alter_column` before
+  committing through `apply_schema_changes_on_table`, so the Iceberg metadata owns the promoted
+  type. A map key keeps Spark's `NOT_SUPPORTED_CHANGE_COLUMN` refusal; top-level and non-TYPE
+  forms fall through unchanged.
+  pins: ice-nested-evo-1/C-024, C-027, C-028
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,
@@ -1152,6 +1162,11 @@ pins: rp-4-fork-repin/C-005, C-006
   (both `catalog_ops.rs`; `repark-common` is a dev-dependency here, so the catalogue itself
   stays unreachable from this crate's production code).
   pins: ice-error-conditions-1/C-011
+  **WO U5 PR1 (2026-09-24):** `ALTER NAMESPACE|SCHEMA|DATABASE <ns> SET
+  [DB]PROPERTIES (...)` loads the complete property map, merges the supplied values, and calls
+  `Catalog::update_namespace`. The normal DESCRIBE path then renders Spark's sorted `Properties`
+  row.
+  pins: ice-nested-evo-1/C-026
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
   into the positional `router::execute_in_session` call, passing `cx.temp_views` through since
   IPI-40 PR6; `#[async_trait(?Send)]` matches the

@@ -783,6 +783,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`COMMENT "x.y"`, `COMMENT "c"`, `COMMENT "x.y" FIRST` on a nested child) run on the same
   three tests; red before the V-001 fix: 18 failed (refused `PARSE_SYNTAX_ERROR`).
   pins: ice-nested-evo-1/C-021
+- [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
+  nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
+  SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET
+  DBPROPERTIES / SET PROPERTIES rendering and key order, the map-key refusal's exact class,
+  condition, SQLSTATE, and full message, and the unchanged top-level TYPE route.
+  pins: ice-nested-evo-1/C-024, C-025, C-026, C-027, C-028
 - [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
   [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
   [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) +

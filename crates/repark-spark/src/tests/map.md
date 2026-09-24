@@ -693,7 +693,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `ctas` (`register_memory_catalog` location-less CTAS lands under the warehouse), `create_table`,
   `namespace_ddl` (`IF NOT EXISTS` create-new / same / conflicting / no-location behavior;
   ICE-DROP-NS-1: non-empty drop refuses on every spelling, empty drops, missing is
-  SCHEMA_NOT_FOUND. pins: ice-drop-ns-1/C-002, C-004, C-008),
+  SCHEMA_NOT_FOUND; WO U5 PR1: SET DBPROPERTIES and SET PROPERTIES update the catalog and
+  DESCRIBE EXTENDED renders the measured sorted Properties row. pins: ice-drop-ns-1/C-002,
+  C-004, C-008; ice-nested-evo-1/C-026),
+  `alter` (WO U5 PR1: bare UNSET and UNSET IF EXISTS on a missing key both preserve table
+  metadata. pins: ice-nested-evo-1/C-025, C-028),
   `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
   CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`; IPI-51 PR4 (2026-09-20):
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table
@@ -1034,6 +1038,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   and a map-value struct child are required; ids are Java's level order; a hand-written
   struct-field `OPTIONS` refuses).
   pins: ice-nested-evo-1/C-014, C-015, C-016, C-019
+  **WO U5 PR1 (2026-09-24):** the three `nested_alter_column_type_updates_*_metadata` tests
+  load the committed Iceberg schema after struct, list-element, and map-value promotion. The
+  map-key test pins Plan, condition, SQLSTATE, and the full Spark-shaped message. The parser
+  test keeps top-level TYPE and column-move forms on their prior paths.
+  pins: ice-nested-evo-1/C-024, C-027, C-028
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

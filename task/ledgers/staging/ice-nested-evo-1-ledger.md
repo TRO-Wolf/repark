@@ -456,3 +456,17 @@ The V-001 commit's intermediate tree (without the CTAS cells) was checked on its
 - C-023 — DECLARED on IDENT-STRUCT-KW-1 (Q-22b-NEST-9).
 - Residual, record only: a `COMMENT` on a struct field inside CREATE (`STRUCT<a: INT COMMENT
   'x'>`) is still a loud parser refusal on both doors.
+
+## WO U5 PR1 plan (2026-09-24)
+
+| Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
+|---|---|---|---|---|
+| C-024 | Nested `ALTER COLUMN <path> TYPE <primitive>` promotes a struct field, list element, or map value in Iceberg metadata. | Spark cell replay plus Rust and facade metadata pins. | PROVEN | Spark 4.1.2 recorded `struct<a:long>`, `list<long>`, and `map<string,long>`; the RePark replay reports the same metadata schemas. |
+| C-025 | `ALTER TABLE … UNSET TBLPROPERTIES IF EXISTS ('missing')` succeeds without changing metadata. | Spark cell replay plus a Rust and facade no-op pin. | PROVEN | Spark accepts both missing-key spellings with unchanged properties. RePark preserves the empty property map for `IF EXISTS` and the existing bare spelling. |
+| C-026 | `ALTER NAMESPACE … SET DBPROPERTIES ('b'='2')` updates the catalog namespace and `DESCRIBE NAMESPACE EXTENDED` renders `((b,2))`. | Spark cell replay plus Rust and facade rows/schema pins. | PROVEN | Spark accepts SET DBPROPERTIES and SET PROPERTIES, sorts `a`, `x`, `z`, and renders `((b,2))`; RePark merges through `Catalog::update_namespace` and replays `((b,2))`. |
+| C-027 | Nested type targets use the top-level promotion validation and a map key keeps Spark's refusal class, condition, SQLSTATE, and message. | Spark probe and exact Rust/facade refusal pins. | PROVEN | Spark rejects `m.key` with `NOT_SUPPORTED_CHANGE_COLUMN`, SQLSTATE `0A000`, and the measured full message. Rust and facade pins compare the exact RePark error. |
+| C-028 | The three parser additions remain narrow: top-level TYPE, non-primitive top-level TYPE, and UNSET without IF EXISTS preserve their prior routes. | Direct Rust parser pins and facade near-miss pins. | PROVEN | Parser pins leave top-level TYPE and nested column-move forms on their prior paths. Mutation runs red for the nested commit, UNSET rewrite, and namespace property merge. |
+
+### Out-of-scope observation
+
+- Spark accepts `ALTER NAMESPACE ... UNSET DBPROPERTIES (...)` and `UNSET PROPERTIES (...)`. This PR does not add the distinct namespace UNSET operation.

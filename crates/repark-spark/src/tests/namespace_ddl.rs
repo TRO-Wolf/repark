@@ -1,6 +1,29 @@
 /// `CREATE NAMESPACE` / `DROP NAMESPACE` against the catalog, with `IF [NOT] EXISTS` idempotency.
 use super::super::*;
 use super::common::*;
+use datafusion::arrow::array::AsArray;
+
+async fn describe_namespace_rows(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Vec<(String, String)> {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    batches
+        .iter()
+        .flat_map(|batch| {
+            let names = batch.column(0).as_string::<i32>();
+            let values = batch.column(1).as_string::<i32>();
+            (0..batch.num_rows())
+                .map(move |row| (names.value(row).to_string(), values.value(row).to_string()))
+        })
+        .collect()
+}
 
 #[tokio::test]
 async fn create_and_drop_namespace() {
@@ -29,6 +52,69 @@ async fn create_and_drop_namespace() {
     execute(&ctx, &catalogs, "DROP NAMESPACE IF EXISTS ice.analytics")
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn alter_namespace_properties_update_catalog_and_describe() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(&ctx, &catalogs, "CREATE NAMESPACE ice.nsa")
+        .await
+        .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER NAMESPACE ice.nsa SET DBPROPERTIES ('b' = '2')",
+    )
+    .await
+    .unwrap();
+    let properties = catalogs["ice"]
+        .get_namespace(&NamespaceIdent::new("nsa".to_string()))
+        .await
+        .unwrap()
+        .properties()
+        .clone();
+    assert_eq!(properties.get("b").map(String::as_str), Some("2"));
+    assert_eq!(
+        describe_namespace_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.nsa").await,
+        vec![
+            ("Catalog Name".to_string(), "ice".to_string()),
+            ("Namespace Name".to_string(), "nsa".to_string()),
+            ("Properties".to_string(), "((b,2))".to_string()),
+        ]
+    );
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER NAMESPACE ice.nsa SET PROPERTIES ('z' = '9', 'a' = '1')",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        describe_namespace_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.nsa")
+            .await
+            .last(),
+        Some(&(
+            "Properties".to_string(),
+            "((a,1), (b,2), (z,9))".to_string()
+        ))
+    );
+    execute(&ctx, &catalogs, "CREATE NAMESPACE ice.nsorder")
+        .await
+        .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER NAMESPACE ice.nsorder SET PROPERTIES ('z' = '9', 'a' = '1')",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        describe_namespace_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.nsorder")
+            .await
+            .last(),
+        Some(&("Properties".to_string(), "((a,1), (z,9))".to_string()))
+    );
 }
 
 /// WG-5 C-1: CREATE NAMESPACE LOCATION on a strict catalog lets a later CTAS land under that path.
