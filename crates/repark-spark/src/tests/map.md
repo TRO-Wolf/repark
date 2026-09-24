@@ -1499,6 +1499,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `qualified_wildcard_near_misses_keep_their_answers` pins D1, C1, P1–P3 (a derived
   table, a CTE, a rewritten or non-Iceberg join partner) and the M1/M2 error strings
   (M2 is `Invalid qualifier t` since mcdel-r9).
+  **mcdel-r12 (2026-09-24, Sol critic r10 V-001):** N13 leaves the loop in
+  `reserved_name_query_positions` and asserts the pair (`ErrorClass::Analysis`, full
+  string) through `refusal`, the `pub(super)` helper of `metadata_columns_deleted.rs`
+  that returns the `repark_core::Error` (a `collect` error mapped through
+  `repark_core::engine_err`, as the Python binding maps it). Each reserved-name refusal here
+  has Spark's text but not Spark's class, which is `ValidationException` via
+  `Py4JJavaError` (residue `R-MC-RESERVED-NAME-CLASS`, IPI-51). "Refuse on both engines"
+  and the `…_like_spark` names refer to the text.
   pins: u10-mc-deleted-1/C-012, C-014, C-015, C-016, C-017, C-018
 - `metadata_columns_scope.rs` — **mcdel-r9 (2026-09-24, Sol critic r7 V-001):** a wildcard
   resolves only against its own SELECT's relations. It imports the `pub(super)` helpers
@@ -1557,8 +1565,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   of that name is read normally, and `insert_around_the_trigger_keeps_todays_answers`
   pins the input-file-name-only trigger returning `Ok(None)` for a non-query
   statement (the `[UNRESOLVED_ROUTINE]` error, never `[ICE-MC-1]`).
+  **mcdel-r12 (2026-09-24, Sol critic r10 V-002):** the session enables
+  `repark.sql.allowCreateFormatVersion3` (default creates stay v2), and
+  `input_file_name_over_a_v3_comma_join_is_an_unresolved_routine` runs
+  `SELECT input_file_name() LIKE '%.parquet' AS f FROM ice.ns.t3 a, ice.ns.t3 b` over a v3
+  table and asserts the pair (`ErrorClass::Analysis`, the full `[UNRESOLVED_ROUTINE] …
+  SQLSTATE: 42883; line 1 pos 7` string). Spark answers `true` on all four rows, so this is
+  residue `R-MC-IFN-COMMA-JOIN` (cell I1).
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013
+  pins: u10-mc-deleted-1/C-020
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

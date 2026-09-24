@@ -13943,6 +13943,11 @@ field NAME.
     prints `Invalid schema: multiple fields for name _deleted: 2 and 2147483644`;
   - `LATERAL VIEW`, which RePark does not implement.
 
+  `R-MC-RESERVED-NAME-CLASS` (KNOWN DIVERGENCE, IPI-51): where both engines refuse
+  with the reserved-name text, the class differs. Spark raises
+  `org.apache.iceberg.exceptions.ValidationException` through `Py4JJavaError`, and
+  RePark raises `AnalysisException` with an `Error during planning: ` prefix.
+
   The mcdel-r5 residue candidate `R-MC-RESERVED-NAME-JOIN` is closed: the join
   answers Spark's `[[1,true],[2,false],[3,false]]`.
   The mcdel-r7 residue candidate `R-MC-QUALIFIED-WILDCARD` is fixed and withdrawn

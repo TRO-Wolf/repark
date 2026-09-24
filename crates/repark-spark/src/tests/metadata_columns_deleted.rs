@@ -76,6 +76,18 @@ pub(super) async fn plan_error(session: &ReparkSession, sql: &str) -> String {
     }
 }
 
+pub(super) async fn refusal(session: &ReparkSession, sql: &str) -> repark_core::Error {
+    match session.sql(sql).await {
+        Ok(frame) => repark_core::engine_err(
+            frame
+                .collect()
+                .await
+                .expect_err("a refused query must fail"),
+        ),
+        Err(error) => error,
+    }
+}
+
 pub(super) fn i64s(
     batches: &[datafusion::arrow::record_batch::RecordBatch],
     col: usize,

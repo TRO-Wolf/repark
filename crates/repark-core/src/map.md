@@ -977,6 +977,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `sole_input_file_name_relation`'s `from.len() != 1` guard: `input_file_name()` over
   `FROM a, b` is left untouched (the `[UNRESOLVED_ROUTINE]` residue). The mutation sweep
   that found the gap is saved in `/tmp/xo58-mcd-r11probe/mutations-r11.json`.
+  **mcdel-r12 (2026-09-24):** that leg asserts only the rewritten SQL. The refusal itself
+  (class and full `[UNRESOLVED_ROUTINE]` text, residue `R-MC-IFN-COMMA-JOIN`) is pinned at
+  the Spark door by `input_file_name_over_a_v3_comma_join_is_an_unresolved_routine`
+  (`crates/repark-spark/src/tests/input_file_name.rs`).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,

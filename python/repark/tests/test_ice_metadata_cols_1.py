@@ -339,6 +339,10 @@ def test_not_projecting_deleted_still_filters(spark: Any) -> None:
 def test_user_column_named_deleted_refuses_like_spark(spark: Any) -> None:
     """A user column named ``_deleted`` refuses Spark's reserved-name text; ``*`` still serves.
 
+    Spark raises ``org.apache.iceberg.exceptions.ValidationException`` with this text; RePark
+    raises ``AnalysisException`` with the same text after its planning prefix (the class gap is
+    IPI-51, residue ``R-MC-RESERVED-NAME-CLASS``).
+
     pins: u10-mc-deleted-1/C-014, C-015
     """
     table = f"{CATALOG}.{NAMESPACE}.t_user_deleted"

@@ -8,9 +8,9 @@ use tempfile::TempDir;
 
 use super::metadata_columns_deleted::{
     MOR, batches, bools, field_names, i32s, i64s, pairs_i64_bool, pairs_i64_i32, pairs_i64_i64,
-    pairs_i64_str, plan_error, run, seed, session, strs, triples_i64,
+    pairs_i64_str, plan_error, refusal, run, seed, session, strs, triples_i64,
 };
-use repark_core::ReparkSession;
+use repark_core::{ErrorClass, ReparkSession};
 
 async fn seed_user_columns(session: &ReparkSession, table: &str, columns: &[&str], props: &str) {
     let defs = columns
@@ -682,20 +682,25 @@ async fn reserved_name_query_positions() {
             "{row}: {sql}"
         );
     }
-    for (row, sql, expected) in [
-        (
-            "N11",
+    assert_eq!(
+        plan_error(
+            &session,
             "SELECT id, e FROM ice.ns.ndel LATERAL VIEW explode(array(_deleted)) t AS e ORDER BY id",
-            "This feature is not implemented: LATERAL VIEWS".to_string(),
-        ),
-        (
-            "N13",
-            "SELECT t.*, t._spec_id FROM ice.ns.ndel t ORDER BY id",
-            reserved_name_collision("_deleted"),
-        ),
-    ] {
-        assert_eq!(plan_error(&session, sql).await, expected, "{row}: {sql}");
-    }
+        )
+        .await,
+        "This feature is not implemented: LATERAL VIEWS",
+        "N11"
+    );
+    let n13 = refusal(
+        &session,
+        "SELECT t.*, t._spec_id FROM ice.ns.ndel t ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        (n13.exception_class(), n13.to_string()),
+        (ErrorClass::Analysis, reserved_name_collision("_deleted")),
+        "N13"
+    );
 }
 
 #[tokio::test]

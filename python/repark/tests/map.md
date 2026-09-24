@@ -7862,7 +7862,9 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `AnalysisException` whose full text is `Error during planning: Table column names
   conflict with names reserved for Iceberg metadata columns: [_deleted]. Please, use
   ALTER TABLE statements to rename the conflicting table columns.`, and `SELECT *` still
-  answers `[[2,"u2"],[3,"u3"]]` (KNOWN DIVERGENCE `R-MC-RESERVED-NAME-SCAN`). The
+  answers `[[2,"u2"],[3,"u3"]]` (KNOWN DIVERGENCE `R-MC-RESERVED-NAME-SCAN`). Spark
+  raises the same text as `ValidationException` via `Py4JJavaError`, so the class differs
+  (residue `R-MC-RESERVED-NAME-CLASS`, IPI-51; the docstring says so since mcdel-r12). The
   superseded `ice-metadata-cols-1/C-023` citation is dropped (its refusal test is gone).
   **mcdel-r7 (2026-09-23):** the `_deleted` legs assert their field names (`[id,
   _deleted]`, `[id]`, `[count(*)]` and the star's `[id, _deleted]`) through `_field_names`
