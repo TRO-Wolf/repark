@@ -29,13 +29,6 @@ databases`, `show tblproperties`, two-part `describe extended`, `create or repla
 `repark.sql()` then. A Thrift endpoint would deliver those statements faithfully and collect
 exactly the same errors, so it buys a wire protocol and no working model. The current served and
 refused split is the measured table,
-Route 2 was rejected on measurement, not on cost. The refusals DBT-1 measured are in the
-**statement surface**, not the transport: `show table extended`, `show tables in`, `show
-databases`, `show tblproperties` and `alter column … comment` are refused by `repark.sql()`
-(two-part `describe extended`, `create or replace view` and `create or replace temporary view`
-were refused when DBT-1 measured and are served since SQL-DESCRIBE-1, ICE-VIEWS-1 and IPI-40
-PR6). A Thrift endpoint would deliver those statements faithfully and collect exactly
-the same errors, so it buys a wire protocol and no working model. The measured table is
 [tests/test_statement_surface.py](tests/test_statement_surface.py), which is the pin, not prose.
 
 Inside route 1 the adapter **subclasses `dbt-spark`'s `SparkAdapter`** and declares

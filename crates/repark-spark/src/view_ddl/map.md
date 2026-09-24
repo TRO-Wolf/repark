@@ -115,8 +115,9 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   `VIEW_EXCEED_MAX_NESTED_DEPTH` (54K00) naming that view, and refuses CREATE OR
   REPLACE cycles with RECURSIVE_VIEW (the cycle walk keeps a 4096-view budget,
   refused with `VIEW_NESTED_DEPTH_LIMIT`); the direct-reference walk is one pass,
-  because `LogicalPlanBuilder::scan` inlines every view provider that carries a
-  plan; `temp_view_column_comments` feeds DESCRIBE. PR6b3b module unit tests pin
+  because `LogicalPlanBuilder::scan` (DataFusion 54.1) inlines a view provider
+  that carries a plan whenever no filters are attached, which is how the SQL
+  planner builds scans; `temp_view_column_comments` feeds DESCRIBE. PR6b3b module unit tests pin
   the cycle-walk budget and the inlined-reference walk.
   pins: ice-views-1/C-018
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,

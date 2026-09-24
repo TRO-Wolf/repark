@@ -35,7 +35,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   under a temp view, a held frame after a catalog replaces the temp home, and the MERGE OUTPUT
   refusal that moved to `merge.rs`. pins: ice-views-1/C-018
 - `temp_view_routing.rs` — **IPI-40 PR6 (2026-09-24):** Rust pins for the
-  temporary-view door: every CREATE TEMPORARY VIEW parser branch (heads, verbatim
+  temporary-view door: the CREATE TEMPORARY VIEW parser branches (heads, verbatim
   bodies, near misses, GLOBAL and the Spark-measured parse refusals as full
   ParserError text), the session-less `NO_TEMP_VIEW_HOME` refusal, and a stub
   `TempViewSession` through `router::execute_in_session` pinning temp-first body

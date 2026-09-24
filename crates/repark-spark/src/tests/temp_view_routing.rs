@@ -141,6 +141,10 @@ fn temp_view_parse_refusals_carry_the_measured_spark_text() {
             "[IDENTIFIER_TOO_MANY_NAME_PARTS] `sc`.`ns`.`q` is not a valid identifier as it has more than 2 name parts. SQLSTATE: 42601",
         ),
         (
+            "CREATE TEMPORARY VIEW a.b.c.d AS SELECT 1 AS id",
+            "[IDENTIFIER_TOO_MANY_NAME_PARTS] `a`.`b`.`c`.`d` is not a valid identifier as it has more than 2 name parts. SQLSTATE: 42601",
+        ),
+        (
             "CREATE TEMPORARY VIEW vx AS INSERT INTO sc.ns.t VALUES (9, 'x', 'y')",
             "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601",
         ),
@@ -399,24 +403,30 @@ async fn temp_view_write_body_refuses_before_registering() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (ctx, catalogs) = setup(&warehouse).await;
     let stub = StubTempViews::with_existing(&[]);
-    let error = run_with_session(
-        &ctx,
-        &catalogs,
-        "CREATE TEMPORARY VIEW w AS WITH s AS (SELECT 9 AS id) INSERT INTO ice.sales.t SELECT id FROM s",
-        &stub,
-    )
-    .await
-    .expect_err("a WITH ... INSERT body is a write, not a view");
-    let DataFusionError::SQL(inner, None) = error else {
-        panic!("expected a ParseException-class SQL error, got {error:?}");
-    };
-    let ParserError::ParserError(message) = *inner else {
-        panic!("expected ParserError::ParserError");
-    };
-    assert_eq!(
-        message,
-        "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601"
-    );
+    for (body, verb) in [
+        ("INSERT INTO ice.sales.t SELECT id FROM s", "INSERT"),
+        ("UPDATE ice.sales.t SET id = 1", "UPDATE"),
+        ("DELETE FROM ice.sales.t", "DELETE"),
+        (
+            "MERGE INTO ice.sales.t USING s ON ice.sales.t.id = s.id WHEN MATCHED THEN DELETE",
+            "MERGE",
+        ),
+    ] {
+        let sql = format!("CREATE TEMPORARY VIEW w AS WITH s AS (SELECT 9 AS id) {body}");
+        let error = run_with_session(&ctx, &catalogs, &sql, &stub)
+            .await
+            .expect_err("a WITH ... write body is a write, not a view");
+        let DataFusionError::SQL(inner, None) = error else {
+            panic!("expected a ParseException-class SQL error for {verb}, got {error:?}");
+        };
+        let ParserError::ParserError(message) = *inner else {
+            panic!("expected ParserError::ParserError for {verb}");
+        };
+        assert_eq!(
+            message,
+            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{verb}'. SQLSTATE: 42601")
+        );
+    }
     assert!(stub.registered().is_empty());
 }
 
@@ -567,13 +577,15 @@ async fn bare_drop_table_of_a_temp_name_drops_the_temp_view() {
         "DROP TABLE src",
         "DROP TABLE src PURGE",
         "DROP TABLE IF EXISTS src",
+        "DROP TABLE IF EXISTS src PURGE",
         "DROP TABLE `datafusion`.`public`.`src`",
+        "DROP VIEW IF EXISTS src",
     ] {
         run_with_session(&ctx, &catalogs, sql, &stub)
             .await
             .unwrap_or_else(|error| panic!("{sql} must drop the temp view: {error}"));
     }
-    assert_eq!(stub.dropped(), vec!["\"src\"".to_string(); 4]);
+    assert_eq!(stub.dropped(), vec!["\"src\"".to_string(); 6]);
 }
 
 #[tokio::test]

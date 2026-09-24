@@ -35,7 +35,8 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   **IPI-40 PR6 (2026-09-24):** the temporary-view rows measured on Spark 4.1.2 —
   `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` (42P07), `TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS` (428EK),
   `IDENTIFIER_TOO_MANY_NAME_PARTS` (42601), `RECURSIVE_VIEW` (42K0H),
-  `INCOMPATIBLE_VIEW_SCHEMA_CHANGE` (51024) and `CANNOT_UP_CAST_DATATYPE` (42846) — with
+  `INCOMPATIBLE_VIEW_SCHEMA_CHANGE` (51024), `CANNOT_UP_CAST_DATATYPE` (42846) and
+  `VIEW_EXCEED_MAX_NESTED_DEPTH` (54K00) — with
   byte-exact unit pins; `template()` carries `#[allow(clippy::too_many_lines)]` as a lookup
   table. pins: ice-views-1/C-018
 

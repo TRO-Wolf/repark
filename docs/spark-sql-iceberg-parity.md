@@ -1526,7 +1526,7 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
 #### DBT-INCREMENTAL-1 — the adapter refuses `incremental` and `snapshot` materializations
 
 - **repark** — dated 2026-09-23 (IPI-40 PR6). The `dbt-repark` `incremental` and `snapshot`
-  materializations, and the adapter's temporary-view staging macro, refuse at compile time with
+  materializations refuse at compile time with
   "RePark does not run dbt incremental/snapshot materializations yet" and a message naming this
   row, so `dbt run` and `dbt snapshot` never emit their staging and MERGE SQL.
 - **Apache Spark** — dbt-spark runs every incremental strategy and the snapshot materialization

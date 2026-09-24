@@ -332,3 +332,72 @@ def test_up_cast_rule_refuses_each_other_class(
     )
     assert caught.value.getCondition() == "CANNOT_UP_CAST_DATATYPE"
     assert caught.value.getSqlState() == "42846"
+
+
+def test_four_part_temp_view_name_refuses(spark: ReparkSession) -> None:
+    """IDENTIFIER_TOO_MANY_NAME_PARTS covers every name of three or more parts."""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("CREATE TEMPORARY VIEW a.b.c.d AS SELECT 1 AS id")
+    assert str(caught.value) == (
+        "[IDENTIFIER_TOO_MANY_NAME_PARTS] `a`.`b`.`c`.`d` is not a valid identifier as it has "
+        "more than 2 name parts. SQLSTATE: 42601"
+    )
+    assert caught.value.getCondition() == "IDENTIFIER_TOO_MANY_NAME_PARTS"
+    assert caught.value.getSqlState() == "42601"
+
+
+@pytest.mark.parametrize(
+    ("body", "verb"),
+    [
+        ("INSERT INTO sc.ns.t SELECT id, 'x', 'y' FROM s", "INSERT"),
+        ("UPDATE sc.ns.t SET id = 1", "UPDATE"),
+        ("DELETE FROM sc.ns.t", "DELETE"),
+        ("MERGE INTO sc.ns.t USING s ON sc.ns.t.id = s.id WHEN MATCHED THEN DELETE", "MERGE"),
+    ],
+)
+def test_with_write_bodies_refuse_at_their_verb(spark: ReparkSession, body: str, verb: str) -> None:
+    """Each WITH ... INSERT/UPDATE/DELETE/MERGE body is PARSE_SYNTAX_ERROR at its verb."""
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"CREATE TEMPORARY VIEW vw AS WITH s AS (SELECT 9 AS id) {body}")
+    assert str(caught.value) == (
+        f"[PARSE_SYNTAX_ERROR] Syntax error at or near '{verb}'. SQLSTATE: 42601"
+    )
+    assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert caught.value.getSqlState() == "42601"
+    assert _rows(spark.sql("SELECT count(*) FROM sc.ns.t")) == [[3]]
+
+
+@pytest.mark.parametrize("statement", ["DROP TABLE IF EXISTS t PURGE", "DROP VIEW IF EXISTS t"])
+def test_if_exists_drops_take_the_temp_view_first(spark: ReparkSession, statement: str) -> None:
+    """IF EXISTS drop forms of a bare temp name drop the temp view and keep the table."""
+    spark.sql("USE sc.ns")
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW t AS SELECT 5 AS id")
+    spark.sql(statement)
+    assert _rows(spark.sql("SHOW VIEWS")) == []
+    assert _rows(spark.sql("SELECT count(*) FROM sc.ns.t")) == [[3]]
+
+
+def test_show_views_like_filters_catalog_and_temp_rows(spark: ReparkSession) -> None:
+    """LIKE applies to catalog rows and temp rows alike (each side kept and dropped)."""
+    spark.sql("CREATE VIEW sc.ns.cv AS SELECT id FROM sc.ns.t")
+    spark.sql("CREATE VIEW sc.ns.tcv AS SELECT id FROM sc.ns.t")
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT 1 AS id")
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW atv AS SELECT 1 AS id")
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns LIKE 't*'")) == [
+        ["ns", "tcv", False],
+        ["", "tv", True],
+    ]
+
+
+def test_temp_views_are_session_scoped(spark: ReparkSession) -> None:
+    """Another session neither lists nor reads this session's temp view."""
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW scoped AS SELECT 1 AS id")
+    other = spark.newSession()
+    assert _rows(other.sql("SHOW VIEWS")) == []
+    with pytest.raises(AnalysisException) as caught:
+        other.sql("SELECT * FROM scoped").collect()
+    assert type(caught.value) is AnalysisException
+    assert str(caught.value) == (
+        "Error during planning: table 'spark_catalog.default.scoped' not found"
+    )
+    assert _rows(spark.sql("SHOW VIEWS")) == [["", "scoped", True]]
