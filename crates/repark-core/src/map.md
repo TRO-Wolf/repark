@@ -948,6 +948,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   keys on the statement's tokens rather than the relation, a join naming `p._deleted`
   beside a table `uc` whose user schema has `_deleted` refuses, where Spark answers
   (residue candidate `R-MC-RESERVED-NAME-JOIN`).
+  **mcdel-r6 (2026-09-23):** the collision check left this file. It now runs in
+  `MetadataColumnsTableProvider::scan` (`repark-iceberg`) on the columns the scan
+  reads, so the token check described in the mcdel-r4/r5 notes is gone.
+  `referenced_metadata_names` only routes a statement onto the rewrite; a reserved
+  word used as an alias, CTE name or table alias answers, and the join above now
+  answers Spark's rows.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
@@ -955,7 +961,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
   so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved

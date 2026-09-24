@@ -1606,6 +1606,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `SELECT *`, copy-on-write `DELETE` and `WHERE` shapes. Near misses are pinned for
   all five names, and the join case is recorded as residue candidate
   `R-MC-RESERVED-NAME-JOIN` (C-016).
+  mcdel-r6 moved the collision check to the scan's read columns (Spark's rule,
+  M-14). Aliases, CTE names, table aliases and the join now answer like Spark
+  (C-016 PROVEN, C-017), and the class-N positions were measured on both engines
+  (M-15). The pins live in `metadata_columns_reserved.rs`.
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017

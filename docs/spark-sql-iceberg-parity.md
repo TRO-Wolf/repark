@@ -13900,12 +13900,14 @@ field NAME.
   `boolean`; recorded `R-MC-DELETED` on the merge-on-read seed answers
   `[[1,true],[2,false],[3,false],[4,false]]` — projecting it reads the
   deleted rows back with `true`, not projecting it keeps the delete filter)
-  on Iceberg reads: `SELECT *` keeps user columns only. A query naming a
-  served metadata column that the table's own schema also carries refuses
-  with Spark's text `Table column names conflict with names reserved for
-  Iceberg metadata columns: [<names>]. Please, use ALTER TABLE statements to
-  rename the conflicting table columns.` The ANSI door serves no metadata
-  columns.
+  on Iceberg reads: `SELECT *` keeps user columns only. A metadata-column
+  query whose scan reads a user column named like a served metadata column
+  refuses with Spark's text `Table column names conflict with names
+  reserved for Iceberg metadata columns: [<names>]. Please, use ALTER TABLE
+  statements to rename the conflicting table columns.`, the names in the table's
+  declaration order. A reserved word used as an alias, CTE name, table alias,
+  literal or struct field is not such a read and answers. The ANSI door serves
+  no metadata columns.
 - **Apache Spark** — answers the eleven served cells (the five R-MC-FILE/POS
   values plus `R-MC-SPEC-ID` / `R-MC-SPEC-ID-EVOLVED` `[[2,0],[3,0],[4,0]]`,
   `R-MC-PARTITION`, `R-MC-PARTITION-UNPART`, `R-MC-SPEC-ID-EVO` and
@@ -13920,25 +13922,27 @@ field NAME.
   `partition_is_null_on_an_unpartitioned_table`, `spec_id_and_partition_answer_after_evolution`,
   `bucket_partitioned_table_serves_all_four_metadata_columns`),
   `crates/repark-spark/src/tests/metadata_columns_deleted.rs` (the `_deleted`
-  cluster, from `deleted_column_marks_merge_on_read_deleted_row`, and the
-  reserved-name collision pins) plus
+  cluster, from `deleted_column_marks_merge_on_read_deleted_row`),
+  `crates/repark-spark/src/tests/metadata_columns_reserved.rs` (the reserved-name
+  collision and alias-position pins) plus
   `python/repark/tests/test_ice_metadata_cols_1.py` (the verbatim cell
   replays, the star pin, the `_deleted` pins and the collision pin).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008;
   u10-mc-deleted-1/C-001
 - **Residue** — `R-MC-RESERVED-NAME-SCAN` (KNOWN DIVERGENCE, U10-MC-DELETED-1):
   on a table whose own schema carries a reserved metadata name, both engines
-  refuse a query that names the colliding column (the bracket lists the named
-  colliding columns in the table's declaration order), and both answer a query
-  that names none. Three shapes stay divergent: Spark refuses `SELECT *` and the
-  copy-on-write `DELETE` with the reserved-name text where RePark serves them, and
-  a `WHERE`-only reference refuses with RePark's reserved-name text where Spark
-  prints `Invalid schema: multiple fields for name _deleted: 2 and 2147483644`.
-  Residue candidate `R-MC-RESERVED-NAME-JOIN`: in a join where only the other
-  table carries the user column, `SELECT p.id, p._deleted FROM p JOIN uc u …`
-  refuses on RePark, while Spark answers `[[1,true],[2,false],[3,false]]`.
+  refuse a query whose scan reads the colliding user column and answer one whose
+  scans do not, joins included. Three shapes stay divergent, all outside RePark's
+  metadata-column scan: a `SELECT *` naming no metadata column, which Spark
+  refuses with the reserved-name text and RePark serves; the copy-on-write
+  `DELETE`, likewise; and a `WHERE`-only reference, which RePark refuses with
+  the reserved-name text where Spark prints `Invalid schema: multiple fields for
+  name _deleted: 2 and 2147483644`. The mcdel-r5 residue candidate
+  `R-MC-RESERVED-NAME-JOIN` is closed: the join answers Spark's
+  `[[1,true],[2,false],[3,false]]`.
   *(oracle: live Spark 4.1.2 + Iceberg 1.11 probes `mcdcol`, `mcdjoin`,
-  `mcdorder`, `mcdfile`, recorded in the u10-mc-deleted-1 ledger M-10 and M-12.)*
+  `mcdorder`, `mcdfile`, `mcdalias`, `mcdclassn`, recorded in the
+  u10-mc-deleted-1 ledger M-10, M-12, M-14 and M-15.)*
 - **Rationale** — BACKLOG, filed 2026-09-20 (ICE-METADATA-COLS-1, IPI-20 PR-1).
   The fork unit is MERGED (metadata columns + scan modes) and the pin bumped
   (RP-45), so the RePark half serves the four ordinary columns end to end;

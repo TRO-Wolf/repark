@@ -1447,15 +1447,38 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `[_deleted, _file]`. `reserved_name_near_misses_still_answer` loops
   `METADATA_COLUMN_NAMES`: for each name `c`, `(id, c STRING)` with `(1,'u1')` answers
   `SELECT id, _spec_id` = `[(1,0)]` (`SELECT id, _file` = one `.parquet` row for
-  `_spec_id`); it also pins `(id, _pos, _file)` answering `SELECT id, _spec_id` and
+  `_spec_id`, the full path since mcdel-r6); it also pins `(id, _pos, _file)` answering `SELECT id, _spec_id` and
   `SELECT id`, the user-`_file` table's `_pos` = `[(1,0),(2,1),(3,2)]`,
   `WHERE _spec_id = 0` = `[1,2,3]` and its divergent `SELECT *` rows.
   `reserved_name_collision_in_a_join` pins the join shapes: `p._deleted` beside
   `uc (id, _deleted STRING)` refuses `[_deleted]` (KNOWN DIVERGENCE, residue candidate
-  `R-MC-RESERVED-NAME-JOIN`: Spark answers `[(1,true),(2,false),(3,false)]`), and the
-  `u._deleted` shapes refuse on both engines.
+  `R-MC-RESERVED-NAME-JOIN`: Spark answers `[(1,true),(2,false),(3,false)]`; flipped to
+  that answer in mcdel-r6), and the `u._deleted` shapes refuse on both engines.
+  **mcdel-r6 (2026-09-23):** the collision tests above moved to
+  `metadata_columns_reserved.rs` (next entry); this file keeps the `_deleted` cluster
+  and exposes its row helpers `pub(super)`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016
+  C-009, C-010, C-011, C-012, C-013
+- `metadata_columns_reserved.rs` — **mcdel-r6 (2026-09-23, Sol critic r5):** the
+  reserved-name collision cluster, moved from `metadata_columns_deleted.rs` ahead of
+  the file-size ceiling; it imports that file's `pub(super)` helpers.
+  `user_deleted_column_collision_refuses_like_spark`,
+  `every_served_metadata_name_collision_refuses` and
+  `reserved_name_near_misses_still_answer` keep the r4/r5 rows above. The near-miss
+  `_file` leg for `_spec_id` now asserts the full path, equal to the one
+  data file `parquet_files_under` finds in the table's warehouse directory.
+  `reserved_name_collision_in_a_join` pins J1 answering
+  `[(1,true),(2,false),(3,false)]` (non-null Boolean), and J2/J3 still refuse
+  `[_deleted]`. `reserved_word_outside_a_user_column_read_answers` pins the measured
+  alias rows A1–A10: select-item alias, `ORDER BY` alias, table alias, CTE name and
+  derived-table alias answer `[1, 2]`; `7 AS _pos` and `v AS _file` answer; A9
+  `_deleted AS d` refuses. `reserved_word_positions_follow_spark` pins B1–B10 and R3:
+  `GROUP BY 1`, `t(_deleted)`, a backticked alias, a string literal, a struct field
+  (field `s[_deleted]`, general DataFusion naming), `AS _file` and a `_spec_id` filter
+  answer; `_deleted(id)` refuses `[UNRESOLVED_ROUTINE]` as Spark does; `FROM … AS t`
+  reading `_deleted` and `SELECT *, _spec_id` refuse `[_deleted]`; `GROUP BY _deleted`
+  over the alias keeps RePark's aggregate-validation error (KNOWN DIVERGENCE B2).
+  pins: u10-mc-deleted-1/C-012, C-014, C-015, C-016, C-017
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell

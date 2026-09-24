@@ -404,11 +404,20 @@ Source comments retain only API and safety contracts; implementation narration i
   **mcdel-r4 (2026-09-23):** `append_metadata_fields` skips a reserved field
   (metadata or lineage) whose name the user schema already carries, so a table
   with a user `_file` column serves `SELECT id, _deleted` instead of failing on
-  a duplicate field; a query that names the colliding column is refused
-  earlier, in `repark-core`'s `prepare_metadata_column_sql`.
+  a duplicate field.
+  **mcdel-r6 (2026-09-23):** `scan` refuses before building the stream when its
+  projection (`None` = every field) reads a user field whose name is in
+  `METADATA_COLUMN_NAMES` (`reserved_user_fields_read`, sorted into the schema's
+  field order = the table's declaration order), with `DataFusionError::Plan`
+  `Table column names conflict with names reserved for Iceberg metadata columns:
+  [<names>]. Please, use ALTER TABLE statements to rename the conflicting table
+  columns.` (`refuse_reserved_name_collision`, moved here from `repark-core`). This
+  is Spark's read-schema rule (`SparkScan` → `validateMetadataColumnReferences`), so
+  a reserved word that is not a read of the user column answers.
   pins: ice-metadata-cols-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005
-  pins: u10-mc-deleted-1/C-001, C-004, C-005, C-009, C-010, C-011, C-014, C-015
+  pins: u10-mc-deleted-1/C-001, C-004, C-005, C-009, C-010, C-011, C-014, C-015, C-016,
+  C-017
 - `snapshot_metadata_table.rs` — **xo55-mt R1 (2026-09-22):** `SnapshotMetadataTableProvider`
   serves `VERSION/TIMESTAMP AS OF` on a metadata table from the fork's public snapshot-scoped
   `iceberg::inspect` constructors. `metadata_asof_mode` is the per-type ruling both Spark-door
