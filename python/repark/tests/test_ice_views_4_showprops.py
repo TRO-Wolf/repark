@@ -350,7 +350,7 @@ def test_commented_view_key_lookups(spark: ReparkSession) -> None:
 
 
 def test_comment_set_through_alter_view_stays_hidden(spark: ReparkSession, tmp_path: Path) -> None:
-    """p5 vc.after_set — ``SET TBLPROPERTIES ('comment'='x')`` is accepted and stays hidden."""
+    """p5 vc.after_set.props(.comment) — SET ('comment'='x') is accepted and stays hidden."""
     spark.sql(COMMENTED_VIEW_DDL)
     spark.sql("ALTER VIEW sc.ns.vc SET TBLPROPERTIES ('comment'='x')")
     assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.vc")) == [

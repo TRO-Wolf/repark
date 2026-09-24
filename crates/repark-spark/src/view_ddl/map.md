@@ -82,11 +82,8 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `describe_view_batch` render the stored schema's columns ONLY —
   `spark_ddl_type_name` spellings, a doc-less column renders `""` (the table
   path renders null), no blank/`# Partitioning`/`# Metadata Columns` trailer,
-  and EXTENDED is the same columns-only answer. SHOW CREATE stays a later PR.
   and EXTENDED is the same columns-only answer; any supplied column refuses
-  with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`. SHOW CREATE /
-  SHOW TBLPROPERTIES / ALTER VIEW stay later PRs.
-  and EXTENDED is the same columns-only answer.
+  with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`.
   pins: ice-views-1/C-017
 - `show_create.rs` — **PR5 (2026-09-24, V-SHOW-CREATE):**
   `execute_show_create_view` is the `Ok(true)` arm of `try_show_create_intercept`
