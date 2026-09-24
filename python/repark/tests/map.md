@@ -7845,9 +7845,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   ordinal; `R-MC-PARTITION-UNPART` on the unpartitioned twin; and
   `R-MC-SPEC-ID-EVO` on the spec-evolution twin); the star pin
   holds user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id` /
-  `*, _partition` compositions; and the refusal pin holds the typed `[ICE-MC-1]`
-  `AnalysisException` for `_deleted`, never the raw `No field named`, with the column
-  name asserted per column (r2 V-001). The v3 twin serves `_file` + `_row_id`
+  `*, _partition` compositions. The v3 twin serves `_file` + `_row_id`
   together, pinning the metadata-before-lineage stage order (r2 V-002, C-009); and
   the identity twin pins every live `_file` against the table's `files.file_path`
   (r2 V-003, C-010).
@@ -7857,8 +7855,26 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `struct<cat:string>` schema leg plus a `_partition.cat` projection), the unpartitioned
   NULL pin, the evo twin now answering the full cell, the `*, _partition` star leg, and
   the refusal asserting the served four.
+  **mcdel-r1 (2026-09-23):** `_deleted` joins the served set — the recorded
+  `R-MC-DELETED` cell pins `SELECT id, _deleted` = `[[1,true],[2,false],[3,false],[4,false]]`
+  (multiset) on the merge-on-read seed with the field a `BooleanType`, and the
+  not-projected near miss keeps `SELECT id` = `[[2],[3],[4]]` and `count(*)` = 3.
+  **mcdel-r4 (2026-09-23):** `test_user_column_named_deleted_refuses_like_spark` — on a
+  merge-on-read `(id BIGINT, _deleted STRING)` table, `SELECT id, _deleted` raises
+  `AnalysisException` whose full text is `Error during planning: Table column names
+  conflict with names reserved for Iceberg metadata columns: [_deleted]. Please, use
+  ALTER TABLE statements to rename the conflicting table columns.`, and `SELECT *` still
+  answers `[[2,"u2"],[3,"u3"]]` (KNOWN DIVERGENCE `R-MC-RESERVED-NAME-SCAN`). Spark
+  raises the same text as `ValidationException` via `Py4JJavaError`, so the class differs
+  (residue `R-MC-RESERVED-NAME-CLASS`, IPI-51; the docstring says so since mcdel-r12). The
+  superseded `ice-metadata-cols-1/C-023` citation is dropped (its refusal test is gone).
+  **mcdel-r7 (2026-09-23):** the `_deleted` legs assert their field names (`[id,
+  _deleted]`, `[id]`, `[count(*)]` and the star's `[id, _deleted]`) through `_field_names`
+  (u10-mc-deleted-1/C-012). The module docstring's first line is shortened to fit the
+  100-column limit.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
+  C-010, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
+  pins: u10-mc-deleted-1/C-001, C-002, C-014, C-015
 - `test_time_travel.py` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the selector pins —
   `t.snapshot_id_<id>` / `t.at_timestamp_<ms>` read the pinned snapshot with rows and schema
   asserted, unparsable numeric suffixes refuse typed, and the `branch_`/`tag_` near-miss

@@ -1,13 +1,15 @@
-"""IPI-20 PR-1 — the Spark door serves ``_file``, ``_pos``, ``_spec_id`` and ``_partition``.
+"""IPI-20 PR-1 — the Spark door serves the metadata columns ``_file`` … ``_deleted``.
 
-Nine inventory cells replayed verbatim: ``R-MC-FILE``, ``R-MC-FILE-DISTINCT``,
+The five served names are ``_file``, ``_pos``, ``_spec_id``, ``_partition`` and ``_deleted``.
+
+Ten inventory cells replayed verbatim: ``R-MC-FILE``, ``R-MC-FILE-DISTINCT``,
 ``R-MC-POS``, ``R-MC-FILE-FILTER`` and ``R-MC-SPEC-ID`` over a two-append plus
 one-delete seed, ``R-MC-POS-MOR`` over the same seed with a merge-on-read
 delete, ``R-MC-PARTITION`` over the same seed, ``R-MC-PARTITION-UNPART`` over
-the unpartitioned twin, and ``R-MC-SPEC-ID-EVO`` over the spec-evolution twin.
-The one column the fork pin cannot serve yet — ``_deleted`` — refuses typed
-with ``[ICE-MC-1]`` instead of the raw planner error. ``SELECT *`` keeps user
-columns only.
+the unpartitioned twin, ``R-MC-SPEC-ID-EVO`` over the spec-evolution twin, and
+``R-MC-DELETED`` over the merge-on-read seed — projecting ``_deleted``
+surfaces every scanned row including the deleted one; not projecting it keeps
+the delete filter. ``SELECT *`` keeps user columns only.
 
 Oracle: the run-25/26 inventory harness cells recorded against live PySpark
 4.1.2 + ``iceberg-spark-runtime-4.1_2.13:1.11.0``
@@ -18,11 +20,13 @@ carries as ``[[2,true,true],[3,true,true],[4,true,true]]`` (``R-MC-FILE``),
 (``R-MC-POS-MOR``), ``[[2,0],[3,0],[4,0]]`` (``R-MC-SPEC-ID``),
 ``[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]``
 (``R-MC-PARTITION``), ``[[2,null],[3,null],[4,null]]``
-(``R-MC-PARTITION-UNPART``) and ``[[1,0,[["cat",null]]],[2,1,[["cat","y"]]]]``
-(``R-MC-SPEC-ID-EVO``).
+(``R-MC-PARTITION-UNPART``), ``[[1,0,[["cat",null]]],[2,1,[["cat","y"]]]]``
+(``R-MC-SPEC-ID-EVO``) and ``[[1,true],[2,false],[3,false],[4,false]]``
+(``R-MC-DELETED``, row order not significant).
 
 pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
+  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
+pins: u10-mc-deleted-1/C-001, C-002, C-014, C-015
 """
 
 from __future__ import annotations
@@ -35,6 +39,7 @@ import pytest
 from repark import ReparkSession
 from repark.errors import AnalysisException
 from repark.spark.session import _reset_active_session_for_tests
+from repark.spark.types import BooleanType
 
 CATALOG = "mc"
 NAMESPACE = "ns"
@@ -115,6 +120,11 @@ def _seeded_evo(session: Any, name: str) -> str:
 def _rows(session: Any, query: str) -> list[list[Any]]:
     """Collect one query as plain lists sorted by id."""
     return sorted((list(row) for row in session.sql(query).collect()), key=lambda row: row[0])
+
+
+def _field_names(session: Any, query: str) -> list[str]:
+    """Field names of a query's schema, in order."""
+    return [field.name for field in session.sql(query).schema.fields]
 
 
 def _schema(session: Any, query: str) -> list[tuple[str, str]]:
@@ -296,20 +306,62 @@ def test_spec_id_and_partition_answer_after_evolution(spark: Any) -> None:
     ]
 
 
-def test_unserved_metadata_columns_refuse_typed(spark: Any) -> None:
-    """``_deleted`` refuses ``[ICE-MC-1]``, never raw.
+def test_deleted_marks_merge_on_read_deleted_row(spark: Any) -> None:
+    """Cell ``R-MC-DELETED``: every scanned row, deleted ones ``_deleted = true``.
 
-    pins: ice-metadata-cols-1/C-007, C-018, C-023
+    pins: u10-mc-deleted-1/C-001
     """
-    table = _seeded(spark, "t_refuse")
-    for column in ["_deleted"]:
-        with pytest.raises(AnalysisException) as caught:
-            spark.sql(f"SELECT {column} FROM {table}").collect()
-        text = str(caught.value)
-        assert "[ICE-MC-1]" in text
-        assert "No field named" not in text
-        assert column in text
-        assert "this layer serves (_file, _pos, _spec_id, _partition)" in text
+    table = _seeded(spark, "t_deleted", MOR_PROPERTIES)
+    frame = spark.sql(f"SELECT id, _deleted FROM {table}")
+    fields = {field.name: field for field in frame.schema.fields}
+    assert list(fields) == ["id", "_deleted"]
+    assert isinstance(fields["_deleted"].dataType, BooleanType)
+    assert sorted((list(row) for row in frame.collect()), key=lambda row: row[0]) == [
+        [1, True],
+        [2, False],
+        [3, False],
+        [4, False],
+    ]
+
+
+def test_not_projecting_deleted_still_filters(spark: Any) -> None:
+    """Near miss: without ``_deleted`` in the projection the delete filter stands.
+
+    pins: u10-mc-deleted-1/C-002
+    """
+    table = _seeded(spark, "t_deleted_noproj", MOR_PROPERTIES)
+    assert _field_names(spark, f"SELECT id FROM {table}") == ["id"]
+    assert _rows(spark, f"SELECT id FROM {table}") == [[2], [3], [4]]
+    assert _field_names(spark, f"SELECT count(*) FROM {table}") == ["count(*)"]
+    assert _rows(spark, f"SELECT count(*) FROM {table}") == [[3]]
+
+
+def test_user_column_named_deleted_refuses_like_spark(spark: Any) -> None:
+    """A user column named ``_deleted`` refuses Spark's reserved-name text; ``*`` still serves.
+
+    Spark raises ``org.apache.iceberg.exceptions.ValidationException`` with this text; RePark
+    raises ``AnalysisException`` with the same text after its planning prefix (the class gap is
+    IPI-51, residue ``R-MC-RESERVED-NAME-CLASS``).
+
+    pins: u10-mc-deleted-1/C-014, C-015
+    """
+    table = f"{CATALOG}.{NAMESPACE}.t_user_deleted"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT, _deleted STRING) USING iceberg "
+        f"TBLPROPERTIES ('format-version'='2', {MOR_PROPERTIES})"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES (1, 'u1'), (2, 'u2'), (3, 'u3')")
+    spark.sql(f"DELETE FROM {table} WHERE id = 1")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"SELECT id, _deleted FROM {table} ORDER BY id").collect()
+    assert str(caught.value) == (
+        "Error during planning: Table column names conflict with names reserved for "
+        "Iceberg metadata columns: [_deleted]. Please, use ALTER TABLE statements to "
+        "rename the conflicting table columns."
+    )
+    assert _field_names(spark, f"SELECT * FROM {table} ORDER BY id") == ["id", "_deleted"]
+    rows = [list(row) for row in spark.sql(f"SELECT * FROM {table} ORDER BY id").collect()]
+    assert rows == [[2, "u2"], [3, "u3"]]
 
 
 def test_file_and_row_id_answer_together_on_v3(spark_v3: Any) -> None:

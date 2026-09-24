@@ -1375,12 +1375,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (a survivor keeps its file ordinal); `select_star_excludes_every_served_metadata_column`
   pins user-columns-only `*` plus the `*, _file` / `*, _pos` / `*, _spec_id` / `*, _partition`
   compositions;
-  `unserved_metadata_columns_refuse_with_a_typed_error` pins the `[ICE-MC-1]` refusal of
-  `_deleted`, never the raw `No field named`, and asserts
-  the message names the requested column (r2 V-001); and
   `served_names_fold_and_composed_shapes_refuse` pins the `_POS` fold, the backtick and
-  aliased spellings, the backtick unserved refusal (also naming the column), and the
+  aliased spellings, the backtick-quoted `_deleted` resolution, and the
   `[ICE-MC-1]` refusal of a `DELETE` naming `_file` and of a `*` over two relations.
+  Since mcdel-r7 every answer leg there asserts its field names; the aliased leg is
+  `SELECT x.id, x._pos … ORDER BY id` = `[(2,0),(3,0),(4,0)]` and the backticked leg is
+  `SELECT id, `_deleted` … ORDER BY id` = `[(2,false),(3,false),(4,false)]`
+  (u10-mc-deleted-1/C-012).
   `file_values_equal_the_files_metadata_table_paths` pins live `_file` identity against
   the table's own `files.file_path` (r2 V-003, C-010); and
   `file_and_row_id_answer_together_on_a_format_v3_table` pins the metadata-before-lineage
@@ -1388,8 +1389,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO-R2 (2026-09-22):** `spec_id_answers_zero_on_a_single_spec_table` pins `R-MC-SPEC-ID`
   (`[[2,0],[3,0],[4,0]]`, Int32); `spec_id_reports_each_rows_own_spec_after_evolution` pins
   the `R-MC-SPEC-ID-EVO` spec-id half (`[(1,0),(2,1)]`); and
-  `served_spec_id_beside_an_unserved_column_names_the_unserved_one` pins that the composed
-  refusal names `_deleted`, not `_spec_id`.
+  `served_spec_id_and_deleted_answer_together` pins the composed `_spec_id` + `_deleted`
+  query answering instead of refusing.
   **WO-R3 (2026-09-22):** `partition_struct_answers_spark` pins `R-MC-PARTITION`
   (`[[2,[["cat","y"]]],[3,[["cat","x"]]],[4,[["cat","x"]]]]`, nullable struct);
   `partition_is_null_on_an_unpartitioned_table` pins `R-MC-PARTITION-UNPART`
@@ -1398,8 +1399,140 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `bucket_partitioned_table_serves_all_four_metadata_columns` serves all four metadata
   columns on a bucket table; the star pin gains the `*, _partition` leg; and the refusal
   advertises the served four.
+  The `_deleted` cluster lives in `metadata_columns_deleted.rs` (mcdel-r1).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015,
-  C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
+  C-016, C-017, C-018, C-019, C-020, C-021, C-022
+- `metadata_columns_deleted.rs` — **mcdel-r1 (2026-09-23):** the `_deleted` pins over
+  the recorded merge-on-read seed (two appends plus one delete).
+  `deleted_column_marks_merge_on_read_deleted_row` pins the recorded
+  `R-MC-DELETED` cell (`SELECT id, _deleted` = `[(1,true),(2,false),(3,false),(4,false)]`,
+  the field non-null Boolean); `not_projecting_deleted_still_filters_mor_rows` pins
+  `SELECT id` = `[2,3,4]` and `count(*)` = 3;
+  `select_star_keeps_user_columns_on_mor_table` pins `*` to the three user columns;
+  `deleted_predicates_reapply_above_the_scan` pins `WHERE _deleted` / `WHERE NOT
+  _deleted` re-applied above the `Inexact` scan;
+  `deleted_column_on_copy_on_write_marks_all_rows_false` pins
+  `[(2,false),(3,false),(4,false)]` on the copy-on-write twin;
+  `unquoted_upper_deleted_folds_to_served_name` pins unquoted `_DELETED` answering
+  like `_deleted`; and `served_spec_id_and_deleted_answer_together` pins the composed
+  `_spec_id` + `_deleted` query answering instead of refusing (full rows since mcdel-r3).
+  **mcdel-r2 (2026-09-23, critic r1):** every pin asserts rows or the full error
+  text, never shapes — the star pin also asserts the ordered rows
+  `[(2,b,y),(3,c,x),(4,d,x)]`; the predicate pin gains the predicate-only legs
+  `WHERE _deleted` = `[1]`, `WHERE NOT _deleted` = `[2,3,4]`,
+  `WHERE _deleted OR id > 0` = `[1,2,3,4]` and `count(*) WHERE _deleted IS NOT NULL`
+  = `[3]`; `deleted_column_flows_through_subqueries` pins the filtered and pruned
+  subquery legs `[2,3,4]`; `deleted_column_in_expressions_order_and_group` pins
+  `CASE` = `[(1,D),(2,L),(3,L),(4,L)]`, `sum(CAST(_deleted AS INT))` = `[1]`,
+  `ORDER BY _deleted` = `[2,3,4,1]` and `GROUP BY` = `[(false,3),(true,1)]`;
+  `deleted_column_in_self_join_answers_empty` pins the `b._deleted` self-join `[]`.
+  Two known divergences pin RePark's full message (class, sub-class and
+  `SQLSTATE: 42703`): `quoted_upper_deleted_known_divergence` — quoted
+  `` `_DELETED` `` and `` `_FILE` `` alike refuse `[UNRESOLVED_COLUMN.WITH_SUGGESTION]`
+  where Spark resolves quoted `` `_DELETED` `` (quoted `` `_FILE` `` is unmeasured on
+  Spark) — and `metadata_column_over_time_travel_known_divergence` — `_file` /
+  `_deleted` over `VERSION AS OF` refuse unresolved where Spark was measured serving
+  them.
+  **mcdel-r3 (2026-09-23, Sol critic r2):** the row helpers no longer sort, so every
+  `ORDER BY` pin asserts row order and the star pin gains the `ORDER BY id DESC` leg
+  `[(4,d,x),(3,c,x),(2,b,y)]`; `served_spec_id_and_deleted_answer_together` asserts the
+  full `(id, _spec_id, _deleted)` rows on the copy-on-write table
+  `[(2,0,false),(3,0,false),(4,0,false)]` and the merge-on-read table
+  `[(1,0,true),(2,0,false),(3,0,false),(4,0,false)]`; and
+  `deleted_column_on_join_right_side_reaches_its_scan` pins the discriminating joins
+  `ON a.id = b.id + 1` — `WHERE b._deleted` = `[(2,1)]`, projected `b._deleted` =
+  `[(2,1,true),(3,2,false),(4,3,false)]`, `WHERE NOT b._deleted` = `[(3,2),(4,3)]`.
+  **mcdel-r4 (2026-09-23, Sol critic r3):** the composed pin repeats the Int32 /
+  non-null Boolean asserts after the merge-on-read query. Reserved-name collisions,
+  each asserting the full string `Error during planning: Table column names conflict
+  with names reserved for Iceberg metadata columns: [<names>]. Please, use ALTER TABLE
+  statements to rename the conflicting table columns.`:
+  `user_deleted_column_collision_refuses_like_spark` — on `(id BIGINT, _deleted STRING)`,
+  copy-on-write and merge-on-read, `SELECT id, _deleted`, `SELECT id, _spec_id, _deleted`,
+  `SELECT t._deleted` and `WHERE _deleted = 'u2'` refuse `[_deleted]`, and `SELECT *`
+  answers `[(2,u2),(3,u3)]` (KNOWN DIVERGENCE `R-MC-RESERVED-NAME-SCAN`);
+  `every_served_metadata_name_collision_refuses` — each name of `METADATA_COLUMN_NAMES`
+  refuses `[<name>]` on its own table, and `(id, _file, _pos)` refuses `[_file, _pos]`;
+  `reserved_name_near_misses_still_answer` — a user `deleted` column beside `_deleted`
+  answers `[(u1,true),(u2,false),(u3,false)]`, and a user `_file` column with only
+  `id, _deleted` named answers `[(1,false),(2,false),(3,false)]`.
+  **mcdel-r5 (2026-09-23, Sol critic r4):** every row below is measured on Spark 4.1.2
+  (ledger M-12). `every_served_metadata_name_collision_refuses` pins the declaration-order
+  bracket: `(id, _pos, _file)` refuses `[_pos, _file]` for both query orders and `[_file]`
+  for `SELECT id, _file`; `(id, _file, _pos)` refuses `[_file, _pos]` for both orders;
+  `(id, _spec_id, _deleted, _file)` refuses `[_spec_id, _deleted, _file]` and
+  `[_deleted, _file]`. `reserved_name_near_misses_still_answer` loops
+  `METADATA_COLUMN_NAMES`: for each name `c`, `(id, c STRING)` with `(1,'u1')` answers
+  `SELECT id, _spec_id` = `[(1,0)]` (`SELECT id, _file` = one `.parquet` row for
+  `_spec_id`, the full path since mcdel-r6); it also pins `(id, _pos, _file)` answering `SELECT id, _spec_id` and
+  `SELECT id`, the user-`_file` table's `_pos` = `[(1,0),(2,1),(3,2)]`,
+  `WHERE _spec_id = 0` = `[1,2,3]` and its divergent `SELECT *` rows.
+  `reserved_name_collision_in_a_join` pins the join shapes: `p._deleted` beside
+  `uc (id, _deleted STRING)` refuses `[_deleted]` (KNOWN DIVERGENCE, residue candidate
+  `R-MC-RESERVED-NAME-JOIN`: Spark answers `[(1,true),(2,false),(3,false)]`; flipped to
+  that answer in mcdel-r6), and the `u._deleted` shapes refuse on both engines.
+  **mcdel-r6 (2026-09-23):** the collision tests above moved to
+  `metadata_columns_reserved.rs` (next entry); this file keeps the `_deleted` cluster
+  and exposes its row helpers `pub(super)` (`seed` and `triples_i64` too since mcdel-r7).
+  mcdel-r7 adds a `field_names` assert to every answer leg (`frame_field_names` for the
+  empty S14 self-join).
+  pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
+  C-009, C-010, C-011, C-012, C-013
+- `metadata_columns_reserved.rs` — **mcdel-r6 (2026-09-23, Sol critic r5):** the
+  reserved-name collision cluster, moved from `metadata_columns_deleted.rs` ahead of
+  the file-size ceiling; it imports that file's `pub(super)` helpers.
+  `user_deleted_column_collision_refuses_like_spark`,
+  `every_served_metadata_name_collision_refuses` and
+  `reserved_name_near_misses_still_answer` keep the r4/r5 rows above. The near-miss
+  `_file` leg for `_spec_id` now asserts the full path, equal to the one
+  data file `parquet_files_under` finds in the table's warehouse directory.
+  `reserved_name_collision_in_a_join` pins J1 answering
+  `[(1,true),(2,false),(3,false)]` (non-null Boolean), and J2/J3 still refuse
+  `[_deleted]`. `reserved_word_outside_a_user_column_read_answers` pins the measured
+  alias rows A1–A10: select-item alias, `ORDER BY` alias, table alias, CTE name and
+  derived-table alias answer `[1, 2]`; `7 AS _pos` and `v AS _file` answer; A9
+  `_deleted AS d` refuses. `reserved_word_positions_follow_spark` pins B1–B10 and R3:
+  `GROUP BY 1`, `t(_deleted)`, a backticked alias, a string literal, a struct field
+  (field `s[_deleted]`, general DataFusion naming), `AS _file` and a `_spec_id` filter
+  answer; `_deleted(id)` refuses `[UNRESOLVED_ROUTINE]` as Spark does; `FROM … AS t`
+  reading `_deleted` and `SELECT *, _spec_id` refuse `[_deleted]`; `GROUP BY _deleted`
+  over the alias keeps RePark's aggregate-validation error (KNOWN DIVERGENCE B2).
+  **mcdel-r7 (2026-09-23, Sol critic r6):** every answer leg asserts `field_names`, and
+  B10 serves the field `count(*)`. `reserved_name_join_positions` pins J4–J9, J4B, J7B,
+  J5M, J6M and J8M; `reserved_name_query_positions` pins the refusals N1–N11 and N13, and
+  `reserved_name_query_positions_that_answer` pins N12 and N17–N19 (ledger M-17): reads of the user column in `GROUP BY`, `HAVING`, `ORDER BY`, window, subquery,
+  `UNION`, `JOIN … ON` / `USING` and `EXISTS` positions refuse `[_deleted]`; unrouted
+  `SELECT *` over a `USING` join, `SELECT t.*` and `NATURAL JOIN` answer (KNOWN
+  DIVERGENCE); non-reading joins and subqueries answer. RePark's error texts are pinned
+  for J4, J5M, J6M and N11 (LATERAL VIEW); N13 refuses `[_deleted]` since mcdel-r8.
+  **mcdel-r8 (2026-09-24):** `qualified_wildcard_under_another_alias_serves_user_columns`
+  (renamed from `…_expands_every_provider_field`) pins X1–X3, B1, B2, K1, W1–W5, Q1 and
+  Q2 with Spark's answers: `x.*` or `*` under a FROM alias serves the user columns
+  (`[(2,b,y),(3,c,x),(4,d,x)]`, plus `p` / `s`) and no deleted row.
+  `qualified_wildcard_near_misses_keep_their_answers` pins D1, C1, P1–P3 (a derived
+  table, a CTE, a rewritten or non-Iceberg join partner) and the M1/M2 error strings
+  (M2 is `Invalid qualifier t` since mcdel-r9).
+  **mcdel-r12 (2026-09-24, Sol critic r10 V-001):** N13 leaves the loop in
+  `reserved_name_query_positions` and asserts the pair (`ErrorClass::Analysis`, full
+  string) through `refusal`, the `pub(super)` helper of `metadata_columns_deleted.rs`
+  that returns the `repark_core::Error` (a `collect` error mapped through
+  `repark_core::engine_err`, as the Python binding maps it). Each reserved-name refusal here
+  has Spark's text but not Spark's class, which is `ValidationException` via
+  `Py4JJavaError` (residue `R-MC-RESERVED-NAME-CLASS`, IPI-51). "Refuse on both engines"
+  and the `…_like_spark` names refer to the text.
+  pins: u10-mc-deleted-1/C-012, C-014, C-015, C-016, C-017, C-018
+- `metadata_columns_scope.rs` — **mcdel-r9 (2026-09-24, Sol critic r7 V-001):** a wildcard
+  resolves only against its own SELECT's relations. It imports the `pub(super)` helpers
+  of `metadata_columns_deleted.rs` and registers a non-Iceberg `tv (id, data, cat,
+  extra)` batch beside the merge-on-read `ice.ns.t`.
+  `wildcard_over_a_plain_relation_keeps_its_own_columns` pins S1, S2, S4, S4B (`*` /
+  `t.*` over `tv t` or a CTE `t`, with the Iceberg `t` only in an `EXISTS` subquery) =
+  `[(2,b,y,e2),(3,c,x,e3)]`; S3, S3B, S3C (derived tables `x` / `t`) =
+  `[(2,b,e),(3,c,e)]`; and S6 (`*` over `tv t JOIN tv u`) with all eight fields.
+  `wildcard_over_the_iceberg_relation_ignores_a_plain_namesake` pins S5/S5B (the
+  Iceberg `t` outside, a plain `tv t` in the subquery) = the live user rows with no
+  `_deleted`, plus the near misses S7 (`t.*, t._pos`) and S8 (`R-MC-DELETED`).
+  pins: u10-mc-deleted-1/C-019
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
@@ -1445,8 +1578,16 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   of that name is read normally, and `insert_around_the_trigger_keeps_todays_answers`
   pins the input-file-name-only trigger returning `Ok(None)` for a non-query
   statement (the `[UNRESOLVED_ROUTINE]` error, never `[ICE-MC-1]`).
+  **mcdel-r12 (2026-09-24, Sol critic r10 V-002):** the session enables
+  `repark.sql.allowCreateFormatVersion3` (default creates stay v2), and
+  `input_file_name_over_a_v3_comma_join_is_an_unresolved_routine` runs
+  `SELECT input_file_name() LIKE '%.parquet' AS f FROM ice.ns.t3 a, ice.ns.t3 b` over a v3
+  table and asserts the pair (`ErrorClass::Analysis`, the full `[UNRESOLVED_ROUTINE] …
+  SQLSTATE: 42883; line 1 pos 7` string). Spark answers `true` on all four rows, so this is
+  residue `R-MC-IFN-COMMA-JOIN` (cell I1).
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-011, C-012, C-013
+  pins: u10-mc-deleted-1/C-020
 - `nan_pushdown.rs` — **ICE-NAN-PUSHDOWN-1 (2026-09-17, round 2):** NaN filter
   answers plus the pushed-predicate plan shape over a memory-catalog Iceberg
   scan — `nan_equality_answers_the_nan_rows` (`=` either side, `<=>`, float `=`)

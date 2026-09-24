@@ -67,8 +67,8 @@ pub use location::{
     mirror_namespace_location_keys, resolve_namespace_location, storage_factory_for_location,
 };
 pub use metadata_columns::{
-    METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, UNSERVED_METADATA_COLUMN_NAMES,
-    is_served_metadata_column, metadata_columns_user_field_names,
+    METADATA_COLUMN_NAMES, MetadataColumnsTableProvider, is_served_metadata_column,
+    metadata_columns_user_field_names,
 };
 pub use snapshot_metadata_table::{
     MetadataAsofMode, SnapshotMetadataTableProvider, as_of_snapshot_scope_refusal,

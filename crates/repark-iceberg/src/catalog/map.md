@@ -381,11 +381,10 @@ Source comments retain only API and safety contracts; implementation narration i
   this provider when a query names the columns.
   pins: v3-4-serve-lineage-columns/C-002, C-017, C-019, C-020 V3-COV pins in this file: a scan column left behind by a widening ALTER promotes instead of failing (V3-COV-2); the projection is resolved once per scan schema and reused for every batch; a scan that lost a lineage column names it rather than rebuilding a short batch.
 - `metadata_columns.rs` — **ICE-METADATA-COLS-1 (2026-09-20):** `MetadataColumnsTableProvider`
-  serves `_file` (Utf8), `_pos` (Int64), `_spec_id` (Int32) and `_partition` (the NULLABLE
-  union struct) on current-snapshot reads by handing the
+  serves `_file` (Utf8), `_pos` (Int64), `_spec_id` (Int32), `_partition` (the NULLABLE
+  union struct) and `_deleted` (non-null Boolean) on current-snapshot reads by handing the
   projected names straight to the fork scan, so the layer serves whatever the fork serves
-  and nothing else. The served set is the hard-coded `METADATA_COLUMN_NAMES`; the
-  hard-coded `UNSERVED_METADATA_COLUMN_NAMES` names the one remaining column, `_deleted`. An empty
+  and nothing else. The served set is the hard-coded `METADATA_COLUMN_NAMES`. An empty
   projection (a bare `count(*)`) scans empty and keeps the row count instead of refusing.
   v3 tables also advertise the two lineage columns (lineage wins for those two).
   **WO-R2 (2026-09-22):** the served const went 2→3 with the Int32 non-null `_spec_id`
@@ -394,8 +393,31 @@ Source comments retain only API and safety contracts; implementation narration i
   `_partition` field (`unified_partition_type`, `RESERVED_FIELD_ID_PARTITION`); every row of
   an unpartitioned table serves a NULL struct, and a row written under a spec that lacks a
   union field serves a non-null union struct with that field NULL (`[["cat", null]]`).
-  pins: ice-metadata-cols-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
+  **mcdel-r1 (2026-09-23):** the served const went 4→5 with the non-null Boolean
+  `_deleted` field (`RESERVED_FIELD_ID_DELETED`) placed after `_partition` and before
+  the lineage pair; `UNSERVED_METADATA_COLUMN_NAMES` is deleted. The scan passthrough
+  is unchanged — `_deleted` reaching the fork's `select` activates its
+  include-deleted mode, so merge-on-read delete-file rows surface marked `true`
+  while projections without `_deleted` keep today's delete filtering; the scan
+  serves `_deleted` wherever the plan needs it (predicate-only, subquery,
+  expression, join legs included).
+  **mcdel-r4 (2026-09-23):** `append_metadata_fields` skips a reserved field
+  (metadata or lineage) whose name the user schema already carries, so a table
+  with a user `_file` column serves `SELECT id, _deleted` instead of failing on
+  a duplicate field.
+  **mcdel-r6 (2026-09-23):** `scan` refuses before building the stream when its
+  projection (`None` = every field) reads a user field whose name is in
+  `METADATA_COLUMN_NAMES` (`reserved_user_fields_read`, sorted into the schema's
+  field order = the table's declaration order), with `DataFusionError::Plan`
+  `Table column names conflict with names reserved for Iceberg metadata columns:
+  [<names>]. Please, use ALTER TABLE statements to rename the conflicting table
+  columns.` (`refuse_reserved_name_collision`, moved here from `repark-core`). This
+  is Spark's read-schema rule (`SparkScan` → `validateMetadataColumnReferences`), so
+  a reserved word that is not a read of the user column answers.
+  pins: ice-metadata-cols-1/C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005
+  pins: u10-mc-deleted-1/C-001, C-004, C-005, C-009, C-010, C-011, C-014, C-015, C-016,
+  C-017
 - `snapshot_metadata_table.rs` — **xo55-mt R1 (2026-09-22):** `SnapshotMetadataTableProvider`
   serves `VERSION/TIMESTAMP AS OF` on a metadata table from the fork's public snapshot-scoped
   `iceberg::inspect` constructors. `metadata_asof_mode` is the per-type ruling both Spark-door
