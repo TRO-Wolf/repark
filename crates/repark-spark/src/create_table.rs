@@ -165,7 +165,7 @@ fn build_schema_create(
 
     let table_name = format!("`{catalog}`.`{namespace}`.`{table}`");
     let schema = schema_from_column_defs(&create.columns, timestamp_type, &table_name)?;
-    let partition_spec = build_partition_spec(&schema, &partition_fields)?;
+    let partition_spec = build_partition_spec(&schema, &partition_fields, true)?;
     // Bind partition validation early (unknown column fails before catalog I/O).
     let _ = partition_spec;
 
@@ -444,7 +444,11 @@ async fn execute_schema_create(
         "column-def CREATE",
     )?;
 
-    let partition_spec = build_partition_spec(&create.schema, &create.partition_fields)?;
+    let partition_spec = build_partition_spec(
+        &create.schema,
+        &create.partition_fields,
+        crate::spark_door_case_insensitive(ctx.state().config().options()),
+    )?;
     let format_version = iceberg_create_format_version(ctx, create.format_version.as_deref())?;
     if existed {
         // OR REPLACE: stage against the existing table (same path as CTAS replace).

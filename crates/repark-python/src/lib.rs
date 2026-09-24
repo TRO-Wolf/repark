@@ -25,6 +25,7 @@ mod subquery;
 mod text_io;
 mod type_bridge;
 mod unresolved_routine;
+mod writer_layout;
 
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
@@ -174,6 +175,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     subquery::register(module)?;
     text_io::register(module)?;
     type_bridge::register(module)?;
+    writer_layout::register(module)?;
     Ok(())
 }
 

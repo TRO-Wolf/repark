@@ -1,64 +1,191 @@
+use datafusion::error::Result;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::tokenizer::{Token, Whitespace, Word};
 
-pub(crate) fn rewrite_clustered_by(tokens: &[Token]) -> Vec<Token> {
+struct BucketRun {
+    first: usize,
+    last: usize,
+    count: Token,
+    columns: Vec<Token>,
+    sorts: Vec<Token>,
+}
+
+pub(crate) fn rewrite_clustered_by(tokens: &[Token]) -> Result<Vec<Token>> {
     let boundary = super::ctas_as_boundary(tokens);
     let significant: Vec<usize> = tokens
         .iter()
         .enumerate()
-        .filter(|(_, token)| !matches!(token, Token::Whitespace(_)))
+        .filter(|(index, token)| *index < boundary && !matches!(token, Token::Whitespace(_)))
         .map(|(index, _)| index)
         .collect();
-    for window in significant.windows(8) {
-        if window[7] >= boundary || !is_clustered_run(tokens, window) {
-            continue;
-        }
-        let mut out = Vec::with_capacity(tokens.len() + 8);
-        out.extend_from_slice(&tokens[..window[0]]);
-        out.push(keyword_token("PARTITIONED", Keyword::PARTITIONED));
-        out.push(Token::Whitespace(Whitespace::Space));
-        out.push(keyword_token("BY", Keyword::BY));
-        out.push(Token::Whitespace(Whitespace::Space));
-        out.push(Token::LParen);
-        out.push(keyword_token("bucket", Keyword::NoKeyword));
-        out.push(Token::LParen);
-        out.push(tokens[window[6]].clone());
-        out.push(Token::Comma);
-        out.push(Token::Whitespace(Whitespace::Space));
-        out.push(tokens[window[3]].clone());
-        out.push(Token::RParen);
-        out.push(Token::RParen);
-        out.extend_from_slice(&tokens[window[7] + 1..]);
-        return out;
+    let Some(start) = significant
+        .iter()
+        .position(|index| word_is(&tokens[*index], "CLUSTERED"))
+    else {
+        return Ok(tokens.to_vec());
+    };
+    let Some(run) = parse_bucket_run(tokens, &significant[start..]) else {
+        return Ok(tokens.to_vec());
+    };
+    if run.columns.len() > 1 || !run.sorts.is_empty() {
+        return Err(repark_iceberg::write::illegal_argument_error(format!(
+            "Cannot convert transform with more than one column reference: {}",
+            describe_run(&run)
+        )));
     }
-    tokens.to_vec()
+    let mut out = Vec::with_capacity(tokens.len() + 8);
+    out.extend_from_slice(&tokens[..run.first]);
+    let splice_at = out.len();
+    out.extend_from_slice(&tokens[run.last + 1..]);
+    let bucket = bucket_tokens(&run);
+    if let Some(close) = partitioned_by_close(&out) {
+        let mut element = vec![Token::Comma, Token::Whitespace(Whitespace::Space)];
+        element.extend(bucket);
+        out.splice(close..close, element);
+        return Ok(out);
+    }
+    let mut clause = vec![
+        keyword_token("PARTITIONED", Keyword::PARTITIONED),
+        Token::Whitespace(Whitespace::Space),
+        keyword_token("BY", Keyword::BY),
+        Token::Whitespace(Whitespace::Space),
+        Token::LParen,
+    ];
+    clause.extend(bucket);
+    clause.push(Token::RParen);
+    out.splice(splice_at..splice_at, clause);
+    Ok(out)
 }
 
-fn is_clustered_run(tokens: &[Token], window: &[usize]) -> bool {
-    let [
-        clustered,
-        by,
-        open,
-        column,
-        close,
-        into,
-        buckets,
-        buckets_word,
-    ] = window
-    else {
-        return false;
+fn parse_bucket_run(tokens: &[Token], significant: &[usize]) -> Option<BucketRun> {
+    let at = |position: usize| significant.get(position).map(|index| &tokens[*index]);
+    if !at(1).is_some_and(|token| word_is(token, "BY")) {
+        return None;
+    }
+    let (columns, mut position) = parse_column_list(tokens, significant, 2)?;
+    let mut sorts = Vec::new();
+    if at(position).is_some_and(|token| word_is(token, "SORTED")) {
+        if !at(position + 1).is_some_and(|token| word_is(token, "BY")) {
+            return None;
+        }
+        (sorts, position) = parse_column_list(tokens, significant, position + 2)?;
+    }
+    if !at(position).is_some_and(|token| word_is(token, "INTO")) {
+        return None;
+    }
+    let count = at(position + 1)?.clone();
+    if !matches!(count, Token::Number(_, _))
+        || !at(position + 2).is_some_and(|token| word_is(token, "BUCKETS"))
+    {
+        return None;
+    }
+    Some(BucketRun {
+        first: significant[0],
+        last: significant[position + 2],
+        count,
+        columns,
+        sorts,
+    })
+}
+
+fn parse_column_list(
+    tokens: &[Token],
+    significant: &[usize],
+    open: usize,
+) -> Option<(Vec<Token>, usize)> {
+    if !matches!(tokens[*significant.get(open)?], Token::LParen) {
+        return None;
+    }
+    let mut columns = Vec::new();
+    let mut position = open + 1;
+    loop {
+        let column = &tokens[*significant.get(position)?];
+        if !matches!(column, Token::Word(_) | Token::DoubleQuotedString(_)) {
+            return None;
+        }
+        columns.push(column.clone());
+        match tokens[*significant.get(position + 1)?] {
+            Token::Comma => position += 2,
+            Token::RParen => return Some((columns, position + 2)),
+            _ => return None,
+        }
+    }
+}
+
+fn partitioned_by_close(tokens: &[Token]) -> Option<usize> {
+    let boundary = super::ctas_as_boundary(tokens);
+    let significant: Vec<usize> = tokens
+        .iter()
+        .enumerate()
+        .filter(|(index, token)| *index < boundary && !matches!(token, Token::Whitespace(_)))
+        .map(|(index, _)| index)
+        .collect();
+    let start = significant.windows(3).find(|window| {
+        word_is(&tokens[window[0]], "PARTITIONED")
+            && word_is(&tokens[window[1]], "BY")
+            && matches!(tokens[window[2]], Token::LParen)
+    })?[2];
+    let mut depth = 0usize;
+    for (index, token) in tokens.iter().enumerate().skip(start) {
+        match token {
+            Token::LParen => depth += 1,
+            Token::RParen => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(index);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn bucket_tokens(run: &BucketRun) -> Vec<Token> {
+    let mut out = vec![keyword_token("bucket", Keyword::NoKeyword), Token::LParen];
+    out.push(run.count.clone());
+    out.push(Token::Comma);
+    out.push(Token::Whitespace(Whitespace::Space));
+    out.extend(run.columns.iter().cloned());
+    out.push(Token::RParen);
+    out
+}
+
+fn column_name(token: &Token) -> String {
+    let raw = match token {
+        Token::Word(word) => word.value.clone(),
+        Token::DoubleQuotedString(value) => value.clone(),
+        other => other.to_string(),
     };
-    word_is(&tokens[*clustered], "CLUSTERED")
-        && word_is(&tokens[*by], "BY")
-        && matches!(tokens[*open], Token::LParen)
-        && matches!(
-            tokens[*column],
-            Token::Word(_) | Token::DoubleQuotedString(_)
+    let plain = !raw.is_empty()
+        && raw
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '_');
+    if plain && !raw.chars().all(|character| character.is_ascii_digit()) {
+        raw
+    } else {
+        format!("`{}`", raw.replace('`', "``"))
+    }
+}
+
+fn describe_run(run: &BucketRun) -> String {
+    let join = |columns: &[Token]| {
+        columns
+            .iter()
+            .map(column_name)
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    if run.sorts.is_empty() {
+        format!("bucket({}, {})", run.count, join(&run.columns))
+    } else {
+        format!(
+            "sorted_bucket({}, {}, {})",
+            join(&run.columns),
+            run.count,
+            join(&run.sorts)
         )
-        && matches!(tokens[*close], Token::RParen)
-        && word_is(&tokens[*into], "INTO")
-        && matches!(tokens[*buckets], Token::Number(_, _))
-        && word_is(&tokens[*buckets_word], "BUCKETS")
+    }
 }
 
 fn word_is(token: &Token, value: &str) -> bool {
@@ -78,6 +205,7 @@ fn keyword_token(value: &str, keyword: Keyword) -> Token {
 
 #[cfg(test)]
 mod tests {
+    use datafusion::error::DataFusionError;
     use datafusion::sql::sqlparser::dialect::DatabricksDialect;
     use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 
@@ -93,29 +221,95 @@ mod tests {
         tokens.iter().map(ToString::to_string).collect::<String>()
     }
 
+    fn rewritten(sql: &str) -> String {
+        render(
+            &rewrite_clustered_by(&tokenize(sql))
+                .unwrap_or_else(|error| panic!("{sql:?} must rewrite: {error}")),
+        )
+    }
+
+    fn refusal(sql: &str) -> String {
+        let error = rewrite_clustered_by(&tokenize(sql)).expect_err("shape refuses");
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External marker, got {error:?}");
+        };
+        inner
+            .downcast_ref::<repark_iceberg::write::IllegalArgumentMarker>()
+            .map_or_else(
+                || panic!("expected an IllegalArgumentMarker, got {inner:?}"),
+                |marker| marker.0.clone(),
+            )
+    }
+
     #[test]
     fn clustered_by_rewrites_to_partitioned_by_bucket() {
-        let sql = "CREATE TABLE ice.ns.t (id BIGINT, data STRING) CLUSTERED BY (id) \
-         INTO 4 BUCKETS";
         assert_eq!(
-            render(&rewrite_clustered_by(&tokenize(sql))),
+            rewritten(
+                "CREATE TABLE ice.ns.t (id BIGINT, data STRING) CLUSTERED BY (id) INTO 4 BUCKETS"
+            ),
             "CREATE TABLE ice.ns.t (id BIGINT, data STRING) PARTITIONED BY (bucket(4, id))"
         );
-        let lower = "CREATE TABLE ice.ns.t (id BIGINT) clustered by (id) into 4 buckets";
         assert_eq!(
-            render(&rewrite_clustered_by(&tokenize(lower))),
+            rewritten("CREATE TABLE ice.ns.t (id BIGINT) clustered by (id) into 4 buckets"),
             "CREATE TABLE ice.ns.t (id BIGINT) PARTITIONED BY (bucket(4, id))"
         );
     }
 
     #[test]
     fn trailing_clauses_survive_the_splice() {
-        let sql = "CREATE TABLE ice.ns.t (id BIGINT) CLUSTERED BY (id) INTO 4 BUCKETS \
-         TBLPROPERTIES ('k'='v')";
         assert_eq!(
-            render(&rewrite_clustered_by(&tokenize(sql))),
+            rewritten(
+                "CREATE TABLE ice.ns.t (id BIGINT) CLUSTERED BY (id) INTO 4 BUCKETS \
+                 TBLPROPERTIES ('k'='v')"
+            ),
             "CREATE TABLE ice.ns.t (id BIGINT) PARTITIONED BY (bucket(4, id)) TBLPROPERTIES \
              ('k'='v')"
+        );
+    }
+
+    #[test]
+    fn the_bucket_joins_an_existing_partitioned_by_list_last() {
+        assert_eq!(
+            rewritten(
+                "CREATE TABLE ice.ns.t PARTITIONED BY (cat) CLUSTERED BY (id) INTO 4 BUCKETS \
+                 AS SELECT * FROM v"
+            ),
+            "CREATE TABLE ice.ns.t PARTITIONED BY (cat, bucket(4, id))  AS SELECT * FROM v"
+        );
+        assert_eq!(
+            rewritten(
+                "CREATE TABLE ice.ns.t CLUSTERED BY (`id`) INTO 4 BUCKETS PARTITIONED BY \
+                 (days(ts)) AS SELECT * FROM v"
+            ),
+            "CREATE TABLE ice.ns.t  PARTITIONED BY (days(ts), bucket(4, `id`)) AS SELECT * \
+             FROM v"
+        );
+    }
+
+    #[test]
+    fn multi_column_and_sorted_buckets_refuse_with_spark_text() {
+        assert_eq!(
+            refusal(
+                "CREATE TABLE ice.ns.t USING iceberg CLUSTERED BY (id, data) INTO 4 BUCKETS \
+                 AS SELECT * FROM v"
+            ),
+            "Cannot convert transform with more than one column reference: bucket(4, id, data)"
+        );
+        assert_eq!(
+            refusal(
+                "CREATE TABLE ice.ns.t (id BIGINT, data STRING) CLUSTERED BY (id) SORTED BY \
+                 (data) INTO 4 BUCKETS"
+            ),
+            "Cannot convert transform with more than one column reference: \
+             sorted_bucket(id, 4, data)"
+        );
+        assert_eq!(
+            refusal(
+                "CREATE TABLE ice.ns.t CLUSTERED BY (`a b`, c) SORTED BY (d, e) INTO 2 BUCKETS \
+                 AS SELECT * FROM v"
+            ),
+            "Cannot convert transform with more than one column reference: \
+             sorted_bucket(`a b`, c, 2, d, e)"
         );
     }
 
@@ -128,21 +322,16 @@ mod tests {
             "CREATE TABLE ice.ns.t (id BIGINT) TBLPROPERTIES ('k'='v')",
             "CREATE TABLE \"clustered\" (id BIGINT)",
             "ALTER TABLE ice.ns.t ADD COLUMN c1 INT",
-        ] {
-            let tokens = tokenize(sql);
-            assert_eq!(rewrite_clustered_by(&tokens), tokens, "{sql:?}");
-        }
-    }
-
-    #[test]
-    fn unsupported_clustered_shapes_pass_through_untouched() {
-        for sql in [
-            "CREATE TABLE ice.ns.t (a INT, b INT) CLUSTERED BY (a, b) INTO 4 BUCKETS",
-            "CREATE TABLE ice.ns.t (id BIGINT) CLUSTERED BY (id) SORTED BY (id) INTO 4 BUCKETS",
+            "CREATE TABLE ice.ns.t (id BIGINT) CLUSTERED BY (id) SORTED BY (id DESC) INTO 4 BUCKETS",
+            "CREATE TABLE ice.ns.t (id BIGINT) CLUSTERED BY (id) INTO x BUCKETS",
             "SELECT clustered FROM t",
         ] {
             let tokens = tokenize(sql);
-            assert_eq!(rewrite_clustered_by(&tokens), tokens, "{sql:?}");
+            assert_eq!(
+                rewrite_clustered_by(&tokens).expect("pass-through"),
+                tokens,
+                "{sql:?}"
+            );
         }
     }
 }

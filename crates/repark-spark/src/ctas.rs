@@ -210,7 +210,11 @@ pub(crate) async fn execute_ctas(
     let derived_schema = repark_core::relax_schema_to_nullable(arrow_schema.as_ref());
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(&derived_schema).map_err(iceberg_err)?;
-    let partition_spec = build_partition_spec(&iceberg_schema, &ctas.partition_fields)?;
+    let partition_spec = build_partition_spec(
+        &iceberg_schema,
+        &ctas.partition_fields,
+        crate::spark_door_case_insensitive(ctx.state().config().options()),
+    )?;
     let format_version =
         crate::create_table::iceberg_create_format_version(ctx, ctas.format_version.as_deref())?;
 

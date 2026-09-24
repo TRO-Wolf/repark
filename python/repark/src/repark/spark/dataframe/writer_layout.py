@@ -283,18 +283,6 @@ def assert_bucket_spec_valid_for_table_write(writer: DataFrameWriter, qualified_
             )
 
 
-def refuse_bucketed_table_write(writer: DataFrameWriter) -> None:
-    """Refuse a bucketed Iceberg table write (Ruling R-1) pointing at ``F.bucket``."""
-    if not _bucketed(writer):
-        return
-    feature = "bucketBy on an Iceberg table (use writeTo(...).partitionedBy(F.bucket(n, col)))"
-    raise PySparkNotImplementedError(
-        f"[NOT_IMPLEMENTED] {feature} is not implemented.",
-        errorClass="NOT_IMPLEMENTED",
-        messageParameters={"feature": feature},
-    )
-
-
 def refuse_clustered_table_write(
     writer: DataFrameWriter | DataFrameWriterV2,
 ) -> None:
@@ -312,7 +300,6 @@ def refuse_clustered_table_write(
 def refuse_bucketed_or_clustered_table_write(writer: DataFrameWriter, qualified_table: str) -> None:
     """Run the table-write bucketing and clustering checks in Spark's order."""
     assert_bucket_spec_valid_for_table_write(writer, qualified_table)
-    refuse_bucketed_table_write(writer)
     refuse_clustered_table_write(writer)
 
 

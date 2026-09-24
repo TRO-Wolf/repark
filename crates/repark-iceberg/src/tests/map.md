@@ -44,6 +44,16 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   manifest on the branch (the carried seed plus 99 branch appends), not the hundredth branch
   append, and main's pointer never moves.
   pins: ice-merge-append-1/C-002, C-003, C-004, C-005, C-008
+- `output_spec.rs` — **U7 PR1 (2026-09-24):** `output-spec-id` pins over a memory catalog
+  table evolved with `ADD PARTITION FIELD cat`: Java int parsing and its refusal text, the
+  staging view's swapped default spec (the real table untouched), Spark's unknown-id text for
+  `7` and `-1`, an append with spec 0 committing only spec-0 files, and the near miss without
+  the option committing two spec-1 files. pins: u7-write-df/C-014
+- `writer_partitioning.rs` — **U7 PR1 (2026-09-24):** the layout and save-target kernels:
+  provided and table transform rendering (quoting, `sorted_bucket`, `days`/`truncate`), the
+  mismatch text with an empty and a three-field table side, count and case mismatches, a
+  matching catalog table passing, and `decide_save_target` across every mode, existence,
+  path and default-format cell. pins: u7-write-df/C-014
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.

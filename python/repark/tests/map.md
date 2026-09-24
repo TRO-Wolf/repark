@@ -388,7 +388,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `COLUMN_NOT_DEFINED_IN_TABLE` with the backticked multipart name — repark's default
   `spark_catalog.default` matches the oracle's), and the two declared refusals (R-1
   `bucketBy`/R-2 `clusterBy` `NOT_IMPLEMENTED` with Spark's feature strings, table not
-  created). V2 `clusterBy` chains and refuses the `partitionedBy` conflict at
+  created; **U7 PR1 (2026-09-24)** retires the R-1 `bucketBy` pin for
+  `test_bucket_by_sort_by_save_as_table_refuses_like_iceberg`, Spark's Iceberg-catalog
+  `sorted_bucket` refusal, pins: u7-write-df/C-008). V2 `clusterBy` chains and refuses the `partitionedBy` conflict at
   create/replace/createOrReplace and the Iceberg clustering record at create — where
   Spark answered `None` by writing a non-Iceberg session-catalog table (declared,
   registry IO-CLUSTER-1). Red on base `8cd6d1e6`: 13 of 14 pins
@@ -854,6 +856,23 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   SQL-door conf probe. Offline pins read the fixture; the live tier re-runs the
   drivers and checks the fixture.
   pins: ice-write-options-1/C-001, C-002, C-003, C-004, C-006, C-009
+- [test_ice_write_df_1.py](test_ice_write_df_1.py) — **U7 PR1 (2026-09-24):** the
+  DataFrame writer surface against
+  [ice_write_df_1_spark_oracle.json](ice_write_df_1_spark_oracle.json) — the four
+  scoreboard cells `W-DF-SAVE-NAME`, `W-DF-SAVE-OVERWRITE-NAME`, `W-DF-V1-BUCKETBY-ERR`,
+  `W-DF-OPT-OUTPUT-SPEC-ID` (`recorded`, live PySpark 4.1.2 + Iceberg 1.11.0) and 61 step-1
+  probe shapes (`measured`, same runtime, InMemoryCatalog `sc`, namespace `u7`, so the
+  refusal texts carry the probe's relation names). `save(name)` in every mode, the path
+  target, the partitioning check, `bucketBy` on new and existing tables (append check,
+  RTAS overwrite, ignore, error), the sorted and multi-column refusals, `output-spec-id`
+  across five writers, its refusals and near misses, the SQL door's `CLUSTERED BY` twins
+  and case-free partition columns. pins: u7-write-df/C-001, C-002, C-003, C-004, C-005,
+  C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+- [ice_write_df_1_spark_oracle.json](ice_write_df_1_spark_oracle.json) — **U7 PR1
+  (2026-09-24):** the oracle `test_ice_write_df_1.py` reads: `recorded` copies the four
+  scoreboard observations verbatim, `measured` holds each probe shape's error (type,
+  condition, SQLSTATE, message with the warehouse path as `<wh>`) or state (rows,
+  operations, summary counts, `.files` spec counts, DESCRIBE partitioning rows).
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect
   `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and

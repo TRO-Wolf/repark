@@ -71,6 +71,7 @@ class DataFrameWriter:
         "_cluster_columns",
         "_dataframe",
         "_format",
+        "_format_explicit",
         "_mode",
         "_num_buckets",
         "_options",
@@ -109,6 +110,7 @@ class DataFrameWriter:
         """Start with PySpark defaults: iceberg format, ``errorifexists`` mode, no partitioning."""
         self._dataframe = dataframe
         self._format = "iceberg"
+        self._format_explicit = False
         self._mode = "error"
         self._partition_columns: list[str] = []
         self._num_buckets: int | None = None
@@ -122,6 +124,7 @@ class DataFrameWriter:
         if not isinstance(source, str):
             raise PySparkTypeError(f"format expects a str, got {type(source).__name__}")
         self._format = source.lower()
+        self._format_explicit = True
         return self
 
     def option(self, key: str, value: Any) -> DataFrameWriter:
@@ -223,6 +226,8 @@ class DataFrameWriter:
             )
         if normalized_mode == "ignore":
             return
+        if self._num_buckets is not None:
+            return writer_save.write_bucketed_existing(self, qualified, table_ref, normalized_mode)
         if normalized_mode == "overwrite":
             columns, projection = self._by_name_projection(session, table_ref, display_name=name)
             self._run_through_temp_view(
@@ -387,12 +392,9 @@ class DataFrameWriter:
         if path is None:
             raise AnalysisException("'path' is not specified.")
         writer_layout.refuse_bucketed_action(self, "save")
+        if self._format == "iceberg":
+            return writer_save.save_iceberg(self, path)
         if self._format not in self._PATH_FORMATS:
-            if self._format == "iceberg":
-                raise AnalysisException(
-                    "DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'|'text'); "
-                    "use saveAsTable for Iceberg tables"
-                )
             _io_declared.refuse_writer_save_format(self)
         if self._format == "text":
             return _writer_text.write_text_path(self, path)
@@ -775,13 +777,7 @@ class DataFrameWriter:
 
     def _ctas_sql(self, table_ref: str, *, view: str) -> str:
         """Build a quoted Iceberg CTAS statement."""
-        from repark.spark._idents import quote_ident as _quote_ident
-
-        partition_clause = ""
-        if self._partition_columns:
-            quoted_parts = ", ".join(_quote_ident(column) for column in self._partition_columns)
-            partition_clause = f" PARTITIONED BY ({quoted_parts})"
-        return f"CREATE TABLE {table_ref} USING iceberg{partition_clause} AS SELECT * FROM {view}"
+        return writer_save.ctas_sql(self, table_ref, view=view)
 
     def _run_through_temp_view(
         self,
@@ -796,7 +792,7 @@ class DataFrameWriter:
         )
 
 
-from repark.spark.dataframe import writer_schema  # noqa: E402
+from repark.spark.dataframe import writer_save, writer_schema  # noqa: E402
 from repark.spark.dataframe.writer_layout import (  # noqa: E402
     _merge_path_write_tree,
     _normalize_parquet_write_compression,

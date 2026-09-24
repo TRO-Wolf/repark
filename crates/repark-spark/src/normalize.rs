@@ -200,7 +200,7 @@ pub(crate) fn parse_single_normalized(
     let mut clauses = create_clauses::CreateClauses::default();
     if is_create_table(&tokens) {
         tokens = create_clauses::strip_create_table_using(&tokens);
-        tokens = clustered_by::rewrite_clustered_by(&tokens);
+        tokens = clustered_by::rewrite_clustered_by(&tokens)?;
         (tokens, partitioning) = extract_partitioned_by(&tokens)?;
         (tokens, clauses) = create_clauses::extract_create_clauses(&tokens);
         tokens = rewrite_create_column_types(&tokens, false).map_err(|message| {
@@ -518,8 +518,7 @@ impl PartitionFieldSpec {
     }
 
     /// The partition-field NAME Java/Spark generate for this transform.
-    fn field_name(&self) -> String {
-        let column = self.column();
+    fn field_name(&self, column: &str) -> String {
         match self {
             PartitionFieldSpec::Identity(_) => column.to_string(),
             PartitionFieldSpec::Bucket { .. } => format!("{column}_bucket"),
@@ -830,6 +829,7 @@ pub(crate) fn property_value(value: &Expr) -> String {
 pub(crate) fn build_partition_spec(
     schema: &iceberg::spec::Schema,
     partition_fields: &[PartitionFieldSpec],
+    case_insensitive: bool,
 ) -> Result<Option<UnboundPartitionSpec>> {
     if partition_fields.is_empty() {
         return Ok(None);
@@ -837,11 +837,16 @@ pub(crate) fn build_partition_spec(
     let mut builder = UnboundPartitionSpec::builder();
     for partition_field in partition_fields {
         let column = partition_field.column();
-        let field = schema
-            .as_struct()
-            .fields()
-            .iter()
-            .find(|field| field.name == *column)
+        let fields = schema.as_struct().fields();
+        let exact = fields.iter().find(|field| field.name == *column);
+        let folded = || {
+            let mut matches = fields
+                .iter()
+                .filter(|field| field.name.eq_ignore_ascii_case(column));
+            matches.next().filter(|_| matches.next().is_none())
+        };
+        let field = exact
+            .or_else(|| if case_insensitive { folded() } else { None })
             .ok_or_else(|| {
                 let available = schema
                     .as_struct()
@@ -862,7 +867,7 @@ pub(crate) fn build_partition_spec(
         builder = builder
             .add_partition_field(
                 field.id,
-                partition_field.field_name(),
+                partition_field.field_name(&field.name),
                 partition_field.transform(),
             )
             .map_err(iceberg_err)?;
@@ -883,8 +888,30 @@ fn session_defaults(ctx: &SessionContext) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use datafusion::config::Dialect;
+    use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 
-    use super::dialect_for_executing_parse;
+    use super::{PartitionFieldSpec, build_partition_spec, dialect_for_executing_parse};
+
+    #[test]
+    fn partition_columns_fold_case_only_when_the_session_does() {
+        let schema = Schema::builder()
+            .with_fields(vec![
+                NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Long)).into(),
+            ])
+            .build()
+            .expect("schema");
+        let fields = [PartitionFieldSpec::Bucket {
+            column: "ID".to_string(),
+            num_buckets: 4,
+        }];
+        let spec = build_partition_spec(&schema, &fields, true)
+            .expect("folds")
+            .expect("a spec");
+        let field = &spec.fields()[0];
+        assert_eq!((field.source_id, field.name.as_str()), (1, "id_bucket"));
+        let error = build_partition_spec(&schema, &fields, false).expect_err("exact refuses");
+        assert!(error.to_string().contains("UNRESOLVED_COLUMN"), "{error}");
+    }
 
     #[test]
     fn lambda_arrow_selects_databricks() {

@@ -3116,7 +3116,7 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   errorClass string; the Python exception class is the facade's `PySparkRuntimeError`
   (repark's closest answer to `SparkRuntimeException`), not a JVM-bound wrapper.
 
-### IO-BUCKET-1 — `bucketBy`/`sortBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
+### IO-BUCKET-1 — `bucketBy`/`sortBy` on an Iceberg table — narrowed 2026-09-24 (U7 PR1)
 
 - **repark** — `DataFrameWriter.bucketBy(numBuckets, col, *cols)` / `sortBy(col, *cols)` run
   Spark's call-time checks (`NOT_INT` on a non-int `numBuckets`, `CANNOT_SET_TOGETHER` for a
@@ -3126,30 +3126,55 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `'<operation>' does not support bucketBy right now.`, with `sortBy` as well
   `_LEGACY_ERROR_TEMP_1313` `'<operation>' does not support bucketBy and sortBy right now.`,
   and `sortBy` without `bucketBy` raises `SORT_BY_WITHOUT_BUCKETING`; `numBuckets <= 0` or
-  `> 100000` raises `INVALID_BUCKET_COUNT` at the save; a bucket column absent from the frame
-  raises `COLUMN_NOT_DEFINED_IN_TABLE`; a valid `saveAsTable` with bucketing raises
-  `PySparkNotImplementedError` `NOT_IMPLEMENTED` with
-  `{"feature": "bucketBy on an Iceberg table (use writeTo(...).partitionedBy(F.bucket(n, col)))"}`.
-- **Apache Spark** — writes Hive bucket files and records `Num Buckets` / `Bucket Columns` /
-  `Sort Columns` in `DESCRIBE EXTENDED`; its classic writer's `assertNotBucketed("save")` /
+  `> 100000` raises `INVALID_BUCKET_COUNT` at the save. **U7 PR1 (2026-09-24):** a bucketed
+  `saveAsTable` is the Iceberg bucket transform, as Spark's Iceberg catalog makes it. A new
+  table is created with `PARTITIONED BY (<partitionBy columns>, bucket(n, col))` (spec field
+  `col_bucket`, column resolved case-insensitively) and written in one `append` snapshot; in
+  overwrite mode it is Spark's RTAS, one `overwrite` snapshot. On an existing table the error
+  and ignore modes answer as before; append compares the writer's layout with the table's
+  partitioning as Spark's transforms (`identity(c)`, `bucket(n, c)`, `sorted_bucket(c, n, s)`,
+  `days(ts)`, `truncate(w, c)`, void fields dropped) and refuses a difference with
+  `IllegalArgumentException` `requirement failed: The provided partitioning or clustering
+  columns do not match the existing table's.` naming both lists; overwrite replaces the table
+  with the bucketed spec (RTAS, the next spec id). A multi-column bucket or any `sortBy`
+  refuses with `IllegalArgumentException` `Cannot convert transform with more than one column
+  reference: bucket(n, a, b)` / `sorted_bucket(a, n, s)` and creates nothing. The decisions
+  are Rust kernels: the SQL door's `CLUSTERED BY … [SORTED BY …] INTO n BUCKETS` rewrite
+  (joining an existing `PARTITIONED BY` list last) and
+  `repark_iceberg::write::check_layout_matches_table`. *Residual (question Q1 of the U7 PR1
+  hand-back):* a bucket column absent from the frame still raises
+  `COLUMN_NOT_DEFINED_IN_TABLE`, the recorded session-catalog answer; Spark's Iceberg catalog
+  raises `_LEGACY_ERROR_TEMP_3060` `Couldn't find column <c> in: <tree>` for a new table and
+  the layout mismatch for an existing one.
+- **Apache Spark** — on its Hive session catalog, writes Hive bucket files and records
+  `Num Buckets` / `Bucket Columns` / `Sort Columns` in `DESCRIBE EXTENDED`; on an Iceberg
+  catalog, converts `bucketBy` into the `bucket[n]` partition transform (scoreboard cell
+  `W-DF-V1-BUCKETBY-ERR`, 2026-09-24: spec `[["id_bucket","bucket[4]","id"]]`, rows 7 and 8,
+  one `append` snapshot). Its classic writer's `assertNotBucketed("save")` /
   `assertNotBucketed("insertInto")` raise the same 1312/1313/SORT_BY errors on those doors.
   *(oracle: recorded — cells `bucketBy_bad_num`, `bucketBy_list`, `bucketBy_save`, `bucketBy_zero`,
-  `bucketBy_missing_col`, `sortBy_without_bucketBy`, `bucketBy_saveAsTable`; the 1313 and
-  `insertInto` shapes read from Spark 4.1.2's `readwriter.py` and classic-writer bytecode by the
-  critic round.)*
+  `bucketBy_missing_col`, `sortBy_without_bucketBy`, `bucketBy_saveAsTable` on the session
+  catalog; the Iceberg-catalog shapes in `python/repark/tests/ice_write_df_1_spark_oracle.json`,
+  live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-24.)*
 - **Pin** — `python/repark/tests/test_io_bucket_cluster_1.py::test_bucket_by_rejects_non_int_num_buckets`,
   `::test_bucket_by_accepts_list_first_column_and_returns_writer`,
   `::test_bucketed_path_save_refused`, `::test_sort_by_without_bucket_by_refused`,
   `::test_bucket_by_count_bounds_refused_at_save`, `::test_bucket_by_missing_column_refused`,
-  `::test_bucket_by_save_as_table_refused_ruling_r1`,
+  `::test_bucket_by_sort_by_save_as_table_refuses_like_iceberg`,
   `::test_bucket_by_list_with_extra_cols_refuses`, `::test_bucket_by_non_str_names_refused`,
-  `::test_bucketed_and_sorted_path_save_refused_1313`, `::test_insert_into_refuses_bucketing`
-- **Rationale** — DECLARED 2026-09-14, Ruling R-1: Iceberg has no Hive bucketing, so the engine
-  cannot produce Spark's bucket file layout; the honest action-time answer is Spark's own
-  `NOT_IMPLEMENTED` shape pointing at `writeTo(...).partitionedBy(F.bucket(n, col))`. Every
-  call-time and save-time argument error in the path is Spark-equal. Critic round 1 (2026-09-14)
-  corrected the path/`insertInto` classes (1312 alone, 1313 with `sortBy`) and added Spark's
-  call-time list/str checks.
+  `::test_bucketed_and_sorted_path_save_refused_1313`, `::test_insert_into_refuses_bucketing`;
+  `python/repark/tests/test_ice_write_df_1.py::test_bucket_by_creates_a_bucket_partitioned_table`,
+  `::test_bucket_by_new_table_shapes`, `::test_bucket_by_shapes_iceberg_cannot_convert_refuse`,
+  `::test_bucket_by_existing_unbucketed_table`, `::test_bucket_by_existing_bucketed_table`,
+  `::test_bucket_by_existing_partitioned_table`,
+  `::test_bucket_by_existing_table_overwrite_with_partition_by`.
+- **Rationale** — DECLARED 2026-09-14 (Ruling R-1: Iceberg has no Hive bucketing, so a bucketed
+  `saveAsTable` refused `NOT_IMPLEMENTED`). **Narrowed 2026-09-24 (U7 PR1):** the R-1 premise
+  compared against Spark's session catalog; the scoreboard record on an Iceberg catalog shows
+  Spark answering with the bucket transform, so the saveAsTable refusal is retired and only the
+  missing-column residual above stays declared. Every call-time and save-time argument error in
+  the path is Spark-equal. Critic round 1 (2026-09-14) corrected the path/`insertInto` classes
+  (1312 alone, 1313 with `sortBy`) and added Spark's call-time list/str checks.
 
 ### IO-CLUSTER-1 — `clusterBy` on an Iceberg table is a declared `NOT_IMPLEMENTED` refusal
 
@@ -3177,6 +3202,42 @@ pattern): the claim is about the *error class hierarchy*, not a value.
 - **Rationale** — DECLARED 2026-09-14, Ruling R-2: recording clustering columns would claim a
   layout the engine never applies, so the table-write refusal names the feature. The conflict
   errors and the path-write answer are Spark-equal.
+
+### ICE-WRITE-DF-SAVE-1 — `format("iceberg").save(target)` — table names FIXED 2026-09-24; path create modes DECLARED
+
+- **repark** — **U7 PR1 (2026-09-24).** With an explicit `format("iceberg")`, `save(target)`
+  (or `option("path", target).save()`) treats a target without `/` as a table identifier,
+  resolved like `saveAsTable`: append and overwrite need the table and raise
+  `TABLE_OR_VIEW_NOT_FOUND` naming `<namespace>.<name>` when it is missing, then append by name
+  or overwrite the whole table (`deleted-records` counted, as Spark's `OverwriteByExpression`);
+  the error modes create a missing table (CTAS, `partitionBy` honoured) and refuse an existing
+  one with `TABLE_OR_VIEW_ALREADY_EXISTS` naming `` `<namespace>`.`<name>` ``; ignore skips an
+  existing table. A `partitionBy` on an existing table must equal its partitioning (the
+  IO-BUCKET-1 layout check). A target with `/` is a path identifier: append and overwrite raise
+  `TABLE_OR_VIEW_NOT_FOUND` naming `` `<parent>`.<leaf> ``, Spark's answer when no path table is
+  there; the error and ignore modes keep the declared refusal `DataFrameWriter.save(path)
+  requires format('parquet'|'csv'|'json'|'text'); use saveAsTable for Iceberg tables`, which a
+  default-format `save()` also keeps (row EX-IO-5). The mode decision is the Rust kernel
+  `repark_iceberg::write::decide_save_target`.
+- **Apache Spark** — scoreboard cells `W-DF-SAVE-NAME` (rows 1,2,3,7,8; two `append`
+  snapshots) and `W-DF-SAVE-OVERWRITE-NAME` (rows 7,8; `append` then `overwrite` with
+  `deleted-records=3`), plus the step-1 shapes in `ice_write_df_1_spark_oracle.json` (live
+  PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-24). A path target in a create mode resolves through
+  the session catalog; the probe session had no metastore and raised `RuntimeMetaException:
+  Failed to connect to Hive Metastore`, and with a Hadoop path table present Spark would write
+  it.
+- **Pin** — `python/repark/tests/test_ice_write_df_1.py::test_save_name_appends_like_the_recorded_cell`,
+  `::test_save_name_overwrites_like_the_recorded_cell`,
+  `::test_save_name_on_a_missing_table_refuses_in_write_modes`,
+  `::test_save_name_creates_a_missing_table_in_create_modes`,
+  `::test_save_name_on_an_existing_table_refuses_in_error_mode`,
+  `::test_save_reads_the_name_from_the_path_option`,
+  `::test_save_name_refuses_a_partitioning_that_differs_from_the_table`,
+  `::test_save_to_a_real_path_refuses_with_spark_path_relation`,
+  `::test_save_to_a_real_path_in_create_mode_is_a_declared_refusal`
+- **Rationale** — the table-name form is FIXED. The path form stays DECLARED: RePark has no
+  path-based (Hadoop-tables) Iceberg writes, and the honest answer is a loud refusal, never a
+  silent write somewhere else.
 ### DF-FOREACH-1 — `foreach` / `foreachPartition` run the callable on the driver
 - **repark** — `foreach(f)` calls `f(row)` once per `Row` through `toLocalIterator` and
   returns `None`; `foreachPartition(f)` calls `f` once per Arrow record batch with an
@@ -4005,6 +4066,23 @@ the pin rather than obeying it.
   Pin: `python/repark/tests/test_ice_write_options_1_rebase.py` (WO-DYN-01…06, WO-RTAS-01/02,
   WO-SORT-01, WO-APP-01/02).
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
+
+- **U7 PR1 (2026-09-24)** — `output-spec-id` is honoured, no longer an ignored key. The
+  value parses as Java's `Integer.parseInt` (a non-integer refuses `IllegalArgumentException`
+  `For input string: "<v>"`); an id the table does not have refuses `Output spec id <n> is not
+  a valid spec id for table` before any file is staged; a known id stages the data files under
+  that spec (`repark_iceberg::write::staging_table` swaps the staging view's default spec, the
+  commit stays on the real table), so `<t>.files` reports them under it. Every option-carrying
+  writer reaches it: `saveAsTable`, `insertInto`, `writeTo(...).append()`, `save(name)`, the
+  static overwrite and `overwritePartitions()`. Spark: scoreboard cell
+  `W-DF-OPT-OUTPUT-SPEC-ID` (`specs [[0, 2]]` after `ADD PARTITION FIELD cat`) and the step-1
+  shapes in `ice_write_df_1_spark_oracle.json`. Pins:
+  `python/repark/tests/test_ice_write_df_1.py::test_output_spec_id_writes_under_the_old_spec`,
+  `::test_output_spec_id_reaches_every_writer`,
+  `::test_output_spec_id_writes_partitioned_files_under_an_old_partitioned_spec`,
+  `::test_output_spec_id_refusals`,
+  `::test_output_spec_id_current_and_absent_land_under_the_current_spec`; in-crate
+  `crates/repark-iceberg/src/tests/output_spec.rs`.
 
 - **Residue ICE-WRITE-OPTIONS-1-R-RP — FIXED 2026-09-18 (RP-30, fork #298
   F-RP-SUMMARY-USER-1)** — a user `snapshot-property.replace-partitions` on a

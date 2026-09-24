@@ -373,6 +373,15 @@ pins: rp-4-fork-repin/C-005, C-006
   mixed-length rows, equal-or-wider VALUES, a missing table — falls through untouched.
   Pins: [tests/insert_arity.rs](tests/insert_arity.rs).
   pins: ice-error-conditions-1/C-011
+- `write_options.rs` — **U7 PR1 (2026-09-24):** `output-spec-id` is a typed key
+  (`StatementWriteOptions.output_spec_id`, parsed by `repark_iceberg::write::parse_output_spec_id`)
+  that `staging_overrides` hands to staging. `normalize.rs` `build_partition_spec` takes the
+  session's case flag: under the default `spark.sql.caseSensitive=false` a partition column
+  that misses exactly resolves to its one case-insensitive match and names the field after the
+  schema spelling (`PARTITIONED BY (bucket(4, ID))` → `id_bucket`), as Spark resolves CTAS and
+  column-def CREATE (measured 2026-09-24); `ctas.rs` and `create_table.rs` pass
+  `spark_door_case_insensitive`, and the early column-def validation passes `true` because the
+  execute-time build is authoritative. pins: u7-write-df/C-010, C-013
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property

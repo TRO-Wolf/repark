@@ -684,6 +684,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `SQLSTATE: 42P07`, V2 `replace` and `_existing_table_ref` (append-missing) get
   `[TABLE_OR_VIEW_NOT_FOUND]`/`SQLSTATE: 42P01`; in-place appends keep the wording and the
   1091 baseline. pins: ice-error-conditions-1/C-011
+- `writer_save.py` owns the U7 PR1 (2026-09-24) Iceberg `save(target)` and bucketed
+  `saveAsTable` routing. `save_iceberg` asks the native `writer_save_target` kernel for the
+  action (explicit `format("iceberg")` only; the default format keeps EX-IO-5's refusal), then
+  runs the CTAS, the by-name append or the static by-name `INSERT OVERWRITE`, checking a
+  `partitionBy` against the table first. `ctas_sql` renders the CTAS (moved from
+  `writer_readwriter.py`), adding Spark's `CLUSTERED BY (…) [SORTED BY (…)] INTO n BUCKETS`
+  clause for `bucketBy`, and a bucketed overwrite is always `CREATE OR REPLACE` (Spark's RTAS);
+  the Rust `rewrite_clustered_by` turns the clause into the bucket transform or refuses.
+  `write_bucketed_existing` replaces the table on overwrite and runs the native
+  `writer_check_layout` before appending. `DataFrameWriter` gains the `_format_explicit` slot;
+  `writer_readwriter.py` delegates `save`'s iceberg branch and `_ctas_sql` here, and
+  `writer_layout.py` drops `refuse_bucketed_table_write` (Ruling R-1 retired);
+  `check_lib_py.py` ratchets `writer_readwriter.py` 1077 → 1073.
+  pins: u7-write-df/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —

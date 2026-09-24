@@ -2,6 +2,8 @@
 
 U1-MEM-LAYOUT-1 (2026-09-23): session memory-catalog registration records the warehouse layout root; see the test pins in `session/tests/map.md`. pins: u1-mem-layout-1/C-001
 
+U7 PR1 (2026-09-24): `session.rs` declares `session/writer_layout.rs` (the DataFrameWriter layout and `save()` target methods); see `session/map.md`. pins: u7-write-df/C-005, C-009
+
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `rewrite_fragment_case` takes `unqualified_scope` — bare references resolve against one MERGE side only while qualified references keep validating against both. pins: ice-mixed-case-1/C-004
 ICE-MIXED-CASE-1 round 4 (2026-09-17): red-first `dataframe_filter_binds_projection_alias` reproduces the L-01 DataFrame filter regression at the Rust level. pins: ice-mixed-case-1/C-009
 

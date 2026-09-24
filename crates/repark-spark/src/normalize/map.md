@@ -27,10 +27,15 @@ here and is re-exported in one line.
   into `PARTITIONED BY (bucket(n, col))`, before `extract_partitioned_by` consumes it.
   The field name falls out of the existing bucket rule as `{col}_bucket`, which is
   what Spark records (cell `D-X-CLUSTERED-BY`: `[["id_bucket","bucket[4]","id"]]`).
-  Multi-column and `SORTED BY` shapes pass through untouched and fail loudly
-  downstream; runs at or past the CTAS `AS` boundary are never rewritten. Unit pins
-  are inline in the module; the parse-level pin is
-  [../tests/ice_ddl_clauses_1.rs](../tests/ice_ddl_clauses_1.rs).
+  Runs at or past the CTAS `AS` boundary are never rewritten.
+  **U7 PR1 (2026-09-24):** the rewrite is fallible and is the `bucketBy` kernel the facade's
+  CTAS/RTAS reaches. A `PARTITIONED BY (…)` already in the statement gains the bucket as its
+  LAST element (Spark's `partitionBy ++ bucketSpec`); a multi-column run or any `SORTED BY`
+  refuses with `IllegalArgumentException` `Cannot convert transform with more than one column
+  reference: bucket(n, a, b)` / `sorted_bucket(a, n, s)`, measured on Spark 4.1.2 for CTAS and
+  column-def CREATE alike; a `SORTED BY` element carrying `ASC`/`DESC` or a non-number count
+  still passes through to the loud parse error. Unit pins in-module.
+  pins: u7-write-df/C-013
 - `create_clauses.rs` — **IPI-26/27 round 2 (2026-09-20):** `extract_create_clauses`
   strips the table `COMMENT` / `LOCATION` clauses from a `CREATE TABLE` before the
   stock parser runs, because sqlparser accepts them only without `TBLPROPERTIES`
@@ -68,6 +73,6 @@ here and is re-exported in one line.
 | `REPLACE TABLE` reports `Unsupported statement REPLACE` | the rewrite did not fire — `replace_table_head` needs the first two significant tokens to be the unquoted keywords `REPLACE` then `TABLE` |
 | `REPLACE TABLE` created a table that did not exist | `refuse_missing_replace_target` was skipped in `../router.rs`; `CREATE OR REPLACE` is allowed to create and the rewrite erases the spelling |
 | `USING iceberg` reached the stock parser | the rewrite ran too late; it must precede `is_create_table` in `parse_single_normalized` |
-| `CLUSTERED BY` reached the stock parser | `rewrite_clustered_by` only fires on one unquoted column with `INTO n BUCKETS` before the CTAS `AS`; anything else is deliberately left for the loud parse error |
+| `CLUSTERED BY` reached the stock parser | `rewrite_clustered_by` fires on an identifier list, an optional plain `SORTED BY` list and `INTO n BUCKETS` before the CTAS `AS`; multi-column and sorted runs refuse with Spark's text, other shapes are left for the loud parse error |
 
 First checks: `cargo test -p repark-spark ctas`. Escalate to: [../map.md#debug](../map.md).

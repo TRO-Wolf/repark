@@ -13,6 +13,7 @@ import repark.spark.functions as F  # noqa: N812
 from repark import ReparkSession
 from repark.errors import (
     AnalysisException,
+    IllegalArgumentException,
     PySparkNotImplementedError,
     PySparkTypeError,
     PySparkValueError,
@@ -161,19 +162,19 @@ def test_bucket_by_missing_column_refused(spark: ReparkSession) -> None:
     assert not spark.catalog.tableExists("bk_missing")
 
 
-def test_bucket_by_save_as_table_refused_ruling_r1(spark: ReparkSession) -> None:
-    """Ruling R-1: a valid bucketed saveAsTable refuses NOT_IMPLEMENTED (bucketBy_saveAsTable).
+def test_bucket_by_sort_by_save_as_table_refuses_like_iceberg(spark: ReparkSession) -> None:
+    """A sorted bucketed saveAsTable refuses as Spark's Iceberg catalog does (R-1 retired).
 
-    Spark records Hive bucket files and DESCRIBE EXTENDED rows; repark has no Hive bucketing.
-    pins: io-bucket-cluster-1/C-001
+    The recorded ``bucketBy_saveAsTable`` cell ran on Spark's Hive session catalog; on an
+    Iceberg catalog Spark cannot convert ``sorted_bucket`` into a partition transform.
+    pins: u7-write-df/C-008
     """
     frame = _kv_frame(spark)
-    with pytest.raises(PySparkNotImplementedError) as raised:
+    with pytest.raises(IllegalArgumentException) as raised:
         frame.write.bucketBy(2, "a").sortBy("b").saveAsTable("bk_t")
-    feature = "bucketBy on an Iceberg table (use writeTo(...).partitionedBy(F.bucket(n, col)))"
-    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
-    assert raised.value.getMessageParameters() == {"feature": feature}
-    assert str(raised.value) == f"[NOT_IMPLEMENTED] {feature} is not implemented."
+    assert str(raised.value) == (
+        "Cannot convert transform with more than one column reference: sorted_bucket(a, 2, b)"
+    )
     assert not spark.catalog.tableExists("bk_t")
 
 
