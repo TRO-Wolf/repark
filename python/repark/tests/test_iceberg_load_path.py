@@ -25,12 +25,21 @@ EXPECTED_CURRENT = [[2, "b", "y"], [3, "c", "x"]]
 EXPECTED_PRE_DELETE = [[1, "a", "z"], [2, "b", "y"], [3, "c", "x"]]
 PATH_OPTION_REFUSAL = (
     "format('iceberg').load(<path>) reads one pinned metadata snapshot and does not "
-    "support time-travel or incremental options; got snapshot-id"
+    "support time-travel or incremental options; got {keys}"
 )
-PATH_INCREMENTAL_REFUSAL = (
-    "format('iceberg').load(<path>) reads one pinned metadata snapshot and does not "
-    "support time-travel or incremental options; got start-snapshot-id"
-)
+PATH_REFUSED_OPTIONS = [
+    ("snapshot-id", "1", "snapshot-id"),
+    ("SNAPSHOT-ID", "1", "snapshot-id"),
+    ("as-of-timestamp", "1", "as-of-timestamp"),
+    ("branch", "main", "branch"),
+    ("tag", "main", "tag"),
+    ("versionAsOf", "1", "versionasof"),
+    ("timestampAsOf", "1", "timestampasof"),
+    ("start-snapshot-id", "1", "start-snapshot-id"),
+    ("end-snapshot-id", "1", "end-snapshot-id"),
+    ("start-timestamp", "1", "start-timestamp"),
+    ("end-timestamp", "1", "end-timestamp"),
+]
 WRONG_FS_EXPECTED = ", expected: file:///"
 NO_METADATA_REFUSAL = (
     "no Iceberg table found at '{path}': expected metadata files under "
@@ -189,31 +198,30 @@ def test_load_path_registers_no_catalog_table(
     assert not spark.catalog.table_exists("path.events")
 
 
-def test_load_path_with_time_travel_option_refuses(
-    spark: ReparkSession, loaded: dict[str, object]
+@pytest.mark.parametrize(("key", "value", "reported"), PATH_REFUSED_OPTIONS)
+def test_load_path_with_travel_or_incremental_option_refuses(
+    spark: ReparkSession, loaded: dict[str, object], key: str, value: str, reported: str
 ) -> None:
-    """Time-travel or incremental options with a path refuse loud, never silently read.
+    """Each time-travel and incremental option beside a path refuses the full pinned text.
 
     pins: dfload-1/C-004
     """
     with pytest.raises(AnalysisException) as raised:
-        spark.read.format("iceberg").option("snapshot-id", "1").load(str(loaded["table_dir"]))
-    assert str(raised.value) == PATH_OPTION_REFUSAL
-    with pytest.raises(AnalysisException) as raised:
-        spark.read.format("iceberg").option("SNAPSHOT-ID", "1").load(str(loaded["table_dir"]))
-    assert str(raised.value) == PATH_OPTION_REFUSAL
+        spark.read.format("iceberg").option(key, value).load(str(loaded["table_dir"]))
+    assert str(raised.value) == PATH_OPTION_REFUSAL.format(keys=reported)
 
 
-def test_load_path_with_incremental_option_refuses(
+def test_load_path_with_two_refused_options_names_them_sorted(
     spark: ReparkSession, loaded: dict[str, object]
 ) -> None:
-    """An incremental window option beside a path raises the same pinned refusal.
+    """Two refused options name their lower-cased keys sorted and ``, ``-joined.
 
     pins: dfload-1/C-004
     """
+    reader = spark.read.format("iceberg").option("tag", "main").option("start-timestamp", "1")
     with pytest.raises(AnalysisException) as raised:
-        spark.read.format("iceberg").option("start-snapshot-id", "1").load(str(loaded["table_dir"]))
-    assert str(raised.value) == PATH_INCREMENTAL_REFUSAL
+        reader.load(str(loaded["table_dir"]))
+    assert str(raised.value) == PATH_OPTION_REFUSAL.format(keys="start-timestamp, tag")
 
 
 def test_load_missing_location_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
