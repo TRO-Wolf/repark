@@ -233,13 +233,14 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   `dfload-finding.md`; scoreboard cell `R-DF-LOAD-PATH`.)*
 - **After** — an argument containing `/` takes Spark's `IcebergSource` rule: it is a
   filesystem path, not an identifier. One trailing `/` is stripped; a table location
-  resolves `<loc>/metadata/version-hint.text` when present — a bare integer selects
-  `v<N>.metadata.json`, which must exist else `AnalysisException` names the path and the
-  hinted file, while a non-integer hint falls through, like
+  resolves `<loc>/metadata/version-hint.text` when present — a bare integer in the Java
+  `int` range selects `v<N>.metadata.json`, which must exist else `AnalysisException` names
+  the path and the hinted file, while any other hint falls through, like
   `HadoopTableOperations.findVersion` — else the highest leading-integer metadata file
   among the direct children of `<loc>/metadata/` (the fork's local `FileIO::list` is
   recursive; nested files are not candidates) in either the `NNNNN-<uuid>` or `v<N>`
-  form (the `v` stem is a whole integer); a location with no resolvable metadata raises
+  form (the `v` stem is a whole integer no larger than `2147483647`, as Iceberg's Hadoop
+  tables parse it with `Integer.parseInt`); a location with no resolvable metadata raises
   `AnalysisException` naming the supplied path. The static
   table reads through `IcebergStaticTableProvider` — nothing is registered in a catalog —
   and a time-travel or incremental reader option beside a path refuses the pinned
@@ -267,7 +268,7 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   Spark's own IcebergSource rule: every near-miss without `/` (`ns.t`, `cat.ns.t`,
   `ns.t.snapshots`, `` `ns`.`t` ``, `ns.t` + `snapshot-id`) keeps the catalog route
   untouched, and the option refusal is declared, never silently ignored.
-  pins: dfload-1/C-001, C-004, C-005, C-006, C-008, C-009
+  pins: dfload-1/C-001, C-003, C-004, C-005, C-006, C-008, C-009, C-010
 
 #### R-DF-LOAD-METADATA-JSON — `format("iceberg").load(<file>.metadata.json)` — **FIXED 2026-09-23**
 
