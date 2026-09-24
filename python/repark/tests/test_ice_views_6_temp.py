@@ -148,8 +148,7 @@ def test_or_replace_temp_view_if_not_exists_refuses(spark: ReparkSession) -> Non
         spark, "CREATE OR REPLACE TEMPORARY VIEW IF NOT EXISTS v AS SELECT 1 AS id"
     )
     assert str(refusal) == (
-        'SQL error: ParserError("CREATE VIEW with both IF NOT EXISTS and REPLACE is not '
-        'allowed.")'
+        'SQL error: ParserError("CREATE VIEW with both IF NOT EXISTS and REPLACE is not allowed.")'
     )
     assert refusal.getCondition() == UNSTRUCTURED_CONDITION
     assert refusal.getSqlState() == UNSTRUCTURED_SQLSTATE
@@ -182,7 +181,9 @@ def test_temp_view_column_aliases_rename(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT * FROM va ORDER BY i")
     assert _schema(frame) == [("i", pa.int64(), True), ("d", pa.string(), True)]
     assert _rows(frame) == [[0, "d0"], [1, "d1"]]
-    spark.sql("CREATE TEMPORARY VIEW vac (i COMMENT 'the id') AS SELECT id FROM sc.ns.t WHERE id < 1")
+    spark.sql(
+        "CREATE TEMPORARY VIEW vac (i COMMENT 'the id') AS SELECT id FROM sc.ns.t WHERE id < 1"
+    )
     frame = spark.sql("SELECT * FROM vac")
     assert _schema(frame) == [("i", pa.int64(), True)]
     assert _rows(frame) == [[0]]
