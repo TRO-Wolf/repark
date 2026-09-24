@@ -107,6 +107,7 @@ mod v3_upgrade;
 mod v3_upgrade_calls;
 mod v3e3;
 mod v3e4;
+mod view_use_resolution;
 mod viewless_catalog;
 mod wap_branch;
 mod wap_id;

@@ -102,6 +102,20 @@ def test_use_resolves_show_views_and_bare_create_drop(spark: ReparkSession) -> N
     assert _rows(spark.sql("SHOW VIEWS IN ns")) == []
 
 
+def test_use_resolves_bare_view_select(spark: ReparkSession) -> None:
+    """A bare view name in SELECT resolves through USE catalog and namespace."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc.ns")
+    assert _rows(spark.sql("SELECT * FROM v ORDER BY id")) == [[0], [1], [2]]
+
+
+def test_use_catalog_resolves_two_part_view_select(spark: ReparkSession) -> None:
+    """A two-part view name in SELECT resolves through the USE catalog."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc")
+    assert _rows(spark.sql("SELECT * FROM ns.v ORDER BY id")) == [[0], [1], [2]]
+
+
 def test_use_resolves_bare_view_write_refusal(spark: ReparkSession) -> None:
     """The write guard resolves a bare view name through USE defaults."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
