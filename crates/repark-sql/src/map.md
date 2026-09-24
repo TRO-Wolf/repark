@@ -250,7 +250,10 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   schema answers Spark's `[SCHEMA_NOT_FOUND]`; `router.rs` no longer passes `cascade`; `tests.rs`
   sheds the stale `CASCADE`-refuses pin and its doc line (ceiling 1513).
   pins: ice-drop-ns-1/C-011
-- `alter.rs` — `ALTER TABLE` schema evolution (ADD/DROP/RENAME COLUMN, `ALTER COLUMN … SET DATA
+- `alter.rs` — **PR-B hadoop naming (2026-09-24):** `rename_table` maps the fork error through
+  `repark_iceberg::write::unsupported_message_error`, so a `type=hadoop` catalog answers
+  exactly "Cannot rename Hadoop tables". Pinned in [alter/hadoop_rename_tests.rs](alter/map.md).
+  `ALTER TABLE` schema evolution (ADD/DROP/RENAME COLUMN, `ALTER COLUMN … SET DATA
   TYPE`, `ALTER COLUMN … FIRST|AFTER` moves, `RENAME TO`) through the tier-1
   `repark_iceberg::write::alter` seams, plus Trino `SET PROPERTIES` and its ONE pre-parse
   recognizer (blank the word `PROPERTIES`, let the stock parser read `SET (…)`). The move has

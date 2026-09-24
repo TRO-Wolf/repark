@@ -1,5 +1,7 @@
 # map — scripts/
 
+PR-B hadoop naming (2026-09-24): `check_rust_file_size.py` ratchets `repark-core/src/catalog_config.rs` 1007 → 1006 (bare-value kind resolution moves to `catalog_kind.rs` beside the hadoop-naming helpers), shrink-only.
+
 U1-MEM-LAYOUT-1 (2026-09-23): `check_rust_file_size.py` ratchets `repark-spark/src/tests/ctas.rs` 1361 → 1357 (the A13 door pin's path shortens under the new layout), shrink-only; layout-r8 changes no baseline. The map lockstep and ledger grammar checks cover the memory-catalog layout pins.
 
 C1 SHOW CREATE (2026-09-23): `check_lib_rs.py` raises `repark-spark` 152 → 154 for `mod show_create;` and `mod table_props_view;` (measured 154).

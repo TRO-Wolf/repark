@@ -21,6 +21,11 @@ which are pure functions, plus the `ALTER COLUMN … FIRST|AFTER` move recognize
   `nested_add_refusal` answers Spark's `FIELD_ALREADY_EXISTS` / `UNRESOLVED_COLUMN` before the
   commit. Every recorded cell is replayed in `../../tests/ansi_nested_ddl_oracle.rs`.
   pins: ice-nested-evo-1/C-017, C-019
+- `hadoop_rename_tests.rs` — **PR-B hadoop naming (2026-09-24):** native-door twin of the Spark
+  door's `tests/hadoop_rename.rs`. It uses a config-map `type=hadoop` catalog, then `CREATE
+  TABLE` and two `INSERT`s. `RENAME TO` fails with `Error::NotImplemented` whose text is exactly
+  "Cannot rename Hadoop tables", and the table still reads under its old name. `type=memory`
+  still renames. Declared in `../alter.rs` as `#[cfg(test)] mod hadoop_rename_tests;`.
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../alter.rs`.
   **V3-10:** `format_version` is no longer a reserved refusal here — the recognizer folds it to
   the Iceberg `format-version` key for the upgrade path (a bare number or a string literal), and

@@ -92,6 +92,10 @@ Catalog adapter tests. `catalog/mod.rs` declares `#[cfg(test)] mod tests;`.
 - `namespace_scoped.rs` — G17 wrapper pins for `NamespaceScopedCatalog`.
   pins: rp-1-fork-repin/C-003
   pins: rp-4-fork-repin/C-002
+- `memory_props_span.rs` — **PR-B class sweep (2026-09-24):** the
+  `catalog.memory_catalog_cached_with_props` span records exactly `warehouse`,
+  `metadata_cache`, `manifest_cache_bytes` and `footer_cache`. No field value carries a prop
+  name or value, even with a secret-looking key in the props.
 - `lineage_columns.rs` — **V3-4 critic:** stored `_row_id` wins over `first_row_id +` pos;
   `WHERE id = lit` keeps matching lineage rows; `try_new_with_snapshot` is absent.
   pins: v3-4-serve-lineage-columns/C-017, C-019, C-020

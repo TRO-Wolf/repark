@@ -1034,6 +1034,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   rows and the name-prefix sibling accept. `call_remove_orphan_files_refuses_a_location_arg_at_the_fallback_root`
   keeps the execute-path refusal at the root.
   pins: ipi-30-orphan-guard-narrow-1/C-001, C-002, C-008, C-009
+- [hadoop_rename.rs](hadoop_rename.rs) — **PR-B hadoop naming (2026-09-24):** on a config-map
+  `type=hadoop` catalog, `ALTER TABLE … RENAME TO` fails with `Error::NotImplemented` whose text
+  is exactly "Cannot rename Hadoop tables", and the table still reads under its old name. The
+  near miss: `type=memory` still renames. Mutation: map the rename error through `iceberg_err`
+  and the pin reads `FeatureUnsupported => Cannot rename Hadoop tables`.
+  `hadoop_type_staged_create_still_writes_uuid_names_divergence` pins the known gap. This
+  door's `CREATE TABLE` goes through `commit_staged_schema_only`, so on a hadoop catalog it
+  still writes `00000`..`00002` uuid names and no hint. The staged-create slice (out of scope
+  for PR-B) flips this pin.
 - [mem_layout.rs](mem_layout.rs) — **U1-MEM-LAYOUT-1 (2026-09-23):** CTAS, column-definition CREATE, explicit and namespace location precedence, nested namespaces, legacy fallback, path escape rejection, and file URI normalization. pins: u1-mem-layout-1/C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010
   **Layout-r8 (2026-09-23):** `mem_layout_refuses_path_escape_identifiers` pins the complete
   refusal for a `..` and an `x/y` table, namespace (top level and nested) and catalog name, each
