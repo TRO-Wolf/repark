@@ -1,18 +1,62 @@
 use iceberg::{NamespaceIdent, TableIdent};
-use repark_common::{Error, Result};
+use repark_common::Error;
+use repark_iceberg::write::WriterRequest;
+pub use repark_iceberg::write::{
+    WriterAction, WriterLayout, WriterRefusal, WriterStatement, missing_column_message,
+    save_target_names_table,
+};
 
 use crate::session::ReparkSession;
 
+#[derive(Debug, Clone, Copy)]
+pub struct TableWriteRequest<'a> {
+    pub action: WriterAction,
+    pub target: &'a str,
+    pub qualified: Option<&'a str>,
+    pub mode: &'a str,
+    pub explicit_format: bool,
+    pub layout: &'a WriterLayout,
+    pub frame_columns: &'a [String],
+    pub case_sensitive: bool,
+}
+
 impl ReparkSession {
     #[allow(clippy::missing_errors_doc)]
-    pub async fn check_writer_layout(
+    pub async fn plan_table_write(
+        &self,
+        request: &TableWriteRequest<'_>,
+    ) -> Result<WriterStatement, WriterRefusal> {
+        let (parts, exists) = match request.qualified {
+            Some(name) => {
+                let parts =
+                    crate::parse_table_identifier_segments(name).map_err(Error::DataFusion)?;
+                (parts, self.table_exists(name).await?)
+            }
+            None => (Vec::new(), false),
+        };
+        let relation_parts = parts.get(1..).unwrap_or_default();
+        let plan = repark_iceberg::write::plan_writer(&WriterRequest {
+            action: request.action,
+            target: request.target,
+            relation_parts,
+            exists,
+            mode: request.mode,
+            explicit_format: request.explicit_format,
+            layout: request.layout,
+            frame_columns: request.frame_columns,
+            case_sensitive: request.case_sensitive,
+        })?;
+        if plan.check_layout {
+            self.check_writer_layout(&parts, request.layout).await?;
+        }
+        Ok(plan.statement)
+    }
+
+    async fn check_writer_layout(
         &self,
         parts: &[String],
-        partition_columns: Vec<String>,
-        num_buckets: Option<i64>,
-        bucket_columns: Vec<String>,
-        sort_columns: Vec<String>,
-    ) -> Result<()> {
+        layout: &WriterLayout,
+    ) -> repark_common::Result<()> {
         let [catalog_name, namespace @ .., name] = parts else {
             return Err(Error::DataFusion(format!(
                 "writer layout check needs a catalog-qualified table name, got {parts:?}"
@@ -21,45 +65,12 @@ impl ReparkSession {
         let catalog = self.catalog_handle(catalog_name)?;
         let namespace = NamespaceIdent::from_vec(namespace.to_vec())
             .map_err(|error| Error::DataFusion(error.to_string()))?;
-        let layout = repark_iceberg::write::WriterLayout {
-            partition_columns,
-            num_buckets,
-            bucket_columns,
-            sort_columns,
-        };
         repark_iceberg::write::check_layout_matches_catalog_table(
             catalog.as_ref(),
             &TableIdent::new(namespace, name.clone()),
-            &layout,
+            layout,
         )
         .await
         .map_err(crate::engine_err)
-    }
-
-    #[allow(clippy::missing_errors_doc)]
-    pub async fn writer_save_target(
-        &self,
-        target: &str,
-        qualified: Option<&str>,
-        mode: &str,
-        explicit_format: bool,
-    ) -> Result<&'static str> {
-        let (relation_parts, exists) = match qualified {
-            Some(name) => {
-                let parts =
-                    crate::parse_table_identifier_segments(name).map_err(Error::DataFusion)?;
-                let exists = self.table_exists(name).await?;
-                (parts.into_iter().skip(1).collect::<Vec<_>>(), exists)
-            }
-            None => (Vec::new(), false),
-        };
-        repark_iceberg::write::decide_save_target(
-            target,
-            &relation_parts,
-            exists,
-            mode,
-            explicit_format,
-        )
-        .map(repark_iceberg::write::SaveTarget::as_str)
     }
 }

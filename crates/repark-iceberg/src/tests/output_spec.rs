@@ -13,10 +13,12 @@ use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent
 use tempfile::TempDir;
 
 use crate::write::concurrency::WriteConcurrency;
-use crate::write::illegal_argument::IllegalArgumentMarker;
-use crate::write::output_spec::{parse_output_spec_id, staging_table};
+use crate::write::illegal_argument::{IllegalArgumentMarker, NumberFormatMarker};
+use crate::write::output_spec::{parse_output_spec_id, staged_spec_is_partitioned, staging_table};
 use crate::write::partition_spec::{PartitionSpecChange, apply_partition_spec_changes};
-use crate::write::write_options::{WriterStagingOverrides, append_with_statement_options};
+use crate::write::write_options::{
+    WriterStagingOverrides, append_with_statement_options, stage_partitioned_stream_with_overrides,
+};
 
 fn illegal_argument_text(error: &DataFusionError) -> String {
     let DataFusionError::External(inner) = error else {
@@ -140,10 +142,13 @@ fn output_spec_id_parses_like_java_integer_parse_int() {
     assert_eq!(parse_output_spec_id("-1").expect("minus"), -1);
     for raw in ["x", "", " 1", "1.0", "99999999999"] {
         let error = parse_output_spec_id(raw).expect_err("non-int refuses");
-        assert_eq!(
-            illegal_argument_text(&error),
-            format!("For input string: \"{raw}\"")
-        );
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External marker, got {error:?}");
+        };
+        let marker = inner
+            .downcast_ref::<NumberFormatMarker>()
+            .unwrap_or_else(|| panic!("expected a NumberFormatMarker, got {inner:?}"));
+        assert_eq!(marker.0, format!("For input string: \"{raw}\""));
     }
 }
 
@@ -222,4 +227,46 @@ async fn append_without_the_option_lands_under_the_current_spec() {
     let (catalog, table) = evolved_table(&warehouse).await;
     let after = append_with(&catalog, &table, None).await;
     assert_eq!(committed_spec_ids(&after).await, vec![1, 1]);
+}
+
+#[tokio::test]
+async fn the_staged_spec_decides_whether_a_dynamic_overwrite_replaces_partitions() {
+    let warehouse = TempDir::new().expect("tempdir");
+    let (_catalog, table) = evolved_table(&warehouse).await;
+    let with = |output_spec_id| WriterStagingOverrides {
+        output_spec_id,
+        ..WriterStagingOverrides::none()
+    };
+    assert!(staged_spec_is_partitioned(&table, &with(None)).expect("current"));
+    assert!(staged_spec_is_partitioned(&table, &with(Some(1))).expect("spec 1"));
+    assert!(!staged_spec_is_partitioned(&table, &with(Some(0))).expect("spec 0"));
+    let error = staged_spec_is_partitioned(&table, &with(Some(7))).expect_err("unknown");
+    assert_eq!(
+        illegal_argument_text(&error),
+        "Output spec id 7 is not a valid spec id for table"
+    );
+}
+
+#[tokio::test]
+async fn a_partitioned_writer_follows_an_unpartitioned_output_spec() {
+    let warehouse = TempDir::new().expect("tempdir");
+    let (_catalog, table) = evolved_table(&warehouse).await;
+    let staging = WriterStagingOverrides {
+        output_spec_id: Some(0),
+        ..WriterStagingOverrides::none()
+    };
+    let stream = futures::stream::iter(vec![Ok::<_, DataFusionError>(frame())]);
+    let files = stage_partitioned_stream_with_overrides(
+        &table,
+        stream,
+        &staging,
+        WriteConcurrency::default(),
+    )
+    .await
+    .expect("staged under spec 0");
+    let specs: Vec<i32> = files
+        .iter()
+        .map(iceberg::spec::DataFile::partition_spec_id)
+        .collect();
+    assert_eq!(specs, vec![0]);
 }

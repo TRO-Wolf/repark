@@ -284,8 +284,8 @@ mod tests {
             panic!("expected an External marker, got {error:?}");
         };
         let marker = inner
-            .downcast_ref::<repark_iceberg::write::IllegalArgumentMarker>()
-            .expect("expected an IllegalArgumentMarker");
+            .downcast_ref::<repark_iceberg::write::NumberFormatMarker>()
+            .expect("expected a NumberFormatMarker");
         assert_eq!(marker.0, "For input string: \"x\"");
     }
 

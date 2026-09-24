@@ -32,12 +32,14 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.
-- `writer_layout.rs` — **U7 PR1 (2026-09-24):** two `ReparkSession` methods the Python
-  binding calls, so `repark-python` keeps no `repark-iceberg` edge. `check_writer_layout`
-  splits a catalog-qualified name, takes the catalog handle and runs
-  `repark_iceberg::write::check_layout_matches_catalog_table`; `writer_save_target` probes
-  `table_exists` for a qualified name and returns `decide_save_target`'s action string.
-  pins: u7-write-df/C-005, C-009
+- `writer_layout.rs` — **U7 PR1 (2026-09-24), round 2:** `ReparkSession::plan_table_write`,
+  the one entry the Python binding calls, so `repark-python` keeps no `repark-iceberg` edge
+  (the module is public and re-exports the kernel's `WriterAction`, `WriterLayout`,
+  `WriterRefusal`, `WriterStatement`, `missing_column_message` and `save_target_names_table`).
+  It probes `table_exists` for a qualified name, runs `repark_iceberg::write::plan_writer`, and
+  when the plan asks, splits the catalog-qualified name and runs
+  `check_layout_matches_catalog_table` before returning the statement.
+  pins: u7-write-df/C-005, C-009, C-018
 - `temp_views.rs` — **IPI-40 PR6 (2026-09-24):** implements `dialect::TempViewSession` for
   `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.

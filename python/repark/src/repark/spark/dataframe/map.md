@@ -698,6 +698,20 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   `writer_layout.py` drops `refuse_bucketed_table_write` (Ruling R-1 retired);
   `check_lib_py.py` ratchets `writer_readwriter.py` 1077 → 1073.
   pins: u7-write-df/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
+  **Round 2 (2026-09-24, Rust-first):** the module composes SQL only. `write_table` asks the
+  native `writer_plan` kernel for the statement of a `saveAsTable` or `save(name)` write
+  (`ctas`, `rtas`, `append` after the kernel's layout check, the static by-name `overwrite`, or
+  `skip`), passing the mode, the layout, `_format_explicit` and the frame's analyzed Arrow
+  schema; `save_iceberg` resolves the target only when `writer_target_is_table` says it names
+  a table. `ctas_sql` no longer chooses `CREATE OR REPLACE` from the bucket and mode state, and
+  `write_bucketed_existing`, `check_layout` and `DataFrameWriter._ctas_sql` are gone.
+  `saveAsTable` is the argument checks plus `write_table`, so its error mode on an existing
+  table raises Spark's `TABLE_OR_VIEW_ALREADY_EXISTS` text and a non-bucketed append checks
+  `partitionBy` like Spark. `writer_layout.py` keeps only `assert_bucket_count_valid`
+  (`INVALID_BUCKET_COUNT`); the missing bucket column is the kernel's `_LEGACY_ERROR_TEMP_3060`
+  (Ruling Q1), and `refuse_bucketed_or_clustered_table_write` and `_backticked_table_name` are
+  removed. The `bucketBy` docstring states the bucket transform.
+  pins: u7-write-df/C-004, C-005, C-015, C-018
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —

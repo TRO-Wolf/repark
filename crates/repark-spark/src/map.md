@@ -209,6 +209,12 @@ pins: rp-4-fork-repin/C-005, C-006
   a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
   0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
   before the fragment rewrite. pins: ice-mixed-case-1/C-004, C-018
+- `insert_overwrite.rs` — **U7 PR1 round 2 (2026-09-24):** the stage-then-swap commit picks
+  replace-partitions when the dynamic write's STAGED spec is partitioned
+  (`staged_spec_is_partitioned`), not the table's current spec, so `output-spec-id` naming an
+  older partitioned spec replaces only the written partitions; the empty-source arm validates
+  `output-spec-id` against the table before its no-op or wipe, so an unknown id refuses a
+  write that stages nothing, as Spark does. pins: u7-write-df/C-011, C-016
 - `insert_overwrite.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the
   `OverwritePlan::RowFilter` arm hands the whole `StaticPartitionOverwrite` to
   `commit_overwrite_by_row_filter_with_summary`, so the commit resolves the files the
@@ -374,8 +380,8 @@ pins: rp-4-fork-repin/C-005, C-006
   Pins: [tests/insert_arity.rs](tests/insert_arity.rs).
   pins: ice-error-conditions-1/C-011
 - `write_options.rs` — **U7 PR1 (2026-09-24):** `output-spec-id` is a typed key
-  (`StatementWriteOptions.output_spec_id`, parsed by `repark_iceberg::write::parse_output_spec_id`)
-  that `staging_overrides` hands to staging. `normalize.rs` `build_partition_spec` takes the
+  (`StatementWriteOptions.output_spec_id`, parsed by `repark_iceberg::write::parse_output_spec_id`;
+  a non-integer is a `NumberFormatMarker` since round 2) that `staging_overrides` hands to staging. `normalize.rs` `build_partition_spec` takes the
   session's case flag: under the default `spark.sql.caseSensitive=false` a partition column
   that misses exactly resolves to its one case-insensitive match and names the field after the
   schema spelling (`PARTITIONED BY (bucket(4, ID))` → `id_bucket`), as Spark resolves CTAS and
@@ -1661,7 +1667,10 @@ pins: rp-4-fork-repin/C-005, C-006
   See [tests/show_table_extended.rs](tests/show_table_extended.rs) for parser and end-to-end pins.
 - `spark_tree_string.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** iterative Arrow-schema port
   of the facade `StructType.treeString` layout for SHOW TABLE EXTENDED. It uses Spark type-name
-  spellings and renders struct, array, and map children with a depth limit.
+  spellings and renders struct, array, and map children with a depth limit. **U7 PR1 round 2
+  (2026-09-24):** the module and `spark_tree_string` are public so the PyO3 writer binding
+  renders the frame's tree into `_LEGACY_ERROR_TEMP_3060` `Couldn't find column <c> in:`.
+  pins: u7-write-df/C-015
 - `table_props_view.rs` — **C1 SHOW CREATE (2026-09-23):** `spark_table_properties`, the one
   Spark-visible table property list (Iceberg 1.11 `SparkTable.properties()` minus Spark's
   `TABLE_RESERVED_PROPERTIES`), shared by DESCRIBE EXTENDED `Table Properties` and SHOW CREATE

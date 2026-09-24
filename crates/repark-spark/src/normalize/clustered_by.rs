@@ -18,13 +18,12 @@ pub(crate) fn rewrite_clustered_by(tokens: &[Token]) -> Result<Vec<Token>> {
         .filter(|(index, token)| *index < boundary && !matches!(token, Token::Whitespace(_)))
         .map(|(index, _)| index)
         .collect();
-    let Some(start) = significant
+    let Some(run) = significant
         .iter()
-        .position(|index| word_is(&tokens[*index], "CLUSTERED"))
+        .enumerate()
+        .filter(|(_, index)| word_is(&tokens[**index], "CLUSTERED"))
+        .find_map(|(start, _)| parse_bucket_run(tokens, &significant[start..]))
     else {
-        return Ok(tokens.to_vec());
-    };
-    let Some(run) = parse_bucket_run(tokens, &significant[start..]) else {
         return Ok(tokens.to_vec());
     };
     if run.columns.len() > 1 || !run.sorts.is_empty() {
@@ -62,13 +61,13 @@ fn parse_bucket_run(tokens: &[Token], significant: &[usize]) -> Option<BucketRun
     if !at(1).is_some_and(|token| word_is(token, "BY")) {
         return None;
     }
-    let (columns, mut position) = parse_column_list(tokens, significant, 2)?;
+    let (columns, mut position) = parse_column_list(tokens, significant, 2, false)?;
     let mut sorts = Vec::new();
     if at(position).is_some_and(|token| word_is(token, "SORTED")) {
         if !at(position + 1).is_some_and(|token| word_is(token, "BY")) {
             return None;
         }
-        (sorts, position) = parse_column_list(tokens, significant, position + 2)?;
+        (sorts, position) = parse_column_list(tokens, significant, position + 2, true)?;
     }
     if !at(position).is_some_and(|token| word_is(token, "INTO")) {
         return None;
@@ -92,6 +91,7 @@ fn parse_column_list(
     tokens: &[Token],
     significant: &[usize],
     open: usize,
+    allow_ascending: bool,
 ) -> Option<(Vec<Token>, usize)> {
     if !matches!(tokens[*significant.get(open)?], Token::LParen) {
         return None;
@@ -104,9 +104,13 @@ fn parse_column_list(
             return None;
         }
         columns.push(column.clone());
-        match tokens[*significant.get(position + 1)?] {
-            Token::Comma => position += 2,
-            Token::RParen => return Some((columns, position + 2)),
+        position += 1;
+        if allow_ascending && word_is(&tokens[*significant.get(position)?], "ASC") {
+            position += 1;
+        }
+        match tokens[*significant.get(position)?] {
+            Token::Comma => position += 1,
+            Token::RParen => return Some((columns, position + 1)),
             _ => return None,
         }
     }
@@ -314,6 +318,30 @@ mod tests {
     }
 
     #[test]
+    fn a_column_named_clustered_does_not_hide_the_bucket_clause() {
+        assert_eq!(
+            rewritten(
+                "CREATE TABLE ice.ns.t (clustered BIGINT, data STRING) USING iceberg CLUSTERED \
+                 BY (clustered) INTO 4 BUCKETS"
+            ),
+            "CREATE TABLE ice.ns.t (clustered BIGINT, data STRING) USING iceberg PARTITIONED BY \
+             (bucket(4, clustered))"
+        );
+    }
+
+    #[test]
+    fn an_ascending_sort_refuses_like_an_unqualified_one() {
+        assert_eq!(
+            refusal(
+                "CREATE TABLE ice.ns.t (id BIGINT, x STRING) USING iceberg CLUSTERED BY (id) \
+                 SORTED BY (x ASC) INTO 4 BUCKETS"
+            ),
+            "Cannot convert transform with more than one column reference: \
+             sorted_bucket(id, 4, x)"
+        );
+    }
+
+    #[test]
     fn non_clustered_create_statements_stay_byte_identical() {
         for sql in [
             "CREATE TABLE ice.ns.t (id BIGINT, data STRING)",
@@ -323,6 +351,8 @@ mod tests {
             "CREATE TABLE \"clustered\" (id BIGINT)",
             "ALTER TABLE ice.ns.t ADD COLUMN c1 INT",
             "CREATE TABLE ice.ns.t (id BIGINT) CLUSTERED BY (id) SORTED BY (id DESC) INTO 4 BUCKETS",
+            "CREATE TABLE ice.ns.t (id BIGINT) CLUSTERED BY (id) SORTED BY (id ASC, x DESC) INTO 4 \
+             BUCKETS",
             "CREATE TABLE ice.ns.t (id BIGINT) CLUSTERED BY (id) INTO x BUCKETS",
             "SELECT clustered FROM t",
         ] {

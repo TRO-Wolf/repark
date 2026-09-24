@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException, IllegalArgumentException
+from repark.errors import AnalysisException, IllegalArgumentException, NumberFormatException
 
 _ORACLE: dict[str, Any] = json.loads(
     Path(__file__).with_name("ice_write_df_1_spark_oracle.json").read_text(encoding="utf-8")
@@ -82,18 +82,32 @@ def _partitioning(spark: ReparkSession, table: str = _T) -> list[str]:
     return [str(row[1]) for row in rows if str(row[0]).startswith("Part ")]
 
 
+def _partition_info(spark: ReparkSession, table: str = _T) -> list[str]:
+    names = [str(row[0]) for row in spark.sql(f"DESCRIBE TABLE {table}").collect()]
+    if "# Partition Information" not in names:
+        return []
+    section = names[names.index("# Partition Information") + 2 :]
+    ends = [index for index, name in enumerate(section) if name == "" or name.startswith("#")]
+    return section[: ends[0]] if ends else section
+
+
 def _assert_state(spark: ReparkSession, cell: str, table: str = _T) -> None:
     expected = _MEASURED[cell]
     assert _rows(spark, table) == expected["rows"]
     assert _operations(spark, table) == expected["operations"]
     assert _specs(spark, table) == expected["specs"]
     assert _partitioning(spark, table) == expected["partitioning"]
+    if "partition_info" in expected:
+        assert _partition_info(spark, table) == expected["partition_info"]
 
 
-def _assert_error(raised: BaseException, cell: str) -> None:
+def _assert_error(raised: BaseException, cell: str, root: Path | None = None) -> None:
     expected = _MEASURED[cell]["error"]
+    message = expected["message"]
+    if root is not None:
+        message = message.replace("<root>", str(root))
     assert type(raised).__name__ == expected["type"]
-    assert str(raised) == expected["message"]
+    assert str(raised) == message
     if expected["condition"] is not None:
         assert raised.getCondition() == expected["condition"]  # type: ignore[attr-defined]
 
@@ -383,6 +397,7 @@ def test_bucket_by_existing_partitioned_table(spark: ReparkSession) -> None:
         ("bucket_existing_part_only_bucket_append", lambda w: w.bucketBy(4, "id")),
         ("bucket_existing_two_append", lambda w: w.bucketBy(4, "id", "data")),
         ("bucket_existing_sorted_append", lambda w: w.bucketBy(4, "id").sortBy("data")),
+        ("bucket_existing_missing_append", lambda w: w.bucketBy(4, "nope")),
     ]
     for cell, write in refusals:
         with pytest.raises(IllegalArgumentException) as raised:
@@ -486,7 +501,7 @@ def test_output_spec_id_writes_partitioned_files_under_an_old_partitioned_spec(
 
 @pytest.mark.parametrize("cell", ["spec_id_unknown", "spec_id_negative", "spec_id_nonnumeric"])
 def test_output_spec_id_refusals(spark: ReparkSession, cell: str) -> None:
-    """An unknown or negative id and a non-integer refuse with Spark's text before any write.
+    """An unknown or negative id and a non-integer refuse with Spark's class and text.
 
     pins: u7-write-df/C-011
     """
@@ -497,8 +512,23 @@ def test_output_spec_id_refusals(spark: ReparkSession, cell: str) -> None:
         _frame(spark).write.format("iceberg").option("output-spec-id", raw).mode(
             "append"
         ).saveAsTable(_T)
-    assert str(raised.value) == _MEASURED[cell]["error"]["message"]
+    _assert_error(raised.value, cell)
     assert _operations(spark) == ["append"]
+
+
+def test_output_spec_id_parses_like_java_integer(spark: ReparkSession) -> None:
+    """A padded id is a ``NumberFormatException``; a signed one parses, as Java's parseInt.
+
+    pins: u7-write-df/C-011
+    """
+    _seed(spark)
+    writer = _frame(spark).write.format("iceberg").mode("append")
+    with pytest.raises(NumberFormatException) as raised:
+        writer.option("output-spec-id", " 1").saveAsTable(_T)
+    _assert_error(raised.value, "spec_id_space")
+    assert issubclass(NumberFormatException, IllegalArgumentException)
+    writer.option("output-spec-id", "+0").saveAsTable(_T)
+    _assert_state(spark, "spec_id_plus")
 
 
 def test_output_spec_id_current_and_absent_land_under_the_current_spec(
@@ -561,12 +591,7 @@ def test_sql_door_bucket_clauses(spark: ReparkSession, cell: str, sql: str) -> N
     """
     _frame(spark).createOrReplaceTempView("v")
     spark.sql(sql.format(t=_T))
-    expected = _MEASURED[cell]
-    assert _rows(spark) == expected["rows"]
-    assert _operations(spark) == expected["operations"]
-    assert _specs(spark) == expected["specs"]
-    if cell != "ctas_part_upper":
-        assert _partitioning(spark) == expected["partitioning"]
+    _assert_state(spark, cell)
 
 
 @pytest.mark.parametrize(
@@ -615,5 +640,6 @@ def test_sql_door_create_resolves_partition_columns_case_free(spark: ReparkSessi
     spark.sql(
         f"CREATE TABLE {_T} (id BIGINT, data STRING, cat STRING) USING iceberg PARTITIONED BY (CAT)"
     )
+    _assert_state(spark, "create_part_upper")
     spark.sql(f"INSERT INTO {_T} VALUES (1, 'a', 'x'), (2, 'b', 'y')")
     assert _specs(spark) == [[0, 2]]

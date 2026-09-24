@@ -58,7 +58,8 @@ repark-core's error map.
   pins: ice-session-write-conf-1/C-048
 - `output_spec.rs` — **U7 PR1 (2026-09-24):** the `output-spec-id` write option.
   `parse_output_spec_id` is Java's `Integer.parseInt` (a non-integer refuses
-  `IllegalArgumentException` `For input string: "<v>"`); `validate_output_spec_id` refuses an
+  `NumberFormatException` `For input string: "<v>"` through `number_format_error`);
+  `validate_output_spec_id` refuses an
   id the table lacks through the fork's `resolve_output_spec` (`Output spec id <n> is not a
   valid spec id for table`); `staging_table` returns the table itself when the option is absent
   or names the current spec, else a read-only view whose metadata default spec is the requested
@@ -68,8 +69,14 @@ repark-core's error map.
   `stage_overwrite_files_with`, `append_staged_with_options`) swaps it in, idempotently, while
   the commit stays on the real table; the fork routes the files into per-spec manifests.
   `WriterStagingOverrides.output_spec_id` carries the value and `merged_staging`
-  (`session_write_conf.rs`) keeps it. Pins: `../tests/output_spec.rs`.
-  pins: u7-write-df/C-010, C-011, C-014
+  (`session_write_conf.rs`) keeps it. **Round 2 (2026-09-24):** the two stream stagers pick
+  the writer from the STAGED view's spec, not the caller's table (an unpartitioned output spec
+  under a partitioned table, or a partitioned one under an unpartitioned table, used to reach
+  the wrong writer and leak `DataInvalid => Cannot create partition calculator…`), so an RTAS
+  or replace resolves the id in the replacement metadata; `staged_spec_is_partitioned` tells
+  the dynamic overwrite whether the staged spec replaces partitions or the whole table. Pins:
+  `../tests/output_spec.rs`.
+  pins: u7-write-df/C-010, C-011, C-014, C-016
 - `writer_partitioning.rs` — **U7 PR1 (2026-09-24):** the DataFrameWriter layout and `save()`
   kernels. `provided_transforms` renders Spark's `partitioningAsV2` (`identity(c)`, then
   `bucket(n, c…)` or `sorted_bucket(c…, n, s…)`, parts quoted as Spark's `quoteIfNeeded`);
@@ -81,9 +88,23 @@ repark-core's error map.
   the table first. `decide_save_target` maps an explicit-iceberg `save(target)` plus mode and
   existence onto create / append / overwrite / skip, raising `TABLE_OR_VIEW_NOT_FOUND`
   (`<ns>.<name>`, or `` `<parent>`.<leaf> `` for a path) and `TABLE_OR_VIEW_ALREADY_EXISTS`
-  (`` `<ns>`.`<name>` ``) from `repark_common::spark_error`, and the declared default-format /
-  path-create refusal. Pins: `../tests/writer_partitioning.rs`.
+  (`` `<ns>`.`<name>` ``, shared with `saveAsTable` as `already_exists_error`) from
+  `repark_common::spark_error`, and the declared default-format / path-create refusal. Round 2:
+  the path relation splits at the last `/` keeping every other character (Iceberg's
+  `PathIdentifier`: `` `file:///r/a`.b ``, `` `/r/a/b`.`` ``), and `save_target_names_table`
+  is the one path-or-name test. Pins: `../tests/writer_partitioning.rs`.
   pins: u7-write-df/C-005, C-006, C-009, C-014
+- `writer_plan.rs` — **U7 PR1 round 2 (2026-09-24):** `plan_writer`, the statement kernel for
+  `saveAsTable` and `save()`. It maps the action, mode, existence and layout to a
+  `WriterStatement` (`ctas`, `rtas`, `append`, `overwrite`, `skip`) plus whether the caller
+  checks the layout against the table: `save()` goes through `decide_save_target`; `saveAsTable`
+  appends to an existing table with the check, replaces on a bucketed overwrite, overwrites an
+  existing table statically otherwise, creates a missing one, skips on ignore and refuses the
+  error mode with Spark's already-exists text. On every create-or-replace arm a bucket column
+  absent from the frame (case-folded unless the session is case-sensitive) is
+  `WriterRefusal::MissingBucketColumn`, rendered as `_LEGACY_ERROR_TEMP_3060` by
+  `missing_column_message` before the existence refusal. Pins: `../tests/writer_plan.rs`.
+  pins: u7-write-df/C-015, C-018
 - `set_location.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   `set_table_location` applies the fork's `update_location` action
   (`TableUpdate::SetLocation`) in one transaction: the move commit itself and every
@@ -1077,7 +1098,10 @@ repark-core's error map.
   `IllegalArgumentMarker` and `illegal_argument_error`, moved here from
   repark-core's `error_map.rs` (which re-exports them unchanged) so a
   repark-iceberg refusal can carry the `IllegalArgumentException` class with an
-  untouched message.
+  untouched message. **U7 PR1 round 2 (2026-09-24):** `NumberFormatMarker` and
+  `number_format_error(input)` (`For input string: "<input>"`) are its leaf, classified to
+  `Error::NumberFormat` and raised as `NumberFormatException`.
+  pins: u7-write-df/C-011
 - `unsupported.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** `UnsupportedMarker` and
   `unsupported_error`, the `IllegalArgumentMarker` twin for the `External`
   classifier arm: a refusal that must reach Python as

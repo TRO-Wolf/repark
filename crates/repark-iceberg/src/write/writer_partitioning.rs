@@ -142,19 +142,29 @@ impl SaveTarget {
 }
 
 fn path_relation(path: &str) -> String {
-    let segments: Vec<&str> = path
-        .split('/')
-        .filter(|segment| !segment.is_empty())
-        .collect();
-    let Some((name, parent)) = segments.split_last() else {
-        return quote_if_needed(path);
-    };
-    let namespace = if path.starts_with('/') {
-        format!("/{}", parent.join("/"))
-    } else {
-        parent.join("/")
-    };
-    format!("{}.{}", quote_if_needed(&namespace), quote_if_needed(name))
+    match path.rsplit_once('/') {
+        Some((namespace, name)) => {
+            format!("{}.{}", quote_if_needed(namespace), quote_if_needed(name))
+        }
+        None => quote_if_needed(path),
+    }
+}
+
+pub(crate) fn already_exists_error(relation_parts: &[String]) -> repark_common::Error {
+    let relation = relation_parts
+        .iter()
+        .map(|part| format!("`{}`", part.replace('`', "``")))
+        .collect::<Vec<_>>()
+        .join(".");
+    repark_common::spark_error::analysis(
+        repark_common::spark_error::TABLE_OR_VIEW_ALREADY_EXISTS,
+        &[("relationName", relation.as_str())],
+    )
+}
+
+#[must_use]
+pub fn save_target_names_table(target: &str, explicit_format: bool) -> bool {
+    explicit_format && !target.contains('/')
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -171,7 +181,7 @@ pub fn decide_save_target(
         mode
     };
     let writes_existing = matches!(normalized, "append" | "overwrite");
-    let is_path = target.contains('/');
+    let is_path = !save_target_names_table(target, true);
     if is_path && explicit_format && writes_existing {
         let relation = path_relation(target);
         return Err(repark_common::spark_error::analysis(
@@ -201,17 +211,7 @@ pub fn decide_save_target(
             ))
         }
         ("ignore", true) => Ok(SaveTarget::Skip),
-        ("error", true) => {
-            let relation = relation_parts
-                .iter()
-                .map(|part| format!("`{}`", part.replace('`', "``")))
-                .collect::<Vec<_>>()
-                .join(".");
-            Err(repark_common::spark_error::analysis(
-                repark_common::spark_error::TABLE_OR_VIEW_ALREADY_EXISTS,
-                &[("relationName", relation.as_str())],
-            ))
-        }
+        ("error", true) => Err(already_exists_error(relation_parts)),
         _ => Ok(SaveTarget::Create),
     }
 }

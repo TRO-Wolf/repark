@@ -33,9 +33,13 @@ here and is re-exported in one line.
   LAST element (Spark's `partitionBy ++ bucketSpec`); a multi-column run or any `SORTED BY`
   refuses with `IllegalArgumentException` `Cannot convert transform with more than one column
   reference: bucket(n, a, b)` / `sorted_bucket(a, n, s)`, measured on Spark 4.1.2 for CTAS and
-  column-def CREATE alike; a `SORTED BY` element carrying `ASC`/`DESC` or a non-number count
+  column-def CREATE alike; a `SORTED BY` element carrying `DESC` or a non-number count
   still passes through to the loud parse error. Unit pins in-module.
-  pins: u7-write-df/C-013
+  **Round 2 (2026-09-24):** every unquoted `CLUSTERED` before the `AS` boundary is tried and
+  the first bucket run wins, so a column named `clustered` no longer hides the clause; a
+  `SORTED BY` element may carry `ASC` (Spark refuses it as `sorted_bucket(id, 4, x)`); `DESC`
+  stays the parse error, a residue against Spark's `_LEGACY_ERROR_TEMP_0035` text.
+  pins: u7-write-df/C-013, C-017
 - `create_clauses.rs` — **IPI-26/27 round 2 (2026-09-20):** `extract_create_clauses`
   strips the table `COMMENT` / `LOCATION` clauses from a `CREATE TABLE` before the
   stock parser runs, because sqlparser accepts them only without `TBLPROPERTIES`

@@ -40,7 +40,7 @@ pub use session::PyReparkSession;
 mod exceptions;
 pub use exceptions::{
     AnalysisException, ArithmeticException, CommitStateUnknownException, IllegalArgumentException,
-    ParseException, PySparkException, UnsupportedOperationException,
+    NumberFormatException, ParseException, PySparkException, UnsupportedOperationException,
 };
 
 /// Convert a crate error to its PySpark-shaped Python exception.
@@ -59,6 +59,7 @@ pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
         ErrorClass::Arithmetic => ArithmeticException::new_err(message),
         ErrorClass::Unsupported => UnsupportedOperationException::new_err(message),
         ErrorClass::IllegalArgument => IllegalArgumentException::new_err(message),
+        ErrorClass::NumberFormat => NumberFormatException::new_err(message),
         ErrorClass::CommitStateUnknown => {
             let operation_id = match &err {
                 repark_core::Error::CommitStateUnknown { operation_id, .. } => operation_id.clone(),
@@ -149,6 +150,10 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add(
         "IllegalArgumentException",
         module.py().get_type::<IllegalArgumentException>(),
+    )?;
+    module.add(
+        "NumberFormatException",
+        module.py().get_type::<NumberFormatException>(),
     )?;
     module.add(
         "CommitStateUnknownException",

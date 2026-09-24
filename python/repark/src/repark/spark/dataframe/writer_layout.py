@@ -173,11 +173,6 @@ def _refuse_not_list_of_str(arg_name: str, value: Any) -> None:
     )
 
 
-def _backticked_table_name(qualified: str) -> str:
-    """Render a resolved multipart table name in Spark's backticked error form."""
-    return ".".join(f"`{segment}`" for segment in qualified.split("."))
-
-
 def bucket_by(writer: DataFrameWriter, num_buckets: Any, col: Any, *cols: Any) -> DataFrameWriter:
     """Record Hive bucketing columns after Spark's call-time checks; chain the writer."""
     if not isinstance(num_buckets, int):
@@ -246,8 +241,8 @@ def assert_no_cluster_conflicts(writer: DataFrameWriter) -> None:
         _raise_cluster_by_with_bucketing()
 
 
-def assert_bucket_spec_valid_for_table_write(writer: DataFrameWriter, qualified_table: str) -> None:
-    """Refuse an out-of-range bucket count or a bucket column missing from the frame."""
+def assert_bucket_count_valid(writer: DataFrameWriter) -> None:
+    """Refuse an out-of-range bucket count with Spark's ``INVALID_BUCKET_COUNT``."""
     if not _bucketed(writer):
         return
     num_buckets = writer._num_buckets
@@ -263,24 +258,6 @@ def assert_bucket_spec_valid_for_table_write(writer: DataFrameWriter, qualified_
             },
             sql_state="22003",
         )
-    frame_columns = list(writer._dataframe.columns)
-    present = {str(name).casefold() for name in frame_columns}
-    for column in writer._bucket_columns:
-        if str(column).casefold() not in present:
-            table_name = _backticked_table_name(qualified_table)
-            table_cols = ", ".join(f"`{name}`" for name in frame_columns)
-            _raise_analysis(
-                f"[COLUMN_NOT_DEFINED_IN_TABLE] bucket column `{column}` is not defined in "
-                f"table {table_name}, defined table columns are: {table_cols}. SQLSTATE: 42703",
-                "COLUMN_NOT_DEFINED_IN_TABLE",
-                message_parameters={
-                    "colName": f"`{column}`",
-                    "colType": "bucket",
-                    "tableCols": table_cols,
-                    "tableName": table_name,
-                },
-                sql_state="42703",
-            )
 
 
 def refuse_clustered_table_write(
@@ -295,12 +272,6 @@ def refuse_clustered_table_write(
         errorClass="NOT_IMPLEMENTED",
         messageParameters={"feature": feature},
     )
-
-
-def refuse_bucketed_or_clustered_table_write(writer: DataFrameWriter, qualified_table: str) -> None:
-    """Run the table-write bucketing and clustering checks in Spark's order."""
-    assert_bucket_spec_valid_for_table_write(writer, qualified_table)
-    refuse_clustered_table_write(writer)
 
 
 def assert_v2_cluster_conflicts(writer: DataFrameWriterV2) -> None:

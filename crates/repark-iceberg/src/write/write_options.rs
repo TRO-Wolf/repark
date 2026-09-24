@@ -159,14 +159,44 @@ pub async fn stage_unpartitioned_stream_with_overrides<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
+    let target = staging_table(table, staging)?;
+    if target
+        .metadata()
+        .default_partition_spec()
+        .is_unpartitioned()
+    {
+        return stage_unpartitioned_on(&target, stream, concurrency, staging).await;
+    }
+    let current_schema = target.metadata().current_schema();
+    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+    let write_default_columns = write_default_column_names(current_schema);
+    let conformed = stream.map(move |item| {
+        crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+    });
+    crate::write::append::fanout_conformed_stream_with_concurrency(
+        &target,
+        conformed,
+        concurrency,
+        staging,
+    )
+    .await
+}
+
+async fn stage_unpartitioned_on<S>(
+    table: &Table,
+    stream: S,
+    concurrency: WriteConcurrency,
+    staging: &WriterStagingOverrides,
+) -> Result<Vec<DataFile>>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+{
     if concurrency.max_concurrent_files < 1 {
         return Err(DataFusionError::Plan(format!(
             "repark.write.max-concurrent-files must be >= 1 (got {})",
             concurrency.max_concurrent_files
         )));
     }
-    let target = staging_table(table, staging)?;
-    let table: &Table = &target;
     let current_schema = table.metadata().current_schema();
     let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
     let write_default_columns = write_default_column_names(current_schema);
@@ -198,6 +228,13 @@ where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
     let target = staging_table(table, staging)?;
+    if target
+        .metadata()
+        .default_partition_spec()
+        .is_unpartitioned()
+    {
+        return stage_unpartitioned_on(&target, conformed, concurrency, staging).await;
+    }
     crate::write::append::fanout_conformed_stream_with_concurrency(
         &target,
         conformed,

@@ -55,7 +55,7 @@ mod update_fields;
 pub use session::ReparkSession as Session;
 pub use session::{
     DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder, resolve_bound_expr,
-    resolve_scoped_expr, resolve_subquery_plan,
+    resolve_scoped_expr, resolve_subquery_plan, writer_layout,
 };
 
 // === Session timezone ===

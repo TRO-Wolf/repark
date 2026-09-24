@@ -177,7 +177,7 @@ class DataFrameWriter:
         col: str | list[str],
         *cols: str,
     ) -> DataFrameWriter:
-        """Set Hive bucketing columns; every table write refuses them (Ruling R-1)."""
+        """Set bucketing columns; an Iceberg table write turns them into a ``bucket`` transform."""
         return writer_layout.bucket_by(self, numBuckets, col, *cols)
 
     bucket_by = bucketBy
@@ -209,39 +209,9 @@ class DataFrameWriter:
         writer_layout.assert_no_cluster_conflicts(self)
         writer_layout.assert_no_sort_without_bucketing(self)
         qualified, table_ref = _resolve_writer_table(self._dataframe, name)
-        writer_layout.assert_bucket_spec_valid_for_table_write(self, qualified)
-        writer_layout.refuse_bucketed_or_clustered_table_write(self, qualified)
-        session = self._dataframe._session
-        normalized_mode = "error" if self._mode == "errorifexists" else self._mode
-        if not session.table_exists(qualified):
-            self._dataframe._refuse_tightened_iceberg_create()
-            self._run_through_temp_view(
-                lambda view: self._ctas_sql(table_ref, view=view), self._options
-            )
-            return
-        if normalized_mode == "error":
-            raise AnalysisException(
-                f"[TABLE_OR_VIEW_ALREADY_EXISTS] table {name!r} already exists; use mode("
-                "'append'|'overwrite'|'ignore') to write into an existing table. SQLSTATE: 42P07"
-            )
-        if normalized_mode == "ignore":
-            return
-        if self._num_buckets is not None:
-            return writer_save.write_bucketed_existing(self, qualified, table_ref, normalized_mode)
-        if normalized_mode == "overwrite":
-            columns, projection = self._by_name_projection(session, table_ref, display_name=name)
-            self._run_through_temp_view(
-                lambda view: (
-                    f"INSERT OVERWRITE {table_ref} ({columns}) SELECT {projection} FROM {view}"
-                ),
-                self._options,
-                static_overwrite=True,
-            )
-            return
-        self._run_through_temp_view(
-            writer_schema.append_statement(session, self._dataframe, table_ref),
-            self._options,
-        )
+        writer_layout.assert_bucket_count_valid(self)
+        writer_layout.refuse_clustered_table_write(self)
+        writer_save.write_table(self, "saveAsTable", name, qualified, table_ref)
 
     save_as_table = saveAsTable
 
@@ -774,10 +744,6 @@ class DataFrameWriter:
             display_name=display_name,
             surface="saveAsTable",
         )
-
-    def _ctas_sql(self, table_ref: str, *, view: str) -> str:
-        """Build a quoted Iceberg CTAS statement."""
-        return writer_save.ctas_sql(self, table_ref, view=view)
 
     def _run_through_temp_view(
         self,

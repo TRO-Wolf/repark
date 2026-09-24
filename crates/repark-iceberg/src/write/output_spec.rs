@@ -4,19 +4,25 @@ use datafusion::error::Result;
 use iceberg::spec::TableMetadataBuilder;
 use iceberg::table::Table;
 
-use crate::write::illegal_argument::illegal_argument_error;
+use crate::write::illegal_argument::{illegal_argument_error, number_format_error};
 use crate::write::write_options::WriterStagingOverrides;
 
 #[allow(clippy::missing_errors_doc)]
 pub fn parse_output_spec_id(raw: &str) -> Result<i32> {
-    raw.parse::<i32>()
-        .map_err(|_| illegal_argument_error(format!("For input string: \"{raw}\"")))
+    raw.parse::<i32>().map_err(|_| number_format_error(raw))
 }
 
 #[allow(clippy::missing_errors_doc)]
 pub fn validate_output_spec_id(table: &Table, output_spec_id: Option<i32>) -> Result<()> {
     iceberg::writer::resolve_output_spec(table, output_spec_id)
         .map(|_| ())
+        .map_err(|error| illegal_argument_error(error.message().to_string()))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn staged_spec_is_partitioned(table: &Table, staging: &WriterStagingOverrides) -> Result<bool> {
+    iceberg::writer::resolve_output_spec(table, staging.output_spec_id)
+        .map(|spec| !spec.is_unpartitioned())
         .map_err(|error| illegal_argument_error(error.message().to_string()))
 }
 

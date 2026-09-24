@@ -57,8 +57,12 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `CommitStateUnknown { message, operation_id }` — **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the
   ambiguous-commit class, carrying the attempted commit's `engine.operation-id` when a RePark
   write path minted one) + `Result<T>`. **FNP-MATH-1 WO-6b R3 (2026-09-21):**
-  `Arithmetic(String)` — the verbatim `{0}` ANSI arithmetic class. pins: fnp-math-1/C-004. Plus
-  `ErrorClass { Parse, Analysis, Arithmetic, Unsupported, IllegalArgument, CommitStateUnknown, Base }` + `Error::exception_class()`
+  `Arithmetic(String)` — the verbatim `{0}` ANSI arithmetic class. pins: fnp-math-1/C-004.
+  **U7 PR1 round 2 (2026-09-24):** `NumberFormat(String)` — the verbatim `{0}` class for a
+  string Java's `Integer.parseInt` refuses (`For input string: "<v>"`), routed
+  `NumberFormat → NumberFormat` → `repark.errors.NumberFormatException`, the
+  `IllegalArgumentException` leaf. pins: u7-write-df/C-011. Plus
+  `ErrorClass { Parse, Analysis, Arithmetic, Unsupported, IllegalArgument, NumberFormat, CommitStateUnknown, Base }` + `Error::exception_class()`
   — the WG-3/U4/Group-X error-taxonomy routing (`NotImplemented → Unsupported` →
   `repark.errors.UnsupportedOperationException`, the PySpark class for a JVM
   `UnsupportedOperationException`; **Group X:** `Config → IllegalArgument` →

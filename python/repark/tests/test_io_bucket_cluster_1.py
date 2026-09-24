@@ -22,6 +22,9 @@ from repark.errors import (
 _ORACLE: dict[str, Any] = json.loads(
     Path(__file__).with_name("facade_reader_writer_oracle.json").read_text(encoding="utf-8")
 )["cells"]
+_U7_MEASURED: dict[str, Any] = json.loads(
+    Path(__file__).with_name("ice_write_df_1_spark_oracle.json").read_text(encoding="utf-8")
+)["measured"]
 
 
 @pytest.fixture
@@ -151,15 +154,31 @@ def test_bucket_by_count_bounds_refused_at_save(spark: ReparkSession) -> None:
 
 
 def test_bucket_by_missing_column_refused(spark: ReparkSession) -> None:
-    """A bucket column absent from the frame raises COLUMN_NOT_DEFINED_IN_TABLE.
+    """A bucket column absent from the frame answers as Spark's Iceberg catalog (Ruling Q1).
 
-    pins: io-bucket-cluster-1/C-001
+    A new table raises ``_LEGACY_ERROR_TEMP_3060`` with the frame's printSchema tree; an append
+    onto an existing table answers the layout mismatch. The recorded ``bucketBy_missing_col``
+    cell ran on Spark's Hive session catalog.
+    pins: u7-write-df/C-015
     """
-    frame = _kv_frame(spark)
+    frame = spark.createDataFrame(
+        [(7, "g", "x"), (8, "h", "w")], "id BIGINT, data STRING, cat STRING"
+    )
     with pytest.raises(AnalysisException) as raised:
-        frame.write.bucketBy(2, "zz").saveAsTable("bk_missing")
-    _assert_error_cell(raised.value, "bucketBy_missing_col")
+        frame.write.bucketBy(4, "nope").saveAsTable("bk_missing")
+    expected = _U7_MEASURED["bucketBy_new_missing_col"]["error"]
+    assert str(raised.value) == expected["message"]
+    assert raised.value.getCondition() == expected["condition"]
     assert not spark.catalog.tableExists("bk_missing")
+    spark.sql(
+        "CREATE TABLE bk_missing (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat, bucket(4, id))"
+    )
+    with pytest.raises(IllegalArgumentException) as mismatch:
+        frame.write.bucketBy(4, "nope").mode("append").saveAsTable("bk_missing")
+    assert (
+        str(mismatch.value) == (_U7_MEASURED["bucket_existing_missing_append"]["error"]["message"])
+    )
 
 
 def test_bucket_by_sort_by_save_as_table_refuses_like_iceberg(spark: ReparkSession) -> None:

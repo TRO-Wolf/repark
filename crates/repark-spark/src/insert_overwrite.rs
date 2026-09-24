@@ -109,6 +109,10 @@ pub(crate) async fn execute_insert_overwrite(
             let still_empty = reprobe_batches.iter().all(|batch| batch.num_rows() == 0);
             if still_empty {
                 if let Some(target) = iceberg_target {
+                    repark_iceberg::write::validate_output_spec_id(
+                        &target.2,
+                        options.output_spec_id,
+                    )?;
                     if dynamic {
                         return ctx.read_empty();
                     }
@@ -453,7 +457,7 @@ pub(crate) async fn insert_overwrite_iceberg_stage_then_swap(
                 .to_string(),
         ));
     }
-    if dynamic && !table.metadata().default_partition_spec().is_unpartitioned() {
+    if dynamic && repark_iceberg::write::staged_spec_is_partitioned(table, &staging)? {
         repark_iceberg::write::commit_replace_partitions_with_summary(
             catalog,
             table,

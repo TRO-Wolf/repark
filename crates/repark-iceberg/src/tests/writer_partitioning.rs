@@ -12,7 +12,7 @@ use tempfile::TempDir;
 use crate::write::illegal_argument::IllegalArgumentMarker;
 use crate::write::writer_partitioning::{
     SaveTarget, WriterLayout, check_layout_matches_catalog_table, check_layout_matches_table,
-    decide_save_target, provided_transforms, table_transforms,
+    decide_save_target, provided_transforms, save_target_names_table, table_transforms,
 };
 
 fn illegal_argument_text(error: &DataFusionError) -> String {
@@ -247,4 +247,33 @@ fn save_target_path_and_default_format_refusals() {
             .expect_err("declared refusal");
         assert_eq!(refusal.to_string(), declared, "{target} {mode} {explicit}");
     }
+}
+
+#[test]
+fn path_relations_split_at_the_last_slash_like_iceberg_path_identifier() {
+    for (path, relation) in [
+        ("file:///tmp/probe/a/b", "`file:///tmp/probe/a`.b"),
+        ("/tmp/probe/a/b/", "`/tmp/probe/a/b`.``"),
+        ("/tmp//x//y", "`/tmp//x/`.y"),
+        ("s3://b/k/t", "`s3://b/k`.t"),
+        ("a/b", "a.b"),
+        ("/x", "``.x"),
+    ] {
+        let error =
+            decide_save_target(path, &[], false, "append", true).expect_err("path append refuses");
+        assert!(
+            error.to_string().starts_with(&format!(
+                "[TABLE_OR_VIEW_NOT_FOUND] The table or view {relation} cannot be found."
+            )),
+            "{path}: {error}"
+        );
+    }
+}
+
+#[test]
+fn only_an_explicit_slash_free_target_names_a_table() {
+    assert!(save_target_names_table("sc.u7.t", true));
+    assert!(!save_target_names_table("sc.u7.t", false));
+    assert!(!save_target_names_table("/tmp/t", true));
+    assert!(!save_target_names_table("s3://b/t", true));
 }

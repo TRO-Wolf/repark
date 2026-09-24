@@ -81,6 +81,20 @@ fn to_py_err_routes_to_typed_exceptions_subclassing_runtime_error() {
 }
 
 #[test]
+fn to_py_err_number_format_is_an_illegal_argument_leaf() {
+    Python::attach(|py| {
+        let raised = to_py_err(Error::NumberFormat("For input string: \"x\"".into()));
+        assert!(raised.is_instance_of::<NumberFormatException>(py));
+        assert!(raised.is_instance_of::<IllegalArgumentException>(py));
+        assert!(raised.is_instance_of::<PySparkException>(py));
+        assert!(!raised.is_instance_of::<AnalysisException>(py));
+        assert_eq!(raised.value(py).to_string(), "For input string: \"x\"");
+        let plain = to_py_err(Error::IllegalArgument("bad".into()));
+        assert!(!plain.is_instance_of::<NumberFormatException>(py));
+    });
+}
+
+#[test]
 fn to_py_err_commit_state_unknown_is_typed_and_carries_operation_id() {
     Python::attach(|py| {
         let stamped = to_py_err(Error::CommitStateUnknown {

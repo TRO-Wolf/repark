@@ -27,7 +27,7 @@ IPI-40 views PR1 WO-R1 (2026-09-21): `check_lib_py.py` ratchets `session/session
 
 IPI-40 views PR1 WO-R2 (2026-09-21): `check_lib_py.py` ratchets `session/session_core.py` 2279 → 2269 (the DROP TABLE block consolidates with DROP VIEW expansion into `sql_relations._expand_drop_table_or_view_sql`), shrink-only.
 
-U7 PR1 (2026-09-24): `check_lib_py.py` ratchets `spark/dataframe/writer_readwriter.py` 1077 → 1073 (the iceberg `save` branch and the CTAS body move to `writer_save.py`; the `_format_explicit` slot adds three lines back), shrink-only.
+U7 PR1 (2026-09-24): `check_lib_py.py` ratchets `spark/dataframe/writer_readwriter.py` 1077 → 1073 (the iceberg `save` branch and the CTAS body move to `writer_save.py`; the `_format_explicit` slot adds three lines back), shrink-only. Round 2 (2026-09-24): 1073 → 1039 (`saveAsTable`'s mode and bucket branches move into the Rust `writer_plan` kernel; `_ctas_sql` leaves), with the CAP-1 mirror.
 
 ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19): `check_rust_file_size.py` DROPS the `write/predicate_dml.rs` exception (1034 → 960, under the default ceiling: the MoR arms split to `predicate_dml/mor_commit.rs` and the UPDATE allow-list moved to `predicate_dml/plain.rs`) `write/merge/tests/streaming_scan.rs` 3020 → 3018 and `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435, all shrink-only, with the CAP-1 mirror.
 

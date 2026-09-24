@@ -41,7 +41,7 @@ mod memory_catalog;
 pub(crate) mod spill;
 mod temp_views;
 mod write_options;
-mod writer_layout;
+pub mod writer_layout;
 
 pub use df_guards::subquery::{resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan};
 use df_guards::{

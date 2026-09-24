@@ -31,6 +31,9 @@ pub enum Error {
     #[error("{0}")]
     IllegalArgument(String),
 
+    #[error("{0}")]
+    NumberFormat(String),
+
     /// A session or catalog configuration error naming the invalid key.
     #[error("repark config error: {0}")]
     Config(String),
@@ -58,6 +61,7 @@ pub enum ErrorClass {
     Unsupported,
     /// An invalid engine or catalog config value mapped to `IllegalArgumentException`.
     IllegalArgument,
+    NumberFormat,
     CommitStateUnknown,
     /// Everything else mapped to the `RuntimeError`-compatible `repark.errors.PySparkException`.
     Base,
@@ -73,6 +77,7 @@ impl Error {
             Error::Analysis(_) => ErrorClass::Analysis,
             Error::Arithmetic(_) => ErrorClass::Arithmetic,
             Error::Config(_) | Error::IllegalArgument(_) => ErrorClass::IllegalArgument,
+            Error::NumberFormat(_) => ErrorClass::NumberFormat,
             Error::NotImplemented(_) => ErrorClass::Unsupported,
             Error::CommitStateUnknown { .. } => ErrorClass::CommitStateUnknown,
             Error::DataFusion(_) | Error::Iceberg(_) => ErrorClass::Base,

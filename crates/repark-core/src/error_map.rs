@@ -9,7 +9,9 @@ use repark_common::{Error, Result};
 use repark_iceberg::write::CommitStateUnknownError;
 #[cfg(test)]
 use repark_iceberg::write::unsupported_error;
-pub use repark_iceberg::write::{IllegalArgumentMarker, UnsupportedMarker, illegal_argument_error};
+pub use repark_iceberg::write::{
+    IllegalArgumentMarker, NumberFormatMarker, UnsupportedMarker, illegal_argument_error,
+};
 
 use crate::object_store_s3;
 
@@ -22,6 +24,7 @@ pub(crate) enum EngineErrorKind<'a> {
     Unsupported,
     IllegalArgument,
     IllegalArgumentMarked(&'a IllegalArgumentMarker),
+    NumberFormatMarked(&'a NumberFormatMarker),
     ArithmeticOverflow(&'a str),
     UnsupportedMarked(&'a UnsupportedMarker),
     /// A peeled `External` wrapping a live [`iceberg::Error`], classified by its `kind()`.
@@ -98,6 +101,21 @@ fn spark_parse_message(error: &DataFusionError) -> String {
     error.to_string()
 }
 
+fn classify_external_tail<'a>(
+    inner: &'a (dyn std::error::Error + Send + Sync + 'static),
+) -> EngineErrorKind<'a> {
+    if let Some(marker) = inner.downcast_ref::<NumberFormatMarker>() {
+        return EngineErrorKind::NumberFormatMarked(marker);
+    }
+    if let Some(marker) = inner.downcast_ref::<UnsupportedMarker>() {
+        return EngineErrorKind::UnsupportedMarked(marker);
+    }
+    match inner.downcast_ref::<iceberg::Error>() {
+        Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
+        None => EngineErrorKind::Other,
+    }
+}
+
 /// Classify a DataFusion error after peeling wrapper variants up to [`MAX_ERROR_PEEL_DEPTH`].
 pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorKind<'_> {
     let mut current = error;
@@ -114,13 +132,7 @@ pub(crate) fn classify_datafusion_error(error: &DataFusionError) -> EngineErrorK
                     Some(stamped) => EngineErrorKind::CommitStateUnknown(stamped),
                     None => match inner.downcast_ref::<IllegalArgumentMarker>() {
                         Some(marker) => EngineErrorKind::IllegalArgumentMarked(marker),
-                        None => match inner.downcast_ref::<UnsupportedMarker>() {
-                            Some(marker) => EngineErrorKind::UnsupportedMarked(marker),
-                            None => match inner.downcast_ref::<iceberg::Error>() {
-                                Some(iceberg_error) => EngineErrorKind::Iceberg(iceberg_error),
-                                None => EngineErrorKind::Other,
-                            },
-                        },
+                        None => classify_external_tail(inner.as_ref()),
                     },
                 };
             }
@@ -173,6 +185,7 @@ pub fn engine_err(err: DataFusionError) -> Error {
         EngineErrorKind::Unsupported => Error::NotImplemented(err.to_string()),
         EngineErrorKind::IllegalArgument => Error::IllegalArgument(err.to_string()),
         EngineErrorKind::IllegalArgumentMarked(marker) => Error::IllegalArgument(marker.0.clone()),
+        EngineErrorKind::NumberFormatMarked(marker) => Error::NumberFormat(marker.0.clone()),
         EngineErrorKind::UnsupportedMarked(marker) => Error::NotImplemented(marker.0.clone()),
         EngineErrorKind::Iceberg(iceberg_error) => classify_iceberg_error(iceberg_error),
         EngineErrorKind::CommitStateUnknown(stamped) => Error::CommitStateUnknown {
@@ -245,6 +258,18 @@ mod tests {
         );
         assert!(
             matches!(error, Error::IllegalArgument(message) if message == "Cannot use options [foo]")
+        );
+    }
+
+    #[test]
+    fn number_format_marker_maps_to_number_format() {
+        let error = engine_err(repark_iceberg::write::number_format_error("x"));
+        assert_eq!(
+            error.exception_class(),
+            repark_common::ErrorClass::NumberFormat
+        );
+        assert!(
+            matches!(error, Error::NumberFormat(message) if message == "For input string: \"x\"")
         );
     }
 

@@ -9,7 +9,8 @@ enum TreeEntry<'a> {
     MapValue(&'a Field, String, usize),
 }
 
-pub(crate) fn spark_tree_string(schema: &Schema) -> String {
+#[must_use]
+pub fn spark_tree_string(schema: &Schema) -> String {
     let mut lines = vec!["root".to_string()];
     let mut entries = Vec::new();
     push_fields(&mut entries, schema.fields(), " |", 0);

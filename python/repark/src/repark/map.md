@@ -38,6 +38,11 @@ Carve-outs that stay here: `repark._native` (maturin module-name), `repark.error
   `getErrorClass` / `getSqlState` parse a Spark-shaped message — at most one known
   engine prefix, a column-0 `[CONDITION]` token, the last `SQLSTATE: XXXXX` in the
   text; `attach_error_condition` instance binds still win. pins: ice-error-conditions-1/C-001
+  **U7 PR1 round 2 (2026-09-24):** re-exports the native `NumberFormatException`
+  (`IllegalArgumentException` leaf); a native instance's `getCondition` /
+  `getMessageParameters` return the `_spark_error_class` / `_spark_message_parameters` a Rust
+  binding attached (the writer's `_LEGACY_ERROR_TEMP_3060`) before parsing the message.
+  pins: u7-write-df/C-011, C-015
   **WO-C2 (2026-09-23):** after an `SQL error: ` prefix, the parser-error wrapper is
   removed before reading a leading condition. Native `SHOW CREATE TABLE` parse refusals now
   expose `INVALID_STATEMENT_OR_CLAUSE` through the same API as planning refusals.
