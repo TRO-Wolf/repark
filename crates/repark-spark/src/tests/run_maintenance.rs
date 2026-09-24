@@ -644,18 +644,21 @@ async fn apply_removes_orphan() {
         "orphan sweep ran, got: {}",
         orphan.result
     );
-    assert!(
-        orphan.result.contains("orphan-0.parquet"),
-        "the result names the removed stray, got: {}",
-        orphan.result
+    let stray = wh
+        .path()
+        .join("sales")
+        .join("sweep")
+        .join("data")
+        .join("orphan-0.parquet");
+    let result: serde_json::Value =
+        serde_json::from_str(&orphan.result).expect("the orphan step's result is JSON");
+    assert_eq!(
+        result,
+        serde_json::json!([{ "orphan_file_location": format!("file:{}", stray.display()) }]),
+        "the result names the removed stray in its file: form"
     );
     assert!(
-        !wh.path()
-            .join("sales")
-            .join("sweep")
-            .join("data")
-            .join("orphan-0.parquet")
-            .exists(),
+        !stray.exists(),
         "the aged stray is gone from the table location"
     );
     assert_eq!(

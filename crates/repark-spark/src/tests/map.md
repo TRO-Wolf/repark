@@ -1860,6 +1860,9 @@ above.
   **IPI-30 round 3 (2026-09-22):** the planned-frame pin asserts `dry_run => false` on the
   rendered orphan CALL — the `arguments` cell is what apply executes, so the printed
   spelling must not omit it.
+  **R5 (2026-09-24):** `apply_removes_orphan` parses the orphan step's JSON result and asserts
+  it equals `[{"orphan_file_location": "file:<stray>"}]` exactly, so a `file://` or bare
+  spelling goes red.
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016,
   C-017, C-018, C-019
   pins: orphan-s3tables-1/C-003, C-004
