@@ -272,7 +272,8 @@ pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<Reco
     )?)
 }
 
-const SHOW_TBLPROPERTIES_RESERVED: [&str; 3] = ["location", "provider", "format-version"];
+const SHOW_TBLPROPERTIES_RESERVED: [&str; 4] =
+    ["location", "provider", "format-version", "comment"];
 
 pub(crate) async fn execute_show_tblproperties(
     ctx: &SessionContext,
@@ -334,7 +335,7 @@ async fn show_tblproperties_missing_error(
     }
 }
 
-fn show_tblproperties_rows(
+pub(crate) fn show_tblproperties_rows(
     view: &iceberg::view::View,
     key: Option<&str>,
     catalog: &str,

@@ -8,7 +8,7 @@ service, and the wrapper-based read path that expands stored SQL per query.
 
 ## Contents
 
-- `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe`.
+- `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe` / `show_create`.
 - `parse.rs` — grammar only: `CREATE [OR REPLACE] [IF NOT EXISTS] VIEW` with
   alias/COMMENT/TBLPROPERTIES forms and verbatim body capture,
   `is_create_view_statement` (the durable head sniff the router skip uses),
@@ -57,7 +57,9 @@ service, and the wrapper-based read path that expands stored SQL per query.
   the `try_preparse_intercepts` arm after `try_parse_alter_view` that falls
   through on `None`, and `execute_show_tblproperties` /
   `show_tblproperties_batch` (`key`/`value` rows, reserved
-  `location`/`provider`/`format-version` then sorted stored properties, keyed
+  `location`/`provider`/`format-version` then sorted stored properties; the
+  stored `comment` is hidden from the listing and from a keyed lookup, as in
+  Spark (PR5 r2, p5 `vc.props`), keyed
   misses answer Spark's sentence, missing names fail closed with
   `TABLE_OR_VIEW_NOT_FOUND`, tables fall through; viewless catalogs treat
   `FeatureUnsupported` as no view and take the same table/missing split).
@@ -80,10 +82,23 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `describe_view_batch` render the stored schema's columns ONLY —
   `spark_ddl_type_name` spellings, a doc-less column renders `""` (the table
   path renders null), no blank/`# Partitioning`/`# Metadata Columns` trailer,
-  and EXTENDED is the same columns-only answer. SHOW CREATE stays a later PR.
   and EXTENDED is the same columns-only answer; any supplied column refuses
-  with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`. SHOW CREATE /
-  SHOW TBLPROPERTIES / ALTER VIEW stay later PRs.
+  with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`.
+  pins: ice-views-1/C-017
+- `show_create.rs` — **PR5 (2026-09-24, V-SHOW-CREATE):**
+  `execute_show_create_view` is the `Ok(true)` arm of `try_show_create_intercept`
+  (`../show_create.rs`; `AS SERDE` on a view keeps main's fall-through). It
+  loads the view with `load_view`; `ViewNotFound` and `FeatureUnsupported`
+  answer `TABLE_OR_VIEW_NOT_FOUND`, and other load errors propagate through
+  `iceberg_err`. `render_create_view` builds Spark's `CREATE VIEW
+  <catalog>.<ns>.<view> (` column list, adding `COMMENT` for a documented column,
+  then a `COMMENT` line when the view has a `comment` property. Its
+  `TBLPROPERTIES` are `execute.rs`'s `show_tblproperties_rows` (which already
+  hides `comment`), sorted by key, rendered through `render_tblproperties_clause`.
+  The body is the stored SQL from `view_read_spec`, verbatim. A version with no
+  SQL representation refuses with that function's `Plan` error, and an unregistered
+  catalog refuses with `catalog_handle`'s. **r2 (2026-09-24):** the renderer has
+  no property filter of its own. Residues: D-VIEW-SHOWCREATE-1.
   pins: ice-views-1/C-017
 
 ## Pointers

@@ -318,3 +318,62 @@ def test_unclosed_backtick_name_falls_through_to_the_tokenizer_refusal(
     assert type(caught.value) is ParseException
     assert caught.value.getCondition() == NO_CONDITION
     assert caught.value.getSqlState() == NO_CONDITION
+
+
+COMMENTED_VIEW_DDL = (
+    "CREATE VIEW sc.ns.vc (i COMMENT 'the id', d) COMMENT 'view doc' "
+    "TBLPROPERTIES ('k'='v') AS SELECT id, data FROM sc.ns.t"
+)
+
+
+def test_commented_view_listing_hides_comment(spark: ReparkSession, tmp_path: Path) -> None:
+    """p5 vc.props — a commented view lists no ``comment`` row, in Spark's measured order."""
+    spark.sql(COMMENTED_VIEW_DDL)
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.vc")) == [
+        ["location", str(tmp_path / "ns" / "vc")],
+        ["provider", "iceberg"],
+        ["format-version", "1"],
+        ["k", "v"],
+    ]
+
+
+def test_commented_view_key_lookups(spark: ReparkSession) -> None:
+    """p5 vc.props.comment/k/nope — ``comment`` is a miss; stored and absent keys as measured."""
+    spark.sql(COMMENTED_VIEW_DDL)
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.vc ('comment')")) == [
+        ["comment", "View sc.ns.vc does not have property: comment"]
+    ]
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.vc ('k')")) == [["k", "v"]]
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.vc ('nope')")) == [
+        ["nope", "View sc.ns.vc does not have property: nope"]
+    ]
+
+
+def test_comment_set_through_alter_view_stays_hidden(spark: ReparkSession, tmp_path: Path) -> None:
+    """p5 vc.after_set.props(.comment) — SET ('comment'='x') is accepted and stays hidden."""
+    spark.sql(COMMENTED_VIEW_DDL)
+    spark.sql("ALTER VIEW sc.ns.vc SET TBLPROPERTIES ('comment'='x')")
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.vc")) == [
+        ["location", str(tmp_path / "ns" / "vc")],
+        ["provider", "iceberg"],
+        ["format-version", "1"],
+        ["k", "v"],
+    ]
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.vc ('comment')")) == [
+        ["comment", "View sc.ns.vc does not have property: comment"]
+    ]
+
+
+def test_commented_view_describe_matches_spark(spark: ReparkSession) -> None:
+    """p2 C.v2.describe — the commented view's DESCRIBE rows, with Arrow schema."""
+    spark.sql(COMMENTED_VIEW_DDL)
+    table = spark.sql("DESCRIBE sc.ns.vc").to_arrow()
+    assert [(field.name, field.type, field.nullable) for field in table.schema] == [
+        ("col_name", pa.string(), False),
+        ("data_type", pa.string(), False),
+        ("comment", pa.string(), True),
+    ]
+    assert [list(row.values()) for row in table.to_pylist()] == [
+        ["i", "bigint", "the id"],
+        ["d", "string", ""],
+    ]

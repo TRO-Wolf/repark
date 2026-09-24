@@ -231,7 +231,10 @@ pub(crate) async fn try_show_create_intercept(
         .is_view(&statement.catalog, &statement.ident())
         .await
     {
-        Ok(true) => None,
+        Ok(true) if statement.as_serde => None,
+        Ok(true) => Some(
+            crate::view_ddl::show_create::execute_show_create_view(ctx, catalogs, &statement).await,
+        ),
         Ok(false) => Some(execute_show_create(ctx, catalogs, statement).await),
         Err(error) => Some(Err(error)),
     }
@@ -271,7 +274,7 @@ pub(crate) async fn execute_show_create(
     ctx.read_batch(show_create_batch(text)?)
 }
 
-fn show_create_batch(text: String) -> Result<RecordBatch> {
+pub(crate) fn show_create_batch(text: String) -> Result<RecordBatch> {
     let schema = Arc::new(Schema::new(vec![Field::new(
         "createtab_stmt",
         DataType::Utf8,

@@ -365,3 +365,54 @@ async fn router_preserves_show_parse_error_and_table_fallthrough() {
     assert_eq!(keys.value(0), "provider");
     assert_eq!(values.value(0), "iceberg");
 }
+
+#[tokio::test]
+async fn commented_view_hides_comment_in_listing_and_key_lookup() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE VIEW ice.sales.vc (i COMMENT 'the id') COMMENT 'view doc' \
+         TBLPROPERTIES ('k'='v') AS SELECT id FROM src",
+    )
+    .await;
+    let location = catalogs["ice"]
+        .load_view(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "vc".to_string(),
+        ))
+        .await
+        .expect("load view")
+        .metadata()
+        .location()
+        .to_string();
+    let frame = execute_show_tblproperties(&ctx, &catalogs, statement("ice", "vc"))
+        .await
+        .expect("view must be handled")
+        .expect("view must answer");
+    assert_eq!(
+        show_rows(frame).await,
+        vec![
+            ("location".to_string(), location),
+            ("provider".to_string(), "iceberg".to_string()),
+            ("format-version".to_string(), "1".to_string()),
+            ("k".to_string(), "v".to_string()),
+        ]
+    );
+    let keyed = ShowTblpropertiesStatement {
+        name: vec!["ice".to_string(), "sales".to_string(), "vc".to_string()],
+        key: Some("comment".to_string()),
+    };
+    let frame = execute_show_tblproperties(&ctx, &catalogs, keyed)
+        .await
+        .expect("keyed view must be handled")
+        .expect("keyed view must answer");
+    assert_eq!(
+        show_rows(frame).await,
+        vec![(
+            "comment".to_string(),
+            "View ice.sales.vc does not have property: comment".to_string()
+        )]
+    );
+}

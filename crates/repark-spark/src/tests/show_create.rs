@@ -648,7 +648,7 @@ async fn show_create_four_part_name_refuses_as_a_missing_table() {
 }
 
 #[tokio::test]
-async fn show_create_table_view_keeps_its_current_analysis_refusal() {
+async fn show_create_table_on_a_view_answers_the_view_text() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -663,10 +663,23 @@ async fn show_create_table_view_keeps_its_current_analysis_refusal() {
         "CREATE VIEW ice.sales.v AS SELECT id FROM ice.sales.t",
     )
     .await;
-    let sql = "SHOW CREATE TABLE ice.sales.v";
+    let location = catalogs["ice"]
+        .load_view(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "v".to_string(),
+        ))
+        .await
+        .unwrap()
+        .metadata()
+        .location()
+        .to_string();
     assert_eq!(
-        plan_error_message(&execution_error(&ctx, &catalogs, sql).await, sql),
-        "SHOW CREATE TABLE is not supported unless information_schema is enabled"
+        show_create(&ctx, &catalogs, "ice.sales.v").await,
+        format!(
+            "CREATE VIEW ice.sales.v (\n  id)\nTBLPROPERTIES (\n  'format-version' = '1',\n  \
+             'location' = '{location}',\n  'provider' = 'iceberg')\nAS\n\
+             SELECT id FROM ice.sales.t\n"
+        )
     );
 }
 
