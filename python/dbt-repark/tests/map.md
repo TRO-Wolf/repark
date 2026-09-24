@@ -53,8 +53,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   `SELECT`, and `SHOW TABLES IN gold` answers the dbt glob shape); `R-RENAME-TWO-PART`
   keeps refusing, against a missing namespace — a missing object refuses, never the name's
   shape (DBT-QUALIFY-1 FIXED).
-  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served and pins one
-  complete four-column row, including the full information text; `R-SHOW-TBLPROPERTIES` stays
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served, and
+  `test_show_table_extended_answers_spark_shape` compares every column name and value of the one
+  four-column row (`to_pylist()`), including the full information text; `R-SHOW-TBLPROPERTIES` stays
   refused. **WO-A18 (2026-09-24):** `test_show_tblproperties_table_refusal_is_exact` pins that
   refusal as `AnalysisException`, condition `None`, SQLSTATE `None` and the full
   `Error during planning: SHOW [VARIABLE] ...` text.

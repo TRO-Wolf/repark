@@ -11,7 +11,7 @@
 - Record the exact current refusal and near-miss paths for the SHOW TABLE EXTENDED parser.
 - Preserve lexer errors for the exact statement head and render their Spark parse-class text.
 - Resolve a PARTITION pattern as one literal table name before the partition-management refusal.
-- Strengthen Rust, facade, and dbt pins to assert one typed, full outcome per probe.
+- Strengthen Rust and facade refusal pins to assert one typed, full outcome per probe; the dbt pins compare the row's names and values and the exact `R-SHOW-TBLPROPERTIES` refusal.
 - Run the requested Rust, Python, structural, and comment-ban gates before departure.
 
 ## Risk ledger
