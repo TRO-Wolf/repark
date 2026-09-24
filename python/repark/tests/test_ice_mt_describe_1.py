@@ -262,18 +262,22 @@ def test_quoted_dollar_missing_base_names_written_name(spark: Any) -> None:
     _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
-def test_unknown_suffix_keeps_compound_identifier_error(spark: Any) -> None:
-    """An unknown ``$`` suffix keeps today's compound-identifier plan error.
+def test_unknown_suffix_is_not_found_naming_full_name(spark: Any) -> None:
+    """An unknown suffix raises TABLE_OR_VIEW_NOT_FOUND naming the full four-part name.
 
     pins: ipi-23-mt-describe-1/C-008
     """
     expected = (
-        "Error during planning: Unsupported compound identifier "
-        f"'`{CATALOG}`.`{NAMESPACE}`.`{TABLE}`.`nope`'. Expected 1, 2 or 3 parts, got 4"
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{NAMESPACE}`.`{TABLE}`.`nope` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.{TABLE}.nope")
-    _assert_full_refusal(excinfo, expected, None, None)
+    _assert_full_refusal(excinfo, expected, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
 
 
 def test_explicit_three_part_with_real_namespace_falls_through(spark: Any) -> None:
@@ -427,12 +431,16 @@ def test_four_part_extended_formatted_matrix(spark: Any) -> None:
         spark.sql(f"DESCRIBE TABLE FORMATTED {CATALOG}.{NAMESPACE}.missing.snapshots")
     _assert_full_refusal(excinfo, missing, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
     unknown = (
-        "Error during planning: Unsupported compound identifier "
-        f"'`{CATALOG}`.`{NAMESPACE}`.`{TABLE}`.`nope`'. Expected 1, 2 or 3 parts, got 4"
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view "
+        f"`{CATALOG}`.`{NAMESPACE}`.`{TABLE}`.`nope` cannot be found. Verify the spelling and "
+        "correctness of the schema and catalog. If you did not qualify the name with a "
+        "schema, verify the current_schema() output, or qualify the name with the correct "
+        "schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP "
+        "TABLE IF EXISTS. SQLSTATE: 42P01"
     )
     with pytest.raises(AnalysisException) as excinfo:
         spark.sql(f"DESCRIBE EXTENDED {CATALOG}.{NAMESPACE}.{TABLE}.nope")
-    _assert_full_refusal(excinfo, unknown, None, None)
+    _assert_full_refusal(excinfo, unknown, "TABLE_OR_VIEW_NOT_FOUND", "42P01")
     upper = f"{CATALOG}.{NAMESPACE}.{TABLE}.SNAPSHOTS"
     assert _rows(spark, f"DESCRIBE EXTENDED {upper}") == SNAPSHOT_ROWS
     absent_ns = (

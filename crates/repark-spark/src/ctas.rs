@@ -128,6 +128,7 @@ pub(crate) fn build_ctas(
             }
         }
     }
+    crate::create_table::refuse_reserved_owner_property(&properties)?;
     // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
     if let Some(comment) = clauses.comment.clone() {
@@ -230,13 +231,15 @@ pub(crate) async fn execute_ctas(
     }
     let (staged, replace_base) = if let CtasMode::StagedCreate(plan) = mode {
         // Create: location + FileIO were resolved above the SELECT (ADV-3).
+        let mut properties = catalogs.table_creation_properties(&ctas.catalog, &ctas.properties);
+        crate::create_table::stamp_owner(ctx, &mut properties);
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
             .location(plan.location)
             .schema(iceberg_schema)
             .partition_spec_opt(partition_spec)
             .format_version(format_version)
-            .properties(catalogs.table_creation_properties(&ctas.catalog, &ctas.properties))
+            .properties(properties)
             .build();
         let staged =
             StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
@@ -257,6 +260,7 @@ pub(crate) async fn execute_ctas(
             ctas.format_version.as_deref(),
             format_version,
         );
+        crate::create_table::stamp_owner(ctx, &mut properties);
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
             .schema(iceberg_schema)
@@ -594,12 +598,14 @@ pub(crate) async fn execute_ctas_service_managed(
     options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
     // Location deliberately not set: the service assigns it.
+    let mut properties = catalogs.table_creation_properties(&ctas.catalog, &ctas.properties);
+    crate::create_table::stamp_owner(ctx, &mut properties);
     let creation = TableCreation::builder()
         .name(ctas.table.clone())
         .schema(iceberg_schema)
         .partition_spec_opt(partition_spec)
         .format_version(format_version)
-        .properties(catalogs.table_creation_properties(&ctas.catalog, &ctas.properties))
+        .properties(properties)
         .build();
     let table = catalog
         .create_table(&ctas.namespace, creation)

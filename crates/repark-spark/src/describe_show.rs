@@ -11,16 +11,14 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, Tokenizer, Word};
-use iceberg::spec::{
-    PartitionField, Schema as IcebergSchema, TableMetadata, Transform, Type as IcebergType,
-};
+use iceberg::spec::{Schema as IcebergSchema, TableMetadata, Type as IcebergType};
 use iceberg::table::Table;
 use iceberg::{ErrorKind, NamespaceIdent, TableIdent};
 use regex::RegexBuilder;
 
 use crate::catalog_ops::{
     catalog_handle, iceberg_err, name_parts, partition_management_unsupported,
-    quoted_table_display, resolve_namespace,
+    quoted_table_display, resolve_namespace, table_or_view_not_found_parts,
 };
 use crate::namespace_ddl::consume_word;
 use crate::spark_type_names::spark_ddl_type_name;
@@ -210,6 +208,8 @@ pub(crate) struct DescribeTable {
     pub(crate) table: String,
     pub(crate) extended: bool,
     pub(crate) written_parts: Vec<String>,
+    pub(crate) column: Option<Vec<String>>,
+    pub(crate) partition: bool,
 }
 
 impl DescribeTable {
@@ -228,26 +228,60 @@ impl DescribeTable {
 
 pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable>> {
     let dialect = DatabricksDialect {};
-    let tokens = Tokenizer::new(&dialect, sql).tokenize().ok()?;
+    let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
+        return crate::describe_column::describe_tokenizer_error(sql);
+    };
     let mut parser = Parser::new(&dialect).with_tokens(tokens);
     if !parser.parse_keyword(Keyword::DESCRIBE) && !parser.parse_keyword(Keyword::DESC) {
         return None;
     }
-    if matches!(&parser.peek_token().token, Token::Word(word) if is_namespace_head(word)) {
+    if matches!(&parser.peek_token().token, Token::Word(word) if is_non_table_describe_head(word)) {
+        return None;
+    }
+    if try_parse_describe_as_json(sql).is_some() {
         return None;
     }
     let _ = parser.parse_keyword(Keyword::TABLE);
     let extended =
         parser.parse_keyword(Keyword::EXTENDED) || consume_word(&mut parser, "FORMATTED");
-    let name = parser.parse_object_name(false).ok()?;
-    if !matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
+    if extended && matches!(parser.peek_token().token, Token::EOF | Token::SemiColon) {
         return None;
     }
+    let token = parser.peek_token().token.clone();
+    let Ok(name) = parser.parse_object_name(false) else {
+        return Some(Err(
+            crate::describe_column::describe_table_name_parse_error(&token, sql),
+        ));
+    };
+    if !name.0.iter().all(|part| {
+        part.as_ident()
+            .is_some_and(|ident| ident.quote_style.is_none_or(|quote| quote == '`'))
+    }) {
+        return Some(Err(
+            crate::describe_column::describe_table_name_token_parse_error(&token),
+        ));
+    }
+    let partition =
+        name.0.len() <= 3 && crate::describe_column::consume_partition_only_tail(&mut parser);
+    let column = match crate::describe_column::parse_describe_column_tail(&mut parser, sql) {
+        Ok(column) => column,
+        Err(error) => return Some(Err(error)),
+    };
     let parts = name_parts(&name);
     let (catalog, namespace, table) = match parts.as_slice() {
         [catalog, namespace, table] => (catalog.clone(), namespace.clone(), table.clone()),
         [namespace, table] => (String::new(), namespace.clone(), table.clone()),
         [table] => (String::new(), String::new(), table.clone()),
+        [_, _, _, suffix]
+            if column.is_none()
+                && crate::metadata_tables::canonical_metadata_table_name(suffix).is_some() =>
+        {
+            return None;
+        }
+        [_, _, _, _] => {
+            let written: Vec<&str> = parts.iter().map(String::as_str).collect();
+            return Some(Err(table_or_view_not_found_parts(&written)));
+        }
         _ => return None,
     };
     Some(Ok(DescribeTable {
@@ -256,6 +290,8 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         table,
         extended,
         written_parts: Vec::new(),
+        column,
+        partition,
     }))
 }
 
@@ -263,6 +299,12 @@ fn is_namespace_head(word: &Word) -> bool {
     word.value.eq_ignore_ascii_case("namespace")
         || word.value.eq_ignore_ascii_case("database")
         || word.value.eq_ignore_ascii_case("schema")
+}
+
+fn is_non_table_describe_head(word: &Word) -> bool {
+    is_namespace_head(word)
+        || word.value.eq_ignore_ascii_case("function")
+        || word.value.eq_ignore_ascii_case("query")
 }
 
 pub(crate) async fn execute_describe_table(
@@ -300,16 +342,17 @@ pub(crate) async fn execute_describe_table(
         }
         Err(error) => return Err(iceberg_err(error)),
     };
-    let owner = describe_table_owner(ctx);
-    ctx.read_batch(describe_table_batch(&describe, &table, &owner)?)
+    if describe.partition {
+        return Err(crate::describe_column::describe_partition_unsupported_error());
+    }
+    if describe.column.is_some() {
+        return crate::describe_column::execute_describe_column(ctx, &describe, &table);
+    }
+    ctx.read_batch(describe_table_batch(&describe, &table)?)
 }
 
-pub(crate) fn describe_table_batch(
-    describe: &DescribeTable,
-    table: &Table,
-    owner: &str,
-) -> Result<RecordBatch> {
-    let rows = describe_table_rows(describe, table, owner)?;
+pub(crate) fn describe_table_batch(describe: &DescribeTable, table: &Table) -> Result<RecordBatch> {
+    let rows = describe_table_rows(describe, table)?;
     let mut names = Vec::with_capacity(rows.len());
     let mut types = Vec::with_capacity(rows.len());
     let mut comments = Vec::with_capacity(rows.len());
@@ -336,7 +379,6 @@ pub(crate) fn describe_table_batch(
 fn describe_table_rows(
     describe: &DescribeTable,
     table: &Table,
-    owner: &str,
 ) -> Result<Vec<(String, String, Option<String>)>> {
     let metadata = table.metadata();
     let iceberg_schema = metadata.current_schema();
@@ -356,17 +398,10 @@ fn describe_table_rows(
         ));
     }
     let spec = metadata.default_partition_spec();
-    if !spec.fields().is_empty() {
-        rows.push(blank_describe_row());
-        rows.push(section_describe_row("# Partitioning"));
-        for (index, field) in spec.fields().iter().enumerate() {
-            rows.push((
-                format!("Part {index}"),
-                describe_partition_field(iceberg_schema, field)?,
-                Some(String::new()),
-            ));
-        }
-    }
+    rows.extend(crate::describe_column::describe_partition_section(
+        iceberg_schema,
+        spec,
+    )?);
     if describe.extended {
         rows.push(blank_describe_row());
         rows.push(section_describe_row("# Metadata Columns"));
@@ -394,7 +429,9 @@ fn describe_table_rows(
         }
         rows.push(plain_describe_row("Location", metadata.location()));
         rows.push(plain_describe_row("Provider", "iceberg"));
-        rows.push(plain_describe_row("Owner", owner));
+        if let Some(owner) = metadata.properties().get("owner") {
+            rows.push(plain_describe_row("Owner", owner));
+        }
         rows.push(plain_describe_row(
             "Table Properties",
             &render_table_properties(metadata),
@@ -420,29 +457,6 @@ fn plain_describe_row(name: &str, value: &str) -> (String, String, Option<String
     (name.to_string(), value.to_string(), Some(String::new()))
 }
 
-pub(crate) fn describe_partition_field(
-    schema: &IcebergSchema,
-    field: &PartitionField,
-) -> Result<String> {
-    let source = schema.field_by_id(field.source_id).ok_or_else(|| {
-        DataFusionError::Plan(format!(
-            "partition field `{}` refers to unknown source id {}",
-            field.name, field.source_id
-        ))
-    })?;
-    Ok(match &field.transform {
-        Transform::Identity => source.name.clone(),
-        Transform::Year => format!("years({})", source.name),
-        Transform::Month => format!("months({})", source.name),
-        Transform::Day => format!("days({})", source.name),
-        Transform::Hour => format!("hours({})", source.name),
-        Transform::Bucket(width) => format!("bucket({width}, {})", source.name),
-        Transform::Truncate(width) => format!("truncate({width}, {})", source.name),
-        Transform::Void => format!("void({})", source.name),
-        Transform::Unknown => format!("unknown({})", source.name),
-    })
-}
-
 fn describe_partition_struct_type(
     schema: &IcebergSchema,
     spec: &Arc<iceberg::spec::PartitionSpec>,
@@ -453,7 +467,7 @@ fn describe_partition_struct_type(
     Ok(spark_ddl_type_name(&arrow_type))
 }
 
-fn describe_table_owner(ctx: &SessionContext) -> String {
+pub(crate) fn describe_table_owner(ctx: &SessionContext) -> String {
     ctx.copied_config()
         .options()
         .extensions

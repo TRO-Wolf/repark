@@ -83,6 +83,9 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     {
         return Err(error);
     }
+    if let Some(Err(error)) = describe_show::try_parse_describe_table(sql) {
+        return Err(error);
+    }
     // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let verbatim =
@@ -108,7 +111,7 @@ async fn execute_calibrated(
     }
     // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
     let sql_after_meta: std::borrow::Cow<'_, str> =
-        if metadata_tables::sql_may_have_metadata_table_path(canonical_sql) {
+        if crate::describe_show::metadata_table::rewrites_metadata_path(canonical_sql) {
             match metadata_tables::prepare_metadata_table_sql(catalogs, canonical_sql).await? {
                 Some(rewritten) => std::borrow::Cow::Owned(rewritten),
                 None => std::borrow::Cow::Borrowed(canonical_sql),

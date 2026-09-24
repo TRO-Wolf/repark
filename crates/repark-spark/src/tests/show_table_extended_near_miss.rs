@@ -112,6 +112,7 @@ async fn show_table_extended_near_misses_keep_their_existing_paths() {
 async fn show_table_extended_skips_leading_and_inter_keyword_comments() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     run(
         &ctx,
         &catalogs,
@@ -130,7 +131,7 @@ async fn show_table_extended_skips_leading_and_inter_keyword_comments() {
         "pc",
         &location,
         &properties,
-        None,
+        Some(&owner),
         "root\n |-- id: long (nullable = true)\n",
     )];
     let (columns, rows) = outcome(
@@ -183,6 +184,7 @@ async fn show_table_extended_refuses_unclosed_quotes_after_comments() {
 async fn show_table_extended_near_miss_probes_keep_their_exact_outcomes() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let owner = repark_core::session_owner_snapshot();
     run(
         &ctx,
         &catalogs,
@@ -202,7 +204,7 @@ async fn show_table_extended_near_miss_probes_keep_their_exact_outcomes() {
             "pc",
             &location,
             &properties,
-            None,
+            Some(&owner),
             "root\n |-- id: long (nullable = true)\n",
         )],
     );
@@ -344,13 +346,14 @@ async fn seed_pc(ctx: &SessionContext, catalogs: &CatalogRegistry) -> (Schema, V
         ("write.parquet.compression-codec", "zstd"),
     ]);
     let location = table_location(catalogs, "pc").await;
+    let owner = repark_core::session_owner_snapshot();
     (
         extended_schema(),
         vec![managed_row(
             "pc",
             &location,
             &properties,
-            None,
+            Some(&owner),
             "root\n |-- id: long (nullable = true)\n",
         )],
     )

@@ -435,11 +435,9 @@ class ReparkSession:
     def _try_expand_describe_sql(self, query: str) -> str | None:
         """Rewrite ``DESCRIBE [TABLE] [EXTENDED|FORMATTED] name`` target to qualified form.
 
-        Returns ``None`` when not a DESCRIBE-table shape (a namespace-head first
-        segment stays on the namespace door unless a temp view owns the bare name;
-        ``FUNCTION`` / ``QUERY`` tails never parse as a lone name). A one-part temp
-        view resolves to its HOME, like SELECT FROM refs; other names qualify under
-        the session default catalog + namespace.
+        Returns ``None`` for non-table DESCRIBE forms. A one-part temp view resolves to HOME.
+        Other names use session defaults.
+        A single column tail remains verbatim.
         """
         prefix_match = _DESCRIBE_TABLE_PREFIX_RE.match(query)
         if prefix_match is None:
@@ -453,7 +451,7 @@ class ReparkSession:
             return None
         raw_table = query[name_start:name_end]
         rest = query[name_end:]
-        if rest.strip().rstrip(";").strip():
+        if rest.strip().strip(";") and not re.fullmatch(r"\s+(`[^`]+`|[A-Za-z_]\w*)\s*;?\s*", rest):
             return None
         head = raw_table.split(".", 1)[0].strip()
         if head.upper() in {"NAMESPACE", "DATABASE", "SCHEMA"} and (

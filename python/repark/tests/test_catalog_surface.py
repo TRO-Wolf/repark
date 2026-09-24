@@ -26,6 +26,7 @@ Iceberg.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,10 @@ import pytest
 from repark import ReparkSession
 from repark.errors import AnalysisException, ParseException, PySparkTypeError
 from repark.spark.catalog import Catalog, CatalogMetadata, Database, Table
+
+
+def _session_owner() -> str:
+    return os.environ["USER"] if "USER" in os.environ else os.environ.get("USERNAME", "unknown")
 
 
 @pytest.fixture
@@ -43,6 +48,32 @@ def spark(tmp_path: Path) -> ReparkSession:
     session.sql("CREATE TABLE glue_catalog.ns1.entity (id BIGINT, name STRING) USING iceberg")
     session.sql("CREATE NAMESPACE glue_catalog.ns2")
     return session
+
+
+@pytest.mark.parametrize(
+    "ddl,table,expected",
+    [
+        (
+            "(id BIGINT, cat STRING COMMENT 'the cat', x INT) USING iceberg "
+            "PARTITIONED BY (cat, id)",
+            "ic",
+            [("id", True), ("cat", True), ("x", False)],
+        ),
+        (
+            "(id BIGINT, `we ird` STRING) USING iceberg PARTITIONED BY (`we ird`)",
+            "`we ird t`",
+            [("id", False), ("we ird", True)],
+        ),
+    ],
+    ids=["two_identity", "spaced_identity"],
+)
+def test_list_columns_flags_every_identity_partition_source(
+    spark: ReparkSession, ddl: str, table: str, expected: list[tuple[str, bool]]
+) -> None:
+    """Every identity-partition source column reads back isPartition like Spark 4.1.2."""
+    spark.sql(f"CREATE TABLE glue_catalog.ns1.{table} {ddl}")
+    columns = spark.catalog.listColumns(f"glue_catalog.ns1.{table}")
+    assert [(column.name, column.isPartition) for column in columns] == expected
 
 
 # Methods already on the facade: tableExists / dropTempView / clearCache
@@ -458,6 +489,7 @@ def test_show_table_extended_returns_spark_metadata_shape(
         "Type: MANAGED\n"
         f"Location: {tmp_path / 'ns1' / 'entity'}\n"
         "Provider: iceberg\n"
+        f"Owner: {_session_owner()}\n"
         "Table Properties: [[, c, u, r, r, e, n, t, -, s, n, a, p, s, h, o, t, -, i, d, "
         "=, n, o, n, e, ,, f, o, r, m, a, t, =, i, c, e, b, e, r, g, /, p, a, r, q, u, e, "
         "t, ,, f, o, r, m, a, t, -, v, e, r, s, i, o, n, =, 2, ,, w, r, i, t, e, ., p, a, "

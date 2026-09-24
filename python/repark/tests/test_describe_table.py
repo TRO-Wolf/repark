@@ -10,7 +10,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, ParseException
 
 LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
 LIVE_SKIP = "REPARK_PARITY_LIVE != 1 — the live describe oracle is skipped (CI is JVM-free)"
@@ -59,9 +59,60 @@ def spark(tmp_path: Path) -> ReparkSession:
 
 
 def _rows(spark: ReparkSession, sql: str) -> list[tuple[str, str, str | None]]:
+    """Return the Arrow rows for one DESCRIBE statement."""
     table = spark.sql(sql).to_arrow()
     columns = [table.column(name).to_pylist() for name in table.schema.names]
     return list(zip(*columns, strict=True))
+
+
+TABLE_SCHEMA: list[tuple[str, bool]] = [
+    ("col_name", False),
+    ("data_type", False),
+    ("comment", True),
+]
+COLUMN_SCHEMA: list[tuple[str, bool]] = [("info_name", False), ("info_value", False)]
+ERROR_TABLE_ROWS: list[tuple[str, str, str | None]] = [
+    ("id", "bigint", None),
+    ("s", "struct<a:int>", None),
+    ("we ird", "string", None),
+]
+
+
+def _answer(
+    spark: ReparkSession, sql: str, schema: list[tuple[str, bool]]
+) -> list[tuple[str | None, ...]]:
+    """Return one DESCRIBE answer's rows after asserting its full Arrow schema."""
+    table = spark.sql(sql).to_arrow()
+    assert [(field.name, field.type, field.nullable) for field in table.schema] == [
+        (name, pa.string(), nullable) for name, nullable in schema
+    ]
+    columns = [table.column(name).to_pylist() for name in table.schema.names]
+    return list(zip(*columns, strict=True))
+
+
+def _create_describe_error_table(spark: ReparkSession) -> str:
+    """Create the measured DESCRIBE error fixture table."""
+    table = "describe_errors"
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.{table} "
+        "(id BIGINT, s STRUCT<a: INT>, `we ird` STRING) USING iceberg"
+    )
+    return table
+
+
+def _assert_describe_parse_error(
+    spark: ReparkSession,
+    sql: str,
+    condition: str,
+    sqlstate: str,
+    message: str,
+) -> None:
+    """Assert one Spark-shaped DESCRIBE parse error."""
+    with pytest.raises(ParseException) as raised:
+        spark.sql(sql)
+    assert raised.value.getCondition() == condition
+    assert raised.value.getSqlState() == sqlstate
+    assert str(raised.value) == message
 
 
 def test_describe_table_plain_matches_spark_rows(spark: ReparkSession) -> None:
@@ -76,6 +127,288 @@ def test_describe_table_plain_matches_spark_rows(spark: ReparkSession) -> None:
     )
     assert _rows(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.{TABLE}") == PLAIN_ROWS
     assert _rows(spark, f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE}") == PLAIN_ROWS
+
+
+def test_describe_identity_partition_uses_spark_partition_information(
+    spark: ReparkSession,
+) -> None:
+    identity_table = "identity_partition"
+    spark.sql(
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.{identity_table} (id BIGINT, data STRING) "
+        "USING iceberg PARTITIONED BY (data)"
+    )
+    expected = [
+        ("id", "bigint", None),
+        ("data", "string", None),
+        ("# Partition Information", "", ""),
+        ("# col_name", "data_type", "comment"),
+        ("data", "string", None),
+    ]
+    plain = _answer(spark, f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{identity_table}", TABLE_SCHEMA)
+    extended = _answer(
+        spark, f"DESCRIBE TABLE EXTENDED {CATALOG}.{NAMESPACE}.{identity_table}", TABLE_SCHEMA
+    )
+    assert plain == expected
+    assert extended[: len(expected)] == expected
+
+
+def test_describe_table_column_matches_spark_rows(spark: ReparkSession) -> None:
+    """DESCRIBE TABLE column returns Spark's non-null info-name/value rows."""
+    table = spark.sql(f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE} id").to_arrow()
+    assert table.schema.names == ["info_name", "info_value"]
+    assert [field.type for field in table.schema] == [pa.string()] * 2
+    assert [field.nullable for field in table.schema] == [False, False]
+    assert _rows(spark, f"DESCRIBE TABLE {CATALOG}.{NAMESPACE}.{TABLE} id") == [
+        ("col_name", "id"),
+        ("data_type", "bigint"),
+        ("comment", "the row identifier"),
+    ]
+
+
+def test_describe_table_column_number_is_parse_exception(spark: ReparkSession) -> None:
+    """A numeric column tail keeps Spark's parse error class and text."""
+    table = _create_describe_error_table(spark)
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} 1",
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near '1': extra input '1'. SQLSTATE: 42601",
+    )
+
+
+def test_describe_table_column_trailing_word_is_parse_exception(spark: ReparkSession) -> None:
+    """A trailing column word keeps Spark's parse error class and text."""
+    table = _create_describe_error_table(spark)
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} id extra",
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near 'extra': extra input 'extra'. "
+        "SQLSTATE: 42601",
+    )
+
+
+def test_describe_table_column_unclosed_quote_is_parse_exception(spark: ReparkSession) -> None:
+    """An unclosed column quote keeps Spark's lexer parse error class and text."""
+    table = _create_describe_error_table(spark)
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} 'id",
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601",
+    )
+
+
+@pytest.mark.parametrize(
+    "_case_id,sql,near",
+    [
+        ("d_blk_lead_unclosed_quote", "/* c */ DESCRIBE sc.sales.pc 'x", "'"),
+        ("d_line_lead_unclosed_quote", "-- c\nDESCRIBE sc.sales.pc 'x", "'"),
+        ("d_blk_mid_unclosed_quote", "DESCRIBE /* c */ sc.sales.pc 'x", "'"),
+        ("d_plain_unclosed_quote", "DESCRIBE sc.sales.pc 'x", "'"),
+        ("d_blk_apos_unclosed_quote", "DESCRIBE sc.sales.pc /* it's */ 'x", "'"),
+        ("d_blk_apos_lead_unclosed_quote", "/* it's */ DESCRIBE sc.sales.pc 'x", "'"),
+        ("d_line_apos_unclosed_bt", "DESCRIBE sc.sales.pc -- it's\n`x", "`"),
+        ("d_blk_lead_unclosed_dquote", '/* c */ DESC sc.sales.pc "x', '"'),
+    ],
+    ids=lambda value: value,
+)
+def test_describe_comment_prefix_unclosed_quotes_keep_parse_messages(
+    spark: ReparkSession, _case_id: str, sql: str, near: str
+) -> None:
+    """Comment markers do not hide an unclosed DESCRIBE table quote."""
+    _assert_describe_parse_error(
+        spark,
+        sql,
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        f"[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601",
+    )
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "/* c */ DESCRIBE mem.dsns1.t1",
+        "-- c\nDESCRIBE mem.dsns1.t1",
+        "DESCRIBE /* c */ mem.dsns1.t1",
+        "/* ' */ DESCRIBE mem.dsns1.t1",
+    ],
+    ids=["d_blk_lead_ok", "d_line_lead_ok", "d_blk_mid_ok", "d_blk_quote_in_comment_only"],
+)
+def test_describe_comments_keep_valid_table_answers(spark: ReparkSession, sql: str) -> None:
+    """Comment prefixes and quote-only comments keep valid table rows."""
+    assert _answer(spark, sql, TABLE_SCHEMA) == PLAIN_ROWS
+
+
+def test_describe_unclosed_comment_answers_unclosed_bracketed_comment(
+    spark: ReparkSession,
+) -> None:
+    """An unclosed block comment answers Spark's UNCLOSED_BRACKETED_COMMENT refusal."""
+    _assert_describe_parse_error(
+        spark,
+        f"/* c DESCRIBE {CATALOG}.{NAMESPACE}.{TABLE} 'x",
+        "UNCLOSED_BRACKETED_COMMENT",
+        "42601",
+        "[UNCLOSED_BRACKETED_COMMENT] Found an unclosed bracketed comment. Please, append */ "
+        "at the end of the comment. SQLSTATE: 42601",
+    )
+
+
+def test_create_reserved_owner_property_is_parse_exception(spark: ReparkSession) -> None:
+    """A user ``owner`` table property refuses with Spark's parser-altitude refusal."""
+    _assert_describe_parse_error(
+        spark,
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.owner_refused (id BIGINT) USING iceberg "
+        "TBLPROPERTIES ('owner'='alice')",
+        "UNSUPPORTED_FEATURE.SET_TABLE_PROPERTY",
+        "0A000",
+        "[UNSUPPORTED_FEATURE.SET_TABLE_PROPERTY] The feature is not supported: owner is a "
+        "reserved table property, it will be set to the current user. SQLSTATE: 0A000",
+    )
+
+
+def test_describe_table_partition_without_column_is_v2_refusal(spark: ReparkSession) -> None:
+    """A partition spec with no column answers Spark's v2 DESCRIBE partition refusal text."""
+    table = _create_describe_error_table(spark)
+    with pytest.raises(AnalysisException) as raised:
+        spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} PARTITION (id=1)")
+    assert str(raised.value) == (
+        "Error during planning: [_LEGACY_ERROR_TEMP_1111] DESCRIBE does not support partition "
+        "for v2 tables."
+    )
+    assert raised.value.getSqlState() is None
+
+
+def test_describe_table_doubled_backtick_column_is_re_escaped(spark: ReparkSession) -> None:
+    """An unresolved column with a doubled backtick names it re-escaped in Spark's order."""
+    table = _create_describe_error_table(spark)
+    with pytest.raises(AnalysisException) as raised:
+        spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} `a``b`")
+    assert raised.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+    assert raised.value.getSqlState() == "42703"
+    assert str(raised.value) == (
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or "
+        "function parameter with name `a``b` cannot be resolved. Did you mean one of the "
+        "following? [`id`, `s`, `we ird`]. SQLSTATE: 42703"
+    )
+
+
+def test_describe_table_column_partition_is_parse_exception(spark: ReparkSession) -> None:
+    """A partition column clause keeps Spark's unsupported parse error."""
+    table = _create_describe_error_table(spark)
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} PARTITION (id=1) id",
+        "UNSUPPORTED_FEATURE.DESC_TABLE_COLUMN_PARTITION",
+        "0A000",
+        "[UNSUPPORTED_FEATURE.DESC_TABLE_COLUMN_PARTITION] The feature is not supported: "
+        "DESC TABLE COLUMN for a specific partition. SQLSTATE: 0A000",
+    )
+
+
+def test_describe_table_unclosed_table_quote_is_parse_exception(spark: ReparkSession) -> None:
+    """An unclosed table quote keeps Spark's lexer parse error class and text."""
+    _assert_describe_parse_error(
+        spark,
+        f"DESCRIBE '{CATALOG}.{NAMESPACE}.{TABLE}",
+        "PARSE_SYNTAX_ERROR",
+        "42601",
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near '''. SQLSTATE: 42601",
+    )
+
+
+def test_describe_table_backtick_column_matches_spark_rows(spark: ReparkSession) -> None:
+    """A backticked column keeps its embedded space in DESCRIBE rows."""
+    table = _create_describe_error_table(spark)
+    assert _answer(spark, f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} `we ird`", COLUMN_SCHEMA) == [
+        ("col_name", "we ird"),
+        ("data_type", "string"),
+        ("comment", "NULL"),
+    ]
+
+
+def test_describe_table_extended_column_matches_plain_rows(spark: ReparkSession) -> None:
+    """EXTENDED DESCRIBE with a column keeps the three column rows only."""
+    table = _create_describe_error_table(spark)
+    assert _answer(spark, f"DESCRIBE EXTENDED {CATALOG}.{NAMESPACE}.{table} id", COLUMN_SCHEMA) == [
+        ("col_name", "id"),
+        ("data_type", "bigint"),
+        ("comment", "NULL"),
+    ]
+
+
+def test_describe_table_column_bare_name_uses_default_namespace(spark: ReparkSession) -> None:
+    """A bare DESCRIBE table name plus column resolves through session defaults."""
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}").to_arrow()
+    assert _answer(spark, f"DESCRIBE TABLE {TABLE} id", COLUMN_SCHEMA) == [
+        ("col_name", "id"),
+        ("data_type", "bigint"),
+        ("comment", "the row identifier"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "sql",
+    ["DESCRIBE describe_errors\n", "DESCRIBE describe_errors\t"],
+    ids=["newline", "tab"],
+)
+def test_describe_bare_table_trailing_whitespace_qualifies(spark: ReparkSession, sql: str) -> None:
+    """Trailing whitespace after a bare table name keeps session-default qualification."""
+    _create_describe_error_table(spark)
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}").to_arrow()
+    assert _answer(spark, sql, TABLE_SCHEMA) == ERROR_TABLE_ROWS
+
+
+@pytest.mark.parametrize(
+    "sql,name,data_type",
+    [
+        ("DESCRIBE describe_errors id", "id", "bigint"),
+        ("DESCRIBE describe_errors `we ird`", "we ird", "string"),
+        ("DESCRIBE describe_errors id;", "id", "bigint"),
+        ("DESCRIBE describe_errors id ; ", "id", "bigint"),
+        ("DESCRIBE describe_errors id\n", "id", "bigint"),
+    ],
+    ids=["bare", "backtick", "semicolon", "spaced_semicolon", "newline"],
+)
+def test_describe_bare_table_column_tail_qualifies(
+    spark: ReparkSession, sql: str, name: str, data_type: str
+) -> None:
+    """A bare table name with one column tail keeps session-default qualification."""
+    _create_describe_error_table(spark)
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}").to_arrow()
+    assert _answer(spark, sql, COLUMN_SCHEMA) == [
+        ("col_name", name),
+        ("data_type", data_type),
+        ("comment", "NULL"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "sql,message",
+    [
+        (
+            "DESCRIBE describe_errors id extra",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'extra': extra input 'extra'. "
+            "SQLSTATE: 42601",
+        ),
+        (
+            'DESCRIBE describe_errors "id"',
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"id\"'. SQLSTATE: 42601",
+        ),
+    ],
+    ids=["two_words", "double_quoted"],
+)
+def test_describe_bare_table_malformed_tail_keeps_parse_messages(
+    spark: ReparkSession, sql: str, message: str
+) -> None:
+    """A tail the qualifier does not accept keeps Spark's parse error."""
+    _create_describe_error_table(spark)
+    spark.sql(f"USE {CATALOG}.{NAMESPACE}").to_arrow()
+    _assert_describe_parse_error(spark, sql, "PARSE_SYNTAX_ERROR", "42601", message)
 
 
 def test_describe_table_extended_sections(spark: ReparkSession) -> None:

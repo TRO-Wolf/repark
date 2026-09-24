@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::spec::Schema as IcebergSchema;
 use iceberg::{Catalog, ErrorKind, TableIdent};
@@ -10,6 +10,7 @@ use iceberg::{Catalog, ErrorKind, TableIdent};
 use crate::catalog_ops::{iceberg_err, table_or_view_not_found};
 use crate::describe_show::DescribeTable;
 use crate::spark_type_names::spark_ddl_type_name;
+use repark_common::spark_error;
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn describe_view_frame(
@@ -34,6 +35,17 @@ pub(crate) async fn describe_view_frame(
         }
         Err(error) => return Err(iceberg_err(error)),
     };
+    if let Some(parts) = &describe.column {
+        let column = parts
+            .iter()
+            .map(|part| format!("`{}`", part.replace('`', "``")))
+            .collect::<Vec<_>>()
+            .join(".");
+        return Err(DataFusionError::Plan(spark_error::message(
+            spark_error::UNRESOLVED_COLUMN_WITHOUT_SUGGESTION,
+            &[("columnName", column.as_str())],
+        )));
+    }
     ctx.read_batch(describe_view_batch(view.metadata().current_schema())?)
 }
 

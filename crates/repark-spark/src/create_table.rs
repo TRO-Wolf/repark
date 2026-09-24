@@ -156,6 +156,7 @@ fn build_schema_create(
             }
         }
     }
+    refuse_reserved_owner_property(&properties)?;
     // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute.
     let format_version = properties.remove("format-version");
     if let Some(comment) = clauses.comment.clone() {
@@ -451,8 +452,7 @@ async fn execute_schema_create(
             .load_table(&table_ident)
             .await
             .map_err(iceberg_err)?;
-        let mut properties =
-            catalogs.table_creation_properties(&create.catalog, &create.properties);
+        let mut properties = stamped_creation_properties(ctx, catalogs, &create);
         stamp_requested_format_version(
             &mut properties,
             create.format_version.as_deref(),
@@ -477,12 +477,13 @@ async fn execute_schema_create(
         == Some(LocationPolicy::ServiceManagedLocation)
     {
         validate_service_managed_create(catalog.as_ref(), &create).await?;
+        let properties = stamped_creation_properties(ctx, catalogs, &create);
         let creation = TableCreation::builder()
             .name(create.table.clone())
             .schema(create.schema)
             .partition_spec_opt(partition_spec)
             .format_version(format_version)
-            .properties(catalogs.table_creation_properties(&create.catalog, &create.properties))
+            .properties(properties)
             .build();
         catalog
             .create_table(&create.namespace, creation)
@@ -499,6 +500,7 @@ async fn execute_schema_create(
             create.location.as_deref(),
         )
         .await?;
+        let properties = stamped_creation_properties(ctx, catalogs, &create);
         commit_staged_schema_only(
             catalog.as_ref(),
             plan,
@@ -506,7 +508,7 @@ async fn execute_schema_create(
             &create.table,
             create.schema,
             partition_spec,
-            catalogs.table_creation_properties(&create.catalog, &create.properties),
+            properties,
             format_version,
         )
         .await?;
@@ -554,6 +556,41 @@ pub(crate) fn stamp_requested_format_version(
         "2"
     };
     properties.insert("format-version".to_string(), number.to_string());
+}
+
+pub(crate) fn stamp_owner(ctx: &SessionContext, properties: &mut HashMap<String, String>) {
+    properties.insert(
+        "owner".to_string(),
+        crate::describe_show::describe_table_owner(ctx),
+    );
+}
+
+fn stamped_creation_properties(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    create: &SchemaCreate,
+) -> HashMap<String, String> {
+    let mut properties = catalogs.table_creation_properties(&create.catalog, &create.properties);
+    stamp_owner(ctx, &mut properties);
+    properties
+}
+
+pub(crate) const RESERVED_OWNER_PROPERTY_ERROR: &str = concat!(
+    "[UNSUPPORTED_FEATURE.SET_TABLE_PROPERTY] The feature is not supported: ",
+    "owner is a reserved table property, it will be set to the current user. ",
+    "SQLSTATE: 0A000"
+);
+
+pub(crate) fn refuse_reserved_owner_property(properties: &HashMap<String, String>) -> Result<()> {
+    if properties.contains_key("owner") {
+        return Err(DataFusionError::SQL(
+            Box::new(ParserError::ParserError(
+                RESERVED_OWNER_PROPERTY_ERROR.to_string(),
+            )),
+            None,
+        ));
+    }
+    Ok(())
 }
 
 async fn validate_service_managed_create(

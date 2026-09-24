@@ -5084,6 +5084,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   pins: ice-catalog-session-1/C-016
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
+  **WO-B10 (2026-09-23):** `listColumns` flags every identity-partition source read from the
+  `# Partition Information` section — two identity columns in spec order and a spaced
+  backticked name — matching Spark 4.1.2's `isPartition` answers.
+  pins: wo-b10-describe-sweep/C-004
 - `test_parity3.py` — **R-PARITY3**: `createDataFrame(schema=StructType|DDL)` preserves int32;
   `show(vertical=True)` real `-RECORD` layout + only-showing-top-n. Row factory/pickle pins in
   `test_row.py`.
@@ -5099,6 +5103,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `SHOW TABLE EXTENDED IN` compares every column name
   and value of its one four-column metadata row (`to_pylist()`).
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `SHOW TABLE EXTENDED IN` pins one complete
+  four-column metadata row.
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_catalog_surface_1.py` + `facade_catalog_oracle.json` — **CATALOG-SURFACE-1
   (2026-09-14):** the thirteen-name second half of `Catalog`, driven by the run-15b
@@ -7027,6 +7033,29 @@ pins: fnp-8-review/C-009, C-010
   the capture on live Spark 4.1.2. It pins the stable rows and complete property string; the
   catalog-specific name and dynamic location and owner each have full expected values or shapes.
   pins: sql-describe-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  **DESCRIBE-COLUMN-1 (2026-09-23):** facade pins prove the three column rows for a qualified
+  target and default-namespace expansion for a bare target.
+  pins: describe-column-1/C-005
+  **WO-B4 (2026-09-23):** facade pins require `ParseException`, condition, SQLSTATE, and full
+  Spark text for malformed number, trailing-word, unclosed-quote, partition, and table-lexer
+  forms. Backticked and EXTENDED column answers retain their exact three rows.
+  pins: wo-b4-describe-errors/C-004
+  **WO-B6 (2026-09-23):** exact `ParseException` messages pin the eight quoted tokenizer failures;
+  complete table rows pin leading, intervening, and quote-only comments.
+  pins: wo-b6-describe-comments/C-002, C-004
+  **Round 2 (2026-09-23):** the identity-partition control asserts Spark's no-blank
+  `# Partition Information` header, column-header row, source type, and nullable comment cell
+  on both plain and EXTENDED DESCRIBE.
+  **WO-B10 (2026-09-23):** B's success pins assert the full Arrow schema through `_answer`; an
+  unclosed block comment pins Spark's `UNCLOSED_BRACKETED_COMMENT` / `42601` refusal with
+  condition, SQLSTATE, and full text; bare-target pins cover each branch of the facade tail
+  check (newline and tab after the table, bare, backticked, semicolon, and newline column
+  tails, two-word and double-quoted tails keeping Spark's parse errors).
+  pins: wo-b10-describe-sweep/C-002, C-003, C-004
+  **WO-B11 (2026-09-23):** `PARTITION (id=1)` without a column pins the full
+  `_LEGACY_ERROR_TEMP_1111` text and null SQLSTATE; a doubled-backtick column pins
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION`, `42703`, and the full re-escaped text.
+  pins: wo-b10-describe-sweep/C-008, C-009
   **RP-23 (2026-09-17):** `Table Properties` carries the
   `write.parquet.compression-codec=zstd` stamp every create writes.
   pins: rp-23-pin-bump/C-001
@@ -7055,6 +7084,8 @@ pins: fnp-8-review/C-009, C-010
   `str(exc)` with the bare bracketed message too. The multi-statement facade refusal includes
   `42601`.
   pins: wo-c5/C-001, C-002, C-003, C-004; wo-c10/C-001, C-003
+  **WO-A4 (2026-09-23):** the bare, commented, unclosed-comment, and multi-statement refusals
+  compare `str(exc)` with the bare bracketed message, superseding the parser-wrapper text above.
 
 - `test_profiles1_probe_rerun.py` — **REVIEW-FIX-8 (2026-09-11):** the PROFILES-1
   probe re-runnability pins, run as a subprocess exactly as the document's reproduce
@@ -7911,8 +7942,8 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   two-part form after `USE` answering 42P01 on the facade-expanded name (C-004),
   and the near misses — plain tables unchanged
   (C-005), a real table named `snapshots` (C-006), a missing base naming the full
-  metadata-table name as written (C-007), an unknown suffix keeping the
-  compound-identifier error (C-008) — plus the critic-r1 refusal pins
+  metadata-table name as written (C-007), an unknown suffix answering Spark's
+  42P01 with the full four-part name (C-008, re-pinned by WO-B10) — plus the critic-r1 refusal pins
   (C-010..C-015: real/shadowing namespaces, missing namespace naming the full
   name, the quoted `t$snapshots` form, the EXTENDED/FORMATTED matrix), the
   strict-xfail `ns.t.snapshots` USE form (C-016), the written-case

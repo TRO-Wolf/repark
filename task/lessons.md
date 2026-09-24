@@ -288,3 +288,8 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DON'T write an instruction as a diff against its previous version** ("now", "replaces",
   "unchanged"), pin a model id where a tier name will do, or restate an enforced rule five times;
   a literal reader reconciles every copy on every turn.
+
+## 2026-09-23 — DESCRIBE-COLUMN-1 gate correction
+
+- **DO run the named Makefile Rust gates.** `make rust-clippy` permits test-only unwrap and
+  expect calls; raw all-targets Clippy is not this unit's lint gate.

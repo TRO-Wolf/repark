@@ -44,6 +44,9 @@ repo.
   single home for how repark differs from Apache Spark. **ICE-METADATA-COLS-1 (2026-09-20):**
   row `ICE-MC-FILEPOS-1` filed BACKLOG in §7 — `_file` / `_pos` answer Spark-equal,
   `_spec_id` / `_partition` / `_deleted` refuse `[ICE-MC-1]` until the PR-2 fork unit.
+  **DESCRIBE-COLUMN-1 (2026-09-23):** `DESC-1` records Spark-equal column rows and the
+  parser-level VERSION/TIMESTAMP-tail refusal; its Round 2 records identity-partition rows and
+  creation-time table ownership.
   **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20):**
   row `FN-SYSFN-1` filed and FIXED in §7 — the seven `<cat>.system.*` functions resolve on
   every registered Iceberg catalog and `SHOW [USER] FUNCTIONS IN <cat>.system` lists them;

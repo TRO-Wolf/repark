@@ -171,10 +171,18 @@ def _table_comment(inner: Any, token: dict[str, Any], resolved: str) -> str | No
 def _partition_source_columns(inner: Any, token: dict[str, Any], resolved: str) -> set[str]:
     names: set[str] = set()
     in_partitioning = False
+    in_partition_information = False
     for row in _describe_extended_rows(inner, token, resolved):
         head = row[0] if row else ""
         if isinstance(head, str) and head.startswith("#"):
+            if head == "# col_name" and in_partition_information:
+                continue
             in_partitioning = head == "# Partitioning"
+            in_partition_information = head == "# Partition Information"
+            continue
+        if in_partition_information:
+            if isinstance(head, str):
+                names.add(head.strip().strip('`"'))
             continue
         if in_partitioning and head:
             value = row[1] if len(row) > 1 else None

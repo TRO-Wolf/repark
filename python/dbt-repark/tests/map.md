@@ -58,6 +58,10 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   four-column row (`to_pylist()`), including the full information text; `R-SHOW-TBLPROPERTIES` stays
   refused, pinned exactly by `test_show_tblproperties_table_refusal_is_exact` (`AnalysisException`,
   condition `None`, SQLSTATE `None`, full `Error during planning: SHOW [VARIABLE] ...` text).
+  **U4 PR B (WO-B12, 2026-09-24):** `test_show_table_extended_answers_spark_shape` expects the
+  session `Owner: <user>` line (helper `_session_owner()`: `USER`, else `USERNAME`, else
+  `"unknown"`) between `Provider:` and `Table Properties:`, as Spark 4.1.2 stamps the creating
+  session's owner.
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row

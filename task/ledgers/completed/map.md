@@ -177,6 +177,12 @@ else. The next pickup's `make ledger-archive` files everything here under
   Rust seam fix plus cache-view conformance, oracle-cell pins, registry row.
   `risk_tier: standard`. Branch `feat/decimal-cache-1`.
   pins: decimal-cache-1/C-001, C-002, C-003, C-004, C-005, C-006
+- [describe-column-1-ledger.md](describe-column-1-ledger.md) —
+  **DESCRIBE-COLUMN-1 (2026-09-23), completed:** Spark's one-column DESCRIBE rows and
+  parse-altitude VERSION/TIMESTAMP refusal on the Spark SQL door. Round 2 adds identity partition
+  rows and CREATE-family owner stamping. `risk_tier: standard`.
+  Branch `xd/describe`.
+  pins: describe-column-1/C-001, C-002, C-003, C-004, C-005, C-006
 - [df-eager-1-ledger.md](df-eager-1-ledger.md) —
   **DF-EAGER-1 step 1 (2026-09-09), in flight:** `.eager()` / `.compute()` / `.lazy()` on the
   facade DataFrame. Step 1 only: the red-first pins in
@@ -1013,6 +1019,26 @@ else. The next pickup's `make ledger-archive` files everything here under
   **WO-A1b (2026-09-23), completed:** follow-up exactness repair for SHOW TABLE EXTENDED:
   typed lexer and refusal pins, literal PARTITION table resolution, and exact near-miss outcomes.
   `risk_tier: standard`. Branch `xd/show-tblprops`.
+- [wo-b10-describe-sweep-ledger.md](wo-b10-describe-sweep-ledger.md) —
+  **WO-B10 (2026-09-23), completed:** DESCRIBE-COLUMN-1 class sweep after the restack onto PR A:
+  four-part metadata-table names go to the #806 path, measured near misses pin full Arrow
+  schemas, tokenizer-text pins give way to the front-door refusal, and every scanner branch
+  has a killing test. `risk_tier: standard`. Branch `xd/describe`.
+  WO-B11 adds the Rust-door metadata DESCRIBE, the v2 partition refusal, re-escaped column
+  names, and identity-name quoting.
+  pins: wo-b10-describe-sweep/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+- [wo-b4-describe-errors-ledger.md](wo-b4-describe-errors-ledger.md) —
+  **WO-B4 (2026-09-23), completed:** every malformed input after `DESCRIBE` or `DESC` and a
+  table target retains Spark 4.1.2's parser class, condition, SQLSTATE, and first-line text;
+  four-part table and column-resolution contracts stay typed; non-table DESCRIBE forms fall
+  through. `risk_tier: standard`. Branch `xd/describe`.
+  pins: wo-b4-describe-errors/C-001, C-002, C-003, C-004, C-005
+- [wo-b6-describe-comments-ledger.md](wo-b6-describe-comments-ledger.md) —
+  **WO-B6 (2026-09-23), completed:** DESCRIBE tokenizer-failure classification skips SQL comments
+  with the shared Spark scanner; quote scans ignore comment contents, and non-table and unclosed
+  block-comment failures retain their measured RePark outcomes. `risk_tier: standard`.
+  Branch `xd/describe`.
+  pins: wo-b6-describe-comments/C-001, C-002, C-003, C-004
 - [write-distribution-1-ledger.md](write-distribution-1-ledger.md) —
   **WRITE-DISTRIBUTION-1 (2026-09-06), in flight:** the hash distribution rule before a
   partitioned Iceberg write — Spark's `write.distribution-mode = hash`. A `RepartitionExec` under

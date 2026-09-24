@@ -12,6 +12,7 @@ mod collation;
 mod column_move;
 mod create_table;
 mod ctas;
+mod describe_column;
 mod describe_show;
 mod dialect;
 mod format_version;
@@ -151,6 +152,5 @@ use std::{collections::HashMap, sync::Arc};
 // The Q13 surface matrix.
 #[cfg(test)]
 mod matrix;
-
 #[cfg(test)]
 mod tests;
