@@ -1047,8 +1047,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ice-nested-evo-1/C-024, C-028
   **WO U5 PR1 round 2 (2026-09-24):** `nested_alter_column_type_refuses_each_pair_like_spark`
   is one table over map keys, struct fields and list elements. It pins the full message of each
-  measured pair (analysis refusal, Iceberg non-promotion, map-key promotion) and each path
-  refusal (INVALID_FIELD_NAME, UNRESOLVED_COLUMN), with the schema id unchanged.
+  measured pair (analysis refusal; Iceberg non-promotion, including DATE→TIMESTAMP,
+  TIMESTAMP→BIGINT, INT→FLOAT and BOOLEAN→STRING; map-key promotion). The path refusals
+  (INVALID_FIELD_NAME under a map, a list or a primitive; UNRESOLVED_COLUMN) are pinned from
+  `type_change_path_refusal_cases`. The schema id stays unchanged.
   `…_accepts_the_pairs_spark_accepts` commits the same-type map key, the struct, list and
   mixed-case promotions and a map value, then reads the committed types.
   `…_on_a_missing_table_is_table_or_view_not_found` pins the missing table.

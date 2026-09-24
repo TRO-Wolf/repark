@@ -290,7 +290,8 @@ async fn nested_alter_column_type_updates_map_value_metadata() {
 }
 
 const TYPE_CHANGE_CREATE: &str = "CREATE TABLE ice.sales.types (id INT, st STRUCT<a: INT, \
-    b: BIGINT, s: STRING, c: BIGINT, dec: DECIMAL(9,2), inner: STRUCT<x: INT>>, arr ARRAY<INT>, \
+    b: BIGINT, s: STRING, c: BIGINT, dec: DECIMAL(9,2), inner: STRUCT<x: INT>, d: DATE, \
+    ts: TIMESTAMP, f: BOOLEAN>, arr ARRAY<INT>, \
     arrl ARRAY<BIGINT>, arrs ARRAY<STRING>, arrd ARRAY<BIGINT>, ki MAP<INT, INT>, \
     kl MAP<BIGINT, INT>, ks MAP<STRING, INT>, kf MAP<FLOAT, INT>) USING iceberg";
 
@@ -373,6 +374,33 @@ fn type_change_refusal_cases() -> Vec<(&'static str, String)> {
             not_supported_change("`arrd`.`element`", "BIGINT", "INT"),
         ),
         (
+            "st.d TYPE TIMESTAMP",
+            unsupported_change("Cannot change column type: st.d: date -> timestamptz"),
+        ),
+        (
+            "st.ts TYPE BIGINT",
+            unsupported_change("Cannot change column type: st.ts: timestamptz -> long"),
+        ),
+        (
+            "st.a TYPE FLOAT",
+            unsupported_change("Cannot change column type: st.a: int -> float"),
+        ),
+        (
+            "st.f TYPE STRING",
+            unsupported_change("Cannot change column type: st.f: boolean -> string"),
+        ),
+    ]
+}
+
+fn type_change_path_refusal_cases() -> Vec<(&'static str, String)> {
+    vec![
+        (
+            "id.x TYPE BIGINT",
+            "Error during planning: [INVALID_FIELD_NAME] Field name `id`.`x` is invalid: `id` \
+             is not a struct. SQLSTATE: 42000"
+                .to_string(),
+        ),
+        (
             "st.zz TYPE BIGINT",
             "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
              function parameter with name `st`.`zz` cannot be resolved. Did you mean one of the \
@@ -404,7 +432,9 @@ async fn nested_alter_column_type_refuses_each_pair_like_spark() {
         .await
         .metadata()
         .current_schema_id();
-    let cases = type_change_refusal_cases();
+    let cases = type_change_refusal_cases()
+        .into_iter()
+        .chain(type_change_path_refusal_cases());
     for (clause, expected) in cases {
         let sql = format!("ALTER TABLE ice.sales.types ALTER COLUMN {clause}");
         let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
