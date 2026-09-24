@@ -4742,12 +4742,15 @@ the pin rather than obeying it.
   statement, `<path>` may be a nested struct field, and a comma list of `COMMENT` specs commits
   in one schema update. An empty string stores `""`. An unknown column raises
   `UNRESOLVED_COLUMN.WITH_SUGGESTION`, a step under a primitive raises `INVALID_FIELD_NAME`, a
-  map key raises `Unsupported table change: Cannot update map keys: …`, a missing table raises
+  map key raises `Unsupported table change: Cannot update map keys: …` (a field under it
+  `Cannot alter map keys: …`, on the nested TYPE route too), a missing table raises
   `TABLE_OR_VIEW_NOT_FOUND`, and `COMMENT NULL`, a number, a missing literal, a trailing token or
   `TYPE … COMMENT` raise Spark's `PARSE_SYNTAX_ERROR`. `dbt-repark` inherits
   `spark__alter_column_comment`, so `persist_docs.columns` lands each description as the field
   doc. A list that names one column twice, or a column and a field under it, raises
-  `NOT_SUPPORTED_CHANGE_SAME_COLUMN`. `SET`/`DROP NOT NULL`, `SET`/`DROP DEFAULT`, `FIRST` or
+  `NOT_SUPPORTED_CHANGE_SAME_COLUMN`, checked after every path resolves and before a map-key
+  refusal. A comment on a list element or map value is a no-op that adds no schema, as in
+  Spark. `SET`/`DROP NOT NULL`, `SET`/`DROP DEFAULT`, `FIRST` or
   `AFTER` followed by `COMMENT` raises `PARSE_SYNTAX_ERROR` near `COMMENT`. A list that mixes
   `COMMENT` with another column change is refused as not implemented, where Spark accepts it
   (residue R-U5-MIXED-COMMENT-LIST in the `ice-nested-evo-1` ledger).

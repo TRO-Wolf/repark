@@ -14,9 +14,9 @@ use repark_iceberg::write::alter::{
     ColumnPosition, SchemaChange, apply_schema_changes_on_table, starts_with_alter,
 };
 use repark_iceberg::write::nested_column::{
-    ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, nested_add_refusal,
-    nested_required_add_refusal, nested_spark_only_type_refusal, resolve_column_path,
-    resolve_nested_type_change,
+    ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, column_paths_commit_refusal,
+    nested_add_refusal, nested_required_add_refusal, nested_spark_only_type_refusal,
+    resolve_column_path, resolve_nested_type_change,
 };
 
 use crate::alter::table_parts_to_ident;
@@ -342,7 +342,7 @@ fn parse_comment_specs(
     let _ = names.parser.consume_token(&Token::SemiColon);
     match names.parser.peek_token().token {
         Token::EOF => Ok(NestedColumnOperation::Comment(specs)),
-        extra => Err(extra_input(&extra)),
+        extra => Err(trailing_input(&names.parser, &extra)),
     }
 }
 
@@ -371,11 +371,17 @@ fn spec_without_comment(
              a COMMENT, or a FIRST/AFTER."
                 .into(),
         )),
-        extra => Err(extra_input(&extra)),
+        extra => Err(trailing_input(parser, &extra)),
     }
 }
 
-fn extra_input(extra: &Token) -> ParserError {
+fn trailing_input(parser: &Parser<'_>, extra: &Token) -> ParserError {
+    if !matches!(
+        parser.peek_nth_token(1).token,
+        Token::EOF | Token::SemiColon
+    ) {
+        return syntax_error_at(parser);
+    }
     ParserError::ParserError(format!(
         "[PARSE_SYNTAX_ERROR] Syntax error at or near '{extra}': extra input '{extra}'. \
          SQLSTATE: 42601"
@@ -533,7 +539,11 @@ fn column_doc_changes(
         .map(|(path, _)| resolve_column_path(schema, path))
         .collect::<std::result::Result<Vec<_>, _>>()
         .map_err(nested_type_error)?;
-    if let Some(column) = repeated_column(&resolved) {
+    let names = resolved
+        .iter()
+        .map(|path| path.names().to_vec())
+        .collect::<Vec<_>>();
+    if let Some(column) = repeated_column(&names) {
         return Err(DataFusionError::Plan(format!(
             "[NOT_SUPPORTED_CHANGE_SAME_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported \
              for changing {}'s column {} including its nested fields multiple times in \
@@ -542,11 +552,15 @@ fn column_doc_changes(
             crate::catalog_ops::quoted_table_display(column)
         )));
     }
+    if let Some(refusal) = column_paths_commit_refusal(schema, &resolved) {
+        return Err(nested_type_error(refusal));
+    }
     Ok(resolved
         .iter()
         .zip(specs)
-        .map(|(names, (_, doc))| SchemaChange::UpdateColumnDoc {
-            name: names.join("."),
+        .filter(|(path, _)| path.doc_lands())
+        .map(|(path, (_, doc))| SchemaChange::UpdateColumnDoc {
+            name: path.names().join("."),
             doc: Some(doc.clone()),
         })
         .collect())
@@ -628,6 +642,9 @@ pub(crate) async fn execute_nested_column_ddl(
         }
         NestedColumnOperation::Comment(specs) => {
             let changes = column_doc_changes(&table, &catalog_name, specs)?;
+            if changes.is_empty() {
+                return ctx.read_empty();
+            }
             apply_schema_changes_on_table(handle.as_ref(), &table, &changes)
                 .await
                 .map_err(iceberg_err)?;

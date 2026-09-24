@@ -700,6 +700,11 @@ repark-core's error map.
   `starts_with_alter` (the zero-alloc `ALTER`-prefix scan gating both doors' intercepts).
   Split out of `alter.rs`, which sits at its exact ceiling.
   pins: ice-column-reorder-1/C-001, C-002, C-003, C-006, C-007, C-008, C-014
+  **WO U5 PR2a round 3 (2026-09-24):** `unresolved_column_parts` renders the unresolved name
+  from its parsed parts, so a backquoted `` `st.x` `` stays one part. Each suggestion splits on
+  `.`, so a top-level `p.q` renders `` `p`.`q` `` as Spark does. `unresolved_column` splits a
+  dotted name and delegates to it.
+  pins: ice-nested-evo-1/C-048
 - `nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** `ColumnPathChange` (`Add` under an
   optional dotted parent — a struct, or a list or map whose element or value struct the fork
   resolves — with `FIRST` / `AFTER` sibling positions; `Rename` and `Drop` by dotted path) and
@@ -742,6 +747,16 @@ repark-core's error map.
   name. The Spark door compares them to refuse a repeated column and joins them for
   `UpdateColumnDoc`.
   pins: ice-nested-evo-1/C-040
+  **Round 3 (2026-09-24):** `resolve_nested_path` keeps a `MapKeyTouch`. A path ending at a
+  map `key` gives `Cannot update map keys: <map>`, and a path strictly under one gives `Cannot
+  alter map keys: <map>`, naming the innermost map. The nested TYPE route raises it where it
+  raised the key refusal. `resolve_column_path` returns a `ResolvedColumnPath` that holds the
+  refusal back, so the Spark door can resolve and check repeats first.
+  `column_paths_commit_refusal` then picks the refusal of the first map in the post-order
+  schema visit that Iceberg's `ApplyChanges` makes. `doc_lands` is false for a list `element`
+  or map `value`, whose doc `ApplyChanges` drops. Unresolved names render from the parsed
+  parts through `column_move::unresolved_column_parts`.
+  pins: ice-nested-evo-1/C-044, C-045, C-046, C-048
 - `nested_type_sql.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the one token
   rewrite both doors run on a nested column type: a struct child's `NOT NULL` becomes the
   struct-field option `OPTIONS(repark_not_null=TRUE)` (the only struct-field suffix

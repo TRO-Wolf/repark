@@ -796,6 +796,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   input`, the list `Operation not allowed` text and two mixed lists. Each row also asserts that no
   metadata file was written. A two-spec list writes exactly one new metadata file.
   pins: ice-nested-evo-1/C-040, C-041, C-042, C-043
+  **Round 3 (2026-09-24):** the refusal table adds the trailing `TYPE STRING`/`DROP NOT NULL`
+  (plain `near`) and bare `TYPE` (`extra input`) tails.
+  `test_map_key_changes_refuse_in_spark_order` pins a field under a map key on COMMENT and
+  TYPE, the schema-order pick, and a repeat or unresolved path winning, with one schema and no
+  new metadata file. `test_element_and_value_comments_add_no_schema_like_spark` keeps one schema
+  for value, element and both, and adds one for a value-plus-column list.
+  `test_unresolved_columns_render_backquoted_parts_like_spark` and
+  `test_a_repeated_column_after_use_names_the_three_part_table` pin the name rendering and the
+  `USE sc.ns` table name.
+  pins: ice-nested-evo-1/C-044, C-045, C-046, C-047, C-048
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET

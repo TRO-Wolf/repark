@@ -219,7 +219,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   (action-then-`COMMENT` and single-quoted names are `PARSE_SYNTAX_ERROR`), C-042 (malformed
   list tails) and C-043 (one schema update; the mixed-list refusal). Residues
   R-U5-MIXED-COMMENT-LIST, R-U5-SPEC-LIST-NOT-COMMENT-FIRST, R-U5-OP-NOT-ALLOWED-WRAP,
-  R-U5-ENGINE-PREFIX and R-U5-CHANGE-COLUMN-ACTION carry Spark's measured text.
+  R-U5-ENGINE-PREFIX and R-U5-CHANGE-COLUMN-ACTION carry Spark's measured text. Round 3:
+  C-044 (a field under a map key is `Cannot alter map keys`, on COMMENT and TYPE), C-045
+  (element/value comments add no schema; C-037 narrowed), C-046 (unresolved, then repeat, then
+  map key), C-047 (`extra input` only for a last token) and C-048 (unresolved names from parsed
+  parts; the three-part name after `USE`). Residues R-U5-MAP-KEY-FIELD-IDS and
+  R-U5-DOTTED-TOP-TYPE.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

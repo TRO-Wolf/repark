@@ -225,6 +225,31 @@ def test_alter_column_comment_takes_the_dbt_statement_shapes(
             id="single-quoted-name",
         ),
         pytest.param(
+            "data COMMENT 'x' TYPE STRING",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'TYPE'. SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="trailing-type-action",
+        ),
+        pytest.param(
+            "data COMMENT 'x' DROP NOT NULL",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'DROP'. SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="trailing-drop-action",
+        ),
+        pytest.param(
+            "data COMMENT 'x' TYPE",
+            ParseException,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'TYPE': extra input 'TYPE'. "
+            "SQLSTATE: 42601",
+            "PARSE_SYNTAX_ERROR",
+            "42601",
+            id="trailing-bare-type",
+        ),
+        pytest.param(
             "data COMMENT 'a', cat garbage",
             ParseException,
             "[PARSE_SYNTAX_ERROR] Syntax error at or near 'garbage': extra input 'garbage'. "
@@ -328,6 +353,119 @@ def test_alter_column_comment_on_a_map_key_matches_spark(
         "datafusion engine error: Execution error: Unsupported table change: "
         "Cannot update map keys: map<string, int>"
     )
+
+
+_MAP_KEY_TABLE = (
+    "CREATE TABLE sc.ns.ac (id BIGINT, data STRING, m MAP<STRING, STRUCT<z: INT>>, "
+    "mm MAP<STRUCT<k: INT>, INT>, arr ARRAY<STRUCT<a: INT>>) USING iceberg"
+)
+
+
+def _field_id(warehouse: Path, top: str, container: str, child: str) -> int:
+    fields = _current_schema(_metadata(warehouse, "ac"))["fields"]
+    field = next(field for field in fields if field["name"] == top)
+    nested = field["type"][container]["fields"]
+    return next(entry["id"] for entry in nested if entry["name"] == child)
+
+
+@pytest.mark.parametrize(
+    ("clause", "shape"),
+    [
+        pytest.param("mm.key.k COMMENT 'k'", "alter-mm", id="map-key-field"),
+        pytest.param(
+            "data COMMENT 'd2', mm.key.k COMMENT 'k'", "alter-mm", id="map-key-field-in-list"
+        ),
+        pytest.param(
+            "mm.key.k COMMENT 'y', m.key COMMENT 'x'", "update-m", id="map-keys-in-schema-order"
+        ),
+        pytest.param("mm.key.k TYPE BIGINT", "alter-mm", id="map-key-field-type"),
+        pytest.param("m.key COMMENT 'x', m.key COMMENT 'y'", "same-m-key", id="repeated-map-key"),
+        pytest.param(
+            "m.key COMMENT 'x', nope COMMENT 'y'", "unresolved", id="map-key-then-missing"
+        ),
+    ],
+)
+def test_map_key_changes_refuse_in_spark_order(
+    spark: ReparkSession, tmp_path: Path, clause: str, shape: str
+) -> None:
+    spark.sql(_MAP_KEY_TABLE)
+    k_id = _field_id(tmp_path, "mm", "key", "k")
+    z_id = _field_id(tmp_path, "m", "value", "z")
+    unsupported = "datafusion engine error: Execution error: Unsupported table change: "
+    expected = {
+        "alter-mm": (
+            f"{unsupported}Cannot alter map keys: map<struct<{k_id}: k: optional int>, int>"
+        ),
+        "update-m": (
+            f"{unsupported}Cannot update map keys: map<string, struct<{z_id}: z: optional int>>"
+        ),
+        "same-m-key": _SAME_COLUMN.format(column="`m`.`key`"),
+        "unresolved": (
+            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or "
+            "function parameter with name `nope` cannot be resolved. Did you mean one of the "
+            "following? [`id`, `data`, `m`, `mm`, `arr`]. SQLSTATE: 42703"
+        ),
+    }[shape]
+    files = _metadata_files(tmp_path, "ac")
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(f"ALTER TABLE sc.ns.ac ALTER COLUMN {clause}")
+    assert str(caught.value) == expected
+    assert len(_metadata(tmp_path, "ac")["schemas"]) == 1
+    assert _metadata_files(tmp_path, "ac") == files
+
+
+def test_element_and_value_comments_add_no_schema_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql(_MAP_KEY_TABLE)
+    for clause in [
+        "m.value COMMENT 'v'",
+        "arr.element COMMENT 'e'",
+        "m.value COMMENT 'v', arr.element COMMENT 'e'",
+    ]:
+        spark.sql(f"ALTER TABLE sc.ns.ac ALTER COLUMN {clause}")
+        assert len(_metadata(tmp_path, "ac")["schemas"]) == 1, clause
+    spark.sql("ALTER TABLE sc.ns.ac ALTER COLUMN m.value COMMENT 'v', data COMMENT 'dv'")
+    metadata = _metadata(tmp_path, "ac")
+    assert len(metadata["schemas"]) == 2
+    fields = {field["name"]: field for field in _current_schema(metadata)["fields"]}
+    assert fields["data"]["doc"] == "dv"
+    assert "doc" not in json.dumps(fields["m"])
+    assert "doc" not in json.dumps(fields["arr"])
+
+
+@pytest.mark.parametrize(
+    ("clause", "rendered"),
+    [
+        pytest.param("ALTER COLUMN `st.x` COMMENT 'a'", "`st.x`", id="comment-dotted-name"),
+        pytest.param("ALTER COLUMN st.`x.y` COMMENT 'a'", "`st`.`x.y`", id="comment-dotted-field"),
+        pytest.param("ALTER COLUMN st.`x.y` TYPE BIGINT", "`st`.`x.y`", id="type-dotted-field"),
+        pytest.param("ADD COLUMN nope.z INT", "`nope`", id="add-missing-parent"),
+    ],
+)
+def test_unresolved_columns_render_backquoted_parts_like_spark(
+    spark: ReparkSession, clause: str, rendered: str
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.ac (id BIGINT, st STRUCT<x: INT>, `p.q` INT) USING iceberg")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"ALTER TABLE sc.ns.ac {clause}")
+    assert str(caught.value) == (
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or "
+        f"function parameter with name {rendered} cannot be resolved. Did you mean one of the "
+        "following? [`id`, `st`, `p`.`q`]. SQLSTATE: 42703"
+    )
+
+
+def test_a_repeated_column_after_use_names_the_three_part_table(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql(_COMMENT_TABLE)
+    spark.sql("USE sc.ns")
+    for table in ["ac", "ns.ac"]:
+        with pytest.raises(AnalysisException) as caught:
+            spark.sql(f"ALTER TABLE {table} ALTER COLUMN data COMMENT 'a', data COMMENT 'b'")
+        assert str(caught.value) == _SAME_COLUMN.format(column="`data`")
+    assert len(_metadata(tmp_path, "ac")["schemas"]) == 1
 
 
 def test_alter_column_comment_on_a_missing_table_matches_spark(spark: ReparkSession) -> None:

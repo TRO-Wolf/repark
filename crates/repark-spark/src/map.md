@@ -1165,6 +1165,13 @@ pins: rp-4-fork-repin/C-005, C-006
   `NameParser` records single-quoted names beside double-quoted ones (`quoted_near`), near
   `'.'` after a period.
   pins: ice-nested-evo-1/C-040, C-041, C-042, C-043
+  **PR2a round 3 (2026-09-24):** `column_doc_changes` follows Spark's order. It resolves every
+  path, checks for a repeated column, then raises the map-key refusal from
+  `column_paths_commit_refusal`. It drops the specs whose `doc_lands` is false (a list
+  `element`, a map `value`). A list left empty commits nothing. `trailing_input` answers a bad
+  token after a complete spec, or after a list path, with `extra input` only when it is the
+  last token before end of input or `;`. Otherwise it answers the plain `near '<t>'`.
+  pins: ice-nested-evo-1/C-044, C-045, C-046, C-047
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

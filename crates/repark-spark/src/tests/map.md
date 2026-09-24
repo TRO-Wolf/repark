@@ -1092,6 +1092,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `single_quoted_column_names_are_parse_errors_like_spark` covers ADD, ADD COLUMNS, DROP,
   RENAME and TYPE.
   pins: ice-nested-evo-1/C-040, C-041, C-042, C-043
+  **Round 3 (2026-09-24):** `alter_column_comment_sets_the_iceberg_doc_like_spark` asserts
+  that the `m.value`/`arr.element` statements and their list keep the schema count.
+  `alter_column_comment_refuses_map_keys_in_spark_order` pins a field under a map key
+  (`Cannot alter map keys`, alone, in a list and on the TYPE route), the schema-order pick
+  between two map keys, and a repeat or unresolved path winning over a map key. It also pins
+  the no-op same-type TYPE, the value-plus-column list and a map value struct field, with the
+  schema count each time. `alter_column_comment_tails_follow_spark_token_recovery` pins the
+  plain `near '<t>'` for a multi-token tail and `extra input` for a last token.
+  `unresolved_columns_render_backquoted_parts_like_spark` covers the COMMENT, nested TYPE and
+  ADD routes. `a_repeated_column_after_use_renders_the_three_part_table_like_spark` issues
+  `USE ice.sales` before a one-part and a two-part table name.
+  pins: ice-nested-evo-1/C-044, C-045, C-046, C-047, C-048
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

@@ -51,10 +51,17 @@ async fn alter_column_comment_sets_the_iceberg_doc_like_spark() {
         "ALTER TABLE ice.sales.ac ALTER COLUMN id COMMENT ''",
         "ALTER TABLE ice.sales.ac CHANGE COLUMN cat COMMENT 'via change'",
         "ALTER TABLE ice.sales.ac ALTER COLUMN DATA COMMENT \"dq doc\"",
-        "ALTER TABLE ice.sales.ac ALTER COLUMN m.value COMMENT 'mv'",
-        "ALTER TABLE ice.sales.ac ALTER COLUMN arr.element COMMENT 'el'",
     ] {
         run(&ctx, &catalogs, sql).await;
+    }
+    let schemas = schema_count(&catalogs).await;
+    for sql in [
+        "ALTER TABLE ice.sales.ac ALTER COLUMN m.value COMMENT 'mv'",
+        "ALTER TABLE ice.sales.ac ALTER COLUMN arr.element COMMENT 'el'",
+        "ALTER TABLE ice.sales.ac ALTER COLUMN m.value COMMENT 'mv', arr.element COMMENT 'el'",
+    ] {
+        run(&ctx, &catalogs, sql).await;
+        assert_eq!(schema_count(&catalogs).await, schemas, "{sql}");
     }
     assert_eq!(
         docs(&catalogs).await,
@@ -268,6 +275,7 @@ async fn alter_column_comment_refuses_malformed_spec_lists_like_spark() {
     );
     for (tail, extra) in [
         ("cat garbage", "garbage"),
+        ("cat garbage;", "garbage"),
         ("cat 'x'", "'x'"),
         ("cat)", ")"),
         ("st.x garbage", "garbage"),
@@ -336,6 +344,91 @@ async fn alter_column_comment_refuses_malformed_spec_lists_like_spark() {
             .count(),
         0
     );
+    assert_eq!(schema_count(&catalogs).await, 1);
+}
+
+#[tokio::test]
+async fn alter_column_comment_tails_follow_spark_token_recovery() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, COMMENT_CREATE).await;
+    for (sql, near) in [
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' TYPE STRING",
+            "TYPE",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' SET NOT NULL",
+            "SET",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' DROP NOT NULL",
+            "DROP",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' AFTER id",
+            "AFTER",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' SET DEFAULT 'a'",
+            "SET",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' DROP DEFAULT",
+            "DROP",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' COMMENT 'y'",
+            "COMMENT",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' NOT NULL",
+            "NOT",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' FIRST foo",
+            "FIRST",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' foo bar",
+            "foo",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x', cat COMMENT 'y' TYPE STRING",
+            "TYPE",
+        ),
+        (
+            "ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'a', cat garbage more",
+            "garbage",
+        ),
+    ] {
+        assert_eq!(
+            parse_refusal(&ctx, &catalogs, sql).await,
+            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"),
+            "{sql}"
+        );
+    }
+    for (tail, extra) in [
+        ("TYPE", "TYPE"),
+        ("SET", "SET"),
+        ("DROP", "DROP"),
+        ("AFTER", "AFTER"),
+        ("NOT", "NOT"),
+        ("foo", "foo"),
+        ("foo;", "foo"),
+        ("5", "5"),
+        (")", ")"),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.ac ALTER COLUMN data COMMENT 'x' {tail}");
+        assert_eq!(
+            parse_refusal(&ctx, &catalogs, &sql).await,
+            format!(
+                "[PARSE_SYNTAX_ERROR] Syntax error at or near '{extra}': extra input '{extra}'. \
+                 SQLSTATE: 42601"
+            ),
+            "{sql}"
+        );
+    }
     assert_eq!(schema_count(&catalogs).await, 1);
 }
 
@@ -487,4 +580,158 @@ async fn alter_column_comment_leaves_type_and_hive_change_forms_unchanged() {
             "{sql}"
         );
     }
+}
+
+const MAP_KEY_CREATE: &str = "CREATE TABLE ice.sales.ac (id BIGINT, data STRING, \
+     m MAP<STRING, STRUCT<z: INT>>, mm MAP<STRUCT<k: INT>, INT>) USING iceberg";
+
+#[tokio::test]
+async fn alter_column_comment_refuses_map_keys_in_spark_order() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, MAP_KEY_CREATE).await;
+    let table = load_sales_table(&catalogs, "ac").await;
+    let schema = table.metadata().current_schema();
+    let k_id = schema.field_by_name("mm.key.k").unwrap().id;
+    let z_id = schema.field_by_name("m.value.z").unwrap().id;
+    let alter_mm = format!(
+        "Unsupported table change: Cannot alter map keys: map<struct<{k_id}: k: optional int>, int>"
+    );
+    let update_m = format!(
+        "Unsupported table change: Cannot update map keys: map<string, struct<{z_id}: z: optional int>>"
+    );
+    let same_column = |column: &str| {
+        format!(
+            "Error during planning: [NOT_SUPPORTED_CHANGE_SAME_COLUMN] ALTER TABLE ALTER/CHANGE \
+             COLUMN is not supported for changing `ice`.`sales`.`ac`'s column {column} including \
+             its nested fields multiple times in the same command. SQLSTATE: 0A000"
+        )
+    };
+    let unresolved = "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, \
+         variable, or function parameter with name `nope` cannot be resolved. Did you mean one \
+         of the following? [`id`, `data`, `m`, `mm`]. SQLSTATE: 42703"
+        .to_string();
+    for (clause, expected) in [
+        (
+            "ALTER COLUMN mm.key.k COMMENT 'k'",
+            format!("Execution error: {alter_mm}"),
+        ),
+        (
+            "ALTER COLUMN data COMMENT 'd2', mm.key.k COMMENT 'k'",
+            format!("Execution error: {alter_mm}"),
+        ),
+        (
+            "ALTER COLUMN mm.key.k COMMENT 'y', m.key COMMENT 'x'",
+            format!("Execution error: {update_m}"),
+        ),
+        (
+            "ALTER COLUMN m.key COMMENT 'x', mm.key.k COMMENT 'y'",
+            format!("Execution error: {update_m}"),
+        ),
+        (
+            "ALTER COLUMN m.key COMMENT 'x', m.value COMMENT 'y'",
+            format!("Execution error: {update_m}"),
+        ),
+        (
+            "ALTER COLUMN m.key COMMENT 'x', m.key COMMENT 'y'",
+            same_column("`m`.`key`"),
+        ),
+        (
+            "ALTER COLUMN mm.key.k COMMENT 'a', mm.key COMMENT 'b'",
+            same_column("`mm`.`key`"),
+        ),
+        (
+            "ALTER COLUMN m.key COMMENT 'x', nope COMMENT 'y'",
+            unresolved.clone(),
+        ),
+        (
+            "ALTER COLUMN mm.key.k COMMENT 'a', nope COMMENT 'b'",
+            unresolved.clone(),
+        ),
+        (
+            "ALTER COLUMN mm.key.k TYPE BIGINT",
+            format!("Execution error: {alter_mm}"),
+        ),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.ac {clause}");
+        assert_eq!(refusal(&ctx, &catalogs, &sql).await, expected, "{sql}");
+    }
+    assert_eq!(schema_count(&catalogs).await, 1);
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.ac ALTER COLUMN mm.key.k TYPE INT",
+    )
+    .await;
+    assert_eq!(schema_count(&catalogs).await, 1);
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.ac ALTER COLUMN m.value COMMENT 'v', data COMMENT 'dv'",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.ac ALTER COLUMN m.value.z COMMENT 'vz'",
+    )
+    .await;
+    assert_eq!(schema_count(&catalogs).await, 3);
+    let table = load_sales_table(&catalogs, "ac").await;
+    let schema = table.metadata().current_schema();
+    let doc = |name: &str| schema.field_by_name(name).unwrap().doc.clone();
+    assert_eq!(doc("data").as_deref(), Some("dv"));
+    assert_eq!(doc("m.value"), None);
+    assert_eq!(doc("m.value.z").as_deref(), Some("vz"));
+    assert_eq!(doc("mm.key.k"), None);
+}
+
+#[tokio::test]
+async fn unresolved_columns_render_backquoted_parts_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ac (id BIGINT, st STRUCT<x: INT>, `p.q` INT) USING iceberg",
+    )
+    .await;
+    for (clause, rendered) in [
+        ("ALTER COLUMN `st.x` COMMENT 'a'", "`st.x`"),
+        ("ALTER COLUMN st.`x.y` COMMENT 'a'", "`st`.`x.y`"),
+        ("ALTER COLUMN st.nope TYPE BIGINT", "`st`.`nope`"),
+        ("ALTER COLUMN st.`x.y` TYPE BIGINT", "`st`.`x.y`"),
+        ("ADD COLUMN nope.z INT", "`nope`"),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.ac {clause}");
+        assert_eq!(
+            refusal(&ctx, &catalogs, &sql).await,
+            format!(
+                "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, \
+                 or function parameter with name {rendered} cannot be resolved. Did you mean one \
+                 of the following? [`id`, `st`, `p`.`q`]. SQLSTATE: 42703"
+            ),
+            "{sql}"
+        );
+    }
+    assert_eq!(schema_count(&catalogs).await, 1);
+}
+
+#[tokio::test]
+async fn a_repeated_column_after_use_renders_the_three_part_table_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, COMMENT_CREATE).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    for table in ["ac", "sales.ac"] {
+        let sql = format!("ALTER TABLE {table} ALTER COLUMN data COMMENT 'a', data COMMENT 'b'");
+        assert_eq!(
+            refusal(&ctx, &catalogs, &sql).await,
+            "Error during planning: [NOT_SUPPORTED_CHANGE_SAME_COLUMN] ALTER TABLE ALTER/CHANGE \
+             COLUMN is not supported for changing `ice`.`sales`.`ac`'s column `data` including \
+             its nested fields multiple times in the same command. SQLSTATE: 0A000",
+            "{sql}"
+        );
+    }
+    assert_eq!(schema_count(&catalogs).await, 1);
 }
