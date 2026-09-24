@@ -7864,6 +7864,10 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   ALTER TABLE statements to rename the conflicting table columns.`, and `SELECT *` still
   answers `[[2,"u2"],[3,"u3"]]` (KNOWN DIVERGENCE `R-MC-RESERVED-NAME-SCAN`). The
   superseded `ice-metadata-cols-1/C-023` citation is dropped (its refusal test is gone).
+  **mcdel-r7 (2026-09-23):** the `_deleted` legs assert their field names (`[id,
+  _deleted]`, `[id]`, `[count(*)]` and the star's `[id, _deleted]`) through `_field_names`
+  (u10-mc-deleted-1/C-012). The module docstring's first line is shortened to fit the
+  100-column limit.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
   C-010, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
   pins: u10-mc-deleted-1/C-001, C-002, C-014, C-015

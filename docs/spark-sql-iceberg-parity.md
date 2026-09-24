@@ -13931,18 +13931,29 @@ field NAME.
   u10-mc-deleted-1/C-001
 - **Residue** — `R-MC-RESERVED-NAME-SCAN` (KNOWN DIVERGENCE, U10-MC-DELETED-1):
   on a table whose own schema carries a reserved metadata name, both engines
-  refuse a query whose scan reads the colliding user column and answer one whose
-  scans do not, joins included. Three shapes stay divergent, all outside RePark's
-  metadata-column scan: a `SELECT *` naming no metadata column, which Spark
-  refuses with the reserved-name text and RePark serves; the copy-on-write
-  `DELETE`, likewise; and a `WHERE`-only reference, which RePark refuses with
-  the reserved-name text where Spark prints `Invalid schema: multiple fields for
-  name _deleted: 2 and 2147483644`. The mcdel-r5 residue candidate
-  `R-MC-RESERVED-NAME-JOIN` is closed: the join answers Spark's
-  `[[1,true],[2,false],[3,false]]`.
+  refuse a query whose metadata-column scan reads the colliding user column and
+  answer one whose scans do not. That holds in the `GROUP BY`, `HAVING`, `ORDER BY`,
+  window, `IN`/scalar-subquery and `UNION` positions and in `JOIN … ON` / `USING`
+  joins that do not read it. Still divergent:
+  - shapes RePark never routes to the metadata-column scan, which RePark serves
+    and Spark refuses: `SELECT *`, `SELECT t.*`, `SELECT *` over a `USING` join,
+    `NATURAL JOIN`, and the copy-on-write `DELETE`;
+  - filter-bound reads — `WHERE`, `JOIN … ON`, `JOIN … USING (_deleted)`,
+    `EXISTS`: both refuse, but RePark uses the reserved-name text where Spark
+    prints `Invalid schema: multiple fields for name _deleted: 2 and 2147483644`;
+  - `LATERAL VIEW`, which RePark does not implement.
+
+  The mcdel-r5 residue candidate `R-MC-RESERVED-NAME-JOIN` is closed: the join
+  answers Spark's `[[1,true],[2,false],[3,false]]`.
+  Residue candidate `R-MC-QUALIFIED-WILDCARD` (KNOWN DIVERGENCE, a silent wrong
+  answer): in a statement that names a metadata column, a qualified wildcard
+  `x.*` whose alias differs from the table name expands to every metadata column
+  too. On a merge-on-read table, the projected `_deleted` then returns the
+  deleted rows (`SELECT x.* FROM t x WHERE x._spec_id = 0` answers ids
+  `[1,2,3,4]` where Spark answers `[2,3,4]` with user columns only).
   *(oracle: live Spark 4.1.2 + Iceberg 1.11 probes `mcdcol`, `mcdjoin`,
-  `mcdorder`, `mcdfile`, `mcdalias`, `mcdclassn`, recorded in the
-  u10-mc-deleted-1 ledger M-10, M-12, M-14 and M-15.)*
+  `mcdorder`, `mcdfile`, `mcdalias`, `mcdclassn`, `mcdjoinpos`, `mcdqualmor`,
+  recorded in the u10-mc-deleted-1 ledger M-10, M-12, M-14, M-15, M-17 and M-18.)*
 - **Rationale** — BACKLOG, filed 2026-09-20 (ICE-METADATA-COLS-1, IPI-20 PR-1).
   The fork unit is MERGED (metadata columns + scan modes) and the pin bumped
   (RP-45), so the RePark half serves the four ordinary columns end to end;

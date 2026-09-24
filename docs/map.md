@@ -53,7 +53,10 @@ repo.
   mcdel-r5 narrowed that residue to the measured divergent shapes (`SELECT *`, the
   copy-on-write `DELETE`, the `WHERE` error text) and added residue candidate
   `R-MC-RESERVED-NAME-JOIN`; mcdel-r6 closed that candidate (the refusal keys on the
-  columns the scan reads, so the join answers Spark's rows).
+  columns the scan reads, so the join answers Spark's rows). mcdel-r7 lists the further
+  measured divergent shapes (unrouted `t.*` / `USING` / `NATURAL` joins, filter-bound
+  `ON` / `USING` / `EXISTS` text, `LATERAL VIEW`) and adds residue candidate
+  `R-MC-QUALIFIED-WILDCARD`.
   **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20):**
   row `FN-SYSFN-1` filed and FIXED in §7 — the seven `<cat>.system.*` functions resolve on
   every registered Iceberg catalog and `SHOW [USER] FUNCTIONS IN <cat>.system` lists them;

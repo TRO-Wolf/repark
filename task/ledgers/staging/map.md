@@ -1610,6 +1610,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   M-14). Aliases, CTE names, table aliases and the join now answer like Spark
   (C-016 PROVEN, C-017), and the class-N positions were measured on both engines
   (M-15). The pins live in `metadata_columns_reserved.rs`.
+  mcdel-r7 made every answer leg assert its field names and full rows (C-012), and
+  measured and pinned the join and query positions (M-17). It also recorded the
+  qualified-wildcard silent wrong answer as residue candidate
+  `R-MC-QUALIFIED-WILDCARD` (C-018, M-18), pinned as RePark's current answer.
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018

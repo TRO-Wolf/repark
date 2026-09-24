@@ -1365,6 +1365,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `served_names_fold_and_composed_shapes_refuse` pins the `_POS` fold, the backtick and
   aliased spellings, the backtick-quoted `_deleted` resolution, and the
   `[ICE-MC-1]` refusal of a `DELETE` naming `_file` and of a `*` over two relations.
+  Since mcdel-r7 every answer leg there asserts its field names; the aliased leg is
+  `SELECT x.id, x._pos … ORDER BY id` = `[(2,0),(3,0),(4,0)]` and the backticked leg is
+  `SELECT id, `_deleted` … ORDER BY id` = `[(2,false),(3,false),(4,false)]`
+  (u10-mc-deleted-1/C-012).
   `file_values_equal_the_files_metadata_table_paths` pins live `_file` identity against
   the table's own `files.file_path` (r2 V-003, C-010); and
   `file_and_row_id_answer_together_on_a_format_v3_table` pins the metadata-before-lineage
@@ -1456,7 +1460,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   that answer in mcdel-r6), and the `u._deleted` shapes refuse on both engines.
   **mcdel-r6 (2026-09-23):** the collision tests above moved to
   `metadata_columns_reserved.rs` (next entry); this file keeps the `_deleted` cluster
-  and exposes its row helpers `pub(super)`.
+  and exposes its row helpers `pub(super)` (`seed` and `triples_i64` too since mcdel-r7).
+  mcdel-r7 adds a `field_names` assert to every answer leg (`frame_field_names` for the
+  empty S14 self-join).
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013
 - `metadata_columns_reserved.rs` — **mcdel-r6 (2026-09-23, Sol critic r5):** the
@@ -1478,7 +1484,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   answer; `_deleted(id)` refuses `[UNRESOLVED_ROUTINE]` as Spark does; `FROM … AS t`
   reading `_deleted` and `SELECT *, _spec_id` refuse `[_deleted]`; `GROUP BY _deleted`
   over the alias keeps RePark's aggregate-validation error (KNOWN DIVERGENCE B2).
-  pins: u10-mc-deleted-1/C-012, C-014, C-015, C-016, C-017
+  **mcdel-r7 (2026-09-23, Sol critic r6):** every answer leg asserts `field_names`, and
+  B10 serves the field `count(*)`. `reserved_name_join_positions` pins J4–J9, J4B, J7B,
+  J5M, J6M and J8M; `reserved_name_query_positions` pins the refusals N1–N11 and N13, and
+  `reserved_name_query_positions_that_answer` pins N12 and N17–N19 (ledger M-17): reads of the user column in `GROUP BY`, `HAVING`, `ORDER BY`, window, subquery,
+  `UNION`, `JOIN … ON` / `USING` and `EXISTS` positions refuse `[_deleted]`; unrouted
+  `SELECT *` over a `USING` join, `SELECT t.*` and `NATURAL JOIN` answer (KNOWN
+  DIVERGENCE); non-reading joins and subqueries answer. RePark's error texts are pinned
+  for J4, J5M, J6M, N11 (LATERAL VIEW) and N13.
+  `qualified_wildcard_under_another_alias_expands_every_provider_field` pins X1–X3: `x.*`
+  under an alias other than the table name expands to every provider field and returns
+  the deleted row (KNOWN DIVERGENCE, residue candidate `R-MC-QUALIFIED-WILDCARD`).
+  pins: u10-mc-deleted-1/C-012, C-014, C-015, C-016, C-017, C-018
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
