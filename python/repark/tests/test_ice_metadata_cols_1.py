@@ -23,8 +23,8 @@ carries as ``[[2,true,true],[3,true,true],[4,true,true]]`` (``R-MC-FILE``),
 (``R-MC-DELETED``, row order not significant).
 
 pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
-pins: u10-mc-deleted-1/C-001, C-002
+  C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
+pins: u10-mc-deleted-1/C-001, C-002, C-014, C-015
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 from repark.spark.session import _reset_active_session_for_tests
 from repark.spark.types import BooleanType
 
@@ -323,6 +324,29 @@ def test_not_projecting_deleted_still_filters(spark: Any) -> None:
     table = _seeded(spark, "t_deleted_noproj", MOR_PROPERTIES)
     assert _rows(spark, f"SELECT id FROM {table}") == [[2], [3], [4]]
     assert _rows(spark, f"SELECT count(*) FROM {table}") == [[3]]
+
+
+def test_user_column_named_deleted_refuses_like_spark(spark: Any) -> None:
+    """A user column named ``_deleted`` refuses Spark's reserved-name text; ``*`` still serves.
+
+    pins: u10-mc-deleted-1/C-014, C-015
+    """
+    table = f"{CATALOG}.{NAMESPACE}.t_user_deleted"
+    spark.sql(
+        f"CREATE TABLE {table} (id BIGINT, _deleted STRING) USING iceberg "
+        f"TBLPROPERTIES ('format-version'='2', {MOR_PROPERTIES})"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES (1, 'u1'), (2, 'u2'), (3, 'u3')")
+    spark.sql(f"DELETE FROM {table} WHERE id = 1")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql(f"SELECT id, _deleted FROM {table} ORDER BY id").collect()
+    assert str(caught.value) == (
+        "Error during planning: Table column names conflict with names reserved for "
+        "Iceberg metadata columns: [_deleted]. Please, use ALTER TABLE statements to "
+        "rename the conflicting table columns."
+    )
+    rows = [list(row) for row in spark.sql(f"SELECT * FROM {table} ORDER BY id").collect()]
+    assert rows == [[2, "u2"], [3, "u3"]]
 
 
 def test_file_and_row_id_answer_together_on_v3(spark_v3: Any) -> None:

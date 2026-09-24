@@ -58,6 +58,40 @@ async fn seed(session: &ReparkSession, table: &str, part: &str, props: &str) {
     run(session, &format!("DELETE FROM {table} WHERE id = 1")).await;
 }
 
+async fn seed_user_columns(session: &ReparkSession, table: &str, columns: &[&str], props: &str) {
+    let defs: String = columns
+        .iter()
+        .map(|column| format!(", {column} STRING"))
+        .collect();
+    run(
+        session,
+        &format!(
+            "CREATE TABLE {table} (id BIGINT{defs}) USING iceberg \
+             TBLPROPERTIES ('format-version' = '2'{props})"
+        ),
+    )
+    .await;
+    let rows: Vec<String> = (1..=3)
+        .map(|id| {
+            let cells: String = columns.iter().map(|_| format!(", 'u{id}'")).collect();
+            format!("({id}{cells})")
+        })
+        .collect();
+    run(
+        session,
+        &format!("INSERT INTO {table} VALUES {}", rows.join(", ")),
+    )
+    .await;
+}
+
+fn reserved_name_collision(names: &str) -> String {
+    format!(
+        "Error during planning: Table column names conflict with names reserved for Iceberg \
+         metadata columns: [{names}]. Please, use ALTER TABLE statements to rename the \
+         conflicting table columns."
+    )
+}
+
 async fn batches(
     session: &ReparkSession,
     sql: &str,
@@ -150,6 +184,13 @@ fn pairs_i64_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Ve
 
 fn pairs_i64_str(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(i64, String)> {
     i64s(batches, 0).into_iter().zip(strs(batches, 1)).collect()
+}
+
+fn pairs_str_bool(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(String, bool)> {
+    strs(batches, 0)
+        .into_iter()
+        .zip(bools(batches, 1))
+        .collect()
 }
 
 fn pairs_bool_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<(bool, i64)> {
@@ -595,4 +636,94 @@ async fn served_spec_id_and_deleted_answer_together() {
         "R-MC-DELETED-SPEC-MOR"
     );
     assert!(!schema.fields()[2].is_nullable(), "R-MC-DELETED-SPEC-MOR");
+}
+
+#[tokio::test]
+async fn user_deleted_column_collision_refuses_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    for (table, props) in [("ice.ns.uc", ""), ("ice.ns.um", MOR)] {
+        seed_user_columns(&session, table, &["_deleted"], props).await;
+        run(&session, &format!("DELETE FROM {table} WHERE id = 1")).await;
+        for sql in [
+            format!("SELECT id, _deleted FROM {table} ORDER BY id"),
+            format!("SELECT id, _spec_id, _deleted FROM {table} ORDER BY id"),
+            format!("SELECT t._deleted FROM {table} t ORDER BY 1"),
+            format!("SELECT id FROM {table} WHERE _deleted = 'u2'"),
+        ] {
+            assert_eq!(
+                plan_error(&session, &sql).await,
+                reserved_name_collision("_deleted"),
+                "R-MC-RESERVED-NAME: {sql}"
+            );
+        }
+        let rows = batches(&session, &format!("SELECT * FROM {table} ORDER BY id")).await;
+        assert_eq!(
+            field_names(&rows),
+            vec!["id", "_deleted"],
+            "R-MC-RESERVED-NAME-SCAN"
+        );
+        assert_eq!(
+            pairs_i64_str(&rows),
+            vec![(2, "u2".to_string()), (3, "u3".to_string())],
+            "R-MC-RESERVED-NAME-SCAN"
+        );
+    }
+}
+
+#[tokio::test]
+async fn every_served_metadata_name_collision_refuses() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    for (index, column) in repark_iceberg::catalog::METADATA_COLUMN_NAMES
+        .iter()
+        .enumerate()
+    {
+        let table = format!("ice.ns.c{index}");
+        seed_user_columns(&session, &table, &[column], "").await;
+        assert_eq!(
+            plan_error(&session, &format!("SELECT id, {column} FROM {table}")).await,
+            reserved_name_collision(column),
+            "R-MC-RESERVED-NAME: {column}"
+        );
+    }
+    seed_user_columns(&session, "ice.ns.cfp", &["_file", "_pos"], "").await;
+    assert_eq!(
+        plan_error(&session, "SELECT id, _pos, _file FROM ice.ns.cfp").await,
+        reserved_name_collision("_file, _pos"),
+        "R-MC-RESERVED-NAME: table-schema order"
+    );
+}
+
+#[tokio::test]
+async fn reserved_name_near_misses_still_answer() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed_user_columns(&session, "ice.ns.near_deleted", &["deleted"], MOR).await;
+    run(&session, "DELETE FROM ice.ns.near_deleted WHERE id = 1").await;
+    let rows = batches(
+        &session,
+        "SELECT deleted, _deleted FROM ice.ns.near_deleted ORDER BY deleted",
+    )
+    .await;
+    assert_eq!(
+        pairs_str_bool(&rows),
+        vec![
+            ("u1".to_string(), true),
+            ("u2".to_string(), false),
+            ("u3".to_string(), false),
+        ],
+        "R-MC-RESERVED-NAME-NEAR"
+    );
+    seed_user_columns(&session, "ice.ns.near_file", &["_file"], MOR).await;
+    let rows = batches(
+        &session,
+        "SELECT id, _deleted FROM ice.ns.near_file ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        pairs_i64_bool(&rows),
+        vec![(1, false), (2, false), (3, false)],
+        "R-MC-RESERVED-NAME-SCAN"
+    );
 }
