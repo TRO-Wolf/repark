@@ -25,9 +25,12 @@ if TYPE_CHECKING:
 def load_iceberg_path(reader: DataFrameReader, path: str) -> DataFrame:
     """Read the Iceberg table at ``path`` as one pinned static snapshot.
 
-    Time-travel (``snapshot-id`` / ``as-of-timestamp`` / ``branch`` / ``tag`` /
-    ``versionAsOf`` / ``timestampAsOf``) and incremental window options refuse with
-    the pinned ``AnalysisException``; every other option is ignored like Spark.
+    ``DataFrameReader.load`` runs the reader's semantic-option gate
+    (``_reject_unsupported_semantic_options``) before this door, so the options it
+    refuses never arrive here. Of the options that pass it, time-travel
+    (``snapshot-id`` / ``as-of-timestamp`` / ``branch`` / ``tag`` / ``versionAsOf`` /
+    ``timestampAsOf``) and incremental window options refuse with the pinned
+    ``AnalysisException``, and every remaining option is ignored.
     """
     from repark import _native
     from repark.errors import AnalysisException
