@@ -98,7 +98,7 @@ pub async fn execute_merge(
         .await
         .map_err(iceberg_err)?;
     let mode = resolve_merge_mode(&table)?;
-    let table = if spec.schema_evolution {
+    let table = if spec.schema_evolution && spec.assigns_columns() {
         union_source_schema(ctx, catalog, &table, spec).await?
     } else {
         table
@@ -385,7 +385,7 @@ async fn union_source_schema(
     );
     let arrow = ctx.sql(&probe).await?.schema().as_arrow().clone();
     let incoming = crate::write::schema_evolution::incoming_schema(&arrow)?;
-    crate::write::schema_evolution::evolve_schema(catalog, table, incoming).await
+    crate::write::schema_evolution::evolve_merge_schema(catalog, table, incoming).await
 }
 
 async fn source_column_names(ctx: &SessionContext, spec: &MergeSpec) -> Result<Vec<String>> {

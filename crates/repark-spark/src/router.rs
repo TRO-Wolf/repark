@@ -361,10 +361,6 @@ async fn execute_inner(
         Statement::Merge(merge) => {
             merge::execute_merge_statement(ctx, catalogs, merge, schema_evolution).await
         }
-        Statement::Insert(insert) if insert.overwrite => {
-            crate::view_dispatch::refuse_insert_into_view(ctx, catalogs, insert).await?;
-            execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await
-        }
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {
             crate::view_dispatch::refuse_insert_into_view(ctx, catalogs, insert).await?;
@@ -403,6 +399,22 @@ async fn execute_insert_routed(
     insert: &Insert,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    if crate::insert_by_name::evolution::routes_positional_by_name(
+        ctx,
+        catalogs,
+        insert,
+        write_options,
+    )
+    .await
+    {
+        return Box::pin(crate::insert_by_name::execute_insert_by_name(
+            ctx,
+            catalogs,
+            sql,
+            write_options,
+        ))
+        .await;
+    }
     if insert.overwrite {
         return execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await;
     }

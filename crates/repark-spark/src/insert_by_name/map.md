@@ -61,3 +61,24 @@ plus the two commits.
   never evolves — no cell measures it and silently widening a schema on an
   overwrite is the wrong default.
   pins: ipi-19-56-37-schema-evolution-write/C-002, C-011
+
+## U6 WRITE-REFUSALS (2026-09-24)
+
+- `evolution.rs` — `columns_to_add` returns `None` when nothing evolves and
+  `Some(added)` whenever the table has the property and merge-schema is on,
+  even with no new column: Spark's union runs on every such write, so a wider
+  source widens and a non-promotable type refuses `Cannot change column type`.
+  Without merge-schema, the first unknown source column refuses
+  `Field <display name> not found in source schema`. `evolve_before_write`
+  unions the source schema into the table, re-registers the catalog, and the
+  normal by-name append or overwrite then runs against the evolved table.
+  `append_with_evolution` is gone; overwrite now evolves too (measured).
+  `routes_positional_by_name` is the router's gate for a positional `INSERT`.
+- `source_names.rs` — `syntactic_source_names` and `normalize_ident`, moved out
+  of `../insert_by_name.rs` to keep it under the size ceiling. An unaliased
+  integer or single-quoted literal is named by its text, as Spark names it.
+- `../insert_by_name.rs` — `source_from_clause` aliases the derived source
+  table's columns with the resolved source names, so a `VALUES` source exposes
+  `col1..colN` and a literal source its Spark name to the projection.
+- `tests.rs` — pins for the literal spelling and the aliased FROM clause.
+  pins: u6-write-refusals/C-002, C-005, C-006

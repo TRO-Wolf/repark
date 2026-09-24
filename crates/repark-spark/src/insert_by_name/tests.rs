@@ -226,7 +226,8 @@ fn build_projection_sql_reorders_and_null_fills() {
             ]
         ),
         "SELECT `first_name` AS `first_name`, NULL AS `last_name`, `n` AS `n` FROM \
-         (SELECT last_name, first_name, n FROM s) AS _repark_by_name_src"
+         (SELECT last_name, first_name, n FROM s) AS \
+         _repark_by_name_src(`last_name`, `first_name`, `n`)"
     );
 }
 
@@ -369,4 +370,38 @@ fn parse_projection_query_round_trips() {
     )
     .expect("parses");
     assert!(matches!(query.body.as_ref(), SetExpr::Select(_)));
+}
+
+#[test]
+fn syntactic_names_use_the_spark_literal_spelling() {
+    let source = parse_query("SELECT 9, 'Z', 9 AS id, 1.50, 'q' AS cat");
+    let names = syntactic_source_names(&source, false).expect("syntactic");
+    assert_eq!(
+        names
+            .iter()
+            .map(|name| (name.display.as_str(), name.resolved.as_str()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("9", "9"),
+            ("Z", "z"),
+            ("id", "id"),
+            ("1.50", "1.50"),
+            ("cat", "cat")
+        ]
+    );
+}
+
+#[test]
+fn syntactic_names_decline_other_literals() {
+    let source = parse_query("SELECT 9, NULL");
+    assert!(syntactic_source_names(&source, false).is_none());
+}
+
+#[test]
+fn source_from_clause_names_every_source_column() {
+    let source = parse_query("VALUES (1, 'a')");
+    assert_eq!(
+        source_from_clause(&source, &named(&["col1", "col2"])),
+        "FROM (VALUES (1, 'a')) AS _repark_by_name_src(`col1`, `col2`)"
+    );
 }

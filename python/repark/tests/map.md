@@ -7828,10 +7828,15 @@ FNP-11B (2026-09-15): datetime format parsing, the TIME family, BL-13 and BL-14.
   Regression pins hold the shapes this unit could silently break: a plain
   `MERGE INTO` whose source carries an extra column still succeeds and ignores
   it, a target row whose data is literally `evolution` is not eaten by the
-  clause sniffer, positional `INSERT … VALUES` never evolves (IPI-17 stays
-  where it is), and `mergeInto`'s RePark-only `target.` / `source.` qualifiers
+  clause sniffer, and `mergeInto`'s RePark-only `target.` / `source.` qualifiers
   and bare-key sugar keep working beside Spark's `{short}.id = s.id` form.
-  pins: ipi-19-56-37-schema-evolution-write/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+  **U6-WRITE-REFUSALS (2026-09-24):** the IPI-17 boundary pin now pins Spark's
+  measured answer — positional `INSERT … VALUES` follows the property (it
+  evolves by name with the conf on an accept-any-schema table, and keeps the
+  arity refusal without the property). C-013 is superseded by
+  u6-write-refusals/C-009.
+  pins: ipi-19-56-37-schema-evolution-write/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+  pins: u6-write-refusals/C-009
 
 Round 2 (2026-09-20) of the same file: the two refusal pins moved to the class
 the implementation actually reaches. With `write.spark.accept-any-schema` and
@@ -8089,3 +8094,19 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   listing. Both scoreboard cells replayed against the lane build answer Spark's recorded
   rows exactly.
   pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
+
+## U6 WRITE-REFUSALS (2026-09-24)
+
+- [test_ice_write_refusals_1.py](test_ice_write_refusals_1.py) — refusal parity
+  on `write.spark.accept-any-schema` tables, against Spark 4.1.2 + Iceberg 1.11's
+  measured answers. Positional `VALUES` and `SELECT` refuse
+  `IllegalArgumentException: Field <name> not found in source schema` naming the
+  first unknown source column (`col1`, a literal's own text), on the SQL door
+  and on `insertInto` / `saveAsTable`. Matching names, column lists and tables
+  without the property keep writing. Under `spark.sql.iceberg.merge-schema` the
+  union always runs: `VALUES` adds `col1..colN`, a wider source widens, an
+  overwrite evolves, and a non-promotable type refuses `Cannot change column
+  type`. `MERGE WITH SCHEMA EVOLUTION` refuses a non-promotable source type with
+  the same text and does not evolve on a `DELETE`-only MERGE. Every refusal
+  pins class, condition, SQLSTATE and message by equality.
+  pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

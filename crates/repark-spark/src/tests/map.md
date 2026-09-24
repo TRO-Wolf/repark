@@ -2068,3 +2068,12 @@ The FNP-8 aggregate literal-width test inspects execution batches for values and
 Its optimized physical field is not the public Arrow schema. Public aggregate nullability is
 pinned through Column, SQL, and F.expr in `test_fnp_8_sql_door.py` and the recorded/live oracle
 matrix; those exports declare the analyzed logical schema.
+
+## U6 WRITE-REFUSALS (2026-09-24)
+
+- `accept_any_refusals.rs` — the Spark door on accept-any-schema tables and
+  `MERGE WITH SCHEMA EVOLUTION`: every refusal pinned as
+  `repark_common::Error::IllegalArgument` with the exact message, the near misses
+  pinned on schema and rows. Sources are DataFusion views, because this door has
+  no temporary-view home.
+  pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008

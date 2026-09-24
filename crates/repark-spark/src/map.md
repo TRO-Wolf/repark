@@ -1835,3 +1835,18 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   unparsable numeric suffix refuses `IllegalArgumentException` naming the selector, never
   table-not-found, and `branch_`/`tag_` behaviour is unchanged.
   pins: ice-metadata-cols-1/C-011, C-012, C-013, C-014
+
+## U6 WRITE-REFUSALS (2026-09-24) — by-name writes on accept-any-schema tables
+
+- `router.rs` — `execute_insert_routed` now receives every `INSERT`, overwrite
+  included, and first asks
+  `insert_by_name::evolution::routes_positional_by_name`. A positional append or
+  overwrite with no column list and no `PARTITION` clause, whose target is an
+  Iceberg table carrying `write.spark.accept-any-schema=true`, runs through
+  `execute_insert_by_name` as if it said `BY NAME`. Spark skips its output
+  resolution for such a table, so Iceberg resolves the write by name. A table
+  without the property keeps the positional path unchanged.
+- `write_options.rs` — `carries_only_merge_schema` says whether the statement's
+  options are all merge-schema keys. A positional INSERT with any other option
+  stays positional, because the by-name append refuses those options.
+  pins: u6-write-refusals/C-001, C-004

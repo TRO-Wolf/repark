@@ -4,6 +4,15 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [u6-write-refusals-ledger.md](u6-write-refusals-ledger.md) —
+  **U6 WRITE-REFUSALS PR1 (2026-09-24), in flight:** refusal parity on
+  `write.spark.accept-any-schema` tables — positional writes resolve by name and
+  refuse `Field <name> not found in source schema`, the merge-schema conf
+  unions on every write, and `MERGE WITH SCHEMA EVOLUTION` refuses a
+  non-promotable type change with `Cannot change column type`. Supersedes
+  ipi-19-56-37-schema-evolution-write/C-013. C-001..C-009 PROVEN.
+  `risk_tier: standard`. Branch `feat/u6-write-refusals`.
+  pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009
 - [ipi-20-input-file-name-1-ledger.md](ipi-20-input-file-name-1-ledger.md) —
   **IPI-20-INPUT-FILE-NAME-1 (2026-09-23), in flight:** `input_file_name()` on the
   Spark door — a second trigger into `prepare_metadata_column_sql` rewrites a

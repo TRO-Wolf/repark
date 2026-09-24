@@ -12,6 +12,7 @@ use repark_core::CatalogRegistry;
 
 use crate::catalog_ops::{name_parts, namespace_schema_name, reregister};
 use crate::parse_single_normalized;
+use source_names::syntactic_source_names;
 
 enum TargetFill {
     Source(usize),
@@ -77,17 +78,28 @@ pub(crate) async fn execute_insert_by_name(
     let case_sensitive = case_sensitive_insert(ctx);
     let source_names = probe_source_names(ctx, catalogs, source, case_sensitive).await?;
     let table_display = display_table_name(&catalog_name, &table);
-    let added = if insert.overwrite {
-        Vec::new()
-    } else {
-        evolution::columns_to_add(
+    let evolution_plan = evolution::columns_to_add(
+        ctx,
+        &table,
+        &target_field_names(&table),
+        &source_names,
+        case_sensitive,
+        write_options,
+    )?;
+    let table = if let Some(added) = evolution_plan {
+        let source_sql = format!("SELECT * {}", source_from_clause(source, &source_names));
+        evolution::evolve_before_write(
             ctx,
+            catalogs,
+            &catalog_name,
+            &catalog,
             &table,
-            &target_field_names(&table),
-            &source_names,
-            case_sensitive,
-            write_options,
-        )?
+            &source_sql,
+            &added,
+        )
+        .await?
+    } else {
+        table
     };
     let (projection_sql, static_columns) = plan_name_projection(
         &table,
@@ -96,7 +108,6 @@ pub(crate) async fn execute_insert_by_name(
         &source_names,
         &table_display,
         case_sensitive,
-        &added,
     )?;
     if insert.overwrite {
         let query = parse_projection_query(&projection_sql)?;
@@ -148,19 +159,7 @@ pub(crate) async fn execute_insert_by_name(
         .await;
     }
     write_options.refuse_if_non_empty("INSERT ... BY NAME")?;
-    if added.is_empty() {
-        return append_by_name_projection(
-            ctx,
-            catalogs,
-            &catalog_name,
-            &catalog,
-            &table,
-            branch.as_deref(),
-            &projection_sql,
-        )
-        .await;
-    }
-    evolution::append_with_evolution(
+    append_by_name_projection(
         ctx,
         catalogs,
         &catalog_name,
@@ -168,7 +167,6 @@ pub(crate) async fn execute_insert_by_name(
         &table,
         branch.as_deref(),
         &projection_sql,
-        &added,
     )
     .await
 }
@@ -360,9 +358,8 @@ fn plan_name_projection(
     source_names: &[SourceName],
     table_display: &str,
     case_sensitive: bool,
-    added: &[String],
 ) -> Result<(String, Vec<StaticColumn>)> {
-    let mut fields: Vec<(String, bool)> = table
+    let fields: Vec<(String, bool)> = table
         .metadata()
         .current_schema()
         .as_struct()
@@ -370,7 +367,6 @@ fn plan_name_projection(
         .iter()
         .map(|field| (field.name.clone(), field.required))
         .collect();
-    fields.extend(added.iter().map(|name| (name.clone(), false)));
     let static_columns = static_partition_columns(table, insert, case_sensitive)?;
     for name in source_names {
         if let Some(found) = static_columns.iter().find(|static_column| {
@@ -528,57 +524,6 @@ async fn probe_source_names(
         .collect())
 }
 
-fn normalize_ident(value: &str, quoted: bool, case_sensitive: bool) -> String {
-    if quoted || case_sensitive {
-        value.to_string()
-    } else {
-        value.to_ascii_lowercase()
-    }
-}
-
-fn syntactic_source_names(source: &Query, case_sensitive: bool) -> Option<Vec<SourceName>> {
-    let SetExpr::Select(select) = source.body.as_ref() else {
-        return None;
-    };
-    select
-        .projection
-        .iter()
-        .map(|item| match item {
-            datafusion::sql::sqlparser::ast::SelectItem::ExprWithAlias { alias, .. } => {
-                Some(SourceName {
-                    display: alias.value.clone(),
-                    resolved: normalize_ident(
-                        &alias.value,
-                        alias.quote_style.is_some(),
-                        case_sensitive,
-                    ),
-                })
-            }
-            datafusion::sql::sqlparser::ast::SelectItem::UnnamedExpr(
-                datafusion::sql::sqlparser::ast::Expr::Identifier(ident),
-            ) => Some(SourceName {
-                display: ident.value.clone(),
-                resolved: normalize_ident(
-                    &ident.value,
-                    ident.quote_style.is_some(),
-                    case_sensitive,
-                ),
-            }),
-            datafusion::sql::sqlparser::ast::SelectItem::UnnamedExpr(
-                datafusion::sql::sqlparser::ast::Expr::CompoundIdentifier(parts),
-            ) => parts.last().map(|ident| SourceName {
-                display: ident.value.clone(),
-                resolved: normalize_ident(
-                    &ident.value,
-                    ident.quote_style.is_some(),
-                    case_sensitive,
-                ),
-            }),
-            _ => None,
-        })
-        .collect()
-}
-
 fn match_source_to_target(
     targets: &[String],
     sources: &[SourceName],
@@ -685,7 +630,16 @@ fn build_projection_sql(
         })
         .collect::<Vec<_>>()
         .join(", ");
-    format!("SELECT {items} FROM ({source}) AS _repark_by_name_src")
+    format!("SELECT {items} {}", source_from_clause(source, sources))
+}
+
+fn source_from_clause(source: &Query, sources: &[SourceName]) -> String {
+    let aliases = sources
+        .iter()
+        .map(|name| quote_name(&name.resolved))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("FROM ({source}) AS _repark_by_name_src({aliases})")
 }
 
 fn build_static_append_projection(
@@ -988,7 +942,8 @@ pub(crate) fn token_span_offsets(
     (by_start <= name_end).then_some((by_start, name_end))
 }
 
-mod evolution;
+pub(crate) mod evolution;
+mod source_names;
 
 #[cfg(test)]
 mod tests;

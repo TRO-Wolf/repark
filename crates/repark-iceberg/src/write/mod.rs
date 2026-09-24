@@ -65,7 +65,7 @@ pub mod writer_props;
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
 pub use illegal_argument::{IllegalArgumentMarker, illegal_argument_error};
 pub use schema_evolution::{
-    ACCEPT_ANY_SCHEMA_PROP, accepts_any_schema, evolve_schema, incoming_schema,
+    ACCEPT_ANY_SCHEMA_PROP, accepts_any_schema, evolve_merge_schema, evolve_schema, incoming_schema,
 };
 pub use snapshot_refs::{
     SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref, create_snapshot_ref,

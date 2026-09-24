@@ -1,6 +1,8 @@
 use iceberg::TableIdent;
 
-use crate::write::merge::not_matched_by_source::NotMatchedBySourceClause;
+use crate::write::merge::not_matched_by_source::{
+    NotMatchedBySourceAction, NotMatchedBySourceClause,
+};
 
 #[derive(Debug, Clone)]
 pub struct MergeSpec {
@@ -15,6 +17,21 @@ pub struct MergeSpec {
     pub commit_branch: Option<String>,
     pub case_insensitive: bool,
     pub schema_evolution: bool,
+}
+
+impl MergeSpec {
+    #[must_use]
+    pub fn assigns_columns(&self) -> bool {
+        !self.not_matched.is_empty()
+            || self
+                .matched
+                .iter()
+                .any(|clause| !matches!(clause.action, MatchedAction::Delete))
+            || self
+                .not_matched_by_source
+                .iter()
+                .any(|clause| !matches!(clause.action, NotMatchedBySourceAction::Delete))
+    }
 }
 
 #[derive(Debug, Clone)]

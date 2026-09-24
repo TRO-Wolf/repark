@@ -390,3 +390,12 @@ Up: [../map.md](../map.md). Fork contract: `docs/ENGINE_CONTRACT.md` (owned fork
   text. The edit is line-neutral on the 1656 baseline. Pin:
   `expand_star_clauses_errors_on_missing_source_column` in `tests/merge.rs`.
   pins: ice-error-conditions-1/C-011
+
+## U6 WRITE-REFUSALS (2026-09-24)
+
+- `spec.rs` — `MergeSpec::assigns_columns` is true when any clause updates or
+  inserts. Spark does not evolve a `DELETE`-only MERGE, so `execute_merge` now
+  unions the schema only when the flag is set and a clause assigns columns.
+- `mod.rs` — `union_source_schema` calls `evolve_merge_schema`, which adds the
+  type changes. The edit is line-neutral on the 1630 baseline.
+  pins: u6-write-refusals/C-007, C-008
