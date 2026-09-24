@@ -68,61 +68,68 @@ fn metadata_field(name: &str, data_type: DataType, field_id: i32, nullable: bool
 }
 
 fn append_metadata_fields(user: &Schema, table: &Table) -> Result<Schema> {
-    let mut fields: Vec<Field> = user
-        .fields()
-        .iter()
-        .map(|field| field.as_ref().clone())
-        .collect();
-    fields.push(metadata_field(
-        RESERVED_COL_NAME_FILE,
-        DataType::Utf8,
-        RESERVED_FIELD_ID_FILE,
-        false,
-    ));
-    fields.push(metadata_field(
-        RESERVED_COL_NAME_POS,
-        DataType::Int64,
-        RESERVED_FIELD_ID_POS,
-        false,
-    ));
-    fields.push(metadata_field(
-        RESERVED_COL_NAME_SPEC_ID,
-        DataType::Int32,
-        RESERVED_FIELD_ID_SPEC_ID,
-        false,
-    ));
     let partition_type = table
         .metadata()
         .unified_partition_type()
         .map_err(iceberg_to_datafusion)?;
     let partition_arrow =
         type_to_arrow_type(&Type::Struct(partition_type)).map_err(iceberg_to_datafusion)?;
-    fields.push(metadata_field(
-        RESERVED_COL_NAME_PARTITION,
-        partition_arrow,
-        RESERVED_FIELD_ID_PARTITION,
-        true,
-    ));
-    fields.push(metadata_field(
-        RESERVED_COL_NAME_DELETED,
-        DataType::Boolean,
-        RESERVED_FIELD_ID_DELETED,
-        false,
-    ));
+    let mut reserved = vec![
+        metadata_field(
+            RESERVED_COL_NAME_FILE,
+            DataType::Utf8,
+            RESERVED_FIELD_ID_FILE,
+            false,
+        ),
+        metadata_field(
+            RESERVED_COL_NAME_POS,
+            DataType::Int64,
+            RESERVED_FIELD_ID_POS,
+            false,
+        ),
+        metadata_field(
+            RESERVED_COL_NAME_SPEC_ID,
+            DataType::Int32,
+            RESERVED_FIELD_ID_SPEC_ID,
+            false,
+        ),
+        metadata_field(
+            RESERVED_COL_NAME_PARTITION,
+            partition_arrow,
+            RESERVED_FIELD_ID_PARTITION,
+            true,
+        ),
+        metadata_field(
+            RESERVED_COL_NAME_DELETED,
+            DataType::Boolean,
+            RESERVED_FIELD_ID_DELETED,
+            false,
+        ),
+    ];
     if table_serves_row_lineage(table) {
-        fields.push(metadata_field(
+        reserved.push(metadata_field(
             RESERVED_COL_NAME_ROW_ID,
             DataType::Int64,
             RESERVED_FIELD_ID_ROW_ID,
             true,
         ));
-        fields.push(metadata_field(
+        reserved.push(metadata_field(
             RESERVED_COL_NAME_LAST_UPDATED_SEQUENCE_NUMBER,
             DataType::Int64,
             RESERVED_FIELD_ID_LAST_UPDATED_SEQUENCE_NUMBER,
             true,
         ));
     }
+    let fields: Vec<Field> = user
+        .fields()
+        .iter()
+        .map(|field| field.as_ref().clone())
+        .chain(
+            reserved
+                .into_iter()
+                .filter(|field| user.field_with_name(field.name()).is_err()),
+        )
+        .collect();
     Ok(Schema::new(fields))
 }
 

@@ -49,15 +49,23 @@ impl MetadataColumnPins {
 
 #[must_use]
 pub fn sql_mentions_metadata_columns(sql: &str, dialect: &dyn Dialect) -> bool {
+    !referenced_metadata_names(sql, dialect).is_empty()
+}
+
+fn referenced_metadata_names(sql: &str, dialect: &dyn Dialect) -> Vec<&'static str> {
     let Ok(tokens) = Tokenizer::new(dialect, sql).tokenize() else {
-        return false;
+        return Vec::new();
     };
-    tokens.iter().any(|token| match token {
-        Token::Word(word) => {
-            canonical_metadata_token(&word.value, word.quote_style.is_some()).is_some()
+    let mut names = Vec::new();
+    for token in &tokens {
+        if let Token::Word(word) = token
+            && let Some(name) = canonical_metadata_token(&word.value, word.quote_style.is_some())
+            && !names.contains(&name)
+        {
+            names.push(name);
         }
-        _ => false,
-    })
+    }
+    names
 }
 
 fn canonical_metadata_token(value: &str, quoted: bool) -> Option<&'static str> {
@@ -126,6 +134,14 @@ fn refuse(kind: &str) -> DataFusionError {
     ))
 }
 
+fn refuse_reserved_name_collision(conflicting: &[String]) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "Table column names conflict with names reserved for Iceberg metadata columns: [{}]. \
+         Please, use ALTER TABLE statements to rename the conflicting table columns.",
+        conflicting.join(", ")
+    ))
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub async fn prepare_metadata_column_sql(
     ctx: &SessionContext,
@@ -134,7 +150,8 @@ pub async fn prepare_metadata_column_sql(
     dialect: &dyn Dialect,
     pinned: &mut MetadataColumnPins,
 ) -> Result<Option<String>> {
-    let mentions_served = sql_mentions_metadata_columns(sql, dialect);
+    let referenced = referenced_metadata_names(sql, dialect);
+    let mentions_served = !referenced.is_empty();
     if !mentions_served && !sql_mentions_input_file_name_call(sql, dialect) {
         return Ok(None);
     }
@@ -176,6 +193,14 @@ pub async fn prepare_metadata_column_sql(
             continue;
         };
         let user_names = metadata_columns_user_field_names(&table);
+        let conflicting: Vec<String> = user_names
+            .iter()
+            .filter(|name| referenced.contains(&name.as_str()))
+            .cloned()
+            .collect();
+        if !conflicting.is_empty() {
+            return Err(refuse_reserved_name_collision(&conflicting));
+        }
         let provider = MetadataColumnsTableProvider::try_new(table)?;
         let temp_name = next_temp_view_name();
         let _ = ctx.deregister_table(temp_name.as_str());
