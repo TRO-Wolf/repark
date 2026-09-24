@@ -14,7 +14,8 @@ use crate::view_ddl::describe::describe_rows_batch;
 use crate::view_ddl::execute::{
     execute_show_views_with, route_create_temp_view, temp_view_err, temp_view_name_arg,
 };
-use crate::view_ddl::parse::{try_parse_create_temp_view, try_parse_show_views};
+use crate::view_ddl::parse::try_parse_show_views;
+use crate::view_ddl::temp_parse::try_parse_create_temp_view;
 use crate::view_ddl::temp_view::temp_view_column_comments;
 use crate::write_options::StatementWriteOptions;
 

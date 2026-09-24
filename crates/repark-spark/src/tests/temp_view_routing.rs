@@ -4,7 +4,7 @@ use super::common::*;
 use datafusion::sql::sqlparser::parser::ParserError;
 
 use crate::view_ddl::execute::NO_TEMP_VIEW_HOME;
-use crate::view_ddl::parse::{
+use crate::view_ddl::temp_parse::{
     CreateTempViewStatement, GLOBAL_TEMP_VIEW_REFUSAL, try_parse_create_temp_view,
 };
 

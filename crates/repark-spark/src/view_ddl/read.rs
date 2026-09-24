@@ -241,7 +241,7 @@ pub(crate) fn refuse_write_query_body(body_sql: &str) -> Result<()> {
         })
         .unwrap_or_else(|| keyword.to_string());
     let near = format!("'{written}'");
-    Err(crate::view_ddl::parse::spark_parse_error(
+    Err(crate::view_ddl::temp_parse::spark_parse_error(
         spark_error::message(spark_error::PARSE_SYNTAX_ERROR, &[("near", near.as_str())]),
     ))
 }

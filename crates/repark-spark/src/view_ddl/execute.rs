@@ -18,11 +18,11 @@ use repark_iceberg::view::{
 use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, table_or_view_not_found};
 use crate::describe_show::filter_pattern_matches;
 use crate::view_ddl::parse::{
-    AlterViewAction, AlterViewStatement, CreateTempViewStatement, CreateViewStatement,
-    ShowTblpropertiesStatement,
+    AlterViewAction, AlterViewStatement, CreateViewStatement, ShowTblpropertiesStatement,
     ShowViewsStatement,
 };
 use crate::view_ddl::read::{plan_prepared_body, prepare_view_body_sql};
+use crate::view_ddl::temp_parse::CreateTempViewStatement;
 use crate::view_ddl::temp_view::{
     TempViewDefinition, refuse_recursive_temp_view, replanning_temp_view,
 };
