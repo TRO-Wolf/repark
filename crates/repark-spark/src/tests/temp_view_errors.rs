@@ -122,7 +122,8 @@ async fn real_refusal(
 
 const TABLE_OR_VIEW_NOT_FOUND_TAIL: &str = " cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01";
 
-async fn chain_depth_outcomes() -> (datafusion::error::Result<Vec<RecordBatch>>, DataFusionError) {
+#[tokio::test]
+async fn temp_view_chain_depth_refuses_at_the_101st_view() {
     let (_warehouse, ctx, catalogs, session) = real_session().await;
     real_ok(
         &ctx,
@@ -138,26 +139,10 @@ async fn chain_depth_outcomes() -> (datafusion::error::Result<Vec<RecordBatch>>,
         );
         real_ok(&ctx, &catalogs, &session, &sql).await;
     }
-    let within = real_run(&ctx, &catalogs, &session, "SELECT * FROM d99").await;
+    real_run(&ctx, &catalogs, &session, "SELECT * FROM d99")
+        .await
+        .unwrap_or_else(|error| panic!("a 100-view chain reads: {error}"));
     let past = real_refusal(&ctx, &catalogs, &session, "SELECT * FROM d100").await;
-    (within, past)
-}
-
-#[test]
-fn temp_view_chain_depth_refuses_at_the_101st_view() {
-    let (within, past) = std::thread::Builder::new()
-        .stack_size(512 << 20)
-        .spawn(|| {
-            tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("runtime")
-                .block_on(chain_depth_outcomes())
-        })
-        .expect("large-stack thread")
-        .join()
-        .expect("chain depth thread");
-    within.unwrap_or_else(|error| panic!("a 100-view chain reads: {error}"));
     assert!(matches!(past, DataFusionError::Plan(_)), "{past:?}");
     assert_eq!(
         past.to_string(),

@@ -19,7 +19,7 @@ from typing import Any
 import pyarrow as pa
 import pytest
 
-from repark import ReparkSession
+from repark import ReparkSession, Row
 from repark.errors import AnalysisException, UnsupportedOperationException
 
 UNSTRUCTURED_CONDITION: None = None
@@ -401,3 +401,39 @@ def test_temp_views_are_session_scoped(spark: ReparkSession) -> None:
         "Error during planning: table 'spark_catalog.default.scoped' not found"
     )
     assert _rows(spark.sql("SHOW VIEWS")) == [["", "scoped", True]]
+
+
+def _sql_chain(spark: ReparkSession, levels: int) -> None:
+    """Build d0 and ``levels`` SQL temp views, each reading the one below it."""
+    spark.sql("CREATE TEMPORARY VIEW d0 AS SELECT 1 AS id")
+    for level in range(1, levels + 1):
+        spark.sql(f"CREATE TEMPORARY VIEW d{level} AS SELECT * FROM d{level - 1}")
+
+
+def test_a_hundred_view_sql_chain_reads_and_the_101st_refuses(spark: ReparkSession) -> None:
+    """d0..d99 read on the default stack; the 101st view is Spark's nested-depth refusal (p10)."""
+    _sql_chain(spark, 100)
+    assert spark.sql("SELECT * FROM d99").collect() == [Row(id=1)]
+    refusal = _analysis_refusal(spark, "SELECT * FROM d100", collect=True)
+    assert str(refusal) == (
+        f"{PLAN}[VIEW_EXCEED_MAX_NESTED_DEPTH] The depth of view `d0` exceeds the maximum view "
+        "resolution depth (100).\nAnalysis is aborted to avoid errors. If you want to work "
+        'around this, please try to increase the value of "spark.sql.view.maxNestedViewDepth". '
+        "SQLSTATE: 54K00"
+    )
+    assert refusal.getCondition() == "VIEW_EXCEED_MAX_NESTED_DEPTH"
+    assert refusal.getSqlState() == "54K00"
+
+
+def test_a_two_view_sql_chain_reads(spark: ReparkSession) -> None:
+    """A shallow SQL chain keeps reading through the grown-stack scan."""
+    _sql_chain(spark, 2)
+    assert spark.sql("SELECT * FROM d2").collect() == [Row(id=1)]
+
+
+def test_a_ninety_nine_view_dataframe_chain_reads(spark: ReparkSession) -> None:
+    """A DataFrame temp-view chain of 99 levels reads as it does on main."""
+    spark.sql("SELECT 1 AS id").createOrReplaceTempView("f0")
+    for level in range(1, 100):
+        spark.table(f"f{level - 1}").createOrReplaceTempView(f"f{level}")
+    assert spark.table("f99").collect() == [Row(id=1)]
