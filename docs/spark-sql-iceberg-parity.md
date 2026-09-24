@@ -1704,7 +1704,7 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
   `::show_create_view_without_a_sql_representation_is_a_plan_error`).
 - **Rationale** — DECLARED. Short names follow the P-SP-BARE-NAME / P-SP-TWO-PART precedent
   from SHOW TBLPROPERTIES. The escape reuses the table renderer's measured literal rule.
-  `AS SERDE` keeps main's answer until Spark's answer for a view is measured. A version with no SQL
+  `AS SERDE` keeps main 970ac11a's answer until Spark's answer for a view is measured. A version with no SQL
   representation has no body to render, so it refuses.
 
 ## 3. Identifier resolution (DECLARED)

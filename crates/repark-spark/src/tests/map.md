@@ -31,7 +31,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   TABLE` on a view through the router. It pins the v1 and v2 texts, including the Arrow schema
   and the metadata location. It pins bare and two-part names after USE, the stored body
   verbatim (a bare `t` stays unqualified) and backslash-escaped quotes in a column doc and a
-  view comment. Near misses keep main's answers: `AS SERDE` on a view (the `Diagnostic`-wrapped
+  view comment. Near misses keep the answers of main 970ac11a, whose view arm is `Ok(true) => None`
+  (`/tmp/xb-views5/target/probe5/r4/m01-main-equivalence.log`): `AS SERDE` on a view (the `Diagnostic`-wrapped
   parser error at column 32), and a bare name shadowed by a session table (the
   `information_schema` refusal). `load_view` returning `ViewNotFound` or `FeatureUnsupported`
   answers the full `TABLE_OR_VIEW_NOT_FOUND` text for `fault`. Any other load failure, and a

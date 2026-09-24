@@ -172,7 +172,7 @@ def test_session_temp_view_shadowing_a_bare_name_falls_through(spark: ReparkSess
 
 
 def test_view_as_serde_keeps_the_main_parse_error(spark: ReparkSession) -> None:
-    """Near miss — ``AS SERDE`` on a view keeps main's answer (Spark's is unmeasured)."""
+    """Near miss — ``AS SERDE`` on a view keeps main 970ac11a's answer (Spark's is unmeasured)."""
     spark.sql(V2_DDL)
     with pytest.raises(ParseException) as caught:
         spark.sql("SHOW CREATE TABLE sc.ns.v2 AS SERDE")
