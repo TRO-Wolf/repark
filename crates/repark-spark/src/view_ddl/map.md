@@ -57,7 +57,9 @@ service, and the wrapper-based read path that expands stored SQL per query.
   the `try_preparse_intercepts` arm after `try_parse_alter_view` that falls
   through on `None`, and `execute_show_tblproperties` /
   `show_tblproperties_batch` (`key`/`value` rows, reserved
-  `location`/`provider`/`format-version` then sorted stored properties, keyed
+  `location`/`provider`/`format-version` then sorted stored properties; the
+  stored `comment` is hidden from the listing and from a keyed lookup, as in
+  Spark (PR5 r2, p5 `vc.props`), keyed
   misses answer Spark's sentence, missing names fail closed with
   `TABLE_OR_VIEW_NOT_FOUND`, tables fall through; viewless catalogs treat
   `FeatureUnsupported` as no view and take the same table/missing split).
@@ -94,10 +96,13 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `iceberg_err`. `render_create_view` builds Spark's `CREATE VIEW
   <catalog>.<ns>.<view> (` column list, adding `COMMENT` for a documented column,
   then a `COMMENT` line when the view has a `comment` property. Its
-  `TBLPROPERTIES` come from `execute.rs`'s `show_tblproperties_rows` minus
-  `comment`, sorted by key, and render through `render_tblproperties_clause`.
-  The body is the stored SQL from `view_read_spec`, verbatim. Residues:
-  D-VIEW-SHOWCREATE-1. pins: ice-views-1/C-017
+  `TBLPROPERTIES` are `execute.rs`'s `show_tblproperties_rows` (which already
+  hides `comment`), sorted by key, rendered through `render_tblproperties_clause`.
+  The body is the stored SQL from `view_read_spec`, verbatim. A version with no
+  SQL representation refuses with that function's `Plan` error, and an unregistered
+  catalog refuses with `catalog_handle`'s. **r2 (2026-09-24):** the renderer has
+  no property filter of its own. Residues: D-VIEW-SHOWCREATE-1.
+  pins: ice-views-1/C-017
 
 ## Pointers
 
