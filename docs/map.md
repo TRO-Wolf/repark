@@ -47,6 +47,9 @@ repo.
   **DESCRIBE-COLUMN-1 (2026-09-23):** `DESC-1` records Spark-equal column rows and the
   parser-level VERSION/TIMESTAMP-tail refusal; its Round 2 records identity-partition rows and
   creation-time table ownership.
+  **U10-MC-DELETED-1 (2026-09-23):** the row now states all five metadata columns served
+  (`_deleted` last) and records residue `R-MC-RESERVED-NAME-SCAN`; a query naming a served
+  metadata column that the table schema also carries refuses with Spark's reserved-name text.
   **ICE-SYSTEM-FUNCTIONS-1 (2026-09-20):**
   row `FN-SYSFN-1` filed and FIXED in §7 — the seven `<cat>.system.*` functions resolve on
   every registered Iceberg catalog and `SHOW [USER] FUNCTIONS IN <cat>.system` lists them;

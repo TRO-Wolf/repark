@@ -930,14 +930,24 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   column over a time-travel read keeps the planner's unresolved-column error — the
   pinned static provider does not advertise metadata columns (a KNOWN DIVERGENCE:
   Spark serves them; pre-existing for every metadata column).
+  **mcdel-r4 (2026-09-23):** before registering a table's temp view,
+  `prepare_metadata_column_sql` refuses when the statement names a served metadata
+  column (its canonical tokens, `referenced_metadata_names`) that the table's user
+  schema also carries: `Table column names conflict with names reserved for Iceberg
+  metadata columns: [<names>]. Please, use ALTER TABLE statements to rename the
+  conflicting table columns.` (Spark's text, as `DataFusionError::Plan`, names in
+  table-schema order) instead of leaking `__repark_mc_N` in a duplicate-field
+  schema error. A statement that does not name the colliding column (`SELECT *`,
+  `DELETE`, another metadata column) is still served — KNOWN DIVERGENCE
+  `R-MC-RESERVED-NAME-SCAN`: Spark refuses every scan of such a table.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
-  C-018, C-019, C-020, C-021, C-022, C-023
+  C-018, C-019, C-020, C-021, C-022
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
   C-012, C-013
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
   so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved

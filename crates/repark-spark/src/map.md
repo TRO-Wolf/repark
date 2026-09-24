@@ -119,10 +119,12 @@ pins: rp-4-fork-repin/C-005, C-006
   `R-MC-DELETED`); `SELECT *` stays user columns and a metadata column over a
   time-travel read keeps the planner's unresolved-column error (KNOWN
   DIVERGENCE — Spark serves them; pre-existing for every metadata column).
+  **mcdel-r4 (2026-09-23):** a query naming a served metadata column that the table
+  schema also carries refuses with Spark's reserved-name text from the same rewrite.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
-  C-018, C-019, C-020, C-021, C-022, C-023
+  C-018, C-019, C-020, C-021, C-022
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015
   SQP-1: the front door canonicalizes escapes once and
   translates downstream parser locations back to the caller's SQL.
   ICE-WRITE-OPTIONS-1 round 4 (2026-09-17, Q-21c-5): every `execute_inner` arm that

@@ -1384,7 +1384,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   advertises the served four.
   The `_deleted` cluster lives in `metadata_columns_deleted.rs` (mcdel-r1).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-015,
-  C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
+  C-016, C-017, C-018, C-019, C-020, C-021, C-022
 - `metadata_columns_deleted.rs` — **mcdel-r1 (2026-09-23):** the `_deleted` pins over
   the recorded merge-on-read seed (two appends plus one delete).
   `deleted_column_marks_merge_on_read_deleted_row` pins the recorded
@@ -1425,8 +1425,22 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `deleted_column_on_join_right_side_reaches_its_scan` pins the discriminating joins
   `ON a.id = b.id + 1` — `WHERE b._deleted` = `[(2,1)]`, projected `b._deleted` =
   `[(2,1,true),(3,2,false),(4,3,false)]`, `WHERE NOT b._deleted` = `[(3,2),(4,3)]`.
+  **mcdel-r4 (2026-09-23, Sol critic r3):** the composed pin repeats the Int32 /
+  non-null Boolean asserts after the merge-on-read query. Reserved-name collisions,
+  each asserting the full string `Error during planning: Table column names conflict
+  with names reserved for Iceberg metadata columns: [<names>]. Please, use ALTER TABLE
+  statements to rename the conflicting table columns.`:
+  `user_deleted_column_collision_refuses_like_spark` — on `(id BIGINT, _deleted STRING)`,
+  copy-on-write and merge-on-read, `SELECT id, _deleted`, `SELECT id, _spec_id, _deleted`,
+  `SELECT t._deleted` and `WHERE _deleted = 'u2'` refuse `[_deleted]`, and `SELECT *`
+  answers `[(2,u2),(3,u3)]` (KNOWN DIVERGENCE `R-MC-RESERVED-NAME-SCAN`);
+  `every_served_metadata_name_collision_refuses` — each name of `METADATA_COLUMN_NAMES`
+  refuses `[<name>]` on its own table, and `(id, _file, _pos)` refuses `[_file, _pos]`;
+  `reserved_name_near_misses_still_answer` — a user `deleted` column beside `_deleted`
+  answers `[(u1,true),(u2,false),(u3,false)]`, and a user `_file` column with only
+  `id, _deleted` named answers `[(1,false),(2,false),(3,false)]`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell

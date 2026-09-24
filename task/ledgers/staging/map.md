@@ -1467,6 +1467,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   merged in as C-015..C-018: `_spec_id` values, evolution, star, refusal strings.
   **WO-R3 (2026-09-22):** merged in as C-019..C-023 — `_partition` joins the
   served set as a NULLABLE union struct; only `_deleted` still refuses.
+  **U10-MC-DELETED-1 (2026-09-23):** `_deleted` is served; C-023 is REJECTED
+  (SUPERSEDED by u10-mc-deleted-1/C-001), with supersession notes on C-007, C-008 and C-018.
   Ready for the departure move to `completed/`.
   `risk_tier: standard`. Branch `fix/ice-metadata-cols-1`.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
@@ -1591,6 +1593,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `_spec_id` + `_deleted` rows on both tables, the discriminating
   `a.id = b.id + 1` joins that prove the right-side `_deleted` reaches its scan,
   and the `SELECT *` rows under `ORDER BY id` and `ORDER BY id DESC`.
+  mcdel-r4 asserts the merge-on-read types beside the copy-on-write ones and
+  refuses a named metadata column that the table schema also carries with Spark's
+  reserved-name text (C-014, all five names). `SELECT *`, `DELETE` and other
+  metadata columns on such a table stay served: KNOWN DIVERGENCE
+  `R-MC-RESERVED-NAME-SCAN` (C-015). It also trues up the `ICE-MC-FILEPOS-1` registry
+  row and the predecessor ledger.
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015

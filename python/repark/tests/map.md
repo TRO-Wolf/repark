@@ -7857,9 +7857,16 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   `R-MC-DELETED` cell pins `SELECT id, _deleted` = `[[1,true],[2,false],[3,false],[4,false]]`
   (multiset) on the merge-on-read seed with the field a `BooleanType`, and the
   not-projected near miss keeps `SELECT id` = `[[2],[3],[4]]` and `count(*)` = 3.
+  **mcdel-r4 (2026-09-23):** `test_user_column_named_deleted_refuses_like_spark` — on a
+  merge-on-read `(id BIGINT, _deleted STRING)` table, `SELECT id, _deleted` raises
+  `AnalysisException` whose full text is `Error during planning: Table column names
+  conflict with names reserved for Iceberg metadata columns: [_deleted]. Please, use
+  ALTER TABLE statements to rename the conflicting table columns.`, and `SELECT *` still
+  answers `[[2,"u2"],[3,"u3"]]` (KNOWN DIVERGENCE `R-MC-RESERVED-NAME-SCAN`). The
+  superseded `ice-metadata-cols-1/C-023` citation is dropped (its refusal test is gone).
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009,
-  C-010, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023
-  pins: u10-mc-deleted-1/C-001, C-002
+  C-010, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
+  pins: u10-mc-deleted-1/C-001, C-002, C-014, C-015
 - `test_time_travel.py` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the selector pins —
   `t.snapshot_id_<id>` / `t.at_timestamp_<ms>` read the pinned snapshot with rows and schema
   asserted, unparsable numeric suffixes refuse typed, and the `branch_`/`tag_` near-miss
