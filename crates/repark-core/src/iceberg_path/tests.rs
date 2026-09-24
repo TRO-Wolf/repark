@@ -723,3 +723,47 @@ async fn relative_file_path_keeps_one_of_two_trailing_slashes() {
         format!("java.net.URISyntaxException: Relative path in absolute URI: {argument}/")
     );
 }
+
+#[tokio::test]
+async fn non_candidate_metadata_names_report_the_supplied_path() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let metadata = dir.path().join("metadata");
+    std::fs::create_dir_all(&metadata).expect("mkdir");
+    std::fs::write(metadata.join("junk.metadata.json.txt"), b"{}").expect("write");
+    std::fs::write(metadata.join("v2147483648.metadata.json"), b"{}").expect("write");
+    std::fs::write(metadata.join("999-.metadata.json"), b"{}").expect("write");
+    let root = dir.path().to_string_lossy().to_string();
+    let file_io = local_file_io(&root);
+    let error = resolve_supplied(&file_io, &root)
+        .await
+        .expect_err("must refuse");
+    assert!(matches!(error, Error::Analysis(_)));
+    assert_eq!(error.to_string(), no_metadata_message(&root));
+}
+
+#[test]
+fn v_form_zero_is_the_lowest_candidate() {
+    assert_eq!(metadata_file_version("v0.metadata.json"), Some(0));
+    let files = vec![info("/w/t/metadata/v0.metadata.json")];
+    assert_eq!(
+        latest_metadata_location(&files),
+        Some("/w/t/metadata/v0.metadata.json")
+    );
+}
+
+#[tokio::test]
+async fn hint_at_java_int_max_selects_that_file() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let metadata = dir.path().join("metadata");
+    std::fs::create_dir_all(&metadata).expect("mkdir");
+    std::fs::write(metadata.join("v2.metadata.json"), b"{}").expect("write");
+    std::fs::write(metadata.join("v2147483647.metadata.json"), b"{}").expect("write");
+    std::fs::write(metadata.join("version-hint.text"), b"2147483647").expect("write");
+    let root = dir.path().to_string_lossy().to_string();
+    let file_io = local_file_io(&root);
+    let resolved = resolve_supplied(&file_io, &root).await.expect("resolve");
+    assert_eq!(
+        resolved,
+        format!("{root}/metadata/v2147483647.metadata.json")
+    );
+}
