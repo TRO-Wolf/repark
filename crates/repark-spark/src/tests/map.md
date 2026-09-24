@@ -1536,7 +1536,11 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `EMPTY_PARTITION_VALUE` text for the first value-less key on both levels; `(a) garbage` keeps the
   trailing `extra input` refusal; `(select=1)` keeps the partition-management refusal. Residue
   guards: `residue_r_u4_13` (`(a=1 b=2)`, Spark refuses near 'b') and `residue_r_u4_14` (`(a b)`,
-  Spark appends `: extra input 'b'`) pin RePark's current answers.
+  Spark appends `: extra input 'b'`) pin RePark's current answers. **WO-A15 (2026-09-24):** every arm of the
+  statement and PARTITION scanners has a pin against `spark-4.1.2-a15-measured.json`
+  (`show_table_extended_scanner_arms_*`); `residue_a15_in_string`, `residue_a15_in_like` and
+  `residue_a15_extendedx` guard RePark's current answers where the statement head differs from
+  Spark.
   pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal

@@ -657,3 +657,157 @@ async fn show_table_extended_residue_r_u4_14_stray_key_token_keeps_the_bare_head
     assert_scanner_refusal(sql, expected);
     assert_end_to_end_refusal(&ctx, &catalogs, sql, expected).await;
 }
+
+const SHOW_TABLE_EXTENDED_PC: &str = "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc'";
+
+#[tokio::test]
+async fn show_table_extended_scanner_arms_refuse_with_spark_measured_text() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let partition = |spec: &str| format!("{SHOW_TABLE_EXTENDED_PC} PARTITION{spec}");
+    for (sql, near) in [
+        (partition(""), "end of input"),
+        (partition(";"), "';'"),
+        (partition(" 1"), "'1'"),
+        (partition(" 'x'"), "''x''"),
+        (partition(" )"), "')'"),
+        (partition(" ("), "end of input"),
+        (partition(" ()"), "')'"),
+        (partition(" (1=1)"), "'1'"),
+        (partition(" (,)"), "','"),
+        (partition(" (a, =1)"), "'='"),
+        (partition(" (a="), "end of input"),
+        (partition(" (a=,b=1)"), "','"),
+        (partition(" (a=)"), "')'"),
+        (partition(" (a=(1))"), "'('"),
+        (partition(" (a=1("), "'('"),
+        (partition(" (a=1 (2))"), "'('"),
+        (partition(" (a=1"), "end of input"),
+        (partition(" (a=1,"), "end of input"),
+        (partition(" (a"), "end of input"),
+        ("SHOW TABLE EXTENDED".to_string(), "end of input"),
+        ("SHOW TABLE EXTENDED IN".to_string(), "end of input"),
+        ("SHOW TABLE EXTENDED IN ice.sales pc".to_string(), "'pc'"),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE".to_string(),
+            "end of input",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE pc".to_string(),
+            "'pc'",
+        ),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE 'pc".to_string(),
+            "'''",
+        ),
+        (
+            format!("{SHOW_TABLE_EXTENDED_PC} extra"),
+            "'extra': extra input 'extra'",
+        ),
+        (partition(" (a=1) extra"), "'extra': extra input 'extra'"),
+    ] {
+        let expected =
+            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near {near}. SQLSTATE: 42601");
+        assert_scanner_refusal(&sql, &expected);
+        assert_end_to_end_refusal(&ctx, &catalogs, &sql, &expected).await;
+    }
+    for (spec, key) in [(" (b=1, a)", "a"), (" (a, b)", "a")] {
+        let sql = partition(spec);
+        let expected = format!(
+            "[INVALID_SQL_SYNTAX.EMPTY_PARTITION_VALUE] Invalid SQL syntax: Partition key `{key}` \
+             must set value. SQLSTATE: 42000"
+        );
+        assert_scanner_refusal(&sql, &expected);
+        assert_end_to_end_refusal(&ctx, &catalogs, &sql, &expected).await;
+    }
+}
+
+#[tokio::test]
+async fn show_table_extended_scanner_arms_accept_what_spark_parses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let expected = seed_pc(&ctx, &catalogs).await;
+    for (sql, scope) in [
+        (format!("{SHOW_TABLE_EXTENDED_PC};"), vec!["ice", "sales"]),
+        (
+            "SHOW TABLE EXTENDED IN ice.sales LIKE \"pc\"".to_string(),
+            vec!["ice", "sales"],
+        ),
+        (
+            "SHOW TABLE EXTENDED FROM ice.sales LIKE 'pc'".to_string(),
+            vec!["ice", "sales"],
+        ),
+    ] {
+        assert_scanner_accepts(&sql, &scope, "pc", false);
+        assert_eq!(
+            outcome(&ctx, &catalogs, &sql).await.unwrap(),
+            expected,
+            "{sql}"
+        );
+    }
+    let two_values = format!("{SHOW_TABLE_EXTENDED_PC} PARTITION (a=1, b=2)");
+    assert_scanner_accepts(&two_values, &["ice", "sales"], "pc", true);
+    let refused = outcome(&ctx, &catalogs, &two_values)
+        .await
+        .expect_err("a partition clause on an existing table refuses");
+    assert_analysis_refusal(&two_values, refused, PARTITION_MANAGEMENT_UNSUPPORTED);
+    let ambient = "SHOW TABLE EXTENDED LIKE 'pc'";
+    let Some(Ok(parsed)) = crate::show_table_extended::try_parse_show_table_extended(ambient)
+    else {
+        panic!("{ambient}: expected a SHOW TABLE EXTENDED parse");
+    };
+    assert_eq!(parsed.scope, None);
+    assert_eq!(
+        outcome(&ctx, &catalogs, ambient).await.unwrap(),
+        (extended_schema(), Vec::new())
+    );
+}
+
+#[tokio::test]
+async fn show_table_extended_residue_a15_in_string_accepts_a_string_namespace() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "SHOW TABLE EXTENDED IN 'x' LIKE 'pc'";
+    assert_scanner_accepts(sql, &["x"], "pc", false);
+    let refused = outcome(&ctx, &catalogs, sql)
+        .await
+        .expect_err("the string namespace does not exist");
+    assert_analysis_refusal(
+        sql,
+        refused,
+        "[SCHEMA_NOT_FOUND] The schema `spark_catalog`.`x` cannot be found. Verify the spelling \
+         and correctness of the schema and catalog. If you did not qualify the name with a \
+         catalog, verify the current_schema() output, or qualify the name with the correct \
+         catalog. To tolerate the error on drop use DROP SCHEMA IF EXISTS. SQLSTATE: 42704",
+    );
+}
+
+#[tokio::test]
+async fn show_table_extended_residue_a15_in_like_keeps_the_bare_head_line() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "SHOW TABLE EXTENDED IN LIKE 'pc'";
+    let expected = "[PARSE_SYNTAX_ERROR] Syntax error at or near ''pc''. SQLSTATE: 42601";
+    assert_scanner_refusal(sql, expected);
+    assert_end_to_end_refusal(&ctx, &catalogs, sql, expected).await;
+}
+
+#[tokio::test]
+async fn show_table_extended_residue_a15_extendedx_falls_through_to_show_variable() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "SHOW TABLE EXTENDEDX IN ice.sales LIKE 'pc'";
+    assert!(crate::show_table_extended::try_parse_show_table_extended(sql).is_none());
+    let refused = outcome(&ctx, &catalogs, sql)
+        .await
+        .expect_err("SHOW TABLE EXTENDEDX falls through");
+    assert_analysis_refusal(
+        sql,
+        refused,
+        "SHOW [VARIABLE] is not supported unless information_schema is enabled",
+    );
+}
