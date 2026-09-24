@@ -365,6 +365,11 @@ def test_remove_orphan_files_deletes_by_default(spark: ReparkSession, tmp_path: 
     ).to_arrow()
     assert _schema_names(listed) == ["orphan_file_location"]
     assert _orphan_names(listed) == {"orphan-first.parquet", "orphan-second.parquet"}
+    assert set(listed.column("orphan_file_location").to_pylist()) == {
+        f"file:{first}",
+        f"file:{second}",
+    }
+    assert listed.num_rows == 2
     assert first.exists()
     assert second.exists()
     deleted = spark.sql("CALL mem.system.remove_orphan_files(table => 'owned.events')").to_arrow()
