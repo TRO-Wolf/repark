@@ -120,6 +120,11 @@ def _rows(session: Any, query: str) -> list[list[Any]]:
     return sorted((list(row) for row in session.sql(query).collect()), key=lambda row: row[0])
 
 
+def _field_names(session: Any, query: str) -> list[str]:
+    """Field names of a query's schema, in order."""
+    return [field.name for field in session.sql(query).schema.fields]
+
+
 def _schema(session: Any, query: str) -> list[tuple[str, str]]:
     """``(name, simpleString)`` per field of a query's schema."""
     frame = session.sql(query)
@@ -307,6 +312,7 @@ def test_deleted_marks_merge_on_read_deleted_row(spark: Any) -> None:
     table = _seeded(spark, "t_deleted", MOR_PROPERTIES)
     frame = spark.sql(f"SELECT id, _deleted FROM {table}")
     fields = {field.name: field for field in frame.schema.fields}
+    assert list(fields) == ["id", "_deleted"]
     assert isinstance(fields["_deleted"].dataType, BooleanType)
     assert sorted((list(row) for row in frame.collect()), key=lambda row: row[0]) == [
         [1, True],
@@ -322,7 +328,9 @@ def test_not_projecting_deleted_still_filters(spark: Any) -> None:
     pins: u10-mc-deleted-1/C-002
     """
     table = _seeded(spark, "t_deleted_noproj", MOR_PROPERTIES)
+    assert _field_names(spark, f"SELECT id FROM {table}") == ["id"]
     assert _rows(spark, f"SELECT id FROM {table}") == [[2], [3], [4]]
+    assert _field_names(spark, f"SELECT count(*) FROM {table}") == ["count(*)"]
     assert _rows(spark, f"SELECT count(*) FROM {table}") == [[3]]
 
 
@@ -345,6 +353,7 @@ def test_user_column_named_deleted_refuses_like_spark(spark: Any) -> None:
         "Iceberg metadata columns: [_deleted]. Please, use ALTER TABLE statements to "
         "rename the conflicting table columns."
     )
+    assert _field_names(spark, f"SELECT * FROM {table} ORDER BY id") == ["id", "_deleted"]
     rows = [list(row) for row in spark.sql(f"SELECT * FROM {table} ORDER BY id").collect()]
     assert rows == [[2, "u2"], [3, "u3"]]
 
