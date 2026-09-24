@@ -526,7 +526,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   30, final 35 on four partitions — with the measured CALL outputs (expire drops
   exactly one manifest list under a load-bearing `older_than`, manifests 3→1, binpack
   admitted as a no-op under the min-input floor, the orphan sweep removes exactly the
-  planted pre-dated file, zero delete files), the adopted properties carried verbatim
+  planted pre-dated file and, since R5 (2026-09-24), prints it as `file:<path>`, zero delete
+  files), the adopted properties carried verbatim
   through `v9`, and repark's zstd codec footer-pinned — plus the Spark-vs-RePark
   metadata-shape diff (`vN` vs `NNNNN-uuid` naming, `version-hint.text` left at `5`
   while repark commits through `v9`, mixed snapshot-summary vocabularies). Live

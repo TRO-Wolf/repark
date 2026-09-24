@@ -188,6 +188,13 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `<own location>/metadata/` for another table's metadata files, and the catalog walk refuses a
   scan inside the own location when another table's location equals it.
   pins: u1-mem-layout-1/C-023, C-024, C-025
+  R5 (2026-09-24): the listing branch prints each orphan through `qualify_local_path`, which
+  prefixes `file:` to a string that starts with `/` and returns every other string unchanged,
+  as Java's Hadoop listing prints a local file; `DeleteOrphanFiles` still deletes the
+  unqualified path, and the `file_list_view` branch prints the view's spelling unqualified.
+  Red tests: `tests/call_orphan.rs::call_remove_orphan_files_qualifies_only_a_bare_absolute_path`,
+  `::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`,
+  `::call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified`.
 - `orphan_file_list.rs` — **IPI-30 (2026-09-22):** `file_list_view`, ported from Java
   `compareToFileList`. The view must carry `file_path` (a string) and `last_modified` (a
   timestamp); a missing view answers `TABLE_OR_VIEW_NOT_FOUND`. Candidates are the non-null
