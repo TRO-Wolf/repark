@@ -26,10 +26,6 @@ pins: dbt-1-adapter/C-002, dbt-1-adapter/C-004
   `test_served_shapes_run[S-DROP-SCHEMA]`.
   | `repark__get_columns_in_relation` | routes to the adapter's Python method, which reads column types from the facade schema, so no caller falls through to `spark__`'s `describe extended` text (`DBT-DESC-1`). |
   | `repark__get_columns_in_relation_raw` | refuses loudly for the same reason, pointing the caller at `adapter.get_columns_in_relation`. |
-  | `repark__create_temporary_view` | RePark has no temporary views (`DBT-TEMPVIEW-1`). |
-  | `repark__create_view_as` | RePark refuses `create or replace view` (`DBT-VIEW-1`). |
-  | `repark__get_columns_in_relation` | routes to the adapter's Python method so no caller can fall through to `spark__`'s `describe extended`, which answers Arrow spellings (`DBT-DESC-1`). |
-  | `repark__get_columns_in_relation_raw` | refuses loudly for the same reason, instead of returning a wrong-typed table. |
   | `repark__create_temporary_view` | refuses: RePark does not run dbt incremental/snapshot materializations yet (`DBT-INCREMENTAL-1`), though the SQL door serves the temporary view. |
   | `repark__create_view_as` | refuses: the SQL door serves `create or replace view`, but the adapter does not build views yet (`DBT-VIEW-1`). |
   | `repark__alter_column_comment` | `alter column … comment` is refused (`DBT-COLCOMMENT-1`). |
