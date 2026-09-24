@@ -6,7 +6,7 @@ table location whose current metadata resolves through ``version-hint.text`` or 
 highest-numbered metadata file under ``<location>/metadata``. Near-miss identifiers keep
 the catalog route untouched. Arrow ``to_arrow`` pins carry value AND type (docs/testing.md).
 
-pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 """
 
 from __future__ import annotations
