@@ -297,9 +297,7 @@ impl RewriteMetadataColumns {
         let TableFactor::Table { name, .. } = relation else {
             return None;
         };
-        self.rewrites
-            .iter()
-            .find(|entry| &entry.original == name || &entry.replacement == name)
+        self.find(name)
     }
 }
 
