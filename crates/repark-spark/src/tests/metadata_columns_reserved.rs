@@ -218,6 +218,11 @@ async fn reserved_name_near_misses_still_answer() {
     )
     .await;
     assert_eq!(
+        field_names(&rows),
+        vec!["deleted", "_deleted"],
+        "field names"
+    );
+    assert_eq!(
         pairs_str_bool(&rows),
         vec![
             ("u1".to_string(), true),
@@ -261,12 +266,14 @@ async fn reserved_name_near_misses_still_answer() {
         "SELECT id, _spec_id FROM ice.ns.near_two ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id", "_spec_id"], "field names");
     assert_eq!(
         pairs_i64_i32(&rows),
         vec![(1, 0), (2, 0), (3, 0)],
         "R-MC-RESERVED-NAME-NEAR"
     );
     let rows = batches(&session, "SELECT id FROM ice.ns.near_two ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![1, 2, 3], "R-MC-RESERVED-NAME-NEAR");
     seed_user_columns(&session, "ice.ns.near_file", &["_file"], "").await;
     let rows = batches(
@@ -274,6 +281,7 @@ async fn reserved_name_near_misses_still_answer() {
         "SELECT id, _deleted FROM ice.ns.near_file ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "field names");
     assert_eq!(
         pairs_i64_bool(&rows),
         vec![(1, false), (2, false), (3, false)],
@@ -284,6 +292,7 @@ async fn reserved_name_near_misses_still_answer() {
         "SELECT id, _pos FROM ice.ns.near_file ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id", "_pos"], "field names");
     assert_eq!(
         pairs_i64_i64(&rows),
         vec![(1, 0), (2, 1), (3, 2)],
@@ -294,8 +303,10 @@ async fn reserved_name_near_misses_still_answer() {
         "SELECT id FROM ice.ns.near_file WHERE _spec_id = 0 ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![1, 2, 3], "R-MC-RESERVED-NAME-NEAR");
     let rows = batches(&session, "SELECT * FROM ice.ns.near_file ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id", "_file"], "field names");
     assert_eq!(
         pairs_i64_str(&rows),
         vec![

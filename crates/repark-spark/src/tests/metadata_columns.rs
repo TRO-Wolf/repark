@@ -575,6 +575,7 @@ async fn served_names_fold_and_composed_shapes_refuse() {
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
 
     let upper = batches(&session, "SELECT id, _POS FROM ice.ns.t").await;
+    assert_eq!(field_names(&upper), vec!["id", "_pos"], "field names");
     assert_eq!(
         pairs_i64(&upper),
         vec![(2, 0), (3, 0), (4, 0)],
@@ -582,6 +583,7 @@ async fn served_names_fold_and_composed_shapes_refuse() {
     );
 
     let quoted = batches(&session, "SELECT id, `_pos` FROM ice.ns.t").await;
+    assert_eq!(field_names(&quoted), vec!["id", "_pos"], "field names");
     assert_eq!(
         pairs_i64(&quoted),
         vec![(2, 0), (3, 0), (4, 0)],

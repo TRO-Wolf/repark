@@ -212,6 +212,18 @@ fn triples_i64_i64_bool(
         .collect()
 }
 
+pub(super) async fn frame_field_names(session: &ReparkSession, sql: &str) -> Vec<String> {
+    session
+        .sql(sql)
+        .await
+        .unwrap()
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect()
+}
+
 pub(super) fn field_names(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> Vec<String> {
     batches[0]
         .schema()
@@ -227,6 +239,7 @@ async fn deleted_column_marks_merge_on_read_deleted_row() {
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
     let rows = batches(&session, "SELECT id, _deleted FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "field names");
     assert_eq!(
         pairs_i64_bool(&rows),
         vec![(1, true), (2, false), (3, false), (4, false)],
@@ -245,8 +258,10 @@ async fn not_projecting_deleted_still_filters_mor_rows() {
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
     let rows = batches(&session, "SELECT id FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![2, 3, 4], "R-MC-DELETED-NOPROJ");
     let rows = batches(&session, "SELECT count(*) FROM ice.ns.t").await;
+    assert_eq!(field_names(&rows), vec!["count(*)"], "field names");
     assert_eq!(i64s(&rows, 0), vec![3], "R-MC-DELETED-NOPROJ");
 }
 
@@ -271,6 +286,7 @@ async fn select_star_keeps_user_columns_on_mor_table() {
         "R-MC-DELETED-STAR"
     );
     let rows = batches(&session, "SELECT * FROM ice.ns.t ORDER BY id DESC").await;
+    assert_eq!(field_names(&rows), vec!["id", "data", "cat"], "field names");
     assert_eq!(
         triples_i64(&rows),
         vec![
@@ -292,6 +308,7 @@ async fn deleted_predicates_reapply_above_the_scan() {
         "SELECT id, _deleted FROM ice.ns.t WHERE NOT _deleted ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "field names");
     assert_eq!(
         pairs_i64_bool(&rows),
         vec![(2, false), (3, false), (4, false)],
@@ -302,30 +319,35 @@ async fn deleted_predicates_reapply_above_the_scan() {
         "SELECT id, _deleted FROM ice.ns.t WHERE _deleted ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "field names");
     assert_eq!(pairs_i64_bool(&rows), vec![(1, true)], "R-MC-DELETED-PRED");
     let rows = batches(
         &session,
         "SELECT id FROM ice.ns.t WHERE _deleted ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![1], "R-MC-DELETED-PRED-ONLY");
     let rows = batches(
         &session,
         "SELECT id FROM ice.ns.t WHERE NOT _deleted ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![2, 3, 4], "R-MC-DELETED-PRED-ONLY");
     let rows = batches(
         &session,
         "SELECT id FROM ice.ns.t WHERE _deleted OR id > 0 ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![1, 2, 3, 4], "R-MC-DELETED-PRED-ONLY");
     let rows = batches(
         &session,
         "SELECT count(*) FROM ice.ns.t WHERE _deleted IS NOT NULL",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["count(*)"], "field names");
     assert_eq!(i64s(&rows, 0), vec![3], "R-MC-DELETED-PRED-ONLY");
 }
 
@@ -335,6 +357,7 @@ async fn deleted_column_on_copy_on_write_marks_all_rows_false() {
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
     let rows = batches(&session, "SELECT id, _deleted FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "field names");
     assert_eq!(
         pairs_i64_bool(&rows),
         vec![(2, false), (3, false), (4, false)],
@@ -353,12 +376,14 @@ async fn deleted_column_flows_through_subqueries() {
          WHERE NOT s._deleted ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![2, 3, 4], "R-MC-DELETED-SUBQ");
     let rows = batches(
         &session,
         "SELECT id FROM (SELECT id, _deleted AS d FROM ice.ns.t) s ORDER BY id",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![2, 3, 4], "R-MC-DELETED-SUBQ");
 }
 
@@ -373,6 +398,14 @@ async fn deleted_column_in_expressions_order_and_group() {
     )
     .await;
     assert_eq!(
+        field_names(&rows),
+        vec![
+            "id",
+            "CASE WHEN t._deleted THEN Utf8(\"D\") ELSE Utf8(\"L\") END"
+        ],
+        "field names"
+    );
+    assert_eq!(
         pairs_i64_str(&rows),
         vec![
             (1, "D".to_string()),
@@ -383,14 +416,21 @@ async fn deleted_column_in_expressions_order_and_group() {
         "R-MC-DELETED-EXPR"
     );
     let rows = batches(&session, "SELECT sum(CAST(_deleted AS INT)) FROM ice.ns.t").await;
+    assert_eq!(field_names(&rows), vec!["sum(t._deleted)"], "field names");
     assert_eq!(i64s(&rows, 0), vec![1], "R-MC-DELETED-EXPR");
     let rows = batches(&session, "SELECT id FROM ice.ns.t ORDER BY _deleted, id").await;
+    assert_eq!(field_names(&rows), vec!["id"], "field names");
     assert_eq!(i64s(&rows, 0), vec![2, 3, 4, 1], "R-MC-DELETED-EXPR");
     let rows = batches(
         &session,
         "SELECT _deleted, count(*) FROM ice.ns.t GROUP BY _deleted ORDER BY 1",
     )
     .await;
+    assert_eq!(
+        field_names(&rows),
+        vec!["_deleted", "count(*)"],
+        "field names"
+    );
     assert_eq!(
         pairs_bool_i64(&rows),
         vec![(false, 3), (true, 1)],
@@ -409,6 +449,15 @@ async fn deleted_column_in_self_join_answers_empty() {
          WHERE b._deleted ORDER BY 1",
     )
     .await;
+    assert_eq!(
+        frame_field_names(
+            &session,
+            "SELECT a.id FROM ice.ns.t a JOIN ice.ns.t b ON a.id = b.id WHERE b._deleted ORDER BY 1",
+        )
+        .await,
+        vec!["id"],
+        "field names"
+    );
     assert_eq!(i64s(&rows, 0), Vec::<i64>::new(), "R-MC-DELETED-JOIN");
 }
 
@@ -423,6 +472,7 @@ async fn deleted_column_on_join_right_side_reaches_its_scan() {
          WHERE b._deleted ORDER BY 1",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id", "id"], "field names");
     assert_eq!(
         pairs_i64_i64(&rows),
         vec![(2, 1)],
@@ -434,6 +484,11 @@ async fn deleted_column_on_join_right_side_reaches_its_scan() {
          ORDER BY 1",
     )
     .await;
+    assert_eq!(
+        field_names(&rows),
+        vec!["id", "id", "_deleted"],
+        "field names"
+    );
     assert_eq!(
         triples_i64_i64_bool(&rows),
         vec![(2, 1, true), (3, 2, false), (4, 3, false)],
@@ -453,6 +508,7 @@ async fn deleted_column_on_join_right_side_reaches_its_scan() {
          WHERE NOT b._deleted ORDER BY 1",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["id", "id"], "field names");
     assert_eq!(
         pairs_i64_i64(&rows),
         vec![(3, 2), (4, 3)],
@@ -466,6 +522,7 @@ async fn unquoted_upper_deleted_folds_to_served_name() {
     let session = session(&wh).await;
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
     let rows = batches(&session, "SELECT id, _DELETED FROM ice.ns.t ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "field names");
     assert_eq!(
         pairs_i64_bool(&rows),
         vec![(1, true), (2, false), (3, false), (4, false)],
@@ -550,12 +607,14 @@ async fn served_spec_id_and_deleted_answer_together() {
     seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", "").await;
     seed(&session, "ice.ns.m", "PARTITIONED BY (cat)", MOR).await;
     let rows = batches(&session, "SELECT id, _spec_id FROM ice.ns.t").await;
+    assert_eq!(field_names(&rows), vec!["id", "_spec_id"], "field names");
     assert_eq!(
         sorted(pairs_i64_i32(&rows)),
         vec![(2, 0), (3, 0), (4, 0)],
         "composed served columns answer together"
     );
     let rows = batches(&session, "SELECT id, _deleted FROM ice.ns.t").await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "field names");
     assert_eq!(
         sorted(pairs_i64_bool(&rows)),
         vec![(2, false), (3, false), (4, false)],
