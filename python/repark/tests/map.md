@@ -5099,6 +5099,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `SHOW TABLE EXTENDED IN` compares every column name
   and value of its one four-column metadata row (`to_pylist()`).
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `SHOW TABLE EXTENDED IN` pins one complete
+  four-column metadata row.
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_catalog_surface_1.py` + `facade_catalog_oracle.json` — **CATALOG-SURFACE-1
   (2026-09-14):** the thirteen-name second half of `Catalog`, driven by the run-15b
