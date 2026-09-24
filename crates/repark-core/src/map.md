@@ -972,6 +972,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   qualifier is always used as written). So a plain table, CTE or derived table sharing the
   Iceberg table's alias in another scope keeps its own columns; the unit leg
   `a_wildcard_resolves_only_against_its_own_select` pins it.
+  **mcdel-r11 (2026-09-24):** the unit leg
+  `input_file_name_over_a_comma_join_is_left_unresolved` pins
+  `sole_input_file_name_relation`'s `from.len() != 1` guard: `input_file_name()` over
+  `FROM a, b` is left untouched (the `[UNRESOLVED_ROUTINE]` residue). The mutation sweep
+  that found the gap is saved in `/tmp/xo58-mcd-r11probe/mutations-r11.json`.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
