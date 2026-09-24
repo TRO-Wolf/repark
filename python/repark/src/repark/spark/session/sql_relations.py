@@ -949,9 +949,9 @@ def _expand_drop_table_or_view_sql(query: str, resolve: Callable[..., str]) -> s
     """Rewrite ``DROP TABLE|VIEW [IF EXISTS] name [, …]`` targets to three-part form.
 
     Returns ``None`` when the statement is neither shape. ``PURGE`` stays a
-    TABLE-only tail. A one-part VIEW name that is a session temp view resolves
-    to that view's HOME so DROP VIEW reaches the temp view before the catalog;
-    every other VIEW name resolves exactly like a TABLE name.
+    TABLE-only tail. A one-part name that is a session temp view resolves to
+    that view's HOME, so DROP TABLE and DROP VIEW both reach the temp view
+    before the catalog, as Spark does; qualified names resolve to the catalog.
     """
 
     table_match = _DROP_TABLE_SQL_RE.match(query)
@@ -984,7 +984,7 @@ def _expand_drop_table_or_view_sql(query: str, resolve: Callable[..., str]) -> s
     qualified: list[str] = []
 
     for raw_name in _split_sql_table_name_list(names_blob):
-        resolved = resolve(raw_name, prefer_temp_view=verb == "VIEW")
+        resolved = resolve(raw_name, prefer_temp_view=True)
 
         qualified.append(_sql_table_ref(resolved))
 

@@ -74,7 +74,7 @@ fn try_drop_temp_view(
     let statements = Parser::parse_sql(&DatabricksDialect {}, sql).ok()?;
     let [
         Statement::Drop {
-            object_type: ObjectType::View,
+            object_type,
             names,
             temporary: false,
             ..
@@ -82,6 +82,11 @@ fn try_drop_temp_view(
     ] = statements.as_slice()
     else {
         return None;
+    };
+    let context = match object_type {
+        ObjectType::View => "DROP VIEW",
+        ObjectType::Table => "DROP TABLE",
+        _ => return None,
     };
     let [name] = names.as_slice() else {
         return None;
@@ -92,7 +97,7 @@ fn try_drop_temp_view(
     };
     Some(
         write_options
-            .refuse_if_non_empty("DROP VIEW")
+            .refuse_if_non_empty(context)
             .and_then(|()| temp_views.drop_temp_view(&target).map_err(temp_view_err))
             .and_then(|_| ctx.read_empty()),
     )

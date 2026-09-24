@@ -557,3 +557,50 @@ async fn show_views_appends_temp_rows_after_catalog_rows() {
         ]]
     );
 }
+
+#[tokio::test]
+async fn bare_drop_table_of_a_temp_name_drops_the_temp_view() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let stub = StubTempViews::with_existing(&["src"]);
+    for sql in [
+        "DROP TABLE src",
+        "DROP TABLE src PURGE",
+        "DROP TABLE IF EXISTS src",
+        "DROP TABLE `datafusion`.`public`.`src`",
+    ] {
+        run_with_session(&ctx, &catalogs, sql, &stub)
+            .await
+            .unwrap_or_else(|error| panic!("{sql} must drop the temp view: {error}"));
+    }
+    assert_eq!(stub.dropped(), vec!["\"src\"".to_string(); 4]);
+}
+
+#[tokio::test]
+async fn qualified_drop_table_falls_through_to_the_catalog() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.src AS SELECT CAST(7 AS INT) AS id, 'z' AS name",
+    )
+    .await
+    .expect("catalog table named like the temp view")
+    .collect()
+    .await
+    .expect("collect ctas");
+    let stub = StubTempViews::with_existing(&["src"]);
+    run_with_session(&ctx, &catalogs, "DROP TABLE ice.sales.src", &stub)
+        .await
+        .expect("the qualified DROP TABLE is the catalog drop");
+    assert!(stub.dropped().is_empty());
+    let exists = catalogs["ice"]
+        .table_exists(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "src".to_string(),
+        ))
+        .await
+        .expect("table existence");
+    assert!(!exists);
+}

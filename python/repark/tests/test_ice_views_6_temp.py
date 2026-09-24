@@ -678,18 +678,81 @@ def test_narrower_dependency_column_up_casts(spark: ReparkSession) -> None:
     assert _rows(frame) == [[7]]
 
 
-def test_drop_table_near_miss_keeps_the_catalog_path(spark: ReparkSession) -> None:
-    """DROP TABLE on a temp view name stays the catalog drop by ruling (Spark drops the view)."""
-    spark.sql("USE sc.ns")
-    spark.sql("CREATE OR REPLACE TEMPORARY VIEW dt AS SELECT 1 AS id")
-    refusal = _analysis_refusal(spark, "DROP TABLE dt")
+def _assert_catalog_t_missing(spark: ReparkSession) -> None:
+    """``sc.ns.t`` is gone: Spark's TABLE_OR_VIEW_NOT_FOUND for the qualified name."""
+    refusal = _analysis_refusal(spark, "SELECT * FROM sc.ns.t", collect=True)
     assert str(refusal) == (
-        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`dt` "
-        "cannot be found. Verify the spelling and correctness of the schema and catalog. If you "
-        "did not qualify the name with a schema, verify the current_schema() output, or qualify "
-        "the name with the correct schema and catalog. To tolerate the error on drop use DROP "
-        "VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+        f"Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`t`"
+        f"{TABLE_OR_VIEW_NOT_FOUND_TAIL}"
     )
     assert refusal.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
     assert refusal.getSqlState() == "42P01"
-    assert _rows(spark.sql("SELECT * FROM dt")) == [[1]]
+
+
+def test_bare_drop_table_drops_the_temp_view(spark: ReparkSession) -> None:
+    """DROP TABLE on a bare temp view name drops the temp view (p9, droptable.run)."""
+    spark.sql("USE sc.ns")
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW dt AS SELECT 1 AS id")
+    spark.sql("DROP TABLE dt")
+    assert _rows(spark.sql("SHOW VIEWS")) == []
+    assert "dt" not in spark.list_temp_view_names()
+
+
+@pytest.mark.parametrize(
+    "statement", ["DROP TABLE t", "DROP TABLE t PURGE", "DROP TABLE IF EXISTS t"]
+)
+def test_bare_drop_table_keeps_a_same_named_catalog_table(
+    spark: ReparkSession, statement: str
+) -> None:
+    """The data-loss pin: a bare DROP TABLE drops the shadowing temp view, never the table."""
+    spark.sql("USE sc.ns")
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW t AS SELECT 5 AS id")
+    spark.sql(statement)
+    assert _rows(spark.sql("SHOW VIEWS")) == []
+    assert _rows(spark.sql("SELECT * FROM t ORDER BY id")) == CELL_ROWS
+    assert _rows(spark.sql("SELECT * FROM sc.ns.t ORDER BY id")) == CELL_ROWS
+
+
+def test_bare_drop_table_drops_a_dataframe_temp_view_and_keeps_the_table(
+    spark: ReparkSession,
+) -> None:
+    """A createOrReplaceTempView view shadowing the table is dropped, the table is kept."""
+    spark.sql("USE sc.ns")
+    spark.sql("SELECT 7 AS id").createOrReplaceTempView("t")
+    assert _rows(spark.sql("SELECT * FROM t")) == [[7]]
+    spark.sql("DROP TABLE t")
+    assert _rows(spark.sql("SHOW VIEWS")) == []
+    assert _rows(spark.sql("SELECT * FROM t ORDER BY id")) == CELL_ROWS
+    assert _rows(spark.sql("SELECT * FROM sc.ns.t ORDER BY id")) == CELL_ROWS
+
+
+def test_drop_table_if_exists_drops_a_temp_only_name(spark: ReparkSession) -> None:
+    """DROP TABLE IF EXISTS on a temp-only name drops it; a missing name is a no-op."""
+    spark.sql("USE sc.ns")
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW tonly AS SELECT 5 AS id")
+    spark.sql("DROP TABLE IF EXISTS tonly")
+    assert _rows(spark.sql("SHOW VIEWS")) == []
+    spark.sql("DROP TABLE IF EXISTS nothing_here")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.t ORDER BY id")) == CELL_ROWS
+
+
+@pytest.mark.parametrize("statement", ["DROP TABLE sc.ns.t", "DROP TABLE ns.t"])
+def test_qualified_drop_table_near_miss_drops_the_catalog_table(
+    spark: ReparkSession, statement: str
+) -> None:
+    """Two- and three-part DROP TABLE reach the catalog and leave the temp view (p9)."""
+    spark.sql("USE sc")
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW t AS SELECT 5 AS id")
+    spark.sql(statement)
+    assert _rows(spark.sql("SELECT * FROM t")) == [[5]]
+    assert _rows(spark.sql("SHOW VIEWS")) == [["", "t", True]]
+    _assert_catalog_t_missing(spark)
+
+
+def test_bare_drop_table_without_a_temp_view_drops_the_catalog_table(
+    spark: ReparkSession,
+) -> None:
+    """With no temp view the bare DROP TABLE is the catalog drop, unchanged."""
+    spark.sql("USE sc.ns")
+    spark.sql("DROP TABLE t")
+    _assert_catalog_t_missing(spark)
