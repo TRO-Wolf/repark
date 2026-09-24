@@ -566,16 +566,7 @@ async fn input_file_name_over_a_temp_view_named_like_the_table_falls_through() {
     seed(&session, "ice.ns.t").await;
     run(&session, "USE ice.ns").await;
 
-    let error = plan_error(&session, "CREATE TEMPORARY VIEW t AS SELECT 1 AS id").await;
-    assert!(
-        error.contains("not implemented") || error.contains("not supported"),
-        "the SQL door refuses CREATE TEMPORARY VIEW outright: {error}"
-    );
-
-    let frame = session.sql("SELECT 1 AS id").await.unwrap();
-    session
-        .create_or_replace_temp_view_from("t", &frame)
-        .unwrap();
+    run(&session, "CREATE TEMPORARY VIEW t AS SELECT 1 AS id").await;
 
     let error = plan_error(&session, "SELECT input_file_name() FROM t").await;
     assert!(

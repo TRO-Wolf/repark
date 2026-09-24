@@ -380,3 +380,44 @@ def test_catalog_reference_is_not_captured_by_a_later_temp_view(spark: ReparkSes
     frame = spark.sql("SELECT * FROM z ORDER BY id")
     assert _schema(frame) == CELL_SCHEMA
     assert _rows(frame) == CELL_ROWS
+
+
+@pytest.mark.parametrize(
+    ("statement", "message"),
+    [
+        (
+            "CREATE TEMPORARY TABLE tt (id INT)",
+            "This feature is not implemented: CREATE TEMPORARY TABLE is not supported for "
+            "Iceberg tables yet — omit TEMPORARY for a durable catalog table, or use a temp "
+            "view (CREATE TEMP VIEW)",
+        ),
+        (
+            "CREATE TEMPORARY TABLE tt AS SELECT 1 AS id",
+            "This feature is not implemented: CREATE TEMPORARY TABLE … AS SELECT is not "
+            "supported for Iceberg tables yet — omit TEMPORARY for a durable catalog table, or "
+            "use a temp view (CREATE TEMP VIEW)",
+        ),
+    ],
+)
+def test_temporary_table_near_misses_keep_their_refusals(
+    spark: ReparkSession, statement: str, message: str
+) -> None:
+    """CREATE TEMPORARY TABLE forms still reach the table and CTAS refusals."""
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql(statement)
+    assert type(caught.value) is UnsupportedOperationException
+    assert str(caught.value) == message
+    assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
+    assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
+
+
+def test_drop_temporary_function_near_miss_still_runs(spark: ReparkSession) -> None:
+    """DROP TEMPORARY FUNCTION IF EXISTS is untouched by the temp view door."""
+    assert _rows(spark.sql("DROP TEMPORARY FUNCTION IF EXISTS nofn")) == []
+
+
+def test_durable_create_view_near_miss_stays_a_catalog_view(spark: ReparkSession) -> None:
+    """CREATE VIEW keeps the durable path: SHOW VIEWS lists it as non-temporary."""
+    spark.sql("CREATE VIEW sc.ns.dv AS SELECT id FROM sc.ns.t WHERE id > 0")
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == [["ns", "dv", False]]
+    assert _rows(spark.sql("SELECT * FROM sc.ns.dv ORDER BY id")) == [[1], [2]]
