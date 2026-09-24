@@ -162,7 +162,7 @@ async fn execute_rename_table(
     let dest_namespace = crate::namespace_schema_name(dest_ident.namespace());
     repark_iceberg::write::alter::rename_table(handle.as_ref(), src_ident, &dest_ident)
         .await
-        .map_err(iceberg_err)?;
+        .map_err(repark_iceberg::write::unsupported_message_error)?;
     if src_namespace == dest_namespace {
         reregister(ctx, handle, catalog_name, &src_namespace).await?;
     } else {
