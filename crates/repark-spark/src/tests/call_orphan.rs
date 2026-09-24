@@ -126,7 +126,7 @@ async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
     assert_eq!(batch.schema().field(0).data_type(), &DataType::Utf8);
     assert!(!batch.schema().field(0).is_nullable());
 
-    let listed: Vec<String> = {
+    let mut listed: Vec<String> = {
         let column = batch
             .column(0)
             .as_any()
@@ -137,12 +137,16 @@ async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
             .collect()
     };
     assert_eq!(listed.len(), 2, "one row per orphan, got {listed:?}");
-    for name in &planted {
-        assert!(
-            listed.iter().any(|location| location.ends_with(name)),
-            "dry run must list {name}, got {listed:?}"
-        );
-    }
+    listed.sort();
+    let mut expected: Vec<String> = planted
+        .iter()
+        .map(|name| format!("file:{}", table_dir.join("data").join(name).display()))
+        .collect();
+    expected.sort();
+    assert_eq!(
+        listed, expected,
+        "the dry run lists each orphan in its file: form"
+    );
 
     assert_eq!(
         files_under(&table_dir),

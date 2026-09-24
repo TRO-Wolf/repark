@@ -1029,7 +1029,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins the listing output `file:<path>` with the orphan deleted from disk;
   `call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified` pins the view
   branch's unqualified output. The listing assertions in `call_orphan_ancestor.rs`,
-  `call_orphan_cotenancy.rs` and `call_orphan_scope.rs` expect `file:<path>`.
+  `call_orphan_cotenancy.rs` and `call_orphan_scope.rs` expect `file:<path>`, and
+  `call_remove_orphan_files_dry_run_lists_without_deleting` pins the `dry_run => true` rows
+  exactly as the sorted `file:<path>` strings of the planted orphans.
   **U1-MEM-LAYOUT-1 (2026-09-23):** the Q-55-6 safety guards stay green after the layout change. pins: u1-mem-layout-1/C-009
   **IPI-30 (2026-09-22):** Spark's defaults land — the bare call deletes with `older_than` at
   now minus 3 days (`call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`),
