@@ -69,6 +69,19 @@ def _show_rows(frame: Any) -> list[list[Any]]:
     return [list(row.values()) for row in table.to_pylist()]
 
 
+def _assert_refusal(
+    error: AnalysisException,
+    message: str,
+    condition: str | None,
+    sql_state: str | None,
+) -> None:
+    """Pin an AnalysisException's exact class, full text, condition and SQLSTATE."""
+    assert type(error) is AnalysisException
+    assert str(error) == message
+    assert error.getCondition() == condition
+    assert error.getSqlState() == sql_state
+
+
 def test_show_tblproperties_key_cell(spark: ReparkSession) -> None:
     """V-SHOW-TBLPROPERTIES — the measured cell: one row, two string columns."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
@@ -162,23 +175,58 @@ def test_alter_view_set_then_show_reflects_updates(spark: ReparkSession, tmp_pat
     ]
 
 
-def test_bare_and_two_part_names_do_not_follow_use(spark: ReparkSession) -> None:
-    """E9 — pin the bare and two-part name residue D-VIEW-SHOWPROPS-1."""
+def test_bare_and_two_part_names_follow_use(spark: ReparkSession, tmp_path: Path) -> None:
+    """E9 — P-SP-BARE-NAME and P-SP-TWO-PART: short names complete from USE."""
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v', 'a'='b') AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc.ns")
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES v ('k')")) == [["k", "v"]]
+    assert sorted(_show_rows(spark.sql("SHOW TBLPROPERTIES v"))) == [
+        ["a", "b"],
+        ["format-version", "1"],
+        ["k", "v"],
+        ["location", str(tmp_path / "ns" / "v")],
+        ["provider", "iceberg"],
+    ]
+    spark.sql("USE sc")
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES ns.v ('k')")) == [["k", "v"]]
+
+
+def test_three_part_name_ignores_use(spark: ReparkSession) -> None:
+    """Near-miss — a three-part name answers the same after USE other_ns."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
-    spark.sql("CREATE NAMESPACE sc.other")
-    spark.catalog.setCurrentCatalog("sc")
-    spark.catalog.setCurrentDatabase("ns")
+    spark.sql("CREATE NAMESPACE sc.other_ns")
+    spark.sql("USE sc")
+    spark.sql("USE other_ns")
+    assert _show_rows(spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k')")) == [["k", "v"]]
+
+
+def test_bare_table_after_use_falls_through(spark: ReparkSession) -> None:
+    """Near-miss — a bare table name after USE keeps the upstream SHOW refusal."""
+    spark.sql("USE sc.ns")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SHOW TBLPROPERTIES t ('k')")
+    _assert_refusal(caught.value, f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}", None, None)
+
+
+def test_bare_missing_name_after_use_is_table_or_view_not_found(spark: ReparkSession) -> None:
+    """Near-miss — a bare missing name after USE answers the full PR2 refusal."""
+    spark.sql("USE sc.ns")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("SHOW TBLPROPERTIES nope ('k')")
+    _assert_refusal(
+        caught.value,
+        f"Error during planning: {_table_or_view_not_found('nope')}",
+        "TABLE_OR_VIEW_NOT_FOUND",
+        "42P01",
+    )
+
+
+def test_bare_name_without_use_resolves_in_the_registry_default(spark: ReparkSession) -> None:
+    """Near-miss — without USE a bare name resolves in spark_catalog.default."""
+    spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SHOW TBLPROPERTIES v ('k')")
-    assert str(caught.value) == f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}"
-    assert caught.value.getCondition() == NO_CONDITION
-    assert caught.value.getSqlState() == NO_CONDITION
-    spark.catalog.setCurrentDatabase("other")
-    with pytest.raises(AnalysisException) as caught:
-        spark.sql("SHOW TBLPROPERTIES ns.v ('k')")
-    assert str(caught.value) == f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}"
-    assert caught.value.getCondition() == NO_CONDITION
-    assert caught.value.getSqlState() == NO_CONDITION
+    _assert_refusal(caught.value, f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}", None, None)
 
 
 def test_show_tblproperties_on_a_table_falls_through(spark: ReparkSession) -> None:
