@@ -357,9 +357,11 @@ impl RewriteMetadataColumns {
             match item {
                 SelectItem::Wildcard(options) => match sole {
                     Some(entry) => {
+                        let qualifier =
+                            sole_relation_alias(select).unwrap_or_else(|| entry.alias.clone());
                         for column in &entry.user_names {
                             expanded.push(SelectItem::UnnamedExpr(SqlExpr::CompoundIdentifier(
-                                vec![entry.alias.clone(), Ident::new(column.clone())],
+                                vec![qualifier.clone(), Ident::new(column.clone())],
                             )));
                         }
                     }
@@ -373,12 +375,15 @@ impl RewriteMetadataColumns {
                         SelectItemQualifiedWildcardKind::ObjectName(name) => last_ident(name),
                         SelectItemQualifiedWildcardKind::Expr(_) => None,
                     };
-                    match prefix.as_ref().and_then(|ident| self.by_alias(ident)) {
-                        Some(entry) => {
+                    match prefix
+                        .as_ref()
+                        .and_then(|ident| self.qualified_rewrite(select, ident))
+                    {
+                        Some((entry, qualifier)) => {
                             for column in &entry.user_names {
                                 expanded.push(SelectItem::UnnamedExpr(
                                     SqlExpr::CompoundIdentifier(vec![
-                                        entry.alias.clone(),
+                                        qualifier.clone(),
                                         Ident::new(column.clone()),
                                     ]),
                                 ));
@@ -392,6 +397,29 @@ impl RewriteMetadataColumns {
         }
         select.projection = expanded;
         Ok(())
+    }
+
+    fn qualified_rewrite(&self, select: &Select, qualifier: &Ident) -> Option<(&Rewrite, Ident)> {
+        let aliased = select
+            .from
+            .iter()
+            .flat_map(|from| {
+                std::iter::once(&from.relation).chain(from.joins.iter().map(|join| &join.relation))
+            })
+            .find_map(|relation| match relation {
+                TableFactor::Table {
+                    name,
+                    alias: Some(table_alias),
+                    ..
+                } if ident_eq(qualifier, &table_alias.name.value) => Some(self.find(name)),
+                _ => None,
+            });
+        match aliased {
+            Some(entry) => entry.map(|entry| (entry, qualifier.clone())),
+            None => self
+                .by_alias(qualifier)
+                .map(|entry| (entry, entry.alias.clone())),
+        }
     }
 
     fn rewrite_input_file_names(&self, select: &mut Select) {
@@ -515,6 +543,16 @@ impl VisitorMut for InputFileNameCalls<'_> {
             self.blocked -= 1;
         }
         ControlFlow::Continue(())
+    }
+}
+
+fn sole_relation_alias(select: &Select) -> Option<Ident> {
+    match &select.from.first()?.relation {
+        TableFactor::Table {
+            alias: Some(table_alias),
+            ..
+        } => Some(table_alias.name.clone()),
+        _ => None,
     }
 }
 
