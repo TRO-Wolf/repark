@@ -346,13 +346,14 @@ async fn seed_pc(ctx: &SessionContext, catalogs: &CatalogRegistry) -> (Schema, V
         ("write.parquet.compression-codec", "zstd"),
     ]);
     let location = table_location(catalogs, "pc").await;
+    let owner = repark_core::session_owner_snapshot();
     (
         extended_schema(),
         vec![managed_row(
             "pc",
             &location,
             &properties,
-            None,
+            Some(&owner),
             "root\n |-- id: long (nullable = true)\n",
         )],
     )
