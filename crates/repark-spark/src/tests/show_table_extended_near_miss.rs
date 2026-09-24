@@ -538,3 +538,46 @@ async fn show_table_extended_partition_spec_near_misses_keep_their_answers() {
     assert_scanner_refusal(unclosed_sql, NEAR_END_OF_INPUT);
     assert_end_to_end_refusal(&ctx, &catalogs, unclosed_sql, NEAR_END_OF_INPUT).await;
 }
+
+#[tokio::test]
+async fn show_table_extended_malformed_partition_specs_refuse_at_the_spark_token() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    for (spec, near) in [
+        ("()", "')'"),
+        ("(a=1,)", "')'"),
+        ("(,a=1)", "','"),
+        ("(=1)", "'='"),
+        ("(a=)", "')'"),
+        ("(1=1)", "'1'"),
+        ("('a'=1)", "''a''"),
+    ] {
+        let sql = format!("SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION {spec}");
+        let expected =
+            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near {near}. SQLSTATE: 42601");
+        assert_scanner_refusal(&sql, &expected);
+        assert_end_to_end_refusal(&ctx, &catalogs, &sql, &expected).await;
+    }
+}
+
+#[tokio::test]
+async fn show_table_extended_well_formed_partition_specs_keep_the_partition_refusal() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    for spec in ["(a=1, b='x')", "(a=-1)", "(a=DATE '2020-01-01')"] {
+        let sql = format!("SHOW TABLE EXTENDED IN ice.sales LIKE 'pc' PARTITION {spec}");
+        assert_scanner_accepts(&sql, &["ice", "sales"], "pc", true);
+        let refused = outcome(&ctx, &catalogs, &sql)
+            .await
+            .expect_err("a partition clause on an existing table refuses");
+        assert_analysis_refusal(
+            &sql,
+            refused,
+            "[INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED] The partition \
+             command is invalid. Table `ice`.`sales`.`pc` does not support partition management. \
+             SQLSTATE: 42601",
+        );
+    }
+}

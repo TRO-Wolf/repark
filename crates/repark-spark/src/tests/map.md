@@ -1529,7 +1529,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Every refusal equals the Spark 4.1.2 condition and message head (WO-A10). **WO-A11
   (2026-09-23):** a nested `(` in the PARTITION spec (closed, unclosed, ambient scope) refuses near
   `'('` at both levels; `(cat='a')` and `(cat='(')` keep the partition-management refusal and
-  `(cat='a'` keeps end of input.
+  `(cat='a'` keeps end of input. **WO-A12 (2026-09-23):** `()`, `(a=1,)`, `(,a=1)`, `(=1)`, `(a=)`,
+  `(1=1)` and `('a'=1)` refuse at Spark 4.1.2's token on both levels; `(a=1, b='x')`, `(a=-1)` and
+  `(a=DATE '2020-01-01')` keep the partition-management refusal.
   pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal

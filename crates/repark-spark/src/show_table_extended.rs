@@ -264,10 +264,38 @@ fn consume_partition_spec(parser: &mut Parser) -> Result<bool> {
     }
     loop {
         match parser.next_token().token {
+            Token::Word(_) => {}
+            Token::EOF => return Ok(false),
+            token => return Err(syntax_error_at_token(&token)),
+        }
+        let mut delimiter = parser.next_token().token;
+        if delimiter == Token::Eq {
+            match parser.next_token().token {
+                Token::EOF => return Ok(false),
+                token @ (Token::Comma | Token::LParen | Token::RParen) => {
+                    return Err(syntax_error_at_token(&token));
+                }
+                _ => {}
+            }
+            delimiter = next_partition_value_delimiter(parser);
+        }
+        match delimiter {
+            Token::Comma => {}
             Token::RParen => return Ok(true),
             Token::EOF => return Ok(false),
-            Token::LParen => return Err(syntax_error_at_token(&Token::LParen)),
-            _ => {}
+            token => return Err(syntax_error_at_token(&token)),
+        }
+    }
+}
+
+fn next_partition_value_delimiter(parser: &mut Parser) -> Token {
+    loop {
+        let token = parser.next_token().token;
+        if matches!(
+            token,
+            Token::Comma | Token::LParen | Token::RParen | Token::EOF
+        ) {
+            return token;
         }
     }
 }
