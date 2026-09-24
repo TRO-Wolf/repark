@@ -197,16 +197,16 @@ async fn call_remove_orphan_files_armed_deletes_orphans_and_nothing_else() {
     )
     .await
     .expect("armed CALL");
+    let mut reported = orphan_locations(&result.collect().await.expect("collect"));
+    reported.sort();
+    let mut expected: Vec<String> = planted
+        .iter()
+        .map(|name| format!("file:{}", table_dir.join("data").join(name).display()))
+        .collect();
+    expected.sort();
     assert_eq!(
-        result
-            .collect()
-            .await
-            .expect("collect")
-            .iter()
-            .map(datafusion::arrow::array::RecordBatch::num_rows)
-            .sum::<usize>(),
-        3,
-        "three orphans reported"
+        reported, expected,
+        "three orphans reported in their file: form"
     );
 
     let after = files_under(&table_dir);
@@ -270,9 +270,10 @@ async fn call_remove_orphan_files_reads_location_positionally() {
         1,
         "the sweep lists only what `location` covers, got {locations:?}"
     );
-    assert!(
-        locations[0].contains("/sub/"),
-        "the listed orphan sits under `location`, got {locations:?}"
+    assert_eq!(
+        locations,
+        vec![format!("file:{}", inside.display())],
+        "the listed orphan sits under `location`"
     );
     assert!(
         !inside.exists(),
@@ -315,9 +316,13 @@ async fn call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_defaul
     let batches = result.collect().await.expect("collect orphan result");
     let locations = orphan_locations(&batches);
     assert_eq!(locations.len(), 1, "one row, got {locations:?}");
-    assert!(
-        locations[0].ends_with("orphan-old.parquet"),
-        "the row must be the 10-day-old orphan, got {locations:?}"
+    assert_eq!(
+        locations,
+        vec![format!(
+            "file:{}",
+            data_dir.join("orphan-old.parquet").display()
+        )],
+        "the row must be the 10-day-old orphan"
     );
 
     let after = files_under(&table_dir);

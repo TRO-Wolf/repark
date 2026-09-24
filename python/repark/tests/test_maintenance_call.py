@@ -347,6 +347,8 @@ def test_remove_orphan_files_defaults_older_than_to_three_days(
 def test_remove_orphan_files_deletes_by_default(spark: ReparkSession, tmp_path: Path) -> None:
     """A bare call deletes; ``dry_run => true`` lists the same rows and keeps the files.
 
+    The listing rows read ``file:<path>``; a ``file_list_view`` row keeps the view's spelling.
+
     Registry rows ORPHAN-1/ORPHAN-2 (retired 2026-09-22, Spark parity).
 
     pins: ipi-30-orphan-1/C-002, C-003
@@ -370,6 +372,14 @@ def test_remove_orphan_files_deletes_by_default(spark: ReparkSession, tmp_path: 
         f"file:{second}",
     }
     assert listed.num_rows == 2
+    spark.sql(
+        f"SELECT '{first}' AS file_path, CAST(from_unixtime(0) AS TIMESTAMP) AS last_modified"
+    ).createOrReplaceTempView("flv")
+    viewed = spark.sql(
+        "CALL mem.system.remove_orphan_files(table => 'owned.events', dry_run => true, "
+        "file_list_view => 'flv')"
+    ).to_arrow()
+    assert viewed.column("orphan_file_location").to_pylist() == [str(first)]
     assert first.exists()
     assert second.exists()
     deleted = spark.sql("CALL mem.system.remove_orphan_files(table => 'owned.events')").to_arrow()
