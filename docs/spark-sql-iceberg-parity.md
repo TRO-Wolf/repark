@@ -1389,8 +1389,11 @@ perfectly good read.
   `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01` message — after `USE`, the two- and three-part forms
   name the facade-expanded name where Spark names the name as written (residue: the name
   shape only). A real table at the written four-part path wins over the metadata intercept;
-  since plain resolution refuses every four-or-more-part name with the compound-identifier
-  error, a nested-namespace table still cannot be described (measured gap).
+  plain DESCRIBE answers a four-part name with `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01` naming the
+  written parts (a metadata-table last part at a real table's path, and any five-or-more-part
+  name, keep the compound-identifier error), so a nested-namespace table still cannot be
+  described (measured gap). An unknown metadata suffix answers Spark's `42P01` naming the full
+  four-part name (WO-B10, 2026-09-23).
   One measured residue: `Table Properties` carries the engine's stored properties
   plus a live `current-snapshot-id`, while Spark stamps `format`, `format-version`, and
   `write.parquet.compression-codec` defaults at `CREATE` — the 2026-09-09 live leg matches
