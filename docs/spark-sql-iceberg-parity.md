@@ -248,7 +248,12 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   argument with a non-empty authority (`file://tmp/…`, `file://localhost/…`) refuses
   `IllegalArgumentException` `Wrong FS: <arg>/metadata, expected: file:///` (the argument
   verbatim when it ends `.metadata.json`) before any FileIO is built, while `file:///<abs>`
-  reads. *(Spark text measured on live Spark 3.5 + Iceberg, WO dfload-r5.)*
+  reads. *(Spark text measured on live Spark 4.1.2 + Iceberg, WO dfload-r5.)* A `file:`
+  argument of any scheme case whose remainder is `/X` or `///X` (`file:/abs`, `FILE:/abs`,
+  `fIlE:///abs`) reads like `file:///X`, and a lower-case `file:<relative>` refuses
+  `IllegalArgumentException` `java.net.URISyntaxException: Relative path in absolute URI: <arg>`;
+  the remaining spelling differences are residue `R-DF-LOAD-SPELLINGS` in the dfload-1 ledger.
+  *(measured against a Hadoop-catalog table on Spark 4.1.2, WO dfload-r6.)*
 - **Apache Spark** — `spark.read.format("iceberg").load(<table location>)` answers the
   current snapshot `[[2,"b","y"],[3,"c","x"]]`. *(oracle: recorded live PySpark 4.1.2 +
   iceberg-spark-runtime-4.1_2.13:1.11.0 cell `R-DF-LOAD-PATH`; replayed identical on the
@@ -262,7 +267,7 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   Spark's own IcebergSource rule: every near-miss without `/` (`ns.t`, `cat.ns.t`,
   `ns.t.snapshots`, `` `ns`.`t` ``, `ns.t` + `snapshot-id`) keeps the catalog route
   untouched, and the option refusal is declared, never silently ignored.
-  pins: dfload-1/C-001, C-004, C-005, C-006, C-008
+  pins: dfload-1/C-001, C-004, C-005, C-006, C-008, C-009
 
 #### R-DF-LOAD-METADATA-JSON — `format("iceberg").load(<file>.metadata.json)` — **FIXED 2026-09-23**
 
