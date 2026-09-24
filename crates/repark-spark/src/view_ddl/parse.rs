@@ -831,6 +831,11 @@ mod tests {
                  Expected: ), found: EOF",
             ),
             (
+                "SHOW TBLPROPERTIES v ('k'.x)",
+                "Error during planning: could not parse CREATE NAMESPACE: sql parser error: \
+                 Expected: ), found: .",
+            ),
+            (
                 "SHOW TBLPROPERTIES v ('k') extra",
                 "Error during planning: could not parse `SHOW TBLPROPERTIES` at `extra`",
             ),
