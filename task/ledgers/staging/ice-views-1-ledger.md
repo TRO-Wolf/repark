@@ -54,3 +54,52 @@ temporary views and the dbt adapter.
   `view_ddl/execute.rs`) keeps its house `read-only` wording: it is the MT-2
   declared diagnostic (`docs/spark-sql-iceberg-parity.md`), never a Spark-parity
   claim — no ledger clause pins its bytes, and p1/p2 carry no probe row for it.
+
+## Coverage attestation
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: ice-views-1
+  complete: true
+  reattested: [AT-3, AT-7, AT-10]
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-001..C-018 walked one by one against the pins each cites — the memory-catalog door and read path (C-001..C-016) through the Rust view-service tests and the test_ice_views_1.py battery, the PR2-PR5 view statements (C-017) through the test_ice_views_2..5 batteries, and SQL session temporary views (C-018) through test_ice_views_6_temp.py, test_ice_views_6_temp_errors.py, temp_view_routing.rs and temp_view_errors.rs against Spark 4.1.2 + Iceberg 1.11.0 probes p6-p11 (target/probe6/). Every clause is PROVEN; C-012, C-017 and C-018 are held to their narrowed wording and their Not claimed sentences are not relied on.
+      artifacts: [task/ledgers/staging/ice-views-1-ledger.md, python/repark/tests/test_ice_views_1.py, python/repark/tests/test_ice_views_2_describe.py, python/repark/tests/test_ice_views_3_alter.py, python/repark/tests/test_ice_views_4_showprops.py, python/repark/tests/test_ice_views_5_showcreate.py, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py, crates/repark-iceberg/src/view/tests.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Boundaries actually exercised — a missing namespace (C-003), IF NOT EXISTS over an existing view (C-004), a viewless catalog (C-005), 100 nested durable views read and the 101st refuses (C-012), and for temp views one-, two-, three- and four-part names, IF NOT EXISTS / OR REPLACE combinations, alias arity in both directions, null and alias-only COMMENT clauses, the up-cast classes (NULL to any, DATE to TIMESTAMP, numeric widening accepted; narrowing, TIMESTAMP to DATE, INT to STRING refused), a 100-level SQL chain reading and the 101st refusing on the default stacks of both doors, and the 4096-visit cycle-walk budget.
+      artifacts: [crates/repark-iceberg/src/view/tests.rs, python/repark/tests/test_ice_views_1.py, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py, crates/repark-spark/src/tests/temp_view_routing.rs, crates/repark-spark/src/tests/temp_view_errors.rs, crates/repark-spark/src/view_ddl/temp_view.rs]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Every refusal is pinned with its full text and variant — the D-9 contract (C-007), ALTER VIEW AS (C-008), viewless CREATE/REPLACE driven off the mutating call (C-005), DROP NAMESPACE over views (C-013), and for temp views a dropped temp dependency, a dropped catalog table under a temp view, a held frame after a catalog replaces the temp home, a replaced home refusing every temp statement, statement write options, malformed heads/clauses/SHOW VIEWS, write bodies, RECURSIVE_VIEW and an injected namespace_exists failure keeping its Iceberg error. The Python-door SIGSEGV on 83+ level temp-view chains was located (gdb, target/probe6/stack/overflow-bt.txt) and replaced by an answer or Spark's refusal. Re-attested after that stack remediation.
+      artifacts: [python/repark/tests/test_ice_views_1.py, crates/repark-iceberg/src/view/tests.rs, crates/repark-spark/src/tests/viewless_catalog.rs, crates/repark-iceberg/src/catalog/tests/namespace_drop.rs, python/repark/tests/test_ice_views_6_temp_errors.py, crates/repark-spark/src/tests/temp_view_errors.rs, crates/repark-spark/src/tests/temp_view_routing.rs]
+    - id: AT-4
+      status: ATTACKED
+      evidence: Ordering and state exercised — the version log after two CREATE OR REPLACE bodies read order-robust (the fork serializes versions from a HashMap, C-009); a temp view re-plans after an INSERT (A-8) and a dependent temp view re-resolves a replaced one; a catalog reference in a temp view body is not captured by a later same-named temp view; temp views are session-scoped (a newSession neither lists nor reads them). Not attacked by a pin — the error arms reachable only if another thread registers a catalog over the temp home between two calls of one statement (execute.rs resolve/create after the home check), classified unreachable in-process in the PR6b3b sweep.
+      artifacts: [python/repark/tests/test_ice_views_1.py, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py]
+    - id: AT-5
+      status: N/A
+      justification: No privileged action, secret, deserialization or authN/Z surface is added — views are catalog metadata written through the fork view API under the existing catalog registration, and a stored view body is planned as a query only (write bodies, including WITH ... INSERT/UPDATE/DELETE/MERGE, refuse before registering; pinned in test_ice_views_6_temp_errors.py and temp_view_routing.rs).
+    - id: AT-6
+      status: ATTACKED
+      evidence: The stored SQL is byte-identical to the user text and the location has no trailing slash (C-001); the version log keeps history (C-002, C-009); a VERSION AS OF body stays pinned across a later INSERT (C-011); temp views conform each read to the creation schema by name, refusing a dropped column (INCOMPATIBLE_VIEW_SCHEMA_CHANGE) or a narrowing type (CANNOT_UP_CAST_DATATYPE) instead of returning drifted rows; answer pins assert rows and Arrow schema; the dbt statement-surface pins moved with the served temp-view shape.
+      artifacts: [crates/repark-iceberg/src/view/tests.rs, python/repark/tests/test_ice_views_1.py, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py, python/dbt-repark/tests/test_statement_surface.py, python/dbt-repark/tests/test_gold_models.py]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The one system-breaking resource defect found — a stack overflow (SIGSEGV) reading SQL temp-view chains of 83 or more levels through the Python door on the debug wheel, about 95 KiB of stack per nested re-plan — is fixed by running ReplanningTempView::scan on repark-core's GrownStack (1 MiB red zone, 8 MiB segments). Sizing and the depth table 82/83/90/100/101 are in target/probe6/stack/sizing.md and depth-table.md; removing the wrapper overflows both pins. The cycle walk keeps a 4096-visit budget. Release-wheel stack use was not measured.
+      artifacts: [crates/repark-spark/src/view_ddl/temp_view.rs, crates/repark-spark/src/view_ddl/read.rs, crates/repark-core/src/column_resolution/stack.rs, crates/repark-spark/src/tests/temp_view_errors.rs, python/repark/tests/test_ice_views_6_temp_errors.py]
+    - id: AT-8
+      status: ATTACKED
+      evidence: Upstream behaviour measured, not presumed — the fork view API's replace_version and FeatureUnsupported paths (C-002, C-005); DataFusion 54.1 inlining a view provider on an unfiltered scan, pinned by a unit test before the reference-walk queue was deleted; Spark 4.1.2 texts, conditions and SQLSTATEs from probes p6-p11 (target/probe6/); main's error map rendering a bracketed ParserError verbatim; the PR5 SHOW CREATE interaction re-measured after the rebase onto 54e2da6a (target/probe6/rebase/sweeps.md). The repark-common catalogue renders every cited condition byte-exact (C-010).
+      artifacts: [crates/repark-iceberg/src/view/tests.rs, crates/repark-spark/src/view_ddl/temp_view.rs, crates/repark-common/src/spark_error.rs, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_5_showcreate.py]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Failure paths surface as typed Spark exceptions whose condition and SQLSTATE are asserted where Spark has one (getCondition / getSqlState in the batteries), and RePark-only texts are pinned as unstructured (condition and SQLSTATE None) so a silent reclassification goes red; the formerly undiagnosable temp-view-chain SIGSEGV now answers or raises VIEW_EXCEED_MAX_NESTED_DEPTH / 54K00.
+      artifacts: [python/repark/tests/test_ice_views_1.py, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Every clause cites named pins. For C-018 every added error branch in view_ddl/ was classified reachable (pinned with the full text and variant), propagation (test cited) or unreachable (deleted — the conform Internal arm and the reference-walk queue), and one mutation per pinned branch was run with the named test going red — 64 final rows, all RED, in target/probe6/mutations.tsv, including removal of the grown-stack wrapper. Mutation evidence for C-001..C-017 lives in their own PR rounds, not re-run here. Re-attested after the stack remediation.
+      artifacts: [crates/repark-spark/src/tests/temp_view_routing.rs, crates/repark-spark/src/tests/temp_view_errors.rs, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py, task/ledgers/staging/ice-views-1-ledger.md]
+```
