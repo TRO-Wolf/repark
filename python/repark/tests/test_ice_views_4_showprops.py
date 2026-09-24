@@ -154,10 +154,12 @@ def test_missing_view_is_table_or_view_not_found(spark: ReparkSession) -> None:
     for tail in ("", " ('k')"):
         with pytest.raises(AnalysisException) as caught:
             spark.sql(f"SHOW TBLPROPERTIES sc.ns.definitely_absent{tail}")
-        expected = f"Error during planning: {_table_or_view_not_found('definitely_absent')}"
-        assert str(caught.value) == expected
-        assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
-        assert caught.value.getSqlState() == "42P01"
+        _assert_refusal(
+            caught.value,
+            f"Error during planning: {_table_or_view_not_found('definitely_absent')}",
+            "TABLE_OR_VIEW_NOT_FOUND",
+            "42P01",
+        )
 
 
 def test_alter_view_set_then_show_reflects_updates(spark: ReparkSession, tmp_path: Path) -> None:
@@ -234,9 +236,12 @@ def test_show_tblproperties_on_a_table_falls_through(spark: ReparkSession) -> No
     for tail in ("", " ('k')"):
         with pytest.raises(AnalysisException) as caught:
             spark.sql(f"SHOW TBLPROPERTIES sc.ns.t{tail}")
-        assert str(caught.value) == f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}"
-        assert caught.value.getCondition() == NO_CONDITION
-        assert caught.value.getSqlState() == NO_CONDITION
+        _assert_refusal(
+            caught.value,
+            f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}",
+            NO_CONDITION,
+            NO_CONDITION,
+        )
 
 
 def test_show_views_and_show_tables_unchanged(spark: ReparkSession) -> None:
@@ -263,27 +268,36 @@ def test_tblpropertiesx_is_not_recognized(spark: ReparkSession) -> None:
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SHOW TBLPROPERTIESX sc.ns.v")
-    assert str(caught.value) == f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}"
-    assert caught.value.getCondition() == NO_CONDITION
-    assert caught.value.getSqlState() == NO_CONDITION
+    _assert_refusal(
+        caught.value,
+        f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}",
+        NO_CONDITION,
+        NO_CONDITION,
+    )
 
 
 def test_show_table_extended_falls_through(spark: ReparkSession) -> None:
     """Near-miss d — SHOW TABLE EXTENDED retains the upstream refusal."""
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SHOW TABLE EXTENDED IN sc.ns LIKE t")
-    assert str(caught.value) == f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}"
-    assert caught.value.getCondition() == NO_CONDITION
-    assert caught.value.getSqlState() == NO_CONDITION
+    _assert_refusal(
+        caught.value,
+        f"Error during planning: {SHOW_VARIABLE_UNSUPPORTED}",
+        NO_CONDITION,
+        NO_CONDITION,
+    )
 
 
 def test_show_tblproperties_requires_a_name(spark: ReparkSession) -> None:
     """Near-miss e — a missing name returns the parser refusal."""
     with pytest.raises(AnalysisException) as caught:
         spark.sql("SHOW TBLPROPERTIES")
-    assert str(caught.value) == f"Error during planning: {SHOW_NAME_PARSE_ERROR}"
-    assert caught.value.getCondition() == NO_CONDITION
-    assert caught.value.getSqlState() == NO_CONDITION
+    _assert_refusal(
+        caught.value,
+        f"Error during planning: {SHOW_NAME_PARSE_ERROR}",
+        NO_CONDITION,
+        NO_CONDITION,
+    )
 
 
 def test_unterminated_key_falls_through_to_the_tokenizer_refusal(spark: ReparkSession) -> None:

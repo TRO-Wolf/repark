@@ -58,7 +58,7 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `location`/`provider`/`format-version` then sorted stored properties, keyed
   misses answer Spark's sentence, missing names fail closed with
   `TABLE_OR_VIEW_NOT_FOUND`, tables fall through; viewless catalogs treat
-  `FeatureUnsupported` as no view and also reach the table path).
+  `FeatureUnsupported` as no view and take the same table/missing split).
   **PR4 r2 (2026-09-23):** bare and two-part names complete through
   `complete_view_name(catalogs, …)` from `use_ddl::session_defaults`, so
   they follow `USE` like ALTER VIEW.
