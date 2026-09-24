@@ -972,4 +972,20 @@ mod tests {
             "SELECT t.id FROM __repark_mc_N t WHERE t._spec_id = 0 AND EXISTS (SELECT * FROM other t)"
         );
     }
+
+    #[tokio::test]
+    async fn input_file_name_over_a_comma_join_is_left_unresolved() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        let out = prepared(
+            &ctx,
+            &catalogs,
+            "SELECT input_file_name() FROM datafusion.public.t a, datafusion.ns.t b",
+        )
+        .await
+        .expect("the input_file_name trigger routes the statement");
+        assert_eq!(
+            normalized(&out),
+            "SELECT input_file_name() FROM __repark_mc_N a, __repark_mc_N b"
+        );
+    }
 }
