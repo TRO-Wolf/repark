@@ -809,6 +809,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_user_typed_ctas_options_land_as_properties` — the IPI-26/27 OPTIONS ruling stores both
   key spellings, so the CTAS `OPTIONS('a'='b')` pin now asserts the created table's `a` /
   `option.a` property map beside the kept `WITH ('a'='b')` refusal.
+  **RP-48 (2026-09-24):** `test_metadata_json_lists_snapshots_in_sequence_order` pins, at the
+  RePark level, that the newest metadata JSON lists `snapshots` by sequence number with the
+  current snapshot last — the fork wrote HashMap order before fork #349.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** the DataFrame write-option pins over the
   fixture above (snapshot properties on append / dynamic overwrite / CTAS / V1
   paths with Spark's strip-and-lowercase rule, write-format parquet honour plus
@@ -2331,8 +2334,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_assert_cell` also pins the recorded post-rewrite sort state (`sort-orders` plus
   default id, both sides sorted by order id — the fork lists the default first,
   Java lists id-ascending) and the current snapshot's `replace` operation, resolved
-  by `current-snapshot-id` on both sides (the fork serializes `snapshots` in hash
-  order, so an array position is not the head); the recorder carries all three
+  by `current-snapshot-id` on both sides (the fork serialized `snapshots` in hash
+  order until RP-48 on 2026-09-24; resolving by id keeps the pin order-independent); the recorder carries all three
   per cell and the tableorder pin keeps its id-DESC-NULLS-LAST shape check on
   the oracle itself.
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) —

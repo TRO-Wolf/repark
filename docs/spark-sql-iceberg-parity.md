@@ -4244,6 +4244,10 @@ the pin rather than obeying it.
   `snapshots[*].timestamp-ms` from the newest metadata file. It belongs to the fork's
   `TableMetadata` builder and wants its own row and fork ask; it is recorded here because
   this is where it was measured.
+  **Resolved 2026-09-24 (RP-48, fork #349 F-SNAPORDER-1):** the fork now serializes the
+  `snapshots` array by sequence number, then timestamp, then id, so the array position
+  follows creation order; pinned at the RePark level by
+  `test_ice_write_options_1.py::test_metadata_json_lists_snapshots_in_sequence_order`.
 - **Round 3 note, OPEN and reported (measured 2026-09-19).** RePark's owned data-file
   writers name files with a random UUID v4 (`DefaultFileNameGenerator::new(Uuid::new_v4()…)`
   at five sites) where the fork's insert exec uses a time-ordered `Uuid::now_v7()`, so the
