@@ -3138,14 +3138,24 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   columns do not match the existing table's.` naming both lists; overwrite replaces the table
   with the bucketed spec (RTAS, the next spec id). A multi-column bucket or any `sortBy`
   refuses with `IllegalArgumentException` `Cannot convert transform with more than one column
-  reference: bucket(n, a, b)` / `sorted_bucket(a, n, s)` and creates nothing. The decisions
-  are Rust kernels: the SQL door's `CLUSTERED BY … [SORTED BY …] INTO n BUCKETS` rewrite
-  (joining an existing `PARTITIONED BY` list last) and
-  `repark_iceberg::write::check_layout_matches_table`. *Residual (question Q1 of the U7 PR1
-  hand-back):* a bucket column absent from the frame still raises
-  `COLUMN_NOT_DEFINED_IN_TABLE`, the recorded session-catalog answer; Spark's Iceberg catalog
-  raises `_LEGACY_ERROR_TEMP_3060` `Couldn't find column <c> in: <tree>` for a new table and
-  the layout mismatch for an existing one.
+  reference: bucket(n, a, b)` / `sorted_bucket(a, n, s)` and creates nothing. **Round 2
+  (2026-09-24, Ruling Q1):** a bucket column absent from the frame answers Spark's Iceberg
+  catalog: every create-or-replace arm (a missing table in any mode, and an existing table in
+  overwrite, error or ignore mode, before the existence check) raises `AnalysisException`
+  `_LEGACY_ERROR_TEMP_3060` `Couldn't find column <c> in:\n<the frame's printSchema tree>`
+  (parameters `i`, `schema`), after `INVALID_BUCKET_COUNT`; an append onto an existing table
+  answers the layout mismatch (`provided: bucket(4, nope)`). The error mode on an existing
+  table raises Spark's `TABLE_OR_VIEW_ALREADY_EXISTS` text `Cannot create table or view
+  `<namespace>`.`<name>` because it already exists.…`, bucketed or not. The decisions are Rust
+  kernels: `repark_iceberg::write::plan_writer` (the statement for each action, mode and
+  layout, the missing column, the already-exists refusal), the tree renderer
+  `repark_spark::spark_tree_string`, the SQL door's `CLUSTERED BY … [SORTED BY … [ASC]] INTO
+  n BUCKETS` rewrite (joining an existing `PARTITIONED BY` list last, every `CLUSTERED` word
+  tried, so a column named `clustered` keeps the clause) and
+  `repark_iceberg::write::check_layout_matches_table`. *Residual:* `SORTED BY (c DESC)` in
+  that clause raises a `ParseException` with the engine's parser text; Spark raises
+  `ParseException` `_LEGACY_ERROR_TEMP_0035` `Operation not allowed: Column ordering must be
+  ASC, was 'DESC'.` followed by its `== SQL (line 1, position <n>) ==` context block.
 - **Apache Spark** — on its Hive session catalog, writes Hive bucket files and records
   `Num Buckets` / `Bucket Columns` / `Sort Columns` in `DESCRIBE EXTENDED`; on an Iceberg
   catalog, converts `bucketBy` into the `bucket[n]` partition transform (scoreboard cell
@@ -3167,12 +3177,22 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_bucket_by_new_table_shapes`, `::test_bucket_by_shapes_iceberg_cannot_convert_refuse`,
   `::test_bucket_by_existing_unbucketed_table`, `::test_bucket_by_existing_bucketed_table`,
   `::test_bucket_by_existing_partitioned_table`,
-  `::test_bucket_by_existing_table_overwrite_with_partition_by`.
+  `::test_bucket_by_existing_table_overwrite_with_partition_by`;
+  `python/repark/tests/test_ice_write_df_1_edges.py::test_a_missing_bucket_column_on_a_new_table_is_legacy_3060`,
+  `::test_a_missing_bucket_column_on_an_existing_table`,
+  `::test_bucket_count_precedes_the_missing_column`,
+  `::test_error_mode_and_bucketed_save_answer_spark_text`,
+  `::test_bucketed_overwrite_of_two_columns_leaves_the_table`,
+  `::test_layout_mismatch_renders_every_table_transform`,
+  `::test_a_column_named_clustered_keeps_the_bucket_clause`,
+  `::test_sorted_by_ordering_in_a_clustered_clause`; in-crate
+  `crates/repark-iceberg/src/tests/writer_plan.rs`.
 - **Rationale** — DECLARED 2026-09-14 (Ruling R-1: Iceberg has no Hive bucketing, so a bucketed
   `saveAsTable` refused `NOT_IMPLEMENTED`). **Narrowed 2026-09-24 (U7 PR1):** the R-1 premise
   compared against Spark's session catalog; the scoreboard record on an Iceberg catalog shows
-  Spark answering with the bucket transform, so the saveAsTable refusal is retired and only the
-  missing-column residual above stays declared. Every call-time and save-time argument error in
+  Spark answering with the bucket transform, so the saveAsTable refusal is retired. Round 2
+  applied Ruling Q1 (the Iceberg-catalog missing-column answer); only the `SORTED BY … DESC`
+  parse text stays a residual. Every call-time and save-time argument error in
   the path is Spark-equal. Critic round 1 (2026-09-14) corrected the path/`insertInto` classes
   (1312 alone, 1313 with `sortBy`) and added Spark's call-time list/str checks.
 
@@ -3215,10 +3235,20 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   existing table. A `partitionBy` on an existing table must equal its partitioning (the
   IO-BUCKET-1 layout check). A target with `/` is a path identifier: append and overwrite raise
   `TABLE_OR_VIEW_NOT_FOUND` naming `` `<parent>`.<leaf> ``, Spark's answer when no path table is
-  there; the error and ignore modes keep the declared refusal `DataFrameWriter.save(path)
-  requires format('parquet'|'csv'|'json'|'text'); use saveAsTable for Iceberg tables`, which a
-  default-format `save()` also keeps (row EX-IO-5). The mode decision is the Rust kernel
-  `repark_iceberg::write::decide_save_target`.
+  there. **Round 2 (2026-09-24):** the relation splits at the last `/` and keeps every other
+  character, as Iceberg's `PathIdentifier`: `file:///r/a/b` names `` `file:///r/a`.b ``,
+  `/r/a/b/` names `` `/r/a/b`.`` `` (an empty name), `/tmp//x//y` names `` `/tmp//x/`.y `` and
+  `/x` names ``` ``.x ```. The error and ignore modes keep the declared refusal
+  `DataFrameWriter.save(path) requires format('parquet'|'csv'|'json'|'text'); use saveAsTable
+  for Iceberg tables`, which a default-format `save()` also keeps (row EX-IO-5). The decisions
+  are the Rust kernels `repark_iceberg::write::plan_writer` (shared with `saveAsTable`) over
+  `decide_save_target` and `save_target_names_table`; Python composes the SQL only.
+  *Residual (unmeasured beyond the probe):* with `spark_catalog` current, Spark sends a one- or
+  two-part `save()` name to its Hive session catalog (a metastore error in the probe session);
+  RePark resolves it against its own current catalog, as `saveAsTable` does. An `s3://` path
+  names `` `s3://b/k`.t `` by the same rule; the probe session had no S3 filesystem, so Spark
+  raised `RuntimeIOException: Failed to get file system for path:
+  s3://b/k/t/metadata/version-hint.text` instead.
 - **Apache Spark** — scoreboard cells `W-DF-SAVE-NAME` (rows 1,2,3,7,8; two `append`
   snapshots) and `W-DF-SAVE-OVERWRITE-NAME` (rows 7,8; `append` then `overwrite` with
   `deleted-records=3`), plus the step-1 shapes in `ice_write_df_1_spark_oracle.json` (live
@@ -3234,7 +3264,11 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_save_reads_the_name_from_the_path_option`,
   `::test_save_name_refuses_a_partitioning_that_differs_from_the_table`,
   `::test_save_to_a_real_path_refuses_with_spark_path_relation`,
-  `::test_save_to_a_real_path_in_create_mode_is_a_declared_refusal`
+  `::test_save_to_a_real_path_in_create_mode_is_a_declared_refusal`;
+  `python/repark/tests/test_ice_write_df_1_edges.py::test_save_path_relations_split_at_the_last_slash`,
+  `::test_save_as_table_append_checks_a_partition_by_layout`,
+  `::test_save_as_table_append_refuses_a_different_partition_by`; in-crate
+  `crates/repark-iceberg/src/tests/writer_partitioning.rs::path_relations_split_at_the_last_slash_like_iceberg_path_identifier`.
 - **Rationale** — the table-name form is FIXED. The path form stays DECLARED: RePark has no
   path-based (Hadoop-tables) Iceberg writes, and the honest answer is a loud refusal, never a
   silent write somewhere else.
@@ -4068,20 +4102,34 @@ the pin rather than obeying it.
   pins: ice-write-options-1/C-014, C-015, C-016, C-017, C-018
 
 - **U7 PR1 (2026-09-24)** — `output-spec-id` is honoured, no longer an ignored key. The
-  value parses as Java's `Integer.parseInt` (a non-integer refuses `IllegalArgumentException`
-  `For input string: "<v>"`); an id the table does not have refuses `Output spec id <n> is not
-  a valid spec id for table` before any file is staged; a known id stages the data files under
-  that spec (`repark_iceberg::write::staging_table` swaps the staging view's default spec, the
-  commit stays on the real table), so `<t>.files` reports them under it. Every option-carrying
-  writer reaches it: `saveAsTable`, `insertInto`, `writeTo(...).append()`, `save(name)`, the
-  static overwrite and `overwritePartitions()`. Spark: scoreboard cell
+  value parses as Java's `Integer.parseInt` (a non-integer or padded value refuses
+  `NumberFormatException` `For input string: "<v>"`, a subclass of `IllegalArgumentException`;
+  `+0` parses); an id the table does not have refuses `IllegalArgumentException` `Output spec
+  id <n> is not a valid spec id for table`, also when the frame is empty and nothing is staged
+  (append, `insertInto`, `saveAsTable` append and overwrite, `overwritePartitions()`); a known
+  id stages the data files under that spec (`repark_iceberg::write::staging_table` swaps the
+  staging view's default spec, the commit stays on the real table), so `<t>.files` reports
+  them under it. Every option-carrying writer reaches it: `saveAsTable`, `insertInto`,
+  `writeTo(...).append()`, `save(name)`, the static overwrite and `overwritePartitions()`.
+  **Round 2 (2026-09-24):** the writer follows the staged spec, not the table's, so a
+  replacing write (bucketed `saveAsTable` overwrite, `createOrReplace()`, `replace()`)
+  resolves the id against the replacement metadata and writes spec 0 unpartitioned under a
+  partitioned replacement (an id the replacement lacks refuses, the table kept); a dynamic
+  `overwritePartitions()` replaces the partitions of the staged spec, so spec 0 partitioned by
+  `cat` under an unpartitioned current spec replaces only the written partitions
+  (`repark_iceberg::write::staged_spec_is_partitioned`). Spark: scoreboard cell
   `W-DF-OPT-OUTPUT-SPEC-ID` (`specs [[0, 2]]` after `ADD PARTITION FIELD cat`) and the step-1
-  shapes in `ice_write_df_1_spark_oracle.json`. Pins:
+  and round-2 shapes in `ice_write_df_1_spark_oracle.json` (`dyn_overwrite_old_part_spec0`:
+  rows 2, 7, 8, `specs [[0, 3]]`). Pins:
   `python/repark/tests/test_ice_write_df_1.py::test_output_spec_id_writes_under_the_old_spec`,
   `::test_output_spec_id_reaches_every_writer`,
   `::test_output_spec_id_writes_partitioned_files_under_an_old_partitioned_spec`,
-  `::test_output_spec_id_refusals`,
-  `::test_output_spec_id_current_and_absent_land_under_the_current_spec`; in-crate
+  `::test_output_spec_id_refusals`, `::test_output_spec_id_parses_like_java_integer`,
+  `::test_output_spec_id_current_and_absent_land_under_the_current_spec`;
+  `python/repark/tests/test_ice_write_df_1_edges.py::test_dynamic_overwrite_replaces_partitions_of_the_staged_spec`,
+  `::test_output_spec_id_on_a_replacing_write_resolves_in_the_replacement`,
+  `::test_output_spec_id_on_a_create_and_an_unknown_replacement_spec`,
+  `::test_an_unknown_output_spec_id_refuses_a_write_that_stages_nothing`; in-crate
   `crates/repark-iceberg/src/tests/output_spec.rs`.
 
 - **Residue ICE-WRITE-OPTIONS-1-R-RP — FIXED 2026-09-18 (RP-30, fork #298
