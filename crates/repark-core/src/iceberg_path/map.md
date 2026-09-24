@@ -23,8 +23,9 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
     candidates under `/abs`, `/abs/` and `file:///abs` roots (`nested_*`,
     `only_nested_*`);
   - path-naming refusals, compared in full with `assert_eq!`: the missing location, the
-    empty `metadata/` dir, the only-nested dir and the hinted-missing file
-    (`missing_location_*`, `empty_metadata_dir_*`, `only_nested_*`, `hinted_*`);
+    empty `metadata/` dir, the only-nested dir, a dir of only non-candidate names and the
+    hinted-missing file (`missing_location_*`, `empty_metadata_dir_*`, `only_nested_*`,
+    `non_candidate_metadata_names_*`, `hinted_*`);
   - `file://<authority>` Wrong FS refusals, compared in full (`file_authority_*`,
     `file_localhost_*`);
   - `file:` spellings: `file:/abs`, `FILE:/abs`, `fIlE:///abs`, `file:/abs/metadata/<latest>`
@@ -34,8 +35,9 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
     trailing slashes (`file_relative_*`, `relative_file_path_*`); and a normalised
     spelling's refusal names the supplied argument
     (`file_single_slash_missing_location_*`);
-  - the Java `int` version range: `v2147483648` is not a candidate, `v2147483647` is the
-    highest, a `u64`-overflowing stem stays ignored, and a hint beyond the range falls back
-    to the listing (`v_form_versions_beyond_*`, `v_form_java_int_max_*`,
-    `v_form_u64_overflow_*`, `hint_beyond_java_int_*`).
+  - the Java `int` version range: `v0` is the lowest candidate, `v2147483648` is not a
+    candidate, `v2147483647` is the highest, a `u64`-overflowing stem stays ignored, a hint
+    of `2147483647` selects that file, and a hint beyond the range falls back to the
+    listing (`v_form_zero_*`, `v_form_versions_beyond_*`, `v_form_java_int_max_*`,
+    `v_form_u64_overflow_*`, `hint_at_java_int_max_*`, `hint_beyond_java_int_*`).
   pins: dfload-1/C-002, C-003, C-005, C-008, C-009, C-010
