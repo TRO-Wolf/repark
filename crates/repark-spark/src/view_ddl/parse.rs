@@ -869,6 +869,7 @@ mod tests {
         assert!(try_parse_show_tblproperties("SHOW COLUMNS IN sc.ns.t").is_none());
         assert!(try_parse_show_tblproperties("SELECT 1").is_none());
         assert!(try_parse_show_tblproperties("SHOW TBLPROPERTIE v").is_none());
+        assert!(try_parse_show_tblproperties("TBLPROPERTIES sc.ns.v").is_none());
         assert!(try_parse_show_tblproperties("SHOW TABLE EXTENDED IN sc.ns LIKE 'v'").is_none());
     }
 }
