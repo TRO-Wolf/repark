@@ -185,6 +185,7 @@ async fn temp_view_parse_refusal_wins_before_the_session_check() {
 
 struct StubTempViews {
     existing: Vec<String>,
+    dropped: std::sync::Mutex<Vec<String>>,
     registered: std::sync::Mutex<Vec<(String, datafusion::prelude::DataFrame)>>,
 }
 
@@ -192,6 +193,7 @@ impl StubTempViews {
     fn with_existing(existing: &[&str]) -> Self {
         Self {
             existing: existing.iter().map(|name| (*name).to_string()).collect(),
+            dropped: std::sync::Mutex::new(Vec::new()),
             registered: std::sync::Mutex::new(Vec::new()),
         }
     }
@@ -219,6 +221,18 @@ impl repark_core::TempViewSession for StubTempViews {
 
     fn temp_view_home(&self) -> repark_common::Result<Vec<String>> {
         Ok(vec!["datafusion".to_string(), "public".to_string()])
+    }
+
+    fn list_temp_view_names(&self) -> repark_common::Result<Vec<String>> {
+        Ok(self.existing.clone())
+    }
+
+    fn drop_temp_view(&self, name: &str) -> repark_common::Result<bool> {
+        self.dropped
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(name.to_string());
+        Ok(self.existing.iter().any(|existing| existing == name))
     }
 
     fn resolve_temp_view_home_ref(&self, name: &str) -> repark_common::Result<Option<Vec<String>>> {
@@ -392,9 +406,15 @@ async fn temp_view_write_body_refuses_before_registering() {
     )
     .await
     .expect_err("a WITH ... INSERT body is a write, not a view");
-    let DataFusionError::Plan(message) = error else {
-        panic!("expected Plan, got {error:?}");
+    let DataFusionError::SQL(inner, None) = error else {
+        panic!("expected a ParseException-class SQL error, got {error:?}");
     };
-    assert_eq!(message, crate::view_ddl::read::TEMP_VIEW_WRITE_BODY_REFUSAL);
+    let ParserError::ParserError(message) = *inner else {
+        panic!("expected ParserError::ParserError");
+    };
+    assert_eq!(
+        message,
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601"
+    );
     assert!(stub.registered().is_empty());
 }

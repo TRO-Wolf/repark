@@ -290,7 +290,7 @@ fn single_part_temp_view_name(object_name: &ObjectName) -> Result<Ident> {
     }
 }
 
-fn spark_parse_error(message: String) -> DataFusionError {
+pub(crate) fn spark_parse_error(message: String) -> DataFusionError {
     DataFusionError::SQL(Box::new(ParserError::ParserError(message)), None)
 }
 
@@ -560,13 +560,6 @@ fn parse_show_views_after_head(parser: &mut Parser) -> Result<ShowViewsStatement
              <catalog.namespace> [LIKE] ['pattern']",
             parser.peek_token()
         )));
-    }
-    if namespace.is_empty() {
-        return Err(DataFusionError::Plan(
-            "SHOW VIEWS requires an explicit namespace — `SHOW VIEWS IN <catalog.namespace>` \
-             (RePark has no current-catalog concept, so there is no default to resolve against)"
-                .to_string(),
-        ));
     }
     Ok(ShowViewsStatement { namespace, like })
 }
@@ -942,17 +935,17 @@ mod tests {
     }
 
     #[test]
-    fn show_views_without_namespace_fails_loud() {
-        let parsed = try_parse_show_views("SHOW VIEWS").unwrap_or_else(|| panic!("must match"));
-        let Err(error) = parsed else {
-            panic!("session scope needs an explicit namespace")
-        };
-        assert!(error.to_string().contains("requires an explicit namespace"));
-        assert!(
-            try_parse_show_views("SHOW VIEWS LIKE 'v*'")
-                .unwrap_or_else(|| panic!("must match"))
-                .is_err()
-        );
+    fn show_views_at_session_scope_parses_without_namespace() {
+        let parsed = try_parse_show_views("SHOW VIEWS")
+            .unwrap_or_else(|| panic!("must match"))
+            .unwrap_or_else(|error| panic!("session scope must parse: {error}"));
+        assert!(parsed.namespace.is_empty());
+        assert_eq!(parsed.like, None);
+        let parsed = try_parse_show_views("SHOW VIEWS LIKE 'v*'")
+            .unwrap_or_else(|| panic!("must match"))
+            .unwrap_or_else(|error| panic!("session scope LIKE must parse: {error}"));
+        assert!(parsed.namespace.is_empty());
+        assert_eq!(parsed.like, Some("v*".to_string()));
         assert!(
             try_parse_show_views("SHOW VIEWS IN sc.ns LIKE vs_*")
                 .unwrap_or_else(|| panic!("must match"))

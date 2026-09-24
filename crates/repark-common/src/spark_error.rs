@@ -41,6 +41,8 @@ pub enum Condition {
     TempViewNameTooManyNameParts,
     IdentifierTooManyNameParts,
     RecursiveView,
+    IncompatibleViewSchemaChange,
+    CannotUpCastDatatype,
 }
 
 pub const TABLE_OR_VIEW_NOT_FOUND: Condition = Condition::TableOrViewNotFound;
@@ -97,6 +99,8 @@ pub const TEMP_TABLE_OR_VIEW_ALREADY_EXISTS: Condition = Condition::TempTableOrV
 pub const TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS: Condition = Condition::TempViewNameTooManyNameParts;
 pub const IDENTIFIER_TOO_MANY_NAME_PARTS: Condition = Condition::IdentifierTooManyNameParts;
 pub const RECURSIVE_VIEW: Condition = Condition::RecursiveView;
+pub const INCOMPATIBLE_VIEW_SCHEMA_CHANGE: Condition = Condition::IncompatibleViewSchemaChange;
+pub const CANNOT_UP_CAST_DATATYPE: Condition = Condition::CannotUpCastDatatype;
 
 impl Condition {
     #[must_use]
@@ -155,6 +159,8 @@ impl Condition {
             Self::TempViewNameTooManyNameParts => "TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS",
             Self::IdentifierTooManyNameParts => "IDENTIFIER_TOO_MANY_NAME_PARTS",
             Self::RecursiveView => "RECURSIVE_VIEW",
+            Self::IncompatibleViewSchemaChange => "INCOMPATIBLE_VIEW_SCHEMA_CHANGE",
+            Self::CannotUpCastDatatype => "CANNOT_UP_CAST_DATATYPE",
         }
     }
 
@@ -167,6 +173,8 @@ impl Condition {
             | Self::TempTableOrViewAlreadyExists => Some("42P07"),
             Self::TempViewNameTooManyNameParts => Some("428EK"),
             Self::RecursiveView => Some("42K0H"),
+            Self::IncompatibleViewSchemaChange => Some("51024"),
+            Self::CannotUpCastDatatype => Some("42846"),
             Self::NotSupportedCommandForV2Table
             | Self::UnsupportedFeatureTableOperation
             | Self::UnsupportedFeatureCatalogOperation
@@ -313,6 +321,12 @@ impl Condition {
                 "{identifier} is not a valid identifier as it has more than {limit} name parts."
             }
             Self::RecursiveView => "Recursive view {viewIdent} detected (cycle: {newPath}).",
+            Self::IncompatibleViewSchemaChange => {
+                "The SQL query of view {viewName} has an incompatible schema change and column {colName} cannot be resolved. Expected {expectedNum} columns named {colName} but got {actualCols}.\nPlease try to re-create the view by running: {suggestion}."
+            }
+            Self::CannotUpCastDatatype => {
+                "Cannot up cast {expression} from {sourceType} to {targetType}.\n{details}"
+            }
         }
     }
 }
@@ -414,6 +428,14 @@ mod tests {
         ("limit", "2"),
         ("viewIdent", "`a`"),
         ("newPath", "`a` -> `b` -> `a`"),
+        ("colName", "data"),
+        ("expectedNum", "1"),
+        ("actualCols", "[]"),
+        ("suggestion", "CREATE OR REPLACE TEMPORARY VIEW"),
+        ("expression", "x3.id"),
+        ("sourceType", "\"STRING\""),
+        ("targetType", "\"INT\""),
+        ("details", "The type path of the target object is:"),
     ];
 
     const ALL: &[Condition] = &[
@@ -456,11 +478,13 @@ mod tests {
         TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS,
         IDENTIFIER_TOO_MANY_NAME_PARTS,
         RECURSIVE_VIEW,
+        INCOMPATIBLE_VIEW_SCHEMA_CHANGE,
+        CANNOT_UP_CAST_DATATYPE,
     ];
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 38);
+        assert_eq!(ALL.len(), 40);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();
@@ -858,6 +882,34 @@ mod tests {
                 &[("viewIdent", "`a`"), ("newPath", "`a` -> `b` -> `a`")]
             ),
             "[RECURSIVE_VIEW] Recursive view `a` detected (cycle: `a` -> `b` -> `a`). SQLSTATE: 42K0H"
+        );
+        assert_eq!(
+            message(
+                INCOMPATIBLE_VIEW_SCHEMA_CHANGE,
+                &[
+                    ("viewName", "`w`"),
+                    ("colName", "data"),
+                    ("expectedNum", "1"),
+                    ("actualCols", "[]"),
+                    ("suggestion", "CREATE OR REPLACE TEMPORARY VIEW"),
+                ]
+            ),
+            "[INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view `w` has an incompatible schema change and column data cannot be resolved. Expected 1 columns named data but got [].\nPlease try to re-create the view by running: CREATE OR REPLACE TEMPORARY VIEW. SQLSTATE: 51024"
+        );
+        assert_eq!(
+            message(
+                CANNOT_UP_CAST_DATATYPE,
+                &[
+                    ("expression", "x3.id"),
+                    ("sourceType", "\"STRING\""),
+                    ("targetType", "\"INT\""),
+                    (
+                        "details",
+                        "The type path of the target object is:\n\nYou can either add an explicit cast to the input data or choose a higher precision type of the field in the target object"
+                    ),
+                ]
+            ),
+            "[CANNOT_UP_CAST_DATATYPE] Cannot up cast x3.id from \"STRING\" to \"INT\".\nThe type path of the target object is:\n\nYou can either add an explicit cast to the input data or choose a higher precision type of the field in the target object SQLSTATE: 42846"
         );
     }
 

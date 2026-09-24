@@ -321,7 +321,56 @@ pub(crate) async fn execute_show_views(
     catalogs: &CatalogRegistry,
     statement: ShowViewsStatement,
 ) -> Result<DataFrame> {
-    let (catalog, namespace_name) = match statement.namespace.as_slice() {
+    execute_show_views_with(ctx, catalogs, statement, Vec::new()).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_show_views_with(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: ShowViewsStatement,
+    mut temp_views: Vec<String>,
+) -> Result<DataFrame> {
+    let (namespace_name, mut views) = catalog_view_names(catalogs, &statement.namespace).await?;
+    views.sort();
+    temp_views.sort();
+    if let Some(pattern) = statement.like.as_deref() {
+        views.retain(|view| filter_pattern_matches(view, pattern));
+        temp_views.retain(|view| filter_pattern_matches(view, pattern));
+    }
+    let rows = views
+        .into_iter()
+        .map(|view| (namespace_name.clone(), view, false))
+        .chain(
+            temp_views
+                .into_iter()
+                .map(|view| (String::new(), view, true)),
+        )
+        .collect::<Vec<_>>();
+    ctx.read_batch(show_view_rows_batch(&rows)?)
+}
+
+async fn catalog_view_names(
+    catalogs: &CatalogRegistry,
+    namespace: &[String],
+) -> Result<(String, Vec<String>)> {
+    let (catalog, namespace_name) = match namespace {
+        [] => {
+            let (catalog, namespace_name) = crate::use_ddl::session_defaults(catalogs);
+            let Some(handle) = catalogs.get(&catalog) else {
+                return Ok((namespace_name, Vec::new()));
+            };
+            let namespace = NamespaceIdent::new(namespace_name.clone());
+            if namespace_name.is_empty()
+                || !handle
+                    .namespace_exists(&namespace)
+                    .await
+                    .map_err(iceberg_err)?
+            {
+                return Ok((namespace_name, Vec::new()));
+            }
+            (catalog, namespace_name)
+        }
         [namespace] => (
             crate::use_ddl::session_defaults(catalogs).0,
             namespace.clone(),
@@ -330,22 +379,17 @@ pub(crate) async fn execute_show_views(
         _ => {
             return Err(DataFusionError::Plan(format!(
                 "expected a two-part `IN <catalog.namespace>` name, got `{}`",
-                statement.namespace.join(".")
+                namespace.join(".")
             )));
         }
     };
     let handle = catalog_handle(catalogs, &catalog)?;
     let namespace = NamespaceIdent::new(namespace_name.clone());
-    let mut views =
-        list_catalog_views(&catalog, handle.as_ref(), &namespace, &namespace_name).await?;
-    views.sort();
-    if let Some(pattern) = statement.like.as_deref() {
-        views.retain(|view| filter_pattern_matches(view, pattern));
-    }
-    ctx.read_batch(show_views_batch(&namespace_name, &views)?)
+    let views = list_catalog_views(&catalog, handle.as_ref(), &namespace, &namespace_name).await?;
+    Ok((namespace_name, views))
 }
 
-pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<RecordBatch> {
+pub(crate) fn show_view_rows_batch(rows: &[(String, String, bool)]) -> Result<RecordBatch> {
     let schema = Arc::new(Schema::new(vec![
         Field::new("namespace", DataType::Utf8, false),
         Field::new("viewName", DataType::Utf8, false),
@@ -354,9 +398,21 @@ pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<Reco
     Ok(RecordBatch::try_new(
         schema,
         vec![
-            Arc::new(StringArray::from(vec![namespace; views.len()])),
-            Arc::new(StringArray::from(views.to_vec())),
-            Arc::new(BooleanArray::from(vec![false; views.len()])),
+            Arc::new(StringArray::from(
+                rows.iter()
+                    .map(|(namespace, _, _)| namespace.as_str())
+                    .collect::<Vec<_>>(),
+            )),
+            Arc::new(StringArray::from(
+                rows.iter()
+                    .map(|(_, view, _)| view.as_str())
+                    .collect::<Vec<_>>(),
+            )),
+            Arc::new(BooleanArray::from(
+                rows.iter()
+                    .map(|(_, _, temporary)| *temporary)
+                    .collect::<Vec<_>>(),
+            )),
         ],
     )?)
 }

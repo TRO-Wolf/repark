@@ -108,9 +108,17 @@ pub(crate) async fn execute_in_session<S: std::hash::BuildHasher>(
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());
-    if let Some(parsed) = crate::view_ddl::parse::try_parse_create_temp_view(canonical_sql) {
-        let route = crate::view_ddl::execute::route_create_temp_view;
-        return Box::pin(route(ctx, &catalogs, parsed, write_options, temp_views)).await;
+    let temp = crate::view_ddl::temp_ddl::route_temp_view_statement;
+    if let Some(outcome) = Box::pin(temp(
+        ctx,
+        &catalogs,
+        canonical_sql,
+        write_options,
+        temp_views,
+    ))
+    .await
+    {
+        return outcome;
     }
     execute_calibrated(ctx, &catalogs, canonical_sql, Some(sql), write_options).await
 }

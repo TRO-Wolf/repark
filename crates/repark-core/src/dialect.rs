@@ -33,6 +33,10 @@ pub trait TempViewSession: Send + Sync {
     fn resolve_temp_view_home_ref(&self, name: &str) -> repark_common::Result<Option<Vec<String>>>;
 
     fn temp_view_home(&self) -> repark_common::Result<Vec<String>>;
+
+    fn list_temp_view_names(&self) -> repark_common::Result<Vec<String>>;
+
+    fn drop_temp_view(&self, name: &str) -> repark_common::Result<bool>;
 }
 
 impl<'a> EngineContext<'a> {

@@ -13,7 +13,9 @@ use datafusion::sql::sqlparser::ast::{
 };
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
+use repark_common::spark_error;
 use repark_core::{CatalogRegistry, TempViewSession};
 use repark_iceberg::catalog::iceberg_to_datafusion;
 use repark_iceberg::view::{ViewReadSpec, view_read_spec};
@@ -212,23 +214,37 @@ pub(crate) fn refuse_write_query_body(body_sql: &str) -> Result<()> {
     let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, body_sql) else {
         return Ok(());
     };
-    let writes = statements.iter().any(|statement| match statement {
-        Statement::Query(query) => matches!(
-            query.body.as_ref(),
-            SetExpr::Insert(_) | SetExpr::Update(_) | SetExpr::Delete(_) | SetExpr::Merge(_)
-        ),
-        _ => false,
+    let keyword = statements.iter().find_map(|statement| match statement {
+        Statement::Query(query) => match query.body.as_ref() {
+            SetExpr::Insert(_) => Some("INSERT"),
+            SetExpr::Update(_) => Some("UPDATE"),
+            SetExpr::Delete(_) => Some("DELETE"),
+            SetExpr::Merge(_) => Some("MERGE"),
+            _ => None,
+        },
+        _ => None,
     });
-    if writes {
-        return Err(DataFusionError::Plan(
-            TEMP_VIEW_WRITE_BODY_REFUSAL.to_string(),
-        ));
-    }
-    Ok(())
+    let Some(keyword) = keyword else {
+        return Ok(());
+    };
+    let written = Tokenizer::new(&DatabricksDialect {}, body_sql)
+        .tokenize()
+        .unwrap_or_default()
+        .into_iter()
+        .find_map(|token| match token {
+            Token::Word(word)
+                if word.quote_style.is_none() && word.value.eq_ignore_ascii_case(keyword) =>
+            {
+                Some(word.value)
+            }
+            _ => None,
+        })
+        .unwrap_or_else(|| keyword.to_string());
+    let near = format!("'{written}'");
+    Err(crate::view_ddl::parse::spark_parse_error(
+        spark_error::message(spark_error::PARSE_SYNTAX_ERROR, &[("near", near.as_str())]),
+    ))
 }
-
-pub(crate) const TEMP_VIEW_WRITE_BODY_REFUSAL: &str = "a temporary view body must be a query: \
-     `WITH ... INSERT/UPDATE/DELETE/MERGE` is a write statement, not a view definition";
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn plan_prepared_body(

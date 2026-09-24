@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use async_trait::async_trait;
-use datafusion::arrow::datatypes::SchemaRef;
+use datafusion::arrow::datatypes::{DataType, SchemaRef};
 use datafusion::catalog::{Session, TableProvider};
 use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::datasource::{ViewTable, source_as_provider};
@@ -38,6 +38,7 @@ pub(crate) struct ReplanningTempView {
     definition: TempViewDefinition,
     temp_homes: HashMap<String, Vec<String>>,
     references: Vec<Vec<String>>,
+    dependencies: Vec<Vec<String>>,
     schema: SchemaRef,
 }
 
@@ -85,6 +86,7 @@ impl TableProvider for ReplanningTempView {
         if guard.level() > MAX_VIEW_EXPANSION_DEPTH {
             return Err(nested_depth_refusal());
         }
+        refuse_dropped_dependency(&self.ctx, &self.dependencies)?;
         let frame = plan_definition(
             &self.ctx,
             &self.catalogs,
@@ -118,6 +120,7 @@ pub(crate) async fn replanning_temp_view(
     )
     .await?;
     let references = direct_temp_view_references(frame.logical_plan())?;
+    let dependencies = temp_home_dependencies(frame.logical_plan(), &definition.home)?;
     let temp_homes = captured
         .into_inner()
         .unwrap_or_else(PoisonError::into_inner);
@@ -128,7 +131,77 @@ pub(crate) async fn replanning_temp_view(
         definition,
         temp_homes,
         references,
+        dependencies,
     }))
+}
+
+fn temp_home_dependencies(plan: &LogicalPlan, home: &[String]) -> Result<Vec<Vec<String>>> {
+    let [catalog, schema, ..] = home else {
+        return Ok(Vec::new());
+    };
+    let mut dependencies: Vec<Vec<String>> = Vec::new();
+    plan.apply_with_subqueries(|node| {
+        if let LogicalPlan::TableScan(scan) = node
+            && let TableReference::Full {
+                catalog: scan_catalog,
+                schema: scan_schema,
+                table,
+            } = &scan.table_name
+            && scan_catalog.as_ref() == catalog.as_str()
+            && scan_schema.as_ref() == schema.as_str()
+        {
+            let dependency = vec![catalog.clone(), schema.clone(), table.to_string()];
+            if !dependencies.contains(&dependency) {
+                dependencies.push(dependency);
+            }
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })?;
+    Ok(dependencies)
+}
+
+fn refuse_dropped_dependency(ctx: &SessionContext, dependencies: &[Vec<String>]) -> Result<()> {
+    for dependency in dependencies {
+        let [catalog, schema, table] = dependency.as_slice() else {
+            continue;
+        };
+        let reference = TableReference::full(catalog.as_str(), schema.as_str(), table.as_str());
+        if !ctx.table_exist(reference)? {
+            let relation = backticked(table);
+            return Err(DataFusionError::Plan(spark_error::message(
+                spark_error::TABLE_OR_VIEW_NOT_FOUND,
+                &[("relationName", relation.as_str())],
+            )));
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn temp_view_column_comments(
+    provider: &dyn TableProvider,
+) -> Result<Option<Vec<Option<String>>>> {
+    let comments = |view: &ReplanningTempView| {
+        let aliases = &view.definition.aliases;
+        view.schema
+            .fields()
+            .iter()
+            .enumerate()
+            .map(|(index, _)| aliases.get(index).and_then(|(_, comment)| comment.clone()))
+            .collect::<Vec<_>>()
+    };
+    let any: &dyn Any = provider;
+    if let Some(view) = any.downcast_ref::<ReplanningTempView>() {
+        return Ok(Some(comments(view)));
+    }
+    let Some(plan) = provider.get_logical_plan() else {
+        return Ok(None);
+    };
+    let LogicalPlan::TableScan(scan) = plan.as_ref() else {
+        return Ok(None);
+    };
+    let inner = source_as_provider(&scan.source)?;
+    let any: &dyn Any = inner.as_ref();
+    Ok(any.downcast_ref::<ReplanningTempView>().map(comments))
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -325,36 +398,93 @@ fn conform_to_creation_schema(
     }
     let mut projection = Vec::with_capacity(creation.fields().len());
     for field in creation.fields() {
-        let position = fields
+        let matches = fields
             .iter()
-            .position(|now| now.name() == field.name())
-            .or_else(|| {
-                fields
-                    .iter()
-                    .position(|now| now.name().eq_ignore_ascii_case(field.name()))
-            })
-            .ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "temporary view {display} can no longer resolve its column {}: the objects \
-                     its query reads changed shape since CREATE TEMPORARY VIEW; re-create the view",
-                    backticked(field.name())
-                ))
-            })?;
-        let (Some(column), Some(now)) = (columns.get(position), fields.get(position)) else {
+            .enumerate()
+            .filter(|(_, now)| now.name().eq_ignore_ascii_case(field.name()))
+            .map(|(position, _)| position)
+            .collect::<Vec<_>>();
+        let [position] = matches.as_slice() else {
+            let actual = matches
+                .iter()
+                .filter_map(|position| fields.get(*position))
+                .map(|now| backticked(now.name()))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let actual = format!("[{actual}]");
+            return Err(DataFusionError::Plan(spark_error::message(
+                spark_error::INCOMPATIBLE_VIEW_SCHEMA_CHANGE,
+                &[
+                    ("viewName", display),
+                    ("colName", field.name()),
+                    ("expectedNum", "1"),
+                    ("actualCols", actual.as_str()),
+                    ("suggestion", "CREATE OR REPLACE TEMPORARY VIEW"),
+                ],
+            )));
+        };
+        let (Some(column), Some(now)) = (columns.get(*position), fields.get(*position)) else {
             return Err(DataFusionError::Internal(
                 "temporary view column lookup out of range".to_string(),
             ));
         };
-        if now.data_type() != field.data_type() {
-            return Err(DataFusionError::Plan(format!(
-                "temporary view {display} column {} is now {} but was {} at CREATE TEMPORARY \
-                 VIEW; re-create the view",
-                backticked(field.name()),
-                now.data_type(),
-                field.data_type()
+        let expr = Expr::Column(column.clone());
+        let expr = if now.data_type() == field.data_type() {
+            expr
+        } else if can_up_cast(now.data_type(), field.data_type()) {
+            datafusion::logical_expr::cast(expr, field.data_type().clone())
+        } else {
+            let expression = match &column.relation {
+                Some(relation) => format!("{}.{}", relation.table(), column.name),
+                None => column.name.clone(),
+            };
+            let source = spark_type_display(now.data_type());
+            let target = spark_type_display(field.data_type());
+            return Err(DataFusionError::Plan(spark_error::message(
+                spark_error::CANNOT_UP_CAST_DATATYPE,
+                &[
+                    ("expression", expression.as_str()),
+                    ("sourceType", source.as_str()),
+                    ("targetType", target.as_str()),
+                    ("details", UP_CAST_DETAILS),
+                ],
             )));
-        }
-        projection.push(Expr::Column(column.clone()).alias(field.name()));
+        };
+        projection.push(expr.alias(field.name()));
     }
     frame.select(projection)
+}
+
+const UP_CAST_DETAILS: &str = "The type path of the target object is:\n\nYou can either add an \
+     explicit cast to the input data or choose a higher precision type of the field in the target \
+     object";
+
+fn spark_type_display(data_type: &DataType) -> String {
+    format!(
+        "\"{}\"",
+        crate::spark_type_names::spark_ddl_type_name(data_type).to_ascii_uppercase()
+    )
+}
+
+fn can_up_cast(from: &DataType, to: &DataType) -> bool {
+    const NUMERIC_PRECEDENCE: [DataType; 6] = [
+        DataType::Int8,
+        DataType::Int16,
+        DataType::Int32,
+        DataType::Int64,
+        DataType::Float32,
+        DataType::Float64,
+    ];
+    if matches!(from, DataType::Null) {
+        return true;
+    }
+    if matches!(from, DataType::Date32) && matches!(to, DataType::Timestamp(_, _)) {
+        return true;
+    }
+    let rank = |data_type: &DataType| {
+        NUMERIC_PRECEDENCE
+            .iter()
+            .position(|candidate| candidate == data_type)
+    };
+    matches!((rank(from), rank(to)), (Some(from), Some(to)) if from < to)
 }
