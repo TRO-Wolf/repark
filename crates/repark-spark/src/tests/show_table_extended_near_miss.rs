@@ -826,3 +826,62 @@ async fn show_table_extended_partition_word_without_parenthesis_reports_the_miss
         assert_end_to_end_refusal(&ctx, &catalogs, &sql, &expected).await;
     }
 }
+
+#[tokio::test]
+async fn show_table_extended_parser_accepted_ambient_forms_answer_like_the_plain_statement() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let expected = seed_pc(&ctx, &catalogs).await;
+    run(&ctx, &catalogs, "USE ice.sales").await;
+    assert_eq!(
+        outcome(&ctx, &catalogs, "SHOW TABLE EXTENDED LIKE 'pc'")
+            .await
+            .unwrap(),
+        expected
+    );
+    for sql in [
+        "SHOW TABLE EXTENDED LIKE 'pc' -- end",
+        "show table extended like 'pc'",
+        "SHOW TABLE EXTENDED LIKE 'pc';;",
+    ] {
+        assert_eq!(
+            outcome(&ctx, &catalogs, sql).await.unwrap(),
+            expected,
+            "{sql}"
+        );
+    }
+    for sql in [
+        "SHOW TABLE EXTENDED LIKE ''",
+        "SHOW TABLE EXTENDED LIKE 'x' -- end",
+        "show table extended like 'x'",
+        "SHOW TABLE EXTENDED LIKE 'x';;",
+        "SHOW TABLE EXTENDED LIKE 'pl'",
+        "SHOW TABLE EXTENDED IN ice.sales LIKE 'x'",
+    ] {
+        assert_eq!(
+            outcome(&ctx, &catalogs, sql).await.unwrap(),
+            (extended_schema(), Vec::new()),
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn show_table_extended_parser_accepted_partition_form_refuses_the_literal_table() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    let sql = "show table extended from `ice`.`sales` like 'p*' partition (cat = 'a');";
+    let refused = outcome(&ctx, &catalogs, sql)
+        .await
+        .expect_err("PARTITION treats the pattern as a literal table name");
+    assert_analysis_refusal(
+        sql,
+        refused,
+        "[TABLE_OR_VIEW_NOT_FOUND] The table or view `ice`.`sales`.`p*` cannot be found. Verify \
+         the spelling and correctness of the schema and catalog. If you did not qualify the name \
+         with a schema, verify the current_schema() output, or qualify the name with the correct \
+         schema and catalog. To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE \
+         IF EXISTS. SQLSTATE: 42P01",
+    );
+}

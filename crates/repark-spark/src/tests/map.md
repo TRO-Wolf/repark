@@ -1541,7 +1541,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`show_table_extended_scanner_arms_*`); `residue_a15_in_string`, `residue_a15_in_like` and
   `residue_a15_extendedx` guard RePark's current answers where the statement head differs from
   Spark. `PARTITION a=1`, `PARTITION select` and `PARTITION a` refuse near the word with
-  `: missing '('`.
+  `: missing '('`. **WO-A16 (2026-09-24):** every parser-level accept also has an end-to-end
+  schema-and-rows pin: `-- end`, lowercase and `;;` forms answer the plain statement's rows,
+  `LIKE ''` and unmatched patterns answer the full schema with no rows, and the FROM/PARTITION
+  accept refuses the literal table (`show_table_extended_parser_accepted_*`).
   pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
