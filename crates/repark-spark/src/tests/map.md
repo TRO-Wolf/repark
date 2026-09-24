@@ -1028,7 +1028,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `C:/tmp/a`, a UNC `\\host\a`, a leading space) unchanged;
   `call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locations` pins the same rule
   at the output rows: `listed_orphan_dataframe` over `/tmp/a/x.parquet`, `s3://`, `file:`,
-  relative, empty, `C:\`, `C:/` and UNC locations answers the one non-nullable Utf8
+  `file:///`, `memory:/`, relative, empty, `C:\`, `C:/` and UNC locations answers the one non-nullable Utf8
   `orphan_file_location` column with only the `/` row prefixed by `file:`, in input order; `call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`
   pins the listing output `file:<path>` with the orphan deleted from disk;
   `call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified` pins the view

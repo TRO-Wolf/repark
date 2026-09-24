@@ -943,6 +943,8 @@ async fn call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locatio
         ("/tmp/a/x.parquet", "file:/tmp/a/x.parquet"),
         ("s3://b/k.parquet", "s3://b/k.parquet"),
         ("file:/tmp/y.parquet", "file:/tmp/y.parquet"),
+        ("file:///tmp/v.parquet", "file:///tmp/v.parquet"),
+        ("memory:/m.parquet", "memory:/m.parquet"),
         ("rel/z.parquet", "rel/z.parquet"),
         ("", ""),
         ("C:\\w\\d.parquet", "C:\\w\\d.parquet"),

@@ -195,6 +195,7 @@ and measured-parity contract would grow `call.rs` beyond its exact
   `file_list_view` branch prints the view's spelling unqualified. `listed_orphan_dataframe` is
   `pub(crate)` so the tests can pin its output rows directly.
   Red tests: `tests/call_orphan.rs::call_remove_orphan_files_qualifies_only_a_location_starting_with_slash`,
+  `::call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locations`,
   `::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`,
   `::call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified`.
 - `orphan_file_list.rs` — **IPI-30 (2026-09-22):** `file_list_view`, ported from Java

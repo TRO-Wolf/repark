@@ -7021,7 +7021,9 @@ the pin rather than obeying it.
   (`call_orphan.rs::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`);
   every other location prints unchanged, including one that already carries a scheme, a
   relative path and a Windows drive path such as `C:\…` or `C:/…`
-  (`call_orphan.rs::call_remove_orphan_files_qualifies_only_a_location_starting_with_slash`), and the
+  (`call_orphan.rs::call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locations`
+  pins the printed rows; `::call_remove_orphan_files_qualifies_only_a_location_starting_with_slash`
+  pins the rule's range), and the
   `file_list_view` path prints the view's spelling unqualified
   (`call_orphan.rs::call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified`).
   What Spark prints for a table whose location is spelled `file:///` is not measured.
@@ -7110,6 +7112,7 @@ the pin rather than obeying it.
   `crates/repark-spark/src/tests/call_orphan.rs::call_orphan_shared_ctas_root_rule`,
   `::call_remove_orphan_files_listing_path_table_location_normal_form_rule`,
   `::call_remove_orphan_files_qualifies_only_a_location_starting_with_slash`,
+  `::call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locations`,
   `::call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path` and
   `::call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified`, and
   `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_sweeps_a_memory_table_but_never_the_shared_root`
