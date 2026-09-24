@@ -460,7 +460,23 @@ pub(super) async fn execute_remove_orphan_files(
         .map(|failure| (failure.path.clone(), failure.error.to_string()))
         .collect();
     refuse_partial_delete(result.orphan_file_locations.len(), &failures)?;
-    orphan_result_dataframe(ctx, &result.orphan_file_locations)
+    listed_orphan_dataframe(ctx, &result.orphan_file_locations)
+}
+
+fn listed_orphan_dataframe(ctx: &SessionContext, locations: &[String]) -> Result<DataFrame> {
+    let qualified: Vec<String> = locations
+        .iter()
+        .map(|location| qualify_local_path(location))
+        .collect();
+    orphan_result_dataframe(ctx, &qualified)
+}
+
+pub(crate) fn qualify_local_path(location: &str) -> String {
+    if location.starts_with('/') {
+        format!("file:{location}")
+    } else {
+        location.to_string()
+    }
 }
 
 fn listing_action(
