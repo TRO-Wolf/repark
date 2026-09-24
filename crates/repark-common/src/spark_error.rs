@@ -7,6 +7,7 @@ pub enum Condition {
     NotSupportedCommandForV2Table,
     UnresolvedColumnWithSuggestion,
     UnsupportedFeatureTableOperation,
+    UnsupportedFeatureCatalogOperation,
     InvalidPartitionOperationPartitionManagementIsUnsupported,
     ParseSyntaxError,
     IncompatibleDataForTableCannotSafelyCast,
@@ -43,6 +44,8 @@ pub const NOT_SUPPORTED_COMMAND_FOR_V2_TABLE: Condition = Condition::NotSupporte
 pub const UNRESOLVED_COLUMN_WITH_SUGGESTION: Condition = Condition::UnresolvedColumnWithSuggestion;
 pub const UNSUPPORTED_FEATURE_TABLE_OPERATION: Condition =
     Condition::UnsupportedFeatureTableOperation;
+pub const UNSUPPORTED_FEATURE_CATALOG_OPERATION: Condition =
+    Condition::UnsupportedFeatureCatalogOperation;
 pub const INVALID_PARTITION_OPERATION_PARTITION_MANAGEMENT_IS_UNSUPPORTED: Condition =
     Condition::InvalidPartitionOperationPartitionManagementIsUnsupported;
 pub const PARSE_SYNTAX_ERROR: Condition = Condition::ParseSyntaxError;
@@ -93,6 +96,7 @@ impl Condition {
             Self::NotSupportedCommandForV2Table => "NOT_SUPPORTED_COMMAND_FOR_V2_TABLE",
             Self::UnresolvedColumnWithSuggestion => "UNRESOLVED_COLUMN.WITH_SUGGESTION",
             Self::UnsupportedFeatureTableOperation => "UNSUPPORTED_FEATURE.TABLE_OPERATION",
+            Self::UnsupportedFeatureCatalogOperation => "UNSUPPORTED_FEATURE.CATALOG_OPERATION",
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported => {
                 "INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED"
             }
@@ -145,6 +149,7 @@ impl Condition {
             Self::TableOrViewAlreadyExists | Self::ViewAlreadyExists => Some("42P07"),
             Self::NotSupportedCommandForV2Table
             | Self::UnsupportedFeatureTableOperation
+            | Self::UnsupportedFeatureCatalogOperation
             | Self::NotSupportedChangeColumn
             | Self::UnsupportedFeatureGeospatialDisabled => Some("0A000"),
             Self::UnresolvedColumnWithSuggestion => Some("42703"),
@@ -189,6 +194,9 @@ impl Condition {
             }
             Self::UnsupportedFeatureTableOperation => {
                 "The feature is not supported: Table {tableName} does not support column default value. Please check the current catalog and namespace to make sure the qualified table name is expected, and also check the catalog implementation which is configured by \"spark.sql.catalog\"."
+            }
+            Self::UnsupportedFeatureCatalogOperation => {
+                "The feature is not supported: Catalog `{catalogName}` does not support views."
             }
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported => {
                 "The partition command is invalid. Table {tableName} does not support partition management."
@@ -372,6 +380,7 @@ mod tests {
         NOT_SUPPORTED_COMMAND_FOR_V2_TABLE,
         UNRESOLVED_COLUMN_WITH_SUGGESTION,
         UNSUPPORTED_FEATURE_TABLE_OPERATION,
+        UNSUPPORTED_FEATURE_CATALOG_OPERATION,
         INVALID_PARTITION_OPERATION_PARTITION_MANAGEMENT_IS_UNSUPPORTED,
         PARSE_SYNTAX_ERROR,
         INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
@@ -404,7 +413,7 @@ mod tests {
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 33);
+        assert_eq!(ALL.len(), 34);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();
@@ -431,7 +440,7 @@ mod tests {
 
     #[test]
     fn take_conditions_carry_the_recorded_sqlstates() {
-        let rows: [Row<'_>; 16] = [
+        let rows: [Row<'_>; 17] = [
             (
                 TABLE_OR_VIEW_NOT_FOUND,
                 &[("relationName", "`ns`.`t`")],
@@ -455,6 +464,11 @@ mod tests {
             (
                 UNSUPPORTED_FEATURE_TABLE_OPERATION,
                 &[("tableName", "`sc`.`ns`.`t`")],
+                "0A000",
+            ),
+            (
+                UNSUPPORTED_FEATURE_CATALOG_OPERATION,
+                &[("catalogName", "sc")],
                 "0A000",
             ),
             (
@@ -682,6 +696,18 @@ mod tests {
             message(VIEW_NOT_FOUND, &[("relationName", "ns1.missing")]),
             "[VIEW_NOT_FOUND] The view ns1.missing cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS. SQLSTATE: 42P01",
             "pins: ice-views-1/C-010"
+        );
+    }
+
+    #[test]
+    fn catalog_operation_reproduces_the_live_probe_bytes() {
+        assert_eq!(
+            message(
+                UNSUPPORTED_FEATURE_CATALOG_OPERATION,
+                &[("catalogName", "sc")]
+            ),
+            "[UNSUPPORTED_FEATURE.CATALOG_OPERATION] The feature is not supported: Catalog `sc` does not support views. SQLSTATE: 0A000",
+            "pins: ice-views-1/C-017"
         );
     }
 

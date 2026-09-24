@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
@@ -83,6 +84,91 @@ def test_show_views_and_drop(spark: ReparkSession) -> None:
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == [["ns", "other_v", False]]
     spark.sql("DROP VIEW sc.ns.other_v")
     assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == []
+
+
+def test_use_resolves_show_views_and_bare_create_drop(spark: ReparkSession) -> None:
+    """USE supplies the catalog for SHOW and the namespace for CREATE and DROP."""
+    spark.sql("USE sc.ns")
+    spark.sql("CREATE VIEW vb AS SELECT id FROM sc.ns.t")
+    frame = spark.sql("SHOW VIEWS IN ns")
+    assert [(field.name, field.type) for field in frame.to_arrow().schema] == [
+        ("namespace", pa.string()),
+        ("viewName", pa.string()),
+        ("isTemporary", pa.bool_()),
+    ]
+    assert _rows(frame) == [["ns", "vb", False]]
+    assert _rows(spark.sql("SELECT * FROM sc.ns.vb ORDER BY id")) == [[0], [1], [2]]
+    spark.sql("DROP VIEW vb")
+    assert _rows(spark.sql("SHOW VIEWS IN ns")) == []
+
+
+def test_use_resolves_bare_view_select(spark: ReparkSession) -> None:
+    """A bare view name in SELECT resolves through USE catalog and namespace."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc.ns")
+    assert _rows(spark.sql("SELECT * FROM v ORDER BY id")) == [[0], [1], [2]]
+
+
+def test_use_catalog_resolves_two_part_view_select(spark: ReparkSession) -> None:
+    """A two-part view name in SELECT resolves through the USE catalog."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc")
+    assert _rows(spark.sql("SELECT * FROM ns.v ORDER BY id")) == [[0], [1], [2]]
+
+
+def test_use_resolves_bare_view_write_refusal(spark: ReparkSession) -> None:
+    """The write guard resolves a bare view name through USE defaults."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc.ns")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("INSERT INTO v VALUES (9)")
+    assert type(caught.value) is AnalysisException
+    assert str(caught.value) == (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v` "
+        "cannot be found. Verify the spelling and correctness of the schema and catalog. "
+        "If you did not qualify the name with a schema, verify the current_schema() output, "
+        "or qualify the name with the correct schema and catalog. To tolerate the error on "
+        "drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert caught.value.getSqlState() == "42P01"
+
+
+def test_use_catalog_resolves_two_part_view_write_refusal(spark: ReparkSession) -> None:
+    """A two-part view write resolves the current catalog and leaves data intact."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("USE sc")
+    with pytest.raises(AnalysisException) as caught:
+        spark.sql("INSERT INTO ns.v VALUES (9)")
+    assert type(caught.value) is AnalysisException
+    assert str(caught.value) == (
+        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v` "
+        "cannot be found. Verify the spelling and correctness of the schema and catalog. "
+        "If you did not qualify the name with a schema, verify the current_schema() output, "
+        "or qualify the name with the correct schema and catalog. To tolerate the error on "
+        "drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+    )
+    assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
+    assert caught.value.getSqlState() == "42P01"
+    assert _rows(spark.sql("SELECT * FROM sc.ns.v ORDER BY id")) == [[0], [1], [2]]
+    assert _rows(spark.sql("SELECT * FROM sc.ns.t ORDER BY id")) == [
+        [0, "d0"],
+        [1, "d1"],
+        [2, "d2"],
+    ]
+
+
+@pytest.mark.parametrize("use_name,table_name", [("sc.ns", "t"), ("sc", "ns.t")])
+def test_use_resolves_table_insert(spark: ReparkSession, use_name: str, table_name: str) -> None:
+    """A table write resolves the current catalog and namespace."""
+    spark.sql(f"USE {use_name}")
+    spark.sql(f"INSERT INTO {table_name} VALUES (9, 'd9')")
+    assert _rows(spark.sql("SELECT * FROM sc.ns.t ORDER BY id")) == [
+        [0, "d0"],
+        [1, "d1"],
+        [2, "d2"],
+        [9, "d9"],
+    ]
 
 
 def test_create_view_if_not_exists_is_noop(spark: ReparkSession) -> None:

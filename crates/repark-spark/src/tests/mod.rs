@@ -3,6 +3,7 @@
 mod common;
 
 mod alter;
+mod alter_view_routing;
 mod alter_write_order;
 mod apply_partitioning;
 mod branch_ops;
@@ -106,6 +107,7 @@ mod v3_upgrade;
 mod v3_upgrade_calls;
 mod v3e3;
 mod v3e4;
+mod view_use_resolution;
 mod viewless_catalog;
 mod wap_branch;
 mod wap_id;

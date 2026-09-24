@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{BooleanArray, StringArray};
@@ -6,16 +7,19 @@ use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::ObjectName;
-use iceberg::{NamespaceIdent, TableIdent};
+use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
+use repark_common::spark_error;
 use repark_core::{CatalogRegistry, LocationPolicy};
 use repark_iceberg::view::{
     ViewDefinition, ViewTarget, create_or_replace_view, drop_catalog_view, list_catalog_views,
     split_view_properties, view_schema_for_output,
 };
 
-use crate::catalog_ops::{catalog_handle, name_parts, table_or_view_not_found};
+use crate::catalog_ops::{catalog_handle, iceberg_err, name_parts, table_or_view_not_found};
 use crate::describe_show::filter_pattern_matches;
-use crate::view_ddl::parse::{CreateViewStatement, ShowViewsStatement};
+use crate::view_ddl::parse::{
+    AlterViewAction, AlterViewStatement, CreateViewStatement, ShowViewsStatement,
+};
 use crate::view_ddl::read::{plan_prepared_body, prepare_view_body_sql};
 
 #[allow(clippy::missing_errors_doc)]
@@ -24,7 +28,7 @@ pub(crate) async fn execute_create_view(
     catalogs: &CatalogRegistry,
     statement: CreateViewStatement,
 ) -> Result<DataFrame> {
-    let (catalog, namespace_name, view_name) = complete_view_name(ctx, &statement.name)?;
+    let (catalog, namespace_name, view_name) = complete_view_name(catalogs, &statement.name)?;
     let handle = catalog_handle(catalogs, &catalog)?;
     let warehouse = warehouse_for_catalog(catalogs, &catalog)?;
     let (stored_properties, location_override) =
@@ -73,7 +77,7 @@ pub(crate) async fn execute_drop_view(
 ) -> Result<DataFrame> {
     for name in names {
         let parts = name_parts(name);
-        let (catalog, namespace_name, view_name) = complete_view_name(ctx, &parts)?;
+        let (catalog, namespace_name, view_name) = complete_view_name(catalogs, &parts)?;
         let handle = catalog_handle(catalogs, &catalog)?;
         let namespace = NamespaceIdent::new(namespace_name.clone());
         let target = ViewTarget {
@@ -89,13 +93,149 @@ pub(crate) async fn execute_drop_view(
 }
 
 #[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_alter_view(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: AlterViewStatement,
+) -> Result<DataFrame> {
+    let (catalog, namespace_name, view_name) = complete_view_name(catalogs, &statement.name)?;
+    let handle = catalog_handle(catalogs, &catalog)?;
+    let ident = TableIdent::new(
+        NamespaceIdent::new(namespace_name.clone()),
+        view_name.clone(),
+    );
+    let view = match handle.load_view(&ident).await {
+        Ok(view) => view,
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::ViewNotFound | ErrorKind::FeatureUnsupported
+            ) =>
+        {
+            return alter_view_missing_target(
+                handle.as_ref(),
+                &catalog,
+                &namespace_name,
+                &view_name,
+                &ident,
+                &statement.action,
+            )
+            .await;
+        }
+        Err(error) => return Err(iceberg_err(error)),
+    };
+    match statement.action {
+        AlterViewAction::SetProperties(properties) => {
+            let commit = view_properties_commit(&view, properties, &[])?;
+            handle.update_view(commit).await.map_err(iceberg_err)?;
+        }
+        AlterViewAction::UnsetProperties { keys, if_exists } => {
+            let removals = select_unset_removals(&keys, if_exists, view.metadata().properties())?;
+            if !removals.is_empty() {
+                let commit = view_properties_commit(&view, HashMap::new(), &removals)?;
+                handle.update_view(commit).await.map_err(iceberg_err)?;
+            }
+        }
+        AlterViewAction::RenameTo(target) => {
+            let (target_catalog, target_namespace, target_name) =
+                complete_view_name(catalogs, &target)?;
+            if target_catalog != catalog {
+                return Err(DataFusionError::Plan(format!(
+                    "Cannot move view between catalogs: from={catalog} and to={target_catalog}"
+                )));
+            }
+            let destination = TableIdent::new(
+                NamespaceIdent::new(target_namespace.clone()),
+                target_name.clone(),
+            );
+            match handle.view_exists(&destination).await {
+                Ok(true) => {
+                    let relation = format!("{target_namespace}.{target_name}");
+                    return Err(DataFusionError::Plan(spark_error::message(
+                        spark_error::VIEW_ALREADY_EXISTS,
+                        &[("relationName", relation.as_str())],
+                    )));
+                }
+                Ok(false) => {}
+                Err(error) => return Err(iceberg_err(error)),
+            }
+            handle
+                .rename_view(&ident, &destination)
+                .await
+                .map_err(iceberg_err)?;
+        }
+    }
+    ctx.read_empty()
+}
+
+async fn alter_view_missing_target(
+    handle: &dyn Catalog,
+    catalog: &str,
+    namespace_name: &str,
+    view_name: &str,
+    ident: &TableIdent,
+    action: &AlterViewAction,
+) -> Result<DataFrame> {
+    if matches!(action, AlterViewAction::RenameTo(_)) {
+        let table_exists = handle.table_exists(ident).await.map_err(iceberg_err)?;
+        if table_exists {
+            return Err(DataFusionError::Plan(
+                "Cannot rename a table with ALTER VIEW. Please use ALTER TABLE instead."
+                    .to_string(),
+            ));
+        }
+        return Err(table_or_view_not_found(catalog, namespace_name, view_name));
+    }
+    Err(DataFusionError::Plan(spark_error::message(
+        spark_error::UNSUPPORTED_FEATURE_CATALOG_OPERATION,
+        &[("catalogName", catalog)],
+    )))
+}
+
+fn select_unset_removals(
+    keys: &[String],
+    if_exists: bool,
+    stored: &HashMap<String, String>,
+) -> Result<Vec<String>> {
+    let mut removals = Vec::new();
+    for key in keys {
+        if stored.contains_key(key) {
+            removals.push(key.clone());
+        } else if !if_exists {
+            return Err(DataFusionError::Plan(format!(
+                "Cannot remove property that is not set: '{key}'"
+            )));
+        }
+    }
+    Ok(removals)
+}
+
+fn view_properties_commit(
+    view: &iceberg::view::View,
+    sets: HashMap<String, String>,
+    removals: &[String],
+) -> Result<iceberg::view::ViewCommit> {
+    let mut update = view.update_properties();
+    for (key, value) in sets {
+        update = update.set(key, value).map_err(iceberg_err)?;
+    }
+    for key in removals {
+        update = update.remove(key.clone()).map_err(iceberg_err)?;
+    }
+    update.to_commit().map_err(iceberg_err)
+}
+
+#[allow(clippy::missing_errors_doc)]
 pub(crate) async fn execute_show_views(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     statement: ShowViewsStatement,
 ) -> Result<DataFrame> {
     let (catalog, namespace_name) = match statement.namespace.as_slice() {
-        [namespace] => (default_catalog_name(ctx), namespace.clone()),
+        [namespace] => (
+            crate::use_ddl::session_defaults(catalogs).0,
+            namespace.clone(),
+        ),
         [catalog, namespace] => (catalog.clone(), namespace.clone()),
         _ => {
             return Err(DataFusionError::Plan(format!(
@@ -133,7 +273,7 @@ pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<Reco
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn refuse_view_write_target(
-    ctx: &SessionContext,
+    _ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     name: &ObjectName,
 ) -> Result<()> {
@@ -141,7 +281,7 @@ pub(crate) async fn refuse_view_write_target(
     if is_metadata_table_target(&parts) {
         return Err(metadata_table_write_refusal(&parts));
     }
-    let Ok((catalog, namespace_name, view_name)) = complete_view_name(ctx, &parts) else {
+    let Ok((catalog, namespace_name, view_name)) = complete_view_name(catalogs, &parts) else {
         return Ok(());
     };
     let ident = TableIdent::new(
@@ -173,35 +313,28 @@ fn metadata_table_write_refusal(parts: &[String]) -> DataFusionError {
     ))
 }
 
-fn complete_view_name(ctx: &SessionContext, parts: &[String]) -> Result<(String, String, String)> {
+fn complete_view_name(
+    catalogs: &CatalogRegistry,
+    parts: &[String],
+) -> Result<(String, String, String)> {
     if is_metadata_table_target(parts) {
         return Err(metadata_table_write_refusal(parts));
     }
+    let (default_catalog, default_namespace) = crate::use_ddl::session_defaults(catalogs);
     match parts {
-        [view] => Ok((
-            default_catalog_name(ctx),
-            default_namespace_name(ctx),
-            view.clone(),
+        [view] if default_namespace.is_empty() => Err(table_or_view_not_found(
+            &default_catalog,
+            &default_namespace,
+            view,
         )),
-        [namespace, view] => Ok((default_catalog_name(ctx), namespace.clone(), view.clone())),
+        [view] => Ok((default_catalog, default_namespace, view.clone())),
+        [namespace, view] => Ok((default_catalog, namespace.clone(), view.clone())),
         [catalog, namespace, view] => Ok((catalog.clone(), namespace.clone(), view.clone())),
         _ => Err(DataFusionError::Plan(format!(
             "expected a [catalog.[namespace.]]view name, got `{}`",
             parts.join(".")
         ))),
     }
-}
-
-fn default_catalog_name(ctx: &SessionContext) -> String {
-    ctx.copied_config()
-        .options()
-        .catalog
-        .default_catalog
-        .clone()
-}
-
-fn default_namespace_name(ctx: &SessionContext) -> String {
-    ctx.copied_config().options().catalog.default_schema.clone()
 }
 
 fn warehouse_for_catalog(catalogs: &CatalogRegistry, catalog_name: &str) -> Result<String> {
@@ -215,5 +348,149 @@ fn warehouse_for_catalog(catalogs: &CatalogRegistry, catalog_name: &str) -> Resu
         }
         Some(LocationPolicy::RequireExplicitLocation | LocationPolicy::ServiceManagedLocation)
         | None => Ok(String::new()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use iceberg::io::FileIO;
+    use iceberg::spec::{
+        NestedField, PrimitiveType, Schema as IcebergSchema, SqlViewRepresentation, Type,
+        ViewMetadataBuilder, ViewRepresentation, ViewRepresentations,
+    };
+    use iceberg::view::View;
+    use iceberg::{ViewCreation, ViewUpdate};
+
+    fn stored_view(properties: HashMap<String, String>) -> View {
+        let schema = IcebergSchema::builder()
+            .with_schema_id(0)
+            .with_fields(vec![Arc::new(NestedField::required(
+                1,
+                "id",
+                Type::Primitive(PrimitiveType::Long),
+            ))])
+            .build()
+            .unwrap_or_else(|error| panic!("schema must build: {error}"));
+        let creation = ViewCreation::builder()
+            .name("v".to_string())
+            .location("memory://ns/v".to_string())
+            .representations(ViewRepresentations::new(vec![ViewRepresentation::Sql(
+                SqlViewRepresentation {
+                    sql: "SELECT 1".to_string(),
+                    dialect: "spark".to_string(),
+                },
+            )]))
+            .schema(schema)
+            .properties(properties)
+            .default_namespace(NamespaceIdent::new("ns".to_string()))
+            .build();
+        let metadata = ViewMetadataBuilder::from_view_creation(creation)
+            .unwrap_or_else(|error| panic!("metadata builder: {error}"))
+            .build()
+            .unwrap_or_else(|error| panic!("metadata must build: {error}"))
+            .metadata;
+        View::builder()
+            .file_io(FileIO::new_with_memory())
+            .metadata(metadata)
+            .identifier(TableIdent::new(
+                NamespaceIdent::new("ns".to_string()),
+                "v".to_string(),
+            ))
+            .build()
+            .unwrap_or_else(|error| panic!("view must build: {error}"))
+    }
+
+    fn stored(properties: &[(&str, &str)]) -> HashMap<String, String> {
+        properties
+            .iter()
+            .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn set_commit_carries_the_property_updates() {
+        let view = stored_view(HashMap::new());
+        let mut commit = view_properties_commit(&view, stored(&[("k", "v"), ("n", "1")]), &[])
+            .unwrap_or_else(|error| panic!("commit must build: {error}"));
+        let updates = commit.take_updates();
+        let [ViewUpdate::SetProperties { updates }] = updates.as_slice() else {
+            panic!("expected a single SetProperties update, got {updates:?}");
+        };
+        assert_eq!(
+            updates,
+            &stored(&[("k", "v"), ("n", "1")]),
+            "pins: ice-views-1/C-017"
+        );
+    }
+
+    #[test]
+    fn unset_commit_carries_the_removals() {
+        let view = stored_view(stored(&[("k", "v"), ("k2", "w")]));
+        let removals = vec!["k".to_string()];
+        let mut commit = view_properties_commit(&view, HashMap::new(), &removals)
+            .unwrap_or_else(|error| panic!("commit must build: {error}"));
+        let updates = commit.take_updates();
+        let [ViewUpdate::RemoveProperties { removals }] = updates.as_slice() else {
+            panic!("expected a single RemoveProperties update, got {updates:?}");
+        };
+        assert_eq!(removals, &vec!["k".to_string()], "pins: ice-views-1/C-017");
+    }
+
+    #[test]
+    fn commit_refuses_a_key_that_is_both_set_and_removed() {
+        let view = stored_view(stored(&[("k", "v")]));
+        let removals = vec!["k".to_string()];
+        let Err(error) = view_properties_commit(&view, stored(&[("k", "v2")]), &removals) else {
+            panic!("a key both set and removed must refuse");
+        };
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External error, got {error:?}");
+        };
+        let source = inner
+            .downcast_ref::<iceberg::Error>()
+            .unwrap_or_else(|| panic!("expected an Iceberg error, got {error:?}"));
+        assert_eq!(source.kind(), ErrorKind::DataInvalid);
+        assert_eq!(
+            error.to_string(),
+            "External error: DataInvalid => Cannot remove and update the same key: k"
+        );
+    }
+
+    #[test]
+    fn unset_selection_keeps_present_keys_in_statement_order() {
+        let stored = stored(&[("k", "v"), ("n", "1")]);
+        let keys = vec!["n".to_string(), "k".to_string()];
+        let removals = select_unset_removals(&keys, false, &stored)
+            .unwrap_or_else(|error| panic!("selection must succeed: {error}"));
+        assert_eq!(removals, vec!["n".to_string(), "k".to_string()]);
+    }
+
+    #[test]
+    fn unset_selection_refuses_the_first_missing_key_without_if_exists() {
+        let stored = stored(&[("k", "v")]);
+        let keys = vec!["k".to_string(), "nope".to_string(), "also_gone".to_string()];
+        let Err(error) = select_unset_removals(&keys, false, &stored) else {
+            panic!("must refuse")
+        };
+        assert!(matches!(error, DataFusionError::Plan(_)));
+        assert_eq!(
+            error.to_string(),
+            "Error during planning: Cannot remove property that is not set: 'nope'",
+            "pins: ice-views-1/C-017"
+        );
+    }
+
+    #[test]
+    fn unset_selection_skips_missing_keys_with_if_exists() {
+        let stored = stored(&[("k", "v")]);
+        let keys = vec!["nope".to_string(), "k".to_string(), "also_gone".to_string()];
+        let removals = select_unset_removals(&keys, true, &stored)
+            .unwrap_or_else(|error| panic!("selection must succeed: {error}"));
+        assert_eq!(removals, vec!["k".to_string()]);
+        let keys = vec!["nope".to_string()];
+        let removals = select_unset_removals(&keys, true, &stored)
+            .unwrap_or_else(|error| panic!("selection must succeed: {error}"));
+        assert!(removals.is_empty());
     }
 }

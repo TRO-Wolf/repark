@@ -1505,6 +1505,62 @@ sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
 
 ---
 
+### 2.6 Iceberg view DDL
+
+#### D-VIEW-ALTER-1 — ALTER VIEW refusals: four declared residues
+
+- **repark** — `ALTER VIEW sc.ns.missing RENAME TO sc.ns.w` returns the complete
+  `TABLE_OR_VIEW_NOT_FOUND` sentence and SQLSTATE `42P01` without Spark's origin and plan tail.
+  `ALTER VIEW sc.ns.t RENAME TO sc.ns.w` returns `Cannot rename a table with ALTER VIEW. Please use ALTER TABLE instead.` with no condition or SQLSTATE.
+  `ALTER TABLE sc.ns.v SET TBLPROPERTIES ('k'='v')` returns the ALTER TABLE path's
+  engine-wide missing-target text, `TableNotFound => No such table: TableIdent { namespace:
+  NamespaceIdent(["ns"]), name: "v" }`, with no condition or SQLSTATE. `SELECT * FROM sc.ns.vo`
+  after renaming that view returns the engine-wide missing-relation text
+  `Error during planning: table 'sc.ns.vo' not found` (the EX-IO-8 family), also with no
+  condition or SQLSTATE. `DESCRIBE sc.ns.vo` is EQUAL.
+- **Apache Spark** — `spark-alter-probe.json` records these full messages:
+
+  `P-AV-RENAME-MISSING` (`TABLE_OR_VIEW_NOT_FOUND`, `42P01`):
+
+  ```text
+  [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`nope_t_p_av_rename_missing` cannot be found. Verify the spelling and correctness of the schema and catalog.
+  If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.
+  To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01; line 1 pos 11;
+  'RenameTable [sc, ns, w_t_p_av_rename_missing], true
+  +- 'UnresolvedTableOrView [sc, ns, nope_t_p_av_rename_missing], ALTER VIEW ... RENAME TO, true
+  ```
+
+  `P-AV-RENAME-TABLE` (`_LEGACY_ERROR_TEMP_1123`, SQLSTATE null):
+  `Cannot rename a table with ALTER VIEW. Please use ALTER TABLE instead.`
+
+  `P-AV-TABLE-SET-ON-VIEW` (`TABLE_OR_VIEW_NOT_FOUND`, `42P01`):
+
+  ```text
+  [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v_t_p_av_table_set_on_view` cannot be found. Verify the spelling and correctness of the schema and catalog.
+  If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.
+  To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01; line 1 pos 12;
+  'SetTableProperties [k=v]
+  +- 'UnresolvedTable [sc, ns, v_t_p_av_table_set_on_view], ALTER TABLE ... SET TBLPROPERTIES, true
+  ```
+
+  `P-AV-RENAME-OLD-GONE` (`TABLE_OR_VIEW_NOT_FOUND`, `42P01`):
+
+  ```text
+  [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`v_t_p_av_rename_old_gone` cannot be found. Verify the spelling and correctness of the schema and catalog.
+  If you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.
+  To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01; line 1 pos 14;
+  'Project [*]
+  +- 'UnresolvedRelation [sc, ns, v_t_p_av_rename_old_gone], [], false
+  ```
+- **Pin** — `python/repark/tests/test_ice_views_3_alter.py::test_rename_missing_view_is_table_or_view_not_found`,
+  `python/repark/tests/test_ice_views_3_alter.py::test_rename_table_with_alter_view_refuses`,
+  `python/repark/tests/test_ice_views_3_alter.py::test_alter_table_set_on_view_name_answers_table_path_missing`,
+  and `python/repark/tests/test_ice_views_3_alter.py::test_old_name_is_gone_after_rename`.
+- **Rationale** — DECLARED. E6 follows the repository's origin-tail convention. E7's native
+  bridge cannot carry a condition beginning with `_LEGACY_`. The ALTER TABLE missing-target
+  answer and SELECT missing-relation answer are engine-wide paths. View DDL does not own them,
+  and this PR does not change them.
+
 ## 3. Identifier resolution (DECLARED)
 
 ### ID-1 — quoted identifiers stay exact on the ANSI door, fold on the Spark door

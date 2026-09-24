@@ -12,18 +12,36 @@ service, and the wrapper-based read path that expands stored SQL per query.
 - `parse.rs` — grammar only: `CREATE [OR REPLACE] [IF NOT EXISTS] VIEW` with
   alias/COMMENT/TBLPROPERTIES forms and verbatim body capture,
   `is_create_view_statement` (the durable head sniff the router skip uses),
-  the `ALTER VIEW … AS` refusal shape, `SHOW VIEWS [IN ns] [LIKE]`.
-  TEMPORARY forms never match (PR3). Unit tests per form. The facade still
-  prefixes one-part targets with `/* repark:bare-name */`; the engine never
-  reads the mark — it only records that the user spelled the name bare
-  (V-001, 2026-09-22).
+  the `ALTER VIEW … AS` refusal shape, `SHOW VIEWS [IN ns] [LIKE]`,
+  and **PR3 (2026-09-22)** `try_parse_alter_view` for `ALTER VIEW` …
+  `SET TBLPROPERTIES`, `UNSET TBLPROPERTIES [IF EXISTS]` and `RENAME TO`
+  (anything else after the name, `AS` included, stays `None`; a recognised
+  verb with a malformed tail is `Some(Err)`). TEMPORARY forms never match.
+  Unit tests per form. The facade still prefixes one-part targets with
+  `/* repark:bare-name */`; the engine never reads the mark — it only
+  records that the user spelled the name bare (V-001, 2026-09-22).
 - `execute.rs` — `execute_create_view` (name completion, body prepare + plan
   for the output schema, service call), `execute_drop_view`,
   `execute_show_views` (`namespace`/`viewName`/`isTemporary` rows, LIKE
-  filter), `refuse_view_write_target` (INSERT/DELETE/UPDATE/BY NAME guard,
+  filter), `execute_alter_view` (**PR3:** `load_view` first; `ViewNotFound` and
+  `FeatureUnsupported` both count as no view; SET/UNSET answer
+  `UNSUPPORTED_FEATURE.CATALOG_OPERATION` for a missing view AND a table
+  alike, UNSET refuses the first absent key in statement order unless
+  `IF EXISTS`; RENAME refuses a cross-catalog target, answers
+  `TABLE_OR_VIEW_NOT_FOUND`/`42P01` for a missing name, redirects a table
+  name to ALTER TABLE, and `VIEW_ALREADY_EXISTS` on collision),
+  `refuse_view_write_target` (INSERT/DELETE/UPDATE/BY NAME guard,
   fail-closed since R2: metadata-table writes refuse up front, `is_view` is a
   `Result`, and names that cannot be views (branch selectors) fall through to
-  the table path).
+  the table path). pins: ice-views-1/C-017
+  Name completion for CREATE, DROP, ALTER, RENAME targets, and the write guard
+  reads `use_ddl::session_defaults(catalogs)`; one-part SHOW VIEWS IN reads its
+  catalog from the same defaults. A bare name with no current namespace uses
+  `TABLE_OR_VIEW_NOT_FOUND`, as `use_ddl::complete_name` does.
+  Unit tests (r2b): `parse.rs` pins every malformed ALTER VIEW tail by its full
+  Plan text (several say `could not parse CREATE NAMESPACE`, because the tail reuses the
+  namespace property helpers); `execute.rs` pins the commit refusal for a key both set and
+  removed.
   The tighten refusal runs unconditionally once `catalog_handle` resolves a
   registered catalog and before `create_or_replace_view` — a bare-name-marked
   target is still a catalog write, and CREATE OR REPLACE shares this site —
@@ -44,7 +62,7 @@ service, and the wrapper-based read path that expands stored SQL per query.
   `spark_ddl_type_name` spellings, a doc-less column renders `""` (the table
   path renders null), no blank/`# Partitioning`/`# Metadata Columns` trailer,
   and EXTENDED is the same columns-only answer. SHOW CREATE /
-  SHOW TBLPROPERTIES / ALTER VIEW stay later PRs.
+  SHOW TBLPROPERTIES stay later PRs.
   pins: ice-views-1/C-017
 
 ## Pointers
