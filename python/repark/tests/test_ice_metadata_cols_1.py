@@ -1,4 +1,6 @@
-"""IPI-20 PR-1 — the Spark door serves ``_file``, ``_pos``, ``_spec_id``, ``_partition`` and ``_deleted``.
+"""IPI-20 PR-1 — the Spark door serves the metadata columns ``_file`` … ``_deleted``.
+
+The five served names are ``_file``, ``_pos``, ``_spec_id``, ``_partition`` and ``_deleted``.
 
 Ten inventory cells replayed verbatim: ``R-MC-FILE``, ``R-MC-FILE-DISTINCT``,
 ``R-MC-POS``, ``R-MC-FILE-FILTER`` and ``R-MC-SPEC-ID`` over a two-append plus
