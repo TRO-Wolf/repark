@@ -5,6 +5,7 @@ mod commit_unknown;
 mod conf_unread;
 mod df_guard;
 mod footer_cache_report;
+mod hadoop_naming;
 mod io_stats;
 mod metadata_cache_report;
 mod namespace_create;

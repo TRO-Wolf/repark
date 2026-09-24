@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, PoisonError, RwLock};
 
 use iceberg::Catalog;
@@ -18,9 +19,13 @@ pub(crate) fn caches_of(registry: &RwLock<CatalogRegistry>) -> Arc<CatalogCaches
 }
 
 impl ReparkSession {
-    pub(crate) async fn memory_catalog_handle(&self, warehouse: &str) -> Result<Arc<dyn Catalog>> {
+    pub(crate) async fn memory_catalog_handle(
+        &self,
+        warehouse: &str,
+        props: HashMap<String, String>,
+    ) -> Result<Arc<dyn Catalog>> {
         let caches = caches_of(&self.catalogs);
-        repark_iceberg::catalog::memory_catalog_cached(warehouse, &caches)
+        repark_iceberg::catalog::memory_catalog_cached_with_props(warehouse, &caches, props)
             .await
             .map_err(engine_err)
     }

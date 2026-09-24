@@ -53,6 +53,25 @@ pub async fn memory_catalog_cached(
     memory_catalog_wired(warehouse, caches, HashMap::new()).await
 }
 
+#[allow(clippy::missing_errors_doc)]
+#[tracing::instrument(
+    name = "catalog.memory_catalog_cached_with_props",
+    skip(warehouse, caches, props),
+    fields(
+        warehouse = %warehouse,
+        metadata_cache = caches.metadata_cache().is_some(),
+        manifest_cache_bytes = caches.manifest_cache_bytes(),
+        footer_cache = caches.footer_cache().is_some()
+    )
+)]
+pub async fn memory_catalog_cached_with_props(
+    warehouse: &str,
+    caches: &CatalogCaches,
+    props: HashMap<String, String>,
+) -> Result<Arc<dyn Catalog>> {
+    memory_catalog_wired(warehouse, caches, props).await
+}
+
 pub(crate) async fn memory_catalog_wired(
     warehouse: &str,
     caches: &CatalogCaches,
