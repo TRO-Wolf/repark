@@ -245,14 +245,16 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   table reads through `IcebergStaticTableProvider` — nothing is registered in a catalog —
   and a time-travel or incremental reader option beside a path refuses the pinned
   `AnalysisException` (`format('iceberg').load(<path>) reads one pinned metadata snapshot
-  and does not support time-travel or incremental options; got <keys>`). A `file://`
-  argument with a non-empty authority (`file://tmp/…`, `file://localhost/…`) refuses
-  `IllegalArgumentException` `Wrong FS: <arg>/metadata, expected: file:///` (the argument
+  and does not support time-travel or incremental options; got <keys>`), whatever the key's
+  case. A lower-case `file://` argument with a non-empty authority (`file://tmp/…`,
+  `file://localhost/…`) refuses `IllegalArgumentException`
+  `Wrong FS: <arg minus at most one trailing />/metadata, expected: file:///` (the argument
   verbatim when it ends `.metadata.json`) before any FileIO is built, while `file:///<abs>`
   reads. *(Spark text measured on live Spark 4.1.2 + Iceberg, WO dfload-r5.)* A `file:`
   argument of any scheme case whose remainder is `/X` or `///X` (`file:/abs`, `FILE:/abs`,
-  `fIlE:///abs`) reads like `file:///X`, and a lower-case `file:<relative>` refuses
-  `IllegalArgumentException` `java.net.URISyntaxException: Relative path in absolute URI: <arg>`;
+  `fIlE:/abs`, `FILE:///abs`, `fIlE:///abs`) reads like `file:///X`, and a lower-case
+  `file:<relative>` refuses `IllegalArgumentException`
+  `java.net.URISyntaxException: Relative path in absolute URI: <arg minus at most one trailing />`;
   the remaining spelling differences are residue `R-DF-LOAD-SPELLINGS` in the dfload-1 ledger.
   *(measured against a Hadoop-catalog table on Spark 4.1.2, WO dfload-r6.)*
 - **Apache Spark** — `spark.read.format("iceberg").load(<table location>)` answers the
@@ -261,8 +263,9 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   lane build 2026-09-23.)*
 - **Pin** — `python/repark/tests/test_iceberg_load_path.py`
   (`test_load_table_location_reads_current_rows`, `test_load_table_location_trailing_slash`,
-  `test_load_missing_location_names_the_path`, `test_load_path_with_time_travel_option_refuses`,
-  and the five near-miss pins that hold the catalog route);
+  `test_load_missing_location_names_the_path`,
+  `test_load_path_with_travel_or_incremental_option_refuses`, and the near-miss pins that
+  hold the catalog route);
   `crates/repark-core/src/iceberg_path/tests.rs` (the picker battery).
 - **Rationale** — FIXED 2026-09-23 (dfload-1, WO dfload-r1). The `contains "/"` test is
   Spark's own IcebergSource rule: every near-miss without `/` (`ns.t`, `cat.ns.t`,
