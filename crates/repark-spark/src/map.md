@@ -1470,8 +1470,9 @@ pins: rp-4-fork-repin/C-005, C-006
   VIEW, SHOW TABLES/COLUMNS/TBLPROPERTIES) return `None`. The intercept
   (`try_show_create_intercept`, one router arm after the DESCRIBE TABLE arm)
   completes one- and two-part names from `use_ddl::session_defaults`, falls through for
-  session-shadowed bare names, unregistered catalogs, and views (lane B owns
-  `V-SHOW-CREATE`); a missing table is `table_or_view_not_found`, `AS SERDE` on a table is
+  session-shadowed bare names and unregistered catalogs, and sends a view to
+  `view_ddl::show_create::execute_show_create_view` (IPI-40 PR5, `V-SHOW-CREATE`; a view
+  with `AS SERDE` still falls through); a missing table is `table_or_view_not_found`, `AS SERDE` on a table is
   `NOT_SUPPORTED_COMMAND_FOR_V2_TABLE`. Layout: columns in Spark `DataType.sql` spelling
   (`MAP<K, V>`, `STRUCT<a: T NOT NULL COMMENT '…'>`, primitives via `spark_ddl_type_name`
   upper-cased, uuid `STRING`, fixed `BINARY`), `USING iceberg`, `OPTIONS` from `option.*`

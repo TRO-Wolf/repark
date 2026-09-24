@@ -1444,8 +1444,8 @@ perfectly good read.
   `[TABLE_OR_VIEW_NOT_FOUND]` (`42P01`); a bare `SHOW CREATE TABLE` refuses
   `[INVALID_STATEMENT_OR_CLAUSE]` (`42601`). The byte-for-byte claim covers CREATE-text
   answers; parse-class refusals match Spark's condition, SQLSTATE, and first line but omit the
-  `== SQL ==` caret block (IPI-51). Views are not answered here — `V-SHOW-CREATE` stays with
-  the view lane (IPI-40).
+  `== SQL ==` caret block (IPI-51). Views answer their own `CREATE VIEW` text (IPI-40 PR5,
+  `V-SHOW-CREATE`; residues in D-VIEW-SHOWCREATE-1).
 - **Apache Spark** — the same text. *(oracle: live PySpark 4.1.2 + Iceberg 1.11,
   2026-09-23, five shapes plus the escape, OPTIONS, multi-term sort-order and
   identifier-order probes.)*
@@ -1663,6 +1663,35 @@ is `python/dbt-repark/tests/test_statement_surface.py`.
 - **EQUAL** — P-SP-BARE-NAME (`USE sc.ns; SHOW TBLPROPERTIES v ('k')`) and P-SP-TWO-PART (`USE sc; SHOW TBLPROPERTIES ns.v ('k')`) each return `[["k","v"]]` in both engines: short names complete from the `USE` session defaults.
 - **Pin** — `python/repark/tests/test_ice_views_4_showprops.py::test_no_key_lists_reserved_then_stored_sorted`, `::test_no_key_without_stored_properties_is_reserved_only`, `::test_alter_view_set_then_show_reflects_updates`, `::test_bare_and_two_part_names_follow_use`, `::test_missing_view_is_table_or_view_not_found`, and `::test_bare_missing_name_after_use_is_table_or_view_not_found`; `crates/repark-spark/src/tests/show_tblproperties_routing.rs::present_view_returns_reserved_and_stored_rows` and `::bare_name_completes_from_use_session_defaults`.
 - **Rationale** — DECLARED. Spark's no-key order follows Java map iteration and is not the property-set contract (R-PR4-ORDER). The missing-name condition and SQLSTATE agree; the compact RePark diagnostic omits Spark's plan context.
+
+#### D-VIEW-SHOWCREATE-1 — SHOW CREATE TABLE on a view: unmeasured shapes
+
+- **repark** — `SHOW CREATE TABLE sc.ns.v2` on an Iceberg view answers one `createtab_stmt`
+  row: `CREATE VIEW <catalog>.<namespace>.<view> (` then the stored column names, each with
+  `COMMENT '<doc>'` when the column has a doc; a `COMMENT '<comment>'` line when the view has a
+  comment; `TBLPROPERTIES` with the reserved `location` / `provider` / `format-version` rows and
+  the stored properties except `comment`, sorted by key; then `AS`, the stored SQL text
+  verbatim, and a newline. The measured v1 and v2 cells are EQUAL (`V-SHOW-CREATE`). Four shapes
+  have no Spark measurement, and their answers are pinned. (1) `USE sc.ns; SHOW CREATE TABLE v2` and
+  `USE sc; SHOW CREATE TABLE ns.v2` answer the same fully qualified `sc.ns.v2` text as the
+  three-part form. (2) A `'` in a column doc or the view comment renders as `\'`
+  (`spark_sql_string_literal`, measured for tables only). (3) `SHOW CREATE TABLE sc.ns.v2 AS
+  SERDE` keeps main a6e8bcda's answer: `ParseException`, text `SQL error: ParserError("Expected:
+  end of statement, found: AS at Line: 1, Column: 28")`, condition and SQLSTATE null.
+  (4) A view body that uses a bare table name (`SELECT id FROM t`) renders that stored text,
+  not the namespace-qualified form that the read path plans.
+- **Apache Spark** — the v1 and v2 answers byte for byte, with `location` taken from the view's
+  metadata. *(oracle: `/tmp/oc-worker/qe/probe/p2.json`, keys `C.show_create` and
+  `C.v2.show_create`, Spark 4.1.2 + Iceberg 1.11.0.)* The oracle has no probe for short names,
+  quote escaping in views, `AS SERDE` on a view, or bare-name bodies.
+- **Pin** — `python/repark/tests/test_ice_views_5_showcreate.py::test_show_create_table_on_view`,
+  `::test_show_create_table_on_plain_view`, `::test_bare_name_follows_use`,
+  `::test_two_part_name_follows_use`, `::test_quotes_in_column_doc_and_view_comment`,
+  `::test_view_as_serde_keeps_the_main_parse_error` and `::test_stored_body_is_rendered_verbatim`;
+  `crates/repark-spark/src/tests/show_create_view_routing.rs`.
+- **Rationale** — DECLARED. Short names follow the P-SP-BARE-NAME / P-SP-TWO-PART precedent
+  from SHOW TBLPROPERTIES. The escape reuses the table renderer's measured literal rule.
+  `AS SERDE` keeps main's answer until Spark's answer for a view is measured.
 
 ## 3. Identifier resolution (DECLARED)
 

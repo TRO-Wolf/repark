@@ -115,7 +115,7 @@ async fn show_create_view_with_docs_comment_and_properties_matches_spark_v2() {
 }
 
 #[tokio::test]
-async fn show_create_view_short_names_follow_use() {
+async fn show_create_view_bare_name_follows_use() {
     let (_warehouse, ctx, catalogs) = prepared().await;
     create_v2(&ctx, &catalogs).await;
     let expected = v2_text(&view_location(&catalogs, "v2").await);
@@ -124,6 +124,13 @@ async fn show_create_view_short_names_follow_use() {
         show_create_text(&ctx, &catalogs, "SHOW CREATE TABLE v2").await,
         expected
     );
+}
+
+#[tokio::test]
+async fn show_create_view_two_part_name_follows_use() {
+    let (_warehouse, ctx, catalogs) = prepared().await;
+    create_v2(&ctx, &catalogs).await;
+    let expected = v2_text(&view_location(&catalogs, "v2").await);
     run(&ctx, &catalogs, "USE ice").await;
     assert_eq!(
         show_create_text(&ctx, &catalogs, "SHOW CREATE TABLE sales.v2").await,

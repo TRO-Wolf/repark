@@ -8,7 +8,7 @@ service, and the wrapper-based read path that expands stored SQL per query.
 
 ## Contents
 
-- `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe`.
+- `mod.rs` — module wiring: `parse` / `execute` / `read` / `describe` / `show_create`.
 - `parse.rs` — grammar only: `CREATE [OR REPLACE] [IF NOT EXISTS] VIEW` with
   alias/COMMENT/TBLPROPERTIES forms and verbatim body capture,
   `is_create_view_statement` (the durable head sniff the router skip uses),
@@ -84,7 +84,20 @@ service, and the wrapper-based read path that expands stored SQL per query.
   and EXTENDED is the same columns-only answer; any supplied column refuses
   with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`. SHOW CREATE /
   SHOW TBLPROPERTIES / ALTER VIEW stay later PRs.
+  and EXTENDED is the same columns-only answer.
   pins: ice-views-1/C-017
+- `show_create.rs` — **PR5 (2026-09-24, V-SHOW-CREATE):**
+  `execute_show_create_view` is the `Ok(true)` arm of `try_show_create_intercept`
+  (`../show_create.rs`; `AS SERDE` on a view keeps main's fall-through). It
+  loads the view with `load_view`; `ViewNotFound` and `FeatureUnsupported`
+  answer `TABLE_OR_VIEW_NOT_FOUND`, and other load errors propagate through
+  `iceberg_err`. `render_create_view` builds Spark's `CREATE VIEW
+  <catalog>.<ns>.<view> (` column list, adding `COMMENT` for a documented column,
+  then a `COMMENT` line when the view has a `comment` property. Its
+  `TBLPROPERTIES` come from `execute.rs`'s `show_tblproperties_rows` minus
+  `comment`, sorted by key, and render through `render_tblproperties_clause`.
+  The body is the stored SQL from `view_read_spec`, verbatim. Residues:
+  D-VIEW-SHOWCREATE-1. pins: ice-views-1/C-017
 
 ## Pointers
 
