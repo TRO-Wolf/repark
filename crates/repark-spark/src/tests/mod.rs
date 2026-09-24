@@ -1,6 +1,7 @@
 //! Unit battery for the Spark SQL door.
 
 mod accept_any_refusals;
+mod accept_any_routing;
 mod common;
 
 mod alter;

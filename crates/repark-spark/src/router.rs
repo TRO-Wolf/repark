@@ -405,7 +405,7 @@ async fn execute_insert_routed(
         insert,
         write_options,
     )
-    .await
+    .await?
     {
         return Box::pin(crate::insert_by_name::execute_insert_by_name(
             ctx,

@@ -1,4 +1,6 @@
-use datafusion::sql::sqlparser::ast::{Expr, Query, SelectItem, SetExpr, Value};
+use datafusion::sql::sqlparser::ast::{
+    Expr, Ident, Query, Select, SelectItem, SetExpr, SetQuantifier, Value,
+};
 
 use super::SourceName;
 
@@ -14,10 +16,7 @@ pub(super) fn syntactic_source_names(
     source: &Query,
     case_sensitive: bool,
 ) -> Option<Vec<SourceName>> {
-    let SetExpr::Select(select) = source.body.as_ref() else {
-        return None;
-    };
-    select
+    leftmost_select(&source.body)?
         .projection
         .iter()
         .map(|item| match item {
@@ -63,4 +62,69 @@ fn literal_name(value: &Value) -> Option<String> {
         Value::Number(text, false) | Value::SingleQuotedString(text) => Some(text.clone()),
         _ => None,
     }
+}
+
+fn names_by_position(quantifier: SetQuantifier) -> bool {
+    !matches!(
+        quantifier,
+        SetQuantifier::ByName | SetQuantifier::AllByName | SetQuantifier::DistinctByName
+    )
+}
+
+fn leftmost_select(mut body: &SetExpr) -> Option<&Select> {
+    loop {
+        body = match body {
+            SetExpr::Select(select) => return Some(select),
+            SetExpr::Query(query) => &query.body,
+            SetExpr::SetOperation {
+                left,
+                set_quantifier,
+                ..
+            } if names_by_position(*set_quantifier) => left,
+            _ => return None,
+        };
+    }
+}
+
+fn leftmost_select_mut(mut body: &mut SetExpr) -> Option<&mut Select> {
+    loop {
+        body = match body {
+            SetExpr::Select(select) => return Some(select),
+            SetExpr::Query(query) => &mut query.body,
+            SetExpr::SetOperation {
+                left,
+                set_quantifier,
+                ..
+            } if names_by_position(*set_quantifier) => left,
+            _ => return None,
+        };
+    }
+}
+
+pub(super) fn aliased_source(source: &Query, names: &[SourceName]) -> Query {
+    let mut aliased = source.clone();
+    let Some(select) = leftmost_select_mut(&mut aliased.body) else {
+        return aliased;
+    };
+    if select.projection.len() != names.len() {
+        return aliased;
+    }
+    let projection: Option<Vec<SelectItem>> = select
+        .projection
+        .iter()
+        .zip(names)
+        .map(|(item, name)| match item {
+            SelectItem::UnnamedExpr(expr) | SelectItem::ExprWithAlias { expr, .. } => {
+                Some(SelectItem::ExprWithAlias {
+                    expr: expr.clone(),
+                    alias: Ident::with_quote('`', name.resolved.clone()),
+                })
+            }
+            _ => None,
+        })
+        .collect();
+    if let Some(projection) = projection {
+        select.projection = projection;
+    }
+    aliased
 }

@@ -1850,3 +1850,12 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   options are all merge-schema keys. A positional INSERT with any other option
   stays positional, because the by-name append refuses those options.
   pins: u6-write-refusals/C-001, C-004
+- Critic r1 remediation (2026-09-24): `routes_positional_by_name` now returns
+  `Result<bool>`, and `execute_insert_routed` propagates it with `?`. A failed
+  table load now surfaces as the error instead of reading as "no property".
+  Before, the positional path could then reload the table and write
+  positionally. A tag selector, a missing table or a missing namespace still
+  keeps the positional path and its own answer. The `PARTITION (…)` and
+  `REPLACE INTO` exclusions are measured, and they are listed in residue R-3
+  of the ledger.
+  pins: u6-write-refusals/C-014

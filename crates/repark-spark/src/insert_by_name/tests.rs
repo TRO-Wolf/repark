@@ -226,8 +226,8 @@ fn build_projection_sql_reorders_and_null_fills() {
             ]
         ),
         "SELECT `first_name` AS `first_name`, NULL AS `last_name`, `n` AS `n` FROM \
-         (SELECT last_name, first_name, n FROM s) AS \
-         _repark_by_name_src(`last_name`, `first_name`, `n`)"
+         (SELECT last_name AS `last_name`, first_name AS `first_name`, n AS `n` FROM s) AS \
+         _repark_by_name_src"
     );
 }
 
@@ -404,4 +404,27 @@ fn source_from_clause_names_every_source_column() {
         source_from_clause(&source, &named(&["col1", "col2"])),
         "FROM (VALUES (1, 'a')) AS _repark_by_name_src(`col1`, `col2`)"
     );
+}
+
+#[test]
+fn source_from_clause_aliases_the_leftmost_select_with_the_resolved_names() {
+    let source = parse_query("SELECT 9, 'z' AS NewC UNION ALL SELECT 8, 'y'");
+    let names = syntactic_source_names(&source, false).expect("syntactic");
+    assert_eq!(
+        names
+            .iter()
+            .map(|name| (name.display.as_str(), name.resolved.as_str()))
+            .collect::<Vec<_>>(),
+        vec![("9", "9"), ("NewC", "newc")]
+    );
+    assert_eq!(
+        source_from_clause(&source, &names),
+        "FROM (SELECT 9 AS `9`, 'z' AS `newc` UNION ALL SELECT 8, 'y') AS _repark_by_name_src"
+    );
+}
+
+#[test]
+fn syntactic_names_decline_a_union_by_name() {
+    let source = parse_query("SELECT 9 AS id UNION ALL BY NAME SELECT 8 AS id");
+    assert!(syntactic_source_names(&source, false).is_none());
 }

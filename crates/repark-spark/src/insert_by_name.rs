@@ -78,15 +78,9 @@ pub(crate) async fn execute_insert_by_name(
     let case_sensitive = case_sensitive_insert(ctx);
     let source_names = probe_source_names(ctx, catalogs, source, case_sensitive).await?;
     let table_display = display_table_name(&catalog_name, &table);
-    let evolution_plan = evolution::columns_to_add(
-        ctx,
-        &table,
-        &target_field_names(&table),
-        &source_names,
-        case_sensitive,
-        write_options,
-    )?;
-    let table = if let Some(added) = evolution_plan {
+    let evolution_plan =
+        evolution::columns_to_add(ctx, &table, &source_names, case_sensitive, write_options)?;
+    let table = if let Some(union) = evolution_plan {
         let source_sql = format!("SELECT * {}", source_from_clause(source, &source_names));
         evolution::evolve_before_write(
             ctx,
@@ -95,7 +89,7 @@ pub(crate) async fn execute_insert_by_name(
             &catalog,
             &table,
             &source_sql,
-            &added,
+            &union,
         )
         .await?
     } else {
@@ -169,17 +163,6 @@ pub(crate) async fn execute_insert_by_name(
         &projection_sql,
     )
     .await
-}
-
-fn target_field_names(table: &iceberg::table::Table) -> Vec<String> {
-    table
-        .metadata()
-        .current_schema()
-        .as_struct()
-        .fields()
-        .iter()
-        .map(|field| field.name.clone())
-        .collect()
 }
 
 async fn wipe_by_name_target(
@@ -634,6 +617,12 @@ fn build_projection_sql(
 }
 
 fn source_from_clause(source: &Query, sources: &[SourceName]) -> String {
+    if !matches!(source.body.as_ref(), SetExpr::Values(_)) {
+        return format!(
+            "FROM ({}) AS _repark_by_name_src",
+            source_names::aliased_source(source, sources)
+        );
+    }
     let aliases = sources
         .iter()
         .map(|name| quote_name(&name.resolved))

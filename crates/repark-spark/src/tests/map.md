@@ -2077,3 +2077,17 @@ matrix; those exports declare the analyzed logical schema.
   pinned on schema and rows. Sources are DataFusion views, because this door has
   no temporary-view home.
   pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+- `accept_any_refusals.rs`, critic r1 remediation (2026-09-24): the spelling of an
+  added column across positional, `BY NAME`, quoted, `UNION`, reference, literal
+  and overwrite sources, plus the mixed-case match that adds nothing (C-010).
+  Also the `BY NAME` overwrite with an extra column, both arms (C-011); an
+  upper-case unknown alias on four doors (C-012); and the repeated-name refusals,
+  where an exact repeat pins `repark_common::Error::Iceberg` by message suffix
+  (C-013). `REPLACE INTO` is never written (C-014).
+  pins: u6-write-refusals/C-010, C-011, C-012, C-013, C-014
+- `accept_any_routing.rs` — `FlakyLoadCatalog` wraps the `ice` memory catalog
+  under the name `flaky` and fails its next `load_table` once. The routing
+  check must surface that failure. Under the old `.ok()` fallback, the
+  positional path reloaded the table and wrote the row. A missing table keeps
+  the positional `not found` answer.
+  pins: u6-write-refusals/C-014

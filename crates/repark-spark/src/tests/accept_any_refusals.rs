@@ -388,3 +388,287 @@ async fn merge_schema_evolution_with_only_a_delete_clause_does_not_evolve() {
     assert_eq!(column_types(&catalogs).await, base_types());
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 1);
 }
+
+async fn column_names_after(merge_schema: bool, statements: &[&str]) -> Vec<(String, String)> {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = door(&wh, ACCEPT_ANY, merge_schema).await;
+    register_view(&ctx, "vnc", "SELECT CAST(9 AS BIGINT) AS id, 'z' AS newc").await;
+    for statement in statements {
+        run(&ctx, &catalogs, statement).await;
+    }
+    column_types(&catalogs).await
+}
+
+fn base_plus(added: &[(&str, &str)]) -> Vec<(String, String)> {
+    let mut expected = base_types();
+    expected.extend(
+        added
+            .iter()
+            .map(|(name, kind)| ((*name).to_string(), (*kind).to_string())),
+    );
+    expected
+}
+
+const SEED: &str = "INSERT INTO ice.sales.t SELECT 1 AS id, 'a' AS data, 'x' AS cat";
+
+type SpellingCase = (
+    &'static [&'static str],
+    &'static [(&'static str, &'static str)],
+);
+
+#[tokio::test]
+async fn merge_schema_conf_adds_a_new_column_in_the_source_spelling() {
+    let cases: [SpellingCase; 9] = [
+        (
+            &["INSERT INTO ice.sales.t SELECT 9 AS id, 'z' AS NewC"],
+            &[("NewC", "string")],
+        ),
+        (
+            &["INSERT INTO ice.sales.t BY NAME SELECT 9 AS id, 'z' AS data, 1 AS NewC"],
+            &[("NewC", "int")],
+        ),
+        (
+            &["INSERT INTO ice.sales.t BY NAME SELECT 9 AS ID, 'q' AS Cat, 1 AS NewC"],
+            &[("NewC", "int")],
+        ),
+        (
+            &["INSERT INTO ice.sales.t SELECT 9 AS id, 'z' AS `NewC`"],
+            &[("NewC", "string")],
+        ),
+        (
+            &["INSERT INTO ice.sales.t SELECT 9 AS id, 'z' AS NewC UNION ALL SELECT 8, 'y'"],
+            &[("NewC", "string")],
+        ),
+        (
+            &["INSERT INTO ice.sales.t SELECT id, NEWC FROM vnc"],
+            &[("NEWC", "string")],
+        ),
+        (
+            &[
+                SEED,
+                "INSERT OVERWRITE ice.sales.t SELECT 9 AS id, 'z' AS NewC",
+            ],
+            &[("NewC", "string")],
+        ),
+        (
+            &[
+                SEED,
+                "INSERT OVERWRITE ice.sales.t BY NAME SELECT 9 AS id, 'z' AS NewC",
+            ],
+            &[("NewC", "string")],
+        ),
+        (
+            &["INSERT INTO ice.sales.t SELECT 9, 'z'"],
+            &[("9", "int"), ("z", "string")],
+        ),
+    ];
+    for (statements, added) in cases {
+        assert_eq!(
+            column_names_after(true, statements).await,
+            base_plus(added),
+            "{statements:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_mixed_case_source_name_matches_the_existing_column() {
+    for merge_schema in [true, false] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = door(&wh, ACCEPT_ANY, merge_schema).await;
+        run(
+            &ctx,
+            &catalogs,
+            "INSERT INTO ice.sales.t SELECT 9 AS ID, 'z' AS Data",
+        )
+        .await;
+        assert_eq!(column_types(&catalogs).await, base_types());
+        assert_eq!(
+            sorted_rows(&ctx, &catalogs).await,
+            vec!["| 9  | z    |     |".to_string()]
+        );
+    }
+}
+
+#[tokio::test]
+async fn overwrite_by_name_with_an_extra_column_follows_the_conf() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = door(&wh, ACCEPT_ANY, false).await;
+    run(&ctx, &catalogs, SEED).await;
+    assert_illegal_argument(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.t BY NAME SELECT 9 AS id, 'z' AS data, 'q' AS cat, 1 AS extra",
+        "Field extra not found in source schema",
+    )
+    .await;
+    assert_eq!(column_types(&catalogs).await, base_types());
+    assert_eq!(
+        sorted_rows(&ctx, &catalogs).await,
+        vec!["| 1  | a    | x   |".to_string()]
+    );
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = door(&wh, ACCEPT_ANY, true).await;
+    run(&ctx, &catalogs, SEED).await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT OVERWRITE ice.sales.t BY NAME SELECT 9 AS id, 'z' AS data, 'q' AS cat, 1 AS extra",
+    )
+    .await;
+    assert_eq!(
+        column_types(&catalogs).await,
+        base_plus(&[("extra", "int")])
+    );
+    assert_eq!(
+        sorted_rows(&ctx, &catalogs).await,
+        vec!["| 9  | z    | q   | 1     |".to_string()]
+    );
+}
+
+#[tokio::test]
+async fn an_unknown_upper_case_alias_is_named_in_its_source_spelling() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = door(&wh, ACCEPT_ANY, false).await;
+    run(&ctx, &catalogs, SEED).await;
+    for verb in ["INSERT INTO", "INSERT OVERWRITE"] {
+        for by_name in ["BY NAME ", ""] {
+            assert_illegal_argument(
+                &ctx,
+                &catalogs,
+                &format!(
+                    "{verb} ice.sales.t {by_name}SELECT 9 AS id, 'z' AS data, 'q' AS cat, \
+                     1 AS EXTRA"
+                ),
+                "Field EXTRA not found in source schema",
+            )
+            .await;
+        }
+    }
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 1);
+}
+
+async fn assert_invalid_schema(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    expected: &str,
+) {
+    let mapped = refusal(ctx, catalogs, sql).await;
+    assert!(
+        matches!(mapped, repark_common::Error::Iceberg(ref message) if message.ends_with(expected)),
+        "{sql}: got {mapped:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_repeated_source_name_refuses_as_an_invalid_schema() {
+    for merge_schema in [true, false] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = door(&wh, ACCEPT_ANY, merge_schema).await;
+        run(&ctx, &catalogs, SEED).await;
+        for (sql, expected) in [
+            (
+                "INSERT INTO ice.sales.t BY NAME SELECT 9 AS id, 1 AS id",
+                "Invalid schema: multiple fields for name id: 0 and 1",
+            ),
+            (
+                "INSERT INTO ice.sales.t SELECT 9 AS id, 1 AS id",
+                "Invalid schema: multiple fields for name id: 0 and 1",
+            ),
+            (
+                "INSERT OVERWRITE ice.sales.t BY NAME SELECT 9 AS id, 1 AS id",
+                "Invalid schema: multiple fields for name id: 0 and 1",
+            ),
+            (
+                "INSERT INTO ice.sales.t BY NAME SELECT 9 AS id, 1 AS n, 2 AS n",
+                "Invalid schema: multiple fields for name n: 1 and 2",
+            ),
+            (
+                "INSERT INTO ice.sales.t SELECT 9 AS id, 'z' AS data, 'q' AS cat, 1 AS data",
+                "Invalid schema: multiple fields for name data: 1 and 3",
+            ),
+            (
+                "INSERT INTO ice.sales.t SELECT 9, 9",
+                "Invalid schema: multiple fields for name 9: 0 and 1",
+            ),
+        ] {
+            assert_invalid_schema(&ctx, &catalogs, sql, expected).await;
+        }
+        assert_eq!(column_types(&catalogs).await, base_types());
+        assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 1);
+    }
+}
+
+#[tokio::test]
+async fn a_source_name_repeated_in_another_case_refuses_like_iceberg() {
+    for merge_schema in [true, false] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = door(&wh, ACCEPT_ANY, merge_schema).await;
+        for (sql, expected) in [
+            (
+                "INSERT INTO ice.sales.t BY NAME SELECT 9 AS id, 1 AS ID",
+                "Multiple entries with same key: 1=ID and 1=id",
+            ),
+            (
+                "INSERT INTO ice.sales.t SELECT 9 AS id, 1 AS ID",
+                "Multiple entries with same key: 1=ID and 1=id",
+            ),
+            (
+                "INSERT INTO ice.sales.t BY NAME SELECT 9 AS id, 'a' AS data, 'b' AS DATA",
+                "Multiple entries with same key: 2=DATA and 2=data",
+            ),
+        ] {
+            assert_illegal_argument(&ctx, &catalogs, sql, expected).await;
+        }
+        let new_pair = if merge_schema {
+            "Cannot build lower case index: n and N collide"
+        } else {
+            "Field n not found in source schema"
+        };
+        assert_illegal_argument(
+            &ctx,
+            &catalogs,
+            "INSERT INTO ice.sales.t BY NAME SELECT 9 AS id, 1 AS n, 2 AS N",
+            new_pair,
+        )
+        .await;
+        assert_eq!(column_types(&catalogs).await, base_types());
+    }
+}
+
+#[tokio::test]
+async fn a_repeated_name_without_the_property_stays_ambiguous() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = door(&wh, PLAIN, true).await;
+    let mapped = refusal(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t BY NAME SELECT 9 AS id, 1 AS id",
+    )
+    .await;
+    assert!(
+        mapped
+            .to_string()
+            .contains("[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]"),
+        "got {mapped}"
+    );
+}
+
+#[tokio::test]
+async fn replace_into_an_accept_any_table_is_never_written() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = door(&wh, ACCEPT_ANY, true).await;
+    let mapped = refusal(
+        &ctx,
+        &catalogs,
+        "REPLACE INTO ice.sales.t VALUES (9, 'z', 'q')",
+    )
+    .await;
+    assert!(
+        matches!(mapped, repark_common::Error::NotImplemented(_)),
+        "got {mapped:?}"
+    );
+    assert_eq!(column_types(&catalogs).await, base_types());
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 0);
+}

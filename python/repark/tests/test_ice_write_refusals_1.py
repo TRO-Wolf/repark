@@ -7,7 +7,11 @@ cells ``W-ACCEPT-ANY-INSERT-VALUES``, ``W-MERGE-SCHEMA-EVOLUTION*``, ``W-DF-OPT-
 
 Every expected value below is Spark's recorded answer, not a RePark derivation.
 
-pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+The round-2 pins (C-010..C-014) come from ``target/probe-u6-r1fix/spark_probe.py`` and
+``spark_probe2.py`` (probes a1..a10, b1..b2, c1..c4, d1..d4, f1..f9, g1..g12, r1..r2).
+
+pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011,
+C-012, C-013, C-014
 """
 
 from __future__ import annotations
@@ -19,7 +23,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.errors import IllegalArgumentException
+from repark.errors import IllegalArgumentException, ParseException, PySparkException
 
 NS = "mem.ns"
 MERGE_SCHEMA_CONF = "spark.sql.iceberg.merge-schema"
@@ -318,3 +322,191 @@ def test_merge_schema_evolution_near_misses_still_succeed(spark: ReparkSession) 
     spark.sql(EVOLVING_MERGE.replace(" WITH SCHEMA EVOLUTION", "").format(t=plain_merge, v=view))
     assert _schema(spark, plain_merge) == BASE_SCHEMA
     assert _rows(spark, plain_merge) == [[1, "a", "x"], [2, "B", "y"], [4, "D", "z"]]
+
+
+def _with_merge_schema(spark: ReparkSession, statements: list[str]) -> None:
+    """Run ``statements`` with the merge-schema conf set, then unset it."""
+    spark.conf.set(MERGE_SCHEMA_CONF, "true")
+    try:
+        for statement in statements:
+            spark.sql(statement)
+    finally:
+        spark.conf.unset(MERGE_SCHEMA_CONF)
+
+
+def test_merge_schema_conf_adds_a_new_column_in_the_source_spelling(
+    spark: ReparkSession,
+) -> None:
+    """pins: u6-write-refusals/C-010"""
+    spark.sql("CREATE OR REPLACE TEMP VIEW vnc AS SELECT 9 AS id, 'z' AS newc")
+    new_c = [(9, None, None, "z")]
+    cases = [
+        ("pos", "INSERT INTO {t} SELECT 9 AS id, 'z' AS NewC", ("NewC", "string"), new_c),
+        (
+            "by_name",
+            "INSERT INTO {t} BY NAME SELECT 9 AS id, 'z' AS data, 1 AS NewC",
+            ("NewC", "int32"),
+            [(9, "z", None, 1)],
+        ),
+        (
+            "by_name_case",
+            "INSERT INTO {t} BY NAME SELECT 9 AS ID, 'q' AS Cat, 1 AS NewC",
+            ("NewC", "int32"),
+            [(9, None, "q", 1)],
+        ),
+        ("quoted", "INSERT INTO {t} SELECT 9 AS id, 'z' AS `NewC`", ("NewC", "string"), new_c),
+        (
+            "union",
+            "INSERT INTO {t} SELECT 9 AS id, 'z' AS NewC UNION ALL SELECT 8, 'y'",
+            ("NewC", "string"),
+            [(8, None, None, "y"), *new_c],
+        ),
+        ("view_ref", "INSERT INTO {t} SELECT id, NEWC FROM vnc", ("NEWC", "string"), new_c),
+        (
+            "overwrite",
+            "INSERT OVERWRITE {t} SELECT 9 AS id, 'z' AS NewC",
+            ("NewC", "string"),
+            new_c,
+        ),
+        (
+            "overwrite_by_name",
+            "INSERT OVERWRITE {t} BY NAME SELECT 9 AS id, 'z' AS NewC",
+            ("NewC", "string"),
+            new_c,
+        ),
+    ]
+    for name, statement, added, rows in cases:
+        table = _create(spark, f"spelling_{name}", accept_any=True)
+        spark.sql(NAMED_SEED.format(t=table))
+        _with_merge_schema(spark, [statement.format(t=table)])
+        assert _schema(spark, table) == [*BASE_SCHEMA, added], name
+        expected = [list(row) for row in rows]
+        if not name.startswith("overwrite"):
+            expected = sorted([[1, "a", "x", None], *expected], key=repr)
+        assert _rows(spark, table) == expected, name
+    matched = _create(spark, "spelling_matched", accept_any=True)
+    _with_merge_schema(spark, [f"INSERT INTO {matched} SELECT 9 AS ID, 'z' AS Data"])
+    assert _schema(spark, matched) == BASE_SCHEMA
+    assert _rows(spark, matched) == [[9, "z", None]]
+
+
+def test_dataframe_writes_add_a_new_column_in_the_frame_spelling(spark: ReparkSession) -> None:
+    """pins: u6-write-refusals/C-010"""
+    frame = spark.createDataFrame(
+        [(9, "z", "q", 1)], "id BIGINT, data STRING, cat STRING, NewC INT"
+    )
+    write_to = _create(spark, "df_write_to", accept_any=True)
+    frame.writeTo(write_to).option("mergeSchema", "true").append()
+    save_as = _create(spark, "df_save_as", accept_any=True)
+    frame.write.format("iceberg").option("mergeSchema", "true").mode("append").saveAsTable(save_as)
+    insert_into = _create(spark, "df_insert_into", accept_any=True)
+    spark.conf.set(MERGE_SCHEMA_CONF, "true")
+    try:
+        frame.write.insertInto(insert_into)
+    finally:
+        spark.conf.unset(MERGE_SCHEMA_CONF)
+    for table in (write_to, save_as, insert_into):
+        assert _schema(spark, table) == [*BASE_SCHEMA, ("NewC", "int32")], table
+        assert _rows(spark, table) == [[9, "z", "q", 1]], table
+    upper = _create(spark, "df_upper", accept_any=True)
+    spark.createDataFrame([(9, "z")], "ID BIGINT, Data STRING").writeTo(upper).option(
+        "mergeSchema", "true"
+    ).append()
+    assert _schema(spark, upper) == BASE_SCHEMA
+    assert _rows(spark, upper) == [[9, "z", None]]
+
+
+def test_overwrite_by_name_with_an_extra_column_follows_the_conf(spark: ReparkSession) -> None:
+    """pins: u6-write-refusals/C-011"""
+    statement = "INSERT OVERWRITE {t} BY NAME SELECT 9 AS id, 'z' AS data, 'q' AS cat, 1 AS extra"
+    refused = _create(spark, "overwrite_extra", accept_any=True)
+    spark.sql(NAMED_SEED.format(t=refused))
+    _assert_illegal_argument(
+        lambda: spark.sql(statement.format(t=refused)), "Field extra not found in source schema"
+    )
+    assert _schema(spark, refused) == BASE_SCHEMA
+    assert _rows(spark, refused) == [[1, "a", "x"]]
+    evolved = _create(spark, "overwrite_extra_conf", accept_any=True)
+    spark.sql(NAMED_SEED.format(t=evolved))
+    _with_merge_schema(spark, [statement.format(t=evolved)])
+    assert _schema(spark, evolved) == [*BASE_SCHEMA, ("extra", "int32")]
+    assert _rows(spark, evolved) == [[9, "z", "q", 1]]
+
+
+def test_an_unknown_upper_case_alias_keeps_its_spelling(spark: ReparkSession) -> None:
+    """pins: u6-write-refusals/C-012"""
+    table = _create(spark, "upper_extra", accept_any=True)
+    spark.sql(NAMED_SEED.format(t=table))
+    for verb in ("INSERT INTO", "INSERT OVERWRITE"):
+        for by_name in ("BY NAME ", ""):
+            statement = (
+                f"{verb} {table} {by_name}SELECT 9 AS id, 'z' AS data, 'q' AS cat, 1 AS EXTRA"
+            )
+            _assert_illegal_argument(
+                lambda sql=statement: spark.sql(sql), "Field EXTRA not found in source schema"
+            )
+    assert _rows(spark, table) == [[1, "a", "x"]]
+
+
+def test_repeated_source_names_refuse_like_iceberg(spark: ReparkSession) -> None:
+    """pins: u6-write-refusals/C-013"""
+    for merge_schema in (True, False):
+        table = _create(spark, f"dup_{merge_schema}", accept_any=True)
+        spark.sql(NAMED_SEED.format(t=table))
+        if merge_schema:
+            spark.conf.set(MERGE_SCHEMA_CONF, "true")
+        try:
+            for statement, core in (
+                (
+                    "INSERT INTO {t} BY NAME SELECT 9 AS id, 1 AS id",
+                    "Invalid schema: multiple fields for name id: 0 and 1",
+                ),
+                (
+                    "INSERT OVERWRITE {t} SELECT 9 AS id, 1 AS id",
+                    "Invalid schema: multiple fields for name id: 0 and 1",
+                ),
+                (
+                    "INSERT INTO {t} SELECT 9 AS id, 'z' AS data, 'q' AS cat, 1 AS data",
+                    "Invalid schema: multiple fields for name data: 1 and 3",
+                ),
+            ):
+                with pytest.raises(PySparkException) as caught:
+                    spark.sql(statement.format(t=table))
+                assert str(caught.value).endswith(core)
+            for statement, message in (
+                (
+                    "INSERT INTO {t} BY NAME SELECT 9 AS id, 1 AS ID",
+                    "Multiple entries with same key: 1=ID and 1=id",
+                ),
+                (
+                    "INSERT INTO {t} BY NAME SELECT 9 AS id, 'a' AS data, 'b' AS DATA",
+                    "Multiple entries with same key: 2=DATA and 2=data",
+                ),
+                (
+                    "INSERT INTO {t} BY NAME SELECT 9 AS id, 1 AS n, 2 AS N",
+                    "Cannot build lower case index: n and N collide"
+                    if merge_schema
+                    else "Field n not found in source schema",
+                ),
+            ):
+                _assert_illegal_argument(
+                    lambda sql=statement, t=table: spark.sql(sql.format(t=t)), message
+                )
+        finally:
+            spark.conf.unset(MERGE_SCHEMA_CONF)
+        assert _schema(spark, table) == BASE_SCHEMA
+        assert _rows(spark, table) == [[1, "a", "x"]]
+
+
+def test_replace_into_an_accept_any_table_refuses_at_the_parser(spark: ReparkSession) -> None:
+    """pins: u6-write-refusals/C-014"""
+    table = _create(spark, "replace_into", accept_any=True)
+    for merge_schema in (False, True):
+        if merge_schema:
+            spark.conf.set(MERGE_SCHEMA_CONF, "true")
+        try:
+            with pytest.raises(ParseException):
+                spark.sql(f"REPLACE INTO {table} VALUES (9, 'z', 'q')")
+        finally:
+            spark.conf.unset(MERGE_SCHEMA_CONF)
+    assert _rows(spark, table) == []

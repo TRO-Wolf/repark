@@ -8110,3 +8110,14 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   the same text and does not evolve on a `DELETE`-only MERGE. Every refusal
   pins class, condition, SQLSTATE and message by equality.
   pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
+  Critic r1 remediation (2026-09-24), measured by
+  `target/probe-u6-r1fix/spark_probe*.py`:
+  - An added column keeps the source spelling on the SQL doors and on the
+    three DataFrame writers. `ID` / `Data` match the existing columns (C-010).
+  - The `BY NAME` overwrite with an extra column refuses without the conf and
+    evolves with it (C-011).
+  - `1 AS EXTRA` answers `Field EXTRA …` on four doors (C-012).
+  - Repeated source names answer Iceberg's texts. The exact repeat is pinned as
+    `PySparkException` by message suffix; the class is residue R-7 (C-013).
+  - `REPLACE INTO` refuses `ParseException` (C-014).
+  pins: u6-write-refusals/C-010, C-011, C-012, C-013, C-014

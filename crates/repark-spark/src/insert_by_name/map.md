@@ -60,25 +60,56 @@ plus the two commits.
   the data files against the table that returns. `INSERT OVERWRITE … BY NAME`
   never evolves — no cell measures it and silently widening a schema on an
   overwrite is the wrong default.
+  *Correction (2026-09-24, U6 WRITE-REFUSALS critic r1):* the names returned were
+  the case-folded resolved names, so `1 AS NewC` added `newc` where Spark adds
+  `NewC`. An added column now keeps the source spelling (u6-write-refusals/C-010),
+  and `INSERT OVERWRITE … BY NAME` now evolves as Spark measures it
+  (u6-write-refusals/C-011). `append_with_evolution` is gone; see the U6 section
+  below.
   pins: ipi-19-56-37-schema-evolution-write/C-002, C-011
 
 ## U6 WRITE-REFUSALS (2026-09-24)
 
 - `evolution.rs` — `columns_to_add` returns `None` when nothing evolves and
-  `Some(added)` whenever the table has the property and merge-schema is on,
-  even with no new column: Spark's union runs on every such write, so a wider
-  source widens and a non-promotable type refuses `Cannot change column type`.
-  Without merge-schema, the first unknown source column refuses
+  `Some(SourceUnion)` whenever the table has the property and merge-schema is
+  on, even with no new column. Spark's union runs on every such write, so a
+  wider source widens and a non-promotable type refuses `Cannot change column
+  type`. Without merge-schema, the first unknown source column refuses
   `Field <display name> not found in source schema`. `evolve_before_write`
-  unions the source schema into the table, re-registers the catalog, and the
-  normal by-name append or overwrite then runs against the evolved table.
-  `append_with_evolution` is gone; overwrite now evolves too (measured).
-  `routes_positional_by_name` is the router's gate for a positional `INSERT`.
+  unions the source schema into the table and re-registers the catalog. The
+  normal by-name append or overwrite then runs against the evolved table,
+  including `INSERT OVERWRITE … BY NAME` (measured, C-011).
+  `append_with_evolution` is gone. `routes_positional_by_name` is the router's
+  gate for a positional `INSERT`.
+  pins: u6-write-refusals/C-002, C-005, C-006
+- Critic r1 remediation (2026-09-24), all in `evolution.rs`:
+  - `SourceUnion` names each source column for the union: a matched column
+    takes the table's spelling, and a new column takes the source's display
+    spelling (`NewC`, not the folded `newc`). Matching stays case-insensitive.
+  - `refuse_duplicate_sources` runs before any evolution. An exact repeat
+    refuses with Iceberg's `Invalid schema: multiple fields for name …`. A
+    case-folded repeat of a table column refuses `Multiple entries with same
+    key: …`. Under the conf, `refuse_lower_case_collision` refuses two new
+    names that differ only in case. All three are Spark's measured texts
+    (C-013).
+  - `routes_positional_by_name` returns `Result<bool>`. A tag selector or a
+    missing table or namespace keeps the positional path; any other load
+    failure surfaces (C-014).
+  pins: u6-write-refusals/C-010, C-011, C-012, C-013, C-014
 - `source_names.rs` — `syntactic_source_names` and `normalize_ident`, moved out
   of `../insert_by_name.rs` to keep it under the size ceiling. An unaliased
   integer or single-quoted literal is named by its text, as Spark names it.
-- `../insert_by_name.rs` — `source_from_clause` aliases the derived source
-  table's columns with the resolved source names, so a `VALUES` source exposes
-  `col1..colN` and a literal source its Spark name to the projection.
-- `tests.rs` — pins for the literal spelling and the aliased FROM clause.
-  pins: u6-write-refusals/C-002, C-005, C-006
+  The names come from the leftmost `SELECT` of a positional set operation
+  (Spark names a `UNION` by its first arm); `UNION … BY NAME` still goes to the
+  planner probe. `aliased_source` rewrites that `SELECT`'s items so each carries its resolved
+  name as a backquoted alias, and the projection can address every source column
+  by that name.
+  pins: u6-write-refusals/C-002, C-010
+- `../insert_by_name.rs` — `source_from_clause` aliases a `VALUES` source's
+  columns `col1..colN` with a derived-table column list. Every other source
+  goes through `aliased_source`, because DataFusion's column-list rename looks
+  the inner column up through `col(name)`, which folds `NewC` to `newc` and
+  fails.
+- `tests.rs` — pins for the literal spelling, the aliased `FROM` clause and the
+  `UNION` arm naming.
+  pins: u6-write-refusals/C-002, C-005, C-006, C-010
