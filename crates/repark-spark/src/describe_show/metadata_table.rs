@@ -50,6 +50,11 @@ pub(crate) fn try_parse_describe_metadata_table(sql: &str) -> Option<DescribeTab
     })
 }
 
+pub(crate) fn rewrites_metadata_path(sql: &str) -> bool {
+    crate::metadata_tables::sql_may_have_metadata_table_path(sql)
+        && try_parse_describe_metadata_table(sql).is_none()
+}
+
 fn is_namespace_head(word: &Word) -> bool {
     word.value.eq_ignore_ascii_case("namespace")
         || word.value.eq_ignore_ascii_case("database")

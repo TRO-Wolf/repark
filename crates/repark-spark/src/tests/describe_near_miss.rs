@@ -205,13 +205,86 @@ async fn four_part_metadata_suffix_answers_metadata_rows() {
         );
     }
     for sql in [
+        "DESCRIBE ice.sales.dc.snapshots",
+        "DESCRIBE ice.sales.dc.snapshots -- c",
+        "DESCRIBE ice.sales.dc.snapshots /* c */",
+        "DESCRIBE ice.sales.dc.SNAPSHOTS",
+        "DESC ice.sales.dc.snapshots",
         "DESCRIBE `ice`.`sales`.`dc`.`snapshots`",
         "DESCRIBE `ice`.`sales`.`dc`.`SNAPSHOTS`",
         "DESC `ice`.`sales`.`dc`.`snapshots`",
     ] {
+        assert!(
+            !crate::describe_show::metadata_table::rewrites_metadata_path(sql),
+            "{sql} must reach the metadata-table path unrewritten"
+        );
         let (schema, rows) = answer(&ctx, &catalogs, sql).await;
         assert_eq!(schema, table_schema(), "{sql}");
         assert_eq!(rows, snapshots_rows(), "{sql}");
+    }
+}
+
+#[tokio::test]
+async fn metadata_rewrite_still_serves_every_other_metadata_path() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = dc_session(&warehouse).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.dc VALUES (1, named_struct('a', 2), 'x')",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    for sql in [
+        "SELECT * FROM ice.sales.dc.snapshots",
+        "DESCRIBE ice.sales.dc.snapshots snapshot_id",
+    ] {
+        assert!(
+            crate::describe_show::metadata_table::rewrites_metadata_path(sql),
+            "{sql} must keep the metadata rewrite"
+        );
+    }
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "SELECT operation, parent_id FROM ice.sales.dc.snapshots",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let batch = datafusion::arrow::compute::concat_batches(&batches[0].schema(), &batches).unwrap();
+    assert_eq!(batch.num_rows(), 1);
+    assert_eq!(
+        batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap()
+            .value(0),
+        "append"
+    );
+    assert!(batch.column(1).is_null(0));
+    assert_error(
+        &ctx,
+        &catalogs,
+        "DESCRIBE ice.sales.dc.snapshots snapshot_id",
+        &table_not_found(&["ice", "sales", "dc", "snapshots"]),
+    )
+    .await;
+    for sql in ["DESCRIBE dc$snapshots", "DESCRIBE ice.sales.dc$snapshots"] {
+        assert_parser_error(
+            &ctx,
+            &catalogs,
+            sql,
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near '$snapshots': extra input \
+             '$snapshots'. SQLSTATE: 42601",
+        )
+        .await;
     }
 }
 
@@ -225,6 +298,10 @@ async fn four_part_missing_base_and_unknown_suffix_name_the_written_parts() {
             ["ice", "sales", "missing", "snapshots"],
         ),
         ("DESCRIBE ice.sales.dc.nope", ["ice", "sales", "dc", "nope"]),
+        (
+            "DESCRIBE ice.sales.dc.nosuch",
+            ["ice", "sales", "dc", "nosuch"],
+        ),
         (
             "DESCRIBE EXTENDED ice.sales.dc.nope",
             ["ice", "sales", "dc", "nope"],
