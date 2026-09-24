@@ -1442,7 +1442,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `PARSE_SYNTAX_ERROR` refusals, including an unclosed quote or backtick; every other head falls
   through. An unclosed `/*` never reaches this parser end to end: the router front door (WO-C10)
   answers `UNCLOSED_BRACKETED_COMMENT` / `42601` first.
-  The router retries that parser when literal canonicalization fails first. Views and session
+  The router retries that parser when literal canonicalization fails first, through
+  `canonicalize_or_refuse` (WO-A13 moved that fallback here from `router.rs`). Views and session
   temporary views remain absent from this statement's Iceberg listing.
   Parser unit pins cover required syntax refusals and near misses. **WO-A11 (2026-09-23):** the
   quote scanner closes on every matching delimiter; a doubled delimiter is a close followed by a

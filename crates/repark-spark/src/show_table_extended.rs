@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{BooleanArray, RecordBatch, StringArray};
@@ -76,6 +77,15 @@ pub(crate) fn try_parse_show_table_extended(sql: &str) -> Option<Result<ShowTabl
         pattern,
         has_partition,
     }))
+}
+
+pub(crate) fn canonicalize_or_refuse(sql: &str, verbatim: bool) -> Result<Cow<'_, str>> {
+    crate::spark_literals::canonicalize_verbatim(sql, verbatim).map_err(|error| {
+        match try_parse_show_table_extended(sql) {
+            Some(Err(parse_error)) => parse_error,
+            _ => error,
+        }
+    })
 }
 
 pub(crate) async fn try_show_table_extended_intercept(

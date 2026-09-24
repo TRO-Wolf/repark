@@ -87,13 +87,7 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let verbatim =
         crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
-    let canonical = match crate::spark_literals::canonicalize_verbatim(sql, verbatim) {
-        Ok(canonical) => canonical,
-        Err(error) => match crate::show_table_extended::try_parse_show_table_extended(sql) {
-            Some(Err(parse_error)) => return Err(parse_error),
-            _ => return Err(error),
-        },
-    };
+    let canonical = crate::show_table_extended::canonicalize_or_refuse(sql, verbatim)?;
     let canonical_sql = canonical.as_ref();
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
