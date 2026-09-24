@@ -25,8 +25,11 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
 
 - `conftest.py` — the two `sys.path` entries above.
 - `test_statement_surface.py` — every statement shape dbt emits, run through
-  `repark.sql()` on a memory catalog. The served and refused sets assert the exact message
-  (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
+  `repark.sql()` on a memory catalog. `test_served_shapes_run` asserts that each served shape
+  returns an Arrow result; `test_refused_shapes_fail_loud` asserts that each refused shape raises a
+  `PySparkException` whose text contains the message the ledger records, and
+  `test_show_tblproperties_table_refusal_is_exact` pins `R-SHOW-TBLPROPERTIES` exactly (class,
+  condition, SQLSTATE and full text) (the `server_side_parameters` `SET` shape moved to served under SQL-SET-DOOR-1, 2026-09-15;
   the `CLUSTERED BY (…) INTO n BUCKETS` CTAS shape moved to served under IPI-26/27 round 1,
   2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform; the `LOCATION`,
   table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served under IPI-26/27
@@ -52,7 +55,9 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   shape (DBT-QUALIFY-1 FIXED).
   **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served and pins one
   complete four-column row, including the full information text; `R-SHOW-TBLPROPERTIES` stays
-  refused.
+  refused. **WO-A18 (2026-09-24):** `test_show_tblproperties_table_refusal_is_exact` pins that
+  refusal as `AnalysisException`, condition `None`, SQLSTATE `None` and the full
+  `Error during planning: SHOW [VARIABLE] ...` text.
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row
