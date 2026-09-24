@@ -4,5 +4,6 @@ mod evolved_lineage_read;
 mod footer_cache;
 mod io_stats;
 mod lineage_columns;
+mod memory_props_span;
 mod namespace_drop;
 mod namespace_scoped;

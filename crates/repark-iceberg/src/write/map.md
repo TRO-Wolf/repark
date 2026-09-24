@@ -1016,6 +1016,18 @@ repark-core's error map.
   `UnsupportedOperationException` with byte-exact text (the A-9 viewless
   CREATE/REPLACE wording, no `NotImplemented` wrapper).
   pins: ice-views-1/C-005
+  **PR-B hadoop naming (2026-09-24):** `unsupported_message_error` maps a fork
+  `FeatureUnsupported` error to `unsupported_error(err.message())`, so the user sees the bare
+  fork message and not `FeatureUnsupported => …`. Every other kind stays
+  `DataFusionError::External`, which is what both doors' `iceberg_err` did. Both doors use it at
+  their `RENAME TO` call site, where the fork's hadoop-naming MemoryCatalog refuses with
+  "Cannot rename Hadoop tables" (Java `HadoopCatalog` 1.11.0).
+- `unsupported_tests.rs` — **PR-B r3 (2026-09-24, critic V-004):** declared in `mod.rs` as
+  `#[cfg(test)] mod unsupported_tests;`. `FeatureUnsupported` becomes an `External`
+  `UnsupportedMarker` whose Display is the bare message and that is not an `iceberg::Error`.
+  `Unexpected`, `TableNotFound` and `TableAlreadyExists` stay an `External` `iceberg::Error`
+  with kind and message kept, never an `UnsupportedMarker`. Mutation: map every error to
+  `unsupported_error(error.to_string())` and both pins go red.
 - `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
   `EngineSummary`, the snapshot-summary keys the engine computes for the commit
   in hand, which a user `snapshot-property.<k>` may not collide with (Spark's

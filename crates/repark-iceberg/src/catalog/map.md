@@ -203,6 +203,11 @@ Source comments retain only API and safety contracts; implementation narration i
   owns it. `memory_catalog_cached(warehouse, caches)` is the session's entry; a caller wanting
   the pre-unit behaviour passes `CatalogCaches::disabled()`.
 
+  **PR-B hadoop naming (2026-09-24):** `memory_catalog_cached_with_props(warehouse, caches,
+  props)` is the public props-taking twin over `memory_catalog_wired`. The session now enters
+  here and passes only the `metadata-naming` prop. Its span records the same fields as
+  `memory_catalog_cached` and never the props, because a props map can carry credentials.
+
   **PERF-ICE-CATALOG-IO-2 (2026-09-05, landed default-OFF per the round-2 ruling):**
   a third knob, `repark.iceberg.manifestCacheBytes` (default `0` = off; set bytes to opt
   A value that is not an integer in `[0, 2^64)` is refused naming both spellings (a u64 overflow is refused as such, not as a negative).

@@ -14,6 +14,31 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   RP-5: `information_schema` hide pin now cites fork F-8 listing (no engine shim).
   pins: rp-5-fork-repin/C-003
 - `aws_gate.rs` — E-2 offline AWS-gate pins.
+- `hadoop_naming.rs` — **PR-B hadoop naming (2026-09-24):** a catalog configured through the
+  config map with `type=hadoop` over a LocalFs tempdir warehouse: create through the registered
+  handle, then two SQL `INSERT`s. The `*.metadata.json` names in `db/t/metadata/` are exactly
+  `v1`, `v2` and `v3`, and `version-hint.text` reads `3`. The core default dialect routes no
+  Iceberg DDL, so the table is created through the catalog handle. Mutation: pass an empty map
+  from the session Memory arm and the hadoop pin goes red.
+  **PR-B r3 (2026-09-24, critic V-002/V-003):** `assert_uuid_metadata_names` holds the fork's
+  uuid contract (`{version:0>5}-{uuid}.metadata.json`, Display of `MetadataLocation`): three
+  names, versions `00000`..`00002`, lowercase 8-4-4-4-12 hex, distinct uuids, and no hint. It
+  runs on `type=hadoop` plus an explicit `metadata-naming=uuid`, on `type=memory`, on
+  `catalog-impl=org.apache.iceberg.inmemory.InMemoryCatalog`, and on direct
+  `register_memory_catalog`. `uuid_metadata_name_check_rejects_near_misses` shows the checker
+  refuses `v1`, gzip, short-version, upper-case, short and unhyphenated names. Mutation: force
+  `hadoop` in the Memory arm whenever `metadata-naming` is present and the explicit-uuid pin
+  goes red.
+  **Class sweep (2026-09-24):** `memory_arm_forwards_only_metadata_naming_to_the_fork_builder`
+  reads `Catalog::properties()` on the registered handle. It is exactly
+  `{metadata-naming: hadoop}` for `type=hadoop` and empty for `type=memory`, even with extra
+  passthrough props (red when the arm forwards every spec prop).
+  `memory_registration_keeps_fallback_root_and_local_write_root` pins the moved registration
+  body on the props path and the direct path: `TempFallbackAllowed` at the warehouse, the
+  layout root, and the SEC-02 local write root.
+  `rename_error_mapping_keeps_the_engine_error_class`: after `unsupported_message_error`,
+  `engine_err` still answers `NotImplemented` with the bare message, `Analysis` for
+  `TableNotFound`, and `Iceberg` for `Unexpected`.
 - `conf_unread.rs` — **CONF-UNREAD-1 step 1 (2026-09-11):** the four
   accepted-but-unread keys. `coalesce_batches` refuses loud at build and at
   runtime `SET`, naming the key and the reason (DataFusion 54.1.0 defines the

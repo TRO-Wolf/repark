@@ -48,6 +48,7 @@ mod dml;
 mod dyn_by_name_overwrite;
 mod dyn_partition_overwrite;
 mod float_agg;
+mod hadoop_rename;
 mod ice_ddl_clauses_1;
 mod identifier_fields;
 mod input_file_name;

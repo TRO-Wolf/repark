@@ -406,6 +406,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   move to `catalog_kind.rs` (1028 → 1007, ratcheted); the accepted sets gain `hadoop` and
   `InMemoryCatalog` (both → `Memory`), with the refusal texts updated.
   pins: ice-catalog-session-1/C-025, C-026, C-030
+  **PR-B hadoop naming (2026-09-24):** the `type` arm records a trimmed, case-insensitive
+  `hadoop` value on the block. `into_spec` then adds `metadata-naming=hadoop` to the spec props
+  through `catalog_kind::with_type_naming`, unless the user set `metadata-naming` explicitly.
+  An explicit value passes through verbatim, and the fork validates it. `type=memory`,
+  `catalog-impl=…InMemoryCatalog` and a bare `spark.sql.catalog.<name> = hadoop` value add
+  nothing. `kind_from_bare_catalog_value` moved to `catalog_kind.rs` so the file stays under
+  its baseline (1007 → 1006, ratcheted). The unit pins are in
+  [catalog_config/hadoop_naming_tests.rs](catalog_config/map.md).
   **REVIEW-FIX-5 (2026-09-10):** `prop_key_is_secret` is `pub` (re-exported at the crate
   root) so `DESCRIBE TABLE EXTENDED` redacts through the same predicate; no second
   predicate exists. pins: review-fix-5/C-004
@@ -788,6 +796,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `Memory` arm, `kind_from_catalog_impl` with the `InMemoryCatalog` → `Memory` arm,
   plus the two alias unit pins).
   pins: ice-catalog-session-1/C-025, C-026
+  **PR-B hadoop naming (2026-09-24):** also holds `kind_from_bare_catalog_value` (moved from
+  `catalog_config.rs`), `is_hadoop_type`, and `with_type_naming`. `with_type_naming` inserts
+  the fork's `metadata-naming` key with `hadoop` only when the key is absent.
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once

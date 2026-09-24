@@ -15,3 +15,11 @@ impl std::error::Error for UnsupportedMarker {}
 pub fn unsupported_error(message: String) -> DataFusionError {
     DataFusionError::External(Box::new(UnsupportedMarker(message)))
 }
+
+#[must_use]
+pub fn unsupported_message_error(error: iceberg::Error) -> DataFusionError {
+    match error.kind() {
+        iceberg::ErrorKind::FeatureUnsupported => unsupported_error(error.message().to_string()),
+        _ => DataFusionError::External(Box::new(error)),
+    }
+}

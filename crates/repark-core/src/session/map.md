@@ -8,7 +8,7 @@ accuracy contracts restored in condensed form (see the unit ledger's findings di
 ## Purpose
 
 File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`, `write_options.rs`,
-`spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `cache_budget.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
+`spill.rs`, `iceberg_caches.rs`, `late_catalogs.rs`, `memory_catalog.rs`, `cache_budget.rs`, `df_guards.rs` and its `df_guards/` submodule) plus the test cohorts under `tests/` (`session.rs`,
 `session/catalog_registration.rs`, `df_guard.rs`, `aws_gate.rs`, `namespace_create.rs`, `a13.rs`,
 `conf_unread.rs`). Test cohorts are two: the E-2 gate tests
 (new, additive) and — landing with the PR-C test-audit commit — the ported v1 session unit-test
@@ -97,8 +97,19 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   held by a live `__repark_cache_*` MemTable add zero to `admitted`. `retained_cache_bytes`
   is the same walk reporting only the total.
   pins: eager-budget-1/C-005
+- `memory_catalog.rs` — **PR-B hadoop naming (2026-09-24):** `register_memory_catalog_with_props`,
+  the body of `register_memory_catalog`, moved here to keep `session.rs` under the default
+  ceiling. The public `register_memory_catalog(name, warehouse)` delegates with an empty map,
+  so it stays on uuid naming. The Memory arm of `session.rs::register_catalog_spec` passes only
+  the spec's `metadata-naming` prop, so no other passthrough prop reaches the fork builder. The
+  moved code sheds two comments; their reasons live here. The memory catalog registers with
+  `TempFallbackAllowed` because an in-memory LocalFs catalog keeps the offline CTAS fallback,
+  and real warehouses fail loud. The warehouse is noted as a local write root (the SEC-02
+  grandfather), so COPY TO and CREATE EXTERNAL under it stay allowed.
 - `iceberg_caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session's view of its Iceberg
-  cache handles. `memory_catalog_handle` is what `session.rs::register_memory_catalog` calls, so a
+  cache handles. `memory_catalog_handle` is what `session.rs::register_memory_catalog` reaches
+  (since PR-B through `memory_catalog.rs::register_memory_catalog_with_props`, which also
+  forwards the builder props), so a
   memory catalog is always built with the session's `CatalogCaches`; `trim_iceberg_caches` runs at
   the statement door (`sql_with`) and clears the metadata cache once the retained-location count
   passes `repark.iceberg.metadataCacheEntries`; `iceberg_metadata_cache_stats` /

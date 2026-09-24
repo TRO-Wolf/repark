@@ -951,6 +951,9 @@ pins: rp-4-fork-repin/C-005, C-006
   is gone; the move lives in `column_move.rs`. **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the
   REPLACE COLUMNS parser, planner and the identity-trap gate left this file for
   `replace_columns.rs`; `alter.rs` only detects the form and routes it.
+  **PR-B hadoop naming (2026-09-24):** `execute_rename_table` maps the fork error through
+  `repark_iceberg::write::unsupported_message_error`, so a `type=hadoop` catalog answers
+  exactly "Cannot rename Hadoop tables". Pinned in `tests/hadoop_rename.rs`.
   **IPI-51 PR4 (2026-09-20):** the residual Hive `ADD PARTITION` refusal now answers
   plan-class through `catalog_ops::partition_management_unsupported` with the backticked
   target (`AnalysisException`, `SQLSTATE: 42601`); the file ratchets 1449 → 1446.

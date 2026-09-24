@@ -7,13 +7,14 @@ use std::sync::{Arc, Mutex, OnceLock, PoisonError, RwLock};
 use aws_config::{BehaviorVersion, SdkConfig};
 use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
+use iceberg::memory::MEMORY_CATALOG_METADATA_NAMING;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_common::{Error, Result};
 use repark_iceberg::catalog::build_iceberg_catalog_provider;
 
 use crate::backend::{ExecutionBackend, SingleNodeBackend};
 use crate::catalog_config::{self, CatalogKind, CatalogSpec};
-use crate::catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
+use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::config_file::maintenance::MaintenancePolicy;
 use crate::config_file::sources::SourceSpec;
 use crate::dialect::{DataFusionDialect, SqlDialect};
@@ -36,6 +37,7 @@ mod cache_budget;
 mod df_guards;
 mod iceberg_caches;
 mod late_catalogs;
+mod memory_catalog;
 pub(crate) mod spill;
 mod temp_views;
 mod write_options;
@@ -489,7 +491,14 @@ impl ReparkSession {
                     .get(catalog_config::WAREHOUSE_PROP)
                     .map(String::as_str)
                     .unwrap_or_default();
-                self.register_memory_catalog(&spec.name, warehouse).await
+                let props = spec
+                    .props
+                    .get_key_value(MEMORY_CATALOG_METADATA_NAMING)
+                    .map(|(key, value)| (key.clone(), value.clone()))
+                    .into_iter()
+                    .collect();
+                self.register_memory_catalog_with_props(&spec.name, warehouse, props)
+                    .await
             }
             CatalogKind::Glue => {
                 let catalog = repark_iceberg::catalog::glue_catalog_counted(
@@ -731,31 +740,8 @@ impl ReparkSession {
     /// # Errors
     /// Returns [`Error::DataFusion`] if `name` is registered or the catalog cannot be built.
     pub async fn register_memory_catalog(&self, name: &str, warehouse: &str) -> Result<()> {
-        if self
-            .catalogs
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .is_registered(name)
-        {
-            return Err(Error::DataFusion(format!(
-                "catalog '{name}' is already registered — re-registering an in-memory catalog \
-                 would orphan its tables (their metadata lives in the replaced handle)"
-            )));
-        }
-        let catalog = self.memory_catalog_handle(warehouse).await?;
-        let root = memory_warehouse_fallback_root(warehouse);
-        // In-memory LocalFs catalogs keep the offline CTAS fallback; real warehouses fail loud.
-        self.register_iceberg_catalog_with_policy(
-            name,
-            catalog,
-            LocationPolicy::TempFallbackAllowed { root: root.clone() },
-        )
-        .await?;
-        // SEC-02 grandfather: COPY TO / CREATE EXTERNAL under this warehouse stay allowed.
-        let mut catalogs = RwLock::write(&self.catalogs).unwrap_or_else(PoisonError::into_inner);
-        catalogs.note_local_warehouse_root(warehouse.to_string());
-        catalogs.set_warehouse_layout_root(name, root);
-        Ok(())
+        self.register_memory_catalog_with_props(name, warehouse, HashMap::new())
+            .await
     }
 
     /// Mark a local path as a trusted write root for the SEC-02 local-filesystem DDL gate.

@@ -259,7 +259,7 @@ async fn rename_table(
         &target.ident(),
     )
     .await
-    .map_err(iceberg_err)?;
+    .map_err(repark_iceberg::write::unsupported_message_error)?;
     invalidate(cx, source).await?;
     Ok(target)
 }
@@ -598,6 +598,9 @@ fn is_default_keyword(value: &Expr) -> bool {
 mod nested;
 
 pub(crate) use nested::{execute_nested_column_ddl, try_parse_nested_column_ddl};
+
+#[cfg(test)]
+mod hadoop_rename_tests;
 
 #[cfg(test)]
 mod tests;
