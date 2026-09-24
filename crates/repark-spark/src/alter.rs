@@ -701,26 +701,6 @@ pub(crate) fn tokens_are_alter_table(tokens: &[Token]) -> bool {
     false
 }
 
-/// Loud refuse for Spark forms stock sqlparser still cannot parse and I7 does not own.
-pub(crate) fn refuse_unsupported_alter_sql(sql: &str) -> Option<Result<DataFrame>> {
-    let upper = sql.to_ascii_uppercase();
-    // Cheap head check — only ALTER TABLE.
-    let trimmed = upper.trim_start();
-    if !trimmed.starts_with("ALTER") || !trimmed.contains("TABLE") {
-        return None;
-    }
-    // ALTER COLUMN COMMENT.
-    if trimmed.contains("ALTER COLUMN") && trimmed.contains("COMMENT") {
-        // Allow through only if we later add a rewrite.
-        return Some(Err(DataFusionError::NotImplemented(
-            "ALTER COLUMN … COMMENT is not supported yet via SQL — column COMMENT is accepted \
-             on ADD COLUMN; UpdateColumnDoc is available on the write primitive (I6 stretch)"
-                .into(),
-        )));
-    }
-    None
-}
-
 // === I7 PARTITION FIELD + REPLACE COLUMNS ===
 
 /// A parsed I7 ALTER form that bypasses stock sqlparser.
@@ -1241,14 +1221,6 @@ mod tests {
 
     #[test]
     fn parse_replace_columns_is_recognized() {
-        // I7: REPLACE COLUMNS uses the dedicated parser instead of the residual refusal path.
-        assert!(
-            refuse_unsupported_alter_sql(
-                "ALTER TABLE ice.sales.t REPLACE COLUMNS (a INT, b STRING)",
-            )
-            .is_none(),
-            "REPLACE COLUMNS must not hit the residual refuse path"
-        );
         let parsed = try_parse_iceberg_alter_ddl(
             "ALTER TABLE ice.sales.t REPLACE COLUMNS (a INT, b STRING)",
         )

@@ -223,6 +223,28 @@ fn resolve_nested_path<'a>(
     Ok(resolved)
 }
 
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "round comment ban: the refusal variants are recorded in the unit ledger"
+)]
+pub fn resolve_column_path(
+    schema: &Schema,
+    path: &[String],
+) -> std::result::Result<String, NestedTypeRefusal> {
+    let resolved = resolve_nested_path(schema, path)?;
+    match resolved.key_of {
+        Some(map) => Err(map_key_refusal(map)),
+        None => Ok(resolved.names.join(".")),
+    }
+}
+
+fn map_key_refusal(map: &MapType) -> NestedTypeRefusal {
+    NestedTypeRefusal::Unsupported(format!(
+        "Unsupported table change: Cannot update map keys: {}",
+        iceberg_type_name(&Type::Map(map.clone()))
+    ))
+}
+
 fn iceberg_type_name(field_type: &Type) -> String {
     match field_type {
         Type::Primitive(PrimitiveType::Decimal { precision, scale }) => {
@@ -432,10 +454,7 @@ pub fn resolve_nested_type_change(
         )));
     }
     match resolved.key_of {
-        Some(map) => Err(NestedTypeRefusal::Unsupported(format!(
-            "Unsupported table change: Cannot update map keys: {}",
-            iceberg_type_name(&Type::Map(map.clone()))
-        ))),
+        Some(map) => Err(map_key_refusal(map)),
         None => Ok(dotted),
     }
 }

@@ -733,6 +733,11 @@ repark-core's error map.
   targets Iceberg has no type for (TINYINT, SMALLINT, CHAR(n), VARCHAR(n)), which Spark never
   up-casts to.
   pins: ice-nested-evo-1/C-032
+  **WO U5 PR2a (2026-09-24):** `resolve_column_path` resolves a column path of any depth the
+  same way for `ALTER COLUMN … COMMENT` and returns the schema-cased dotted name. A map `key`
+  step refuses with the shared `map_key_refusal` (`Unsupported table change: Cannot update map
+  keys: map<…>`), which `resolve_nested_type_change` now also uses.
+  pins: ice-nested-evo-1/C-038
 - `nested_type_sql.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the one token
   rewrite both doors run on a nested column type: a struct child's `NOT NULL` becomes the
   struct-field option `OPTIONS(repark_not_null=TRUE)` (the only struct-field suffix

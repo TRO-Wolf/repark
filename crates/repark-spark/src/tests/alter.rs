@@ -964,26 +964,24 @@ async fn alter_column_case_insensitive_rename_and_drop() {
 }
 
 #[tokio::test]
-async fn alter_unsupported_comment_and_after_missing_refuse() {
+async fn alter_comment_lands_and_after_missing_refuses() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     create_alter_target(&ctx, &catalogs, "refuse2").await;
 
-    let comment_err = execute(
+    run(
         &ctx,
         &catalogs,
         "ALTER TABLE ice.sales.refuse2 ALTER COLUMN id COMMENT 'docs'",
     )
-    .await
-    .expect_err("ALTER COLUMN COMMENT must refuse loud");
-    assert!(
-        comment_err.to_string().to_uppercase().contains("COMMENT")
-            || comment_err
-                .to_string()
-                .to_lowercase()
-                .contains("not supported"),
-        "got: {comment_err}"
-    );
+    .await;
+    let table = load_sales_table(&catalogs, "refuse2").await;
+    let id = table
+        .metadata()
+        .current_schema()
+        .field_by_name("id")
+        .unwrap();
+    assert_eq!(id.doc.as_deref(), Some("docs"));
 
     let after_err = execute(
         &ctx,

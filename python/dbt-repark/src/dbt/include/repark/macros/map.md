@@ -28,7 +28,6 @@ pins: dbt-1-adapter/C-002, dbt-1-adapter/C-004
   | `repark__get_columns_in_relation_raw` | refuses loudly for the same reason, pointing the caller at `adapter.get_columns_in_relation`. |
   | `repark__create_temporary_view` | refuses: RePark does not run dbt incremental/snapshot materializations yet (`DBT-INCREMENTAL-1`), though the SQL door serves the temporary view. |
   | `repark__create_view_as` | refuses: the SQL door serves `create or replace view`, but the adapter does not build views yet (`DBT-VIEW-1`). |
-  | `repark__alter_column_comment` | `alter column … comment` is refused (`DBT-COLCOMMENT-1`). |
   There is deliberately **no** `repark__comment_clause` or `repark__location_clause`
   (**IPI-26/27 round 2**, 2026-09-20): the SQL door serves `COMMENT` and `LOCATION`
   on either side of `TBLPROPERTIES`, so the dead overrides were deleted and
@@ -37,6 +36,12 @@ pins: dbt-1-adapter/C-002, dbt-1-adapter/C-004
   pinned at `test_served_shapes_run[S-TABLE-COMMENT]`,
   `test_served_shapes_run[S-TABLE-COMMENT-AFTER-TBLPROPERTIES]`, and
   `test_served_shapes_run[S-CTAS-LOCATION]`.
+  There is deliberately **no** `repark__alter_column_comment` (**WO U5 PR2a**, 2026-09-24): the
+  SQL door serves `alter table … alter column … comment` and `change column … comment`, so the
+  refusing override was deleted and dbt-spark's `spark__alter_column_comment` is inherited
+  (`DBT-COLCOMMENT-1` retired). Pinned at `test_served_shapes_run[S-COLUMN-COMMENT]`,
+  `test_served_shapes_run[S-COLUMN-COMMENT-CHANGE]` and
+  `test_gold_models.py::test_column_documentation_sets_the_column_docs`.
   | `repark__options_clause`, `repark__clustered_cols` | `OPTIONS` and `CLUSTERED BY` are refused on an Iceberg CTAS (`DBT-CTASCLAUSE-1`). `partition_by` is served, so `spark__partition_cols` is **not** overridden. |
 
 - `materializations.sql` — `view`, `incremental` and `snapshot` for `adapter='repark'`, each

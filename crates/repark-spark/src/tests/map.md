@@ -700,7 +700,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Comment and Properties rows. pins: ice-drop-ns-1/C-002, C-004, C-008;
   ice-nested-evo-1/C-026, C-030),
   `alter` (WO U5 PR1: bare UNSET and UNSET IF EXISTS on a missing key both preserve table
-  metadata. pins: ice-nested-evo-1/C-025, C-028),
+  metadata. pins: ice-nested-evo-1/C-025, C-028. WO U5 PR2a: the old `ALTER COLUMN … COMMENT`
+  refusal pin becomes `alter_comment_lands_and_after_missing_refuses`, which reads the landed
+  doc. pins: ice-nested-evo-1/C-037),
   `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
   CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`; IPI-51 PR4 (2026-09-20):
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table
@@ -1069,6 +1071,18 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   probe's `DECIMAL(38,18)`/INT struct and the measured map value BIGINT→SMALLINT. The
   missing-table test adds a missing namespace.
   pins: ice-nested-evo-1/C-032, C-033, C-035, C-036
+- [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
+  COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
+  struct field, empty string, `CHANGE COLUMN`, upper-cased name, double-quoted literal, and a
+  map value or list element (no doc in the Iceberg JSON, as in Spark). Bare `CHANGE`/`ALTER` and
+  a two-spec list land, and a backslash-escaped quote with a trailing `;` (dbt's shape) is read.
+  The refusals pin full text: `UNRESOLVED_COLUMN.WITH_SUGGESTION` (top level and nested),
+  `INVALID_FIELD_NAME`, `TABLE_OR_VIEW_NOT_FOUND`, the `PARSE_SYNTAX_ERROR` family through
+  `engine_err` (`NULL`, a number, a double-quoted name, `TYPE … COMMENT`, `extra input` after
+  the list, `end of input`), the map-key `Unsupported table change`, and the mixed-list
+  not-implemented text, with no doc written. The near misses (top-level TYPE, the hive
+  `CHANGE COLUMN a a <type> COMMENT`, DROP NOT NULL, FIRST) keep their routes.
+  pins: ice-nested-evo-1/C-037, C-038, C-039
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

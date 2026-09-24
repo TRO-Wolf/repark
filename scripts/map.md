@@ -1,5 +1,7 @@
 # map — scripts/
 
+WO U5 PR2a (2026-09-24): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1382 → 1354 and `repark-spark/src/tests/alter.rs` 1184 → 1182. The residual `refuse_unsupported_alter_sql` (`ALTER COLUMN … COMMENT` refusal) is deleted, `nested_column_ddl.rs` serves the statement, and the old refusal pin now asserts the landed doc. Shrink-only. pins: ice-nested-evo-1/C-037
+
 WO U5 PR1 round 2 (2026-09-24): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1384 → 1382. The UNSET `IF EXISTS` span moves to `table_props_ddl::unset_if_exists_pair`. Shrink-only. pins: ice-nested-evo-1/C-031
 
 PR-B hadoop naming (2026-09-24): `check_rust_file_size.py` ratchets `repark-core/src/catalog_config.rs` 1007 → 1006 (bare-value kind resolution moves to `catalog_kind.rs` beside the hadoop-naming helpers), shrink-only.

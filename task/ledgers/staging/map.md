@@ -211,7 +211,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Round 4 (2026-09-24) widens C-033 to the sized STRING/BINARY/FLOAT(p,s)/DOUBLE(p,s)/
   TIMESTAMP_NTZ/DATE/BOOLEAN targets, names C-032's pinned pairs, and adds C-035 (bare DECIMAL
   as decimal(10,0) on the nested route) and C-036 (missing namespace as TABLE_OR_VIEW_NOT_FOUND),
-  with residues R-U5-DECIMAL-DEFAULT and R-U5-NS-LEAK.
+  with residues R-U5-DECIMAL-DEFAULT and R-U5-NS-LEAK. **WO U5 PR2a (2026-09-24):** C-037
+  (`ALTER COLUMN … COMMENT` lands the field doc on every Spark spelling, `DBT-COLCOMMENT-1`
+  retired), C-038 (its refusals answer Spark's text) and C-039 (the TYPE and hive CHANGE
+  routes are unchanged), with the fork-blocked cells recorded as questions.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

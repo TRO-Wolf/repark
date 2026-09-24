@@ -993,6 +993,9 @@ pins: rp-4-fork-repin/C-005, C-006
   is gone; the move lives in `column_move.rs`. **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the
   REPLACE COLUMNS parser, planner and the identity-trap gate left this file for
   `replace_columns.rs`; `alter.rs` only detects the form and routes it.
+  **WO U5 PR2a (2026-09-24):** the last residual refusal, `refuse_unsupported_alter_sql`
+  (`ALTER COLUMN … COMMENT is not supported yet via SQL`), is deleted with its router call;
+  `nested_column_ddl.rs` serves the statement.
   **PR-B hadoop naming (2026-09-24):** `execute_rename_table` maps the fork error through
   `repark_iceberg::write::unsupported_message_error`, so a `type=hadoop` catalog answers
   exactly "Cannot rename Hadoop tables". Pinned in `tests/hadoop_rename.rs`.
@@ -1070,7 +1073,8 @@ pins: rp-4-fork-repin/C-005, C-006
   [`tests/identifier_fields.rs`](tests/identifier_fields.rs).
   **WO U5 PR1 round 2 (2026-09-24):** `unset_if_exists_pair` (the `IF EXISTS` span the UNSET
   rewrite drops) and `unset_tblproperties_if_refusal`, a router pre-parse intercept placed after
-  `refuse_unsupported_alter_sql`. It gives Spark's `PARSE_SYNTAX_ERROR` for a lone `IF`
+  the comment-DDL pre-parse (the `refuse_unsupported_alter_sql` step it followed is gone since WO
+  U5 PR2a). It gives Spark's `PARSE_SYNTAX_ERROR` for a lone `IF`
   (`missing 'EXISTS'`, or `end of input`) and for a leading `EXISTS` (`extra input`).
   pins: ice-nested-evo-1/C-031
 - `nested_column_ddl.rs` — **ICE-NESTED-EVO-1 (2026-09-17):** the nested-path `ALTER TABLE`
@@ -1137,6 +1141,18 @@ pins: rp-4-fork-repin/C-005, C-006
   lowering keeps (38,18), residue R-U5-DECIMAL-DEFAULT). A missing namespace maps to
   `table_or_view_not_found` like a missing table.
   pins: ice-nested-evo-1/C-033, C-035, C-036
+  **WO U5 PR2a (2026-09-24):** `ALTER [COLUMN] <path> COMMENT '…'` and `CHANGE [COLUMN] <path>
+  COMMENT '…'` are claimed for any path depth, top level included, as a comma list of
+  `COMMENT` specs (`parse_comment_specs`). Each path resolves through
+  `repark_iceberg::write::nested_column::resolve_column_path`, and the docs commit in one
+  `UpdateColumnDoc` schema update. A single-quoted or double-quoted literal is the doc; any
+  other token raises `PARSE_SYNTAX_ERROR` near it (`end of input` when absent), and a token
+  after a complete list raises `… near '<t>': extra input '<t>'`. A top-level `TYPE <t>
+  COMMENT` raises `PARSE_SYNTAX_ERROR` near `COMMENT` (`top_level_type_tail`); any other
+  top-level TYPE still falls through. A list mixing `COMMENT` with another change is
+  `MixedCommentList`, refused as not implemented. The hive `CHANGE COLUMN a a <type>` form
+  falls through to `router/hive_change_column.rs` unchanged.
+  pins: ice-nested-evo-1/C-037, C-038, C-039
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

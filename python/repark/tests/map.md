@@ -783,6 +783,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`COMMENT "x.y"`, `COMMENT "c"`, `COMMENT "x.y" FIRST` on a nested child) run on the same
   three tests; red before the V-001 fix: 18 failed (refused `PARSE_SYNTAX_ERROR`).
   pins: ice-nested-evo-1/C-021
+- [test_ice_ddl_alter_2.py](test_ice_ddl_alter_2.py) — **WO U5 PR2a (2026-09-24):** facade
+  pins for `ALTER COLUMN … COMMENT`. The docs land in the current Iceberg metadata file and in
+  `DESCRIBE TABLE`'s comment column (top level, nested, empty string, `CHANGE COLUMN`). dbt's
+  multi-line `alter column` / `change column` shapes with a backslash-escaped quote and `;`,
+  bare `CHANGE`/`ALTER` and a spec list land too. The refusal table pins class, full message,
+  condition and SQLSTATE for each measured refusal and that the schema is unchanged; the map
+  key, missing table and unchanged top-level TYPE / hive CHANGE routes are pinned beside it.
+  pins: ice-nested-evo-1/C-037, C-038, C-039
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET

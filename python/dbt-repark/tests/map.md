@@ -63,6 +63,10 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   session `Owner: <user>` line (helper `_session_owner()`: `USER`, else `USERNAME`, else
   `"unknown"`) between `Provider:` and `Table Properties:`, as Spark 4.1.2 stamps the creating
   session's owner.
+  **WO U5 PR2a (2026-09-24):** `R-COLUMN-COMMENT` moves to served as `S-COLUMN-COMMENT` (the
+  `alter column` shape dbt-spark emits for an Iceberg relation, backslash-escaped quote and
+  trailing `;` included) and `S-COLUMN-COMMENT-CHANGE` (the `change column` shape it emits
+  otherwise), both on the silver survey table (`DBT-COLCOMMENT-1` retired).
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row
@@ -82,6 +86,11 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   pins inverted to success — the description lands as the `comment` property and
   the table lands under `location_root` with readable rows — while the `OPTIONS`,
   `clustered_by`, and column-documentation refusal pins hold.
+  **WO U5 PR2a (2026-09-24):** the column-documentation pin inverts to success —
+  `test_column_documentation_sets_the_column_docs` writes two column descriptions (one with an
+  apostrophe), runs `persist_docs.columns`, and reads each as the Iceberg field `doc` in the
+  table's metadata. A schema.yml column with no description gets `""`, because
+  `spark__alter_column_comment` emits `comment ''` for every listed column.
   **IPI-40 PR6 r2 (2026-09-24):** the incremental and snapshot refusals pin the complete
   `DBT-INCREMENTAL-1` compilation-error text dbt reports, macro trail included.
 - `test_aws_acceptance_gold.py` — the Glue gold leg, gated on `REPARK_AWS_ACCEPTANCE=1` and

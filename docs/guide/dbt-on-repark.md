@@ -24,10 +24,10 @@ adapter was built to run.
 | `dbt docs generate` | yes — columns come from the frame schema, not `DESCRIBE` |
 | a namespace that does not exist yet | created before the model builds |
 | `persist_docs: {relation: true}` | yes — sets the table `comment` property (`DBT-RELCOMMENT-1`) |
+| `persist_docs: {columns: true}` | yes — sets each column's Iceberg field doc (`DBT-COLCOMMENT-1`) |
 | `materialized='view'` | **refused** — [DBT-VIEW-1](../spark-sql-iceberg-parity.md) |
 | `materialized='incremental'` | **refused** — [DBT-INCREMENTAL-1](../spark-sql-iceberg-parity.md) |
 | snapshots | **refused** — [DBT-INCREMENTAL-1](../spark-sql-iceberg-parity.md) |
-| `persist_docs: {columns: true}` | **refused** — [DBT-COLCOMMENT-1](../spark-sql-iceberg-parity.md) |
 | `options`, `clustered_by` / `buckets` | **refused** — [DBT-CTASCLAUSE-1](../spark-sql-iceberg-parity.md) |
 | `location_root` | yes — the table builds under the given path (`DBT-CTASCLAUSE-1`) |
 

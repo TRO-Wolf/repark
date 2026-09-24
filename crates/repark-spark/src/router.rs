@@ -834,10 +834,6 @@ async fn try_preparse_intercepts(
     if let Some(frame) = try_preparse_comment_ddl(ctx, catalogs, sql, write_options).await {
         return Some(frame);
     }
-    // I6 residual — forms stock sqlparser still cannot model.
-    if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
-        return Some(refused);
-    }
     if let Some(refused) = crate::table_props_ddl::unset_tblproperties_if_refusal(sql) {
         return Some(Err(refused));
     }
