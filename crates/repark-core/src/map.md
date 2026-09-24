@@ -962,6 +962,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   merge-on-read tables. The unit leg
   `a_qualified_wildcard_under_a_from_alias_expands_to_user_columns` pins the rewritten
   SQL.
+  **mcdel-r9 (2026-09-24):** the statement-global `by_alias` is removed. Each
+  per-SELECT decision (`sole_rewritten_relation`, `qualified_rewrite`,
+  `select_touches_rewrite`) reads only this SELECT's relations (`select_relations`,
+  `written_qualifier`). A relation counts as rewritten only through
+  `rewrite_for_relation`: a `TableFactor::Table` whose name is a rewrite's original or
+  its `__repark_mc_N` replacement. So a plain table, CTE or derived table sharing the
+  Iceberg table's alias in another scope keeps its own columns; the unit leg
+  `a_wildcard_resolves_only_against_its_own_select` pins it.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
   C-018, C-019, C-020, C-021, C-022
   pins: ipi-20-input-file-name-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-009, C-010, C-011,
@@ -969,7 +977,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017, C-018
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
-  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
+  C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019
   **ICE-VIEWS-1 (2026-09-20):** `prepare_lineage_sql` takes `&(dyn Dialect + Sync)`
   so the view read path's `Send` future can route through it; no behavior change.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + `TimeTravelOpts` (moved

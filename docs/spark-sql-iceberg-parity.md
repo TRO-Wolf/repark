@@ -13950,10 +13950,13 @@ field NAME.
   and a bare `*` over one aliased relation, expand to the user columns, as on
   Spark. Before the fix, a statement that named a metadata column widened `x.*` to
   every metadata column, and on merge-on-read tables returned the deleted rows.
+  mcdel-r9 (C-019) scopes that expansion to the wildcard's own SELECT. A plain
+  relation, CTE or derived table that shares the Iceberg table's alias in another
+  scope keeps its own columns, where it had lost the ones the Iceberg table lacks.
   *(oracle: live Spark 4.1.2 + Iceberg 1.11 probes `mcdcol`, `mcdjoin`,
   `mcdorder`, `mcdfile`, `mcdalias`, `mcdclassn`, `mcdjoinpos`, `mcdqualmor`,
-  `mcdqualfix`, recorded in the u10-mc-deleted-1 ledger M-10, M-12, M-14, M-15, M-17,
-  M-18 and M-20.)*
+  `mcdqualfix`, `mcdscope`, recorded in the u10-mc-deleted-1 ledger M-10, M-12, M-14,
+  M-15, M-17, M-18, M-20 and M-21.)*
 - **Rationale** — BACKLOG, filed 2026-09-20 (ICE-METADATA-COLS-1, IPI-20 PR-1).
   The fork unit is MERGED (metadata columns + scan modes) and the pin bumped
   (RP-45), so the RePark half serves the four ordinary columns end to end;

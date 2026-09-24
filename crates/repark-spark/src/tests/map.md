@@ -1497,8 +1497,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Q2 with Spark's answers: `x.*` or `*` under a FROM alias serves the user columns
   (`[(2,b,y),(3,c,x),(4,d,x)]`, plus `p` / `s`) and no deleted row.
   `qualified_wildcard_near_misses_keep_their_answers` pins D1, C1, P1–P3 (a derived
-  table, a CTE, a rewritten or non-Iceberg join partner) and the M1/M2 error strings.
+  table, a CTE, a rewritten or non-Iceberg join partner) and the M1/M2 error strings
+  (M2 is `Invalid qualifier t` since mcdel-r9).
   pins: u10-mc-deleted-1/C-012, C-014, C-015, C-016, C-017, C-018
+- `metadata_columns_scope.rs` — **mcdel-r9 (2026-09-24, Sol critic r7 V-001):** a wildcard
+  resolves only against its own SELECT's relations. It imports the `pub(super)` helpers
+  of `metadata_columns_deleted.rs` and registers a non-Iceberg `tv (id, data, cat,
+  extra)` batch beside the merge-on-read `ice.ns.t`.
+  `wildcard_over_a_plain_relation_keeps_its_own_columns` pins S1, S2, S4, S4B (`*` /
+  `t.*` over `tv t` or a CTE `t`, with the Iceberg `t` only in an `EXISTS` subquery) =
+  `[(2,b,y,e2),(3,c,x,e3)]`; S3, S3B, S3C (derived tables `x` / `t`) =
+  `[(2,b,e),(3,c,e)]`; and S6 (`*` over `tv t JOIN tv u`) with all eight fields.
+  `wildcard_over_the_iceberg_relation_ignores_a_plain_namesake` pins S5/S5B (the
+  Iceberg `t` outside, a plain `tv t` in the subquery) = the live user rows with no
+  `_deleted`, plus the near misses S7 (`t.*, t._pos`) and S8 (`R-MC-DELETED`).
+  pins: u10-mc-deleted-1/C-019
 - `input_file_name.rs` — **IPI-20 / R-INPUT-FILE-NAME (2026-09-23):** the Spark-door
   `input_file_name()` pins over the same two-append plus one-delete seed.
   `input_file_name_like_parquet_answers_true_on_every_row` pins the cell
