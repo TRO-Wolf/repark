@@ -140,8 +140,9 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   `spark_ddl_type_name` spellings, a doc-less column renders `""` (the table
   path renders null), no blank/`# Partitioning`/`# Metadata Columns` trailer,
   and EXTENDED is the same columns-only answer; any supplied column refuses
-  with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`.
-  pins: ice-views-1/C-017
+  with Spark's `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION`. **PR6a2:** `describe_rows_batch`
+  is the shared batch builder the temp-view DESCRIBE in `temp_ddl.rs` reuses.
+  pins: ice-views-1/C-017, C-018
 - `show_create.rs` — **PR5 (2026-09-24, V-SHOW-CREATE):**
   `execute_show_create_view` is the `Ok(true)` arm of `try_show_create_intercept`
   (`../show_create.rs`; `AS SERDE` on a view keeps main's fall-through). It
@@ -157,9 +158,6 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   catalog refuses with `catalog_handle`'s. **r2 (2026-09-24):** the renderer has
   no property filter of its own. Residues: D-VIEW-SHOWCREATE-1.
   pins: ice-views-1/C-017
-  and EXTENDED is the same columns-only answer. SHOW CREATE stays a later PR.
-  **PR6a2:** `describe_rows_batch` is the shared batch builder the temp-view
-  DESCRIBE in `temp_ddl.rs` reuses. pins: ice-views-1/C-017
 
 ## Pointers
 
