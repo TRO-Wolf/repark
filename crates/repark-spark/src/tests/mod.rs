@@ -42,6 +42,7 @@ mod decimal;
 mod declared_refuse;
 mod delete_granularity;
 mod describe_column_errors;
+mod describe_near_miss;
 mod describe_owner;
 mod describe_show;
 mod describe_table;

@@ -26,9 +26,29 @@ async fn describe_rows(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Vec<DescribeRow> {
-    let batches = execute(ctx, catalogs, sql)
+    let frame = execute(ctx, catalogs, sql)
         .await
-        .unwrap_or_else(|error| panic!("{sql} must plan: {error}"))
+        .unwrap_or_else(|error| panic!("{sql} must plan: {error}"));
+    assert_eq!(
+        frame
+            .schema()
+            .as_arrow()
+            .fields()
+            .iter()
+            .map(|field| (
+                field.name().clone(),
+                field.data_type().clone(),
+                field.is_nullable()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("col_name".to_string(), DataType::Utf8, false),
+            ("data_type".to_string(), DataType::Utf8, false),
+            ("comment".to_string(), DataType::Utf8, true),
+        ],
+        "{sql}"
+    );
+    let batches = frame
         .collect()
         .await
         .unwrap_or_else(|error| panic!("{sql} must execute: {error}"));
@@ -242,6 +262,46 @@ async fn identity_partition_describe_rows_keep_spec_order() {
 }
 
 #[tokio::test]
+async fn identity_partition_rows_carry_the_source_comment_in_spec_order() {
+    let warehouse = TempDir::new().expect("warehouse must create");
+    let (ctx, catalogs) = setup(&warehouse).await;
+    execute_statement(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ic (id BIGINT, cat STRING COMMENT 'the cat') USING iceberg PARTITIONED BY (cat, id)",
+    )
+    .await;
+
+    assert_eq!(
+        describe_rows(&ctx, &catalogs, "DESCRIBE ice.sales.ic").await,
+        vec![
+            ("id".to_string(), "bigint".to_string(), None),
+            (
+                "cat".to_string(),
+                "string".to_string(),
+                Some("the cat".to_string())
+            ),
+            (
+                "# Partition Information".to_string(),
+                String::new(),
+                Some(String::new()),
+            ),
+            (
+                "# col_name".to_string(),
+                "data_type".to_string(),
+                Some("comment".to_string()),
+            ),
+            (
+                "cat".to_string(),
+                "string".to_string(),
+                Some("the cat".to_string())
+            ),
+            ("id".to_string(), "bigint".to_string(), None),
+        ]
+    );
+}
+
+#[tokio::test]
 async fn non_identity_and_unpartitioned_describe_sections_keep_existing_shapes() {
     let warehouse = TempDir::new().expect("warehouse must create");
     let (ctx, catalogs) = setup(&warehouse).await;
@@ -388,6 +448,8 @@ async fn create_and_ctas_refuse_the_reserved_owner_property_before_catalog_acces
     for sql in [
         "CREATE TABLE absent.sales.owner_create (id BIGINT) USING iceberg TBLPROPERTIES ('owner'='alice')",
         "CREATE TABLE absent.sales.owner_ctas USING iceberg TBLPROPERTIES ('owner'='alice') AS SELECT 1 AS id",
+        "CREATE OR REPLACE TABLE absent.sales.owner_replace (id BIGINT) USING iceberg TBLPROPERTIES ('owner'='alice')",
+        "CREATE TABLE absent.sales.owner_options (id BIGINT) USING iceberg OPTIONS ('owner'='alice')",
     ] {
         let error = execute(&ctx, &catalogs, sql)
             .await

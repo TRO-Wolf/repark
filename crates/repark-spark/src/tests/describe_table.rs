@@ -138,12 +138,26 @@ async fn describe_column_rows(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Vec<(String, String)> {
-    let batches = execute(ctx, catalogs, sql)
-        .await
-        .unwrap()
-        .collect()
-        .await
-        .unwrap();
+    let frame = execute(ctx, catalogs, sql).await.unwrap();
+    assert_eq!(
+        frame
+            .schema()
+            .as_arrow()
+            .fields()
+            .iter()
+            .map(|field| (
+                field.name().clone(),
+                field.data_type().clone(),
+                field.is_nullable()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("info_name".to_string(), DataType::Utf8, false),
+            ("info_value".to_string(), DataType::Utf8, false),
+        ],
+        "{sql}"
+    );
+    let batches = frame.collect().await.unwrap();
     let mut rows = Vec::new();
     for batch in &batches {
         let names = batch
@@ -294,25 +308,6 @@ async fn describe_tokenizer_comment_failures_keep_full_parse_messages() {
 }
 
 #[tokio::test]
-async fn describe_non_table_and_unclosed_comment_keep_tokenizer_errors() {
-    let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
-    for (sql, expected) in [
-        (
-            "/* c */ DESCRIBE NAMESPACE mem.dsns1 'x",
-            "SQL error: TokenizerError(\"Unterminated string literal at Line: 1, Column: 38\")",
-        ),
-        (
-            "/* c DESCRIBE mem.dsns1.t1 'x",
-            "SQL error: TokenizerError(\"Unexpected EOF while in a multi-line comment at Line: 1, Column: 30\")",
-        ),
-    ] {
-        let error = execute(&ctx, &catalogs, sql).await.unwrap_err();
-        assert_eq!(error.to_string(), expected, "{sql}");
-    }
-}
-
-#[tokio::test]
 async fn describe_table_parser_leaves_non_table_forms_alone() {
     for sql in [
         "DESCRIBE EXTENDED",
@@ -323,6 +318,7 @@ async fn describe_table_parser_leaves_non_table_forms_alone() {
         "DESCRIBE ice.sales.t1 AS JSON",
         "DESCRIBE FUNCTION upper",
         "DESCRIBE QUERY SELECT 1",
+        "DESCRIBE ice.sales.t1.snapshots",
         "SELECT 1",
     ] {
         assert!(

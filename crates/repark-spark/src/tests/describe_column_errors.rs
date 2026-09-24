@@ -195,12 +195,26 @@ async fn describe_column_rows(
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Vec<(String, String)> {
-    let batches = execute(ctx, catalogs, sql)
-        .await
-        .unwrap()
-        .collect()
-        .await
-        .unwrap();
+    let frame = execute(ctx, catalogs, sql).await.unwrap();
+    assert_eq!(
+        frame
+            .schema()
+            .as_arrow()
+            .fields()
+            .iter()
+            .map(|field| (
+                field.name().clone(),
+                field.data_type().clone(),
+                field.is_nullable()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("info_name".to_string(), DataType::Utf8, false),
+            ("info_value".to_string(), DataType::Utf8, false),
+        ],
+        "{sql}"
+    );
+    let batches = frame.collect().await.unwrap();
     let mut rows = Vec::new();
     for batch in batches {
         let names = batch
@@ -868,17 +882,4 @@ async fn session_col_view_missing_column_returns_spark_unresolved_column_error()
         &unresolved_column_without_suggestion_error("nope"),
     )
     .await;
-}
-
-#[tokio::test]
-async fn session_describe_view_without_column_returns_rows() {
-    let warehouse = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&warehouse).await;
-    execute(&ctx, &catalogs, "CREATE VIEW ice.sales.v AS SELECT 1 AS id")
-        .await
-        .unwrap();
-    assert_eq!(
-        describe_column_rows(&ctx, &catalogs, "DESCRIBE ice.sales.v").await,
-        vec![("id".to_string(), "int".to_string())]
-    );
 }
