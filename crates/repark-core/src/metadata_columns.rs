@@ -293,10 +293,13 @@ impl RewriteMetadataColumns {
         self.rewrites.iter().find(|entry| &entry.original == name)
     }
 
-    fn by_alias(&self, ident: &Ident) -> Option<&Rewrite> {
+    fn rewrite_for_relation(&self, relation: &TableFactor) -> Option<&Rewrite> {
+        let TableFactor::Table { name, .. } = relation else {
+            return None;
+        };
         self.rewrites
             .iter()
-            .find(|entry| ident_eq(ident, &entry.alias.value))
+            .find(|entry| &entry.original == name || &entry.replacement == name)
     }
 }
 
@@ -400,26 +403,19 @@ impl RewriteMetadataColumns {
     }
 
     fn qualified_rewrite(&self, select: &Select, qualifier: &Ident) -> Option<(&Rewrite, Ident)> {
-        let aliased = select
-            .from
-            .iter()
-            .flat_map(|from| {
-                std::iter::once(&from.relation).chain(from.joins.iter().map(|join| &join.relation))
-            })
-            .find_map(|relation| match relation {
-                TableFactor::Table {
-                    name,
-                    alias: Some(table_alias),
-                    ..
-                } if ident_eq(qualifier, &table_alias.name.value) => Some(self.find(name)),
-                _ => None,
-            });
-        match aliased {
-            Some(entry) => entry.map(|entry| (entry, qualifier.clone())),
-            None => self
-                .by_alias(qualifier)
-                .map(|entry| (entry, entry.alias.clone())),
-        }
+        let relation = select_relations(select).find(|relation| {
+            written_qualifier(relation).is_some_and(|written| ident_eq(qualifier, &written.value))
+        })?;
+        let entry = self.rewrite_for_relation(relation)?;
+        let aliased = matches!(relation, TableFactor::Table { alias: Some(_), .. });
+        Some((
+            entry,
+            if aliased {
+                qualifier.clone()
+            } else {
+                entry.alias.clone()
+            },
+        ))
     }
 
     fn rewrite_input_file_names(&self, select: &mut Select) {
@@ -479,30 +475,11 @@ impl RewriteMetadataColumns {
         if !from.joins.is_empty() {
             return None;
         }
-        match &from.relation {
-            TableFactor::Table { name, alias, .. } => self.find(name).or_else(|| {
-                alias
-                    .as_ref()
-                    .and_then(|table_alias| self.by_alias(&table_alias.name))
-            }),
-            _ => None,
-        }
+        self.rewrite_for_relation(&from.relation)
     }
 
     fn select_touches_rewrite(&self, select: &Select) -> bool {
-        select.from.iter().any(|from| {
-            let mut relations = vec![&from.relation];
-            relations.extend(from.joins.iter().map(|join| &join.relation));
-            relations.into_iter().any(|relation| match relation {
-                TableFactor::Table { name, alias, .. } => {
-                    self.find(name).is_some()
-                        || alias
-                            .as_ref()
-                            .is_some_and(|table_alias| self.by_alias(&table_alias.name).is_some())
-                }
-                _ => false,
-            })
-        })
+        select_relations(select).any(|relation| self.rewrite_for_relation(relation).is_some())
     }
 }
 
@@ -543,6 +520,27 @@ impl VisitorMut for InputFileNameCalls<'_> {
             self.blocked -= 1;
         }
         ControlFlow::Continue(())
+    }
+}
+
+fn select_relations(select: &Select) -> impl Iterator<Item = &TableFactor> {
+    select.from.iter().flat_map(|from| {
+        std::iter::once(&from.relation).chain(from.joins.iter().map(|join| &join.relation))
+    })
+}
+
+fn written_qualifier(relation: &TableFactor) -> Option<Ident> {
+    match relation {
+        TableFactor::Table {
+            alias: Some(table_alias),
+            ..
+        }
+        | TableFactor::Derived {
+            alias: Some(table_alias),
+            ..
+        } => Some(table_alias.name.clone()),
+        TableFactor::Table { name, .. } => last_ident(name),
+        _ => None,
     }
 }
 

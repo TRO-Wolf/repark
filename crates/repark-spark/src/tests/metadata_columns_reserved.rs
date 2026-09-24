@@ -877,10 +877,7 @@ async fn qualified_wildcard_near_misses_keep_their_answers() {
         (
             "M2",
             "SELECT t.* FROM ice.ns.t x WHERE x._spec_id = 0 ORDER BY id",
-            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function \
-             parameter with name `id` cannot be resolved. Did you mean one of the following? \
-             [`id`, `data`, `cat`, `_file`, `_pos`, `_spec_id`, `_partition`, `_deleted`]. \
-             SQLSTATE: 42703",
+            "Error during planning: Invalid qualifier t",
         ),
     ] {
         assert_eq!(plan_error(&session, sql).await, expected, "{row}: {sql}");
