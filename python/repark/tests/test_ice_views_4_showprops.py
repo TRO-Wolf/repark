@@ -301,7 +301,7 @@ def test_show_tblproperties_requires_a_name(spark: ReparkSession) -> None:
 
 
 def test_unterminated_key_falls_through_to_the_tokenizer_refusal(spark: ReparkSession) -> None:
-    """Near-miss f — an untokenizable tail falls through; TokenizerError text stays unpinned."""
+    """Near-miss f — an unterminated key falls through to the front-door tokenizer refusal."""
     spark.sql("CREATE VIEW sc.ns.v TBLPROPERTIES ('k'='v') AS SELECT id FROM sc.ns.t")
     with pytest.raises(ParseException) as caught:
         spark.sql("SHOW TBLPROPERTIES sc.ns.v ('k")
