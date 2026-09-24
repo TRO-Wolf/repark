@@ -219,7 +219,7 @@ async fn assert_swept(session: &ReparkSession, scan: &Path, orphan: &Path) {
     )
     .await
     .expect("no table's metadata lies on the path or above it");
-    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert_eq!(listed, vec![format!("file:{}", orphan.display())]);
     assert!(!orphan.exists());
 }
 

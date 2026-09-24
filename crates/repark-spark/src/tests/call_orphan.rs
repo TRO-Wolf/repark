@@ -1,6 +1,7 @@
 //! Pins the destructive `CALL system.remove_orphan_files` surface and its safety defaults.
 
 use super::super::*;
+use super::call_orphan_scope::{call_rows, ctas, fallback_session, plant, register_file_list};
 use super::common::*;
 
 /// The procedure executes with an explicit cutoff and returns its result schema.
@@ -125,7 +126,7 @@ async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
     assert_eq!(batch.schema().field(0).data_type(), &DataType::Utf8);
     assert!(!batch.schema().field(0).is_nullable());
 
-    let listed: Vec<String> = {
+    let mut listed: Vec<String> = {
         let column = batch
             .column(0)
             .as_any()
@@ -136,12 +137,16 @@ async fn call_remove_orphan_files_dry_run_lists_without_deleting() {
             .collect()
     };
     assert_eq!(listed.len(), 2, "one row per orphan, got {listed:?}");
-    for name in &planted {
-        assert!(
-            listed.iter().any(|location| location.ends_with(name)),
-            "dry run must list {name}, got {listed:?}"
-        );
-    }
+    listed.sort();
+    let mut expected: Vec<String> = planted
+        .iter()
+        .map(|name| format!("file:{}", table_dir.join("data").join(name).display()))
+        .collect();
+    expected.sort();
+    assert_eq!(
+        listed, expected,
+        "the dry run lists each orphan in its file: form"
+    );
 
     assert_eq!(
         files_under(&table_dir),
@@ -192,16 +197,16 @@ async fn call_remove_orphan_files_armed_deletes_orphans_and_nothing_else() {
     )
     .await
     .expect("armed CALL");
+    let mut reported = orphan_locations(&result.collect().await.expect("collect"));
+    reported.sort();
+    let mut expected: Vec<String> = planted
+        .iter()
+        .map(|name| format!("file:{}", table_dir.join("data").join(name).display()))
+        .collect();
+    expected.sort();
     assert_eq!(
-        result
-            .collect()
-            .await
-            .expect("collect")
-            .iter()
-            .map(datafusion::arrow::array::RecordBatch::num_rows)
-            .sum::<usize>(),
-        3,
-        "three orphans reported"
+        reported, expected,
+        "three orphans reported in their file: form"
     );
 
     let after = files_under(&table_dir);
@@ -265,9 +270,10 @@ async fn call_remove_orphan_files_reads_location_positionally() {
         1,
         "the sweep lists only what `location` covers, got {locations:?}"
     );
-    assert!(
-        locations[0].contains("/sub/"),
-        "the listed orphan sits under `location`, got {locations:?}"
+    assert_eq!(
+        locations,
+        vec![format!("file:{}", inside.display())],
+        "the listed orphan sits under `location`"
     );
     assert!(
         !inside.exists(),
@@ -310,9 +316,13 @@ async fn call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_defaul
     let batches = result.collect().await.expect("collect orphan result");
     let locations = orphan_locations(&batches);
     assert_eq!(locations.len(), 1, "one row, got {locations:?}");
-    assert!(
-        locations[0].ends_with("orphan-old.parquet"),
-        "the row must be the 10-day-old orphan, got {locations:?}"
+    assert_eq!(
+        locations,
+        vec![format!(
+            "file:{}",
+            data_dir.join("orphan-old.parquet").display()
+        )],
+        "the row must be the 10-day-old orphan"
     );
 
     let after = files_under(&table_dir);
@@ -895,4 +905,96 @@ async fn call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way() {
         );
         assert_orphan_s3_tables_refusal(&err, "ns.t");
     }
+}
+
+#[test]
+fn call_remove_orphan_files_qualifies_only_a_location_starting_with_slash() {
+    use crate::call::remove_orphan_files::qualify_local_path;
+    for (location, qualified) in [
+        ("/tmp/a", "file:/tmp/a"),
+        ("/var/a", "file:/var/a"),
+        ("/", "file:/"),
+        ("//host/a", "file://host/a"),
+        ("/tmp/../a/", "file:/tmp/../a/"),
+    ] {
+        assert_eq!(qualify_local_path(location), qualified);
+    }
+    for unchanged in [
+        "file:/tmp/a",
+        "file:///tmp/a",
+        "s3://b/a",
+        "memory:/a",
+        "a/relative",
+        "",
+        "C:\\tmp\\a",
+        "C:/tmp/a",
+        "\\\\host\\a",
+        " /tmp/a",
+        "./a",
+    ] {
+        assert_eq!(qualify_local_path(unchanged), unchanged);
+    }
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locations() {
+    use crate::call::remove_orphan_files::listed_orphan_dataframe;
+    let cases = [
+        ("/tmp/a/x.parquet", "file:/tmp/a/x.parquet"),
+        ("s3://b/k.parquet", "s3://b/k.parquet"),
+        ("file:/tmp/y.parquet", "file:/tmp/y.parquet"),
+        ("file:///tmp/v.parquet", "file:///tmp/v.parquet"),
+        ("memory:/m.parquet", "memory:/m.parquet"),
+        ("rel/z.parquet", "rel/z.parquet"),
+        ("", ""),
+        ("C:\\w\\d.parquet", "C:\\w\\d.parquet"),
+        ("C:/w/d.parquet", "C:/w/d.parquet"),
+        ("\\\\srv\\share\\d.parquet", "\\\\srv\\share\\d.parquet"),
+    ];
+    let locations: Vec<String> = cases.iter().map(|(input, _)| input.to_string()).collect();
+    let batches = listed_orphan_dataframe(&SessionContext::new(), &locations)
+        .expect("listing rows")
+        .collect()
+        .await
+        .expect("collect listing rows");
+    let field = Field::new("orphan_file_location", DataType::Utf8, false);
+    assert_eq!(batches[0].schema().as_ref(), &Schema::new(vec![field]));
+    let expected: Vec<&str> = cases.iter().map(|(_, output)| *output).collect();
+    assert_eq!(orphan_locations(&batches), expected);
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(table => 'ns.t', dry_run => false)",
+    )
+    .await
+    .expect("armed listing");
+    assert_eq!(listed, vec![format!("file:{}", orphan.display())]);
+    assert!(!orphan.exists());
+}
+
+#[tokio::test]
+async fn call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified() {
+    let warehouse = TempDir::new().unwrap();
+    let session = fallback_session(&warehouse).await;
+    let table_dir = ctas(&session, &warehouse, "t").await;
+    let orphan = plant(&table_dir, "orphan-file.parquet", 10);
+    register_file_list(&session, &[(orphan.display().to_string(), 0)]).await;
+
+    let listed = call_rows(
+        &session,
+        "CALL ice.system.remove_orphan_files(\
+             table => 'ns.t', dry_run => false, file_list_view => 'v')",
+    )
+    .await
+    .expect("armed view sweep");
+    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert!(!orphan.exists());
 }

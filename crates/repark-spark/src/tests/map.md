@@ -1034,6 +1034,25 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   equality-delete pin exists here.
   pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
+  **R5 (2026-09-24):** `call_remove_orphan_files_qualifies_only_a_location_starting_with_slash` pins
+  `/tmp/a`, `/var/a`, `/`, `//host/a` and `/tmp/../a/` to `file:` plus the string unchanged
+  (the literal leading-`/` rule, including its `//` boundary, with no normalisation) and its
+  near misses (`file:/`, `file:///`, `s3://`, `memory:/`, relative, `./a`, empty, `C:\tmp\a`,
+  `C:/tmp/a`, a UNC `\\host\a`, a leading space) unchanged;
+  `call_remove_orphan_files_listing_rows_qualify_only_slash_rooted_locations` pins the same rule
+  at the output rows: `listed_orphan_dataframe` over `/tmp/a/x.parquet`, `s3://`, `file:`,
+  `file:///`, `memory:/`, relative, empty, `C:\`, `C:/` and UNC locations answers the one non-nullable Utf8
+  `orphan_file_location` column with only the `/` row prefixed by `file:`, in input order; `call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`
+  pins the listing output `file:<path>` with the orphan deleted from disk;
+  `call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified` pins the view
+  branch's unqualified output. The listing assertions in `call_orphan_ancestor.rs`,
+  `call_orphan_cotenancy.rs` and `call_orphan_scope.rs` expect `file:<path>`, and
+  `call_remove_orphan_files_dry_run_lists_without_deleting` pins the `dry_run => true` rows
+  exactly as the sorted `file:<path>` strings of the planted orphans;
+  `call_remove_orphan_files_armed_deletes_orphans_and_nothing_else`,
+  `call_remove_orphan_files_reads_location_positionally` and
+  `call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default` pin their armed
+  rows the same exact way.
   **U1-MEM-LAYOUT-1 (2026-09-23):** the Q-55-6 safety guards stay green after the layout change. pins: u1-mem-layout-1/C-009
   **IPI-30 (2026-09-22):** Spark's defaults land — the bare call deletes with `older_than` at
   now minus 3 days (`call_remove_orphan_files_bare_call_deletes_with_sparks_three_day_default`),
@@ -1867,6 +1886,9 @@ above.
   **IPI-30 round 3 (2026-09-22):** the planned-frame pin asserts `dry_run => false` on the
   rendered orphan CALL — the `arguments` cell is what apply executes, so the printed
   spelling must not omit it.
+  **R5 (2026-09-24):** `apply_removes_orphan` parses the orphan step's JSON result and asserts
+  it equals `[{"orphan_file_location": "file:<stray>"}]` exactly, so a `file://` or bare
+  spelling goes red.
   pins: maint-policy-1/C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016,
   C-017, C-018, C-019
   pins: orphan-s3tables-1/C-003, C-004

@@ -290,7 +290,7 @@ async fn call_orphan_cotenancy_own_history_metadata_copy_is_swept() {
     )
     .await
     .expect("a copy of the table's own metadata is its own orphan");
-    assert_eq!(listed, vec![copy.display().to_string()]);
+    assert_eq!(listed, vec![format!("file:{}", copy.display())]);
     assert!(!copy.exists(), "the copy is deleted");
     assert!(Path::new(&history).exists(), "the logged file is kept");
     assert_eq!(ids(&session, "ice.ns.t").await, vec![1]);
@@ -313,7 +313,7 @@ async fn call_orphan_cotenancy_stray_non_metadata_file_is_swept() {
     )
     .await
     .expect("a stray file that is not named *.metadata.json is never probed");
-    assert_eq!(listed, vec![stray.display().to_string()]);
+    assert_eq!(listed, vec![format!("file:{}", stray.display())]);
     assert!(!stray.exists());
     assert_eq!(ids(&session, "ice.ns.t").await, vec![1]);
 }
@@ -335,7 +335,7 @@ async fn call_orphan_cotenancy_single_catalog_default_sweep_deletes_the_orphan()
     )
     .await
     .expect("a table alone on the warehouse sweeps its own directory");
-    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert_eq!(listed, vec![format!("file:{}", orphan.display())]);
     assert!(!orphan.exists());
     assert_eq!(ids(&session, "ice.ns.t").await, vec![1, 2]);
 }
@@ -463,7 +463,7 @@ async fn call_orphan_cotenancy_table_located_inside_another_table_sweeps_its_dat
     )
     .await
     .expect("a path inside the swept table's own location is sweepable");
-    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert_eq!(listed, vec![format!("file:{}", orphan.display())]);
     assert!(!orphan.exists());
     assert!(host_live.exists());
     assert_eq!(ids(&session, "ice.o.x").await, vec![2]);
@@ -702,7 +702,7 @@ async fn call_orphan_cotenancy_lone_table_data_dir_scan_deletes_the_orphan() {
     )
     .await
     .expect("a table's own data/ is sweepable");
-    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert_eq!(listed, vec![format!("file:{}", orphan.display())]);
     assert!(!orphan.exists());
     assert_eq!(ids(&session, "ice.ns.t").await, vec![1]);
 }
@@ -738,7 +738,7 @@ async fn call_orphan_cotenancy_host_table_data_dir_scan_ignores_a_table_nested_i
     )
     .await
     .expect("a table nested in the swept root writes no metadata into its metadata/");
-    assert_eq!(listed, vec![orphan.display().to_string()]);
+    assert_eq!(listed, vec![format!("file:{}", orphan.display())]);
     assert!(!orphan.exists());
     assert_eq!(walk(&nested_dir), nested_files);
     assert_eq!(ids(&session, "ice.a.t").await, vec![1]);

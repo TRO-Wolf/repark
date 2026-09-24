@@ -748,7 +748,7 @@ async fn call_remove_orphan_files_listing_path_resolves_an_aliased_location() {
         )
         .await
         .expect("armed listing runs");
-        assert_eq!(listed, vec![orphan_path.clone()], "{location}");
+        assert_eq!(listed, vec![format!("file:{orphan_path}")], "{location}");
         assert!(!orphan.exists(), "{location}: the orphan is deleted");
         assert!(live.exists(), "{location}: the live file is not an orphan");
         assert_eq!(live_rows(&session, "ns.t").await, 1, "{location}");
