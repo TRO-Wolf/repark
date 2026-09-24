@@ -25,7 +25,7 @@ impl ReparkSession {
         props: HashMap<String, String>,
     ) -> Result<Arc<dyn Catalog>> {
         let caches = caches_of(&self.catalogs);
-        repark_iceberg::catalog::memory_catalog_cached_with_props(warehouse, &caches, props)
+        repark_iceberg::catalog::memory_catalog_cached_with_props(warehouse, &caches, &props)
             .await
             .map_err(engine_err)
     }

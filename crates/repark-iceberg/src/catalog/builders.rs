@@ -64,12 +64,12 @@ pub async fn memory_catalog_cached(
         footer_cache = caches.footer_cache().is_some()
     )
 )]
-pub async fn memory_catalog_cached_with_props(
+pub async fn memory_catalog_cached_with_props<S: BuildHasher>(
     warehouse: &str,
     caches: &CatalogCaches,
-    props: HashMap<String, String>,
+    props: &HashMap<String, String, S>,
 ) -> Result<Arc<dyn Catalog>> {
-    memory_catalog_wired(warehouse, caches, props).await
+    memory_catalog_wired(warehouse, caches, clone_props(props)).await
 }
 
 pub(crate) async fn memory_catalog_wired(
