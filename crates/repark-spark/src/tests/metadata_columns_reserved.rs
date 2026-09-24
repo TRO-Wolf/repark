@@ -5,7 +5,7 @@ use tempfile::TempDir;
 
 use super::metadata_columns_deleted::{
     MOR, batches, bools, field_names, i64s, pairs_i64_bool, pairs_i64_i32, pairs_i64_i64,
-    pairs_i64_str, plan_error, run, session, strs,
+    pairs_i64_str, plan_error, run, seed, session, strs, triples_i64,
 };
 use repark_core::ReparkSession;
 
@@ -461,6 +461,7 @@ async fn reserved_word_positions_follow_spark() {
         "SELECT count(*) FROM ice.ns.ndel WHERE id > 0 AND _spec_id = 0",
     )
     .await;
+    assert_eq!(field_names(&rows), vec!["count(*)"], "B10");
     assert_eq!(i64s(&rows, 0), vec![2], "B10");
     assert_eq!(
         plan_error(&session, "SELECT _deleted(id) FROM ice.ns.ndel").await,
@@ -490,4 +491,290 @@ async fn reserved_word_positions_follow_spark() {
          appears in the SELECT clause satisfies this requirement",
         "B2"
     );
+}
+
+#[tokio::test]
+async fn reserved_name_join_positions() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed_values(
+        &session,
+        "ice.ns.ndel",
+        "id BIGINT, _deleted STRING",
+        "(1, 'u1'), (2, 'u2')",
+    )
+    .await;
+    seed_values(
+        &session,
+        "ice.ns.ndel2",
+        "id BIGINT, _deleted STRING",
+        "(2, 'u2'), (3, 'u3')",
+    )
+    .await;
+    seed_values(
+        &session,
+        "ice.ns.pl",
+        "id BIGINT, v STRING",
+        "(1, 'a'), (2, 'b')",
+    )
+    .await;
+    assert_eq!(
+        plan_error(
+            &session,
+            "SELECT id FROM ice.ns.ndel JOIN ice.ns.ndel2 USING (_deleted) ORDER BY id",
+        )
+        .await,
+        "Error during planning: [AMBIGUOUS_REFERENCE] Reference `id` is ambiguous, could be: \
+         [`ndel`.`id`, `ndel2`.`id`]. SQLSTATE: 42704",
+        "J4"
+    );
+    assert_eq!(
+        plan_error(
+            &session,
+            "SELECT ndel.id FROM ice.ns.ndel JOIN ice.ns.ndel2 USING (_deleted) ORDER BY 1",
+        )
+        .await,
+        reserved_name_collision("_deleted"),
+        "J4B"
+    );
+    for (row, sql, ids) in [
+        (
+            "J5",
+            "SELECT id FROM ice.ns.ndel JOIN ice.ns.pl USING (id) ORDER BY id",
+            vec![1, 2],
+        ),
+        (
+            "J7",
+            "SELECT id FROM ice.ns.ndel NATURAL JOIN ice.ns.ndel2 ORDER BY id",
+            vec![2],
+        ),
+        (
+            "J7B",
+            "SELECT ndel.id FROM ice.ns.ndel NATURAL JOIN ice.ns.ndel2 ORDER BY 1",
+            vec![2],
+        ),
+        (
+            "J8",
+            "SELECT pl.id FROM ice.ns.pl JOIN ice.ns.ndel ON pl.id = ndel.id ORDER BY 1",
+            vec![1, 2],
+        ),
+        (
+            "J9",
+            "SELECT pl.id FROM ice.ns.pl LEFT SEMI JOIN ice.ns.ndel ON pl.id = ndel.id ORDER BY 1",
+            vec![1, 2],
+        ),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(field_names(&rows), vec!["id"], "{row}: {sql}");
+        assert_eq!(i64s(&rows, 0), ids, "{row}: {sql}");
+    }
+    let rows = batches(
+        &session,
+        "SELECT * FROM ice.ns.ndel JOIN ice.ns.pl USING (id) ORDER BY id",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted", "v"], "J6");
+    assert_eq!(
+        triples_i64(&rows),
+        vec![
+            (1, "u1".to_string(), "a".to_string()),
+            (2, "u2".to_string(), "b".to_string()),
+        ],
+        "J6"
+    );
+    let rows = batches(
+        &session,
+        "SELECT pl.id, ndel._spec_id FROM ice.ns.pl JOIN ice.ns.ndel ON pl.id = ndel.id ORDER BY 1",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id", "_spec_id"], "J8M");
+    assert_eq!(pairs_i64_i32(&rows), vec![(1, 0), (2, 0)], "J8M");
+    assert_eq!(
+        plan_error(
+            &session,
+            "SELECT id, _spec_id FROM ice.ns.ndel JOIN ice.ns.pl USING (id) ORDER BY id",
+        )
+        .await,
+        "Error during planning: [AMBIGUOUS_REFERENCE] Reference `_spec_id` is ambiguous, could be: \
+         [`ndel`.`_spec_id`, `pl`.`_spec_id`]. SQLSTATE: 42704",
+        "J5M"
+    );
+    assert_eq!(
+        plan_error(
+            &session,
+            "SELECT *, ndel._spec_id FROM ice.ns.ndel JOIN ice.ns.pl USING (id) ORDER BY id",
+        )
+        .await,
+        "Error during planning: [ICE-MC-1] a metadata column (_file, _pos, _spec_id, _partition, \
+         _deleted) over a wildcard over more than one relation is not served; name the columns \
+         explicitly on a table relation",
+        "J6M"
+    );
+}
+
+#[tokio::test]
+async fn reserved_name_query_positions() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed_values(
+        &session,
+        "ice.ns.ndel",
+        "id BIGINT, _deleted STRING",
+        "(1, 'u1'), (2, 'u2')",
+    )
+    .await;
+    seed_values(
+        &session,
+        "ice.ns.pl",
+        "id BIGINT, v STRING",
+        "(1, 'a'), (2, 'b')",
+    )
+    .await;
+    for (row, sql) in [
+        (
+            "N1",
+            "SELECT _deleted, count(*) FROM ice.ns.ndel GROUP BY _deleted ORDER BY 1",
+        ),
+        (
+            "N2",
+            "SELECT id FROM ice.ns.ndel GROUP BY id HAVING max(_deleted) = 'u2' ORDER BY id",
+        ),
+        ("N3", "SELECT id FROM ice.ns.ndel ORDER BY _deleted"),
+        (
+            "N4",
+            "SELECT ndel.id FROM ice.ns.ndel JOIN ice.ns.pl ON ndel._deleted = pl.v ORDER BY 1",
+        ),
+        (
+            "N5",
+            "SELECT id, row_number() OVER (PARTITION BY _deleted ORDER BY id) FROM ice.ns.ndel \
+             ORDER BY id",
+        ),
+        (
+            "N6",
+            "SELECT id, rank() OVER (ORDER BY _deleted) FROM ice.ns.ndel ORDER BY id",
+        ),
+        (
+            "N7",
+            "SELECT id FROM ice.ns.pl WHERE v IN (SELECT _deleted FROM ice.ns.ndel) ORDER BY id",
+        ),
+        (
+            "N8",
+            "SELECT id FROM ice.ns.pl WHERE EXISTS \
+             (SELECT 1 FROM ice.ns.ndel WHERE ndel._deleted = 'u1') ORDER BY id",
+        ),
+        (
+            "N9",
+            "SELECT id, (SELECT max(_deleted) FROM ice.ns.ndel) FROM ice.ns.pl ORDER BY id",
+        ),
+        (
+            "N10",
+            "SELECT _deleted FROM ice.ns.ndel UNION ALL SELECT v FROM ice.ns.pl ORDER BY 1",
+        ),
+    ] {
+        assert_eq!(
+            plan_error(&session, sql).await,
+            reserved_name_collision("_deleted"),
+            "{row}: {sql}"
+        );
+    }
+    assert_eq!(
+        plan_error(
+            &session,
+            "SELECT id, e FROM ice.ns.ndel LATERAL VIEW explode(array(_deleted)) t AS e ORDER BY id",
+        )
+        .await,
+        "This feature is not implemented: LATERAL VIEWS",
+        "N11"
+    );
+    let rows = batches(&session, "SELECT t.* FROM ice.ns.ndel t ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "N12");
+    assert_eq!(
+        pairs_i64_str(&rows),
+        vec![(1, "u1".to_string()), (2, "u2".to_string())],
+        "N12"
+    );
+    assert_eq!(
+        plan_error(
+            &session,
+            "SELECT t.*, t._spec_id FROM ice.ns.ndel t ORDER BY id",
+        )
+        .await,
+        "Error during planning: Projections require unique expression names but the expression \
+         \"t._spec_id\" at position 4 and \"t._spec_id\" at position 6 have the same name. Consider \
+         aliasing (\"AS\") one of them.",
+        "N13"
+    );
+    let rows = batches(
+        &session,
+        "SELECT id FROM ice.ns.pl WHERE id IN (SELECT id FROM ice.ns.ndel) ORDER BY id",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id"], "N17");
+    assert_eq!(i64s(&rows, 0), vec![1, 2], "N17");
+    let rows = batches(
+        &session,
+        "SELECT id FROM ice.ns.ndel UNION ALL SELECT id FROM ice.ns.pl ORDER BY 1",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id"], "N18");
+    assert_eq!(i64s(&rows, 0), vec![1, 1, 2, 2], "N18");
+    let rows = batches(
+        &session,
+        "SELECT id, count(*) OVER (PARTITION BY id) FROM ice.ns.ndel WHERE _spec_id = 0 \
+         ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        field_names(&rows),
+        vec![
+            "id",
+            "count(*) PARTITION BY [ndel.id] ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING"
+        ],
+        "N19"
+    );
+    assert_eq!(pairs_i64_i64(&rows), vec![(1, 1), (2, 1)], "N19");
+}
+
+#[tokio::test]
+async fn qualified_wildcard_under_another_alias_expands_every_provider_field() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    let provider_fields = [
+        "id",
+        "data",
+        "cat",
+        "_file",
+        "_pos",
+        "_spec_id",
+        "_partition",
+        "_deleted",
+    ];
+    for (row, sql, extra) in [
+        (
+            "X1",
+            "SELECT x.*, x._pos AS p FROM ice.ns.t x ORDER BY id",
+            Some("p"),
+        ),
+        (
+            "X2",
+            "SELECT x.*, _spec_id AS s FROM ice.ns.t x ORDER BY id",
+            Some("s"),
+        ),
+        (
+            "X3",
+            "SELECT x.* FROM ice.ns.t x WHERE x._spec_id = 0 ORDER BY id",
+            None,
+        ),
+    ] {
+        let rows = batches(&session, sql).await;
+        let expected: Vec<&str> = provider_fields.iter().copied().chain(extra).collect();
+        assert_eq!(field_names(&rows), expected, "{row}: {sql}");
+        assert_eq!(i64s(&rows, 0), vec![1, 2, 3, 4], "{row}: {sql}");
+        assert_eq!(
+            bools(&rows, 7),
+            vec![true, false, false, false],
+            "{row}: {sql}"
+        );
+    }
 }

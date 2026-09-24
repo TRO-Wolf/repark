@@ -36,7 +36,7 @@ pub(super) async fn run(session: &ReparkSession, sql: &str) {
     session.sql(sql).await.unwrap().collect().await.unwrap();
 }
 
-async fn seed(session: &ReparkSession, table: &str, part: &str, props: &str) {
+pub(super) async fn seed(session: &ReparkSession, table: &str, part: &str, props: &str) {
     run(
         session,
         &format!(
@@ -179,7 +179,7 @@ fn pairs_bool_i64(batches: &[datafusion::arrow::record_batch::RecordBatch]) -> V
         .collect()
 }
 
-fn triples_i64(
+pub(super) fn triples_i64(
     batches: &[datafusion::arrow::record_batch::RecordBatch],
 ) -> Vec<(i64, String, String)> {
     i64s(batches, 0)

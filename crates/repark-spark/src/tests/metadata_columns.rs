@@ -588,20 +588,34 @@ async fn served_names_fold_and_composed_shapes_refuse() {
         "backtick `_pos` resolves exact"
     );
 
-    let aliased = batches(&session, "SELECT x._pos FROM ice.ns.t AS x").await;
-    let mut ordinals = i64s(&aliased, 0);
-    ordinals.sort_unstable();
-    assert_eq!(ordinals, vec![0, 0, 0], "compound ident through an alias");
+    let aliased = batches(
+        &session,
+        "SELECT x.id, x._pos FROM ice.ns.t AS x ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        field_names(&aliased),
+        vec!["id", "_pos"],
+        "compound ident through an alias"
+    );
+    assert_eq!(
+        pairs_i64(&aliased),
+        vec![(2, 0), (3, 0), (4, 0)],
+        "compound ident through an alias"
+    );
 
-    let quoted_deleted = batches(&session, "SELECT `_deleted` FROM ice.ns.t").await;
+    let quoted_deleted = batches(&session, "SELECT id, `_deleted` FROM ice.ns.t ORDER BY id").await;
     assert_eq!(
         field_names(&quoted_deleted),
-        vec!["_deleted"],
+        vec!["id", "_deleted"],
         "backtick `_deleted` resolves exact"
     );
     assert_eq!(
-        bools(&quoted_deleted, 0),
-        vec![false, false, false],
+        i64s(&quoted_deleted, 0)
+            .into_iter()
+            .zip(bools(&quoted_deleted, 1))
+            .collect::<Vec<_>>(),
+        vec![(2, false), (3, false), (4, false)],
         "backtick `_deleted` resolves exact"
     );
 
