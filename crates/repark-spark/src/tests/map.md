@@ -1022,7 +1022,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: ice-count-fold-1/C-003, C-005
 - [call_orphan.rs](call_orphan.rs) — orphan safety, cutoff, and fallback-root refusal pins.
   **R5 (2026-09-24):** `call_remove_orphan_files_qualifies_only_a_location_starting_with_slash` pins
-  `/tmp/a` to `file:/tmp/a` and its near misses (`file:/`, `file:///`, `s3://`, `memory:/`,
+  `/tmp/a`, `/var/a`, `/` and `//host/a` to `file:` plus the string unchanged (the literal
+  leading-`/` rule, including its `//` boundary) and its near misses (`file:/`, `file:///`, `s3://`, `memory:/`,
   relative, empty, `C:\tmp\a`, `C:/tmp/a`) unchanged; `call_remove_orphan_files_listing_prints_file_scheme_and_deletes_the_bare_path`
   pins the listing output `file:<path>` with the orphan deleted from disk;
   `call_remove_orphan_files_file_list_view_prints_the_bare_path_unqualified` pins the view

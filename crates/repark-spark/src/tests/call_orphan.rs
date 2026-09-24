@@ -901,7 +901,14 @@ async fn call_remove_orphan_files_on_s3_tables_dry_run_refuses_the_same_way() {
 #[test]
 fn call_remove_orphan_files_qualifies_only_a_location_starting_with_slash() {
     use crate::call::remove_orphan_files::qualify_local_path;
-    assert_eq!(qualify_local_path("/tmp/a"), "file:/tmp/a");
+    for (location, qualified) in [
+        ("/tmp/a", "file:/tmp/a"),
+        ("/var/a", "file:/var/a"),
+        ("/", "file:/"),
+        ("//host/a", "file://host/a"),
+    ] {
+        assert_eq!(qualify_local_path(location), qualified);
+    }
     for unchanged in [
         "file:/tmp/a",
         "file:///tmp/a",
