@@ -117,7 +117,11 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   because `LogicalPlanBuilder::scan` (DataFusion 54.1) inlines a view provider
   that carries a plan whenever no filters are attached, which is how the SQL
   planner builds scans; `temp_view_column_comments` feeds DESCRIBE. PR6b3b module unit tests pin
-  the cycle-walk budget and the inlined-reference walk.
+  the cycle-walk budget and the inlined-reference walk. Each scan runs on
+  `repark_core::column_resolution::on_grown_stack_with` (a nested temp-view chain re-plans
+  through the physical planner at every level, about 95 KiB of debug stack per level),
+  with `read.rs`'s `VIEW_EXPANSION_STACK_RED_ZONE` (1 MiB) and
+  `VIEW_EXPANSION_STACK_SEGMENT` (8 MiB), so a 100-level chain reads on the caller's stack.
   pins: ice-views-1/C-018
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under the stored

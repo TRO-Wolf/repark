@@ -799,5 +799,7 @@ fn direct_tables(statement: &Statement) -> Vec<(String, TableReference)> {
 mod fold;
 mod stack;
 
+pub use stack::{GrownStack, on_grown_stack_with};
+
 #[cfg(test)]
 mod tests;

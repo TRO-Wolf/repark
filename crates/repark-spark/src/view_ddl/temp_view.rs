@@ -14,10 +14,12 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::TableReference;
 use iceberg::NamespaceIdent;
 use repark_common::spark_error;
+use repark_core::column_resolution::on_grown_stack_with;
 use repark_core::{CatalogRegistry, TempViewSession};
 
 use crate::view_ddl::read::{
-    MAX_VIEW_EXPANSION_DEPTH, TempHomes, nested_depth_refusal, plan_prepared_body,
+    MAX_VIEW_EXPANSION_DEPTH, TempHomes, VIEW_EXPANSION_STACK_RED_ZONE,
+    VIEW_EXPANSION_STACK_SEGMENT, nested_depth_refusal, plan_prepared_body,
     prepare_view_body_sql_with, refuse_write_query_body,
 };
 
@@ -76,6 +78,23 @@ impl TableProvider for ReplanningTempView {
     }
 
     async fn scan(
+        &self,
+        state: &dyn Session,
+        projection: Option<&Vec<usize>>,
+        filters: &[Expr],
+        limit: Option<usize>,
+    ) -> Result<Arc<dyn ExecutionPlan>> {
+        on_grown_stack_with(
+            VIEW_EXPANSION_STACK_RED_ZONE,
+            VIEW_EXPANSION_STACK_SEGMENT,
+            self.scan_replanned(state, projection, filters, limit),
+        )
+        .await
+    }
+}
+
+impl ReplanningTempView {
+    async fn scan_replanned(
         &self,
         state: &dyn Session,
         projection: Option<&Vec<usize>>,

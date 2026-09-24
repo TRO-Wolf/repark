@@ -24,6 +24,8 @@ use crate::catalog_ops::name_parts;
 use crate::time_travel::{PinnedViews, prepare_time_travel_sql, sql_has_time_travel};
 
 pub(crate) const MAX_VIEW_EXPANSION_DEPTH: usize = 100;
+pub(crate) const VIEW_EXPANSION_STACK_RED_ZONE: usize = 1024 * 1024;
+pub(crate) const VIEW_EXPANSION_STACK_SEGMENT: usize = 8 * 1024 * 1024;
 pub(crate) const VIEW_SUBQUERY_ALIAS: &str = "_repark_view";
 
 pub(crate) struct ViewSchemaProvider {

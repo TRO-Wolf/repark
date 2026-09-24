@@ -681,6 +681,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   queries + their set-operation height + open expressions + open table factors, times
   32 KiB, plus 256 KiB) and `GrownStack`, a future whose every poll runs under
   `stacker::maybe_grow`. pins: ice-mixed-case-1/C-022
+  **IPI-40 PR6 (2026-09-24):** `on_grown_stack_with(red_zone, segment, future)` takes the
+  red zone and the segment size apart (`on_grown_stack` passes one value for both) and is
+  public through `column_resolution`, for repark-spark's re-planning temp-view scan (a
+  `lib.rs` re-export would pass its 155-line ceiling). pins: ice-views-1/C-018
 - `column_resolution/tests.rs` — the fold's unit battery (statement cells, fragment
   scoping, ambiguity shape, backticked exact under `true`, DataFrame filter alias
   binding). Split from `column_resolution.rs` under the file-size gate.
