@@ -849,11 +849,10 @@ fn assert_parse_syntax_error(error: &DataFusionError, sql: &str) {
     let ParserError::ParserError(message) = inner.as_ref() else {
         panic!("{sql}: expected ParserError, got {inner:?}");
     };
-    assert!(
-        message.starts_with("[PARSE_SYNTAX_ERROR] "),
-        "{sql}: {message}"
-    );
+    assert_eq!(message, MULTI_STATEMENT_MESSAGE, "{sql}");
 }
+
+const MULTI_STATEMENT_MESSAGE: &str = "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported (Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or comment after that statement is allowed. SQLSTATE: 42601";
 
 #[tokio::test]
 async fn temp_view_statements_with_a_trailing_statement_refuse_as_the_catalog_does() {
@@ -899,6 +898,8 @@ async fn temp_view_statements_with_a_trailing_statement_refuse_as_the_catalog_do
             std::mem::discriminant(&catalog),
             "{sql}: {temp:?} vs {catalog:?}"
         );
+        assert_parse_syntax_error(&temp, sql);
+        assert_parse_syntax_error(&catalog, &catalog_sql);
     }
     assert!(stub.dropped().is_empty());
     for sql in [

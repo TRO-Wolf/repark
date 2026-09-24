@@ -439,12 +439,28 @@ def test_a_ninety_nine_view_dataframe_chain_reads(spark: ReparkSession) -> None:
     assert spark.table("f99").collect() == [Row(id=1)]
 
 
+MULTI_STATEMENT_MESSAGE = (
+    "[PARSE_SYNTAX_ERROR] Syntax error: multiple SQL statements in one call are not supported "
+    "(Spark parity). Only a single statement is accepted; a trailing semicolon, whitespace, or "
+    "comment after that statement is allowed. SQLSTATE: 42601"
+)
+
+
+def _unquoted_segment_refusal(name: str, segment: str) -> str:
+    return (
+        f"invalid table identifier {name!r}: invalid unquoted segment {segment!r} "
+        "(expected multipart name like catalog.db.table; SQL fragments are not allowed)"
+    )
+
+
 def _trailing_statement_refusal(spark: ReparkSession, statement: str) -> ParseException:
     """Run a statement followed by a second one; it must refuse as a parse error."""
     with pytest.raises(ParseException) as caught:
         spark.sql(statement).collect()
     assert type(caught.value) is ParseException
+    assert str(caught.value) == MULTI_STATEMENT_MESSAGE
     assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert caught.value.getSqlState() == "42601"
     return caught.value
 
 
@@ -501,6 +517,11 @@ def test_drop_with_a_trailing_statement_keeps_the_temp_view(
     catalog = _analysis_refusal(spark, statement.replace("tv", "sc.ns.t"))
     assert type(temp) is type(catalog)
     assert temp.getCondition() == catalog.getCondition()
+    assert str(temp) == _unquoted_segment_refusal("tv; SELECT 1", "tv; SELECT 1")
+    assert str(catalog) == _unquoted_segment_refusal("sc.ns.t; SELECT 1", "t; SELECT 1")
+    for refusal in (temp, catalog):
+        assert refusal.getCondition() == UNSTRUCTURED_CONDITION
+        assert refusal.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert _rows(spark.sql("SHOW VIEWS")) == [["", "tv", True]]
     spark.sql("DROP VIEW tv;")
     assert _rows(spark.sql("SHOW VIEWS")) == []
@@ -510,7 +531,10 @@ def test_create_temp_view_with_a_trailing_statement_registers_nothing(
     spark: ReparkSession,
 ) -> None:
     """A two-statement body refuses at CREATE and leaves no view; a trailing semicolon registers."""
-    _analysis_refusal(spark, "CREATE TEMPORARY VIEW vm AS SELECT 1 AS id; SELECT 2")
+    refusal = _analysis_refusal(spark, "CREATE TEMPORARY VIEW vm AS SELECT 1 AS id; SELECT 2")
+    assert str(refusal) == f"{PLAN}a stored view body must hold exactly one statement"
+    assert refusal.getCondition() == UNSTRUCTURED_CONDITION
+    assert refusal.getSqlState() == UNSTRUCTURED_SQLSTATE
     assert _rows(spark.sql("SHOW VIEWS")) == []
     spark.sql("CREATE TEMPORARY VIEW vs AS SELECT 1 AS id;")
     assert _rows(spark.sql("SELECT * FROM vs")) == [[1]]
