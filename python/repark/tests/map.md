@@ -3077,16 +3077,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `/*` inside a double-quoted string, a backticked alias, backslash-escaped single and double
   quotes, and a closed comment after a `\r`-ended line comment.
   pins: wo-c10/C-002
-  **WO-A4 (2026-09-23):** INSERT BY NAME with a column list and multi-statement SQL pin the
-  bare bracketed parser payload, `ParseException`, `PARSE_SYNTAX_ERROR`, and SQLSTATE `42601`.
   **WO-A4 (2026-09-23):** INSERT BY NAME with a column list pins the bare bracketed parser
   payload, `ParseException`, `PARSE_SYNTAX_ERROR`, and SQLSTATE `42601`.
   pins: wo-c3/C-004
   Multi-statement SQL pins the same facade contract.
   pins: wo-c5/C-001
-  **WO-A4 (2026-09-23):** the bracketed-payload rendering supersedes the wrapper text above:
-  INSERT BY NAME with a column list and multi-statement SQL compare `str(exc)` with the bare
-  bracketed parser message. **WO-A8 (2026-09-23):** the six unclosed bracketed comments the
+  Both compare `str(exc)` with the bare bracketed parser message, superseding the WO-C3 and
+  WO-C5 wrapper text above. **WO-A8 (2026-09-23):** the six unclosed bracketed comments the
   router front door (WO-C10) refuses compare `str(exc)` with the bare
   `UNCLOSED_BRACKETED_COMMENT` message.
 - `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
@@ -5101,11 +5098,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `pyspark`→`repark.spark` smoke, top-level shim identity.
 - [test_catalog_surface.py](test_catalog_surface.py) — **G-INT INT-004** (historical bullet; current surface is the
   R-CURCAT entry above). Pins that still matter: `tableExists` / camelCase aliases /
-  `clearCache`/`dropTempView`. Rowed listing: `SHOW TABLES IN` answers Spark's shape and
-  `SHOW TABLE EXTENDED IN` pins one complete four-column metadata row
+  `clearCache`/`dropTempView`.   Rowed listing: `SHOW TABLES IN` answers Spark's shape
   ([ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in--is-unimplemented--fixed-2026-09-20),
   fixed 2026-09-20) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
+  **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `SHOW TABLE EXTENDED IN` pins one complete
+  four-column metadata row.
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_catalog_surface_1.py` + `facade_catalog_oracle.json` — **CATALOG-SURFACE-1
   (2026-09-14):** the thirteen-name second half of `Catalog`, driven by the run-15b
