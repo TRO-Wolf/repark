@@ -280,6 +280,19 @@ async fn show_create_view_exists_failure_keeps_iceberg_identity() {
     });
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
     let sql = "SHOW CREATE TABLE fault.sales.v2";
+    let intercepted = crate::show_create::try_show_create_intercept(
+        &ctx,
+        &catalogs,
+        sql,
+        &crate::write_options::StatementWriteOptions::default(),
+    )
+    .await
+    .expect("the intercept must answer an is_view failure")
+    .expect_err("an is_view failure must refuse");
+    assert_eq!(
+        intercepted.to_string(),
+        "External error: Unexpected => injected view_exists failure"
+    );
     let error = execute(&ctx, &catalogs, sql).await.expect_err(sql);
     assert_eq!(
         error.to_string(),
