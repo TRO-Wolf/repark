@@ -97,6 +97,7 @@ struct Block {
     kind_from_type: Option<CatalogKind>,
     /// Passthrough builder properties (kind indicators consumed, `io-impl` dropped).
     props: HashMap<String, String>,
+    hadoop_type: bool,
 }
 
 /// Parse a Spark / repark config map into one [`CatalogSpec`] per configured catalog.
@@ -137,7 +138,7 @@ pub fn parse_catalog_specs<S: BuildHasher>(
                     )));
                 }
                 let block = blocks.entry(rest.to_string()).or_default();
-                if let Some(kind) = kind_from_bare_catalog_value(value) {
+                if let Some(kind) = crate::catalog_kind::kind_from_bare_catalog_value(value) {
                     block.kind_from_type = Some(kind);
                 }
             }
@@ -186,6 +187,7 @@ fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<
             );
         }
         "type" => {
+            block.hadoop_type = crate::catalog_kind::is_hadoop_type(value);
             block.kind_from_type =
                 Some(crate::catalog_kind::kind_from_type(value).ok_or_else(|| {
                     Error::Config(format!(
@@ -201,12 +203,6 @@ fn apply_prop(block: &mut Block, name: &str, prop: &str, value: &str) -> Result<
         }
     }
     Ok(())
-}
-
-/// Bare `spark.sql.catalog.<name> = <value>` kind resolution (jdbc/postgres class spellings).
-fn kind_from_bare_catalog_value(value: &str) -> Option<CatalogKind> {
-    crate::catalog_kind::kind_from_type(value)
-        .or_else(|| crate::catalog_kind::kind_from_catalog_impl(value))
 }
 
 impl Block {
@@ -256,7 +252,7 @@ impl Block {
             )));
         }
 
-        let mut props = self.props;
+        let mut props = crate::catalog_kind::with_type_naming(self.props, self.hadoop_type);
         if kind == CatalogKind::S3Tables {
             translate_s3tables_arn(&name, &mut props)?;
         }
@@ -303,6 +299,9 @@ fn translate_s3tables_arn(name: &str, props: &mut HashMap<String, String>) -> Re
         ))),
     }
 }
+
+#[cfg(test)]
+mod hadoop_naming_tests;
 
 #[cfg(test)]
 mod tests {

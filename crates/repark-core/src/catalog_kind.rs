@@ -1,4 +1,10 @@
+use std::collections::HashMap;
+
+use iceberg::memory::MEMORY_CATALOG_METADATA_NAMING;
+
 use crate::catalog_config::CatalogKind;
+
+const HADOOP_METADATA_NAMING: &str = "hadoop";
 
 pub(crate) fn kind_from_catalog_impl(value: &str) -> Option<CatalogKind> {
     let value = value.trim();
@@ -23,6 +29,26 @@ pub(crate) fn kind_from_type(value: &str) -> Option<CatalogKind> {
         "postgres" | "postgresql" | "jdbc" => Some(CatalogKind::Postgres),
         _ => None,
     }
+}
+
+pub(crate) fn kind_from_bare_catalog_value(value: &str) -> Option<CatalogKind> {
+    kind_from_type(value).or_else(|| kind_from_catalog_impl(value))
+}
+
+pub(crate) fn is_hadoop_type(value: &str) -> bool {
+    value.trim().eq_ignore_ascii_case("hadoop")
+}
+
+pub(crate) fn with_type_naming(
+    mut props: HashMap<String, String>,
+    hadoop_type: bool,
+) -> HashMap<String, String> {
+    if hadoop_type {
+        props
+            .entry(MEMORY_CATALOG_METADATA_NAMING.to_string())
+            .or_insert_with(|| HADOOP_METADATA_NAMING.to_string());
+    }
+    props
 }
 
 #[cfg(test)]
