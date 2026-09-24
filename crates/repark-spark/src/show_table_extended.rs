@@ -265,6 +265,10 @@ enum PartitionSpec {
 
 fn consume_partition_spec(parser: &mut Parser) -> Result<PartitionSpec> {
     if !parser.consume_token(&Token::LParen) {
+        let next = parser.peek_token().token;
+        if matches!(next, Token::Word(_)) {
+            return Err(syntax_error_near(&token_near(&next), Some("missing '('")));
+        }
         return Ok(PartitionSpec::Unclosed);
     }
     let mut valueless_key = None;

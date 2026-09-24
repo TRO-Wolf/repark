@@ -1452,7 +1452,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `identifier [= non-empty value run] {, ...}`; the first token that breaks the shape refuses
   near itself, EOF keeps end of input. **WO-A13 (2026-09-23):** once the spec and statement end parse, the
   first key without `= value` refuses `INVALID_SQL_SYNTAX.EMPTY_PARTITION_VALUE` / `42000` with the
-  key backticked as written (Spark 4.1.2).
+  key backticked as written (Spark 4.1.2). **WO-A15 (2026-09-24):** a word right after `PARTITION` refuses
+  near that word with `: missing '('`, as Spark 4.1.2 does.
   pins: wo-a1b/C-001
   See [tests/show_table_extended.rs](tests/show_table_extended.rs) for parser and end-to-end pins.
 - `spark_tree_string.rs` — **SHOW-TABLE-EXTENDED-1 (2026-09-23):** iterative Arrow-schema port

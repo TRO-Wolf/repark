@@ -811,3 +811,18 @@ async fn show_table_extended_residue_a15_extendedx_falls_through_to_show_variabl
         "SHOW [VARIABLE] is not supported unless information_schema is enabled",
     );
 }
+
+#[tokio::test]
+async fn show_table_extended_partition_word_without_parenthesis_reports_the_missing_parenthesis() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    seed_pc(&ctx, &catalogs).await;
+    for (spec, word) in [(" a=1", "a"), (" select", "select"), (" a", "a")] {
+        let sql = format!("{SHOW_TABLE_EXTENDED_PC} PARTITION{spec}");
+        let expected = format!(
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near '{word}': missing '('. SQLSTATE: 42601"
+        );
+        assert_scanner_refusal(&sql, &expected);
+        assert_end_to_end_refusal(&ctx, &catalogs, &sql, &expected).await;
+    }
+}

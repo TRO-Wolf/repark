@@ -1540,7 +1540,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   statement and PARTITION scanners has a pin against `spark-4.1.2-a15-measured.json`
   (`show_table_extended_scanner_arms_*`); `residue_a15_in_string`, `residue_a15_in_like` and
   `residue_a15_extendedx` guard RePark's current answers where the statement head differs from
-  Spark.
+  Spark. `PARTITION a=1`, `PARTITION select` and `PARTITION a` refuse near the word with
+  `: missing '('`.
   pins: wo-a1b/C-003
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
