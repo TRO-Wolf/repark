@@ -29,8 +29,7 @@
 
 {% macro repark__get_columns_in_relation_raw(relation) -%}
   {{ exceptions.raise_compiler_error(
-    "dbt-repark cannot use DESCRIBE EXTENDED for column metadata: it answers Arrow type
-     spellings (Utf8, Int32, Date32) and no table-detail block (divergence registry
+    "dbt-repark does not read DESCRIBE EXTENDED text for column metadata (divergence registry
      DBT-DESC-1). Call adapter.get_columns_in_relation instead, which reads the facade schema."
   ) }}
 {% endmacro %}
