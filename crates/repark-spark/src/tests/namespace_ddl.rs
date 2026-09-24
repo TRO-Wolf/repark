@@ -1,6 +1,29 @@
 /// `CREATE NAMESPACE` / `DROP NAMESPACE` against the catalog, with `IF [NOT] EXISTS` idempotency.
 use super::super::*;
 use super::common::*;
+use datafusion::arrow::array::AsArray;
+
+async fn describe_namespace_rows(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> Vec<(String, String)> {
+    let batches = execute(ctx, catalogs, sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    batches
+        .iter()
+        .flat_map(|batch| {
+            let names = batch.column(0).as_string::<i32>();
+            let values = batch.column(1).as_string::<i32>();
+            (0..batch.num_rows())
+                .map(move |row| (names.value(row).to_string(), values.value(row).to_string()))
+        })
+        .collect()
+}
 
 #[tokio::test]
 async fn create_and_drop_namespace() {
@@ -29,6 +52,233 @@ async fn create_and_drop_namespace() {
     execute(&ctx, &catalogs, "DROP NAMESPACE IF EXISTS ice.analytics")
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn alter_namespace_properties_update_catalog_and_describe() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(&ctx, &catalogs, "CREATE NAMESPACE ice.nsa")
+        .await
+        .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER NAMESPACE ice.nsa SET DBPROPERTIES ('b' = '2')",
+    )
+    .await
+    .unwrap();
+    let properties = catalogs["ice"]
+        .get_namespace(&NamespaceIdent::new("nsa".to_string()))
+        .await
+        .unwrap()
+        .properties()
+        .clone();
+    assert_eq!(properties.get("b").map(String::as_str), Some("2"));
+    assert_eq!(
+        describe_namespace_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.nsa").await,
+        vec![
+            ("Catalog Name".to_string(), "ice".to_string()),
+            ("Namespace Name".to_string(), "nsa".to_string()),
+            ("Properties".to_string(), "((b,2))".to_string()),
+        ]
+    );
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER NAMESPACE ice.nsa SET PROPERTIES ('z' = '9', 'a' = '1')",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        describe_namespace_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.nsa")
+            .await
+            .last(),
+        Some(&(
+            "Properties".to_string(),
+            "((a,1), (b,2), (z,9))".to_string()
+        ))
+    );
+    execute(&ctx, &catalogs, "CREATE NAMESPACE ice.nsorder")
+        .await
+        .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "ALTER NAMESPACE ice.nsorder SET PROPERTIES ('z' = '9', 'a' = '1')",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        describe_namespace_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.nsorder")
+            .await
+            .last(),
+        Some(&("Properties".to_string(), "((a,1), (z,9))".to_string()))
+    );
+}
+
+async fn namespace_properties(
+    catalogs: &CatalogRegistry,
+    namespace: &str,
+) -> HashMap<String, String> {
+    catalogs["ice"]
+        .get_namespace(&NamespaceIdent::new(namespace.to_string()))
+        .await
+        .unwrap()
+        .properties()
+        .clone()
+}
+
+#[tokio::test]
+async fn alter_namespace_on_a_missing_namespace_is_schema_not_found() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for sql in [
+        "ALTER NAMESPACE ice.nope SET DBPROPERTIES ('b' = '2')",
+        "ALTER NAMESPACE ice.nope SET PROPERTIES ('b' = '2')",
+        "ALTER DATABASE ice.nope SET DBPROPERTIES ('b' = '2')",
+    ] {
+        let error = execute(&ctx, &catalogs, sql).await.expect_err(sql);
+        assert!(matches!(error, DataFusionError::Plan(_)), "{sql}: {error}");
+        assert_eq!(
+            error.to_string(),
+            "Error during planning: [SCHEMA_NOT_FOUND] The schema `nope` cannot be found. \
+             Verify the spelling and correctness of the schema and catalog.\nIf you did not \
+             qualify the name with a catalog, verify the current_schema() output, or qualify the \
+             name with the correct catalog.\nTo tolerate the error on drop use DROP SCHEMA IF \
+             EXISTS. SQLSTATE: 42704",
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn alter_namespace_refuses_the_properties_spark_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(&ctx, &catalogs, "CREATE NAMESPACE ice.nsr")
+        .await
+        .unwrap();
+    let before = namespace_properties(&catalogs, "nsr").await;
+    let location = "[UNSUPPORTED_FEATURE.SET_NAMESPACE_PROPERTY] The feature is not supported: \
+                    location is a reserved namespace property, please use the LOCATION clause to \
+                    specify it. SQLSTATE: 0A000";
+    let owner = "[UNSUPPORTED_FEATURE.SET_NAMESPACE_PROPERTY] The feature is not supported: owner \
+                 is a reserved namespace property, it will be set to the current user. SQLSTATE: \
+                 0A000";
+    let duplicate = "[DUPLICATE_KEY] Found duplicate keys `a`. SQLSTATE: 23505";
+    let near = |token: &str| {
+        format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{token}'. SQLSTATE: 42601")
+    };
+    let cases = [
+        (
+            "ice.nsr SET DBPROPERTIES ('location' = '/x')",
+            location.to_string(),
+        ),
+        (
+            "ice.nsr SET DBPROPERTIES ('z' = '1', 'location' = '/x')",
+            location.to_string(),
+        ),
+        (
+            "ice.nope SET DBPROPERTIES ('location' = '/x')",
+            location.to_string(),
+        ),
+        (
+            "ice.nsr SET DBPROPERTIES ('owner' = 'bob')",
+            owner.to_string(),
+        ),
+        (
+            "ice.nsr SET PROPERTIES ('owner' = 'bob')",
+            owner.to_string(),
+        ),
+        (
+            "ice.nsr SET DBPROPERTIES ('owner' = '1', 'location' = '2')",
+            owner.to_string(),
+        ),
+        (
+            "ice.nsr SET DBPROPERTIES ('a' = '1', 'a' = '2')",
+            duplicate.to_string(),
+        ),
+        (
+            "ice.nsr SET DBPROPERTIES (a = '1', 'a' = '2')",
+            duplicate.to_string(),
+        ),
+        (
+            "ice.nsr SET DBPROPERTIES ('location' = '1', 'a' = '1', 'a' = '2')",
+            duplicate.to_string(),
+        ),
+        ("ice.nsr SET DBPROPERTIES ()", near(")")),
+        ("ice.nsr SET DBPROPERTIES ('w' = foo)", near("foo")),
+        ("ice.nsr SET DBPROPERTIES (1 = 'v')", near("1")),
+        ("ice.nsr SET DBPROPERTIES ('neg' = -1)", near("-")),
+        ("ice.nsr SET DBPROPERTIES ('nv' =)", near(")")),
+        (
+            "ice.nsr SET DBPROPERTIES ('k' = 'v'",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601"
+                .to_string(),
+        ),
+        (
+            "ice.nsr SET DBPROPERTIES ('k2' = 'v') extra",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'extra': extra input 'extra'. \
+             SQLSTATE: 42601"
+                .to_string(),
+        ),
+        (
+            "ice.nsr SET DBPROPERTIES ('nv')",
+            "SQL error: ParserError(\"Operation not allowed: Values must be specified for \
+             key(s): [nv].\")"
+                .to_string(),
+        ),
+    ];
+    for (tail, expected) in cases {
+        let sql = format!("ALTER NAMESPACE {tail}");
+        let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        let mapped = repark_core::engine_err(error);
+        let repark_common::Error::Parse(message) = &mapped else {
+            panic!("{sql}: expected a Parse error, got {mapped:?}");
+        };
+        assert_eq!(message, &expected, "{sql}");
+    }
+    assert_eq!(namespace_properties(&catalogs, "nsr").await, before);
+}
+
+#[tokio::test]
+async fn alter_namespace_accepts_the_property_shapes_spark_accepts() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    execute(&ctx, &catalogs, "CREATE NAMESPACE ice.nsp")
+        .await
+        .unwrap();
+    for tail in [
+        "SET DBPROPERTIES (wk = 'v')",
+        "SET DBPROPERTIES (a.b = 'v')",
+        "SET DBPROPERTIES (UpK = 'v')",
+        "SET DBPROPERTIES ('n' = 5, 'dv' = 1.5)",
+        "SET DBPROPERTIES ('t' = true, 'tu' = TRUE)",
+        "SET DBPROPERTIES (\"dq\" = \"v\")",
+        "SET DBPROPERTIES (nk 'v')",
+        "SET DBPROPERTIES ('LOCATION' = '/x')",
+        "SET DBPROPERTIES ('comment' = 'c')",
+    ] {
+        let sql = format!("ALTER NAMESPACE ice.nsp {tail}");
+        execute(&ctx, &catalogs, &sql)
+            .await
+            .unwrap_or_else(|error| panic!("{sql}: {error}"));
+    }
+    assert_eq!(
+        describe_namespace_rows(&ctx, &catalogs, "DESCRIBE NAMESPACE EXTENDED ice.nsp").await,
+        vec![
+            ("Catalog Name".to_string(), "ice".to_string()),
+            ("Namespace Name".to_string(), "nsp".to_string()),
+            ("Comment".to_string(), "c".to_string()),
+            (
+                "Properties".to_string(),
+                "((LOCATION,/x), (UpK,v), (a.b,v), (dq,v), (dv,1.5), (n,5), (nk,v), (t,true), \
+                 (tu,true), (wk,v))"
+                    .to_string()
+            ),
+        ]
+    );
 }
 
 /// WG-5 C-1: CREATE NAMESPACE LOCATION on a strict catalog lets a later CTAS land under that path.

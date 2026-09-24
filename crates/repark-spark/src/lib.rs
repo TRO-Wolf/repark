@@ -119,8 +119,8 @@ pub(crate) use insert_overwrite::execute_insert_overwrite;
 #[cfg(test)]
 pub(crate) use insert_overwrite::{logical_plan_has_unsafe_cast, tighten_batch_nullability};
 pub(crate) use namespace_ddl::{
-    execute_create_namespace, execute_drop_namespace, execute_drop_table,
-    try_parse_create_namespace,
+    execute_alter_namespace, execute_create_namespace, execute_drop_namespace, execute_drop_table,
+    try_parse_alter_namespace, try_parse_create_namespace,
 };
 pub use normalize::dialect_for_executing_parse;
 pub(crate) use normalize::{

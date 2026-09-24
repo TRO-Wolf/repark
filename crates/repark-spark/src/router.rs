@@ -10,15 +10,15 @@ use repark_core::{CatalogRegistry, TempViewSession};
 
 use crate::{
     DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, column_move,
-    create_table, delete_target_object_name, describe_show, execute_append_with_options,
-    execute_create_namespace, execute_ctas, execute_drop_namespace, execute_drop_table,
-    execute_insert_overwrite, execute_truncate, insert_arity, merge, metadata_tables,
-    nested_column_ddl, object_name_from_table_with_joins, parse_single_normalized,
+    create_table, delete_target_object_name, describe_show, execute_alter_namespace,
+    execute_append_with_options, execute_create_namespace, execute_ctas, execute_drop_namespace,
+    execute_drop_table, execute_insert_overwrite, execute_truncate, insert_arity, merge,
+    metadata_tables, nested_column_ddl, object_name_from_table_with_joins, parse_single_normalized,
     passthrough_after_p11, ref_ddl, refuse_dml_subquery_predicate,
     refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
     refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, spark_ast,
-    starts_with_branch_or_tag_ddl, starts_with_merge, time_travel, try_parse_create_namespace, wap,
-    write_to_branch,
+    starts_with_branch_or_tag_ddl, starts_with_merge, time_travel, try_parse_alter_namespace,
+    try_parse_create_namespace, wap, write_to_branch,
 };
 
 mod comment_on_table;
@@ -825,6 +825,19 @@ async fn try_preparse_intercepts(
     // I6 residual — forms stock sqlparser still cannot model.
     if let Some(refused) = alter::refuse_unsupported_alter_sql(sql) {
         return Some(refused);
+    }
+    if let Some(refused) = crate::table_props_ddl::unset_tblproperties_if_refusal(sql) {
+        return Some(Err(refused));
+    }
+    if let Some(parsed) = try_parse_alter_namespace(sql) {
+        return Some(
+            match parsed.and_then(|ddl| parsed_ddl("ALTER NAMESPACE").map(|()| ddl)) {
+                Ok(alter_namespace) => {
+                    execute_alter_namespace(ctx, catalogs, alter_namespace).await
+                }
+                Err(error) => Err(error),
+            },
+        );
     }
     // CREATE NAMESPACE LOCATION/COMMENT/WITH properties: sqlparser cannot model those clauses.
     if let Some(parsed) = try_parse_create_namespace(sql) {

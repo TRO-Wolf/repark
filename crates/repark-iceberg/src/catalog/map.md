@@ -31,6 +31,9 @@ Source comments retain only API and safety contracts; implementation narration i
   pins: ice-drop-ns-1/C-007
   `schema_not_found_on_drop` is Spark's three-sentence `[SCHEMA_NOT_FOUND]` for a drop, shared
   by both doors (verification critic 2026-09-19). pins: ice-drop-ns-1/C-011
+  **WO U5 PR1 round 2 (2026-09-24):** the text is built by `schema_not_found(<quoted name>)`.
+  The drop form passes `` `catalog`.`ns` `` and ALTER NAMESPACE passes Spark's single-part
+  `` `ns` ``. pins: ice-nested-evo-1/C-030
 - `catalog_ops.rs` — `reregister_catalog_provider(ctx, catalog, name)`: the session
   `refresh_catalog_provider` escape hatch's engine-side adapter (full O(databases) rebuild via
   `rebuild_catalog_provider`). Hoisted MOVE-ONLY from v1 `repark-sql/src/catalog_ops.rs`; the

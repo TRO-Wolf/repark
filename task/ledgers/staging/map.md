@@ -189,7 +189,17 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   struct or map value struct gained a child (rating row V2-10d), and nested DDL on both doors
   (`CREATE TABLE` with nested columns, `ADD`/`RENAME`/`DROP COLUMN` on a nested path, the
   required-child refusal). Fork half F-NESTED-EVO-1 (fork PR #292). `risk_tier: high`.
-  Branch `fix/ice-nested-evo-1`.
+  Branch `fix/ice-nested-evo-1`. **WO U5 PR1 (2026-09-24):** nested TYPE promotion,
+  UNSET TBLPROPERTIES IF EXISTS, and namespace SET properties are recorded in C-024 through
+  C-028. Round 2 (2026-09-24) narrows C-027 to the per-pair rule and adds C-029 (nested path
+  resolution), C-030 (namespace property grammar and SCHEMA_NOT_FOUND) and C-031 (UNSET `IF`
+  without `EXISTS`). Round 3 (2026-09-24) adds C-032 (TINYINT/SMALLINT/CHAR/VARCHAR targets
+  decided before lowering), C-033 (parse-stage target refusals) and C-034 (C-027 narrowed to
+  the pinned Spark type names). The non-primitive target residue is recorded with Spark's text.
+  Round 4 (2026-09-24) widens C-033 to the sized STRING/BINARY/FLOAT(p,s)/DOUBLE(p,s)/
+  TIMESTAMP_NTZ/DATE/BOOLEAN targets, names C-032's pinned pairs, and adds C-035 (bare DECIMAL
+  as decimal(10,0) on the nested route) and C-036 (missing namespace as TABLE_OR_VIEW_NOT_FOUND),
+  with residues R-U5-DECIMAL-DEFAULT and R-U5-NS-LEAK.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

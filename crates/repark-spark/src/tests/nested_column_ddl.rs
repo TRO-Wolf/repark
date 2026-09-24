@@ -2,7 +2,7 @@ use super::super::*;
 use super::common::*;
 use datafusion::arrow::array::{Array, AsArray, RecordBatch};
 use datafusion::arrow::util::display::array_value_to_string;
-use iceberg::spec::{NestedFieldRef, Type};
+use iceberg::spec::{NestedFieldRef, PrimitiveType, Type};
 use tempfile::TempDir;
 
 const NESTED_CREATE: &str = "CREATE TABLE ice.sales.nested (id INT, s STRUCT<a: INT, b: STRING>, \
@@ -206,6 +206,488 @@ async fn nested_required_child_refuses_and_keeps_the_schema() {
 }
 
 #[tokio::test]
+async fn nested_alter_column_type_updates_struct_metadata() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.struct_type (id BIGINT, st STRUCT<a: INT>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.struct_type ALTER COLUMN st.a TYPE BIGINT",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "struct_type").await;
+    let field = table
+        .metadata()
+        .current_schema()
+        .field_by_name("st.a")
+        .unwrap();
+    assert!(matches!(
+        field.field_type.as_ref(),
+        Type::Primitive(PrimitiveType::Long)
+    ));
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_updates_list_element_metadata() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.list_type (id BIGINT, arr ARRAY<INT>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.list_type ALTER COLUMN arr.element TYPE BIGINT",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "list_type").await;
+    let field = table
+        .metadata()
+        .current_schema()
+        .field_by_name("arr.element")
+        .unwrap();
+    assert!(matches!(
+        field.field_type.as_ref(),
+        Type::Primitive(PrimitiveType::Long)
+    ));
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_updates_map_value_metadata() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.map_type (id BIGINT, m MAP<STRING, INT>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.map_type ALTER COLUMN m.value TYPE BIGINT",
+    )
+    .await;
+    let table = load_sales_table(&catalogs, "map_type").await;
+    let field = table
+        .metadata()
+        .current_schema()
+        .field_by_name("m.value")
+        .unwrap();
+    assert!(matches!(
+        field.field_type.as_ref(),
+        Type::Primitive(PrimitiveType::Long)
+    ));
+}
+
+const TYPE_CHANGE_CREATE: &str = "CREATE TABLE ice.sales.types (id INT, st STRUCT<a: INT, \
+    b: BIGINT, s: STRING, c: BIGINT, dec: DECIMAL(9,2), inner: STRUCT<x: INT>, d: DATE, \
+    ts: TIMESTAMP, f: BOOLEAN>, arr ARRAY<INT>, \
+    arrl ARRAY<BIGINT>, arrs ARRAY<STRING>, arrd ARRAY<BIGINT>, ki MAP<INT, INT>, \
+    kl MAP<BIGINT, INT>, ks MAP<STRING, INT>, kf MAP<FLOAT, INT>) USING iceberg";
+
+fn not_supported_change(column: &str, from: &str, to: &str) -> String {
+    format!(
+        "Error during planning: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is \
+         not supported for changing `ice`.`sales`.`types`'s column {column} with type \"{from}\" \
+         to {column} with type \"{to}\". SQLSTATE: 0A000"
+    )
+}
+
+fn unsupported_change(message: &str) -> String {
+    format!("Execution error: Unsupported table change: {message}")
+}
+
+fn type_change_refusal_cases() -> Vec<(&'static str, String)> {
+    vec![
+        (
+            "ki.key TYPE BIGINT",
+            unsupported_change("Cannot update map keys: map<int, int>"),
+        ),
+        (
+            "kf.key TYPE DOUBLE",
+            unsupported_change("Cannot update map keys: map<float, int>"),
+        ),
+        (
+            "ki.key TYPE DOUBLE",
+            unsupported_change("Cannot change column type: ki.key: int -> double"),
+        ),
+        (
+            "kl.key TYPE STRING",
+            unsupported_change("Cannot change column type: kl.key: long -> string"),
+        ),
+        (
+            "ks.key TYPE BIGINT",
+            not_supported_change("`ks`.`key`", "STRING", "BIGINT"),
+        ),
+        (
+            "kl.key TYPE INT",
+            not_supported_change("`kl`.`key`", "BIGINT", "INT"),
+        ),
+        (
+            "st.b TYPE STRING",
+            unsupported_change("Cannot change column type: st.b: long -> string"),
+        ),
+        (
+            "st.s TYPE BIGINT",
+            not_supported_change("`st`.`s`", "STRING", "BIGINT"),
+        ),
+        (
+            "ST.C TYPE INT",
+            not_supported_change("`st`.`c`", "BIGINT", "INT"),
+        ),
+        (
+            "st.dec TYPE DOUBLE",
+            not_supported_change("`st`.`dec`", "DECIMAL(9,2)", "DOUBLE"),
+        ),
+        (
+            "st.a TYPE DECIMAL(10,0)",
+            unsupported_change("Cannot change column type: st.a: int -> decimal(10, 0)"),
+        ),
+        (
+            "st.a TYPE DECIMAL(9,0)",
+            not_supported_change("`st`.`a`", "INT", "DECIMAL(9,0)"),
+        ),
+        (
+            "st.inner TYPE STRING",
+            not_supported_change("`st`.`inner`", "STRUCT<x: INT>", "STRING"),
+        ),
+        (
+            "arrl.element TYPE STRING",
+            unsupported_change("Cannot change column type: arrl.element: long -> string"),
+        ),
+        (
+            "arrs.element TYPE BIGINT",
+            not_supported_change("`arrs`.`element`", "STRING", "BIGINT"),
+        ),
+        (
+            "arrd.element TYPE INT",
+            not_supported_change("`arrd`.`element`", "BIGINT", "INT"),
+        ),
+        (
+            "st.d TYPE TIMESTAMP",
+            unsupported_change("Cannot change column type: st.d: date -> timestamptz"),
+        ),
+        (
+            "st.ts TYPE BIGINT",
+            unsupported_change("Cannot change column type: st.ts: timestamptz -> long"),
+        ),
+        (
+            "st.a TYPE FLOAT",
+            unsupported_change("Cannot change column type: st.a: int -> float"),
+        ),
+        (
+            "st.f TYPE STRING",
+            unsupported_change("Cannot change column type: st.f: boolean -> string"),
+        ),
+    ]
+}
+
+fn spark_only_target_refusal_cases() -> Vec<(&'static str, String)> {
+    [
+        ("st.a TYPE TINYINT", "`st`.`a`", "INT", "TINYINT"),
+        ("st.a TYPE tinyint", "`st`.`a`", "INT", "TINYINT"),
+        ("st.a TYPE SMALLINT", "`st`.`a`", "INT", "SMALLINT"),
+        ("st.b TYPE SMALLINT", "`st`.`b`", "BIGINT", "SMALLINT"),
+        ("st.b TYPE TINYINT", "`st`.`b`", "BIGINT", "TINYINT"),
+        ("st.a TYPE VARCHAR(10)", "`st`.`a`", "INT", "VARCHAR(10)"),
+        ("st.a TYPE CHAR(5)", "`st`.`a`", "INT", "CHAR(5)"),
+        ("st.a TYPE CHARACTER(5)", "`st`.`a`", "INT", "CHAR(5)"),
+        ("st.s TYPE VARCHAR(10)", "`st`.`s`", "STRING", "VARCHAR(10)"),
+        ("st.s TYPE varchar(10)", "`st`.`s`", "STRING", "VARCHAR(10)"),
+        ("st.s TYPE CHAR(5)", "`st`.`s`", "STRING", "CHAR(5)"),
+        (
+            "st.inner TYPE VARCHAR(10)",
+            "`st`.`inner`",
+            "STRUCT<x: INT>",
+            "VARCHAR(10)",
+        ),
+        (
+            "arr.element TYPE TINYINT",
+            "`arr`.`element`",
+            "INT",
+            "TINYINT",
+        ),
+        ("ki.key TYPE SMALLINT", "`ki`.`key`", "INT", "SMALLINT"),
+        ("kl.value TYPE SMALLINT", "`kl`.`value`", "INT", "SMALLINT"),
+    ]
+    .into_iter()
+    .map(|(clause, column, from, to)| (clause, not_supported_change(column, from, to)))
+    .chain([
+        (
+            "st.zz TYPE TINYINT",
+            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+             function parameter with name `st`.`zz` cannot be resolved. Did you mean one of the \
+             following? [`id`, `st`, `arr`, `arrl`, `arrs`, `arrd`, `ki`, `kl`, `ks`, `kf`]. \
+             SQLSTATE: 42703"
+                .to_string(),
+        ),
+        (
+            "st.a.q TYPE VARCHAR(10)",
+            "Error during planning: [INVALID_FIELD_NAME] Field name `st`.`a`.`q` is invalid: \
+             `st`.`a` is not a struct. SQLSTATE: 42000"
+                .to_string(),
+        ),
+    ])
+    .collect()
+}
+
+fn type_change_path_refusal_cases() -> Vec<(&'static str, String)> {
+    vec![
+        (
+            "id.x TYPE BIGINT",
+            "Error during planning: [INVALID_FIELD_NAME] Field name `id`.`x` is invalid: `id` \
+             is not a struct. SQLSTATE: 42000"
+                .to_string(),
+        ),
+        (
+            "st.zz TYPE BIGINT",
+            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+             function parameter with name `st`.`zz` cannot be resolved. Did you mean one of the \
+             following? [`id`, `st`, `arr`, `arrl`, `arrs`, `arrd`, `ki`, `kl`, `ks`, `kf`]. \
+             SQLSTATE: 42703"
+                .to_string(),
+        ),
+        (
+            "ki.KEY TYPE BIGINT",
+            "Error during planning: [INVALID_FIELD_NAME] Field name `ki`.`KEY` is invalid: `ki` \
+             is not a struct. SQLSTATE: 42000"
+                .to_string(),
+        ),
+        (
+            "st.a.q TYPE BIGINT",
+            "Error during planning: [INVALID_FIELD_NAME] Field name `st`.`a`.`q` is invalid: \
+             `st`.`a` is not a struct. SQLSTATE: 42000"
+                .to_string(),
+        ),
+    ]
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_refuses_each_pair_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, TYPE_CHANGE_CREATE).await;
+    let schema_id = load_sales_table(&catalogs, "types")
+        .await
+        .metadata()
+        .current_schema_id();
+    let cases = type_change_refusal_cases()
+        .into_iter()
+        .chain(type_change_path_refusal_cases())
+        .chain(spark_only_target_refusal_cases());
+    for (clause, expected) in cases {
+        let sql = format!("ALTER TABLE ice.sales.types ALTER COLUMN {clause}");
+        let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        assert_eq!(error.to_string(), expected, "{sql}");
+    }
+    assert_eq!(
+        load_sales_table(&catalogs, "types")
+            .await
+            .metadata()
+            .current_schema_id(),
+        schema_id
+    );
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_accepts_the_pairs_spark_accepts() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, TYPE_CHANGE_CREATE).await;
+    for clause in [
+        "ki.key TYPE INT",
+        "st.a TYPE BIGINT",
+        "ST.INNER.X TYPE BIGINT",
+        "arr.element TYPE BIGINT",
+        "ki.value TYPE BIGINT",
+    ] {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("ALTER TABLE ice.sales.types ALTER COLUMN {clause}"),
+        )
+        .await;
+    }
+    let table = load_sales_table(&catalogs, "types").await;
+    let schema = table.metadata().current_schema();
+    for (path, expected) in [
+        ("ki.key", PrimitiveType::Int),
+        ("st.a", PrimitiveType::Long),
+        ("st.inner.x", PrimitiveType::Long),
+        ("arr.element", PrimitiveType::Long),
+        ("ki.value", PrimitiveType::Long),
+    ] {
+        let field = schema.field_by_name(path).unwrap();
+        assert_eq!(
+            field.field_type.as_ref(),
+            &Type::Primitive(expected),
+            "{path}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_refuses_unsized_and_sized_targets_as_parse_errors() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(&ctx, &catalogs, TYPE_CHANGE_CREATE).await;
+    let schema_id = load_sales_table(&catalogs, "types")
+        .await
+        .metadata()
+        .current_schema_id();
+    let missing_size = |name: &str| {
+        format!(
+            "[DATATYPE_MISSING_SIZE] DataType \"{name}\" requires a length parameter, for \
+             example \"{name}\"(10). Please specify the length. SQLSTATE: 42K01"
+        )
+    };
+    let sized = [
+        ("tinyint(3)", "TINYINT(3)"),
+        ("SMALLINT(2)", "SMALLINT(2)"),
+        ("INT(3)", "INT(3)"),
+        ("INTEGER(3)", "INTEGER(3)"),
+        ("BIGINT(5)", "BIGINT(5)"),
+        ("FLOAT(10)", "FLOAT(10)"),
+        ("DOUBLE(5)", "DOUBLE(5)"),
+        ("TIMESTAMP(3)", "TIMESTAMP(3)"),
+        ("STRING(10)", "STRING(10)"),
+        ("string(10)", "STRING(10)"),
+        ("DOUBLE(5,2)", "DOUBLE(5,2)"),
+        ("double(5,2)", "DOUBLE(5,2)"),
+        ("FLOAT(10,2)", "FLOAT(10,2)"),
+        ("BINARY(3)", "BINARY(3)"),
+        ("TIMESTAMP_NTZ(3)", "TIMESTAMP_NTZ(3)"),
+        ("DATE(3)", "DATE(3)"),
+        ("BOOLEAN(1)", "BOOLEAN(1)"),
+    ]
+    .map(|(spelling, name)| {
+        (
+            format!("types ALTER COLUMN st.a TYPE {spelling}"),
+            format!("[UNSUPPORTED_DATATYPE] Unsupported data type \"{name}\". SQLSTATE: 0A000"),
+        )
+    });
+    let unsized_targets = [
+        ("types ALTER COLUMN st.s TYPE VARCHAR", "VARCHAR"),
+        ("types ALTER COLUMN st.s TYPE varchar", "VARCHAR"),
+        ("types ALTER COLUMN st.s TYPE CHAR", "CHAR"),
+        ("types ALTER COLUMN st.s TYPE Character", "CHARACTER"),
+        ("nope ALTER COLUMN st.s TYPE VARCHAR", "VARCHAR"),
+    ]
+    .map(|(sql, name)| (sql.to_string(), missing_size(name)));
+    for (sql, expected) in unsized_targets.into_iter().chain(sized) {
+        let sql = format!("ALTER TABLE ice.sales.{sql}");
+        let refused = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        assert!(
+            matches!(&refused, DataFusionError::Context(_, inner) if matches!(**inner, DataFusionError::SQL(_, _))),
+            "{sql}: {refused}"
+        );
+        let mapped = repark_core::engine_err(refused);
+        let repark_common::Error::Parse(message) = &mapped else {
+            panic!("{sql}: expected a Parse error, got {mapped:?}");
+        };
+        assert_eq!(*message, expected, "{sql}");
+    }
+    assert_eq!(
+        load_sales_table(&catalogs, "types")
+            .await
+            .metadata()
+            .current_schema_id(),
+        schema_id
+    );
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_decides_bare_decimal_and_map_values_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.d (st STRUCT<a: DECIMAL(38,18), i: INT>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (m MAP<INT, BIGINT>) USING iceberg",
+    )
+    .await;
+    let not_supported = |table: &str, column: &str, from: &str, to: &str| {
+        format!(
+            "Error during planning: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE \
+             COLUMN is not supported for changing `ice`.`sales`.`{table}`'s column {column} \
+             with type \"{from}\" to {column} with type \"{to}\". SQLSTATE: 0A000"
+        )
+    };
+    let int_to_decimal =
+        unsupported_change("Cannot change column type: st.i: int -> decimal(10, 0)");
+    for (sql, expected) in [
+        (
+            "d ALTER COLUMN st.a TYPE DECIMAL",
+            not_supported("d", "`st`.`a`", "DECIMAL(38,18)", "DECIMAL(10,0)"),
+        ),
+        ("d ALTER COLUMN st.i TYPE DECIMAL", int_to_decimal.clone()),
+        ("d ALTER COLUMN st.i TYPE NUMERIC", int_to_decimal.clone()),
+        ("d ALTER COLUMN st.i TYPE DEC", int_to_decimal),
+        (
+            "t ALTER COLUMN m.value TYPE SMALLINT",
+            not_supported("t", "`m`.`value`", "BIGINT", "SMALLINT"),
+        ),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.{sql}");
+        let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        assert_eq!(error.to_string(), expected, "{sql}");
+    }
+    for table in ["d", "t"] {
+        assert_eq!(
+            load_sales_table(&catalogs, table)
+                .await
+                .metadata()
+                .current_schema_id(),
+            0,
+            "{table}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn nested_alter_column_type_on_a_missing_table_is_table_or_view_not_found() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    for (table, target) in [
+        ("sales.nope", "BIGINT"),
+        ("sales.nope", "TINYINT"),
+        ("nope.t", "BIGINT"),
+    ] {
+        let sql = format!("ALTER TABLE ice.{table} ALTER COLUMN st.a TYPE {target}");
+        let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        let quoted = table.replace('.', "`.`");
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view \
+             `ice`.`{quoted}` cannot be found. Verify the spelling and correctness of the \
+             schema and catalog. If you did not qualify the name with a schema, verify the \
+             current_schema() output, or qualify the name with the correct schema and catalog. \
+             To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. \
+             SQLSTATE: 42P01"
+            ),
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn nested_ddl_refuses_malformed_paths_spark_shaped() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
@@ -349,6 +831,8 @@ fn nested_parse_leaves_top_level_forms_to_the_existing_path() {
         "ALTER TABLE ice.sales.t ADD COLUMNS (c STRING, d INT)",
         "ALTER TABLE ice.sales.t DROP COLUMN c",
         "ALTER TABLE ice.sales.t RENAME COLUMN c TO d",
+        "ALTER TABLE ice.sales.t ALTER COLUMN id TYPE BIGINT",
+        "ALTER TABLE ice.sales.t ALTER COLUMN st TYPE STRING",
         "ALTER TABLE ice.sales.t ALTER COLUMN s.b FIRST",
         "SELECT s.a FROM ice.sales.t",
     ] {
@@ -363,6 +847,7 @@ fn nested_parse_leaves_top_level_forms_to_the_existing_path() {
         "ALTER TABLE ice.sales.t ADD COLUMN m.value.q MAP<STRING, STRUCT<z: INT>>",
         "ALTER TABLE ice.sales.t DROP COLUMNS (s.b, c)",
         "ALTER TABLE ice.sales.t RENAME COLUMN s.a TO a2",
+        "ALTER TABLE ice.sales.t ALTER COLUMN s.a TYPE BIGINT",
         "ALTER TABLE ice.sales.t ADD COLUMN s.d INT COMMENT \"x.y\" FIRST",
     ] {
         assert!(

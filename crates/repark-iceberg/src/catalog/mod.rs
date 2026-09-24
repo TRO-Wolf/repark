@@ -113,8 +113,13 @@ pub async fn list_table_names(catalog: &dyn Catalog, namespace: &str) -> Result<
 
 #[must_use]
 pub fn schema_not_found_on_drop(catalog: &str, namespace: &str) -> DataFusionError {
+    schema_not_found(&format!("`{catalog}`.`{namespace}`"))
+}
+
+#[must_use]
+pub fn schema_not_found(schema: &str) -> DataFusionError {
     DataFusionError::Plan(format!(
-        "[SCHEMA_NOT_FOUND] The schema `{catalog}`.`{namespace}` cannot be found. Verify the \
+        "[SCHEMA_NOT_FOUND] The schema {schema} cannot be found. Verify the \
          spelling and correctness of the schema and catalog.\nIf you did not qualify the name \
          with a catalog, verify the current_schema() output, or qualify the name with the \
          correct catalog.\nTo tolerate the error on drop use DROP SCHEMA IF EXISTS. \

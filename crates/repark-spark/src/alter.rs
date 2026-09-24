@@ -224,8 +224,7 @@ fn schema_change_from_add_column(
     })
 }
 
-/// Map `ALTER COLUMN` ops: TYPE widen, DROP NOT NULL, refuse SET NOT NULL / DEFAULT / GENERATED.
-fn schema_change_from_alter_column(
+pub(crate) fn schema_change_from_alter_column(
     column_name: &Ident,
     op: &AlterColumnOperation,
     timestamp_type: SparkTimestampType,
@@ -368,9 +367,7 @@ fn resolve_table(catalogs: &CatalogRegistry, name: &ObjectName) -> Result<(Strin
     ))
 }
 
-/// Rewrite `UNSET TBLPROPERTIES` into a sentinel `SET TBLPROPERTIES` form sqlparser can parse.
 pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
-    // Match only UNSET immediately before TBLPROPERTIES.
     let keyword_at = |kw: Keyword| {
         tokens
             .iter()
@@ -380,7 +377,6 @@ pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
     else {
         return tokens.to_vec();
     };
-    // Prefer UNSET immediately before TBLPROPERTIES over any earlier token.
     let mut unset_index = None;
     let mut tblprops_index = None;
     for (index, token) in tokens.iter().enumerate() {
@@ -399,16 +395,18 @@ pub(crate) fn rewrite_unset_tblproperties(tokens: &[Token]) -> Vec<Token> {
     let (Some(unset), Some(tblprops)) = (unset_index, tblprops_index) else {
         return tokens.to_vec();
     };
-    // Guard the shape: ALTER … TABLE … UNSET … TBLPROPERTIES in order.
     if !(alter < table && table < unset && unset < tblprops) {
         return tokens.to_vec();
     }
 
-    // Locate the property-list parens that follow `TBLPROPERTIES` and track depth.
     let mut out = Vec::with_capacity(tokens.len() + 8);
     let mut depth: i32 = 0;
     let mut seen_open = false;
+    let if_exists = crate::table_props_ddl::unset_if_exists_pair(tokens, tblprops);
     for (i, token) in tokens.iter().enumerate() {
+        if if_exists.is_some_and(|pair| pair.contains(&i)) {
+            continue;
+        }
         if i == unset {
             out.push(Token::Word(Word {
                 value: "SET".to_string(),
@@ -667,7 +665,7 @@ fn trim_ws_tokens(tokens: Vec<Token>) -> Vec<Token> {
     out
 }
 
-fn next_significant(tokens: &[Token], from: usize) -> Option<usize> {
+pub(crate) fn next_significant(tokens: &[Token], from: usize) -> Option<usize> {
     tokens
         .iter()
         .enumerate()
@@ -676,7 +674,7 @@ fn next_significant(tokens: &[Token], from: usize) -> Option<usize> {
         .map(|(index, _)| index)
 }
 
-fn is_word_keyword(token: &Token, keyword: Keyword) -> bool {
+pub(crate) fn is_word_keyword(token: &Token, keyword: Keyword) -> bool {
     matches!(token, Token::Word(word) if word.keyword == keyword)
 }
 

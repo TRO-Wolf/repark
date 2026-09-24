@@ -43,7 +43,6 @@ async fn alter_set_tblproperties() {
     assert_eq!(props.get("pii").map(String::as_str), Some("false"));
 }
 
-/// `ALTER TABLE … UNSET TBLPROPERTIES`.
 #[tokio::test]
 async fn alter_unset_tblproperties() {
     let wh = TempDir::new().unwrap();
@@ -57,7 +56,6 @@ async fn alter_unset_tblproperties() {
     )
     .await
     .unwrap();
-    // UNSET one of the two keys.
     execute(
         &ctx,
         &catalogs,
@@ -65,6 +63,8 @@ async fn alter_unset_tblproperties() {
     )
     .await
     .unwrap();
+    let missing = "ALTER TABLE ice.sales.t UNSET TBLPROPERTIES IF EXISTS ('nope')";
+    execute(&ctx, &catalogs, missing).await.unwrap();
 
     let props = table_props(&catalogs, "t").await;
     assert!(!props.contains_key("owner"));
