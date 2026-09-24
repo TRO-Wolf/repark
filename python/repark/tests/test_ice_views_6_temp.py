@@ -241,9 +241,9 @@ def test_two_part_temp_view_name_refuses(spark: ReparkSession, statement: str) -
     """TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS for a qualified temp view name."""
     refusal = _parse_refusal(spark, statement)
     assert str(refusal) == (
-        'SQL error: ParserError("[TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS] CREATE TEMPORARY VIEW '
+        "[TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS] CREATE TEMPORARY VIEW "
         "or the corresponding Dataset APIs only accept single-part view names, but got: "
-        '`a`.`b`. SQLSTATE: 428EK")'
+        "`a`.`b`. SQLSTATE: 428EK"
     )
     assert refusal.getCondition() == "TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS"
     assert refusal.getSqlState() == "428EK"
@@ -253,8 +253,8 @@ def test_three_part_temp_view_name_refuses(spark: ReparkSession) -> None:
     """IDENTIFIER_TOO_MANY_NAME_PARTS for a three-part temp view name."""
     refusal = _parse_refusal(spark, "CREATE TEMPORARY VIEW sc.ns.q AS SELECT 1 AS id")
     assert str(refusal) == (
-        'SQL error: ParserError("[IDENTIFIER_TOO_MANY_NAME_PARTS] `sc`.`ns`.`q` is not a '
-        'valid identifier as it has more than 2 name parts. SQLSTATE: 42601")'
+        "[IDENTIFIER_TOO_MANY_NAME_PARTS] `sc`.`ns`.`q` is not a "
+        "valid identifier as it has more than 2 name parts. SQLSTATE: 42601"
     )
     assert refusal.getCondition() == "IDENTIFIER_TOO_MANY_NAME_PARTS"
     assert refusal.getSqlState() == "42601"
@@ -283,8 +283,7 @@ def test_temp_view_non_query_body_refuses(spark: ReparkSession) -> None:
         spark, "CREATE TEMPORARY VIEW vx AS INSERT INTO sc.ns.t VALUES (9, 'x', 'y')"
     )
     assert str(refusal) == (
-        "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. "
-        'SQLSTATE: 42601")'
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601"
     )
     assert refusal.getCondition() == "PARSE_SYNTAX_ERROR"
     assert refusal.getSqlState() == "42601"
@@ -299,8 +298,7 @@ def test_temp_view_write_body_refuses(spark: ReparkSession) -> None:
         "INSERT INTO sc.ns.t SELECT id, 'x', 'y' FROM s",
     )
     assert str(refusal) == (
-        "SQL error: ParserError(\"[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. "
-        'SQLSTATE: 42601")'
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near 'INSERT'. SQLSTATE: 42601"
     )
     assert refusal.getCondition() == "PARSE_SYNTAX_ERROR"
     assert refusal.getSqlState() == "42601"
@@ -341,9 +339,9 @@ def test_two_part_temp_view_name_after_use_refuses(spark: ReparkSession) -> None
     spark.sql("USE sc.ns")
     refusal = _parse_refusal(spark, "CREATE TEMPORARY VIEW ns.vq AS SELECT 1 AS id")
     assert str(refusal) == (
-        'SQL error: ParserError("[TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS] CREATE TEMPORARY VIEW '
+        "[TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS] CREATE TEMPORARY VIEW "
         "or the corresponding Dataset APIs only accept single-part view names, but got: "
-        '`ns`.`vq`. SQLSTATE: 428EK")'
+        "`ns`.`vq`. SQLSTATE: 428EK"
     )
     assert refusal.getCondition() == "TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS"
     assert refusal.getSqlState() == "428EK"
@@ -750,3 +748,147 @@ def test_bare_drop_table_without_a_temp_view_drops_the_catalog_table(
     spark.sql("USE sc.ns")
     spark.sql("DROP TABLE t")
     _assert_catalog_t_missing(spark)
+
+
+PLAN = "Error during planning: "
+
+
+@pytest.mark.parametrize(
+    ("statement", "message"),
+    [
+        (
+            "(CREATE TEMPORARY VIEW v AS SELECT 1 AS id",
+            "could not parse `CREATE TEMPORARY VIEW`: expected CREATE",
+        ),
+        (
+            'CREATE OR REPLACE "x" TEMPORARY VIEW v AS SELECT 1 AS id',
+            "could not parse `CREATE TEMPORARY VIEW`: expected TEMPORARY",
+        ),
+        (
+            "CREATE TEMPORARY ( VIEW v AS SELECT 1 AS id",
+            "could not parse `CREATE TEMPORARY VIEW`: expected VIEW",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v SELECT 1",
+            "could not parse `CREATE TEMPORARY VIEW`: expected AS with the view query, got "
+            "`CREATE TEMPORARY VIEW v SELECT 1`",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v AS",
+            "could not parse `CREATE TEMPORARY VIEW`: the view query after AS is empty",
+        ),
+        (
+            "CREATE TEMPORARY VIEW AS SELECT 1 AS id",
+            "could not parse CREATE NAMESPACE: sql parser error: Expected: identifier, found: EOF",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v (, i) AS SELECT 1 AS id",
+            "could not parse CREATE NAMESPACE: sql parser error: Expected: identifier, found: ,",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v (i AS SELECT 1 AS id",
+            "could not parse CREATE NAMESPACE: sql parser error: Expected: ), found: EOF",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v COMMENT 5 AS SELECT 1 AS id",
+            "could not parse CREATE NAMESPACE: sql parser error: "
+            "Expected: literal string, found: 5",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v TBLPROPERTIES ('k') AS SELECT 1 AS id",
+            "could not parse CREATE NAMESPACE: sql parser error: Expected: =, found: )",
+        ),
+        (
+            "CREATE TEMPORARY VIEW v extra AS SELECT 1 AS id",
+            "could not parse `CREATE TEMPORARY VIEW` at `extra`",
+        ),
+        (
+            "SHOW VIEWS LIKE",
+            "SHOW VIEWS … LIKE needs a quoted pattern (e.g. SHOW VIEWS IN cat.ns LIKE 'v*')",
+        ),
+        (
+            "SHOW VIEWS IN a.b.c",
+            "expected a two-part `IN <catalog.namespace>` name, got `a.b.c`",
+        ),
+        (
+            "SHOW VIEWS IN sc.ns extra",
+            "could not parse `SHOW VIEWS` at `extra` — the supported form is SHOW VIEWS IN "
+            "<catalog.namespace> [LIKE] ['pattern']",
+        ),
+    ],
+)
+def test_malformed_temp_view_statements_refuse_with_the_full_text(
+    spark: ReparkSession, statement: str, message: str
+) -> None:
+    """Every reachable temp-view parse refusal answers its complete Plan text."""
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT 1 AS id")
+    refusal = _analysis_refusal(spark, statement)
+    assert str(refusal) == PLAN + message
+    assert refusal.getCondition() == UNSTRUCTURED_CONDITION
+    assert refusal.getSqlState() == UNSTRUCTURED_SQLSTATE
+    assert _rows(spark.sql("SHOW VIEWS")) == [["", "tv", True]]
+
+
+@pytest.mark.parametrize(
+    ("statement", "context"),
+    [
+        ("DROP VIEW tv", "DROP VIEW"),
+        ("DROP TABLE tv", "DROP TABLE"),
+        ("DESCRIBE tv", "DESCRIBE TABLE"),
+        ("CREATE OR REPLACE TEMPORARY VIEW tv2 AS SELECT 1 AS id", "CREATE TEMPORARY VIEW"),
+    ],
+)
+def test_temp_view_statements_refuse_statement_write_options(
+    spark: ReparkSession, statement: str, context: str
+) -> None:
+    """Statement write options on a temp-view statement refuse with the full text."""
+    from repark import _native
+
+    spark.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT 1 AS id")
+    with pytest.raises(AnalysisException) as caught:
+        _native.session_sql_with_write_options(
+            spark._ensure_alive(), statement, {"write-format": "parquet"}, False, False
+        )
+    assert type(caught.value) is AnalysisException
+    assert str(caught.value) == (
+        f"{PLAN}{context} does not support write options (write-format); they are only "
+        "honoured on Iceberg table writes (ICE-WRITE-OPTIONS-1)"
+    )
+    assert _rows(spark.sql("SHOW VIEWS")) == [["", "tv", True]]
+
+
+@pytest.mark.parametrize(
+    "statement",
+    ["DROP VIEW tv", "DESCRIBE tv", "SHOW VIEWS", "CREATE TEMPORARY VIEW t2 AS SELECT 1 AS id"],
+)
+def test_a_catalog_over_the_temp_view_home_refuses_temp_statements(
+    tmp_path: Path, statement: str
+) -> None:
+    """A catalog registered over the temp-view home refuses with the session's full text."""
+    session = ReparkSession.builder.appName("pytest-ice-views-6-home").getOrCreate()
+    session.sql("CREATE OR REPLACE TEMPORARY VIEW tv AS SELECT 1 AS id")
+    session.register_memory_catalog("datafusion", tmp_path)
+    refusal = _analysis_refusal(session, statement, collect=True)
+    assert str(refusal) == (
+        f"{PLAN}this session has no session-local temp-view home: 'datafusion.public' (the "
+        "build-time `datafusion.catalog.default_catalog` / `default_schema`) is not the "
+        "session-local schema the session was built with — a catalog was registered over it. "
+        "A temporary view is SESSION-LOCAL and is never created in a catalog or database, so "
+        "the temp-view API refuses rather than write that catalog. Build the session with a "
+        "`default_catalog` that no registered catalog shares a name with."
+    )
+    assert refusal.getCondition() == UNSTRUCTURED_CONDITION
+    assert refusal.getSqlState() == UNSTRUCTURED_SQLSTATE
+
+
+def test_qualified_drop_view_near_miss_without_a_temp_view(spark: ReparkSession) -> None:
+    """DROP VIEW sc.ns.v with no temp view is main's catalog drop (nearmiss-b3a)."""
+    spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
+    spark.sql("DROP VIEW sc.ns.v")
+    assert _rows(spark.sql("SHOW VIEWS IN sc.ns")) == []
+
+
+def test_qualified_drop_table_near_miss_without_a_temp_view(spark: ReparkSession) -> None:
+    """DROP TABLE sc.ns.t with no temp view is main's catalog drop (nearmiss-b3a)."""
+    spark.sql("DROP TABLE sc.ns.t")
+    assert spark.catalog.tableExists("sc.ns.t") is False
