@@ -11,7 +11,6 @@ pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008
 
 from __future__ import annotations
 
-import re
 import shutil
 from pathlib import Path
 
@@ -33,6 +32,15 @@ PATH_INCREMENTAL_REFUSAL = (
     "support time-travel or incremental options; got start-snapshot-id"
 )
 WRONG_FS_EXPECTED = ", expected: file:///"
+NO_METADATA_REFUSAL = (
+    "no Iceberg table found at '{path}': expected metadata files under "
+    "'<location>/metadata' or a '<location>/metadata/version-hint.text'"
+)
+HINTED_MISSING_REFUSAL = (
+    "no Iceberg table found at '{path}': version-hint.text names "
+    "'v7.metadata.json', which does not exist"
+)
+METADATA_TABLE_REFUSAL = "Error during planning: table 'ns.events.snapshots' not found"
 SNAPSHOT_ID_REFUSAL = (
     "Time travel option `snapshot-id` is no longer supported, "
     "use Spark built-in `versionAsOf` instead"
@@ -101,6 +109,7 @@ def _registration_inventory(spark: ReparkSession) -> dict[str, object]:
         spark.catalog.setCurrentCatalog(current)
     temp_views = sorted(t.name for t in spark.catalog.listTables())
     return {
+        "current_catalog": spark.catalog.currentCatalog(),
         "catalogs": catalogs,
         "tables": per_catalog,
         "temp_views": temp_views,
@@ -170,10 +179,13 @@ def test_load_path_registers_no_catalog_table(
 
     pins: dfload-1/C-007
     """
+    spark.catalog.setCurrentCatalog("mem")
     before = _registration_inventory(spark)
+    assert before["current_catalog"] == "mem"
     frame = spark.read.format("iceberg").load(str(loaded["table_dir"]))
     _assert_current(frame)
     assert _registration_inventory(spark) == before
+    assert spark.catalog.currentCatalog() == "mem"
     assert not spark.catalog.table_exists("path.events")
 
 
@@ -184,10 +196,12 @@ def test_load_path_with_time_travel_option_refuses(
 
     pins: dfload-1/C-004
     """
-    with pytest.raises(AnalysisException, match=re.escape(PATH_OPTION_REFUSAL)):
+    with pytest.raises(AnalysisException) as raised:
         spark.read.format("iceberg").option("snapshot-id", "1").load(str(loaded["table_dir"]))
-    with pytest.raises(AnalysisException, match=re.escape(PATH_OPTION_REFUSAL)):
+    assert str(raised.value) == PATH_OPTION_REFUSAL
+    with pytest.raises(AnalysisException) as raised:
         spark.read.format("iceberg").option("SNAPSHOT-ID", "1").load(str(loaded["table_dir"]))
+    assert str(raised.value) == PATH_OPTION_REFUSAL
 
 
 def test_load_path_with_incremental_option_refuses(
@@ -197,8 +211,9 @@ def test_load_path_with_incremental_option_refuses(
 
     pins: dfload-1/C-004
     """
-    with pytest.raises(AnalysisException, match=re.escape(PATH_INCREMENTAL_REFUSAL)):
+    with pytest.raises(AnalysisException) as raised:
         spark.read.format("iceberg").option("start-snapshot-id", "1").load(str(loaded["table_dir"]))
+    assert str(raised.value) == PATH_INCREMENTAL_REFUSAL
 
 
 def test_load_missing_location_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
@@ -207,8 +222,9 @@ def test_load_missing_location_names_the_path(spark: ReparkSession, tmp_path: Pa
     pins: dfload-1/C-005
     """
     missing = str(tmp_path / "no" / "such" / "dir")
-    with pytest.raises(AnalysisException, match=re.escape(missing)):
+    with pytest.raises(AnalysisException) as raised:
         spark.read.format("iceberg").load(missing)
+    assert str(raised.value) == NO_METADATA_REFUSAL.format(path=missing)
 
 
 def test_load_empty_metadata_dir_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
@@ -218,8 +234,9 @@ def test_load_empty_metadata_dir_names_the_path(spark: ReparkSession, tmp_path: 
     """
     location = tmp_path / "empty-table"
     (location / "metadata").mkdir(parents=True)
-    with pytest.raises(AnalysisException, match=re.escape(str(location))):
+    with pytest.raises(AnalysisException) as raised:
         spark.read.format("iceberg").load(str(location))
+    assert str(raised.value) == NO_METADATA_REFUSAL.format(path=location)
 
 
 def test_load_hinted_missing_metadata_names_the_path(spark: ReparkSession, tmp_path: Path) -> None:
@@ -233,8 +250,7 @@ def test_load_hinted_missing_metadata_names_the_path(spark: ReparkSession, tmp_p
     (location / "metadata" / "version-hint.text").write_text("7\n")
     with pytest.raises(AnalysisException) as raised:
         spark.read.format("iceberg").load(str(location))
-    assert str(location) in str(raised.value)
-    assert "v7.metadata.json" in str(raised.value)
+    assert str(raised.value) == HINTED_MISSING_REFUSAL.format(path=location)
 
 
 def test_load_two_part_identifier_keeps_catalog_route(
@@ -266,8 +282,9 @@ def test_load_metadata_table_identifier_keeps_catalog_route(
 
     pins: dfload-1/C-006
     """
-    with pytest.raises(AnalysisException, match=r"table 'ns\.events\.snapshots' not found"):
+    with pytest.raises(AnalysisException) as raised:
         spark.read.format("iceberg").load("ns.events.snapshots")
+    assert str(raised.value) == METADATA_TABLE_REFUSAL
 
 
 def test_load_quoted_identifier_keeps_catalog_route(
@@ -288,8 +305,9 @@ def test_load_identifier_snapshot_id_keeps_spark_refusal(
 
     pins: dfload-1/C-006
     """
-    with pytest.raises(IllegalArgumentException, match=re.escape(SNAPSHOT_ID_REFUSAL)):
+    with pytest.raises(IllegalArgumentException) as raised:
         spark.read.format("iceberg").option("snapshot-id", "1").load("ns.events")
+    assert str(raised.value) == SNAPSHOT_ID_REFUSAL
 
 
 def test_load_file_scheme_location_reads_current_rows(
