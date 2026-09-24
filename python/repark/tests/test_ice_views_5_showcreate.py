@@ -200,3 +200,15 @@ def test_malformed_forms_keep_the_parse_error(spark: ReparkSession, sql: str) ->
         "INVALID_STATEMENT_OR_CLAUSE",
         "42601",
     )
+
+
+def test_comment_set_through_alter_view_renders(spark: ReparkSession, tmp_path: Path) -> None:
+    """p5 vc.after_set.show_create — a comment set by ALTER VIEW is the COMMENT line."""
+    spark.sql(V2_DDL)
+    spark.sql("ALTER VIEW sc.ns.v2 SET TBLPROPERTIES ('comment'='x')")
+    assert _show_create(spark.sql("SHOW CREATE TABLE sc.ns.v2")) == (
+        "CREATE VIEW sc.ns.v2 (\n  i COMMENT 'the id',\n  d)\nCOMMENT 'x'\n"
+        "TBLPROPERTIES (\n  'format-version' = '1',\n  'k' = 'v',\n"
+        f"  'location' = '{tmp_path / 'ns' / 'v2'}',\n  'provider' = 'iceberg')\n"
+        "AS\nSELECT id, data FROM sc.ns.t\n"
+    )

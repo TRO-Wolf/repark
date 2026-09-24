@@ -247,6 +247,10 @@ async fn show_create_view_load_failure_keeps_iceberg_identity() {
     register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
     let sql = "SHOW CREATE TABLE fault.sales.v2";
     let error = execute(&ctx, &catalogs, sql).await.expect_err(sql);
+    assert_eq!(
+        error.to_string(),
+        "External error: Unexpected => injected load_view failure"
+    );
     let DataFusionError::External(inner) = &error else {
         panic!("expected External, got {error:?}");
     };
@@ -257,4 +261,92 @@ async fn show_create_view_load_failure_keeps_iceberg_identity() {
         "Unexpected => injected load_view failure"
     );
     assert_eq!(view_calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn show_create_view_exists_failure_keeps_iceberg_identity() {
+    let (warehouse, ctx, mut catalogs) = prepared().await;
+    create_v2(&ctx, &catalogs).await;
+    let view_calls = Arc::new(AtomicUsize::new(0));
+    let catalog = Arc::new(FaultCatalog {
+        inner: catalogs["ice"].clone(),
+        table_failure: None,
+        view_failure: None,
+        view_calls: view_calls.clone(),
+        faults: ViewFaults {
+            view_exists_failure: Some(ErrorKind::Unexpected),
+            ..ViewFaults::default()
+        },
+    });
+    register_catalog(&ctx, &mut catalogs, catalog, &warehouse).await;
+    let sql = "SHOW CREATE TABLE fault.sales.v2";
+    let error = execute(&ctx, &catalogs, sql).await.expect_err(sql);
+    assert_eq!(
+        error.to_string(),
+        "External error: Unexpected => injected view_exists failure"
+    );
+    let DataFusionError::External(inner) = &error else {
+        panic!("expected External, got {error:?}");
+    };
+    let source = inner.downcast_ref::<iceberg::Error>().unwrap();
+    assert_eq!(source.kind(), ErrorKind::Unexpected);
+    assert_eq!(view_calls.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn show_create_view_without_a_sql_representation_is_a_plan_error() {
+    let (warehouse, ctx, catalogs) = prepared().await;
+    let schema = iceberg::spec::Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![Arc::new(iceberg::spec::NestedField::optional(
+            1,
+            "id",
+            iceberg::spec::Type::Primitive(iceberg::spec::PrimitiveType::Long),
+        ))])
+        .build()
+        .unwrap();
+    let namespace = NamespaceIdent::new("sales".to_string());
+    let creation = iceberg::ViewCreation::builder()
+        .name("norep".to_string())
+        .location(
+            warehouse
+                .path()
+                .join("sales/norep")
+                .to_string_lossy()
+                .into_owned(),
+        )
+        .representations(iceberg::spec::ViewRepresentations::new(Vec::new()))
+        .schema(schema)
+        .default_namespace(namespace.clone())
+        .build();
+    catalogs["ice"]
+        .create_view(&namespace, creation)
+        .await
+        .unwrap();
+    let sql = "SHOW CREATE TABLE ice.sales.norep";
+    let error = execute(&ctx, &catalogs, sql).await.expect_err(sql);
+    assert!(matches!(&error, DataFusionError::Plan(_)), "{error:?}");
+    assert_eq!(
+        error.to_string(),
+        "Error during planning: view `norep` has a current version with no SQL representation"
+    );
+}
+
+#[tokio::test]
+async fn show_create_view_on_an_unregistered_catalog_is_a_plan_error() {
+    let (_warehouse, ctx, catalogs) = prepared().await;
+    let statement = crate::show_create::ShowCreateStatement {
+        catalog: "nope".to_string(),
+        namespace: "sales".to_string(),
+        table: "v2".to_string(),
+        as_serde: false,
+    };
+    let error = crate::view_ddl::show_create::execute_show_create_view(&ctx, &catalogs, &statement)
+        .await
+        .expect_err("an unregistered catalog must refuse");
+    assert!(matches!(&error, DataFusionError::Plan(_)), "{error:?}");
+    assert_eq!(
+        error.to_string(),
+        "Error during planning: unknown catalog `nope`"
+    );
 }

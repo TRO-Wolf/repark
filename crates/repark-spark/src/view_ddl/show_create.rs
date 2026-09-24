@@ -45,13 +45,14 @@ pub(crate) async fn execute_show_create_view(
 
 fn render_show_create_view(statement: &ShowCreateStatement, view: &View) -> Result<String> {
     let metadata = view.metadata();
-    let properties = view_tblproperties(show_tblproperties_rows(
+    let mut properties = show_tblproperties_rows(
         view,
         None,
         &statement.catalog,
         &statement.namespace,
         &statement.table,
-    ));
+    );
+    properties.sort();
     Ok(render_create_view(
         &format!(
             "{}.{}.{}",
@@ -65,15 +66,6 @@ fn render_show_create_view(statement: &ShowCreateStatement, view: &View) -> Resu
         &properties,
         &view_read_spec(view)?.sql,
     ))
-}
-
-fn view_tblproperties(rows: Vec<(String, String)>) -> Vec<(String, String)> {
-    let mut properties = rows
-        .into_iter()
-        .filter(|(key, _)| key != VIEW_COMMENT_PROPERTY)
-        .collect::<Vec<_>>();
-    properties.sort();
-    properties
 }
 
 fn render_create_view(
@@ -128,25 +120,6 @@ mod tests {
                 })
             })
             .collect()
-    }
-
-    #[test]
-    fn view_tblproperties_drops_comment_and_sorts_by_key() {
-        assert_eq!(
-            view_tblproperties(pairs(&[
-                ("location", "/wh/ns/v2"),
-                ("provider", "iceberg"),
-                ("format-version", "1"),
-                ("comment", "view doc"),
-                ("k", "v"),
-            ])),
-            pairs(&[
-                ("format-version", "1"),
-                ("k", "v"),
-                ("location", "/wh/ns/v2"),
-                ("provider", "iceberg"),
-            ])
-        );
     }
 
     #[test]
