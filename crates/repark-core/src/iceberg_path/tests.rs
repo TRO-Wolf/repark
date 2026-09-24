@@ -769,19 +769,31 @@ async fn hint_at_java_int_max_selects_that_file() {
 }
 
 #[test]
-fn numbered_form_keeps_the_u64_range() {
+fn numbered_form_above_u32_is_a_candidate() {
     assert_eq!(
         metadata_file_version(&format!("4294967296-{UUID_A}.metadata.json")),
         Some(4_294_967_296)
     );
+}
+
+#[test]
+fn numbered_form_u64_max_is_a_candidate() {
     assert_eq!(
         metadata_file_version(&format!("18446744073709551615-{UUID_A}.metadata.json")),
         Some(u64::MAX)
     );
+}
+
+#[test]
+fn numbered_form_beyond_u64_is_ignored() {
     assert_eq!(
         metadata_file_version(&format!("18446744073709551616-{UUID_A}.metadata.json")),
         None
     );
+}
+
+#[test]
+fn numbered_form_above_u32_beats_a_small_number() {
     let files = vec![
         info(&format!("/w/t/metadata/00002-{UUID_A}.metadata.json")),
         info(&format!("/w/t/metadata/4294967296-{UUID_B}.metadata.json")),
