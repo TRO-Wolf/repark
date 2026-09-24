@@ -51,7 +51,13 @@ pub(crate) async fn describe_view_frame(
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) fn describe_view_batch(schema: &IcebergSchema) -> Result<RecordBatch> {
-    let rows = describe_view_rows(schema)?;
+    describe_rows_batch(describe_view_rows(schema)?)
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn describe_rows_batch(
+    rows: Vec<(String, String, Option<String>)>,
+) -> Result<RecordBatch> {
     let mut names = Vec::with_capacity(rows.len());
     let mut types = Vec::with_capacity(rows.len());
     let mut comments = Vec::with_capacity(rows.len());

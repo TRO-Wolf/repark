@@ -566,27 +566,18 @@ async fn input_file_name_over_a_temp_view_named_like_the_table_falls_through() {
     seed(&session, "ice.ns.t").await;
     run(&session, "USE ice.ns").await;
 
-    let error = plan_error(&session, "CREATE TEMPORARY VIEW t AS SELECT 1 AS id").await;
-    assert!(
-        error.contains("not implemented") || error.contains("not supported"),
-        "the SQL door refuses CREATE TEMPORARY VIEW outright: {error}"
-    );
-
-    let frame = session.sql("SELECT 1 AS id").await.unwrap();
-    session
-        .create_or_replace_temp_view_from("t", &frame)
-        .unwrap();
+    run(&session, "CREATE TEMPORARY VIEW t AS SELECT 1 AS id").await;
 
     let error = plan_error(&session, "SELECT input_file_name() FROM t").await;
-    assert!(
-        error.contains("[UNRESOLVED_ROUTINE]") && error.contains("input_file_name"),
-        "a temp view named like the table is not served: {error}"
+    assert_eq!(
+        error,
+        "[UNRESOLVED_ROUTINE] Cannot resolve routine `input_file_name` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"
     );
 
     let error = plan_error(&session, "SELECT _file FROM t").await;
-    assert!(
-        !error.is_empty(),
-        "a _file read over the temp view must not silently answer: {error}"
+    assert_eq!(
+        error,
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `_file` cannot be resolved. Did you mean one of the following? [`id`]. SQLSTATE: 42703"
     );
 }
 

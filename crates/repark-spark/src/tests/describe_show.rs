@@ -808,16 +808,26 @@ async fn show_namespaces_intercept_shadows_no_other_statement() {
     register_source(&ctx, "schemas", &[(2, "b")]);
     register_source(&ctx, "databases", &[(3, "c")]);
 
-    for sql in ["SHOW VIEWS", "SHOW ALL"] {
-        let error = execute(&ctx, &catalogs, sql)
-            .await
-            .expect_err("SHOW VIEWS and SHOW ALL stay DataFusion-owned");
-        let message = error.to_string();
-        assert!(
-            !message.contains("SHOW NAMESPACES") && !message.contains("unknown catalog"),
-            "{sql} must keep DataFusion's own refusal, got: {message}"
-        );
-    }
+    let error = execute(&ctx, &catalogs, "SHOW ALL")
+        .await
+        .expect_err("SHOW ALL stays DataFusion-owned");
+    let DataFusionError::Plan(message) = error else {
+        panic!("SHOW ALL must keep DataFusion's own Plan refusal, got {error:?}");
+    };
+    assert_eq!(
+        message,
+        "SHOW [VARIABLE] is not supported unless information_schema is enabled"
+    );
+    let views = execute(&ctx, &catalogs, "SHOW VIEWS")
+        .await
+        .expect("SHOW VIEWS answers at session scope");
+    let fields = views
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect::<Vec<_>>();
+    assert_eq!(fields, vec!["namespace", "viewName", "isTemporary"]);
 
     // Relations whose names collide with the keywords are still readable and describable.
     for sql in [

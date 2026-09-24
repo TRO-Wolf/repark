@@ -6,7 +6,7 @@ use datafusion::common::TableReference;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{Insert, ObjectType, Statement, TableObject};
-use repark_core::CatalogRegistry;
+use repark_core::{CatalogRegistry, TempViewSession};
 
 use crate::{
     DmlSubqueryVerb, MorDmlKind, alter, alter_write_order, build_ctas, call, column_move,
@@ -77,6 +77,18 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     read_only_catalogs: &HashSet<String, S>,
     write_options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    execute_in_session(ctx, catalogs, sql, read_only_catalogs, write_options, None).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_in_session<S: std::hash::BuildHasher>(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    read_only_catalogs: &HashSet<String, S>,
+    write_options: &crate::write_options::StatementWriteOptions,
+    temp_views: Option<&dyn TempViewSession>,
+) -> Result<DataFrame> {
     crate::normalize::refuse_unclosed_bracketed_comment(sql)?;
     if crate::show_create::starts_with_show_create_table(sql)
         && let Some(Err(error)) = crate::show_create::try_parse_show_create(sql)
@@ -96,6 +108,18 @@ pub async fn execute_with_statement_options<S: std::hash::BuildHasher>(
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());
+    let temp = crate::view_ddl::temp_ddl::route_temp_view_statement;
+    if let Some(outcome) = Box::pin(temp(
+        ctx,
+        &catalogs,
+        canonical_sql,
+        write_options,
+        temp_views,
+    ))
+    .await
+    {
+        return outcome;
+    }
     execute_calibrated(ctx, &catalogs, canonical_sql, Some(sql), write_options).await
 }
 
@@ -240,38 +264,6 @@ fn original_sql_for_locations<'a>(original: &'a str, before: &str, after: &str) 
     (before == after).then_some(original)
 }
 
-async fn execute_merge_statement(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    merge: &datafusion::sql::sqlparser::ast::Merge,
-    schema_evolution: bool,
-) -> Result<DataFrame> {
-    if merge.output.is_some() {
-        return Err(DataFusionError::NotImplemented(
-            "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
-        ));
-    }
-    let lowered;
-    let merge = if crate::keyword_lower::has_timestamp_ns_cast(merge) {
-        let mut owned = merge.clone();
-        crate::keyword_lower::lower_timestamp_ns_casts(&mut owned);
-        lowered = owned;
-        &lowered
-    } else {
-        merge
-    };
-    merge::execute_merge(
-        ctx,
-        catalogs,
-        &merge.table,
-        &merge.source,
-        &merge.on,
-        &merge.clauses,
-        schema_evolution,
-    )
-    .await
-}
-
 pub(crate) fn rewrite_sql_for_execute(sql: &str, catalogs: &CatalogRegistry) -> String {
     let rewritten = repark_functions::cast_map::rewrite_map_casts(sql);
     let sql = rewritten.as_deref().unwrap_or(sql);
@@ -367,7 +359,7 @@ async fn execute_inner(
                 .await
         }
         Statement::Merge(merge) => {
-            execute_merge_statement(ctx, catalogs, merge, schema_evolution).await
+            merge::execute_merge_statement(ctx, catalogs, merge, schema_evolution).await
         }
         Statement::Insert(insert) if insert.overwrite => {
             crate::view_dispatch::refuse_insert_into_view(ctx, catalogs, insert).await?;

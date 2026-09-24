@@ -23,8 +23,35 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the source table disappears, including EXTENDED. Failure pins check the
   DataFusion variant and the wrapped Iceberg error kind. It also owns the
   `FaultCatalog`/`ViewFaults` doubles the ALTER VIEW pins share: counted or
-  failing `table_exists`, `view_exists`, `rename_view` and `update_view`.
+  failing `table_exists`, `view_exists`, `rename_view` and `update_view`, and a failing
+  `namespace_exists` for the bare SHOW VIEWS probe in `temp_view_errors.rs`.
 - `alter_view_routing.rs` — ALTER VIEW pins viewless catalog refusals, error propagation, and property update counts. `alter_view_bare_name_uses_session_defaults_and_commits_once` pins one bare SET commit after USE; `view_create_drop_and_write_guard_complete_bare_names_from_use` pins CREATE, DROP, and the exact Plan variant and text of the write guard after USE. The four write-route tests pin bare and two-part view refusals against the same three-part Plan text, with bare table controls and committed rows. The empty-namespace test pins the bare ALTER VIEW Plan text, unchanged properties, and the write guard's `Ok(())` fallthrough. **r2b (2026-09-23):** every error pin is variant plus the full text with `==` (`VIEW_V_NOT_FOUND` for all three write legs; the injected External errors as `External error: Unexpected => injected … failure`). New branch pins: unknown catalog and four-part names for ALTER source, RENAME target and DROP; an empty current namespace refusing CREATE, DROP and a bare RENAME target; one-part SHOW VIEWS IN after USE; the SQL-reachable commit error (`version.history.num-entries`=-1); `update_view`/`rename_view` failures propagating for SET, UNSET and RENAME; UNSET's missing-key refusal at the router with zero updates; a backtick-quoted verb not matching; UNSET's non-key token refusal.
+- `temp_view_errors.rs` — **IPI-40 PR6b3b (2026-09-24):** end-to-end pins over a
+  ctx-backed `TempViewSession` (`CtxTempViews`) for every `view_ddl/temp_view.rs` refusal with
+  the complete text: the 101st nested temp view's `VIEW_EXCEED_MAX_NESTED_DEPTH` (a plain
+  `#[tokio::test]` on the default test-thread stack; a 100-view chain still reads), read-time
+  `INCOMPATIBLE_VIEW_SCHEMA_CHANGE` / `CANNOT_UP_CAST_DATATYPE` / `TABLE_OR_VIEW_NOT_FOUND`,
+  CREATE-time arity (both directions), multi-statement and unparsable bodies, an unknown
+  relation, `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` and `RECURSIVE_VIEW`, a dropped catalog table
+  under a temp view, a held frame after a catalog replaces the temp home, and the MERGE OUTPUT
+  refusal that moved to `merge.rs`; a bare SHOW VIEWS keeps the Iceberg error when the
+  current namespace's existence probe fails. Every Plan-class pin checks the root variant
+  beside the complete text (PR6 r2). pins: ice-views-1/C-018
+- `temp_view_routing.rs` — **IPI-40 PR6 (2026-09-24):** Rust pins for the
+  temporary-view door: the CREATE TEMPORARY VIEW parser branches (heads, verbatim
+  bodies, near misses, GLOBAL and the Spark-measured parse refusals as full
+  ParserError text), the session-less `NO_TEMP_VIEW_HOME` refusal, and a stub
+  `TempViewSession` through `router::execute_in_session` pinning temp-first body
+  qualification, the already-exists refusal, OR REPLACE, quoted names, the
+  write-body refusal, temp DROP VIEW / DROP TABLE (bare, PURGE, IF EXISTS,
+  home-qualified), the qualified DROP fall-throughs to the catalog, DESCRIBE's
+  NULL comments and SHOW VIEWS temp rows. The error-path pins (PR6b3a/b3b) add a
+  `TempViewSession` whose home a catalog replaced (DROP, DESCRIBE, SHOW VIEWS and CREATE
+  refuse with the session's text), malformed heads, clauses and SHOW VIEWS as full plan text,
+  and statement write options refused on every temp statement. Since PR6 r2 the
+  trailing-statement pins assert the complete multi-statement `PARSE_SYNTAX_ERROR` text on
+  every temp and catalog door, DROP included, and the qualified and bare catalog DROP
+  fall-throughs pin their complete texts. pins: ice-views-1/C-018
 - `view_use_resolution.rs` — **IPI-40 PR3 r2b (2026-09-23):** USE resolution per view entry point on the engine: bare and two-part ALTER VIEW SET/UNSET/RENAME, two-part CREATE and DROP after `USE ice`, and SHOW VIEWS IN with a one-part namespace after USE and an explicit `cat.ns` under a different current catalog. Each is killed by reverting its own call site to DataFusion's `ctx` defaults.
 - `show_tblproperties_routing.rs` — SHOW TBLPROPERTIES pins the complete view row set, warehouse location, Arrow schema, viewless catalog fallback, and error routing. `bare_name_completes_from_use_session_defaults` pins the same rows for a bare name after `use_ddl::set_session_defaults(ice, sales)`; it goes red if completion reads DataFusion's `default_catalog`. `commented_view_hides_comment_in_listing_and_key_lookup` (PR5 r2) pins a commented view's full listing without `comment` and the `('comment')` miss row.
 - `show_create_view_routing.rs` — **IPI-40 PR5 (2026-09-24, V-SHOW-CREATE):** `SHOW CREATE
@@ -679,7 +706,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   NAMESPACES / FUNCTIONS, SET TBLPROPERTIES / LOCATION, ANALYZE DATABASE / TABLES, bare
   MSCK, SELECT 1).
   pins: ice-error-conditions-1/C-011), `describe_show` (IPI-51 PR4, 2026-09-20: SHOW
-  PARTITIONS refuses stamped, and SHOW NAMESPACES / SHOW FUNCTIONS keep their intercepts.
+  PARTITIONS refuses stamped, and SHOW NAMESPACES / SHOW FUNCTIONS keep their intercepts;
+  since IPI-40 PR6a2 the SHOW NAMESPACES shadowing pin asserts that bare `SHOW VIEWS` answers
+  its `namespace`/`viewName`/`isTemporary` frame while `SHOW ALL` keeps DataFusion's refusal,
+  pinned as its complete Plan text since PR6 r2.
   pins: ice-error-conditions-1/C-011), `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `partition_overwrite` (DML-B dynamic/static snapshot stamps, empty-static `delete`,
@@ -1125,8 +1155,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   the warehouse, `repark_ctas` or `repark_ansi_ctas` refuses; a `location` holding another
   table refuses naming it, whether that table is in the same namespace, another namespace or
   a nested one (built through the catalog API). `file_list_view` (a temp view
-  registered through `create_or_replace_temp_view_from`, since the SQL door has no `CREATE
-  TEMP VIEW`) lists the view's orphans verbatim under `dry_run => true`, deletes exactly
+  registered through `create_or_replace_temp_view_from`) lists the view's orphans verbatim under `dry_run => true`, deletes exactly
   the listed ones when armed, and refuses a missing view (`TABLE_OR_VIEW_NOT_FOUND`), a
   warehouse `location` and a non-timestamp `last_modified`. On a table under a `file:///`
   namespace location, a bare view path fails with the same prefix-conflict string as a bare
@@ -1591,8 +1620,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   misses (bare, unrelated CTE, and a colliding CTE name beside the qualified
   table) answering `_file` row by row; and
   `input_file_name_over_a_temp_view_named_like_the_table_falls_through`
-  measures the temp-view collision (`CREATE TEMPORARY VIEW` refuses
-  `NotImplemented`; a programmatic temp view still falls through).
+  measures the temp-view collision (since IPI-40 PR6 the view is created
+  through the SQL door's `CREATE TEMPORARY VIEW`, and it still falls through; since PR6 r2
+  the `[UNRESOLVED_ROUTINE]` and `_file` refusals are pinned as complete texts).
   `a_real_column_named_input_file_name_reads_unchanged` pins that a user column
   of that name is read normally, and `insert_around_the_trigger_keeps_todays_answers`
   pins the input-file-name-only trigger returning `Ok(None)` for a non-query

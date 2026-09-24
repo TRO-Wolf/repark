@@ -6,10 +6,10 @@ use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::ObjectName;
+use datafusion::sql::sqlparser::ast::{Ident, ObjectName};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
 use repark_common::spark_error;
-use repark_core::{CatalogRegistry, LocationPolicy};
+use repark_core::{CatalogRegistry, LocationPolicy, TempViewSession};
 use repark_iceberg::view::{
     ViewDefinition, ViewTarget, create_or_replace_view, drop_catalog_view, list_catalog_views,
     split_view_properties, view_schema_for_output,
@@ -22,6 +22,14 @@ use crate::view_ddl::parse::{
     ShowViewsStatement,
 };
 use crate::view_ddl::read::{plan_prepared_body, prepare_view_body_sql};
+use crate::view_ddl::temp_parse::CreateTempViewStatement;
+use crate::view_ddl::temp_view::{
+    TempViewDefinition, refuse_recursive_temp_view, replanning_temp_view,
+};
+
+pub(crate) const NO_TEMP_VIEW_HOME: &str = "CREATE TEMPORARY VIEW needs a session: this SQL \
+     door runs without a session-local temp-view home, so it cannot register a temporary view. \
+     Run the statement through ReparkSession::sql";
 
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn execute_create_view(
@@ -67,6 +75,87 @@ pub(crate) async fn execute_create_view(
     )
     .await?;
     ctx.read_empty()
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn route_create_temp_view(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    parsed: Result<CreateTempViewStatement>,
+    write_options: &crate::write_options::StatementWriteOptions,
+    temp_views: Option<&dyn TempViewSession>,
+) -> Result<DataFrame> {
+    let statement = parsed?;
+    write_options.refuse_if_non_empty("CREATE TEMPORARY VIEW")?;
+    execute_create_temp_view(ctx, catalogs, statement, temp_views).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_create_temp_view(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: CreateTempViewStatement,
+    temp_views: Option<&dyn TempViewSession>,
+) -> Result<DataFrame> {
+    let Some(temp_views) = temp_views else {
+        return Err(DataFusionError::NotImplemented(
+            NO_TEMP_VIEW_HOME.to_string(),
+        ));
+    };
+    let (catalog, namespace_name) = crate::use_ddl::session_defaults(catalogs);
+    let mut home = temp_views.temp_view_home().map_err(temp_view_err)?;
+    home.push(temp_view_home_segment(&statement.name));
+    let definition = TempViewDefinition {
+        home,
+        display: format!("`{}`", statement.name.value.replace('`', "``")),
+        sql: statement.body_sql,
+        catalog,
+        namespace: NamespaceIdent::new(namespace_name),
+        aliases: statement.aliases,
+    };
+    let view = replanning_temp_view(ctx, catalogs, definition, temp_views).await?;
+    let name = temp_view_name_arg(&statement.name);
+    if !statement.or_replace
+        && temp_views
+            .resolve_temp_view_home_ref(&name)
+            .map_err(temp_view_err)?
+            .is_some()
+    {
+        return Err(DataFusionError::Plan(spark_error::message(
+            spark_error::TEMP_TABLE_OR_VIEW_ALREADY_EXISTS,
+            &[("relationName", view.display())],
+        )));
+    }
+    refuse_recursive_temp_view(ctx, &view).await?;
+    let frame = ctx.read_table(view)?;
+    temp_views
+        .create_or_replace_temp_view_from(&name, &frame)
+        .map_err(temp_view_err)?;
+    ctx.read_empty()
+}
+
+pub(crate) fn temp_view_home_segment(ident: &Ident) -> String {
+    if ident.quote_style.is_some() {
+        ident.value.clone()
+    } else {
+        ident.value.to_ascii_lowercase()
+    }
+}
+
+pub(crate) fn temp_view_name_arg(ident: &Ident) -> String {
+    if ident.quote_style.is_some() {
+        format!("\"{}\"", ident.value.replace('"', "\"\""))
+    } else {
+        ident.value.clone()
+    }
+}
+
+#[allow(clippy::needless_pass_by_value)]
+pub(crate) fn temp_view_err(error: repark_common::Error) -> DataFusionError {
+    match error {
+        repark_common::Error::Analysis(message) => DataFusionError::Plan(message),
+        other => DataFusionError::External(Box::new(other)),
+    }
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -232,7 +321,56 @@ pub(crate) async fn execute_show_views(
     catalogs: &CatalogRegistry,
     statement: ShowViewsStatement,
 ) -> Result<DataFrame> {
-    let (catalog, namespace_name) = match statement.namespace.as_slice() {
+    execute_show_views_with(ctx, catalogs, statement, Vec::new()).await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn execute_show_views_with(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    statement: ShowViewsStatement,
+    mut temp_views: Vec<String>,
+) -> Result<DataFrame> {
+    let (namespace_name, mut views) = catalog_view_names(catalogs, &statement.namespace).await?;
+    views.sort();
+    temp_views.sort();
+    if let Some(pattern) = statement.like.as_deref() {
+        views.retain(|view| filter_pattern_matches(view, pattern));
+        temp_views.retain(|view| filter_pattern_matches(view, pattern));
+    }
+    let rows = views
+        .into_iter()
+        .map(|view| (namespace_name.clone(), view, false))
+        .chain(
+            temp_views
+                .into_iter()
+                .map(|view| (String::new(), view, true)),
+        )
+        .collect::<Vec<_>>();
+    ctx.read_batch(show_view_rows_batch(&rows)?)
+}
+
+async fn catalog_view_names(
+    catalogs: &CatalogRegistry,
+    namespace: &[String],
+) -> Result<(String, Vec<String>)> {
+    let (catalog, namespace_name) = match namespace {
+        [] => {
+            let (catalog, namespace_name) = crate::use_ddl::session_defaults(catalogs);
+            let Some(handle) = catalogs.get(&catalog) else {
+                return Ok((namespace_name, Vec::new()));
+            };
+            let namespace = NamespaceIdent::new(namespace_name.clone());
+            if namespace_name.is_empty()
+                || !handle
+                    .namespace_exists(&namespace)
+                    .await
+                    .map_err(iceberg_err)?
+            {
+                return Ok((namespace_name, Vec::new()));
+            }
+            (catalog, namespace_name)
+        }
         [namespace] => (
             crate::use_ddl::session_defaults(catalogs).0,
             namespace.clone(),
@@ -241,22 +379,17 @@ pub(crate) async fn execute_show_views(
         _ => {
             return Err(DataFusionError::Plan(format!(
                 "expected a two-part `IN <catalog.namespace>` name, got `{}`",
-                statement.namespace.join(".")
+                namespace.join(".")
             )));
         }
     };
     let handle = catalog_handle(catalogs, &catalog)?;
     let namespace = NamespaceIdent::new(namespace_name.clone());
-    let mut views =
-        list_catalog_views(&catalog, handle.as_ref(), &namespace, &namespace_name).await?;
-    views.sort();
-    if let Some(pattern) = statement.like.as_deref() {
-        views.retain(|view| filter_pattern_matches(view, pattern));
-    }
-    ctx.read_batch(show_views_batch(&namespace_name, &views)?)
+    let views = list_catalog_views(&catalog, handle.as_ref(), &namespace, &namespace_name).await?;
+    Ok((namespace_name, views))
 }
 
-pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<RecordBatch> {
+pub(crate) fn show_view_rows_batch(rows: &[(String, String, bool)]) -> Result<RecordBatch> {
     let schema = Arc::new(Schema::new(vec![
         Field::new("namespace", DataType::Utf8, false),
         Field::new("viewName", DataType::Utf8, false),
@@ -265,9 +398,21 @@ pub(crate) fn show_views_batch(namespace: &str, views: &[String]) -> Result<Reco
     Ok(RecordBatch::try_new(
         schema,
         vec![
-            Arc::new(StringArray::from(vec![namespace; views.len()])),
-            Arc::new(StringArray::from(views.to_vec())),
-            Arc::new(BooleanArray::from(vec![false; views.len()])),
+            Arc::new(StringArray::from(
+                rows.iter()
+                    .map(|(namespace, _, _)| namespace.as_str())
+                    .collect::<Vec<_>>(),
+            )),
+            Arc::new(StringArray::from(
+                rows.iter()
+                    .map(|(_, view, _)| view.as_str())
+                    .collect::<Vec<_>>(),
+            )),
+            Arc::new(BooleanArray::from(
+                rows.iter()
+                    .map(|(_, _, temporary)| *temporary)
+                    .collect::<Vec<_>>(),
+            )),
         ],
     )?)
 }

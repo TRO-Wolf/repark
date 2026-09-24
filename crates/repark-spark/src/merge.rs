@@ -41,6 +41,38 @@ const NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_NOT_MATCHED_C
 const NON_LAST_NOT_MATCHED_BY_SOURCE_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_NOT_MATCHED_BY_SOURCE_CLAUSE_OMIT_CONDITION: When there are more than one NOT MATCHED \
      BY SOURCE clauses in a MERGE statement, only the last NOT MATCHED BY SOURCE clause can omit the condition";
 
+pub(crate) async fn execute_merge_statement(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    merge: &datafusion::sql::sqlparser::ast::Merge,
+    schema_evolution: bool,
+) -> Result<DataFrame> {
+    if merge.output.is_some() {
+        return Err(DataFusionError::NotImplemented(
+            "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
+        ));
+    }
+    let lowered;
+    let merge = if crate::keyword_lower::has_timestamp_ns_cast(merge) {
+        let mut owned = merge.clone();
+        crate::keyword_lower::lower_timestamp_ns_casts(&mut owned);
+        lowered = owned;
+        &lowered
+    } else {
+        merge
+    };
+    execute_merge(
+        ctx,
+        catalogs,
+        &merge.table,
+        &merge.source,
+        &merge.on,
+        &merge.clauses,
+        schema_evolution,
+    )
+    .await
+}
+
 /// Route MERGE INTO: lower the AST to `MergeSpec`, resolve the Iceberg handle, and execute COW.
 /// # Errors
 /// Returns planning errors for malformed MERGE statements and `NotImplemented` for residual forms.

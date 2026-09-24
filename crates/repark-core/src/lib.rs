@@ -66,7 +66,7 @@ pub use session_time_zone::{
 
 // --- Seams.
 pub use backend::{ExecutionBackend, SingleNodeBackend};
-pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
+pub use dialect::{DataFusionDialect, EngineContext, SqlDialect, TempViewSession};
 
 // === Pre-execute belt ===
 pub use extension::{SessionBuildConf, SessionExtension};

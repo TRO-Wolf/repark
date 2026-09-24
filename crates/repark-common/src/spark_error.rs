@@ -37,6 +37,13 @@ pub enum Condition {
     ViewNotFound,
     CreateViewColumnArityMismatchNotEnoughDataColumns,
     CreateViewColumnArityMismatchTooManyDataColumns,
+    TempTableOrViewAlreadyExists,
+    TempViewNameTooManyNameParts,
+    IdentifierTooManyNameParts,
+    RecursiveView,
+    IncompatibleViewSchemaChange,
+    CannotUpCastDatatype,
+    ViewExceedMaxNestedDepth,
 }
 
 pub const TABLE_OR_VIEW_NOT_FOUND: Condition = Condition::TableOrViewNotFound;
@@ -89,6 +96,13 @@ pub const CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS: Condition =
     Condition::CreateViewColumnArityMismatchNotEnoughDataColumns;
 pub const CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS: Condition =
     Condition::CreateViewColumnArityMismatchTooManyDataColumns;
+pub const TEMP_TABLE_OR_VIEW_ALREADY_EXISTS: Condition = Condition::TempTableOrViewAlreadyExists;
+pub const TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS: Condition = Condition::TempViewNameTooManyNameParts;
+pub const IDENTIFIER_TOO_MANY_NAME_PARTS: Condition = Condition::IdentifierTooManyNameParts;
+pub const RECURSIVE_VIEW: Condition = Condition::RecursiveView;
+pub const INCOMPATIBLE_VIEW_SCHEMA_CHANGE: Condition = Condition::IncompatibleViewSchemaChange;
+pub const CANNOT_UP_CAST_DATATYPE: Condition = Condition::CannotUpCastDatatype;
+pub const VIEW_EXCEED_MAX_NESTED_DEPTH: Condition = Condition::ViewExceedMaxNestedDepth;
 
 impl Condition {
     #[must_use]
@@ -143,6 +157,13 @@ impl Condition {
             Self::CreateViewColumnArityMismatchTooManyDataColumns => {
                 "CREATE_VIEW_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS"
             }
+            Self::TempTableOrViewAlreadyExists => "TEMP_TABLE_OR_VIEW_ALREADY_EXISTS",
+            Self::TempViewNameTooManyNameParts => "TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS",
+            Self::IdentifierTooManyNameParts => "IDENTIFIER_TOO_MANY_NAME_PARTS",
+            Self::RecursiveView => "RECURSIVE_VIEW",
+            Self::IncompatibleViewSchemaChange => "INCOMPATIBLE_VIEW_SCHEMA_CHANGE",
+            Self::CannotUpCastDatatype => "CANNOT_UP_CAST_DATATYPE",
+            Self::ViewExceedMaxNestedDepth => "VIEW_EXCEED_MAX_NESTED_DEPTH",
         }
     }
 
@@ -150,7 +171,14 @@ impl Condition {
     pub fn sqlstate(self) -> Option<&'static str> {
         match self {
             Self::TableOrViewNotFound | Self::ViewNotFound => Some("42P01"),
-            Self::TableOrViewAlreadyExists | Self::ViewAlreadyExists => Some("42P07"),
+            Self::TableOrViewAlreadyExists
+            | Self::ViewAlreadyExists
+            | Self::TempTableOrViewAlreadyExists => Some("42P07"),
+            Self::TempViewNameTooManyNameParts => Some("428EK"),
+            Self::RecursiveView => Some("42K0H"),
+            Self::IncompatibleViewSchemaChange => Some("51024"),
+            Self::CannotUpCastDatatype => Some("42846"),
+            Self::ViewExceedMaxNestedDepth => Some("54K00"),
             Self::NotSupportedCommandForV2Table
             | Self::UnsupportedFeatureTableOperation
             | Self::UnsupportedFeatureCatalogOperation
@@ -160,7 +188,8 @@ impl Condition {
                 Some("42703")
             }
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported
-            | Self::ParseSyntaxError => Some("42601"),
+            | Self::ParseSyntaxError
+            | Self::IdentifierTooManyNameParts => Some("42601"),
             Self::IncompatibleDataForTableCannotSafelyCast => Some("KD000"),
             Self::InsertColumnArityMismatchNotEnoughDataColumns
             | Self::CreateViewColumnArityMismatchNotEnoughDataColumns
@@ -186,6 +215,7 @@ impl Condition {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn template(self) -> &'static str {
         match self {
             Self::TableOrViewNotFound => {
@@ -285,6 +315,25 @@ impl Condition {
             Self::CreateViewColumnArityMismatchTooManyDataColumns => {
                 "Cannot create view {viewName}, the reason is too many data columns:\nView columns: {viewColumns}.\nData columns: {dataColumns}."
             }
+            Self::TempTableOrViewAlreadyExists => {
+                "Cannot create the temporary view {relationName} because it already exists.\nChoose a different name, drop or replace the existing view."
+            }
+            Self::TempViewNameTooManyNameParts => {
+                "CREATE TEMPORARY VIEW or the corresponding Dataset APIs only accept single-part view names, but got: {actualName}."
+            }
+            Self::IdentifierTooManyNameParts => {
+                "{identifier} is not a valid identifier as it has more than {limit} name parts."
+            }
+            Self::RecursiveView => "Recursive view {viewIdent} detected (cycle: {newPath}).",
+            Self::IncompatibleViewSchemaChange => {
+                "The SQL query of view {viewName} has an incompatible schema change and column {colName} cannot be resolved. Expected {expectedNum} columns named {colName} but got {actualCols}.\nPlease try to re-create the view by running: {suggestion}."
+            }
+            Self::CannotUpCastDatatype => {
+                "Cannot up cast {expression} from {sourceType} to {targetType}.\n{details}"
+            }
+            Self::ViewExceedMaxNestedDepth => {
+                "The depth of view {viewName} exceeds the maximum view resolution depth ({maxNestedDepth}).\nAnalysis is aborted to avoid errors. If you want to work around this, please try to increase the value of \"spark.sql.view.maxNestedViewDepth\"."
+            }
         }
     }
 }
@@ -381,6 +430,20 @@ mod tests {
         ("viewName", "sc.ns.va"),
         ("viewColumns", "a, b"),
         ("dataColumns", "id"),
+        ("actualName", "`a`.`b`"),
+        ("identifier", "`a`.`b`.`c`"),
+        ("limit", "2"),
+        ("viewIdent", "`a`"),
+        ("newPath", "`a` -> `b` -> `a`"),
+        ("colName", "data"),
+        ("expectedNum", "1"),
+        ("actualCols", "[]"),
+        ("suggestion", "CREATE OR REPLACE TEMPORARY VIEW"),
+        ("expression", "x3.id"),
+        ("sourceType", "\"STRING\""),
+        ("targetType", "\"INT\""),
+        ("details", "The type path of the target object is:"),
+        ("maxNestedDepth", "100"),
     ];
 
     const ALL: &[Condition] = &[
@@ -419,11 +482,18 @@ mod tests {
         VIEW_NOT_FOUND,
         CREATE_VIEW_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
         CREATE_VIEW_COLUMN_ARITY_MISMATCH_TOO_MANY_DATA_COLUMNS,
+        TEMP_TABLE_OR_VIEW_ALREADY_EXISTS,
+        TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS,
+        IDENTIFIER_TOO_MANY_NAME_PARTS,
+        RECURSIVE_VIEW,
+        INCOMPATIBLE_VIEW_SCHEMA_CHANGE,
+        CANNOT_UP_CAST_DATATYPE,
+        VIEW_EXCEED_MAX_NESTED_DEPTH,
     ];
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 35);
+        assert_eq!(ALL.len(), 42);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();
@@ -790,6 +860,73 @@ mod tests {
         let text = error.to_string();
         assert!(text.starts_with("[TABLE_OR_VIEW_NOT_FOUND]"), "{text}");
         assert!(text.contains("SQLSTATE: 42P01"), "{text}");
+    }
+
+    #[test]
+    fn temp_view_rows_reproduce_the_measured_spark_bytes() {
+        assert_eq!(
+            message(
+                TEMP_TABLE_OR_VIEW_ALREADY_EXISTS,
+                &[("relationName", "`v`")]
+            ),
+            "[TEMP_TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create the temporary view `v` because it already exists.\nChoose a different name, drop or replace the existing view. SQLSTATE: 42P07"
+        );
+        assert_eq!(
+            message(
+                TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS,
+                &[("actualName", "`a`.`b`")]
+            ),
+            "[TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS] CREATE TEMPORARY VIEW or the corresponding Dataset APIs only accept single-part view names, but got: `a`.`b`. SQLSTATE: 428EK"
+        );
+        assert_eq!(
+            message(
+                IDENTIFIER_TOO_MANY_NAME_PARTS,
+                &[("identifier", "`sc`.`ns`.`q`"), ("limit", "2")]
+            ),
+            "[IDENTIFIER_TOO_MANY_NAME_PARTS] `sc`.`ns`.`q` is not a valid identifier as it has more than 2 name parts. SQLSTATE: 42601"
+        );
+        assert_eq!(
+            message(
+                RECURSIVE_VIEW,
+                &[("viewIdent", "`a`"), ("newPath", "`a` -> `b` -> `a`")]
+            ),
+            "[RECURSIVE_VIEW] Recursive view `a` detected (cycle: `a` -> `b` -> `a`). SQLSTATE: 42K0H"
+        );
+        assert_eq!(
+            message(
+                INCOMPATIBLE_VIEW_SCHEMA_CHANGE,
+                &[
+                    ("viewName", "`w`"),
+                    ("colName", "data"),
+                    ("expectedNum", "1"),
+                    ("actualCols", "[]"),
+                    ("suggestion", "CREATE OR REPLACE TEMPORARY VIEW"),
+                ]
+            ),
+            "[INCOMPATIBLE_VIEW_SCHEMA_CHANGE] The SQL query of view `w` has an incompatible schema change and column data cannot be resolved. Expected 1 columns named data but got [].\nPlease try to re-create the view by running: CREATE OR REPLACE TEMPORARY VIEW. SQLSTATE: 51024"
+        );
+        assert_eq!(
+            message(
+                CANNOT_UP_CAST_DATATYPE,
+                &[
+                    ("expression", "x3.id"),
+                    ("sourceType", "\"STRING\""),
+                    ("targetType", "\"INT\""),
+                    (
+                        "details",
+                        "The type path of the target object is:\n\nYou can either add an explicit cast to the input data or choose a higher precision type of the field in the target object"
+                    ),
+                ]
+            ),
+            "[CANNOT_UP_CAST_DATATYPE] Cannot up cast x3.id from \"STRING\" to \"INT\".\nThe type path of the target object is:\n\nYou can either add an explicit cast to the input data or choose a higher precision type of the field in the target object SQLSTATE: 42846"
+        );
+        assert_eq!(
+            message(
+                VIEW_EXCEED_MAX_NESTED_DEPTH,
+                &[("viewName", "`d0`"), ("maxNestedDepth", "100")]
+            ),
+            "[VIEW_EXCEED_MAX_NESTED_DEPTH] The depth of view `d0` exceeds the maximum view resolution depth (100).\nAnalysis is aborted to avoid errors. If you want to work around this, please try to increase the value of \"spark.sql.view.maxNestedViewDepth\". SQLSTATE: 54K00"
+        );
     }
 
     #[test]

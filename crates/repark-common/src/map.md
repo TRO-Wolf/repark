@@ -32,6 +32,13 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   `CREATE_VIEW_COLUMN_ARITY_MISMATCH` (both directions) rows with unit pins.
   **IPI-40 ALTER VIEW (2026-09-23):** `UNSUPPORTED_FEATURE.CATALOG_OPERATION` refuses view property changes on catalogs without view support with SQLSTATE `0A000`.
   pins: ice-views-1/C-010
+  **IPI-40 PR6 (2026-09-24):** the temporary-view rows measured on Spark 4.1.2 —
+  `TEMP_TABLE_OR_VIEW_ALREADY_EXISTS` (42P07), `TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS` (428EK),
+  `IDENTIFIER_TOO_MANY_NAME_PARTS` (42601), `RECURSIVE_VIEW` (42K0H),
+  `INCOMPATIBLE_VIEW_SCHEMA_CHANGE` (51024), `CANNOT_UP_CAST_DATATYPE` (42846) and
+  `VIEW_EXCEED_MAX_NESTED_DEPTH` (54K00) — with
+  byte-exact unit pins; `template()` carries `#[allow(clippy::too_many_lines)]` as a lookup
+  table. pins: ice-views-1/C-018
 
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
   unsupported-feature class (U4: no longer a scaffolding placeholder; `engine_err` folds

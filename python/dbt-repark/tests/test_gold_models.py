@@ -487,7 +487,19 @@ def test_incremental_materialization_refuses(project: tuple[Path, Path]) -> None
     _prepend_config(root, "gold_fct", "config(materialized='incremental')")
     built = _invoke(["run", "--select", "gold_fct"], root)
     assert not built.success
-    assert "DBT-TEMPVIEW-1" in _failures(built)
+    assert _failures(built) == json.dumps(
+        [
+            "Compilation Error in model gold_fct (models/gold_fct.sql)\n"
+            "  dbt-repark does not support materialized='incremental':\n"
+            "       RePark does not run dbt incremental/snapshot materializations yet\n"
+            "       (divergence registry DBT-INCREMENTAL-1). Use materialized='table', which "
+            "rebuilds with\n"
+            "       CREATE OR REPLACE TABLE in one Iceberg snapshot.\n"
+            "  \n"
+            "  > in macro materialization_incremental_repark (macros/materializations.sql)\n"
+            "  > called by model gold_fct (models/gold_fct.sql)"
+        ]
+    )
 
 
 def test_snapshot_materialization_refuses(project: tuple[Path, Path]) -> None:
@@ -510,7 +522,17 @@ def test_snapshot_materialization_refuses(project: tuple[Path, Path]) -> None:
     assert _invoke(["run"], root).success
     taken = _invoke(["snapshot"], root)
     assert not taken.success
-    assert "DBT-TEMPVIEW-1" in _failures(taken)
+    assert _failures(taken) == json.dumps(
+        [
+            "Compilation Error in snapshot gold_snapshot (snapshots/gold_snapshot.sql)\n"
+            "  dbt-repark does not support snapshots:\n"
+            "       RePark does not run dbt incremental/snapshot materializations yet\n"
+            "       (divergence registry DBT-INCREMENTAL-1).\n"
+            "  \n"
+            "  > in macro materialization_snapshot_repark (macros/materializations.sql)\n"
+            "  > called by snapshot gold_snapshot (snapshots/gold_snapshot.sql)"
+        ]
+    )
 
 
 def test_column_documentation_refuses(project: tuple[Path, Path]) -> None:

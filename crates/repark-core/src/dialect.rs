@@ -19,6 +19,24 @@ pub struct EngineContext<'a> {
     pub read_only: &'a HashSet<String>,
     pub overwrite_intent: crate::OverwriteIntent,
     pub session_time_zone: SessionTimeZone,
+    pub temp_views: Option<&'a dyn TempViewSession>,
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub trait TempViewSession: Send + Sync {
+    fn create_or_replace_temp_view_from(
+        &self,
+        name: &str,
+        frame: &DataFrame,
+    ) -> repark_common::Result<()>;
+
+    fn resolve_temp_view_home_ref(&self, name: &str) -> repark_common::Result<Option<Vec<String>>>;
+
+    fn temp_view_home(&self) -> repark_common::Result<Vec<String>>;
+
+    fn list_temp_view_names(&self) -> repark_common::Result<Vec<String>>;
+
+    fn drop_temp_view(&self, name: &str) -> repark_common::Result<bool>;
 }
 
 impl<'a> EngineContext<'a> {
@@ -45,6 +63,7 @@ impl<'a> EngineContext<'a> {
             read_only,
             overwrite_intent: crate::OverwriteIntent::Session,
             session_time_zone,
+            temp_views: None,
         }
     }
 }

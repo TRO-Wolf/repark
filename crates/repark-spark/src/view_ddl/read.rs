@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::ops::ControlFlow;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use datafusion::catalog::{SchemaProvider, TableProvider};
@@ -9,12 +9,14 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    Ident, ObjectName, ObjectNamePart, Query, Statement, VisitMut, VisitorMut,
+    Ident, ObjectName, ObjectNamePart, Query, SetExpr, Statement, VisitMut, VisitorMut,
 };
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{Catalog, ErrorKind, NamespaceIdent, TableIdent};
-use repark_core::CatalogRegistry;
+use repark_common::spark_error;
+use repark_core::{CatalogRegistry, TempViewSession};
 use repark_iceberg::catalog::iceberg_to_datafusion;
 use repark_iceberg::view::{ViewReadSpec, view_read_spec};
 
@@ -22,6 +24,8 @@ use crate::catalog_ops::name_parts;
 use crate::time_travel::{PinnedViews, prepare_time_travel_sql, sql_has_time_travel};
 
 pub(crate) const MAX_VIEW_EXPANSION_DEPTH: usize = 100;
+pub(crate) const VIEW_EXPANSION_STACK_RED_ZONE: usize = 1024 * 1024;
+pub(crate) const VIEW_EXPANSION_STACK_SEGMENT: usize = 8 * 1024 * 1024;
 pub(crate) const VIEW_SUBQUERY_ALIAS: &str = "_repark_view";
 
 pub(crate) struct ViewSchemaProvider {
@@ -140,10 +144,7 @@ async fn expand_view_body(
 ) -> Result<LogicalPlan> {
     let guard = catalogs.view_expansion_guard();
     if guard.level() > MAX_VIEW_EXPANSION_DEPTH {
-        return Err(DataFusionError::Plan(format!(
-            "[VIEW_NESTED_DEPTH_LIMIT] View resolution exceeded the maximum nested depth of \
-             {MAX_VIEW_EXPANSION_DEPTH}"
-        )));
+        return Err(nested_depth_refusal());
     }
     let stored_catalog = spec
         .default_catalog
@@ -162,6 +163,13 @@ async fn expand_view_body(
     Ok(frame.logical_plan().clone())
 }
 
+pub(crate) fn nested_depth_refusal() -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[VIEW_NESTED_DEPTH_LIMIT] View resolution exceeded the maximum nested depth of \
+         {MAX_VIEW_EXPANSION_DEPTH}"
+    ))
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub(crate) async fn prepare_view_body_sql(
     ctx: &SessionContext,
@@ -169,6 +177,26 @@ pub(crate) async fn prepare_view_body_sql(
     stored_catalog: &str,
     stored_namespace: &NamespaceIdent,
     body_sql: &str,
+) -> Result<(String, PinnedViews)> {
+    prepare_view_body_sql_with(
+        ctx,
+        catalogs,
+        stored_catalog,
+        stored_namespace,
+        body_sql,
+        &TempHomes::None,
+    )
+    .await
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) async fn prepare_view_body_sql_with(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    stored_catalog: &str,
+    stored_namespace: &NamespaceIdent,
+    body_sql: &str,
+    temp_homes: &TempHomes<'_>,
 ) -> Result<(String, PinnedViews)> {
     let mut pins = PinnedViews::default();
     let mut sql = body_sql.to_string();
@@ -178,8 +206,46 @@ pub(crate) async fn prepare_view_body_sql(
         sql = rewritten;
     }
     let qualified =
-        qualify_view_body_refs(catalogs, stored_catalog, stored_namespace, &sql).await?;
+        qualify_view_body_refs(catalogs, stored_catalog, stored_namespace, &sql, temp_homes)
+            .await?;
     Ok((qualified, pins))
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub(crate) fn refuse_write_query_body(body_sql: &str) -> Result<()> {
+    let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, body_sql) else {
+        return Ok(());
+    };
+    let keyword = statements.iter().find_map(|statement| match statement {
+        Statement::Query(query) => match query.body.as_ref() {
+            SetExpr::Insert(_) => Some("INSERT"),
+            SetExpr::Update(_) => Some("UPDATE"),
+            SetExpr::Delete(_) => Some("DELETE"),
+            SetExpr::Merge(_) => Some("MERGE"),
+            _ => None,
+        },
+        _ => None,
+    });
+    let Some(keyword) = keyword else {
+        return Ok(());
+    };
+    let written = Tokenizer::new(&DatabricksDialect {}, body_sql)
+        .tokenize()
+        .unwrap_or_default()
+        .into_iter()
+        .find_map(|token| match token {
+            Token::Word(word)
+                if word.quote_style.is_none() && word.value.eq_ignore_ascii_case(keyword) =>
+            {
+                Some(word.value)
+            }
+            _ => None,
+        })
+        .unwrap_or_else(|| keyword.to_string());
+    let near = format!("'{written}'");
+    Err(crate::view_ddl::temp_parse::spark_parse_error(
+        spark_error::message(spark_error::PARSE_SYNTAX_ERROR, &[("near", near.as_str())]),
+    ))
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -223,6 +289,7 @@ async fn qualify_view_body_refs(
     stored_catalog: &str,
     stored_namespace: &NamespaceIdent,
     sql: &str,
+    temp_homes: &TempHomes<'_>,
 ) -> Result<String> {
     let statements = Parser::parse_sql(&DatabricksDialect {}, sql).map_err(|error| {
         DataFusionError::Plan(format!("could not parse a stored view body: {error}"))
@@ -240,9 +307,10 @@ async fn qualify_view_body_refs(
             "a view body must hold a single query statement".to_string(),
         ));
     }
-    let Some(handle) = catalogs.get(stored_catalog) else {
+    let handle = catalogs.get(stored_catalog);
+    if handle.is_none() && matches!(temp_homes, TempHomes::None) {
         return Ok(sql.to_string());
-    };
+    }
     let mut candidates = Vec::new();
     let mut scopes = CteScopes { levels: Vec::new() };
     if let Statement::Query(query) = &mut statement {
@@ -257,6 +325,19 @@ async fn qualify_view_body_refs(
     distinct.dedup();
     let mut qualified: HashMap<Vec<String>, ObjectName> = HashMap::new();
     for parts in distinct {
+        let Some(original) = candidates
+            .iter()
+            .find(|candidate| name_parts(candidate) == parts)
+        else {
+            continue;
+        };
+        if let Some(home) = temp_view_home_name(temp_homes, original)? {
+            qualified.insert(parts, home);
+            continue;
+        }
+        let Some(handle) = handle else {
+            continue;
+        };
         let (namespace, table) = match parts.as_slice() {
             [table] => (stored_namespace.clone(), table.clone()),
             [namespace, table] => (NamespaceIdent::new(namespace.clone()), table.clone()),
@@ -265,12 +346,6 @@ async fn qualify_view_body_refs(
         if !reference_is_catalog_object(handle.as_ref(), &namespace, &table).await? {
             continue;
         }
-        let Some(original) = candidates
-            .iter()
-            .find(|candidate| name_parts(candidate) == parts)
-        else {
-            continue;
-        };
         qualified.insert(
             parts,
             qualify_object_name(original, stored_catalog, stored_namespace),
@@ -288,6 +363,53 @@ async fn qualify_view_body_refs(
         });
     }
     Ok(statement.to_string())
+}
+
+pub(crate) enum TempHomes<'a> {
+    None,
+    Live {
+        session: &'a dyn TempViewSession,
+        captured: &'a Mutex<HashMap<String, Vec<String>>>,
+    },
+    Captured(&'a HashMap<String, Vec<String>>),
+}
+
+fn temp_view_home_name(
+    temp_homes: &TempHomes<'_>,
+    name: &ObjectName,
+) -> Result<Option<ObjectName>> {
+    let [ObjectNamePart::Identifier(ident)] = name.0.as_slice() else {
+        return Ok(None);
+    };
+    let home = match temp_homes {
+        TempHomes::None => None,
+        TempHomes::Captured(homes) => homes
+            .get(&crate::view_ddl::execute::temp_view_home_segment(ident))
+            .cloned(),
+        TempHomes::Live { session, captured } => {
+            let home = session
+                .resolve_temp_view_home_ref(&crate::view_ddl::execute::temp_view_name_arg(ident))
+                .map_err(crate::view_ddl::execute::temp_view_err)?;
+            if let Some(segments) = &home {
+                captured
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .insert(
+                        crate::view_ddl::execute::temp_view_home_segment(ident),
+                        segments.clone(),
+                    );
+            }
+            home
+        }
+    };
+    Ok(home.map(|segments| {
+        ObjectName(
+            segments
+                .into_iter()
+                .map(|segment| ObjectNamePart::Identifier(Ident::with_quote('"', segment)))
+                .collect(),
+        )
+    }))
 }
 
 struct ScopedRelations<'a, F: FnMut(&mut ObjectName)> {

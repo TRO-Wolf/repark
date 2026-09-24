@@ -461,12 +461,15 @@ def test_describe_missing_table_analysis_exception(spark: ReparkSession) -> None
     )
 
 
-def test_describe_temp_view_falls_through(spark: ReparkSession) -> None:
-    """D-1: DESCRIBE of a temp view keeps DataFusion's shape, not the table path."""
+def test_describe_temp_view_answers_spark_rows(spark: ReparkSession) -> None:
+    """D-1: DESCRIBE of a temp view answers Spark's rows with a NULL comment, not the table path."""
     spark.sql("SELECT 1 AS a, 'x' AS b").createOrReplaceTempView("src_view")
     described = spark.sql("DESCRIBE src_view").to_arrow()
-    assert described.schema.names[0] != "col_name"
-    assert described.num_rows == 2
+    assert described.schema.names == ["col_name", "data_type", "comment"]
+    assert described.to_pylist() == [
+        {"col_name": "a", "data_type": "int", "comment": None},
+        {"col_name": "b", "data_type": "string", "comment": None},
+    ]
 
 
 def test_describe_table_properties_redacted(spark: ReparkSession) -> None:

@@ -16,6 +16,8 @@ and the `EngineContext` construction contract.
   carries the overwrite intent; **ICE-OVERWRITE-MODE-1 (2026-09-19)** replaces the
   `force_static_overwrite` flag with `overwrite_intent: OverwriteIntent` (`Session` in `new`;
   the literals here set it explicitly). pins: ice-dyn-overwrite-1/L-001; ice-overwrite-mode-1/C-007
+  **IPI-40 PR6 (2026-09-24):** the explicit-field literals in `tests.rs` set
+  `temp_views: None` for the new `EngineContext` field. pins: ice-views-1/C-018
 
 ## Pointers
 

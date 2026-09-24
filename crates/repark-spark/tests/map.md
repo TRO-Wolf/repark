@@ -22,8 +22,10 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   refuses before the catalog write — including the facade's
   `/* repark:bare-name */` marked spelling, which is a registered-catalog
   write, not a session view — while an untightened CREATE VIEW persists and
-  reads back; session TEMPORARY VIEW refuses until PR3 and SELECT INTO stays
-  allowed; `ALTER VIEW … AS` keeps its own refusal ahead of the tighten
+  reads back; a session `CREATE TEMPORARY VIEW` over the tightened source
+  serves the source rows byte-for-byte (IPI-40 PR6a1,
+  `session_scoped_temp_view_serves_and_select_into_stays_allowed`) and SELECT
+  INTO stays allowed; `ALTER VIEW … AS` keeps its own refusal ahead of the tighten
   error.
 - [ddl_sessions.rs](ddl_sessions.rs) — CTAS
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key

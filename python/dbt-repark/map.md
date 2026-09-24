@@ -83,6 +83,6 @@ compile time with a named registry row rather than deep in the parser.
 | `Could not find adapter type repark!` | `src/` is not on `sys.path`; `tests/conftest.py` is what puts it there |
 | `Cannot set database in spark!` | a relation was built from `SparkRelation`; the adapter's own `ReparkRelation` is the three-part one |
 | `table 'datafusion.<ns>.<t>' not found` | a two-part name reached the SQL door; every relation must render `catalog.namespace.table` |
-| `incremental` / `snapshot` model refuses | deliberate — RePark has no temporary views, so dbt's merge staging cannot run |
+| `incremental` / `snapshot` model refuses | deliberate — RePark does not run dbt incremental/snapshot materializations yet (`DBT-INCREMENTAL-1` in the registry) |
 | a `view` model refuses | deliberate — `DBT-VIEW-1` in the registry |
 | `persist_docs.relation` or `location_root` refuses | regression — both serve since IPI-26/27 round 2 (2026-09-20); `persist_docs.columns` still refuses (`DBT-COLCOMMENT-1`), as do `OPTIONS` and `CLUSTERED BY` (`DBT-CTASCLAUSE-1`) |

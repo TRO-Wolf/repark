@@ -206,6 +206,13 @@ def _served() -> tuple[Shape, ...]:
             f"select * from {CATALOG}.{NAMESPACE}.{STEM}_survey",
             None,
         ),
+        Shape(
+            "S-CREATE-TEMPORARY-VIEW",
+            "spark__create_temporary_view",
+            f"create or replace temporary view dbt_tmp as "
+            f"select * from {CATALOG}.{NAMESPACE}.{STEM}_survey",
+            None,
+        ),
     )
 
 
@@ -224,12 +231,6 @@ def _refused() -> tuple[Shape, ...]:
             "fetch_tbl_properties",
             f"show tblproperties {fact}",
             "SHOW [VARIABLE] is not supported unless information_schema is enabled",
-        ),
-        Shape(
-            "R-CREATE-TEMPORARY-VIEW",
-            "spark__create_temporary_view",
-            f"create or replace temporary view dbt_tmp as select * from {fact}",
-            "Temporary views not supported",
         ),
         Shape(
             "R-RENAME-TWO-PART",
@@ -307,6 +308,16 @@ def test_show_tblproperties_table_refusal_is_exact(seeded_session: Any) -> None:
         "Error during planning: SHOW [VARIABLE] is not supported unless information_schema "
         "is enabled"
     )
+
+
+def test_temporary_view_shape_stages_the_source_rows(seeded_session: Any) -> None:
+    """The dbt staging temp view reads the rows of the relation it stages."""
+    source = f"{CATALOG}.{NAMESPACE}.{STEM}_survey"
+    seeded_session.sql(f"create or replace temporary view dbt_tmp_rows as select * from {source}")
+    staged = seeded_session.sql("select count(*) as n from dbt_tmp_rows").to_arrow()
+    expected = seeded_session.sql(f"select count(*) as n from {source}").to_arrow()
+    assert staged.to_pylist() == expected.to_pylist()
+    assert expected.to_pylist()[0]["n"] > 0
 
 
 def test_describe_extended_answers_spark_shape(seeded_session: Any) -> None:

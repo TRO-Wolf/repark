@@ -47,7 +47,11 @@ pins: rp-4-fork-repin/C-005, C-006
   falls through to the table path and a missing name answers
   `TABLE_OR_VIEW_NOT_FOUND`; routing and error-identity pins live in
   `tests/show_tblproperties_routing.rs`.
-  pins: ice-views-1/C-007, C-008, C-016, C-017
+  **IPI-40 PR6 (2026-09-24):** session temporary views — `temp_parse.rs`
+  (CREATE TEMPORARY VIEW grammar and refusals), `temp_ddl.rs` (the session
+  dispatcher: CREATE, temp-first DROP TABLE / DROP VIEW, temp DESCRIBE, SHOW
+  VIEWS temp rows) and `temp_view.rs` (the re-planning provider).
+  pins: ice-views-1/C-007, C-008, C-016, C-017, C-018
 - `router.rs` — **ICE-VIEWS-1 (2026-09-20):** pre-parse CREATE/DROP/SHOW VIEWS
   arms, the DROP VIEW match arm, INSERT/DELETE/UPDATE view write guards, the
   query-only `execute_view_body_query` (no DDL dispatch, so no `Send` cycle),
@@ -67,9 +71,15 @@ pins: rp-4-fork-repin/C-005, C-006
   updated by path only. **V-001 (2026-09-22):** the `bare_name_target` bit is
   gone — the facade's bare-name mark qualifies the name only, and the
   tighten refusal on the CREATE VIEW catalog write is unconditional.
+  **IPI-40 PR6 (2026-09-24):** `execute_with_statement_options` delegates to
+  the crate-private `execute_in_session`, which takes the session's
+  `TempViewSession` (None for the public router doors) and, after
+  canonicalization and before `execute_calibrated`, hands the statement to
+  `view_ddl::temp_ddl::route_temp_view_statement`; anything it does not own
+  falls through unchanged. pins: ice-views-1/C-018
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
-  write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `execute_merge_statement` (OUTPUT refusal, timestamp_ns cast lowering) so `execute_inner` stays under clippy's 100-line cap (run 22b).
+  write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `merge::execute_merge_statement` in `merge.rs` (OUTPUT refusal, timestamp_ns cast lowering; moved out of `router.rs` in IPI-40 PR6a1 to hold the router under the file-size ceiling) so `execute_inner` stays under clippy's 100-line cap (run 22b).
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `Statement::{ShowCatalogs, ShowTables,
   ShowColumns}` arms route to `use_ddl`; the `DESCRIBE TABLE` intercept skips the Iceberg
   path when a bare name resolves as a session table, so temp views keep winning.
@@ -183,7 +193,9 @@ pins: rp-4-fork-repin/C-005, C-006
   verbatim), refuses a malformed tail loud naming the clause, leaves
   `SET/UNSET TBLPROPERTIES` and branch/tag forms alone, and executes the metadata
   location move through the fork's `SetLocation` update.
-- `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
+- `merge.rs` — `execute_merge_statement` (the router's MERGE adapter: OUTPUT refusal,
+  timestamp_ns cast lowering; moved here from `router.rs` in IPI-40 PR6a1) and
+  MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
   in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
@@ -1141,7 +1153,8 @@ pins: rp-4-fork-repin/C-005, C-006
   stays unreachable from this crate's production code).
   pins: ice-error-conditions-1/C-011
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
-  into the positional `execute_with_read_only` call; `#[async_trait(?Send)]` matches the
+  into the positional `router::execute_in_session` call, passing `cx.temp_views` through since
+  IPI-40 PR6; `#[async_trait(?Send)]` matches the
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
   `execute_with_write_options` copies `cx.force_static_overwrite` onto the validated
   options (ICE-WRITE-OPTIONS-1 run 22b, 2026-09-18). pins: ice-write-options-1/C-014

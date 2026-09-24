@@ -58,16 +58,7 @@ pub(crate) fn is_create_view_statement(sql: &str) -> bool {
 }
 
 fn is_durable_create_view_head(sql: &str) -> bool {
-    let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
-        .tokenize()
-        .unwrap_or_default();
-    let words = tokens
-        .iter()
-        .filter_map(|token| match token {
-            Token::Word(word) if word.quote_style.is_none() => Some(word.value.as_str()),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
+    let words = unquoted_head_words(sql);
     let mut position = 0;
     if !consume_head_word(&words, &mut position, "CREATE") {
         return false;
@@ -86,7 +77,19 @@ fn is_durable_create_view_head(sql: &str) -> bool {
     position < words.len() && words[position].eq_ignore_ascii_case("VIEW")
 }
 
-fn consume_head_word(words: &[&str], position: &mut usize, expected: &str) -> bool {
+pub(super) fn unquoted_head_words(sql: &str) -> Vec<String> {
+    Tokenizer::new(&DatabricksDialect {}, sql)
+        .tokenize()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|token| match token {
+            Token::Word(word) if word.quote_style.is_none() => Some(word.value),
+            _ => None,
+        })
+        .collect()
+}
+
+pub(super) fn consume_head_word(words: &[String], position: &mut usize, expected: &str) -> bool {
     if *position < words.len() && words[*position].eq_ignore_ascii_case(expected) {
         *position += 1;
         true
@@ -96,18 +99,38 @@ fn consume_head_word(words: &[&str], position: &mut usize, expected: &str) -> bo
 }
 
 fn parse_create_view_after_head(sql: &str) -> Result<CreateViewStatement> {
-    let (tokens, _, ends) = tokenize_with_spans(sql)
-        .ok_or_else(|| DataFusionError::Plan("could not tokenize CREATE VIEW".to_string()))?;
+    let parts = split_view_statement(sql, "CREATE VIEW")?;
+    let mut parser = Parser::new(&DatabricksDialect {}).with_tokens(parts.header);
+    parse_create_view_header(&mut parser, parts.body_sql)
+}
+
+pub(super) struct ViewStatementParts {
+    pub(super) header: Vec<Token>,
+    pub(super) body_sql: String,
+    pub(super) body_head: Option<(Token, String)>,
+}
+
+pub(super) fn split_view_statement(sql: &str, statement: &str) -> Result<ViewStatementParts> {
+    let (tokens, starts, ends) = tokenize_with_spans(sql)
+        .ok_or_else(|| DataFusionError::Plan(format!("could not tokenize {statement}")))?;
     let as_index = first_unquoted_word(&tokens, "AS").ok_or_else(|| {
         DataFusionError::Plan(format!(
-            "could not parse `CREATE VIEW`: expected AS with the view query, got `{sql}`"
+            "could not parse `{statement}`: expected AS with the view query, got `{sql}`"
         ))
     })?;
     let as_end = ends.get(as_index).copied().unwrap_or(sql.len());
-    let body_sql = body_after_as(sql, as_end)?;
+    let body_sql = body_after_as(sql, as_end, statement)?;
+    let body_head = tokens.get(as_index + 1).and_then(|token| {
+        let start = starts.get(as_index + 1).copied()?;
+        let end = ends.get(as_index + 1).copied()?;
+        Some((token.clone(), sql.get(start..end)?.to_string()))
+    });
     let header = tokens.get(..as_index).unwrap_or(&[]).to_vec();
-    let mut parser = Parser::new(&DatabricksDialect {}).with_tokens(header);
-    parse_create_view_header(&mut parser, body_sql)
+    Ok(ViewStatementParts {
+        header,
+        body_sql,
+        body_head,
+    })
 }
 
 fn first_unquoted_word(tokens: &[Token], expected: &str) -> Option<usize> {
@@ -119,18 +142,18 @@ fn first_unquoted_word(tokens: &[Token], expected: &str) -> Option<usize> {
     })
 }
 
-fn body_after_as(sql: &str, as_end: usize) -> Result<String> {
+fn body_after_as(sql: &str, as_end: usize, statement: &str) -> Result<String> {
     let rest = sql.get(as_end..).ok_or_else(|| {
-        DataFusionError::Plan(
-            "could not parse `CREATE VIEW`: the view query is missing".to_string(),
-        )
+        DataFusionError::Plan(format!(
+            "could not parse `{statement}`: the view query is missing"
+        ))
     })?;
     let trimmed = rest.trim();
     let without_semicolon = trimmed.strip_suffix(';').unwrap_or(trimmed).trim();
     if without_semicolon.is_empty() {
-        return Err(DataFusionError::Plan(
-            "could not parse `CREATE VIEW`: the view query after AS is empty".to_string(),
-        ));
+        return Err(DataFusionError::Plan(format!(
+            "could not parse `{statement}`: the view query after AS is empty"
+        )));
     }
     Ok(without_semicolon.to_string())
 }
@@ -167,24 +190,41 @@ fn parse_create_view_header(parser: &mut Parser, body_sql: String) -> Result<Cre
             name.join(".")
         )));
     }
+    let clauses = parse_view_clauses(parser, "CREATE VIEW")?;
+    Ok(CreateViewStatement {
+        or_replace,
+        if_not_exists,
+        name,
+        aliases: clauses.aliases,
+        comment: clauses.comment,
+        properties: clauses.properties.unwrap_or_default(),
+        body_sql,
+    })
+}
+
+pub(super) struct ViewClauses {
+    pub(super) aliases: Vec<(String, Option<String>)>,
+    pub(super) comment: Option<String>,
+    pub(super) properties: Option<HashMap<String, String>>,
+}
+
+pub(super) fn parse_view_clauses(parser: &mut Parser, statement: &str) -> Result<ViewClauses> {
     let aliases = parse_view_aliases(parser)?;
     let mut comment = None;
     if parser.parse_keyword(Keyword::COMMENT) {
         comment = Some(parser.parse_literal_string().map_err(sqlparser_err)?);
     }
-    let mut properties = HashMap::new();
+    let mut properties = None;
     if consume_word(parser, "TBLPROPERTIES") {
-        parse_namespace_property_list(parser, &mut properties, "CREATE VIEW")?;
+        let mut parsed = HashMap::new();
+        parse_namespace_property_list(parser, &mut parsed, statement)?;
+        properties = Some(parsed);
     }
-    expect_end(parser, "CREATE VIEW")?;
-    Ok(CreateViewStatement {
-        or_replace,
-        if_not_exists,
-        name,
+    expect_end(parser, statement)?;
+    Ok(ViewClauses {
         aliases,
         comment,
         properties,
-        body_sql,
     })
 }
 
@@ -359,13 +399,6 @@ fn parse_show_views_after_head(parser: &mut Parser) -> Result<ShowViewsStatement
              <catalog.namespace> [LIKE] ['pattern']",
             parser.peek_token()
         )));
-    }
-    if namespace.is_empty() {
-        return Err(DataFusionError::Plan(
-            "SHOW VIEWS requires an explicit namespace — `SHOW VIEWS IN <catalog.namespace>` \
-             (RePark has no current-catalog concept, so there is no default to resolve against)"
-                .to_string(),
-        ));
     }
     Ok(ShowViewsStatement { namespace, like })
 }
@@ -741,17 +774,17 @@ mod tests {
     }
 
     #[test]
-    fn show_views_without_namespace_fails_loud() {
-        let parsed = try_parse_show_views("SHOW VIEWS").unwrap_or_else(|| panic!("must match"));
-        let Err(error) = parsed else {
-            panic!("session scope needs an explicit namespace")
-        };
-        assert!(error.to_string().contains("requires an explicit namespace"));
-        assert!(
-            try_parse_show_views("SHOW VIEWS LIKE 'v*'")
-                .unwrap_or_else(|| panic!("must match"))
-                .is_err()
-        );
+    fn show_views_at_session_scope_parses_without_namespace() {
+        let parsed = try_parse_show_views("SHOW VIEWS")
+            .unwrap_or_else(|| panic!("must match"))
+            .unwrap_or_else(|error| panic!("session scope must parse: {error}"));
+        assert!(parsed.namespace.is_empty());
+        assert_eq!(parsed.like, None);
+        let parsed = try_parse_show_views("SHOW VIEWS LIKE 'v*'")
+            .unwrap_or_else(|| panic!("must match"))
+            .unwrap_or_else(|error| panic!("session scope LIKE must parse: {error}"));
+        assert!(parsed.namespace.is_empty());
+        assert_eq!(parsed.like, Some("v*".to_string()));
         assert!(
             try_parse_show_views("SHOW VIEWS IN sc.ns LIKE vs_*")
                 .unwrap_or_else(|| panic!("must match"))

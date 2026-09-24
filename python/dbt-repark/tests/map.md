@@ -35,13 +35,14 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   table-`COMMENT`, and comment-after-`TBLPROPERTIES` shapes moved to served under IPI-26/27
   round 2, 2026-09-20),
   2026-09-20 — INDEX-19 rewrites it to a `bucket(n, col)` partition transform),
-  `S-CREATE-VIEW` moved to served under ICE-VIEWS-1, 2026-09-20),
+  `S-CREATE-VIEW` moved to served under ICE-VIEWS-1, 2026-09-20;
+  `S-CREATE-TEMPORARY-VIEW` moved to served under IPI-40 PR6, 2026-09-23, with
+  `test_temporary_view_shape_stages_the_source_rows` pinning the staged rows),
   plus
   the facade-schema probe (the column source the adapter uses) and the `describe extended`
   probe (Spark shape since SQL-DESCRIBE-1, 2026-09-09 — the old Arrow-spellings premise reds on
   purpose in that unit's ledger). This file is the
   design evidence for the route choice and the pin behind every registry row this unit filed.
-  `[R-CREATE-TEMPORARY-VIEW]` keeps refusing (PR3 owns it).
   It needs **no adapter**, which is why it stays green when the package is removed — the
   red-first evidence lives in the two files below.
   pins: dbt-1-adapter/C-001
@@ -81,6 +82,8 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   pins inverted to success — the description lands as the `comment` property and
   the table lands under `location_root` with readable rows — while the `OPTIONS`,
   `clustered_by`, and column-documentation refusal pins hold.
+  **IPI-40 PR6 r2 (2026-09-24):** the incremental and snapshot refusals pin the complete
+  `DBT-INCREMENTAL-1` compilation-error text dbt reports, macro trail included.
 - `test_aws_acceptance_gold.py` — the Glue gold leg, gated on `REPARK_AWS_ACCEPTANCE=1` and
   the same env variables as `python/repark/tests/test_aws_acceptance.py`. It writes to
   `testing_repark_acceptance` and nowhere else. **The orchestrator runs it; a unit agent never

@@ -27,6 +27,7 @@ async fn datafusion_dialect_passthrough_executes_trivial_query() {
                 read_only: &read_only,
                 overwrite_intent: crate::OverwriteIntent::Session,
                 session_time_zone: SessionTimeZone::default(),
+                temp_views: None,
             },
             "SELECT 1 + 1 AS two",
         )
@@ -61,6 +62,7 @@ async fn engine_context_constructs_with_explicit_fields() {
         read_only: &read_only,
         overwrite_intent: crate::OverwriteIntent::Session,
         session_time_zone: SessionTimeZone::default(),
+        temp_views: None,
     };
     assert!(cx.read_only.is_empty());
     let dialect: Arc<dyn SqlDialect> = Arc::new(DataFusionDialect);

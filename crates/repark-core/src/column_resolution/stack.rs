@@ -93,14 +93,20 @@ pub(super) fn set_height(body: &SetExpr) -> usize {
     deepest
 }
 
-pub(super) struct GrownStack<F> {
-    bytes: usize,
+pub struct GrownStack<F> {
+    red_zone: usize,
+    segment: usize,
     future: Pin<Box<F>>,
 }
 
-pub(super) fn on_grown_stack<F: Future>(bytes: usize, future: F) -> GrownStack<F> {
+pub fn on_grown_stack<F: Future>(bytes: usize, future: F) -> GrownStack<F> {
+    on_grown_stack_with(bytes, bytes, future)
+}
+
+pub fn on_grown_stack_with<F: Future>(red_zone: usize, segment: usize, future: F) -> GrownStack<F> {
     GrownStack {
-        bytes,
+        red_zone,
+        segment,
         future: Box::pin(future),
     }
 }
@@ -109,8 +115,8 @@ impl<F: Future> Future for GrownStack<F> {
     type Output = F::Output;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let bytes = self.bytes;
+        let (red_zone, segment) = (self.red_zone, self.segment);
         let future = self.future.as_mut();
-        stacker::maybe_grow(bytes, bytes, || future.poll(cx))
+        stacker::maybe_grow(red_zone, segment, || future.poll(cx))
     }
 }
