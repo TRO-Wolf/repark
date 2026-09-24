@@ -29,6 +29,13 @@ databases`, `show tblproperties`, two-part `describe extended`, `create or repla
 `repark.sql()` then. A Thrift endpoint would deliver those statements faithfully and collect
 exactly the same errors, so it buys a wire protocol and no working model. The current served and
 refused split is the measured table,
+Route 2 was rejected on measurement, not on cost. The refusals DBT-1 measured are in the
+**statement surface**, not the transport: `show table extended`, `show tables in`, `show
+databases`, `show tblproperties` and `alter column … comment` are refused by `repark.sql()`
+(two-part `describe extended`, `create or replace view` and `create or replace temporary view`
+were refused when DBT-1 measured and are served since SQL-DESCRIBE-1, ICE-VIEWS-1 and IPI-40
+PR6). A Thrift endpoint would deliver those statements faithfully and collect exactly
+the same errors, so it buys a wire protocol and no working model. The measured table is
 [tests/test_statement_surface.py](tests/test_statement_surface.py), which is the pin, not prose.
 
 Inside route 1 the adapter **subclasses `dbt-spark`'s `SparkAdapter`** and declares
@@ -83,6 +90,6 @@ compile time with a named registry row rather than deep in the parser.
 | `Could not find adapter type repark!` | `src/` is not on `sys.path`; `tests/conftest.py` is what puts it there |
 | `Cannot set database in spark!` | a relation was built from `SparkRelation`; the adapter's own `ReparkRelation` is the three-part one |
 | `table 'datafusion.<ns>.<t>' not found` | a two-part name reached the SQL door; every relation must render `catalog.namespace.table` |
-| `incremental` / `snapshot` model refuses | deliberate — RePark has no temporary views, so dbt's merge staging cannot run |
+| `incremental` / `snapshot` model refuses | deliberate — RePark does not run dbt incremental/snapshot materializations yet (`DBT-INCREMENTAL-1` in the registry) |
 | a `view` model refuses | deliberate — `DBT-VIEW-1` in the registry |
 | `persist_docs.relation` or `location_root` refuses | regression — both serve since IPI-26/27 round 2 (2026-09-20); `persist_docs.columns` still refuses (`DBT-COLCOMMENT-1`), as do `OPTIONS` and `CLUSTERED BY` (`DBT-CTASCLAUSE-1`) |

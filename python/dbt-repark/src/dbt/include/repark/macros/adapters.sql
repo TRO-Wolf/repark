@@ -37,16 +37,18 @@
 
 {% macro repark__create_temporary_view(relation, compiled_code) -%}
   {{ exceptions.raise_compiler_error(
-    "dbt-repark has no temporary views: RePark refuses CREATE OR REPLACE TEMPORARY VIEW
-     (divergence registry DBT-TEMPVIEW-1). Only materialized='table' is supported."
+    "dbt-repark does not stage temporary views:
+     RePark does not run dbt incremental/snapshot materializations yet
+     (divergence registry DBT-INCREMENTAL-1). Only materialized='table' is supported."
   ) }}
 {%- endmacro %}
 
 
 {% macro repark__create_view_as(relation, sql) -%}
   {{ exceptions.raise_compiler_error(
-    "dbt-repark cannot build views: RePark refuses CREATE OR REPLACE VIEW (divergence
-     registry DBT-VIEW-1). Set materialized='table' on " ~ relation.render() ~ "."
+    "dbt-repark cannot build views: the SQL door serves CREATE VIEW, but the adapter does
+     not build views yet (divergence registry DBT-VIEW-1). Set materialized='table' on "
+     ~ relation.render() ~ "."
   ) }}
 {% endmacro %}
 

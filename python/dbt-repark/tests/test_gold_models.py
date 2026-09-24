@@ -487,7 +487,9 @@ def test_incremental_materialization_refuses(project: tuple[Path, Path]) -> None
     _prepend_config(root, "gold_fct", "config(materialized='incremental')")
     built = _invoke(["run", "--select", "gold_fct"], root)
     assert not built.success
-    assert "DBT-TEMPVIEW-1" in _failures(built)
+    failures = _failures(built)
+    assert "DBT-INCREMENTAL-1" in failures
+    assert "RePark does not run dbt incremental/snapshot materializations yet" in failures
 
 
 def test_snapshot_materialization_refuses(project: tuple[Path, Path]) -> None:
@@ -510,7 +512,9 @@ def test_snapshot_materialization_refuses(project: tuple[Path, Path]) -> None:
     assert _invoke(["run"], root).success
     taken = _invoke(["snapshot"], root)
     assert not taken.success
-    assert "DBT-TEMPVIEW-1" in _failures(taken)
+    failures = _failures(taken)
+    assert "DBT-INCREMENTAL-1" in failures
+    assert "RePark does not run dbt incremental/snapshot materializations yet" in failures
 
 
 def test_column_documentation_refuses(project: tuple[Path, Path]) -> None:
