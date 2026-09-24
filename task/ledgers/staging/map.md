@@ -23,10 +23,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   table at a filesystem path like Spark's `IcebergSource` — the contains-slash route,
   `.metadata.json` direct, `version-hint.text` then highest-integer metadata resolution,
   static read-only provider with no catalog registration, pinned refusal for
-  time-travel/incremental options beside a path, and the unchanged catalog route for
-  every slash-free near-miss. C-001..C-007 PROVEN. `risk_tier: standard`. Branch
+  time-travel/incremental options beside a path, the unchanged catalog route for
+  every slash-free near-miss, the `file:` spellings Spark reads or refuses (`Wrong FS`
+  for an authority, `URISyntaxException` for a relative path), and `v<N>` / hint versions
+  bounded to the Java `int` range. C-001..C-010 PROVEN. `risk_tier: standard`. Branch
   `fix/u10-df-load-path`.
-  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
+  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [ice-procedures-1-ledger.md](ice-procedures-1-ledger.md) —
   **ICE-PROCEDURES-1 (2026-09-20), in flight:** the CALL declared-parameter
   binder, parser first (IPI-31 D-1) — one parameter table transcribed from the

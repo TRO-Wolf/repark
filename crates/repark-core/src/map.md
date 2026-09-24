@@ -259,14 +259,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   engine door. A path ending `.metadata.json` loads that exact file through the fork's
   `StaticTable::from_metadata_file`; any other path is a table location that strips one
   trailing `/`, prefers `<loc>/metadata/version-hint.text` (`v<N>.metadata.json`), else
-  lists `<loc>/metadata/` for the highest leading-integer metadata file in either the
-  `NNNNN-<uuid>` or `v<N>` form. A location with no resolvable metadata raises
+  lists the direct children of `<loc>/metadata/` for the highest leading-integer metadata
+  file in either the `NNNNN-<uuid>` or `v<N>` form, with `v<N>` and hint versions bounded
+  to the Java `int` range. Lower-case `file://<authority>` and `file:<relative>` arguments
+  refuse Spark's texts before any I/O, and `file:/abs`-style spellings read as `file:///abs`. A location with no resolvable metadata raises
   `Error::Analysis` naming the supplied path. The `FileIO` comes from
   `repark_iceberg::catalog::file_io_for_location` (scheme-selected local fs / s3 / s3a),
   the read-only static table feeds `IcebergStaticTableProvider::try_new_from_table`, and
   the provider goes straight to `SessionContext::read_table` — nothing is registered in
   a catalog and no time-travel or incremental option reaches the path route.
-  pins: dfload-1/C-003, C-004, C-005
+  pins: dfload-1/C-003, C-004, C-005, C-008, C-009, C-010
 - `plan_canonical.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-15, round 4):** the
   expression-canonicalization half of the hash, split out when the expression
   family outgrew `plan_introspect.rs`. `RelTable` numbers scans and subquery
