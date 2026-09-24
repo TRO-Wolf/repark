@@ -841,4 +841,71 @@ mod tests {
             "the physical table stays rewritten: {rewritten}"
         );
     }
+
+    fn normalized(rewritten: &str) -> String {
+        let mut parts = rewritten.split(TEMP_VIEW_PREFIX);
+        let mut out = parts.next().unwrap_or_default().to_string();
+        for part in parts {
+            out.push_str(TEMP_VIEW_PREFIX);
+            out.push('N');
+            out.push_str(part.trim_start_matches(|c: char| c.is_ascii_digit()));
+        }
+        out
+    }
+
+    #[tokio::test]
+    async fn a_qualified_wildcard_under_a_from_alias_expands_to_user_columns() {
+        let (ctx, catalogs, _warehouse) = defaulted_iceberg_table().await;
+        for (sql, expected) in [
+            (
+                "SELECT x.* FROM datafusion.public.t x WHERE x._spec_id = 0",
+                "SELECT x.id FROM __repark_mc_N x WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT X.* FROM datafusion.public.t x WHERE x._spec_id = 0",
+                "SELECT X.id FROM __repark_mc_N x WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT * FROM datafusion.public.t x WHERE x._spec_id = 0",
+                "SELECT x.id FROM __repark_mc_N x WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT t.* FROM datafusion.public.t t WHERE t._spec_id = 0",
+                "SELECT t.id FROM __repark_mc_N t WHERE t._spec_id = 0",
+            ),
+            (
+                "SELECT t.*, t._pos FROM datafusion.public.t",
+                "SELECT t.id, t._pos FROM __repark_mc_N t",
+            ),
+            (
+                "SELECT q.*, x.id FROM datafusion.public.t x JOIN datafusion.ns.t q ON x.id = q.id \
+                 WHERE x._spec_id = 0",
+                "SELECT q.id, x.id FROM __repark_mc_N x JOIN __repark_mc_N q ON x.id = q.id \
+                 WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT q.*, x.id FROM datafusion.public.t x JOIN other q ON x.id = q.id \
+                 WHERE x._spec_id = 0",
+                "SELECT q.*, x.id FROM __repark_mc_N x JOIN other q ON x.id = q.id \
+                 WHERE x._spec_id = 0",
+            ),
+            (
+                "SELECT x.* FROM (SELECT id FROM datafusion.public.t WHERE _spec_id = 0) x",
+                "SELECT x.* FROM (SELECT id FROM __repark_mc_N t WHERE _spec_id = 0) x",
+            ),
+            (
+                "WITH x AS (SELECT id FROM datafusion.public.t WHERE _spec_id = 0) SELECT x.* FROM x",
+                "WITH x AS (SELECT id FROM __repark_mc_N t WHERE _spec_id = 0) SELECT x.* FROM x",
+            ),
+            (
+                "SELECT y.* FROM datafusion.public.t x WHERE x._spec_id = 0",
+                "SELECT y.* FROM __repark_mc_N x WHERE x._spec_id = 0",
+            ),
+        ] {
+            let rewritten = prepared(&ctx, &catalogs, sql)
+                .await
+                .expect("a metadata column routes the statement");
+            assert_eq!(normalized(&rewritten), expected, "{sql}");
+        }
+    }
 }

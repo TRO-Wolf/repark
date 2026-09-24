@@ -1,10 +1,13 @@
 use std::path::Path;
+use std::sync::Arc;
 
-use datafusion::arrow::datatypes::DataType;
+use datafusion::arrow::array::{Int64Array, StringArray};
+use datafusion::arrow::datatypes::{DataType, Field, Schema};
+use datafusion::arrow::record_batch::RecordBatch;
 use tempfile::TempDir;
 
 use super::metadata_columns_deleted::{
-    MOR, batches, bools, field_names, i64s, pairs_i64_bool, pairs_i64_i32, pairs_i64_i64,
+    MOR, batches, bools, field_names, i32s, i64s, pairs_i64_bool, pairs_i64_i32, pairs_i64_i64,
     pairs_i64_str, plan_error, run, seed, session, strs, triples_i64,
 };
 use repark_core::ReparkSession;
@@ -683,41 +686,16 @@ async fn reserved_name_query_positions() {
         (
             "N11",
             "SELECT id, e FROM ice.ns.ndel LATERAL VIEW explode(array(_deleted)) t AS e ORDER BY id",
-            "This feature is not implemented: LATERAL VIEWS",
+            "This feature is not implemented: LATERAL VIEWS".to_string(),
         ),
         (
             "N13",
             "SELECT t.*, t._spec_id FROM ice.ns.ndel t ORDER BY id",
-            "Error during planning: Projections require unique expression names but the \
-             expression \"t._spec_id\" at position 4 and \"t._spec_id\" at position 6 have the \
-             same name. Consider aliasing (\"AS\") one of them.",
+            reserved_name_collision("_deleted"),
         ),
     ] {
         assert_eq!(plan_error(&session, sql).await, expected, "{row}: {sql}");
     }
-    for (row, sql, expected) in [
-        (
-            "N11",
-            "SELECT id, e FROM ice.ns.ndel LATERAL VIEW explode(array(_deleted)) t AS e ORDER BY id",
-            "This feature is not implemented: LATERAL VIEWS",
-        ),
-        (
-            "N13",
-            "SELECT t.*, t._spec_id FROM ice.ns.ndel t ORDER BY id",
-            "Error during planning: Projections require unique expression names but the \
-             expression \"t._spec_id\" at position 4 and \"t._spec_id\" at position 6 have the \
-             same name. Consider aliasing (\"AS\") one of them.",
-        ),
-    ] {
-        assert_eq!(plan_error(&session, sql).await, expected, "{row}: {sql}");
-    }
-    let rows = batches(&session, "SELECT t.* FROM ice.ns.ndel t ORDER BY id").await;
-    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "N12");
-    assert_eq!(
-        pairs_i64_str(&rows),
-        vec![(1, "u1".to_string()), (2, "u2".to_string())],
-        "N12"
-    );
 }
 
 #[tokio::test]
@@ -725,6 +703,13 @@ async fn reserved_name_query_positions_that_answer() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
     seed_position_tables(&session).await;
+    let rows = batches(&session, "SELECT t.* FROM ice.ns.ndel t ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "N12");
+    assert_eq!(
+        pairs_i64_str(&rows),
+        vec![(1, "u1".to_string()), (2, "u2".to_string())],
+        "N12"
+    );
     for (row, sql, ids) in [
         (
             "N17",
@@ -758,46 +743,190 @@ async fn reserved_name_query_positions_that_answer() {
     assert_eq!(pairs_i64_i64(&rows), vec![(1, 1), (2, 1)], "N19");
 }
 
+async fn seed_qualified_wildcard_tables(session: &ReparkSession) {
+    seed(session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
+    seed_values(
+        session,
+        "ice.ns.pl",
+        "id BIGINT, v STRING",
+        "(1, 'a'), (2, 'b'), (3, 'c')",
+    )
+    .await;
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, true),
+            Field::new("v", DataType::Utf8, true),
+        ])),
+        vec![
+            Arc::new(Int64Array::from(vec![2, 3])),
+            Arc::new(StringArray::from(vec!["b", "c"])),
+        ],
+    )
+    .unwrap();
+    session.context().register_batch("tv", batch).unwrap();
+}
+
+fn live_user_rows() -> Vec<(i64, String, String)> {
+    vec![
+        (2, "b".to_string(), "y".to_string()),
+        (3, "c".to_string(), "x".to_string()),
+        (4, "d".to_string(), "x".to_string()),
+    ]
+}
+
 #[tokio::test]
-async fn qualified_wildcard_under_another_alias_expands_every_provider_field() {
+async fn qualified_wildcard_under_another_alias_serves_user_columns() {
     let wh = TempDir::new().unwrap();
     let session = session(&wh).await;
-    seed(&session, "ice.ns.t", "PARTITIONED BY (cat)", MOR).await;
-    let provider_fields = [
-        "id",
-        "data",
-        "cat",
-        "_file",
-        "_pos",
-        "_spec_id",
-        "_partition",
-        "_deleted",
-    ];
-    for (row, sql, extra) in [
-        (
-            "X1",
-            "SELECT x.*, x._pos AS p FROM ice.ns.t x ORDER BY id",
-            Some("p"),
-        ),
-        (
-            "X2",
-            "SELECT x.*, _spec_id AS s FROM ice.ns.t x ORDER BY id",
-            Some("s"),
-        ),
+    seed_qualified_wildcard_tables(&session).await;
+    for (row, sql) in [
         (
             "X3",
             "SELECT x.* FROM ice.ns.t x WHERE x._spec_id = 0 ORDER BY id",
-            None,
+        ),
+        (
+            "B1",
+            "SELECT * FROM ice.ns.t x WHERE x._spec_id = 0 ORDER BY id",
+        ),
+        (
+            "K1",
+            "SELECT X.* FROM ice.ns.t x WHERE x._spec_id = 0 ORDER BY id",
+        ),
+        (
+            "W2",
+            "SELECT t.* FROM ice.ns.t t WHERE t._spec_id = 0 ORDER BY id",
+        ),
+        ("W4", "SELECT t.* FROM ice.ns.t t ORDER BY id"),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(
+            field_names(&rows),
+            vec!["id", "data", "cat"],
+            "{row}: {sql}"
+        );
+        assert_eq!(triples_i64(&rows), live_user_rows(), "{row}: {sql}");
+    }
+    for (row, sql) in [
+        ("X1", "SELECT x.*, x._pos AS p FROM ice.ns.t x ORDER BY id"),
+        ("B2", "SELECT *, x._pos AS p FROM ice.ns.t x ORDER BY id"),
+        ("W1", "SELECT t.*, t._pos AS p FROM ice.ns.t t ORDER BY id"),
+        ("W5", "SELECT t.*, t._pos AS p FROM ice.ns.t ORDER BY id"),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(
+            field_names(&rows),
+            vec!["id", "data", "cat", "p"],
+            "{row}: {sql}"
+        );
+        assert_eq!(triples_i64(&rows), live_user_rows(), "{row}: {sql}");
+        assert_eq!(i64s(&rows, 3), vec![0, 0, 1], "{row}: {sql}");
+    }
+    for (row, sql) in [
+        (
+            "X2",
+            "SELECT x.*, _spec_id AS s FROM ice.ns.t x ORDER BY id",
+        ),
+        (
+            "W3",
+            "SELECT t.*, _spec_id AS s FROM ice.ns.t t ORDER BY id",
         ),
     ] {
         let rows = batches(&session, sql).await;
-        let expected: Vec<&str> = provider_fields.iter().copied().chain(extra).collect();
-        assert_eq!(field_names(&rows), expected, "{row}: {sql}");
-        assert_eq!(i64s(&rows, 0), vec![1, 2, 3, 4], "{row}: {sql}");
         assert_eq!(
-            bools(&rows, 7),
-            vec![true, false, false, false],
+            field_names(&rows),
+            vec!["id", "data", "cat", "s"],
             "{row}: {sql}"
         );
+        assert_eq!(triples_i64(&rows), live_user_rows(), "{row}: {sql}");
+        assert_eq!(i32s(&rows, 3), vec![0, 0, 0], "{row}: {sql}");
+    }
+    for (row, sql) in [
+        ("Q1", "SELECT t.*, t._spec_id FROM ice.ns.pl t ORDER BY id"),
+        ("Q2", "SELECT t.*, _spec_id FROM ice.ns.pl t ORDER BY id"),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(
+            field_names(&rows),
+            vec!["id", "v", "_spec_id"],
+            "{row}: {sql}"
+        );
+        assert_eq!(
+            pairs_i64_str(&rows),
+            vec![
+                (1, "a".to_string()),
+                (2, "b".to_string()),
+                (3, "c".to_string())
+            ],
+            "{row}: {sql}"
+        );
+        assert_eq!(i32s(&rows, 2), vec![0, 0, 0], "{row}: {sql}");
+    }
+}
+
+#[tokio::test]
+async fn qualified_wildcard_near_misses_keep_their_answers() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed_qualified_wildcard_tables(&session).await;
+    for (row, sql, expected) in [
+        (
+            "M1",
+            "SELECT y.* FROM ice.ns.t x WHERE x._spec_id = 0",
+            "Error during planning: Invalid qualifier y",
+        ),
+        (
+            "M2",
+            "SELECT t.* FROM ice.ns.t x WHERE x._spec_id = 0 ORDER BY id",
+            "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function \
+             parameter with name `id` cannot be resolved. Did you mean one of the following? \
+             [`id`, `data`, `cat`, `_file`, `_pos`, `_spec_id`, `_partition`, `_deleted`]. \
+             SQLSTATE: 42703",
+        ),
+    ] {
+        assert_eq!(plan_error(&session, sql).await, expected, "{row}: {sql}");
+    }
+    for (row, sql) in [
+        (
+            "D1",
+            "SELECT x.* FROM (SELECT id FROM ice.ns.t WHERE _spec_id = 0) x ORDER BY id",
+        ),
+        (
+            "C1",
+            "WITH x AS (SELECT id FROM ice.ns.t WHERE _spec_id = 0) SELECT x.* FROM x ORDER BY id",
+        ),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(field_names(&rows), vec!["id"], "{row}: {sql}");
+        assert_eq!(i64s(&rows, 0), vec![2, 3, 4], "{row}: {sql}");
+    }
+    let rows = batches(
+        &session,
+        "SELECT x.*, q.v FROM ice.ns.t x JOIN ice.ns.pl q ON x.id = q.id WHERE x._spec_id = 0 \
+         ORDER BY x.id",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id", "data", "cat", "v"], "P1");
+    assert_eq!(triples_i64(&rows), live_user_rows()[..2].to_vec(), "P1");
+    assert_eq!(strs(&rows, 3), vec!["b", "c"], "P1");
+    for (row, sql) in [
+        (
+            "P2",
+            "SELECT q.*, x.id AS xid FROM ice.ns.t x JOIN ice.ns.pl q ON x.id = q.id \
+             WHERE x._spec_id = 0 ORDER BY q.id",
+        ),
+        (
+            "P3",
+            "SELECT q.*, x.id AS xid FROM ice.ns.t x JOIN tv q ON x.id = q.id \
+             WHERE x._spec_id = 0 ORDER BY q.id",
+        ),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(field_names(&rows), vec!["id", "v", "xid"], "{row}: {sql}");
+        assert_eq!(
+            pairs_i64_str(&rows),
+            vec![(2, "b".to_string()), (3, "c".to_string())],
+            "{row}: {sql}"
+        );
+        assert_eq!(i64s(&rows, 2), vec![2, 3], "{row}: {sql}");
     }
 }
