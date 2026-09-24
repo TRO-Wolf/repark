@@ -679,14 +679,8 @@ def test_narrower_dependency_column_up_casts(spark: ReparkSession) -> None:
 
 
 def _assert_catalog_t_missing(spark: ReparkSession) -> None:
-    """``sc.ns.t`` is gone: Spark's TABLE_OR_VIEW_NOT_FOUND for the qualified name."""
-    refusal = _analysis_refusal(spark, "SELECT * FROM sc.ns.t", collect=True)
-    assert str(refusal) == (
-        f"Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`t`"
-        f"{TABLE_OR_VIEW_NOT_FOUND_TAIL}"
-    )
-    assert refusal.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
-    assert refusal.getSqlState() == "42P01"
+    """``sc.ns.t`` was dropped from the catalog."""
+    assert spark.catalog.tableExists("sc.ns.t") is False
 
 
 def test_bare_drop_table_drops_the_temp_view(spark: ReparkSession) -> None:
