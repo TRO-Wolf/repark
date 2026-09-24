@@ -2102,3 +2102,15 @@ matrix; those exports declare the analyzed logical schema.
   `NewC` first under the conf (C-018). The helpers it shares are `pub(super)`
   in `accept_any_refusals.rs`.
   pins: u6-write-refusals/C-015, C-016, C-017, C-018
+- `accept_any_naming.rs`, critic r3 disposition (2026-09-24,
+  `target/probe-u6-r3fix/spark.out`):
+  - Column-alias lists name the added column and its row `[9, NULL, NULL, z]`:
+    `WITH c(id, NewC)`, `(SELECT 9, 'z') AS v(id, NewC)`, `VALUES … AS v(id,
+    NewC)` and `c AS x(id, Other)`. Without the conf the same four refuse
+    `Field NewC …` / `Field Other …` (C-015, C-016).
+  - `SELECT *, *` and `hsrc.*, hsrc.*` refuse `Invalid schema: multiple fields
+    for name id: 0 and 2` on append, `BY NAME` and overwrite, with and without
+    the conf (C-013).
+  - A typed-suffix refusal never quotes the internal marker (C-017).
+  - Plain-table arms of the empty `BY NAME` overwrite wipe (C-018).
+  pins: u6-write-refusals/C-013, C-015, C-016, C-017, C-018

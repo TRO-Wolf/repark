@@ -76,7 +76,14 @@ pub(crate) async fn execute_insert_by_name(
         )));
     };
     let case_sensitive = case_sensitive_insert(ctx);
-    let source_names = probe_source_names(ctx, catalogs, source, case_sensitive).await?;
+    let source_names = probe_source_names(
+        ctx,
+        catalogs,
+        source,
+        case_sensitive,
+        repark_iceberg::write::accepts_any_schema(&table),
+    )
+    .await?;
     let table_display = display_table_name(&catalog_name, &table);
     source_names::refuse_underived(&table, &source_names, &table_display, case_sensitive)?;
     let evolution_plan =

@@ -1,9 +1,13 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
+use std::fmt::Display;
+use std::ops::ControlFlow;
+
 use datafusion::sql::sqlparser::ast::{
-    CastKind, Cte, Expr, Ident, ObjectName, ObjectNamePart, Query, Select, SelectItem,
-    SelectItemQualifiedWildcardKind, SetExpr, SetQuantifier, TableAliasColumnDef, TableFactor,
-    Values, WildcardAdditionalOptions,
+    CastKind, Cte, Expr, FunctionArg, FunctionArgExpr, FunctionArguments, Ident, ObjectName,
+    ObjectNamePart, Query, Select, SelectItem, SelectItemQualifiedWildcardKind, SetExpr,
+    SetQuantifier, TableAliasColumnDef, TableFactor, Values, VisitMut, WildcardAdditionalOptions,
+    visit_expressions_mut,
 };
 use repark_core::CatalogRegistry;
 
@@ -140,12 +144,12 @@ fn select_item(
 ) -> Item {
     let unresolved = || Item::Wildcard {
         trusted: from_named_tables(select, scope),
-        text: item.to_string(),
+        text: user_text(item),
     };
     match item {
         SelectItem::ExprWithAlias { alias, .. } => Item::Named(ident_named(alias, case_sensitive)),
         SelectItem::UnnamedExpr(expr) => expr_named(expr, qualifiers, case_sensitive)
-            .map_or_else(|| Item::Opaque(expr.to_string()), Item::Named),
+            .map_or_else(|| Item::Opaque(user_text(expr)), Item::Named),
         SelectItem::Wildcard(options) => {
             wildcard(select, None, options, scope, case_sensitive, depth).unwrap_or_else(unresolved)
         }
@@ -156,8 +160,39 @@ fn select_item(
             .unwrap_or_else(unresolved),
         _ => Item::Wildcard {
             trusted: false,
-            text: item.to_string(),
+            text: user_text(item),
         },
+    }
+}
+
+fn user_text<T: VisitMut + Clone + Display>(node: &T) -> String {
+    let mut shown = node.clone();
+    let _ = visit_expressions_mut(&mut shown, |expr| {
+        if let Some(literal) = suffix_literal(expr) {
+            *expr = literal;
+        }
+        ControlFlow::<()>::Continue(())
+    });
+    shown.to_string()
+}
+
+fn suffix_literal(expr: &Expr) -> Option<Expr> {
+    let Expr::Function(function) = expr else {
+        return None;
+    };
+    let [ObjectNamePart::Identifier(name)] = function.name.0.as_slice() else {
+        return None;
+    };
+    let FunctionArguments::List(list) = &function.args else {
+        return None;
+    };
+    match list.args.as_slice() {
+        [FunctionArg::Unnamed(FunctionArgExpr::Expr(literal))]
+            if name.value.eq_ignore_ascii_case(crate::SUFFIX_LITERAL_NAME) =>
+        {
+            Some(literal.clone())
+        }
+        _ => None,
     }
 }
 
@@ -338,6 +373,7 @@ pub(super) async fn probe_source_names(
     catalogs: &CatalogRegistry,
     source: &Query,
     case_sensitive: bool,
+    accepts_any: bool,
 ) -> Result<Vec<SourceName>> {
     let items = match query_items(source, case_sensitive) {
         Some(items) if items.iter().all(|item| matches!(item, Item::Named(_))) => {
@@ -345,8 +381,16 @@ pub(super) async fn probe_source_names(
         }
         items => items,
     };
-    let probe_sql = format!("SELECT * FROM ({source}) AS _repark_by_name_src LIMIT 0");
-    let frame = crate::spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await?;
+    let frame = match planner_frame(ctx, catalogs, source).await {
+        Ok(frame) => frame,
+        Err(error) if accepts_any => {
+            return match repeated_names(ctx, catalogs, source, items, case_sensitive).await {
+                Some(names) => Ok(names),
+                None => Err(error),
+            };
+        }
+        Err(error) => return Err(error),
+    };
     let planner: Vec<String> = frame
         .schema()
         .as_arrow()
@@ -359,9 +403,76 @@ pub(super) async fn probe_source_names(
         .unwrap_or_else(|| {
             planner
                 .iter()
-                .map(|column| planned(column, None, Some(source.to_string())))
+                .map(|column| planned(column, None, Some(user_text(source))))
                 .collect()
         }))
+}
+
+async fn planner_frame(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    source: &Query,
+) -> Result<datafusion::dataframe::DataFrame> {
+    let probe_sql = format!("SELECT * FROM ({source}) AS _repark_by_name_src LIMIT 0");
+    crate::spark_ast::execute_passthrough(ctx, catalogs, &probe_sql).await
+}
+
+async fn repeated_names(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    source: &Query,
+    items: Option<Vec<Item>>,
+    case_sensitive: bool,
+) -> Option<Vec<SourceName>> {
+    let Leftmost::Select(select) = leftmost(&source.body)? else {
+        return None;
+    };
+    let mut names = Vec::new();
+    for (index, (item, projected)) in items?.into_iter().zip(&select.projection).enumerate() {
+        let expanded = match item {
+            Item::Named(one) => vec![one],
+            Item::Expanded(many) => many,
+            Item::Wildcard { trusted: true, .. } => {
+                star_names(ctx, catalogs, source, select, projected, case_sensitive).await?
+            }
+            Item::Wildcard { .. } | Item::Opaque(_) => return None,
+        };
+        names.extend(expanded.into_iter().map(|one| {
+            let column = one.resolved.clone();
+            source_name(one, column, Some(index), None)
+        }));
+    }
+    let repeats = names.iter().enumerate().any(|(later, name)| {
+        names[..later]
+            .iter()
+            .any(|earlier| super::same_name(&earlier.resolved, &name.resolved, case_sensitive))
+    });
+    repeats.then_some(names)
+}
+
+async fn star_names(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    source: &Query,
+    select: &Select,
+    star: &SelectItem,
+    case_sensitive: bool,
+) -> Option<Vec<Named>> {
+    let mut alone = select.clone();
+    alone.projection = vec![star.clone()];
+    let mut query = source.clone();
+    *query.body = SetExpr::Select(Box::new(alone));
+    query.order_by = None;
+    let frame = planner_frame(ctx, catalogs, &query).await.ok()?;
+    Some(
+        frame
+            .schema()
+            .as_arrow()
+            .fields()
+            .iter()
+            .map(|field| text_named(field.name().clone(), case_sensitive))
+            .collect(),
+    )
 }
 
 pub(super) fn place(items: Vec<Item>, planner: &[String]) -> Option<Vec<SourceName>> {

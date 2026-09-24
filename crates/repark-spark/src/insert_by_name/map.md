@@ -171,3 +171,26 @@ per item.
   pins: u6-write-refusals/C-018
 - `tests.rs` — the rendering, underived, star-placement and derived-star pins.
   pins: u6-write-refusals/C-015, C-017
+
+## U6 WRITE-REFUSALS round 4 (2026-09-24, critic r3 V-001..V-004)
+
+- `source_names.rs` — `probe_source_names` takes `accepts_any`. When the
+  planner probe fails on an accept-any table, `repeated_names` derives the
+  per-item list from the statement. `star_names` resolves each star that
+  would count as Spark's, one star at a time, with its own `LIMIT 0` probe.
+  If that list repeats a name, it goes back without the whole-source probe, and
+  `refuse_duplicate_sources` answers Iceberg's text. `SELECT *, * FROM src`
+  refuses `Invalid schema: multiple fields for name id: 0 and 2`, where the
+  planner would have leaked DataFusion's `Projections require unique expression
+  names`. With no repeat, the probe's own error surfaces unchanged. A table
+  without the property keeps the old path.
+  pins: u6-write-refusals/C-013
+- `source_names.rs` — `user_text` renders an opaque item, a star and the
+  whole-source fallback with the router's `__repark_suffix_literal__(x)` marker
+  unwrapped to `x`. A refusal therefore never quotes the internal marker. The
+  quoted text is still the canonicalized form: `9L` reads `CAST(9 AS BIGINT)`,
+  and `2BD` reads `CAST(2 AS DECIMAL(1,0))`. The router rewrites typed-suffix
+  literals before this path sees the SQL. The same cast written out is a
+  different Spark name (`CAST(9 AS BIGINT)`), so Spark's `9` is not recoverable
+  from the AST, and those shapes stay residue R-9.
+  pins: u6-write-refusals/C-017

@@ -13,6 +13,9 @@ The round-2 pins (C-010..C-014) come from ``target/probe-u6-r1fix/spark_probe.py
 The round-3 pins (C-015..C-018) come from ``target/probe-u6-r2fix/spark.out`` and
 ``spark2.out`` (probes n00..n70, s1..s13, m00..m41, w1..w8) and the critic's h1..h9.
 
+The round-4 pins come from ``target/probe-u6-r3fix/spark.out`` (probes y1..y18) and the
+critic's x1..x15.
+
 pins: u6-write-refusals/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-010, C-011,
 C-012, C-013, C-014, C-015, C-016, C-017, C-018
 """
@@ -459,6 +462,7 @@ def test_an_unknown_upper_case_alias_keeps_its_spelling(spark: ReparkSession) ->
 
 def test_repeated_source_names_refuse_like_iceberg(spark: ReparkSession) -> None:
     """pins: u6-write-refusals/C-013"""
+    spark.sql(HSRC)
     for merge_schema in (True, False):
         table = _create(spark, f"dup_{merge_schema}", accept_any=True)
         spark.sql(NAMED_SEED.format(t=table))
@@ -477,6 +481,18 @@ def test_repeated_source_names_refuse_like_iceberg(spark: ReparkSession) -> None
                 (
                     "INSERT INTO {t} SELECT 9 AS id, 'z' AS data, 'q' AS cat, 1 AS data",
                     "Invalid schema: multiple fields for name data: 1 and 3",
+                ),
+                (
+                    "INSERT INTO {t} SELECT *, * FROM hsrc",
+                    "Invalid schema: multiple fields for name id: 0 and 2",
+                ),
+                (
+                    "INSERT INTO {t} BY NAME SELECT *, * FROM hsrc",
+                    "Invalid schema: multiple fields for name id: 0 and 2",
+                ),
+                (
+                    "INSERT OVERWRITE {t} SELECT *, * FROM hsrc",
+                    "Invalid schema: multiple fields for name id: 0 and 2",
                 ),
             ):
                 with pytest.raises(PySparkException) as caught:
@@ -549,6 +565,31 @@ def test_an_added_column_is_named_per_item_like_spark(spark: ReparkSession) -> N
             [("NewC", "string")],
             [[9, None, None, "z"]],
         ),
+        (
+            "cte_columns",
+            "INSERT INTO {t} WITH c(id, NewC) AS (SELECT 9, 'z') SELECT * FROM c",
+            [("NewC", "string")],
+            [[9, None, None, "z"]],
+        ),
+        (
+            "derived_columns",
+            "INSERT INTO {t} SELECT * FROM (SELECT 9, 'z') AS v(id, NewC)",
+            [("NewC", "string")],
+            [[9, None, None, "z"]],
+        ),
+        (
+            "values_columns",
+            "INSERT INTO {t} SELECT * FROM VALUES (9, 'z') AS v(id, NewC)",
+            [("NewC", "string")],
+            [[9, None, None, "z"]],
+        ),
+        (
+            "cte_reference_columns",
+            "INSERT INTO {t} WITH c AS (SELECT 9 AS id, 'z' AS NewC) "
+            "SELECT * FROM c AS x(id, Other)",
+            [("Other", "string")],
+            [[9, None, None, "z"]],
+        ),
     ]
     for name, statement, added, rows in cases:
         table = _create(spark, f"per_item_{name}", accept_any=True)
@@ -568,6 +609,10 @@ def test_the_refusal_names_an_unaliased_expression_like_spark(spark: ReparkSessi
         ("SELECT id, id + 1 FROM hsrc", "(id + 1)"),
         ("SELECT id, id <> 1 FROM hsrc", "(NOT (id = 1))"),
         ("SELECT id, data || 'x' FROM hsrc", "concat(data, x)"),
+        ("WITH c(id, NewC) AS (SELECT 9, 'z') SELECT * FROM c", "NewC"),
+        ("SELECT * FROM (SELECT 9, 'z') AS v(id, NewC)", "NewC"),
+        ("SELECT * FROM VALUES (9, 'z') AS v(id, NewC)", "NewC"),
+        ("WITH c AS (SELECT 9 AS id, 'z' AS NewC) SELECT * FROM c AS x(id, Other)", "Other"),
     ):
         _assert_illegal_argument(
             lambda sql=f"INSERT INTO {table} {source}": spark.sql(sql),
@@ -584,14 +629,18 @@ def test_an_underivable_name_refuses_before_any_evolution(spark: ReparkSession) 
     for statement in (
         "INSERT INTO {t} SELECT id, CASE WHEN id > 0 THEN 1 END FROM hsrc",
         "INSERT INTO {t} SELECT id, ceil(1.2) FROM hsrc",
+        "INSERT INTO {t} SELECT id, 9L FROM hsrc",
+        "INSERT INTO {t} SELECT id, 1.5D FROM hsrc",
+        "INSERT INTO {t} SELECT id, 2BD FROM hsrc",
     ):
-        with pytest.raises(UnsupportedOperationException, match="as Spark names it"):
+        with pytest.raises(UnsupportedOperationException, match="as Spark names it") as caught:
             _with_merge_schema(spark, [statement.format(t=table)])
+        assert "__repark" not in str(caught.value)
     assert _rows(spark, table) == []
     assert _schema(spark, table) == BASE_SCHEMA
 
 
-def test_an_empty_overwrite_wipes_an_accept_any_table(spark: ReparkSession) -> None:
+def test_an_empty_overwrite_wipes_the_table(spark: ReparkSession) -> None:
     """pins: u6-write-refusals/C-018"""
     wiped = _create(spark, "empty_overwrite", accept_any=True)
     spark.sql(NAMED_SEED.format(t=wiped))
@@ -605,3 +654,15 @@ def test_an_empty_overwrite_wipes_an_accept_any_table(spark: ReparkSession) -> N
     )
     assert _rows(spark, evolved) == []
     assert _schema(spark, evolved) == [*BASE_SCHEMA, ("NewC", "string")]
+    for name, statement in (
+        ("missing", "INSERT OVERWRITE {t} BY NAME SELECT 9 AS id WHERE false"),
+        (
+            "null",
+            "INSERT OVERWRITE {t} BY NAME SELECT 9 AS id, NULL AS data, 'c' AS cat WHERE false",
+        ),
+    ):
+        plain = _create(spark, f"empty_overwrite_plain_{name}", accept_any=False)
+        spark.sql(NAMED_SEED.format(t=plain))
+        spark.sql(statement.format(t=plain))
+        assert _rows(spark, plain) == [], name
+        assert _schema(spark, plain) == BASE_SCHEMA, name

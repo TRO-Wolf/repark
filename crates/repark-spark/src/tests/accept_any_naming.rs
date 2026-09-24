@@ -28,7 +28,7 @@ async fn added_after(statements: &[&str]) -> Vec<(String, String)> {
 
 #[tokio::test]
 async fn an_added_column_is_named_per_item_from_the_statement() {
-    let cases: [(&str, &[(&str, &str)]); 9] = [
+    let cases: [(&str, &[(&str, &str)]); 13] = [
         (
             "INSERT INTO ice.sales.t SELECT *, 'z' AS NewC FROM hsrc",
             &[("NewC", "string")],
@@ -65,6 +65,23 @@ async fn an_added_column_is_named_per_item_from_the_statement() {
             "INSERT INTO ice.sales.t SELECT *, upper(data) FROM (SELECT id, data FROM hsrc)",
             &[("upper(data)", "string")],
         ),
+        (
+            "INSERT INTO ice.sales.t WITH c(id, NewC) AS (SELECT 9, 'z') SELECT * FROM c",
+            &[("NewC", "string")],
+        ),
+        (
+            "INSERT INTO ice.sales.t SELECT * FROM (SELECT 9, 'z') AS v(id, NewC)",
+            &[("NewC", "string")],
+        ),
+        (
+            "INSERT INTO ice.sales.t SELECT * FROM VALUES (9, 'z') AS v(id, NewC)",
+            &[("NewC", "string")],
+        ),
+        (
+            "INSERT INTO ice.sales.t WITH c AS (SELECT 9 AS id, 'z' AS NewC) \
+             SELECT * FROM c AS x(id, Other)",
+            &[("Other", "string")],
+        ),
     ];
     for (statement, added) in cases {
         assert_eq!(
@@ -80,6 +97,112 @@ async fn an_added_column_is_named_per_item_from_the_statement() {
             .map(|(name, _)| name)
             .collect();
     assert_eq!(names, ["id", "data", "cat", "col1", "col2"]);
+}
+
+const ALIAS_LISTS: [(&str, &str); 4] = [
+    (
+        "INSERT INTO ice.sales.t WITH c(id, NewC) AS (SELECT 9, 'z') SELECT * FROM c",
+        "NewC",
+    ),
+    (
+        "INSERT INTO ice.sales.t SELECT * FROM (SELECT 9, 'z') AS v(id, NewC)",
+        "NewC",
+    ),
+    (
+        "INSERT INTO ice.sales.t SELECT * FROM VALUES (9, 'z') AS v(id, NewC)",
+        "NewC",
+    ),
+    (
+        "INSERT INTO ice.sales.t WITH c AS (SELECT 9 AS id, 'z' AS NewC) \
+         SELECT * FROM c AS x(id, Other)",
+        "Other",
+    ),
+];
+
+#[tokio::test]
+async fn a_column_alias_list_names_the_added_column_and_its_rows() {
+    for (sql, added) in ALIAS_LISTS {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = src_door(&wh, ACCEPT_ANY, true).await;
+        run(&ctx, &catalogs, sql).await;
+        assert_eq!(
+            column_types(&catalogs).await,
+            base_plus(&[(added, "string")]),
+            "{sql}"
+        );
+        assert_eq!(
+            sorted_rows(&ctx, &catalogs).await,
+            vec![format!(
+                "| 9  |      |     | {:<width$} |",
+                "z",
+                width = added.len()
+            )],
+            "{sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn without_the_conf_a_column_alias_list_names_the_refusal() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = src_door(&wh, ACCEPT_ANY, false).await;
+    for (sql, added) in ALIAS_LISTS {
+        assert_illegal_argument(
+            &ctx,
+            &catalogs,
+            sql,
+            &format!("Field {added} not found in source schema"),
+        )
+        .await;
+    }
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 0);
+    assert_eq!(column_types(&catalogs).await, base_types());
+}
+
+#[tokio::test]
+async fn a_repeated_star_refuses_with_the_iceberg_duplicate_text() {
+    for merge_schema in [false, true] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = src_door(&wh, ACCEPT_ANY, merge_schema).await;
+        for sql in [
+            "INSERT INTO ice.sales.t SELECT *, * FROM hsrc",
+            "INSERT INTO ice.sales.t SELECT hsrc.*, hsrc.* FROM hsrc",
+            "INSERT INTO ice.sales.t BY NAME SELECT *, * FROM hsrc",
+            "INSERT OVERWRITE ice.sales.t SELECT *, * FROM hsrc",
+        ] {
+            assert_invalid_schema(
+                &ctx,
+                &catalogs,
+                sql,
+                "Invalid schema: multiple fields for name id: 0 and 2",
+            )
+            .await;
+        }
+        assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 0);
+        assert_eq!(column_types(&catalogs).await, base_types());
+    }
+}
+
+#[tokio::test]
+async fn a_typed_suffix_literal_refusal_never_quotes_the_internal_marker() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = src_door(&wh, ACCEPT_ANY, true).await;
+    for (literal, quoted) in [
+        ("9L", "CAST(9 AS BIGINT)"),
+        ("1.5D", "CAST(1.5 AS DOUBLE)"),
+        ("2BD", "CAST(2 AS DECIMAL(1,0))"),
+    ] {
+        let sql = format!("INSERT INTO ice.sales.t SELECT id, {literal} FROM hsrc");
+        let mapped = refusal(&ctx, &catalogs, &sql).await;
+        assert!(
+            matches!(mapped, repark_common::Error::NotImplemented(ref message)
+                if message.contains(&format!("`{quoted}`"))
+                    && !message.contains("__repark")),
+            "{sql}: got {mapped:?}"
+        );
+    }
+    assert_eq!(column_types(&catalogs).await, base_types());
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.t").await, 0);
 }
 
 #[tokio::test]
@@ -217,25 +340,41 @@ async fn a_plain_table_names_an_extra_expression_as_spark_does() {
 
 #[tokio::test]
 async fn an_empty_positional_overwrite_wipes_the_table() {
-    for (merge_schema, sql, added) in [
+    for (create, merge_schema, sql, added) in [
         (
+            ACCEPT_ANY,
             false,
             "INSERT OVERWRITE ice.sales.t SELECT 9 AS id WHERE false",
             &[][..],
         ),
         (
+            ACCEPT_ANY,
             true,
             "INSERT OVERWRITE ice.sales.t SELECT 9 AS id, 'z' AS NewC WHERE false",
             &[("NewC", "string")][..],
         ),
         (
+            ACCEPT_ANY,
             false,
             "INSERT OVERWRITE ice.sales.t BY NAME SELECT 9 AS id WHERE false",
             &[][..],
         ),
+        (
+            PLAIN,
+            false,
+            "INSERT OVERWRITE ice.sales.t BY NAME SELECT 9 AS id WHERE false",
+            &[][..],
+        ),
+        (
+            PLAIN,
+            false,
+            "INSERT OVERWRITE ice.sales.t BY NAME SELECT 9 AS id, NULL AS data, 'c' AS cat \
+             WHERE false",
+            &[][..],
+        ),
     ] {
         let wh = TempDir::new().unwrap();
-        let (ctx, catalogs) = door(&wh, ACCEPT_ANY, merge_schema).await;
+        let (ctx, catalogs) = door(&wh, create, merge_schema).await;
         run(&ctx, &catalogs, SEED).await;
         run(&ctx, &catalogs, sql).await;
         assert_eq!(

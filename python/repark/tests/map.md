@@ -8132,3 +8132,15 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   - Empty positional overwrites wipe, and under the conf they add `NewC` first
     (C-018).
   pins: u6-write-refusals/C-015, C-016, C-017, C-018
+  Critic r3 disposition (2026-09-24), measured by
+  `target/probe-u6-r3fix/spark.out` (y1..y18):
+  - Four column-alias-list sources add `NewC` / `Other` with the row
+    `[9, None, None, "z"]`. Without the conf they refuse `Field NewC …` /
+    `Field Other …` (C-015, C-016).
+  - `SELECT *, * FROM hsrc` refuses Iceberg's `… id: 0 and 2` on append,
+    `BY NAME` and overwrite (C-013).
+  - `9L`, `1.5D` and `2BD` refuse without the internal marker in the text (C-017).
+  - `test_an_empty_overwrite_wipes_the_table` (renamed from
+    `…_an_accept_any_table`) also wipes a plain table with an empty `BY NAME`
+    overwrite, with or without a NULL column (C-018).
+  pins: u6-write-refusals/C-013, C-015, C-016, C-017, C-018
