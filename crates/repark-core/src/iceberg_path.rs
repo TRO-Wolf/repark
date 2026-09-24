@@ -129,7 +129,14 @@ async fn read_version_hint(file_io: &FileIO, hint_location: &str) -> Result<Opti
     let Ok(text) = std::str::from_utf8(&raw) else {
         return Ok(None);
     };
-    Ok(text.trim().parse().ok())
+    Ok(java_int_version(text.trim()))
+}
+
+fn java_int_version(digits: &str) -> Option<u64> {
+    digits
+        .parse::<i32>()
+        .ok()
+        .and_then(|version| u64::try_from(version).ok())
 }
 
 fn hinted_metadata_missing_error(path: &str, file_name: &str) -> Error {
@@ -177,7 +184,7 @@ fn metadata_file_version(name: &str) -> Option<u64> {
     let stem = name.strip_suffix(".metadata.json")?;
     if let Some(rest) = stem.strip_prefix('v') {
         if !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()) {
-            return rest.parse().ok();
+            return java_int_version(rest);
         }
         return None;
     }
