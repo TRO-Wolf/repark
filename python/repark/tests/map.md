@@ -7960,7 +7960,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   and `load(<location>/)` answering the current `[[2,"b","y"],[3,"c","x"]]` with BIGINT /
   STRING Arrow types, `load(<latest metadata.json>)` the same, `load(<an older
   metadata.json>)` the pre-delete three rows, `load(<location>)` with each of the ten
-  time-travel and incremental keys (written literally, plus `SNAPSHOT-ID`) the pinned path
+  time-travel and incremental keys (written literally, plus `SNAPSHOT-ID` and `Snapshot-Id`) the pinned path
   refusal (`format('iceberg').load(<path>) reads one pinned metadata snapshot and does not
   support time-travel or incremental options; got <key>`), two keys named sorted
   (`got start-timestamp, tag`), the refusal winning over a missing location, the semantic
@@ -7977,7 +7977,7 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   temp views, and the restored `currentCatalog()`) before and after a path load, with the
   non-default `mem` made current first. The `file:` families pin `file:///<abs>` and
   `file:///<abs>/metadata/<latest>` reading, the `file://<authority>` Wrong FS refusal,
-  `file:/<abs>`, `FILE:/<abs>`, `file:/<abs>/metadata/<latest>` and `file:////<abs>` reading,
+  `file:/<abs>`, `FILE:/<abs>`, `fIlE:/<abs>`, `file:/<abs>/metadata/<latest>` and `file:////<abs>` reading,
   and the `file:<relative>` `URISyntaxException` refusal with one and with two trailing
   slashes. A `v2147483648.metadata.json` copy of the create snapshot never wins the
   listing. Both scoreboard cells replayed against the lane build answer Spark's recorded
