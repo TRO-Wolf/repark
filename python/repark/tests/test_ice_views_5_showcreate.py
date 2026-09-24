@@ -212,3 +212,28 @@ def test_comment_set_through_alter_view_renders(spark: ReparkSession, tmp_path: 
         f"  'location' = '{tmp_path / 'ns' / 'v2'}',\n  'provider' = 'iceberg')\n"
         "AS\nSELECT id, data FROM sc.ns.t\n"
     )
+
+
+def test_properties_set_and_unset_after_creation_render_sorted(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """p5b vs.show_create.1/.2 — keys set later sort among the reserved ones; UNSET removes k."""
+    spark.sql(
+        "CREATE VIEW sc.ns.vs (i COMMENT 'the id', d) COMMENT 'view doc' "
+        "TBLPROPERTIES ('k'='v') AS SELECT id, data FROM sc.ns.t"
+    )
+    location = tmp_path / "ns" / "vs"
+    spark.sql("ALTER VIEW sc.ns.vs SET TBLPROPERTIES ('a'='1', 'z'='2')")
+    assert _show_create(spark.sql("SHOW CREATE TABLE sc.ns.vs")) == (
+        "CREATE VIEW sc.ns.vs (\n  i COMMENT 'the id',\n  d)\nCOMMENT 'view doc'\n"
+        "TBLPROPERTIES (\n  'a' = '1',\n  'format-version' = '1',\n  'k' = 'v',\n"
+        f"  'location' = '{location}',\n  'provider' = 'iceberg',\n  'z' = '2')\n"
+        "AS\nSELECT id, data FROM sc.ns.t\n"
+    )
+    spark.sql("ALTER VIEW sc.ns.vs UNSET TBLPROPERTIES ('k')")
+    assert _show_create(spark.sql("SHOW CREATE TABLE sc.ns.vs")) == (
+        "CREATE VIEW sc.ns.vs (\n  i COMMENT 'the id',\n  d)\nCOMMENT 'view doc'\n"
+        "TBLPROPERTIES (\n  'a' = '1',\n  'format-version' = '1',\n"
+        f"  'location' = '{location}',\n  'provider' = 'iceberg',\n  'z' = '2')\n"
+        "AS\nSELECT id, data FROM sc.ns.t\n"
+    )
