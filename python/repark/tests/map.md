@@ -7962,9 +7962,19 @@ pins: ipi-19-56-37-schema-evolution-write/C-002, C-004
   metadata.json>)` the pre-delete three rows, `load(<location>)` with `snapshot-id` the
   pinned path refusal (`format('iceberg').load(<path>) reads one pinned metadata snapshot
   and does not support time-travel or incremental options; got snapshot-id`), and
-  `load("/no/such/dir")` an `AnalysisException` naming the path. The near-miss arm holds
+  `load("/no/such/dir")`, an empty `metadata/` dir and a hint naming a missing file an
+  `AnalysisException` naming the path. Every refusal pin compares the complete exception
+  string (`str(raised.value) ==`). The near-miss arm holds
   the catalog route on `ns.events`, `mem.ns.events`, `ns.events.snapshots` (the measured
   `table not found` refusal), `` `ns`.`events` ``, and `snapshot-id` on a catalog
-  identifier (Spark's `IllegalArgumentException` text). Both scoreboard cells replayed
-  against the lane build answer Spark's recorded rows exactly.
-  pins: dfload-1/C-001, C-002, C-004, C-005, C-006, C-007
+  identifier (Spark's `IllegalArgumentException` text). `test_load_path_registers_no_catalog_table`
+  compares `_registration_inventory` (every listed catalog's namespaces and tables, the
+  temp views, and the restored `currentCatalog()`) before and after a path load, with the
+  non-default `mem` made current first. The `file:` families pin `file:///<abs>` and
+  `file:///<abs>/metadata/<latest>` reading, the `file://<authority>` Wrong FS refusal,
+  `file:/<abs>`, `FILE:/<abs>`, `file:/<abs>/metadata/<latest>` and `file:////<abs>` reading,
+  and the `file:<relative>` `URISyntaxException` refusal with one and with two trailing
+  slashes. A `v2147483648.metadata.json` copy of the create snapshot never wins the
+  listing. Both scoreboard cells replayed against the lane build answer Spark's recorded
+  rows exactly.
+  pins: dfload-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
