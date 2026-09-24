@@ -1024,7 +1024,9 @@ else. The next pickup's `make ledger-archive` files everything here under
   four-part metadata-table names go to the #806 path, measured near misses pin full Arrow
   schemas, tokenizer-text pins give way to the front-door refusal, and every scanner branch
   has a killing test. `risk_tier: standard`. Branch `xd/describe`.
-  pins: wo-b10-describe-sweep/C-001, C-002, C-003, C-004, C-005, C-006
+  WO-B11 adds the Rust-door metadata DESCRIBE, the v2 partition refusal, re-escaped column
+  names, and identity-name quoting.
+  pins: wo-b10-describe-sweep/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010
 - [wo-b4-describe-errors-ledger.md](wo-b4-describe-errors-ledger.md) —
   **WO-B4 (2026-09-23), completed:** every malformed input after `DESCRIBE` or `DESC` and a
   table target retains Spark 4.1.2's parser class, condition, SQLSTATE, and first-line text;

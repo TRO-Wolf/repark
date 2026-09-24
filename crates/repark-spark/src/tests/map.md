@@ -1574,8 +1574,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   paths, reserved lowercase `owner` refusal, case and prefix near misses, and an unowned direct
   catalog table omitting the Owner row. **WO-B10 (2026-09-23):** every answer asserts the full
   Arrow schema; the owner refusal covers CREATE OR REPLACE and OPTIONS, and identity partition
-  rows carry the source comment in spec order.
-  pins: wo-b10-describe-sweep/C-002, C-005
+  rows carry the source comment in spec order. **WO-B11 (2026-09-23):** a spaced identity
+  source reads back-quoted in the Partition Information rows while a bare one stays unquoted.
+  pins: wo-b10-describe-sweep/C-002, C-005, C-010
 - `describe_near_miss.rs` — **WO-B10 (2026-09-23):** near misses of every arm B adds, each
   measured on Spark 4.1.2 and pinned with its full Arrow schema and rows or its full refusal:
   four-part metadata-suffix names (parser yields; backticked facade form answers the six
@@ -1585,6 +1586,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   fall-throughs; the unclosed-comment front-door refusal; plain view rows; and one unit case
   per branch of `unclosed_describe_quote` and `is_table_describe_text`.
   pins: wo-b10-describe-sweep/C-001, C-002, C-003, C-004
+  **WO-B11 (2026-09-23):** bare and comment-tailed four-part metadata DESCRIBE answers the six
+  snapshots rows, while SELECT keeps the rewrite, the four-part column tail keeps 42P01
+  (R-U4-3), and a literal `dc$snapshots` keeps its parse error; `PARTITION (...)` without a
+  column answers the full `_LEGACY_ERROR_TEMP_1111` text (missing table 42P01, view rows),
+  with one parser case per branch of the partition-only scan; a doubled-backtick column names
+  itself re-escaped in Spark's suggestion order.
+  pins: wo-b10-describe-sweep/C-007, C-008, C-009
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the Spark door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
   and a STRING column into BIGINT stamp

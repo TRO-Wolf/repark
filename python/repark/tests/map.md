@@ -7052,6 +7052,10 @@ pins: fnp-8-review/C-009, C-010
   check (newline and tab after the table, bare, backticked, semicolon, and newline column
   tails, two-word and double-quoted tails keeping Spark's parse errors).
   pins: wo-b10-describe-sweep/C-002, C-003, C-004
+  **WO-B11 (2026-09-23):** `PARTITION (id=1)` without a column pins the full
+  `_LEGACY_ERROR_TEMP_1111` text and null SQLSTATE; a doubled-backtick column pins
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION`, `42703`, and the full re-escaped text.
+  pins: wo-b10-describe-sweep/C-008, C-009
   **RP-23 (2026-09-17):** `Table Properties` carries the
   `write.parquet.compression-codec=zstd` stamp every create writes.
   pins: rp-23-pin-bump/C-001

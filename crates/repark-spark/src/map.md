@@ -77,6 +77,11 @@ pins: rp-4-fork-repin/C-005, C-006
   **WO-B4 (2026-09-23):** `execute_with_statement_options` checks a typed malformed
   DESCRIBE result before literal canonicalization. Unterminated table or column quotes then
   retain the Spark parser-class payload instead of leaking a generic lexer message.
+  **WO-B11 (2026-09-23):** `execute_calibrated` skips the metadata rewrite when
+  `describe_show::metadata_table::rewrites_metadata_path` finds #806's four-part DESCRIBE, so
+  `DESCRIBE cat.ns.t.snapshots` (bare, or with a trailing comment) reaches the metadata-table
+  path instead of a `$snapshots` parse error; SELECT and every other statement keep the rewrite.
+  pins: wo-b10-describe-sweep/C-007
   pins: wo-b4-describe-errors/C-001, C-002, C-004
   **ICE-CATALOG-SESSION-1 S5 (2026-09-20):** the `REFRESH` pre-parse intercept routes to
   `use_ddl::execute_refresh`, beside the extracted `DESCRIBE TABLE` helper.
@@ -1359,6 +1364,13 @@ pins: rp-4-fork-repin/C-005, C-006
   quote as text.
   pins: wo-b6-describe-comments/C-001, C-002
   pins: wo-b10-describe-sweep/C-004
+  **WO-B11 (2026-09-23):** `consume_partition_only_tail` takes an unquoted `PARTITION (...)`
+  that closes at its first `)` and ends the statement, after a name of at most three parts;
+  the executor answers `[_LEGACY_ERROR_TEMP_1111]` once the Iceberg table loads (a view keeps
+  its rows, a missing table keeps 42P01). An unresolved column names itself with doubled
+  backticks re-escaped, and suggestions sort against the quote-if-needed name. Identity
+  partition rows write the source name through the same quote-if-needed rule.
+  pins: wo-b10-describe-sweep/C-008, C-009, C-010
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction) +
   SQL-DESCRIBE-1 `DESCRIBE|DESC [TABLE] [EXTENDED|FORMATTED] catalog.namespace.table`

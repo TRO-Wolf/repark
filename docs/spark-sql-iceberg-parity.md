@@ -1404,7 +1404,10 @@ perfectly good read.
   `PARSE_SYNTAX_ERROR` like Spark.
 - **D-DESCRIBE-EXTENDED (2026-09-23):** A nonempty all-identity spec emits `# Partition
   Information`, its column header, and source type/comment rows without a leading blank, while
-  other specs retain `# Partitioning` transform rows.
+  other specs retain `# Partitioning` transform rows. WO-B11 (2026-09-23): an identity source
+  that is not a bare identifier is back-quoted there, `DESCRIBE t PARTITION (spec)` without a
+  column answers `_LEGACY_ERROR_TEMP_1111`, and the Rust door's `DESCRIBE cat.ns.t.snapshots`
+  answers the metadata rows.
 - **Apache Spark** — the same shape and sections on the DataSourceV2 path. *(oracle: live
   PySpark 4.1.2, 2026-09-09, SQL-DESCRIBE-1 step-1 capture: commented `bigint` column,
   `string`, `timestamp`, `days(ts)`, one `k=v` property.)*

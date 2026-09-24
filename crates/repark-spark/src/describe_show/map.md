@@ -33,6 +33,9 @@ with the four-part parser for names the metadata rewrite leaves untouched.
   (missing base, `EXTENDED`/`FORMATTED`, which print the column rows only).
   `../describe_show.rs` carries the five-line hook and the router a two-line
   `or_else`; the plain path maps a missing namespace to the same 42P01 answer.
+  **WO-B11 (2026-09-23):** `rewrites_metadata_path` answers false when this parser claims
+  the statement, so the router leaves #806's four-part DESCRIBE unrewritten.
+  pins: wo-b10-describe-sweep/C-007
   pins: ipi-23-mt-describe-1/C-001, C-002, C-003, C-004, C-007, C-009, C-012, C-013, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../describe_show.rs`.
 
