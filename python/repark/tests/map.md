@@ -881,9 +881,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   append, bucket count first), Spark's already-exists text and the bucketed `save()` refusal,
   the multi-column RTAS and the days/truncate mismatch, the non-bucketed `saveAsTable`
   `partitionBy` check, `output-spec-id` on dynamic, replacing, create and empty writes, the
-  path relation for URI and slash spellings, and the `CLUSTERED BY` scan (`clustered` column,
-  `ASC`, the `DESC` residue by class). pins: u7-write-df/C-004, C-005, C-006, C-008, C-009,
-  C-011, C-015, C-016, C-017
+  path relation for URI and slash spellings, the `CLUSTERED BY` scan (`clustered` column,
+  `ASC`, the two `DESC` residues by class) and a mixed spec's `Part N` rows.
+  pins: u7-write-df/C-004, C-005, C-006, C-008, C-009, C-011, C-013, C-015, C-016, C-017
 - [ice_write_df_1_spark_oracle.json](ice_write_df_1_spark_oracle.json) — **U7 PR1
   (2026-09-24):** the oracle `test_ice_write_df_1.py` reads: `recorded` copies the four
   scoreboard observations verbatim, `measured` holds each probe shape's error (type,

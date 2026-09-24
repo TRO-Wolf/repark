@@ -3185,7 +3185,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `::test_bucketed_overwrite_of_two_columns_leaves_the_table`,
   `::test_layout_mismatch_renders_every_table_transform`,
   `::test_a_column_named_clustered_keeps_the_bucket_clause`,
-  `::test_sorted_by_ordering_in_a_clustered_clause`; in-crate
+  `::test_sorted_by_ordering_in_a_clustered_clause`,
+  `::test_a_mixed_partition_spec_describes_as_part_rows`; in-crate
   `crates/repark-iceberg/src/tests/writer_plan.rs`.
 - **Rationale** — DECLARED 2026-09-14 (Ruling R-1: Iceberg has no Hive bucketing, so a bucketed
   `saveAsTable` refused `NOT_IMPLEMENTED`). **Narrowed 2026-09-24 (U7 PR1):** the R-1 premise
@@ -4127,6 +4128,7 @@ the pin rather than obeying it.
   `::test_output_spec_id_refusals`, `::test_output_spec_id_parses_like_java_integer`,
   `::test_output_spec_id_current_and_absent_land_under_the_current_spec`;
   `python/repark/tests/test_ice_write_df_1_edges.py::test_dynamic_overwrite_replaces_partitions_of_the_staged_spec`,
+  `::test_dynamic_overwrite_of_an_unpartitioned_staged_spec_replaces_everything`,
   `::test_output_spec_id_on_a_replacing_write_resolves_in_the_replacement`,
   `::test_output_spec_id_on_a_create_and_an_unknown_replacement_spec`,
   `::test_an_unknown_output_spec_id_refuses_a_write_that_stages_nothing`; in-crate

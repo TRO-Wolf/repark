@@ -5,7 +5,7 @@ entry of the same name (Spark 4.1.2 + Iceberg 1.11.0): the missing bucket column
 ``output-spec-id`` on replacing, dynamic and empty writes, the path relation text, the
 saveAsTable layout check and the ``CLUSTERED BY`` scan.
 
-pins: u7-write-df/C-004, C-005, C-006, C-008, C-009, C-011, C-015, C-016, C-017
+pins: u7-write-df/C-004, C-005, C-006, C-008, C-009, C-011, C-013, C-015, C-016, C-017
 """
 
 from __future__ import annotations
@@ -197,6 +197,31 @@ def test_dynamic_overwrite_replaces_partitions_of_the_staged_spec(spark: ReparkS
 
 
 @pytest.mark.parametrize(
+    ("cell", "part", "alter", "options"),
+    [
+        (
+            "dyn_overwrite_old_part_nooption",
+            "PARTITIONED BY (cat)",
+            "DROP PARTITION FIELD cat",
+            {},
+        ),
+        ("dyn_overwrite_new_part_spec0", "", "ADD PARTITION FIELD cat", {"output-spec-id": "0"}),
+    ],
+)
+def test_dynamic_overwrite_of_an_unpartitioned_staged_spec_replaces_everything(
+    spark: ReparkSession, cell: str, part: str, alter: str, options: dict[str, str]
+) -> None:
+    """An unpartitioned staged spec, current or chosen, replaces every row, as Spark does.
+
+    pins: u7-write-df/C-016
+    """
+    _seed(spark, part=part)
+    spark.sql(f"ALTER TABLE {_T} {alter}")
+    _frame(spark).writeTo(_T).options(**options).overwritePartitions()
+    _assert_state(spark, cell)
+
+
+@pytest.mark.parametrize(
     ("cell", "write"),
     [
         (
@@ -382,7 +407,27 @@ def test_sorted_by_ordering_in_a_clustered_clause(spark: ReparkSession) -> None:
     with pytest.raises(IllegalArgumentException) as raised:
         spark.sql((base + "(x ASC) INTO 4 BUCKETS").format(t=_T))
     _assert_error(raised.value, "clustered_sorted_asc")
-    with pytest.raises(ParseException):
-        spark.sql((base + "(x DESC) INTO 4 BUCKETS").format(t=_T))
-    assert _MEASURED["clustered_sorted_desc"]["error"]["type"] == "ParseException"
+    for cell, sql in [
+        ("clustered_sorted_desc", base + "(x DESC) INTO 4 BUCKETS"),
+        (
+            "clustered_self_sorted_desc",
+            "CREATE TABLE {t} (id BIGINT) USING iceberg CLUSTERED BY (id) SORTED BY (id DESC) "
+            "INTO 4 BUCKETS",
+        ),
+    ]:
+        with pytest.raises(ParseException):
+            spark.sql(sql.format(t=_T))
+        assert _MEASURED[cell]["error"]["type"] == "ParseException"
     assert not spark.catalog.tableExists(_T)
+
+
+def test_a_mixed_partition_spec_describes_as_part_rows(spark: ReparkSession) -> None:
+    """``PARTITIONED BY (cat, bucket(4, id))`` lists both fields as ``Part N`` rows.
+
+    pins: u7-write-df/C-013
+    """
+    spark.sql(
+        f"CREATE TABLE {_T} (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat, bucket(4, id))"
+    )
+    _assert_state(spark, "create_part_bucket_mixed")
