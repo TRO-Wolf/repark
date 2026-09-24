@@ -61,7 +61,7 @@ temporary views and the dbt adapter.
 COVERAGE_ATTESTATION:
   pr_unit: ice-views-1
   complete: true
-  reattested: [AT-3, AT-7, AT-10]
+  reattested: [AT-2, AT-3, AT-5, AT-7, AT-10]
   categories:
     - id: AT-1
       status: ATTACKED
@@ -69,7 +69,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/ice-views-1-ledger.md, python/repark/tests/test_ice_views_1.py, python/repark/tests/test_ice_views_2_describe.py, python/repark/tests/test_ice_views_3_alter.py, python/repark/tests/test_ice_views_4_showprops.py, python/repark/tests/test_ice_views_5_showcreate.py, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py, crates/repark-iceberg/src/view/tests.rs]
     - id: AT-2
       status: ATTACKED
-      evidence: Boundaries actually exercised — a missing namespace (C-003), IF NOT EXISTS over an existing view (C-004), a viewless catalog (C-005), 100 nested durable views read and the 101st refuses (C-012), and for temp views one-, two-, three- and four-part names, IF NOT EXISTS / OR REPLACE combinations, alias arity in both directions, null and alias-only COMMENT clauses, the up-cast classes (NULL to any, DATE to TIMESTAMP, numeric widening accepted; narrowing, TIMESTAMP to DATE, INT to STRING refused), a 100-level SQL chain reading and the 101st refusing on the default stacks of both doors, and the 4096-visit cycle-walk budget.
+      evidence: Boundaries actually exercised — a missing namespace (C-003), IF NOT EXISTS over an existing view (C-004), a viewless catalog (C-005), 100 nested durable views read and the 101st refuses (C-012), and for temp views one-, two-, three- and four-part names, IF NOT EXISTS / OR REPLACE combinations, alias arity in both directions, null and alias-only COMMENT clauses, the up-cast classes (NULL to any, DATE to TIMESTAMP, numeric widening accepted; narrowing, TIMESTAMP to DATE, INT to STRING refused), a 100-level SQL chain reading and the 101st refusing on the default stacks of both doors, the 4096-visit cycle-walk budget, and a second statement after a temp-view DESCRIBE, SHOW VIEWS, DROP or CREATE TEMPORARY VIEW (refused as the catalog path refuses it, nothing dropped or registered) beside trailing semicolons alone (answered).
       artifacts: [crates/repark-iceberg/src/view/tests.rs, python/repark/tests/test_ice_views_1.py, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py, crates/repark-spark/src/tests/temp_view_routing.rs, crates/repark-spark/src/tests/temp_view_errors.rs, crates/repark-spark/src/view_ddl/temp_view.rs]
     - id: AT-3
       status: ATTACKED
@@ -81,7 +81,7 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_ice_views_1.py, python/repark/tests/test_ice_views_6_temp.py, python/repark/tests/test_ice_views_6_temp_errors.py]
     - id: AT-5
       status: N/A
-      justification: No privileged action, secret, deserialization or authN/Z surface is added — views are catalog metadata written through the fork view API under the existing catalog registration, and a stored view body is planned as a query only (write bodies, including WITH ... INSERT/UPDATE/DELETE/MERGE, refuse before registering; pinned in test_ice_views_6_temp_errors.py and temp_view_routing.rs).
+      justification: No privileged action, secret, deserialization or authN/Z surface is added — catalog (permanent) views are catalog metadata written through the fork view API under the existing catalog registration; temporary views are registered in the session only, through TempViewSession (view_ddl/execute.rs execute_create_temp_view), and are never written to a catalog; a stored view body is planned as a query only (write bodies, including WITH ... INSERT/UPDATE/DELETE/MERGE, refuse before registering; pinned in test_ice_views_6_temp_errors.py and temp_view_routing.rs).
     - id: AT-6
       status: ATTACKED
       evidence: The stored SQL is byte-identical to the user text and the location has no trailing slash (C-001); the version log keeps history (C-002, C-009); a VERSION AS OF body stays pinned across a later INSERT (C-011); temp views conform each read to the creation schema by name, refusing a dropped column (INCOMPATIBLE_VIEW_SCHEMA_CHANGE) or a narrowing type (CANNOT_UP_CAST_DATATYPE) instead of returning drifted rows; answer pins assert rows and Arrow schema; the dbt statement-surface pins moved with the served temp-view shape.
