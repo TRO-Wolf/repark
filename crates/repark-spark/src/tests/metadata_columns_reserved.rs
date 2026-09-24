@@ -1,3 +1,6 @@
+use std::path::Path;
+
+use datafusion::arrow::datatypes::DataType;
 use tempfile::TempDir;
 
 use super::metadata_columns_deleted::{
@@ -31,6 +34,34 @@ async fn seed_user_columns(session: &ReparkSession, table: &str, columns: &[&str
         &format!("INSERT INTO {table} VALUES {}", rows.join(", ")),
     )
     .await;
+}
+
+async fn seed_values(session: &ReparkSession, table: &str, ddl: &str, values: &str) {
+    run(
+        session,
+        &format!(
+            "CREATE TABLE {table} ({ddl}) USING iceberg TBLPROPERTIES ('format-version' = '2')"
+        ),
+    )
+    .await;
+    run(session, &format!("INSERT INTO {table} VALUES {values}")).await;
+}
+
+fn parquet_files_under(root: &Path) -> Vec<String> {
+    let mut pending = vec![root.to_path_buf()];
+    let mut files = Vec::new();
+    while let Some(dir) = pending.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|ext| ext == "parquet") {
+                files.push(path.to_str().unwrap().to_string());
+            }
+        }
+    }
+    files.sort();
+    files
 }
 
 fn reserved_name_collision(names: &str) -> String {
@@ -148,8 +179,21 @@ async fn reserved_name_collision_in_a_join() {
     .await;
     run(&session, "DELETE FROM ice.ns.p WHERE id = 1").await;
     seed_user_columns(&session, "ice.ns.uc", &["_deleted"], "").await;
-    for sql in [
+    let rows = batches(
+        &session,
         "SELECT p.id, p._deleted FROM ice.ns.p p JOIN ice.ns.uc u ON p.id = u.id ORDER BY p.id",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id", "_deleted"], "J1");
+    assert_eq!(
+        pairs_i64_bool(&rows),
+        vec![(1, true), (2, false), (3, false)],
+        "J1"
+    );
+    let schema = rows[0].schema();
+    assert_eq!(schema.fields()[1].data_type(), &DataType::Boolean, "J1");
+    assert!(!schema.fields()[1].is_nullable(), "J1");
+    for sql in [
         "SELECT p.id, p._deleted, u._deleted FROM ice.ns.p p JOIN ice.ns.uc u ON p.id = u.id \
          ORDER BY p.id",
         "SELECT u.id, u._deleted FROM ice.ns.uc u JOIN ice.ns.p p ON p.id = u.id ORDER BY u.id",
@@ -200,9 +244,11 @@ async fn reserved_name_near_misses_still_answer() {
             let rows = batches(&session, &format!("SELECT id, _file FROM {table}")).await;
             assert_eq!(field_names(&rows), vec!["id", "_file"], "{column}");
             assert_eq!(i64s(&rows, 0), vec![1], "{column}");
-            let files = strs(&rows, 1);
-            assert_eq!(files.len(), 1, "{column}");
-            assert!(files[0].ends_with(".parquet"), "{column}: {}", files[0]);
+            assert_eq!(
+                strs(&rows, 1),
+                parquet_files_under(&wh.path().join("ns").join(format!("n{index}"))),
+                "{column}"
+            );
         } else {
             let rows = batches(&session, &format!("SELECT id, _spec_id FROM {table}")).await;
             assert_eq!(field_names(&rows), vec!["id", "_spec_id"], "{column}");
@@ -258,5 +304,96 @@ async fn reserved_name_near_misses_still_answer() {
             (3, "u3".to_string()),
         ],
         "R-MC-RESERVED-NAME-SCAN"
+    );
+}
+
+#[tokio::test]
+async fn reserved_word_outside_a_user_column_read_answers() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed_values(
+        &session,
+        "ice.ns.ndel",
+        "id BIGINT, _deleted STRING",
+        "(1, 'u1'), (2, 'u2')",
+    )
+    .await;
+    seed_values(
+        &session,
+        "ice.ns.nfile",
+        "id BIGINT, _file STRING",
+        "(1, 'f1'), (2, 'f2')",
+    )
+    .await;
+    seed_values(
+        &session,
+        "ice.ns.pl",
+        "id BIGINT, v STRING",
+        "(1, 'a'), (2, 'b')",
+    )
+    .await;
+    for (row, sql, field) in [
+        (
+            "A1",
+            "SELECT id AS _deleted FROM ice.ns.ndel ORDER BY id",
+            "_deleted",
+        ),
+        (
+            "A2",
+            "SELECT id AS _file FROM ice.ns.nfile ORDER BY id",
+            "_file",
+        ),
+        (
+            "A4",
+            "SELECT id AS _deleted FROM ice.ns.ndel ORDER BY _deleted",
+            "_deleted",
+        ),
+        (
+            "A5",
+            "SELECT _deleted.id FROM ice.ns.ndel AS _deleted ORDER BY 1",
+            "id",
+        ),
+        (
+            "A6",
+            "WITH _deleted AS (SELECT id FROM ice.ns.ndel) SELECT id FROM _deleted ORDER BY id",
+            "id",
+        ),
+        (
+            "A7",
+            "SELECT id AS _deleted FROM ice.ns.pl ORDER BY id",
+            "_deleted",
+        ),
+        (
+            "A10",
+            "SELECT x AS _deleted FROM (SELECT id AS x FROM ice.ns.ndel) ORDER BY 1",
+            "_deleted",
+        ),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(field_names(&rows), vec![field], "{row}: {sql}");
+        assert_eq!(i64s(&rows, 0), vec![1, 2], "{row}: {sql}");
+    }
+    let rows = batches(
+        &session,
+        "SELECT id, 7 AS _pos FROM ice.ns.ndel ORDER BY id",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id", "_pos"], "A3");
+    assert_eq!(pairs_i64_i32(&rows), vec![(1, 7), (2, 7)], "A3");
+    let rows = batches(&session, "SELECT id, v AS _file FROM ice.ns.pl ORDER BY id").await;
+    assert_eq!(field_names(&rows), vec!["id", "_file"], "A8");
+    assert_eq!(
+        pairs_i64_str(&rows),
+        vec![(1, "a".to_string()), (2, "b".to_string())],
+        "A8"
+    );
+    assert_eq!(
+        plan_error(
+            &session,
+            "SELECT id, _deleted AS d FROM ice.ns.ndel ORDER BY id"
+        )
+        .await,
+        reserved_name_collision("_deleted"),
+        "A9"
     );
 }
