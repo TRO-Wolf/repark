@@ -80,9 +80,9 @@ class ReparkAdapter(SparkAdapter):
     def get_columns_in_relation(self, relation: BaseRelation) -> list[SparkColumn]:
         """Columns from the facade schema.
 
-        ``DESCRIBE EXTENDED`` runs but answers Arrow spellings (``Utf8``, ``Int32``) and no
-        table-detail block, so its output cannot fill a dbt column (registry DBT-DESC-1).
-        The facade schema answers Spark spellings.
+        The facade schema answers Spark type spellings without parsing text. ``DESCRIBE
+        EXTENDED`` output is a diagnostic report, not a contract, so the adapter does not read
+        it (registry DBT-DESC-1).
         """
         try:
             schema = self._session().table(relation.render()).schema
