@@ -306,15 +306,9 @@ fn unbalanced_delimiter(sql: &str) -> Option<char> {
     while let Some(byte) = bytes.get(position) {
         if let Some(delimiter) = active_delimiter {
             if *byte == delimiter as u8 {
-                if bytes.get(position + 1) == Some(byte) {
-                    position += 2;
-                } else {
-                    active_delimiter = None;
-                    position += 1;
-                }
-            } else {
-                position += 1;
+                active_delimiter = None;
             }
+            position += 1;
         } else if bytes
             .get(position..)
             .is_some_and(|tail| tail.starts_with(b"--") || tail.starts_with(b"/*"))
