@@ -5,7 +5,7 @@ path, not a table identifier. A path ending ``.metadata.json`` pins that metadat
 file; any other path is a table location whose current metadata the engine resolves
 through ``version-hint.text`` or the highest-numbered metadata file. Time-travel and
 incremental reader options refuse here — a path already names the snapshot — and
-nothing is registered in a catalog.
+the read leaves no registration behind.
 """
 
 from __future__ import annotations
