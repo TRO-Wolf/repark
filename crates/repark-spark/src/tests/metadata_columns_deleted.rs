@@ -59,10 +59,11 @@ async fn seed(session: &ReparkSession, table: &str, part: &str, props: &str) {
 }
 
 async fn seed_user_columns(session: &ReparkSession, table: &str, columns: &[&str], props: &str) {
-    let defs: String = columns
+    let defs = columns
         .iter()
         .map(|column| format!(", {column} STRING"))
-        .collect();
+        .collect::<Vec<_>>()
+        .concat();
     run(
         session,
         &format!(
@@ -73,7 +74,7 @@ async fn seed_user_columns(session: &ReparkSession, table: &str, columns: &[&str
     .await;
     let rows: Vec<String> = (1..=3)
         .map(|id| {
-            let cells: String = columns.iter().map(|_| format!(", 'u{id}'")).collect();
+            let cells = vec![format!(", 'u{id}'"); columns.len()].concat();
             format!("({id}{cells})")
         })
         .collect();
