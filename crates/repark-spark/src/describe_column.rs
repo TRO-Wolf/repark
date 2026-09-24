@@ -17,6 +17,40 @@ use crate::namespace_ddl::consume_word;
 use crate::show_create::{skip_sql_whitespace_and_comments, starts_with_sql_keywords};
 use crate::spark_type_names::spark_ddl_type_name;
 
+pub(crate) fn consume_partition_only_tail(parser: &mut Parser) -> bool {
+    let head_is_partition = matches!(
+        &parser.peek_token().token,
+        Token::Word(word) if word.quote_style.is_none() && word.value.eq_ignore_ascii_case("PARTITION")
+    );
+    if !head_is_partition || !matches!(parser.peek_nth_token(1).token, Token::LParen) {
+        return false;
+    }
+    let mut offset = 2;
+    loop {
+        match parser.peek_nth_token(offset).token {
+            Token::RParen => break,
+            Token::EOF => return false,
+            _ => offset += 1,
+        }
+    }
+    if !matches!(
+        parser.peek_nth_token(offset + 1).token,
+        Token::EOF | Token::SemiColon
+    ) {
+        return false;
+    }
+    for _ in 0..=offset {
+        parser.next_token();
+    }
+    true
+}
+
+pub(crate) fn describe_partition_unsupported_error() -> DataFusionError {
+    DataFusionError::Plan(
+        "[_LEGACY_ERROR_TEMP_1111] DESCRIBE does not support partition for v2 tables.".to_string(),
+    )
+}
+
 pub(crate) fn parse_describe_column_tail(
     parser: &mut Parser,
     sql: &str,
@@ -375,10 +409,11 @@ fn unresolved_describe_column_error(
     let mut suggestions = field_names
         .map(|name| format!("`{}`", name.replace('`', "``")))
         .collect::<Vec<_>>();
+    let similarity_base = crate::describe_show::quote_namespace_name_if_needed(column_name);
     suggestions.sort_by_key(|candidate| {
-        datafusion::common::utils::datafusion_strsim::levenshtein(candidate, column_name)
+        datafusion::common::utils::datafusion_strsim::levenshtein(candidate, &similarity_base)
     });
-    let column_name = format!("`{column_name}`");
+    let column_name = format!("`{}`", column_name.replace('`', "``"));
     let suggestions = suggestions.join(", ");
     DataFusionError::Plan(spark_error::message(
         spark_error::UNRESOLVED_COLUMN_WITH_SUGGESTION,

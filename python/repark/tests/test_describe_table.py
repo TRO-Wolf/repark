@@ -258,6 +258,32 @@ def test_describe_unclosed_comment_answers_unclosed_bracketed_comment(
     )
 
 
+def test_describe_table_partition_without_column_is_v2_refusal(spark: ReparkSession) -> None:
+    """A partition spec with no column answers Spark's v2 DESCRIBE partition refusal text."""
+    table = _create_describe_error_table(spark)
+    with pytest.raises(AnalysisException) as raised:
+        spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} PARTITION (id=1)")
+    assert str(raised.value) == (
+        "Error during planning: [_LEGACY_ERROR_TEMP_1111] DESCRIBE does not support partition "
+        "for v2 tables."
+    )
+    assert raised.value.getSqlState() is None
+
+
+def test_describe_table_doubled_backtick_column_is_re_escaped(spark: ReparkSession) -> None:
+    """An unresolved column with a doubled backtick names it re-escaped in Spark's order."""
+    table = _create_describe_error_table(spark)
+    with pytest.raises(AnalysisException) as raised:
+        spark.sql(f"DESCRIBE {CATALOG}.{NAMESPACE}.{table} `a``b`")
+    assert raised.value.getCondition() == "UNRESOLVED_COLUMN.WITH_SUGGESTION"
+    assert raised.value.getSqlState() == "42703"
+    assert str(raised.value) == (
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or "
+        "function parameter with name `a``b` cannot be resolved. Did you mean one of the "
+        "following? [`id`, `s`, `we ird`]. SQLSTATE: 42703"
+    )
+
+
 def test_describe_table_column_partition_is_parse_exception(spark: ReparkSession) -> None:
     """A partition column clause keeps Spark's unsupported parse error."""
     table = _create_describe_error_table(spark)

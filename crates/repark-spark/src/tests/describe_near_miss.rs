@@ -539,3 +539,86 @@ fn table_describe_text_covers_each_branch() {
         );
     }
 }
+
+#[tokio::test]
+async fn partition_spec_without_column_answers_spark_v2_refusal() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = dc_session(&warehouse).await;
+    for sql in [
+        "DESCRIBE ice.sales.dc PARTITION (id=1)",
+        "DESCRIBE EXTENDED ice.sales.dc PARTITION (id=1)",
+        "DESCRIBE TABLE ice.sales.dc PARTITION (id=1);",
+        "desc ice.sales.dc partition (id=1)",
+    ] {
+        assert_error(
+            &ctx,
+            &catalogs,
+            sql,
+            "Error during planning: [_LEGACY_ERROR_TEMP_1111] DESCRIBE does not support partition \
+             for v2 tables.",
+        )
+        .await;
+    }
+    assert_error(
+        &ctx,
+        &catalogs,
+        "DESCRIBE ice.sales.nope PARTITION (id=1)",
+        &table_not_found(&["ice", "sales", "nope"]),
+    )
+    .await;
+    assert_parser_error(
+        &ctx,
+        &catalogs,
+        "DESCRIBE ice.sales.dc PARTITION (id=1) id",
+        "[UNSUPPORTED_FEATURE.DESC_TABLE_COLUMN_PARTITION] The feature is not supported: DESC \
+         TABLE COLUMN for a specific partition. SQLSTATE: 0A000",
+    )
+    .await;
+    execute(&ctx, &catalogs, "CREATE VIEW ice.sales.v AS SELECT 1 AS id")
+        .await
+        .unwrap();
+    let (schema, rows) = answer(&ctx, &catalogs, "DESCRIBE ice.sales.v PARTITION (id=1)").await;
+    assert_eq!(schema, table_schema());
+    assert_eq!(rows, owned(&[&[Some("id"), Some("int"), Some("")]]));
+}
+
+#[test]
+fn partition_only_tail_scan_covers_each_branch() {
+    for (sql, claimed) in [
+        ("DESCRIBE ice.sales.dc PARTITION (id=1)", true),
+        ("DESCRIBE ice.sales.dc PARTITION (id=1, cat='a');", true),
+        ("DESCRIBE ice.sales.dc PARTITION (id=1", false),
+        ("DESCRIBE ice.sales.dc PARTITION id)", false),
+        ("DESCRIBE ice.sales.dc PARTITION (id=(1))", false),
+        ("DESCRIBE ice.sales.dc PARTITION (id=1) id", false),
+        ("DESCRIBE ice.sales.dc `PARTITION` (id=1)", false),
+        ("DESCRIBE ice.sales.dc.snapshots PARTITION (id=1)", false),
+    ] {
+        let parsed = crate::describe_show::try_parse_describe_table(sql);
+        if claimed {
+            let describe = parsed
+                .expect("the partition-only tail takes the table path")
+                .expect("the partition-only tail parses");
+            assert!(describe.partition, "{sql}");
+            assert!(describe.column.is_none(), "{sql}");
+        } else {
+            assert!(
+                matches!(parsed, Some(Err(_))),
+                "{sql} must keep its parse refusal"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn unresolved_column_re_escapes_backticks_in_spark_order() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = dc_session(&warehouse).await;
+    assert_error(
+        &ctx,
+        &catalogs,
+        "DESCRIBE ice.sales.dc `a``b`",
+        &unresolved_column("`a``b`", "`id`, `s`, `we ird`"),
+    )
+    .await;
+}

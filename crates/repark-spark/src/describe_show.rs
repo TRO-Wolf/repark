@@ -209,6 +209,7 @@ pub(crate) struct DescribeTable {
     pub(crate) extended: bool,
     pub(crate) written_parts: Vec<String>,
     pub(crate) column: Option<Vec<String>>,
+    pub(crate) partition: bool,
 }
 
 impl DescribeTable {
@@ -260,6 +261,8 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
             crate::describe_column::describe_table_name_token_parse_error(&token),
         ));
     }
+    let partition =
+        name.0.len() <= 3 && crate::describe_column::consume_partition_only_tail(&mut parser);
     let column = match crate::describe_column::parse_describe_column_tail(&mut parser, sql) {
         Ok(column) => column,
         Err(error) => return Some(Err(error)),
@@ -288,6 +291,7 @@ pub(crate) fn try_parse_describe_table(sql: &str) -> Option<Result<DescribeTable
         extended,
         written_parts: Vec::new(),
         column,
+        partition,
     }))
 }
 
@@ -338,6 +342,9 @@ pub(crate) async fn execute_describe_table(
         }
         Err(error) => return Err(iceberg_err(error)),
     };
+    if describe.partition {
+        return Err(crate::describe_column::describe_partition_unsupported_error());
+    }
     if describe.column.is_some() {
         return crate::describe_column::execute_describe_column(ctx, &describe, &table);
     }
