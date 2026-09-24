@@ -397,3 +397,97 @@ async fn reserved_word_outside_a_user_column_read_answers() {
         "A9"
     );
 }
+
+#[tokio::test]
+async fn reserved_word_positions_follow_spark() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    seed_values(
+        &session,
+        "ice.ns.ndel",
+        "id BIGINT, _deleted STRING",
+        "(1, 'u1'), (2, 'u2')",
+    )
+    .await;
+    let rows = batches(
+        &session,
+        "SELECT id AS _deleted, count(*) AS c FROM ice.ns.ndel GROUP BY 1 ORDER BY 1",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["_deleted", "c"], "B1");
+    assert_eq!(pairs_i64_i64(&rows), vec![(1, 1), (2, 1)], "B1");
+    for (row, sql, field) in [
+        (
+            "B3",
+            "SELECT _deleted FROM (SELECT id FROM ice.ns.ndel) t(_deleted) ORDER BY 1",
+            "_deleted",
+        ),
+        (
+            "B4",
+            "SELECT id AS `_deleted` FROM ice.ns.ndel ORDER BY id",
+            "_deleted",
+        ),
+        (
+            "B8",
+            "SELECT id AS _file FROM ice.ns.ndel ORDER BY id",
+            "_file",
+        ),
+    ] {
+        let rows = batches(&session, sql).await;
+        assert_eq!(field_names(&rows), vec![field], "{row}: {sql}");
+        assert_eq!(i64s(&rows, 0), vec![1, 2], "{row}: {sql}");
+    }
+    let rows = batches(
+        &session,
+        "SELECT s._deleted FROM (SELECT named_struct('_deleted', id) AS s FROM ice.ns.ndel) \
+         ORDER BY 1",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["s[_deleted]"], "B7");
+    assert_eq!(i64s(&rows, 0), vec![1, 2], "B7");
+    let rows = batches(
+        &session,
+        "SELECT id, '_deleted' AS s FROM ice.ns.ndel ORDER BY id",
+    )
+    .await;
+    assert_eq!(field_names(&rows), vec!["id", "s"], "B5");
+    assert_eq!(
+        pairs_i64_str(&rows),
+        vec![(1, "_deleted".to_string()), (2, "_deleted".to_string())],
+        "B5"
+    );
+    let rows = batches(
+        &session,
+        "SELECT count(*) FROM ice.ns.ndel WHERE id > 0 AND _spec_id = 0",
+    )
+    .await;
+    assert_eq!(i64s(&rows, 0), vec![2], "B10");
+    assert_eq!(
+        plan_error(&session, "SELECT _deleted(id) FROM ice.ns.ndel").await,
+        "[UNRESOLVED_ROUTINE] Cannot resolve routine `_deleted` on search path [`system`.`builtin`, \
+         `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7",
+        "B6"
+    );
+    for (row, sql) in [
+        ("B9", "SELECT _deleted FROM ice.ns.ndel AS t ORDER BY 1"),
+        ("R3", "SELECT *, _spec_id FROM ice.ns.ndel ORDER BY id"),
+    ] {
+        assert_eq!(
+            plan_error(&session, sql).await,
+            reserved_name_collision("_deleted"),
+            "{row}: {sql}"
+        );
+    }
+    assert_eq!(
+        plan_error(
+            &session,
+            "SELECT id AS _deleted, count(*) AS c FROM ice.ns.ndel GROUP BY _deleted ORDER BY 1",
+        )
+        .await,
+        "Error during planning: Column in SELECT must be in GROUP BY or an aggregate function: \
+         While expanding wildcard, column \"ndel.id\" must appear in the GROUP BY clause or must \
+         be part of an aggregate function, currently only \"ndel._deleted, count(Int64(1))\" \
+         appears in the SELECT clause satisfies this requirement",
+        "B2"
+    );
+}
