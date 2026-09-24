@@ -22,9 +22,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **DFLOAD-1 / U10 (2026-09-23), in flight:** `format("iceberg").load(<path>)` reads the
   table at a filesystem path like Spark's `IcebergSource` — the contains-slash route,
   `.metadata.json` direct, `version-hint.text` then highest-integer metadata resolution,
-  static read-only provider with no catalog registration, pinned refusal for
-  time-travel/incremental options beside a path, the unchanged catalog route for
-  every slash-free near-miss, the `file:` spellings Spark reads or refuses (`Wrong FS`
+  static read-only provider that leaves no registration behind, pinned refusal for
+  time-travel/incremental options beside a path, the catalog route for the pinned
+  slash-free near-misses, the `file:` spellings Spark reads or refuses (`Wrong FS`
   for an authority, `URISyntaxException` for a relative path), and `v<N>` / hint versions
   bounded to the Java `int` range. C-001..C-010 PROVEN. `risk_tier: standard`. Branch
   `fix/u10-df-load-path`.

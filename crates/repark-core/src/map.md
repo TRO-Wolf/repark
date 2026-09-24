@@ -268,8 +268,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `repark_iceberg::catalog::file_io_for_location` on the normalised spelling
   (scheme-selected local fs / s3 / s3a),
   the read-only static table feeds `IcebergStaticTableProvider::try_new_from_table`, and
-  the provider goes straight to `SessionContext::read_table` — nothing is registered in
-  a catalog and no time-travel or incremental option reaches the path route.
+  the provider goes straight to `SessionContext::read_table` — no registration is left
+  behind and no time-travel or incremental option reaches the path route.
   pins: dfload-1/C-002, C-003, C-004, C-005, C-007, C-008, C-009, C-010
 - `plan_canonical.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-15, round 4):** the
   expression-canonicalization half of the hash, split out when the expression
