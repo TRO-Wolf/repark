@@ -688,12 +688,69 @@ async fn every_served_metadata_name_collision_refuses() {
             "R-MC-RESERVED-NAME: {column}"
         );
     }
-    seed_user_columns(&session, "ice.ns.cfp", &["_file", "_pos"], "").await;
-    assert_eq!(
-        plan_error(&session, "SELECT id, _pos, _file FROM ice.ns.cfp").await,
-        reserved_name_collision("_file, _pos"),
-        "R-MC-RESERVED-NAME: table-schema order"
-    );
+    seed_user_columns(&session, "ice.ns.two", &["_pos", "_file"], "").await;
+    seed_user_columns(&session, "ice.ns.rev", &["_file", "_pos"], "").await;
+    seed_user_columns(
+        &session,
+        "ice.ns.tri",
+        &["_spec_id", "_deleted", "_file"],
+        "",
+    )
+    .await;
+    for (sql, names) in [
+        ("SELECT id, _file, _pos FROM ice.ns.two", "_pos, _file"),
+        ("SELECT id, _pos, _file FROM ice.ns.two", "_pos, _file"),
+        ("SELECT id, _file FROM ice.ns.two", "_file"),
+        ("SELECT id, _pos, _file FROM ice.ns.rev", "_file, _pos"),
+        ("SELECT id, _file, _pos FROM ice.ns.rev", "_file, _pos"),
+        (
+            "SELECT id, _file, _deleted, _spec_id FROM ice.ns.tri",
+            "_spec_id, _deleted, _file",
+        ),
+        (
+            "SELECT id, _deleted, _file FROM ice.ns.tri",
+            "_deleted, _file",
+        ),
+    ] {
+        assert_eq!(
+            plan_error(&session, sql).await,
+            reserved_name_collision(names),
+            "R-MC-RESERVED-NAME-ORDER: {sql}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn reserved_name_collision_in_a_join() {
+    let wh = TempDir::new().unwrap();
+    let session = session(&wh).await;
+    run(
+        &session,
+        &format!(
+            "CREATE TABLE ice.ns.p (id BIGINT, data STRING) USING iceberg \
+             TBLPROPERTIES ('format-version' = '2'{MOR})"
+        ),
+    )
+    .await;
+    run(
+        &session,
+        "INSERT INTO ice.ns.p VALUES (1, 'a'), (2, 'b'), (3, 'c')",
+    )
+    .await;
+    run(&session, "DELETE FROM ice.ns.p WHERE id = 1").await;
+    seed_user_columns(&session, "ice.ns.uc", &["_deleted"], "").await;
+    for sql in [
+        "SELECT p.id, p._deleted FROM ice.ns.p p JOIN ice.ns.uc u ON p.id = u.id ORDER BY p.id",
+        "SELECT p.id, p._deleted, u._deleted FROM ice.ns.p p JOIN ice.ns.uc u ON p.id = u.id \
+         ORDER BY p.id",
+        "SELECT u.id, u._deleted FROM ice.ns.uc u JOIN ice.ns.p p ON p.id = u.id ORDER BY u.id",
+    ] {
+        assert_eq!(
+            plan_error(&session, sql).await,
+            reserved_name_collision("_deleted"),
+            "R-MC-RESERVED-NAME-JOIN: {sql}"
+        );
+    }
 }
 
 #[tokio::test]
@@ -716,7 +773,47 @@ async fn reserved_name_near_misses_still_answer() {
         ],
         "R-MC-RESERVED-NAME-NEAR"
     );
-    seed_user_columns(&session, "ice.ns.near_file", &["_file"], MOR).await;
+    for (index, column) in repark_iceberg::catalog::METADATA_COLUMN_NAMES
+        .iter()
+        .enumerate()
+    {
+        let table = format!("ice.ns.n{index}");
+        run(
+            &session,
+            &format!(
+                "CREATE TABLE {table} (id BIGINT, {column} STRING) USING iceberg \
+                 TBLPROPERTIES ('format-version' = '2')"
+            ),
+        )
+        .await;
+        run(&session, &format!("INSERT INTO {table} VALUES (1, 'u1')")).await;
+        if *column == "_spec_id" {
+            let rows = batches(&session, &format!("SELECT id, _file FROM {table}")).await;
+            assert_eq!(field_names(&rows), vec!["id", "_file"], "{column}");
+            assert_eq!(i64s(&rows, 0), vec![1], "{column}");
+            let files = strs(&rows, 1);
+            assert_eq!(files.len(), 1, "{column}");
+            assert!(files[0].ends_with(".parquet"), "{column}: {}", files[0]);
+        } else {
+            let rows = batches(&session, &format!("SELECT id, _spec_id FROM {table}")).await;
+            assert_eq!(field_names(&rows), vec!["id", "_spec_id"], "{column}");
+            assert_eq!(pairs_i64_i32(&rows), vec![(1, 0)], "{column}");
+        }
+    }
+    seed_user_columns(&session, "ice.ns.near_two", &["_pos", "_file"], "").await;
+    let rows = batches(
+        &session,
+        "SELECT id, _spec_id FROM ice.ns.near_two ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        pairs_i64_i32(&rows),
+        vec![(1, 0), (2, 0), (3, 0)],
+        "R-MC-RESERVED-NAME-NEAR"
+    );
+    let rows = batches(&session, "SELECT id FROM ice.ns.near_two ORDER BY id").await;
+    assert_eq!(i64s(&rows, 0), vec![1, 2, 3], "R-MC-RESERVED-NAME-NEAR");
+    seed_user_columns(&session, "ice.ns.near_file", &["_file"], "").await;
     let rows = batches(
         &session,
         "SELECT id, _deleted FROM ice.ns.near_file ORDER BY id",
@@ -725,6 +822,32 @@ async fn reserved_name_near_misses_still_answer() {
     assert_eq!(
         pairs_i64_bool(&rows),
         vec![(1, false), (2, false), (3, false)],
+        "R-MC-RESERVED-NAME-NEAR"
+    );
+    let rows = batches(
+        &session,
+        "SELECT id, _pos FROM ice.ns.near_file ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        pairs_i64_i64(&rows),
+        vec![(1, 0), (2, 1), (3, 2)],
+        "R-MC-RESERVED-NAME-NEAR"
+    );
+    let rows = batches(
+        &session,
+        "SELECT id FROM ice.ns.near_file WHERE _spec_id = 0 ORDER BY id",
+    )
+    .await;
+    assert_eq!(i64s(&rows, 0), vec![1, 2, 3], "R-MC-RESERVED-NAME-NEAR");
+    let rows = batches(&session, "SELECT * FROM ice.ns.near_file ORDER BY id").await;
+    assert_eq!(
+        pairs_i64_str(&rows),
+        vec![
+            (1, "u1".to_string()),
+            (2, "u2".to_string()),
+            (3, "u3".to_string()),
+        ],
         "R-MC-RESERVED-NAME-SCAN"
     );
 }
