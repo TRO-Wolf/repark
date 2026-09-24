@@ -142,13 +142,11 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-write-options-1/C-014
   **IPI-51 PR5 (2026-09-20):** `try_preparse_intercepts` gains the four v2-command
   intercepts — DESCRIBE AS JSON ahead of the describe-table arm, SET SERDE / MSCK REPAIR /
-  ANALYZE TABLE after SHOW PARTITIONS — through `v2_json_preparse` / `v2_tail_preparse`
-  helpers in the `show_partitions_preparse` shape, each refusing through the shared
-  `v2_command_outcome` helper so the write-options gate still runs first. The DESCRIBE
-  NAMESPACE arm moves into `describe_namespace_preparse` so the function holds clippy's
-  line cap. **WO-A17 (2026-09-24):** the three v2-command helpers moved to `catalog_ops.rs`;
-  `try_preparse_intercepts` calls `crate::catalog_ops::v2_json_preparse` / `v2_tail_preparse` at
-  the same two points, so the routing order is unchanged and `router.rs` stays under its ceiling.
+  ANALYZE TABLE after SHOW PARTITIONS — through `crate::catalog_ops::v2_json_preparse` /
+  `v2_tail_preparse` (in `catalog_ops.rs`, in the `show_partitions_preparse` shape), each
+  refusing through the shared `v2_command_outcome` helper so the write-options gate still runs
+  first. The DESCRIBE NAMESPACE arm moves into `describe_namespace_preparse` so the function
+  holds clippy's line cap.
   pins: ice-error-conditions-1/C-011
   **IPI-26/27 round 2 (2026-09-20):** `COMMENT ON TABLE` and the two-name Hive
   `CHANGE COLUMN` are true pre-parse intercepts
@@ -1444,8 +1442,8 @@ pins: rp-4-fork-repin/C-005, C-006
   `PARSE_SYNTAX_ERROR` refusals, including an unclosed quote or backtick; every other head falls
   through. An unclosed `/*` never reaches this parser end to end: the router front door (WO-C10)
   answers `UNCLOSED_BRACKETED_COMMENT` / `42601` first.
-  The router retries that parser when literal canonicalization fails first, through
-  `refusal_or` (WO-A13 moved that fallback here from `router.rs`). Views and session
+  When literal canonicalization fails, the router maps the error through `refusal_or`, which
+  answers this parser's refusal for a SHOW TABLE EXTENDED head. Views and session
   temporary views remain absent from this statement's Iceberg listing.
   Parser unit pins cover required syntax refusals and near misses. **WO-A11 (2026-09-23):** the
   quote scanner closes on every matching delimiter; a doubled delimiter is a close followed by a
@@ -1516,9 +1514,9 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ipi-07-branch-read-schema-1/C-001, C-003, C-004, C-005, C-006, C-008
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate; 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape rejection, and
-  `reregister*` provider invalidation. **WO-A17 (2026-09-24):** also home of the v2-command intercepts
+  `reregister*` provider invalidation. It is also the home of the v2-command intercepts
   `v2_json_preparse` / `v2_tail_preparse` and their `v2_command_outcome` helper, next to
-  `not_supported_command_for_v2_table` (moved from `router.rs`, behaviour unchanged). **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
+  `not_supported_command_for_v2_table`. **IPI-21/IPI-25 (2026-09-20):** `table_or_view_not_found`
   is the single home of Spark's `[TABLE_OR_VIEW_NOT_FOUND]` text for a three-part name, condition
   and `SQLSTATE: 42P01` included; `describe_show.rs`, `normalize/replace_table.rs`,
   `namespace_ddl/purge.rs` and `namespace_ddl.rs` DROP all answer through it, so they cannot

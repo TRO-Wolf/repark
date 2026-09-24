@@ -1485,8 +1485,8 @@ perfectly good read.
 Filed by DBT-1 (2026-09-04), which measured every statement `dbt run` and `dbt test` emit for a
 `materialized='table'`, `file_format='iceberg'` model against the SQL door. The `dbt-repark`
 adapter overrides the macro behind each row, so the refusal is a design constraint on the adapter,
-not a runtime failure of the gold stage. The whole measured table — twelve served shapes and
-sixteen refused — is `python/dbt-repark/tests/test_statement_surface.py`.
+not a runtime failure of the gold stage. The whole measured table of served and refused shapes
+is `python/dbt-repark/tests/test_statement_surface.py`.
 
 #### DBT-VIEW-1 — `CREATE OR REPLACE VIEW` is refused, so dbt cannot build views
 

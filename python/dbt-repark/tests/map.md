@@ -47,7 +47,7 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   pins: dbt-1-adapter/C-001
   pins: sql-set-door-1/C-005
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20, re-measured after the current-catalog flip):**
-  twenty served, eight refused — `R-SHOW-DATABASES`, `R-DESCRIBE-TWO-PART` and
+  `R-SHOW-DATABASES`, `R-DESCRIBE-TWO-PART` and
   `R-SHOW-TABLES` move to served (a registered memory catalog becomes the current catalog,
   so `gold` resolves: bare `SHOW NAMESPACES` lists it, two-part `DESCRIBE` resolves like
   `SELECT`, and `SHOW TABLES IN gold` answers the dbt glob shape); `R-RENAME-TWO-PART`
@@ -56,9 +56,8 @@ resolves without an install, and `python/repark/tests`, so the gold models' SQL 
   **SHOW-TABLE-EXTENDED-1 (2026-09-23):** `S-SHOW-TABLE-EXTENDED` moves to served, and
   `test_show_table_extended_answers_spark_shape` compares every column name and value of the one
   four-column row (`to_pylist()`), including the full information text; `R-SHOW-TBLPROPERTIES` stays
-  refused. **WO-A18 (2026-09-24):** `test_show_tblproperties_table_refusal_is_exact` pins that
-  refusal as `AnalysisException`, condition `None`, SQLSTATE `None` and the full
-  `Error during planning: SHOW [VARIABLE] ...` text.
+  refused, pinned exactly by `test_show_tblproperties_table_refusal_is_exact` (`AnalysisException`,
+  condition `None`, SQLSTATE `None`, full `Error during planning: SHOW [VARIABLE] ...` text).
 - `test_cursor.py` — 10 cases over the cursor dbt drives: `fetchall` / `fetchmany` / `fetchone`
   across three-row results, `description` across two columns, the zero-column DDL result, the
   refused binding, and two cursors that do not drain each other. Added in round 2: the multi-row

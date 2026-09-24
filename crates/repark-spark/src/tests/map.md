@@ -1501,14 +1501,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins for `SHOW TABLE EXTENDED`: full four-column rows for partitioned/plain, v3 Unicode,
   sorted tables, LOCATION, owner, and nested/deep schema trees; property redaction and snapshot
   changes; alternation and case-insensitive LIKE; FROM and ambient scopes; missing-LIKE and
-  partition/missing-table/missing-namespace refusals, and SHOW-family near misses that remain
-  outside this parser. **WO-A4 (2026-09-23):** every parser refusal pins its SQL error variant
-  and complete condition/SQLSTATE text; partition lookup pins literal wildcard absence; the
-  unclaimed SHOW TABLE(S) forms pin their current exact variants and messages. **WO-A5
+  partition/missing-table/missing-namespace refusals; the SHOW-family near misses live in
+  `show_table_extended_near_miss.rs`. **WO-A4 (2026-09-23):** every parser refusal pins its SQL
+  error variant and complete condition/SQLSTATE text; partition lookup pins literal wildcard
+  absence. **WO-A5
   (2026-09-23):** snapshot, alternation, case, and ambient-scope checks compare complete ordered
   four-column row vectors. **WO-A8 (2026-09-23):** every successful answer also compares the
-  complete Arrow schema (names, types, nullability); the near-miss tests moved to
-  `show_table_extended_near_miss.rs`.
+  complete Arrow schema (names, types, nullability).
   pins: wo-a1b/C-002, C-003
   pins: show-table-extended-1/C-001, C-002, C-003, C-004
 - `show_table_extended_near_miss.rs` — **WO-A8 (2026-09-23):** the SHOW TABLE EXTENDED near
@@ -1516,17 +1515,17 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (SHOW TABLES, SHOW CREATE TABLE, leading and inter-keyword comments, `;` and `; ;`) compare the
   complete Arrow schema and every row; refusals (SHOW TABLES EXTENDED, SHOW TBLPROPERTIES, SHOW
   TABLE, unclosed quotes after comments, `;;x`, SHOW TABLE EXTENDEDX) compare full messages. The
-  leading and inter-keyword unclosed `/*` probes pin the full rendered
-  `UNCLOSED_BRACKETED_COMMENT` / `42601` text the router front door (WO-C10) answers.
-  **WO-A10 (2026-09-23):** the `;;x` and unclosed-comment refusals go through
-  `assert_parse_refusal` (the SQL / ParserError variants and the bare message). The scanner
+  `;;x` refusal and the leading and inter-keyword unclosed `/*` probes go through
+  `assert_parse_refusal`: the SQL / ParserError variants, the rendered display, and the bare
+  `UNCLOSED_BRACKETED_COMMENT` / `42601` message the router front door (WO-C10) answers.
+  **WO-A10 (2026-09-23):** the scanner
   branches of `unbalanced_delimiter` and the bare `PARTITION` path each have a parser-level pin
   (`try_parse_show_table_extended`) and an end-to-end pin (`assert_parse_refusal` plus
   `repark_common::Error::Parse`), with a balanced near miss that keeps its exact rows or refusal:
   doubled `'`, `"` and backtick before an unclosed quote; `/*` and `--` inside an open quote; a
   quote inside `--` and nested `/* */` comments; an unterminated trailing `/*` (parser: end of
   input; router front door: `UNCLOSED_BRACKETED_COMMENT`); `PARTITION` with no parentheses.
-  Every refusal equals the Spark 4.1.2 condition and message head (WO-A10). **WO-A11
+  Each of these scanner refusals equals the Spark 4.1.2 condition and message head. **WO-A11
   (2026-09-23):** a nested `(` in the PARTITION spec (closed, unclosed, ambient scope) refuses near
   `'('` at both levels; `(cat='a')` and `(cat='(')` keep the partition-management refusal and
   `(cat='a'` keeps end of input. **WO-A12 (2026-09-23):** `()`, `(a=1,)`, `(,a=1)`, `(=1)`, `(a=)`,
