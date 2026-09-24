@@ -18,6 +18,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
+from repark.errors import ParseException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.dataframe import DataFrame
 
@@ -380,12 +381,12 @@ def test_out_of_range_integer_suffix_raises(spark: ReparkSession) -> None:
             "[INVALID_NUMERIC_LITERAL_RANGE] Numeric literal 40000S is outside the valid range",
         ),
     ]:
-        with pytest.raises(Exception, match="INVALID_NUMERIC_LITERAL_RANGE") as caught:
+        with pytest.raises(ParseException) as caught:
             spark.sql(sql).to_arrow()
-        message = str(caught.value)
-        assert message.splitlines()[0] == expected
-        assert "SQL error" not in message
-        assert "ParserError(" not in message
+        assert type(caught.value) is ParseException, sql
+        assert caught.value.getCondition() == "INVALID_NUMERIC_LITERAL_RANGE", sql
+        assert caught.value.getSqlState() is None, sql
+        assert str(caught.value) == expected, sql
 
 
 def test_signed_integer_suffix_minima_answer(spark: ReparkSession) -> None:

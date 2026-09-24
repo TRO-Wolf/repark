@@ -390,10 +390,10 @@ def test_rollback_to_timestamp_invalid_typed_literal_keeps_full_parse_message(
     )
     with pytest.raises(ParseException) as caught:
         spark.sql(sql).to_arrow()
-    message = str(caught.value)
-    assert message.splitlines()[0] == expected
-    assert "SQL error" not in message
-    assert "ParserError(" not in message
+    assert type(caught.value) is ParseException
+    assert caught.value.getCondition() == "INVALID_TYPED_LITERAL"
+    assert caught.value.getSqlState() == "42604"
+    assert str(caught.value) == expected
 
 
 def _live_rows(session: Any, sql: str) -> list[tuple[Any, Any]]:

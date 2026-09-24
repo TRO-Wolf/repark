@@ -1913,7 +1913,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `ICE-BRANCH-OPS-1-R-001`); the recorder keeps the live Spark error unchanged.
   **WO-A5 (2026-09-23):** a malformed `TIMESTAMP` argument to
   `rollback_to_timestamp` pins the full `INVALID_TYPED_LITERAL` producer message without a
-  DataFusion wrapper.
+  DataFusion wrapper. **WO-A10 (2026-09-23):** it asserts `ParseException`,
+  `INVALID_TYPED_LITERAL`, SQLSTATE `42604`, and the complete `str(exc)`.
   pins: ice-branch-ops-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-011
   pins: ice-branch-ops-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
@@ -6348,6 +6349,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   loud refusal, `1.e2` rewrite shape.
   **WO-A5 (2026-09-23):** `128Y` and `40000S` pin their full
   `INVALID_NUMERIC_LITERAL_RANGE` producer messages without a DataFusion wrapper.
+  **WO-A10 (2026-09-23):** both assert `ParseException`, the condition, the current `None`
+  SQLSTATE (Spark 4.1.2 answers `22003`), and the complete `str(exc)`.
   pins: fnp-4b/C-004, C-005, C-006, C-010, C-011, C-012, C-013, C-014, C-016
 - `test_fnp_4b_spark_dialect.py` — **FNP-4B (2026-09-15):** the Spark-door dialect pins —
   double-quoted STRING literals with Spark escapes and the `F.expr` / `filter` / `where` /
