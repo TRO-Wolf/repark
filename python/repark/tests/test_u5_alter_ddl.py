@@ -502,15 +502,23 @@ def test_nested_alter_column_type_refusals_match_spark(
     assert _current_schema(_metadata(tmp_path, "types")) == before
 
 
-@pytest.mark.parametrize("target", ["BIGINT", "TINYINT"])
+@pytest.mark.parametrize(
+    ("table", "target"),
+    [
+        pytest.param("ns.nope", "BIGINT", id="missing-table-bigint"),
+        pytest.param("ns.nope", "TINYINT", id="missing-table-tinyint"),
+        pytest.param("nope.t", "BIGINT", id="missing-namespace-bigint"),
+    ],
+)
 def test_nested_alter_column_type_on_a_missing_table_matches_spark(
-    spark: ReparkSession, target: str
+    spark: ReparkSession, table: str, target: str
 ) -> None:
     with pytest.raises(AnalysisException) as caught:
-        spark.sql(f"ALTER TABLE sc.ns.nope ALTER COLUMN st.a TYPE {target}")
+        spark.sql(f"ALTER TABLE sc.{table} ALTER COLUMN st.a TYPE {target}")
+    quoted = table.replace(".", "`.`")
     assert type(caught.value) is AnalysisException
     assert str(caught.value) == (
-        "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`nope` "
+        f"Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`{quoted}` "
         "cannot be found. Verify the spelling and correctness of the schema and catalog. If you "
         "did not qualify the name with a schema, verify the current_schema() output, or qualify "
         "the name with the correct schema and catalog. To tolerate the error on drop use DROP "
@@ -518,6 +526,81 @@ def test_nested_alter_column_type_on_a_missing_table_matches_spark(
     )
     assert caught.value.getCondition() == "TABLE_OR_VIEW_NOT_FOUND"
     assert caught.value.getSqlState() == "42P01"
+
+
+def _not_supported_in(table: str, column: str, from_type: str, to_type: str) -> str:
+    return (
+        "Error during planning: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is "
+        f"not supported for changing `sc`.`ns`.`{table}`'s column {column} with type "
+        f'"{from_type}" to {column} with type "{to_type}". SQLSTATE: 0A000'
+    )
+
+
+@pytest.mark.parametrize(
+    ("statement", "expected_type", "message", "condition", "sql_state"),
+    [
+        pytest.param(
+            "d ALTER COLUMN st.a TYPE DECIMAL",
+            AnalysisException,
+            _not_supported_in("d", "`st`.`a`", "DECIMAL(38,18)", "DECIMAL(10,0)"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="decimal-38-18-to-bare-decimal",
+        ),
+        pytest.param(
+            "d ALTER COLUMN st.i TYPE DECIMAL",
+            PySparkException,
+            _unsupported("Cannot change column type: st.i: int -> decimal(10, 0)"),
+            None,
+            None,
+            id="int-to-bare-decimal",
+        ),
+        pytest.param(
+            "d ALTER COLUMN st.i TYPE NUMERIC",
+            PySparkException,
+            _unsupported("Cannot change column type: st.i: int -> decimal(10, 0)"),
+            None,
+            None,
+            id="int-to-bare-numeric",
+        ),
+        pytest.param(
+            "d ALTER COLUMN st.i TYPE DEC",
+            PySparkException,
+            _unsupported("Cannot change column type: st.i: int -> decimal(10, 0)"),
+            None,
+            None,
+            id="int-to-bare-dec",
+        ),
+        pytest.param(
+            "t ALTER COLUMN m.value TYPE SMALLINT",
+            AnalysisException,
+            _not_supported_in("t", "`m`.`value`", "BIGINT", "SMALLINT"),
+            "NOT_SUPPORTED_CHANGE_COLUMN",
+            "0A000",
+            id="map-value-bigint-to-smallint",
+        ),
+    ],
+)
+def test_nested_alter_column_type_bare_decimal_and_map_value_match_spark(
+    spark: ReparkSession,
+    tmp_path: Path,
+    statement: str,
+    expected_type: type[Exception],
+    message: str,
+    condition: str | None,
+    sql_state: str | None,
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.d (st STRUCT<a: DECIMAL(38,18), i: INT>) USING iceberg")
+    spark.sql("CREATE TABLE sc.ns.t (m MAP<INT, BIGINT>) USING iceberg")
+    table = statement.split(" ", 1)[0]
+    before = _current_schema(_metadata(tmp_path, table))
+    with pytest.raises(PySparkException) as caught:
+        spark.sql(f"ALTER TABLE sc.ns.{statement}")
+    assert type(caught.value) is expected_type
+    assert str(caught.value) == message
+    assert caught.value.getCondition() == condition
+    assert caught.value.getSqlState() == sql_state
+    assert _current_schema(_metadata(tmp_path, table)) == before
 
 
 def _missing_size(name: str) -> str:
@@ -624,6 +707,69 @@ def _unsupported_datatype(name: str) -> str:
             "UNSUPPORTED_DATATYPE",
             "0A000",
             id="timestamp-precision",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE STRING(10)",
+            _unsupported_datatype("STRING(10)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="string-length",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE string(10)",
+            _unsupported_datatype("STRING(10)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="lower-string-length",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE DOUBLE(5,2)",
+            _unsupported_datatype("DOUBLE(5,2)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="double-precision-scale",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE double(5,2)",
+            _unsupported_datatype("DOUBLE(5,2)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="lower-double-precision-scale",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE FLOAT(10,2)",
+            _unsupported_datatype("FLOAT(10,2)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="float-precision-scale",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE BINARY(3)",
+            _unsupported_datatype("BINARY(3)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="binary-length",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE TIMESTAMP_NTZ(3)",
+            _unsupported_datatype("TIMESTAMP_NTZ(3)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="timestamp-ntz-precision",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE DATE(3)",
+            _unsupported_datatype("DATE(3)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="date-parameter",
+        ),
+        pytest.param(
+            "types ALTER COLUMN st.a TYPE BOOLEAN(1)",
+            _unsupported_datatype("BOOLEAN(1)"),
+            "UNSUPPORTED_DATATYPE",
+            "0A000",
+            id="boolean-parameter",
         ),
     ],
 )

@@ -551,57 +551,40 @@ async fn nested_alter_column_type_refuses_unsized_and_sized_targets_as_parse_err
              example \"{name}\"(10). Please specify the length. SQLSTATE: 42K01"
         )
     };
-    let unsupported = |name: &str| {
-        format!("[UNSUPPORTED_DATATYPE] Unsupported data type \"{name}\". SQLSTATE: 0A000")
-    };
-    for (sql, expected) in [
+    let sized = [
+        ("tinyint(3)", "TINYINT(3)"),
+        ("SMALLINT(2)", "SMALLINT(2)"),
+        ("INT(3)", "INT(3)"),
+        ("INTEGER(3)", "INTEGER(3)"),
+        ("BIGINT(5)", "BIGINT(5)"),
+        ("FLOAT(10)", "FLOAT(10)"),
+        ("DOUBLE(5)", "DOUBLE(5)"),
+        ("TIMESTAMP(3)", "TIMESTAMP(3)"),
+        ("STRING(10)", "STRING(10)"),
+        ("string(10)", "STRING(10)"),
+        ("DOUBLE(5,2)", "DOUBLE(5,2)"),
+        ("double(5,2)", "DOUBLE(5,2)"),
+        ("FLOAT(10,2)", "FLOAT(10,2)"),
+        ("BINARY(3)", "BINARY(3)"),
+        ("TIMESTAMP_NTZ(3)", "TIMESTAMP_NTZ(3)"),
+        ("DATE(3)", "DATE(3)"),
+        ("BOOLEAN(1)", "BOOLEAN(1)"),
+    ]
+    .map(|(spelling, name)| {
         (
-            "types ALTER COLUMN st.s TYPE VARCHAR",
-            missing_size("VARCHAR"),
-        ),
-        (
-            "types ALTER COLUMN st.s TYPE varchar",
-            missing_size("VARCHAR"),
-        ),
-        ("types ALTER COLUMN st.s TYPE CHAR", missing_size("CHAR")),
-        (
-            "types ALTER COLUMN st.s TYPE Character",
-            missing_size("CHARACTER"),
-        ),
-        (
-            "nope ALTER COLUMN st.s TYPE VARCHAR",
-            missing_size("VARCHAR"),
-        ),
-        (
-            "types ALTER COLUMN st.a TYPE tinyint(3)",
-            unsupported("TINYINT(3)"),
-        ),
-        (
-            "types ALTER COLUMN st.a TYPE SMALLINT(2)",
-            unsupported("SMALLINT(2)"),
-        ),
-        ("types ALTER COLUMN st.a TYPE INT(3)", unsupported("INT(3)")),
-        (
-            "types ALTER COLUMN st.a TYPE INTEGER(3)",
-            unsupported("INTEGER(3)"),
-        ),
-        (
-            "types ALTER COLUMN st.a TYPE BIGINT(5)",
-            unsupported("BIGINT(5)"),
-        ),
-        (
-            "types ALTER COLUMN st.a TYPE FLOAT(10)",
-            unsupported("FLOAT(10)"),
-        ),
-        (
-            "types ALTER COLUMN st.a TYPE DOUBLE(5)",
-            unsupported("DOUBLE(5)"),
-        ),
-        (
-            "types ALTER COLUMN st.a TYPE TIMESTAMP(3)",
-            unsupported("TIMESTAMP(3)"),
-        ),
-    ] {
+            format!("types ALTER COLUMN st.a TYPE {spelling}"),
+            format!("[UNSUPPORTED_DATATYPE] Unsupported data type \"{name}\". SQLSTATE: 0A000"),
+        )
+    });
+    let unsized_targets = [
+        ("types ALTER COLUMN st.s TYPE VARCHAR", "VARCHAR"),
+        ("types ALTER COLUMN st.s TYPE varchar", "VARCHAR"),
+        ("types ALTER COLUMN st.s TYPE CHAR", "CHAR"),
+        ("types ALTER COLUMN st.s TYPE Character", "CHARACTER"),
+        ("nope ALTER COLUMN st.s TYPE VARCHAR", "VARCHAR"),
+    ]
+    .map(|(sql, name)| (sql.to_string(), missing_size(name)));
+    for (sql, expected) in unsized_targets.into_iter().chain(sized) {
         let sql = format!("ALTER TABLE ice.sales.{sql}");
         let refused = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
         assert!(
@@ -624,20 +607,81 @@ async fn nested_alter_column_type_refuses_unsized_and_sized_targets_as_parse_err
 }
 
 #[tokio::test]
+async fn nested_alter_column_type_decides_bare_decimal_and_map_values_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.d (st STRUCT<a: DECIMAL(38,18), i: INT>) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t (m MAP<INT, BIGINT>) USING iceberg",
+    )
+    .await;
+    let not_supported = |table: &str, column: &str, from: &str, to: &str| {
+        format!(
+            "Error during planning: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE \
+             COLUMN is not supported for changing `ice`.`sales`.`{table}`'s column {column} \
+             with type \"{from}\" to {column} with type \"{to}\". SQLSTATE: 0A000"
+        )
+    };
+    let int_to_decimal =
+        unsupported_change("Cannot change column type: st.i: int -> decimal(10, 0)");
+    for (sql, expected) in [
+        (
+            "d ALTER COLUMN st.a TYPE DECIMAL",
+            not_supported("d", "`st`.`a`", "DECIMAL(38,18)", "DECIMAL(10,0)"),
+        ),
+        ("d ALTER COLUMN st.i TYPE DECIMAL", int_to_decimal.clone()),
+        ("d ALTER COLUMN st.i TYPE NUMERIC", int_to_decimal.clone()),
+        ("d ALTER COLUMN st.i TYPE DEC", int_to_decimal),
+        (
+            "t ALTER COLUMN m.value TYPE SMALLINT",
+            not_supported("t", "`m`.`value`", "BIGINT", "SMALLINT"),
+        ),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.{sql}");
+        let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        assert_eq!(error.to_string(), expected, "{sql}");
+    }
+    for table in ["d", "t"] {
+        assert_eq!(
+            load_sales_table(&catalogs, table)
+                .await
+                .metadata()
+                .current_schema_id(),
+            0,
+            "{table}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn nested_alter_column_type_on_a_missing_table_is_table_or_view_not_found() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    for target in ["BIGINT", "TINYINT"] {
-        let sql = format!("ALTER TABLE ice.sales.nope ALTER COLUMN st.a TYPE {target}");
+    for (table, target) in [
+        ("sales.nope", "BIGINT"),
+        ("sales.nope", "TINYINT"),
+        ("nope.t", "BIGINT"),
+    ] {
+        let sql = format!("ALTER TABLE ice.{table} ALTER COLUMN st.a TYPE {target}");
         let error = execute(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        let quoted = table.replace('.', "`.`");
         assert_eq!(
             error.to_string(),
-            "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view \
-             `ice`.`sales`.`nope` cannot be found. Verify the spelling and correctness of the \
+            format!(
+                "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view \
+             `ice`.`{quoted}` cannot be found. Verify the spelling and correctness of the \
              schema and catalog. If you did not qualify the name with a schema, verify the \
              current_schema() output, or qualify the name with the correct schema and catalog. \
              To tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. \
-             SQLSTATE: 42P01",
+             SQLSTATE: 42P01"
+            ),
             "{sql}"
         );
     }

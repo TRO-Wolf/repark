@@ -1062,6 +1062,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   UNSUPPORTED_DATATYPE ParseException texts, including one on a missing table. The
   missing-table test also runs a TINYINT target.
   pins: ice-nested-evo-1/C-032, C-033
+  **Round 4 (2026-09-24):** the parse-refusal table adds the measured `STRING(10)`,
+  `BINARY(3)`, `FLOAT(10,2)`, `DOUBLE(5,2)`, `TIMESTAMP_NTZ(3)`, `DATE(3)` and `BOOLEAN(1)`
+  spellings as one-line `(spelling, Spark text)` pairs.
+  `…_decides_bare_decimal_and_map_values_like_spark` pins bare DECIMAL/NUMERIC/DEC over the
+  probe's `DECIMAL(38,18)`/INT struct and the measured map value BIGINT→SMALLINT. The
+  missing-table test adds a missing namespace.
+  pins: ice-nested-evo-1/C-032, C-033, C-035, C-036
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

@@ -1129,6 +1129,14 @@ pins: rp-4-fork-repin/C-005, C-006
   `nested_spark_only_type_refusal`, which raises `NOT_SUPPORTED_CHANGE_COLUMN` with Spark's
   name after the path resolves.
   pins: ice-nested-evo-1/C-032, C-033
+  **Round 4 (2026-09-24):** `target_type_parse_refusal` also refuses `STRING(n)`, `BINARY(n)`,
+  `FLOAT(p,s)`, `DOUBLE(p,s)` and `TIMESTAMP_NTZ(p)`. sqlparser has no parameters on DATE or
+  BOOLEAN, so `parse_unparameterized_type_parameters` reads `DATE(n)`/`BOOLEAN(n)` into a
+  `Custom` type that only this refusal consumes. `spark_default_target_type` reads a bare
+  DECIMAL/NUMERIC/DEC as `decimal(10,0)`, Spark's default, before the lowering (the shared
+  lowering keeps (38,18), residue R-U5-DECIMAL-DEFAULT). A missing namespace maps to
+  `table_or_view_not_found` like a missing table.
+  pins: ice-nested-evo-1/C-033, C-035, C-036
 - `alter_write_order.rs` — **WRITE-ORDER-DIST-1 (2026-09-06):** the `ALTER TABLE …
   WRITE …` pre-parse intercept (sqlparser carries none of these forms): `WRITE ORDERED BY`
   (sort order + `write.distribution-mode = range`), `WRITE LOCALLY ORDERED BY` (sort order,

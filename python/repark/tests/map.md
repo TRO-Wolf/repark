@@ -802,6 +802,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   DATATYPE_MISSING_SIZE and UNSUPPORTED_DATATYPE ParseExceptions. The missing-table test runs a
   TINYINT target too.
   pins: ice-nested-evo-1/C-027, C-032, C-033, C-034
+  **Round 4 (2026-09-24):** the parse-refusal table adds the measured `STRING(10)`,
+  `BINARY(3)`, `FLOAT(10,2)`, `DOUBLE(5,2)`, `TIMESTAMP_NTZ(3)`, `DATE(3)` and `BOOLEAN(1)`
+  spellings. `test_nested_alter_column_type_bare_decimal_and_map_value_match_spark` pins bare
+  DECIMAL/NUMERIC/DEC and the measured map value BIGINT→SMALLINT. The missing-table test adds
+  a missing namespace.
+  pins: ice-nested-evo-1/C-032, C-033, C-035, C-036
 - [ice_write_options_1_spark_oracle.json](ice_write_options_1_spark_oracle.json) +
   [_record_ice_write_options_1_oracle.py](_record_ice_write_options_1_oracle.py) +
   [_record_ice_write_options_2_oracle.py](_record_ice_write_options_2_oracle.py) +

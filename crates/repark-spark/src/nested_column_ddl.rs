@@ -1,7 +1,7 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    AlterColumnOperation, DataType as SqlDataType, ExactNumberInfo, Ident, TimezoneInfo,
+    AlterColumnOperation, DataType as SqlDataType, ExactNumberInfo, Ident, ObjectName, TimezoneInfo,
 };
 use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
@@ -276,8 +276,30 @@ fn parse_alter_column_type(
         return Ok(None);
     }
     let data_type = names.parser.parse_data_type()?;
+    let data_type = parse_unparameterized_type_parameters(&mut names.parser, data_type)?;
     expect_end(&mut names.parser)?;
     Ok(Some(NestedColumnOperation::AlterType { path, data_type }))
+}
+
+fn parse_unparameterized_type_parameters(
+    parser: &mut Parser<'_>,
+    data_type: SqlDataType,
+) -> ParseResult<SqlDataType> {
+    if !matches!(data_type, SqlDataType::Date | SqlDataType::Boolean)
+        || !parser.consume_token(&Token::LParen)
+    {
+        return Ok(data_type);
+    }
+    let parameters = parser.parse_comma_separated(Parser::parse_literal_uint)?;
+    parser.expect_token(&Token::RParen)?;
+    Ok(SqlDataType::Custom(
+        ObjectName::from(vec![Ident::new(data_type.to_string())]),
+        parameters.iter().map(u64::to_string).collect(),
+    ))
+}
+
+fn unparameterized_type_name(name: &ObjectName) -> bool {
+    matches!(name.to_string().as_str(), "DATE" | "BOOLEAN")
 }
 
 fn target_type_parse_refusal(operation: &NestedColumnOperation) -> Option<String> {
@@ -296,12 +318,37 @@ fn target_type_parse_refusal(operation: &NestedColumnOperation) -> Option<String
         | SqlDataType::Int(Some(_))
         | SqlDataType::Integer(Some(_))
         | SqlDataType::BigInt(Some(_))
-        | SqlDataType::Float(ExactNumberInfo::Precision(_))
-        | SqlDataType::Double(ExactNumberInfo::Precision(_))
-        | SqlDataType::Timestamp(Some(_), TimezoneInfo::None) => Some(format!(
-            "[UNSUPPORTED_DATATYPE] Unsupported data type \"{data_type}\". SQLSTATE: 0A000"
-        )),
+        | SqlDataType::Float(
+            ExactNumberInfo::Precision(_) | ExactNumberInfo::PrecisionAndScale(..),
+        )
+        | SqlDataType::Double(
+            ExactNumberInfo::Precision(_) | ExactNumberInfo::PrecisionAndScale(..),
+        )
+        | SqlDataType::String(Some(_))
+        | SqlDataType::Binary(Some(_))
+        | SqlDataType::TimestampNtz(Some(_))
+        | SqlDataType::Timestamp(Some(_), TimezoneInfo::None) => {
+            Some(unsupported_datatype(&data_type.to_string()))
+        }
+        SqlDataType::Custom(name, parameters) if unparameterized_type_name(name) => Some(
+            unsupported_datatype(&format!("{name}({})", parameters.join(","))),
+        ),
         _ => None,
+    }
+}
+
+fn unsupported_datatype(spelling: &str) -> String {
+    format!("[UNSUPPORTED_DATATYPE] Unsupported data type \"{spelling}\". SQLSTATE: 0A000")
+}
+
+fn spark_default_target_type(data_type: &SqlDataType) -> SqlDataType {
+    match data_type {
+        SqlDataType::Decimal(ExactNumberInfo::None)
+        | SqlDataType::Numeric(ExactNumberInfo::None)
+        | SqlDataType::Dec(ExactNumberInfo::None) => {
+            SqlDataType::Decimal(ExactNumberInfo::PrecisionAndScale(10, 0))
+        }
+        other => other.clone(),
     }
 }
 
@@ -353,13 +400,17 @@ pub(crate) async fn execute_nested_column_ddl(
     let handle = catalog_handle(catalogs, &catalog_name)?;
     let namespace = crate::namespace_schema_name(ident.namespace());
     let table = handle.load_table(&ident).await.map_err(|error| {
-        if error.kind() == ErrorKind::TableNotFound {
+        if matches!(
+            error.kind(),
+            ErrorKind::TableNotFound | ErrorKind::NamespaceNotFound
+        ) {
             return table_or_view_not_found(&catalog_name, &namespace, ident.name());
         }
         iceberg_err(error)
     })?;
     match &ddl.operation {
         NestedColumnOperation::AlterType { path, data_type } => {
+            let data_type = &spark_default_target_type(data_type);
             let table_name = crate::catalog_ops::quoted_table_display(&ddl.table_parts);
             let schema = table.metadata().current_schema();
             if let Some(to_type) = spark_only_target_type(data_type) {

@@ -196,6 +196,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   without `EXISTS`). Round 3 (2026-09-24) adds C-032 (TINYINT/SMALLINT/CHAR/VARCHAR targets
   decided before lowering), C-033 (parse-stage target refusals) and C-034 (C-027 narrowed to
   the pinned Spark type names). The non-primitive target residue is recorded with Spark's text.
+  Round 4 (2026-09-24) widens C-033 to the sized STRING/BINARY/FLOAT(p,s)/DOUBLE(p,s)/
+  TIMESTAMP_NTZ/DATE/BOOLEAN targets, names C-032's pinned pairs, and adds C-035 (bare DECIMAL
+  as decimal(10,0) on the nested route) and C-036 (missing namespace as TABLE_OR_VIEW_NOT_FOUND),
+  with residues R-U5-DECIMAL-DEFAULT and R-U5-NS-LEAK.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three
