@@ -1,7 +1,8 @@
 # Charter ledger — U10-MC-DELETED-1 · serve the `_deleted` metadata column (R-MC-DELETED)
 
-**Date:** 2026-09-23 · **Branch:** `fix/u10-mc-deleted` · **Base:** `fd43f19` (`origin/main`) · **Model:** Devin SWE-2 (swe-2-high) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
-**Path:** STANDARD. **risk_tier: standard.** **Registry:** no registry row touched.
+**Date:** 2026-09-23 (opened; rounds mcdel-r1 to mcdel-r13 ran on 2026-09-23 and 2026-09-24) · **Branch:** `fix/u10-mc-deleted` · **Base:** `970ac11a` (`origin/main`, the current merge base after the orchestrator's r12 rebase; the original base was `fd43f19`) · **Model:** Devin SWE-2 (swe-2-high) wrote mcdel-r1 and mcdel-r2; Claude Opus (`claude-opus-5-5`) wrote mcdel-r3 to mcdel-r13, per each commit's `Authored-By` trailer · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
+**Path:** STANDARD. **risk_tier: standard.** **Registry:** row `ICE-MC-FILEPOS-1` updated in `docs/spark-sql-iceberg-parity.md` §7 this unit; no row added. Status changed: the heading now lists `_deleted` among the Spark-equal columns and adds "`_deleted` served 2026-09-23 (U10-MC-DELETED-1)"; the status stays BACKLOG. Cell text changed: the repark, Apache Spark, Pin and Rationale bullets. Added: a Residue bullet naming `R-MC-RESERVED-NAME-SCAN` and `R-MC-RESERVED-NAME-CLASS`, and recording the closed candidates `R-MC-RESERVED-NAME-JOIN` and `R-MC-QUALIFIED-WILDCARD` (mcdel-r4 to mcdel-r12). No other row changes: `[ICE-MC-1]` is a refusal tag in the removed text, `U10-MC-DELETED-1` is this unit, `R-MC-DELETED` is a recorded cell, and row `ICE-MC-IFN-1` is untouched.
+**Commit SHAs:** those cited in M-1 to M-22 are pre-rebase. The rebase maps are `/tmp/xo-xo-opus62/wo/mcd-sha-map-r11rebase.txt` and `mcd-sha-map-r12rebase.txt`.
 
 **Retires:** in flight.
 
@@ -11,8 +12,8 @@ included, with `_deleted = true` where a delete file removes the row and `false`
 otherwise (recorded cell `R-MC-DELETED` = `[[1,true],[2,false],[3,false],[4,false]]`,
 order-insensitive). `_deleted` joins `METADATA_COLUMN_NAMES` (4→5) and gains a
 non-null Boolean field (`RESERVED_FIELD_ID_DELETED`) after `_partition` in
-`crates/repark-iceberg/src/catalog/metadata_columns.rs`; the scan passthrough is
-unchanged so the projected name reaches the pinned fork (rev `604edca`), which
+`crates/repark-iceberg/src/catalog/metadata_columns.rs`. The scan's name passthrough is
+unchanged (mcdel-r6 adds only the collision check ahead of it), so the projected name reaches the pinned fork (rev `604edca`), which
 activates include-deleted mode by itself. The unserved machinery
 (`UNSERVED_METADATA_COLUMN_NAMES`, `canonical_unserved_token`,
 `first_unserved_metadata_column`, `refuse_unserved`, the unserved branch in
@@ -30,6 +31,10 @@ FROM alias to the relation's user columns (`qualified_rewrite`, `sole_relation_a
 in `crates/repark-core/src/metadata_columns.rs`); mcdel-r9 scopes every wildcard decision
 to its own SELECT (`rewrite_for_relation`, `select_relations`, `written_qualifier`;
 `by_alias` removed). Tests in
+`crates/repark-spark/src/tests/metadata_columns.rs` (the two unserved-refusal tests
+`unserved_metadata_columns_refuse_with_a_typed_error` and
+`served_spec_id_beside_an_unserved_column_names_the_unserved_one` removed, and
+`served_names_fold_and_composed_shapes_refuse` changed),
 `crates/repark-spark/src/tests/metadata_columns_deleted.rs` (the `_deleted`
 cluster moved there when `metadata_columns.rs` reached the file-size ceiling),
 `crates/repark-spark/src/tests/metadata_columns_reserved.rs` (the reserved-name
@@ -38,8 +43,11 @@ collision cluster, moved there in mcdel-r6 ahead of the same ceiling; it shares 
 `crates/repark-spark/src/tests/metadata_columns_scope.rs` (the mcdel-r9 wildcard-scope
 pins), `crates/repark-spark/src/tests/input_file_name.rs` (the mcdel-r12 comma-join
 refusal pin), the module entries in `crates/repark-spark/src/tests/mod.rs`, and
-`python/repark/tests/test_ice_metadata_cols_1.py`; seven `map.md` files; this
-ledger.
+`python/repark/tests/test_ice_metadata_cols_1.py` (`test_unserved_metadata_columns_refuse_typed`
+removed); seven `map.md` files (`crates/repark-core/src/`, `crates/repark-iceberg/src/catalog/`,
+`crates/repark-spark/src/`, `crates/repark-spark/src/tests/`, `docs/`, `python/repark/tests/`,
+`task/ledgers/staging/`); this ledger. That is the twenty files of
+`git diff origin/main...HEAD --stat`.
 The fork, every `Cargo.toml`, `Cargo.lock`, `STATUS.md`, `time_travel.rs`, the
 metadata-table paths, `describe_show.rs` and the lineage columns are untouched; no
 code comment added anywhere.
@@ -680,7 +688,7 @@ COVERAGE_ATTESTATION:
 ```
 
 Every clause is PROVEN — the answering pins against the recorded PySpark 4.1.2
-cell, the r2 S1–S14 table, the r3 P1–P8 table and the r4/r5/r6/r7 reserved-name probes, the near-miss and KNOWN DIVERGENCE pins against
+cell, the r2 S1–S14 table, the r3 P1–P8 table and the r4 to r12 reserved-name, wildcard and comma-join probes, the near-miss and KNOWN DIVERGENCE pins against
 measured pre-change behavior. No clause is
 OPEN. Touched files per the Scope paragraph; the fork, `Cargo.toml`/`Cargo.lock`,
 `STATUS.md`, `time_travel.rs`, the metadata-table paths, `describe_show.rs` and
