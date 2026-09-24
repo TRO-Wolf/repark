@@ -954,3 +954,25 @@ async fn alter_view_unset_missing_key_refuses_without_update() {
     );
     assert_eq!(update_calls.load(Ordering::SeqCst), 0);
 }
+
+#[test]
+fn alter_view_backtick_quoted_verb_is_not_recognized() {
+    assert!(
+        crate::view_ddl::parse::try_parse_alter_view("ALTER VIEW v `SET` TBLPROPERTIES ('k'='v')")
+            .is_none()
+    );
+}
+
+#[test]
+fn alter_view_unset_refuses_a_non_key_token() {
+    let error =
+        crate::view_ddl::parse::try_parse_alter_view("ALTER VIEW v UNSET TBLPROPERTIES ('k',)")
+            .expect("ALTER VIEW must match")
+            .err()
+            .expect("a missing key must refuse");
+    assert!(matches!(error, DataFusionError::Plan(_)));
+    assert_eq!(
+        error.to_string(),
+        "Error during planning: ALTER VIEW: expected a property name or value, got `)`"
+    );
+}
