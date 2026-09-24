@@ -966,8 +966,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   per-SELECT decision (`sole_rewritten_relation`, `qualified_rewrite`,
   `select_touches_rewrite`) reads only this SELECT's relations (`select_relations`,
   `written_qualifier`). A relation counts as rewritten only through
-  `rewrite_for_relation`: a `TableFactor::Table` whose name is a rewrite's original or
-  its `__repark_mc_N` replacement. So a plain table, CTE or derived table sharing the
+  `rewrite_for_relation`: a `TableFactor::Table` whose name is a rewrite's original
+  (mcdel-r10 removed the unreachable replacement-name match, the Derived arm of
+  `written_qualifier` and `qualified_rewrite`'s unaliased `entry.alias` branch; the
+  qualifier is always used as written). So a plain table, CTE or derived table sharing the
   Iceberg table's alias in another scope keeps its own columns; the unit leg
   `a_wildcard_resolves_only_against_its_own_select` pins it.
   pins: ice-metadata-cols-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-015, C-016, C-017,
