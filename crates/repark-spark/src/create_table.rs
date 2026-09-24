@@ -583,8 +583,11 @@ pub(crate) const RESERVED_OWNER_PROPERTY_ERROR: &str = concat!(
 
 pub(crate) fn refuse_reserved_owner_property(properties: &HashMap<String, String>) -> Result<()> {
     if properties.contains_key("owner") {
-        return Err(DataFusionError::Plan(
-            RESERVED_OWNER_PROPERTY_ERROR.to_string(),
+        return Err(DataFusionError::SQL(
+            Box::new(ParserError::ParserError(
+                RESERVED_OWNER_PROPERTY_ERROR.to_string(),
+            )),
+            None,
         ));
     }
     Ok(())

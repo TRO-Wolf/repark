@@ -580,7 +580,8 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-write-options-1/C-001, C-003
   **D-CREATE-DEFAULT-PROPS (2026-09-23):** all three CTAS creation paths stamp the
   session owner through the shared `create_table::stamp_owner` helper; a user-supplied,
-  exact lowercase `owner` property refuses before catalog access.
+  exact lowercase `owner` property refuses before catalog access with a parser-kind
+  error (ParseException, as Spark raises it).
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
   merged session write, so CTAS stamps session snapshot properties.
   **ICE-MERGE-APPEND-1 (2026-09-19):** the staged-table append commits through
@@ -905,7 +906,8 @@ pins: rp-4-fork-repin/C-005, C-006
   pins: ice-catalog-session-1/C-027
   **D-CREATE-DEFAULT-PROPS (2026-09-23):** all three column-definition creation paths
   stamp the `DescribeOwnerConfig` session owner through `stamp_owner`; an exact lowercase
-  user `owner` property refuses before catalog access.
+  user `owner` property refuses before catalog access with a parser-kind error
+  (ParseException, as Spark raises it).
   **FNP-4B round 7 (2026-09-15):** angle-bracket `ARRAY<T>` maps to an Iceberg
   list with nullable `element` fields and table-unique ids from a checked
   allocator (R-16b-21 grant); bare/square-bracket forms still refuse.

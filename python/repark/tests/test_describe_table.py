@@ -258,6 +258,19 @@ def test_describe_unclosed_comment_answers_unclosed_bracketed_comment(
     )
 
 
+def test_create_reserved_owner_property_is_parse_exception(spark: ReparkSession) -> None:
+    """A user ``owner`` table property refuses with Spark's parser-altitude refusal."""
+    _assert_describe_parse_error(
+        spark,
+        f"CREATE TABLE {CATALOG}.{NAMESPACE}.owner_refused (id BIGINT) USING iceberg "
+        "TBLPROPERTIES ('owner'='alice')",
+        "UNSUPPORTED_FEATURE.SET_TABLE_PROPERTY",
+        "0A000",
+        "[UNSUPPORTED_FEATURE.SET_TABLE_PROPERTY] The feature is not supported: owner is a "
+        "reserved table property, it will be set to the current user. SQLSTATE: 0A000",
+    )
+
+
 def test_describe_table_partition_without_column_is_v2_refusal(spark: ReparkSession) -> None:
     """A partition spec with no column answers Spark's v2 DESCRIBE partition refusal text."""
     table = _create_describe_error_table(spark)

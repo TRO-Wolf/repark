@@ -1,6 +1,7 @@
 use super::super::*;
 use super::common::*;
 
+use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
 
 type DescribeRow = (String, String, Option<String>);
@@ -486,9 +487,16 @@ async fn create_and_ctas_refuse_the_reserved_owner_property_before_catalog_acces
         let error = execute(&ctx, &catalogs, sql)
             .await
             .expect_err("reserved owner must refuse before catalog access");
+        let DataFusionError::SQL(parser_error, None) = &error else {
+            panic!("{sql} must refuse with a parser error, got {error:?}");
+        };
+        let ParserError::ParserError(message) = parser_error.as_ref() else {
+            panic!("{sql} must refuse with ParserError, got {parser_error:?}");
+        };
+        assert_eq!(message, RESERVED_OWNER_PROPERTY_ERROR, "{sql}");
         assert_eq!(
             error.to_string(),
-            format!("Error during planning: {RESERVED_OWNER_PROPERTY_ERROR}"),
+            format!("SQL error: ParserError(\"{RESERVED_OWNER_PROPERTY_ERROR}\")"),
             "{sql}"
         );
     }
