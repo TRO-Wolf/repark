@@ -1500,36 +1500,44 @@ adapter overrides the macro behind each row, so the refusal is a design constrai
 not a runtime failure of the gold stage. The whole measured table of served and refused shapes
 is `python/dbt-repark/tests/test_statement_surface.py`.
 
-#### DBT-VIEW-1 — `CREATE OR REPLACE VIEW` is refused, so dbt cannot build views
+#### DBT-VIEW-1 — the adapter refuses `materialized='view'`; the SQL door serves `CREATE VIEW`
 
-- **repark** — `CREATE OR REPLACE VIEW cat.ns.v AS SELECT …` over an Iceberg catalog refuses
-  with `PySparkException: Unexpected => register_table does not support tables with data.`
-  There is no SQL view surface. The `dbt-repark` `view` materialization refuses at compile time
-  with a message naming this row, rather than emitting SQL that fails at run time.
+- **repark** — SQL door fixed (CREATE VIEW served since #767); the adapter still refuses, so
+  `dbt run` never emits the SQL. The `dbt-repark` `view` materialization refuses at compile time
+  with a message naming this row.
 - **Apache Spark** — with the Iceberg extension, `CREATE OR REPLACE VIEW` creates an Iceberg
   view and dbt's `view` materialization works. *(oracle: documented — the claim here is the
   refusal form, not a value.)*
-- **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CREATE-VIEW]`
-  and `python/dbt-repark/tests/test_gold_models.py::test_view_materialization_refuses`
-- **Rationale** — DECLARED. Iceberg views are fork work; the message is the whole contract until
-  they land. `materialized='table'` covers the gold stage, which is what the cutover needs.
+- **Pin** — `python/dbt-repark/tests/test_gold_models.py::test_view_materialization_refuses`
+- **Rationale** — DECLARED. Enabling `materialized='view'` in the adapter is an owner follow-up
+  (IPI-40 packet A-10); `materialized='table'` covers the gold stage, which is what the cutover
+  needs.
 
-#### DBT-TEMPVIEW-1 — no temporary views, so `incremental` and `snapshot` cannot run
+#### DBT-TEMPVIEW-1 — RETIRED (2026-09-23, IPI-40 PR6): SQL temporary views are served
 
-- **repark** — `CREATE OR REPLACE TEMPORARY VIEW v AS SELECT …` refuses with
-  `UnsupportedOperationException: This feature is not implemented: Temporary views not
-  supported`. The session temp-view surface is the facade's `createOrReplaceTempView`, not this
-  SQL form. Every dbt incremental strategy and the snapshot materialization stage their new rows
-  in a temporary view first, so `dbt-repark` refuses both at compile time.
-- **Apache Spark** — creates a session-scoped temporary view. *(oracle: documented — the claim
-  here is the refusal form, not a value.)*
+> **CLOSED 2026-09-23 (IPI-40 PR6, orchestrating-session ruling PR6 Q1).** `CREATE [OR REPLACE]
+> TEMPORARY VIEW` is served by the SQL door as a session-scoped view that re-plans on every read,
+> so the premise of this row is gone. The refused-shape pin
+> `test_refused_shapes_fail_loud[R-CREATE-TEMPORARY-VIEW]` flipped to the served shape
+> `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-CREATE-TEMPORARY-VIEW]`
+> in the same change. The dbt compile-time refusal of `incremental` and `snapshot` continues as
+> DBT-INCREMENTAL-1. Retired per §6.
+
+#### DBT-INCREMENTAL-1 — the adapter refuses `incremental` and `snapshot` materializations
+
+- **repark** — dated 2026-09-23 (IPI-40 PR6). The `dbt-repark` `incremental` and `snapshot`
+  materializations, and the adapter's temporary-view staging macro, refuse at compile time with
+  "RePark does not run dbt incremental/snapshot materializations yet" and a message naming this
+  row, so `dbt run` and `dbt snapshot` never emit their staging and MERGE SQL.
+- **Apache Spark** — dbt-spark runs every incremental strategy and the snapshot materialization
+  by staging the new rows in a temporary view and merging them into the target. *(oracle:
+  documented — the claim here is the refusal form, not a value.)*
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-CREATE-TEMPORARY-VIEW]`
-  and `python/dbt-repark/tests/test_gold_models.py::test_incremental_materialization_refuses`
+  `python/dbt-repark/tests/test_gold_models.py::test_incremental_materialization_refuses`
+  and `python/dbt-repark/tests/test_gold_models.py::test_snapshot_materialization_refuses`
 - **Rationale** — DECLARED. The gold stage is two full-rebuild `table` models, so
-  incremental is not on the cutover path. A later unit that wants dbt incremental needs the SQL
-  temp-view form, or an adapter-side staging relation, and that is a design decision of its own.
+  incremental is not on the cutover path. Enabling the materializations is an adapter design
+  decision of its own, now that the SQL door serves the temporary-view form they stage with.
 
 #### DBT-DESC-1 — the adapter reads the facade schema, not `DESCRIBE EXTENDED`
 
