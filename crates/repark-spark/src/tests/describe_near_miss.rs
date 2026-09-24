@@ -170,6 +170,14 @@ async fn assert_parser_error(
         panic!("{sql} must answer ParserError, got {parser_error:?}");
     };
     assert_eq!(message, expected, "{sql}");
+    assert_eq!(
+        error.to_string(),
+        format!(
+            "SQL error: {:?}",
+            ParserError::ParserError(expected.to_string())
+        ),
+        "{sql}"
+    );
 }
 
 async fn dc_session(warehouse: &TempDir) -> (SessionContext, CatalogRegistry) {
@@ -582,31 +590,44 @@ async fn partition_spec_without_column_answers_spark_v2_refusal() {
     assert_eq!(rows, owned(&[&[Some("id"), Some("int"), Some("")]]));
 }
 
-#[test]
-fn partition_only_tail_scan_covers_each_branch() {
-    for (sql, claimed) in [
-        ("DESCRIBE ice.sales.dc PARTITION (id=1)", true),
-        ("DESCRIBE ice.sales.dc PARTITION (id=1, cat='a');", true),
-        ("DESCRIBE ice.sales.dc PARTITION (id=1", false),
-        ("DESCRIBE ice.sales.dc PARTITION id)", false),
-        ("DESCRIBE ice.sales.dc PARTITION (id=(1))", false),
-        ("DESCRIBE ice.sales.dc PARTITION (id=1) id", false),
-        ("DESCRIBE ice.sales.dc `PARTITION` (id=1)", false),
-        ("DESCRIBE ice.sales.dc.snapshots PARTITION (id=1)", false),
+#[tokio::test]
+async fn partition_only_tail_scan_covers_each_branch() {
+    for sql in [
+        "DESCRIBE ice.sales.dc PARTITION (id=1)",
+        "DESCRIBE ice.sales.dc PARTITION (id=1, cat='a');",
     ] {
-        let parsed = crate::describe_show::try_parse_describe_table(sql);
-        if claimed {
-            let describe = parsed
-                .expect("the partition-only tail takes the table path")
-                .expect("the partition-only tail parses");
-            assert!(describe.partition, "{sql}");
-            assert!(describe.column.is_none(), "{sql}");
-        } else {
-            assert!(
-                matches!(parsed, Some(Err(_))),
-                "{sql} must keep its parse refusal"
-            );
-        }
+        let describe = crate::describe_show::try_parse_describe_table(sql)
+            .expect("the partition-only tail takes the table path")
+            .expect("the partition-only tail parses");
+        assert!(describe.partition, "{sql}");
+        assert!(describe.column.is_none(), "{sql}");
+    }
+    let column_partition = "[UNSUPPORTED_FEATURE.DESC_TABLE_COLUMN_PARTITION] The feature is not \
+                            supported: DESC TABLE COLUMN for a specific partition. SQLSTATE: 0A000";
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = dc_session(&warehouse).await;
+    for (sql, expected) in [
+        ("DESCRIBE ice.sales.dc PARTITION (id=1", column_partition),
+        (
+            "DESCRIBE ice.sales.dc PARTITION id)",
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near 'id': extra input 'id'. SQLSTATE: 42601",
+        ),
+        ("DESCRIBE ice.sales.dc PARTITION (id=(1))", column_partition),
+        (
+            "DESCRIBE ice.sales.dc PARTITION (id=1) id",
+            column_partition,
+        ),
+        ("DESCRIBE ice.sales.dc `PARTITION` (id=1)", column_partition),
+        (
+            "DESCRIBE ice.sales.dc.snapshots PARTITION (id=1)",
+            column_partition,
+        ),
+    ] {
+        assert!(
+            crate::describe_show::try_parse_describe_table(sql).is_some(),
+            "{sql} must stay on the table path"
+        );
+        assert_parser_error(&ctx, &catalogs, sql, expected).await;
     }
 }
 

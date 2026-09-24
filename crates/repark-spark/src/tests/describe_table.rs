@@ -293,15 +293,21 @@ async fn describe_tokenizer_comment_failures_keep_full_parse_messages() {
         ("/* c */ DESC sc.sales.pc \"x", "\""),
     ] {
         let error = execute(&ctx, &catalogs, sql).await.unwrap_err();
-        let DataFusionError::SQL(error, _) = error else {
+        let expected =
+            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{quote}'. SQLSTATE: 42601");
+        let DataFusionError::SQL(parser_error, None) = &error else {
             panic!("{sql} must return a parser error");
         };
-        let ParserError::ParserError(message) = error.as_ref() else {
-            panic!("{sql} must use ParserError, got {error:?}");
+        let ParserError::ParserError(message) = parser_error.as_ref() else {
+            panic!("{sql} must use ParserError, got {parser_error:?}");
         };
+        assert_eq!(message, &expected, "{sql}");
         assert_eq!(
-            message,
-            &format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{quote}'. SQLSTATE: 42601"),
+            error.to_string(),
+            format!(
+                "SQL error: {:?}",
+                ParserError::ParserError(expected.clone())
+            ),
             "{sql}"
         );
     }
@@ -405,22 +411,21 @@ async fn describe_table_column_refusals_match_spark() {
     let nested = execute(&ctx, &catalogs, "DESCRIBE ice.sales.dc st.a")
         .await
         .expect_err("a nested describe column must refuse");
-    assert!(
-        nested.to_string().ends_with(
-            "[_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support nested column: st.a."
-        ),
-        "{nested}"
+    assert!(matches!(nested, DataFusionError::Plan(_)), "{nested:?}");
+    assert_eq!(
+        nested.to_string(),
+        "Error during planning: [_LEGACY_ERROR_TEMP_1060] DESC TABLE COLUMN does not support \
+         nested column: st.a."
     );
     let missing = execute(&ctx, &catalogs, "DESCRIBE ice.sales.dc nope")
         .await
         .expect_err("a missing describe column must refuse");
-    assert!(
-        missing.to_string().ends_with(
-            "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with \
-             name `nope` cannot be resolved. Did you mean one of the following? [`id`, `st`, \
-             `data`]. SQLSTATE: 42703"
-        ),
-        "{missing}"
+    assert!(matches!(missing, DataFusionError::Plan(_)), "{missing:?}");
+    assert_eq!(
+        missing.to_string(),
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+         function parameter with name `nope` cannot be resolved. Did you mean one of the \
+         following? [`id`, `st`, `data`]. SQLSTATE: 42703"
     );
     for (sql, near) in [
         ("DESCRIBE ice.sales.dc VERSION AS OF 1", "OF"),
@@ -431,17 +436,24 @@ async fn describe_table_column_refusals_match_spark() {
         ),
         ("DESCRIBE ice.sales.dc FOR VERSION AS OF 1", "VERSION"),
     ] {
-        let error = match execute(&ctx, &catalogs, sql).await {
-            Err(DataFusionError::SQL(error, _)) => error,
-            Err(error) => panic!("{sql} must return SQL parser error, got {error:?}"),
-            Ok(_) => panic!("{sql} must refuse"),
+        let Err(error) = execute(&ctx, &catalogs, sql).await else {
+            panic!("{sql} must refuse");
         };
-        let ParserError::ParserError(message) = error.as_ref() else {
-            panic!("{sql} must return ParserError, got {error:?}");
+        let expected =
+            format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601");
+        let DataFusionError::SQL(parser_error, None) = &error else {
+            panic!("{sql} must return SQL parser error, got {error:?}");
         };
+        let ParserError::ParserError(message) = parser_error.as_ref() else {
+            panic!("{sql} must return ParserError, got {parser_error:?}");
+        };
+        assert_eq!(message, &expected, "{sql}");
         assert_eq!(
-            message,
-            &format!("[PARSE_SYNTAX_ERROR] Syntax error at or near '{near}'. SQLSTATE: 42601"),
+            error.to_string(),
+            format!(
+                "SQL error: {:?}",
+                ParserError::ParserError(expected.clone())
+            ),
             "{sql}"
         );
     }

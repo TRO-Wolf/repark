@@ -126,14 +126,24 @@ async fn assert_session_sql_error(
     sql: &str,
     expected: &str,
 ) {
-    match execute(ctx, catalogs, sql).await {
-        Err(DataFusionError::SQL(error, _)) => match *error {
-            ParserError::ParserError(message) => assert_eq!(message.as_str(), expected, "{sql}"),
-            error => panic!("{sql} must use ParserError, got {error:?}"),
-        },
-        Err(error) => panic!("{sql} must return SQL parser error, got {error:?}"),
-        Ok(_) => panic!("{sql} must return an error"),
-    }
+    let Err(error) = execute(ctx, catalogs, sql).await else {
+        panic!("{sql} must return an error");
+    };
+    let DataFusionError::SQL(parser_error, None) = &error else {
+        panic!("{sql} must return SQL parser error, got {error:?}");
+    };
+    let ParserError::ParserError(message) = parser_error.as_ref() else {
+        panic!("{sql} must use ParserError, got {parser_error:?}");
+    };
+    assert_eq!(message.as_str(), expected, "{sql}");
+    assert_eq!(
+        error.to_string(),
+        format!(
+            "SQL error: {:?}",
+            ParserError::ParserError(expected.to_string())
+        ),
+        "{sql}"
+    );
 }
 
 async fn assert_session_plan_error(
@@ -142,11 +152,18 @@ async fn assert_session_plan_error(
     sql: &str,
     expected: &str,
 ) {
-    match execute(ctx, catalogs, sql).await {
-        Err(DataFusionError::Plan(message)) => assert_eq!(message.as_str(), expected, "{sql}"),
-        Err(error) => panic!("{sql} must return plan error, got {error:?}"),
-        Ok(_) => panic!("{sql} must return an error"),
-    }
+    let Err(error) = execute(ctx, catalogs, sql).await else {
+        panic!("{sql} must return an error");
+    };
+    let DataFusionError::Plan(message) = &error else {
+        panic!("{sql} must return plan error, got {error:?}");
+    };
+    assert_eq!(message.as_str(), expected, "{sql}");
+    assert_eq!(
+        error.to_string(),
+        format!("Error during planning: {expected}"),
+        "{sql}"
+    );
 }
 
 async fn create_describe_error_table(catalogs: &CatalogRegistry, warehouse: &str) {
