@@ -571,6 +571,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (`Model: Grok 4.6 xHigh`). **V3-9 (2026-09-02):** the refusal dropped its parenthetical
   "v3 tables cannot yet do merge-on-read row-level writes" — false since the `V3-MOR-1` lift;
   it names the conf and the v2 default only. pins: v3-9-mor-predicate-dml-dv/C-006
+  **WO U5 PR2b (2026-09-24):** the resolver parses the value as an integer and accepts `1`
+  (D-CREATE-V1); `0`, `4`, negatives and non-integers refuse, naming v1, v2 or v3.
 
 
 - **R-FN-BATCH4** aggregate expansion.

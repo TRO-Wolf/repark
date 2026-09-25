@@ -29,6 +29,12 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   plans the row filter `d = 2024-01-01` and `'2024-13-45'` refuses with the Arrow cast text;
   an empty dynamic stage skips the commit (`replace_partitions_is_noop`).
   pins: ice-overwrite-mode-1/C-011, C-013, C-014
+- `v1_ref_writes.rs` — **WO U5 PR2b round 2 (2026-09-25):** the kernel pin for C-053. On a
+  format v1 table, `create_branch_on_empty_table`, `commit_append_to(…, Some("b1"))` and
+  `create_snapshot_ref(Tag)` refuse with the named v1 text; `commit_append_to(…, Some("main"))`
+  commits, and a reload holds no non-main ref. Red-first: each refusal reported success with the
+  kernel forced to `Ok`.
+  pins: ice-nested-evo-1/C-053
 - `merge_append_series.rs` — **ICE-MERGE-APPEND-1 (2026-09-19):** replays the recorded Spark
   4.1.2 / Iceberg 1.11.0 manifest series (`../../../../python/repark/tests/ice_merge_append_1_truth.json`)
   through `write::commit_append` — 120 sequential single-file appends per variant, probed at

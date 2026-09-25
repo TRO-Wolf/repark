@@ -832,6 +832,26 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   near their tokens, and `test_other_column_comment_statements_answer_the_residual_refusal`
   pins the residual text. The name-rendering test adds the MOVE route (`move-missing-column`).
   pins: ice-nested-evo-1/C-048, C-049, C-050, C-051
+  **WO U5 PR2b (2026-09-24):** the three PR2b cells on the facade. D-CREATE-V1: a v1 table
+  writes format-version 1 with no sequence numbers and the legacy keys, reads back its seed on
+  the Arrow path (value and type) and deletes copy-on-write; `5` and `abc` raise
+  IllegalArgumentException with Spark's text, and `0` and `4` keep the not-implemented residue.
+  D-WRITE-ORDERED-TRANSFORM: the cell's order and `range`, the argument-order and `date_hour`
+  spellings, the identity near miss, and the void, zorder, zero-width and unbindable refusals
+  with no metadata written. D-REF-BRANCH-ON-EMPTY: the empty append's summary, the `b1` ref, an
+  empty branch read, `IF NOT EXISTS` and retention, the tag, replace and duplicate refusals,
+  `CREATE BRANCH main`, and a seeded table's unchanged refs.
+  **Round 2 (2026-09-25):** `test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref`
+  sets `spark.wap.branch` on a v1 WAP table: the INSERT raises UnsupportedOperationException
+  with the `BRANCH` v1 text, no metadata file is written, `refs` lists only `main` and the data
+  is unchanged. The refusal table adds `short-width` and `empty-arguments`;
+  `test_write_ordered_by_a_long_width_literal_lands_like_spark` lands `bucket(4L, id)`.
+  days-on-long moved to `test_write_ordered_by_bind_refusal_keeps_the_fork_text_residue`, a
+  residue pin (R-U5-PR2B-BIND-TEXT), not a parity pin.
+  **Round 3 (2026-09-25):** the transform refusal table adds `hex-token-is-a-quoted-reference`
+  (`bucket(0x4, id)` → `bucket(`0x4`, id)`) and `string-constant-doubles-its-quote`
+  (`truncate('a\'b', id)` → `truncate('a''b', id)`).
+  pins: ice-nested-evo-1/C-052, C-053, C-054, C-055, C-056
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET
@@ -2394,6 +2414,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it, the same-version request writing no new metadata file, and the proof that the opt-in
   refusal carries no CREATE-door phrasing.
   pins: v3-10-upgrade-v2-to-v3/C-003, C-004
+  **WO U5 PR2b round 2 (2026-09-25):** the downgrade refusals (`2` and `-1` on a v3 table) read
+  Spark's PySparkException `Unsupported table change: Cannot downgrade v3 table to vM`.
+  pins: ice-nested-evo-1/C-057
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true, and
   **since V3-9 (2026-09-02)** the refusal no longer claims v3 cannot do merge-on-read
@@ -5005,7 +5028,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   both engines leave equal sort orders, default ids, and distribution properties, and the same
   DDL + overwrite over the same seed commits the same row set per partition value on both.
   Round 2 (2026-09-06): the transform-sort DDL refusal committing nothing (the
-  WRITE-ORDER-TRANSFORM-1 red-when-fixed pin), the dotted `(st.a)` DDL transition on v2 and
+  WRITE-ORDER-TRANSFORM-1 red-when-fixed pin; flipped 2026-09-24 by WO U5 PR2b to
+  `test_write_order_transform_sort_lands_the_measured_order`, which reads `bucket[4]` on
+  source 1, then `day` on source 4, with `range`), the dotted `(st.a)` DDL transition on v2 and
   v3 over a struct seed, nested-monotone overwrite files, and the live dotted-order metadata
   equality on both versions.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

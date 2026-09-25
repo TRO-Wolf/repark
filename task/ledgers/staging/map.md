@@ -242,7 +242,14 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   C-051 (the named residual refusal), with C-048 naming the MOVE route. R-U5-SPEC-LIST-NOT-COMMENT-FIRST
   is reworded, since the leak followed from deleting the I6 refusal. New residues:
   R-U5-RESIDUAL-COMMENT-SHAPES, R-U5-ADD-COLUMNS-TRAILING-COMMENT, R-U5-IF-EXISTS-ALTER-TABLE and
-  R-U5-PARTITION-CHANGE.
+  R-U5-PARTITION-CHANGE. **WO U5 PR2b (2026-09-24, C-052 through C-057):** format v1 creation,
+  the v1 ref-write kernel, transform write orders and their refusals, CREATE BRANCH on an empty
+  table, v1 merge-on-read and downgrade refusals. Round 4 (2026-09-25, critic r3): C-055 adds
+  the INVALID_TYPED_LITERAL hex refusal, Spark's string unescape, by-value exponent and decimal
+  renderings and the empty-segment refusal that commits nothing; C-053 records that the v1
+  reader drops non-main refs, so the selector-door kernel call is belt-and-braces until
+  F-V1-REFS-1; R-U5-PR2B-OTHER-MALFORMED and R-U5-PR2B-RETENTION-SECOND-COMMIT carry the dated
+  V-005 and V-007 residues.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

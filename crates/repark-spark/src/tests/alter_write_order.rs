@@ -1,4 +1,5 @@
 use super::super::*;
+use super::accept_any_refusals::refusal;
 use super::common::*;
 use iceberg::spec::{NullOrder, SortDirection};
 
@@ -217,8 +218,54 @@ async fn write_order_malformed_shapes_refuse() {
             .expect_err("malformed WRITE shape refuses");
         assert!(error.to_string().contains(needle), "{sql}: {error}");
     }
+    let files_before = metadata_file_count(&load_write_target(&catalogs, "t").await);
+    for (clause, token) in [
+        ("ORDERED BY id ,", "<EOF>"),
+        ("ORDERED BY id DESC ,", "<EOF>"),
+        ("ORDERED BY id, s ,", "<EOF>"),
+        ("ORDERED BY bucket(4, id) ,", "<EOF>"),
+        ("ORDERED BY bucket(4, id) , ,", ","),
+        ("ORDERED BY , id", ","),
+        ("ORDERED BY id , , s", ","),
+        ("ORDERED BY (id ,)", ")"),
+        ("ORDERED BY (, id)", ","),
+        ("ORDERED BY (id , ,)", ","),
+        ("ORDERED BY (bucket(4, id) ,)", ")"),
+        ("LOCALLY ORDERED BY id ,", "<EOF>"),
+        ("DISTRIBUTED BY PARTITION LOCALLY ORDERED BY id ,", "<EOF>"),
+        ("DISTRIBUTED BY PARTITION ORDERED BY id ,", "<EOF>"),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.t WRITE {clause}");
+        let mapped = refusal(&ctx, &catalogs, &sql).await;
+        let expected = format!(
+            "Error during planning: \nno viable alternative at input '{token}'\n== SQL ==\n{sql}"
+        );
+        assert!(
+            matches!(&mapped, repark_common::Error::Analysis(message) if message == &expected),
+            "{sql}: got {mapped:?}"
+        );
+    }
     let table = load_write_target(&catalogs, "t").await;
     assert_eq!(table.metadata().sort_orders_iter().len(), 1);
+    assert_eq!(table.metadata().default_sort_order_id(), 0);
+    assert_eq!(metadata_file_count(&table), files_before);
+}
+
+fn metadata_file_count(table: &iceberg::table::Table) -> usize {
+    let location = table.metadata_location().expect("a persisted table");
+    let directory = std::path::Path::new(location.trim_start_matches("file://"))
+        .parent()
+        .expect("the metadata directory");
+    std::fs::read_dir(directory)
+        .expect("the metadata directory is readable")
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .ends_with(".metadata.json")
+        })
+        .count()
 }
 
 #[tokio::test]
@@ -380,54 +427,6 @@ async fn write_ordered_by_bad_dotted_name_refuses_and_commits_nothing() {
     }
     let table = load_write_target(&catalogs, "t").await;
     assert_eq!(table.metadata().sort_orders_iter().len(), 1);
-}
-
-#[tokio::test]
-async fn write_order_transform_sort_refuses_as_fork_ceiling() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    create_write_target(&ctx, &catalogs, "t").await;
-    let error = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.t WRITE ORDERED BY (bucket(4, id))",
-    )
-    .await
-    .expect_err("transform sort fields refuse");
-    assert!(error.to_string().contains("bucket"), "{error}");
-    let table = load_write_target(&catalogs, "t").await;
-    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
-}
-
-#[tokio::test]
-async fn write_order_zorder_term_refuses_and_commits_nothing() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    create_write_target(&ctx, &catalogs, "t").await;
-    let before = load_write_target(&catalogs, "t").await;
-    let snapshots_before = before.metadata().snapshots().count();
-    let error = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.t WRITE ORDERED BY (zorder(id))",
-    )
-    .await
-    .expect_err("a zorder term refuses on the ALTER door");
-    assert!(
-        matches!(error, DataFusionError::NotImplemented(_)),
-        "got: {error:?}"
-    );
-    assert_eq!(
-        error.to_string(),
-        concat!(
-            "This feature is not implemented: ALTER TABLE WRITE ORDERED BY transform `zorder(…)` ",
-            "is not supported yet — the fork's sort-order action only models identity sort fields"
-        )
-    );
-    let table = load_write_target(&catalogs, "t").await;
-    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
-    assert_eq!(table.metadata().default_sort_order_id(), 0);
-    assert_eq!(table.metadata().snapshots().count(), snapshots_before);
 }
 
 #[tokio::test]

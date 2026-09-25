@@ -626,7 +626,6 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
 
-    // Schema-only empty: CREATE BRANCH without AS OF must refuse.
     run(
         &ctx,
         &catalogs,
@@ -636,12 +635,12 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
     let empty_err = execute(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.empty_ref CREATE BRANCH b1",
+        "ALTER TABLE ice.sales.empty_ref CREATE TAG t1",
     )
     .await
-    .expect_err("empty schema-only needs AS OF VERSION");
+    .expect_err("an empty table has no snapshot to tag");
     assert!(
-        empty_err.to_string().contains("AS OF VERSION"),
+        empty_err.to_string().contains("main has no snapshot"),
         "got: {empty_err}"
     );
 

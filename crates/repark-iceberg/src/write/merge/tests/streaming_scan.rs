@@ -2509,8 +2509,8 @@ async fn mor_on_v1_transform_partitioned_table_is_still_rejected() {
     let error =
         resolve_merge_mode(&table).expect_err("merge-on-read on a V1 transform table is refused");
     assert!(
-        matches!(error, DataFusionError::NotImplemented(_)),
-        "must be a deterministic NotImplemented: {error}"
+        error.to_string() == "External error: Deletes are supported in V2 and above",
+        "must be Spark's IllegalArgumentException text: {error}"
     );
     assert!(
         error.to_string().contains("V2"),
@@ -2544,8 +2544,8 @@ async fn mor_on_v1_table_is_rejected_before_any_write() {
 
     let error = resolve_merge_mode(&table).expect_err("merge-on-read on V1 is refused");
     assert!(
-        matches!(error, DataFusionError::NotImplemented(_)),
-        "must be a deterministic NotImplemented: {error}"
+        error.to_string() == "External error: Deletes are supported in V2 and above",
+        "must be Spark's IllegalArgumentException text: {error}"
     );
     assert!(
         error.to_string().contains("V2"),

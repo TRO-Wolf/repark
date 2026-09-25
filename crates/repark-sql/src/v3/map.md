@@ -13,6 +13,9 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   SELECT round-trips ns values and Arrow types (pins: v3-6-v3-types/C-003).
   **V3-9:** the opt-in refusal must not claim merge-on-read is unserved
   (pins: v3-9-mor-predicate-dml-dv/C-006).
+  **WO U5 PR2b (2026-09-24):** `format_version_one_creates_v1_and_deletes_copy_on_write` is the
+  ANSI-door D-CREATE-V1 row: a v1 column-def table seeds, deletes copy-on-write (no delete
+  files) and keeps sequence number 0; a v1 CTAS writes v1.
   **V3-12:** `upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv` is the
   ANSI door's V3-12 cell — it lives here, not in `cow.rs`, because the upgrade needs
   `door_with_session_v3_opt_in` (the real `ReparkSqlConfig`), which `cow.rs`'s extension-only
@@ -30,6 +33,11 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   downgrade / `'1'` / `'-1'` / `'4'` / `'x'` / `'3.0'` refusals; the `extra_properties` map
   spelling of the reserved key keeps steering to the curated `format_version`
   (pins: v3-10-upgrade-v2-to-v3/C-003, C-004).
+  **WO U5 PR2b round 2 (2026-09-25):** `ref_ddl_on_a_v1_table_refuses_before_the_ref_is_lost`
+  is the ANSI-door C-053 pin: `CREATE BRANCH audit` and `CREATE TAG t1` on a seeded v1 table
+  refuse with the kind's v1 text and leave no ref (red-first: the branch statement succeeded
+  with the kernel forced to `Ok`).
+  pins: ice-nested-evo-1/C-052, C-053
 - `cow.rs` — **V3-COW-1 (V3-7 MERGE lift):** adopted and created v3 UPDATE and MERGE
   keep `_row_id`; The module doc no longer carries a pins line; citations live here.
   sequential COW DELETE keeps the survivor id at next-row-id 6; **V3-8:** subquery-`WHERE`

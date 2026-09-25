@@ -411,8 +411,7 @@ pub(crate) async fn execute_ref_ddl(cx: &EngineContext<'_>, ddl: RefDdl) -> Resu
                     retention,
                 )
                 .await
-            }
-            .map_err(iceberg_err)?;
+            }?;
         }
         RefOp::Drop {
             kind,

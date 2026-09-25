@@ -38,6 +38,9 @@ pins: rp-4-fork-repin/C-005, C-006
   (`spark_door_case_insensitive`, Spark's `spark.sql.caseSensitive=false` default), which is the
   flag Java's `SparkTable` reads. A false answer falls through unchanged.
   pins: ice-meta-delete-1/C-001, C-006
+  **WO U5 PR2b round 2 (2026-09-25):** `execute_in_session` asks
+  `alter_write_order::verbatim_write_order_sql` first and keeps an `ALTER TABLE … WRITE`
+  statement verbatim; every other statement still goes through `spark_literals::canonicalize_verbatim`.
 - [view_ddl/](view_ddl/map.md) — **ICE-VIEWS-1 (2026-09-20):** view grammar,
   execution, and the wrapper-based read path (`parse` / `execute` / `read`).
   **PR2 (2026-09-22, V-DESCRIBE):** `describe.rs` answers DESCRIBE on a view
@@ -460,6 +463,11 @@ pins: rp-4-fork-repin/C-005, C-006
   set and no explicit branch, a plain INSERT carrying only session snapshot properties
   stages a snapshot stamped `wap.id` instead of committing on main.
   pins: ice-wap-branch-1/C-002, C-004, C-005, C-012
+  **WO U5 PR2b round 2 (2026-09-25):** `commit_write_on_branch` calls
+  `refuse_ref_write_on_format_v1` right after it loads the table, so a WAP branch write, an
+  `INSERT`/`DELETE` into `t.branch_x` and the fork-provider commit refuse on a format v1 table
+  before any ref or data is written.
+  pins: ice-nested-evo-1/C-053
 - `wap.rs` — **IPI-05 (2026-09-21):** `wap_id_for_table` is the read half for the id, the twin of
   `wap_branch_for_table`: it answers the conf's `spark.wap.id` only for a `write.wap.enabled=true`
   table and refuses both keys together first, and `WAP_ID_SNAPSHOT_PROPERTY` (`wap.id`) is the one
@@ -492,7 +500,16 @@ pins: rp-4-fork-repin/C-005, C-006
   sanctioned form for the pedantic lint under the comment ban.
   pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010, C-011
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
-  write-to-branch sniff. Its 14 in-module tests are file-backed in
+  write-to-branch sniff. **WO U5 PR2b (2026-09-24):** with no `AS OF` and no current snapshot,
+  `create_ref_on_empty_table` follows Spark's `CreateOrReplaceBranchExec`: a new branch commits an
+  empty append through `create_branch_on_empty_table`, an `IF NOT EXISTS` on an existing branch
+  is a no-op, and a tag, a replace of an existing branch, bare `REPLACE` and a duplicate raise
+  Spark's IllegalArgumentException texts (`main_has_no_snapshot`, `Ref <name> already exists`).
+  Round 2 (2026-09-25): the door-only v1 guard is gone; the ref helpers call the repark-iceberg
+  kernel `refuse_ref_write_on_format_v1` (C-053), so a v1 refusal names its kind (`BRANCH`/`TAG`)
+  and a tag on an empty v1 table answers Spark's `main has no snapshot` first.
+  pins: ice-nested-evo-1/C-053, C-056
+  Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
   `parse_if_not_exists` / `parse_if_exists` take a token index and answer `(matched, next_index)`,
   so `finish_create`, `finish_drop`, `parse_create_with_in` and `parse_drop_with_in` all consume
@@ -698,6 +715,11 @@ pins: rp-4-fork-repin/C-005, C-006
   own append / identity-DML path instead of the fork temp provider (which carries neither
   snapshot properties nor a codec — `QS-BRANCH-*`, `QZ-BRANCH-*`).
   pins: ice-session-write-conf-1/C-038, C-039, C-040
+  **WO U5 PR2b round 3 (2026-09-25):** `commit_write_on_branch` checks that an explicit
+  `t.branch_x` target exists before the v1 ref kernel, so a missing branch on a format v1 table
+  answers REF-1's `Cannot use branch (does not exist): x` (Spark's text) and the kernel answers
+  only for a branch that exists; the session WAP path still meets the kernel first.
+  pins: ice-nested-evo-1/C-053
 - `time_travel.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the ref-selector scan
   skips the `FROM` that names a `DELETE` target, so `DELETE FROM t.branch_b …` is a write to
   the branch and not a read pinned to it (the pin turned the target into a read-only temp
@@ -953,6 +975,13 @@ pins: rp-4-fork-repin/C-005, C-006
   primitives behind the same opt-in (pins: v3-6-v3-types/C-003); v2 CREATE refuses via
   the fork's `check_compatibility`.
   4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
+  **WO U5 PR2b (2026-09-24):** `'format-version'='1'` creates a v1 table (D-CREATE-V1), and
+  `stamp_requested_format_version` stamps the number from the enum.
+  `refuse_format_version_spark_rejects` answers Spark's measured IllegalArgumentException
+  texts before the shared resolver: `Unsupported format version: v5 (supported: v4)` above
+  v4, and `For input string: "abc"` for a non-integer. Spark writes metadata v0, v-1 and v4 for
+  `'0'`, `'-1'` and `'4'`; the fork cannot, so those keep the loud not-implemented refusal.
+  Pinned by [tests/create_format_version_one.rs](tests/create_format_version_one.rs).
   **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `execute_schema_create` merges user
   `TBLPROPERTIES` through the catalog side map (override > user > default).
   pins: ice-catalog-session-1/C-027
@@ -1013,6 +1042,10 @@ pins: rp-4-fork-repin/C-005, C-006
   provider reloads table metadata per plan. `tests/v3_upgrade_calls.rs` is the guard — it pins
   the call counts AND reads the v3 lineage columns through the same session afterwards.
   pins: v3-10-upgrade-v2-to-v3/C-003, C-004
+  **WO U5 PR2b round 2 (2026-09-25):** an integer target below the current version answers
+  Spark's `Unsupported table change: Cannot downgrade vN table to vM` as an Execution error,
+  before the shared resolver; the ANSI door keeps the shared text.
+  pins: ice-nested-evo-1/C-057
 - `alter.rs` — ALTER TABLE handlers (SET/UNSET TBLPROPERTIES, RENAME TO, schema evolution I6,
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;
   9 in-module tests. **Q10:** ADD/ALTER COLUMN bare `TIMESTAMP` follows the session
@@ -1222,6 +1255,42 @@ pins: rp-4-fork-repin/C-005, C-006
   module, not an `alter.rs` arm, because that file sits at its exact ceiling. Pins:
   [tests/alter_write_order.rs](tests/alter_write_order.rs).
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **WO U5 PR2b (2026-09-24):** transform terms land (D-WRITE-ORDERED-TRANSFORM).
+  `parse_write_order_term` splits each `order_list_segments` segment. A `name(…)` segment is a
+  transform term, checked in the order of Spark's `Spark3Util.toIcebergTerm`: zorder first
+  (`Term must be unbound`), then exactly one column reference, then the name switch (bucket and
+  truncate take the first integer argument through `findWidth`'s rules; year/month/day/hour
+  take their plural, `date` and `date_hour` names). Anything else is `Transform is not
+  supported: <term>`. The IllegalArgumentException and UnsupportedOperationException texts use
+  the `repark_core` markers so the facade raises Spark's classes. The fork binds the source
+  type and answers Java's `Cannot bind: …` text. Every other segment keeps
+  `parse_order_segment`, so the identity forms are unchanged. Pins:
+  [tests/alter_write_order_transform.rs](tests/alter_write_order_transform.rs).
+  **WO U5 PR2b round 2 (2026-09-25):** transform arguments render by value, as Spark's
+  `describe` does, and a digit-leading word is a typed literal: `L`/`l` is a long width
+  (`bucket(4L, id)` lands), `S`/`Y`/`BD` render as integers without a width, and `D`/`F` render
+  as doubles (`4.0`). Spark's rule for a long width is `0 < w < Integer.MAX_VALUE`; for an int
+  width it is `w > 0`. An empty argument, an argument opening with a token that is not a name
+  or a literal (`+`, `(`), and `(` after a term raise AnalysisException with Spark's ANTLR text
+  and `== SQL ==` block. `verbatim_write_order_sql` lets `router.rs` skip the literal
+  canonicalizer for these statements, so `4L` reaches the parser as typed.
+  **WO U5 PR2b round 3 (2026-09-25):** a column argument renders each part through
+  `quote_if_needed` (Spark's rule: back-quoted unless it matches `[A-Za-z_][A-Za-z0-9_]*`, so
+  `0x4`, `1abc` and `my col` render back-quoted and `a.b` stays plain) while the bound name is
+  the plain join; a string constant renders through `quote_constant` (embedded `'` doubled,
+  as Spark's `describe` does); a `Sig::Hex` token (`X'4'`) is a binary constant rendered
+  through `hex_constant` (`0x04`). Only a token that is neither a name, a literal nor a hex
+  constant reaches the ANTLR-shaped message, and it is named as typed.
+  **WO U5 PR2b round 4 (2026-09-25):** `number_literal` renders a `Sig::Number` that is not an
+  i64 by value — an exponent form through `java_double_text` (Java's `Double.toString`: `100.0`,
+  `1.0E10`, `0.15`), which the `D`/`F` suffix branch now shares, and a bare-point decimal as its
+  decimal string (`.5` → `0.5`, `5.` → `5`); an `X'…'` body that is not all hex digits answers
+  Spark's `[INVALID_TYPED_LITERAL] … "X" …` text through `invalid_typed_literal` instead of an
+  invented `0x4G`; `alter_order_error` takes the statement so an `EmptySegment` (a comma with
+  nothing before it or nothing after it) renders Spark's `no viable alternative at input
+  '<token>'` with the `== SQL ==` block, and `transform_close` returns `Option` so the
+  unterminated-list text is rendered at the one call site.
+  pins: ice-nested-evo-1/C-054, C-055
 - `namespace_ddl/` — the table-lifecycle work `namespace_ddl.rs` delegates; see
   [namespace_ddl/map.md](namespace_ddl/map.md). `purge.rs` holds the `DROP TABLE … PURGE`
   reachable-file sweep and the `gc.enabled` gate (**IPI-21**, 2026-09-20); `execute_drop_table`
@@ -1254,9 +1323,35 @@ pins: rp-4-fork-repin/C-005, C-006
   (`RDF-SORT-TRANSFORM-1`); reusing the ALTER door's wording would have mis-stated which door
   refused. The ALTER half of the split — `WRITE ORDERED BY (zorder(id))` refusing with no
   commit — is pinned by
-  `tests/alter_write_order.rs::write_order_zorder_term_refuses_and_commits_nothing`.
+  `tests/alter_write_order_transform.rs::write_ordered_by_transform_refusals_match_spark_and_commit_nothing`
+  (Spark's `Term must be unbound` since WO U5 PR2b, 2026-09-24). `order_list_segments` hands the
+  ALTER door the raw segments (it parses transform terms itself); `Sig::Minus` carries a
+  leading `-` so a negative width renders as Spark does.
+  **WO U5 PR2b round 3 (2026-09-25):** `tokenize_significant` tokenizes with spans and reads
+  every token outside the named variants back from its source text (`span_text` maps
+  sqlparser's line/column locations to byte offsets), so `Sig::Other` carries what the user
+  typed rather than sqlparser's Display (`0x4` had rendered as `X'4'`). A hex literal typed
+  `0x…` is `Sig::Word` — Spark's lexer reads it as an identifier — and one typed `X'…'` is the
+  new `Sig::Hex`. `quote_if_needed`, `quote_constant` and `hex_constant` hold Spark's
+  renderings for the ALTER door's messages.
+  **WO U5 PR2b round 4 (2026-09-25):** the tokenizer runs on `SparkOrderDialect`, Databricks
+  with `supports_string_literal_backslash_escape`, because the Databricks dialect could not
+  tokenize `'a\'b'` and the failure sent the statement through `router.rs`'s literal
+  canonicalizer, whose re-quoted output was then unescaped a second time. A string token is
+  read back from its source span and `unescape_spark_string` applies Spark's
+  `unescapeSQLString` rules (`\uXXXX`, `\UXXXXXXXX`, octal `\[01][0-7]{2}`, the single-character
+  escapes, `\%`/`\_` keeping their backslash, any other escaped character standing for itself,
+  and a doubled quote). `hex_constant` returns `None` unless every body character is an ASCII
+  hex digit, and `hex_literal_body` hands the ALTER door the body as typed for Spark's
+  INVALID_TYPED_LITERAL text. `order_list_segments` splits through `split_order_segments`,
+  which refuses an empty segment as `OrderParseError::EmptySegment` naming the token that
+  follows the gap (`,`, `)` or `<EOF>`) — the CALL door's `split_sig_comma_segments` still drops
+  empties silently, as Java's `parseSortOrder` path is not what this round measured.
+  pins: ice-nested-evo-1/C-055
   pins: ice-rdf-sort-parse-1/C-001, C-002, C-003,
-  tests/alter_write_order.rs::write_order_zorder_term_refuses_and_commits_nothing
+  tests/alter_write_order_transform.rs::write_ordered_by_transform_refusals_match_spark_and_commit_nothing
+  **WO U5 PR2b round 2 (2026-09-25):** `Sig::Other` carries its token's text, so a refusal
+  renders the token (`+`) instead of `<other>`.
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:
   matching/no-location requests stay idempotent; contradictory `LOCATION` fails loud naming both

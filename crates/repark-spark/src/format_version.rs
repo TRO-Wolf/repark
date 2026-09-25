@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use iceberg::spec::FormatVersion;
 use iceberg::table::Table;
@@ -51,6 +51,13 @@ fn resolve_upgrade_target(
     form: &str,
 ) -> Result<Option<FormatVersion>> {
     let current = format_version_number(table);
+    if let Ok(target) = requested.parse::<i64>()
+        && target < current
+    {
+        return Err(DataFusionError::Execution(format!(
+            "Unsupported table change: Cannot downgrade v{current} table to v{target}"
+        )));
+    }
     let number = resolve_alter_format_version(requested, current, allow_v3, property_name, form)?;
     number
         .map(|value| format_version_from_number(value).map_err(iceberg_err))

@@ -43,3 +43,5 @@ holds the pieces split out of it.
   red-when-fixed pin). Shares `tests.rs` helpers (`memory_catalog`, `declare_order`,
   `iceberg_schema`, `shuffled_full_batches`) through `pub(super)` visibility.
   pins: write-order-dist-1/C-008
+  **WO U5 PR2b (2026-09-24):** the `WriteSortField` literals here and in `tests.rs` name
+  `Transform::Identity`, the field the struct gained for transform terms.

@@ -279,21 +279,33 @@ def test_write_order_bad_column_refuses_without_committing(tmp_path: Path) -> No
         engine.stop()
 
 
-def test_write_order_transform_sort_refuses_without_committing(tmp_path: Path) -> None:
-    """WRITE-ORDER-TRANSFORM-1 red-when-fixed: transform orders refuse loud, nothing commits."""
+def test_write_order_transform_sort_lands_the_measured_order(tmp_path: Path) -> None:
+    """WRITE-ORDER-TRANSFORM-1 fixed: bucket and days orders land as Spark measured them."""
     warehouse = tmp_path / "wh"
     source = _struct_seed_files(tmp_path / "seed", 8_000, 2)
     engine = _session("wo-transform", warehouse)
     try:
         engine.read.parquet(str(source)).createOrReplaceTempView("src")
         _ctas(engine, f"{CATALOG}.w.t", "2")
-        before = _metadata_count(warehouse, "t")
-        with pytest.raises(Exception, match="not supported yet"):
-            engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (bucket(4, id))").collect()
-        with pytest.raises(Exception, match="not supported yet"):
-            engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (days(ts))").collect()
-        assert _metadata_count(warehouse, "t") == before
-        assert _write_state(warehouse, "t")[1] == 0
+        engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (bucket(4, id))").collect()
+        orders, default, mode = _write_state(warehouse, "t")
+        assert [order["fields"] for order in orders if order["order-id"] == default] == [
+            [
+                {
+                    "transform": "bucket[4]",
+                    "source-id": 1,
+                    "direction": "asc",
+                    "null-order": "nulls-first",
+                }
+            ]
+        ]
+        assert mode == "range"
+        engine.sql(f"ALTER TABLE {CATALOG}.w.t WRITE ORDERED BY (days(ts))").collect()
+        orders, default, mode = _write_state(warehouse, "t")
+        assert [order["fields"] for order in orders if order["order-id"] == default] == [
+            [{"transform": "day", "source-id": 4, "direction": "asc", "null-order": "nulls-first"}]
+        ]
+        assert mode == "range"
     finally:
         engine.stop()
 

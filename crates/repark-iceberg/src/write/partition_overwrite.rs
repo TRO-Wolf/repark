@@ -376,7 +376,7 @@ pub async fn commit_overwrite_by_row_filter_to(
         .add_files(staged_files)
         .set_snapshot_properties(summary);
     action = apply_overwrite_isolation(action, isolation, table, branch);
-    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
+    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
     let tx = action.apply(tx).map_err(iceberg_err)?;
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }
@@ -416,7 +416,7 @@ pub async fn commit_replace_partitions_to(
             action = action.validate_from_snapshot(snapshot_id);
         }
     }
-    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
+    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
     let tx = action.apply(tx).map_err(iceberg_err)?;
     commit_result(tx.commit(catalog.as_ref()).await, &operation_id)
 }

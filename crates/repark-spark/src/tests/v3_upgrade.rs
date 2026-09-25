@@ -158,16 +158,27 @@ async fn alter_downgrade_and_unsupported_versions_refuse_naming_both_versions() 
         "ALTER TABLE ice.sales.dg SET TBLPROPERTIES ('format-version' = '2')",
     )
     .await;
-    assert!(
-        down.contains("format-version") && down.contains("v3") && down.contains("v2"),
-        "downgrade must name the key and both versions: {down}"
+    assert_eq!(
+        down,
+        "Execution error: Unsupported table change: Cannot downgrade v3 table to v2"
     );
 
     seed_v2(&ctx, &catalogs, "bad").await;
+    for target in ["1", "-1", "0"] {
+        let message = refuse(
+            &ctx,
+            &catalogs,
+            &format!("ALTER TABLE ice.sales.bad SET TBLPROPERTIES ('format-version' = '{target}')"),
+        )
+        .await;
+        assert_eq!(
+            message,
+            format!(
+                "Execution error: Unsupported table change: Cannot downgrade v2 table to v{target}"
+            )
+        );
+    }
     for (value, needle) in [
-        ("1", "v1"),
-        ("-1", "v-1"),
-        ("0", "v0"),
         ("4", "v1 through v3"),
         ("x", "not an Iceberg format version"),
         ("", "not an Iceberg format version"),

@@ -5,6 +5,7 @@ pub(crate) mod overwrite_scope;
 pub(crate) mod replace_schema;
 pub(crate) mod session_write_conf;
 pub(crate) mod tracing;
+pub(crate) mod v1_ref_writes;
 pub(crate) mod v3_types;
 pub(crate) mod writer_partitioning;
 pub(crate) mod writer_plan;

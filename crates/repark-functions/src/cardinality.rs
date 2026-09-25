@@ -197,16 +197,17 @@ pub fn resolve_create_format_version(
     let Some(raw) = requested.map(str::trim).filter(|value| !value.is_empty()) else {
         return Ok(2);
     };
-    match raw {
-        "2" => Ok(2),
-        "3" if allow_v3 => Ok(3),
-        "3" => Err(DataFusionError::NotImplemented(format!(
-            "{form} '{property_name}' = '3' is not enabled — set `{ALLOW_CREATE_FORMAT_VERSION_3_KEY}` \
-             = true (default create stays format v2)"
+    match raw.parse::<i64>() {
+        Ok(1) => Ok(1),
+        Ok(2) => Ok(2),
+        Ok(3) if allow_v3 => Ok(3),
+        Ok(3) => Err(DataFusionError::NotImplemented(format!(
+            "{form} '{property_name}' = '{raw}' is not enabled — set \
+             `{ALLOW_CREATE_FORMAT_VERSION_3_KEY}` = true (default create stays format v2)"
         ))),
-        other => Err(DataFusionError::NotImplemented(format!(
-            "{form} '{property_name}' = '{other}' is not supported (tables are created as Iceberg \
-             format v2)"
+        _ => Err(DataFusionError::NotImplemented(format!(
+            "{form} '{property_name}' = '{raw}' is not supported (tables are created as Iceberg \
+             format v1, v2 or v3)"
         ))),
     }
 }
@@ -708,13 +709,28 @@ mod tests {
             err.contains(ALLOW_CREATE_FORMAT_VERSION_3_KEY) && err.contains("format-version"),
             "opt-in refuse must name conf and property: {err}"
         );
-        let err = resolve_create_format_version(Some("1"), false, "format_version", "WITH")
-            .unwrap_err()
-            .to_string();
-        assert!(
-            err.contains("format_version") && err.contains('1'),
-            "v1 must refuse naming the key: {err}"
+        assert_eq!(
+            resolve_create_format_version(Some("1"), false, "format_version", "WITH").unwrap(),
+            1
         );
+        assert_eq!(
+            resolve_create_format_version(Some("01"), false, "format-version", "TBLPROPERTIES")
+                .unwrap(),
+            1
+        );
+        for unwritable in ["0", "4", "-1", "abc"] {
+            let err =
+                resolve_create_format_version(Some(unwritable), true, "format_version", "WITH")
+                    .unwrap_err()
+                    .to_string();
+            assert_eq!(
+                err,
+                format!(
+                    "This feature is not implemented: WITH 'format_version' = '{unwritable}' is not \
+                     supported (tables are created as Iceberg format v1, v2 or v3)"
+                )
+            );
+        }
         assert_eq!(
             resolve_create_format_version(None, true, "format-version", "TBLPROPERTIES").unwrap(),
             2,

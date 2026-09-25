@@ -248,6 +248,41 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter.rs::alter_unsupported_forms_refuse_loud` in the same unit (`tests/alter.rs`
   1436→1397) — the forms execute now, so the refusal pin would fail.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **WO U5 PR2b (2026-09-24):** the transform and zorder refusal pins moved to
+  `alter_write_order_transform.rs`, flipped to the landed behavior.
+  **WO U5 PR2b round 4 (2026-09-25):** `write_order_malformed_shapes_refuse` adds fourteen
+  empty-segment shapes (`id ,`, `, id`, `id , , s`, `(id ,)`, `(bucket(4, id) ,)`, after
+  `LOCALLY` and `DISTRIBUTED BY PARTITION`, …) with Spark's full `no viable alternative at
+  input '<EOF>'` / `','` / `')'` text and a `metadata_file_count` assertion, because every
+  earlier head committed the order typed before a trailing comma.
+  pins: ice-nested-evo-1/C-055
+- [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
+  (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
+  the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;
+  `LOCALLY` leaves the distribution unset and `DISTRIBUTED BY PARTITION` sets `hash`. The
+  refusal table pins full text and class (IllegalArgument, NotImplemented, the fork's
+  `Cannot bind`), and nothing commits. A plain `INSERT` after `bucket(4, id)` stamps order 1
+  and reads back in bucket order.
+  **Round 2 (2026-09-25):** the landed table adds `bucket(4L, id)`, `bucket(4l, id)` and
+  `truncate(s, 2L)`; `typed_width_literals_and_parse_shapes_answer_spark` pins `4S`, `4Y`,
+  `4BD`, `4.0`, `4D`, `4F`, `0L`, `-4L`, `3000000000L` and the ANTLR shapes (`bucket()`, `bucket(4,)`, `hours()`, `bucket(+4, id)`,
+  `bucket((4), id)`, `bucket(4, id)(x)`) with Spark's text. The insert pin is positive (bucket
+  order, order id 1), and `delete_after_a_repark_bucket_order_is_the_identity_only_residue` pins
+  R-U5-PR2B-IDENTITY-ONLY-DML's full text with nothing committed.
+  **Round 3 (2026-09-25):** `hex_quoted_and_string_tokens_render_as_spark_does` pins the
+  measured renderings: `0x4`/`0X4`/`1abc`/`` `my col` ``/`` `a.b` `` back-quoted and `a.b` plain
+  in the one-column-reference text, `bucket(0x4)` in the width text, `X'4'`/`x'abc'`/`X''` as
+  `0x04`/`0x0ABC`/`0x`, `'a\'b'`, `'a''b'` and `"a'b"` as `'a''b'`, `'a`b'` as typed, and
+  `bucket(4, 0x4)` as the unknown-field residue, with nothing committed.
+  **Round 4 (2026-09-25):** the row tables are module `const`s (`WIDTH_LITERAL_ROWS`,
+  `RENDERED_TOKEN_ROWS`, `INVALID_HEX_ROWS`) so the pins stay under clippy's line ceiling.
+  `WIDTH_LITERAL_ROWS` adds the exponent and bare-point decimal renderings (`1e2` → `100.0`,
+  `1e10` → `1.0E10`, `1.5E-1` → `0.15`, `.5` → `0.5`, `5.` → `5`, `-.5` → `-0.5`, `1.50` as
+  is); `RENDERED_TOKEN_ROWS` adds the Spark escape rows (`'a\\b'` → `'a\b'`, a real tab and
+  newline, `"a""b"` → `'a"b'`, `A`/`\U00000041`/`\101` → `A`, `\%`/`\_` kept, `\q`/`\f`
+  dropped, `\Z` → U+001A, `'a\\\'b'` → `'a\''b'`); `INVALID_HEX_ROWS` pins Spark's
+  INVALID_TYPED_LITERAL text for `X'4g'`, `X'é'`, `x'4g'`, `X'4G'`, `X' 4'` and `X'zz'`.
+  pins: ice-nested-evo-1/C-054, C-055
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
   `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
   level-order struct ids (`s` 5, `s.a` 6, `s.b` 7, `last-column-id` 7), the kept `COMMENT`, the
@@ -289,6 +324,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   v3-2-create-v3-opt-in/C-008 (V3-10 negates that clause) and cites C-005 alone.
   pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
   pins: rp-8-repin-f21-f22/C-004
+  **WO U5 PR2b round 2 (2026-09-25):** the downgrade rows pin Spark's
+  `Execution error: Unsupported table change: Cannot downgrade vN table to vM` for 3→2 and for
+  `1`, `-1`, `0` on a v2 table.
+  pins: ice-nested-evo-1/C-057
 - `v3_legacy_delete.rs` — **V3-12:** the Spark-SQL-door cells for a v3 merge-on-read write over an
   upgraded table's legacy parquet position deletes. Seven merge cells (MERGE-DELETE and the append
   after it, UPDATE, subquery DELETE, two legacy deletes on one data file, an untouched sibling
@@ -1071,6 +1110,21 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   probe's `DECIMAL(38,18)`/INT struct and the measured map value BIGINT→SMALLINT. The
   missing-table test adds a missing namespace.
   pins: ice-nested-evo-1/C-032, C-033, C-035, C-036
+- [create_format_version_one.rs](create_format_version_one.rs) — **WO U5 PR2b (2026-09-24):**
+  D-CREATE-V1. `'format-version'='1'` writes the v1 metadata Spark measured: format-version 1,
+  no `last-sequence-number` and no snapshot `sequence-number`, the legacy `schema` and
+  `partition-spec` keys, a snapshot-log entry and `main` on the seed. DELETE is copy-on-write
+  (`overwrite`, zero delete files). CTAS and `'01'` write v1 too. The refusals pin full text:
+  `v5` and `abc` as IllegalArgumentException, `0`/`-1`/`4` as not implemented, and the fork's
+  downgrade text for `CREATE OR REPLACE` v2 → v1 (Spark says `Cannot downgrade v2 table to v1`).
+  The v1 refusal pins it replaced now read `4`: `create_table.rs` dropped its v1 block and
+  `ctas.rs::ctas_format_version_two_consumed_others_rejected` rejects `'format-version' = 4`.
+  **Round 2 (2026-09-25):** `merge_on_read_row_level_writes_on_a_v1_table_refuse_like_spark` pins
+  Spark's `Deletes are supported in V2 and above` on DELETE, UPDATE and MERGE with nothing
+  committed. The stale `pins: v3-2-create-v3-opt-in/C-007` lines in `ctas.rs` and
+  `repark-sql/src/properties/tests.rs` are gone; this row and the D-CREATE-V1 registry row carry
+  the citation.
+  pins: ice-nested-evo-1/C-052, C-057
 - [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
   COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
   struct field, empty string, `CHANGE COLUMN`, upper-cased name, double-quoted literal, and a
@@ -2038,6 +2092,35 @@ above.
   `create_or_replace_table_still_creates_a_missing_table` is the control that keeps the
   existence check narrow.
   pins: ipi-21-25-42-small-parser/C-005, C-006, C-007
+- [ref_branch_on_empty.rs](ref_branch_on_empty.rs) — **WO U5 PR2b (2026-09-24):**
+  D-REF-BRANCH-ON-EMPTY. `CREATE BRANCH b1` on a snapshot-less v2 table writes one empty
+  `append` with Spark's summary counters, sequence number 1 and no parent, points `b1` at it and
+  leaves `main` and the snapshot log absent; the branch and `main` read zero rows and a write to
+  `branch_b1` stays on the branch. The variants (`IF NOT EXISTS`, retention, `OR REPLACE` of a new
+  branch, `RETAIN … WITH SNAPSHOT RETENTION`) each add their own snapshot with the measured ref
+  retention, and `CREATE BRANCH main` sets the current snapshot. The refusal table pins Spark's
+  IllegalArgumentException texts (tag forms, replace forms, a duplicate) and that nothing
+  commits. A seeded table keeps the old path, and v1 tables refuse branch and tag DDL loud
+  because the fork drops v1 refs.
+  **Round 2 (2026-09-25):** the v1 test pins the kernel text per kind (`BRANCH`/`TAG`) on the
+  empty and the seeded table, adding IF NOT EXISTS, CREATE OR REPLACE TAG, REPLACE TAG, both
+  AS OF VERSION forms and `REPLACE BRANCH main WITH SNAPSHOT RETENTION`, with the metadata file
+  count unchanged; a tag on the empty v1 table answers Spark's `main has no snapshot`, and a
+  plain `REPLACE BRANCH main` commits. `v1_ref_refusal` and `metadata_file_count` are shared
+  with `v1_ref_writes.rs`.
+  pins: ice-nested-evo-1/C-053, C-056
+- [v1_ref_writes.rs](v1_ref_writes.rs) — **WO U5 PR2b round 2 (2026-09-25):** the Spark-door
+  C-053 pins. A session WAP branch write on a seeded and on an empty format v1 table,
+  `INSERT`/`DELETE` into `t.branch_b1`, `CALL fast_forward` to a new branch and
+  `rewrite_data_files(branch => …)` each refuse with the `BRANCH` v1 text, with no metadata file,
+  snapshot or ref written. `set_current_snapshot` and `fast_forward('main', 'main')` keep
+  working. `wap_branch.rs::set_wap` is `pub(super)` for these pins.
+  **Round 3 (2026-09-25):** `writes_into_a_missing_branch_on_a_v1_table_answer_the_missing_branch_text`
+  replaces the `t.branch_b1` kernel pin: `INSERT`, `DELETE`, `MERGE INTO` and `INSERT OVERWRITE`
+  into a missing branch on the seeded v1 table answer the full mapped REF-1 text
+  (`Error during planning: Cannot use branch (does not exist): b1`) with no metadata file,
+  snapshot or ref written and the seed row intact.
+  pins: ice-nested-evo-1/C-053
 - `ref_ddl.rs` — **IPI-42 (2026-09-20):**
   `ref_guards_are_conditional_and_never_move_an_existing_ref` is the mutation-proof half the four
   recorded cells cannot be: it pins `b1` at the OLDER of two snapshots before the guarded
@@ -2048,6 +2131,8 @@ above.
   `ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse` replaces the
   retired REF-2 refusal pin: the guarded spellings run on both grammars, and a leftover token
   still refuses naming its own dynamic span.
+  **WO U5 PR2b (2026-09-24):** the edge matrix's empty-table pin now reads the tag refusal
+  (`main has no snapshot`); an empty-table branch commits (see `ref_branch_on_empty.rs`).
   pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004
   The four purge functions are
   `drop_table_purge_deletes_reachable_files_and_plain_drop_keeps_them`,

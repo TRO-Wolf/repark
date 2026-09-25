@@ -800,6 +800,7 @@ async fn declared_sort_order_sorts_batches_across_batch_boundaries() {
         "ordered",
         vec![WriteSortField {
             name: "id".to_string(),
+            transform: iceberg::spec::Transform::Identity,
             direction: SortDirection::Ascending,
             null_order: NullOrder::First,
         }],
@@ -836,6 +837,7 @@ async fn written_files_are_sorted_by_the_declared_order() {
         "ordered",
         vec![WriteSortField {
             name: "id".to_string(),
+            transform: iceberg::spec::Transform::Identity,
             direction: SortDirection::Ascending,
             null_order: NullOrder::First,
         }],
@@ -867,6 +869,7 @@ async fn unpartitioned_sorted_write_keeps_sorted_files() {
         "ordered",
         vec![WriteSortField {
             name: "id".to_string(),
+            transform: iceberg::spec::Transform::Identity,
             direction: SortDirection::Descending,
             null_order: NullOrder::Last,
         }],

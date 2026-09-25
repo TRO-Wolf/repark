@@ -90,6 +90,14 @@ pub(super) async fn run_rewrite(
     options: RewriteOptions,
     branch: Option<&str>,
 ) -> Result<DataFrame> {
+    if let Some(name) = branch {
+        repark_iceberg::write::refuse_ref_write_on_format_v1(
+            &table,
+            repark_iceberg::write::SnapshotRefKind::Branch,
+            name,
+            repark_iceberg::write::SnapshotRefRetention::default(),
+        )?;
+    }
     let remove_dangling = options.remove_dangling_deletes.unwrap_or(false);
     let mut action = RewriteDataFiles::new(table)
         .remove_dangling_deletes(remove_dangling)

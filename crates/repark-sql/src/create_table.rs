@@ -459,11 +459,7 @@ fn iceberg_table_creation(
         .map(str::trim)
         .is_some_and(|value| !value.is_empty())
     {
-        let number = if format_version == FormatVersion::V3 {
-            "3"
-        } else {
-            "2"
-        };
+        let number = format_version as u8;
         extra_properties.insert("format-version".to_string(), number.to_string());
     }
     let builder = TableCreation::builder()
@@ -501,6 +497,7 @@ fn iceberg_create_format_version(
         return Ok(FormatVersion::V2);
     };
     match raw {
+        "1" => Ok(FormatVersion::V1),
         "2" => Ok(FormatVersion::V2),
         "3" if allow_v3 => Ok(FormatVersion::V3),
         "3" => Err(DataFusionError::NotImplemented(format!(
@@ -509,7 +506,7 @@ fn iceberg_create_format_version(
         ))),
         other => Err(DataFusionError::NotImplemented(format!(
             "WITH 'format_version' = '{other}' is not supported (tables are created as Iceberg \
-             format v2)"
+             format v1, v2 or v3)"
         ))),
     }
 }

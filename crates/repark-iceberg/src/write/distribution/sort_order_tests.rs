@@ -128,6 +128,7 @@ async fn nested_sort_field_sorts_on_the_nested_value() {
         "nested",
         vec![WriteSortField {
             name: "st.a".to_string(),
+            transform: iceberg::spec::Transform::Identity,
             direction: SortDirection::Ascending,
             null_order: NullOrder::First,
         }],

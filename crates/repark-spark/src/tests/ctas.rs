@@ -586,7 +586,7 @@ async fn ctas_format_version_two_consumed_others_rejected() {
     let err = execute(
         &ctx,
         &catalogs,
-        "CREATE TABLE ice.sales.v1 TBLPROPERTIES('format-version' = 1) \
+        "CREATE TABLE ice.sales.v4 TBLPROPERTIES('format-version' = 4) \
              AS SELECT * FROM src",
     )
     .await
@@ -596,7 +596,6 @@ async fn ctas_format_version_two_consumed_others_rejected() {
         "expected the format-version reject, got: {err}"
     );
 
-    // pins: v3-2-create-v3-opt-in/C-004, C-007
     let err = execute(
         &ctx,
         &catalogs,

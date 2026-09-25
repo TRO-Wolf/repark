@@ -103,7 +103,11 @@ pub(crate) async fn execute_in_session<S: std::hash::BuildHasher>(
     // Translate downstream parser locations back to the caller's SQL before returning an error.
     let verbatim =
         crate::spark_literals::escaped_verbatim_from_options(ctx.state().config().options());
-    let canonical = crate::spark_literals::canonicalize_verbatim(sql, verbatim)
+    let canonical = crate::alter_write_order::verbatim_write_order_sql(sql)
+        .map_or_else(
+            || crate::spark_literals::canonicalize_verbatim(sql, verbatim),
+            Ok,
+        )
         .map_err(|error| crate::show_table_extended::refusal_or(sql, error))?;
     let canonical_sql = canonical.as_ref();
     // Clone the registry snapshot so P11 survives `.await` thread hops.

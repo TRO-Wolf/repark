@@ -1,7 +1,12 @@
 //! Snapshot-ref helpers over the fork's `ManageSnapshots` transaction API.
 
+use datafusion::error::DataFusionError;
+use iceberg::spec::{FormatVersion, MAIN_BRANCH};
+use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, Error, ErrorKind, Result, TableIdent};
+
+use crate::catalog::iceberg_to_datafusion;
 
 /// Kind of snapshot ref (branch vs tag).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,7 +47,7 @@ pub async fn create_snapshot_ref(
     kind: SnapshotRefKind,
     name: &str,
     snapshot_id: i64,
-) -> Result<()> {
+) -> datafusion::error::Result<()> {
     create_snapshot_ref_with_retention(
         catalog,
         ident,
@@ -64,16 +69,20 @@ pub async fn create_snapshot_ref_with_retention(
     name: &str,
     snapshot_id: i64,
     retention: SnapshotRefRetention,
-) -> Result<()> {
-    let table = catalog.load_table(ident).await?;
+) -> datafusion::error::Result<()> {
+    let table = catalog
+        .load_table(ident)
+        .await
+        .map_err(iceberg_to_datafusion)?;
+    refuse_ref_write_on_format_v1(&table, kind, name, retention)?;
     let tx = Transaction::new(&table);
     let action = match kind {
         SnapshotRefKind::Branch => tx.manage_snapshots().create_branch(name, snapshot_id),
         SnapshotRefKind::Tag => tx.manage_snapshots().create_tag(name, snapshot_id),
     };
     let action = apply_retention(action, name, retention);
-    let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
+    let tx = action.apply(tx).map_err(iceberg_to_datafusion)?;
+    tx.commit(catalog).await.map_err(iceberg_to_datafusion)?;
     Ok(())
 }
 
@@ -87,16 +96,20 @@ pub async fn replace_snapshot_ref(
     name: &str,
     snapshot_id: i64,
     retention: SnapshotRefRetention,
-) -> Result<()> {
-    let table = catalog.load_table(ident).await?;
+) -> datafusion::error::Result<()> {
+    let table = catalog
+        .load_table(ident)
+        .await
+        .map_err(iceberg_to_datafusion)?;
+    refuse_ref_write_on_format_v1(&table, kind, name, retention)?;
     let tx = Transaction::new(&table);
     let action = match kind {
         SnapshotRefKind::Branch => tx.manage_snapshots().replace_branch(name, snapshot_id),
         SnapshotRefKind::Tag => tx.manage_snapshots().replace_tag(name, snapshot_id),
     };
     let action = apply_retention(action, name, retention);
-    let tx = action.apply(tx)?;
-    tx.commit(catalog).await?;
+    let tx = action.apply(tx).map_err(iceberg_to_datafusion)?;
+    tx.commit(catalog).await.map_err(iceberg_to_datafusion)?;
     Ok(())
 }
 
@@ -110,14 +123,79 @@ pub async fn create_or_replace_snapshot_ref(
     name: &str,
     snapshot_id: i64,
     retention: SnapshotRefRetention,
-) -> Result<()> {
-    let table = catalog.load_table(ident).await?;
+) -> datafusion::error::Result<()> {
+    let table = catalog
+        .load_table(ident)
+        .await
+        .map_err(iceberg_to_datafusion)?;
     let exists = table.metadata().snapshot_for_ref(name).is_some();
     if exists {
         replace_snapshot_ref(catalog, ident, kind, name, snapshot_id, retention).await
     } else {
         create_snapshot_ref_with_retention(catalog, ident, kind, name, snapshot_id, retention).await
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub async fn create_branch_on_empty_table(
+    catalog: &dyn Catalog,
+    ident: &TableIdent,
+    name: &str,
+    retention: SnapshotRefRetention,
+) -> datafusion::error::Result<()> {
+    let table = catalog
+        .load_table(ident)
+        .await
+        .map_err(iceberg_to_datafusion)?;
+    refuse_ref_write_on_format_v1(&table, SnapshotRefKind::Branch, name, retention)?;
+    let (_, summary) = super::commit_error::operation_id_and_summary();
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .fast_append()
+        .to_branch(name)
+        .set_snapshot_properties(summary)
+        .apply(tx)
+        .map_err(iceberg_to_datafusion)?;
+    let table = tx.commit(catalog).await.map_err(iceberg_to_datafusion)?;
+    if retention.is_empty() {
+        return Ok(());
+    }
+    let tx = Transaction::new(&table);
+    let tx = apply_retention(tx.manage_snapshots(), name, retention)
+        .apply(tx)
+        .map_err(iceberg_to_datafusion)?;
+    tx.commit(catalog).await.map_err(iceberg_to_datafusion)?;
+    Ok(())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn refuse_ref_write_on_format_v1(
+    table: &Table,
+    kind: SnapshotRefKind,
+    name: &str,
+    retention: SnapshotRefRetention,
+) -> datafusion::error::Result<()> {
+    if table.metadata().format_version() != FormatVersion::V1
+        || (kind == SnapshotRefKind::Branch && name == MAIN_BRANCH && retention.is_empty())
+    {
+        return Ok(());
+    }
+    let kind = match kind {
+        SnapshotRefKind::Branch => "BRANCH",
+        SnapshotRefKind::Tag => "TAG",
+    };
+    let ident = table.identifier();
+    let table_name = ident
+        .namespace()
+        .iter()
+        .map(String::as_str)
+        .chain(std::iter::once(ident.name()))
+        .collect::<Vec<_>>()
+        .join(".");
+    Err(DataFusionError::NotImplemented(format!(
+        "{kind} on the format v1 table {table_name} is not supported: the Iceberg fork writes v1 \
+         metadata without its refs, so the new ref would be lost"
+    )))
 }
 
 /// Drop a branch or tag ref on `ident`.
