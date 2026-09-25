@@ -2054,6 +2054,16 @@ above.
   `create_or_replace_table_still_creates_a_missing_table` is the control that keeps the
   existence check narrow.
   pins: ipi-21-25-42-small-parser/C-005, C-006, C-007
+- [ref_branch_on_empty.rs](ref_branch_on_empty.rs) — **WO U5 PR2b (2026-09-24):**
+  D-REF-BRANCH-ON-EMPTY. `CREATE BRANCH b1` on a snapshot-less v2 table writes one empty
+  `append` with Spark's summary counters, sequence number 1 and no parent, points `b1` at it and
+  leaves `main` and the snapshot log absent; the branch and `main` read zero rows and a write to
+  `branch_b1` stays on the branch. The variants (`IF NOT EXISTS`, retention, `OR REPLACE` of a new
+  branch, `RETAIN … WITH SNAPSHOT RETENTION`) each add their own snapshot with the measured ref
+  retention, and `CREATE BRANCH main` sets the current snapshot. The refusal table pins Spark's
+  IllegalArgumentException texts (tag forms, replace forms, a duplicate) and that nothing
+  commits. A seeded table keeps the old path, and v1 tables refuse branch and tag DDL loud
+  because the fork drops v1 refs.
 - `ref_ddl.rs` — **IPI-42 (2026-09-20):**
   `ref_guards_are_conditional_and_never_move_an_existing_ref` is the mutation-proof half the four
   recorded cells cannot be: it pins `b1` at the OLDER of two snapshots before the guarded
@@ -2064,6 +2074,8 @@ above.
   `ref_ddl_if_exists_spellings_run_and_unknown_trailing_clauses_still_refuse` replaces the
   retired REF-2 refusal pin: the guarded spellings run on both grammars, and a leftover token
   still refuses naming its own dynamic span.
+  **WO U5 PR2b (2026-09-24):** the edge matrix's empty-table pin now reads the tag refusal
+  (`main has no snapshot`); an empty-table branch commits (see `ref_branch_on_empty.rs`).
   pins: ipi-21-25-42-small-parser/C-001, C-002, C-003, C-004
   The four purge functions are
   `drop_table_purge_deletes_reachable_files_and_plain_drop_keeps_them`,

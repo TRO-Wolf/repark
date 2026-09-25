@@ -89,6 +89,7 @@ mod partitioned_ctas;
 mod partitioned_merge;
 mod plan_partitioning;
 mod purge;
+mod ref_branch_on_empty;
 mod ref_ddl;
 mod refs_and_wap;
 mod replace_columns;

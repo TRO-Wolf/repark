@@ -7,8 +7,9 @@ use datafusion::sql::sqlparser::parser::ParserError;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_iceberg::write::{
-    SnapshotRefKind, SnapshotRefRetention, create_or_replace_snapshot_ref,
-    create_snapshot_ref_with_retention, drop_snapshot_ref, replace_snapshot_ref,
+    SnapshotRefKind, SnapshotRefRetention, create_branch_on_empty_table,
+    create_or_replace_snapshot_ref, create_snapshot_ref_with_retention, drop_snapshot_ref,
+    replace_snapshot_ref,
 };
 
 use repark_core::CatalogRegistry;
@@ -661,7 +662,26 @@ pub(crate) async fn execute_ref_ddl(
         } => {
             let loaded = handle.load_table(&ident).await.map_err(iceberg_err)?;
             let already_there = loaded.metadata().snapshot_for_ref(&name).is_some();
-            if !(if_not_exists && already_there) {
+            let spark_ident = format!("{namespace}.{table}");
+            refuse_ref_on_format_v1(&loaded, &spark_ident)?;
+            if as_of_version.is_none() && loaded.metadata().current_snapshot_id().is_none() {
+                let empty = EmptyTableRef {
+                    kind,
+                    name: &name,
+                    spark_ident: &spark_ident,
+                    already_there,
+                };
+                if kind == SnapshotRefKind::Tag || !(if_not_exists && already_there) {
+                    create_ref_on_empty_table(
+                        handle.as_ref(),
+                        &ident,
+                        empty,
+                        or_replace,
+                        retention,
+                    )
+                    .await?;
+                }
+            } else if !(if_not_exists && already_there) {
                 let snapshot_id = resolve_snapshot_id(
                     &loaded,
                     as_of_version,
@@ -693,6 +713,10 @@ pub(crate) async fn execute_ref_ddl(
             retention,
         } => {
             let loaded = handle.load_table(&ident).await.map_err(iceberg_err)?;
+            refuse_ref_on_format_v1(&loaded, &format!("{namespace}.{table}"))?;
+            if as_of_version.is_none() && loaded.metadata().current_snapshot_id().is_none() {
+                return Err(main_has_no_snapshot(kind, &format!("{namespace}.{table}")));
+            }
             let snapshot_id = resolve_snapshot_id(
                 &loaded,
                 as_of_version,
@@ -709,26 +733,83 @@ pub(crate) async fn execute_ref_ddl(
             kind,
             name,
             if_exists,
-        } => {
-            let present = !if_exists
-                || handle
-                    .load_table(&ident)
-                    .await
-                    .map_err(iceberg_err)?
-                    .metadata()
-                    .snapshot_for_ref(&name)
-                    .is_some();
-            if present {
-                drop_snapshot_ref(handle.as_ref(), &ident, kind, &name)
-                    .await
-                    .map_err(iceberg_err)?;
-            }
-        }
+        } => execute_drop_ref(handle.as_ref(), &ident, kind, &name, if_exists).await?,
     }
 
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, handle.clone(), catalog_name, &namespace).await?;
     ctx.read_empty()
+}
+
+async fn execute_drop_ref(
+    handle: &dyn Catalog,
+    ident: &TableIdent,
+    kind: SnapshotRefKind,
+    name: &str,
+    if_exists: bool,
+) -> Result<()> {
+    let present = !if_exists
+        || handle
+            .load_table(ident)
+            .await
+            .map_err(iceberg_err)?
+            .metadata()
+            .snapshot_for_ref(name)
+            .is_some();
+    if present {
+        drop_snapshot_ref(handle, ident, kind, name)
+            .await
+            .map_err(iceberg_err)?;
+    }
+    Ok(())
+}
+
+struct EmptyTableRef<'a> {
+    kind: SnapshotRefKind,
+    name: &'a str,
+    spark_ident: &'a str,
+    already_there: bool,
+}
+
+async fn create_ref_on_empty_table(
+    handle: &dyn Catalog,
+    ident: &TableIdent,
+    empty: EmptyTableRef<'_>,
+    or_replace: bool,
+    retention: SnapshotRefRetention,
+) -> Result<()> {
+    if empty.kind == SnapshotRefKind::Tag || (or_replace && empty.already_there) {
+        return Err(main_has_no_snapshot(empty.kind, empty.spark_ident));
+    }
+    if empty.already_there {
+        return Err(repark_core::illegal_argument_error(format!(
+            "Ref {} already exists",
+            empty.name
+        )));
+    }
+    create_branch_on_empty_table(handle, ident, empty.name, retention)
+        .await
+        .map_err(iceberg_err)
+}
+
+fn refuse_ref_on_format_v1(loaded: &iceberg::table::Table, spark_ident: &str) -> Result<()> {
+    if loaded.metadata().format_version() == iceberg::spec::FormatVersion::V1 {
+        return Err(DataFusionError::NotImplemented(format!(
+            "BRANCH|TAG on the format v1 table {spark_ident} is not supported: the Iceberg fork \
+             writes v1 metadata without its refs, so the new ref would be lost"
+        )));
+    }
+    Ok(())
+}
+
+fn main_has_no_snapshot(kind: SnapshotRefKind, spark_ident: &str) -> DataFusionError {
+    let operation = match kind {
+        SnapshotRefKind::Branch => "replace branch",
+        SnapshotRefKind::Tag => "create or replace tag",
+    };
+    repark_core::illegal_argument_error(format!(
+        "Cannot complete {operation} operation on {spark_ident}, main has no snapshot"
+    ))
 }
 
 async fn execute_create_ref(

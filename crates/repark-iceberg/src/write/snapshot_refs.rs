@@ -120,6 +120,35 @@ pub async fn create_or_replace_snapshot_ref(
     }
 }
 
+/// Commit an empty append onto a new branch of a table with no snapshot, the way Java
+/// `SnapshotManager.createBranch(name)` does. Retention is a second commit: the fork checks a
+/// retention update against the base table, where the branch does not exist yet.
+/// # Errors
+/// Propagates any [`iceberg::Error`] from load / apply / commit.
+pub async fn create_branch_on_empty_table(
+    catalog: &dyn Catalog,
+    ident: &TableIdent,
+    name: &str,
+    retention: SnapshotRefRetention,
+) -> Result<()> {
+    let table = catalog.load_table(ident).await?;
+    let (_, summary) = super::commit_error::operation_id_and_summary();
+    let tx = Transaction::new(&table);
+    let tx = tx
+        .fast_append()
+        .to_branch(name)
+        .set_snapshot_properties(summary)
+        .apply(tx)?;
+    let table = tx.commit(catalog).await?;
+    if retention.is_empty() {
+        return Ok(());
+    }
+    let tx = Transaction::new(&table);
+    let tx = apply_retention(tx.manage_snapshots(), name, retention).apply(tx)?;
+    tx.commit(catalog).await?;
+    Ok(())
+}
+
 /// Drop a branch or tag ref on `ident`.
 /// # Errors
 /// Propagates any [`iceberg::Error`] from load / apply / commit.

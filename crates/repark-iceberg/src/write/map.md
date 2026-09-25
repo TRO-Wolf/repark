@@ -886,7 +886,11 @@ repark-core's error map.
   `(name, kind, snapshot_id)` through the fork's refs inspect table for the branch-procedure
   pre-checks (the fork's refs-map field is crate-private). **Round 2:** the inspect batch
   schema is gated (strict Utf8/Utf8/Int64) and a mistyped refs schema refuses typed instead
-  of panicking.
+  of panicking. **WO U5 PR2b (2026-09-24):** `create_branch_on_empty_table` is Java's
+  `SnapshotManager.createBranch(name)` on a snapshot-less table: an empty fast append
+  `to_branch(name)`. The `engine.operation-id` snapshot property is what lets the fork's
+  empty-commit guard pass, so no data file is needed. Retention is a second commit, because
+  the fork checks a retention update against the base table, where the branch is still absent.
 - `testing_support.rs` — `testing_create_ref` (wraps `create_snapshot_ref`) for fixtures only;
   product SQL routes via `snapshot_refs`.
 - `concurrency.rs` — `repark.write.max-concurrent-files` (default 4, ≥1 or loud): DataFusion

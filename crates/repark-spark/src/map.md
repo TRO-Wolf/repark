@@ -492,7 +492,13 @@ pins: rp-4-fork-repin/C-005, C-006
   sanctioned form for the pedantic lint under the comment ban.
   pins: ice-wap-branch-1/C-001, C-003, C-006, C-007, C-010, C-011
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
-  write-to-branch sniff. Its 14 in-module tests are file-backed in
+  write-to-branch sniff. **WO U5 PR2b (2026-09-24):** with no `AS OF` and no current snapshot,
+  `create_ref_on_empty_table` follows Spark's `CreateOrReplaceBranchExec`: a new branch commits an
+  empty append through `create_branch_on_empty_table`, an `IF NOT EXISTS` on an existing branch
+  is a no-op, and a tag, a replace of an existing branch, bare `REPLACE` and a duplicate raise
+  Spark's IllegalArgumentException texts (`main_has_no_snapshot`, `Ref <name> already exists`).
+  `refuse_ref_on_format_v1` refuses create and replace on a v1 table, because the fork writes v1
+  metadata without refs and the new ref would be lost on reload. Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
   `parse_if_not_exists` / `parse_if_exists` take a token index and answer `(matched, next_index)`,
   so `finish_create`, `finish_drop`, `parse_create_with_in` and `parse_drop_with_in` all consume

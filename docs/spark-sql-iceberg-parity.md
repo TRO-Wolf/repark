@@ -8238,6 +8238,48 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   Integer literals narrow to `INT` on every path, so the CTAS derivation agrees with Spark.
   pins: types-1/C-001
 
+### D-CREATE-V1 — `TBLPROPERTIES ('format-version'='1')` refused — **FIXED 2026-09-24 (WO U5 PR2b)**
+
+- **repark** — `CREATE TABLE … TBLPROPERTIES ('format-version'='1')`, the CTAS form, `'01'`
+  and the ANSI door's `WITH (format_version = 1)` create a v1 table: format-version 1, no
+  `last-sequence-number` and no snapshot `sequence-number`, the legacy `schema` and
+  `partition-spec` keys, a snapshot-log entry and `main` after the seed. DELETE is
+  copy-on-write (`overwrite`, zero delete files). `'5'` raises IllegalArgumentException
+  `Unsupported format version: v5 (supported: v4)` and `'abc'` raises it with
+  `For input string: "abc"`, as Spark does. Residues, all loud: Spark writes metadata v0, v-1
+  and v4 for `'0'`, `'-1'` and `'4'`, which the fork cannot write, so RePark refuses them as not
+  implemented; Spark raises NumberFormatException, which PySpark maps to a leaf of
+  IllegalArgumentException that RePark does not define; `' 1 '` is trimmed where Spark raises
+  `For input string: " 1 "`; `CREATE OR REPLACE` v2 → v1 answers the fork's `Cannot downgrade
+  FormatVersion from v2 to v1` where Spark says `Cannot downgrade v2 table to v1`; the fork
+  omits an empty `snapshots` array and never writes `refs` into v1 metadata (Java writes both).
+  Branch and tag DDL on a v1 table refuses loud for that last reason (D-REF-BRANCH-ON-EMPTY).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-24
+  (`target/probe-u5-pr2b/spark.out` in the lane clone; scoreboard cell `D-CREATE-V1`).
+- **Pin** — `crates/repark-spark/src/tests/create_format_version_one.rs`,
+  `crates/repark-sql/src/v3/create.rs::format_version_one_creates_v1_and_deletes_copy_on_write`,
+  `python/repark/tests/test_ice_ddl_alter_2.py`.
+
+### D-REF-BRANCH-ON-EMPTY — `CREATE BRANCH` on a snapshot-less table refused — **FIXED 2026-09-24 (WO U5 PR2b)**
+
+- **repark** — `ALTER TABLE t CREATE BRANCH b1` on a table with no snapshot commits an empty
+  append (sequence-number 1, `append`, zero `total-*` counters, `changed-partition-count` 0,
+  `manifests-created` 0) and points `b1` at it; `main` stays absent, the branch reads zero rows,
+  and a write to `t.branch_b1` lands on the branch only. `IF NOT EXISTS`, `OR REPLACE` of a new
+  branch, `WITH SNAPSHOT RETENTION` and `RETAIN` each commit their own snapshot;
+  `CREATE BRANCH main` sets the current snapshot and a snapshot-log entry. The refusals answer
+  Spark's IllegalArgumentException texts: every tag form, `Cannot complete create or replace
+  tag operation on ns.t, main has no snapshot`; `CREATE OR REPLACE` of an existing branch and
+  bare `REPLACE BRANCH`, `Cannot complete replace branch operation on ns.t, main has no
+  snapshot`; a duplicate, `Ref b1 already exists`. Residues: retention is a second commit (the
+  fork checks a retention update against the base table), where Spark commits one transaction;
+  branch and tag DDL on a format v1 table refuses loud because the fork drops v1 refs; the ANSI
+  door keeps its `needs AS OF VERSION` refusal.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-24
+  (`target/probe-u5-pr2b/spark.out`, `spark2.out`; scoreboard cell `D-REF-BRANCH-ON-EMPTY`).
+- **Pin** — `crates/repark-spark/src/tests/ref_branch_on_empty.rs`,
+  `python/repark/tests/test_ice_ddl_alter_2.py`.
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field
