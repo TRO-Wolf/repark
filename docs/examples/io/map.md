@@ -52,10 +52,13 @@ directory carries the one-liner (verified by scan, EX-26 round 2).
   pins: ex-26-io-session/C-007
 - [writer_bucket_cluster.py](writer_bucket_cluster.py) — `bucketBy` / `bucket_by`,
   `sortBy` / `sort_by`, `clusterBy` / `cluster_by` (v1 and V2) chaining on a local
-  memory-catalog frame, with the two declared Iceberg refusals pinned at the
-  actions (§5 IO-BUCKET-1 Ruling R-1, IO-CLUSTER-1 Ruling R-2; the V2 create
-  arm records where Spark answered `None`). IO-BUCKET-CLUSTER-1 (2026-09-14).
-  pins: io-bucket-cluster-1/C-002
+  memory-catalog frame: a plain `bucketBy` `saveAsTable` creates a `bucket(2, a)`
+  table (U7 retired IO-BUCKET-1 Ruling R-1 on 2026-09-24), a sorted bucket
+  refuses with Spark's `Cannot convert transform…` text and creates nothing,
+  and the clusterBy refusal stays pinned at the actions (§5 IO-CLUSTER-1
+  Ruling R-2; the V2 create arm records where Spark answered `None`).
+  IO-BUCKET-CLUSTER-1 (2026-09-14), U7-WRITE-DF PR1 (2026-09-24).
+  pins: io-bucket-cluster-1/C-002, u7-write-df/C-008
 - [writer_tables.py](writer_tables.py) — `saveAsTable` / `save_as_table` and
   `insertInto` / `insert_into`, positional insert included (EX-26). The snake
   spellings are repark-only; non-iceberg table formats are §7 `EX-IO-6`, the
