@@ -2257,6 +2257,12 @@ table, four files). `overwrite_mode.rs` re-pins
 `static_value_is_cast_to_a_date_partition_and_an_invalid_value_refuses` to Spark's
 `CAST_INVALID_INPUT` text. pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
 C-008, C-009, C-010, C-011, C-012
+**U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`
+runs the door with `source_by_name` — a source with an extra column at matching width refuses
+`EXTRA_COLUMNS` with Spark's full text and commits nothing (red under mutation M14, where the
+old positional binding wrote the columns shifted), a wider source refuses arity first, a
+reordered, upper-cased, narrower source writes by name with `NULL` for the missing column,
+and the same statement without the flag stays positional. pins: u7-write-df-2/C-013
 
 U8 WRITE-SQL PR1 round 3 (2026-09-25, critic r2): `replace_where_oracle.rs` replays the Spark
 measurements committed in

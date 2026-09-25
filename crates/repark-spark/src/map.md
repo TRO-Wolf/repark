@@ -329,6 +329,16 @@ pins: rp-4-fork-repin/C-005, C-006
   reregister) and the overwrite delegation to `insert_overwrite_from_staged_source`. Branch
   targets count as owned write heads (`write_to_branch.rs`), so no temp-view rewrite fires.
   In-module tests (file-backed in [insert_by_name/map.md](insert_by_name/map.md)).
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `by_name_source_query` is the by-name
+  resolution alone (`probe_source_names`, `refuse_underived`, `name_mapping` — the arity check,
+  the ambiguity and `EXTRA_COLUMNS` refusals and `CANNOT_FIND_DATA` for a missing required
+  column — and `null_filled_projection`), shared by `plan_name_projection` and the REPLACE
+  WHERE door's V2-writer binding. pins: u7-write-df-2/C-013
+  **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** after `name_mapping`, `by_name_source_query`
+  runs `insert_by_name/nested.rs::refuse_nested_mismatch`, so the REPLACE WHERE door's
+  by-name binding reaches struct sub-fields (`CANNOT_FIND_DATA` with the dotted path,
+  `EXTRA_STRUCT_FIELDS`); `plan_name_projection` (SQL `BY NAME`, the append doors) does not
+  call it (residue R-15). pins: u7-write-df-2/C-013
   ICE-WRITE-OPTIONS-1 (2026-09-17): the statement write options travel into the two
   delegating overwrite calls, which honour them; the empty-projection commit and the
   by-name append commit without them, so both refuse a non-empty options set rather than
@@ -391,6 +401,24 @@ pins: rp-4-fork-repin/C-005, C-006
   column-def CREATE (measured 2026-09-24); `ctas.rs` and `create_table.rs` pass
   `spark_door_case_insensitive`, and the early column-def validation passes `true` because the
   execute-time build is authoritative. pins: u7-write-df/C-010, C-013
+- `write_options.rs` — **U7 PR2 (2026-09-24):** `validate-from-snapshot-id` is kept raw
+  (`StatementWriteOptions.validate_from_snapshot_id`): only the overwrite-by-filter commit
+  reads it, so an append with a bad value commits as on Spark.
+  `router/insert_positional/replace_where.rs` passes it with the level as
+  `repark_iceberg::write::FilterValidation`. pins: u7-write-df-2/C-009
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `source_by_name: bool` (set by `dialect.rs` from
+  `EngineContext`, never from an option key) tells the REPLACE WHERE door to bind its source by
+  name; `validate_isolation_level` accepts only `snapshot` and `serializable`, so
+  `isolation-level=none` refuses `Invalid isolation level: none` as Spark's
+  `IsolationLevel.fromName` does (before, `none` was accepted and skipped the validation;
+  pin `isolation_level_none_refuses_like_spark`). pins: u7-write-df-2/C-013, C-014
+  **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** that refusal ran on every statement and refused
+  `none` on append, where Spark commits. `validate` now keeps `isolation-level` raw
+  (`validate_isolation_level` is gone); the overwrite executors parse it through
+  `repark_iceberg::write::isolation_with_override`, and `refuse_invalid_isolation` serves the
+  replace door (`ctas.rs`), so an append or a plain create ignores the option as Spark does.
+  pins `isolation_level_passes_through_unparsed_like_spark`,
+  `replace_doors_refuse_an_unknown_isolation_level_like_spark`. pins: u7-write-df-2/C-014
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property
@@ -627,6 +655,10 @@ pins: rp-4-fork-repin/C-005, C-006
   SELECT`) keep their column ids, so an older ref still reads its rows; round 3 (2026-09-25)
   brings the column-def doors in `create_table.rs` and the native door in `repark-sql` onto
   the same kernel, so every `begin_replace` caller keeps them. pins: u7-write-df-2/C-011
+  **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** `execute_ctas` refuses an unknown
+  `isolation-level` option (`none` included) on the replace arm (`or_replace`) before any
+  catalog read, as Spark's RTAS does with or without a table; a plain CTAS ignores it.
+  pins: u7-write-df-2/C-014
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **D-5 (2026-09-21):** `refuse_unsupported_create_table_clauses`' options arm
@@ -1390,6 +1422,8 @@ pins: rp-4-fork-repin/C-005, C-006
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
   `execute_with_write_options` copies `cx.force_static_overwrite` onto the validated
   options (ICE-WRITE-OPTIONS-1 run 22b, 2026-09-18). pins: ice-write-options-1/C-014
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** it also copies `cx.source_by_name` onto
+  `StatementWriteOptions::source_by_name`. pins: u7-write-df-2/C-013
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** it copies `cx.overwrite_intent`; `execute` routes a
   non-`Session` intent through `execute_with_statement_options`. pins: ice-overwrite-mode-1/C-007
   **ICE-CATALOG-SESSION-1 R6 (2026-09-20):** the S9 `on_session_built` flip and the

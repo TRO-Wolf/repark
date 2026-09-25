@@ -363,6 +363,23 @@ repark-core's error map.
   as a value, so a float range stays unscoped (ruling Q-21a-OCC-1).
   pins: ice-occ-scoped-1/C-001, C-002, C-003, C-018
 - `commit_target.rs` — `maybe_to_branch` / `snapshot_id_for_commit` for named-ref commits.
+  **U7 PR2 (2026-09-24):** `FilterValidation` carries the `isolation-level` and
+  `validate-from-snapshot-id` writer options into `commit_overwrite_by_filter_with_summary`.
+  `isolation` resolves the level as before (the option, else the table property); `start` is
+  where the conflict validation begins: the requested snapshot when an explicit level is
+  set, else the snapshot the table was loaded at (the old behaviour; Spark
+  validates the whole history there, residue R-6). The requested id parses like Java's
+  `Long.parseLong` (`NumberFormatMarker` `For input string: "<v>"`) and must be an ancestor of
+  the commit's snapshot, else `DataInvalid` `Cannot determine history between starting
+  snapshot <id> and the last known ancestor <oldest id>` (Java's text; the fork walks the whole
+  history for an unknown start). Pins: `../tests/filter_validation.rs`.
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `write_options.rs::isolation_with_override` no longer
+  maps an `isolation-level=none` option to "no validation": only `serializable` and
+  `snapshot` parse, anything else refuses `Invalid isolation level: <raw>` (Spark's
+  `IsolationLevel.fromName`; the table property parser in `overwrite.rs` keeps the fork's
+  `none` sentinel). Pin: `writer_props.rs::isolation_override_none_refuses_like_spark`
+  (was `isolation_override_none_disables_validations`). pins: u7-write-df-2/C-014
+  pins: u7-write-df-2/C-009
   `commit_append_to` (ICE-RTAS-BYNAME-1, 2026-09-17): `commit_append` with an
   optional named branch, mirroring `commit_overwrite_replace_all_to`; the Spark door's
   `INSERT … BY NAME` staged append commits through it. Like its sibling it carries
@@ -1307,7 +1324,10 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   minimum). pins: u8-write-sql/C-022
   `commit_overwrite_by_filter_with_summary` commits `overwrite_files().overwrite_by_row_filter`
   with the staged files and no added-file validation (Spark adds none), with the isolation,
-  `validate_from_snapshot` and branch handling of its siblings in `write_options.rs`. A set
+  `validate_from_snapshot` and branch handling of its siblings in `write_options.rs` (U7 PR2,
+  2026-09-24: the level and the start come from `commit_target::FilterValidation`, so a
+  `validate-from-snapshot-id` writer option beside an `isolation-level` starts the
+  validation there; pins: u7-write-df-2/C-009). A set
   row filter already counts as a change in the fork, so an empty source commits `delete`
   without `allow_empty_commit`. A snapshot property that names an engine summary field
   refuses, because the removed-file set of a general filter is not computed.

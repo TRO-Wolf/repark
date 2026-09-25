@@ -1,18 +1,23 @@
-"""U7 PR2 — DataFrame writer semantics: saveAsTable overwrite replaces, the branch option.
+"""U7 PR2 — DataFrame writer semantics: saveAsTable overwrite, the branch option, overwrite().
 
 Every expected value is Spark 4.1.2 + Iceberg 1.11.0's answer, read from the committed
-``ice_write_df_1_spark_oracle.json``: the scoreboard cells ``W-DF-SAVEASTABLE-OVERWRITE`` and
-``W-DF-V2-OPTION-BRANCH`` under ``recorded``, and the PR2 shapes under ``measured``. Seed
-``values`` is one ``INSERT … VALUES`` (one data file); seed ``named`` is an
-``INSERT … UNION ALL`` (three data files on both engines); seed ``none`` creates no table.
-Snapshot references are indexes in commit order.
+``ice_write_df_1_spark_oracle.json``: the scoreboard cells ``W-DF-SAVEASTABLE-OVERWRITE``,
+``W-DF-V2-OPTION-BRANCH``, ``W-DF-V2-OVERWRITE-COND-PART`` and ``W-DF-V2-OVERWRITE-COND-ROWS``
+under ``recorded``, and the PR2 shapes under ``measured``. Seed ``values`` is one
+``INSERT … VALUES`` (one data file); seed ``named`` is an ``INSERT … UNION ALL`` (three data
+files on both engines); seed ``none`` creates no table; seed ``empty`` creates the table with
+no snapshot. Snapshot references are indexes in commit order. A residue pin states RePark's
+answer as a rule over Spark's recorded one. The ``overwrite(condition)`` pins (C-006..C-010) live
+in ``test_ice_write_df_2_overwrite.py`` on this module's helpers.
 
-pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005
+pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
 """
 
 from __future__ import annotations
 
+import itertools
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -83,6 +88,16 @@ def _seed(spark: ReparkSession, seed: str, part: str, props: str, version: int) 
         spark.sql(
             f"INSERT INTO {_T} VALUES (1, named_struct('a', 1, 'b', 'x')), "
             "(2, named_struct('a', 2, 'b', 'y'))"
+        )
+        return
+    if seed == "notnull":
+        spark.sql(
+            f"CREATE TABLE {_T} (id BIGINT NOT NULL, data STRING, cat STRING) USING iceberg "
+            "TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(
+            f"INSERT INTO {_T} SELECT 1 AS id, 'a' AS data, 'x' AS cat "
+            "UNION ALL SELECT 2, 'b', 'y' UNION ALL SELECT 3, 'c', 'x'"
         )
         return
     if seed == "identifier":
@@ -219,6 +234,17 @@ def _iceberg(frame: Any) -> Any:
     return frame.write.format("iceberg")
 
 
+def _error(raised: BaseException, warehouse: Path) -> dict[str, Any]:
+    message = str(raised).replace(str(warehouse), "<wh>")
+    message = re.sub(r"<wh>/u7/t/data/\S+\.parquet", "<file>", message)
+    return {
+        "type": type(raised).__name__,
+        "condition": getattr(raised, "getCondition", lambda: None)(),
+        "sqlstate": getattr(raised, "getSqlState", lambda: None)(),
+        "message": message,
+    }
+
+
 def _run(
     spark: ReparkSession,
     warehouse: Path,
@@ -228,10 +254,29 @@ def _run(
     _seed(spark, seed, part, props, version)
     uuid_before = None if seed == "none" else _metadata(warehouse)["table-uuid"]
     out: dict[str, Any] = {}
-    action(spark, _frame(spark), out)
-    out["ok"] = True
-    out.update(_state(spark, warehouse, uuid_before))
-    return out
+    try:
+        action(spark, _frame(spark), out)
+        out["ok"] = True
+    except Exception as raised:
+        out["error"] = _error(raised, warehouse)
+    if seed != "none" or out.get("ok"):
+        out.update(_state(spark, warehouse, uuid_before))
+    return _sorted_rows(out)
+
+
+def _sorted_rows(observed: dict[str, Any]) -> dict[str, Any]:
+    ordered = dict(observed)
+    for key in ("rows", "branch_rows"):
+        if isinstance(ordered.get(key), list):
+            ordered[key] = _sorted_within_equal_ids(ordered[key])
+    return ordered
+
+
+def _sorted_within_equal_ids(rows: list[list[Any]]) -> list[list[Any]]:
+    ordered: list[list[Any]] = []
+    for _, group in itertools.groupby(rows, key=lambda row: repr(row[0])):
+        ordered.extend(sorted(group, key=repr))
+    return ordered
 
 
 def _dynamic_session_overwrite(spark: ReparkSession, frame: Any) -> None:
@@ -295,6 +340,12 @@ def _v1_branch_overwrite(spark: ReparkSession, frame: Any, out: dict[str, Any]) 
 def _v1_branch_insert_overwrite(spark: ReparkSession, frame: Any, out: dict[str, Any]) -> None:
     _create_branch(spark)
     frame.write.option("branch", "b1").mode("overwrite").insertInto(_T)
+    _branch_rows(spark, out)
+
+
+def _v2_branch_condition(spark: ReparkSession, frame: Any, out: dict[str, Any]) -> None:
+    _create_branch(spark)
+    frame.writeTo(_T).option("branch", "b1").overwrite(functions.col("cat") == "x")
     _branch_rows(spark, out)
 
 
@@ -413,6 +464,7 @@ _BRANCH_OPTION: dict[str, tuple[str, str, str, int, Action]] = {
     ),
     "v1_option_branch_overwrite": ("values", "", "", 2, _v1_branch_overwrite),
     "v1_option_branch_insert_into_overwrite": ("values", "", "", 2, _v1_branch_insert_overwrite),
+    "v2_option_branch_overwrite_condition": ("named", _PARTITIONED, "", 2, _v2_branch_condition),
 }
 
 
@@ -550,7 +602,7 @@ def test_save_as_table_overwrite_shapes_match_spark(
 
     pins: u7-write-df-2/C-002
     """
-    assert _run(spark, warehouse, _SAVE_AS_TABLE[name]) == _MEASURED[name]
+    assert _run(spark, warehouse, _SAVE_AS_TABLE[name]) == _sorted_rows(_MEASURED[name])
 
 
 @pytest.mark.parametrize("name", list(_NO_FORMAT))
@@ -564,7 +616,7 @@ def test_save_as_table_without_a_format_writes_no_format_property_divergence(
     pins: u7-write-df-2/C-003
     """
     observed = _run(spark, warehouse, _NO_FORMAT[name])
-    expected = dict(_MEASURED[name])
+    expected = _sorted_rows(_MEASURED[name])
     assert expected.pop("properties") == {"write.format.default": "parquet"}
     assert observed.pop("properties") == {}
     assert observed == expected
@@ -599,7 +651,7 @@ def test_branch_and_tag_options_are_ignored_like_spark(
 
     pins: u7-write-df-2/C-005
     """
-    assert _run(spark, warehouse, _BRANCH_OPTION[name]) == _MEASURED[name]
+    assert _run(spark, warehouse, _BRANCH_OPTION[name]) == _sorted_rows(_MEASURED[name])
 
 
 @pytest.mark.parametrize("name", list(_FIELD_IDS))
@@ -613,7 +665,7 @@ def test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark(
 
     pins: u7-write-df-2/C-011
     """
-    assert _run(spark, warehouse, _FIELD_IDS[name]) == _MEASURED[name]
+    assert _run(spark, warehouse, _FIELD_IDS[name]) == _sorted_rows(_MEASURED[name])
 
 
 def test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence(
@@ -639,7 +691,7 @@ def test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence(
             ),
         ),
     )
-    expected = dict(_MEASURED["ids_type_change_branch"])
+    expected = _sorted_rows(_MEASURED["ids_type_change_branch"])
     assert expected.pop("branch_rows")["error"]["message"].startswith(
         "java.lang.ClassCastException"
     )
@@ -732,4 +784,4 @@ def test_every_replace_door_keeps_field_ids_by_name_like_spark(
 
     pins: u7-write-df-2/C-011
     """
-    assert _run(spark, warehouse, _REPLACE_DOORS[name]) == _MEASURED[name]
+    assert _run(spark, warehouse, _REPLACE_DOORS[name]) == _sorted_rows(_MEASURED[name])

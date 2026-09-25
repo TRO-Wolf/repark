@@ -18,6 +18,7 @@ pub struct EngineContext<'a> {
     /// Read-only (postgres) catalog names for the P11 DML direction-notes.
     pub read_only: &'a HashSet<String>,
     pub overwrite_intent: crate::OverwriteIntent,
+    pub source_by_name: bool,
     pub session_time_zone: SessionTimeZone,
     pub temp_views: Option<&'a dyn TempViewSession>,
 }
@@ -62,6 +63,7 @@ impl<'a> EngineContext<'a> {
             catalogs,
             read_only,
             overwrite_intent: crate::OverwriteIntent::Session,
+            source_by_name: false,
             session_time_zone,
             temp_views: None,
         }

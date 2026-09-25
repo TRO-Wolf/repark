@@ -28,6 +28,9 @@ Tests for [`overwrite_filter.rs`](../overwrite_filter.rs), which declares `#[cfg
   literal outside the INT range folds to the out-of-range texts, never a constant, and a `.0`
   literal at the INT boundary follows Spark's boundary rules; BIGINT keeps its constants.
   pins: u8-write-sql/C-022
+  two-element list), and the out-of-range integer folds.
+- U7 PR2 (2026-09-24): the commit helper passes `FilterValidation::default()` (no writer
+  options) where it passed `None`. pins: u7-write-df-2/C-009
 
 ## Pointers
 

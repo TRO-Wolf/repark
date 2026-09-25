@@ -19,7 +19,10 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   source through `spark_ast::execute_insert_source` (the branch write ref stripped), checks
   the width, refuses a volatile predicate from the planned `Filter`, converts it with
   `repark_iceberg::write::spark_overwrite_filter`, stages, and commits
-  `commit_overwrite_by_filter_with_summary`; a literal `false` commits an append, as Spark's
+  `commit_overwrite_by_filter_with_summary` (U7 PR2, 2026-09-24: with the statement's
+  `isolation-level` and `validate-from-snapshot-id` as `FilterValidation`; the DataFrame
+  writer's `overwrite(condition)` reaches this door through its generated statement,
+  pins: u7-write-df-2/C-006, C-009); a literal `false` commits an append, as Spark's
   optimizer does. A missing target answers `TABLE_OR_VIEW_NOT_FOUND`, also when its namespace
   does not exist (round 2, 2026-09-25). The width check plans the deduplicated source, so a
   source whose output names repeat writes (critic r1 V-003); the refusal names the columns
@@ -27,7 +30,16 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   (2026-09-25, critic r3 V-005): `as_written` swaps each `__repark_suffix_literal__(x)` marker
   back to `x` before the kernel converts or renders the predicate, so `id = 1BD` refuses
   `…: id = CAST(1 AS DECIMAL(1,0))`; the non-determinism check still reads the parsed predicate.
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018, C-021, C-024
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** with `StatementWriteOptions::source_by_name`
+  (the DataFrame writer's `overwrite(condition)`), `by_name_source` rewrites the source through
+  `insert_by_name::by_name_source_query` once the target is resolved — the frame's columns
+  bind to the table by name (Spark's `caseSensitive` folding), a column the frame lacks is
+  `NULL`, a frame column the table lacks refuses `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS`
+  with Spark's text (before, the facade projected by position and a frame with one extra and
+  one missing column committed shifted columns), a wider frame `TOO_MANY_DATA_COLUMNS` first;
+  `prepare_source` reparses the rewritten source. The SQL door stays positional.
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018, C-021, C-024;
+  u7-write-df-2/C-013
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),

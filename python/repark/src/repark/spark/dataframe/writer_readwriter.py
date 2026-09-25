@@ -21,7 +21,6 @@ from repark.errors import (
     PySparkNotImplementedError,
     PySparkTypeError,
     PySparkValueError,
-    UnsupportedOperationException,
 )
 from repark.spark._idents import escape_sql_single_quotes
 from repark.spark._idents import quote_ident as _quote_ident_sql
@@ -900,13 +899,10 @@ class DataFrameWriterV2:
     overwrite_partitions = overwritePartitions
 
     def overwrite(self, condition: Column | str) -> None:
-        """Reject conditional overwrite because no engine path supports it."""
-        _ = condition
-        raise UnsupportedOperationException(
-            "DataFrameWriterV2.overwrite(condition) is not supported — no engine path for "
-            "conditional overwrite (Group I disclosure). Use createOrReplace() for a "
-            "deliberate full rebuild, or DELETE + append."
-        )
+        """Replace the rows that match ``condition`` with this DataFrame (Spark's overwrite)."""
+        _session, table_ref = self._existing_table_ref()
+        statement = writer_schema.replace_where_statement(self._dataframe, table_ref, condition)
+        writer_layout.run_overwrite_condition(self, statement)
 
     def option(self, key: str, value: Any) -> DataFrameWriterV2:
         """Set an option that rides the action SQL; a ``branch`` or ``tag`` key is ignored."""

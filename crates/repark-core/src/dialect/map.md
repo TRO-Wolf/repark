@@ -18,6 +18,8 @@ and the `EngineContext` construction contract.
   the literals here set it explicitly). pins: ice-dyn-overwrite-1/L-001; ice-overwrite-mode-1/C-007
   **IPI-40 PR6 (2026-09-24):** the explicit-field literals in `tests.rs` set
   `temp_views: None` for the new `EngineContext` field. pins: ice-views-1/C-018
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** the literals set `source_by_name: false` for the
+  V2 writer's by-name source flag. pins: u7-write-df-2/C-013
 
 ## Pointers
 

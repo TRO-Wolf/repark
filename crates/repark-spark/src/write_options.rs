@@ -17,10 +17,12 @@ pub struct StatementWriteOptions {
     pub level: Option<String>,
     pub distribution_mode: Option<String>,
     pub isolation: Option<String>,
+    pub validate_from_snapshot_id: Option<String>,
     pub overwrite_intent: repark_iceberg::write::OverwriteIntent,
     pub overwrite_mode_dynamic: bool,
     pub merge_schema: Option<bool>,
     pub output_spec_id: Option<i32>,
+    pub source_by_name: bool,
 }
 
 impl StatementWriteOptions {
@@ -135,7 +137,8 @@ impl StatementWriteOptions {
                 "distribution-mode" => {
                     options.distribution_mode = Some(validate_distribution_mode(&value)?);
                 }
-                "isolation-level" => options.isolation = Some(validate_isolation_level(&value)?),
+                "isolation-level" => options.isolation = Some(value),
+                "validate-from-snapshot-id" => options.validate_from_snapshot_id = Some(value),
                 "output-spec-id" => {
                     options.output_spec_id =
                         Some(repark_iceberg::write::parse_output_spec_id(&value)?);
@@ -155,6 +158,18 @@ impl StatementWriteOptions {
             options.level.as_deref(),
         )?;
         Ok(options)
+    }
+}
+
+pub(crate) fn refuse_invalid_isolation(options: &StatementWriteOptions) -> Result<()> {
+    match options.isolation.as_deref() {
+        None => Ok(()),
+        Some(raw) => match raw.to_ascii_lowercase().as_str() {
+            "snapshot" | "serializable" => Ok(()),
+            _ => Err(DataFusionError::Plan(format!(
+                "Invalid isolation level: {raw}"
+            ))),
+        },
     }
 }
 
@@ -179,15 +194,6 @@ fn validate_distribution_mode(raw: &str) -> Result<String> {
         "none" | "hash" | "range" => Ok(raw.to_ascii_lowercase()),
         _ => Err(DataFusionError::Plan(format!(
             "Invalid distribution mode: {raw}"
-        ))),
-    }
-}
-
-fn validate_isolation_level(raw: &str) -> Result<String> {
-    match raw.to_ascii_lowercase().as_str() {
-        "none" | "snapshot" | "serializable" => Ok(raw.to_string()),
-        _ => Err(DataFusionError::Plan(format!(
-            "Invalid isolation level: {raw}"
         ))),
     }
 }
@@ -287,6 +293,42 @@ mod tests {
             .downcast_ref::<repark_iceberg::write::NumberFormatMarker>()
             .expect("expected a NumberFormatMarker");
         assert_eq!(marker.0, "For input string: \"x\"");
+    }
+
+    #[test]
+    fn validate_from_snapshot_id_stays_raw_until_an_overwrite_commit_reads_it() {
+        let options =
+            StatementWriteOptions::validate(vec![pair("Validate-From-Snapshot-Id", "abc")])
+                .expect("an append never parses it");
+        assert_eq!(options.validate_from_snapshot_id.as_deref(), Some("abc"));
+    }
+
+    #[test]
+    fn isolation_level_passes_through_unparsed_like_spark() {
+        for level in ["none", "NONE", "bogus", "Snapshot"] {
+            let options = StatementWriteOptions::validate(vec![pair("isolation-level", level)])
+                .expect("Spark parses the level only on the overwrite family");
+            assert_eq!(options.isolation.as_deref(), Some(level));
+        }
+    }
+
+    #[test]
+    fn replace_doors_refuse_an_unknown_isolation_level_like_spark() {
+        for level in ["none", "NONE", "bogus"] {
+            let options = StatementWriteOptions::validate(vec![pair("isolation-level", level)])
+                .expect("validate");
+            let error = refuse_invalid_isolation(&options).expect_err("refuses");
+            assert_eq!(
+                error.to_string(),
+                format!("Error during planning: Invalid isolation level: {level}")
+            );
+        }
+        for level in ["Snapshot", "SERIALIZABLE"] {
+            let options = StatementWriteOptions::validate(vec![pair("isolation-level", level)])
+                .expect("validate");
+            refuse_invalid_isolation(&options).expect("parses");
+        }
+        refuse_invalid_isolation(&StatementWriteOptions::default()).expect("absent");
     }
 
     #[test]

@@ -390,7 +390,16 @@ async fn replace_where(
         let cats: Vec<&str> = added.iter().map(|row| row.2).collect();
         stage(&table, &ids, &data, &cats).await
     };
-    commit_overwrite_by_filter_with_summary(catalog, &table, staged, filter, None, &[], None).await
+    commit_overwrite_by_filter_with_summary(
+        catalog,
+        &table,
+        staged,
+        filter,
+        None,
+        &[],
+        FilterValidation::default(),
+    )
+    .await
 }
 
 fn summary_of(table: &Table) -> (Operation, HashMap<String, String>) {

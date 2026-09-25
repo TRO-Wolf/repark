@@ -75,7 +75,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   overwrite_intent)` fills `EngineContext::overwrite_intent` (`Session` / `Static` for
   `saveAsTable` / `Dynamic` for `writeTo.overwritePartitions`), and `sql_with` calls it with an
   empty map and `Session`. pins: ice-dyn-overwrite-1/L-001; ice-write-options-1/C-014;
-  ice-overwrite-mode-1/C-007
+  ice-overwrite-mode-1/C-007 **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** a fourth argument
+  `source_by_name` fills `EngineContext::source_by_name`, the V2 DataFrame writer's by-name
+  source binding (`Column`-named source columns resolve against the table by name, as
+  Spark's `OverwriteByExpression.byName`); `sql_with` passes `false`. pins: u7-write-df-2/C-013
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the builder folds the
   `spark.sql.iceberg.*` write confs from its config map into the session
   (`with_session_write_conf`), so the funnel's `from_ctx` read answers them. Builder collects
@@ -751,7 +754,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   at a door — per-door wiring missed the native door twice (measured).
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
-  is the sanctioned downstream constructor, added phase-2 PR-2) + `SqlDialect` +
+  is the sanctioned downstream constructor, added phase-2 PR-2; **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**
+  `source_by_name: bool`, `false` in `new`, pins: u7-write-df-2/C-013) + `SqlDialect` +
   `DataFusionDialect` (the phase-1 default: DataFusion semantics — round 5 Z-2 routes its
   `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
   door is guarded like the two SQL doors). `SqlDialect::on_session_built` (default no-op)

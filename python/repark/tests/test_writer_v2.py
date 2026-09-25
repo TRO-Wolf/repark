@@ -15,7 +15,7 @@ import pytest
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom
 from repark import types as T  # noqa: N812 — PySpark idiom
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException
 
 CATALOG = "glue_catalog"
 NS = "writer_v2_ns"
@@ -302,10 +302,13 @@ def test_insert_into_empty_overwrite_wipes_all(spark: ReparkSession) -> None:
     assert spark.sql(f"SELECT * FROM {table}").to_arrow().to_pylist() == []
 
 
-def test_write_to_overwrite_condition_loud_reject(spark: ReparkSession) -> None:
+def test_write_to_overwrite_condition_replaces_the_matching_file(spark: ReparkSession) -> None:
+    """A condition every row of the one data file matches replaces it (U7 PR2, EX-W2-1)."""
     _source(spark, "(1,'a')").writeTo(TABLE).create()
-    with pytest.raises(UnsupportedOperationException, match="overwrite\\(condition\\)"):
-        _source(spark, "(1,'aa')").writeTo(TABLE).overwrite(F.col("id") == 1)
+    _source(spark, "(1,'aa')").writeTo(TABLE).overwrite(F.col("id") == 1)
+    assert spark.sql(f"SELECT * FROM {TABLE}").collect() == [(1, "aa")]
+    operations = spark.sql(f"SELECT operation FROM {TABLE}.snapshots ORDER BY committed_at")
+    assert [row[0] for row in operations.collect()] == ["append", "overwrite"]
 
 
 def test_write_to_using_rejects_non_iceberg(spark: ReparkSession) -> None:

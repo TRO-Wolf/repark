@@ -239,10 +239,6 @@ RePark refuses. See registry
 
 Each refuses because the alternative would be silent data loss:
 
-- **`writeTo(...).overwrite(condition)`** — no engine path for a caller-supplied overwrite
-  filter. Use `overwritePartitions()` for Spark's dynamic partition overwrite, or
-  `DELETE` + `append`.
-
 - **`TRUNCATE TABLE`** — first-class whole-table wipe (DML-C, 2026-08-30). Commits a new
   snapshot with `operation = delete`, zero live data files; `VERSION AS OF` the prior snapshot
   still reads the old rows. Registry row
@@ -250,6 +246,14 @@ Each refuses because the alternative would be silent data loss:
   `TRUNCATE TABLE … PARTITION (…)` still refuses.
 
 Whole-table `INSERT OVERWRITE` (no `PARTITION` clause) works.
+
+`writeTo(...).overwrite(condition)` is Spark's overwrite by filter (U7 PR2, 2026-09-24):
+the condition becomes an Iceberg row filter, the data files whose rows all match are
+replaced, and the frame's rows are added in one `overwrite` snapshot. A data file that
+matches only in part refuses (`Cannot delete file where some, but not all, rows match
+filter`), as on Spark, so align the condition with the partitioning. The frame writes by
+name. See registry
+[EX-W2-1](../spark-sql-iceberg-parity.md#ex-w2-1--overwritecondition-refuses-where-spark-performs-the-conditional-overwrite--fixed-2026-09-24-u7-pr2).
 
 ## Time travel
 
@@ -297,10 +301,11 @@ and snapshot-id
 ```
 
 `start-snapshot-id` / `end-snapshot-id` (incremental read) are not implemented. On the **write**
-side there is no branch or tag targeting: writes go to the current snapshot, and
-`writeTo(...).option("branch", ...)` refuses — registry row
-[REF-1](../spark-sql-iceberg-parity.md#ref-1--writing-to-a-branch-or-tag) explains the supported
-path (read a ref, then re-pin it with `CREATE OR REPLACE BRANCH`).
+side a branch is targeted by name (`t.branch_b`, registry row
+[REF-1](../spark-sql-iceberg-parity.md#ref-1--writing-to-a-branch-or-tag--fixed-2026-09-01-rp-5)).
+A `branch` or `tag` writer option is ignored, as Spark ignores it: the write lands on main
+(U7 PR2, 2026-09-24, row
+[EX-W2-3](../spark-sql-iceberg-parity.md#ex-w2-3--optionoptions-with-a-branch-or-tag-key-refuse-where-spark-silently-writes-the-default-branch--fixed-2026-09-24-u7-pr2)).
 
 ## Metadata tables
 

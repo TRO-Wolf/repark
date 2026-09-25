@@ -11,11 +11,11 @@ use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
 use crate::write::commit_error::commit_result;
-use crate::write::commit_target::{maybe_to_branch, snapshot_id_for_commit};
+use crate::write::commit_target::{FilterValidation, maybe_to_branch};
 use crate::write::illegal_argument::illegal_argument_error;
 use crate::write::overwrite::OverwriteIsolation;
 use crate::write::summary_collision::{EngineSummary, extras_need_removed_files};
-use crate::write::write_options::{isolation_with_override, summary_with_extras};
+use crate::write::write_options::summary_with_extras;
 
 const MAX_FILTER_DEPTH: usize = 64;
 
@@ -77,7 +77,7 @@ pub async fn commit_overwrite_by_filter_with_summary(
     predicate: Predicate,
     branch: Option<&str>,
     summary_extra: &[(String, String)],
-    isolation_override: Option<&str>,
+    validation: FilterValidation<'_>,
 ) -> Result<Table> {
     if extras_need_removed_files(summary_extra) {
         return Err(DataFusionError::NotImplemented(
@@ -86,7 +86,8 @@ pub async fn commit_overwrite_by_filter_with_summary(
                 .to_string(),
         ));
     }
-    let isolation = isolation_with_override(table, isolation_override)?;
+    let isolation = validation.isolation(table)?;
+    let start = validation.start(table, branch)?;
     let engine = EngineSummary::for_overwrite(table, &staged_files, branch);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;
     let tx = Transaction::new(table);
@@ -100,7 +101,7 @@ pub async fn commit_overwrite_by_filter_with_summary(
         if level == OverwriteIsolation::Serializable {
             action = action.validate_no_conflicting_data();
         }
-        if let Some(snapshot_id) = snapshot_id_for_commit(table, branch) {
+        if let Some(snapshot_id) = start {
             action = action.validate_from_snapshot(snapshot_id);
         }
     }

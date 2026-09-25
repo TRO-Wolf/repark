@@ -158,6 +158,9 @@ pub(crate) async fn execute_ctas(
     ctas: Ctas,
     options: &crate::write_options::StatementWriteOptions,
 ) -> Result<DataFrame> {
+    if ctas.or_replace {
+        crate::write_options::refuse_invalid_isolation(options)?;
+    }
     // Use catalog_handle so postgres (read-only) targets get P11, not a bare "unknown catalog".
     let catalog = catalog_handle(catalogs, &ctas.catalog)?;
     let table_ident = TableIdent::new(ctas.namespace.clone(), ctas.table.clone());

@@ -89,9 +89,6 @@ pub fn isolation_with_override(
     let Some(raw) = isolation_override else {
         return parse_overwrite_isolation(table);
     };
-    if raw.eq_ignore_ascii_case("none") {
-        return Ok(None);
-    }
     match raw.to_ascii_lowercase().as_str() {
         "serializable" => Ok(Some(OverwriteIsolation::Serializable)),
         "snapshot" => Ok(Some(OverwriteIsolation::Snapshot)),

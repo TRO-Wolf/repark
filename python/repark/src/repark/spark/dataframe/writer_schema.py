@@ -10,11 +10,14 @@ decision, instead of being refused here.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from repark.errors import AnalysisException
+from repark.errors import AnalysisException, PySparkTypeError
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark.dataframe.core import _by_name_casefold_map
+
+if TYPE_CHECKING:
+    from repark.spark.column import Column
 
 
 def _split_columns(
@@ -64,6 +67,40 @@ def append_statement(session: Any, dataframe: Any, table_ref: str) -> Callable[[
     columns = ", ".join(_quote_ident(column) for column in present)
     projection = ", ".join(_quote_ident(name) for name in _matched_sources(source_by_case, present))
     return lambda view: f"INSERT INTO {table_ref} ({columns}) SELECT {projection} FROM {view}"
+
+
+def replace_where_statement(
+    dataframe: Any, table_ref: str, condition: Column | str
+) -> Callable[[str], str]:
+    """Build ``INSERT INTO … REPLACE WHERE`` for ``DataFrameWriterV2.overwrite(condition)``.
+
+    Args:
+        dataframe: The source frame.
+        table_ref: The quoted target table.
+        condition: A Column, or a str that names a column, as PySpark reads it.
+
+    Returns:
+        The statement for a given source view name. The source names the frame's columns in
+        frame order; the engine binds them to the table by name, as Spark's V2 writer does,
+        so a column the frame lacks is NULL and an extra one refuses ``EXTRA_COLUMNS``.
+
+    Raises:
+        PySparkTypeError: ``NOT_COLUMN_OR_STR`` when ``condition`` is neither.
+    """
+    from repark.spark.column import Column
+    from repark.spark.functions import col
+
+    if not isinstance(condition, (Column, str)):
+        kind = type(condition).__name__
+        raise PySparkTypeError(
+            f"[NOT_COLUMN_OR_STR] Argument `col` should be a Column or str, got {kind}.",
+            errorClass="NOT_COLUMN_OR_STR",
+            messageParameters={"arg_name": "col", "arg_type": kind},
+        )
+    predicate = col(condition) if isinstance(condition, str) else condition
+    columns = ", ".join(_quote_ident(column) for column in dataframe.columns)
+    head = f"INSERT INTO {table_ref} REPLACE WHERE {predicate.sql_expr_part()}"
+    return lambda view: f"{head} SELECT {columns} FROM {view}"
 
 
 def _matched_sources(source_by_case: dict[str, str], present: list[str]) -> list[str]:

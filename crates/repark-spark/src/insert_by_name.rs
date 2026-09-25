@@ -346,6 +346,86 @@ async fn projection_is_empty(
     Ok(batches.iter().all(|batch| batch.num_rows() == 0))
 }
 
+pub(crate) async fn by_name_source_query(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    catalog_name: &str,
+    table: &iceberg::table::Table,
+    source: &Query,
+) -> Result<Box<Query>> {
+    let case_sensitive = case_sensitive_insert(ctx);
+    let source_names = probe_source_names(
+        ctx,
+        catalogs,
+        source,
+        case_sensitive,
+        repark_iceberg::write::accepts_any_schema(table),
+    )
+    .await?;
+    let table_display = display_table_name(catalog_name, table);
+    source_names::refuse_underived(table, &source_names, &table_display, case_sensitive)?;
+    let fields = schema_fields(table);
+    let mapping = name_mapping(&fields, &source_names, &table_display, case_sensitive)?;
+    nested::refuse_nested_mismatch(
+        ctx,
+        catalogs,
+        table,
+        source,
+        &mapping,
+        &table_display,
+        case_sensitive,
+    )
+    .await?;
+    let names: Vec<String> = fields.into_iter().map(|(name, _)| name).collect();
+    parse_projection_query(&null_filled_projection(
+        source,
+        &names,
+        &source_names,
+        &mapping,
+    ))
+}
+
+fn schema_fields(table: &iceberg::table::Table) -> Vec<(String, bool)> {
+    table
+        .metadata()
+        .current_schema()
+        .as_struct()
+        .fields()
+        .iter()
+        .map(|field| (field.name.clone(), field.required))
+        .collect()
+}
+
+fn name_mapping(
+    match_fields: &[(String, bool)],
+    source_names: &[SourceName],
+    table_display: &str,
+    case_sensitive: bool,
+) -> Result<Vec<Option<usize>>> {
+    let match_names: Vec<String> = match_fields.iter().map(|(name, _)| name.clone()).collect();
+    let mapping =
+        match_source_to_target(&match_names, source_names, table_display, case_sensitive)?;
+    for ((name, required), slot) in match_fields.iter().zip(mapping.iter()) {
+        if slot.is_none() && *required {
+            return Err(cannot_find_data(table_display, name));
+        }
+    }
+    Ok(mapping)
+}
+
+fn null_filled_projection(
+    source: &Query,
+    names: &[String],
+    source_names: &[SourceName],
+    mapping: &[Option<usize>],
+) -> String {
+    let fills: Vec<TargetFill> = mapping
+        .iter()
+        .map(|slot| slot.map_or(TargetFill::Null, TargetFill::Source))
+        .collect();
+    build_projection_sql(source, names, source_names, &fills)
+}
+
 fn plan_name_projection(
     table: &iceberg::table::Table,
     insert: &datafusion::sql::sqlparser::ast::Insert,
@@ -354,14 +434,7 @@ fn plan_name_projection(
     table_display: &str,
     case_sensitive: bool,
 ) -> Result<(String, Vec<StaticColumn>)> {
-    let fields: Vec<(String, bool)> = table
-        .metadata()
-        .current_schema()
-        .as_struct()
-        .fields()
-        .iter()
-        .map(|field| (field.name.clone(), field.required))
-        .collect();
+    let fields = schema_fields(table);
     let static_columns = static_partition_columns(table, insert, case_sensitive)?;
     for name in source_names {
         if let Some(found) = static_columns.iter().find(|static_column| {
@@ -379,14 +452,7 @@ fn plan_name_projection(
         })
         .cloned()
         .collect();
-    let match_names: Vec<String> = match_fields.iter().map(|(name, _)| name.clone()).collect();
-    let mapping =
-        match_source_to_target(&match_names, source_names, table_display, case_sensitive)?;
-    for ((name, required), slot) in match_fields.iter().zip(mapping.iter()) {
-        if slot.is_none() && *required {
-            return Err(cannot_find_data(table_display, name));
-        }
-    }
+    let mapping = name_mapping(&match_fields, source_names, table_display, case_sensitive)?;
     if !insert.overwrite && !static_columns.is_empty() {
         return Ok((
             build_static_append_projection(
@@ -400,15 +466,9 @@ fn plan_name_projection(
             static_columns,
         ));
     }
-    let fills: Vec<TargetFill> = mapping
-        .iter()
-        .map(|slot| match slot {
-            Some(index) => TargetFill::Source(*index),
-            None => TargetFill::Null,
-        })
-        .collect();
+    let match_names: Vec<String> = match_fields.into_iter().map(|(name, _)| name).collect();
     Ok((
-        build_projection_sql(source, &match_names, source_names, &fills),
+        null_filled_projection(source, &match_names, source_names, &mapping),
         static_columns,
     ))
 }
@@ -908,6 +968,7 @@ pub(crate) fn token_span_offsets(
 }
 
 pub(crate) mod evolution;
+mod nested;
 mod source_names;
 pub(crate) mod spark_names;
 

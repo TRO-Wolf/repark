@@ -201,3 +201,16 @@ U8 WRITE-SQL PR1 (2026-09-24): `evolution.rs` `routes_positional_by_name` keeps 
 `Field 9 not found in source schema` there (u6-write-refusals residue R-3 part b, appends).
 `spark_names.rs` `expression_name` is crate-visible for the PARTITION arity message.
 pins: u8-write-sql/C-008, C-010
+
+## U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001)
+
+- `nested.rs` — `refuse_nested_mismatch` plans the source once (only when the table has a
+  struct column) and walks each name-bound column's struct type against the table's:
+  a table sub-field the source lacks refuses `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA`
+  with the dotted back-quoted path (`` `s`.`b` ``), checked in table order and depth first,
+  before any extra; a source sub-field the table lacks refuses
+  `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS` (`Cannot write extra fields `c` to the
+  struct `s``). Names fold by `spark.sql.caseSensitive`. Only `by_name_source_query` (the
+  `overwrite(condition)` door) calls it. In-file units pin the missing, extra, reordered and
+  case-folded shapes. Structs inside lists and maps are not walked.
+  pins: u7-write-df-2/C-013
