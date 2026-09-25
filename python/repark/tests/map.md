@@ -5005,7 +5005,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   both engines leave equal sort orders, default ids, and distribution properties, and the same
   DDL + overwrite over the same seed commits the same row set per partition value on both.
   Round 2 (2026-09-06): the transform-sort DDL refusal committing nothing (the
-  WRITE-ORDER-TRANSFORM-1 red-when-fixed pin), the dotted `(st.a)` DDL transition on v2 and
+  WRITE-ORDER-TRANSFORM-1 red-when-fixed pin; flipped 2026-09-24 by WO U5 PR2b to
+  `test_write_order_transform_sort_lands_the_measured_order`, which reads `bucket[4]` on
+  source 1, then `day` on source 4, with `range`), the dotted `(st.a)` DDL transition on v2 and
   v3 over a struct seed, nested-monotone overwrite files, and the live dotted-order metadata
   equality on both versions.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010

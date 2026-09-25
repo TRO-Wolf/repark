@@ -1229,6 +1229,17 @@ pins: rp-4-fork-repin/C-005, C-006
   module, not an `alter.rs` arm, because that file sits at its exact ceiling. Pins:
   [tests/alter_write_order.rs](tests/alter_write_order.rs).
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **WO U5 PR2b (2026-09-24):** transform terms land (D-WRITE-ORDERED-TRANSFORM).
+  `parse_write_order_term` splits each `order_list_segments` segment. A `name(…)` segment is a
+  transform term, checked in the order of Spark's `Spark3Util.toIcebergTerm`: zorder first
+  (`Term must be unbound`), then exactly one column reference, then the name switch (bucket and
+  truncate take the first integer argument through `findWidth`'s rules; year/month/day/hour
+  take their plural, `date` and `date_hour` names). Anything else is `Transform is not
+  supported: <term>`. The IllegalArgumentException and UnsupportedOperationException texts use
+  the `repark_core` markers so the facade raises Spark's classes. The fork binds the source
+  type and answers Java's `Cannot bind: …` text. Every other segment keeps
+  `parse_order_segment`, so the identity forms are unchanged. Pins:
+  [tests/alter_write_order_transform.rs](tests/alter_write_order_transform.rs).
 - `namespace_ddl/` — the table-lifecycle work `namespace_ddl.rs` delegates; see
   [namespace_ddl/map.md](namespace_ddl/map.md). `purge.rs` holds the `DROP TABLE … PURGE`
   reachable-file sweep and the `gc.enabled` gate (**IPI-21**, 2026-09-20); `execute_drop_table`
@@ -1261,9 +1272,12 @@ pins: rp-4-fork-repin/C-005, C-006
   (`RDF-SORT-TRANSFORM-1`); reusing the ALTER door's wording would have mis-stated which door
   refused. The ALTER half of the split — `WRITE ORDERED BY (zorder(id))` refusing with no
   commit — is pinned by
-  `tests/alter_write_order.rs::write_order_zorder_term_refuses_and_commits_nothing`.
+  `tests/alter_write_order_transform.rs::write_ordered_by_transform_refusals_match_spark_and_commit_nothing`
+  (Spark's `Term must be unbound` since WO U5 PR2b, 2026-09-24). `order_list_segments` hands the
+  ALTER door the raw segments (it parses transform terms itself); `Sig::Minus` carries a
+  leading `-` so a negative width renders as Spark does.
   pins: ice-rdf-sort-parse-1/C-001, C-002, C-003,
-  tests/alter_write_order.rs::write_order_zorder_term_refuses_and_commits_nothing
+  tests/alter_write_order_transform.rs::write_ordered_by_transform_refusals_match_spark_and_commit_nothing
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:
   matching/no-location requests stay idempotent; contradictory `LOCATION` fails loud naming both

@@ -8,6 +8,7 @@ mod common;
 mod alter;
 mod alter_view_routing;
 mod alter_write_order;
+mod alter_write_order_transform;
 mod apply_partitioning;
 mod branch_ops;
 mod branch_read_schema;

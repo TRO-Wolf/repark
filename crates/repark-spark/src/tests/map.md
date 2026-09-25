@@ -248,6 +248,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `alter.rs::alter_unsupported_forms_refuse_loud` in the same unit (`tests/alter.rs`
   1436→1397) — the forms execute now, so the refusal pin would fail.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **WO U5 PR2b (2026-09-24):** the transform and zorder refusal pins moved to
+  `alter_write_order_transform.rs`, flipped to the landed behavior.
+- [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
+  (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
+  the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;
+  `LOCALLY` leaves the distribution unset and `DISTRIBUTED BY PARTITION` sets `hash`. The
+  refusal table pins full text and class (IllegalArgument, NotImplemented, the fork's
+  `Cannot bind`), and nothing commits. A plain `INSERT` after `bucket(4, id)` stamps order 1
+  and reads back in bucket order.
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
   `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
   level-order struct ids (`s` 5, `s.a` 6, `s.b` 7, `last-column-id` 7), the kept `COMMENT`, the

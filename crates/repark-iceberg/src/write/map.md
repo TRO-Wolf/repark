@@ -861,6 +861,9 @@ repark-core's error map.
   list resets the default to the unsorted order 0 (the fork dedups it, so no order is appended),
   and an identical order reuses its id the way Spark's sequence does. Return `iceberg::Result`.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
+  **WO U5 PR2b (2026-09-24):** `WriteSortField` carries a `Transform`, and every field goes
+  through the fork's `ReplaceSortOrderAction::sort_by` (RP-46), so a transform term lands with
+  the fork's void, width and bind checks. Identity fields pass `Transform::Identity`.
 - `format_version.rs` — **V3-10:** `set_properties_and_format_version` folds the fork's
   `UpgradeFormatVersionAction` and `UpdatePropertiesAction` into ONE transaction, so an ALTER
   carrying `format-version` beside another key is one metadata commit as it is on Spark; nothing

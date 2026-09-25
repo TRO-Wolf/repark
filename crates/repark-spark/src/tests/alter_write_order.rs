@@ -383,54 +383,6 @@ async fn write_ordered_by_bad_dotted_name_refuses_and_commits_nothing() {
 }
 
 #[tokio::test]
-async fn write_order_transform_sort_refuses_as_fork_ceiling() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    create_write_target(&ctx, &catalogs, "t").await;
-    let error = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.t WRITE ORDERED BY (bucket(4, id))",
-    )
-    .await
-    .expect_err("transform sort fields refuse");
-    assert!(error.to_string().contains("bucket"), "{error}");
-    let table = load_write_target(&catalogs, "t").await;
-    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
-}
-
-#[tokio::test]
-async fn write_order_zorder_term_refuses_and_commits_nothing() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    create_write_target(&ctx, &catalogs, "t").await;
-    let before = load_write_target(&catalogs, "t").await;
-    let snapshots_before = before.metadata().snapshots().count();
-    let error = execute(
-        &ctx,
-        &catalogs,
-        "ALTER TABLE ice.sales.t WRITE ORDERED BY (zorder(id))",
-    )
-    .await
-    .expect_err("a zorder term refuses on the ALTER door");
-    assert!(
-        matches!(error, DataFusionError::NotImplemented(_)),
-        "got: {error:?}"
-    );
-    assert_eq!(
-        error.to_string(),
-        concat!(
-            "This feature is not implemented: ALTER TABLE WRITE ORDERED BY transform `zorder(…)` ",
-            "is not supported yet — the fork's sort-order action only models identity sort fields"
-        )
-    );
-    let table = load_write_target(&catalogs, "t").await;
-    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
-    assert_eq!(table.metadata().default_sort_order_id(), 0);
-    assert_eq!(table.metadata().snapshots().count(), snapshots_before);
-}
-
-#[tokio::test]
 async fn write_order_parser_ignores_other_statements() {
     assert!(
         crate::alter_write_order::try_parse_write_order_ddl(

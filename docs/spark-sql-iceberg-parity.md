@@ -8162,7 +8162,18 @@ the pin rather than obeying it.
   `none` with the default reset). The write path honors both halves: `none` skips the hash
   distribution rule, and a declared default order sorts each writer's stream. `CREATE TABLE …
   WRITE ORDERED BY` is a parse error on **both** engines, so the create arm is still not a
-  divergence.
+  divergence. **Transform terms FIXED 2026-09-24 (WO U5 PR2b, cell D-WRITE-ORDERED-TRANSFORM):**
+  `WRITE ORDERED BY bucket(4, id), days(ts) DESC NULLS FIRST` lands `[bucket[4] id asc
+  nulls-first], [day ts desc nulls-first]` with `write.distribution-mode = range`, as Spark
+  does. The argument order is free (`bucket(id, 4)`, `truncate(s, 2)`), the plural, singular,
+  `date` and `date_hour` names map to year/month/day/hour, `identity(id)` is identity, DESC
+  defaults to nulls-last and duplicates stay. The refusals answer Spark's measured class and
+  text (`Transform is not supported: void(id)`, `Term must be unbound`, `Unsupported width for
+  transform: bucket(0, id)`, `Cannot convert transform with more than one column reference: …`,
+  `Cannot find width for transform: …`, and the fork's `Cannot bind: day cannot transform long
+  values from 'id'`) and commit nothing. Residue: an unknown column in a term keeps RePark's
+  `Cannot find field nope in table schema`, where Spark says `Cannot find field 'nope' in
+  struct: struct<…>`.
 - **Apache Spark** — sets the table's write order. *(oracle: live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-03; the five-form matrix re-measured 2026-09-06.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-write-ordered-by]`
@@ -11154,7 +11165,12 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (AGENTS.md rule 3). Pin (plain, passing):
   `python/repark/tests/test_ice_sorted_insert_2.py::test_predicate_update_sorts_and_stamps_like_spark`
   pins: ice-sorted-insert-1/C-009
-- **WRITE-ORDER-TRANSFORM-1** — surfaced 2026-09-06 (WRITE-ORDER-DIST-1 round 2). Spark
+- **WRITE-ORDER-TRANSFORM-1** — **DDL half FIXED 2026-09-24 (WO U5 PR2b):** the ALTER lands
+  transform terms through the fork's `ReplaceSortOrderAction::sort_by` (RP-46); see V3-COV-5.
+  A plain `INSERT INTO` then sorts by the transformed value and stamps the order id
+  (`crates/repark-spark/src/tests/alter_write_order_transform.rs`); the RePark-owned write
+  paths keep the loud refusal below. The text that follows is the 2026-09-06 record.
+  Surfaced 2026-09-06 (WRITE-ORDER-DIST-1 round 2). Spark
   accepts transform sort fields: `WRITE ORDERED BY (bucket(4, id))` and `(days(ts))` land
   order 1 (`bucket[4]` on source id 1 / `day` on source id 4, `asc NULLS FIRST`), default 1,
   `write.distribution-mode = range`, identically on v2 and v3 (live Spark 4.1.2). RePark's DDL
@@ -11166,10 +11182,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   hardcodes `Transform::Identity` and `TableCommit`'s builder is `pub(crate)`, so no RePark-side
   commit path can land a transform sort field — support needs fork work plus DDL parse and
   per-writer sort on the transformed value. BACKLOG, stated here rather than silent.
-  Red-when-fixed pins (they assert today's refusal and red once the behavior lands): the DDL
-  refusal (`crates/repark-spark/src/tests/alter_write_order.rs` and
-  `python/repark/tests/test_write_order_dist_1.py::test_write_order_transform_sort_refuses_without_committing`)
-  and the write-path refusal
+  Red-when-fixed pins: the DDL refusal pins flipped on 2026-09-24
+  (`python/repark/tests/test_write_order_dist_1.py::test_write_order_transform_sort_lands_the_measured_order`);
+  the write-path refusal
   (`crates/repark-iceberg/src/write/distribution/sort_order_tests.rs::transform_sort_order_refuses_the_write_loud`).
   Measured 2026-09-17 (ICE-SORTED-INSERT-1, still open): a plain `INSERT INTO`
   a Spark-registered `days(ts), id` ordered table sorts day-major and stamps 1

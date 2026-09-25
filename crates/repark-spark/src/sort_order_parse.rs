@@ -16,6 +16,7 @@ pub(crate) enum Sig {
     RParen,
     Comma,
     String(String),
+    Minus,
     Other,
 }
 
@@ -52,6 +53,7 @@ pub(crate) fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
                 Token::LParen => Some(Sig::LParen),
                 Token::RParen => Some(Sig::RParen),
                 Token::Comma => Some(Sig::Comma),
+                Token::Minus => Some(Sig::Minus),
                 Token::SingleQuotedString(text) | Token::DoubleQuotedString(text) => {
                     Some(Sig::String(text))
                 }
@@ -106,6 +108,7 @@ pub(crate) fn render_sig_at(significant: &[Sig], index: usize) -> String {
         Some(Sig::RParen) => ")".into(),
         Some(Sig::Comma) => ",".into(),
         Some(Sig::String(text)) => format!("'{text}'"),
+        Some(Sig::Minus) => "-".into(),
         Some(Sig::Other) => "<other>".into(),
         None => "<eof>".into(),
     }
@@ -134,14 +137,13 @@ pub(crate) fn split_sig_comma_segments(tokens: &[Sig]) -> Vec<&[Sig]> {
     segments
 }
 
-pub(crate) fn parse_order_list(
+pub(crate) fn order_list_segments(
     significant: &[Sig],
     start: usize,
-) -> Result<(Vec<WriteOrderField>, usize), OrderParseError> {
+) -> Result<(Vec<&[Sig]>, usize), OrderParseError> {
     if !matches!(significant.get(start), Some(Sig::LParen)) {
         let segments = split_sig_comma_segments(&significant[start..]);
-        let fields = parse_order_segments(&segments)?;
-        return Ok((fields, significant.len()));
+        return non_empty(segments, significant.len());
     }
     let mut depth = 0_i32;
     let mut close = None;
@@ -160,8 +162,14 @@ pub(crate) fn parse_order_list(
     }
     let close = close.ok_or(OrderParseError::Unterminated)?;
     let segments = split_sig_comma_segments(&significant[start + 1..close]);
-    let fields = parse_order_segments(&segments)?;
-    Ok((fields, close + 1))
+    non_empty(segments, close + 1)
+}
+
+fn non_empty(segments: Vec<&[Sig]>, next: usize) -> Result<(Vec<&[Sig]>, usize), OrderParseError> {
+    if segments.is_empty() {
+        return Err(OrderParseError::Empty);
+    }
+    Ok((segments, next))
 }
 
 fn parse_order_segments(segments: &[&[Sig]]) -> Result<Vec<WriteOrderField>, OrderParseError> {
