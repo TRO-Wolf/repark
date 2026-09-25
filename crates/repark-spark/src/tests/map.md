@@ -256,6 +256,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   input '<EOF>'` / `','` / `')'` text and a `metadata_file_count` assertion, because every
   earlier head committed the order typed before a trailing comma.
   pins: ice-nested-evo-1/C-055
+- [u9_map.rs](u9_map.rs) — **WO U9-TYPES-1 (2026-09-25):** `map()` / `MAP()` is an empty
+  map of `Null` keys and values; a `MAP<STRING, INT>` column and a nested map column take
+  `map('k', 1)`, `map()`, `NULL` and `SELECT … map()` and read back with lookups.
+  pins: u9-types-1/C-006
 - [u9_timestamp_ltz.rs](u9_timestamp_ltz.rs) — **WO U9-TYPES-1 (2026-09-25):** a
   `TIMESTAMP_LTZ` column is `timestamptz` on v2 and v3, in a struct and at ADD COLUMN; it
   writes, filters on a `TIMESTAMP_LTZ '…'` literal and partitions by `days`; the typed literal

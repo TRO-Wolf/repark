@@ -841,6 +841,10 @@ pins: rp-4-fork-repin/C-005, C-006
   cell is left for the µs rule and widened like `INSERT … SELECT`. Both hooks return a
   non-insert plan without moving it. Rust tests: `tests/v3_timestamp_ns_door.rs`.
   pins: ice-tsns-sql-1/C-002, C-010
+- `keyword_lower.rs` — **WO U9-TYPES-1 (2026-09-25):** `lower_expression` rewrites an
+  unqualified zero-argument `map()` (no `OVER`, no `FILTER`) into
+  `map(make_array(), make_array())`, Spark's empty `map<void,void>` (cell `TY-MAP`).
+  pins: u9-types-1/C-006
 - `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):**
   Spark-only keyword lowerings onto registered kernels. `x RLIKE p` becomes
   `regexp_like(x, p)` (`NOT RLIKE` becomes `NOT regexp_like`); `CAST(x AS

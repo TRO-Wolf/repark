@@ -1,11 +1,11 @@
-"""WO U9-TYPES-1: MAP and TIMESTAMP_LTZ columns end to end, replayed against Spark 4.1.2.
+"""WO U9-TYPES-1: TIMESTAMP_LTZ and MAP columns end to end, replayed against Spark 4.1.2.
 
 Every step of ``u9_types_1_spark_oracle.json`` runs in order through the facade, one session per
 group, and its observation must equal Spark's measured answer. A step whose RePark answer is a
 dated residue carries ``residue = {id, repark}``; the replay holds RePark to that recorded answer,
 so a residue that moves reds. The generator is ``target/probe-u9-types-1/build_oracle.py``.
 
-pins: u9-types-1/C-001, C-002, C-003, C-005
+pins: u9-types-1/C-001, C-002, C-003, C-005, C-006, C-007, C-008
 """
 
 from __future__ import annotations

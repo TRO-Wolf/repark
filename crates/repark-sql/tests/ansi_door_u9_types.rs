@@ -54,3 +54,30 @@ async fn the_spark_timestamp_ltz_spelling_refuses_on_the_ansi_door() {
             .starts_with("ERR ")
     );
 }
+
+#[tokio::test]
+async fn the_ansi_empty_map_is_map_of_two_empty_arrays_and_the_spark_spelling_refuses() {
+    let (session, _dir) = door().await;
+    answer(
+        &session,
+        "CREATE TABLE ice.sales.m (id INT, c MAP(VARCHAR, INTEGER))",
+    )
+    .await;
+    assert_eq!(
+        answer(
+            &session,
+            "INSERT INTO ice.sales.m VALUES (0, MAP(ARRAY['k'], ARRAY[1])), \
+             (1, MAP(ARRAY[], ARRAY[]))"
+        )
+        .await,
+        "+-------+\n| count |\n+-------+\n| 2     |\n+-------+"
+    );
+    assert_eq!(
+        answer(&session, "SELECT id, c FROM ice.sales.m ORDER BY id").await,
+        "+----+--------+\n| id | c      |\n+----+--------+\n| 0  | {k: 1} |\n| 1  | {}     |\n+----+--------+"
+    );
+    assert_eq!(
+        answer(&session, "SELECT MAP() AS m").await,
+        "ERR Error during planning: Function 'map' expected at least one argument but received 0"
+    );
+}

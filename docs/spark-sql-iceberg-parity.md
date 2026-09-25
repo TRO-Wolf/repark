@@ -8566,6 +8566,30 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `crates/repark-spark/src/spark_rewrites/timestamp_ltz_literal.rs` (unit pins),
   `crates/repark-sql/tests/ansi_door_u9_types.rs`.
 
+### TY-MAP — the empty map literal `map()` refused, so a `MAP` column could not take it — **FIXED 2026-09-25 (WO U9-TYPES-1)**
+
+- **repark** — the Spark door reads an unqualified zero-argument `map()` as Spark's empty
+  `map<void,void>` (`{}`), so `INSERT … VALUES (0, map('k', 1)), (1, map())` into a
+  `MAP<STRING, INT>` column writes and reads back `[[0, [["k", 1]]], [1, []]]` as Spark does,
+  also through `INSERT … SELECT`, a typed `CAST`, a nested map value, `CASE`, `UNION ALL` and
+  `map_concat`. The rest of the measured `MAP` column surface (schema surfaces, lookups,
+  `element_at`, `map_keys` / `map_values`, `size`, map-to-map casts, DataFrame appends, `.files`
+  counts, `ADD COLUMN`, `ALTER COLUMN c.value TYPE`, struct and map values) already answered
+  as Spark and is now pinned. Before, `map()` raised `Function 'map' expected at least one
+  argument but received 0`. The ANSI door keeps `MAP(ARRAY[], ARRAY[])` and refuses `MAP()`.
+  Residues (ledger R-6..R-13, each held by its oracle record): maps compare and sort where
+  Spark refuses `INVALID_ORDERING_TYPE`; `CAST(<map> AS STRING)` refuses where Spark renders
+  `{k -> 1}`; two refusal texts differ only in rendering; invalid map values and map
+  partitioning refuse with DataFusion's / the fork's texts; `ALTER COLUMN c TYPE MAP<…>`
+  refuses; `c['k'].a` refuses; `map()` does not unify inside `coalesce`, `if`, `array` or a
+  `VALUES` table.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (77 steps in
+  `python/repark/tests/u9_types_1_spark_oracle.json`, group `map`; scoreboard cell `TY-MAP`,
+  replayed EQUAL).
+- **Pin** — `python/repark/tests/test_u9_types_1.py`, `crates/repark-spark/src/tests/u9_map.rs`,
+  `crates/repark-spark/src/keyword_lower.rs` (unit pin),
+  `crates/repark-sql/tests/ansi_door_u9_types.rs`.
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

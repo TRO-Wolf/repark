@@ -73,6 +73,7 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   types, refusal class/condition/SQLSTATE/text) equals Spark's, or its residue record when the
   step names one (the ledger's residue table is cross-checked). Group `ltz`: 85 steps, 74
   EQUAL. pins: u9-types-1/C-001, C-002, C-003, C-005
+  Group `map`: 77 steps, 60 EQUAL. pins: u9-types-1/C-006, C-007, C-008
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

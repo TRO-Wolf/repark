@@ -2000,6 +2000,2326 @@
      ]
     ]
    }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.m2 (id INT, c MAP<STRING, INT>) USING iceberg TBLPROPERTIES ('format-version'='2')",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.m2 VALUES (0, map('k', 1)), (1, map()), (2, NULL), (3, map('a', 2, 'b', NULL))",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     [
+      [
+       "k",
+       1
+      ]
+     ]
+    ],
+    [
+     1,
+     []
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       null
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/md",
+   "do": "md",
+   "table": "sc.ns.m2",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          3
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          "int"
+         ],
+         [
+          "value-id",
+          4
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/filter-notnull",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.m2 WHERE c IS NOT NULL",
+   "spark": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.m2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "map<string,int>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/describe",
+   "do": "describe",
+   "sql": "sc.ns.m2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "map<string,int>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/printschema",
+   "do": "printschema",
+   "sql": "SELECT * FROM sc.ns.m2",
+   "spark": "root\n |-- id: integer (nullable = true)\n |-- c: map (nullable = true)\n |    |-- key: string\n |    |-- value: integer (valueContainsNull = true)\n\n"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/dtypes",
+   "do": "dtypes",
+   "sql": "SELECT * FROM sc.ns.m2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "map<string,int>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/pytypes",
+   "do": "pytypes",
+   "sql": "SELECT c FROM sc.ns.m2 ORDER BY id",
+   "spark": [
+    [
+     "dict"
+    ],
+    [
+     "dict"
+    ],
+    [
+     "NoneType"
+    ],
+    [
+     "dict"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/where-key",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.m2 WHERE c['k'] = 1",
+   "spark": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/where-eq",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.m2 WHERE c = map('k', 1)",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = map(k, 1))\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 30;\n'Project ['id]\n+- 'Filter (c#646 = cast(map(k, 1) as map<string,int>))\n   +- SubqueryAlias sc.ns.m2\n      +- RelationV2[id#645, c#646] sc.ns.m2"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/order",
+   "do": "ordered",
+   "sql": "SELECT id FROM sc.ns.m2 ORDER BY c",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"c ASC NULLS FIRST\" due to data type mismatch: The `sortorder` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 33;\n'Project [id#647]\n+- 'Sort [c#648 ASC NULLS FIRST], true\n   +- Project [id#647, c#648]\n      +- SubqueryAlias sc.ns.m2\n         +- RelationV2[id#647, c#648] sc.ns.m2"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-6",
+    "repark": [
+     [
+      2
+     ],
+     [
+      1
+     ],
+     [
+      3
+     ],
+     [
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/lookup",
+   "do": "rows",
+   "sql": "SELECT id, c['k'], c['zz'] FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     1,
+     null
+    ],
+    [
+     1,
+     null,
+     null
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/element_at",
+   "do": "rows",
+   "sql": "SELECT id, element_at(c, 'k') FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     null
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/map_keys",
+   "do": "rows",
+   "sql": "SELECT id, map_keys(c), map_values(c) FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     [
+      "k"
+     ],
+     [
+      1
+     ]
+    ],
+    [
+     1,
+     [],
+     []
+    ],
+    [
+     2,
+     null,
+     null
+    ],
+    [
+     3,
+     [
+      "a",
+      "b"
+     ],
+     [
+      2,
+      null
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/size",
+   "do": "rows",
+   "sql": "SELECT id, size(c) FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     2
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/cast-string",
+   "do": "rows",
+   "sql": "SELECT id, CAST(c AS STRING) FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     "{k -> 1}"
+    ],
+    [
+     1,
+     "{}"
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     "{a -> 2, b -> null}"
+    ]
+   ],
+   "residue": {
+    "id": "R-7",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: Unsupported CAST from Map(\"key_value\": non-null Struct(\"key\": non-null Utf8, \"value\": Int32), unsorted) to Utf8View"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/cast-from-string",
+   "do": "rows",
+   "sql": "SELECT CAST('{k -> 1}' AS MAP<STRING, INT>)",
+   "spark": [
+    [
+     "cond",
+     "DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"{k -> 1}\" due to data type mismatch: cannot cast \"STRING\" to \"MAP<STRING, INT>\". SQLSTATE: 42K09; line 1 pos 7;\n'Project [unresolvedalias(cast({k -> 1} as map<string,int>))]\n+- OneRowRelation"
+    ],
+    [
+     "state",
+     "42K09"
+    ]
+   ],
+   "residue": {
+    "id": "R-8",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] Cannot resolve \"Utf8(\"{k -> 1}\")\" due to data type mismatch: cannot cast \"STRING\" to \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/cast-map-bigint",
+   "do": "rows",
+   "sql": "SELECT id, CAST(c AS MAP<STRING, BIGINT>) FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     [
+      [
+       "k",
+       1
+      ]
+     ]
+    ],
+    [
+     1,
+     []
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       null
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/insert-select",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.m2 SELECT 4, map('x', 9)",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/insert-select-empty",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.m2 SELECT 5, map()",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/insert-empty-typed",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.m2 SELECT 6, CAST(map() AS MAP<STRING, INT>)",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/insert-wrong-type",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.m2 VALUES (7, map(1, 'a'))",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`m2`: Cannot safely cast `c`.`value` \"STRING\" to \"INT\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-9",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast string 'a' to value of Int32 type"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/insert-null-key",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.m2 VALUES (8, map(NULL, 1))",
+   "spark": [
+    [
+     "cond",
+     "INVALID_INLINE_TABLE.FAILED_SQL_EXPRESSION_EVALUATION"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INVALID_INLINE_TABLE.FAILED_SQL_EXPRESSION_EVALUATION] Invalid inline table. Failed to evaluate the SQL expression \"map(NULL, 1)\". Please check your syntax and ensure all required tables and columns are available. SQLSTATE: 42000; line 1 pos 21"
+    ],
+    [
+     "state",
+     "42000"
+    ]
+   ],
+   "residue": {
+    "id": "R-9",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Execution error: map key cannot be null"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/insert-dup-key",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.m2 VALUES (9, map('d', 1, 'd', 2))",
+   "spark": [
+    [
+     "cond",
+     "INVALID_INLINE_TABLE.FAILED_SQL_EXPRESSION_EVALUATION"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INVALID_INLINE_TABLE.FAILED_SQL_EXPRESSION_EVALUATION] Invalid inline table. Failed to evaluate the SQL expression \"map(d, 1, d, 2)\". Please check your syntax and ensure all required tables and columns are available. SQLSTATE: 42000; line 1 pos 21"
+    ],
+    [
+     "state",
+     "42000"
+    ]
+   ],
+   "residue": {
+    "id": "R-9",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "datafusion engine error: Execution error: map key must be unique, duplicate key found: d"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/after-inserts",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     [
+      [
+       "k",
+       1
+      ]
+     ]
+    ],
+    [
+     1,
+     []
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       null
+      ]
+     ]
+    ],
+    [
+     4,
+     [
+      [
+       "x",
+       9
+      ]
+     ]
+    ],
+    [
+     5,
+     []
+    ],
+    [
+     6,
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/dfwrite",
+   "do": "append",
+   "table": "sc.ns.m2",
+   "schema": "id INT, c MAP<STRING, INT>",
+   "rows": [
+    [
+     10,
+     {
+      "map": [
+       [
+        "w",
+        5
+       ]
+      ]
+     }
+    ],
+    [
+     11,
+     {
+      "map": []
+     }
+    ],
+    [
+     12,
+     null
+    ]
+   ],
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/after-dfwrite",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.m2 WHERE id >= 10",
+   "spark": [
+    [
+     10,
+     [
+      [
+       "w",
+       5
+      ]
+     ]
+    ],
+    [
+     11,
+     []
+    ],
+    [
+     12,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/files",
+   "do": "rows",
+   "sql": "SELECT record_count, value_counts, null_value_counts, lower_bounds IS NULL FROM sc.ns.m2.files",
+   "spark": [
+    [
+     1,
+     [
+      [
+       1,
+       1
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ]
+     ],
+     false
+    ],
+    [
+     1,
+     [
+      [
+       1,
+       1
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ]
+     ],
+     false
+    ],
+    [
+     1,
+     [
+      [
+       1,
+       1
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ]
+     ],
+     false
+    ],
+    [
+     3,
+     [
+      [
+       1,
+       3
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ]
+     ],
+     false
+    ],
+    [
+     4,
+     [
+      [
+       1,
+       4
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ]
+     ],
+     false
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/partition",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.m2 ADD PARTITION FIELD c",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.iceberg.exceptions.ValidationException: Cannot partition by non-primitive source field: map<string, int>"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-10",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Cannot partition by non-primitive source field: 'map'."
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/create-partitioned",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.mp (id INT, c MAP<STRING, INT>) USING iceberg PARTITIONED BY (c)",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.iceberg.exceptions.ValidationException: Cannot partition by non-primitive source field: map<string, int>"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-10",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Cannot partition by non-primitive source field: 'map'."
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/addcol",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.m2 ADD COLUMN c2 MAP<STRING, STRING>",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/addcol-md",
+   "do": "md",
+   "table": "sc.ns.m2",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          3
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          "int"
+         ],
+         [
+          "value-id",
+          4
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ],
+      [
+       [
+        "id",
+        5
+       ],
+       [
+        "name",
+        "c2"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          6
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          "string"
+         ],
+         [
+          "value-id",
+          7
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/addcol-read",
+   "do": "rows",
+   "sql": "SELECT id, c2 FROM sc.ns.m2",
+   "spark": [
+    [
+     0,
+     null
+    ],
+    [
+     1,
+     null
+    ],
+    [
+     10,
+     null
+    ],
+    [
+     11,
+     null
+    ],
+    [
+     12,
+     null
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     null
+    ],
+    [
+     5,
+     null
+    ],
+    [
+     6,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/alter-value-type",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.m2 ALTER COLUMN c.value TYPE BIGINT",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v2/alter-value-md",
+   "do": "md",
+   "table": "sc.ns.m2",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          3
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          "long"
+         ],
+         [
+          "value-id",
+          4
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ],
+      [
+       [
+        "id",
+        5
+       ],
+       [
+        "name",
+        "c2"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          6
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          "string"
+         ],
+         [
+          "value-id",
+          7
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/alter-map-type",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.m2 ALTER COLUMN c TYPE MAP<STRING, BIGINT>",
+   "spark": "ok",
+   "residue": {
+    "id": "R-11",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: ALTER COLUMN `c` TYPE to a non-primitive is not supported"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/alter-key-type",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.m2 ALTER COLUMN c.key TYPE BIGINT",
+   "spark": [
+    [
+     "cond",
+     "NOT_SUPPORTED_CHANGE_COLUMN"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported for changing `sc`.`ns`.`m2`'s column `c`.`key` with type \"STRING\" to `c`.`key` with type \"BIGINT\". SQLSTATE: 0A000; line 1 pos 0;\nAlterColumns [altercolumnspec(resolvedfieldname(c, StructField(key,StringType,false)), Some(LongType), None, None, None, None, false)]\n+- ResolvedTable org.apache.iceberg.spark.SparkCatalog@242e90c5, ns.m2, sc.ns.m2, [id#839, c#840, c2#841]"
+    ],
+    [
+     "state",
+     "0A000"
+    ]
+   ],
+   "residue": {
+    "id": "R-8",
+    "repark": [
+     [
+      "cond",
+      "NOT_SUPPORTED_CHANGE_COLUMN"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [NOT_SUPPORTED_CHANGE_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported for changing `sc`.`ns`.`m2`'s column `c`.`key` with type \"STRING\" to `c`.`key` with type \"BIGINT\". SQLSTATE: 0A000"
+     ],
+     [
+      "state",
+      "0A000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/v2/after-alter",
+   "do": "rows",
+   "sql": "SELECT id, c FROM sc.ns.m2 WHERE id < 2",
+   "spark": [
+    [
+     0,
+     [
+      [
+       "k",
+       1
+      ]
+     ]
+    ],
+    [
+     1,
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v2/after-alter-cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.m2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "map<string,bigint>"
+    ],
+    [
+     "c2",
+     "map<string,string>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v3/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.m3 (id INT, c MAP<STRING, INT>) USING iceberg TBLPROPERTIES ('format-version'='3')",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v3/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.m3 VALUES (0, map('k', 1)), (1, map()), (2, NULL), (3, map('a', 2, 'b', NULL))",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/v3/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.m3",
+   "spark": [
+    [
+     0,
+     [
+      [
+       "k",
+       1
+      ]
+     ]
+    ],
+    [
+     1,
+     []
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     3,
+     [
+      [
+       "a",
+       2
+      ],
+      [
+       "b",
+       null
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v3/md",
+   "do": "md",
+   "table": "sc.ns.m3",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          3
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          "int"
+         ],
+         [
+          "value-id",
+          4
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/v3/filter-notnull",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.m3 WHERE c IS NOT NULL",
+   "spark": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/struct/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.ms (id INT, c MAP<STRING, STRUCT<a: INT, b: STRING>>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/struct/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ms VALUES (0, map('k', named_struct('a', 1, 'b', 'x'))), (1, map())",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/struct/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.ms",
+   "spark": [
+    [
+     0,
+     [
+      [
+       "k",
+       [
+        [
+         "a",
+         1
+        ],
+        [
+         "b",
+         "x"
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     1,
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/struct/field",
+   "do": "rows",
+   "sql": "SELECT id, c['k'].a FROM sc.ns.ms",
+   "spark": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-12",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "UnsupportedOperationException"
+     ],
+     [
+      "msg",
+      "This feature is not implemented: Dot access not supported for non-string expr: Identifier(Ident { value: \"a\", quote_style: None, span: Span(Location(1,19)..Location(1,20)) })"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/struct/cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.ms",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "map<string,struct<a:int,b:string>>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/struct/describe",
+   "do": "describe",
+   "sql": "sc.ns.ms",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "map<string,struct<a:int,b:string>>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/struct/md",
+   "do": "md",
+   "table": "sc.ns.ms",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          3
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          [
+           [
+            "fields",
+            [
+             [
+              [
+               "id",
+               5
+              ],
+              [
+               "name",
+               "a"
+              ],
+              [
+               "required",
+               false
+              ],
+              [
+               "type",
+               "int"
+              ]
+             ],
+             [
+              [
+               "id",
+               6
+              ],
+              [
+               "name",
+               "b"
+              ],
+              [
+               "required",
+               false
+              ],
+              [
+               "type",
+               "string"
+              ]
+             ]
+            ]
+           ],
+           [
+            "type",
+            "struct"
+           ]
+          ]
+         ],
+         [
+          "value-id",
+          4
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/nested/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.mn (id INT, c MAP<STRING, MAP<STRING, INT>>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/nested/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.mn VALUES (0, map('k', map('j', 1))), (1, map('e', map()))",
+   "spark": "ok"
+  },
+  {
+   "group": "map",
+   "key": "map/nested/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.mn",
+   "spark": [
+    [
+     0,
+     [
+      [
+       "k",
+       [
+        [
+         "j",
+         1
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       "e",
+       []
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/nested/lookup",
+   "do": "rows",
+   "sql": "SELECT id, c['k']['j'] FROM sc.ns.mn",
+   "spark": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/nested/cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.mn",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "map<string,map<string,int>>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/nested/md",
+   "do": "md",
+   "table": "sc.ns.mn",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          3
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          [
+           [
+            "key",
+            "string"
+           ],
+           [
+            "key-id",
+            5
+           ],
+           [
+            "type",
+            "map"
+           ],
+           [
+            "value",
+            "int"
+           ],
+           [
+            "value-id",
+            6
+           ],
+           [
+            "value-required",
+            false
+           ]
+          ]
+         ],
+         [
+          "value-id",
+          4
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/empty",
+   "do": "rows",
+   "sql": "SELECT map()",
+   "spark": [
+    [
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/empty-upper",
+   "do": "rows",
+   "sql": "SELECT MAP() AS m, size(MAP()) AS n",
+   "spark": [
+    [
+     [],
+     0
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/empty-cols",
+   "do": "cols",
+   "sql": "SELECT map() AS m",
+   "spark": [
+    [
+     "m",
+     "map<void,void>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/empty-size",
+   "do": "rows",
+   "sql": "SELECT size(map())",
+   "spark": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/k1",
+   "do": "cols",
+   "sql": "SELECT map('k', 1) AS m",
+   "spark": [
+    [
+     "m",
+     "map<string,int>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/empty-array-cols",
+   "do": "cols",
+   "sql": "SELECT array() AS a, map() AS m",
+   "spark": [
+    [
+     "a",
+     "array<void>"
+    ],
+    [
+     "m",
+     "map<void,void>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/coalesce",
+   "do": "rows",
+   "sql": "SELECT coalesce(map(), map('a', 1)) AS m",
+   "spark": [
+    [
+     []
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: Execution error: Function 'coalesce' user-defined coercion failed with: Execution error: Fail to find the coerced type, errors: Execution error: Expect to get struct but got Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted). No function matches the given name and argument types 'coalesce(Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted), Map(\"entries\": non-null Struct(\"key\": non-null Utf8, \"value\": Int64), unsorted))'. You might need to add explicit type casts.\n\tCandidate functions:\n\tcoalesce(UserDefined)"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/literal/coalesce-cols",
+   "do": "cols",
+   "sql": "SELECT coalesce(map(), map('a', 1)) AS m",
+   "spark": [
+    [
+     "m",
+     "map<string,int>"
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: Execution error: Function 'coalesce' user-defined coercion failed with: Execution error: Fail to find the coerced type, errors: Execution error: Expect to get struct but got Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted). No function matches the given name and argument types 'coalesce(Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted), Map(\"entries\": non-null Struct(\"key\": non-null Utf8, \"value\": Int64), unsorted))'. You might need to add explicit type casts.\n\tCandidate functions:\n\tcoalesce(UserDefined)"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/literal/case",
+   "do": "rows",
+   "sql": "SELECT CASE WHEN true THEN map() ELSE map('a', 1) END AS m",
+   "spark": [
+    [
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/case-cols",
+   "do": "cols",
+   "sql": "SELECT CASE WHEN true THEN map() ELSE map('a', 1) END AS m",
+   "spark": [
+    [
+     "m",
+     "map<string,int>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/if",
+   "do": "rows",
+   "sql": "SELECT if(true, map(), map('a', 1)) AS m",
+   "spark": [
+    [
+     []
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: Execution error: Function 'if' user-defined coercion failed with: Execution error: Fail to find the coerced type, errors: Execution error: Expect to get struct but got Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted). No function matches the given name and argument types 'if(Boolean, Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted), Map(\"entries\": non-null Struct(\"key\": non-null Utf8, \"value\": Int64), unsorted))'. You might need to add explicit type casts.\n\tCandidate functions:\n\tif(UserDefined)"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/literal/union",
+   "do": "rows",
+   "sql": "SELECT map('a', 1) AS m UNION ALL SELECT map()",
+   "spark": [
+    [
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ],
+    [
+     []
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/union-cols",
+   "do": "cols",
+   "sql": "SELECT map('a', 1) AS m UNION ALL SELECT map()",
+   "spark": [
+    [
+     "m",
+     "map<string,int>"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/array-of-maps",
+   "do": "rows",
+   "sql": "SELECT array(map(), map('a', 1)) AS m",
+   "spark": [
+    [
+     [
+      [],
+      [
+       [
+        "a",
+        1
+       ]
+      ]
+     ]
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: Execution error: Function 'array' user-defined coercion failed with: Error during planning: Failed to unify argument types of array: [Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted), Map(\"entries\": non-null Struct(\"key\": non-null Utf8, \"value\": Int64), unsorted)]. No function matches the given name and argument types 'array(Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted), Map(\"entries\": non-null Struct(\"key\": non-null Utf8, \"value\": Int64), unsorted))'. You might need to add explicit type casts.\n\tCandidate functions:\n\tarray(UserDefined)"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/literal/values",
+   "do": "rows",
+   "sql": "SELECT * FROM VALUES (map('a', 1)), (map()) AS t(m)",
+   "spark": [
+    [
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ],
+    [
+     []
+    ]
+   ],
+   "residue": {
+    "id": "R-13",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: Inconsistent data type across values list at row 1 column 0. Was Map(\"entries\": non-null Struct(\"key\": non-null Utf8, \"value\": Int64), unsorted) but found Map(\"entries\": non-null Struct(\"key\": non-null Null, \"value\": Null), unsorted)"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "map",
+   "key": "map/literal/map-concat",
+   "do": "rows",
+   "sql": "SELECT map_concat(map(), map('a', 1)) AS m",
+   "spark": [
+    [
+     [
+      [
+       "a",
+       1
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/pytypes",
+   "do": "pytypes",
+   "sql": "SELECT map() AS m, map('a', 1) AS n",
+   "spark": [
+    [
+     "dict",
+     "dict"
+    ]
+   ]
+  },
+  {
+   "group": "map",
+   "key": "map/literal/cast-typed",
+   "do": "cols",
+   "sql": "SELECT CAST(map() AS MAP<STRING, INT>) AS m",
+   "spark": [
+    [
+     "m",
+     "map<string,int>"
+    ]
+   ]
   }
  ]
 }

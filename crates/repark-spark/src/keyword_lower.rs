@@ -77,8 +77,33 @@ fn lower_timestamp_ns_cast(node: &mut Expr) -> bool {
     true
 }
 
+fn is_empty_map_call(node: &Expr) -> bool {
+    let Expr::Function(function) = node else {
+        return false;
+    };
+    let empty_arguments = match &function.args {
+        FunctionArguments::List(list) => list.args.is_empty() && list.clauses.is_empty(),
+        FunctionArguments::None | FunctionArguments::Subquery(_) => false,
+    };
+    empty_arguments
+        && function.over.is_none()
+        && function.filter.is_none()
+        && function.name.0.len() == 1
+        && function.name.to_string().eq_ignore_ascii_case("map")
+}
+
 fn lower_expression(node: &mut Expr) {
     if lower_timestamp_ns_cast(node) {
+        return;
+    }
+    if is_empty_map_call(node) {
+        *node = function_call(
+            "map",
+            vec![
+                function_call("make_array", Vec::new()),
+                function_call("make_array", Vec::new()),
+            ],
+        );
         return;
     }
     if let Expr::RLike {
@@ -208,6 +233,19 @@ mod tests {
     fn not_rlike_lowers_to_not_regexp_like() {
         let text = lowered("SELECT 'abc' NOT RLIKE '^a' AS v").to_string();
         assert!(text.contains("NOT regexp_like('abc', '^a')"), "{text}");
+    }
+
+    #[test]
+    fn an_empty_map_call_lowers_to_a_map_of_two_empty_arrays() {
+        let text =
+            lowered("SELECT map() AS a, MAP() AS b, map('k', 1) AS c, s.map() AS d").to_string();
+        assert!(
+            text.contains("map(make_array(), make_array()) AS a")
+                && text.contains("map(make_array(), make_array()) AS b"),
+            "{text}"
+        );
+        assert!(text.contains("map('k', 1) AS c"), "{text}");
+        assert!(text.contains("s.map() AS d"), "{text}");
     }
 
     #[test]
