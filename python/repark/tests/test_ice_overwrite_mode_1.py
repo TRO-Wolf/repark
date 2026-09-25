@@ -100,10 +100,6 @@ def test_overwrite_cell_matches_spark(
         assert got["snapshots"] == want["snapshots"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="saveAsTable(overwrite) history is Spark's RTAS table replace, not this unit",
-)
 @pytest.mark.parametrize(("shape", "version"), RTAS_CELLS)
 def test_save_as_table_history_matches_spark(
     spark: ReparkSession, shape: OverwriteShape, version: int

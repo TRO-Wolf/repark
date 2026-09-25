@@ -169,13 +169,17 @@ def test_writerv2_overwrite_partitions_unpartitioned_replaces_the_table(
     assert still == [{"id": 5, "v": "z"}]
 
 
-def test_writerv2_option_branch_refuses(spark_v2: ReparkSession) -> None:
-    """option('branch', …) raises; Spark silently writes the default branch (EX-W2-3)."""
+def test_writerv2_option_branch_writes_the_default_branch(spark_v2: ReparkSession) -> None:
+    """option('branch', …) is ignored: the row lands on main and b1 keeps its seed (EX-W2-3)."""
     session = spark_v2
     session.sql("SELECT * FROM (VALUES (1,'a')) AS t(id, name)").writeTo(
         "local.ns.t_pin_br"
     ).create()
-    with pytest.raises(UnsupportedOperationException, match="branch"):
-        session.sql("SELECT * FROM (VALUES (3,'c')) AS t(id, name)").writeTo(
-            "local.ns.t_pin_br"
-        ).option("branch", "b1").append()
+    session.sql("ALTER TABLE local.ns.t_pin_br CREATE BRANCH b1")
+    session.sql("SELECT * FROM (VALUES (3,'c')) AS t(id, name)").writeTo(
+        "local.ns.t_pin_br"
+    ).option("branch", "b1").append()
+    main = session.sql("SELECT id, name FROM local.ns.t_pin_br ORDER BY id").to_arrow()
+    branch = session.sql("SELECT id, name FROM local.ns.t_pin_br.branch_b1").to_arrow()
+    assert main.to_pylist() == [{"id": 1, "name": "a"}, {"id": 3, "name": "c"}]
+    assert branch.to_pylist() == [{"id": 1, "name": "a"}]

@@ -167,7 +167,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   refusal class, condition and SQLSTATE. The recorder owns the shapes and the cell runner;
   the pin file replays every cell on the facade and asserts rows, Arrow types and history,
   or class plus condition token. The two `saveAsTable(overwrite)` shapes match rows only:
-  Spark's history there is an RTAS table replace, pinned as a strict xfail. The live tier
+  Spark's history there is an RTAS table replace, pinned as a strict xfail until U7 PR2
+  (2026-09-24) made the overwrite an RTAS; `test_save_as_table_history_matches_spark` now
+  passes plainly (u7-write-df-2 C-002). The live tier
   (`REPARK_PARITY_LIVE=1`) runs the recorder's `check` mode. Python's native `repark.sql`
   door has no Iceberg `PARTITION` overwrite shape, so the native-door cells are Rust pins in
   `crates/repark-sql`. Registry rows DML-1, ICE-OVERWRITE-MODE-1 and ICE-WRITE-OPTIONS-1
@@ -877,6 +879,18 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_assert_state` the measured snapshot summaries (with `deleted-data-files`), and the
   current-then-absent `output-spec-id` state is read from `spec_id_current_then_absent`. pins: u7-write-df/C-001, C-002, C-003, C-004, C-005,
   C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013
+- [test_ice_write_df_2.py](test_ice_write_df_2.py) — **U7 PR2 (2026-09-24):** writer
+  semantics against the same oracle: the recorded cells `W-DF-SAVEASTABLE-OVERWRITE` and
+  `W-DF-V2-OPTION-BRANCH`, and the `measured` PR2 shapes (recorded by
+  `target/probe-u7-pr2/record.py`). A `saveAsTable` overwrite is Spark's RTAS: the table uuid,
+  properties and other refs stay; the frame's schema, the `partitionBy` spec (none without
+  one) and no sort order replace the old ones; the replace snapshot is an `overwrite` with no
+  parent, so the history marks the old snapshots as not current ancestors. The no-format
+  property is residue R-1, pinned as a divergence. A `branch` or `tag` option, in any case
+  and on any writer, is ignored: the write lands on main. Each shape compares rows,
+  operations, summary counters, spec counts, partitioning, schema, refs, history, selected
+  properties, format version, sort fields and the uuid.
+  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
   oracle entry through the helpers of `test_ice_write_df_1.py`: the missing bucket column
@@ -903,7 +917,13 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `output-spec-id` state, and the void and time-transform mismatches (the void one, a
   format-version 1 table, is the Rust kernel test's expectation). Round 4 (2026-09-24) adds
   five `sortBy_*` shapes from `target/probe-u7-r3fix/sprobe.py`: a missing sort column is the
-  3060 after the bucket columns.
+  3060 after the bucket columns. **U7 PR2 (2026-09-24)** adds the `sat_*` and branch-option
+  shapes from `target/probe-u7-pr2/record.py` (`schema`, `refs`, `history` as snapshot
+  indexes, `properties`, `format_version`, `sort_fields`, `uuid_same`, `branch_rows`; an
+  `AnalysisException` message stops before Spark's appended plan) and the recorded cells
+  `W-DF-SAVEASTABLE-OVERWRITE` and `W-DF-V2-OPTION-BRANCH`; `test_ice_write_df_2.py` reads
+  them.
+  pins: u7-write-df-2/C-001, C-004
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect
   `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and

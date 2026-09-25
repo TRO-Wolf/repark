@@ -60,12 +60,13 @@ fn save_as_table_statements_follow_spark_save_modes() {
     let plain = WriterLayout::default();
     let table = WriterAction::SaveAsTable;
     assert_eq!(statement(table, true, "append", &plain), ("append", true));
+    assert_eq!(statement(table, true, "overwrite", &plain), ("rtas", false));
     assert_eq!(
-        statement(table, true, "overwrite", &plain),
-        ("overwrite", false)
+        statement(table, false, "overwrite", &plain),
+        ("rtas", false)
     );
     assert_eq!(statement(table, true, "ignore", &plain), ("skip", false));
-    for mode in ["append", "overwrite", "error", "errorifexists", "ignore"] {
+    for mode in ["append", "error", "errorifexists", "ignore"] {
         assert_eq!(
             statement(table, false, mode, &plain),
             ("ctas", false),

@@ -98,9 +98,10 @@ repark-core's error map.
   `saveAsTable` and `save()`. It maps the action, mode, existence and layout to a
   `WriterStatement` (`ctas`, `rtas`, `append`, `overwrite`, `skip`) plus whether the caller
   checks the layout against the table: `save()` goes through `decide_save_target`; `saveAsTable`
-  appends to an existing table with the check, replaces on a bucketed overwrite, overwrites an
-  existing table statically otherwise, creates a missing one, skips on ignore and refuses the
-  error mode with Spark's already-exists text. On every create-or-replace arm a bucket column,
+  appends to an existing table with the check, replaces on every overwrite (U7 PR2,
+  2026-09-24: Spark's `ReplaceTableAsSelect(orCreate)`, bucketed or not, existing or not;
+  it was a static `INSERT OVERWRITE` for an unbucketed existing table), creates a missing
+  one, skips on ignore and refuses the error mode with Spark's already-exists text. On every create-or-replace arm a bucket column,
   then a `sortBy` column (round 4), absent from the frame (case-folded unless the session is
   case-sensitive) is
   `WriterRefusal::MissingBucketColumn`, rendered as `_LEGACY_ERROR_TEMP_3060` by
@@ -108,6 +109,7 @@ repark-core's error map.
   rendering of the name (backticks when it contains a `.`, no escaping), also the `i`
   parameter. Pins: `../tests/writer_plan.rs`.
   pins: u7-write-df/C-015, C-018
+  pins: u7-write-df-2/C-002
 - `set_location.rs` — **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):**
   `set_table_location` applies the fork's `update_location` action
   (`TableUpdate::SetLocation`) in one transaction: the move commit itself and every

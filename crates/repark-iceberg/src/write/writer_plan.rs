@@ -130,10 +130,8 @@ fn plan_save_as_table(request: &WriterRequest<'_>) -> Result<WriterPlan, WriterR
     if let Some(column) = missing_bucket_column(request) {
         return Err(WriterRefusal::MissingBucketColumn(column));
     }
-    let bucketed = request.layout.num_buckets.is_some();
     let statement = match (mode, request.exists) {
-        ("overwrite", _) if bucketed => WriterStatement::Rtas,
-        ("overwrite", true) => WriterStatement::Overwrite,
+        ("overwrite", _) => WriterStatement::Rtas,
         (_, false) => WriterStatement::Ctas,
         ("ignore", true) => WriterStatement::Skip,
         _ => return Err(already_exists_error(request.relation_parts).into()),

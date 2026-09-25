@@ -276,8 +276,8 @@ def test_stale_overwrite_shapes_raise(tmp_path: Path) -> None:
 
 
 def test_stale_overwrite_doors_raise(tmp_path: Path) -> None:
-    """L-03: saveAsTable(overwrite) conflicts; writeTo().overwrite refuses declared."""
-    from repark.errors import UnsupportedOperationException
+    """L-03: saveAsTable(overwrite) is a stale replace; writeTo().overwrite refuses declared."""
+    from repark.errors import PySparkException, UnsupportedOperationException
 
     session = _new_session(tmp_path)
     try:
@@ -285,14 +285,11 @@ def test_stale_overwrite_doors_raise(tmp_path: Path) -> None:
             _run_conc_shape(session, table_root)
             stale = f"{_CATALOG_TWO}.{_NAMESPACE}.{_TABLE}"
             fresh = f"{_CATALOG_ONE}.{_NAMESPACE}.{_TABLE}"
-            _assert_stale_write_raises(
-                session,
-                lambda: (
-                    session.createDataFrame([(8, "df-ovw")], ["id", "s"])
-                    .write.mode("overwrite")
-                    .saveAsTable(stale)
-                ),
-                table_root,
+            frame = session.createDataFrame([(8, "df-ovw")], ["id", "s"])
+            with pytest.raises(PySparkException, match="CatalogCommitConflicts") as stale_replace:
+                frame.write.mode("overwrite").saveAsTable(stale)
+            assert str(stale_replace.value).startswith(
+                "CatalogCommitConflicts => Cannot stage replace to"
             )
             with pytest.raises(UnsupportedOperationException, match="overwrite"):
                 session.sql("SELECT 7 AS id, 'df-wt-ovw' AS s").writeTo(stale).overwrite("true")

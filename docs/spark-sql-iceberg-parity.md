@@ -822,7 +822,8 @@ perfectly good read.
   partitions. The facade forwards the writer options unchanged. All 60 cells answer Spark's
   rows and snapshot summaries except: the two `saveAsTable(overwrite)` shapes (4 cells) match
   rows but not history — Spark's history there is an RTAS table replace (fresh `overwrite`
-  snapshot, no deleted files), not this row's subject; and the `NON_PARTITION_COLUMN`
+  snapshot, no deleted files), not this row's subject (U7 PR2, 2026-09-24: `saveAsTable`
+  overwrite is now that replace, and the history matches too); and the `NON_PARTITION_COLUMN`
   refusal matches class and message while `getCondition()` answers `None`, as for every
   engine error. Round 2: all 28 new cells answer Spark (rows, snapshot history, or the
   `NON_PARTITION_COLUMN` class and condition token); the empty dynamic source commits no
@@ -12195,20 +12196,29 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   stage skips the commit. Filed 2026-09-04 from the EX-22 measurement; the example still
   teaches the populated-source arm.
 
-### EX-W2-3 — `option`/`options` with a branch or tag key refuse where Spark silently writes the default branch
+### EX-W2-3 — `option`/`options` with a branch or tag key refuse where Spark silently writes the default branch — **FIXED 2026-09-24 (U7 PR2)**
 
-- **repark** — `option("branch", "b1")` (and the `tag` key) raises
+- **repark** — since U7 PR2 (2026-09-24) `DataFrameWriterV2.option`/`options` store a
+  `branch` or `tag` key (any case) like any other option and no writer reads it: the write
+  lands on main and the named ref keeps its snapshot, as on Spark, even when the ref does not
+  exist; `DataFrameWriter` already did so. Before, the V2 writer raised
   `UnsupportedOperationException` ("writing to an Iceberg branch is not supported — repark
-  write path is current-snapshot only (I1 / R-TIME-TRAVEL)"). Non-branch options are accepted
-  for signature parity, warn once, and are ignored.
+  write path is current-snapshot only (I1 / R-TIME-TRAVEL)").
 - **Apache Spark** — `option("branch", "b1").append()` neither errors nor writes the branch:
   the row lands on the table's default branch and `b1` keeps its seed rows.
   *(oracle: live PySpark 4.1.2 + Iceberg runtime, same engine as EX-W2-1, branch created via
   `ALTER TABLE … CREATE BRANCH IF NOT EXISTS b1`, 2026-09-04, EX-22 WriterV2 batch.)*
-- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_option_branch_refuses`
-- **Rationale** — BACKLOG, filed 2026-09-04 from the EX-22 measurement. The storage-option arm
-  (rows land identically on both engines) is the arm the example teaches; the branch/tag
-  refusal is pinned, not taught.
+  Re-measured 2026-09-24 (U7 PR2, scoreboard cell `W-DF-V2-OPTION-BRANCH` and the
+  `*_option_branch_*`/`v2_option_tag_append`/`v2_options_branch_upper` shapes in
+  `python/repark/tests/ice_write_df_1_spark_oracle.json`): the same on `append`,
+  `overwritePartitions`, `overwrite(condition)`, `create`, `DataFrameWriter` append and a
+  missing branch.
+- **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_option_branch_writes_the_default_branch`;
+  `python/repark/tests/test_ice_write_df_2.py::test_writer_v2_branch_option_writes_main_like_the_recorded_cell`,
+  `::test_branch_and_tag_options_are_ignored_like_spark`.
+- **Rationale** — FIXED 2026-09-24 (U7 PR2). Filed BACKLOG 2026-09-04 from the EX-22
+  measurement.
+  pins: u7-write-df-2/C-004, C-005
 
 ### EX-W2-4 — `overwritePartitions` on an unpartitioned table leaks a ParseException where Spark replaces the table — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1)**
 
@@ -12235,6 +12245,24 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `test_ice_evo_dml_1.py` cells run plainly against Spark's recorded answers. Filed
   2026-09-04 from the EX-22 round-2 review (repark's own generated SQL failed to parse).
   pins: ice-overwrite-mode-1/C-018
+
+### EX-W2-5 — `saveAsTable` without `format(...)` stores no `write.format.default` where Spark stores `parquet` — **BACKLOG 2026-09-24**
+
+- **repark** — `df.write.saveAsTable(t)` and `df.write.mode("overwrite").saveAsTable(t)`
+  with no `format(...)` create or replace an Iceberg table and store no
+  `write.format.default`; a replace keeps an existing value (`orc` stays `orc`). Every other
+  observation (rows, snapshots, schema, spec, refs, history) equals Spark's.
+- **Apache Spark** — the session's default source (`parquet`) is the table provider, and
+  Iceberg's catalog turns it into `write.format.default=parquet` on the CTAS and on the RTAS,
+  overwriting an existing `orc`. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
+  InMemoryCatalog, 2026-09-24, shapes `sat_new_no_format` and `sat_overwrite_no_format` in
+  `python/repark/tests/ice_write_df_1_spark_oracle.json`; the `orc` case measured by
+  `target/probe-u7-pr2/cells_pr2.py` `P-SAVEAS-OVW-NOFORMAT-PROPS`.)*
+- **Pin** — `python/repark/tests/test_ice_write_df_2.py::test_save_as_table_without_a_format_writes_no_format_property_divergence`
+- **Rationale** — BACKLOG, filed 2026-09-24 (U7 PR2 residue R-1). The CTAS half predates
+  U7 PR2; the fix is one rule for both statements (the provider of a format-less writer), not
+  a passenger on the replace change.
+  pins: u7-write-df-2/C-003
 
 ### FNP9-ARRAYS-ZIP-NAMES-1 — `arrays_zip` names its struct fields by position, never after the column
 
@@ -14071,13 +14099,17 @@ field NAME.
   `BY NAME` in its round 2). Filed OPEN 2026-09-18 (ruling Q-21b-10) as a loud refusal.
   pins: ice-v3-write-default-1/C-022
 
-### ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE — `saveAsTable(mode="overwrite")` is `INSERT OVERWRITE` by name, Spark replaces the table — **DECLARED 2026-09-17**
+### ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE — `saveAsTable(mode="overwrite")` is `INSERT OVERWRITE` by name, Spark replaces the table — **FIXED 2026-09-24 (U7 PR2)**
 
-- **repark** — `df.write.mode("overwrite").saveAsTable(t)` on an existing table
-  runs a by-name `INSERT OVERWRITE`: the table keeps its schema and an omitted
-  defaulted column fills from `write_default` — a 2-column frame `(30, 's')` over
-  `(id, name, c write-default 5)` reads back `[(30, 's', 5)]` with `c` still in
-  the schema.
+- **repark** — since U7 PR2 (2026-09-24) `df.write.mode("overwrite").saveAsTable(t)` is
+  Spark's `CREATE OR REPLACE TABLE … AS SELECT`: the 2-column frame `(30, 's')` reads back
+  `[(30, 's')]` with the schema narrowed to `[id int, name string]`. The replace keeps the
+  table uuid, its properties and its other refs; the frame's schema, the `partitionBy` spec
+  (unpartitioned without one) and an empty sort order replace the old ones; the new
+  `overwrite` snapshot has no parent (scoreboard cell `W-DF-SAVEASTABLE-OVERWRITE` and the
+  `sat_*` shapes in `python/repark/tests/ice_write_df_1_spark_oracle.json`). Before, it ran a
+  by-name `INSERT OVERWRITE`: the table kept its schema and an omitted defaulted column
+  filled from `write_default` (`[(30, 's', 5)]`, `c` still in the schema).
 - **Apache Spark** — REPLACES the table: rows `[[30, 's']]`, schema narrowed to
   the frame `[id int, name string]`, the `c` column gone. This is the unit's
   finding F-002 (`saveAsTable(overwrite)` replace vs RePark `INSERT OVERWRITE`),
@@ -14085,14 +14117,15 @@ field NAME.
   *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-17, cell
   `saveastable_overwrite_missing_defaulted` and `schema_after.dfltsat` in
   `python/repark-parity/fixtures/torture/data/ice_v3_write_default_1/truth.json`.)*
-- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_saveastable_overwrite_is_insert_overwrite_not_replace`
-  asserts RePark's answer beside the recorded Spark replace cell and schema; it
-  flips red when replace semantics land.
-- **Rationale** — DECLARED, dated 2026-09-17 (ruling Q-21b-5). The divergence is
-  the standing replace-vs-overwrite difference (F-002), not a write-default gap;
-  the fill on this path is internally consistent with RePark's overwrite, and
-  chasing replace semantics belongs to its own unit.
+- **Pin** — `python/repark/tests/test_ice_v3_write_default_1.py::test_saveastable_overwrite_replaces_the_table_like_spark`
+  (the old `test_saveastable_overwrite_is_insert_overwrite_not_replace` flipped red and
+  was re-pinned to the recorded Spark cell and schema);
+  `python/repark/tests/test_ice_write_df_2.py::test_save_as_table_overwrite_replaces_like_the_recorded_cell`,
+  `::test_save_as_table_overwrite_shapes_match_spark`.
+- **Rationale** — FIXED 2026-09-24 (U7 PR2). DECLARED 2026-09-17 (ruling Q-21b-5) as
+  the standing replace-vs-overwrite difference (F-002), left to its own unit.
   pins: ice-v3-write-default-1/C-017
+  pins: u7-write-df-2/C-001, C-002
 
 ### ICE-V3-WRITE-DEFAULT-1-NESTED — nested struct-field defaults are unpinned — **DECLARED 2026-09-17**
 

@@ -1681,3 +1681,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   the path relation, the `CLUSTERED` scan and one Rust statement kernel for both writers.
   pins: u7-write-df/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
   C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
+- [u7-write-df-2-ledger.md](u7-write-df-2-ledger.md) —
+  **WO U7 PR2 (2026-09-24):** DataFrame writer semantics. Slice 1: every `saveAsTable`
+  overwrite is Spark's RTAS (uuid, properties and refs kept; schema, spec and sort order
+  replaced; the replace snapshot has no parent), and a `branch`/`tag` writer option is
+  ignored as on Spark (the write lands on main). Cells `W-DF-SAVEASTABLE-OVERWRITE` and
+  `W-DF-V2-OPTION-BRANCH` EQUAL; residue R-1 (format-less provider property) is registry
+  `EX-W2-5`. `risk_tier: standard`. Branch `feat/u7-write-df-2`.
+  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005

@@ -691,18 +691,22 @@ def test_overwrite_default_keyword_fills_write_default() -> None:
         session.stop()
 
 
-def test_saveastable_overwrite_is_insert_overwrite_not_replace() -> None:
-    """``saveAsTable(overwrite)`` keeps the schema and fills; Spark replaces the table (F-002)."""
+def test_saveastable_overwrite_replaces_the_table_like_spark() -> None:
+    """``saveAsTable(overwrite)`` replaces the table: the schema narrows to the frame (F-002)."""
     session = _session("ice-v3-write-default-1-saveas-ow")
     try:
         with _materialize():
             _adopt(session, _CATALOG, "dfltsat")
+            table = f"{_CATALOG}.{_NAMESPACE}.dfltsat"
             session.createDataFrame([(30, "s")], "id int, name string").write.mode(
                 "overwrite"
-            ).saveAsTable(f"{_CATALOG}.{_NAMESPACE}.dfltsat")
-            assert _rows(session, _CATALOG, "dfltsat") == [(30, "s", 5)]
+            ).saveAsTable(table)
+            assert _rows(session, _CATALOG, "dfltsat") == [(30, "s")]
             assert _cell_rows("saveastable_overwrite_missing_defaulted") == [(30, "s")]
-            assert _truth()["schema_after"]["dfltsat"] == [["id", "int"], ["name", "string"]]
+            schema = [
+                [field.name, field.dataType.simpleString()] for field in session.table(table).schema
+            ]
+            assert schema == _truth()["schema_after"]["dfltsat"]
     finally:
         session.stop()
 

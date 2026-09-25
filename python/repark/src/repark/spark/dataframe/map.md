@@ -635,7 +635,9 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   non-PostgreSQL drivers need the JVM driver layer — refusals, a restored connector
   delegation, not compute. pins: io-declared-1/C-001, C-002, C-003, C-007
 - `writer_readwriter.py` owns `DataFrameWriter`, `DataFrameWriterV2`, statistics, and write
-  helpers. **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
+  helpers. **U7 PR2 (2026-09-24):** `DataFrameWriterV2.option` stores a `branch` or `tag` key
+  like any other option (the refusal is gone); no writer reads it, so the write lands on main
+  as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005 **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** table writes emit an explicit target
   column list and pass through columns missing from the frame; the engine fills
@@ -712,6 +714,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   (Ruling Q1), and `refuse_bucketed_or_clustered_table_write` and `_backticked_table_name` are
   removed. The `bucketBy` docstring states the bucket transform.
   pins: u7-write-df/C-004, C-005, C-015, C-018
+  **U7 PR2 (2026-09-24):** the kernel answers `rtas` for every `saveAsTable` overwrite, so
+  `write_table` runs `CREATE OR REPLACE TABLE … AS SELECT` there (Spark's replace), and the
+  static by-name `overwrite` arm now serves `save(name)` only.
+  pins: u7-write-df-2/C-002
 - `writer_layout.py` owns the writer layout bodies (IO-BUCKET-CLUSTER-1, 2026-09-14):
   the `bucketBy` / `sortBy` / `clusterBy` state setters (Spark's `NOT_INT` on
   `numBuckets` at the call, list first columns flattened), the action-time checks —

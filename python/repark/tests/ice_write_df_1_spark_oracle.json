@@ -1,5 +1,5 @@
 {
- "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind)",
+ "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append and v2_options_branch_upper shapes (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE and W-DF-V2-OPTION-BRANCH from the same scoreboard file.",
  "seed": "t (id BIGINT, data STRING, cat STRING) seeded (1,'a','x'),(2,'b','y'),(3,'c','x'); frame [(7,'g','x'),(8,'h','w')]",
  "recorded": {
   "W-DF-SAVE-NAME": {
@@ -440,6 +440,298 @@
    "md.sort-order": [],
    "md.properties": [],
    "md.refs": [
+    [
+     "main",
+     "branch",
+     "S1",
+     null,
+     null,
+     null
+    ]
+   ],
+   "md.snapshots": [
+    [
+     [
+      "added-records",
+      "3"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "3"
+     ]
+    ],
+    [
+     [
+      "added-records",
+      "2"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "5"
+     ]
+    ]
+   ],
+   "layout.snapshots": [
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "1"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ],
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "2"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ]
+   ]
+  },
+  "W-DF-SAVEASTABLE-OVERWRITE": {
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "md.format-version": 2,
+   "md.schema": [
+    [
+     "id",
+     "long",
+     false,
+     null
+    ],
+    [
+     "data",
+     "string",
+     false,
+     null
+    ],
+    [
+     "cat",
+     "string",
+     false,
+     null
+    ]
+   ],
+   "md.identifier-fields": [],
+   "md.spec": [],
+   "md.spec-count": 1,
+   "md.sort-order": [],
+   "md.properties": [],
+   "md.refs": [
+    [
+     "main",
+     "branch",
+     "S1",
+     null,
+     null,
+     null
+    ]
+   ],
+   "md.snapshots": [
+    [
+     [
+      "added-records",
+      "3"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "3"
+     ]
+    ],
+    [
+     [
+      "added-records",
+      "2"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "overwrite"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "2"
+     ]
+    ]
+   ],
+   "layout.snapshots": [
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "1"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ],
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "1"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ]
+   ]
+  },
+  "W-DF-V2-OPTION-BRANCH": {
+   "branch": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "md.format-version": 2,
+   "md.schema": [
+    [
+     "id",
+     "long",
+     false,
+     null
+    ],
+    [
+     "data",
+     "string",
+     false,
+     null
+    ],
+    [
+     "cat",
+     "string",
+     false,
+     null
+    ]
+   ],
+   "md.identifier-fields": [],
+   "md.spec": [],
+   "md.spec-count": 1,
+   "md.sort-order": [],
+   "md.properties": [],
+   "md.refs": [
+    [
+     "b1",
+     "branch",
+     "S0",
+     null,
+     null,
+     null
+    ],
     [
      "main",
      "branch",
@@ -3998,6 +4290,1887 @@
     "sqlstate": null,
     "message": "Couldn't find column zz in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
    }
+  },
+  "sat_overwrite": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_partitioned": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_partby": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_props": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {
+    "k1": "v1"
+   },
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_option": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_schema": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     7
+    ],
+    [
+     8,
+     8
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "extra",
+     "int"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_missing": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0
+  },
+  "sat_overwrite_branch_ref": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_sorted": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {
+    "write.distribution-mode": "range"
+   },
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_empty": {
+   "ok": true,
+   "rows": [],
+   "operations": [
+    "append",
+    "delete"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "total-records": "0"
+    }
+   ],
+   "specs": [],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_dynamic_session": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_twice": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     2
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     false
+    ],
+    [
+     2,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_v3": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 3,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_self_source": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_overwrite_no_format": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {
+    "write.format.default": "parquet"
+   },
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "sat_new_no_format": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {
+    "write.format.default": "parquet"
+   },
+   "format_version": 2,
+   "sort_fields": 0
+  },
+  "v2_option_branch_append": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "v1_option_branch_append": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "v2_option_branch_missing": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "v2_option_branch_overwrite_partitions": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "v2_option_tag_append": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ],
+    [
+     "t1",
+     "TAG",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "v2_options_branch_upper": {
+   "branch_rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true
+  },
+  "v2_option_branch_create": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0
   }
  }
 }

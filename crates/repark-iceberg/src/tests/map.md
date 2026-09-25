@@ -68,6 +68,8 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   the name backticked when it contains a `.`, and only then), a missing `sortBy` column after
   the bucket columns (round 4), and the `save()` statements with their layout check.
   pins: u7-write-df/C-015, C-018
+  U7 PR2 (2026-09-24): a `saveAsTable` overwrite plans `rtas` whether or not the table
+  exists or is bucketed. pins: u7-write-df-2/C-002
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.
