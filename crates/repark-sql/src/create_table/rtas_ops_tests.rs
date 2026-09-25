@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use datafusion::arrow::util::display::{ArrayFormatter, FormatOptions};
 use datafusion::prelude::SessionContext;
 use iceberg::io::LocalFsStorageFactory;
 use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
@@ -276,4 +277,115 @@ async fn native_rtas_keeps_field_ids_by_name() {
         door.field_ids("rids").await,
         (named(&[(3, "cat"), (4, "extra"), (1, "id")]), 4)
     );
+}
+
+impl NativeDoor {
+    async fn rows(&self, sql: &str) -> Vec<Vec<String>> {
+        let read_only = HashSet::new();
+        let batches = crate::execute(
+            EngineContext::new(&self.ctx, &self.catalogs, &read_only),
+            sql,
+        )
+        .await
+        .unwrap_or_else(|err| panic!("`{sql}` must plan: {err}"))
+        .collect()
+        .await
+        .unwrap_or_else(|err| panic!("`{sql}` must succeed: {err}"));
+        let options = FormatOptions::default().with_null("NULL");
+        let mut rows = Vec::new();
+        for batch in &batches {
+            let formatters: Vec<ArrayFormatter<'_>> = batch
+                .columns()
+                .iter()
+                .map(|column| ArrayFormatter::try_new(column.as_ref(), &options))
+                .collect::<Result<_, _>>()
+                .expect("formatters");
+            for row in 0..batch.num_rows() {
+                rows.push(
+                    formatters
+                        .iter()
+                        .map(|formatter| formatter.value(row).to_string())
+                        .collect(),
+                );
+            }
+        }
+        rows
+    }
+
+    async fn spec_source_ids(&self, table: &str) -> Vec<i32> {
+        self.catalog
+            .load_table(&TableIdent::new(
+                NamespaceIdent::new("sales".to_string()),
+                table.to_string(),
+            ))
+            .await
+            .unwrap_or_else(|err| panic!("`{table}` must load: {err}"))
+            .metadata()
+            .default_partition_spec()
+            .fields()
+            .iter()
+            .map(|field| field.source_id)
+            .collect()
+    }
+}
+
+fn cells(rows: &[&[&str]]) -> Vec<Vec<String>> {
+    rows.iter()
+        .map(|row| row.iter().map(|cell| (*cell).to_string()).collect())
+        .collect()
+}
+
+#[tokio::test]
+async fn native_partitioned_rtas_keys_the_spec_by_name_and_keeps_the_old_branch() {
+    let door = staged().await;
+    door.ok(
+        "CREATE TABLE ice.sales.prt AS SELECT CAST(1 AS BIGINT) AS id, 'a' AS data, 'x' AS cat",
+    )
+    .await;
+    door.ok("ALTER TABLE ice.sales.prt CREATE BRANCH b1").await;
+    door.ok(
+        "CREATE OR REPLACE TABLE ice.sales.prt WITH (partitioning = ARRAY['extra']) AS \
+         SELECT 'e' AS extra, CAST(9 AS BIGINT) AS id, 'z' AS cat",
+    )
+    .await;
+    assert_eq!(
+        door.field_ids("prt").await,
+        (named(&[(4, "extra"), (1, "id"), (3, "cat")]), 4)
+    );
+    assert_eq!(door.spec_source_ids("prt").await, [4]);
+    assert_eq!(
+        door.rows("SELECT * FROM ice.sales.prt FOR VERSION AS OF 'b1' ORDER BY id")
+            .await,
+        cells(&[&["NULL", "1", "x"]])
+    );
+    assert_eq!(
+        door.rows("SELECT * FROM ice.sales.prt ORDER BY id").await,
+        cells(&[&["e", "9", "z"]])
+    );
+}
+
+#[tokio::test]
+async fn native_partitioned_column_def_replace_keys_the_spec_by_name_and_keeps_the_old_branch() {
+    let door = staged().await;
+    door.ok("CREATE TABLE ice.sales.pcd (id BIGINT, data VARCHAR, cat VARCHAR)")
+        .await;
+    door.ok("INSERT INTO ice.sales.pcd VALUES (1, 'a', 'x')")
+        .await;
+    door.ok("ALTER TABLE ice.sales.pcd CREATE BRANCH b1").await;
+    door.ok(
+        "CREATE OR REPLACE TABLE ice.sales.pcd (payload VARCHAR, id BIGINT, cat VARCHAR) \
+         WITH (partitioning = ARRAY['payload'])",
+    )
+    .await;
+    assert_eq!(
+        door.field_ids("pcd").await,
+        (named(&[(4, "payload"), (1, "id"), (3, "cat")]), 4)
+    );
+    assert_eq!(door.spec_source_ids("pcd").await, [4]);
+    assert_eq!(
+        door.rows("SELECT * FROM ice.sales.pcd FOR VERSION AS OF 'b1' ORDER BY id")
+            .await,
+        cells(&[&["NULL", "1", "x"]])
+    );
+    assert_eq!(door.row_count("pcd").await, 0);
 }

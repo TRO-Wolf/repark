@@ -39,7 +39,14 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
 
 - `rtas_ops_tests.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):**
   `native_column_def_replace_keeps_field_ids_by_name` and `native_rtas_keeps_field_ids_by_name`
-  pin the replace's ids by name and `last-column-id`. pins: u7-write-df-2/C-011
+  pin the replace's ids by name and `last-column-id`. Critic r3 [S2]:
+  `native_partitioned_rtas_keys_the_spec_by_name_and_keeps_the_old_branch` and
+  `native_partitioned_column_def_replace_keys_the_spec_by_name_and_keeps_the_old_branch` put the
+  added column first, so an un-re-keyed schema would key it 1 while the pins hold the default
+  spec's source id at the re-keyed 4 (`WITH (partitioning = ARRAY['extra' | 'payload'])`), and read
+  branch `b1` (created before the replace) after it: its pre-replace row comes back through the
+  new schema as `[NULL, 1, x]`, as measured against Spark. Helpers `rows` (cells as text, nulls
+  as `NULL`) and `spec_source_ids`. pins: u7-write-df-2/C-011
   **ICE-RTAS-OPS-2 round 2 (2026-09-18):** the native-door
   snapshot-operation pins for fixture `rtas_ops`
   (`python/repark/tests/ice_rtas_byname_1_spark_oracle.json`), declared as

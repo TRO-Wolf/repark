@@ -12,6 +12,7 @@ use datafusion::sql::sqlparser::ast::{
 use iceberg::arrow::arrow_schema_to_schema_auto_assign_ids;
 use iceberg::io::FileIO;
 use iceberg::spec::{FormatVersion, PrimitiveType, Type, UnboundPartitionSpec};
+use iceberg::table::Table;
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_common::spark_error;
@@ -124,13 +125,14 @@ pub(crate) async fn execute_create_table(
     };
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(ctas_schema).map_err(iceberg_err)?;
-    let iceberg_schema = replacement_if_existed(&target, existed, iceberg_schema).await?;
+    let (iceberg_schema, existing) =
+        replacement_if_existed(&target, existed, iceberg_schema).await?;
     let partition_spec = build_partition_spec(&iceberg_schema, &properties.partitioning)?;
     let format_version =
         iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;
 
     // Resolve the placement before running the SELECT so target errors fail before writes.
-    let placement = resolve_placement(&target, &properties, cx.catalogs, existed).await?;
+    let placement = resolve_placement(&target, &properties, cx.catalogs, existing).await?;
     let replace_write = create.or_replace && query.is_some();
 
     match placement {
@@ -147,7 +149,7 @@ pub(crate) async fn execute_create_table(
             )
             .await
         }
-        Placement::StagedReplace | Placement::StagedCreate { .. } => {
+        Placement::StagedReplace { .. } | Placement::StagedCreate { .. } => {
             execute_staged_create(
                 cx,
                 &target,
@@ -168,16 +170,17 @@ async fn replacement_if_existed(
     target: &CreateTarget,
     existed: bool,
     schema: iceberg::spec::Schema,
-) -> Result<iceberg::spec::Schema> {
+) -> Result<(iceberg::spec::Schema, Option<Table>)> {
     if !existed {
-        return Ok(schema);
+        return Ok((schema, None));
     }
     let existing = target
         .catalog
         .load_table(&target.ident())
         .await
         .map_err(iceberg_err)?;
-    repark_iceberg::write::replacement_schema(existing.metadata(), &schema)
+    let schema = repark_iceberg::write::replacement_schema(existing.metadata(), &schema)?;
+    Ok((schema, Some(existing)))
 }
 
 /// Model: Grok 4.6 xHigh
@@ -194,41 +197,44 @@ async fn execute_staged_create(
     replace_write: bool,
 ) -> Result<DataFrame> {
     let mut replace_base: Option<String> = None;
-    let staged = if let Placement::StagedCreate { location, file_io } = placement {
-        let creation = iceberg_table_creation(
-            &target.table,
-            iceberg_schema,
-            partition_spec,
-            format_version,
-            properties.extra_properties.clone(),
-            Some(location),
-            None,
-        );
-        StagedTableTransaction::begin_create(*file_io, target.ident(), creation)
-            .await
-            .map_err(iceberg_err)?
-            .with_replace_write(replace_write)
-    } else {
-        // Replace stages keep the existing table location and metadata contract.
-        let existing = target
-            .catalog
-            .load_table(&target.ident())
-            .await
-            .map_err(iceberg_err)?;
-        let creation = iceberg_table_creation(
-            &target.table,
-            iceberg_schema,
-            partition_spec,
-            format_version,
-            properties.extra_properties.clone(),
-            None,
-            properties.format_version.as_deref(),
-        );
-        replace_base = existing.metadata_location().map(str::to_string);
-        StagedTableTransaction::begin_replace(&existing, creation)
-            .await
-            .map_err(iceberg_err)?
-            .with_replace_write(replace_write)
+    let staged = match placement {
+        Placement::StagedCreate { location, file_io } => {
+            let creation = iceberg_table_creation(
+                &target.table,
+                iceberg_schema,
+                partition_spec,
+                format_version,
+                properties.extra_properties.clone(),
+                Some(location),
+                None,
+            );
+            StagedTableTransaction::begin_create(*file_io, target.ident(), creation)
+                .await
+                .map_err(iceberg_err)?
+                .with_replace_write(replace_write)
+        }
+        Placement::StagedReplace { existing } => {
+            let creation = iceberg_table_creation(
+                &target.table,
+                iceberg_schema,
+                partition_spec,
+                format_version,
+                properties.extra_properties.clone(),
+                None,
+                properties.format_version.as_deref(),
+            );
+            replace_base = existing.metadata_location().map(str::to_string);
+            StagedTableTransaction::begin_replace(&existing, creation)
+                .await
+                .map_err(iceberg_err)?
+                .with_replace_write(replace_write)
+        }
+        Placement::ServiceManaged => {
+            return Err(DataFusionError::Internal(format!(
+                "service-managed placement reached the staged create of `{}`",
+                target.full_name
+            )));
+        }
     };
 
     // Streaming bounds memory by batch size and open writers.
@@ -313,7 +319,7 @@ async fn publish_staged_with_summary(
 /// Where a create's data will live, resolved before the SELECT runs.
 enum Placement {
     /// Stage a REPLACE against the existing table, which carries its own location and `FileIO`.
-    StagedReplace,
+    StagedReplace { existing: Box<Table> },
     /// Stage a CREATE at `location`, write, publish the catalog pointer last.
     StagedCreate {
         location: String,
@@ -328,10 +334,12 @@ async fn resolve_placement(
     target: &CreateTarget,
     properties: &TableProperties,
     catalogs: &CatalogRegistry,
-    existed: bool,
+    existing: Option<Table>,
 ) -> Result<Placement> {
-    if existed {
-        return Ok(Placement::StagedReplace);
+    if let Some(existing) = existing {
+        return Ok(Placement::StagedReplace {
+            existing: Box::new(existing),
+        });
     }
     let policy = catalogs
         .location_policy(&target.catalog_name)
@@ -585,7 +593,7 @@ async fn create_first_service_managed(
 /// Stream a plan's batches into Iceberg data files, honouring the session's write concurrency.
 async fn stage_query(
     ctx: &SessionContext,
-    table: &iceberg::table::Table,
+    table: &Table,
     query: DataFrame,
     staging: &repark_iceberg::write::WriterStagingOverrides,
 ) -> Result<Vec<iceberg::spec::DataFile>> {
