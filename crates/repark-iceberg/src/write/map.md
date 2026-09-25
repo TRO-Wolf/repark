@@ -100,8 +100,9 @@ repark-core's error map.
   checks the layout against the table: `save()` goes through `decide_save_target`; `saveAsTable`
   appends to an existing table with the check, replaces on a bucketed overwrite, overwrites an
   existing table statically otherwise, creates a missing one, skips on ignore and refuses the
-  error mode with Spark's already-exists text. On every create-or-replace arm a bucket column
-  absent from the frame (case-folded unless the session is case-sensitive) is
+  error mode with Spark's already-exists text. On every create-or-replace arm a bucket column,
+  then a `sortBy` column (round 4), absent from the frame (case-folded unless the session is
+  case-sensitive) is
   `WriterRefusal::MissingBucketColumn`, rendered as `_LEGACY_ERROR_TEMP_3060` by
   `missing_column_message` before the existence refusal; `missing_column_name` is Spark's
   rendering of the name (backticks when it contains a `.`, no escaping), also the `i`

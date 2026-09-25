@@ -65,8 +65,9 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   statement for every mode and existence with and without buckets, Spark's already-exists
   text, the missing bucket column on every create-or-replace arm (and not on an existing
   append), a case-sensitive session keeping `ID`, the `_LEGACY_ERROR_TEMP_3060` text (round 3:
-  the name backticked when it contains a `.`, and only then), and the `save()` statements with
-  their layout check. pins: u7-write-df/C-015, C-018
+  the name backticked when it contains a `.`, and only then), a missing `sortBy` column after
+  the bucket columns (round 4), and the `save()` statements with their layout check.
+  pins: u7-write-df/C-015, C-018
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.

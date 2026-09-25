@@ -90,6 +90,34 @@ def test_a_dotted_bucket_column_is_backticked_in_legacy_3060(
 
 
 @pytest.mark.parametrize(
+    ("cell", "mode", "bucket", "sorts", "name"),
+    [
+        ("sortBy_missing", "error", "id", ["zz"], "zz"),
+        ("sortBy_missing_overwrite", "overwrite", "id", ["zz"], "zz"),
+        ("sortBy_second_missing", "error", "id", ["data", "zz"], "zz"),
+        ("sortBy_dotted_missing", "error", "id", ["a.b"], "`a.b`"),
+        ("sortBy_bucket_missing_first", "error", "zz", ["data"], "zz"),
+    ],
+)
+def test_a_missing_sort_column_is_legacy_3060_after_the_bucket_columns(
+    spark: ReparkSession, cell: str, mode: str, bucket: str, sorts: list[str], name: str
+) -> None:
+    """A ``sortBy`` column the frame lacks is Spark's 3060, the bucket columns named first.
+
+    pins: u7-write-df/C-015
+    """
+    writer = _frame(spark).write.format("iceberg").mode(mode).bucketBy(4, bucket)
+    with pytest.raises(AnalysisException) as raised:
+        writer.sortBy(*sorts).saveAsTable(_T)
+    _assert_error(raised.value, cell)
+    assert raised.value.getMessageParameters() == {  # type: ignore[attr-defined]
+        "i": name,
+        "schema": str(raised.value).split(":\n", 1)[1],
+    }
+    assert not spark.catalog.tableExists(_T)
+
+
+@pytest.mark.parametrize(
     ("cell", "mode", "error_type"),
     [
         ("bucket_unbucketed_missing_append", "append", IllegalArgumentException),

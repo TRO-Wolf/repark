@@ -3137,8 +3137,8 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   measured round 3 on a format-version 1 table whose dropped field became void) and refuses a difference with
   `IllegalArgumentException` `requirement failed: The provided partitioning or clustering
   columns do not match the existing table's.` naming both lists; overwrite replaces the table
-  with the bucketed spec (RTAS, the next spec id). A multi-column bucket or any `sortBy`
-  refuses with `IllegalArgumentException` `Cannot convert transform with more than one column
+  with the bucketed spec (RTAS, the next spec id). A multi-column bucket or a `sortBy` over
+  columns the frame carries refuses with `IllegalArgumentException` `Cannot convert transform with more than one column
   reference: bucket(n, a, b)` / `sorted_bucket(a, n, s)` and creates nothing. **Round 2
   (2026-09-24, Ruling Q1):** a bucket column absent from the frame answers Spark's Iceberg
   catalog: every create-or-replace arm (a missing table in any mode, and an existing table in
@@ -3148,7 +3148,10 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   backticks when it contains a `.` and only then, with no escaping (round 3, measured: `` `s.a` ``
   for a nested field, which a bucket column never resolves to, `` `a.b` ``, `` `a.`b` ``, while
   `my col`, `select`, `1a`, `12` and ``a`b`` stay bare); an append onto an existing table
-  answers the layout mismatch (`provided: bucket(4, nope)`). The error mode on an existing
+  answers the layout mismatch (`provided: bucket(4, nope)`). **Round 4 (2026-09-24):** a
+  `sortBy` column absent from the frame is the same 3060, checked after the bucket columns
+  (measured: `sortBy('zz')` names `zz`, `sortBy('a.b')` `` `a.b` ``, `sortBy('data', 'zz')`
+  `zz`, and `bucketBy(4, 'zz').sortBy('data')` the bucket column `zz`). The error mode on an existing
   table raises Spark's `TABLE_OR_VIEW_ALREADY_EXISTS` text `Cannot create table or view
   `<namespace>`.`<name>` because it already exists.…`, bucketed or not. The decisions are Rust
   kernels: `repark_iceberg::write::plan_writer` (the statement for each action, mode and
@@ -3159,7 +3162,9 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   `repark_iceberg::write::check_layout_matches_table`. *Residual:* `SORTED BY (c DESC)` in
   that clause raises a `ParseException` with the engine's parser text; Spark raises
   `ParseException` `_LEGACY_ERROR_TEMP_0035` `Operation not allowed: Column ordering must be
-  ASC, was 'DESC'.` followed by its `== SQL (line 1, position <n>) ==` context block.
+  ASC, was 'DESC'.` followed by its `== SQL (line 1, position <n>) ==` context block. A
+  `sortBy` column spelled in another case than the frame's (`sortBy('DATA')`) refuses
+  `sorted_bucket(id, 4, DATA)`; Spark names the frame's spelling, `sorted_bucket(id, 4, data)`.
 - **Apache Spark** — on its Hive session catalog, writes Hive bucket files and records
   `Num Buckets` / `Bucket Columns` / `Sort Columns` in `DESCRIBE EXTENDED`; on an Iceberg
   catalog, converts `bucketBy` into the `bucket[n]` partition transform (scoreboard cell

@@ -119,6 +119,45 @@ fn a_missing_bucket_column_refuses_on_every_create_or_replace_arm() {
     );
 }
 
+fn sorted(bucket: &str, sorts: &[&str]) -> WriterLayout {
+    WriterLayout {
+        sort_columns: strings(sorts),
+        ..bucketed(bucket)
+    }
+}
+
+#[test]
+fn a_missing_sort_column_refuses_after_the_bucket_columns() {
+    let table = WriterAction::SaveAsTable;
+    for mode in ["append", "overwrite", "error", "ignore"] {
+        assert_eq!(
+            missing(table, false, mode, &sorted("id", &["zz"])),
+            "zz",
+            "{mode}"
+        );
+    }
+    assert_eq!(
+        missing(table, false, "error", &sorted("id", &["a.b"])),
+        "a.b"
+    );
+    assert_eq!(
+        missing(table, false, "error", &sorted("id", &["data", "zz"])),
+        "zz"
+    );
+    assert_eq!(
+        missing(table, false, "error", &sorted("zz", &["nope"])),
+        "zz"
+    );
+    assert_eq!(
+        statement(table, true, "append", &sorted("id", &["zz"])),
+        ("append", true)
+    );
+    assert_eq!(
+        statement(table, false, "error", &sorted("id", &["DATA"])),
+        ("ctas", false)
+    );
+}
+
 #[test]
 fn a_case_sensitive_session_keeps_the_bucket_column_case() {
     let relation = strings(&["u7", "t"]);
@@ -136,6 +175,19 @@ fn a_case_sensitive_session_keeps_the_bucket_column_case() {
         case_sensitive: true,
     });
     assert!(matches!(refusal, Err(WriterRefusal::MissingBucketColumn(column)) if column == "ID"));
+    let layout = sorted("id", &["DATA"]);
+    let refusal = plan_writer(&WriterRequest {
+        action: WriterAction::SaveAsTable,
+        target: "sc.u7.t",
+        relation_parts: &relation,
+        exists: false,
+        mode: "error",
+        explicit_format: true,
+        layout: &layout,
+        frame_columns: &strings(&["id", "data"]),
+        case_sensitive: true,
+    });
+    assert!(matches!(refusal, Err(WriterRefusal::MissingBucketColumn(column)) if column == "DATA"));
 }
 
 #[test]

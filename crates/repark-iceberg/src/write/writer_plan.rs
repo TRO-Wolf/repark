@@ -91,6 +91,7 @@ fn missing_bucket_column(request: &WriterRequest<'_>) -> Option<String> {
         .layout
         .bucket_columns
         .iter()
+        .chain(&request.layout.sort_columns)
         .find(|column| !found(column))
         .cloned()
 }

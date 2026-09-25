@@ -887,7 +887,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   path relation for URI and slash spellings, the `CLUSTERED BY` scan (`clustered` column,
   `ASC`, the two `DESC` residues by class) and a mixed spec's `Part N` rows. Round 3
   (2026-09-24): a dotted or nested bucket column backticked in the 3060 text and `i`, and the
-  years/months/hours mismatch.
+  years/months/hours mismatch. Round 4 (2026-09-24): a missing `sortBy` column is the same
+  3060 after the bucket columns (plain, dotted, second of two, overwrite, bucket named first).
   pins: u7-write-df/C-004, C-005, C-006, C-008, C-009, C-011, C-013, C-015, C-016, C-017
 - [ice_write_df_1_spark_oracle.json](ice_write_df_1_spark_oracle.json) — **U7 PR1
   (2026-09-24):** the oracle `test_ice_write_df_1.py` reads: `recorded` copies the four
@@ -900,7 +901,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `create_part_upper`. Round 3 (2026-09-24) adds six shapes from
   `target/probe-u7-r2fix/sprobe.py`: the nested and dotted 3060 names, the current-then-absent
   `output-spec-id` state, and the void and time-transform mismatches (the void one, a
-  format-version 1 table, is the Rust kernel test's expectation).
+  format-version 1 table, is the Rust kernel test's expectation). Round 4 (2026-09-24) adds
+  five `sortBy_*` shapes from `target/probe-u7-r3fix/sprobe.py`: a missing sort column is the
+  3060 after the bucket columns.
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect
   `IllegalArgumentException` — the class Spark 4.1.2 raises for a summary-key collision and
