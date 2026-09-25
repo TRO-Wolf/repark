@@ -51,7 +51,6 @@ pub(crate) async fn refuse_cast_then_fold_nested(
     let Some(target) = load_update_target(ctx, catalogs, update).await else {
         return Ok(None);
     };
-    refuse_incompatible_update_cast(ctx, &target, object_name, update).await?;
     let alias = match &update.table.relation {
         TableFactor::Table {
             alias: Some(alias), ..
@@ -70,6 +69,9 @@ pub(crate) async fn refuse_cast_then_fold_nested(
         column_prefix: None,
         probe_from: update.table.to_string(),
     };
+    if !nested_assign::repeats_a_column(&target.arrow_schema, &scope, &update.assignments) {
+        refuse_incompatible_update_cast(ctx, &target, object_name, update).await?;
+    }
     let Some(assignments) = nested_assign::fold_nested_assignments(
         ctx,
         &target.arrow_schema,

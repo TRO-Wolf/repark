@@ -236,11 +236,24 @@ async fn top_level_assignments_are_not_folded() {
         &ctx,
         &schema(),
         &scope(),
-        &assignments("UPDATE t SET t.id = 1, id = 2"),
+        &assignments("UPDATE t SET t.id = 1, arr = NULL"),
     )
     .await
     .unwrap();
     assert!(folded.is_none());
+    let repeated = fold_nested_assignments(
+        &ctx,
+        &schema(),
+        &scope(),
+        &assignments("UPDATE t SET t.id = 1, id = 2"),
+    )
+    .await
+    .expect_err("a repeated top-level key refuses")
+    .to_string();
+    assert!(
+        repeated.ends_with("- Multiple assignments for 'id': 1, 2 SQLSTATE: 42K09"),
+        "{repeated}"
+    );
 }
 
 #[tokio::test]

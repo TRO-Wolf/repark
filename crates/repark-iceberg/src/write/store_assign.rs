@@ -122,9 +122,11 @@ pub(crate) fn refuse_unless_ansi_store_assignable(
     let dst = normalize_for_assignment(target_type);
     if !ansi_store_assignable(src, dst) {
         return Err(DataFusionError::Plan(format!(
-            "{op} cannot store-assign column `{column}`: source type {source_type} is not \
-             ANSI-store-assignable to target type {target_type} (Spark {spark_class}; \
-             add an explicit CAST only if the reinterpretation is intended semantics)"
+            "{op} cannot store-assign column `{column}`: source type {} is not \
+             ANSI-store-assignable to target type {} (Spark {spark_class}; \
+             add an explicit CAST only if the reinterpretation is intended semantics)",
+            without_field_metadata(source_type),
+            without_field_metadata(target_type),
         )));
     }
     Ok(())
@@ -317,6 +319,40 @@ mod tests {
         assert!(!ansi_store_assignable(&renamed, &target));
         let short = DataType::Struct(vec![Field::new("a", DataType::Int32, true)].into());
         assert!(!ansi_store_assignable(&short, &target));
+    }
+
+    #[test]
+    fn a_struct_refusal_names_both_types_without_field_ids() {
+        let target = DataType::Struct(
+            vec![
+                field_id(Field::new("a", DataType::Int32, true), "3"),
+                field_id(Field::new("b", DataType::Utf8, true), "4"),
+            ]
+            .into(),
+        );
+        let string_leaf = DataType::Struct(
+            vec![
+                Field::new("a", DataType::Utf8, true),
+                Field::new("b", DataType::Utf8, true),
+            ]
+            .into(),
+        );
+        let text = refuse_unless_ansi_store_assignable(
+            "MERGE UPDATE SET",
+            MERGE_SPARK_CLASS,
+            "st",
+            &string_leaf,
+            &target,
+        )
+        .expect_err("a STRING leaf into INT must refuse")
+        .to_string();
+        assert_eq!(
+            text,
+            "Error during planning: MERGE UPDATE SET cannot store-assign column `st`: source type \
+             Struct(\"a\": Utf8, \"b\": Utf8) is not ANSI-store-assignable to target type \
+             Struct(\"a\": Int32, \"b\": Utf8) (Spark INCOMPATIBLE_DATA_FOR_TABLE; add an \
+             explicit CAST only if the reinterpretation is intended semantics)"
+        );
     }
 
     #[test]

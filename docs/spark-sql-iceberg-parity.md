@@ -1328,13 +1328,25 @@ perfectly good read.
   (`repark-iceberg` `write/store_assign.rs`) now judges a struct field by field and ignores
   Iceberg field ids. Whole-struct `SET t.st = named_struct(…)`, `UPDATE SET *` and a struct
   `INSERT` value therefore write Spark's rows. Before, they refused `not ANSI-store-assignable`.
+  Fix round 3: an `UPDATE SET *`, an `INSERT *` and an `INSERT (…) VALUES (…)` struct value whose
+  fields are reordered, re-cased, short or wide (also two levels down) resolve by name through
+  the same rebuild, so a reorder writes and a short or wide struct refuses `CANNOT_FIND_DATA` /
+  `EXTRA_STRUCT_FIELDS`. A repeated top-level key (`SET id = 5, id = 6`, also case-folded and on
+  MERGE) refuses `INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS` `Multiple assignments for 'id': 5, 6`;
+  before, UPDATE leaked an Arrow error or silently kept the last value on a table without a
+  struct column, and MERGE answered RePark's own text. The gate's own refusal text names both
+  types without Iceberg field ids.
 - **Apache Spark** — the same answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
-  2026-09-25, 107 keys `pr2/…` of `python/repark/tests/u8_write_sql_nested_spark_oracle.json`;
+  2026-09-25, 131 keys `pr2/…` of `python/repark/tests/u8_write_sql_nested_spark_oracle.json`;
   scoreboard cells `W-UPDATE-NESTED-FIELD`, `W-MERGE-NESTED`.)*
 - **Residue** — an `UPDATE` without `WHERE` on a table with a struct column fails in the fork's
   `IcebergUpdateExec` (`arguments need to have the same data type`), also for top-level
   assignments (R-13). An overflowing leaf refuses with Arrow's cast text, where Spark raises
-  `CAST_OVERFLOW_IN_TABLE_INSERT` (R-15). R-17 (a whole-struct value with a missing field wrote
+  `CAST_OVERFLOW_IN_TABLE_INSERT` (R-15). A table with a `NOT NULL` struct field cannot be
+  seeded, so Spark's `NOT_NULL_ASSERT_VIOLATION` for `SET st.a = NULL` is unreachable (R-14).
+  Top-level texts outside the fold keep their rendering: `UNRESOLVED_COLUMN` without Spark's
+  table-qualified suggestions, the table name in a top-level `CANNOT_SAFELY_CAST`, and RePark's
+  clause-order text where Spark answers `PARSE_SYNTAX_ERROR` (R-16). R-17 (a whole-struct value with a missing field wrote
   NULL; a reordered or renamed MERGE value refused RePark's gate text) is retired by fix round 2.
   Spark appends `; line N pos M` to key refusals; RePark does not.
 - **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;

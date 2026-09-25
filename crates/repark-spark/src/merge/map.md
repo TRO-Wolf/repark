@@ -41,9 +41,13 @@ and the star-sentinel rewrite live here instead of in it.
   (fix round 2, 2026-09-25), so `SET st = named_struct('q', 1, 'b', 'z')` refuses
   `CANNOT_FIND_DATA` for `st`.`a` instead of writing a NULL field, an extra field refuses
   `EXTRA_STRUCT_FIELDS`, and a reordered or re-cased value resolves by name. A top-level key
-  on an atomic column is not folded.
-  `fold_merge_clauses` loads the MERGE target when any UPDATE clause has a SET key, and applies
-  the fold to each UPDATE clause.
+  on an atomic column is folded only when it repeats (fix round 3), so a repeated key refuses
+  Spark's `Multiple assignments` text; `repeats_a_column` lets the UPDATE route raise it before
+  its cast refusal.
+  `fold_merge_clauses` loads the MERGE target when any UPDATE clause has a SET key or any
+  INSERT clause has a column list, and applies the fold to each UPDATE clause. A star whose
+  source struct differs from the target by name or order is expanded first, and struct INSERT
+  values are rebuilt by name ([nested_assign/expand.rs](nested_assign/map.md), fix round 3).
   The design did not reuse repark-iceberg's `resolve_nested_path`. Its path grammar is the
   ALTER one (`key` / `value` / `element` name map and list children, and its refusals are the
   ALTER texts). Spark reads the same spellings in a SET key as value extraction with other

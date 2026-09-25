@@ -86,7 +86,9 @@ pub(crate) async fn execute_merge(
     clauses: &[MergeClause],
     schema_evolution: bool,
 ) -> Result<DataFrame> {
-    let folded = nested_assign::fold_merge_clauses(ctx, catalogs, table, source, clauses).await?;
+    let folded =
+        nested_assign::fold_merge_clauses(ctx, catalogs, table, source, clauses, schema_evolution)
+            .await?;
     let (catalog_name, mut spec) = lower(table, source, on, folded.as_deref().unwrap_or(clauses))?;
     spec.schema_evolution = schema_evolution;
     let handle = catalog_handle(catalogs, &catalog_name)?;

@@ -756,9 +756,10 @@ repark-core's error map.
   the same length and the same names in the same order (case-insensitive), and each field
   must be assignable. The field metadata (Iceberg's `PARQUET:field_id`) is ignored. Before, a
   struct passed only by identity, so every MERGE struct assignment refused against a table
-  schema that carries field ids. Reordered or renamed struct fields still refuse, which is
-  stricter than Spark (u8-write-sql R-17). `without_field_metadata` strips those ids at every
-  depth for the cast type name. pins: u8-write-sql/C-030
+  schema that carries field ids. The gate stays positional: the Spark door rebuilds a
+  reordered struct by name before it reaches the gate (u8-write-sql C-030, C-032).
+  `without_field_metadata` strips those ids at every depth for the cast type name and for
+  both types in the refusal text, so no `PARQUET:field_id` reaches a user. pins: u8-write-sql/C-030
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /

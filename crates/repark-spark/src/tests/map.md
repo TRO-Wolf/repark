@@ -2324,9 +2324,14 @@ gate judges structs field by field now; before, both refused. A fourth (fix roun
 `whole_struct_values_resolve_by_name_on_update_and_merge`) pins a top-level struct value on
 UPDATE, MERGE matched (qualified and bare key) and NOT MATCHED BY SOURCE: a missing field refuses
 `CANNOT_FIND_DATA`, an extra field `EXTRA_STRUCT_FIELDS`, a reordered or re-cased value writes by
-name. `nested_assign_oracle.rs` replays
+name. Fix round 3 adds `star_and_inserted_struct_values_resolve_by_name` (`UPDATE SET *`,
+`INSERT *`, `INSERT (id, st) VALUES (…)` with a reordered, re-cased, short or wide struct),
+`a_struct_reordered_two_levels_down_resolves_by_name`, and
+`repeated_top_level_assignments_refuse_like_spark` (a repeated atomic key on UPDATE, MERGE
+matched and NOT MATCHED BY SOURCE refuses Spark's `Multiple assignments` text).
+`nested_assign_oracle.rs` replays
 [`python/repark/tests/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_nested_spark_oracle.json)
-(read with `include_str!`). It covers 84 of its 107 keys, counted exactly: every key without a
+(read with `include_str!`). It covers 108 of its 131 keys, counted exactly: every key without a
 residue record and without an ARRAY or MAP column. The Rust test context has no Spark `array` /
 `map` constructors, and the facade replays every key. Each refusal compares the Analysis class
 and the full normalized message. Rows compare as JSON with structs and maps as objects.

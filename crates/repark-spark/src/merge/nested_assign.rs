@@ -14,6 +14,7 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::update_cast::{incompatible_update_message, store_assignment_cast_sql};
 
+mod expand;
 mod render;
 #[cfg(test)]
 mod tests;
@@ -214,15 +215,16 @@ fn pretty_assignment(
     key: Option<&ResolvedKey>,
     value: &Expr,
 ) -> String {
-    let key = key.map_or_else(
-        || {
-            key_parts(name).map_or_else(
-                || name.to_string(),
-                |parts| unqualified(schema, scope, &parts).join("."),
-            )
-        },
-        ResolvedKey::pretty,
-    );
+    let written = || {
+        key_parts(name).map_or_else(
+            || name.to_string(),
+            |parts| unqualified(schema, scope, &parts).join("."),
+        )
+    };
+    let key = match key {
+        Some(key) if !key.steps.is_empty() => key.pretty(),
+        _ => written(),
+    };
     format!(
         "{key} = {}",
         render::pretty_expr(value, &scope.value_qualifiers)
@@ -423,10 +425,11 @@ pub(crate) async fn fold_nested_assignments(
             AssignmentTarget::Tuple(_) => None,
         });
     }
+    let mut seen = HashSet::new();
     let affected: HashSet<String> = keys
         .iter()
         .flatten()
-        .filter(|key| folds(schema, key))
+        .filter(|key| folds(schema, key) || (key.steps.is_empty() && !seen.insert(&key.column)))
         .map(|key| key.column.clone())
         .collect();
     if affected.is_empty() {
@@ -551,9 +554,26 @@ fn refuse_nested_insert_keys(
 fn merge_needs_fold(clauses: &[MergeClause]) -> bool {
     clauses.iter().any(|clause| match &clause.action {
         MergeAction::Update(update) => !update.assignments.is_empty(),
-        MergeAction::Insert(insert) => insert.columns.iter().any(|column| column.0.len() > 1),
+        MergeAction::Insert(insert) => !insert.columns.is_empty(),
         MergeAction::Delete { .. } => false,
     })
+}
+
+pub(crate) fn repeats_a_column(
+    schema: &ArrowSchema,
+    scope: &AssignmentScope,
+    assignments: &[Assignment],
+) -> bool {
+    let mut seen = HashSet::new();
+    assignments
+        .iter()
+        .any(|assignment| match &assignment.target {
+            AssignmentTarget::ColumnName(name) => matches!(
+                resolve_target(schema, scope, name),
+                Ok(Some(key)) if key.steps.is_empty() && !seen.insert(key.column.clone())
+            ),
+            AssignmentTarget::Tuple(_) => false,
+        })
 }
 
 fn factor_alias(factor: &TableFactor) -> Option<(String, String)> {
@@ -596,6 +616,7 @@ pub(crate) async fn fold_merge_clauses(
     table: &TableFactor,
     source: &TableFactor,
     clauses: &[MergeClause],
+    schema_evolution: bool,
 ) -> Result<Option<Vec<MergeClause>>> {
     if !merge_needs_fold(clauses) {
         return Ok(None);
@@ -613,7 +634,19 @@ pub(crate) async fn fold_merge_clauses(
         _ => vec![vec![target_alias.clone()]],
     };
     let mut value_qualifiers = qualifiers.clone();
-    value_qualifiers.extend(factor_alias(source).map(|(alias, _)| vec![alias]));
+    let source_alias = factor_alias(source);
+    value_qualifiers.extend(source_alias.as_ref().map(|(alias, _)| vec![alias.clone()]));
+    let has_star = clauses.iter().any(|clause| match &clause.action {
+        MergeAction::Update(update) => {
+            matches!(super::star_update(&update.assignments), Ok(Some(_)))
+        }
+        MergeAction::Insert(insert) => super::star_insert(insert),
+        MergeAction::Delete { .. } => false,
+    });
+    let star = match source_alias.filter(|_| has_star && !schema_evolution) {
+        Some((_, rendered)) => expand::star_source(ctx, &schema, source, &rendered).await,
+        None => None,
+    };
     let scope = AssignmentScope {
         qualifiers,
         sql_qualifier: target_alias,
@@ -626,6 +659,13 @@ pub(crate) async fn fold_merge_clauses(
     for clause in &mut folded {
         match &mut clause.action {
             MergeAction::Update(update) => {
+                if let Some(star) = star
+                    .as_ref()
+                    .filter(|_| matches!(super::star_update(&update.assignments), Ok(Some(_))))
+                {
+                    update.assignments = star.assignments()?;
+                    changed = true;
+                }
                 if let Some(assignments) =
                     fold_nested_assignments(ctx, &schema, &scope, &update.assignments).await?
                 {
@@ -633,7 +673,14 @@ pub(crate) async fn fold_merge_clauses(
                     changed = true;
                 }
             }
-            MergeAction::Insert(insert) => refuse_nested_insert_keys(&schema, &scope, insert)?,
+            MergeAction::Insert(insert) => {
+                refuse_nested_insert_keys(&schema, &scope, insert)?;
+                if let Some(star) = star.as_ref().filter(|_| super::star_insert(insert)) {
+                    star.expand_insert(insert)?;
+                    changed = true;
+                }
+                changed |= expand::fold_insert_values(ctx, &schema, &scope, insert).await?;
+            }
             MergeAction::Delete { .. } => {}
         }
     }

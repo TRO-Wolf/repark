@@ -169,5 +169,5 @@ async fn every_nested_assignment_measurement_answers_as_spark_did() {
         replay(key, case).await;
         replayed += 1;
     }
-    assert_eq!(replayed, 84, "{replayed} cases replayed");
+    assert_eq!(replayed, 108, "{replayed} cases replayed");
 }

@@ -19,10 +19,12 @@ The rounds-2 and -3 pins (C-015..C-017, C-019..C-021) replay that file case by c
 residue (R-2, R-8, R-11, R-12) is held to RePark's recorded answer.
 
 PR2 (C-025..C-032, 2026-09-25) pins nested struct-field assignment in UPDATE and MERGE. The
-cells ``W-UPDATE-NESTED-FIELD`` and ``W-MERGE-NESTED`` have their own tests. The 107 ``pr2/…``
+cells ``W-UPDATE-NESTED-FIELD`` and ``W-MERGE-NESTED`` have their own tests. The 131 ``pr2/…``
 measurements in ``u8_write_sql_nested_spark_oracle.json`` replay case by case, and a residue
 key (R-13..R-16) is held to RePark's recorded answer. The ``pr2/U4-…`` and ``pr2/M4-…`` keys
-(C-032) are whole-struct values of UPDATE and MERGE resolved by name.
+(C-032) are whole-struct values of UPDATE and MERGE resolved by name; the ``pr2/M5-…`` keys
+(C-030) are star-expanded and inserted struct values, and the ``pr2/U5-…`` and ``M5-dup-…``
+keys (C-029) are repeated top-level keys.
 
 pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
 C-011, C-012, C-014, C-015, C-016, C-017, C-019, C-020, C-021, C-022, C-023, C-024, C-025,
@@ -943,6 +945,11 @@ def test_merge_sets_one_struct_field_as_spark_does(spark: ReparkSession) -> None
         "deleted-records": "2",
         "total-records": "2",
     }
+
+
+def test_the_nested_oracle_holds_every_measurement() -> None:
+    """pins: u8-write-sql/C-031"""
+    assert len(NESTED) == 131
 
 
 @pytest.mark.parametrize("key", list(NESTED))

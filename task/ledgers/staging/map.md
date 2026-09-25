@@ -18,7 +18,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `feat/u8-write-sql`.
   **PR2 (2026-09-25):** nested struct-field assignment in UPDATE and MERGE (C-025..C-031);
   fix round 2 routes top-level whole-struct values through the by-name check (C-032, retires
-  R-17). Branch `feat/u8-write-sql-2`.
+  R-17); fix round 3 resolves star-expanded and inserted struct values by name (C-030) and
+  refuses repeated top-level keys with Spark's text (C-029). Branch `feat/u8-write-sql-2`.
   pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
 - [u6-write-refusals-ledger.md](u6-write-refusals-ledger.md) —
   **U6 WRITE-REFUSALS PR1 (2026-09-24), in flight:** refusal parity on

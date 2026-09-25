@@ -26,6 +26,12 @@
     "repark": "repark4-after.json",
     "probe": "probe4.py",
     "sha256": "1cf7da0ecbae1897662b7028bd368208f4b33bb9e9f07649b247b3ebe7bf9783"
+   },
+   {
+    "spark": "spark5.json",
+    "repark": "repark5-after.json",
+    "probe": "probe5.py",
+    "sha256": "f36f21bb840d98f6dac811e9671c8cbe807e3f8ad42c42840122fea98c9dc92d"
    }
   ],
   "normalization": "each case ran on table sc.ns.n<k> (k = its index in its probe); messages drop RePark's 'Error during planning: ' prefix and Spark's '; line N pos M' / '(line N, pos M)' suffix with the plan that follows, and spell the table <T> (plain), `<T>` (ticked) and its last part `<t>`; rows hold structs and maps as objects (map keys as strings)",
@@ -3451,6 +3457,778 @@
        "y": "v"
       }
      }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('b', 'w', 'a', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('a', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('a', 22, 'b', 'w', 'z', 1) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `z` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'v')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('inner', named_struct('y', 'k', 'x', 33), 'a', 22) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "inner": {
+       "x": 33,
+       "y": "k"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-setstar-deep-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'v')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, named_struct('a', 22, 'inner', named_struct('x', 33)) AS st) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`inner`.`y`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "inner": {
+       "x": 20,
+       "y": "v"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-insstar-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('b', 'n', 'a', 55) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-insstar-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('a', 55) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-insstar-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('a', 55, 'b', 'n', 'z', 1) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `z` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-insstar-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'v')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('inner', named_struct('y', 'k', 'x', 33), 'a', 55) AS st) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "inner": {
+       "x": 20,
+       "y": "v"
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "inner": {
+       "x": 33,
+       "y": "k"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('b', 'n', 'a', 55))"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-srccol": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id, named_struct('b', 'n', 'a', 55) AS sv) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, s.sv)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-missing": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('a', 55))"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table ``: Cannot find data for the output column `st`.`b`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-extra": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('a', 55, 'b', 'n', 'z', 1))"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+     "sqlstate": "KD000",
+     "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table ``: Cannot write extra fields `z` to the struct `st`. SQLSTATE: KD000"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-deep-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>",
+   "seed": "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u'))), (2, named_struct('a', 2, 'inner', named_struct('x', 20, 'y', 'v')))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (st, id) VALUES (named_struct('inner', named_struct('y', 'k', 'x', 33), 'a', 55), s.id)"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "inner": {
+       "x": 10,
+       "y": "u"
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "inner": {
+       "x": 20,
+       "y": "v"
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "inner": {
+       "x": 33,
+       "y": "k"
+      }
+     }
+    ]
+   ]
+  },
+  "pr2/M5-ins-values-case": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, named_struct('B', 'n', 'A', 55))"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 55,
+      "b": "n"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-both-star-reorder": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT id, named_struct('b', concat('w', id), 'a', CAST(id * 11 AS INT)) AS st FROM VALUES (2), (6) AS v(id)) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 22,
+      "b": "w2"
+     }
+    ],
+    [
+     6,
+     {
+      "a": 66,
+      "b": "w6"
+     }
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET id = 5, id = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = 5\", \"id = 6\" due to data type mismatch: \n- Multiple assignments for 'id': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar-flat": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET v = 5, v = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = 5\", \"v = 6\" due to data type mismatch: \n- Multiple assignments for 'v': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar-case": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET v = 5, V = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = 5\", \"V = 6\" due to data type mismatch: \n- Multiple assignments for 'v': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar-mixed": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET id = 5, st.a = 1, id = 6 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = 5\", \"st.a = 1\", \"id = 6\" due to data type mismatch: \n- Multiple assignments for 'id': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/U5-dup-scalar-three": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET v = 5, id = 3, v = 6, v = 'x' WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = 5\", \"id = 3\", \"v = 6\", \"v = x\" due to data type mismatch: \n- Multiple assignments for 'v': 5, 6, 'x' SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/M5-dup-scalar": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.id = 5, t.id = 6"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = 5\", \"id = 6\" due to data type mismatch: \n- Multiple assignments for 'id': 5, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/M5-dup-scalar-flat": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 7 AS nv) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET v = s.nv, t.v = 6"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = nv\", \"v = 6\" due to data type mismatch: \n- Multiple assignments for 'v': s.nv, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/M5-dup-scalar-nmbs": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id, 7 AS nv) s ON t.id = s.id WHEN NOT MATCHED BY SOURCE THEN UPDATE SET v = 1, v = 2"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"v = 1\", \"v = 2\" due to data type mismatch: \n- Multiple assignments for 'v': 1, 2 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
     ]
    ]
   }

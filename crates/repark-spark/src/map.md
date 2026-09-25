@@ -457,7 +457,8 @@ pins: rp-4-fork-repin/C-005, C-006
   [tests/update_cast.rs](tests/update_cast.rs). pins: ipi-51/W-UPDATE-TYPE-ERR
   **U8 WRITE-SQL PR2 (2026-09-25):** `execute_update` now calls
   `refuse_cast_then_fold_nested`. It loads the target once (`load_update_target`), runs the
-  same top-level cast refusal on it, and then folds nested struct-field assignments and
+  same top-level cast refusal on it (skipped when a key repeats, so the fold's `Multiple
+  assignments` refusal answers first, as Spark's does), and then folds nested struct-field assignments and
   top-level struct values through [`merge/nested_assign.rs`](merge/map.md). It re-renders the
   statement only when something folded, so every other UPDATE keeps its original SQL.
   `router.rs` stays at 1000 lines (two lines replaced by two).
@@ -2065,8 +2066,10 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   `merge::nested_assign::fold_merge_clauses`, which folds nested SET targets of every UPDATE
   clause (matched and NOT MATCHED BY SOURCE) into whole-column `named_struct` rebuilds and
   refuses nested INSERT keys. `lower` then sees only top-level targets. A top-level SET value
-  on a struct column is folded too, so it resolves by name (fix round 2, C-032). A MERGE
-  without an UPDATE SET key returns without loading the table. pins: u8-write-sql/C-026,
+  on a struct column is folded too, so it resolves by name (fix round 2, C-032). A star or an
+  INSERT struct value resolves by name too, and a repeated atomic key refuses Spark's
+  `Multiple assignments` text (fix round 3). A MERGE without an UPDATE SET key or an INSERT
+  column list returns without loading the table. pins: u8-write-sql/C-026,
   C-029, C-032
 - `time_travel.rs` — **ICE-METADATA-COLS-1 WO-R1 (2026-09-21):** the Spark-door `snapshot_id_<id>`
   and `at_timestamp_<ms>` ref selectors resolve to snapshot pins beside `branch_`/`tag_`; an

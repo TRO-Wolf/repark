@@ -206,3 +206,273 @@ async fn whole_struct_values_resolve_by_name_on_update_and_merge() {
         written("| 1 | {a: 5, b: z} |", "| 2 | {a: 2, b: q} |")
     );
 }
+
+async fn answer_on(columns: &str, seed: &str, statement: &str) -> Result<Vec<String>, String> {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("CREATE TABLE ice.sales.t ({columns}) USING iceberg"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO ice.sales.t VALUES {seed}"),
+    )
+    .await;
+    let sql = statement.replace("{T}", "ice.sales.t");
+    let refused = match execute(&ctx, &catalogs, &sql).await {
+        Ok(frame) => frame.collect().await.err(),
+        Err(error) => Some(error),
+    };
+    if refused.is_some() {
+        let mapped = refusal(&ctx, &catalogs, &sql).await;
+        return Err(mapped
+            .to_string()
+            .trim_start_matches("Error during planning: ")
+            .to_string());
+    }
+    Ok(text(&ctx, &catalogs, "SELECT * FROM ice.sales.t ORDER BY id").await)
+}
+
+const STRUCT: &str = "id BIGINT, st STRUCT<a: INT, b: STRING>";
+const DEEP: &str = "id BIGINT, st STRUCT<a: INT, inner: STRUCT<x: INT, y: STRING>>";
+const DEEP_SEED: &str = "(1, named_struct('a', 1, 'inner', named_struct('x', 10, 'y', 'u')))";
+
+fn merge_from(source: &str, action: &str) -> String {
+    format!("MERGE INTO {{T}} t USING (SELECT {source}) s ON t.id = s.id {action}")
+}
+
+fn rows(expected: &[&str]) -> Vec<String> {
+    expected.iter().map(ToString::to_string).collect()
+}
+
+#[tokio::test]
+async fn star_and_inserted_struct_values_resolve_by_name() {
+    let set_star = "WHEN MATCHED THEN UPDATE SET *";
+    let insert_star = "WHEN NOT MATCHED THEN INSERT *";
+    let insert_values = "WHEN NOT MATCHED THEN INSERT (id, st) VALUES (s.id, ";
+    let updated = Ok(rows(&["| 1 | {a: 1, b: p} |", "| 2 | {a: 22, b: w} |"]));
+    let inserted = Ok(rows(&[
+        "| 1 | {a: 1, b: p} |",
+        "| 2 | {a: 2, b: q} |",
+        "| 5 | {a: 55, b: n} |",
+    ]));
+    for (statement, expected) in [
+        (
+            merge_from("2 AS id, named_struct('b', 'w', 'a', 22) AS st", set_star),
+            &updated,
+        ),
+        (
+            merge_from(
+                "5 AS id, named_struct('b', 'n', 'a', 55) AS st",
+                insert_star,
+            ),
+            &inserted,
+        ),
+        (
+            merge_from(
+                "5 AS id",
+                &format!("{insert_values}named_struct('b', 'n', 'a', 55))"),
+            ),
+            &inserted,
+        ),
+        (
+            merge_from(
+                "5 AS id, named_struct('b', 'n', 'a', 55) AS sv",
+                &format!("{insert_values}s.sv)"),
+            ),
+            &inserted,
+        ),
+        (
+            merge_from(
+                "5 AS id",
+                &format!("{insert_values}named_struct('B', 'n', 'A', 55))"),
+            ),
+            &inserted,
+        ),
+    ] {
+        assert_eq!(
+            &answer_on(STRUCT, SEED, &statement).await,
+            expected,
+            "{statement}"
+        );
+    }
+    let missing = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data \
+                   for the table ``: Cannot find data for the output column `st`.`b`. \
+                   SQLSTATE: KD000";
+    let extra = "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible \
+                 data for the table ``: Cannot write extra fields `z` to the struct `st`. \
+                 SQLSTATE: KD000";
+    for (statement, expected) in [
+        (
+            merge_from("2 AS id, named_struct('a', 22) AS st", set_star),
+            missing,
+        ),
+        (
+            merge_from(
+                "2 AS id, named_struct('a', 22, 'b', 'w', 'z', 1) AS st",
+                set_star,
+            ),
+            extra,
+        ),
+        (
+            merge_from("5 AS id, named_struct('a', 55) AS st", insert_star),
+            missing,
+        ),
+        (
+            merge_from(
+                "5 AS id, named_struct('a', 55, 'b', 'n', 'z', 1) AS st",
+                insert_star,
+            ),
+            extra,
+        ),
+        (
+            merge_from("5 AS id", &format!("{insert_values}named_struct('a', 55))")),
+            missing,
+        ),
+        (
+            merge_from(
+                "5 AS id",
+                &format!("{insert_values}named_struct('a', 55, 'b', 'n', 'z', 1))"),
+            ),
+            extra,
+        ),
+    ] {
+        assert_eq!(
+            answer_on(STRUCT, SEED, &statement).await,
+            Err(expected.to_string()),
+            "{statement}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_struct_reordered_two_levels_down_resolves_by_name() {
+    let set_star = "WHEN MATCHED THEN UPDATE SET *";
+    let deep_source = "named_struct('inner', named_struct('y', 'k', 'x', 33), 'a', 22)";
+    assert_eq!(
+        answer_on(
+            DEEP,
+            DEEP_SEED,
+            &merge_from(&format!("1 AS id, {deep_source} AS st"), set_star)
+        )
+        .await,
+        Ok(rows(&["| 1 | {a: 22, inner: {x: 33, y: k}} |"]))
+    );
+    assert_eq!(
+        answer_on(
+            DEEP,
+            DEEP_SEED,
+            &merge_from(
+                "5 AS id",
+                &format!("WHEN NOT MATCHED THEN INSERT (st, id) VALUES ({deep_source}, s.id)")
+            )
+        )
+        .await,
+        Ok(rows(&[
+            "| 1 | {a: 1, inner: {x: 10, y: u}} |",
+            "| 5 | {a: 22, inner: {x: 33, y: k}} |"
+        ]))
+    );
+    assert_eq!(
+        answer_on(
+            DEEP,
+            DEEP_SEED,
+            &merge_from(
+                "1 AS id, named_struct('a', 22, 'inner', named_struct('x', 33)) AS st",
+                set_star
+            )
+        )
+        .await,
+        Err(
+            "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for \
+             the table ``: Cannot find data for the output column `st`.`inner`.`y`. \
+             SQLSTATE: KD000"
+                .to_string()
+        )
+    );
+}
+
+#[tokio::test]
+async fn repeated_top_level_assignments_refuse_like_spark() {
+    let flat = "id BIGINT, v INT";
+    let flat_seed = "(1, 10), (2, 20)";
+    let refused = |pretty: &str, detail: &str| {
+        Err(format!(
+            "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve {pretty} \
+             due to data type mismatch: \n- Multiple assignments for {detail} SQLSTATE: 42K09"
+        ))
+    };
+    for (columns, seed, statement, expected) in [
+        (
+            STRUCT,
+            SEED,
+            "UPDATE {T} SET id = 5, id = 6 WHERE id = 1".to_string(),
+            refused("\"id = 5\", \"id = 6\"", "'id': 5, 6"),
+        ),
+        (
+            flat,
+            flat_seed,
+            "UPDATE {T} SET v = 5, v = 6 WHERE id = 1".to_string(),
+            refused("\"v = 5\", \"v = 6\"", "'v': 5, 6"),
+        ),
+        (
+            flat,
+            flat_seed,
+            "UPDATE {T} SET v = 5, V = 6 WHERE id = 1".to_string(),
+            refused("\"v = 5\", \"V = 6\"", "'v': 5, 6"),
+        ),
+        (
+            STRUCT,
+            SEED,
+            "UPDATE {T} SET id = 5, st.a = 1, id = 6 WHERE id = 1".to_string(),
+            refused("\"id = 5\", \"st.a = 1\", \"id = 6\"", "'id': 5, 6"),
+        ),
+        (
+            flat,
+            flat_seed,
+            "UPDATE {T} SET v = 5, id = 3, v = 6, v = 'x' WHERE id = 1".to_string(),
+            refused(
+                "\"v = 5\", \"id = 3\", \"v = 6\", \"v = x\"",
+                "'v': 5, 6, 'x'",
+            ),
+        ),
+        (
+            STRUCT,
+            SEED,
+            merge_from("2 AS id", "WHEN MATCHED THEN UPDATE SET t.id = 5, t.id = 6"),
+            refused("\"id = 5\", \"id = 6\"", "'id': 5, 6"),
+        ),
+        (
+            flat,
+            flat_seed,
+            merge_from(
+                "2 AS id, 7 AS nv",
+                "WHEN MATCHED THEN UPDATE SET v = s.nv, t.v = 6",
+            ),
+            refused("\"v = nv\", \"v = 6\"", "'v': s.nv, 6"),
+        ),
+        (
+            flat,
+            flat_seed,
+            merge_from(
+                "2 AS id, 7 AS nv",
+                "WHEN NOT MATCHED BY SOURCE THEN UPDATE SET v = 1, v = 2",
+            ),
+            refused("\"v = 1\", \"v = 2\"", "'v': 1, 2"),
+        ),
+    ] {
+        assert_eq!(
+            answer_on(columns, seed, &statement).await,
+            expected,
+            "{statement}"
+        );
+    }
+    assert_eq!(
+        answer_on(flat, flat_seed, "UPDATE {T} SET v = 5, id = 3 WHERE id = 1").await,
+        Ok(rows(&["| 2 | 20 |", "| 3 | 5 |"]))
+    );
+}

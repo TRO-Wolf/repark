@@ -628,7 +628,7 @@ async fn merge_update_set_casefold_duplicate_errors_without_write() {
     .await
     .unwrap_err();
     assert!(
-        err.to_string().contains("more than once"),
+        err.to_string().contains("'name': 'first', 'second' SQL"),
         "expected casefold-duplicate SET error, got: {err}"
     );
     assert_eq!(
