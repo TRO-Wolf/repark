@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from repark.errors import PySparkNotImplementedError
+from repark.errors import IllegalArgumentException, PySparkNotImplementedError
 from repark.spark import ReparkSession
 
 COVERS: list[str] = [
@@ -21,7 +21,9 @@ COVERS: list[str] = [
     "DataFrameWriterV2.cluster_by",
 ]
 
-BUCKET_FEATURE = "bucketBy on an Iceberg table (use writeTo(...).partitionedBy(F.bucket(n, col)))"
+SORTED_BUCKET_MESSAGE = (
+    "Cannot convert transform with more than one column reference: sorted_bucket(a, 2, b)"
+)
 CLUSTER_FEATURE = "clusterBy on an Iceberg table"
 
 
@@ -40,8 +42,17 @@ def expect_not_implemented(label: str, call: object, feature: str) -> None:
         raise SystemExit(f"{label} did not refuse with NOT_IMPLEMENTED")
 
 
+def expect_illegal_argument(label: str, call: object, message: str) -> None:
+    try:
+        call()
+    except IllegalArgumentException as error:
+        expect(f"{label} message", str(error), message)
+    else:
+        raise SystemExit(f"{label} did not refuse with IllegalArgumentException")
+
+
 def main() -> None:
-    """Chain the layout setters and pin the Iceberg write refusals on one local frame."""
+    """Chain the layout setters, write one bucket table and pin the Iceberg refusals."""
     repark = ReparkSession.builder.appName("ex-io-bucket-cluster").master("local[1]").getOrCreate()
     repark.register_memory_catalog("local", Path.cwd() / "ex_io_bucket_cluster_wh")
     repark.sql("CREATE NAMESPACE local.ns")
@@ -49,17 +60,23 @@ def main() -> None:
         frame = repark.sql("SELECT * FROM (VALUES ('x', 1, 2)) AS t(key, a, b)")
         writer = frame.write
         expect("bucketBy chains", writer.bucketBy(2, "a").sortBy("b") is writer, True)
-        expect_not_implemented(
-            "bucketBy saveAsTable",
+        expect_illegal_argument(
+            "bucketBy sortBy saveAsTable",
             lambda: writer.saveAsTable("local.ns.bk"),
-            BUCKET_FEATURE,
+            SORTED_BUCKET_MESSAGE,
         )
         snake_writer = frame.write.bucket_by(2, ["a"]).sort_by("b")
-        expect_not_implemented(
-            "bucket_by saveAsTable",
+        expect_illegal_argument(
+            "bucket_by sort_by saveAsTable",
             lambda: snake_writer.saveAsTable("local.ns.bk_snake"),
-            BUCKET_FEATURE,
+            SORTED_BUCKET_MESSAGE,
         )
+        expect("sorted bucket creates nothing", repark.catalog.tableExists("local.ns.bk"), False)
+        frame.write.bucketBy(2, "a").saveAsTable("local.ns.bk")
+        described = repark.sql("DESCRIBE TABLE local.ns.bk").collect()
+        partitioning = [str(row[1]) for row in described if str(row[0]).startswith("Part ")]
+        expect("bucketBy saveAsTable partitioning", partitioning, ["bucket(2, a)"])
+        expect("bucketBy saveAsTable rows", repark.sql("SELECT * FROM local.ns.bk").count(), 1)
         clustered = frame.write.clusterBy("a")
         expect_not_implemented(
             "clusterBy saveAsTable",

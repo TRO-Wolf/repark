@@ -3,7 +3,7 @@
 //! user input), and a per-call-site `#[expect]` cannot reach inside the macro expansion
 #![expect(
     clippy::disallowed_methods,
-    reason = "pyo3::create_exception! expands to Result::expect at the six macro \
+    reason = "pyo3::create_exception! expands to Result::expect at the eight macro \
               sites below; the expansion is compile-time-constant registration, not a \
               reachable panic path. Scoped here so the spawn/panic bans stay live for \
               the whole crate (p3c ledger P-4/P-5)."
@@ -67,7 +67,14 @@ pyo3::create_exception!(
      key/value the session cannot map to a valid engine/catalog configuration. The PySpark name \
      (pyspark.errors.IllegalArgumentException — what PySpark raises for a JVM \
      IllegalArgumentException; live pyspark 4.0.0 raises it for an invalid SQLConf value). \
-     Subclasses PySparkException (hence RuntimeError). NOTE: PySpark's \
-     `NumberFormatException(IllegalArgumentException)` leaf is deliberately NOT defined here — \
-     repark has no reachable raise for it (Group X)."
+     Subclasses PySparkException (hence RuntimeError)."
+);
+pyo3::create_exception!(
+    repark._native,
+    NumberFormatException,
+    IllegalArgumentException,
+    "A string that is not a Java integer where the engine parses one — today, a non-integer \
+     `output-spec-id` write option (`For input string: \"x\"`). The PySpark name \
+     (pyspark.errors.NumberFormatException); subclasses IllegalArgumentException, so \
+     `except IllegalArgumentException` keeps catching it."
 );

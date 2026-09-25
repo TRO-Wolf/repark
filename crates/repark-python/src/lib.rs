@@ -25,6 +25,7 @@ mod subquery;
 mod text_io;
 mod type_bridge;
 mod unresolved_routine;
+mod writer_layout;
 
 use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
@@ -39,7 +40,7 @@ pub use session::PyReparkSession;
 mod exceptions;
 pub use exceptions::{
     AnalysisException, ArithmeticException, CommitStateUnknownException, IllegalArgumentException,
-    ParseException, PySparkException, UnsupportedOperationException,
+    NumberFormatException, ParseException, PySparkException, UnsupportedOperationException,
 };
 
 /// Convert a crate error to its PySpark-shaped Python exception.
@@ -58,6 +59,7 @@ pub(crate) fn to_py_err(err: repark_core::Error) -> PyErr {
         ErrorClass::Arithmetic => ArithmeticException::new_err(message),
         ErrorClass::Unsupported => UnsupportedOperationException::new_err(message),
         ErrorClass::IllegalArgument => IllegalArgumentException::new_err(message),
+        ErrorClass::NumberFormat => NumberFormatException::new_err(message),
         ErrorClass::CommitStateUnknown => {
             let operation_id = match &err {
                 repark_core::Error::CommitStateUnknown { operation_id, .. } => operation_id.clone(),
@@ -150,6 +152,10 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module.py().get_type::<IllegalArgumentException>(),
     )?;
     module.add(
+        "NumberFormatException",
+        module.py().get_type::<NumberFormatException>(),
+    )?;
+    module.add(
         "CommitStateUnknownException",
         module.py().get_type::<CommitStateUnknownException>(),
     )?;
@@ -174,6 +180,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     subquery::register(module)?;
     text_io::register(module)?;
     type_bridge::register(module)?;
+    writer_layout::register(module)?;
     Ok(())
 }
 

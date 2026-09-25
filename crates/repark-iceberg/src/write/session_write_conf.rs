@@ -140,6 +140,7 @@ impl SessionWriteView {
             fork_insert_dictionary_rule: statement.fork_insert_dictionary_rule,
             write_format: statement.write_format.clone(),
             delete_format: statement.delete_format.clone(),
+            output_spec_id: statement.output_spec_id,
         }
     }
 }

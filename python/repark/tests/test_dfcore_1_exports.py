@@ -120,6 +120,9 @@ DF-SUBQUERY-1 (2026-09-15): the four subquery-surface methods (``scalar``,
 walk sees them — so ``EXPECTED_DATAFRAME_DIR`` gains exactly those four names;
 ``core`` and the package each gain exactly the one new module name ``subquery``.
 pins: df-subquery-1/C-007
+U7 PR1 (2026-09-24): the package gains exactly the one new module name
+``writer_save`` (bound by ``writer_readwriter`` importing it); no ``DataFrame``
+member, slot, alias, or core-surface name changes.
 """
 
 from __future__ import annotations

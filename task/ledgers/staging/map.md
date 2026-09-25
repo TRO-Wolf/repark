@@ -1668,3 +1668,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   `risk_tier: standard`. Branch `fix/u10-mc-deleted`.
   pins: u10-mc-deleted-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008,
   C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020
+- [u7-write-df-ledger.md](u7-write-df-ledger.md) —
+  **WO U7 PR1 (2026-09-24):** the DataFrame writer surface. `format("iceberg").save(name)`
+  is a table write in every mode (Spark's TABLE_OR_VIEW_NOT_FOUND / ALREADY_EXISTS texts,
+  partitionBy checked against the table), a path target refuses as Spark does or keeps the
+  declared create-mode refusal; `bucketBy` on `saveAsTable` is the Iceberg bucket transform
+  (CTAS/RTAS through the SQL door's `CLUSTERED BY`, layout-checked appends, Spark's
+  sorted/multi-column refusals; Ruling R-1 retired); `output-spec-id` stages files under the
+  requested spec. Four scoreboard cells EQUAL, nine mutations red. `risk_tier: standard`.
+  Branch `feat/u7-write-df`. Round 2 (critic r1 V-001..V-012): Ruling Q1's missing-column
+  answer, the staged spec deciding the writer and the dynamic scope, `NumberFormatException`,
+  the path relation, the `CLUSTERED` scan and one Rust statement kernel for both writers.
+  pins: u7-write-df/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
+  C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018

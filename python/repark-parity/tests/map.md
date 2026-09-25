@@ -392,6 +392,7 @@ pins: perf-dynflatten-1-measure/C-001, C-003
   review answered 2026-09-02 (packet); the freeze lands with the tag" — and this pin stayed green
   across it. pins: api-freeze/C-002
 - `test_api_freeze.py` — **API-FREEZE (2026-09-02; release 2026-09-03: the STATUS pointer now names the cut tag, not the waiting gate):** the v1.0 freeze pin. Holds three things
+- `test_api_freeze.py` — **U7 PR1 (2026-09-24):** the frozen-names count pin moves 890 → 891 with the regenerated register (`NumberFormatException` added to `errors.py`). No other pin moves.
   at once: every packet row's `decision` equals its `recommend` (15 YES / 15 YES-except / 5 NO,
   dated 2026-09-02, the owner's rule sentence byte-equal in packet, inventory and
   `docs/release.md`); the checked-in register
@@ -1076,3 +1077,5 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
 - `test_cap_1_source_file_line_cap.py` — **U4 PR B DESCRIBE (2026-09-24):** the `session_core.py` mirror row ratchets 2327 → 2325 to the measured file and `scripts/check_lib_py.py`. No other row moves.
 - `test_cap_1_source_file_line_cap.py` — **U5 PR1 nested ALTER (2026-09-24):** the `crates/repark-spark/src/alter.rs` mirror row ratchets 1384 → 1382 to the measured file and `scripts/check_rust_file_size.py`. No other row moves.
 - `test_cap_1_source_file_line_cap.py` — **U5 PR2a ALTER COLUMN COMMENT (2026-09-24):** the `crates/repark-spark/src/alter.rs` mirror row ratchets 1382 → 1354 and the `crates/repark-spark/src/tests/alter.rs` row 1184 → 1182, to the measured files and `scripts/check_rust_file_size.py` (the residual `ALTER COLUMN … COMMENT` refusal is deleted and its refusal pin flips to a landed doc). No other row moves.
+- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves.
+- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate.

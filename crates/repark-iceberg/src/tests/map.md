@@ -44,6 +44,30 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   manifest on the branch (the carried seed plus 99 branch appends), not the hundredth branch
   append, and main's pointer never moves.
   pins: ice-merge-append-1/C-002, C-003, C-004, C-005, C-008
+- `output_spec.rs` — **U7 PR1 (2026-09-24):** `output-spec-id` pins over a memory catalog
+  table evolved with `ADD PARTITION FIELD cat`: Java int parsing and its refusal text, the
+  staging view's swapped default spec (the real table untouched), Spark's unknown-id text for
+  `7` and `-1`, an append with spec 0 committing only spec-0 files, and the near miss without
+  the option committing two spec-1 files. Round 2 (2026-09-24): the refusal is a
+  `NumberFormatMarker`, the partitioned stager follows an unpartitioned output spec (one
+  spec-0 file), and `staged_spec_is_partitioned` answers per id and refuses `7`.
+  pins: u7-write-df/C-014, C-016
+- `writer_partitioning.rs` — **U7 PR1 (2026-09-24):** the layout and save-target kernels:
+  provided and table transform rendering (quoting, `sorted_bucket`, `days`/`truncate`), the
+  mismatch text with an empty and a three-field table side, count and case mismatches, a
+  matching catalog table passing, and `decide_save_target` across every mode, existence,
+  path and default-format cell. Round 2: the path relation for URI, trailing-slash,
+  doubled-slash, `s3://`, relative and one-segment paths, and `save_target_names_table`.
+  Round 3: a void field dropped from the table side and `years`/`months`/`hours` named, as
+  Spark measured them (`bucket_existing_void_append`, `bucket_existing_time_append`).
+  pins: u7-write-df/C-005, C-006, C-014
+- `writer_plan.rs` — **U7 PR1 round 2 (2026-09-24):** `plan_writer` pins: the `saveAsTable`
+  statement for every mode and existence with and without buckets, Spark's already-exists
+  text, the missing bucket column on every create-or-replace arm (and not on an existing
+  append), a case-sensitive session keeping `ID`, the `_LEGACY_ERROR_TEMP_3060` text (round 3:
+  the name backticked when it contains a `.`, and only then), a missing `sortBy` column after
+  the bucket columns (round 4), and the `save()` statements with their layout check.
+  pins: u7-write-df/C-015, C-018
 - `tracing.rs` — shared tracing harness: one global subscriber, both capture layers
   (forced-edit class 6). Accessors used by `catalog/tests/catalog.rs` and
   `write/merge/tests/streaming_scan.rs`.

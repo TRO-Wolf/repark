@@ -6,7 +6,7 @@
   "rows": 35,
   "frozen_rows": 30,
   "unfrozen_rows": 5,
-  "frozen_names": 890
+  "frozen_names": 891
  },
  "rows": [
   {
@@ -5282,6 +5282,10 @@
     },
     {
      "name": "IllegalArgumentException",
+     "source": "python/repark/src/repark/errors.py"
+    },
+    {
+     "name": "NumberFormatException",
      "source": "python/repark/src/repark/errors.py"
     },
     {

@@ -13,6 +13,7 @@ import repark.spark.functions as F  # noqa: N812
 from repark import ReparkSession
 from repark.errors import (
     AnalysisException,
+    IllegalArgumentException,
     PySparkNotImplementedError,
     PySparkTypeError,
     PySparkValueError,
@@ -21,6 +22,9 @@ from repark.errors import (
 _ORACLE: dict[str, Any] = json.loads(
     Path(__file__).with_name("facade_reader_writer_oracle.json").read_text(encoding="utf-8")
 )["cells"]
+_U7_MEASURED: dict[str, Any] = json.loads(
+    Path(__file__).with_name("ice_write_df_1_spark_oracle.json").read_text(encoding="utf-8")
+)["measured"]
 
 
 @pytest.fixture
@@ -150,30 +154,49 @@ def test_bucket_by_count_bounds_refused_at_save(spark: ReparkSession) -> None:
 
 
 def test_bucket_by_missing_column_refused(spark: ReparkSession) -> None:
-    """A bucket column absent from the frame raises COLUMN_NOT_DEFINED_IN_TABLE.
+    """A bucket column absent from the frame answers as Spark's Iceberg catalog (Ruling Q1).
 
-    pins: io-bucket-cluster-1/C-001
+    A new table raises ``_LEGACY_ERROR_TEMP_3060`` with the frame's printSchema tree; an append
+    onto an existing table answers the layout mismatch. The recorded ``bucketBy_missing_col``
+    cell ran on Spark's Hive session catalog.
+    pins: u7-write-df/C-015
     """
-    frame = _kv_frame(spark)
+    frame = spark.createDataFrame(
+        [(7, "g", "x"), (8, "h", "w")], "id BIGINT, data STRING, cat STRING"
+    )
     with pytest.raises(AnalysisException) as raised:
-        frame.write.bucketBy(2, "zz").saveAsTable("bk_missing")
-    _assert_error_cell(raised.value, "bucketBy_missing_col")
+        frame.write.bucketBy(4, "nope").saveAsTable("bk_missing")
+    expected = _U7_MEASURED["bucketBy_new_missing_col"]["error"]
+    assert str(raised.value) == expected["message"]
+    assert raised.value.getCondition() == expected["condition"]
     assert not spark.catalog.tableExists("bk_missing")
+    spark.sql(
+        "CREATE TABLE bk_missing (id BIGINT, data STRING, cat STRING) USING iceberg "
+        "PARTITIONED BY (cat, bucket(4, id))"
+    )
+    with pytest.raises(IllegalArgumentException) as mismatch:
+        frame.write.bucketBy(4, "nope").mode("append").saveAsTable("bk_missing")
+    assert (
+        str(mismatch.value) == (_U7_MEASURED["bucket_existing_missing_append"]["error"]["message"])
+    )
 
 
-def test_bucket_by_save_as_table_refused_ruling_r1(spark: ReparkSession) -> None:
-    """Ruling R-1: a valid bucketed saveAsTable refuses NOT_IMPLEMENTED (bucketBy_saveAsTable).
+def test_bucket_by_sort_by_save_as_table_refuses_like_iceberg(spark: ReparkSession) -> None:
+    """A sorted bucketed saveAsTable refuses as Spark's Iceberg catalog does (R-1 retired).
 
-    Spark records Hive bucket files and DESCRIBE EXTENDED rows; repark has no Hive bucketing.
-    pins: io-bucket-cluster-1/C-001
+    The recorded ``bucketBy_saveAsTable`` cell ran on Spark's Hive session catalog; on an
+    Iceberg catalog Spark cannot convert ``sorted_bucket`` into a partition transform. The
+    frame and the expected text are the U7 oracle shape ``bucketBy_new_sortBy``.
+    pins: u7-write-df/C-008
     """
-    frame = _kv_frame(spark)
-    with pytest.raises(PySparkNotImplementedError) as raised:
-        frame.write.bucketBy(2, "a").sortBy("b").saveAsTable("bk_t")
-    feature = "bucketBy on an Iceberg table (use writeTo(...).partitionedBy(F.bucket(n, col)))"
-    assert raised.value.getCondition() == "NOT_IMPLEMENTED"
-    assert raised.value.getMessageParameters() == {"feature": feature}
-    assert str(raised.value) == f"[NOT_IMPLEMENTED] {feature} is not implemented."
+    frame = spark.createDataFrame(
+        [(7, "g", "x"), (8, "h", "w")], "id BIGINT, data STRING, cat STRING"
+    )
+    with pytest.raises(IllegalArgumentException) as raised:
+        frame.write.bucketBy(4, "id").sortBy("data").saveAsTable("bk_t")
+    expected = _U7_MEASURED["bucketBy_new_sortBy"]["error"]
+    assert type(raised.value).__name__ == expected["type"]
+    assert str(raised.value) == expected["message"]
     assert not spark.catalog.tableExists("bk_t")
 
 

@@ -76,7 +76,7 @@ def test_no_rows_are_recorded_unfrozen_and_unchecked() -> None:
     assert unfrozen == {"B2", "J2", "K5", "K7", "M1"}
     assert all(row["members"] == [] for row in inventory["rows"] if not row["frozen"])
     assert inventory["counts"]["frozen_rows"] == 30
-    assert inventory["counts"]["frozen_names"] == 890
+    assert inventory["counts"]["frozen_names"] == 891
 
 
 def test_excepted_members_are_not_registered() -> None:

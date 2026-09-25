@@ -28,6 +28,7 @@ pub mod meta_delete;
 mod name_resolution;
 pub mod nested_column;
 pub mod nested_type_sql;
+pub mod output_spec;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;
 pub mod overwrite_commit;
@@ -60,10 +61,14 @@ pub mod unsupported;
 mod unsupported_tests;
 pub mod update_cast;
 pub mod write_options;
+pub mod writer_partitioning;
+pub mod writer_plan;
 pub mod writer_props;
 
 pub use commit_error::{CommitStateUnknownError, commit_err, is_commit_state_unknown};
-pub use illegal_argument::{IllegalArgumentMarker, illegal_argument_error};
+pub use illegal_argument::{
+    IllegalArgumentMarker, NumberFormatMarker, illegal_argument_error, number_format_error,
+};
 pub use schema_evolution::{
     ACCEPT_ANY_SCHEMA_PROP, accepts_any_schema, evolve_merge_schema, evolve_schema, incoming_schema,
 };
@@ -98,6 +103,9 @@ pub use insert_gate::InsertStoreAssignment;
 pub use merge::{
     write_data_files, write_data_files_from_stream, write_data_files_from_stream_with_concurrency,
     write_data_files_with_concurrency,
+};
+pub use output_spec::{
+    parse_output_spec_id, staged_spec_is_partitioned, staging_table, validate_output_spec_id,
 };
 pub use overwrite::{
     OverwriteIsolation, WRITE_OVERWRITE_ISOLATION_LEVEL, commit_overwrite_replace_all,
@@ -137,6 +145,14 @@ pub use write_options::{
     stage_partitioned_stream_with_overrides, stage_static_partition_overwrite_files_with,
     stage_unpartitioned_stream_with_overrides, stage_unpartitioned_with_overrides,
     summary_with_extras,
+};
+pub use writer_partitioning::{
+    SaveTarget, WriterLayout, check_layout_matches_catalog_table, check_layout_matches_table,
+    decide_save_target, provided_transforms, save_target_names_table, table_transforms,
+};
+pub use writer_plan::{
+    WriterAction, WriterPlan, WriterRefusal, WriterRequest, WriterStatement,
+    missing_column_message, missing_column_name, plan_writer,
 };
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,

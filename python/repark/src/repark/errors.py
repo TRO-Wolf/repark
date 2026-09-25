@@ -5,7 +5,8 @@ errors map to ``ParseException`` for syntax, ``AnalysisException`` for planning,
 ``ArithmeticException`` for ANSI arithmetic failures,
 ``UnsupportedOperationException`` for refused operations, and
 ``IllegalArgumentException`` for invalid configuration, ML parameters, schemas,
-values, or stream inputs. Other execution, IO, and
+values, or stream inputs, with its ``NumberFormatException`` leaf for a non-integer
+option value. Other execution, IO, and
 Iceberg failures use ``PySparkException``.
 
 Facade argument checks use ``PySparkTypeError``, ``PySparkValueError``, and
@@ -25,6 +26,7 @@ from repark._native import (
     ArithmeticException,
     CommitStateUnknownException,
     IllegalArgumentException,
+    NumberFormatException,
     ParseException,
     PySparkException,
     UnsupportedOperationException,
@@ -51,7 +53,10 @@ def _native_message_text(error: object) -> str:
 
 
 def _native_get_condition(self: object) -> str | None:
-    """Parse the Spark error condition out of a well-formed native message."""
+    """Return the attached Spark condition, else parse it out of a well-formed native message."""
+    attached = getattr(self, "_spark_error_class", None)
+    if isinstance(attached, str):
+        return attached
     message = _native_message_text(self)
     for prefix in _NATIVE_MESSAGE_PREFIXES:
         if message.startswith(prefix):
@@ -78,9 +83,10 @@ def _native_get_sql_state(self: object) -> str | None:
     return str(matches[-1]) if matches else None
 
 
-def _native_get_message_parameters(self: object) -> None:
-    """Return no message parameters for a native engine exception."""
-    return None
+def _native_get_message_parameters(self: object) -> dict[str, str] | None:
+    """Return the attached Spark message parameters of a native engine exception, if any."""
+    attached = getattr(self, "_spark_message_parameters", None)
+    return attached if isinstance(attached, dict) else None
 
 
 def _native_get_query_context(self: object) -> list[Any]:
@@ -95,6 +101,7 @@ for _native_exception_type in (
     ParseException,
     UnsupportedOperationException,
     IllegalArgumentException,
+    NumberFormatException,
     CommitStateUnknownException,
 ):
     if not hasattr(_native_exception_type, "getCondition"):
@@ -332,6 +339,7 @@ for _exception_type in (
     ParseException,
     UnsupportedOperationException,
     IllegalArgumentException,
+    NumberFormatException,
     CommitStateUnknownException,
 ):
     _exception_type.__module__ = __name__
@@ -342,6 +350,7 @@ __all__ = [
     "ArithmeticException",
     "CommitStateUnknownException",
     "IllegalArgumentException",
+    "NumberFormatException",
     "ParseException",
     "PySparkAssertionError",
     "PySparkAttributeError",

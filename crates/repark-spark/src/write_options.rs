@@ -20,6 +20,7 @@ pub struct StatementWriteOptions {
     pub overwrite_intent: repark_iceberg::write::OverwriteIntent,
     pub overwrite_mode_dynamic: bool,
     pub merge_schema: Option<bool>,
+    pub output_spec_id: Option<i32>,
 }
 
 impl StatementWriteOptions {
@@ -81,6 +82,7 @@ impl StatementWriteOptions {
             codec: self.codec.clone(),
             level: self.level.clone(),
             target_file_size_bytes: self.target_file_size_bytes,
+            output_spec_id: self.output_spec_id,
             ..repark_iceberg::write::WriterStagingOverrides::none()
         }
     }
@@ -134,6 +136,10 @@ impl StatementWriteOptions {
                     options.distribution_mode = Some(validate_distribution_mode(&value)?);
                 }
                 "isolation-level" => options.isolation = Some(validate_isolation_level(&value)?),
+                "output-spec-id" => {
+                    options.output_spec_id =
+                        Some(repark_iceberg::write::parse_output_spec_id(&value)?);
+                }
                 repark_iceberg::write::OVERWRITE_MODE_OPTION => {
                     options.overwrite_mode_dynamic =
                         repark_iceberg::write::overwrite_mode_option_is_dynamic(&value);
@@ -264,6 +270,23 @@ mod tests {
             .downcast_ref::<repark_iceberg::write::IllegalArgumentMarker>()
             .expect("expected an IllegalArgumentMarker");
         assert_eq!(marker.0, "Invalid file format: bogus");
+    }
+
+    #[test]
+    fn output_spec_id_parses_and_reaches_staging() {
+        let options =
+            StatementWriteOptions::validate(vec![pair("OUTPUT-SPEC-ID", "0")]).expect("validate");
+        assert_eq!(options.output_spec_id, Some(0));
+        assert_eq!(options.staging_overrides().output_spec_id, Some(0));
+        let error = StatementWriteOptions::validate(vec![pair("output-spec-id", "x")])
+            .expect_err("non-int refuses");
+        let DataFusionError::External(inner) = &error else {
+            panic!("expected an External marker, got {error:?}");
+        };
+        let marker = inner
+            .downcast_ref::<repark_iceberg::write::NumberFormatMarker>()
+            .expect("expected a NumberFormatMarker");
+        assert_eq!(marker.0, "For input string: \"x\"");
     }
 
     #[test]

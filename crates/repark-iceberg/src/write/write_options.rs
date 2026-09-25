@@ -26,6 +26,7 @@ use crate::write::concurrency::WriteConcurrency;
 use crate::write::conform::write_default_column_names;
 use crate::write::data_format::resolve_data_format;
 use crate::write::merge::OPERATION_ID_PROP;
+use crate::write::output_spec::staging_table;
 use crate::write::overwrite::{OverwriteIsolation, parse_overwrite_isolation};
 use crate::write::partition_overwrite::{PartitionEquality, StaticPartitionOverwrite};
 use crate::write::summary_collision::EngineSummary;
@@ -39,6 +40,7 @@ pub struct WriterStagingOverrides {
     pub fork_insert_dictionary_rule: bool,
     pub write_format: Option<String>,
     pub delete_format: Option<String>,
+    pub output_spec_id: Option<i32>,
 }
 
 impl WriterStagingOverrides {
@@ -112,16 +114,21 @@ pub async fn append_with_statement_options<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
-    let new_files = if table.metadata().default_partition_spec().is_unpartitioned() {
-        stage_unpartitioned_stream_with_overrides(table, stream, concurrency, staging).await?
+    let target = staging_table(table, staging)?;
+    let new_files = if target
+        .metadata()
+        .default_partition_spec()
+        .is_unpartitioned()
+    {
+        stage_unpartitioned_stream_with_overrides(&target, stream, concurrency, staging).await?
     } else {
-        let current_schema = table.metadata().current_schema();
+        let current_schema = target.metadata().current_schema();
         let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
         let write_default_columns = write_default_column_names(current_schema);
         let conformed = stream.map(move |item| {
             crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
         });
-        stage_partitioned_stream_with_overrides(table, conformed, staging, concurrency).await?
+        stage_partitioned_stream_with_overrides(&target, conformed, staging, concurrency).await?
     };
     commit_append_with_summary(catalog, table, new_files, summary_extra, branch).await
 }
@@ -144,6 +151,38 @@ pub async fn stage_unpartitioned_with_overrides(
 
 #[allow(clippy::missing_errors_doc)]
 pub async fn stage_unpartitioned_stream_with_overrides<S>(
+    table: &Table,
+    stream: S,
+    concurrency: WriteConcurrency,
+    staging: &WriterStagingOverrides,
+) -> Result<Vec<DataFile>>
+where
+    S: Stream<Item = Result<RecordBatch>> + Unpin,
+{
+    let target = staging_table(table, staging)?;
+    if target
+        .metadata()
+        .default_partition_spec()
+        .is_unpartitioned()
+    {
+        return stage_unpartitioned_on(&target, stream, concurrency, staging).await;
+    }
+    let current_schema = target.metadata().current_schema();
+    let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
+    let write_default_columns = write_default_column_names(current_schema);
+    let conformed = stream.map(move |item| {
+        crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
+    });
+    crate::write::append::fanout_conformed_stream_with_concurrency(
+        &target,
+        conformed,
+        concurrency,
+        staging,
+    )
+    .await
+}
+
+async fn stage_unpartitioned_on<S>(
     table: &Table,
     stream: S,
     concurrency: WriteConcurrency,
@@ -188,8 +227,16 @@ pub async fn stage_partitioned_stream_with_overrides<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
+    let target = staging_table(table, staging)?;
+    if target
+        .metadata()
+        .default_partition_spec()
+        .is_unpartitioned()
+    {
+        return stage_unpartitioned_on(&target, conformed, concurrency, staging).await;
+    }
     crate::write::append::fanout_conformed_stream_with_concurrency(
-        table,
+        &target,
         conformed,
         concurrency,
         staging,
@@ -208,6 +255,8 @@ pub async fn stage_overwrite_files_with<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
+    let target = staging_table(table, staging)?;
+    let table: &Table = &target;
     let write_schema: datafusion::arrow::datatypes::SchemaRef =
         Arc::new(schema_to_arrow_schema(table.metadata().current_schema()).map_err(iceberg_err)?);
     let mapped = stream
@@ -323,18 +372,23 @@ pub async fn append_staged_with_options<S>(
 where
     S: Stream<Item = Result<RecordBatch>> + Unpin,
 {
+    let target = staging_table(table, staging)?;
     let new_files = if let Some(columns) = positional_columns {
-        stage_overwrite_files_with(table, stream, columns, concurrency, staging).await?
-    } else if table.metadata().default_partition_spec().is_unpartitioned() {
-        stage_unpartitioned_stream_with_overrides(table, stream, concurrency, staging).await?
+        stage_overwrite_files_with(&target, stream, columns, concurrency, staging).await?
+    } else if target
+        .metadata()
+        .default_partition_spec()
+        .is_unpartitioned()
+    {
+        stage_unpartitioned_stream_with_overrides(&target, stream, concurrency, staging).await?
     } else {
-        let current_schema = table.metadata().current_schema();
+        let current_schema = target.metadata().current_schema();
         let write_schema = Arc::new(schema_to_arrow_schema(current_schema).map_err(iceberg_err)?);
         let write_default_columns = write_default_column_names(current_schema);
         let conformed = stream.map(move |item| {
             crate::write::conform::conform_batch(&write_schema, &write_default_columns, &item?)
         });
-        stage_partitioned_stream_with_overrides(table, conformed, staging, concurrency).await?
+        stage_partitioned_stream_with_overrides(&target, conformed, staging, concurrency).await?
     };
     let engine = EngineSummary::for_append(table, &new_files, None);
     let (operation_id, summary) = summary_with_extras(summary_extra, &engine)?;

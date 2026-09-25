@@ -1,0 +1,4003 @@
+{
+ "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind)",
+ "seed": "t (id BIGINT, data STRING, cat STRING) seeded (1,'a','x'),(2,'b','y'),(3,'c','x'); frame [(7,'g','x'),(8,'h','w')]",
+ "recorded": {
+  "W-DF-SAVE-NAME": {
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "md.format-version": 2,
+   "md.schema": [
+    [
+     "id",
+     "long",
+     false,
+     null
+    ],
+    [
+     "data",
+     "string",
+     false,
+     null
+    ],
+    [
+     "cat",
+     "string",
+     false,
+     null
+    ]
+   ],
+   "md.identifier-fields": [],
+   "md.spec": [],
+   "md.spec-count": 1,
+   "md.sort-order": [],
+   "md.properties": [],
+   "md.refs": [
+    [
+     "main",
+     "branch",
+     "S1",
+     null,
+     null,
+     null
+    ]
+   ],
+   "md.snapshots": [
+    [
+     [
+      "added-records",
+      "3"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "3"
+     ]
+    ],
+    [
+     [
+      "added-records",
+      "2"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "5"
+     ]
+    ]
+   ],
+   "layout.snapshots": [
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "1"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ],
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "2"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ]
+   ]
+  },
+  "W-DF-SAVE-OVERWRITE-NAME": {
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "md.format-version": 2,
+   "md.schema": [
+    [
+     "id",
+     "long",
+     false,
+     null
+    ],
+    [
+     "data",
+     "string",
+     false,
+     null
+    ],
+    [
+     "cat",
+     "string",
+     false,
+     null
+    ]
+   ],
+   "md.identifier-fields": [],
+   "md.spec": [],
+   "md.spec-count": 1,
+   "md.sort-order": [],
+   "md.properties": [],
+   "md.refs": [
+    [
+     "main",
+     "branch",
+     "S1",
+     null,
+     null,
+     null
+    ]
+   ],
+   "md.snapshots": [
+    [
+     [
+      "added-records",
+      "3"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "3"
+     ]
+    ],
+    [
+     [
+      "added-records",
+      "2"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "deleted-records",
+      "3"
+     ],
+     [
+      "operation",
+      "overwrite"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "2"
+     ]
+    ]
+   ],
+   "layout.snapshots": [
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "1"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ],
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "deleted-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "1"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ]
+   ]
+  },
+  "W-DF-V1-BUCKETBY-ERR": {
+   "data": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "md.format-version": 2,
+   "md.schema": [
+    [
+     "id",
+     "long",
+     false,
+     null
+    ],
+    [
+     "data",
+     "string",
+     false,
+     null
+    ],
+    [
+     "cat",
+     "string",
+     false,
+     null
+    ]
+   ],
+   "md.identifier-fields": [],
+   "md.spec": [
+    [
+     "id_bucket",
+     "bucket[4]",
+     "id"
+    ]
+   ],
+   "md.spec-count": 1,
+   "md.sort-order": [],
+   "md.properties": [],
+   "md.refs": [
+    [
+     "main",
+     "branch",
+     "S0",
+     null,
+     null,
+     null
+    ]
+   ],
+   "md.snapshots": [
+    [
+     [
+      "added-records",
+      "2"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "2"
+     ]
+    ]
+   ],
+   "layout.snapshots": [
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "1"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ]
+   ]
+  },
+  "W-DF-OPT-OUTPUT-SPEC-ID": {
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "data": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "md.format-version": 2,
+   "md.schema": [
+    [
+     "id",
+     "long",
+     false,
+     null
+    ],
+    [
+     "data",
+     "string",
+     false,
+     null
+    ],
+    [
+     "cat",
+     "string",
+     false,
+     null
+    ]
+   ],
+   "md.identifier-fields": [],
+   "md.spec": [
+    [
+     "cat",
+     "identity",
+     "cat"
+    ]
+   ],
+   "md.spec-count": 2,
+   "md.sort-order": [],
+   "md.properties": [],
+   "md.refs": [
+    [
+     "main",
+     "branch",
+     "S1",
+     null,
+     null,
+     null
+    ]
+   ],
+   "md.snapshots": [
+    [
+     [
+      "added-records",
+      "3"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "3"
+     ]
+    ],
+    [
+     [
+      "added-records",
+      "2"
+     ],
+     [
+      "changed-partition-count",
+      "1"
+     ],
+     [
+      "operation",
+      "append"
+     ],
+     [
+      "total-position-deletes",
+      "0"
+     ],
+     [
+      "total-records",
+      "5"
+     ]
+    ]
+   ],
+   "layout.snapshots": [
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "1"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ],
+    [
+     [
+      "added-data-files",
+      "1"
+     ],
+     [
+      "total-data-files",
+      "2"
+     ],
+     [
+      "total-delete-files",
+      "0"
+     ]
+    ]
+   ]
+  }
+ },
+ "measured": {
+  "bucketBy_existing_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(4, id)\n - table: "
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "bucketBy_existing_default": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "message": "[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `u7`.`t` because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "bucketBy_existing_overwrite": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "bucketBy_new_append": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "bucketBy_new_missing_col": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column nope in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "bucketBy_new_overwrite": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "bucketBy_new_partitionBy": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucketBy_new_sortBy": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert transform with more than one column reference: sorted_bucket(id, 4, data)"
+   }
+  },
+  "bucketBy_new_two_cols": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert transform with more than one column reference: bucket(4, id, data)"
+   }
+  },
+  "bucketBy_new_upper_col": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "bucketBy_new_zero": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INVALID_BUCKET_COUNT",
+    "sqlstate": "22003",
+    "message": "[INVALID_BUCKET_COUNT] Number of buckets should be greater than 0 but less than or equal to bucketing.maxBuckets (`100000`). Got `0`. SQLSTATE: 22003"
+   }
+  },
+  "bucketBy_save_name": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_1312",
+    "sqlstate": null,
+    "message": "'save' does not support bucketBy right now."
+   }
+  },
+  "bucket_existing_ignore": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_match_append": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_missing_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(4, nope)\n - table: identity(cat), bucket(4, id)"
+   },
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_other_n_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(8, id)\n - table: bucket(4, id)"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_overwrite_part": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_overwrite_two": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert transform with more than one column reference: bucket(4, id, data)"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "bucket_existing_part_match_append": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_part_only_bucket_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(4, id)\n - table: identity(cat), bucket(4, id)"
+   },
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_partitioned_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: identity(cat), bucket(4, id)\n - table: identity(cat), days(ts), truncate(3, data)"
+   },
+   "rows": [],
+   "operations": [],
+   "summaries": [],
+   "specs": [],
+   "partitioning": [
+    "cat",
+    "days(ts)",
+    "truncate(3, data)"
+   ]
+  },
+  "bucket_existing_sorted_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: sorted_bucket(id, 4, data)\n - table: identity(cat), bucket(4, id)"
+   },
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_two_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(4, id, data)\n - table: identity(cat), bucket(4, id)"
+   },
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucket_existing_upper_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(4, ID)\n - table: bucket(4, id)"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "create_bucket_upper": {
+   "ok": true,
+   "rows": [],
+   "operations": [],
+   "summaries": [],
+   "specs": [],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "create_clustered_sorted": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert transform with more than one column reference: sorted_bucket(id, 4, data)"
+   }
+  },
+  "create_clustered_two": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert transform with more than one column reference: bucket(4, a, b)"
+   }
+  },
+  "create_part_upper": {
+   "ok": true,
+   "rows": [],
+   "operations": [],
+   "summaries": [],
+   "specs": [],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "ctas_bucket_upper": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "ctas_part_upper": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "rtas_new_clustered": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "save_name_append_partby_match": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_existing_default_mode": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "message": "[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `u7`.`t` because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_existing_errorifexists": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "message": "[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `u7`.`t` because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_existing_ignore": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_missing_append": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view u7.missing_a cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "save_name_missing_default": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_missing_ignore": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_missing_overwrite": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view u7.missing_o cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "save_name_missing_partby": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_overwrite_partby_existing": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: identity(cat)\n - table: "
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_partitionBy": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: identity(cat)\n - table: "
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_name_via_option_path": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "save_path_append": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `<wh>`.pathtbl cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "save_path_overwrite": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `<wh>`.pathtbl2 cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "spec_id_current": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_negative": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Output spec id -1 is not a valid spec id for table"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_nonnumeric": {
+   "error": {
+    "type": "NumberFormatException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "For input string: \"x\""
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_old_insertInto": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_old_overwrite": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_old_overwritePartitions": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "3",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_old_partitioned": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_old_save_name": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_old_writeTo_append": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_sql_insert": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ],
+    [
+     9,
+     "z",
+     "q"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "total-records": "6"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ],
+    [
+     1,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "spec_id_unknown": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Output spec id 7 is not a valid spec id for table"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": []
+  },
+  "sql_clustered_one": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "sql_clustered_sorted": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert transform with more than one column reference: sorted_bucket(id, 4, data)"
+   }
+  },
+  "sql_clustered_two": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert transform with more than one column reference: bucket(4, id, data)"
+   }
+  },
+  "sql_clustered_upper": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ]
+  },
+  "sql_part_clustered": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ]
+  },
+  "bucketBy_new_missing_col_overwrite": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column nope in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "bucketBy_new_missing_col_partby": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column nope in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "bucketBy_new_missing_col_zero": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INVALID_BUCKET_COUNT",
+    "sqlstate": "22003",
+    "message": "[INVALID_BUCKET_COUNT] Number of buckets should be greater than 0 but less than or equal to bucketing.maxBuckets (`100000`). Got `0`. SQLSTATE: 22003"
+   }
+  },
+  "bucket_unbucketed_missing_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(4, nope)\n - table: "
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "bucket_unbucketed_missing_overwrite": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column nope in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "bucket_unbucketed_missing_error": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column nope in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "bucket_unbucketed_missing_ignore": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column nope in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "bucketed_rtas_spec0": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ],
+   "partition_info": []
+  },
+  "createOrReplace_part_spec0": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "replace_part_spec1": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "replace_part_spec5": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Output spec id 5 is not a valid spec id for table"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "rtas_sql_spec0_on_partitioned": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "ctas_new_partby_spec0": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "dyn_overwrite_old_part_spec0": {
+   "ok": true,
+   "rows": [
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "dyn_overwrite_old_part_nooption": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "2",
+     "deleted-records": "3",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     1,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "dyn_overwrite_new_part_spec0": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "deleted-data-files": "1",
+     "deleted-records": "3",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "empty_overwritePartitions_spec7": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Output spec id 7 is not a valid spec id for table"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "empty_append_spec7": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Output spec id 7 is not a valid spec id for table"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "empty_saveAsTable_append_spec7": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Output spec id 7 is not a valid spec id for table"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "empty_insertInto_spec7": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Output spec id 7 is not a valid spec id for table"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "empty_overwrite_saveAsTable_spec7": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Output spec id 7 is not a valid spec id for table"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "save_file_uri": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `file://<root>/a`.b cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "save_trailing_slash": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `<root>/a/b`.`` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "save_s3": {
+   "error": {
+    "type": "Py4JJavaError",
+    "condition": null,
+    "sqlstate": null,
+    "message": "An error occurred while calling o1221.save.\n: org.apache.iceberg.exceptions.RuntimeIOException: Failed to get file system for path: s3://b/k/t/metadata/version-hint.text"
+   }
+  },
+  "save_double_slash": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view `/tmp//x/`.y cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "save_relative": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view a.b cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "save_single_segment_slash": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_NOT_FOUND",
+    "sqlstate": "42P01",
+    "message": "[TABLE_OR_VIEW_NOT_FOUND] The table or view ``.x cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the current_schema() output, or qualify the name with the correct schema and catalog.\nTo tolerate the error on drop use DROP VIEW IF EXISTS or DROP TABLE IF EXISTS. SQLSTATE: 42P01"
+   }
+  },
+  "spec_id_space": {
+   "error": {
+    "type": "NumberFormatException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "For input string: \" 1\""
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "spec_id_plus": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "sat_partby_mismatch_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: identity(cat)\n - table: "
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "sat_partby_match_append": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "sat_nopartby_append_partitioned": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "sat_error_existing": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "TABLE_OR_VIEW_ALREADY_EXISTS",
+    "sqlstate": "42P07",
+    "message": "[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view `u7`.`t` because it already exists.\nChoose a different name, drop or replace the existing object, or add the IF NOT EXISTS clause to tolerate pre-existing objects. SQLSTATE: 42P07"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": []
+  },
+  "clustered_colname": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a"
+    ],
+    [
+     2,
+     "b"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, clustered)"
+   ],
+   "partition_info": []
+  },
+  "clustered_sorted_desc": {
+   "error": {
+    "type": "ParseException",
+    "condition": "_LEGACY_ERROR_TEMP_0035",
+    "sqlstate": null,
+    "message": "\nOperation not allowed: Column ordering must be ASC, was 'DESC'.\n== SQL (line 1, position 58) ==\n...BIGINT, x STRING) USING iceberg CLUSTERED BY (id) SORTED BY (x DESC) INTO 4 BUCKETS\n                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
+   }
+  },
+  "clustered_sorted_asc": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Cannot convert transform with more than one column reference: sorted_bucket(id, 4, x)"
+   }
+  },
+  "clustered_self_sorted_desc": {
+   "error": {
+    "type": "ParseException",
+    "condition": "_LEGACY_ERROR_TEMP_0035",
+    "sqlstate": null,
+    "message": "\nOperation not allowed: Column ordering must be ASC, was 'DESC'.\n== SQL (line 1, position 48) ==\n....u7.t (id BIGINT) USING iceberg CLUSTERED BY (id) SORTED BY (id DESC) INTO 4 BUCKETS\n                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
+   }
+  },
+  "create_part_bucket_mixed": {
+   "ok": true,
+   "rows": [],
+   "operations": [],
+   "summaries": [],
+   "specs": [],
+   "partitioning": [
+    "cat",
+    "bucket(4, id)"
+   ],
+   "partition_info": []
+  },
+  "ctas_clustered_colname": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g"
+    ],
+    [
+     8,
+     "h"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, clustered)"
+   ],
+   "partition_info": []
+  },
+  "bucketBy_new_nested_col": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column `s.a` in:\nroot\n |-- id: long (nullable = true)\n |-- s: struct (nullable = true)\n |    |-- a: integer (nullable = true)\n |    |-- b: string (nullable = true)\n"
+   }
+  },
+  "bucketBy_new_nested_missing": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column `s.zz` in:\nroot\n |-- id: long (nullable = true)\n |-- s: struct (nullable = true)\n |    |-- a: integer (nullable = true)\n |    |-- b: string (nullable = true)\n"
+   }
+  },
+  "bucketBy_new_dotted_missing": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column `a.b` in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "spec_id_current_then_absent": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "5"
+    },
+    {
+     "added-data-files": "2",
+     "added-records": "2",
+     "total-records": "7"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "partition_info": [
+    "cat"
+   ]
+  },
+  "bucket_existing_void_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(8, id)\n - table: bucket(4, id)"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "total-records": "1"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [
+    "bucket(4, id)"
+   ],
+   "partition_info": []
+  },
+  "bucket_existing_time_append": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "requirement failed: The provided partitioning or clustering columns do not match the existing table's.\n - provided: bucket(4, id)\n - table: years(y), months(m), hours(h)"
+   },
+   "rows": [],
+   "operations": [],
+   "summaries": [],
+   "specs": [],
+   "partitioning": [
+    "years(y)",
+    "months(m)",
+    "hours(h)"
+   ],
+   "partition_info": []
+  },
+  "sortBy_missing": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column zz in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "sortBy_dotted_missing": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column `a.b` in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "sortBy_second_missing": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column zz in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "sortBy_missing_overwrite": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column zz in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  },
+  "sortBy_bucket_missing_first": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "_LEGACY_ERROR_TEMP_3060",
+    "sqlstate": null,
+    "message": "Couldn't find column zz in:\nroot\n |-- id: long (nullable = true)\n |-- data: string (nullable = true)\n |-- cat: string (nullable = true)\n"
+   }
+  }
+ }
+}
