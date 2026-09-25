@@ -8166,7 +8166,11 @@ the pin rather than obeying it.
   `none` with the default reset). The write path honors both halves: `none` skips the hash
   distribution rule, and a declared default order sorts each writer's stream. `CREATE TABLE …
   WRITE ORDERED BY` is a parse error on **both** engines, so the create arm is still not a
-  divergence. **Transform terms FIXED 2026-09-24 (WO U5 PR2b, cell D-WRITE-ORDERED-TRANSFORM):**
+  divergence.
+- **Apache Spark** — sets the table's write order. *(oracle: live PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-09-03; the five-form matrix re-measured 2026-09-06.)*
+- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-write-ordered-by]`
+- **Transform terms** — **Transform terms FIXED 2026-09-24 (WO U5 PR2b, cell D-WRITE-ORDERED-TRANSFORM):**
   `WRITE ORDERED BY bucket(4, id), days(ts) DESC NULLS FIRST` lands `[bucket[4] id asc
   nulls-first], [day ts desc nulls-first]` with `write.distribution-mode = range`, as Spark
   does. The argument order is free (`bucket(id, 4)`, `truncate(s, 2)`), the plural, singular,
@@ -8223,9 +8227,6 @@ the pin rather than obeying it.
   supported`, where Spark runs all four and stamps `sort_order_id` 1. INSERT INTO,
   `writeTo().append()` and `rewrite_data_files` succeed. Pin:
   `alter_write_order_transform.rs::delete_after_a_repark_bucket_order_is_the_identity_only_residue`.
-- **Apache Spark** — sets the table's write order. *(oracle: live PySpark 4.1.2 +
-  Iceberg 1.11.0, 2026-09-03; the five-form matrix re-measured 2026-09-06.)*
-- **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-write-ordered-by]`
   (the repark half flipped `ERROR` → `OK`, the verdict `DIVERGES` → `EQUAL`) and
   `…::test_v3_statement_row_matches_the_live_spark_oracle[alter-write-ordered-by]`; the
   five-form behavior is pinned in `python/repark/tests/test_write_order_dist_1.py`
