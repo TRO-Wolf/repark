@@ -120,11 +120,7 @@ pub async fn create_or_replace_snapshot_ref(
     }
 }
 
-/// Commit an empty append onto a new branch of a table with no snapshot, the way Java
-/// `SnapshotManager.createBranch(name)` does. Retention is a second commit: the fork checks a
-/// retention update against the base table, where the branch does not exist yet.
-/// # Errors
-/// Propagates any [`iceberg::Error`] from load / apply / commit.
+#[allow(clippy::missing_errors_doc)]
 pub async fn create_branch_on_empty_table(
     catalog: &dyn Catalog,
     ident: &TableIdent,

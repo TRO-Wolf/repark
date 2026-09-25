@@ -185,8 +185,7 @@ pub fn repark_sql_settings_from_options(options: &ConfigOptions) -> ReparkSqlSet
 
 /// pins: v3-2-create-v3-opt-in/C-001, C-003, C-004
 /// Model: Grok 4.6 xHigh
-/// Resolve CREATE/CTAS Iceberg format version 1, 2 or 3; v3 requires
-/// [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`].
+/// Resolve CREATE/CTAS Iceberg format version; v3 requires [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`].
 /// # Errors
 /// Unsupported version, or v3 requested while the session opt-in is off.
 pub fn resolve_create_format_version(

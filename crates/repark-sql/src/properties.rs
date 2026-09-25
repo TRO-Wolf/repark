@@ -120,8 +120,6 @@ pub(crate) fn refuse_format_value(value: &str, form: &str) -> Result<()> {
     }
 }
 
-/// `format_version`: `'1'`, `'2'` and `'3'` are stored for execute (v3 still needs the session
-/// opt-in).
 fn parse_format_version(value: &str, form: &str) -> Result<String> {
     match value.trim() {
         version @ ("1" | "2" | "3") => Ok(version.to_string()),

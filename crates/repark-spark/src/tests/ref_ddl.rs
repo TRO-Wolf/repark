@@ -626,7 +626,6 @@ async fn branch_tag_ddl_edge_matrix_as_of_and_drop_targets() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
 
-    // Schema-only empty: CREATE TAG without AS OF must refuse.
     run(
         &ctx,
         &catalogs,
