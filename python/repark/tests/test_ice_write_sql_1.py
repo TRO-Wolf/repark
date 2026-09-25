@@ -9,8 +9,12 @@ Oracle: live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, measured on 
 Every expected value below is Spark's recorded answer, not a RePark derivation. Where the
 exception class or the rendering differs, the pin says so and the ledger names the residue.
 
+The round-2 pins (C-015..C-017) come from ``target/probe-u8-r1fix/probe_r1.py``
+(``spark_r1.json``: S1-* over a NULL ``cat`` key, S3-* over a NULL ``id`` key, S4-* on an INT
+key, S5-* repeated source names) and the critic's ``probe_xr.py`` / ``probe_xn.py``.
+
 pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010,
-C-011, C-012, C-014
+C-011, C-012, C-014, C-015, C-016, C-017
 """
 
 from __future__ import annotations
@@ -756,3 +760,100 @@ def test_near_misses_keep_their_answers(spark: ReparkSession) -> None:
     assert [row["operation"] for row in _summaries(spark, table)] == ["append"] * 3
     spark.sql(f"INSERT OVERWRITE {table} VALUES (9, 'z', 'x')")
     assert _rows(spark, table) == [[9, "z", "x"]]
+
+
+NULL_KEY_ROW = [4, "n", None]
+
+
+@pytest.mark.parametrize(
+    ("predicate", "rows"),
+    [
+        ("cat < 'y'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("cat <= 'x'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("'y' > cat", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("cat NOT BETWEEN 'y' AND 'z'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("NOT (cat BETWEEN 'y' AND 'z')", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("NOT cat >= 'y'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("NOT cat < 'y'", [[1, "a", "x"], [3, "c", "x"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("cat > 'a'", [NULL_KEY_ROW, [9, "z", "x"]]),
+        ("cat NOT IN ('y')", [[2, "b", "y"], [9, "z", "x"]]),
+        ("NOT cat IN ('y')", [[2, "b", "y"], [9, "z", "x"]]),
+        ("cat NOT IN ('y', 'y')", [[2, "b", "y"], [9, "z", "x"]]),
+        ("cat NOT IN ('y', 'q')", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("cat NOT IN ('y', NULL)", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("cat <> 'x'", [[1, "a", "x"], [3, "c", "x"], [9, "z", "x"]]),
+        ("cat IN ('x', NULL)", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("cat < 'b' OR cat = 'x'", [[2, "b", "y"], NULL_KEY_ROW, [9, "z", "x"]]),
+        ("NOT (cat = 'x' AND cat IN ('y'))", [[9, "z", "x"]]),
+        ("cat IS NULL", [[1, "a", "x"], [2, "b", "y"], [3, "c", "x"], [9, "z", "x"]]),
+    ],
+)
+def test_a_null_partition_key_is_kept_or_replaced_as_spark_does(
+    spark: ReparkSession, predicate: str, rows: list[list[Any]]
+) -> None:
+    """pins: u8-write-sql/C-015"""
+    table = _create(spark, "nullkey")
+    spark.sql(f"INSERT INTO {table} VALUES (4, 'n', NULL)")
+    spark.sql(f"INSERT INTO {table} REPLACE WHERE {predicate} SELECT 9, 'z', 'x'")
+    assert _rows(spark, table) == sorted(rows, key=repr)
+
+
+def test_a_null_long_key_is_kept_under_a_range_predicate(spark: ReparkSession) -> None:
+    """pins: u8-write-sql/C-015"""
+    table = _create(spark, "nullid", "PARTITIONED BY (id)")
+    spark.sql(f"INSERT INTO {table} VALUES (NULL, 'n', 'w')")
+    spark.sql(f"INSERT INTO {table} REPLACE WHERE id < 3 SELECT 9, 'z', 'x'")
+    assert _rows(spark, table) == sorted([[3, "c", "x"], [9, "z", "x"], [None, "n", "w"]], key=repr)
+
+
+@pytest.mark.parametrize(
+    ("source", "rows"),
+    [
+        (
+            "SELECT id, CAST(id AS STRING), 'x' FROM {t} WHERE cat = 'x'",
+            [[1, "1", "x"], [2, "b", "y"], [3, "3", "x"]],
+        ),
+        ("SELECT 9 AS a, 'z' AS a, 'x'", [[2, "b", "y"], [9, "z", "x"]]),
+        (
+            "SELECT 9 AS a, 'z' AS a, 'x' UNION ALL SELECT 10, 'w', 'x'",
+            [[10, "w", "x"], [2, "b", "y"], [9, "z", "x"]],
+        ),
+    ],
+)
+def test_a_replace_where_source_with_repeated_names_writes(
+    spark: ReparkSession, source: str, rows: list[list[Any]]
+) -> None:
+    """pins: u8-write-sql/C-016"""
+    table = _create(spark, "dupnames")
+    spark.sql(f"INSERT INTO {table} REPLACE WHERE cat = 'x' {source.format(t=table)}")
+    assert _rows(spark, table) == rows
+
+
+@pytest.mark.parametrize(
+    ("predicate", "rendered"),
+    [
+        ("i = 3000000000", "null"),
+        ("i > 3000000000", "null"),
+        ("i IN (3000000000)", "null"),
+        ("i <= -3000000000", "null"),
+        ("i < 3000000000", "(i IS NOT NULL) OR (null)"),
+        ("i <> 3000000000", "(i IS NOT NULL) OR (null)"),
+    ],
+)
+def test_an_out_of_range_integer_literal_refuses_as_spark_folds_it(
+    spark: ReparkSession, predicate: str, rendered: str
+) -> None:
+    """pins: u8-write-sql/C-017"""
+    table = _create(
+        spark, "intkey", "PARTITIONED BY (i)", seeded=False, columns="i INT, data STRING"
+    )
+    spark.sql(f"INSERT INTO {table} VALUES (1, 'a'), (2, 'b')")
+    _raises(
+        lambda: spark.sql(f"INSERT INTO {table} REPLACE WHERE {predicate} SELECT 9, 'z'"),
+        IllegalArgumentException,
+        f"Cannot convert Spark predicate to Iceberg expression: {rendered}",
+        None,
+        None,
+    )
+    spark.sql(f"INSERT INTO {table} REPLACE WHERE i IN (1, 3000000000) SELECT 9, 'z'")
+    assert _rows(spark, table) == [[2, "b"], [9, "z"]]

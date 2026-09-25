@@ -1260,13 +1260,20 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
 
 - `overwrite_filter.rs` — Spark's `OverwriteByFilter` for `INSERT INTO … REPLACE WHERE`.
   `spark_overwrite_filter` converts a sqlparser predicate to an Iceberg row filter by Spark's
-  V2-filter rules (`=`, `<>` as `NOT (=)`, `<=>`, ranges, `BETWEEN`, `IN`, `NOT IN` as
-  `notNull AND notIn`, `IS [NOT] NULL`, a wildcard-free or prefix `LIKE`, `AND`/`OR`/`NOT`
-  with no `IN` under a `NOT`). A string literal is coerced to the column type, an integral
-  decimal to an integer column. A column reference binds by its exact name; another case
-  refuses Iceberg's `Cannot find field '<name>' in struct: …`. Anything else refuses
+  optimizer and V2-filter rules (`=`, `<>` as `NOT (=)`, `<=>`, ranges, `BETWEEN`, `IN`,
+  `NOT IN`, `IS [NOT] NULL`, a wildcard-free or prefix `LIKE`, `AND`/`OR`/`NOT`). **Round 2
+  (2026-09-25, critic r1):** `NOT` pushes down as Spark's optimizer pushes it (comparisons flip,
+  De Morgan, `IS NULL` ↔ `IS NOT NULL`, `NOT BETWEEN` → `< low OR > high`); `<` and `<=` carry a
+  `notNull` conjunct because Java Iceberg's `lt` never matches a NULL while the fork's evaluator
+  orders NULL first; an `IN` list is deduplicated with its NULL counted and a one-element list
+  folds to `=` / `<>` (Spark's OptimizeIn), a longer `NOT IN` is `notNull AND notIn`; an integer
+  literal outside an INT/BIGINT column's range folds as Spark's unwrap-cast does (the
+  `folded` pre-check renders `null` or `(<col> IS NOT NULL) OR (null)` for a whole-predicate
+  comparison, and an `IN` drops it). A string literal is coerced to the column type, an
+  integral decimal to an integer column. A column reference binds by its exact name; another
+  case refuses Iceberg's `Cannot find field '<name>' in struct: …`. Anything else refuses
   `IllegalArgumentException: Cannot convert Spark predicate to Iceberg expression: <the
-  predicate>`, and `x = NULL` renders `null` as Spark's folded predicate does.
+  predicate>`. pins: u8-write-sql/C-015, C-017
   `commit_overwrite_by_filter_with_summary` commits `overwrite_files().overwrite_by_row_filter`
   with the staged files and no added-file validation (Spark adds none), with the isolation,
   `validate_from_snapshot` and branch handling of its siblings in `write_options.rs`. A set

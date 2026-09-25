@@ -23,6 +23,7 @@ fn table_schema() -> Schema {
             NestedField::optional(2, "data", Type::Primitive(PrimitiveType::String)).into(),
             NestedField::optional(3, "cat", Type::Primitive(PrimitiveType::String)).into(),
             NestedField::optional(4, "d", Type::Primitive(PrimitiveType::Date)).into(),
+            NestedField::optional(5, "i", Type::Primitive(PrimitiveType::Int)).into(),
         ])
         .build()
         .expect("build table schema")
@@ -65,6 +66,10 @@ fn spark_translatable_predicates_convert_to_iceberg_filters() {
         ("id = 2.0", "id = 2"),
         ("id >= 1", "id >= 1"),
         ("1 < id", "id > 1"),
+        ("id > 1", "id > 1"),
+        ("cat < 'y'", "(cat IS NOT NULL) AND (cat < \"y\")"),
+        ("cat <= 'x'", "(cat IS NOT NULL) AND (cat <= \"x\")"),
+        ("'y' > cat", "(cat IS NOT NULL) AND (cat < \"y\")"),
         ("cat <> 'x'", "NOT (cat = \"x\")"),
         ("cat != 'y'", "NOT (cat = \"y\")"),
         ("NOT cat = 'y'", "NOT (cat = \"y\")"),
@@ -72,7 +77,10 @@ fn spark_translatable_predicates_convert_to_iceberg_filters() {
         ("cat IS NOT NULL", "cat IS NOT NULL"),
         ("cat LIKE 'x%'", "cat STARTS WITH \"x\""),
         ("cat LIKE 'x'", "cat = \"x\""),
-        ("id BETWEEN 1 AND 3", "(id >= 1) AND (id <= 3)"),
+        (
+            "id BETWEEN 1 AND 3",
+            "(id >= 1) AND ((id IS NOT NULL) AND (id <= 3))",
+        ),
         ("cat <=> 'x'", "cat = \"x\""),
         ("cat <=> NULL", "cat IS NULL"),
         ("cat = 'x' AND id > 1", "(cat = \"x\") AND (id > 1)"),
@@ -89,14 +97,56 @@ fn spark_translatable_predicates_convert_to_iceberg_filters() {
 }
 
 #[test]
+fn not_pushes_down_through_comparisons_and_connectives_as_spark_does() {
+    let cases = [
+        ("NOT cat < 'y'", "cat >= \"y\""),
+        ("NOT cat <= 'x'", "cat > \"x\""),
+        ("NOT cat > 'x'", "(cat IS NOT NULL) AND (cat <= \"x\")"),
+        ("NOT cat >= 'y'", "(cat IS NOT NULL) AND (cat < \"y\")"),
+        ("NOT 'y' > cat", "cat >= \"y\""),
+        ("NOT cat IS NULL", "cat IS NOT NULL"),
+        ("NOT cat IS NOT NULL", "cat IS NULL"),
+        ("NOT NOT cat = 'x'", "cat = \"x\""),
+        ("NOT (cat <> 'x')", "cat = \"x\""),
+        ("NOT (cat <=> NULL)", "cat IS NOT NULL"),
+        ("NOT cat <=> 'x'", "NOT (cat = \"x\")"),
+        (
+            "cat NOT BETWEEN 'y' AND 'z'",
+            "((cat IS NOT NULL) AND (cat < \"y\")) OR (cat > \"z\")",
+        ),
+        (
+            "NOT (cat BETWEEN 'y' AND 'z')",
+            "((cat IS NOT NULL) AND (cat < \"y\")) OR (cat > \"z\")",
+        ),
+        (
+            "NOT (cat = 'x' AND cat = 'y')",
+            "(NOT (cat = \"x\")) OR (NOT (cat = \"y\"))",
+        ),
+        (
+            "NOT (cat = 'y' OR cat < 'x')",
+            "(NOT (cat = \"y\")) AND (cat >= \"x\")",
+        ),
+        (
+            "NOT (cat = 'x' AND cat IN ('y'))",
+            "(NOT (cat = \"x\")) OR (NOT (cat = \"y\"))",
+        ),
+        ("NOT true", "FALSE"),
+        ("NOT false", "TRUE"),
+    ];
+    for (sql, expected) in cases {
+        assert_eq!(converted(sql), expected, "{sql}");
+    }
+}
+
+#[test]
 fn in_lists_follow_spark_null_semantics() {
     let within = spark_overwrite_filter(&predicate_expr("cat IN ('x', 'y')"), &table_schema())
         .expect("IN converts");
     assert!(matches!(within, Predicate::Set(_)), "{within}");
-    let outside = spark_overwrite_filter(&predicate_expr("cat NOT IN ('y')"), &table_schema())
+    let outside = spark_overwrite_filter(&predicate_expr("cat NOT IN ('y', 'q')"), &table_schema())
         .expect("NOT IN converts");
     let Predicate::And(parts) = &outside else {
-        panic!("NOT IN must pair notNull with notIn, got {outside}");
+        panic!("a two-element NOT IN must pair notNull with notIn, got {outside}");
     };
     let [not_null, not_in] = parts.inputs();
     assert_eq!(not_null.to_string(), "cat IS NOT NULL");
@@ -105,10 +155,50 @@ fn in_lists_follow_spark_null_semantics() {
         "{not_in}"
     );
     let parenthesised =
-        spark_overwrite_filter(&predicate_expr("NOT (cat IN ('y'))"), &table_schema())
+        spark_overwrite_filter(&predicate_expr("NOT (cat IN ('y', 'q'))"), &table_schema())
             .expect("NOT over a nested IN converts");
     assert_eq!(parenthesised.to_string(), outside.to_string());
+    let single = [
+        ("cat IN ('x')", "cat = \"x\""),
+        ("cat NOT IN ('y')", "NOT (cat = \"y\")"),
+        ("NOT cat IN ('y')", "NOT (cat = \"y\")"),
+        ("cat NOT IN ('y', 'y')", "NOT (cat = \"y\")"),
+        ("cat IN ('x', NULL)", "cat IN (\"x\")"),
+    ];
+    for (sql, expected) in single {
+        assert_eq!(converted(sql), expected, "{sql}");
+    }
+    let with_null = converted("cat NOT IN ('y', NULL)");
+    assert!(
+        with_null.starts_with("(cat IS NOT NULL) AND (cat NOT IN"),
+        "{with_null}"
+    );
     assert!(converted("id IN ('1', '3', NULL)").contains("id IN"));
+    assert_eq!(converted("i IN (1, 3000000000)"), "i = 1");
+}
+
+#[test]
+fn an_out_of_range_integer_literal_folds_as_spark_unwraps_the_cast() {
+    let cases = [
+        ("i = 3000000000", "null"),
+        ("i > 3000000000", "null"),
+        ("i >= 3000000000", "null"),
+        ("i = -3000000000", "null"),
+        ("i <= -3000000000", "null"),
+        ("i IN (3000000000)", "null"),
+        ("i < 3000000000", "(i IS NOT NULL) OR (null)"),
+        ("i <> 3000000000", "(i IS NOT NULL) OR (null)"),
+        ("NOT i >= 3000000000", "(i IS NOT NULL) OR (null)"),
+        ("3000000000 > i", "(i IS NOT NULL) OR (null)"),
+        ("NOT (cat = NULL)", "null"),
+    ];
+    for (sql, rendered) in cases {
+        assert_eq!(
+            refused(sql),
+            format!("Cannot convert Spark predicate to Iceberg expression: {rendered}"),
+            "{sql}"
+        );
+    }
 }
 
 #[test]
@@ -139,16 +229,12 @@ fn untranslatable_predicates_refuse_with_the_spark_message() {
             "Cannot convert Spark predicate to Iceberg expression: cat = 'x' AND upper(cat) = 'X'",
         ),
         (
-            "NOT (cat = 'x' AND cat IN ('y'))",
-            "Cannot convert Spark predicate to Iceberg expression: NOT (cat = 'x' AND cat IN ('y'))",
-        ),
-        (
             "id = 2.5",
             "Cannot convert Spark predicate to Iceberg expression: id = 2.5",
         ),
         (
-            "cat NOT IN ('y', NULL)",
-            "Cannot convert Spark predicate to Iceberg expression: cat NOT IN ('y', NULL)",
+            "cat IN (NULL)",
+            "Cannot convert Spark predicate to Iceberg expression: cat IN (NULL)",
         ),
     ];
     for (sql, expected) in cases {
@@ -161,7 +247,8 @@ fn a_reference_in_another_case_fails_the_iceberg_field_lookup() {
     assert_eq!(
         refused("CAT = 'x'"),
         "Error during planning: Cannot find field 'CAT' in struct: struct<1: id: optional long, \
-         2: data: optional string, 3: cat: optional string, 4: d: optional date>"
+         2: data: optional string, 3: cat: optional string, 4: d: optional date, 5: i: optional \
+         int>"
     );
 }
 

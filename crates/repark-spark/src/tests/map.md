@@ -2172,3 +2172,8 @@ table, four files). `overwrite_mode.rs` re-pins
 `static_value_is_cast_to_a_date_partition_and_an_invalid_value_refuses` to Spark's
 `CAST_INVALID_INPUT` text. pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
 C-008, C-009, C-010, C-011, C-012
+
+U8 WRITE-SQL PR1 round 2 (2026-09-25, critic r1): `replace_where_nulls.rs` pins REPLACE WHERE
+over a NULL partition key — 49 predicates on a NULL `cat` key and 7 on a NULL `id` key, each
+row set generated from Spark's measured rows (`target/probe-u8-r1fix/spark_r1.json`) — plus the
+repeated-name sources and the missing-namespace refusal. pins: u8-write-sql/C-015, C-016, C-018

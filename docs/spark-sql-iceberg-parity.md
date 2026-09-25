@@ -1183,40 +1183,57 @@ perfectly good read.
   `PARQUET:field_id` (fork ask F-DML-FIELD-ID-1), so the surface never routes
   through it.
 
-#### DML-7 — `INSERT INTO … REPLACE WHERE` — **FIXED 2026-09-24 (U8 PR1)**
+#### DML-7 — `INSERT INTO … REPLACE WHERE` — **FIXED 2026-09-24 (U8 PR1); NULL keys 2026-09-25**
 
 - **repark** — `INSERT INTO [TABLE] t REPLACE WHERE <predicate> <query>` runs on the Spark door
   (`crates/repark-spark/src/router/insert_positional/replace_where.rs`). The predicate converts
-  to an Iceberg row filter by Spark's V2-filter rules
+  to an Iceberg row filter by Spark's optimizer and V2-filter rules
   (`repark_iceberg::write::spark_overwrite_filter`: `=`, `<>`, `<=>`, ranges, `BETWEEN`, `IN`,
-  `NOT IN` as `notNull AND notIn`, `IS [NOT] NULL`, prefix `LIKE`, `AND` / `OR` / `NOT`, a
-  string literal coerced to the column type), and the query's rows commit through
-  `overwrite_by_row_filter` with no added-file validation
-  (`commit_overwrite_by_filter_with_summary`). The snapshot is `overwrite`, `delete` for an
-  empty source (even when nothing matches), and `append` for a literal `false` predicate. A
-  filter that matches some but not all rows of a file refuses Iceberg's `Cannot delete file
-  where some, but not all, rows match filter …`. Branch targets (`t.branch_b`) commit to the
-  branch. Refusals: a subquery predicate `UNSUPPORTED_FEATURE.OVERWRITE_BY_SUBQUERY` / `0A000`,
-  a non-deterministic one `INVALID_NON_DETERMINISTIC_EXPRESSIONS` / `42K0E`, an untranslatable
-  one `IllegalArgumentException: Cannot convert Spark predicate to Iceberg expression: …`, a
-  wrong-width source `INSERT_COLUMN_ARITY_MISMATCH` / `21S01`, and `REPLACE WHERE` after
-  `OVERWRITE`, a column list, `BY NAME` or `PARTITION` a `ParseException` `PARSE_SYNTAX_ERROR`
-  near `'REPLACE'`.
+  `NOT IN`, `IS [NOT] NULL`, prefix `LIKE`, `AND` / `OR` / `NOT`, a string literal coerced to
+  the column type). A NULL key follows Spark: `<` and `<=` carry a `notNull` conjunct (Java
+  Iceberg's `lt` never matches NULL), `NOT` pushes down as Spark's optimizer pushes it (`NOT cat
+  < 'y'` → `cat >= 'y'`, `NOT BETWEEN` → `< low OR > high`), a one-element `IN` / `NOT IN` folds
+  to `=` / `<>` (so `NOT IN ('y')` deletes the NULL row), and a longer `NOT IN` is `notNull AND
+  notIn` (the NULL row stays). An integer literal outside the column's range folds as Spark's
+  unwrap-cast does (`…: null`, `…: (i IS NOT NULL) OR (null)`, dropped from an `IN`). The
+  query's rows commit through `overwrite_by_row_filter` with no added-file validation
+  (`commit_overwrite_by_filter_with_summary`); a source whose output names repeat is
+  deduplicated first. The snapshot is `overwrite`, `delete` for an empty source (even when
+  nothing matches), and `append` for a literal `false` predicate. A filter that matches some but
+  not all rows of a file refuses Iceberg's `Cannot delete file where some, but not all, rows
+  match filter …`. Branch targets (`t.branch_b`) commit to the branch. Refusals: a subquery
+  predicate `UNSUPPORTED_FEATURE.OVERWRITE_BY_SUBQUERY` / `0A000`, a non-deterministic one
+  `INVALID_NON_DETERMINISTIC_EXPRESSIONS` / `42K0E`, an untranslatable one
+  `IllegalArgumentException: Cannot convert Spark predicate to Iceberg expression: …`, a
+  wrong-width source `INSERT_COLUMN_ARITY_MISMATCH` / `21S01`, a missing table or namespace
+  `TABLE_OR_VIEW_NOT_FOUND`, and `REPLACE WHERE` after `OVERWRITE`, a column list, `BY NAME` or
+  `PARTITION` a `ParseException` `PARSE_SYNTAX_ERROR` near `'REPLACE'`.
 - **Apache Spark** — `OverwriteByExpression` → Iceberg `SparkWrite.OverwriteByFilter`, the same
-  answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-24,
-  `target/probe-u8-pr1/spark*.json`; scoreboard cell `W-INSERT-OVERWRITE-WHERE`.)*
+  answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-24 and 2026-09-25,
+  `target/probe-u8-pr1/spark*.json`, `target/probe-u8-r1fix/spark_r1.json` (83 probes, NULL-key
+  sweep); scoreboard cell `W-INSERT-OVERWRITE-WHERE`.)*
 - **Residue** — (1) the partial-match refusal is `PySparkException` with `DataInvalid => …` and
-  the fork's filter spelling (`id = 2`), where Spark raises `Py4JJavaError` wrapping
-  `ValidationException` and spells `ref(name="id") == 2`; a mis-cased column (`CAT = 'x'`)
-  refuses Iceberg's `Cannot find field 'CAT' in struct: …` as `AnalysisException`. (2) The
-  untranslatable-predicate text quotes the statement's own spelling, where Spark renders its V2
-  expression (`(id + 1) = 3`, `CAST(id AS string)`). (3) `TIMESTAMP` literals in the predicate
-  refuse as untranslatable; Spark converts them. (4) A `TABLE a.b.c` source is the door's
-  pre-existing parse gap for three-part `TABLE` queries.
+  the fork's filter spelling (`id = 2`, `(data IS NOT NULL) AND (data < "b")`), where Spark
+  raises `Py4JJavaError` wrapping `ValidationException` and spells `ref(name="id") == 2`; a
+  mis-cased column (`CAT = 'x'`) refuses Iceberg's `Cannot find field 'CAT' in struct: …` as
+  `AnalysisException`. (2) The untranslatable-predicate text quotes the statement's own
+  spelling, where Spark renders its V2 expression (`(id + 1) = 3`, `CAST(id AS string)`). (3)
+  `TIMESTAMP` literals in the predicate refuse as untranslatable; Spark converts them. (4) A
+  `TABLE a.b.c` source is the door's pre-existing parse gap for three-part `TABLE` queries. (5)
+  Dated 2026-09-25: `NOT LIKE 'y%'` over a NULL key — Spark fails `[INTERNAL_ERROR] Eagerly
+  executed overwrite failed. You hit a bug in Spark or the Spark plugins you use. … SQLSTATE:
+  XX000` and commits nothing; RePark commits `not(startsWith)` and deletes the NULL-key row.
+  Spark's answer is a Spark bug and is not emulated. (6) Dated 2026-09-25: a non-Iceberg target
+  — Spark answers `[_LEGACY_ERROR_TEMP_1011] Writing into a view is not allowed` for a temporary
+  view and `[_LEGACY_ERROR_TEMP_1012] Cannot write into v1 table` for a `USING parquet` table;
+  the facade qualifies a bare temp-view name to the current catalog, so RePark answers
+  `TABLE_OR_VIEW_NOT_FOUND`, and a DataFusion session table on the Rust door answers RePark's
+  own `INSERT INTO … REPLACE WHERE requires an Iceberg table, got …`.
 - **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
   `crates/repark-spark/src/tests/replace_where.rs`;
+  `crates/repark-spark/src/tests/replace_where_nulls.rs`;
   `crates/repark-iceberg/src/write/overwrite_filter/tests.rs`.
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-013, C-014
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-013, C-014, C-015, C-016, C-017, C-018
 - **Rationale** — FIXED. Spark-only syntax, like DML-6; the native door has no spelling.
 
 #### DML-8 — `INSERT INTO … PARTITION (…)` — **FIXED 2026-09-24 (U8 PR1)**

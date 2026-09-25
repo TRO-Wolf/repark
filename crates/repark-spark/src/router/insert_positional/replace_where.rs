@@ -215,8 +215,15 @@ pub(crate) async fn execute_replace_where(
         }
         None => sql.clone(),
     };
-    super::partition_append::refuse_positional_arity(ctx, catalogs, &catalog_name, &table, source)
-        .await?;
+    let planned_source = insert.source.as_deref().unwrap_or(source);
+    super::partition_append::refuse_positional_arity(
+        ctx,
+        catalogs,
+        &catalog_name,
+        &table,
+        planned_source,
+    )
+    .await?;
     let source_df = spark_ast::execute_insert_source(ctx, catalogs, &planning_sql).await?;
     let namespace = namespace_schema_name(table.identifier().namespace());
     let base_table = format!(
@@ -281,10 +288,11 @@ async fn missing_target(
     };
     let catalog = catalogs.get(catalog_name)?;
     let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
-    match catalog.table_exists(&ident).await {
-        Ok(false) => Some(table_or_view_not_found(catalog_name, namespace, table)),
-        _ => None,
-    }
+    let missing = match catalog.table_exists(&ident).await {
+        Ok(exists) => !exists,
+        Err(error) => error.kind() == iceberg::ErrorKind::NamespaceNotFound,
+    };
+    missing.then(|| table_or_view_not_found(catalog_name, namespace, table))
 }
 
 fn refuse_subquery(predicate: &Expr) -> Result<()> {

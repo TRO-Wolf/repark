@@ -20,8 +20,10 @@ Rewrite or execute the INSERT forms the stock parser cannot model on the Spark d
   the width, refuses a volatile predicate from the planned `Filter`, converts it with
   `repark_iceberg::write::spark_overwrite_filter`, stages, and commits
   `commit_overwrite_by_filter_with_summary`; a literal `false` commits an append, as Spark's
-  optimizer does. A missing target answers `TABLE_OR_VIEW_NOT_FOUND`.
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005
+  optimizer does. A missing target answers `TABLE_OR_VIEW_NOT_FOUND`, also when its namespace
+  does not exist (round 2, 2026-09-25). The width check plans the deduplicated source, so a
+  source whose output names repeat writes (critic r1 V-003).
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-016, C-018
 - `partition_append.rs` — `INSERT INTO … PARTITION (…)` becomes a plain positional INSERT.
   Static values (Spark's string form, checked by an Arrow cast with `safe: false`,
   `CAST_INVALID_INPUT` on failure) go in at their table positions (or after a column list),

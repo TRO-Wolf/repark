@@ -32,6 +32,8 @@ CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_accepta
 
 U8 WRITE-SQL PR1 (2026-09-24): `test_ice_write_sql_1.py` pins `INSERT INTO … REPLACE WHERE`, `INSERT INTO … PARTITION (…)` and the bucketed `INSERT … FROM range(20)` against Spark 4.1.2 + Iceberg 1.11 (`target/probe-u8-pr1/spark*.json` and the scoreboard cells `W-INSERT-OVERWRITE-WHERE`, `W-INSERT-PARTITION-CLAUSE`, `W-INSERT-BUCKETED`): rows, snapshot summaries, file layouts, and every refusal's exact class, condition, SQLSTATE and message. `test_ice_overwrite_mode_1.py` renames `test_invalid_static_date_refuses_like_the_engine_cast` to `test_invalid_static_date_refuses_with_spark_cast_invalid_input` and pins Spark's `CAST_INVALID_INPUT` text (supersedes the refusal text of ice-overwrite-mode-1/C-013). pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014
 
+U8 WRITE-SQL PR1 round 2 (2026-09-25): `test_ice_write_sql_1.py` adds the NULL-key REPLACE WHERE pins (a NULL `cat` or `id` key under `<`, `<=`, `NOT BETWEEN`, `NOT <`, one- and two-element `NOT IN`, `IN (…, NULL)`), the repeated-name sources, and the out-of-range INT literal refusals, all from `target/probe-u8-r1fix/spark_r1.json` and the critic's XR/XN probes. pins: u8-write-sql/C-015, C-016, C-017
+
 ## Purpose
 
 Facade tests for the `repark` wheel — they require the compiled native module and exercise the

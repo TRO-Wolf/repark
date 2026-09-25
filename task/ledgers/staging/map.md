@@ -8,9 +8,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
   overwrite by filter, `INSERT INTO … PARTITION (…)` static and dynamic keys, and positional
   INSERT sources whose names repeat (the bucketed `range()` cell). Supersedes the refusal
-  text of ice-overwrite-mode-1/C-013. C-001..C-014 PROVEN.
+  text of ice-overwrite-mode-1/C-013. Critic r1 remediation (2026-09-25): NULL partition keys
+  under `<`, `<=`, `NOT` and `NOT IN`, repeated-name REPLACE WHERE sources, out-of-range
+  literals. C-001..C-018 PROVEN.
   `risk_tier: standard`. Branch `feat/u8-write-sql`.
-  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018
 - [u6-write-refusals-ledger.md](u6-write-refusals-ledger.md) —
   **U6 WRITE-REFUSALS PR1 (2026-09-24), in flight:** refusal parity on
   `write.spark.accept-any-schema` tables — positional writes resolve by name and

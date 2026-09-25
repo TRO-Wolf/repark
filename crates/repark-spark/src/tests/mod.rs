@@ -92,6 +92,7 @@ mod refs_and_wap;
 mod replace_columns;
 mod replace_table;
 mod replace_where;
+mod replace_where_nulls;
 mod router;
 mod run_maintenance;
 mod service_managed_ctas;
