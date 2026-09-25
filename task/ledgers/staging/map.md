@@ -250,6 +250,16 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   reader drops non-main refs, so the selector-door kernel call is belt-and-braces until
   F-V1-REFS-1; R-U5-PR2B-OTHER-MALFORMED and R-U5-PR2B-RETENTION-SECOND-COMMIT carry the dated
   V-005 and V-007 residues.
+  **WO U5 PR3 (2026-09-25, C-058):** hive-style typed `PARTITIONED BY` columns become table
+  columns with identity partition fields (D-X-PARTITIONED-COLDEF); residues R-U5-PR3-MIX-RENDER,
+  R-U5-PR3-NON-PRIMITIVE, R-U5-PR3-CTAS-TYPED. **Ruling (2026-09-25, C-059):** `RENAME TO`
+  reads its target inside the source catalog like Spark's InMemoryCatalog (D-RENAME-TABLE);
+  supersedes ice-catalog-session-1/C-022's cross-catalog half and dbt-1-adapter/C-001's
+  `S-RENAME` row. Residues R-U5-PR3-RENAME-CLASS, NESTED-NS-SQL, RENAME-MISSING-SOURCE and
+  DBT-RENAME. Verifier fixes (2026-09-25): R-U5-PR3-NON-PRIMITIVE and CTAS-TYPED narrowed to
+  measured texts; new residues CASE-SENSITIVE, SYNTAX-CONTEXT and TEMP-VIEW-RENAME; the dbt
+  rename follow-up line. Verifier r2 fixes: C-058 takes `NOT NULL` then `COMMENT`, each once,
+  and names the planning prefix on `COLUMN_ALREADY_EXISTS`; residue INSERT-NOT-NULL.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

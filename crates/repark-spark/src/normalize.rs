@@ -5,8 +5,8 @@ use std::ops::ControlFlow;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor, TableWithJoins,
-    Value, Visit, Visitor,
+    ColumnDef, Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor,
+    TableWithJoins, Value, Visit, Visitor,
 };
 use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect, GenericDialect};
 use datafusion::sql::sqlparser::keywords::Keyword;
@@ -473,7 +473,7 @@ pub(crate) enum PartitionedByElement {
     /// A transform call `name(args…)` (`bucket(4, c)` / `days(ts)` / `truncate(10, c)` / …).
     Transform { name: String, args: Vec<String> },
     /// A Hive-style typed column def.
-    Typed(String),
+    Typed(ColumnDef),
     /// A multipart reference (`a.b`) — nested-field partitioning, gated `NotImplemented` in v1.
     Nested(String),
 }
@@ -691,9 +691,10 @@ pub(crate) fn find_partitioned_by_run(tokens: &[Token], boundary: usize) -> Opti
 pub(crate) fn parse_partitioned_by_elements(inner: &[Token]) -> Result<Vec<PartitionedByElement>> {
     let mut elements = Vec::new();
     let mut depth = 0usize;
+    let mut angle = 0usize;
     let mut current: Vec<&Token> = Vec::new();
     for token in inner {
-        if matches!(token, Token::Comma) && depth == 0 {
+        if matches!(token, Token::Comma) && depth == 0 && angle == 0 {
             elements.push(classify_partitioned_by_element(&current)?);
             current.clear();
             continue;
@@ -701,6 +702,9 @@ pub(crate) fn parse_partitioned_by_elements(inner: &[Token]) -> Result<Vec<Parti
         match token {
             Token::LParen => depth += 1,
             Token::RParen => depth = depth.saturating_sub(1),
+            Token::Lt => angle += 1,
+            Token::Gt => angle = angle.saturating_sub(1),
+            Token::ShiftRight => angle = angle.saturating_sub(2),
             _ => {}
         }
         if !matches!(token, Token::Whitespace(_)) {
@@ -732,8 +736,8 @@ pub(crate) fn classify_partitioned_by_element(tokens: &[&Token]) -> Result<Parti
         [Token::Word(_), Token::Period, ..] => Ok(PartitionedByElement::Nested(
             tokens.iter().map(ToString::to_string).collect::<String>(),
         )),
-        [Token::Word(word), Token::Word(_), ..] => {
-            Ok(PartitionedByElement::Typed(word.value.clone()))
+        [Token::Word(_), Token::Word(_), ..] => {
+            crate::nested_column_ddl::typed_partition_column(tokens)
         }
         other => Err(DataFusionError::Plan(format!(
             "malformed PARTITIONED BY element `{}`: expected a column name, got an \

@@ -55,9 +55,18 @@ pub(crate) async fn execute_create_table(
     partitioning: &[PartitionedByElement],
     clauses: &CreateClauses,
 ) -> Result<DataFrame> {
-    let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
-    let schema_create =
-        build_schema_create(catalogs, create, partitioning, timestamp_type, clauses)?;
+    let options = ctx.copied_config();
+    let timestamp_type = spark_timestamp_type_from_options(options.options());
+    let case_sensitive =
+        repark_functions::case_sensitive::spark_case_sensitive_from_options(options.options());
+    let schema_create = build_schema_create(
+        catalogs,
+        create,
+        partitioning,
+        timestamp_type,
+        case_sensitive,
+        clauses,
+    )?;
     execute_schema_create(ctx, catalogs, schema_create).await
 }
 
@@ -68,6 +77,7 @@ fn build_schema_create(
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
     timestamp_type: SparkTimestampType,
+    case_sensitive: bool,
     clauses: &CreateClauses,
 ) -> Result<SchemaCreate> {
     if create.query.is_some() {
@@ -107,7 +117,8 @@ fn build_schema_create(
                 .into(),
         ));
     }
-    if create.columns.is_empty() {
+    let typed_columns = typed_partition_columns(partitioning)?;
+    if create.columns.is_empty() && typed_columns.is_empty() {
         return Err(DataFusionError::Plan(
             "CREATE TABLE without AS SELECT requires a column list \
              (e.g. CREATE TABLE c.ns.t (id BIGINT, name STRING) USING iceberg)"
@@ -125,11 +136,7 @@ fn build_schema_create(
                 partition_fields.push(build_transform_field(name, args)?);
             }
             PartitionedByElement::Typed(column) => {
-                return Err(DataFusionError::Plan(format!(
-                    "PARTITIONED BY typed column `{column}` is not supported for Iceberg CREATE \
-                     TABLE — reference a table column (or a transform over one), e.g. \
-                     PARTITIONED BY ({column})"
-                )));
+                partition_fields.push(PartitionFieldSpec::Identity(column.name.value.clone()));
             }
             PartitionedByElement::Nested(path) => {
                 return Err(DataFusionError::NotImplemented(format!(
@@ -164,7 +171,14 @@ fn build_schema_create(
     }
 
     let table_name = format!("`{catalog}`.`{namespace}`.`{table}`");
-    let schema = schema_from_column_defs(&create.columns, timestamp_type, &table_name)?;
+    refuse_duplicate_partition_columns(&create.columns, &typed_columns, case_sensitive)?;
+    let columns: Vec<ColumnDef> = create
+        .columns
+        .iter()
+        .chain(&typed_columns)
+        .cloned()
+        .collect();
+    let schema = schema_from_column_defs(&columns, timestamp_type, &table_name)?;
     let partition_spec = build_partition_spec(&schema, &partition_fields, true)?;
     // Bind partition validation early (unknown column fails before catalog I/O).
     let _ = partition_spec;
@@ -182,6 +196,67 @@ fn build_schema_create(
         location: clauses.location.clone(),
         format_version,
     })
+}
+
+pub(crate) fn typed_partition_columns(
+    partitioning: &[PartitionedByElement],
+) -> Result<Vec<ColumnDef>> {
+    let mut columns = Vec::new();
+    let mut expressions = Vec::new();
+    for element in partitioning {
+        match element {
+            PartitionedByElement::Typed(column) => columns.push(column.clone()),
+            PartitionedByElement::Identity(column) | PartitionedByElement::Nested(column) => {
+                expressions.push(column.clone());
+            }
+            PartitionedByElement::Transform { name, args } => {
+                expressions.push(format!("{name}({})", args.join(", ")));
+            }
+        }
+    }
+    if columns.is_empty() || expressions.is_empty() {
+        return Ok(columns);
+    }
+    let rendered = columns
+        .iter()
+        .map(|column| {
+            let data_type = column.data_type.to_string().to_lowercase();
+            format!("{} {data_type}", column.name.value)
+        })
+        .collect::<Vec<_>>();
+    Err(DataFusionError::SQL(
+        Box::new(ParserError::ParserError(format!(
+            "Operation not allowed: PARTITION BY: Cannot mix partition expressions and \
+             partition columns:\nExpressions: {}\nColumns: {}.",
+            expressions.join(", "),
+            rendered.join(", ")
+        ))),
+        None,
+    ))
+}
+
+fn refuse_duplicate_partition_columns(
+    declared: &[ColumnDef],
+    typed: &[ColumnDef],
+    case_sensitive: bool,
+) -> Result<()> {
+    for (index, column) in typed.iter().enumerate() {
+        let name = &column.name.value;
+        if declared.iter().chain(&typed[..index]).any(|earlier| {
+            if case_sensitive {
+                earlier.name.value == *name
+            } else {
+                earlier.name.value.eq_ignore_ascii_case(name)
+            }
+        }) {
+            return Err(DataFusionError::Plan(format!(
+                "[COLUMN_ALREADY_EXISTS] The column `{}` already exists. Choose another name or \
+                 rename the existing column. SQLSTATE: 42711",
+                name.to_lowercase()
+            )));
+        }
+    }
+    Ok(())
 }
 
 /// Map sqlparser column defs → Iceberg [`Schema`] (1-based field ids, Spark nullable default).

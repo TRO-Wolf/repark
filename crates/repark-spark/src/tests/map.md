@@ -1125,6 +1125,30 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `repark-sql/src/properties/tests.rs` are gone; this row and the D-CREATE-V1 registry row carry
   the citation.
   pins: ice-nested-evo-1/C-052, C-057
+- [rename_target.rs](rename_target.rs) — **WO U5 PR3 (2026-09-25):** D-RENAME-TABLE. A
+  catalog-qualified `RENAME TO` target is a namespace inside the source catalog: `ice.sales.r3b`,
+  `other.sales.rcb`, `nope.rnb` and `x.y.z.w` answer Spark's exact `Cannot rename … Namespace
+  does not exist: …` execution error and the source keeps its rows; with nested namespace
+  `[ice, nested]` present, `ice.nested.rqb` moves the table there (created through the catalog
+  API, since SQL cannot create a nested namespace). Two-part, one-part and other-namespace
+  targets rename; an existing target answers `[TABLE_OR_VIEW_ALREADY_EXISTS]` with Spark's
+  text; a missing source keeps the catalog's `No such namespace`. The three `tests/alter.rs`
+  multi-op renames now spell a two-part target. pins: ice-nested-evo-1/C-059
+- [create_typed_partition.rs](create_typed_partition.rs) — **WO U5 PR3 (2026-09-25):**
+  D-X-PARTITIONED-COLDEF. Typed `PARTITIONED BY` columns append after the declared columns with
+  the next ids and identity fields (`cat STRING`; `cat, k INT, d DATE`; `NOT NULL` + `COMMENT`
+  and a backticked `DECIMAL(10,2)`; no column list), and the seeded table reads back. The mix
+  refusal pins Spark's parse text for a transform, many elements and `DECIMAL`/`ARRAY`
+  spellings; the duplicate refusal pins `COLUMN_ALREADY_EXISTS` for a declared name, a case
+  variant and a repeated typed name. Neither creates a table. Near misses: untyped `(cat)`,
+  `(days(ts))`, and the empty-column-list refusal without typed columns. Verifier fixes
+  (2026-09-25): `CREATE OR REPLACE` and `REPLACE TABLE` re-key a kept and an added typed column
+  (ids 3/4, spec fields 1001/1002, last-partition-id 1002); under `caseSensitive=true` a
+  case-only pair reaches the fork's lower-case-index refusal; `MAP`, two-field `STRUCT` and
+  `ARRAY<MAP<…>>` reach the non-primitive refusal whole; `DEFAULT` and `NULL` options, `COMMENT` before
+  `NOT NULL`, and a repeated `NOT NULL` or `COMMENT` answer `PARSE_SYNTAX_ERROR` near the
+  unexpected token (r2 V-001); a CTAS mixing untyped and typed elements answers the mix text.
+  pins: ice-nested-evo-1/C-058
 - [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
   COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
   struct field, empty string, `CHANGE COLUMN`, upper-cased name, double-quoted literal, and a
@@ -1243,7 +1267,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - [hadoop_rename.rs](hadoop_rename.rs) — **PR-B hadoop naming (2026-09-24):** on a config-map
   `type=hadoop` catalog, `ALTER TABLE … RENAME TO` fails with `Error::NotImplemented` whose text
   is exactly "Cannot rename Hadoop tables", and the table still reads under its old name. The
-  near miss: `type=memory` still renames. Mutation: map the rename error through `iceberg_err`
+  near miss: `type=memory` still renames (a two-part `db.u` target since WO U5 PR3, 2026-09-25;
+  `hadoop_type_rename_refuses_every_target_shape` pins the refusal for one-, two-, three- and
+  four-part targets and a missing namespace). Mutation: map the rename error through `iceberg_err`
   and the pin reads `FeatureUnsupported => Cannot rename Hadoop tables`.
   `hadoop_type_staged_create_still_writes_uuid_names_divergence` pins the known gap. This
   door's `CREATE TABLE` goes through `commit_staged_schema_only`, so on a hadoop catalog it
@@ -1952,7 +1978,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `DATABASE`/`SCHEMA`, `USE CATALOG` parse refusal, zero-row answer, `USE DEFAULT`
   arm reachability, the completer legs, and the `SHOW`/`CACHE`/`CALL` statement-variant
   parse pins. S3 adds the short-name mechanism pins: ALTER source + RENAME dest
-  (source-anchored, T-3), cross-catalog RENAME refusal, CREATE / CTAS / DROP
+  (source-anchored, T-3), the three-part RENAME target read as a namespace (WO U5 PR3,
+  2026-09-25: `rename_three_part_dest_reads_the_catalog_as_a_namespace` replaces the
+  cross-catalog refusal pin), CREATE / CTAS / DROP
   completion, and two-part CALL catalog resolution. S4 adds the `SHOW` mechanism
   pins: catalog listing + `LIKE`, tables-after-`USE` + `IN`/`LIKE` forms + missing
   explicit namespace refusal + empty ambient scope, columns declaration order +

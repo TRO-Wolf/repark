@@ -1,5 +1,7 @@
 # map — scripts/
 
+WO U5 PR3 (2026-09-25): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1354 → 1353 and `repark-sql/tests/cross_door.rs` 1254 → 1253. The `RENAME TO` cross-catalog refusal is deleted: the target is read inside the source catalog (`use_ddl::rename_dest`, `use_ddl::rename_error`). Shrink-only. pins: ice-nested-evo-1/C-059
+
 WO U5 PR2b round 2 (2026-09-25): `check_rust_file_size.py` ratchets `repark-iceberg/src/write/merge/mod.rs` 1630 → 1628 (the merge-on-read v1 refusal became Spark's two-line `Deletes are supported in V2 and above`) and `repark-spark/src/tests/ctas.rs` 1357 → 1356 (a stale `pins:` line removed). Shrink-only. pins: ice-nested-evo-1/C-057
 
 WO U5 PR2a (2026-09-24): `check_rust_file_size.py` ratchets `repark-spark/src/alter.rs` 1382 → 1354 and `repark-spark/src/tests/alter.rs` 1184 → 1182. The residual `refuse_unsupported_alter_sql` (`ALTER COLUMN … COMMENT` refusal) is deleted, `nested_column_ddl.rs` serves the statement, and the old refusal pin now asserts the landed doc. Shrink-only. pins: ice-nested-evo-1/C-037

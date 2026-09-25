@@ -129,6 +129,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (41 passed; divergences EAGER-1, HADOOP-1 stay pinned in the registry; bare
   `SHOW NAMESPACES` follows the registry box while `SELECT current_catalog()` stays `spark_catalog`).
   pins: ice-catalog-session-1/C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028
+  **WO U5 PR3 (2026-09-25):** `test_rename_across_catalogs_reads_a_namespace_like_spark`
+  replaces C-022's cross-catalog refusal: `RENAME TO hc.ns.t2` from `sc` is namespace `hc.ns`
+  inside `sc`, so it raises PySparkException `… Namespace does not exist: hc.ns` and the source
+  stays. pins: ice-nested-evo-1/C-059
 
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) +
   [ice_meta_delete_1_spark_oracle.json](ice_meta_delete_1_spark_oracle.json) +
@@ -850,6 +854,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_write_ordered_by_a_long_width_literal_lands_like_spark` lands `bucket(4L, id)`.
   days-on-long moved to `test_write_ordered_by_bind_refusal_keeps_the_fork_text_residue`, a
   residue pin (R-U5-PR2B-BIND-TEXT), not a parity pin.
+  **WO U5 PR3 (2026-09-25):** D-X-PARTITIONED-COLDEF.
+  `test_typed_partition_columns_become_identity_columns_like_spark` pins the appended `cat`
+  column and its identity field, two typed columns (`INT`, `DATE`) and the untyped `(cat)` near
+  miss; `test_typed_partition_column_refusals_match_spark` pins the mix ParseException and the
+  `COLUMN_ALREADY_EXISTS` AnalysisException with full text and no table created.
+  pins: ice-nested-evo-1/C-058
+  D-RENAME-TABLE: `test_rename_to_reads_the_target_inside_the_source_catalog` pins the full
+  PySparkException text for `sc.ns.u`, `hc.ns.u` and `x.y.z.w` with the source kept, and
+  `test_rename_to_an_existing_table_answers_spark_text` pins `TABLE_OR_VIEW_ALREADY_EXISTS`.
+  pins: ice-nested-evo-1/C-059
   **Round 3 (2026-09-25):** the transform refusal table adds `hex-token-is-a-quoted-reference`
   (`bucket(0x4, id)` → `bucket(`0x4`, id)`) and `string-constant-doubles-its-quote`
   (`truncate('a\'b', id)` → `truncate('a''b', id)`).
@@ -2673,6 +2687,15 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   floored to µs, in UTC and New York; a nine-digit `TIMESTAMP` value in `VALUES` stores what
   `INSERT … SELECT` stores; `EXPLAIN` lowers ns casts.
   pins: ice-tsns-sql-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011
+- [test_ice_typed_partition_refusals.py](test_ice_typed_partition_refusals.py) — **WO U5 PR3
+  verifier fixes (2026-09-25):** D-X-PARTITIONED-COLDEF refusals beside
+  `test_ice_ddl_alter_2.py` (kept under the 1000-line cap).
+  `test_typed_partition_column_shapes_refuse_like_spark` pins the `MAP` and two-field `STRUCT`
+  non-primitive texts (the element splitter keeps commas inside `<…>`) and the `DEFAULT`,
+  out-of-order and repeated `NOT NULL` / `COMMENT` `PARSE_SYNTAX_ERROR`s (r2 V-001); `test_ctas_mixing_untyped_and_typed_partition_elements_answers_the_mix_text`
+  pins Spark's mix text on CTAS; `test_typed_partition_columns_differing_by_case_reach_the_fork_under_case_sensitive`
+  pins the fork's lower-case-index refusal under `caseSensitive=true`. No table is created.
+  pins: ice-nested-evo-1/C-058
 - [ice_tsns_sql_1_oracle.json](ice_tsns_sql_1_oracle.json) — **ICE-TSNS-SQL-1 (2026-09-17):**
   the PyIceberg `StaticTable` read-back of the DataFrame-door control (schema type names, spec,
   int64-ns values, partitions with counts), RePark's `.partitions` answer for the same table,

@@ -1,7 +1,8 @@
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
-    AlterColumnOperation, DataType as SqlDataType, ExactNumberInfo, Ident, ObjectName, TimezoneInfo,
+    AlterColumnOperation, ColumnDef, ColumnOption, ColumnOptionDef, DataType as SqlDataType,
+    ExactNumberInfo, Ident, ObjectName, TimezoneInfo,
 };
 use datafusion::sql::sqlparser::dialect::SparkSqlDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
@@ -22,7 +23,7 @@ use repark_iceberg::write::nested_column::{
 use crate::alter::table_parts_to_ident;
 use crate::catalog_ops::table_or_view_not_found;
 use crate::create_table::sql_type_to_iceberg_with_timestamp_type;
-use crate::{catalog_handle, iceberg_err, name_parts, reregister};
+use crate::{PartitionedByElement, catalog_handle, iceberg_err, name_parts, reregister};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct NestedAddColumn {
@@ -872,4 +873,35 @@ pub(crate) async fn execute_nested_column_ddl(
     }
     reregister(ctx, handle.clone(), &catalog_name, &namespace).await?;
     ctx.read_empty()
+}
+
+pub(crate) fn typed_partition_column(tokens: &[&Token]) -> Result<PartitionedByElement> {
+    let sql_error = |error| DataFusionError::SQL(Box::new(error), None);
+    let mut parser = Parser::new(&SparkSqlDialect {})
+        .with_tokens(tokens.iter().map(|token| (*token).clone()).collect());
+    let name = parser.parse_identifier().map_err(sql_error)?;
+    let data_type = parser.parse_data_type().map_err(sql_error)?;
+    let mut options = Vec::new();
+    if parser.parse_keywords(&[Keyword::NOT, Keyword::NULL]) {
+        options.push(ColumnOption::NotNull);
+    }
+    if parser.parse_keyword(Keyword::COMMENT) {
+        options.push(ColumnOption::Comment(
+            parser.parse_literal_string().map_err(sql_error)?,
+        ));
+    }
+    if parser.peek_token().token != Token::EOF {
+        return Err(verbatim_parser_error(syntax_error_near(
+            &parser.peek_token().token,
+        )));
+    }
+    let options = options
+        .into_iter()
+        .map(|option| ColumnOptionDef { name: None, option })
+        .collect();
+    Ok(PartitionedByElement::Typed(ColumnDef {
+        name,
+        data_type,
+        options,
+    }))
 }

@@ -88,6 +88,7 @@ pub(crate) fn build_ctas(
             "Schema may not be specified in a {statement} statement"
         )));
     }
+    crate::create_table::typed_partition_columns(partitioning)?;
     let mut partition_fields = Vec::with_capacity(partitioning.len());
     for element in partitioning {
         match element {
@@ -98,6 +99,7 @@ pub(crate) fn build_ctas(
                 partition_fields.push(build_transform_field(name, args)?);
             }
             PartitionedByElement::Typed(column) => {
+                let column = &column.name.value;
                 return Err(DataFusionError::Plan(format!(
                     "Partition column types may not be specified in Create Table As Select \
                      (CTAS): partition column `{column}` carries a data type. Reference an \

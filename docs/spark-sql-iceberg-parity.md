@@ -8405,6 +8405,68 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Pin** — `crates/repark-spark/src/tests/ref_branch_on_empty.rs`,
   `crates/repark-spark/src/tests/v1_ref_writes.rs`, `python/repark/tests/test_ice_ddl_alter_2.py`.
 
+### D-X-PARTITIONED-COLDEF — hive-style typed `PARTITIONED BY` column refused — **FIXED 2026-09-25 (WO U5 PR3)**
+
+- **repark** — `CREATE TABLE t (id BIGINT, data STRING) USING iceberg PARTITIONED BY (cat STRING)`
+  appends `cat string` after the declared columns with the next field id and adds the identity
+  field `cat`, as Spark does. Several typed columns keep clause order; `NOT NULL` makes the
+  column required, `COMMENT` lands the doc, a table with no column list takes only the typed
+  columns, and `CREATE OR REPLACE` / `REPLACE TABLE` re-key it like a declared column. A typed
+  column beside an untyped column or a transform raises ParseException `Operation not allowed:
+  PARTITION BY: Cannot mix partition expressions and partition columns:` with Spark's
+  `Expressions:` and `Columns:` lines; a repeated name (case-insensitive) raises AnalysisException
+  `Error during planning: [COLUMN_ALREADY_EXISTS] The column `<name>` already exists.
+  …SQLSTATE: 42711` with the lower-cased name (Spark's text after RePark's planning prefix,
+  R-U5-PR2B-PLANNING-PREFIX); under `spark.sql.caseSensitive=true` only an exact repeat does, and a
+  case-only pair reaches the fork's `Cannot build lower case index: data and DATA collide` where
+  Spark commits both columns. A typed column may carry only `NOT NULL` then `COMMENT`, in that order and
+  each at most once; `DEFAULT`, `NULL`, `COMMENT 'c' NOT NULL`, a repeated `NOT NULL` or a
+  repeated `COMMENT` raises ParseException `[PARSE_SYNTAX_ERROR] Syntax error at or near '<token>'.
+  SQLSTATE: 42601`. A CTAS mixing an untyped and a typed element answers the mix text. Residues: the mix text spells each type as written, lower-cased (`integer`
+  where Spark says `int`), and the facade wraps it as `SQL error: ParserError("…")`; a STRUCT or
+  ARRAY or MAP typed column (commas inside `<…>` stay in the element) answers the fork's
+  `DataInvalid => Cannot partition by non-primitive source field` text where Spark raises
+  ValidationException with its own rendering; Spark's syntax-error position and `== SQL ==` block
+  are not rendered; the case-sensitive pair above; a CTAS with only typed columns keeps its
+  pre-existing typed-partition text.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25
+  (`target/probe-u5-pr3/spark.out`, `spark2.out` in the lane clone; scoreboard cell
+  `D-X-PARTITIONED-COLDEF`, replayed EQUAL).
+- **Pin** — `crates/repark-spark/src/tests/create_typed_partition.rs`,
+  `python/repark/tests/test_ice_ddl_alter_2.py::test_typed_partition_columns_become_identity_columns_like_spark`,
+  `…::test_typed_partition_column_refusals_match_spark`,
+  `python/repark/tests/test_ice_typed_partition_refusals.py`.
+  Verifier probe 2026-09-25 (critic `xr-spark.out`; `REPLACE TABLE` and `NULL` in the critic
+  scratchpad `xr/rep_spark.out`).
+  pins: ice-nested-evo-1/C-058
+
+### D-RENAME-TABLE — a catalog-qualified `RENAME TO` target renamed across the catalog name — **FIXED 2026-09-25 (WO U5 PR3)**
+
+- **repark** — the Spark door reads the whole `RENAME TO` target inside the source catalog.
+  A one-part target keeps the source namespace. Two or more parts are `namespace…name`, so
+  `ALTER TABLE sc.ns.t RENAME TO sc.ns.u` targets namespace `sc.ns` inside `sc`. When that
+  namespace is missing, the statement raises `Cannot rename ns.t to sc.ns.u. Namespace does not
+  exist: sc.ns` and the source keeps its rows. The same holds for `hc.ns.u` (`hc.ns`) and
+  `x.y.z.w` (`x.y.z`). When the nested namespace exists, the table moves into it. Two-part,
+  one-part and other-namespace targets rename. An existing target raises
+  `[TABLE_OR_VIEW_ALREADY_EXISTS] Cannot create table or view ns.re2 because it already
+  exists.` with Spark's text. `type=hadoop` keeps `Cannot rename Hadoop tables` for every
+  target. The cross-catalog refusal is gone. The ANSI door keeps `catalog.schema.table`.
+  Residues: RePark raises PySparkException `datafusion engine error: Execution error: …` where
+  Spark raises Py4JJavaError; SQL cannot create or list a nested namespace (owner item
+  D-NS-NESTED); a missing source keeps the catalog's text where Spark raises
+  TABLE_OR_VIEW_NOT_FOUND; dbt-repark's `spark__rename_relation` emits a three-part target,
+  which now refuses as it would on Spark.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0 on `catalog-impl` InMemoryCatalog and
+  `type=hadoop`, measured 2026-09-25 (`target/probe-u5-pr3/spark.out` in the lane clone;
+  scoreboard cells `D-RENAME-TABLE` and `D-RENAME-TABLE-SHORT`, both replayed EQUAL).
+- **Pin** — `crates/repark-spark/src/tests/rename_target.rs`,
+  `crates/repark-spark/src/tests/hadoop_rename.rs`,
+  `python/repark/tests/test_ice_ddl_alter_2.py::test_rename_to_reads_the_target_inside_the_source_catalog`,
+  `…::test_rename_to_an_existing_table_answers_spark_text`,
+  `python/repark/tests/test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`.
+  pins: ice-nested-evo-1/C-059
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

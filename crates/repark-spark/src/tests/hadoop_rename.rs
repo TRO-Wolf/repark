@@ -67,8 +67,23 @@ async fn memory_type_rename_still_succeeds() {
     let warehouse = TempDir::new().unwrap();
     let session = configured_session("memory", warehouse.path()).await;
     create_and_insert_twice(&session).await;
-    run(&session, "ALTER TABLE ice.db.t RENAME TO ice.db.u").await;
+    run(&session, "ALTER TABLE ice.db.t RENAME TO db.u").await;
     assert_eq!(row_count(&session, "ice.db.u").await, 2);
+}
+
+#[tokio::test]
+async fn hadoop_type_rename_refuses_every_target_shape() {
+    let warehouse = TempDir::new().unwrap();
+    let session = configured_session("hadoop", warehouse.path()).await;
+    create_and_insert_twice(&session).await;
+    for target in ["db.u", "u", "other.u", "nope.u", "ice.db.t", "x.y.z.w"] {
+        let error = session
+            .sql(&format!("ALTER TABLE ice.db.t RENAME TO {target}"))
+            .await
+            .unwrap_err();
+        assert_eq!(error.to_string(), HADOOP_RENAME_REFUSAL, "{target}");
+    }
+    assert_eq!(row_count(&session, "ice.db.t").await, 2);
 }
 
 #[tokio::test]

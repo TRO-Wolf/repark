@@ -1,5 +1,7 @@
 # map — repark-sql/tests
 
+WO U5 PR3 (2026-09-25): `cross_door.rs` renames with each door's own target spelling — ANSI `ice.sales.orders_v2`, Spark `sales.orders_v2` — because the Spark door reads a `RENAME TO` target inside the source catalog (D-RENAME-TABLE). pins: ice-nested-evo-1/C-059
+
 ICE-MIXED-CASE-1 (2026-09-17): `cross_door.rs` ROW 8 pins the identifier-case-folding split — ANSI refuses, Spark resolves. pins: ice-mixed-case-1/C-011
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule

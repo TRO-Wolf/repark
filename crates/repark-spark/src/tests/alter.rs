@@ -81,7 +81,7 @@ async fn alter_rename_table() {
     execute(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.orders RENAME TO ice.sales.orders_v2",
+        "ALTER TABLE ice.sales.orders RENAME TO sales.orders_v2",
     )
     .await
     .unwrap();
@@ -1106,7 +1106,7 @@ async fn alter_if_not_exists_after_case_and_rename_then_set_props() {
     execute(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.c8 RENAME TO ice.sales.c8_v2, \
+        "ALTER TABLE ice.sales.c8 RENAME TO sales.c8_v2, \
              SET TBLPROPERTIES('owner'='octo')",
     )
     .await
@@ -1127,7 +1127,7 @@ async fn alter_rename_table_then_add_column_same_statement() {
     execute(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.ren_add RENAME TO ice.sales.ren_add_v2, ADD COLUMN extra STRING",
+        "ALTER TABLE ice.sales.ren_add RENAME TO sales.ren_add_v2, ADD COLUMN extra STRING",
     )
     .await
     .unwrap();
