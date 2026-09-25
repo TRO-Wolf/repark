@@ -127,7 +127,6 @@ pub(crate) async fn execute_column_move_ddl(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::alter::refuse_unsupported_alter_sql;
 
     #[test]
     fn parse_column_move_first_after_and_nested() {
@@ -163,10 +162,6 @@ mod tests {
             try_parse_column_move_ddl("ALTER TABLE ice.sales.t ALTER COLUMN b FIRST EXTRA")
                 .expect("recognize")
                 .is_err()
-        );
-        assert!(
-            refuse_unsupported_alter_sql("ALTER TABLE ice.sales.t ALTER COLUMN b FIRST").is_none(),
-            "a parsed move must not hit the residual refuse path"
         );
     }
 

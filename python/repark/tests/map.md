@@ -783,6 +783,35 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`COMMENT "x.y"`, `COMMENT "c"`, `COMMENT "x.y" FIRST` on a nested child) run on the same
   three tests; red before the V-001 fix: 18 failed (refused `PARSE_SYNTAX_ERROR`).
   pins: ice-nested-evo-1/C-021
+- [test_ice_ddl_alter_2.py](test_ice_ddl_alter_2.py) — **WO U5 PR2a (2026-09-24):** facade
+  pins for `ALTER COLUMN … COMMENT`. The docs land in the current Iceberg metadata file and in
+  `DESCRIBE TABLE`'s comment column (top level, nested, empty string, `CHANGE COLUMN`). dbt's
+  multi-line `alter column` / `change column` shapes with a backslash-escaped quote and `;`,
+  bare `CHANGE`/`ALTER` and a spec list land too. The refusal table pins class, full message,
+  condition and SQLSTATE for each measured refusal and that the schema is unchanged; the map
+  key, missing table and unchanged top-level TYPE / hive CHANGE routes are pinned beside it.
+  pins: ice-nested-evo-1/C-037, C-038, C-039
+  **Round 2 (2026-09-24):** the refusal table adds the repeated column (exact, case variant,
+  struct with its field), the action-then-`COMMENT` forms, a single-quoted name, list `extra
+  input`, the list `Operation not allowed` text and two mixed lists. Each row also asserts that no
+  metadata file was written. A two-spec list writes exactly one new metadata file.
+  pins: ice-nested-evo-1/C-040, C-041, C-042, C-043
+  **Round 3 (2026-09-24):** the refusal table adds the trailing `TYPE STRING`/`DROP NOT NULL`
+  (plain `near`) and bare `TYPE` (`extra input`) tails.
+  `test_map_key_changes_refuse_in_spark_order` pins a field under a map key on COMMENT and
+  TYPE, the schema-order pick, and a repeat or unresolved path winning, with one schema and no
+  new metadata file. `test_element_and_value_comments_add_no_schema_like_spark` keeps one schema
+  for value, element and both, and adds one for a value-plus-column list.
+  `test_unresolved_columns_render_backquoted_parts_like_spark` and
+  `test_a_repeated_column_after_use_names_the_three_part_table` pin the name rendering and the
+  `USE sc.ns` table name.
+  pins: ice-nested-evo-1/C-044, C-045, C-046, C-047, C-048
+  **Round 4 fold (2026-09-24):** the refusal table adds `mixed-list-drop-not-null-first`,
+  `mixed-list-type-first` and `mixed-list-missing-literal`.
+  `test_wrapped_column_comments_are_parse_errors_like_spark` pins `IF EXISTS` and `PARTITION`
+  near their tokens, and `test_other_column_comment_statements_answer_the_residual_refusal`
+  pins the residual text. The name-rendering test adds the MOVE route (`move-missing-column`).
+  pins: ice-nested-evo-1/C-048, C-049, C-050, C-051
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET

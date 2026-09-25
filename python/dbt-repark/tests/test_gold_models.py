@@ -535,13 +535,37 @@ def test_snapshot_materialization_refuses(project: tuple[Path, Path]) -> None:
     )
 
 
-def test_column_documentation_refuses(project: tuple[Path, Path]) -> None:
-    """persist_docs.columns fails with the message that names the registry row."""
-    root, _ = project
+def test_column_documentation_sets_the_column_docs(project: tuple[Path, Path]) -> None:
+    """``persist_docs.columns`` lands each column description as the Iceberg field doc."""
+    root, warehouse = project
     _prepend_config(root, "gold_fct", "config(persist_docs={'columns': true})")
+    schema_path = root / "models" / "schema.yml"
+    document = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
+    columns = document["models"][0]["columns"]
+    columns[0]["description"] = "the survey's key"
+    columns[1]["description"] = "the clinic"
+    schema_path.write_text(yaml.safe_dump(document), encoding="utf-8")
     built = _invoke(["run", "--select", "gold_fct"], root)
-    assert not built.success
-    assert "DBT-COLCOMMENT-1" in _failures(built)
+    assert built.success, _failures(built)
+
+    pointers = sorted(warehouse.glob("*/gold_fct/metadata/*.metadata.json"))
+    assert pointers, "gold_fct has no Iceberg metadata"
+    metadata = json.loads(pointers[-1].read_text(encoding="utf-8"))
+    schema = next(
+        entry
+        for entry in metadata["schemas"]
+        if entry["schema-id"] == metadata["current-schema-id"]
+    )
+    docs = {field["name"]: field.get("doc") for field in schema["fields"]}
+    assert docs["survey_id"] == "the survey's key"
+    assert docs["clinic_id"] == "the clinic"
+    assert docs["calendar_date"] == ""
+    fact = _read(
+        warehouse,
+        f"select survey_id, clinic_id, wait_time_minutes "
+        f"from {CATALOG}.{NAMESPACE}.gold_fct order by survey_id",
+    )
+    assert fact == FCT_ROWS
 
 
 def test_a_second_profile_refuses_rather_than_reusing_the_session(tmp_path: Path) -> None:

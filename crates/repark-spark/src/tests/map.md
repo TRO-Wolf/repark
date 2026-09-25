@@ -700,7 +700,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Comment and Properties rows. pins: ice-drop-ns-1/C-002, C-004, C-008;
   ice-nested-evo-1/C-026, C-030),
   `alter` (WO U5 PR1: bare UNSET and UNSET IF EXISTS on a missing key both preserve table
-  metadata. pins: ice-nested-evo-1/C-025, C-028),
+  metadata. pins: ice-nested-evo-1/C-025, C-028. WO U5 PR2a: the old `ALTER COLUMN … COMMENT`
+  refusal pin becomes `alter_comment_lands_and_after_missing_refuses`, which reads the landed
+  doc. pins: ice-nested-evo-1/C-037),
   `catalog_ops` (IPI-51, 2026-09-20: DROP-missing pins `[TABLE_OR_VIEW_NOT_FOUND]`/`42P01`,
   CREATE/CTAS-exists pins `[TABLE_OR_VIEW_ALREADY_EXISTS]`/`42P07`; IPI-51 PR4 (2026-09-20):
   the `partition_management_unsupported` unit pin asserts the condition prefix, the table
@@ -1069,6 +1071,47 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   probe's `DECIMAL(38,18)`/INT struct and the measured map value BIGINT→SMALLINT. The
   missing-table test adds a missing namespace.
   pins: ice-nested-evo-1/C-032, C-033, C-035, C-036
+- [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
+  COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
+  struct field, empty string, `CHANGE COLUMN`, upper-cased name, double-quoted literal, and a
+  map value or list element (no doc in the Iceberg JSON, as in Spark). Bare `CHANGE`/`ALTER` and
+  a two-spec list land, and a backslash-escaped quote with a trailing `;` (dbt's shape) is read.
+  The refusals pin full text: `UNRESOLVED_COLUMN.WITH_SUGGESTION` (top level and nested),
+  `INVALID_FIELD_NAME`, `TABLE_OR_VIEW_NOT_FOUND`, the `PARSE_SYNTAX_ERROR` family through
+  `engine_err` (`NULL`, a number, a double-quoted name, `TYPE … COMMENT`, `extra input` after
+  the list, `end of input`), the map-key `Unsupported table change`, and the mixed-list
+  not-implemented text, with no doc written. The near misses (top-level TYPE, the hive
+  `CHANGE COLUMN a a <type> COMMENT`, DROP NOT NULL, FIRST) keep their routes.
+  pins: ice-nested-evo-1/C-037, C-038, C-039
+  **Round 2 (2026-09-24):** a repeated column or a column with its field (top level, case
+  variant, backquoted, struct, `element`, `value`, three specs, `CHANGE`, bare `ALTER`) refuses
+  `NOT_SUPPORTED_CHANGE_SAME_COLUMN` with one schema kept. An unresolved path in the same list
+  wins, and a four-spec list commits in one schema. The malformed table adds the action-then-
+  `COMMENT` forms, a numeric and single-quoted list path, `extra input`, `Operation not
+  allowed`, the trailing comma and every mixed action.
+  `single_quoted_column_names_are_parse_errors_like_spark` covers ADD, ADD COLUMNS, DROP,
+  RENAME and TYPE.
+  pins: ice-nested-evo-1/C-040, C-041, C-042, C-043
+  **Round 3 (2026-09-24):** `alter_column_comment_sets_the_iceberg_doc_like_spark` asserts
+  that the `m.value`/`arr.element` statements and their list keep the schema count.
+  `alter_column_comment_refuses_map_keys_in_spark_order` pins a field under a map key
+  (`Cannot alter map keys`, alone, in a list and on the TYPE route), the schema-order pick
+  between two map keys, and a repeat or unresolved path winning over a map key. It also pins
+  the no-op same-type TYPE, the value-plus-column list and a map value struct field, with the
+  schema count each time. `alter_column_comment_tails_follow_spark_token_recovery` pins the
+  plain `near '<t>'` for a multi-token tail and `extra input` for a last token.
+  `unresolved_columns_render_backquoted_parts_like_spark` covers the COMMENT, nested TYPE and
+  ADD routes. `a_repeated_column_after_use_renders_the_three_part_table_like_spark` issues
+  `USE ice.sales` before a one-part and a two-part table name.
+  pins: ice-nested-evo-1/C-044, C-045, C-046, C-047, C-048
+  **Round 4 fold (2026-09-24):** `a_comment_list_after_another_change_is_the_mixed_list_refusal`
+  pins the mixed-list text for lists whose first spec is an action or a `TYPE`, on `ALTER
+  COLUMN`, bare `ALTER` and bare `CHANGE`. `wrapped_and_malformed_comment_lists_are_parse_errors_like_spark`
+  pins the missing literal, `extra input`, a quoted later path, a first spec with no action,
+  and the `IF EXISTS` and `PARTITION` wrappers. It also pins the forms that stay on their
+  routes (`is_none`). `other_column_comment_statements_answer_the_residual_refusal` pins the
+  residual text and its near misses.
+  pins: ice-nested-evo-1/C-049, C-050, C-051
 - [column_move.rs](column_move.rs) — **ICE-COLUMN-REORDER-1 (2026-09-17):**
   `alter_column_move_first_and_after_reorder` pins the move end to end over
   `common::setup` (`name FIRST` leads with `name`, `name AFTER id` restores the order).

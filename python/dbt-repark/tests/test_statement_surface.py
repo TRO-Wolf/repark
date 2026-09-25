@@ -65,6 +65,7 @@ def _test_wrapper(body: str) -> str:
 def _served() -> tuple[Shape, ...]:
     """Statement shapes the SQL door serves, in the order dbt emits them."""
     fact = f"{CATALOG}.{NAMESPACE}.gold_fct"
+    survey = f"{CATALOG}.{NAMESPACE}.{STEM}_survey"
     return (
         Shape(
             "S-CREATE-NS",
@@ -164,6 +165,20 @@ def _served() -> tuple[Shape, ...]:
             None,
         ),
         Shape(
+            "S-COLUMN-COMMENT",
+            "spark__alter_column_comment",
+            f"alter table {survey} alter column\n              survey_id\n"
+            "              comment 'the survey\\'s key';",
+            None,
+        ),
+        Shape(
+            "S-COLUMN-COMMENT-CHANGE",
+            "spark__alter_column_comment",
+            f"alter table {survey} change column\n              patient_visit_id\n"
+            "              comment 'the visit';",
+            None,
+        ),
+        Shape(
             "S-RENAME",
             "spark__rename_relation",
             f"alter table {fact} rename to {CATALOG}.{NAMESPACE}.gold_fct_renamed",
@@ -244,12 +259,6 @@ def _refused() -> tuple[Shape, ...]:
             f"create or replace table {CATALOG}.{NAMESPACE}.optioned using iceberg "
             'options (compression "zstd") as select 1 as a',
             "Expected: end of statement, found: using",
-        ),
-        Shape(
-            "R-COLUMN-COMMENT",
-            "spark__alter_column_comment",
-            f"alter table {fact} alter column survey_id comment 'x'",
-            "ALTER COLUMN … COMMENT is not supported yet via SQL",
         ),
     )
 

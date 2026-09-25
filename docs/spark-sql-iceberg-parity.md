@@ -4735,20 +4735,39 @@ the pin rather than obeying it.
   the diagnostic land together: the door accepts the clause on either side of `TBLPROPERTIES`
   and reports nothing misleading.
 
-### DBT-COLCOMMENT-1 — `ALTER TABLE … ALTER COLUMN … COMMENT` is refused, so `persist_docs.columns` cannot run
+### DBT-COLCOMMENT-1 — `ALTER TABLE … ALTER COLUMN … COMMENT` is served, so `persist_docs.columns` runs
 
-- **repark** — the statement refuses with `UnsupportedOperationException: ALTER COLUMN … COMMENT
-  is not supported yet via SQL — column COMMENT is accepted on ADD COLUMN; UpdateColumnDoc is
-  available on the write primitive`. `dbt-repark` refuses `persist_docs.columns` at compile time
-  rather than emitting it. `persist_docs.relation` is unaffected.
-- **Apache Spark** — sets the column comment on an Iceberg table. *(oracle: documented — the
-  claim here is the refusal form, not a value.)*
+- **repark** — `ALTER TABLE t ALTER COLUMN <path> COMMENT '…'` sets the Iceberg field `doc`
+  through the fork's `UpdateColumnDoc`. `CHANGE [COLUMN]` and a bare `ALTER` spell the same
+  statement, `<path>` may be a nested struct field, and a comma list of `COMMENT` specs commits
+  in one schema update. An empty string stores `""`. An unknown column raises
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION`, a step under a primitive raises `INVALID_FIELD_NAME`, a
+  map key raises `Unsupported table change: Cannot update map keys: …` (a field under it
+  `Cannot alter map keys: …`, on the nested TYPE route too), a missing table raises
+  `TABLE_OR_VIEW_NOT_FOUND`, and `COMMENT NULL`, a number, a missing literal, a trailing token or
+  `TYPE … COMMENT` raise Spark's `PARSE_SYNTAX_ERROR`. `dbt-repark` inherits
+  `spark__alter_column_comment`, so `persist_docs.columns` lands each description as the field
+  doc. A list that names one column twice, or a column and a field under it, raises
+  `NOT_SUPPORTED_CHANGE_SAME_COLUMN`, checked after every path resolves and before a map-key
+  refusal. A comment on a list element or map value is a no-op that adds no schema, as in
+  Spark. `SET`/`DROP NOT NULL`, `SET`/`DROP DEFAULT`, `FIRST` or
+  `AFTER` followed by `COMMENT` raises `PARSE_SYNTAX_ERROR` near `COMMENT`. A list that mixes
+  `COMMENT` with another column change, in either order, is refused as not implemented, where
+  Spark accepts it (residue R-U5-MIXED-COMMENT-LIST in the `ice-nested-evo-1` ledger).
+  `ALTER TABLE IF EXISTS` and a `PARTITION (…)` spec before the column form raise Spark's
+  `PARSE_SYNTAX_ERROR` near `EXISTS` / `ALTER`. Any other `ALTER COLUMN … COMMENT '<doc>'`
+  statement shape is refused as not implemented, and none leaks raw parser text.
+- **Apache Spark** — sets the column comment on an Iceberg table. *(oracle: recorded live —
+  Spark 4.1.2 + Iceberg 1.11.0 scoreboard cell `D-ALTER-COMMENT` and the WO U5 PR2 probes.)*
 - **Pin** —
-  `python/dbt-repark/tests/test_statement_surface.py::test_refused_shapes_fail_loud[R-COLUMN-COMMENT]`
-  and `python/dbt-repark/tests/test_gold_models.py::test_column_documentation_refuses`
-- **Rationale** — BACKLOG. The write primitive already carries `UpdateColumnDoc`; this is the SQL
-  spelling catching up, not a missing capability. The pin codifies today's refusal so the fix
-  reds it on purpose.
+  `crates/repark-spark/src/tests/column_comment_ddl.rs`,
+  `python/repark/tests/test_ice_ddl_alter_2.py`,
+  `python/dbt-repark/tests/test_statement_surface.py::test_served_shapes_run[S-COLUMN-COMMENT]`
+  and `[S-COLUMN-COMMENT-CHANGE]`, and
+  `python/dbt-repark/tests/test_gold_models.py::test_column_documentation_sets_the_column_docs`
+- **Rationale** — SERVED (WO U5 PR2a, 2026-09-24). The write primitive already carried
+  `UpdateColumnDoc`; the SQL spelling now reaches it and the dbt override that refused
+  `persist_docs.columns` is deleted.
 
 ### ICE-SET-LOCATION-1 — `ALTER TABLE … SET LOCATION '<path>'` is served; the location moves, the files stay
 
@@ -4823,7 +4842,8 @@ the pin rather than obeying it.
   order, sibling-scope resolution).
 - **Rationale** — FIXED, not declared. The standing I6 refusal
   (`ALTER COLUMN … FIRST/AFTER (column MOVE) without ADD …`) is removed; the remaining
-  `ALTER COLUMN … COMMENT` refusal (DBT-COLCOMMENT-1) is untouched. Round 2 (Q-20b-5)
+  `ALTER COLUMN … COMMENT` refusal (DBT-COLCOMMENT-1) was untouched here and is served since
+  WO U5 PR2a. Round 2 (Q-20b-5)
   removed RePark's local order/no-op simulation: every move commits through the fork's
   `UpdateSchema`, with single-catalog-load doors and an `ALTER`-prefix fast path on the
   intercepts.

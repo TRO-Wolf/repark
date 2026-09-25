@@ -53,15 +53,6 @@
 {% endmacro %}
 
 
-{% macro repark__alter_column_comment(relation, column_dict) %}
-  {{ exceptions.raise_compiler_error(
-    "dbt-repark cannot persist column documentation: RePark refuses ALTER TABLE ... ALTER
-     COLUMN ... COMMENT via SQL (divergence registry DBT-COLCOMMENT-1). Remove
-     persist_docs.columns, or keep persist_docs.relation only."
-  ) }}
-{% endmacro %}
-
-
 {% macro repark__options_clause() -%}
   {%- if config.get('options') is not none -%}
     {{ exceptions.raise_compiler_error(

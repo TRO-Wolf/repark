@@ -211,7 +211,25 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Round 4 (2026-09-24) widens C-033 to the sized STRING/BINARY/FLOAT(p,s)/DOUBLE(p,s)/
   TIMESTAMP_NTZ/DATE/BOOLEAN targets, names C-032's pinned pairs, and adds C-035 (bare DECIMAL
   as decimal(10,0) on the nested route) and C-036 (missing namespace as TABLE_OR_VIEW_NOT_FOUND),
-  with residues R-U5-DECIMAL-DEFAULT and R-U5-NS-LEAK.
+  with residues R-U5-DECIMAL-DEFAULT and R-U5-NS-LEAK. **WO U5 PR2a (2026-09-24):** C-037
+  (`ALTER COLUMN … COMMENT` lands the field doc on every Spark spelling, `DBT-COLCOMMENT-1`
+  retired), C-038 (its refusals answer Spark's text) and C-039 (the TYPE and hive CHANGE
+  routes are unchanged), with the fork-blocked cells recorded as questions. Round 2: C-040
+  (a repeated column or a column with its field is `NOT_SUPPORTED_CHANGE_SAME_COLUMN`), C-041
+  (action-then-`COMMENT` and single-quoted names are `PARSE_SYNTAX_ERROR`), C-042 (malformed
+  list tails) and C-043 (one schema update; the mixed-list refusal). Residues
+  R-U5-MIXED-COMMENT-LIST, R-U5-SPEC-LIST-NOT-COMMENT-FIRST, R-U5-OP-NOT-ALLOWED-WRAP,
+  R-U5-ENGINE-PREFIX and R-U5-CHANGE-COLUMN-ACTION carry Spark's measured text. Round 3:
+  C-044 (a field under a map key is `Cannot alter map keys`, on COMMENT and TYPE), C-045
+  (element/value comments add no schema; C-037 narrowed), C-046 (unresolved, then repeat, then
+  map key), C-047 (`extra input` only for a last token) and C-048 (unresolved names from parsed
+  parts; the three-part name after `USE`). Residues R-U5-MAP-KEY-FIELD-IDS and
+  R-U5-DOTTED-TOP-TYPE. Round 4 fold: C-049 (a COMMENT list after another change is the
+  mixed-list refusal), C-050 (`IF EXISTS` and `PARTITION` wrappers are `PARSE_SYNTAX_ERROR`),
+  C-051 (the named residual refusal), with C-048 naming the MOVE route. R-U5-SPEC-LIST-NOT-COMMENT-FIRST
+  is reworded, since the leak followed from deleting the I6 refusal. New residues:
+  R-U5-RESIDUAL-COMMENT-SHAPES, R-U5-ADD-COLUMNS-TRAILING-COMMENT, R-U5-IF-EXISTS-ALTER-TABLE and
+  R-U5-PARTITION-CHANGE.
 - [ice-array-insert-1-ledger.md](ice-array-insert-1-ledger.md) —
   **ICE-ARRAY-INSERT-1 (2026-09-18), in flight:** inserts into array columns answer Spark
   4.1.2 on every door at fork #295 (F-LIST-INSERT-1) — one pin per recorded cell (three

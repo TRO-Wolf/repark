@@ -5,7 +5,7 @@ use iceberg::{Catalog, Result};
 use repark_common::spark_error;
 
 use super::alter::ColumnPosition;
-use super::column_move::{top_level_names, unresolved_column};
+use super::column_move::{top_level_names, unresolved_column, unresolved_column_parts};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ColumnPathChange {
@@ -148,10 +148,55 @@ pub enum NestedTypeRefusal {
     Unsupported(String),
 }
 
+#[derive(Debug, Clone, Copy)]
+enum MapKeyTouch<'a> {
+    Update(&'a MapType),
+    Alter(&'a MapType),
+}
+
+impl<'a> MapKeyTouch<'a> {
+    fn map(self) -> &'a MapType {
+        match self {
+            Self::Update(map) | Self::Alter(map) => map,
+        }
+    }
+
+    fn refusal(self) -> NestedTypeRefusal {
+        let verb = match self {
+            Self::Update(_) => "update",
+            Self::Alter(_) => "alter",
+        };
+        NestedTypeRefusal::Unsupported(format!(
+            "Unsupported table change: Cannot {verb} map keys: {}",
+            iceberg_type_name(&Type::Map(self.map().clone()))
+        ))
+    }
+}
+
 struct ResolvedNestedPath<'a> {
     names: Vec<String>,
     field_type: &'a Type,
-    key_of: Option<&'a MapType>,
+    map_key: Option<MapKeyTouch<'a>>,
+    container_child: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedColumnPath {
+    names: Vec<String>,
+    map_key: Option<(i32, NestedTypeRefusal)>,
+    container_child: bool,
+}
+
+impl ResolvedColumnPath {
+    #[must_use]
+    pub fn names(&self) -> &[String] {
+        &self.names
+    }
+
+    #[must_use]
+    pub fn doc_lands(&self) -> bool {
+        !self.container_child
+    }
 }
 
 fn quoted_path(parts: &[String]) -> String {
@@ -181,9 +226,8 @@ fn resolve_nested_path<'a>(
     schema: &'a Schema,
     path: &[String],
 ) -> std::result::Result<ResolvedNestedPath<'a>, NestedTypeRefusal> {
-    let unresolved = || {
-        NestedTypeRefusal::Analysis(unresolved_column(&path.join("."), &top_level_names(schema)))
-    };
+    let unresolved =
+        || NestedTypeRefusal::Analysis(unresolved_column_parts(path, &top_level_names(schema)));
     let Some((first, rest)) = path.split_first() else {
         return Err(unresolved());
     };
@@ -191,36 +235,99 @@ fn resolve_nested_path<'a>(
     let mut resolved = ResolvedNestedPath {
         names: vec![root.name.clone()],
         field_type: root.field_type.as_ref(),
-        key_of: None,
+        map_key: None,
+        container_child: false,
     };
     for part in rest {
-        let (name, field_type, key_of) = match (resolved.field_type, part.as_str()) {
+        let (name, field_type, key_of, container_child) = match (resolved.field_type, part.as_str())
+        {
             (Type::Struct(fields), _) => {
                 let child = struct_child(fields, part).ok_or_else(unresolved)?;
-                (child.name.clone(), child.field_type.as_ref(), None)
+                (child.name.clone(), child.field_type.as_ref(), None, false)
             }
             (Type::Map(map), "key") => (
                 "key".to_string(),
                 map.key_field.field_type.as_ref(),
                 Some(map),
+                false,
             ),
             (Type::Map(map), "value") => (
                 "value".to_string(),
                 map.value_field.field_type.as_ref(),
                 None,
+                true,
             ),
             (Type::List(list), "element") => (
                 "element".to_string(),
                 list.element_field.field_type.as_ref(),
                 None,
+                true,
             ),
             _ => return Err(invalid_field_name(path, &resolved.names)),
         };
         resolved.names.push(name);
         resolved.field_type = field_type;
-        resolved.key_of = key_of;
+        resolved.container_child = container_child;
+        resolved.map_key = match key_of {
+            Some(map) => Some(MapKeyTouch::Update(map)),
+            None => resolved
+                .map_key
+                .map(|touch| MapKeyTouch::Alter(touch.map())),
+        };
     }
     Ok(resolved)
+}
+
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "round comment ban: the refusal variants are recorded in the unit ledger"
+)]
+pub fn resolve_column_path(
+    schema: &Schema,
+    path: &[String],
+) -> std::result::Result<ResolvedColumnPath, NestedTypeRefusal> {
+    let resolved = resolve_nested_path(schema, path)?;
+    Ok(ResolvedColumnPath {
+        map_key: resolved
+            .map_key
+            .map(|touch| (touch.map().key_field.id, touch.refusal())),
+        container_child: resolved.container_child,
+        names: resolved.names,
+    })
+}
+
+#[must_use]
+pub fn column_paths_commit_refusal(
+    schema: &Schema,
+    paths: &[ResolvedColumnPath],
+) -> Option<NestedTypeRefusal> {
+    let mut key_ids = Vec::new();
+    for field in schema.as_struct().fields() {
+        map_keys_in_visit_order(&field.field_type, &mut key_ids);
+    }
+    key_ids.iter().find_map(|key_id| {
+        paths.iter().find_map(|path| match &path.map_key {
+            Some((id, refusal)) if id == key_id => Some(refusal.clone()),
+            _ => None,
+        })
+    })
+}
+
+fn map_keys_in_visit_order(field_type: &Type, key_ids: &mut Vec<i32>) {
+    match field_type {
+        Type::Struct(fields) => {
+            for field in fields.fields() {
+                map_keys_in_visit_order(&field.field_type, key_ids);
+            }
+        }
+        Type::List(list) => map_keys_in_visit_order(&list.element_field.field_type, key_ids),
+        Type::Map(map) => {
+            map_keys_in_visit_order(&map.key_field.field_type, key_ids);
+            map_keys_in_visit_order(&map.value_field.field_type, key_ids);
+            key_ids.push(map.key_field.id);
+        }
+        Type::Primitive(_) | Type::Variant => {}
+    }
 }
 
 fn iceberg_type_name(field_type: &Type) -> String {
@@ -431,11 +538,8 @@ pub fn resolve_nested_type_change(
             iceberg_type_name(to)
         )));
     }
-    match resolved.key_of {
-        Some(map) => Err(NestedTypeRefusal::Unsupported(format!(
-            "Unsupported table change: Cannot update map keys: {}",
-            iceberg_type_name(&Type::Map(map.clone()))
-        ))),
+    match resolved.map_key {
+        Some(touch) => Err(touch.refusal()),
         None => Ok(dotted),
     }
 }

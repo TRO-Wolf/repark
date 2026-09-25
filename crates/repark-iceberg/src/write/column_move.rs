@@ -114,11 +114,19 @@ pub(super) fn top_level_names(schema: &Schema) -> Vec<String> {
 }
 
 pub(super) fn unresolved_column(name: &str, candidates: &[String]) -> String {
-    let rendered = name
-        .split('.')
+    let parts = name.split('.').map(str::to_string).collect::<Vec<_>>();
+    unresolved_column_parts(&parts, candidates)
+}
+
+fn quoted_parts<'a>(parts: impl Iterator<Item = &'a str>) -> String {
+    parts
         .map(|part| format!("`{part}`"))
         .collect::<Vec<_>>()
-        .join(".");
+        .join(".")
+}
+
+pub(super) fn unresolved_column_parts(parts: &[String], candidates: &[String]) -> String {
+    let rendered = quoted_parts(parts.iter().map(String::as_str));
     if candidates.is_empty() {
         return format!(
             "[UNRESOLVED_COLUMN.WITHOUT_SUGGESTION] A column, variable, or function parameter \
@@ -127,7 +135,7 @@ pub(super) fn unresolved_column(name: &str, candidates: &[String]) -> String {
     }
     let suggestions = candidates
         .iter()
-        .map(|candidate| format!("`{candidate}`"))
+        .map(|candidate| quoted_parts(candidate.split('.')))
         .collect::<Vec<_>>()
         .join(", ");
     format!(

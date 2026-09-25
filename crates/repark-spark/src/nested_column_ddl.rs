@@ -14,8 +14,9 @@ use repark_iceberg::write::alter::{
     ColumnPosition, SchemaChange, apply_schema_changes_on_table, starts_with_alter,
 };
 use repark_iceberg::write::nested_column::{
-    ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, nested_add_refusal,
-    nested_required_add_refusal, nested_spark_only_type_refusal, resolve_nested_type_change,
+    ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, column_paths_commit_refusal,
+    nested_add_refusal, nested_required_add_refusal, nested_spark_only_type_refusal,
+    resolve_column_path, resolve_nested_type_change,
 };
 
 use crate::alter::table_parts_to_ident;
@@ -47,6 +48,8 @@ pub(crate) enum NestedColumnOperation {
         path: Vec<String>,
         data_type: SqlDataType,
     },
+    Comment(Vec<(Vec<String>, String)>),
+    MixedCommentList(Vec<String>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,10 +69,14 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
     if !parser.parse_keywords(&[Keyword::ALTER, Keyword::TABLE]) {
         return None;
     }
+    let exists = if_exists_token(&mut parser);
     let table_parts = name_parts(&parser.parse_object_name(false).ok()?);
+    if exists.is_some() || parser.peek_keyword(Keyword::PARTITION) {
+        return wrapped_column_comment_refusal(&mut parser, exists);
+    }
     let mut names = NameParser {
         parser,
-        double_quoted: None,
+        quoted_near: None,
     };
     let operation = if names.parser.parse_keyword(Keyword::ADD) {
         if !(names.parser.parse_keyword(Keyword::COLUMN)
@@ -94,13 +101,18 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
         .parser
         .parse_keywords(&[Keyword::ALTER, Keyword::COLUMN])
     {
-        parse_alter_column_type(&mut names)
+        parse_alter_column(&mut names, true, false)
+    } else if names.parser.parse_keyword(Keyword::CHANGE) {
+        let hive_change = names.parser.parse_keyword(Keyword::COLUMN);
+        parse_alter_column(&mut names, false, hive_change)
+    } else if names.parser.parse_keyword(Keyword::ALTER) {
+        parse_alter_column(&mut names, false, false)
     } else {
         return None;
     };
     match operation {
         Ok(None) => None,
-        Ok(Some(operation)) => Some(match names.double_quoted {
+        Ok(Some(operation)) => Some(match names.quoted_near {
             Some(quoted) => Err(verbatim_parser_error(syntax_error_near(&quoted))),
             None => match target_type_parse_refusal(&operation) {
                 Some(message) => Err(verbatim_parser_error(message)),
@@ -114,6 +126,99 @@ pub(crate) fn try_parse_nested_column_ddl(sql: &str) -> Option<Result<NestedColu
     }
 }
 
+pub(crate) fn residual_column_comment_refusal(sql: &str) -> Option<DataFusionError> {
+    if !starts_with_alter(sql) {
+        return None;
+    }
+    let dialect = SparkSqlDialect {};
+    let mut parser = Parser::new(&dialect).try_with_sql(sql).ok()?;
+    if !parser.parse_keywords(&[Keyword::ALTER, Keyword::TABLE]) {
+        return None;
+    }
+    let mut column_altered = false;
+    loop {
+        if parser.parse_keywords(&[Keyword::ALTER, Keyword::COLUMN]) {
+            column_altered = true;
+            continue;
+        }
+        match parser.next_token().token {
+            Token::EOF => return None,
+            Token::Word(word)
+                if column_altered
+                    && word.keyword == Keyword::COMMENT
+                    && matches!(
+                        parser.peek_token().token,
+                        Token::SingleQuotedString(_) | Token::DoubleQuotedString(_)
+                    ) =>
+            {
+                return Some(DataFusionError::NotImplemented(
+                    "ALTER TABLE … ALTER COLUMN … COMMENT is supported only as ALTER TABLE \
+                     <table> ALTER COLUMN <column> COMMENT '<doc>' or a list of such COMMENT \
+                     specs; this statement shape is not supported"
+                        .into(),
+                ));
+            }
+            _ => {}
+        }
+    }
+}
+
+fn if_exists_token(parser: &mut Parser<'_>) -> Option<Token> {
+    if !parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]) {
+        return None;
+    }
+    parser.prev_token();
+    Some(parser.next_token().token)
+}
+
+fn wrapped_column_comment_refusal(
+    parser: &mut Parser<'_>,
+    exists: Option<Token>,
+) -> Option<Result<NestedColumnDdl>> {
+    let near = exists.or_else(|| partition_spec_then_alter(parser))?;
+    let keywords = remaining_keywords(parser);
+    let alters_a_column = keywords
+        .iter()
+        .any(|keyword| matches!(keyword, Keyword::ALTER | Keyword::CHANGE));
+    (alters_a_column && keywords.contains(&Keyword::COMMENT))
+        .then(|| Err(verbatim_parser_error(syntax_error_near(&near))))
+}
+
+fn partition_spec_then_alter(parser: &mut Parser<'_>) -> Option<Token> {
+    parser.next_token();
+    skip_parenthesized(parser)?;
+    parser
+        .peek_keyword(Keyword::ALTER)
+        .then(|| parser.peek_token().token)
+}
+
+fn skip_parenthesized(parser: &mut Parser<'_>) -> Option<()> {
+    if !parser.consume_token(&Token::LParen) {
+        return None;
+    }
+    let mut depth = 1_usize;
+    while depth > 0 {
+        match parser.next_token().token {
+            Token::LParen => depth = depth.saturating_add(1),
+            Token::RParen => depth = depth.saturating_sub(1),
+            Token::EOF => return None,
+            _ => {}
+        }
+    }
+    Some(())
+}
+
+fn remaining_keywords(parser: &mut Parser<'_>) -> Vec<Keyword> {
+    let mut keywords = Vec::new();
+    loop {
+        match parser.next_token().token {
+            Token::EOF => return keywords,
+            Token::Word(word) => keywords.push(word.keyword),
+            _ => {}
+        }
+    }
+}
+
 fn verbatim_parser_error(message: String) -> DataFusionError {
     DataFusionError::Context(
         message.clone(),
@@ -123,14 +228,22 @@ fn verbatim_parser_error(message: String) -> DataFusionError {
 
 struct NameParser<'a> {
     parser: Parser<'a>,
-    double_quoted: Option<Ident>,
+    quoted_near: Option<String>,
 }
 
 impl NameParser<'_> {
     fn name(&mut self) -> ParseResult<String> {
+        self.part(false)
+    }
+
+    fn part(&mut self, after_period: bool) -> ParseResult<String> {
         let ident = self.parser.parse_identifier()?;
-        if ident.quote_style == Some('"') && self.double_quoted.is_none() {
-            self.double_quoted = Some(ident.clone());
+        if self.quoted_near.is_none() {
+            self.quoted_near = match ident.quote_style {
+                Some('\'') if after_period => Some(Token::Period.to_string()),
+                Some('"' | '\'') => Some(ident.to_string()),
+                _ => None,
+            };
         }
         Ok(ident.value)
     }
@@ -138,7 +251,7 @@ impl NameParser<'_> {
     fn column_path(&mut self) -> ParseResult<Vec<String>> {
         let mut path = vec![self.name()?];
         while self.parser.consume_token(&Token::Period) {
-            path.push(self.name()?);
+            path.push(self.part(true)?);
         }
         Ok(path)
     }
@@ -265,20 +378,221 @@ fn parse_drop_columns(names: &mut NameParser<'_>) -> ParseResult<Option<NestedCo
     Ok(Some(NestedColumnOperation::Drop { paths, if_exists }))
 }
 
-fn parse_alter_column_type(
+fn parse_alter_column(
+    names: &mut NameParser<'_>,
+    type_allowed: bool,
+    hive_change: bool,
+) -> ParseResult<Option<NestedColumnOperation>> {
+    let path = match names.column_path() {
+        Ok(path) => path,
+        Err(error) if type_allowed => return Err(error),
+        Err(_) => return Ok(None),
+    };
+    if names.parser.parse_keyword(Keyword::COMMENT) {
+        return parse_comment_specs(names, path).map(Some);
+    }
+    if type_allowed && names.parser.parse_keyword(Keyword::TYPE) {
+        if path.len() < 2 {
+            return top_level_type_tail(names, path);
+        }
+        let data_type = names.parser.parse_data_type()?;
+        let data_type = parse_unparameterized_type_parameters(&mut names.parser, data_type)?;
+        if names.parser.peek_token().token == Token::Comma {
+            let near_comma = syntax_error_at(&names.parser);
+            return match comment_list_after_first_spec(names, path)? {
+                Some(mixed) => Ok(Some(mixed)),
+                None => Err(near_comma),
+            };
+        }
+        expect_end(&mut names.parser)?;
+        return Ok(Some(NestedColumnOperation::AlterType { path, data_type }));
+    }
+    if hive_change {
+        return Ok(None);
+    }
+    if column_action(&mut names.parser) {
+        if names.parser.parse_keyword(Keyword::COMMENT) {
+            names.parser.prev_token();
+            return Err(syntax_error_at(&names.parser));
+        }
+    } else if names.parser.parse_keyword(Keyword::TYPE) {
+        if names.parser.parse_data_type().is_err() {
+            return Ok(None);
+        }
+    } else {
+        return first_spec_without_action(names);
+    }
+    comment_list_after_first_spec(names, path)
+}
+
+fn column_action(parser: &mut Parser<'_>) -> bool {
+    if parser.parse_keywords(&[Keyword::SET, Keyword::DEFAULT]) {
+        parser.parse_expr().is_ok()
+    } else if parser.parse_keyword(Keyword::AFTER) {
+        parser.parse_identifier().is_ok()
+    } else {
+        parser.parse_keywords(&[Keyword::SET, Keyword::NOT, Keyword::NULL])
+            || parser.parse_keywords(&[Keyword::DROP, Keyword::NOT, Keyword::NULL])
+            || parser.parse_keywords(&[Keyword::DROP, Keyword::DEFAULT])
+            || parser.parse_keyword(Keyword::FIRST)
+    }
+}
+
+fn first_spec_without_action(
     names: &mut NameParser<'_>,
 ) -> ParseResult<Option<NestedColumnOperation>> {
-    let path = names.column_path()?;
-    if path.len() < 2 {
+    match names.parser.peek_token().token {
+        Token::EOF | Token::SemiColon => Ok(None),
+        Token::Comma => {
+            names.parser.next_token();
+            if later_comment_spec(names)? {
+                return Err(operation_not_allowed());
+            }
+            Ok(None)
+        }
+        _ => {
+            let near = syntax_error_at(&names.parser);
+            match later_comment_spec(names) {
+                Ok(false) => Ok(None),
+                Ok(true) | Err(_) => Err(near),
+            }
+        }
+    }
+}
+
+fn comment_list_after_first_spec(
+    names: &mut NameParser<'_>,
+    path: Vec<String>,
+) -> ParseResult<Option<NestedColumnOperation>> {
+    if !names.parser.consume_token(&Token::Comma) {
         return Ok(None);
     }
-    if !names.parser.parse_keyword(Keyword::TYPE) {
+    Ok(later_comment_spec(names)?.then_some(NestedColumnOperation::MixedCommentList(path)))
+}
+
+fn later_comment_spec(names: &mut NameParser<'_>) -> ParseResult<bool> {
+    let mut depth = 0_usize;
+    let mut spec_start = true;
+    loop {
+        if spec_start
+            && depth == 0
+            && names.column_path().is_ok()
+            && names.parser.parse_keyword(Keyword::COMMENT)
+        {
+            comment_literal(&mut names.parser)?;
+            return match names.parser.peek_token().token {
+                Token::EOF | Token::Comma | Token::SemiColon => Ok(true),
+                extra => Err(trailing_input(&names.parser, &extra)),
+            };
+        }
+        spec_start = false;
+        match names.parser.next_token().token {
+            Token::EOF => return Ok(false),
+            Token::LParen => depth = depth.saturating_add(1),
+            Token::RParen => depth = depth.saturating_sub(1),
+            Token::Comma => spec_start = depth == 0,
+            _ => {}
+        }
+    }
+}
+
+fn parse_comment_specs(
+    names: &mut NameParser<'_>,
+    first: Vec<String>,
+) -> ParseResult<NestedColumnOperation> {
+    let mut specs = vec![(first, comment_literal(&mut names.parser)?)];
+    while names.parser.consume_token(&Token::Comma) {
+        let path = list_column_path(names)?;
+        if !names.parser.parse_keyword(Keyword::COMMENT) {
+            return spec_without_comment(&names.parser, path);
+        }
+        specs.push((path, comment_literal(&mut names.parser)?));
+    }
+    let _ = names.parser.consume_token(&Token::SemiColon);
+    match names.parser.peek_token().token {
+        Token::EOF => Ok(NestedColumnOperation::Comment(specs)),
+        extra => Err(trailing_input(&names.parser, &extra)),
+    }
+}
+
+fn list_column_path(names: &mut NameParser<'_>) -> ParseResult<Vec<String>> {
+    names.column_path().map_err(|_| {
+        names.parser.prev_token();
+        syntax_error_or_end(&names.parser)
+    })
+}
+
+fn spec_without_comment(
+    parser: &Parser<'_>,
+    path: Vec<String>,
+) -> ParseResult<NestedColumnOperation> {
+    match parser.peek_token().token {
+        Token::Word(word)
+            if matches!(
+                word.keyword,
+                Keyword::TYPE | Keyword::SET | Keyword::DROP | Keyword::FIRST | Keyword::AFTER
+            ) =>
+        {
+            Ok(NestedColumnOperation::MixedCommentList(path))
+        }
+        Token::EOF | Token::Comma | Token::SemiColon => Err(operation_not_allowed()),
+        extra => Err(trailing_input(parser, &extra)),
+    }
+}
+
+fn operation_not_allowed() -> ParserError {
+    ParserError::ParserError(
+        "Operation not allowed: ALTER TABLE table ALTER COLUMN requires a TYPE, a SET/DROP, a \
+         COMMENT, or a FIRST/AFTER."
+            .into(),
+    )
+}
+
+fn trailing_input(parser: &Parser<'_>, extra: &Token) -> ParserError {
+    if !matches!(
+        parser.peek_nth_token(1).token,
+        Token::EOF | Token::SemiColon
+    ) {
+        return syntax_error_at(parser);
+    }
+    ParserError::ParserError(format!(
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near '{extra}': extra input '{extra}'. \
+         SQLSTATE: 42601"
+    ))
+}
+
+fn syntax_error_or_end(parser: &Parser<'_>) -> ParserError {
+    if parser.peek_token().token == Token::EOF {
+        return ParserError::ParserError(
+            "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601".into(),
+        );
+    }
+    syntax_error_at(parser)
+}
+
+fn comment_literal(parser: &mut Parser<'_>) -> ParseResult<String> {
+    match parser.next_token().token {
+        Token::SingleQuotedString(doc) | Token::DoubleQuotedString(doc) => Ok(doc),
+        _ => {
+            parser.prev_token();
+            Err(syntax_error_or_end(parser))
+        }
+    }
+}
+
+fn top_level_type_tail(
+    names: &mut NameParser<'_>,
+    path: Vec<String>,
+) -> ParseResult<Option<NestedColumnOperation>> {
+    let parser = &mut names.parser;
+    if parser.parse_data_type().is_err() {
         return Ok(None);
     }
-    let data_type = names.parser.parse_data_type()?;
-    let data_type = parse_unparameterized_type_parameters(&mut names.parser, data_type)?;
-    expect_end(&mut names.parser)?;
-    Ok(Some(NestedColumnOperation::AlterType { path, data_type }))
+    if parser.parse_keyword(Keyword::COMMENT) {
+        parser.prev_token();
+        return Err(syntax_error_at(parser));
+    }
+    comment_list_after_first_spec(names, path)
 }
 
 fn parse_unparameterized_type_parameters(
@@ -391,6 +705,70 @@ fn path_change_for_add(
     })
 }
 
+fn column_doc_changes(
+    table: &iceberg::table::Table,
+    catalog_name: &str,
+    specs: &[(Vec<String>, String)],
+) -> Result<Vec<SchemaChange>> {
+    let schema = table.metadata().current_schema();
+    let resolved = specs
+        .iter()
+        .map(|(path, _)| resolve_column_path(schema, path))
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(nested_type_error)?;
+    let names = resolved
+        .iter()
+        .map(|path| path.names().to_vec())
+        .collect::<Vec<_>>();
+    if let Some(column) = repeated_column(&names) {
+        return Err(DataFusionError::Plan(format!(
+            "[NOT_SUPPORTED_CHANGE_SAME_COLUMN] ALTER TABLE ALTER/CHANGE COLUMN is not supported \
+             for changing {}'s column {} including its nested fields multiple times in \
+             the same command. SQLSTATE: 0A000",
+            full_table_name(catalog_name, table.identifier()),
+            crate::catalog_ops::quoted_table_display(column)
+        )));
+    }
+    if let Some(refusal) = column_paths_commit_refusal(schema, &resolved) {
+        return Err(nested_type_error(refusal));
+    }
+    Ok(resolved
+        .iter()
+        .zip(specs)
+        .filter(|(path, _)| path.doc_lands())
+        .map(|(path, (_, doc))| SchemaChange::UpdateColumnDoc {
+            name: path.names().join("."),
+            doc: Some(doc.clone()),
+        })
+        .collect())
+}
+
+fn full_table_name(catalog_name: &str, ident: &iceberg::TableIdent) -> String {
+    let mut parts = vec![catalog_name.to_string()];
+    parts.extend(ident.namespace().iter().cloned());
+    parts.push(ident.name().to_string());
+    crate::catalog_ops::quoted_table_display(&parts)
+}
+
+fn repeated_column(paths: &[Vec<String>]) -> Option<&[String]> {
+    paths.iter().enumerate().find_map(|(index, path)| {
+        paths.iter().skip(index + 1).find_map(|other| {
+            path.iter()
+                .zip(other)
+                .all(|(left, right)| left == right)
+                .then_some(std::cmp::min_by_key(path, other, |parts| parts.len()).as_slice())
+        })
+    })
+}
+
+fn mixed_comment_list(path: &[String]) -> DataFusionError {
+    DataFusionError::NotImplemented(format!(
+        "ALTER TABLE … ALTER COLUMN mixes COMMENT with another change for `{}` in one column \
+         list; only a list of COMMENT changes is supported, so split the statement",
+        path.join(".")
+    ))
+}
+
 pub(crate) async fn execute_nested_column_ddl(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -438,6 +816,18 @@ pub(crate) async fn execute_nested_column_ddl(
             apply_schema_changes_on_table(handle.as_ref(), &table, &[change])
                 .await
                 .map_err(iceberg_err)?;
+        }
+        NestedColumnOperation::Comment(specs) => {
+            let changes = column_doc_changes(&table, &catalog_name, specs)?;
+            if changes.is_empty() {
+                return ctx.read_empty();
+            }
+            apply_schema_changes_on_table(handle.as_ref(), &table, &changes)
+                .await
+                .map_err(iceberg_err)?;
+        }
+        NestedColumnOperation::MixedCommentList(path) => {
+            return Err(mixed_comment_list(path));
         }
         NestedColumnOperation::Add(columns) => {
             let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
