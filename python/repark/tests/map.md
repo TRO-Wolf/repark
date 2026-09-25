@@ -901,7 +901,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   ids and the spec ids; the `ids_*` shapes pin Java's by-name id reuse and the branch rows it
   protects, the type-change branch read is residue R-9, and `overwrite-mode=dynamic` as an
   option plus the `DataFrameWriter` overwrite and `insertInto` overwrite branch doors are
-  pinned.
+  pinned. Round 3 (2026-09-25): `test_every_replace_door_keeps_field_ids_by_name_like_spark`
+  pins column-def `CREATE OR REPLACE`, `REPLACE TABLE`, SQL RTAS, `createOrReplace()` and
+  `replace()` on the full state with the old branch's rows.
   pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
@@ -937,7 +939,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   them. Round 2 (2026-09-25, `target/probe-u7-pr2a-r1fix/record_ids.py`) re-records those
   shapes with the field-id, schema-id and spec observations (earlier values unchanged) and
   adds the `ids_*` shapes, `sat_overwrite_dynamic_option`, `v1_option_branch_overwrite`,
-  `v1_option_branch_insert_into_overwrite` and `sat_overwrite_partby_on_partitioned`.
+  `v1_option_branch_insert_into_overwrite` and `sat_overwrite_partby_on_partitioned`. Round 3
+  (`target/probe-u7-pr2a-r2fix/record_doors.py`) adds the five replace-door shapes
+  `sql_column_def_replace`, `sql_replace_table`, `sql_rtas_reordered`,
+  `v2_create_or_replace_reordered` and `v2_replace_renamed`.
   pins: u7-write-df-2/C-001, C-004
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the `COLL-*` pins here now expect

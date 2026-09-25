@@ -414,10 +414,24 @@ fn decimal_from_info(info: &ExactNumberInfo) -> Result<PrimitiveType> {
     Ok(PrimitiveType::Decimal { precision, scale })
 }
 
+async fn replaced_table(
+    catalog: &dyn Catalog,
+    table_ident: &TableIdent,
+    existed: bool,
+    create: &mut SchemaCreate,
+) -> Result<Option<iceberg::table::Table>> {
+    if !existed {
+        return Ok(None);
+    }
+    let table = catalog.load_table(table_ident).await.map_err(iceberg_err)?;
+    create.schema = repark_iceberg::write::replacement_schema(table.metadata(), &create.schema)?;
+    Ok(Some(table))
+}
+
 async fn execute_schema_create(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
-    create: SchemaCreate,
+    mut create: SchemaCreate,
 ) -> Result<DataFrame> {
     let catalog = catalog_handle(catalogs, &create.catalog)?;
     let table_ident = TableIdent::new(create.namespace.clone(), create.table.clone());
@@ -444,18 +458,14 @@ async fn execute_schema_create(
         "column-def CREATE",
     )?;
 
+    let existing = replaced_table(catalog.as_ref(), &table_ident, existed, &mut create).await?;
     let partition_spec = build_partition_spec(
         &create.schema,
         &create.partition_fields,
         crate::spark_door_case_insensitive(ctx.state().config().options()),
     )?;
     let format_version = iceberg_create_format_version(ctx, create.format_version.as_deref())?;
-    if existed {
-        // OR REPLACE: stage against the existing table (same path as CTAS replace).
-        let existing = catalog
-            .load_table(&table_ident)
-            .await
-            .map_err(iceberg_err)?;
+    if let Some(existing) = existing {
         let mut properties = stamped_creation_properties(ctx, catalogs, &create);
         stamp_requested_format_version(
             &mut properties,

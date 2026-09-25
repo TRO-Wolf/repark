@@ -14119,9 +14119,10 @@ field NAME.
   nextId)`: a new name takes a fresh id above `last-column-id`, nested fields keep theirs by
   dotted name, and a branch or tag that still points at a pre-replace snapshot reads its own
   rows (the `ids_*` shapes; before, ids were renumbered by position and `branch_b1` read
-  `[null, 'a', null]` after a reordered overwrite). The same fix covers
-  `writeTo(...).createOrReplace()`, `replace()` and SQL `CREATE OR REPLACE TABLE … AS SELECT`,
-  which share the replace staging. Before U7 PR2, the overwrite ran a
+  `[null, 'a', null]` after a reordered overwrite). The same fix covers every replace door:
+  `writeTo(...).createOrReplace()`, `replace()`, SQL `CREATE OR REPLACE TABLE … AS SELECT`,
+  the column-def `CREATE OR REPLACE TABLE t (…)` and `REPLACE TABLE t (…)` (round 3,
+  2026-09-25) and the native door's CTAS and column-def replace. Before U7 PR2, the overwrite ran a
   by-name `INSERT OVERWRITE`: the table kept its schema and an omitted defaulted column
   filled from `write_default` (`[(30, 's', 5)]`, `c` still in the schema).
   *Residual (2026-09-25):* after a replace that changes a kept column's type (`id` BIGINT →
@@ -14145,8 +14146,11 @@ field NAME.
   `python/repark/tests/test_ice_write_df_2.py::test_save_as_table_overwrite_replaces_like_the_recorded_cell`,
   `::test_save_as_table_overwrite_shapes_match_spark`,
   `::test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark`,
-  `::test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence`; Rust
-  `crates/repark-iceberg/src/tests/replace_schema.rs`.
+  `::test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence`,
+  `::test_every_replace_door_keeps_field_ids_by_name_like_spark`; Rust
+  `crates/repark-iceberg/src/tests/replace_schema.rs`,
+  `crates/repark-spark/src/tests/replace_table.rs`,
+  `crates/repark-sql/src/create_table/rtas_ops_tests.rs`.
 - **Rationale** — FIXED 2026-09-24 (U7 PR2). DECLARED 2026-09-17 (ruling Q-21b-5) as
   the standing replace-vs-overwrite difference (F-002), left to its own unit.
   pins: ice-v3-write-default-1/C-017

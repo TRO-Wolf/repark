@@ -124,6 +124,7 @@ pub(crate) async fn execute_create_table(
     };
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(ctas_schema).map_err(iceberg_err)?;
+    let iceberg_schema = replacement_if_existed(&target, existed, iceberg_schema).await?;
     let partition_spec = build_partition_spec(&iceberg_schema, &properties.partitioning)?;
     let format_version =
         iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;
@@ -161,6 +162,22 @@ pub(crate) async fn execute_create_table(
             .await
         }
     }
+}
+
+async fn replacement_if_existed(
+    target: &CreateTarget,
+    existed: bool,
+    schema: iceberg::spec::Schema,
+) -> Result<iceberg::spec::Schema> {
+    if !existed {
+        return Ok(schema);
+    }
+    let existing = target
+        .catalog
+        .load_table(&target.ident())
+        .await
+        .map_err(iceberg_err)?;
+    repark_iceberg::write::replacement_schema(existing.metadata(), &schema)
 }
 
 /// Model: Grok 4.6 xHigh

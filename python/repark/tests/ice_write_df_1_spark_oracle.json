@@ -1,5 +1,5 @@
 {
- "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append and v2_options_branch_upper shapes (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE and W-DF-V2-OPTION-BRANCH from the same scoreboard file. U7 PR2 slice-1 round 2 (2026-09-25): target/probe-u7-pr2a-r1fix/record_ids.py re-recorded the slice-1 shapes with the current schema's field ids by name (`field_ids`, nested struct/list/map ids included), `identifier_field_ids`, `last_column_id`, `current_schema_id`, `schema_ids`, the default spec's `spec_fields` (source id, field id, name, transform) and the sorted `spec_ids` (every earlier value unchanged), and added the ids_* shapes (reordered, swapped, renamed, added, dropped, type-changed, nested-reordered, identifier, reordered partitionBy and re-added columns, each reading branch b1 where it has one), sat_overwrite_dynamic_option, v1_option_branch_overwrite, v1_option_branch_insert_into_overwrite and sat_overwrite_partby_on_partitioned; the SparkException text of ids_type_change_branch keeps only its ClassCastException clause.",
+ "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append and v2_options_branch_upper shapes (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE and W-DF-V2-OPTION-BRANCH from the same scoreboard file. U7 PR2 slice-1 round 2 (2026-09-25): target/probe-u7-pr2a-r1fix/record_ids.py re-recorded the slice-1 shapes with the current schema's field ids by name (`field_ids`, nested struct/list/map ids included), `identifier_field_ids`, `last_column_id`, `current_schema_id`, `schema_ids`, the default spec's `spec_fields` (source id, field id, name, transform) and the sorted `spec_ids` (every earlier value unchanged), and added the ids_* shapes (reordered, swapped, renamed, added, dropped, type-changed, nested-reordered, identifier, reordered partitionBy and re-added columns, each reading branch b1 where it has one), sat_overwrite_dynamic_option, v1_option_branch_overwrite, v1_option_branch_insert_into_overwrite and sat_overwrite_partby_on_partitioned; the SparkException text of ids_type_change_branch keeps only its ClassCastException clause. U7 PR2 slice-1 round 3 (2026-09-25): target/probe-u7-pr2a-r2fix/record_doors.py recorded the five replace doors with the same observations and a branch b1 read: sql_column_def_replace, sql_replace_table, sql_rtas_reordered, v2_create_or_replace_reordered and v2_replace_renamed (the critic's r2 probe /tmp/xr-xu7-writedf-probe/spark.json measured the same branch rows and ids).",
  "seed": "t (id BIGINT, data STRING, cat STRING) seeded (1,'a','x'),(2,'b','y'),(3,'c','x'); frame [(7,'g','x'),(8,'h','w')]",
  "recorded": {
   "W-DF-SAVE-NAME": {
@@ -8597,6 +8597,577 @@
    "spec_ids": [
     0,
     1
+   ]
+  },
+  "sql_column_def_replace": {
+   "branch_rows": [
+    [
+     "x",
+     "a",
+     1
+    ],
+    [
+     "y",
+     "b",
+     2
+    ],
+    [
+     "x",
+     "c",
+     3
+    ]
+   ],
+   "ok": true,
+   "rows": [],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [],
+   "partitioning": [],
+   "schema": [
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "sql_replace_table": {
+   "branch_rows": [
+    [
+     "x",
+     null,
+     1
+    ],
+    [
+     "y",
+     null,
+     2
+    ],
+    [
+     "x",
+     null,
+     3
+    ]
+   ],
+   "ok": true,
+   "rows": [],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [],
+   "partitioning": [],
+   "schema": [
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "payload",
+     "string"
+    ],
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     4,
+     "payload",
+     false,
+     "string"
+    ],
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "sql_rtas_reordered": {
+   "branch_rows": [
+    [
+     "x",
+     "a",
+     1
+    ],
+    [
+     "y",
+     "b",
+     2
+    ],
+    [
+     "x",
+     "c",
+     3
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     "z",
+     "q",
+     9
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "total-records": "1"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "v2_create_or_replace_reordered": {
+   "branch_rows": [
+    [
+     "x",
+     "a",
+     1
+    ],
+    [
+     "y",
+     "b",
+     2
+    ],
+    [
+     "x",
+     "c",
+     3
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     "x",
+     "g",
+     7
+    ],
+    [
+     "w",
+     "h",
+     8
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "v2_replace_renamed": {
+   "branch_rows": [
+    [
+     "x",
+     null,
+     1
+    ],
+    [
+     "y",
+     null,
+     2
+    ],
+    [
+     "x",
+     null,
+     3
+    ]
+   ],
+   "ok": true,
+   "rows": [
+    [
+     "x",
+     "g",
+     7
+    ],
+    [
+     "w",
+     "h",
+     8
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "cat",
+     "string"
+    ],
+    [
+     "payload",
+     "string"
+    ],
+    [
+     "id",
+     "bigint"
+    ]
+   ],
+   "refs": [
+    [
+     "b1",
+     "BRANCH",
+     0
+    ],
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     false
+    ],
+    [
+     1,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ],
+    [
+     4,
+     "payload",
+     false,
+     "string"
+    ],
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 1,
+   "schema_ids": [
+    0,
+    1
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
    ]
   }
  }

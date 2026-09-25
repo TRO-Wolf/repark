@@ -16,6 +16,10 @@ Slice 1 (this ledger's C-001..C-005) covers the first two:
 - Round 2: `crates/repark-iceberg/src/write/replace_schema.rs` (`replacement_schema`, Java's
   by-name `assignFreshIds` through the fork's `assign_fresh_ids_with_base`), called by
   `crates/repark-spark/src/ctas.rs` before the replace's partition spec is built.
+- Round 3 (critic r2 V-001): the other two `begin_replace` callers, the column-def
+  `CREATE OR REPLACE` / `REPLACE TABLE` doors `crates/repark-spark/src/create_table.rs` and
+  `crates/repark-sql/src/create_table.rs` (the native door, CTAS and column-def), call
+  `replacement_schema` before their partition spec is built.
 
 The fork, every `Cargo.toml`, `Cargo.lock` and `STATUS.md` are untouched, and no code comment
 is added.
@@ -62,13 +66,22 @@ The `branch` option:
 RePark after slice 1 (`target/probe-u7-pr2/oracle-repark-s1.json`): 21 of the 23 slice-1
 shapes equal Spark's on every observation; the two others are residue R-1.
 
+**M-4 — round 3 (critic r2), Spark 4.1.2 + Iceberg 1.11.0** (`target/probe-u7-pr2a-r2fix/
+record_doors.py` under `jvm-lock.sh`): the five replace doors, each reading branch b1 after
+the replace — `CREATE OR REPLACE TABLE t (cat, data, id)` keeps ids 3, 2, 1 and the branch
+reads `['x', 'a', 1]`; `REPLACE TABLE t (cat, payload, id)` gives 3, 4, 1, `last-column-id` 4,
+rows `['x', null, 1]`; SQL RTAS, `createOrReplace()` and `replace()` likewise. Before round 3
+the two column-def doors numbered by position (`[null, 'a', null]`). After: 5 of 5 equal
+Spark on every observation (the critic's r2 probe measured the same Spark answers).
+
 **M-3 — round 2 (critic r1), Spark 4.1.2 + Iceberg 1.11.0** (`target/probe-u7-pr2a-r1fix/
 record_ids.py` under `jvm-lock.sh`, results `spark.json` / `repark.json`): the replace keeps
 field ids by name. A reordered frame `(cat, data, id)` keeps ids 3, 2, 1, and `branch_b1`
 reads the seed rows (RePark before: ids 1, 2, 3 by position; `branch_b1` read `[null, 'a',
 null]`). A renamed or added column takes a fresh id above `last-column-id` (4). A dropped
 column's id is not reused by a later re-add (5). Nested struct fields keep their ids by dotted
-name. A type-changed kept name keeps its id. Identifier fields keep id 1. A reordered
+name. A type-changed kept name keeps its id. The identifier column keeps field id 1; the replace
+clears `identifier-field-ids`, as Spark does (`ids_identifier`). A reordered
 `partitionBy('cat')` keeps source id 3. RePark after the fix: 34 of the 37 recorded shapes
 equal Spark's, field ids included (the raw JSON of `ids_nested_reorder_branch` differs only in
 how the recorder renders a struct value, a Spark `Row` list against a RePark dict; the pin
@@ -86,7 +99,7 @@ not compared).
 | C-003 | Residue R-1: a format-less `saveAsTable` (CTAS or RTAS) stores no `write.format.default`, where Spark stores `parquet`; every other observation equals Spark's. | `test_save_as_table_without_a_format_writes_no_format_property_divergence`; registry `EX-W2-5`. | **PROVEN** | Divergence pin, BACKLOG row. |
 | C-004 | `writeTo(t).option("branch", "b1").append()` writes main and leaves `b1` at S0, as cell `W-DF-V2-OPTION-BRANCH` records. | `test_writer_v2_branch_option_writes_main_like_the_recorded_cell`, `test_examples_window_catalog.py::test_writerv2_option_branch_writes_the_default_branch`; replay. | **PROVEN** | M2 red. |
 | C-005 | A `branch` or `tag` key, in any case, is ignored on `writeTo` `append`, `overwritePartitions` and `create`, and on `DataFrameWriter` `saveAsTable` append, `saveAsTable` overwrite and `insertInto` overwrite, even for a missing ref: the write lands on main and the ref keeps its snapshot. | `test_branch_and_tag_options_are_ignored_like_spark` (9 shapes, one per door plus tag, upper case and missing ref), `test_time_travel.py::test_write_to_branch_option_writes_main`, `::test_write_to_tag_option_writes_main`. | **PROVEN** | M2 red on six of them. Narrowed 2026-09-25 (critic V-004): `overwrite(condition)` is not a slice-1 door. |
-| C-011 | A replace keeps each column's field id by name (Java `TypeUtil.assignFreshIds(schema, base, nextId)`): reordered, swapped and renamed columns, added and re-added ones (fresh ids above `last-column-id`, a dropped id never reused), nested struct fields by dotted name, identifier fields and a reordered `partitionBy` source; a branch on a pre-replace snapshot reads its rows. | `test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark` (9 shapes); Rust `tests/replace_schema.rs` (3). | **PROVEN** | M3 and M4 red. |
+| C-011 | A replace keeps each column's field id by name (Java `TypeUtil.assignFreshIds(schema, base, nextId)`): reordered, swapped and renamed columns, added and re-added ones (fresh ids above `last-column-id`, a dropped id never reused), nested struct fields by dotted name, the identifier column (the replace clears `identifier-field-ids`, as Spark does) and a reordered `partitionBy` source; a branch on a pre-replace snapshot reads its rows. Round 3: on every replace door — `saveAsTable` overwrite, column-def `CREATE OR REPLACE`, `REPLACE TABLE`, SQL RTAS, `createOrReplace()`, `replace()` and the native door's CTAS and column-def replace. | `test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark` (9 shapes), `test_every_replace_door_keeps_field_ids_by_name_like_spark` (5 doors); Rust `repark-iceberg tests/replace_schema.rs` (4), `repark-spark tests/replace_table.rs::column_def_replace_keeps_field_ids_by_name`, `::replace_table_takes_a_fresh_id_above_the_last_column_id`, `repark-sql create_table/rtas_ops_tests.rs::native_column_def_replace_keeps_field_ids_by_name`, `::native_rtas_keeps_field_ids_by_name`. | **PROVEN** | M3..M7 red. |
 | C-012 | Residue R-9: after a replace that changes a kept column's type, the old branch reads NULL for it where Spark fails the read (`ClassCastException`); every other observation, the kept id included, equals Spark's. | `test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence`. | **PROVEN** | Divergence pin; registry SAVEAS-OVERWRITE Residual. |
 
 ## Pre-existing pins changed (slice 1)
@@ -125,6 +138,13 @@ Each load-bearing line was broken, its named test run, and the source restored.
 - **M4** (`mutation-M4.txt`, rebuilt wheel): `ctas.rs` skips `replacement_schema`. Six
   `test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark` shapes go red (reorder,
   swap, rename, nested, reordered `partitionBy`, re-add).
+- **M5** (round 3, `target/probe-u7-pr2a-r2fix/mutation-M5.txt`): the counter starts at the
+  current schema's highest id. `fresh_ids_start_above_the_last_column_id_not_the_highest_current_id`
+  goes red (`left: [(1, "id"), (2, "data"), (3, "cat")] right: [… (4, "cat")]`).
+- **M6** (`mutation-M6.txt`): the Spark column-def door skips `replacement_schema`. Both new
+  `tests/replace_table.rs` pins go red (`left: ([(1, "cat"), (2, "data"), (3, "id")], 3)`).
+- **M7** (`mutation-M7.txt`): the native door skips it. Both new `rtas_ops_tests.rs` pins go
+  red.
 
 ## Out of scope (observed, not worked)
 

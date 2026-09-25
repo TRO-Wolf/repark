@@ -125,3 +125,77 @@ async fn create_or_replace_table_still_creates_a_missing_table() {
     );
     assert!(catalogs["ice"].table_exists(&ident).await.unwrap());
 }
+
+fn field_ids(loaded: &iceberg::table::Table) -> (Vec<(i32, String)>, i32) {
+    let metadata = loaded.metadata();
+    let ids = metadata
+        .current_schema()
+        .as_struct()
+        .fields()
+        .iter()
+        .map(|field| (field.id, field.name.clone()))
+        .collect();
+    (ids, metadata.last_column_id())
+}
+
+fn named(pairs: &[(i32, &str)]) -> Vec<(i32, String)> {
+    pairs
+        .iter()
+        .map(|(id, name)| (*id, (*name).to_string()))
+        .collect()
+}
+
+#[tokio::test]
+async fn column_def_replace_keeps_field_ids_by_name() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ids (id BIGINT, data STRING, cat STRING) USING iceberg \
+         PARTITIONED BY (cat)",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE OR REPLACE TABLE ice.sales.ids (cat STRING, data STRING, id BIGINT) \
+         USING iceberg PARTITIONED BY (cat)",
+    )
+    .await;
+    let loaded = load_sales_table(&catalogs, "ids").await;
+    assert_eq!(
+        field_ids(&loaded),
+        (named(&[(3, "cat"), (2, "data"), (1, "id")]), 3)
+    );
+    let source_ids: Vec<i32> = loaded
+        .metadata()
+        .default_partition_spec()
+        .fields()
+        .iter()
+        .map(|field| field.source_id)
+        .collect();
+    assert_eq!(source_ids, [3]);
+}
+
+#[tokio::test]
+async fn replace_table_takes_a_fresh_id_above_the_last_column_id() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.rids (id BIGINT, data STRING, cat STRING) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "REPLACE TABLE ice.sales.rids (cat STRING, payload STRING, id BIGINT) USING iceberg",
+    )
+    .await;
+    assert_eq!(
+        field_ids(&load_sales_table(&catalogs, "rids").await),
+        (named(&[(3, "cat"), (4, "payload"), (1, "id")]), 4)
+    );
+}

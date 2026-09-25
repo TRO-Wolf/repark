@@ -126,3 +126,26 @@ fn nested_fields_keep_their_ids_by_dotted_name() {
     assert_eq!(replaced.field_id_by_name("s.c"), Some(5));
     assert_eq!(replaced.field_id_by_name("s"), Some(2));
 }
+
+#[test]
+fn fresh_ids_start_above_the_last_column_id_not_the_highest_current_id() {
+    let created = metadata(schema(vec![
+        long(1, "id"),
+        string(2, "data"),
+        string(3, "cat"),
+    ]));
+    let dropped = TableMetadataBuilder::new_from_metadata(created, None)
+        .add_current_schema(schema(vec![long(1, "id"), string(2, "data")]))
+        .expect("drop cat")
+        .build()
+        .expect("metadata")
+        .metadata;
+    assert_eq!(dropped.last_column_id(), 3);
+    assert_eq!(dropped.current_schema().highest_field_id(), 2);
+    let replaced = replacement_schema(
+        &dropped,
+        &schema(vec![long(1, "id"), string(2, "data"), string(3, "cat")]),
+    )
+    .expect("replacement");
+    assert_eq!(ids(&replaced), named(&[(1, "id"), (2, "data"), (4, "cat")]));
+}

@@ -216,3 +216,64 @@ async fn native_service_managed_plain_ctas_records_append() {
         .await;
     assert_eq!(door.ops("sm_plain_empty").await, Vec::<String>::new());
 }
+
+impl NativeDoor {
+    async fn field_ids(&self, table: &str) -> (Vec<(i32, String)>, i32) {
+        let loaded = self
+            .catalog
+            .load_table(&TableIdent::new(
+                NamespaceIdent::new("sales".to_string()),
+                table.to_string(),
+            ))
+            .await
+            .unwrap_or_else(|err| panic!("`{table}` must load: {err}"));
+        let metadata = loaded.metadata();
+        let ids = metadata
+            .current_schema()
+            .as_struct()
+            .fields()
+            .iter()
+            .map(|field| (field.id, field.name.clone()))
+            .collect();
+        (ids, metadata.last_column_id())
+    }
+}
+
+fn named(pairs: &[(i32, &str)]) -> Vec<(i32, String)> {
+    pairs
+        .iter()
+        .map(|(id, name)| (*id, (*name).to_string()))
+        .collect()
+}
+
+#[tokio::test]
+async fn native_column_def_replace_keeps_field_ids_by_name() {
+    let door = staged().await;
+    door.ok("CREATE TABLE ice.sales.ids (id BIGINT, data VARCHAR, cat VARCHAR)")
+        .await;
+    door.ok("CREATE OR REPLACE TABLE ice.sales.ids (cat VARCHAR, data VARCHAR, id BIGINT)")
+        .await;
+    assert_eq!(
+        door.field_ids("ids").await,
+        (named(&[(3, "cat"), (2, "data"), (1, "id")]), 3)
+    );
+    door.ok("CREATE OR REPLACE TABLE ice.sales.ids (cat VARCHAR, payload VARCHAR, id BIGINT)")
+        .await;
+    assert_eq!(
+        door.field_ids("ids").await,
+        (named(&[(3, "cat"), (4, "payload"), (1, "id")]), 4)
+    );
+}
+
+#[tokio::test]
+async fn native_rtas_keeps_field_ids_by_name() {
+    let door = staged().await;
+    door.ok("CREATE TABLE ice.sales.rids AS SELECT 1 AS id, 'a' AS data, 'x' AS cat")
+        .await;
+    door.ok("CREATE OR REPLACE TABLE ice.sales.rids AS SELECT 'x' AS cat, 2 AS extra, 1 AS id")
+        .await;
+    assert_eq!(
+        door.field_ids("rids").await,
+        (named(&[(3, "cat"), (4, "extra"), (1, "id")]), 4)
+    );
+}

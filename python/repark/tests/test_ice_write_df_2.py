@@ -645,3 +645,91 @@ def test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence(
     )
     assert observed.pop("branch_rows") == [[None, "a", "x"], [None, "b", "y"], [None, "c", "x"]]
     assert observed == expected
+
+
+def _door_with_branch(
+    spark: ReparkSession, out: dict[str, Any], replace: Callable[[], object]
+) -> None:
+    _create_branch(spark)
+    replace()
+    _branch_rows(spark, out)
+
+
+_REPLACE_DOORS: dict[str, tuple[str, str, str, int, Action]] = {
+    "sql_column_def_replace": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _door_with_branch(
+            s,
+            o,
+            lambda: s.sql(
+                f"CREATE OR REPLACE TABLE {_T} (cat STRING, data STRING, id BIGINT) USING iceberg"
+            ),
+        ),
+    ),
+    "sql_replace_table": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _door_with_branch(
+            s,
+            o,
+            lambda: s.sql(
+                f"REPLACE TABLE {_T} (cat STRING, payload STRING, id BIGINT) USING iceberg"
+            ),
+        ),
+    ),
+    "sql_rtas_reordered": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _door_with_branch(
+            s,
+            o,
+            lambda: s.sql(
+                f"CREATE OR REPLACE TABLE {_T} USING iceberg AS SELECT 'z' AS cat, 'q' AS data, "
+                "CAST(9 AS BIGINT) AS id"
+            ),
+        ),
+    ),
+    "v2_create_or_replace_reordered": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _door_with_branch(
+            s,
+            o,
+            lambda: f.select("cat", "data", "id").writeTo(_T).using("iceberg").createOrReplace(),
+        ),
+    ),
+    "v2_replace_renamed": (
+        "values",
+        "",
+        "",
+        2,
+        lambda s, f, o: _door_with_branch(
+            s,
+            o,
+            lambda: (
+                f.selectExpr("cat", "data AS payload", "id").writeTo(_T).using("iceberg").replace()
+            ),
+        ),
+    ),
+}
+
+
+@pytest.mark.parametrize("name", list(_REPLACE_DOORS))
+def test_every_replace_door_keeps_field_ids_by_name_like_spark(
+    spark: ReparkSession, warehouse: Path, name: str
+) -> None:
+    """Column-def ``CREATE OR REPLACE`` and ``REPLACE TABLE``, SQL RTAS, ``createOrReplace()``
+    and ``replace()`` keep each column's id by name; the old branch reads Spark's rows.
+
+    pins: u7-write-df-2/C-011
+    """
+    assert _run(spark, warehouse, _REPLACE_DOORS[name]) == _MEASURED[name]

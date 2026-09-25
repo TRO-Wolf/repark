@@ -37,7 +37,10 @@ opt-in; end-to-end pins live in [`../v3/create.rs`](../v3/create.rs).
   classifies to `Error::CommitStateUnknown` with the minted id.
   pins: ice-commit-unknown-1/C-001, C-003, C-004
 
-- `rtas_ops_tests.rs` — **ICE-RTAS-OPS-2 round 2 (2026-09-18):** the native-door
+- `rtas_ops_tests.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):**
+  `native_column_def_replace_keeps_field_ids_by_name` and `native_rtas_keeps_field_ids_by_name`
+  pin the replace's ids by name and `last-column-id`. pins: u7-write-df-2/C-011
+  **ICE-RTAS-OPS-2 round 2 (2026-09-18):** the native-door
   snapshot-operation pins for fixture `rtas_ops`
   (`python/repark/tests/ice_rtas_byname_1_spark_oracle.json`), declared as
   `#[cfg(test)] mod rtas_ops_tests;` in `../create_table.rs`. A memory catalog under
