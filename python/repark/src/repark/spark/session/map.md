@@ -121,3 +121,10 @@ so `unset` forwards the literal `"false"`, which is the documented default the
 Rust carrier starts from. SQL `SET spark.sql.iceberg.merge-schema = true` needs
 no new parser: `sql_set_statements.py` already routes a plain assignment through
 `RuntimeConfig.set`. pins: ipi-19-56-37-schema-evolution-write/C-004, C-012
+
+U8 WRITE-SQL PR1 (2026-09-24): `sql_replace_where.py` — `expand_insert_body` keeps an
+`INSERT INTO t REPLACE WHERE <predicate>` head out of the bare-name expansion and expands only
+the query, found at the first `WITH`/`SELECT`/`VALUES`/`TABLE`/`FROM` at paren depth 0 of the
+masked text, so a CTE in the query keeps its scope. `_funcs.py` re-exports it as
+`_expand_insert_body`; `session_core.py` `_try_expand_insert_sql` calls it in place of the
+direct expansion (same line count, exact baseline kept). pins: u8-write-sql/C-014

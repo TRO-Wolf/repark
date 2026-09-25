@@ -140,6 +140,8 @@ fn is_owned_write_head_always(sql: &str) -> bool {
                 Token::Word(word) => word.value.eq_ignore_ascii_case("OVERWRITE"),
                 _ => false,
             }) || crate::insert_by_name::sql_has_insert_by_name(sql)
+                || crate::router::insert_positional::replace_where::sql_has_replace_where(sql)
+                || crate::router::insert_positional::partition_append::sql_has_partition_append(sql)
         }
         _ => false,
     }

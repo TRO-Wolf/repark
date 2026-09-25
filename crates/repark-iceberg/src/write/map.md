@@ -1255,3 +1255,42 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   `type_change_err` maps the fork's `DataInvalid` `Cannot change column type: …`
   to `IllegalArgumentMarker`, on apply and on commit, for both seams.
   pins: u6-write-refusals/C-006, C-007
+
+## U8 WRITE-SQL PR1 (2026-09-24) — overwrite by a Spark filter
+
+- `overwrite_filter.rs` — Spark's `OverwriteByFilter` for `INSERT INTO … REPLACE WHERE`.
+  `spark_overwrite_filter` converts a sqlparser predicate to an Iceberg row filter by Spark's
+  optimizer and V2-filter rules (`=`, `<>` as `NOT (=)`, `<=>`, ranges, `BETWEEN`, `IN`,
+  `NOT IN`, `IS [NOT] NULL`, a wildcard-free or prefix `LIKE`, `AND`/`OR`/`NOT`). **Round 3
+  (2026-09-25, critic r2):** `lower` builds Spark's optimized predicate as a `Folded` tree
+  (convertible leaves with their Spark rendering, opaque leaves, `null`, `(c IS NULL) AND
+  (null)`, `(c IS NOT NULL) OR (null)`, constants simplified through `AND`/`OR`), and
+  `spark_overwrite_filter` splits it into conjuncts and refuses on the first one it cannot
+  convert, rendering that conjunct as Spark does. `NOT` pushes down as Spark's optimizer
+  pushes it; `<` and `<=` carry a `notNull` conjunct because Java Iceberg's `lt` never
+  matches a NULL. An `IN` list is deduplicated with its NULL counted, and a one-element list
+  folds to `=` / `<>`. A literal an integer column cannot hold follows Spark's unwrap-cast: a
+  BIGINT-typed literal on INT folds `=` / range comparisons to `(c IS NULL) AND (null)` or
+  `(c IS NOT NULL) OR (null)`; a literal beyond i64 folds range comparisons to TRUE / FALSE;
+  a fractional literal selects the rows of `<= floor` / `>= ceil` and renders in a refusal as
+  Spark's unwrap-cast renders it (`<` → `< ceil`, `<=` → `<= floor`, `>` → `> floor`, `>=` →
+  `>= ceil`; round 5, verifier V-001); `<=>` against any of them is FALSE; an `IN` drops them. A string literal is coerced to the column
+  type. A column reference binds by its exact name; another case refuses Iceberg's
+  `Cannot find field '<name>' in struct: …`. pins: u8-write-sql/C-015, C-017, C-019, C-020
+  **Round 4 (2026-09-25, critic r3):** `number_literal` types a decimal literal on an INT
+  column as Spark does: outside the INT range but inside i64 it is `OutOfRange` with the INT
+  folds (never a constant), and a `.0` literal exactly at the INT maximum or minimum is a
+  `Boundary`, which `boundary` folds by Spark's rules (`> max` → `null`, `<= max` →
+  `(c IS NOT NULL) OR (null)`, `< max` → `NOT (c = max)`, `>= max` → `c = max`, mirrored at the
+  minimum). pins: u8-write-sql/C-022
+  `commit_overwrite_by_filter_with_summary` commits `overwrite_files().overwrite_by_row_filter`
+  with the staged files and no added-file validation (Spark adds none), with the isolation,
+  `validate_from_snapshot` and branch handling of its siblings in `write_options.rs`. A set
+  row filter already counts as a change in the fork, so an empty source commits `delete`
+  without `allow_empty_commit`. A snapshot property that names an engine summary field
+  refuses, because the removed-file set of a general filter is not computed.
+  Tests: [overwrite_filter/](overwrite_filter/map.md).
+  U7's `writeTo(t).overwrite(condition)` reuses these two entry points (the claims line is in
+  `task/ledgers/staging/u8-write-sql-ledger.md`).
+  pins: u8-write-sql/C-013
+- `mod.rs` — declares `overwrite_filter` and re-exports its two entry points.

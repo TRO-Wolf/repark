@@ -497,3 +497,4 @@ from repark.spark.session.sql_relations import (
     _sql_table_ref,
     _update_rest_has_set_clause,
 )
+from repark.spark.session.sql_replace_where import expand_insert_body as _expand_insert_body

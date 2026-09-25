@@ -131,7 +131,7 @@ pub(crate) async fn routes_positional_by_name(
     write_options: &StatementWriteOptions,
 ) -> Result<bool> {
     if insert.replace_into
-        || insert.partitioned.is_some()
+        || (insert.partitioned.is_some() && insert.overwrite)
         || !insert.columns.is_empty()
         || insert.source.is_none()
         || !write_options.carries_only_merge_schema()

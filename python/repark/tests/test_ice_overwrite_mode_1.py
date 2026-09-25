@@ -30,6 +30,7 @@ from _record_ice_overwrite_mode_1_oracle import (
 )
 
 from repark import ReparkSession
+from repark.errors import IllegalArgumentException
 from repark.spark.session import _reset_active_session_for_tests
 
 LIVE = os.environ.get("REPARK_PARITY_LIVE") == "1"
@@ -120,20 +121,28 @@ def test_non_partition_column_refusal_keeps_every_row(spark: ReparkSession) -> N
     assert rows == [(1, "a", "x"), (2, "b", "y"), (3, "c", "x")]
 
 
-def test_invalid_static_date_refuses_like_the_engine_cast(spark: ReparkSession) -> None:
-    """A static value the DATE cast rejects refuses with the engine's CAST refusal text.
+def test_invalid_static_date_refuses_with_spark_cast_invalid_input(spark: ReparkSession) -> None:
+    """A static value the DATE cast rejects refuses with Spark's ``CAST_INVALID_INPUT``.
 
-    Spark answers ``CAST_INVALID_INPUT`` there; the pin holds the engine's own cast text.
+    Measured on Spark 4.1.2 by ``target/probe-u8-pr1/probe3.py`` (U8 PR1). The plain
+    ``SELECT CAST`` keeps the engine's cast text.
     """
     shape = next(item for item in SHAPES if item.key == "CAST-STATIC-DATE")
     table = seed_table(spark, shape, 2)
     with pytest.raises(Exception) as cast_error:
         spark.sql("SELECT CAST('2024-13-45' AS DATE)").collect()
-    with pytest.raises(Exception) as insert_error:
+    with pytest.raises(IllegalArgumentException) as insert_error:
         spark.sql(f"INSERT OVERWRITE {table} PARTITION (d = '2024-13-45') SELECT 9, 'z'").collect()
-    refusal = "Cast error: Cannot cast string '2024-13-45' to value of Date32 type"
-    assert refusal in str(cast_error.value), cast_error.value
-    assert refusal in str(insert_error.value), insert_error.value
+    assert "Cast error: Cannot cast string '2024-13-45' to value of Date32 type" in str(
+        cast_error.value
+    )
+    assert str(insert_error.value) == (
+        "[CAST_INVALID_INPUT] The value '2024-13-45' of the type \"STRING\" cannot be cast to "
+        '"DATE" because it is malformed. Correct the value as per the syntax, or change its '
+        "target type. Use `try_cast` to tolerate malformed input and return NULL instead. "
+        "SQLSTATE: 22018"
+    )
+    assert insert_error.value.getCondition() == "CAST_INVALID_INPUT"
     rows = sorted(tuple(row) for row in spark.sql(f"SELECT id, data FROM {table}").collect())
     assert rows == [(1, "a"), (2, "b")]
 

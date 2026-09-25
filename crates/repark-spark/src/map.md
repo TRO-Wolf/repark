@@ -1940,3 +1940,17 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   The by-name door passes `true`, so a NULL-typed column no longer blocks the
   wipe Spark performs. The positional door passes `false` and is unchanged.
   pins: u6-write-refusals/C-018
+
+## U8 WRITE-SQL PR1 (2026-09-24) — REPLACE WHERE, INSERT PARTITION, positional sources
+
+- `router.rs` — `execute_inner` hands `INSERT INTO … REPLACE WHERE` to
+  `insert_positional::replace_where` before the `BY NAME` strip; `execute_insert_routed` calls
+  `insert_positional::prepare_positional_insert` after U6's by-name routing check and routes an
+  `owned_append` statement to `execute_append_with_options`. The three modules live under
+  [router/insert_positional/](router/insert_positional/map.md) because `lib.rs` is at its crate-root ceiling. 997 lines.
+  pins: u8-write-sql/C-001, C-006, C-011
+- `write_to_branch.rs` — `REPLACE WHERE` and `INSERT INTO … PARTITION` are owned write heads,
+  so a branch target is rewritten to the `branch_<b>` selector instead of a temp view.
+  pins: u8-write-sql/C-005, C-009
+- `append_with_options.rs` — `insert_sql_without_write_ref` is crate-visible for the
+  REPLACE WHERE branch planning.

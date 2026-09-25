@@ -194,3 +194,10 @@ per item.
   different Spark name (`CAST(9 AS BIGINT)`), so Spark's `9` is not recoverable
   from the AST, and those shapes stay residue R-9.
   pins: u6-write-refusals/C-017
+
+U8 WRITE-SQL PR1 (2026-09-24): `evolution.rs` `routes_positional_by_name` keeps a positional
+`INSERT INTO … PARTITION (…)` on the by-name door when the table carries
+`write.spark.accept-any-schema`; only the `PARTITION` overwrite stays excluded. Spark answers
+`Field 9 not found in source schema` there (u6-write-refusals residue R-3 part b, appends).
+`spark_names.rs` `expression_name` is crate-visible for the PARTITION arity message.
+pins: u8-write-sql/C-008, C-010

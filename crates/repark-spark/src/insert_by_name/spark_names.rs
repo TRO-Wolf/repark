@@ -18,7 +18,7 @@ const PLAIN_FUNCTIONS: [&str; 10] = [
     "upper",
 ];
 
-pub(super) fn expression_name(expr: &Expr, qualifiers: &[String]) -> Option<String> {
+pub(crate) fn expression_name(expr: &Expr, qualifiers: &[String]) -> Option<String> {
     render(expr, qualifiers, 0)
 }
 
