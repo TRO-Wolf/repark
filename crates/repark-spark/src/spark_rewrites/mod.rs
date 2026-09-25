@@ -435,7 +435,15 @@ pub(crate) fn plan_delete_from_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralR
     }]
 }
 
-pub(crate) fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
+pub(crate) fn plan_keyword_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
+    let mut regions = plan_drop_temporary_regions(tokens);
+    regions.extend(timestamp_ltz_literal::plan_timestamp_ltz_literal_regions(
+        tokens,
+    ));
+    regions
+}
+
+fn plan_drop_temporary_regions(tokens: &[TokenWithSpan]) -> Vec<LiteralRegion> {
     let mut regions = Vec::new();
     let mut index = 0;
     while index < tokens.len() {
@@ -923,6 +931,7 @@ fn starts_insert_source(token: Option<&Token>) -> bool {
 }
 
 pub(crate) mod create_options;
+pub(crate) mod timestamp_ltz_literal;
 
 #[cfg(test)]
 mod tests {

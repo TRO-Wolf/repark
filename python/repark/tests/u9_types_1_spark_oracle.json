@@ -1,0 +1,2005 @@
+{
+ "generator": "target/probe-u9-types-1/build_oracle.py + merge_oracle.py",
+ "engine": "Spark 4.1.2 + Iceberg 1.11.0 (local[1], InMemoryCatalog sc, session zone UTC)",
+ "measured": "2026-09-25",
+ "steps": [
+  {
+   "group": "ltz",
+   "key": "ltz/v2/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.l2 (id INT, c TIMESTAMP_LTZ) USING iceberg TBLPROPERTIES ('format-version'='2')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.l2 VALUES (0, TIMESTAMP'2024-01-01 00:00:00'), (1, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/insert-ltz-literal",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.l2 VALUES (2, TIMESTAMP_LTZ'2024-06-01 12:30:00.123456')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/insert-date",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.l2 VALUES (5, DATE'2024-05-01')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.l2",
+   "spark": [
+    [
+     0,
+     "2024-01-01T00:00:00"
+    ],
+    [
+     1,
+     null
+    ],
+    [
+     2,
+     "2024-06-01T12:30:00.123456"
+    ],
+    [
+     5,
+     "2024-05-01T00:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/md",
+   "do": "md",
+   "table": "sc.ns.l2",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamptz"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.l2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/describe",
+   "do": "describe",
+   "sql": "sc.ns.l2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/side-create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.lx2 (id INT, c TIMESTAMP_LTZ) USING iceberg TBLPROPERTIES ('format-version'='2')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/side-insert-string",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lx2 VALUES (3, '2024-03-01 01:02:03')",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`lx2`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-1",
+    "repark": "ok"
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/side-insert-ntz",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lx2 VALUES (4, TIMESTAMP_NTZ'2024-04-01 00:00:00')",
+   "spark": "ok",
+   "residue": {
+    "id": "R-2",
+    "repark": [
+     [
+      "cond",
+      "UNSUPPORTED_TIMESTAMP_NTZ"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [UNSUPPORTED_TIMESTAMP_NTZ] The data type TIMESTAMP_NTZ is not a SQL-door type: declare TIMESTAMP instead. The naive/instant contract is TZ-6 (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000"
+     ],
+     [
+      "state",
+      "0A000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/side-insert-cast-string",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lx2 VALUES (6, CAST('2024-03-01 01:02:03' AS TIMESTAMP_LTZ))",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/side-select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.lx2",
+   "spark": [
+    [
+     4,
+     "2024-04-01T00:00:00"
+    ],
+    [
+     6,
+     "2024-03-01T01:02:03"
+    ]
+   ],
+   "residue": {
+    "id": "R-1",
+    "repark": [
+     [
+      3,
+      "2024-03-01T01:02:03"
+     ],
+     [
+      6,
+      "2024-03-01T01:02:03"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/printschema",
+   "do": "printschema",
+   "sql": "SELECT * FROM sc.ns.l2",
+   "spark": "root\n |-- id: integer (nullable = true)\n |-- c: timestamp (nullable = true)\n\n"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/dtypes",
+   "do": "dtypes",
+   "sql": "SELECT * FROM sc.ns.l2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/pytypes",
+   "do": "pytypes",
+   "sql": "SELECT c FROM sc.ns.l2 ORDER BY id",
+   "spark": [
+    [
+     "datetime"
+    ],
+    [
+     "NoneType"
+    ],
+    [
+     "datetime"
+    ],
+    [
+     "datetime"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/tzinfo",
+   "do": "tzinfo",
+   "sql": "SELECT c FROM sc.ns.l2 ORDER BY id",
+   "spark": [
+    [
+     "None"
+    ],
+    [
+     "n/a"
+    ],
+    [
+     "None"
+    ],
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/filter-notnull",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.l2 WHERE c IS NOT NULL",
+   "spark": [
+    [
+     0
+    ],
+    [
+     2
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/where",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.l2 WHERE c > TIMESTAMP'2024-02-01 00:00:00'",
+   "spark": [
+    [
+     2
+    ],
+    [
+     5
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/where-ltz-literal",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.l2 WHERE c < TIMESTAMP_LTZ'2024-02-01 00:00:00'",
+   "spark": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/where-str",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.l2 WHERE c = '2024-01-01 00:00:00'",
+   "spark": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/order",
+   "do": "ordered",
+   "sql": "SELECT id FROM sc.ns.l2 ORDER BY c",
+   "spark": [
+    [
+     1
+    ],
+    [
+     0
+    ],
+    [
+     5
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/order-desc",
+   "do": "ordered",
+   "sql": "SELECT id FROM sc.ns.l2 ORDER BY c DESC",
+   "spark": [
+    [
+     2
+    ],
+    [
+     5
+    ],
+    [
+     0
+    ],
+    [
+     1
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/cast-string",
+   "do": "rows",
+   "sql": "SELECT id, CAST(c AS STRING) FROM sc.ns.l2",
+   "spark": [
+    [
+     0,
+     "2024-01-01 00:00:00"
+    ],
+    [
+     1,
+     null
+    ],
+    [
+     2,
+     "2024-06-01 12:30:00.123456"
+    ],
+    [
+     5,
+     "2024-05-01 00:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/cast-from-string",
+   "do": "rows",
+   "sql": "SELECT CAST('2024-01-01 05:00:00' AS TIMESTAMP_LTZ)",
+   "spark": [
+    [
+     "2024-01-01T05:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/cast-from-string-cols",
+   "do": "cols",
+   "sql": "SELECT CAST('2024-01-01 05:00:00' AS TIMESTAMP_LTZ) AS x",
+   "spark": [
+    [
+     "x",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/cast-ntz",
+   "do": "rows",
+   "sql": "SELECT id, CAST(c AS TIMESTAMP_NTZ) FROM sc.ns.l2",
+   "spark": [
+    [
+     0,
+     "2024-01-01T00:00:00"
+    ],
+    [
+     1,
+     null
+    ],
+    [
+     2,
+     "2024-06-01T12:30:00.123456"
+    ],
+    [
+     5,
+     "2024-05-01T00:00:00"
+    ]
+   ],
+   "residue": {
+    "id": "R-2",
+    "repark": [
+     [
+      "cond",
+      "UNSUPPORTED_TIMESTAMP_NTZ"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [UNSUPPORTED_TIMESTAMP_NTZ] The data type TIMESTAMP_NTZ is not a SQL-door type: declare TIMESTAMP instead. The naive/instant contract is TZ-6 (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000"
+     ],
+     [
+      "state",
+      "0A000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/literal-cols",
+   "do": "cols",
+   "sql": "SELECT TIMESTAMP_LTZ'2024-01-01 00:00:00' AS x, timestamp_ltz '2024-01-01' AS y",
+   "spark": [
+    [
+     "x",
+     "timestamp"
+    ],
+    [
+     "y",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/literal-rows",
+   "do": "rows",
+   "sql": "SELECT TIMESTAMP_LTZ'2024-01-01 00:00:00' AS x, timestamp_ltz '2024-01-01' AS y",
+   "spark": [
+    [
+     "2024-01-01T00:00:00",
+     "2024-01-01T00:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/dfwrite",
+   "do": "append",
+   "table": "sc.ns.l2",
+   "schema": "id INT, c TIMESTAMP",
+   "rows": [
+    [
+     10,
+     {
+      "datetime": "2024-05-05T05:05:05"
+     }
+    ],
+    [
+     11,
+     null
+    ]
+   ],
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/after-dfwrite",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.l2 WHERE id >= 10",
+   "spark": [
+    [
+     10,
+     "2024-05-05T05:05:05"
+    ],
+    [
+     11,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/files-bounds",
+   "do": "rows",
+   "sql": "SELECT readable_metrics.c.lower_bound, readable_metrics.c.upper_bound, readable_metrics.c.null_value_count, readable_metrics.c.value_count FROM sc.ns.l2.files",
+   "spark": [
+    [
+     "2024-01-01T00:00:00",
+     "2024-01-01T00:00:00",
+     1,
+     2
+    ],
+    [
+     "2024-05-01T00:00:00",
+     "2024-05-01T00:00:00",
+     0,
+     1
+    ],
+    [
+     "2024-05-05T05:05:05",
+     "2024-05-05T05:05:05",
+     1,
+     2
+    ],
+    [
+     "2024-06-01T12:30:00.123456",
+     "2024-06-01T12:30:00.123456",
+     0,
+     1
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/files-counts",
+   "do": "rows",
+   "sql": "SELECT record_count, value_counts, null_value_counts FROM sc.ns.l2.files",
+   "spark": [
+    [
+     1,
+     [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       1
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ],
+      [
+       2,
+       0
+      ]
+     ]
+    ],
+    [
+     1,
+     [
+      [
+       1,
+       1
+      ],
+      [
+       2,
+       1
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ],
+      [
+       2,
+       0
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       1,
+       2
+      ],
+      [
+       2,
+       2
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ],
+      [
+       2,
+       1
+      ]
+     ]
+    ],
+    [
+     2,
+     [
+      [
+       1,
+       2
+      ],
+      [
+       2,
+       2
+      ]
+     ],
+     [
+      [
+       1,
+       0
+      ],
+      [
+       2,
+       1
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/addcol",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.l2 ADD COLUMN c2 TIMESTAMP_LTZ",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/addcol-md",
+   "do": "md",
+   "table": "sc.ns.l2",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamptz"
+       ]
+      ],
+      [
+       [
+        "id",
+        3
+       ],
+       [
+        "name",
+        "c2"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamptz"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/addcol-cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.l2",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "timestamp"
+    ],
+    [
+     "c2",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/addcol-rows",
+   "do": "rows",
+   "sql": "SELECT id, c2 FROM sc.ns.l2",
+   "spark": [
+    [
+     0,
+     null
+    ],
+    [
+     1,
+     null
+    ],
+    [
+     10,
+     null
+    ],
+    [
+     11,
+     null
+    ],
+    [
+     2,
+     null
+    ],
+    [
+     5,
+     null
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/alter-to-ltz",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.l2 ALTER COLUMN c TYPE TIMESTAMP_LTZ",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/alter-to-ntz",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.l2 ALTER COLUMN c TYPE TIMESTAMP_NTZ",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Unsupported table change: Cannot change column type: c: timestamptz -> timestamp"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-3",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Cannot change column type: c: timestamptz -> timestamp"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/alter-to-string",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.l2 ALTER COLUMN c TYPE STRING",
+   "spark": [
+    [
+     "cond",
+     null
+    ],
+    [
+     "error",
+     "Py4JJavaError"
+    ],
+    [
+     "msg",
+     "An error occurred while calling o56.sql.\n: org.apache.spark.SparkException: Unsupported table change: Cannot change column type: c: timestamptz -> string"
+    ],
+    [
+     "state",
+     null
+    ]
+   ],
+   "residue": {
+    "id": "R-3",
+    "repark": [
+     [
+      "cond",
+      null
+     ],
+     [
+      "error",
+      "PySparkException"
+     ],
+     [
+      "msg",
+      "DataInvalid => Cannot change column type: c: timestamptz -> string"
+     ],
+     [
+      "state",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/struct-create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.ls (id INT, s STRUCT<t: TIMESTAMP_LTZ>, a ARRAY<TIMESTAMP_LTZ>, m MAP<STRING, TIMESTAMP_LTZ>) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/struct-md",
+   "do": "md",
+   "table": "sc.ns.ls",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "s"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "fields",
+          [
+           [
+            [
+             "id",
+             5
+            ],
+            [
+             "name",
+             "t"
+            ],
+            [
+             "required",
+             false
+            ],
+            [
+             "type",
+             "timestamptz"
+            ]
+           ]
+          ]
+         ],
+         [
+          "type",
+          "struct"
+         ]
+        ]
+       ]
+      ],
+      [
+       [
+        "id",
+        3
+       ],
+       [
+        "name",
+        "a"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "element",
+          "timestamptz"
+         ],
+         [
+          "element-id",
+          6
+         ],
+         [
+          "element-required",
+          false
+         ],
+         [
+          "type",
+          "list"
+         ]
+        ]
+       ]
+      ],
+      [
+       [
+        "id",
+        4
+       ],
+       [
+        "name",
+        "m"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        [
+         [
+          "key",
+          "string"
+         ],
+         [
+          "key-id",
+          7
+         ],
+         [
+          "type",
+          "map"
+         ],
+         [
+          "value",
+          "timestamptz"
+         ],
+         [
+          "value-id",
+          8
+         ],
+         [
+          "value-required",
+          false
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/struct-cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.ls",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "s",
+     "struct<t:timestamp>"
+    ],
+    [
+     "a",
+     "array<timestamp>"
+    ],
+    [
+     "m",
+     "map<string,timestamp>"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/struct-insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.ls VALUES (0, named_struct('t', TIMESTAMP_LTZ'2024-01-01 00:00:00'), array(TIMESTAMP'2024-01-02 00:00:00'), map('k', TIMESTAMP'2024-01-03 00:00:00'))",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v2/struct-rows",
+   "do": "rows",
+   "sql": "SELECT id, s.t, a[0], m['k'] FROM sc.ns.ls",
+   "spark": [
+    [
+     0,
+     "2024-01-01T00:00:00",
+     "2024-01-02T00:00:00",
+     "2024-01-03T00:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.l3 (id INT, c TIMESTAMP_LTZ) USING iceberg TBLPROPERTIES ('format-version'='3')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.l3 VALUES (0, TIMESTAMP'2024-01-01 00:00:00'), (1, NULL)",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/insert-ltz-literal",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.l3 VALUES (2, TIMESTAMP_LTZ'2024-06-01 12:30:00.123456')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/insert-date",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.l3 VALUES (5, DATE'2024-05-01')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.l3",
+   "spark": [
+    [
+     0,
+     "2024-01-01T00:00:00"
+    ],
+    [
+     1,
+     null
+    ],
+    [
+     2,
+     "2024-06-01T12:30:00.123456"
+    ],
+    [
+     5,
+     "2024-05-01T00:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/md",
+   "do": "md",
+   "table": "sc.ns.l3",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamptz"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/cols",
+   "do": "cols",
+   "sql": "SELECT * FROM sc.ns.l3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/describe",
+   "do": "describe",
+   "sql": "sc.ns.l3",
+   "spark": [
+    [
+     "id",
+     "int"
+    ],
+    [
+     "c",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/side-create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.lx3 (id INT, c TIMESTAMP_LTZ) USING iceberg TBLPROPERTIES ('format-version'='3')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/side-insert-string",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lx3 VALUES (3, '2024-03-01 01:02:03')",
+   "spark": [
+    [
+     "cond",
+     "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
+    ],
+    [
+     "error",
+     "AnalysisException"
+    ],
+    [
+     "msg",
+     "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`ns`.`lx3`: Cannot safely cast `c` \"STRING\" to \"TIMESTAMP\". SQLSTATE: KD000"
+    ],
+    [
+     "state",
+     "KD000"
+    ]
+   ],
+   "residue": {
+    "id": "R-1",
+    "repark": "ok"
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/side-insert-ntz",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lx3 VALUES (4, TIMESTAMP_NTZ'2024-04-01 00:00:00')",
+   "spark": "ok",
+   "residue": {
+    "id": "R-2",
+    "repark": [
+     [
+      "cond",
+      "UNSUPPORTED_TIMESTAMP_NTZ"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "Error during planning: [UNSUPPORTED_TIMESTAMP_NTZ] The data type TIMESTAMP_NTZ is not a SQL-door type: declare TIMESTAMP instead. The naive/instant contract is TZ-6 (docs/spark-sql-iceberg-parity.md). SQLSTATE: 0A000"
+     ],
+     [
+      "state",
+      "0A000"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/side-insert-cast-string",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lx3 VALUES (6, CAST('2024-03-01 01:02:03' AS TIMESTAMP_LTZ))",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/v3/side-select",
+   "do": "rows",
+   "sql": "SELECT * FROM sc.ns.lx3",
+   "spark": [
+    [
+     4,
+     "2024-04-01T00:00:00"
+    ],
+    [
+     6,
+     "2024-03-01T01:02:03"
+    ]
+   ],
+   "residue": {
+    "id": "R-1",
+    "repark": [
+     [
+      3,
+      "2024-03-01T01:02:03"
+     ],
+     [
+      6,
+      "2024-03-01T01:02:03"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.lp (id INT, c TIMESTAMP_LTZ) USING iceberg PARTITIONED BY (days(c))",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/insert",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lp VALUES (0, TIMESTAMP'2024-01-01 23:00:00'), (1, TIMESTAMP'2024-01-02 01:00:00')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/md",
+   "do": "md",
+   "table": "sc.ns.lp",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamptz"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     [
+      [
+       [
+        "field-id",
+        1000
+       ],
+       [
+        "name",
+        "c_day"
+       ],
+       [
+        "source-id",
+        2
+       ],
+       [
+        "transform",
+        "day"
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/partitions",
+   "do": "rows",
+   "sql": "SELECT partition, record_count FROM sc.ns.lp.partitions",
+   "spark": [
+    [
+     [
+      [
+       "c_day",
+       "2024-01-01"
+      ]
+     ],
+     1
+    ],
+    [
+     [
+      [
+       "c_day",
+       "2024-01-02"
+      ]
+     ],
+     1
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/rows",
+   "do": "rows",
+   "sql": "SELECT id, CAST(c AS STRING) FROM sc.ns.lp WHERE c >= TIMESTAMP_LTZ'2024-01-02 00:00:00'",
+   "spark": [
+    [
+     1,
+     "2024-01-02 01:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/hours",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.lh (id INT, c TIMESTAMP_LTZ) USING iceberg PARTITIONED BY (hours(c))",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/hours-md",
+   "do": "md",
+   "table": "sc.ns.lh",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamptz"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     [
+      [
+       [
+        "field-id",
+        1000
+       ],
+       [
+        "name",
+        "c_hour"
+       ],
+       [
+        "source-id",
+        2
+       ],
+       [
+        "transform",
+        "hour"
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/identity",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.li (id INT, c TIMESTAMP_LTZ) USING iceberg PARTITIONED BY (c)",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/alter-add",
+   "do": "sql",
+   "sql": "ALTER TABLE sc.ns.li ADD PARTITION FIELD months(c)",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/part/alter-add-md",
+   "do": "md",
+   "table": "sc.ns.li",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamptz"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     [
+      [
+       [
+        "field-id",
+        1000
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "source-id",
+        2
+       ],
+       [
+        "transform",
+        "identity"
+       ]
+      ],
+      [
+       [
+        "field-id",
+        1001
+       ],
+       [
+        "name",
+        "c_month"
+       ],
+       [
+        "source-id",
+        2
+       ],
+       [
+        "transform",
+        "month"
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.lny (id INT, c TIMESTAMP_LTZ) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/insert-utc",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lny VALUES (0, TIMESTAMP'2024-01-01 00:00:00')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/set",
+   "do": "conf",
+   "setting": "spark.sql.session.timeZone",
+   "value": "America/New_York",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/insert-ny",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lny VALUES (1, TIMESTAMP'2024-01-01 00:00:00')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/insert-ny-literal",
+   "do": "sql",
+   "sql": "INSERT INTO sc.ns.lny VALUES (2, TIMESTAMP_LTZ'2024-01-01 00:00:00')",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/select",
+   "do": "rows",
+   "sql": "SELECT id, c FROM sc.ns.lny",
+   "spark": [
+    [
+     0,
+     "2024-01-01T00:00:00"
+    ],
+    [
+     1,
+     "2024-01-01T05:00:00"
+    ],
+    [
+     2,
+     "2024-01-01T05:00:00"
+    ]
+   ],
+   "residue": {
+    "id": "R-4",
+    "repark": [
+     [
+      0,
+      "2023-12-31T19:00:00"
+     ],
+     [
+      1,
+      "2024-01-01T00:00:00"
+     ],
+     [
+      2,
+      "2024-01-01T00:00:00"
+     ]
+    ]
+   }
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/cast-string",
+   "do": "rows",
+   "sql": "SELECT id, CAST(c AS STRING) FROM sc.ns.lny",
+   "spark": [
+    [
+     0,
+     "2023-12-31 19:00:00"
+    ],
+    [
+     1,
+     "2024-01-01 00:00:00"
+    ],
+    [
+     2,
+     "2024-01-01 00:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/where",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.lny WHERE c = TIMESTAMP'2023-12-31 19:00:00'",
+   "spark": [
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/where-ltz",
+   "do": "rows",
+   "sql": "SELECT id FROM sc.ns.lny WHERE c = TIMESTAMP_LTZ'2024-01-01 00:00:00'",
+   "spark": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/tzinfo",
+   "do": "tzinfo",
+   "sql": "SELECT c FROM sc.ns.lny ORDER BY id",
+   "spark": [
+    [
+     "None"
+    ],
+    [
+     "None"
+    ],
+    [
+     "None"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/unset",
+   "do": "conf",
+   "setting": "spark.sql.session.timeZone",
+   "value": "UTC",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ny/cast-string-utc",
+   "do": "rows",
+   "sql": "SELECT id, CAST(c AS STRING) FROM sc.ns.lny",
+   "spark": [
+    [
+     0,
+     "2024-01-01 00:00:00"
+    ],
+    [
+     1,
+     "2024-01-01 05:00:00"
+    ],
+    [
+     2,
+     "2024-01-01 05:00:00"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ntzconf/set",
+   "do": "conf",
+   "setting": "spark.sql.timestampType",
+   "value": "TIMESTAMP_NTZ",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ntzconf/create",
+   "do": "sql",
+   "sql": "CREATE TABLE sc.ns.lntz (id INT, c TIMESTAMP_LTZ, d TIMESTAMP) USING iceberg",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ntzconf/literal-cols",
+   "do": "cols",
+   "sql": "SELECT TIMESTAMP_LTZ'2024-01-01 00:00:00' AS x",
+   "spark": [
+    [
+     "x",
+     "timestamp"
+    ]
+   ]
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ntzconf/unset",
+   "do": "conf",
+   "setting": "spark.sql.timestampType",
+   "value": "TIMESTAMP_LTZ",
+   "spark": "ok"
+  },
+  {
+   "group": "ltz",
+   "key": "ltz/ntzconf/md",
+   "do": "md",
+   "table": "sc.ns.lntz",
+   "spark": [
+    [
+     "fields",
+     [
+      [
+       [
+        "id",
+        1
+       ],
+       [
+        "name",
+        "id"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "int"
+       ]
+      ],
+      [
+       [
+        "id",
+        2
+       ],
+       [
+        "name",
+        "c"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamptz"
+       ]
+      ],
+      [
+       [
+        "id",
+        3
+       ],
+       [
+        "name",
+        "d"
+       ],
+       [
+        "required",
+        false
+       ],
+       [
+        "type",
+        "timestamp"
+       ]
+      ]
+     ]
+    ],
+    [
+     "spec",
+     []
+    ]
+   ],
+   "residue": {
+    "id": "R-5",
+    "repark": [
+     [
+      "fields",
+      [
+       [
+        [
+         "id",
+         1
+        ],
+        [
+         "name",
+         "id"
+        ],
+        [
+         "required",
+         false
+        ],
+        [
+         "type",
+         "int"
+        ]
+       ],
+       [
+        [
+         "id",
+         2
+        ],
+        [
+         "name",
+         "c"
+        ],
+        [
+         "required",
+         false
+        ],
+        [
+         "type",
+         "timestamptz"
+        ]
+       ],
+       [
+        [
+         "id",
+         3
+        ],
+        [
+         "name",
+         "d"
+        ],
+        [
+         "required",
+         false
+        ],
+        [
+         "type",
+         "timestamptz"
+        ]
+       ]
+      ]
+     ],
+     [
+      "spec",
+      []
+     ]
+    ]
+   }
+  }
+ ]
+}

@@ -957,6 +957,10 @@ pins: rp-4-fork-repin/C-005, C-006
   `USING iceberg`, `WITH`/plain variants, malformed pairs, and DataFusion-style
   no-eq pairs stay untouched. Cells `D-CREATE-OPTIONS`, `D-CTAS-OPTIONS`.
   Details: [spark_rewrites/map.md](spark_rewrites/map.md).
+- `spark_rewrites/mod.rs` + `spark_rewrites/timestamp_ltz_literal.rs` — **WO U9-TYPES-1
+  (2026-09-25):** `plan_keyword_regions` (the one call `spark_literals.rs` makes, in place of
+  `plan_drop_temporary_regions`) adds `TIMESTAMP_LTZ '…'` → `TIMESTAMP '…'`, Spark's LTZ
+  literal. pins: u9-types-1/C-002
 - `spark_rewrites/mod.rs` — **FNP-4B (2026-09-15):** numeric suffixes (BD precision/scale from
   digits; D/F as CAST of a decimal operand so the planner keeps them non-null; `1e3L` /
   `0x1D` as identifiers; `128Y`/`40000S` refuse `[INVALID_NUMERIC_LITERAL_RANGE]`),
@@ -1002,6 +1006,10 @@ pins: rp-4-fork-repin/C-005, C-006
   inner. Inner renames are out of scope:
   analysis runs twice and outer references would go stale.
   pins: fnp-4b/C-012, C-014, C-015, C-019, C-020, C-021, C-022
+- `create_table.rs` — **WO U9-TYPES-1 (2026-09-25):** `iceberg_named_primitive` (renamed from
+  `iceberg_v3_named_primitive`) maps the Spark type name `TIMESTAMP_LTZ` to Iceberg
+  `timestamptz` whatever `spark.sql.timestampType` says, at CREATE, ADD COLUMN and nested
+  (cell `TY-TIMESTAMP-LTZ`). pins: u9-types-1/C-001
 - `create_table.rs` — **WO U5 PR3 (2026-09-25):** a hive-style typed `PARTITIONED BY` column
   (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
   field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and

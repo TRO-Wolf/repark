@@ -67,6 +67,12 @@ requires one, and nothing may say more. Reasons live in this map, not in the sou
 CC-2 slice complete: every module's comments and docstrings audited; oracle discriminators,
 mutation payloads, pins, and safety contracts kept, narration and round history deleted.
 
+- [test_u9_types_1.py](test_u9_types_1.py) + `u9_types_1_spark_oracle.json` — **WO U9-TYPES-1
+  (2026-09-25):** replays every measured step of the oracle through the facade, one session
+  per group, in order; each observation (rows, schema surfaces, metadata fields, Python value
+  types, refusal class/condition/SQLSTATE/text) equals Spark's, or its residue record when the
+  step names one (the ledger's residue table is cross-checked). Group `ltz`: 85 steps, 74
+  EQUAL. pins: u9-types-1/C-001, C-002, C-003, C-005
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) —
   **ICE-ERROR-CONDITIONS-1 / IPI-51 PR1 (2026-09-20):** constructor pins for the native
   error-condition parser — `getCondition`/`getErrorClass`/`getSqlState` on the PyO3

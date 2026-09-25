@@ -8543,6 +8543,29 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `python/repark/tests/test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`.
   pins: ice-nested-evo-1/C-059
 
+### TY-TIMESTAMP-LTZ — a `TIMESTAMP_LTZ` column refused at CREATE — **FIXED 2026-09-25 (WO U9-TYPES-1)**
+
+- **repark** — the Spark door maps the type name `TIMESTAMP_LTZ` to Iceberg `timestamptz` on
+  format v2 and v3, at CREATE, `ADD COLUMN` and inside `STRUCT` / `ARRAY` / `MAP`, whatever
+  `spark.sql.timestampType` says; the column reads as Spark `timestamp` (`DESCRIBE`,
+  `dtypes`, `printSchema`, `simpleString`). `TIMESTAMP_LTZ '…'` is Spark's session-zone
+  instant literal. Rows, filters, ordering, `CAST … AS STRING`, a DataFrame append, `.files`
+  metrics and `days` / `hours` / identity / `months` partitioning answer as Spark. Before, the
+  CREATE refused `column type TIMESTAMP_LTZ is not supported yet for Iceberg tables` and the
+  literal did not parse. The ANSI door keeps refusing the Spark spelling. Residues (ledger
+  R-1..R-5, each held by its oracle record): a STRING literal writes into the column where
+  Spark refuses `CANNOT_SAFELY_CAST` (as for `TIMESTAMP`); the `TIMESTAMP_NTZ` name stays
+  refused (TZ-6); `ALTER COLUMN … TYPE` refusals keep RePark's class and `DataInvalid =>`
+  prefix; `collect()` in a non-UTC session answers the session-zone wall (TZ-7 Q12); a bare
+  `TIMESTAMP` under `spark.sql.timestampType=TIMESTAMP_NTZ` stays `timestamptz` (TZ-6 Q10).
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25 (85 steps in
+  `python/repark/tests/u9_types_1_spark_oracle.json`, group `ltz`; scoreboard cell
+  `TY-TIMESTAMP-LTZ`, replayed EQUAL).
+- **Pin** — `python/repark/tests/test_u9_types_1.py`,
+  `crates/repark-spark/src/tests/u9_timestamp_ltz.rs`,
+  `crates/repark-spark/src/spark_rewrites/timestamp_ltz_literal.rs` (unit pins),
+  `crates/repark-sql/tests/ansi_door_u9_types.rs`.
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

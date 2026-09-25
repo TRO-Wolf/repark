@@ -4,6 +4,12 @@
 Ledgers of units in flight. A ledger here on `main` is a charter whose retirement event has not
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 ## Contents
+- [u9-types-1-ledger.md](u9-types-1-ledger.md) —
+  **WO U9-TYPES-1 (2026-09-25), in flight:** four column types end to end on the Spark door,
+  measured against Spark 4.1.2 + Iceberg 1.11 and replayed step by step from
+  `python/repark/tests/u9_types_1_spark_oracle.json`. `TIMESTAMP_LTZ` columns and typed
+  literals (C-001..C-005). `risk_tier: standard`. Branch `feat/u9-types-1`.
+  pins: u9-types-1/C-001, C-002, C-003, C-004, C-005
 - [u8-write-sql-ledger.md](u8-write-sql-ledger.md) —
   **U8 WRITE-SQL PR1 (2026-09-24), in flight:** `INSERT INTO … REPLACE WHERE` as Spark's
   overwrite by filter, `INSERT INTO … PARTITION (…)` static and dynamic keys, and positional
