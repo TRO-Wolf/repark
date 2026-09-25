@@ -476,107 +476,108 @@ async fn an_empty_source_on_a_table_without_snapshots_commits_a_delete() {
     assert_eq!(table.metadata().snapshots().count(), 1);
 }
 
+const RENDERED_CONJUNCT_ROWS: &[(&str, &str)] = &[
+    ("i = 3000000000 AND data = 'a'", "null"),
+    ("data = 'a' AND i = 3000000000", "null"),
+    (
+        "i = 3000000000 OR data = 'a'",
+        "((i IS NULL) AND (null)) OR (data = 'a')",
+    ),
+    ("i < 3000000000 AND data = 'a'", "(i IS NOT NULL) OR (null)"),
+    (
+        "i < 3000000000 OR data = 'a'",
+        "((i IS NOT NULL) OR (null)) OR (data = 'a')",
+    ),
+    (
+        "NOT (i = 3000000000 AND data = 'a')",
+        "((i IS NOT NULL) OR (null)) OR (NOT (data = 'a'))",
+    ),
+    (
+        "NOT (i = 3000000000) AND data = 'a'",
+        "(i IS NOT NULL) OR (null)",
+    ),
+    ("i NOT IN (3000000000)", "(i IS NOT NULL) OR (null)"),
+    (
+        "i NOT IN (3000000000) AND data = 'a'",
+        "(i IS NOT NULL) OR (null)",
+    ),
+    ("i IN (3000000000) AND data = 'a'", "null"),
+    ("i IN (3000000000, NULL)", "null"),
+    ("i NOT IN (3000000000, NULL)", "null"),
+    ("cat NOT IN (NULL)", "null"),
+    ("cat IN (NULL, NULL)", "null"),
+    (
+        "i < 2.5 OR UPPER(data) = 'A'",
+        "(i < 3) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "i <= 2.5 OR UPPER(data) = 'A'",
+        "(i <= 2) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "i > 2.5 OR UPPER(data) = 'A'",
+        "(i > 2) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "i >= 2.5 OR UPPER(data) = 'A'",
+        "(i >= 3) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "i < -0.5 OR UPPER(data) = 'A'",
+        "(i < 0) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "i <= -0.5 OR UPPER(data) = 'A'",
+        "(i <= -1) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "i > -0.5 OR UPPER(data) = 'A'",
+        "(i > -1) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "i >= -0.5 OR UPPER(data) = 'A'",
+        "(i >= 0) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "NOT (i < 2.5) OR UPPER(data) = 'A'",
+        "(i >= 3) OR (UPPER(data) = 'A')",
+    ),
+    (
+        "i NOT BETWEEN 0.5 AND 2147483647.5",
+        "(i < 1) OR ((i IS NULL) AND (null))",
+    ),
+    ("cat NOT IN (NULL, NULL)", "null"),
+    ("cat = NULL AND id = 1", "null"),
+    ("id = 1 AND cat = NULL", "null"),
+    ("cat = NULL OR id = 1", "(null) OR (id = 1)"),
+    ("cat IN (NULL) OR id = 1", "(null) OR (id = 1)"),
+    ("NOT (cat = NULL AND id = 1)", "(null) OR (NOT (id = 1))"),
+    ("NOT (cat = NULL OR id = 1)", "null"),
+    (
+        "upper(cat) = 'X' OR cat = 'x'",
+        "(upper(cat) = 'X') OR (cat = 'x')",
+    ),
+    (
+        "NOT (upper(cat) = 'X' AND cat = 'x')",
+        "(NOT (upper(cat) = 'X')) OR (NOT (cat = 'x'))",
+    ),
+    ("id <> 2.5", "(id IS NOT NULL) OR (null)"),
+    ("id IN (2.5)", "null"),
+    ("id = -2.5", "null"),
+    ("id = 99999999999999999999", "null"),
+    ("id <> 99999999999999999999", "(id IS NOT NULL) OR (null)"),
+    ("id IN (99999999999999999999)", "null"),
+    (
+        "id NOT IN (99999999999999999999)",
+        "(id IS NOT NULL) OR (null)",
+    ),
+    ("i = 99999999999999999999", "null"),
+    ("i <> 99999999999999999999", "(i IS NOT NULL) OR (null)"),
+];
+
 #[test]
 fn a_refusal_renders_the_first_unconvertible_conjunct_as_spark_does() {
-    let cases = [
-        ("i = 3000000000 AND data = 'a'", "null"),
-        ("data = 'a' AND i = 3000000000", "null"),
-        (
-            "i = 3000000000 OR data = 'a'",
-            "((i IS NULL) AND (null)) OR (data = 'a')",
-        ),
-        ("i < 3000000000 AND data = 'a'", "(i IS NOT NULL) OR (null)"),
-        (
-            "i < 3000000000 OR data = 'a'",
-            "((i IS NOT NULL) OR (null)) OR (data = 'a')",
-        ),
-        (
-            "NOT (i = 3000000000 AND data = 'a')",
-            "((i IS NOT NULL) OR (null)) OR (NOT (data = 'a'))",
-        ),
-        (
-            "NOT (i = 3000000000) AND data = 'a'",
-            "(i IS NOT NULL) OR (null)",
-        ),
-        ("i NOT IN (3000000000)", "(i IS NOT NULL) OR (null)"),
-        (
-            "i NOT IN (3000000000) AND data = 'a'",
-            "(i IS NOT NULL) OR (null)",
-        ),
-        ("i IN (3000000000) AND data = 'a'", "null"),
-        ("i IN (3000000000, NULL)", "null"),
-        ("i NOT IN (3000000000, NULL)", "null"),
-        ("cat NOT IN (NULL)", "null"),
-        ("cat IN (NULL, NULL)", "null"),
-        (
-            "i < 2.5 OR UPPER(data) = 'A'",
-            "(i < 3) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "i <= 2.5 OR UPPER(data) = 'A'",
-            "(i <= 2) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "i > 2.5 OR UPPER(data) = 'A'",
-            "(i > 2) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "i >= 2.5 OR UPPER(data) = 'A'",
-            "(i >= 3) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "i < -0.5 OR UPPER(data) = 'A'",
-            "(i < 0) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "i <= -0.5 OR UPPER(data) = 'A'",
-            "(i <= -1) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "i > -0.5 OR UPPER(data) = 'A'",
-            "(i > -1) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "i >= -0.5 OR UPPER(data) = 'A'",
-            "(i >= 0) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "NOT (i < 2.5) OR UPPER(data) = 'A'",
-            "(i >= 3) OR (UPPER(data) = 'A')",
-        ),
-        (
-            "i NOT BETWEEN 0.5 AND 2147483647.5",
-            "(i < 1) OR ((i IS NULL) AND (null))",
-        ),
-        ("cat NOT IN (NULL, NULL)", "null"),
-        ("cat = NULL AND id = 1", "null"),
-        ("id = 1 AND cat = NULL", "null"),
-        ("cat = NULL OR id = 1", "(null) OR (id = 1)"),
-        ("cat IN (NULL) OR id = 1", "(null) OR (id = 1)"),
-        ("NOT (cat = NULL AND id = 1)", "(null) OR (NOT (id = 1))"),
-        ("NOT (cat = NULL OR id = 1)", "null"),
-        (
-            "upper(cat) = 'X' OR cat = 'x'",
-            "(upper(cat) = 'X') OR (cat = 'x')",
-        ),
-        (
-            "NOT (upper(cat) = 'X' AND cat = 'x')",
-            "(NOT (upper(cat) = 'X')) OR (NOT (cat = 'x'))",
-        ),
-        ("id <> 2.5", "(id IS NOT NULL) OR (null)"),
-        ("id IN (2.5)", "null"),
-        ("id = -2.5", "null"),
-        ("id = 99999999999999999999", "null"),
-        ("id <> 99999999999999999999", "(id IS NOT NULL) OR (null)"),
-        ("id IN (99999999999999999999)", "null"),
-        (
-            "id NOT IN (99999999999999999999)",
-            "(id IS NOT NULL) OR (null)",
-        ),
-        ("i = 99999999999999999999", "null"),
-        ("i <> 99999999999999999999", "(i IS NOT NULL) OR (null)"),
-    ];
-    for (sql, rendered) in cases {
+    for &(sql, rendered) in RENDERED_CONJUNCT_ROWS {
         assert_eq!(
             refused(sql),
             format!("Cannot convert Spark predicate to Iceberg expression: {rendered}"),
