@@ -11,7 +11,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
+from repark.errors import PySparkException, UnsupportedOperationException
 
 _ALLOW_CREATE_V3_KEY = "repark.sql.allowCreateFormatVersion3"
 _UPGRADE = "ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '3')"
@@ -127,13 +127,16 @@ def test_alter_downgrade_and_unsupported_versions_refuse(tmp_path: Path) -> None
         session.register_memory_catalog("ice", tmp_path)
         _seed_v2(session)
         session.sql(_UPGRADE).collect()
-        with pytest.raises(UnsupportedOperationException, match="cannot downgrade a v3 table"):
-            session.sql(
-                "ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '2')"
-            ).collect()
+        for target in ("2", "-1"):
+            with pytest.raises(
+                PySparkException,
+                match=f"Unsupported table change: Cannot downgrade v3 table to v{target}",
+            ):
+                session.sql(
+                    f"ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '{target}')"
+                ).collect()
         for value, needle in (
             ("4", "v1 through v3"),
-            ("-1", "v-1"),
             ("x", "not an Iceberg format version"),
             ("3.0", "not an Iceberg format version"),
         ):

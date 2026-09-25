@@ -257,6 +257,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refusal table pins full text and class (IllegalArgument, NotImplemented, the fork's
   `Cannot bind`), and nothing commits. A plain `INSERT` after `bucket(4, id)` stamps order 1
   and reads back in bucket order.
+  **Round 2 (2026-09-25):** the landed table adds `bucket(4L, id)`, `bucket(4l, id)` and
+  `truncate(s, 2L)`; `typed_width_literals_and_parse_shapes_answer_spark` pins `4S`, `4Y`,
+  `4BD`, `4.0`, `4D`, `4F`, `0L`, `-4L`, `3000000000L` and the ANTLR shapes (`bucket()`, `bucket(4,)`, `hours()`, `bucket(+4, id)`,
+  `bucket((4), id)`, `bucket(4, id)(x)`) with Spark's text. The insert pin is positive (bucket
+  order, order id 1), and `delete_after_a_repark_bucket_order_is_the_identity_only_residue` pins
+  R-U5-PR2B-IDENTITY-ONLY-DML's full text with nothing committed.
+  pins: ice-nested-evo-1/C-054, C-055
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
   `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the
   level-order struct ids (`s` 5, `s.a` 6, `s.b` 7, `last-column-id` 7), the kept `COMMENT`, the
@@ -298,6 +305,10 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   v3-2-create-v3-opt-in/C-008 (V3-10 negates that clause) and cites C-005 alone.
   pins: v3-10-upgrade-v2-to-v3/C-001, C-003, C-004, C-005
   pins: rp-8-repin-f21-f22/C-004
+  **WO U5 PR2b round 2 (2026-09-25):** the downgrade rows pin Spark's
+  `Execution error: Unsupported table change: Cannot downgrade vN table to vM` for 3→2 and for
+  `1`, `-1`, `0` on a v2 table.
+  pins: ice-nested-evo-1/C-057
 - `v3_legacy_delete.rs` — **V3-12:** the Spark-SQL-door cells for a v3 merge-on-read write over an
   upgraded table's legacy parquet position deletes. Seven merge cells (MERGE-DELETE and the append
   after it, UPDATE, subquery DELETE, two legacy deletes on one data file, an untouched sibling
@@ -1089,6 +1100,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   downgrade text for `CREATE OR REPLACE` v2 → v1 (Spark says `Cannot downgrade v2 table to v1`).
   The v1 refusal pins it replaced now read `4`: `create_table.rs` dropped its v1 block and
   `ctas.rs::ctas_format_version_two_consumed_others_rejected` rejects `'format-version' = 4`.
+  **Round 2 (2026-09-25):** `merge_on_read_row_level_writes_on_a_v1_table_refuse_like_spark` pins
+  Spark's `Deletes are supported in V2 and above` on DELETE, UPDATE and MERGE with nothing
+  committed. The stale `pins: v3-2-create-v3-opt-in/C-007` lines in `ctas.rs` and
+  `repark-sql/src/properties/tests.rs` are gone; this row and the D-CREATE-V1 registry row carry
+  the citation.
+  pins: ice-nested-evo-1/C-052, C-057
 - [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
   COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
   struct field, empty string, `CHANGE COLUMN`, upper-cased name, double-quoted literal, and a
@@ -2066,6 +2083,20 @@ above.
   IllegalArgumentException texts (tag forms, replace forms, a duplicate) and that nothing
   commits. A seeded table keeps the old path, and v1 tables refuse branch and tag DDL loud
   because the fork drops v1 refs.
+  **Round 2 (2026-09-25):** the v1 test pins the kernel text per kind (`BRANCH`/`TAG`) on the
+  empty and the seeded table, adding IF NOT EXISTS, CREATE OR REPLACE TAG, REPLACE TAG, both
+  AS OF VERSION forms and `REPLACE BRANCH main WITH SNAPSHOT RETENTION`, with the metadata file
+  count unchanged; a tag on the empty v1 table answers Spark's `main has no snapshot`, and a
+  plain `REPLACE BRANCH main` commits. `v1_ref_refusal` and `metadata_file_count` are shared
+  with `v1_ref_writes.rs`.
+  pins: ice-nested-evo-1/C-053, C-056
+- [v1_ref_writes.rs](v1_ref_writes.rs) — **WO U5 PR2b round 2 (2026-09-25):** the Spark-door
+  C-053 pins. A session WAP branch write on a seeded and on an empty format v1 table,
+  `INSERT`/`DELETE` into `t.branch_b1`, `CALL fast_forward` to a new branch and
+  `rewrite_data_files(branch => …)` each refuse with the `BRANCH` v1 text, with no metadata file,
+  snapshot or ref written. `set_current_snapshot` and `fast_forward('main', 'main')` keep
+  working. `wap_branch.rs::set_wap` is `pub(super)` for these pins.
+  pins: ice-nested-evo-1/C-053
 - `ref_ddl.rs` — **IPI-42 (2026-09-20):**
   `ref_guards_are_conditional_and_never_move_an_existing_ref` is the mutation-proof half the four
   recorded cells cannot be: it pins `b1` at the OLDER of two snapshots before the guarded

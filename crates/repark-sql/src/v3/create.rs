@@ -548,6 +548,30 @@ async fn format_version_one_creates_v1_and_deletes_copy_on_write() {
 }
 
 #[tokio::test]
+async fn ref_ddl_on_a_v1_table_refuses_before_the_ref_is_lost() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.v1r (id INT) WITH (format_version = 1)")
+        .await;
+    door.ok("INSERT INTO ice.sales.v1r VALUES (1)").await;
+    for (sql, kind) in [
+        ("ALTER TABLE ice.sales.v1r CREATE BRANCH audit", "BRANCH"),
+        ("ALTER TABLE ice.sales.v1r CREATE TAG t1", "TAG"),
+    ] {
+        let err = door.err(sql).await;
+        assert!(
+            err.ends_with(&format!(
+                "{kind} on the format v1 table sales.v1r is not supported: the Iceberg fork \
+                 writes v1 metadata without its refs, so the new ref would be lost"
+            )),
+            "{sql}: {err}"
+        );
+    }
+    let table = door.table("sales", "v1r").await;
+    assert!(table.metadata().snapshot_for_ref("audit").is_none());
+    assert!(table.metadata().snapshot_for_ref("t1").is_none());
+}
+
+#[tokio::test]
 async fn upgraded_v3_merge_delete_merges_a_legacy_parquet_position_delete_into_the_dv() {
     let door = door_with_session_v3_opt_in().await;
     door.ok(&format!(

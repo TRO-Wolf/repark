@@ -150,3 +150,57 @@ async fn create_format_version_refusals_match_spark() {
             .unwrap()
     );
 }
+
+#[tokio::test]
+async fn merge_on_read_row_level_writes_on_a_v1_table_refuse_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v1 (id BIGINT, data STRING) USING iceberg TBLPROPERTIES \
+         ('format-version'='1', 'write.delete.mode'='merge-on-read', \
+         'write.update.mode'='merge-on-read', 'write.merge.mode'='merge-on-read')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.v1 VALUES (1,'a'),(2,'b')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.src (id BIGINT, data STRING) USING iceberg",
+    )
+    .await;
+    run(&ctx, &catalogs, "INSERT INTO ice.sales.src VALUES (1,'z')").await;
+    let snapshots = load_sales_table(&catalogs, "v1")
+        .await
+        .metadata()
+        .snapshots()
+        .count();
+    for sql in [
+        "DELETE FROM ice.sales.v1 WHERE id = 1",
+        "UPDATE ice.sales.v1 SET data = 'x' WHERE id = 1",
+        "MERGE INTO ice.sales.v1 t USING ice.sales.src s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET data = s.data",
+    ] {
+        assert_illegal_argument(
+            &ctx,
+            &catalogs,
+            sql,
+            "Deletes are supported in V2 and above",
+        )
+        .await;
+    }
+    assert_eq!(
+        load_sales_table(&catalogs, "v1")
+            .await
+            .metadata()
+            .snapshots()
+            .count(),
+        snapshots
+    );
+}

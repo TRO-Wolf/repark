@@ -1,3 +1,5 @@
+> **Errata (2026-09-25, WO U5 PR2b):** C-007 ("`'1'` still refuses on both doors") is superseded. Since WO U5 PR2b, `'format-version'='1'` (Spark door) and `format_version = 1` (ANSI door) create a format v1 table on CREATE and CTAS; `0`, `4` and other unwritable versions still refuse. The live record is `task/ledgers/staging/ice-nested-evo-1-ledger.md` C-052 and the registry row D-CREATE-V1.
+
 # V3-2 — CREATE/CTAS format-version=3 behind an explicit session opt-in
 
 **Date:** 2026-08-24 · **Branch:** `feat/v3-2-create-v3-opt-in` · **Base:** `fb91233` (`origin/main`) ·

@@ -190,6 +190,9 @@ repark-core's error map.
   pins: ice-meta-delete-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007
 - `predicate_dml.rs` — **ICE-CATALOG-SESSION-1 S9 (2026-09-20):** the identity-collector
   scratch refs quote through the split-aware scratch quoter (982 → 983, under the default ceiling).
+  **WO U5 PR2b round 2 (2026-09-25):** merge-on-read DELETE/UPDATE on a v1 table raise Spark's
+  IllegalArgumentException `Deletes are supported in V2 and above` (MERGE: `merge/mod.rs`).
+  pins: ice-nested-evo-1/C-057
 - `predicate_dml.rs` — **ICE-OCC-SCOPED-1 (2026-09-17):** the identity DELETE / UPDATE builds a
   `CommitScope` from its isolation property and `conflict_filter::for_identity_dml` over its own
   `WHERE`, and hands it to the COW overwrite or the MoR row delta, so a concurrent commit that
@@ -891,6 +894,18 @@ repark-core's error map.
   `to_branch(name)`. The `engine.operation-id` snapshot property is what lets the fork's
   empty-commit guard pass, so no data file is needed. Retention is a second commit, because
   the fork checks a retention update against the base table, where the branch is still absent.
+  **WO U5 PR2b round 2 (2026-09-25):** `refuse_ref_write_on_format_v1` is the one kernel that
+  keeps a non-main ref out of format v1 metadata, which the fork writes without refs (fork unit
+  F-V1-REFS-1). It returns UnsupportedOperationException `<KIND> on the format v1 table
+  <ns>.<table> is not supported: the Iceberg fork writes v1 metadata without its refs, so the new
+  ref would be lost` for a branch or tag other than `main`, and for `main` with retention. The
+  ref-writing helpers (`create_snapshot_ref[_with_retention]`, `replace_snapshot_ref`,
+  `create_or_replace_snapshot_ref`, `create_branch_on_empty_table`) call it after they load the
+  table and now return DataFusion `Result`, so both doors inherit the refusal;
+  `testing_create_ref` keeps its `iceberg::Result` by folding the error back.
+  `commit_target::maybe_to_branch` takes the table and calls it for every RePark branch commit
+  (append, overwrite, partition overwrite, write options, MERGE).
+  pins: ice-nested-evo-1/C-053
 - `testing_support.rs` — `testing_create_ref` (wraps `create_snapshot_ref`) for fixtures only;
   product SQL routes via `snapshot_refs`.
 - `concurrency.rs` — `repark.write.max-concurrent-files` (default 4, ≥1 or loud): DataFusion

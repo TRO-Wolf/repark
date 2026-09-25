@@ -40,6 +40,10 @@ Source comments retain OCC, streaming, and cleanup invariants; implementation na
   `std::mem::take` instead of deep-cloned once per row-delta commit.
   pins: v3-9-mor-predicate-dml-dv/C-009
   pins: rp-5-fork-repin/C-004
+  **WO U5 PR2b round 2 (2026-09-25):** each `maybe_to_branch` call passes the table, so a MERGE
+  into a branch of a format v1 table refuses with the v1 ref text before it commits. `mod.rs`
+  answers merge-on-read MERGE on v1 with `Deletes are supported in V2 and above`.
+  pins: ice-nested-evo-1/C-053, C-057
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
   **ICE-OCC-SCOPED-1 (2026-09-17):** `MergeTarget` carries the MERGE's `conflict_filter`,
   computed once in `execute_merge` by `merge_conflict_filter`: the target-only conjuncts of the

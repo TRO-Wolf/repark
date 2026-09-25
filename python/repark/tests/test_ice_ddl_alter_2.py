@@ -741,10 +741,17 @@ def test_write_ordered_by_transforms_lands_the_order_spark_measured(
             id="bucket-zero",
         ),
         pytest.param(
-            "days(id)",
-            PySparkException,
-            "DataInvalid => Cannot bind: day cannot transform long values from 'id'",
-            id="days-on-long",
+            "bucket(4S, id)",
+            IllegalArgumentException,
+            "Cannot find width for transform: bucket(4, id)",
+            id="short-width",
+        ),
+        pytest.param(
+            "bucket()",
+            AnalysisException,
+            "Error during planning: \nno viable alternative at input ')'\n== SQL ==\n"
+            "ALTER TABLE sc.ns.wo WRITE ORDERED BY bucket()",
+            id="empty-arguments",
         ),
     ],
 )
@@ -839,3 +846,47 @@ def test_create_branch_main_and_seeded_branches_keep_their_answers(
         "b1": current,
         "t1": current,
     }
+
+
+def test_write_ordered_by_bind_refusal_keeps_the_fork_text_residue(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.wo (id BIGINT, ts TIMESTAMP) USING iceberg")
+    files = _metadata_files(tmp_path, "wo")
+    caught = _refusal(spark, "ALTER TABLE sc.ns.wo WRITE ORDERED BY days(id)")
+    assert type(caught) is PySparkException
+    assert str(caught) == "DataInvalid => Cannot bind: day cannot transform long values from 'id'"
+    assert _metadata_files(tmp_path, "wo") == files
+
+
+def test_write_ordered_by_a_long_width_literal_lands_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql("CREATE TABLE sc.ns.wo (id BIGINT, ts TIMESTAMP) USING iceberg")
+    spark.sql("ALTER TABLE sc.ns.wo WRITE ORDERED BY bucket(4L, id)")
+    assert _default_order(_metadata(tmp_path, "wo")) == [["bucket[4]", 1, "asc", "nulls-first"]]
+
+
+def test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql(
+        "CREATE TABLE sc.ns.w1 (id BIGINT) USING iceberg "
+        "TBLPROPERTIES ('format-version'='1', 'write.wap.enabled'='true')"
+    )
+    spark.sql("INSERT INTO sc.ns.w1 VALUES (1)")
+    files = _metadata_files(tmp_path, "w1")
+    spark.conf.set("spark.wap.branch", "w1")
+    try:
+        caught = _refusal(spark, "INSERT INTO sc.ns.w1 VALUES (2)")
+    finally:
+        spark.conf.unset("spark.wap.branch")
+    assert type(caught) is UnsupportedOperationException
+    assert str(caught) == (
+        "This feature is not implemented: BRANCH on the format v1 table ns.w1 is not supported: "
+        "the Iceberg fork writes v1 metadata without its refs, so the new ref would be lost"
+    )
+    assert _metadata_files(tmp_path, "w1") == files
+    refs = spark.sql("SELECT name FROM sc.ns.w1.refs ORDER BY name").collect()
+    assert [row[0] for row in refs] == ["main"]
+    assert spark.sql("SELECT id FROM sc.ns.w1").to_arrow().to_pylist() == [{"id": 1}]

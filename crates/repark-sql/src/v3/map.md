@@ -33,6 +33,11 @@ ANSI-door format-v3 test modules. `lib.rs` declares `#[cfg(test)] mod v3;`.
   downgrade / `'1'` / `'-1'` / `'4'` / `'x'` / `'3.0'` refusals; the `extra_properties` map
   spelling of the reserved key keeps steering to the curated `format_version`
   (pins: v3-10-upgrade-v2-to-v3/C-003, C-004).
+  **WO U5 PR2b round 2 (2026-09-25):** `ref_ddl_on_a_v1_table_refuses_before_the_ref_is_lost`
+  is the ANSI-door C-053 pin: `CREATE BRANCH audit` and `CREATE TAG t1` on a seeded v1 table
+  refuse with the kind's v1 text and leave no ref (red-first: the branch statement succeeded
+  with the kernel forced to `Ok`).
+  pins: ice-nested-evo-1/C-052, C-053
 - `cow.rs` — **V3-COW-1 (V3-7 MERGE lift):** adopted and created v3 UPDATE and MERGE
   keep `_row_id`; The module doc no longer carries a pins line; citations live here.
   sequential COW DELETE keeps the survivor id at next-row-id 6; **V3-8:** subquery-`WHERE`

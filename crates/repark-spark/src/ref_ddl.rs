@@ -663,7 +663,6 @@ pub(crate) async fn execute_ref_ddl(
             let loaded = handle.load_table(&ident).await.map_err(iceberg_err)?;
             let already_there = loaded.metadata().snapshot_for_ref(&name).is_some();
             let spark_ident = format!("{namespace}.{table}");
-            refuse_ref_on_format_v1(&loaded, &spark_ident)?;
             if as_of_version.is_none() && loaded.metadata().current_snapshot_id().is_none() {
                 let empty = EmptyTableRef {
                     kind,
@@ -713,7 +712,6 @@ pub(crate) async fn execute_ref_ddl(
             retention,
         } => {
             let loaded = handle.load_table(&ident).await.map_err(iceberg_err)?;
-            refuse_ref_on_format_v1(&loaded, &format!("{namespace}.{table}"))?;
             if as_of_version.is_none() && loaded.metadata().current_snapshot_id().is_none() {
                 return Err(main_has_no_snapshot(kind, &format!("{namespace}.{table}")));
             }
@@ -726,8 +724,7 @@ pub(crate) async fn execute_ref_ddl(
                 "REPLACE BRANCH|TAG",
             )?;
             replace_snapshot_ref(handle.as_ref(), &ident, kind, &name, snapshot_id, retention)
-                .await
-                .map_err(iceberg_err)?;
+                .await?;
         }
         RefOp::Drop {
             kind,
@@ -787,19 +784,7 @@ async fn create_ref_on_empty_table(
             empty.name
         )));
     }
-    create_branch_on_empty_table(handle, ident, empty.name, retention)
-        .await
-        .map_err(iceberg_err)
-}
-
-fn refuse_ref_on_format_v1(loaded: &iceberg::table::Table, spark_ident: &str) -> Result<()> {
-    if loaded.metadata().format_version() == iceberg::spec::FormatVersion::V1 {
-        return Err(DataFusionError::NotImplemented(format!(
-            "BRANCH|TAG on the format v1 table {spark_ident} is not supported: the Iceberg fork \
-             writes v1 metadata without its refs, so the new ref would be lost"
-        )));
-    }
-    Ok(())
+    create_branch_on_empty_table(handle, ident, empty.name, retention).await
 }
 
 fn main_has_no_snapshot(kind: SnapshotRefKind, spark_ident: &str) -> DataFusionError {
@@ -822,13 +807,9 @@ async fn execute_create_ref(
     or_replace: bool,
 ) -> Result<()> {
     if or_replace {
-        create_or_replace_snapshot_ref(handle, ident, kind, name, snapshot_id, retention)
-            .await
-            .map_err(iceberg_err)
+        create_or_replace_snapshot_ref(handle, ident, kind, name, snapshot_id, retention).await
     } else {
-        create_snapshot_ref_with_retention(handle, ident, kind, name, snapshot_id, retention)
-            .await
-            .map_err(iceberg_err)
+        create_snapshot_ref_with_retention(handle, ident, kind, name, snapshot_id, retention).await
     }
 }
 

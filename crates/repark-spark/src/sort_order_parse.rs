@@ -17,7 +17,7 @@ pub(crate) enum Sig {
     Comma,
     String(String),
     Minus,
-    Other,
+    Other(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,7 +57,7 @@ pub(crate) fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
                 Token::SingleQuotedString(text) | Token::DoubleQuotedString(text) => {
                     Some(Sig::String(text))
                 }
-                _ => Some(Sig::Other),
+                other => Some(Sig::Other(other.to_string())),
             })
             .collect(),
     )
@@ -109,7 +109,7 @@ pub(crate) fn render_sig_at(significant: &[Sig], index: usize) -> String {
         Some(Sig::Comma) => ",".into(),
         Some(Sig::String(text)) => format!("'{text}'"),
         Some(Sig::Minus) => "-".into(),
-        Some(Sig::Other) => "<other>".into(),
+        Some(Sig::Other(text)) => text.clone(),
         None => "<eof>".into(),
     }
 }

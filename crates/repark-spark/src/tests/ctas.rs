@@ -596,7 +596,6 @@ async fn ctas_format_version_two_consumed_others_rejected() {
         "expected the format-version reject, got: {err}"
     );
 
-    // pins: v3-2-create-v3-opt-in/C-004, C-007
     let err = execute(
         &ctx,
         &catalogs,

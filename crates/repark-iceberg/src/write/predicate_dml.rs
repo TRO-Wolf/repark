@@ -48,7 +48,6 @@ const WRITE_UPDATE_MODE: &str = "write.update.mode";
 const WRITE_UPDATE_ISOLATION_LEVEL: &str = "write.update.isolation-level";
 
 const MODE_MERGE_ON_READ: &str = "merge-on-read";
-const MODE_COPY_ON_WRITE: &str = "copy-on-write";
 
 /// A lowered identity-DELETE against one Iceberg target.
 #[derive(Debug, Clone)]
@@ -499,14 +498,14 @@ fn resolve_delete_isolation(table: &Table) -> Result<IsolationLevel> {
 }
 
 fn resolve_update_mode(table: &Table) -> Result<DeleteWriteMode> {
-    resolve_write_mode(table, WRITE_UPDATE_MODE, "UPDATE")
+    resolve_write_mode(table, WRITE_UPDATE_MODE)
 }
 
 fn resolve_update_isolation(table: &Table) -> Result<IsolationLevel> {
     resolve_isolation_property(table, WRITE_UPDATE_ISOLATION_LEVEL)
 }
 
-fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<DeleteWriteMode> {
+fn resolve_write_mode(table: &Table, property: &str) -> Result<DeleteWriteMode> {
     let mode = table
         .metadata()
         .properties()
@@ -514,13 +513,10 @@ fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<Delet
         .map(String::as_str);
     match mode {
         Some(value) if value.eq_ignore_ascii_case(MODE_MERGE_ON_READ) => {
-            let format_version = table.metadata().format_version();
-            if format_version < FormatVersion::V2 {
-                return Err(DataFusionError::NotImplemented(format!(
-                    "merge-on-read {verb} writes position deletes on V2 and deletion \
-                     vectors on V3 (this table is {format_version:?}; V1 has no delete files) — \
-                     use {property} = '{MODE_COPY_ON_WRITE}' instead"
-                )));
+            if table.metadata().format_version() < FormatVersion::V2 {
+                return Err(crate::write::illegal_argument::illegal_argument_error(
+                    "Deletes are supported in V2 and above".to_string(),
+                ));
             }
             // pins: mw-9-delete-granularity/C-004 — same class as resolve_merge_mode: refuse
             // unknown granularity BEFORE identity UPDATE/DELETE writes parquet.
@@ -551,7 +547,7 @@ fn resolve_isolation_property(table: &Table, property: &str) -> Result<Isolation
 }
 
 fn resolve_delete_mode(table: &Table) -> Result<DeleteWriteMode> {
-    resolve_write_mode(table, WRITE_DELETE_MODE, "DELETE")
+    resolve_write_mode(table, WRITE_DELETE_MODE)
 }
 
 fn is_column_expr(expr: &Expr) -> bool {

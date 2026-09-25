@@ -92,7 +92,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        1630,
+        1628,
         "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
         "Split plan preparation from COW and MOR execution modules.",
     ),
@@ -157,7 +157,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split parsing failures from procedure execution scenarios.",
     ),
     "crates/repark-spark/src/tests/ctas.rs": (
-        1357,
+        1356,
         "CTAS behavior and property scenarios share one test module.",
         "Split format and property cases from query-shape cases.",
     ),

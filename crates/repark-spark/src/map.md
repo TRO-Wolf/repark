@@ -38,6 +38,9 @@ pins: rp-4-fork-repin/C-005, C-006
   (`spark_door_case_insensitive`, Spark's `spark.sql.caseSensitive=false` default), which is the
   flag Java's `SparkTable` reads. A false answer falls through unchanged.
   pins: ice-meta-delete-1/C-001, C-006
+  **WO U5 PR2b round 2 (2026-09-25):** `execute_in_session` asks
+  `alter_write_order::verbatim_write_order_sql` first and keeps an `ALTER TABLE … WRITE`
+  statement verbatim; every other statement still goes through `spark_literals::canonicalize_verbatim`.
 - [view_ddl/](view_ddl/map.md) — **ICE-VIEWS-1 (2026-09-20):** view grammar,
   execution, and the wrapper-based read path (`parse` / `execute` / `read`).
   **PR2 (2026-09-22, V-DESCRIBE):** `describe.rs` answers DESCRIBE on a view
@@ -460,6 +463,11 @@ pins: rp-4-fork-repin/C-005, C-006
   set and no explicit branch, a plain INSERT carrying only session snapshot properties
   stages a snapshot stamped `wap.id` instead of committing on main.
   pins: ice-wap-branch-1/C-002, C-004, C-005, C-012
+  **WO U5 PR2b round 2 (2026-09-25):** `commit_write_on_branch` calls
+  `refuse_ref_write_on_format_v1` right after it loads the table, so a WAP branch write, an
+  `INSERT`/`DELETE` into `t.branch_x` and the fork-provider commit refuse on a format v1 table
+  before any ref or data is written.
+  pins: ice-nested-evo-1/C-053
 - `wap.rs` — **IPI-05 (2026-09-21):** `wap_id_for_table` is the read half for the id, the twin of
   `wap_branch_for_table`: it answers the conf's `spark.wap.id` only for a `write.wap.enabled=true`
   table and refuses both keys together first, and `WAP_ID_SNAPSHOT_PROPERTY` (`wap.id`) is the one
@@ -497,8 +505,11 @@ pins: rp-4-fork-repin/C-005, C-006
   empty append through `create_branch_on_empty_table`, an `IF NOT EXISTS` on an existing branch
   is a no-op, and a tag, a replace of an existing branch, bare `REPLACE` and a duplicate raise
   Spark's IllegalArgumentException texts (`main_has_no_snapshot`, `Ref <name> already exists`).
-  `refuse_ref_on_format_v1` refuses create and replace on a v1 table, because the fork writes v1
-  metadata without refs and the new ref would be lost on reload. Its 14 in-module tests are file-backed in
+  Round 2 (2026-09-25): the door-only v1 guard is gone; the ref helpers call the repark-iceberg
+  kernel `refuse_ref_write_on_format_v1` (C-053), so a v1 refusal names its kind (`BRANCH`/`TAG`)
+  and a tag on an empty v1 table answers Spark's `main has no snapshot` first.
+  pins: ice-nested-evo-1/C-053, C-056
+  Its 14 in-module tests are file-backed in
   [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
   `parse_if_not_exists` / `parse_if_exists` take a token index and answer `(matched, next_index)`,
   so `finish_create`, `finish_drop`, `parse_create_with_in` and `parse_drop_with_in` all consume
@@ -1026,6 +1037,10 @@ pins: rp-4-fork-repin/C-005, C-006
   provider reloads table metadata per plan. `tests/v3_upgrade_calls.rs` is the guard — it pins
   the call counts AND reads the v3 lineage columns through the same session afterwards.
   pins: v3-10-upgrade-v2-to-v3/C-003, C-004
+  **WO U5 PR2b round 2 (2026-09-25):** an integer target below the current version answers
+  Spark's `Unsupported table change: Cannot downgrade vN table to vM` as an Execution error,
+  before the shared resolver; the ANSI door keeps the shared text.
+  pins: ice-nested-evo-1/C-057
 - `alter.rs` — ALTER TABLE handlers (SET/UNSET TBLPROPERTIES, RENAME TO, schema evolution I6,
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;
   9 in-module tests. **Q10:** ADD/ALTER COLUMN bare `TIMESTAMP` follows the session
@@ -1246,6 +1261,15 @@ pins: rp-4-fork-repin/C-005, C-006
   type and answers Java's `Cannot bind: …` text. Every other segment keeps
   `parse_order_segment`, so the identity forms are unchanged. Pins:
   [tests/alter_write_order_transform.rs](tests/alter_write_order_transform.rs).
+  **WO U5 PR2b round 2 (2026-09-25):** transform arguments render by value, as Spark's
+  `describe` does, and a digit-leading word is a typed literal: `L`/`l` is a long width
+  (`bucket(4L, id)` lands), `S`/`Y`/`BD` render as integers without a width, and `D`/`F` render
+  as doubles (`4.0`). Spark's rule for a long width is `0 < w < Integer.MAX_VALUE`; for an int
+  width it is `w > 0`. An empty argument, an argument opening with a token that is not a name
+  or a literal (`+`, `(`), and `(` after a term raise AnalysisException with Spark's ANTLR text
+  and `== SQL ==` block. `verbatim_write_order_sql` lets `router.rs` skip the literal
+  canonicalizer for these statements, so `4L` reaches the parser as typed.
+  pins: ice-nested-evo-1/C-054, C-055
 - `namespace_ddl/` — the table-lifecycle work `namespace_ddl.rs` delegates; see
   [namespace_ddl/map.md](namespace_ddl/map.md). `purge.rs` holds the `DROP TABLE … PURGE`
   reachable-file sweep and the `gc.enabled` gate (**IPI-21**, 2026-09-20); `execute_drop_table`
@@ -1284,6 +1308,8 @@ pins: rp-4-fork-repin/C-005, C-006
   leading `-` so a negative width renders as Spark does.
   pins: ice-rdf-sort-parse-1/C-001, C-002, C-003,
   tests/alter_write_order_transform.rs::write_ordered_by_transform_refusals_match_spark_and_commit_nothing
+  **WO U5 PR2b round 2 (2026-09-25):** `Sig::Other` carries its token's text, so a refusal
+  renders the token (`+`) instead of `<other>`.
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. `IF NOT EXISTS` checks location consistently:
   matching/no-location requests stay idempotent; contradictory `LOCATION` fails loud naming both

@@ -231,11 +231,9 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
 
     let format_version = table.metadata().format_version();
     if format_version < FormatVersion::V2 {
-        return Err(DataFusionError::NotImplemented(format!(
-            "merge-on-read MERGE INTO writes position deletes on V2 and deletion vectors \
-             on V3 (this table is {format_version:?}; V1 has no delete files) — use \
-             write.merge.mode = 'copy-on-write' instead"
-        )));
+        return Err(crate::write::illegal_argument::illegal_argument_error(
+            "Deletes are supported in V2 and above".to_string(),
+        ));
     }
     crate::write::position_delete::parse_delete_granularity(
         table

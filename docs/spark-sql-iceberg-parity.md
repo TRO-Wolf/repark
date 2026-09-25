@@ -8167,13 +8167,33 @@ the pin rather than obeying it.
   nulls-first], [day ts desc nulls-first]` with `write.distribution-mode = range`, as Spark
   does. The argument order is free (`bucket(id, 4)`, `truncate(s, 2)`), the plural, singular,
   `date` and `date_hour` names map to year/month/day/hour, `identity(id)` is identity, DESC
-  defaults to nulls-last and duplicates stay. The refusals answer Spark's measured class and
-  text (`Transform is not supported: void(id)`, `Term must be unbound`, `Unsupported width for
-  transform: bucket(0, id)`, `Cannot convert transform with more than one column reference: …`,
-  `Cannot find width for transform: …`, and the fork's `Cannot bind: day cannot transform long
-  values from 'id'`) and commit nothing. Residue: an unknown column in a term keeps RePark's
-  `Cannot find field nope in table schema`, where Spark says `Cannot find field 'nope' in
-  struct: struct<…>`.
+  defaults to nulls-last and duplicates stay. A long width literal (`bucket(4L, id)`,
+  `truncate(s, 2L)`) lands as Spark lands it (round 2, 2026-09-25); the statement skips the
+  literal canonicalizer, so no parser-internal text reaches a message. RePark's own refusals
+  answer Spark's measured class and text and commit nothing: UnsupportedOperationException
+  `Transform is not supported: void(id)`; IllegalArgumentException `Term must be unbound`,
+  `Unsupported width for transform: bucket(0, id)` (also `0L`, `-4L`, `3000000000L`), `Cannot
+  convert transform with more than one column reference: …` and `Cannot find width for
+  transform: …` (with the literal rendered by value, as Spark does: `4S`, `4Y`, `4BD` render
+  `4`; `4D`, `4F`, `4.0` render `4.0`). The ANTLR shapes answer AnalysisException with Spark's
+  text after RePark's `Error during planning: ` prefix: `bucket()`, `bucket(4,)` and `hours()`
+  give `\nno viable alternative at input ')'\n== SQL ==\n<statement>`, `bucket(+4, id)` gives
+  `… at input '+'`, and `bucket(4, id)(x)` gives `mismatched input '(' expecting {<EOF>, ',',
+  'ASC', 'DESC', 'DISTRIBUTED', 'LOCALLY', 'NULLS', 'ORDERED', 'UNORDERED'}`. Residues (dated
+  2026-09-25), all loud: the bind refusal is the fork's text and class. RePark raises
+  PySparkException `DataInvalid => Cannot bind: day cannot transform long values from 'id'`,
+  where Spark raises ValidationException `Cannot bind: day cannot transform long values from
+  'id'`. For a struct source the fork renders `struct<intstring>` where Spark prints
+  `struct<5: a: optional int, 6: b: optional string>`. An unknown column in a term keeps
+  RePark's `Cannot find field nope in table schema`, where Spark says `Cannot find field 'nope'
+  in struct: struct<…>` (also `id.x` and `sc.ns.wo.id`). Other malformed shapes keep RePark's
+  analysis texts (`bucket(`, `bucket(4, id))`, `… DESC DESC`, `… NULLS`, `… LOCALLY`). After a
+  RePark-set transform order, UPDATE, DELETE, MERGE INTO and INSERT OVERWRITE raise
+  UnsupportedOperationException `This feature is not implemented: sorting by the table's
+  default sort order uses transform `bucket[4]` on source id 1, only identity sort fields are
+  supported`, where Spark runs all four and stamps `sort_order_id` 1. INSERT INTO,
+  `writeTo().append()` and `rewrite_data_files` succeed. Pin:
+  `alter_write_order_transform.rs::delete_after_a_repark_bucket_order_is_the_identity_only_residue`.
 - **Apache Spark** — sets the table's write order. *(oracle: live PySpark 4.1.2 +
   Iceberg 1.11.0, 2026-09-03; the five-form matrix re-measured 2026-09-06.)*
 - **Pin** — `python/repark/tests/test_v3_statement_coverage.py::test_v3_statement_row_reproduces_the_measured_repark_answer[alter-write-ordered-by]`
@@ -8252,13 +8272,34 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   IllegalArgumentException that RePark does not define; `' 1 '` is trimmed where Spark raises
   `For input string: " 1 "`; `CREATE OR REPLACE` v2 → v1 answers the fork's `Cannot downgrade
   FormatVersion from v2 to v1` where Spark says `Cannot downgrade v2 table to v1`; the fork
-  omits an empty `snapshots` array and never writes `refs` into v1 metadata (Java writes both).
-  Branch and tag DDL on a v1 table refuses loud for that last reason (D-REF-BRANCH-ON-EMPTY).
+  omits an empty `snapshots` array and never writes `refs` into v1 metadata (Java writes both);
+  after a v1 → v2 upgrade the fork writes `sequence-number 0` on each legacy snapshot, where Java
+  omits the key. Because the fork drops v1 refs (fork unit F-V1-REFS-1), every path that would
+  write a non-main ref into v1 metadata refuses before it writes, through one repark-iceberg
+  kernel (`refuse_ref_write_on_format_v1`): UnsupportedOperationException `This feature is not
+  implemented: BRANCH on the format v1 table <ns>.<table> is not supported: the Iceberg fork
+  writes v1 metadata without its refs, so the new ref would be lost` (`TAG …` for a tag). It
+  covers branch and tag DDL on both doors (including IF NOT EXISTS, OR REPLACE, REPLACE and
+  AS OF VERSION, and `main` with retention), a session WAP branch write, `INSERT`/`DELETE`
+  into `t.branch_x`, every RePark branch commit (`writeTo().option('branch')`, MERGE, overwrite),
+  `CALL fast_forward` to a new branch and `rewrite_data_files` on a branch. Commits that move
+  only `main` (`set_current_snapshot`, `cherrypick_snapshot`, `REPLACE BRANCH main`) keep
+  working. Round 2 (2026-09-25): merge-on-read DELETE, UPDATE and MERGE on a v1 table raise
+  IllegalArgumentException `Deletes are supported in V2 and above`, as Spark does, and the
+  Spark door's `ALTER TABLE <v2> SET TBLPROPERTIES ('format-version'='1')` answers Spark's
+  `Unsupported table change: Cannot downgrade v2 table to v1` (RePark renders it as
+  PySparkException `datafusion engine error: Execution error: …`, the PR2a precedent for
+  Spark's SparkException).
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-24
   (`target/probe-u5-pr2b/spark.out` in the lane clone; scoreboard cell `D-CREATE-V1`).
 - **Pin** — `crates/repark-spark/src/tests/create_format_version_one.rs`,
   `crates/repark-sql/src/v3/create.rs::format_version_one_creates_v1_and_deletes_copy_on_write`,
-  `python/repark/tests/test_ice_ddl_alter_2.py`.
+  `python/repark/tests/test_ice_ddl_alter_2.py`; the v1 ref-write refusal:
+  `crates/repark-iceberg/src/tests/v1_ref_writes.rs`, `crates/repark-spark/src/tests/v1_ref_writes.rs`,
+  `ref_branch_on_empty.rs::branch_and_tag_on_a_v1_table_refuse_until_the_fork_keeps_v1_refs`,
+  `crates/repark-sql/src/v3/create.rs::ref_ddl_on_a_v1_table_refuses_before_the_ref_is_lost`,
+  `test_ice_ddl_alter_2.py::test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref`;
+  the downgrade: `crates/repark-spark/src/tests/v3_upgrade.rs`, `python/repark/tests/test_v3_upgrade.py`.
 
 ### D-REF-BRANCH-ON-EMPTY — `CREATE BRANCH` on a snapshot-less table refused — **FIXED 2026-09-24 (WO U5 PR2b)**
 
@@ -8271,14 +8312,25 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   Spark's IllegalArgumentException texts: every tag form, `Cannot complete create or replace
   tag operation on ns.t, main has no snapshot`; `CREATE OR REPLACE` of an existing branch and
   bare `REPLACE BRANCH`, `Cannot complete replace branch operation on ns.t, main has no
-  snapshot`; a duplicate, `Ref b1 already exists`. Residues: retention is a second commit (the
-  fork checks a retention update against the base table), where Spark commits one transaction;
-  branch and tag DDL on a format v1 table refuses loud because the fork drops v1 refs; the ANSI
-  door keeps its `needs AS OF VERSION` refusal.
+  snapshot`; a duplicate, `Ref b1 already exists`. Residues: retention is a second commit.
+  The fork's `ManageSnapshots` emits a `RefSnapshotIdMatch` requirement for the branch that the
+  empty append created in the same transaction, and the catalog checks it against the base
+  table, where the branch is absent. The fork change is to drop a later action's requirement on
+  a ref that an earlier action of the same transaction set. What the scoreboard would see
+  (measured 2026-09-25, `target/probe-u5-pr2b-r1fix/repark_rt.py`, `spark_rt.out`): one extra
+  metadata-log entry per statement that carries retention. That is 2 against Spark's 1 after
+  `CREATE BRANCH b2 WITH SNAPSHOT RETENTION 3 SNAPSHOTS`, and 6 against 3 after three retention
+  forms; the snapshot counts are equal. The two commits are not atomic: if the second fails,
+  the branch stays without retention and the statement raises. No cell compares the metadata-log
+  (the cell sets `snaps=False`). The empty append also carries RePark's `engine.operation-id`
+  summary key, where Spark writes `app-id`/`app-name`/`engine-name`/`engine-version`/
+  `iceberg-version`; no cell compares those keys. Branch and tag DDL on a format v1 table
+  refuses with the named v1 text (D-CREATE-V1). The ANSI door keeps its `needs AS OF VERSION`
+  refusal.
 - **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-24
   (`target/probe-u5-pr2b/spark.out`, `spark2.out`; scoreboard cell `D-REF-BRANCH-ON-EMPTY`).
 - **Pin** — `crates/repark-spark/src/tests/ref_branch_on_empty.rs`,
-  `python/repark/tests/test_ice_ddl_alter_2.py`.
+  `crates/repark-spark/src/tests/v1_ref_writes.rs`, `python/repark/tests/test_ice_ddl_alter_2.py`.
 
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
@@ -11210,8 +11262,10 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **WRITE-ORDER-TRANSFORM-1** — **DDL half FIXED 2026-09-24 (WO U5 PR2b):** the ALTER lands
   transform terms through the fork's `ReplaceSortOrderAction::sort_by` (RP-46); see V3-COV-5.
   A plain `INSERT INTO` then sorts by the transformed value and stamps the order id
-  (`crates/repark-spark/src/tests/alter_write_order_transform.rs`); the RePark-owned write
-  paths keep the loud refusal below. The text that follows is the 2026-09-06 record.
+  (`crates/repark-spark/src/tests/alter_write_order_transform.rs`). The RePark-owned write
+  paths keep the loud refusal below: UPDATE, DELETE, MERGE INTO and INSERT OVERWRITE on a
+  RePark-set transform order raise it where Spark runs them and stamps `sort_order_id` 1
+  (residue, dated 2026-09-25; DELETE pinned). The text that follows is the 2026-09-06 record.
   Surfaced 2026-09-06 (WRITE-ORDER-DIST-1 round 2). Spark
   accepts transform sort fields: `WRITE ORDERED BY (bucket(4, id))` and `(days(ts))` land
   order 1 (`bucket[4]` on source id 1 / `day` on source id 4, `asc NULLS FIRST`), default 1,

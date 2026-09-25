@@ -331,6 +331,11 @@ There is no `$` pre-parse bypass; stock parsing handles metadata references.
   a trailing token that is not a duration stays trailing and `reject_trailing` refuses it.
   Tests: [ref_ddl/map.md](ref_ddl/map.md).
   pins: ref-branch-tag-wap/C-003
+  **WO U5 PR2b round 2 (2026-09-25):** the ref helpers now return DataFusion `Result` and
+  refuse a non-main ref on a format v1 table (repark-iceberg `refuse_ref_write_on_format_v1`), so
+  `CREATE BRANCH`/`CREATE TAG` on a v1 table refuse here too; the `.map_err(iceberg_err)` fold
+  is gone.
+  pins: ice-nested-evo-1/C-053
 - `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C). Pins: `truncate_tests.rs`
   (wipe summary keys, `INVALID_PARTITION_OPERATION` class token, IF EXISTS parse refuse).
   **IPI-51 PR4 (2026-09-20):** the PARTITION arm renders

@@ -44,7 +44,7 @@ fn distribution_mode(table: &iceberg::table::Table) -> Option<String> {
 
 #[tokio::test]
 async fn write_ordered_by_transforms_lands_the_order_spark_measured() {
-    let cases: [(&str, &[&str]); 17] = [
+    let cases: [(&str, &[&str]); 20] = [
         (
             "bucket(4, id), days(ts) DESC NULLS FIRST",
             &["bucket[4] id asc nulls-first", "day ts desc nulls-first"],
@@ -105,6 +105,9 @@ async fn write_ordered_by_transforms_lands_the_order_spark_measured() {
             "truncate(2, id), days(TS)",
             &["truncate[2] id asc nulls-first", "day ts asc nulls-first"],
         ),
+        ("bucket(4L, id)", &["bucket[4] id asc nulls-first"]),
+        ("bucket(4l, id)", &["bucket[4] id asc nulls-first"]),
+        ("truncate(s, 2L)", &["truncate[2] s asc nulls-first"]),
     ];
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = transform_door(&wh).await;
@@ -306,4 +309,120 @@ async fn insert_after_a_bucket_order_sorts_by_the_bucket() {
         .map(|id| [0, 0, 0, 3, 2, 3][usize::try_from(id).unwrap()])
         .collect();
     assert_eq!(buckets, [0, 0, 2, 3, 3]);
+}
+
+#[tokio::test]
+async fn delete_after_a_repark_bucket_order_is_the_identity_only_residue() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.wo (id BIGINT, s STRING) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.wo VALUES (1,'a'),(2,'b')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.wo WRITE ORDERED BY bucket(4, id)",
+    )
+    .await;
+    let snapshots = load_sales_table(&catalogs, "wo")
+        .await
+        .metadata()
+        .snapshots()
+        .count();
+    let mapped = refusal(&ctx, &catalogs, "DELETE FROM ice.sales.wo WHERE id = 1").await;
+    assert!(
+        matches!(&mapped, repark_common::Error::NotImplemented(message)
+            if message == "This feature is not implemented: sorting by the table's default sort \
+                order uses transform `bucket[4]` on source id 1, only identity sort fields are \
+                supported"),
+        "got {mapped:?}"
+    );
+    let table = load_sales_table(&catalogs, "wo").await;
+    assert_eq!(table.metadata().snapshots().count(), snapshots);
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.wo").await, 2);
+}
+
+#[tokio::test]
+async fn typed_width_literals_and_parse_shapes_answer_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = transform_door(&wh).await;
+    let sql = |spec: &str| format!("ALTER TABLE ice.sales.wo WRITE ORDERED BY {spec}");
+    for (spec, expected) in [
+        (
+            "bucket(4S, id)",
+            "Cannot find width for transform: bucket(4, id)",
+        ),
+        (
+            "bucket(4Y, id)",
+            "Cannot find width for transform: bucket(4, id)",
+        ),
+        (
+            "bucket(4BD, id)",
+            "Cannot find width for transform: bucket(4, id)",
+        ),
+        (
+            "bucket(4.0, id)",
+            "Cannot find width for transform: bucket(4.0, id)",
+        ),
+        (
+            "bucket(4D, id)",
+            "Cannot find width for transform: bucket(4.0, id)",
+        ),
+        (
+            "bucket(4F, id)",
+            "Cannot find width for transform: bucket(4.0, id)",
+        ),
+        (
+            "bucket(0L, id)",
+            "Unsupported width for transform: bucket(0, id)",
+        ),
+        (
+            "bucket(-4L, id)",
+            "Unsupported width for transform: bucket(-4, id)",
+        ),
+        (
+            "bucket(3000000000L, id)",
+            "Unsupported width for transform: bucket(3000000000, id)",
+        ),
+    ] {
+        let mapped = refusal(&ctx, &catalogs, &sql(spec)).await;
+        assert!(
+            matches!(&mapped, repark_common::Error::IllegalArgument(message) if message == expected),
+            "{spec}: got {mapped:?}"
+        );
+    }
+    for (spec, detail) in [
+        ("bucket()", "no viable alternative at input ')'"),
+        ("bucket(4,)", "no viable alternative at input ')'"),
+        ("hours()", "no viable alternative at input ')'"),
+        ("bucket(+4, id)", "no viable alternative at input '+'"),
+        ("bucket((4), id)", "no viable alternative at input '('"),
+        (
+            "bucket(4, id)(x)",
+            "mismatched input '(' expecting {<EOF>, ',', 'ASC', 'DESC', 'DISTRIBUTED', \
+             'LOCALLY', 'NULLS', 'ORDERED', 'UNORDERED'}",
+        ),
+    ] {
+        let mapped = refusal(&ctx, &catalogs, &sql(spec)).await;
+        let expected = format!(
+            "Error during planning: \n{detail}\n== SQL ==\n{}",
+            sql(spec)
+        );
+        assert!(
+            matches!(&mapped, repark_common::Error::Analysis(message) if message == &expected),
+            "{spec}: got {mapped:?}"
+        );
+    }
+    let table = load_sales_table(&catalogs, "wo").await;
+    assert_eq!(table.metadata().sort_orders_iter().len(), 1);
+    assert_eq!(table.metadata().default_sort_order_id(), 0);
 }

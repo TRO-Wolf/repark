@@ -118,6 +118,7 @@ mod truncate;
 mod unset_tblproperties;
 mod update_cast;
 mod use_ddl;
+mod v1_ref_writes;
 mod v3_cow;
 mod v3_cow_lift;
 mod v3_dml_scan;

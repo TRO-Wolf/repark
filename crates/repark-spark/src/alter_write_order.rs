@@ -6,8 +6,7 @@ use repark_core::{CatalogRegistry, illegal_argument_error};
 
 use crate::sort_order_parse::{
     OrderParseError, Sig, collect_name_parts, is_period_at, order_list_segments,
-    parse_order_segment, render_sig_at, split_sig_comma_segments, tokenize_significant, word_at,
-    word_eq,
+    parse_order_segment, render_sig_at, tokenize_significant, word_at, word_eq,
 };
 use crate::{catalog_handle, iceberg_err, reregister};
 use repark_iceberg::write::sort_order::WriteSortField;
@@ -21,9 +20,17 @@ pub(crate) struct WriteOrderDdl {
 
 enum TermArgument {
     Column(String),
-    Integer(i64),
+    Integer { value: i64, long: bool },
     Constant,
 }
+
+struct ParsedArgument {
+    argument: TermArgument,
+    rendered: String,
+}
+
+const AFTER_TERM_EXPECTING: &str = "{<EOF>, ',', 'ASC', 'DESC', 'DISTRIBUTED', 'LOCALLY', \
+                                    'NULLS', 'ORDERED', 'UNORDERED'}";
 
 fn alter_order_error(error: OrderParseError) -> DataFusionError {
     match error {
@@ -55,6 +62,15 @@ fn alter_order_error(error: OrderParseError) -> DataFusionError {
     }
 }
 
+pub(crate) fn verbatim_write_order_sql(sql: &str) -> Option<std::borrow::Cow<'_, str>> {
+    let mentions_write = sql
+        .as_bytes()
+        .windows(5)
+        .any(|window| window.eq_ignore_ascii_case(b"WRITE"));
+    (mentions_write && try_parse_write_order_ddl(sql).is_some())
+        .then_some(std::borrow::Cow::Borrowed(sql))
+}
+
 pub(crate) fn try_parse_write_order_ddl(sql: &str) -> Option<Result<WriteOrderDdl>> {
     let significant = tokenize_significant(sql)?;
     if significant.len() < 4 {
@@ -74,7 +90,12 @@ pub(crate) fn try_parse_write_order_ddl(sql: &str) -> Option<Result<WriteOrderDd
     if !word_eq(&significant, index, "WRITE") {
         return None;
     }
-    Some(parse_write_clause(&significant, index + 1, table_parts))
+    Some(parse_write_clause(
+        &significant,
+        index + 1,
+        table_parts,
+        sql,
+    ))
 }
 
 pub(crate) async fn execute_write_order_ddl(
@@ -118,6 +139,7 @@ fn parse_write_clause(
     significant: &[Sig],
     start: usize,
     table_parts: Vec<String>,
+    sql: &str,
 ) -> Result<WriteOrderDdl> {
     if word_eq(significant, start, "UNORDERED") {
         end_of_clause(significant, start + 1)?;
@@ -128,7 +150,7 @@ fn parse_write_clause(
         });
     }
     if word_eq(significant, start, "DISTRIBUTED") {
-        return parse_distributed(significant, start + 1, table_parts);
+        return parse_distributed(significant, start + 1, table_parts, sql);
     }
     let (ordered_start, distribution_mode) = if word_eq(significant, start, "LOCALLY") {
         (start + 1, None)
@@ -144,7 +166,7 @@ fn parse_write_clause(
             render_sig_at(significant, start)
         )));
     }
-    let (fields, next) = parse_write_order_list(significant, ordered_start + 2)?;
+    let (fields, next) = parse_write_order_list(significant, ordered_start + 2, sql)?;
     end_of_clause(significant, next)?;
     Ok(WriteOrderDdl {
         table_parts,
@@ -157,6 +179,7 @@ fn parse_distributed(
     significant: &[Sig],
     start: usize,
     table_parts: Vec<String>,
+    sql: &str,
 ) -> Result<WriteOrderDdl> {
     if !word_eq(significant, start, "BY") {
         return Err(DataFusionError::Plan(format!(
@@ -193,7 +216,7 @@ fn parse_distributed(
             render_sig_at(significant, next)
         )));
     }
-    let (fields, after) = parse_write_order_list(significant, next + 2)?;
+    let (fields, after) = parse_write_order_list(significant, next + 2, sql)?;
     end_of_clause(significant, after)?;
     Ok(WriteOrderDdl {
         table_parts,
@@ -215,16 +238,17 @@ fn end_of_clause(significant: &[Sig], next: usize) -> Result<()> {
 fn parse_write_order_list(
     significant: &[Sig],
     start: usize,
+    sql: &str,
 ) -> Result<(Vec<WriteSortField>, usize)> {
     let (segments, next) = order_list_segments(significant, start).map_err(alter_order_error)?;
     let fields = segments
         .into_iter()
-        .map(parse_write_order_term)
+        .map(|segment| parse_write_order_term(segment, sql))
         .collect::<Result<Vec<_>>>()?;
     Ok((fields, next))
 }
 
-fn parse_write_order_term(segment: &[Sig]) -> Result<WriteSortField> {
+fn parse_write_order_term(segment: &[Sig], sql: &str) -> Result<WriteSortField> {
     let (Some(Sig::Word(function)), Some(Sig::LParen)) = (segment.first(), segment.get(1)) else {
         let field = parse_order_segment(segment).map_err(alter_order_error)?;
         return Ok(WriteSortField {
@@ -235,13 +259,26 @@ fn parse_write_order_term(segment: &[Sig]) -> Result<WriteSortField> {
         });
     };
     let close = transform_close(segment)?;
-    let arguments = split_sig_comma_segments(&segment[2..close]);
-    let described = describe_term(function, &arguments)?;
-    let parsed = arguments
-        .iter()
-        .map(|argument| parse_term_argument(argument, &described))
+    if matches!(segment.get(close + 1), Some(Sig::LParen)) {
+        return Err(extension_parse_error(
+            &format!("mismatched input '(' expecting {AFTER_TERM_EXPECTING}"),
+            sql,
+        ));
+    }
+    let parsed = term_arguments(&segment[2..=close], sql)?
+        .into_iter()
+        .map(|argument| parse_term_argument(argument, function, &segment[..=close], sql))
         .collect::<Result<Vec<_>>>()?;
-    let (name, transform) = resolve_term(function, &parsed, &described)?;
+    let described = format!(
+        "{function}({})",
+        parsed
+            .iter()
+            .map(|argument| argument.rendered.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    let arguments: Vec<TermArgument> = parsed.into_iter().map(|parsed| parsed.argument).collect();
+    let (name, transform) = resolve_term(function, &arguments, &described)?;
     let mut suffix = vec![Sig::Word(described)];
     suffix.extend_from_slice(&segment[close + 1..]);
     let order = parse_order_segment(&suffix).map_err(alter_order_error)?;
@@ -270,44 +307,130 @@ fn transform_close(segment: &[Sig]) -> Result<usize> {
     Err(alter_order_error(OrderParseError::Unterminated))
 }
 
-fn describe_term(function: &str, arguments: &[&[Sig]]) -> Result<String> {
-    let mut rendered = Vec::with_capacity(arguments.len());
-    for argument in arguments {
-        let text = (0..argument.len())
-            .map(|index| render_sig_at(argument, index))
-            .collect::<String>();
-        if text.is_empty() {
-            return Err(DataFusionError::Plan(format!(
-                "ALTER TABLE WRITE ORDERED BY transform `{function}(…)` has an empty argument"
-            )));
+fn extension_parse_error(detail: &str, sql: &str) -> DataFusionError {
+    DataFusionError::Plan(format!("\n{detail}\n== SQL ==\n{sql}"))
+}
+
+fn no_viable_alternative(token: &str, sql: &str) -> DataFusionError {
+    extension_parse_error(&format!("no viable alternative at input '{token}'"), sql)
+}
+
+fn term_arguments<'a>(inner_and_close: &'a [Sig], sql: &str) -> Result<Vec<&'a [Sig]>> {
+    let mut arguments = Vec::new();
+    let mut depth = 0_i32;
+    let mut start = 0usize;
+    let last = inner_and_close.len() - 1;
+    for (index, token) in inner_and_close.iter().enumerate() {
+        let ends_argument = index == last || (depth == 0 && matches!(token, Sig::Comma));
+        if ends_argument {
+            if start == index {
+                return Err(no_viable_alternative(
+                    &render_sig_at(inner_and_close, index),
+                    sql,
+                ));
+            }
+            arguments.push(&inner_and_close[start..index]);
+            start = index + 1;
+            continue;
         }
-        rendered.push(text);
+        match token {
+            Sig::LParen => depth += 1,
+            Sig::RParen => depth -= 1,
+            _ => {}
+        }
     }
-    Ok(format!("{function}({})", rendered.join(", ")))
+    Ok(arguments)
 }
 
-fn parse_term_argument(argument: &[Sig], described: &str) -> Result<TermArgument> {
-    match argument {
-        [Sig::Number(raw)] => Ok(integer_argument(raw)),
-        [Sig::Minus, Sig::Number(raw)] => Ok(integer_argument(&format!("-{raw}"))),
-        [Sig::String(_)] => Ok(TermArgument::Constant),
-        [Sig::Word(_), ..] => collect_name_parts(argument, 0, argument.len())
-            .map(|parts| TermArgument::Column(parts.join(".")))
-            .ok_or_else(|| unsupported_argument(described)),
-        _ => Err(unsupported_argument(described)),
+fn parse_term_argument(
+    argument: &[Sig],
+    function: &str,
+    term: &[Sig],
+    sql: &str,
+) -> Result<ParsedArgument> {
+    let (negative, body) = match argument {
+        [Sig::Minus, rest @ ..] if !rest.is_empty() => (true, rest),
+        _ => (false, argument),
+    };
+    let sign = if negative { "-" } else { "" };
+    match body {
+        [Sig::Number(raw)] => Ok(integer_literal(&format!("{sign}{raw}"), false)),
+        [Sig::Word(word)] if word.starts_with(|first: char| first.is_ascii_digit()) => {
+            typed_literal(sign, word).map_or_else(|| column_argument(argument, function, term), Ok)
+        }
+        [Sig::String(text)] if !negative => Ok(ParsedArgument {
+            argument: TermArgument::Constant,
+            rendered: format!("'{text}'"),
+        }),
+        [Sig::Word(_), ..] if !negative => column_argument(argument, function, term),
+        _ => Err(no_viable_alternative(&render_sig_at(argument, 0), sql)),
     }
 }
 
-fn integer_argument(raw: &str) -> TermArgument {
-    raw.parse::<i64>()
-        .map_or(TermArgument::Constant, TermArgument::Integer)
+fn integer_literal(text: &str, long: bool) -> ParsedArgument {
+    match text.parse::<i64>() {
+        Ok(value) => ParsedArgument {
+            argument: TermArgument::Integer {
+                value,
+                long: long || i32::try_from(value).is_err(),
+            },
+            rendered: value.to_string(),
+        },
+        Err(_) => ParsedArgument {
+            argument: TermArgument::Constant,
+            rendered: text.to_string(),
+        },
+    }
 }
 
-fn unsupported_argument(described: &str) -> DataFusionError {
-    DataFusionError::Plan(format!(
-        "ALTER TABLE WRITE ORDERED BY transform `{described}` takes column names and constants \
-         only"
-    ))
+fn typed_literal(sign: &str, word: &str) -> Option<ParsedArgument> {
+    let digits_end = word
+        .find(|character: char| !(character.is_ascii_digit() || character == '.'))
+        .unwrap_or(word.len());
+    let (number, suffix) = word.split_at(digits_end);
+    let number = format!("{sign}{number}");
+    match suffix.to_ascii_uppercase().as_str() {
+        "L" if !number.contains('.') => Some(integer_literal(&number, true)),
+        "S" | "Y" if !number.contains('.') => Some(ParsedArgument {
+            argument: TermArgument::Constant,
+            rendered: integer_literal(&number, false).rendered,
+        }),
+        "BD" => Some(ParsedArgument {
+            argument: TermArgument::Constant,
+            rendered: number,
+        }),
+        "D" | "F" => {
+            let value = number.parse::<f64>().ok()?;
+            let rendered = if value.fract() == 0.0 && value.abs() < 1e7 {
+                format!("{value:.1}")
+            } else {
+                value.to_string()
+            };
+            Some(ParsedArgument {
+                argument: TermArgument::Constant,
+                rendered,
+            })
+        }
+        _ => None,
+    }
+}
+
+fn column_argument(argument: &[Sig], function: &str, term: &[Sig]) -> Result<ParsedArgument> {
+    let parts = collect_name_parts(argument, 0, argument.len()).ok_or_else(|| {
+        let rendered = (0..term.len())
+            .map(|index| render_sig_at(term, index))
+            .collect::<Vec<_>>()
+            .join(" ");
+        DataFusionError::Plan(format!(
+            "ALTER TABLE WRITE ORDERED BY transform `{rendered}` takes column names and \
+             constants only (transform `{function}`)"
+        ))
+    })?;
+    let name = parts.join(".");
+    Ok(ParsedArgument {
+        argument: TermArgument::Column(name.clone()),
+        rendered: name,
+    })
 }
 
 fn resolve_term(
@@ -349,18 +472,17 @@ fn resolve_term(
 }
 
 fn transform_width(arguments: &[TermArgument], described: &str) -> Result<u32> {
-    let width = arguments.iter().find_map(|argument| match argument {
-        TermArgument::Integer(value) => Some(*value),
+    let Some((value, long)) = arguments.iter().find_map(|argument| match argument {
+        TermArgument::Integer { value, long } => Some((*value, *long)),
         _ => None,
-    });
-    let Some(width) = width else {
+    }) else {
         return Err(illegal_argument_error(format!(
             "Cannot find width for transform: {described}"
         )));
     };
-    i32::try_from(width)
+    i32::try_from(value)
         .ok()
-        .filter(|value| *value > 0)
+        .filter(|width| *width > 0 && !(long && *width == i32::MAX))
         .map(i32::unsigned_abs)
         .ok_or_else(|| {
             illegal_argument_error(format!("Unsupported width for transform: {described}"))

@@ -184,7 +184,6 @@ fn unknown_format_refuses() {
     assert!(err.contains("'PARQUET'"), "must list the support: {err}");
 }
 
-/// pins: v3-2-create-v3-opt-in/C-007
 #[test]
 fn non_v2_format_version_refuses() {
     assert!(parse("format_version = 1").is_ok());

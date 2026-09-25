@@ -15,5 +15,7 @@ pub async fn testing_create_ref(
     name: &str,
     snapshot_id: i64,
 ) -> Result<()> {
-    create_snapshot_ref(catalog, ident, kind, name, snapshot_id).await
+    create_snapshot_ref(catalog, ident, kind, name, snapshot_id)
+        .await
+        .map_err(|error| iceberg::Error::new(iceberg::ErrorKind::Unexpected, error.to_string()))
 }

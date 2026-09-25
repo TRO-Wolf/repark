@@ -841,6 +841,14 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   with no metadata written. D-REF-BRANCH-ON-EMPTY: the empty append's summary, the `b1` ref, an
   empty branch read, `IF NOT EXISTS` and retention, the tag, replace and duplicate refusals,
   `CREATE BRANCH main`, and a seeded table's unchanged refs.
+  **Round 2 (2026-09-25):** `test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref`
+  sets `spark.wap.branch` on a v1 WAP table: the INSERT raises UnsupportedOperationException
+  with the `BRANCH` v1 text, no metadata file is written, `refs` lists only `main` and the data
+  is unchanged. The refusal table adds `short-width` and `empty-arguments`;
+  `test_write_ordered_by_a_long_width_literal_lands_like_spark` lands `bucket(4L, id)`.
+  days-on-long moved to `test_write_ordered_by_bind_refusal_keeps_the_fork_text_residue`, a
+  residue pin (R-U5-PR2B-BIND-TEXT), not a parity pin.
+  pins: ice-nested-evo-1/C-052, C-053, C-054, C-055, C-056
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — **WO U5 PR1 (2026-09-24):** facade pins for
   nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the
   SQL DESCRIBE type. It also pins the UNSET IF EXISTS missing-key no-op, namespace SET
@@ -2403,6 +2411,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   it, the same-version request writing no new metadata file, and the proof that the opt-in
   refusal carries no CREATE-door phrasing.
   pins: v3-10-upgrade-v2-to-v3/C-003, C-004
+  **WO U5 PR2b round 2 (2026-09-25):** the downgrade refusals (`2` and `-1` on a v3 table) read
+  Spark's PySparkException `Unsupported table change: Cannot downgrade v3 table to vM`.
+  pins: ice-nested-evo-1/C-057
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true, and
   **since V3-9 (2026-09-02)** the refusal no longer claims v3 cannot do merge-on-read

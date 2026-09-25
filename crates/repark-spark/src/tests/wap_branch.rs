@@ -11,7 +11,7 @@ const WAP_DDL: &str = "CREATE TABLE ice.sales.t (id INT, name STRING) USING iceb
 const PLAIN_DDL: &str = "CREATE TABLE ice.sales.t (id INT, name STRING) USING iceberg \
      TBLPROPERTIES ('format-version'='2')";
 
-fn set_wap(ctx: &SessionContext, branch: Option<&str>, id: Option<&str>) {
+pub(super) fn set_wap(ctx: &SessionContext, branch: Option<&str>, id: Option<&str>) {
     let state_lock = ctx.state_ref();
     let mut state = state_lock.write();
     state
