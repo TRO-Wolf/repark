@@ -1281,6 +1281,15 @@ pins: rp-4-fork-repin/C-005, C-006
   as Spark's `describe` does); a `Sig::Hex` token (`X'4'`) is a binary constant rendered
   through `hex_constant` (`0x04`). Only a token that is neither a name, a literal nor a hex
   constant reaches the ANTLR-shaped message, and it is named as typed.
+  **WO U5 PR2b round 4 (2026-09-25):** `number_literal` renders a `Sig::Number` that is not an
+  i64 by value — an exponent form through `java_double_text` (Java's `Double.toString`: `100.0`,
+  `1.0E10`, `0.15`), which the `D`/`F` suffix branch now shares, and a bare-point decimal as its
+  decimal string (`.5` → `0.5`, `5.` → `5`); an `X'…'` body that is not all hex digits answers
+  Spark's `[INVALID_TYPED_LITERAL] … "X" …` text through `invalid_typed_literal` instead of an
+  invented `0x4G`; `alter_order_error` takes the statement so an `EmptySegment` (a comma with
+  nothing before it or nothing after it) renders Spark's `no viable alternative at input
+  '<token>'` with the `== SQL ==` block, and `transform_close` returns `Option` so the
+  unterminated-list text is rendered at the one call site.
   pins: ice-nested-evo-1/C-054, C-055
 - `namespace_ddl/` — the table-lifecycle work `namespace_ddl.rs` delegates; see
   [namespace_ddl/map.md](namespace_ddl/map.md). `purge.rs` holds the `DROP TABLE … PURGE`
@@ -1325,6 +1334,19 @@ pins: rp-4-fork-repin/C-005, C-006
   `0x…` is `Sig::Word` — Spark's lexer reads it as an identifier — and one typed `X'…'` is the
   new `Sig::Hex`. `quote_if_needed`, `quote_constant` and `hex_constant` hold Spark's
   renderings for the ALTER door's messages.
+  **WO U5 PR2b round 4 (2026-09-25):** the tokenizer runs on `SparkOrderDialect`, Databricks
+  with `supports_string_literal_backslash_escape`, because the Databricks dialect could not
+  tokenize `'a\'b'` and the failure sent the statement through `router.rs`'s literal
+  canonicalizer, whose re-quoted output was then unescaped a second time. A string token is
+  read back from its source span and `unescape_spark_string` applies Spark's
+  `unescapeSQLString` rules (`\uXXXX`, `\UXXXXXXXX`, octal `\[01][0-7]{2}`, the single-character
+  escapes, `\%`/`\_` keeping their backslash, any other escaped character standing for itself,
+  and a doubled quote). `hex_constant` returns `None` unless every body character is an ASCII
+  hex digit, and `hex_literal_body` hands the ALTER door the body as typed for Spark's
+  INVALID_TYPED_LITERAL text. `order_list_segments` splits through `split_order_segments`,
+  which refuses an empty segment as `OrderParseError::EmptySegment` naming the token that
+  follows the gap (`,`, `)` or `<EOF>`) — the CALL door's `split_sig_comma_segments` still drops
+  empties silently, as Java's `parseSortOrder` path is not what this round measured.
   pins: ice-nested-evo-1/C-055
   pins: ice-rdf-sort-parse-1/C-001, C-002, C-003,
   tests/alter_write_order_transform.rs::write_ordered_by_transform_refusals_match_spark_and_commit_nothing

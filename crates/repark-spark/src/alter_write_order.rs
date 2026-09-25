@@ -5,9 +5,9 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, illegal_argument_error};
 
 use crate::sort_order_parse::{
-    OrderParseError, Sig, collect_name_parts, hex_constant, is_period_at, order_list_segments,
-    parse_order_segment, quote_constant, quote_if_needed, render_sig_at, tokenize_significant,
-    word_at, word_eq,
+    OrderParseError, Sig, collect_name_parts, hex_constant, hex_literal_body, is_period_at,
+    order_list_segments, parse_order_segment, quote_constant, quote_if_needed, render_sig_at,
+    tokenize_significant, word_at, word_eq,
 };
 use crate::{catalog_handle, iceberg_err, reregister};
 use repark_iceberg::write::sort_order::WriteSortField;
@@ -33,8 +33,9 @@ struct ParsedArgument {
 const AFTER_TERM_EXPECTING: &str = "{<EOF>, ',', 'ASC', 'DESC', 'DISTRIBUTED', 'LOCALLY', \
                                     'NULLS', 'ORDERED', 'UNORDERED'}";
 
-fn alter_order_error(error: OrderParseError) -> DataFusionError {
+fn alter_order_error(error: OrderParseError, sql: &str) -> DataFusionError {
     match error {
+        OrderParseError::EmptySegment { got } => no_viable_alternative(&got, sql),
         OrderParseError::Empty => DataFusionError::Plan(
             "ALTER TABLE WRITE ORDERED BY requires at least one column".into(),
         ),
@@ -241,7 +242,8 @@ fn parse_write_order_list(
     start: usize,
     sql: &str,
 ) -> Result<(Vec<WriteSortField>, usize)> {
-    let (segments, next) = order_list_segments(significant, start).map_err(alter_order_error)?;
+    let (segments, next) =
+        order_list_segments(significant, start).map_err(|error| alter_order_error(error, sql))?;
     let fields = segments
         .into_iter()
         .map(|segment| parse_write_order_term(segment, sql))
@@ -251,7 +253,7 @@ fn parse_write_order_list(
 
 fn parse_write_order_term(segment: &[Sig], sql: &str) -> Result<WriteSortField> {
     let (Some(Sig::Word(function)), Some(Sig::LParen)) = (segment.first(), segment.get(1)) else {
-        let field = parse_order_segment(segment).map_err(alter_order_error)?;
+        let field = parse_order_segment(segment).map_err(|error| alter_order_error(error, sql))?;
         return Ok(WriteSortField {
             name: field.name,
             transform: Transform::Identity,
@@ -259,7 +261,8 @@ fn parse_write_order_term(segment: &[Sig], sql: &str) -> Result<WriteSortField> 
             null_order: field.null_order,
         });
     };
-    let close = transform_close(segment)?;
+    let close = transform_close(segment)
+        .ok_or_else(|| alter_order_error(OrderParseError::Unterminated, sql))?;
     if matches!(segment.get(close + 1), Some(Sig::LParen)) {
         return Err(extension_parse_error(
             &format!("mismatched input '(' expecting {AFTER_TERM_EXPECTING}"),
@@ -282,7 +285,7 @@ fn parse_write_order_term(segment: &[Sig], sql: &str) -> Result<WriteSortField> 
     let (name, transform) = resolve_term(function, &arguments, &described)?;
     let mut suffix = vec![Sig::Word(described)];
     suffix.extend_from_slice(&segment[close + 1..]);
-    let order = parse_order_segment(&suffix).map_err(alter_order_error)?;
+    let order = parse_order_segment(&suffix).map_err(|error| alter_order_error(error, sql))?;
     Ok(WriteSortField {
         name,
         transform,
@@ -291,7 +294,7 @@ fn parse_write_order_term(segment: &[Sig], sql: &str) -> Result<WriteSortField> 
     })
 }
 
-fn transform_close(segment: &[Sig]) -> Result<usize> {
+fn transform_close(segment: &[Sig]) -> Option<usize> {
     let mut depth = 0_i32;
     for (index, token) in segment.iter().enumerate().skip(1) {
         match token {
@@ -299,13 +302,13 @@ fn transform_close(segment: &[Sig]) -> Result<usize> {
             Sig::RParen => {
                 depth -= 1;
                 if depth == 0 {
-                    return Ok(index);
+                    return Some(index);
                 }
             }
             _ => {}
         }
     }
-    Err(alter_order_error(OrderParseError::Unterminated))
+    None
 }
 
 fn extension_parse_error(detail: &str, sql: &str) -> DataFusionError {
@@ -314,6 +317,17 @@ fn extension_parse_error(detail: &str, sql: &str) -> DataFusionError {
 
 fn no_viable_alternative(token: &str, sql: &str) -> DataFusionError {
     extension_parse_error(&format!("no viable alternative at input '{token}'"), sql)
+}
+
+fn invalid_typed_literal(typed: &str, sql: &str) -> DataFusionError {
+    let body = hex_literal_body(typed).unwrap_or(typed);
+    extension_parse_error(
+        &format!(
+            "[INVALID_TYPED_LITERAL] The value of the typed literal \"X\" is invalid: '{body}'. \
+             SQLSTATE: 42604"
+        ),
+        sql,
+    )
 }
 
 fn term_arguments<'a>(inner_and_close: &'a [Sig], sql: &str) -> Result<Vec<&'a [Sig]>> {
@@ -355,7 +369,7 @@ fn parse_term_argument(
     };
     let sign = if negative { "-" } else { "" };
     match body {
-        [Sig::Number(raw)] => Ok(integer_literal(&format!("{sign}{raw}"), false)),
+        [Sig::Number(raw)] => Ok(number_literal(sign, raw)),
         [Sig::Word(word)] if word.starts_with(|first: char| first.is_ascii_digit()) => {
             typed_literal(sign, word).map_or_else(|| column_argument(argument, function, term), Ok)
         }
@@ -368,26 +382,67 @@ fn parse_term_argument(
                 argument: TermArgument::Constant,
                 rendered,
             }),
-            None => Err(no_viable_alternative(typed, sql)),
+            None => Err(invalid_typed_literal(typed, sql)),
         },
         [Sig::Word(_), ..] if !negative => column_argument(argument, function, term),
         _ => Err(no_viable_alternative(&render_sig_at(argument, 0), sql)),
     }
 }
 
+fn number_literal(sign: &str, raw: &str) -> ParsedArgument {
+    let signed = format!("{sign}{raw}");
+    if let Ok(value) = signed.parse::<i64>() {
+        return integer_argument(value, false);
+    }
+    let rendered = if raw.contains(['e', 'E']) {
+        signed.parse::<f64>().map_or(signed, java_double_text)
+    } else {
+        let trimmed = raw.strip_suffix('.').unwrap_or(raw);
+        let leading_zero = if trimmed.starts_with('.') { "0" } else { "" };
+        format!("{sign}{leading_zero}{trimmed}")
+    };
+    ParsedArgument {
+        argument: TermArgument::Constant,
+        rendered,
+    }
+}
+
 fn integer_literal(text: &str, long: bool) -> ParsedArgument {
     match text.parse::<i64>() {
-        Ok(value) => ParsedArgument {
-            argument: TermArgument::Integer {
-                value,
-                long: long || i32::try_from(value).is_err(),
-            },
-            rendered: value.to_string(),
-        },
+        Ok(value) => integer_argument(value, long),
         Err(_) => ParsedArgument {
             argument: TermArgument::Constant,
             rendered: text.to_string(),
         },
+    }
+}
+
+fn integer_argument(value: i64, long: bool) -> ParsedArgument {
+    ParsedArgument {
+        argument: TermArgument::Integer {
+            value,
+            long: long || i32::try_from(value).is_err(),
+        },
+        rendered: value.to_string(),
+    }
+}
+
+fn java_double_text(value: f64) -> String {
+    let magnitude = value.abs();
+    if magnitude >= 1e7 || (magnitude < 1e-3 && magnitude != 0.0) {
+        let scientific = format!("{value:e}");
+        let (mantissa, exponent) = scientific.split_once('e').unwrap_or((&scientific, "0"));
+        let mantissa = if mantissa.contains('.') {
+            mantissa.to_string()
+        } else {
+            format!("{mantissa}.0")
+        };
+        return format!("{mantissa}E{exponent}");
+    }
+    if value.fract() == 0.0 {
+        format!("{value:.1}")
+    } else {
+        value.to_string()
     }
 }
 
@@ -407,18 +462,10 @@ fn typed_literal(sign: &str, word: &str) -> Option<ParsedArgument> {
             argument: TermArgument::Constant,
             rendered: number,
         }),
-        "D" | "F" => {
-            let value = number.parse::<f64>().ok()?;
-            let rendered = if value.fract() == 0.0 && value.abs() < 1e7 {
-                format!("{value:.1}")
-            } else {
-                value.to_string()
-            };
-            Some(ParsedArgument {
-                argument: TermArgument::Constant,
-                rendered,
-            })
-        }
+        "D" | "F" => Some(ParsedArgument {
+            argument: TermArgument::Constant,
+            rendered: java_double_text(number.parse::<f64>().ok()?),
+        }),
         _ => None,
     }
 }

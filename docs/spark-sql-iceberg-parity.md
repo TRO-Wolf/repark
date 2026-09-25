@@ -8181,9 +8181,20 @@ the pin rather than obeying it.
   column reference: bucket(`0x4`, id)` (also `0X4`, `1abc`, `` `my col` ``, `` `a.b` ``; `a.b`
   stays plain), `bucket(0x4)` raises `Cannot find width for transform: bucket(`0x4`)`, and a
   `0x…` token in the column position is an unknown field. `X'4'` is a binary constant rendered
-  `0x04` (`x'abc'` → `0x0ABC`, `X''` → `0x`), and a string constant doubles its embedded quote:
+  `0x04` (`x'abc'` → `0x0ABC`, `X''` → `0x`), and a string constant is unescaped as Spark's
+  `unescapeSQLString` does before its embedded quote doubles (round 4, 2026-09-25):
   `truncate('a\'b', s)`, `truncate('a''b', s)` and `truncate("a'b", s)` all raise `Cannot find
-  width for transform: truncate('a''b', s)` (`'a`b'` and `'a\\b'` render as typed). RePark's own refusals
+  width for transform: truncate('a''b', s)`, `'a\\b'` renders `'a\b'`, `'a\tb'` a real tab,
+  `"a""b"` and `"a\"b"` render `'a"b'`, `A`/`\U00000041`/`\101` render `A`, `\%` and `\_`
+  keep their backslash, `\q` and `\f` drop it, and `'a`b'` renders as typed. An `X'…'` body that
+  is not all hex digits raises AnalysisException `[INVALID_TYPED_LITERAL] The value of the typed
+  literal "X" is invalid: '4g'. SQLSTATE: 42604` with the `== SQL ==` block (`X'4g'`, `x'4g'`,
+  `X'é'`; the earlier head rendered an invented `0x4G`); an exponent or bare-point width literal
+  renders as Spark's Double/BigDecimal string (`1e2` → `100.0`, `1.5e1` → `15.0`, `1e10` →
+  `1.0E10`, `.5` → `0.5`, `5.` → `5`); and an empty order segment (`id ,`, `, id`, `id , , s`,
+  `(id ,)`, `bucket(4, id) ,`) raises `no viable alternative at input '<EOF>'` / `','` / `')'`
+  naming the token after the gap and commits nothing (every earlier head committed the order
+  typed before a trailing comma). RePark's own refusals
   answer Spark's measured class and text and commit nothing: UnsupportedOperationException
   `Transform is not supported: void(id)`; IllegalArgumentException `Term must be unbound`,
   `Unsupported width for transform: bucket(0, id)` (also `0L`, `-4L`, `3000000000L`), `Cannot
@@ -8303,8 +8314,12 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
   `CALL fast_forward` to a new branch and `rewrite_data_files` on a branch. A write into
   `t.branch_x` answers REF-1's missing-branch text first (round 3, 2026-09-25: `INSERT`,
   `DELETE`, `UPDATE`, `MERGE` and `INSERT OVERWRITE` into a missing branch on v1 raise `Cannot
-  use branch (does not exist): x`, as Spark does); the kernel answers only for a branch that
-  exists, which on v1 only Java can have written. `writeTo().option('branch', …)` does not reach
+  use branch (does not exist): x`, as Spark does). The kernel call behind that check is
+  belt-and-braces on this branch (round 4, 2026-09-25): the v1 reader drops every non-main ref
+  until F-V1-REFS-1 lands (repin repark#836), so an existing-branch selector write on v1 cannot
+  occur — a registered v1 metadata file carrying refs `main`, `b` and `t` lists `main` only, and
+  every selector write into `branch_b` answers the missing-branch text with nothing written,
+  where Spark 4.1.2 writes to `b` (R-U5-PR2B-V1-REFS). `writeTo().option('branch', …)` does not reach
   the kernel on this branch: the Python facade refuses it first with the pre-existing
   UnsupportedOperationException `writing to an Iceberg branch is not supported — repark write
   path is current-snapshot only (I1 / R-TIME-TRAVEL)`, where Spark 4.1.2 ignores the option and

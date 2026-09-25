@@ -250,6 +250,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006
   **WO U5 PR2b (2026-09-24):** the transform and zorder refusal pins moved to
   `alter_write_order_transform.rs`, flipped to the landed behavior.
+  **WO U5 PR2b round 4 (2026-09-25):** `write_order_malformed_shapes_refuse` adds fourteen
+  empty-segment shapes (`id ,`, `, id`, `id , , s`, `(id ,)`, `(bucket(4, id) ,)`, after
+  `LOCALLY` and `DISTRIBUTED BY PARTITION`, …) with Spark's full `no viable alternative at
+  input '<EOF>'` / `','` / `')'` text and a `metadata_file_count` assertion, because every
+  earlier head committed the order typed before a trailing comma.
+  pins: ice-nested-evo-1/C-055
 - [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
   (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
   the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;
@@ -268,6 +274,14 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   in the one-column-reference text, `bucket(0x4)` in the width text, `X'4'`/`x'abc'`/`X''` as
   `0x04`/`0x0ABC`/`0x`, `'a\'b'`, `'a''b'` and `"a'b"` as `'a''b'`, `'a`b'` as typed, and
   `bucket(4, 0x4)` as the unknown-field residue, with nothing committed.
+  **Round 4 (2026-09-25):** the row tables are module `const`s (`WIDTH_LITERAL_ROWS`,
+  `RENDERED_TOKEN_ROWS`, `INVALID_HEX_ROWS`) so the pins stay under clippy's line ceiling.
+  `WIDTH_LITERAL_ROWS` adds the exponent and bare-point decimal renderings (`1e2` → `100.0`,
+  `1e10` → `1.0E10`, `1.5E-1` → `0.15`, `.5` → `0.5`, `5.` → `5`, `-.5` → `-0.5`, `1.50` as
+  is); `RENDERED_TOKEN_ROWS` adds the Spark escape rows (`'a\\b'` → `'a\b'`, a real tab and
+  newline, `"a""b"` → `'a"b'`, `A`/`\U00000041`/`\101` → `A`, `\%`/`\_` kept, `\q`/`\f`
+  dropped, `\Z` → U+001A, `'a\\\'b'` → `'a\''b'`); `INVALID_HEX_ROWS` pins Spark's
+  INVALID_TYPED_LITERAL text for `X'4g'`, `X'é'`, `x'4g'`, `X'4G'`, `X' 4'` and `X'zz'`.
   pins: ice-nested-evo-1/C-054, C-055
 - `replace_columns.rs` — **ICE-REPLACE-COLUMNS-1 (2026-09-19):** the Rust twins of the measured
   `RC-*` cells — fresh ids + all-NULL read-back on the basic, same-list and re-typed forms, the

@@ -1,3 +1,4 @@
+use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect};
 use iceberg::spec::{NullOrder, SortDirection};
 
 #[derive(Debug)]
@@ -30,6 +31,7 @@ pub(crate) enum OrderParseError {
     Transform { name: String },
     BadNulls { name: String, got: String },
     Trailing { name: String, got: String },
+    EmptySegment { got: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,10 +41,87 @@ pub(crate) enum ZOrderScan {
     Mixed,
 }
 
+#[derive(Debug)]
+struct SparkOrderDialect(DatabricksDialect);
+
+impl Dialect for SparkOrderDialect {
+    fn dialect(&self) -> std::any::TypeId {
+        self.0.dialect()
+    }
+    fn supports_string_literal_backslash_escape(&self) -> bool {
+        true
+    }
+    fn is_identifier_start(&self, ch: char) -> bool {
+        self.0.is_identifier_start(ch)
+    }
+    fn is_identifier_part(&self, ch: char) -> bool {
+        self.0.is_identifier_part(ch)
+    }
+    fn is_delimited_identifier_start(&self, ch: char) -> bool {
+        self.0.is_delimited_identifier_start(ch)
+    }
+    fn is_nested_delimited_identifier_start(&self, ch: char) -> bool {
+        self.0.is_nested_delimited_identifier_start(ch)
+    }
+    fn peek_nested_delimited_identifier_quotes(
+        &self,
+        chars: std::iter::Peekable<std::str::Chars<'_>>,
+    ) -> Option<(char, Option<char>)> {
+        self.0.peek_nested_delimited_identifier_quotes(chars)
+    }
+    fn is_custom_operator_part(&self, ch: char) -> bool {
+        self.0.is_custom_operator_part(ch)
+    }
+    fn supports_triple_quoted_string(&self) -> bool {
+        self.0.supports_triple_quoted_string()
+    }
+    fn supports_quote_delimited_string(&self) -> bool {
+        self.0.supports_quote_delimited_string()
+    }
+    fn supports_string_escape_constant(&self) -> bool {
+        self.0.supports_string_escape_constant()
+    }
+    fn supports_unicode_string_literal(&self) -> bool {
+        self.0.supports_unicode_string_literal()
+    }
+    fn supports_numeric_literal_underscores(&self) -> bool {
+        self.0.supports_numeric_literal_underscores()
+    }
+    fn supports_numeric_prefix(&self) -> bool {
+        self.0.supports_numeric_prefix()
+    }
+    fn supports_multiline_comment_hints(&self) -> bool {
+        self.0.supports_multiline_comment_hints()
+    }
+    fn supports_nested_comments(&self) -> bool {
+        self.0.supports_nested_comments()
+    }
+    fn requires_single_line_comment_whitespace(&self) -> bool {
+        self.0.requires_single_line_comment_whitespace()
+    }
+    fn supports_geometric_types(&self) -> bool {
+        self.0.supports_geometric_types()
+    }
+    fn supports_pipe_operator(&self) -> bool {
+        self.0.supports_pipe_operator()
+    }
+    fn supports_dollar_placeholder(&self) -> bool {
+        self.0.supports_dollar_placeholder()
+    }
+    fn supports_dollar_as_money_prefix(&self) -> bool {
+        self.0.supports_dollar_as_money_prefix()
+    }
+    fn supports_bang_not_operator(&self) -> bool {
+        self.0.supports_bang_not_operator()
+    }
+    fn ignores_wildcard_escapes(&self) -> bool {
+        self.0.ignores_wildcard_escapes()
+    }
+}
+
 pub(crate) fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
-    use datafusion::sql::sqlparser::dialect::DatabricksDialect;
     use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
-    let tokens = Tokenizer::new(&DatabricksDialect {}, sql)
+    let tokens = Tokenizer::new(&SparkOrderDialect(DatabricksDialect {}), sql)
         .tokenize_with_location()
         .ok()?;
     let line_starts = line_starts(sql);
@@ -57,9 +136,13 @@ pub(crate) fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
             Token::RParen => Some(Some(Sig::RParen)),
             Token::Comma => Some(Some(Sig::Comma)),
             Token::Minus => Some(Some(Sig::Minus)),
-            Token::SingleQuotedString(text) | Token::DoubleQuotedString(text) => {
-                Some(Some(Sig::String(text)))
-            }
+            Token::SingleQuotedString(text) | Token::DoubleQuotedString(text) => Some(Some(
+                span_text(sql, &line_starts, &with_span.span)
+                    .and_then(quoted_body)
+                    .map_or(Sig::String(text), |(body, quote)| {
+                        Sig::String(unescape_spark_string(body, quote))
+                    }),
+            )),
             Token::HexStringLiteral(_) => {
                 Some(span_text(sql, &line_starts, &with_span.span).map(|typed| {
                     if typed.starts_with("0x") || typed.starts_with("0X") {
@@ -104,11 +187,90 @@ fn location_offset(sql: &str, line_starts: &[usize], line: u64, column: u64) -> 
     }
 }
 
-pub(crate) fn hex_constant(typed: &str) -> Option<String> {
-    let digits = typed
+fn quoted_body(typed: &str) -> Option<(&str, char)> {
+    let quote = typed
+        .chars()
+        .next()
+        .filter(|first| matches!(first, '\'' | '"'))?;
+    let body = typed.strip_prefix(quote)?.strip_suffix(quote)?;
+    Some((body, quote))
+}
+
+pub(crate) fn unescape_spark_string(body: &str, quote: char) -> String {
+    let mut out = String::with_capacity(body.len());
+    let mut chars = body.chars().peekable();
+    while let Some(character) = chars.next() {
+        if character == quote && chars.peek() == Some(&quote) {
+            chars.next();
+            out.push(quote);
+        } else if character == '\\' {
+            push_escape(&mut out, &mut chars);
+        } else {
+            out.push(character);
+        }
+    }
+    out
+}
+
+fn push_escape(out: &mut String, chars: &mut std::iter::Peekable<std::str::Chars<'_>>) {
+    let Some(escaped) = chars.next() else {
+        out.push('\\');
+        return;
+    };
+    if let Some(decoded) = decode_code_point(chars, escaped) {
+        out.push(decoded);
+        return;
+    }
+    match escaped {
+        '0' => out.push('\0'),
+        'b' => out.push('\u{8}'),
+        'n' => out.push('\n'),
+        'r' => out.push('\r'),
+        't' => out.push('\t'),
+        'Z' => out.push('\u{1a}'),
+        '%' | '_' => {
+            out.push('\\');
+            out.push(escaped);
+        }
+        other => out.push(other),
+    }
+}
+
+fn decode_code_point(
+    chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
+    escaped: char,
+) -> Option<char> {
+    let (width, radix) = match escaped {
+        'u' => (4, 16),
+        'U' => (8, 16),
+        '0' | '1' => (2, 8),
+        _ => return None,
+    };
+    let digits: String = chars.clone().take(width).collect();
+    if digits.chars().count() != width || !digits.chars().all(|digit| digit.is_digit(radix)) {
+        return None;
+    }
+    let mut value = u32::from_str_radix(&digits, radix).ok()?;
+    if radix == 8 {
+        value += escaped.to_digit(8)? * 64;
+    }
+    let decoded = char::from_u32(value)?;
+    chars.by_ref().take(width).for_each(drop);
+    Some(decoded)
+}
+
+pub(crate) fn hex_literal_body(typed: &str) -> Option<&str> {
+    typed
         .strip_prefix(['x', 'X'])?
         .strip_prefix('\'')?
-        .strip_suffix('\'')?;
+        .strip_suffix('\'')
+}
+
+pub(crate) fn hex_constant(typed: &str) -> Option<String> {
+    let digits = hex_literal_body(typed)?;
+    if !digits.chars().all(|digit| digit.is_ascii_hexdigit()) {
+        return None;
+    }
     let padding = if digits.len() % 2 == 1 { "0" } else { "" };
     Some(format!("0x{padding}{}", digits.to_ascii_uppercase()))
 }
@@ -211,7 +373,7 @@ pub(crate) fn order_list_segments(
     start: usize,
 ) -> Result<(Vec<&[Sig]>, usize), OrderParseError> {
     if !matches!(significant.get(start), Some(Sig::LParen)) {
-        let segments = split_sig_comma_segments(&significant[start..]);
+        let segments = split_order_segments(&significant[start..], "<EOF>")?;
         return non_empty(segments, significant.len());
     }
     let mut depth = 0_i32;
@@ -230,8 +392,37 @@ pub(crate) fn order_list_segments(
         }
     }
     let close = close.ok_or(OrderParseError::Unterminated)?;
-    let segments = split_sig_comma_segments(&significant[start + 1..close]);
+    let segments = split_order_segments(&significant[start + 1..close], ")")?;
     non_empty(segments, close + 1)
+}
+
+fn split_order_segments<'a>(
+    tokens: &'a [Sig],
+    end: &str,
+) -> Result<Vec<&'a [Sig]>, OrderParseError> {
+    let mut segments = Vec::new();
+    let mut depth = 0_i32;
+    let mut start = 0usize;
+    for (index, token) in tokens.iter().enumerate() {
+        match token {
+            Sig::LParen => depth += 1,
+            Sig::RParen => depth -= 1,
+            Sig::Comma if depth == 0 => {
+                if start == index {
+                    return Err(OrderParseError::EmptySegment { got: ",".into() });
+                }
+                segments.push(&tokens[start..index]);
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    if start < tokens.len() {
+        segments.push(&tokens[start..]);
+    } else if !segments.is_empty() {
+        return Err(OrderParseError::EmptySegment { got: end.into() });
+    }
+    Ok(segments)
 }
 
 fn non_empty(segments: Vec<&[Sig]>, next: usize) -> Result<(Vec<&[Sig]>, usize), OrderParseError> {

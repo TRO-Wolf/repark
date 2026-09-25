@@ -1,4 +1,5 @@
 use super::super::*;
+use super::accept_any_refusals::refusal;
 use super::common::*;
 use iceberg::spec::{NullOrder, SortDirection};
 
@@ -217,8 +218,54 @@ async fn write_order_malformed_shapes_refuse() {
             .expect_err("malformed WRITE shape refuses");
         assert!(error.to_string().contains(needle), "{sql}: {error}");
     }
+    let files_before = metadata_file_count(&load_write_target(&catalogs, "t").await);
+    for (clause, token) in [
+        ("ORDERED BY id ,", "<EOF>"),
+        ("ORDERED BY id DESC ,", "<EOF>"),
+        ("ORDERED BY id, s ,", "<EOF>"),
+        ("ORDERED BY bucket(4, id) ,", "<EOF>"),
+        ("ORDERED BY bucket(4, id) , ,", ","),
+        ("ORDERED BY , id", ","),
+        ("ORDERED BY id , , s", ","),
+        ("ORDERED BY (id ,)", ")"),
+        ("ORDERED BY (, id)", ","),
+        ("ORDERED BY (id , ,)", ","),
+        ("ORDERED BY (bucket(4, id) ,)", ")"),
+        ("LOCALLY ORDERED BY id ,", "<EOF>"),
+        ("DISTRIBUTED BY PARTITION LOCALLY ORDERED BY id ,", "<EOF>"),
+        ("DISTRIBUTED BY PARTITION ORDERED BY id ,", "<EOF>"),
+    ] {
+        let sql = format!("ALTER TABLE ice.sales.t WRITE {clause}");
+        let mapped = refusal(&ctx, &catalogs, &sql).await;
+        let expected = format!(
+            "Error during planning: \nno viable alternative at input '{token}'\n== SQL ==\n{sql}"
+        );
+        assert!(
+            matches!(&mapped, repark_common::Error::Analysis(message) if message == &expected),
+            "{sql}: got {mapped:?}"
+        );
+    }
     let table = load_write_target(&catalogs, "t").await;
     assert_eq!(table.metadata().sort_orders_iter().len(), 1);
+    assert_eq!(table.metadata().default_sort_order_id(), 0);
+    assert_eq!(metadata_file_count(&table), files_before);
+}
+
+fn metadata_file_count(table: &iceberg::table::Table) -> usize {
+    let location = table.metadata_location().expect("a persisted table");
+    let directory = std::path::Path::new(location.trim_start_matches("file://"))
+        .parent()
+        .expect("the metadata directory");
+    std::fs::read_dir(directory)
+        .expect("the metadata directory is readable")
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .ends_with(".metadata.json")
+        })
+        .count()
 }
 
 #[tokio::test]

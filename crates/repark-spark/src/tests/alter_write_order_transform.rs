@@ -351,49 +351,95 @@ async fn delete_after_a_repark_bucket_order_is_the_identity_only_residue() {
     assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.wo").await, 2);
 }
 
+const WIDTH_LITERAL_ROWS: &[(&str, &str)] = &[
+    (
+        "bucket(4S, id)",
+        "Cannot find width for transform: bucket(4, id)",
+    ),
+    (
+        "bucket(4Y, id)",
+        "Cannot find width for transform: bucket(4, id)",
+    ),
+    (
+        "bucket(4BD, id)",
+        "Cannot find width for transform: bucket(4, id)",
+    ),
+    (
+        "bucket(4.0, id)",
+        "Cannot find width for transform: bucket(4.0, id)",
+    ),
+    (
+        "bucket(4D, id)",
+        "Cannot find width for transform: bucket(4.0, id)",
+    ),
+    (
+        "bucket(4F, id)",
+        "Cannot find width for transform: bucket(4.0, id)",
+    ),
+    (
+        "bucket(0L, id)",
+        "Unsupported width for transform: bucket(0, id)",
+    ),
+    (
+        "bucket(-4L, id)",
+        "Unsupported width for transform: bucket(-4, id)",
+    ),
+    (
+        "bucket(3000000000L, id)",
+        "Unsupported width for transform: bucket(3000000000, id)",
+    ),
+    (
+        "bucket(1e2, id)",
+        "Cannot find width for transform: bucket(100.0, id)",
+    ),
+    (
+        "bucket(1E2, id)",
+        "Cannot find width for transform: bucket(100.0, id)",
+    ),
+    (
+        "bucket(1.5e1, id)",
+        "Cannot find width for transform: bucket(15.0, id)",
+    ),
+    (
+        "bucket(.5, id)",
+        "Cannot find width for transform: bucket(0.5, id)",
+    ),
+    (
+        "bucket(5., id)",
+        "Cannot find width for transform: bucket(5, id)",
+    ),
+    (
+        "bucket(-1e2, id)",
+        "Cannot find width for transform: bucket(-100.0, id)",
+    ),
+    (
+        "bucket(1e10, id)",
+        "Cannot find width for transform: bucket(1.0E10, id)",
+    ),
+    (
+        "bucket(1.5E-1, id)",
+        "Cannot find width for transform: bucket(0.15, id)",
+    ),
+    (
+        "bucket(2e0, id)",
+        "Cannot find width for transform: bucket(2.0, id)",
+    ),
+    (
+        "bucket(1.50, id)",
+        "Cannot find width for transform: bucket(1.50, id)",
+    ),
+    (
+        "bucket(-.5, id)",
+        "Cannot find width for transform: bucket(-0.5, id)",
+    ),
+];
+
 #[tokio::test]
 async fn typed_width_literals_and_parse_shapes_answer_spark() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = transform_door(&wh).await;
     let sql = |spec: &str| format!("ALTER TABLE ice.sales.wo WRITE ORDERED BY {spec}");
-    for (spec, expected) in [
-        (
-            "bucket(4S, id)",
-            "Cannot find width for transform: bucket(4, id)",
-        ),
-        (
-            "bucket(4Y, id)",
-            "Cannot find width for transform: bucket(4, id)",
-        ),
-        (
-            "bucket(4BD, id)",
-            "Cannot find width for transform: bucket(4, id)",
-        ),
-        (
-            "bucket(4.0, id)",
-            "Cannot find width for transform: bucket(4.0, id)",
-        ),
-        (
-            "bucket(4D, id)",
-            "Cannot find width for transform: bucket(4.0, id)",
-        ),
-        (
-            "bucket(4F, id)",
-            "Cannot find width for transform: bucket(4.0, id)",
-        ),
-        (
-            "bucket(0L, id)",
-            "Unsupported width for transform: bucket(0, id)",
-        ),
-        (
-            "bucket(-4L, id)",
-            "Unsupported width for transform: bucket(-4, id)",
-        ),
-        (
-            "bucket(3000000000L, id)",
-            "Unsupported width for transform: bucket(3000000000, id)",
-        ),
-    ] {
+    for &(spec, expected) in WIDTH_LITERAL_ROWS {
         let mapped = refusal(&ctx, &catalogs, &sql(spec)).await;
         assert!(
             matches!(&mapped, repark_common::Error::IllegalArgument(message) if message == expected),
@@ -427,76 +473,159 @@ async fn typed_width_literals_and_parse_shapes_answer_spark() {
     assert_eq!(table.metadata().default_sort_order_id(), 0);
 }
 
+const RENDERED_TOKEN_ROWS: &[(&str, &str)] = &[
+    (
+        "bucket(0x4, id)",
+        "Cannot convert transform with more than one column reference: bucket(`0x4`, id)",
+    ),
+    (
+        "bucket(0X4, id) DESC",
+        "Cannot convert transform with more than one column reference: bucket(`0X4`, id)",
+    ),
+    (
+        "truncate(0x4, s)",
+        "Cannot convert transform with more than one column reference: truncate(`0x4`, s)",
+    ),
+    (
+        "bucket(0x4)",
+        "Cannot find width for transform: bucket(`0x4`)",
+    ),
+    (
+        "bucket(1abc, id)",
+        "Cannot convert transform with more than one column reference: bucket(`1abc`, id)",
+    ),
+    (
+        "bucket(`my col`, id)",
+        "Cannot convert transform with more than one column reference: bucket(`my col`, id)",
+    ),
+    (
+        "bucket(`a.b`, id)",
+        "Cannot convert transform with more than one column reference: bucket(`a.b`, id)",
+    ),
+    (
+        "bucket(a.b, id)",
+        "Cannot convert transform with more than one column reference: bucket(a.b, id)",
+    ),
+    (
+        "bucket(X'4', id)",
+        "Cannot find width for transform: bucket(0x04, id)",
+    ),
+    (
+        "bucket(x'abc', id)",
+        "Cannot find width for transform: bucket(0x0ABC, id)",
+    ),
+    (
+        "bucket(X'', id)",
+        "Cannot find width for transform: bucket(0x, id)",
+    ),
+    (
+        "truncate('a\\'b', s)",
+        "Cannot find width for transform: truncate('a''b', s)",
+    ),
+    (
+        "truncate('a''b', s)",
+        "Cannot find width for transform: truncate('a''b', s)",
+    ),
+    (
+        "truncate(\"a'b\", s)",
+        "Cannot find width for transform: truncate('a''b', s)",
+    ),
+    (
+        "truncate('a`b', s)",
+        "Cannot find width for transform: truncate('a`b', s)",
+    ),
+    (
+        r"truncate('a\\b', s)",
+        "Cannot find width for transform: truncate('a\\b', s)",
+    ),
+    (
+        r"truncate('a\tb', s)",
+        "Cannot find width for transform: truncate('a\tb', s)",
+    ),
+    (
+        r"truncate('a\nb', s)",
+        "Cannot find width for transform: truncate('a\nb', s)",
+    ),
+    (
+        r#"truncate("a""b", s)"#,
+        "Cannot find width for transform: truncate('a\"b', s)",
+    ),
+    (
+        r#"truncate("a\"b", s)"#,
+        "Cannot find width for transform: truncate('a\"b', s)",
+    ),
+    (
+        r"truncate('aAb', s)",
+        "Cannot find width for transform: truncate('aAb', s)",
+    ),
+    (
+        r"truncate('a\U00000041b', s)",
+        "Cannot find width for transform: truncate('aAb', s)",
+    ),
+    (
+        r"truncate('a\101b', s)",
+        "Cannot find width for transform: truncate('aAb', s)",
+    ),
+    (
+        r"truncate('a\%b', s)",
+        "Cannot find width for transform: truncate('a\\%b', s)",
+    ),
+    (
+        r"truncate('a\_b', s)",
+        "Cannot find width for transform: truncate('a\\_b', s)",
+    ),
+    (
+        r"truncate('a\qb', s)",
+        "Cannot find width for transform: truncate('aqb', s)",
+    ),
+    (
+        r"truncate('a\fb', s)",
+        "Cannot find width for transform: truncate('afb', s)",
+    ),
+    (
+        r"truncate('a\Zb', s)",
+        "Cannot find width for transform: truncate('a\u{1a}b', s)",
+    ),
+    (
+        r"truncate('a\\\'b', s)",
+        "Cannot find width for transform: truncate('a\\''b', s)",
+    ),
+    (
+        r"truncate('\\', s)",
+        "Cannot find width for transform: truncate('\\', s)",
+    ),
+];
+
+const INVALID_HEX_ROWS: &[(&str, &str)] = &[
+    ("bucket(X'4g', id)", "4g"),
+    ("bucket(X'é', id)", "é"),
+    ("bucket(x'4g', id)", "4g"),
+    ("bucket(X'4G', id) DESC", "4G"),
+    ("bucket(X' 4', id)", " 4"),
+    ("truncate(X'zz', s)", "zz"),
+];
+
 #[tokio::test]
 async fn hex_quoted_and_string_tokens_render_as_spark_does() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = transform_door(&wh).await;
     let sql = |spec: &str| format!("ALTER TABLE ice.sales.wo WRITE ORDERED BY {spec}");
-    for (spec, expected) in [
-        (
-            "bucket(0x4, id)",
-            "Cannot convert transform with more than one column reference: bucket(`0x4`, id)",
-        ),
-        (
-            "bucket(0X4, id) DESC",
-            "Cannot convert transform with more than one column reference: bucket(`0X4`, id)",
-        ),
-        (
-            "truncate(0x4, s)",
-            "Cannot convert transform with more than one column reference: truncate(`0x4`, s)",
-        ),
-        (
-            "bucket(0x4)",
-            "Cannot find width for transform: bucket(`0x4`)",
-        ),
-        (
-            "bucket(1abc, id)",
-            "Cannot convert transform with more than one column reference: bucket(`1abc`, id)",
-        ),
-        (
-            "bucket(`my col`, id)",
-            "Cannot convert transform with more than one column reference: bucket(`my col`, id)",
-        ),
-        (
-            "bucket(`a.b`, id)",
-            "Cannot convert transform with more than one column reference: bucket(`a.b`, id)",
-        ),
-        (
-            "bucket(a.b, id)",
-            "Cannot convert transform with more than one column reference: bucket(a.b, id)",
-        ),
-        (
-            "bucket(X'4', id)",
-            "Cannot find width for transform: bucket(0x04, id)",
-        ),
-        (
-            "bucket(x'abc', id)",
-            "Cannot find width for transform: bucket(0x0ABC, id)",
-        ),
-        (
-            "bucket(X'', id)",
-            "Cannot find width for transform: bucket(0x, id)",
-        ),
-        (
-            "truncate('a\\'b', s)",
-            "Cannot find width for transform: truncate('a''b', s)",
-        ),
-        (
-            "truncate('a''b', s)",
-            "Cannot find width for transform: truncate('a''b', s)",
-        ),
-        (
-            "truncate(\"a'b\", s)",
-            "Cannot find width for transform: truncate('a''b', s)",
-        ),
-        (
-            "truncate('a`b', s)",
-            "Cannot find width for transform: truncate('a`b', s)",
-        ),
-    ] {
+    for &(spec, expected) in RENDERED_TOKEN_ROWS {
         let mapped = refusal(&ctx, &catalogs, &sql(spec)).await;
         assert!(
             matches!(&mapped, repark_common::Error::IllegalArgument(message) if message == expected),
+            "{spec}: got {mapped:?}"
+        );
+    }
+    for &(spec, body) in INVALID_HEX_ROWS {
+        let mapped = refusal(&ctx, &catalogs, &sql(spec)).await;
+        let expected = format!(
+            "Error during planning: \n[INVALID_TYPED_LITERAL] The value of the typed literal \
+             \"X\" is invalid: '{body}'. SQLSTATE: 42604\n== SQL ==\n{}",
+            sql(spec)
+        );
+        assert!(
+            matches!(&mapped, repark_common::Error::Analysis(message) if message == &expected),
             "{spec}: got {mapped:?}"
         );
     }
