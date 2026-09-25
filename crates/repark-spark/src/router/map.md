@@ -15,6 +15,15 @@ modules, which live here because `lib.rs` is at its re-export ceiling.
 
 ## Contents
 
+- `insert_positional.rs` — **U8 WRITE-SQL PR1 (2026-09-24):** `prepare_positional_insert`
+  runs after U6's by-name routing check in `execute_insert_routed`. It aliases a later
+  projection item whose DataFusion name repeats an earlier one (`__repark_col_<n>`; a cast
+  keeps its input's name) in every top-level `SELECT` of the source, because a positional
+  write never reads the names, then hands the statement to the PARTITION rewrite.
+  `PreparedInsert.owned_append` tells the router to commit through the owned append. Its two
+  children are in [insert_positional/](insert_positional/map.md).
+  pins: u8-write-sql/C-011
+
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../router.rs`.
   **MW-6:** the CALL dispatch covers all supported procedures, including `register_table`.
 - `comment_on_table.rs` — **IPI-26/27 round 2 (2026-09-20):** the

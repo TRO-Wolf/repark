@@ -32,6 +32,7 @@ pub mod output_spec;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap).
 pub mod overwrite;
 pub mod overwrite_commit;
+pub mod overwrite_filter;
 pub mod overwrite_scope;
 /// Partition-scoped INSERT OVERWRITE (static row-filter + dynamic replace-partitions).
 pub mod partition_overwrite;
@@ -114,6 +115,7 @@ pub use overwrite::{
     write_overwrite_staged_files_from_stream,
 };
 pub use overwrite_commit::{commit_overwrite_replace_all_to, commit_replace_write};
+pub use overwrite_filter::{commit_overwrite_by_filter_with_summary, spark_overwrite_filter};
 pub use overwrite_scope::{
     OVERWRITE_MODE_OPTION, OverwriteIntent, OverwriteMode, OverwritePlan, OverwriteScope,
     overwrite_mode_option_is_dynamic, plan_overwrite, replace_partitions_is_noop,

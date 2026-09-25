@@ -242,9 +242,10 @@ async fn static_value_is_cast_to_a_date_partition_and_an_invalid_value_refuses()
     .await
     .expect_err("the DATE cast rejects the value");
     assert!(
-        error
-            .to_string()
-            .contains("Cast error: Cannot cast string '2024-13-45' to value of Date32 type"),
+        error.to_string().contains(
+            "[CAST_INVALID_INPUT] The value '2024-13-45' of the type \"STRING\" cannot be \
+                 cast to \"DATE\" because it is malformed."
+        ),
         "{error}"
     );
     run(

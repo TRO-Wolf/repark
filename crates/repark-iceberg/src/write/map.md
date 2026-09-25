@@ -1255,3 +1255,26 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   `type_change_err` maps the fork's `DataInvalid` `Cannot change column type: …`
   to `IllegalArgumentMarker`, on apply and on commit, for both seams.
   pins: u6-write-refusals/C-006, C-007
+
+## U8 WRITE-SQL PR1 (2026-09-24) — overwrite by a Spark filter
+
+- `overwrite_filter.rs` — Spark's `OverwriteByFilter` for `INSERT INTO … REPLACE WHERE`.
+  `spark_overwrite_filter` converts a sqlparser predicate to an Iceberg row filter by Spark's
+  V2-filter rules (`=`, `<>` as `NOT (=)`, `<=>`, ranges, `BETWEEN`, `IN`, `NOT IN` as
+  `notNull AND notIn`, `IS [NOT] NULL`, a wildcard-free or prefix `LIKE`, `AND`/`OR`/`NOT`
+  with no `IN` under a `NOT`). A string literal is coerced to the column type, an integral
+  decimal to an integer column. A column reference binds by its exact name; another case
+  refuses Iceberg's `Cannot find field '<name>' in struct: …`. Anything else refuses
+  `IllegalArgumentException: Cannot convert Spark predicate to Iceberg expression: <the
+  predicate>`, and `x = NULL` renders `null` as Spark's folded predicate does.
+  `commit_overwrite_by_filter_with_summary` commits `overwrite_files().overwrite_by_row_filter`
+  with the staged files and no added-file validation (Spark adds none), with the isolation,
+  `validate_from_snapshot` and branch handling of its siblings in `write_options.rs`. A set
+  row filter already counts as a change in the fork, so an empty source commits `delete`
+  without `allow_empty_commit`. A snapshot property that names an engine summary field
+  refuses, because the removed-file set of a general filter is not computed.
+  Tests: [overwrite_filter/](overwrite_filter/map.md).
+  U7's `writeTo(t).overwrite(condition)` reuses these two entry points (the claims line is in
+  `task/ledgers/staging/u8-write-sql-ledger.md`).
+  pins: u8-write-sql/C-013
+- `mod.rs` — declares `overwrite_filter` and re-exports its two entry points.

@@ -909,7 +909,7 @@ pub(crate) fn token_span_offsets(
 
 pub(crate) mod evolution;
 mod source_names;
-mod spark_names;
+pub(crate) mod spark_names;
 
 #[cfg(test)]
 mod tests;

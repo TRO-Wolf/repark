@@ -111,7 +111,7 @@ pub(crate) async fn execute_append_with_options(
     ctx.read_empty()
 }
 
-fn insert_sql_without_write_ref(
+pub(crate) fn insert_sql_without_write_ref(
     insert: &Insert,
     name: &datafusion::sql::sqlparser::ast::ObjectName,
 ) -> Option<String> {

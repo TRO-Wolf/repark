@@ -345,7 +345,7 @@ class ReparkSession:
         except Exception:
             # Invalid identifier — leave the statement unchanged so the engine/plan error wins.
             return query
-        rest_expanded = self._expand_from_join_table_refs_in_sql(rest)
+        rest_expanded = _expand_insert_body(rest, self._expand_from_join_table_refs_in_sql)
         return f"{prefix}{qualified}{rest_expanded}"
 
     def _try_expand_create_table_sql(self, query: str) -> str | None:

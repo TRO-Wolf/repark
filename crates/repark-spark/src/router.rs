@@ -23,6 +23,7 @@ use crate::{
 
 mod comment_on_table;
 mod hive_change_column;
+pub(crate) mod insert_positional;
 mod table_props_ddl;
 
 /// Execute one Spark-SQL statement, routing Iceberg DDL and writes and passing reads to DataFusion.
@@ -288,6 +289,10 @@ async fn execute_inner(
     let sql = evolving.as_deref().unwrap_or(sql);
     // Refuse genuine multi-statement scripts before any intercept or passthrough.
     refuse_multi_statement_sql(sql)?;
+    if let Some(replace) = insert_positional::replace_where::parse_replace_where(sql)? {
+        let execute = insert_positional::replace_where::execute_replace_where;
+        return Box::pin(execute(ctx, catalogs, replace, write_options)).await;
+    }
     if let Some(stripped) = crate::insert_by_name::strip_insert_by_name(sql)? {
         return Box::pin(crate::insert_by_name::execute_insert_by_name(
             ctx,
@@ -415,11 +420,15 @@ async fn execute_insert_routed(
         ))
         .await;
     }
+    let prepared = insert_positional::prepare_positional_insert(ctx, catalogs, insert).await?;
+    let (sql, insert) = prepared
+        .as_ref()
+        .map_or((sql, insert), |p| (p.sql.as_str(), &p.insert));
     if insert.overwrite {
         return execute_insert_overwrite(ctx, catalogs, sql, insert, write_options).await;
     }
     insert_arity::refuse_if_short_values(ctx, catalogs, insert).await?;
-    if !write_options.is_empty() {
+    if !write_options.is_empty() || prepared.as_ref().is_some_and(|p| p.owned_append) {
         return execute_append_with_options(ctx, catalogs, sql, insert, write_options).await;
     }
     if repark_iceberg::write::session_write_conf_is_set(ctx)

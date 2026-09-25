@@ -309,3 +309,9 @@ COVERAGE_ATTESTATION:
       artifacts: [python/repark/tests/test_dml_b_partition_overwrite.py, python/repark/tests/test_writer_v2.py, crates/repark-spark/src/tests/partition_overwrite.rs]
   complete: true
 ```
+
+**Superseded in part (2026-09-24, U8 PR1):** C-013's refusal text. An invalid static value now
+refuses Spark's `[CAST_INVALID_INPUT] … SQLSTATE: 22018` as `IllegalArgumentException`
+(measured on Spark 4.1.2, `target/probe-u8-pr1/probe3.py`), not the Arrow `Cast error` text.
+The facade pin is renamed `test_invalid_static_date_refuses_with_spark_cast_invalid_input`.
+See `task/ledgers/staging/u8-write-sql-ledger.md` C-009.

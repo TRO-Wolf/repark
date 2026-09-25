@@ -749,7 +749,9 @@ perfectly good read.
   and snapshot list unchanged). `INSERT … PARTITION (k1='v', k2) BY NAME` follows the same
   plan as the positional form. A static value is cast to the partition source type with the
   engine's cast (`PARTITION (d = '2024-01-01')` on a `DATE` column); a value that cast
-  rejects refuses with its `Cast error` text. An empty frame through
+  rejects refuses with Spark's `[CAST_INVALID_INPUT] … SQLSTATE: 22018` (U8 PR1,
+  2026-09-24; it answered the Arrow `Cast error` text before), and a repeated clause key
+  refuses `[DUPLICATE_KEY]` / `23505` as a `ParseException`. An empty frame through
   `insertInto(overwrite=True)` commits nothing with `overwrite-mode=dynamic` and wipes the
   table (`delete`) in static mode. `writeTo().overwritePartitions()` stays dynamic in every
   mode (typed intent). ANSI whole-table `INSERT OVERWRITE` (no clause) stays
@@ -1180,6 +1182,66 @@ perfectly good read.
   incidental: the DML passthrough misroutes reordered scan batches by
   `PARQUET:field_id` (fork ask F-DML-FIELD-ID-1), so the surface never routes
   through it.
+
+#### DML-7 — `INSERT INTO … REPLACE WHERE` — **FIXED 2026-09-24 (U8 PR1)**
+
+- **repark** — `INSERT INTO [TABLE] t REPLACE WHERE <predicate> <query>` runs on the Spark door
+  (`crates/repark-spark/src/router/insert_positional/replace_where.rs`). The predicate converts
+  to an Iceberg row filter by Spark's V2-filter rules
+  (`repark_iceberg::write::spark_overwrite_filter`: `=`, `<>`, `<=>`, ranges, `BETWEEN`, `IN`,
+  `NOT IN` as `notNull AND notIn`, `IS [NOT] NULL`, prefix `LIKE`, `AND` / `OR` / `NOT`, a
+  string literal coerced to the column type), and the query's rows commit through
+  `overwrite_by_row_filter` with no added-file validation
+  (`commit_overwrite_by_filter_with_summary`). The snapshot is `overwrite`, `delete` for an
+  empty source (even when nothing matches), and `append` for a literal `false` predicate. A
+  filter that matches some but not all rows of a file refuses Iceberg's `Cannot delete file
+  where some, but not all, rows match filter …`. Branch targets (`t.branch_b`) commit to the
+  branch. Refusals: a subquery predicate `UNSUPPORTED_FEATURE.OVERWRITE_BY_SUBQUERY` / `0A000`,
+  a non-deterministic one `INVALID_NON_DETERMINISTIC_EXPRESSIONS` / `42K0E`, an untranslatable
+  one `IllegalArgumentException: Cannot convert Spark predicate to Iceberg expression: …`, a
+  wrong-width source `INSERT_COLUMN_ARITY_MISMATCH` / `21S01`, and `REPLACE WHERE` after
+  `OVERWRITE`, a column list, `BY NAME` or `PARTITION` a `ParseException` `PARSE_SYNTAX_ERROR`
+  near `'REPLACE'`.
+- **Apache Spark** — `OverwriteByExpression` → Iceberg `SparkWrite.OverwriteByFilter`, the same
+  answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0, 2026-09-24,
+  `target/probe-u8-pr1/spark*.json`; scoreboard cell `W-INSERT-OVERWRITE-WHERE`.)*
+- **Residue** — (1) the partial-match refusal is `PySparkException` with `DataInvalid => …` and
+  the fork's filter spelling (`id = 2`), where Spark raises `Py4JJavaError` wrapping
+  `ValidationException` and spells `ref(name="id") == 2`; a mis-cased column (`CAT = 'x'`)
+  refuses Iceberg's `Cannot find field 'CAT' in struct: …` as `AnalysisException`. (2) The
+  untranslatable-predicate text quotes the statement's own spelling, where Spark renders its V2
+  expression (`(id + 1) = 3`, `CAST(id AS string)`). (3) `TIMESTAMP` literals in the predicate
+  refuse as untranslatable; Spark converts them. (4) A `TABLE a.b.c` source is the door's
+  pre-existing parse gap for three-part `TABLE` queries.
+- **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
+  `crates/repark-spark/src/tests/replace_where.rs`;
+  `crates/repark-iceberg/src/write/overwrite_filter/tests.rs`.
+  pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-013, C-014
+- **Rationale** — FIXED. Spark-only syntax, like DML-6; the native door has no spelling.
+
+#### DML-8 — `INSERT INTO … PARTITION (…)` — **FIXED 2026-09-24 (U8 PR1)**
+
+- **repark** — the Spark door rewrites the clause into a plain positional INSERT
+  (`crates/repark-spark/src/router/insert_positional/partition_append.rs`) and commits it
+  through the owned append (`append_with_options.rs`), so branch targets and WAP ids behave as a
+  plain INSERT does. A static value is Spark's string form cast to the column type (`id = '7'` →
+  7, `cat = 5` → `'5'`, `cat = true` → `'true'`, `NULL`), injected at the column's table
+  position (or after a column list); a dynamic key is the query's own column. A key that is not
+  an identity partition column refuses `NON_PARTITION_COLUMN` / `42000`, a repeated key
+  `DUPLICATE_KEY` / `23505` (`ParseException`), a value the cast rejects `CAST_INVALID_INPUT` /
+  `22018`, a static key in the column list `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST` /
+  `42713`, and a wrong-width query `INSERT_COLUMN_ARITY_MISMATCH` naming the static column at
+  its table position. On a `write.spark.accept-any-schema` table the append resolves by name
+  (U6's door), so `SELECT 9, 'z'` refuses `Field 9 not found in source schema`.
+- **Apache Spark** — the same answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
+  2026-09-24, `target/probe-u8-pr1/spark*.json`; scoreboard cell `W-INSERT-PARTITION-CLAUSE`.)*
+- **Residue** — Spark raises `NumberFormatException` for `CAST_INVALID_INPUT`; RePark raises its
+  parent `IllegalArgumentException` (the facade has no narrower class).
+- **Pin** — `python/repark/tests/test_ice_write_sql_1.py`;
+  `crates/repark-spark/src/tests/partition_append.rs`.
+  pins: u8-write-sql/C-006, C-007, C-008, C-009, C-010
+- **Rationale** — FIXED. `Partitioned inserts not yet supported` (DataFusion's planner text)
+  retires.
 
 #### RTAS-OPS-1 — `[CREATE OR ]REPLACE TABLE [… AS SELECT]` snapshot operation stamps
 
@@ -1955,6 +2017,13 @@ Unit ICE-NESTED-EVO-1, run 22b round 3 (2026-09-18), ruling Q-22b-NEST-9.
   and is load-bearing for facade helpers that assume unique names (e.g. the filter rewriter's
   exact-duplicate defensive branch). Reproducing Spark's late raise would mean allowing illegal
   frames through the engine.
+- **Exemption (U8 PR1, 2026-09-24)** — the source of a positional `INSERT` (append, overwrite,
+  `REPLACE WHERE`) is written by position, so its output names are never read. A later item
+  whose name repeats an earlier one (`SELECT id, CAST(id AS STRING), 'k' FROM range(20)` — a
+  cast keeps its input's name) is aliased before planning
+  (`crates/repark-spark/src/router/insert_positional.rs`) and the write answers as Spark's does
+  (scoreboard cell `W-INSERT-BUCKETED`). `BY NAME` and accept-any-schema writes keep their
+  names. pins: u8-write-sql/C-011
 
 ---
 

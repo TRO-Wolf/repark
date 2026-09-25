@@ -2161,3 +2161,14 @@ matrix; those exports declare the analyzed logical schema.
   - A typed-suffix refusal never quotes the internal marker (C-017).
   - Plain-table arms of the empty `BY NAME` overwrite wipe (C-018).
   pins: u6-write-refusals/C-013, C-015, C-016, C-017, C-018
+
+U8 WRITE-SQL PR1 (2026-09-24): `replace_where.rs` pins `INSERT INTO … REPLACE WHERE` on the
+router door — rows, snapshot operations and counts, the accepted spellings, a branch target,
+the refusals with their full text, the misplaced-keyword parse errors, and a `WHERE` inside
+the query staying a plain append. `partition_append.rs` pins `INSERT INTO … PARTITION (…)` —
+static and dynamic keys, casts, a branch target, the refusals, the accept-any by-name door —
+and the positional-source rename (`SELECT id, CAST(id AS STRING)` into a `bucket(4, id)`
+table, four files). `overwrite_mode.rs` re-pins
+`static_value_is_cast_to_a_date_partition_and_an_invalid_value_refuses` to Spark's
+`CAST_INVALID_INPUT` text. pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007,
+C-008, C-009, C-010, C-011, C-012

@@ -30,6 +30,8 @@ CC-2 close: S3 Tables location-guard phrase kept contiguous in `test_aws_accepta
 **FNP-11B step 3 (2026-09-15, run 16a):** the deferred census is gone (`to_timestamp_ltz` / `to_timestamp_ntz` answer, presence pin in its place); `test_fn_batch3.py` answers `try_to_timestamp` instead of refusing it; the split-identity tail follows the thirteen-name installer tuple with no edit; `test_examples_functions_b.py` retires the `try_to_timestamp` refusal pin (EX-FN-20 FIXED). pins: fnp-11b/C-002, C-007
 **FNP-AGG-1 slice (d) (2026-09-21):** `test_functions_split_identity.py` counts `FNPAGG1_EXPORTS` after the window names. pins: fnp-agg-1/C-002, C-006
 
+U8 WRITE-SQL PR1 (2026-09-24): `test_ice_write_sql_1.py` pins `INSERT INTO … REPLACE WHERE`, `INSERT INTO … PARTITION (…)` and the bucketed `INSERT … FROM range(20)` against Spark 4.1.2 + Iceberg 1.11 (`target/probe-u8-pr1/spark*.json` and the scoreboard cells `W-INSERT-OVERWRITE-WHERE`, `W-INSERT-PARTITION-CLAUSE`, `W-INSERT-BUCKETED`): rows, snapshot summaries, file layouts, and every refusal's exact class, condition, SQLSTATE and message. `test_ice_overwrite_mode_1.py` renames `test_invalid_static_date_refuses_like_the_engine_cast` to `test_invalid_static_date_refuses_with_spark_cast_invalid_input` and pins Spark's `CAST_INVALID_INPUT` text (supersedes the refusal text of ice-overwrite-mode-1/C-013). pins: u8-write-sql/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-014
+
 ## Purpose
 
 Facade tests for the `repark` wheel — they require the compiled native module and exercise the
