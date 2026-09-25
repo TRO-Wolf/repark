@@ -1,3 +1,7 @@
+# Errata — C-022 cross-catalog RENAME half superseded (2026-09-25, U5 PR3 / ice-nested-evo-1 C-059)
+
+This note sits at the top because `completed/` ledgers are frozen except a prepended errata. C-022's second half, "cross-catalog `RENAME TO` still refuses", is superseded by ice-nested-evo-1/C-059: the Spark door now reads a catalog-qualified target inside the source catalog, as Spark 4.1.2 does. `test_rename_across_catalogs_still_refuses` is replaced by `test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`, and `rename_three_part_dest_across_catalogs_still_refuses` by the pins in `crates/repark-spark/src/tests/use_ddl.rs` and `rename_target.rs`. The `D-RENAME-TABLE-SHORT` half stands.
+
 # Unit ledger — ICE-CATALOG-SESSION-1 · catalog and session SQL (IPI-32, RePark half)
 
 **Retires:** this ledger moves to `../completed/` in this unit's last commit.
@@ -133,8 +137,6 @@ setCurrentCatalog, USE DEFAULT). Committed verbatim as
 | C-030 | `catalog_config.rs` extraction ratchets down with `hadoop` / `InMemoryCatalog` arms and updated refusal texts. | `scripts/check_rust_file_size.py` green + `type_short_forms_resolve_each_kind` siblings. | **PROVEN** | `scripts/check_rust_file_size.py` green; `catalog_config.rs` 1028 → 1007, kind arms live in `catalog_kind.rs`. pins: ice-catalog-session-1/C-030 |
 
 VERDICT: 30 clauses, 30 PROVEN, 0 OPEN, 0 REJECTED.
-
-**Correction (2026-09-25, U5 PR3).** C-022's second half, "cross-catalog `RENAME TO` still refuses", is superseded by ice-nested-evo-1/C-059: the Spark door now reads a catalog-qualified target inside the source catalog, as Spark 4.1.2 does. `test_rename_across_catalogs_still_refuses` is replaced by `test_ice_catalog_session_1.py::test_rename_across_catalogs_reads_a_namespace_like_spark`, and `rename_three_part_dest_across_catalogs_still_refuses` by the pins in `crates/repark-spark/src/tests/use_ddl.rs` and `rename_target.rs`. The `D-RENAME-TABLE-SHORT` half stands.
 
 ## Coverage attestation
 
