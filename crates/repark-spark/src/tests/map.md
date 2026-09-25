@@ -1087,6 +1087,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   (`overwrite`, zero delete files). CTAS and `'01'` write v1 too. The refusals pin full text:
   `v5` and `abc` as IllegalArgumentException, `0`/`-1`/`4` as not implemented, and the fork's
   downgrade text for `CREATE OR REPLACE` v2 → v1 (Spark says `Cannot downgrade v2 table to v1`).
+  The v1 refusal pins it replaced now read `4`: `create_table.rs` dropped its v1 block and
+  `ctas.rs::ctas_format_version_two_consumed_others_rejected` rejects `'format-version' = 4`.
 - [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
   COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
   struct field, empty string, `CHANGE COLUMN`, upper-cased name, double-quoted literal, and a
