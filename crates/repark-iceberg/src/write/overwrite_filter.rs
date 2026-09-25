@@ -104,7 +104,7 @@ pub async fn commit_overwrite_by_filter_with_summary(
             action = action.validate_from_snapshot(snapshot_id);
         }
     }
-    let action = maybe_to_branch(action, branch, |action, name| action.to_branch(name));
+    let action = maybe_to_branch(table, action, branch, |action, name| action.to_branch(name))?;
     let tx = action
         .apply(tx)
         .map_err(crate::catalog::iceberg_to_datafusion)?;
