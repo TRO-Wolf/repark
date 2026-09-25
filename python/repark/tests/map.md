@@ -934,7 +934,8 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `replace()` on the full state with the old branch's rows.
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `_sorted_rows` sorts only inside runs of equal
   ids, so the `ORDER BY id` order itself is compared and a `10 before 2` regression is caught
-  (critic V-007); the `nested` seed serves `oc_nested_field`.
+  (critic V-007); the `nested` seed serves `oc_nested_field`. Round 3 (2026-09-25): the
+  `notnull` seed (the named seed under `id BIGINT NOT NULL`) serves `oc_null_into_not_null`.
   pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
 - [test_ice_write_df_2_overwrite.py](test_ice_write_df_2_overwrite.py) — **U7 PR2 slice 2
   (2026-09-24, rebased 2026-09-25):** `DataFrameWriterV2.overwrite(condition)` on the helpers of
@@ -956,6 +957,19 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `_untranslatable`); `test_overwrite_condition_divergences_on_the_row_filter` pins R-11
   (fractional literals commit) and R-12 (`startswith` refuses) beside Spark's answers.
   pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010, C-013, C-014, C-015
+  **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** five nested sub-field
+  refusals join `test_overwrite_condition_residues` (`CANNOT_FIND_DATA` `` `s`.`b` ``,
+  `EXTRA_STRUCT_FIELDS`; Spark's text, R-4 prefix); `_struct_frame` and `_case_sensitive`
+  build them. pins: u7-write-df-2/C-013, C-016
+- [test_ice_write_df_2_doors.py](test_ice_write_df_2_doors.py) — **U7 PR2 slice-2 round 3
+  (2026-09-25, critic r3 V-001..V-005; split out so the overwrite file stays under the
+  1000-line ceiling):** `test_isolation_level_is_ignored_where_spark_ignores_it` (append,
+  `saveAsTable` append and create, `insertInto` append, `create()` with `none` or `bogus`,
+  EQUAL) and `test_isolation_level_refuses_on_the_overwrite_and_replace_doors`
+  (`overwritePartitions`, `saveAsTable` and `insertInto` overwrite, `replace`,
+  `createOrReplace` on no table; R-4 class); `test_nested_binding_residues_beside_spark`
+  (R-15, R-16) and `test_store_assignment_residues_beside_spark` (R-17, R-18) pin RePark's
+  answer beside Spark's. pins: u7-write-df-2/C-013, C-014, C-016
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
   oracle entry through the helpers of `test_ice_write_df_1.py`: the missing bucket column
@@ -1004,6 +1018,10 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   column, a struct-field condition over the `nested` seed, the `validate-from-snapshot-id`
   shapes without a level, on an unsnapshotted table and on a branch target, `isolation-level=none`,
   a `t.branch_b1` target, and the three extra-plus-missing frames (bigint, string, reordered).
+  **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** the scratchpad recorder `xr4/xrec5.py` adds 23
+  shapes: the `iso_*` doors with an `isolation-level` option, the `oc_nested_*`,
+  `append_nested_*` and `op_nested_*` struct frames, `oc_string_into_bigint` and
+  `oc_null_into_not_null`.
   pins: u7-write-df-2/C-001, C-004
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **U7 PR2 (2026-09-24):** P2-14's refusal pin is now

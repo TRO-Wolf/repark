@@ -366,6 +366,16 @@ pub(crate) async fn by_name_source_query(
     source_names::refuse_underived(table, &source_names, &table_display, case_sensitive)?;
     let fields = schema_fields(table);
     let mapping = name_mapping(&fields, &source_names, &table_display, case_sensitive)?;
+    nested::refuse_nested_mismatch(
+        ctx,
+        catalogs,
+        table,
+        source,
+        &mapping,
+        &table_display,
+        case_sensitive,
+    )
+    .await?;
     let names: Vec<String> = fields.into_iter().map(|(name, _)| name).collect();
     parse_projection_query(&null_filled_projection(
         source,
@@ -958,6 +968,7 @@ pub(crate) fn token_span_offsets(
 }
 
 pub(crate) mod evolution;
+mod nested;
 mod source_names;
 pub(crate) mod spark_names;
 

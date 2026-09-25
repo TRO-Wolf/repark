@@ -1,5 +1,5 @@
 {
- "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append, v2_options_branch_upper, oc_* and vf_* shapes (a vf_* shape takes validate-from-snapshot-id from the seed snapshot and applies its change before the overwrite; `#<id>` stands for a Spark attribute id) (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE, W-DF-V2-OPTION-BRANCH, W-DF-V2-OVERWRITE-COND-PART and W-DF-V2-OVERWRITE-COND-ROWS from the same scoreboard file. U7 PR2 slice-1 round 2 (2026-09-25): target/probe-u7-pr2a-r1fix/record_ids.py re-recorded the slice-1 shapes with the current schema's field ids by name (`field_ids`, nested struct/list/map ids included), `identifier_field_ids`, `last_column_id`, `current_schema_id`, `schema_ids`, the default spec's `spec_fields` (source id, field id, name, transform) and the sorted `spec_ids` (every earlier value unchanged), and added the ids_* shapes (reordered, swapped, renamed, added, dropped, type-changed, nested-reordered, identifier, reordered partitionBy and re-added columns, each reading branch b1 where it has one), sat_overwrite_dynamic_option, v1_option_branch_overwrite, v1_option_branch_insert_into_overwrite and sat_overwrite_partby_on_partitioned; the SparkException text of ids_type_change_branch keeps only its ClassCastException clause. U7 PR2 slice-1 round 3 (2026-09-25): target/probe-u7-pr2a-r2fix/record_doors.py recorded the five replace doors with the same observations and a branch b1 read: sql_column_def_replace, sql_replace_table, sql_rtas_reordered, v2_create_or_replace_reordered and v2_replace_renamed (the critic's r2 probe /tmp/xr-xu7-writedf-probe/spark.json measured the same branch rows and ids). U7 PR2 slice-2 rebase (2026-09-25): the oc_*, vf_* and v2_option_branch_overwrite_condition shapes re-recorded through record.py's shapes under a recorder adding the same field-id observations (every earlier value unchanged). U7 PR2 slice-2 round 2 (2026-09-25, critic V-001/V-003/V-004): the scratchpad recorder xr/xrec2.py (record.py's session and state plus the field-id observations, same Spark and Iceberg, JDK 17) added oc_between_fractional, oc_le_fractional, oc_isin_rows, oc_data_string_rows, oc_startswith_partition, oc_isnull_with_null_row, oc_not_partition_with_null_row and oc_not_in_with_null_row (the last three insert a fourth row (4, 'd', NULL) before the overwrite), oc_lit_null, oc_frame_upper_case, oc_cond_on_dropped_frame_column, oc_nested_field (the ids_nested_reorder_branch seed `nested` and the frame [(7, {9, g}), (8, {1, h})]), vf_bad_id_no_level, vf_bad_id_level_none, vf_unknown_id_no_level, vf_empty_table_validate, oc_branch_target (writeTo('t.branch_b1'), branch_rows read after), vf_on_branch_target (a DELETE on the branch after the validation start), oc_extra_and_missing_bigint, oc_extra_and_missing_string and oc_extra_and_missing_reordered.",
+ "source": "live PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0, InMemoryCatalog `sc`, 2026-09-24; probe drivers target/probe-u7-pr1/probe.py, probe2.py, probe3.py (U7 PR1 step 1); recorded cells from the 2026-09-24 scoreboard spark-core.json; round-2 fix probes target/probe-u7-r1fix/sprobe.py and sprobe2.py (same Spark and Iceberg, 2026-09-24) re-measured ctas_part_upper and create_part_upper with the `# Partition Information` rows (`partition_info`) and added the shapes from bucketBy_new_missing_col_overwrite to ctas_clustered_colname; `<root>` stands for that probe directory; round-3 fix probe target/probe-u7-r2fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added bucketBy_new_nested_col, bucketBy_new_nested_missing and bucketBy_new_dotted_missing (Spark backtick-quotes a bucket column name containing '.', and only that; sprobe.out and sprobe2.out hold the other name shapes), spec_id_current_then_absent, bucket_existing_void_append (a format-version 1 table whose dropped field became void) and bucket_existing_time_append; the nested frame is createDataFrame with the DDL `id BIGINT, s STRUCT<a: INT, b: STRING>`; round-4 fix probe target/probe-u7-r3fix/sprobe.py (same Spark and Iceberg, 2026-09-24) added sortBy_missing, sortBy_dotted_missing, sortBy_second_missing, sortBy_missing_overwrite and sortBy_bucket_missing_first (a sortBy column the frame lacks is the same 3060 as a bucket column, the bucket columns named first; no table is left behind); U7 PR2 (2026-09-24): target/probe-u7-pr2/record.py recorded the sat_*, *_option_branch_*, v2_option_tag_append, v2_options_branch_upper, oc_* and vf_* shapes (a vf_* shape takes validate-from-snapshot-id from the seed snapshot and applies its change before the overwrite; `#<id>` stands for a Spark attribute id) (seed `values` = one INSERT VALUES, `named` = INSERT … UNION ALL, three files; `schema`/`refs`/`history` (snapshot indexes in commit order)/`properties`/`format_version`/`sort_fields`/`uuid_same`/`branch_rows` read after the write; an AnalysisException message stops before Spark's appended plan); recorded cells W-DF-SAVEASTABLE-OVERWRITE, W-DF-V2-OPTION-BRANCH, W-DF-V2-OVERWRITE-COND-PART and W-DF-V2-OVERWRITE-COND-ROWS from the same scoreboard file. U7 PR2 slice-1 round 2 (2026-09-25): target/probe-u7-pr2a-r1fix/record_ids.py re-recorded the slice-1 shapes with the current schema's field ids by name (`field_ids`, nested struct/list/map ids included), `identifier_field_ids`, `last_column_id`, `current_schema_id`, `schema_ids`, the default spec's `spec_fields` (source id, field id, name, transform) and the sorted `spec_ids` (every earlier value unchanged), and added the ids_* shapes (reordered, swapped, renamed, added, dropped, type-changed, nested-reordered, identifier, reordered partitionBy and re-added columns, each reading branch b1 where it has one), sat_overwrite_dynamic_option, v1_option_branch_overwrite, v1_option_branch_insert_into_overwrite and sat_overwrite_partby_on_partitioned; the SparkException text of ids_type_change_branch keeps only its ClassCastException clause. U7 PR2 slice-1 round 3 (2026-09-25): target/probe-u7-pr2a-r2fix/record_doors.py recorded the five replace doors with the same observations and a branch b1 read: sql_column_def_replace, sql_replace_table, sql_rtas_reordered, v2_create_or_replace_reordered and v2_replace_renamed (the critic's r2 probe /tmp/xr-xu7-writedf-probe/spark.json measured the same branch rows and ids). U7 PR2 slice-2 rebase (2026-09-25): the oc_*, vf_* and v2_option_branch_overwrite_condition shapes re-recorded through record.py's shapes under a recorder adding the same field-id observations (every earlier value unchanged). U7 PR2 slice-2 round 2 (2026-09-25, critic V-001/V-003/V-004): the scratchpad recorder xr/xrec2.py (record.py's session and state plus the field-id observations, same Spark and Iceberg, JDK 17) added oc_between_fractional, oc_le_fractional, oc_isin_rows, oc_data_string_rows, oc_startswith_partition, oc_isnull_with_null_row, oc_not_partition_with_null_row and oc_not_in_with_null_row (the last three insert a fourth row (4, 'd', NULL) before the overwrite), oc_lit_null, oc_frame_upper_case, oc_cond_on_dropped_frame_column, oc_nested_field (the ids_nested_reorder_branch seed `nested` and the frame [(7, {9, g}), (8, {1, h})]), vf_bad_id_no_level, vf_bad_id_level_none, vf_unknown_id_no_level, vf_empty_table_validate, oc_branch_target (writeTo('t.branch_b1'), branch_rows read after), vf_on_branch_target (a DELETE on the branch after the validation start), oc_extra_and_missing_bigint, oc_extra_and_missing_string and oc_extra_and_missing_reordered. U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005): the scratchpad recorder xr4/xrec5.py (xrec2.py's session, state and field-id observations, same Spark and Iceberg, JDK 17) added iso_append_none, iso_append_bogus, iso_v1_append_none, iso_v1_append_bogus, iso_insert_into_append_bogus, iso_overwrite_partitions_none (PARTITIONED BY (cat)), iso_sat_overwrite_none, iso_insert_into_overwrite_none, iso_v2_replace_bogus, iso_v2_create_or_replace_none, iso_sat_ctas_bogus and iso_v2_create_none (the last three on no table; an isolation-level write option on each door), oc_nested_missing_subfield, oc_nested_extra_subfield, oc_nested_missing_and_extra, oc_nested_missing_reordered, oc_nested_upper_subfield_case_sensitive (spark.sql.caseSensitive=true), oc_nested_upper_subfield (condition id >= 1), append_nested_missing_subfield, append_nested_extra_subfield and op_nested_missing_subfield (seed `nested`, a one-row frame (7, s) whose struct DDL each name spells), oc_string_into_bigint and oc_null_into_not_null (seed `notnull` = the named seed under id BIGINT NOT NULL).",
  "seed": "t (id BIGINT, data STRING, cat STRING) seeded (1,'a','x'),(2,'b','y'),(3,'c','x'); frame [(7,'g','x'),(8,'h','w')]",
  "recorded": {
   "W-DF-SAVE-NAME": {
@@ -16653,6 +16653,2387 @@
      1,
      "id",
      false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_append_none": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_append_bogus": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_v1_append_none": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_v1_append_bogus": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_insert_into_append_bogus": {
+   "ok": true,
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ],
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append",
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "5"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     4
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_overwrite_partitions_none": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Invalid isolation level: none"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "2",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     2
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [
+    [
+     3,
+     1000,
+     "cat",
+     "identity"
+    ]
+   ],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_sat_overwrite_none": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Invalid isolation level: none"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_insert_into_overwrite_none": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Invalid isolation level: none"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_v2_replace_bogus": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Invalid isolation level: bogus"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_v2_create_or_replace_none": {
+   "error": {
+    "type": "IllegalArgumentException",
+    "condition": null,
+    "sqlstate": null,
+    "message": "Invalid isolation level: none"
+   },
+   "state_error": "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`u7`.`t` cannot be found. Verify the spelling and correctness of the schema and catalog.\nIf you did not qualify the name with a schema, verify the curr"
+  },
+  "iso_sat_ctas_bogus": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "iso_v2_create_none": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     "g",
+     "x"
+    ],
+    [
+     8,
+     "h",
+     "w"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_nested_missing_subfield": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot find data for the output column `s`.`b`. SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     [
+      1,
+      "x"
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      "y"
+     ]
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_nested_extra_subfield": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot write extra fields `c` to the struct `s`. SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     [
+      1,
+      "x"
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      "y"
+     ]
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_nested_missing_and_extra": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot find data for the output column `s`.`b`. SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     [
+      1,
+      "x"
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      "y"
+     ]
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_nested_missing_reordered": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot find data for the output column `s`.`b`. SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     [
+      1,
+      "x"
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      "y"
+     ]
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_nested_upper_subfield_case_sensitive": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot find data for the output column `s`.`a`. SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     [
+      1,
+      "x"
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      "y"
+     ]
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_nested_upper_subfield": {
+   "ok": true,
+   "rows": [
+    [
+     7,
+     [
+      9,
+      "g"
+     ]
+    ]
+   ],
+   "operations": [
+    "append",
+    "overwrite"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    },
+    {
+     "added-data-files": "1",
+     "added-records": "1",
+     "deleted-data-files": "1",
+     "deleted-records": "2",
+     "total-records": "1"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     1
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ],
+    [
+     1,
+     0,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "append_nested_missing_subfield": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot find data for the output column `s`.`b`. SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     [
+      1,
+      "x"
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      "y"
+     ]
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "append_nested_extra_subfield": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot write extra fields `c` to the struct `s`. SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     [
+      1,
+      "x"
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      "y"
+     ]
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "op_nested_missing_subfield": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot find data for the output column `s`.`b`. SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     [
+      1,
+      "x"
+     ]
+    ],
+    [
+     2,
+     [
+      2,
+      "y"
+     ]
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "1",
+     "added-records": "2",
+     "total-records": "2"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     1
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "s",
+     "struct<a:int,b:string>"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "s",
+     false,
+     [
+      [
+       3,
+       "a",
+       false,
+       "int"
+      ],
+      [
+       4,
+       "b",
+       false,
+       "string"
+      ]
+     ]
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 4,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_string_into_bigint": {
+   "error": {
+    "type": "AnalysisException",
+    "condition": "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST",
+    "sqlstate": "KD000",
+    "message": "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `sc`.`u7`.`t`: Cannot safely cast `id` \"STRING\" to \"BIGINT\". SQLSTATE: KD000"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     false,
+     "long"
+    ],
+    [
+     2,
+     "data",
+     false,
+     "string"
+    ],
+    [
+     3,
+     "cat",
+     false,
+     "string"
+    ]
+   ],
+   "identifier_field_ids": [],
+   "last_column_id": 3,
+   "current_schema_id": 0,
+   "schema_ids": [
+    0
+   ],
+   "spec_fields": [],
+   "spec_ids": [
+    0
+   ]
+  },
+  "oc_null_into_not_null": {
+   "error": {
+    "type": "SparkRuntimeException",
+    "condition": "NOT_NULL_ASSERT_VIOLATION",
+    "sqlstate": "42000",
+    "message": "[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in non-nullable field: \nid\nIf the schema is inferred from a Scala tuple/case class, or a Java bean, please try to use scala.Option[_] or other nullable types (such as java.lang.Integer instead of int/scala.Int). SQLSTATE: 42000"
+   },
+   "rows": [
+    [
+     1,
+     "a",
+     "x"
+    ],
+    [
+     2,
+     "b",
+     "y"
+    ],
+    [
+     3,
+     "c",
+     "x"
+    ]
+   ],
+   "operations": [
+    "append"
+   ],
+   "summaries": [
+    {
+     "added-data-files": "3",
+     "added-records": "3",
+     "total-records": "3"
+    }
+   ],
+   "specs": [
+    [
+     0,
+     3
+    ]
+   ],
+   "partitioning": [],
+   "schema": [
+    [
+     "id",
+     "bigint"
+    ],
+    [
+     "data",
+     "string"
+    ],
+    [
+     "cat",
+     "string"
+    ]
+   ],
+   "refs": [
+    [
+     "main",
+     "BRANCH",
+     0
+    ]
+   ],
+   "history": [
+    [
+     0,
+     null,
+     true
+    ]
+   ],
+   "properties": {},
+   "format_version": 2,
+   "sort_fields": 0,
+   "uuid_same": true,
+   "field_ids": [
+    [
+     1,
+     "id",
+     true,
      "long"
     ],
     [

@@ -114,6 +114,21 @@ def _extra_and_missing(frame: Any, extra: Any, order: tuple[str, ...] = ()) -> N
     wide.writeTo(_T).overwrite(_cond("id", 1))
 
 
+def _struct_frame(spark: ReparkSession, ddl: str, value: tuple[Any, ...]) -> Any:
+    return spark.createDataFrame([(7, value)], f"id BIGINT, s STRUCT<{ddl}>")
+
+
+def _case_sensitive(action: Action) -> Action:
+    def act(spark: ReparkSession, frame: Any, out: dict[str, Any]) -> None:
+        spark.conf.set("spark.sql.caseSensitive", "true")
+        try:
+            action(spark, frame, out)
+        finally:
+            spark.conf.set("spark.sql.caseSensitive", "false")
+
+    return act
+
+
 _APPEND_ID_1 = f"INSERT INTO {_T} VALUES (1, 'z', 'q')"
 _ACCEPT_ANY_SCHEMA = ", 'write.spark.accept-any-schema'='true'"
 
@@ -454,6 +469,73 @@ _CONDITION_RESIDUES: dict[
         ),
         _planning,
     ),
+    "oc_nested_missing_subfield": (
+        (
+            "nested",
+            "",
+            "",
+            2,
+            lambda s, f, o: _struct_frame(s, "a: INT", (9,)).writeTo(_T).overwrite(_cond("id", 1)),
+        ),
+        _planning,
+    ),
+    "oc_nested_extra_subfield": (
+        (
+            "nested",
+            "",
+            "",
+            2,
+            lambda s, f, o: (
+                _struct_frame(s, "a: INT, b: STRING, c: INT", (9, "g", 5))
+                .writeTo(_T)
+                .overwrite(_cond("id", 1))
+            ),
+        ),
+        _planning,
+    ),
+    "oc_nested_missing_and_extra": (
+        (
+            "nested",
+            "",
+            "",
+            2,
+            lambda s, f, o: (
+                _struct_frame(s, "a: INT, c: INT", (9, 5)).writeTo(_T).overwrite(_cond("id", 1))
+            ),
+        ),
+        _planning,
+    ),
+    "oc_nested_missing_reordered": (
+        (
+            "nested",
+            "",
+            "",
+            2,
+            lambda s, f, o: (
+                _struct_frame(s, "a: INT", (9,))
+                .select("s", "id")
+                .writeTo(_T)
+                .overwrite(_cond("id", 1))
+            ),
+        ),
+        _planning,
+    ),
+    "oc_nested_upper_subfield_case_sensitive": (
+        (
+            "nested",
+            "",
+            "",
+            2,
+            _case_sensitive(
+                lambda s, f, o: (
+                    _struct_frame(s, "A: INT, b: STRING", (9, "g"))
+                    .writeTo(_T)
+                    .overwrite(_cond("id", 1))
+                )
+            ),
+        ),
+        _planning,
+    ),
     "vf_serializable_from_s0": (
         ("named", "", "", 2, lambda s, f, o: _validated_overwrite(s, f, "serializable", True)),
         _data_invalid,
@@ -581,10 +663,13 @@ def test_overwrite_condition_residues(spark: ReparkSession, warehouse: Path, nam
 
     The table is left as Spark leaves it. A frame with an extra column and a missing one
     refuses ``EXTRA_COLUMNS`` with Spark's condition, SQLSTATE and text (R-4 prefix), whether
-    the extra is a bigint, a string or the frame is reordered; a ``lit(None)`` or a struct-field
+    the extra is a bigint, a string or the frame is reordered; a frame struct missing a
+    sub-field refuses ``CANNOT_FIND_DATA`` naming `s`.`b` (also reordered, beside an extra
+    sub-field, or spelled ``A`` under ``caseSensitive=true``) and one with an extra sub-field
+    refuses ``EXTRA_STRUCT_FIELDS``, in Spark's text; a ``lit(None)`` or a struct-field
     condition refuses where Spark refuses, in the engine's untranslatable-predicate class.
 
-    pins: u7-write-df-2/C-008, C-013, C-015
+    pins: u7-write-df-2/C-008, C-013, C-015, C-016
     """
     shape, rule = _CONDITION_RESIDUES[name]
     expected = _sorted_rows(_MEASURED[name])

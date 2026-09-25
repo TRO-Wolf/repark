@@ -334,6 +334,11 @@ pins: rp-4-fork-repin/C-005, C-006
   the ambiguity and `EXTRA_COLUMNS` refusals and `CANNOT_FIND_DATA` for a missing required
   column — and `null_filled_projection`), shared by `plan_name_projection` and the REPLACE
   WHERE door's V2-writer binding. pins: u7-write-df-2/C-013
+  **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** after `name_mapping`, `by_name_source_query`
+  runs `insert_by_name/nested.rs::refuse_nested_mismatch`, so the REPLACE WHERE door's
+  by-name binding reaches struct sub-fields (`CANNOT_FIND_DATA` with the dotted path,
+  `EXTRA_STRUCT_FIELDS`); `plan_name_projection` (SQL `BY NAME`, the append doors) does not
+  call it (residue R-15). pins: u7-write-df-2/C-013
   ICE-WRITE-OPTIONS-1 (2026-09-17): the statement write options travel into the two
   delegating overwrite calls, which honour them; the empty-projection commit and the
   by-name append commit without them, so both refuse a non-empty options set rather than
@@ -407,6 +412,13 @@ pins: rp-4-fork-repin/C-005, C-006
   `isolation-level=none` refuses `Invalid isolation level: none` as Spark's
   `IsolationLevel.fromName` does (before, `none` was accepted and skipped the validation;
   pin `isolation_level_none_refuses_like_spark`). pins: u7-write-df-2/C-013, C-014
+  **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** that refusal ran on every statement and refused
+  `none` on append, where Spark commits. `validate` now keeps `isolation-level` raw
+  (`validate_isolation_level` is gone); the overwrite executors parse it through
+  `repark_iceberg::write::isolation_with_override`, and `refuse_invalid_isolation` serves the
+  replace door (`ctas.rs`), so an append or a plain create ignores the option as Spark does.
+  pins `isolation_level_passes_through_unparsed_like_spark`,
+  `replace_doors_refuse_an_unknown_isolation_level_like_spark`. pins: u7-write-df-2/C-014
 - `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
   the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
   honour, orc/avro/bogus refusals, option-over-table-property
@@ -643,6 +655,10 @@ pins: rp-4-fork-repin/C-005, C-006
   SELECT`) keep their column ids, so an older ref still reads its rows; round 3 (2026-09-25)
   brings the column-def doors in `create_table.rs` and the native door in `repark-sql` onto
   the same kernel, so every `begin_replace` caller keeps them. pins: u7-write-df-2/C-011
+  **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** `execute_ctas` refuses an unknown
+  `isolation-level` option (`none` included) on the replace arm (`or_replace`) before any
+  catalog read, as Spark's RTAS does with or without a table; a plain CTAS ignores it.
+  pins: u7-write-df-2/C-014
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **D-5 (2026-09-21):** `refuse_unsupported_create_table_clauses`' options arm

@@ -4124,11 +4124,22 @@ the pin rather than obeying it.
   (any case) writes parquet. `target-file-size-bytes`, `compression-codec`, and
   `compression-level` override the table property (option over table property, as Spark);
   `isolation-level` (`snapshot`/`serializable`) overrides the table property on
-  the overwrite family and is accepted-and-ignored on plain append, as Spark; `none`
-  refuses `Invalid isolation level: none` as Spark's `IsolationLevel.fromName` does
-  (measured 2026-09-25 on `writeTo(t).overwrite(condition)`, shape `vf_bad_id_level_none`
-  in `python/repark/tests/ice_write_df_1_spark_oracle.json`; until U7 PR2 slice-2 round 2
-  RePark accepted `none` and skipped the conflict validation on every overwrite door).
+  the overwrite family. Spark parses the option only on the overwrite and replace doors, and
+  RePark matches it door by door (measured 2026-09-25, `iso_*` and `vf_bad_*` shapes in
+  `python/repark/tests/ice_write_df_1_spark_oracle.json`): `writeTo(t).overwrite(condition)`,
+  `overwritePartitions()`, `saveAsTable` overwrite, `insertInto(overwrite=True)` (static and
+  dynamic), `replace()` and `createOrReplace()` (with or without a table) refuse
+  `Invalid isolation level: <value>` for `none` or any other unknown value (Spark's text,
+  EX-W2-1's R-4 class); `writeTo(t).append()`, `saveAsTable` append, `insertInto` append,
+  `saveAsTable` onto no table and `writeTo(t).create()` ignore the option and commit, `none`
+  and `bogus` alike. U7 PR2 slice-2 round 2 refused `none` on every statement, append
+  included; round 3 moved the check to those doors. Before round 2 RePark accepted `none`
+  everywhere and skipped the conflict validation on the overwrite doors, and refused `bogus`
+  on append where Spark commits. The table property `write.overwrite.isolation-level` is
+  not the option: a `bogus` value refuses `Invalid isolation level: bogus` on
+  `overwrite(condition)` where Spark ignores the property and commits
+  (`y_prop_isolation_bogus`, critic r3 V-003, 2026-09-25, not worked); `none` there keeps
+  the fork's skip-validation sentinel, and a non-concurrent overwrite matches Spark.
   `distribution-mode` (`none`/`hash`/`range`), `fanout-enabled`, `check-nullability`,
   and `check-ordering` are accepted with Spark's leniency (any boolean spelling; unknown
   `distribution-mode` refused) while file layout follows the engine default; unknown
@@ -4152,12 +4163,15 @@ the pin rather than obeying it.
 - **Pin** — `python/repark/tests/test_ice_write_options_1.py` (offline over the
   fixture; the live tier re-runs all three record drivers and checks the fixture);
   `crates/repark-spark/src/write_options.rs` (out-of-band pair validation units,
-  `isolation_level_none_refuses_like_spark` among them) and the
+  `isolation_level_passes_through_unparsed_like_spark` and
+  `replace_doors_refuse_an_unknown_isolation_level_like_spark` among them) and the
   staging/commit units in `crates/repark-iceberg/src/write/write_options.rs`
   (`writer_props.rs::isolation_override_none_refuses_like_spark`); the `none` refusal on
   the facade is
   `python/repark/tests/test_ice_write_df_2_overwrite.py::test_validate_from_snapshot_residues[vf_bad_id_level_none]`
-  (Spark's text; the class is EX-W2-1's R-4).
+  (Spark's text; the class is EX-W2-1's R-4), and the door-by-door answers are
+  `python/repark/tests/test_ice_write_df_2_doors.py::test_isolation_level_is_ignored_where_spark_ignores_it`
+  and `::test_isolation_level_refuses_on_the_overwrite_and_replace_doors`.
 - **Rationale** — FIXED for the measured option set. Two residuals stay named here, not
   pinned as parity: (a) required-field nullability is not asserted on write, so
   `check-nullability=true` cannot abort a null-into-required write the way Spark's own
@@ -12508,6 +12522,30 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   filter: null.`); a struct-field condition (`s.a == 1`) refuses at conversion
   (`` `s`.`a` = 1 ``) where Spark converts it and refuses the partial file
   (`ValidationException`); `isolation-level=none` refuses Spark's text in the R-4 class.
+  Slice-2 round 3 (2026-09-25, critic r3 V-001/V-005, `oc_nested_*`, `append_nested_*`,
+  `op_nested_*`, `oc_string_into_bigint` and `oc_null_into_not_null` in the same oracle):
+  the by-name binding reaches struct sub-fields, so a frame struct missing a sub-field
+  refuses `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA` (`Cannot find data for the output
+  column `s`.`b``) and one with an extra sub-field refuses
+  `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_STRUCT_FIELDS` (`Cannot write extra fields `c` to the
+  struct `s``), a missing sub-field reported first, with Spark's condition, SQLSTATE and text
+  under the R-4 prefix and the table unchanged (until round 3 RePark committed `b` NULL and
+  dropped `c`). Residues, dated 2026-09-25: R-15 the append doors (`writeTo(t).append()`,
+  `saveAsTable` append) do not share that resolver, so the same frames commit (`b` NULL,
+  `c` dropped) where Spark refuses, and `overwritePartitions()` refuses the missing `b` as
+  `PySparkException` `datafusion engine error: Execution error: INSERT OVERWRITE cast of list
+  column `s` to `s` (…) failed: … Incorrect number of arrays for StructArray fields, expected
+  2 got 1`; R-16 a sub-field spelled `A` for `a` under the default case-insensitive setting
+  writes `a` NULL through `overwrite(condition)` where Spark writes the value; R-17 a STRING
+  `id` into BIGINT refuses `AnalysisException` `repark_insert_store_assignment … INSERT INTO
+  cannot store-assign column `id`: source type Utf8 is not ANSI-store-assignable to target
+  type Int64 …` where Spark raises `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] …
+  Cannot safely cast `id` "STRING" to "BIGINT". SQLSTATE: KD000`; R-18 a NULL into the NOT
+  NULL `id` refuses `PySparkException` `Unexpected => Arrow Schema Error, source: Invalid
+  argument error: Column 'id' is declared as non-nullable but contains null values` where
+  Spark raises `SparkRuntimeException` `[NOT_NULL_ASSERT_VIOLATION] NULL value appeared in
+  non-nullable field: id …` (ICE-WRITE-OPTIONS-1 rationale (a)). R-17 and R-18 leave the
+  table unchanged on both engines.
 - **Apache Spark** — `writeTo(t).overwrite(F.col("id") == 1)` on an Iceberg table overwrites the
   matching rows and keeps the rest: after seeding `(1,'a'),(2,'b')` and overwriting `id = 1`
   with `(1,'aa')`, the table answers `[(1,'aa'), (2,'b')]`.
@@ -12525,11 +12563,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   `::test_validate_from_snapshot_shapes_match_spark`, `::test_validate_from_snapshot_residues`,
   `::test_overwrite_condition_divergences_where_one_engine_answers`,
   `::test_overwrite_condition_divergences_on_the_row_filter`;
+  `python/repark/tests/test_ice_write_df_2_doors.py::test_nested_binding_residues_beside_spark`,
+  `::test_store_assignment_residues_beside_spark`;
   Rust `crates/repark-iceberg/src/tests/filter_validation.rs`,
-  `crates/repark-spark/src/tests/replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`.
+  `crates/repark-spark/src/tests/replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`,
+  `crates/repark-spark/src/insert_by_name/nested.rs` (the sub-field resolver's units).
 - **Rationale** — FIXED 2026-09-24 (U7 PR2), on U8's REPLACE WHERE kernel. Filed BACKLOG
   2026-09-04 from the EX-22 measurement; the example still does not teach the name.
-  pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010, C-013, C-014, C-015
+  pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010, C-013, C-014, C-015, C-016
 
 ### EX-W2-2 — `overwritePartitions` on an empty source refuses where Spark no-ops — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1 round 2)**
 

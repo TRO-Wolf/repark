@@ -90,6 +90,16 @@ def _seed(spark: ReparkSession, seed: str, part: str, props: str, version: int) 
             "(2, named_struct('a', 2, 'b', 'y'))"
         )
         return
+    if seed == "notnull":
+        spark.sql(
+            f"CREATE TABLE {_T} (id BIGINT NOT NULL, data STRING, cat STRING) USING iceberg "
+            "TBLPROPERTIES ('format-version'='2')"
+        )
+        spark.sql(
+            f"INSERT INTO {_T} SELECT 1 AS id, 'a' AS data, 'x' AS cat "
+            "UNION ALL SELECT 2, 'b', 'y' UNION ALL SELECT 3, 'c', 'x'"
+        )
+        return
     if seed == "identifier":
         spark.sql(
             f"CREATE TABLE {_T} (id BIGINT NOT NULL, data STRING, cat STRING) USING iceberg "
