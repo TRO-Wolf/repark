@@ -1125,6 +1125,15 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `repark-sql/src/properties/tests.rs` are gone; this row and the D-CREATE-V1 registry row carry
   the citation.
   pins: ice-nested-evo-1/C-052, C-057
+- [create_typed_partition.rs](create_typed_partition.rs) — **WO U5 PR3 (2026-09-25):**
+  D-X-PARTITIONED-COLDEF. Typed `PARTITIONED BY` columns append after the declared columns with
+  the next ids and identity fields (`cat STRING`; `cat, k INT, d DATE`; `NOT NULL` + `COMMENT`
+  and a backticked `DECIMAL(10,2)`; no column list), and the seeded table reads back. The mix
+  refusal pins Spark's parse text for a transform, many elements and `DECIMAL`/`ARRAY`
+  spellings; the duplicate refusal pins `COLUMN_ALREADY_EXISTS` for a declared name, a case
+  variant and a repeated typed name. Neither creates a table. Near misses: untyped `(cat)`,
+  `(days(ts))`, and the empty-column-list refusal without typed columns.
+  pins: ice-nested-evo-1/C-058
 - [column_comment_ddl.rs](column_comment_ddl.rs) — **WO U5 PR2a (2026-09-24):** `ALTER
   COLUMN … COMMENT` on the Spark door. The docs land as Spark measured: top level, nested
   struct field, empty string, `CHANGE COLUMN`, upper-cased name, double-quoted literal, and a

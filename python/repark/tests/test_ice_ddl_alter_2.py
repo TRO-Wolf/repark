@@ -902,3 +902,66 @@ def test_a_wap_branch_write_on_a_v1_table_refuses_and_writes_no_ref(
     refs = spark.sql("SELECT name FROM sc.ns.w1.refs ORDER BY name").collect()
     assert [row[0] for row in refs] == ["main"]
     assert spark.sql("SELECT id FROM sc.ns.w1").to_arrow().to_pylist() == [{"id": 1}]
+
+
+def _schema_and_spec(warehouse: Path, table: str) -> tuple[list[list[Any]], list[list[Any]]]:
+    metadata = _metadata(warehouse, table)
+    fields = _current_schema(metadata)["fields"]
+    specs = metadata["partition-specs"]
+    spec = next(item for item in specs if item["spec-id"] == metadata["default-spec-id"])
+    return (
+        [[field["id"], field["name"], field["type"], field["required"]] for field in fields],
+        [[field["name"], field["transform"], field["source-id"]] for field in spec["fields"]],
+    )
+
+
+def test_typed_partition_columns_become_identity_columns_like_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    spark.sql(
+        "CREATE TABLE sc.ns.pc (id BIGINT, data STRING) USING iceberg PARTITIONED BY (cat STRING)"
+    )
+    assert _schema_and_spec(tmp_path, "pc") == (
+        [[1, "id", "long", False], [2, "data", "string", False], [3, "cat", "string", False]],
+        [["cat", "identity", 3]],
+    )
+    assert "current-snapshot-id" not in _metadata(tmp_path, "pc")
+    spark.sql("CREATE TABLE sc.ns.pk (id BIGINT) USING iceberg PARTITIONED BY (k INT, d DATE)")
+    assert _schema_and_spec(tmp_path, "pk") == (
+        [[1, "id", "long", False], [2, "k", "int", False], [3, "d", "date", False]],
+        [["k", "identity", 2], ["d", "identity", 3]],
+    )
+    spark.sql("CREATE TABLE sc.ns.pu (id BIGINT, cat STRING) USING iceberg PARTITIONED BY (cat)")
+    assert _schema_and_spec(tmp_path, "pu")[1] == [["cat", "identity", 2]]
+
+
+@pytest.mark.parametrize(
+    ("partitioning", "expected_type", "message"),
+    [
+        pytest.param(
+            "(cat STRING, days(ts))",
+            ParseException,
+            'SQL error: ParserError("Operation not allowed: PARTITION BY: Cannot mix partition '
+            'expressions and partition columns:\\nExpressions: days(ts)\\nColumns: cat string.")',
+            id="mix",
+        ),
+        pytest.param(
+            "(data STRING)",
+            AnalysisException,
+            "Error during planning: [COLUMN_ALREADY_EXISTS] The column `data` already exists. "
+            "Choose another name or rename the existing column. SQLSTATE: 42711",
+            id="duplicate",
+        ),
+    ],
+)
+def test_typed_partition_column_refusals_match_spark(
+    spark: ReparkSession, partitioning: str, expected_type: type[Exception], message: str
+) -> None:
+    caught = _refusal(
+        spark,
+        "CREATE TABLE sc.ns.pr (id BIGINT, data STRING, ts TIMESTAMP) USING iceberg "
+        f"PARTITIONED BY {partitioning}",
+    )
+    assert type(caught) is expected_type
+    assert str(caught) == message
+    assert not spark.catalog.tableExists("sc.ns.pr")

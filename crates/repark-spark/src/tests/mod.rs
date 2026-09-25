@@ -42,6 +42,7 @@ mod count_fold;
 mod create_format_version_one;
 mod create_table;
 mod create_table_options;
+mod create_typed_partition;
 mod ctas;
 mod ctas_view;
 mod decimal;

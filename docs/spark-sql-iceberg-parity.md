@@ -8405,6 +8405,30 @@ TYPES-1. Heading kept verbatim so existing `#v3-cov-8` anchors keep resolving.)*
 - **Pin** — `crates/repark-spark/src/tests/ref_branch_on_empty.rs`,
   `crates/repark-spark/src/tests/v1_ref_writes.rs`, `python/repark/tests/test_ice_ddl_alter_2.py`.
 
+### D-X-PARTITIONED-COLDEF — hive-style typed `PARTITIONED BY` column refused — **FIXED 2026-09-25 (WO U5 PR3)**
+
+- **repark** — `CREATE TABLE t (id BIGINT, data STRING) USING iceberg PARTITIONED BY (cat STRING)`
+  appends `cat string` after the declared columns with the next field id and adds the identity
+  field `cat`, as Spark does. Several typed columns keep clause order; `NOT NULL` makes the
+  column required, `COMMENT` lands the doc, a table with no column list takes only the typed
+  columns, and `CREATE OR REPLACE` / `REPLACE TABLE` re-key it like a declared column. A typed
+  column beside an untyped column or a transform raises ParseException `Operation not allowed:
+  PARTITION BY: Cannot mix partition expressions and partition columns:` with Spark's
+  `Expressions:` and `Columns:` lines; a repeated name (case-insensitive) raises AnalysisException
+  `[COLUMN_ALREADY_EXISTS] The column `<name>` already exists. …SQLSTATE: 42711` with the
+  lower-cased name. Residues: the mix text spells each type as written, lower-cased (`integer`
+  where Spark says `int`), and the facade wraps it as `SQL error: ParserError("…")`; a STRUCT or
+  ARRAY typed column answers the fork's `DataInvalid => Cannot partition by non-primitive source
+  field` text where Spark raises ValidationException with its own rendering; CTAS keeps its
+  pre-existing typed-partition text.
+- **Apache Spark** — Spark 4.1.2 + Iceberg 1.11.0, measured 2026-09-25
+  (`target/probe-u5-pr3/spark.out`, `spark2.out` in the lane clone; scoreboard cell
+  `D-X-PARTITIONED-COLDEF`, replayed EQUAL).
+- **Pin** — `crates/repark-spark/src/tests/create_typed_partition.rs`,
+  `python/repark/tests/test_ice_ddl_alter_2.py::test_typed_partition_columns_become_identity_columns_like_spark`,
+  `…::test_typed_partition_column_refusals_match_spark`.
+  pins: ice-nested-evo-1/C-058
+
 ### CUTOVER-CTAS-REQ-1 — parquet CTAS keeps source non-null fields required; Spark makes every column optional
 
 - **repark** — **FIXED 2026-09-04 (CUTOVER-SCHEMA-1).** The same CTAS stores every field

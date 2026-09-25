@@ -850,6 +850,12 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   `test_write_ordered_by_a_long_width_literal_lands_like_spark` lands `bucket(4L, id)`.
   days-on-long moved to `test_write_ordered_by_bind_refusal_keeps_the_fork_text_residue`, a
   residue pin (R-U5-PR2B-BIND-TEXT), not a parity pin.
+  **WO U5 PR3 (2026-09-25):** D-X-PARTITIONED-COLDEF.
+  `test_typed_partition_columns_become_identity_columns_like_spark` pins the appended `cat`
+  column and its identity field, two typed columns (`INT`, `DATE`) and the untyped `(cat)` near
+  miss; `test_typed_partition_column_refusals_match_spark` pins the mix ParseException and the
+  `COLUMN_ALREADY_EXISTS` AnalysisException with full text and no table created.
+  pins: ice-nested-evo-1/C-058
   **Round 3 (2026-09-25):** the transform refusal table adds `hex-token-is-a-quoted-reference`
   (`bucket(0x4, id)` → `bucket(`0x4`, id)`) and `string-constant-doubles-its-quote`
   (`truncate('a\'b', id)` → `truncate('a''b', id)`).

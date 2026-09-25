@@ -992,6 +992,12 @@ pins: rp-4-fork-repin/C-005, C-006
   inner. Inner renames are out of scope:
   analysis runs twice and outer references would go stale.
   pins: fnp-4b/C-012, C-014, C-015, C-019, C-020, C-021, C-022
+- `create_table.rs` — **WO U5 PR3 (2026-09-25):** a hive-style typed `PARTITIONED BY` column
+  (D-X-PARTITIONED-COLDEF) joins the schema after the declared columns and gets an identity
+  field; `typed_partition_columns` raises Spark's `Cannot mix partition expressions and
+  partition columns` parse error beside any other element, and
+  `refuse_duplicate_partition_columns` answers `COLUMN_ALREADY_EXISTS`. `normalize.rs` parses
+  the element into a `ColumnDef` (`PartitionedByElement::Typed`). pins: ice-nested-evo-1/C-058
 - `create_table.rs` — **U7 PR2 slice-1 round 3 (2026-09-25):** a column-def `CREATE OR
   REPLACE` / `REPLACE TABLE` loads the existing table first and re-keys the declared schema
   through `repark_iceberg::write::replacement_schema` before the partition spec is built, so

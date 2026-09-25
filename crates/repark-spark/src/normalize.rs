@@ -5,8 +5,8 @@ use std::ops::ControlFlow;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor, TableWithJoins,
-    Value, Visit, Visitor,
+    ColumnDef, Expr, FromTable, ObjectName, ObjectNamePart, Query, Statement, TableFactor,
+    TableWithJoins, Value, Visit, Visitor,
 };
 use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect, GenericDialect};
 use datafusion::sql::sqlparser::keywords::Keyword;
@@ -473,7 +473,7 @@ pub(crate) enum PartitionedByElement {
     /// A transform call `name(args…)` (`bucket(4, c)` / `days(ts)` / `truncate(10, c)` / …).
     Transform { name: String, args: Vec<String> },
     /// A Hive-style typed column def.
-    Typed(String),
+    Typed(ColumnDef),
     /// A multipart reference (`a.b`) — nested-field partitioning, gated `NotImplemented` in v1.
     Nested(String),
 }
@@ -732,15 +732,29 @@ pub(crate) fn classify_partitioned_by_element(tokens: &[&Token]) -> Result<Parti
         [Token::Word(_), Token::Period, ..] => Ok(PartitionedByElement::Nested(
             tokens.iter().map(ToString::to_string).collect::<String>(),
         )),
-        [Token::Word(word), Token::Word(_), ..] => {
-            Ok(PartitionedByElement::Typed(word.value.clone()))
-        }
+        [Token::Word(_), Token::Word(_), ..] => typed_partition_column(tokens),
         other => Err(DataFusionError::Plan(format!(
             "malformed PARTITIONED BY element `{}`: expected a column name, got an \
              unrecognisable shape",
             other.iter().map(ToString::to_string).collect::<String>()
         ))),
     }
+}
+
+fn typed_partition_column(tokens: &[&Token]) -> Result<PartitionedByElement> {
+    let mut parser = Parser::new(&DatabricksDialect {})
+        .with_tokens(tokens.iter().map(|token| (*token).clone()).collect());
+    let column = parser
+        .parse_column_def()
+        .map_err(|error| DataFusionError::SQL(Box::new(error), None))?;
+    if parser.peek_token().token != Token::EOF {
+        return Err(DataFusionError::Plan(format!(
+            "malformed PARTITIONED BY element `{}`: expected a column name, got an \
+             unrecognisable shape",
+            tokens.iter().map(ToString::to_string).collect::<String>()
+        )));
+    }
+    Ok(PartitionedByElement::Typed(column))
 }
 
 /// Split transform-call arguments on top-level commas and render each to its semantic string.
