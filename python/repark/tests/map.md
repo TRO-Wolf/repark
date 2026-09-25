@@ -932,6 +932,9 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   pinned. Round 3 (2026-09-25): `test_every_replace_door_keeps_field_ids_by_name_like_spark`
   pins column-def `CREATE OR REPLACE`, `REPLACE TABLE`, SQL RTAS, `createOrReplace()` and
   `replace()` on the full state with the old branch's rows.
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `_sorted_rows` sorts only inside runs of equal
+  ids, so the `ORDER BY id` order itself is compared and a `10 before 2` regression is caught
+  (critic V-007); the `nested` seed serves `oc_nested_field`.
   pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
 - [test_ice_write_df_2_overwrite.py](test_ice_write_df_2_overwrite.py) — **U7 PR2 slice 2
   (2026-09-24, rebased 2026-09-25):** `DataFrameWriterV2.overwrite(condition)` on the helpers of
@@ -943,7 +946,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   observations as the slice-1 shapes (field ids included, re-recorded on the rebase);
   residues R-2 to R-8 are pinned by rules over Spark's recorded refusal (`_planning`,
   `_data_invalid`, …) and `test_overwrite_condition_divergences_where_one_engine_answers`.
-  pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** the 21 shapes the critic measured join the same
+  tables — EQUAL: `IN` and a string equality on rows, `IS NULL` / `NOT` / `NOT IN` over a NULL
+  partition key, the upper-cased frame, the dropped condition column, a `t.branch_b1` target,
+  `validate-from-snapshot-id` without a level (bad and unknown) and on an unsnapshotted table;
+  by rule: the three extra-plus-missing frames (`EXTRA_COLUMNS`, R-4 prefix — before round 2
+  RePark committed shifted columns), `isolation-level=none` (R-4 class), a validated overwrite
+  on a branch target (R-2), `lit(None)` and the struct-field condition (R-13, R-14,
+  `_untranslatable`); `test_overwrite_condition_divergences_on_the_row_filter` pins R-11
+  (fractional literals commit) and R-12 (`startswith` refuses) beside Spark's answers.
+  pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010, C-013, C-014, C-015
 - [test_ice_write_df_1_edges.py](test_ice_write_df_1_edges.py) — **U7 PR1 round 2
   (2026-09-24):** the shapes critic r1 found unpinned or wrong, each against its `measured`
   oracle entry through the helpers of `test_ice_write_df_1.py`: the missing bucket column
@@ -982,9 +994,16 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   (`target/probe-u7-pr2a-r2fix/record_doors.py`) adds the five replace-door shapes
   `sql_column_def_replace`, `sql_replace_table`, `sql_rtas_reordered`,
   `v2_create_or_replace_reordered` and `v2_replace_renamed`.
-  them. Slice 2 adds the `oc_*` and `vf_*` shapes (`#<id>` stands for a Spark attribute id;
+  Slice 2 adds the `oc_*` and `vf_*` shapes (`#<id>` stands for a Spark attribute id;
   a `vf_*` shape starts validation at the seed snapshot and applies its change first) and the
   recorded cells `W-DF-V2-OVERWRITE-COND-PART` and `W-DF-V2-OVERWRITE-COND-ROWS`.
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** the scratchpad recorder `xr/xrec2.py` (record.py's
+  session and state plus the field-id observations) adds the 21 shapes the critic measured:
+  fractional literals, `IN` and a string equality on rows, `startswith`, `IS NULL` / `NOT` /
+  `NOT IN` over a NULL partition key, `lit(None)`, an upper-cased frame, a dropped condition
+  column, a struct-field condition over the `nested` seed, the `validate-from-snapshot-id`
+  shapes without a level, on an unsnapshotted table and on a branch target, `isolation-level=none`,
+  a `t.branch_b1` target, and the three extra-plus-missing frames (bigint, string, reordered).
   pins: u7-write-df-2/C-001, C-004
 - [test_ice_write_options_1.py](test_ice_write_options_1.py) —
   **U7 PR2 (2026-09-24):** P2-14's refusal pin is now
@@ -5556,7 +5575,6 @@ mutation payloads, pins, and safety contracts kept, narration and round history 
   spellings of a hidden name still return the same rows
   (`test_a_hidden_metadata_table_is_still_queryable_at_the_facade`). Hidden from the listing,
   never removed from the engine.
-- `test_time_travel.py` — U7 PR2 (2026-09-24/25): the writer `branch`/`tag` option pins are
 - `test_time_travel.py` — U7 PR2 (2026-09-24): the writer `branch`/`tag` option pins are
   `test_write_to_branch_option_writes_main` and `test_write_to_tag_option_writes_main` (the
   row lands on main, the ref keeps its snapshot, as on Spark). pins: u7-write-df-2/C-005

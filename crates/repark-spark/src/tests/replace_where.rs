@@ -354,3 +354,73 @@ async fn a_where_inside_the_query_is_not_replace_where() {
     let (operation, _) = latest_summary(&catalogs).await;
     assert_eq!(operation, "append");
 }
+
+async fn run_by_name(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+) -> datafusion::error::Result<datafusion::prelude::DataFrame> {
+    let options = crate::write_options::StatementWriteOptions {
+        source_by_name: true,
+        ..crate::write_options::StatementWriteOptions::empty()
+    };
+    crate::execute_with_statement_options(
+        ctx,
+        catalogs,
+        sql,
+        &std::collections::HashSet::<String>::new(),
+        &options,
+    )
+    .await
+}
+
+#[tokio::test]
+async fn a_by_name_source_resolves_against_the_table_like_the_v2_writer() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = seeded(&wh, PARTITIONED).await;
+    let shifted = "INSERT INTO ice.sales.t REPLACE WHERE cat = 'x' \
+                   SELECT 7 AS id, 'x' AS cat, 'e' AS extra";
+    let error = run_by_name(&ctx, &catalogs, shifted)
+        .await
+        .expect_err("an extra column refuses before any file is staged");
+    assert_eq!(
+        repark_core::engine_err(error).to_string(),
+        "Error during planning: [INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write \
+         incompatible data for the table `ice`.`sales`.`t`: Cannot write extra columns `extra`. \
+         SQLSTATE: KD000"
+    );
+    assert_eq!(snapshot_count(&catalogs).await, 1, "must not commit");
+    let two_extra = "INSERT INTO ice.sales.t REPLACE WHERE cat = 'x' \
+                     SELECT 7 AS id, 'e' AS extra, 'x' AS cat, 'f' AS more";
+    let error = run_by_name(&ctx, &catalogs, two_extra)
+        .await
+        .expect_err("four columns into three");
+    assert!(
+        repark_core::engine_err(error)
+            .to_string()
+            .contains("[INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS]"),
+        "arity first, as Spark's resolver"
+    );
+    run_by_name(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t REPLACE WHERE cat = 'x' SELECT 'x' AS CAT, 7 AS Id",
+    )
+    .await
+    .expect("a reordered, case-folded, narrower source writes by name");
+    assert_eq!(
+        sorted_rows(&ctx, &catalogs).await,
+        vec![row(2, "b", "y"), row(7, "", "x")]
+    );
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.t REPLACE WHERE cat = 'y' SELECT 8 AS cat, 'q' AS data, 'y' AS id",
+    )
+    .await;
+    assert_eq!(
+        sorted_rows(&ctx, &catalogs).await,
+        vec![row(7, "", "x"), row(8, "q", "y")],
+        "the SQL door stays positional"
+    );
+}

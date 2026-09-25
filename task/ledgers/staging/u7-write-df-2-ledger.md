@@ -1,7 +1,7 @@
 # Charter ledger — U7-WRITE-DF-2 · WO U7 PR2: DataFrame writer semantics
 
 **Date:** 2026-09-24 (round 2: 2026-09-25; slice 2 rebased 2026-09-25) · **Branch:** `feat/u7-write-df-2b` (slice 1 as `feat/u7-write-df-2a`, repark#835) · **Base:** `9e3bf2dd` (`origin/main`, U7 PR1 merged); slice 2 rebased onto `e97682ed` (U8 PR1 repark#833 and slice 1 merged) · **Model:** Claude Opus (`claude-opus-5-5`), per each commit's `Authored-By` trailer · **Policy:** [../../../AGENTS.md](../../../AGENTS.md).
-**Path:** STANDARD. **risk_tier: standard.** **Registry:** `docs/spark-sql-iceberg-parity.md` — rows `ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE`, `EX-W2-3` and `EX-W2-1` FIXED (EX-W2-1 lists residues R-2..R-8), row `EX-W2-5` added (BACKLOG, residue R-1), the ICE-OVERWRITE-MODE-1 "Before/After" note on the two `saveAsTable(overwrite)` shapes and the ICE-WRITE-OPTIONS-1 P2-14 sentence dated. Round 2 (critic r1 V-001..V-005): the SAVEAS-OVERWRITE row states the by-name field ids and residues R-9/R-10; EX-W2-3 names the doors slice 1 pins.
+**Path:** STANDARD. **risk_tier: standard.** **Registry:** `docs/spark-sql-iceberg-parity.md` — rows `ICE-V3-WRITE-DEFAULT-1-SAVEAS-OVERWRITE`, `EX-W2-3` and `EX-W2-1` FIXED (EX-W2-1 lists residues R-2..R-8), row `EX-W2-5` added (BACKLOG, residue R-1), the ICE-OVERWRITE-MODE-1 "Before/After" note on the two `saveAsTable(overwrite)` shapes and the ICE-WRITE-OPTIONS-1 P2-14 sentence dated. Round 2 (critic r1 V-001..V-005): the SAVEAS-OVERWRITE row states the by-name field ids and residues R-9/R-10; EX-W2-3 names the doors slice 1 pins. Slice-2 round 2 (2026-09-25, critic r4 V-001..V-007, fixer `claude-fable-5-1`): EX-W2-1 states the by-name binding in Rust, the `EXTRA_COLUMNS` refusal, the pin file and residues R-11..R-14; ICE-WRITE-OPTIONS-1 no longer lists `none` as an accepted isolation level.
 **Stack:** slice 2 was built on U8 PR1 (repark#833) before it merged. After #833 (`e97682ed`) and slice 1 (repark#835, `f3242566`) landed, the slice-2 commit was rebased onto `origin/main` with `git rebase --onto origin/main f405e5b2` (the old slice-1 commit is the cut, so only the slice-2 commit replays); U8's kernel is main's, `FilterValidation` replaces its `isolation_override` parameter as designed, and the slice-2 shapes were re-recorded with the field-id observations round 2 added (M-5).
 
 **Retires:** in flight.
@@ -27,6 +27,15 @@ since the rebase, when the merged pin file crossed the 1000-line ceiling) covers
 U8's REPLACE WHERE door:
 - `python/repark/src/repark/spark/dataframe/writer_schema.py`: `replace_where_statement`, the
   `INSERT INTO t REPLACE WHERE <condition> SELECT …` for `DataFrameWriterV2.overwrite`.
+  Slice-2 round 2 (critic V-001/V-002): the statement names the frame's columns in frame order
+  and the facade decides nothing else; `writer_layout.run_overwrite_condition` raises a typed
+  `source_by_name` flag that rides the native call (`session_sql_with_write_options` →
+  `ReparkSession::sql_with_write_options` → `EngineContext::source_by_name` →
+  `StatementWriteOptions::source_by_name`), and U8's door binds the source to the table by
+  name through `insert_by_name::by_name_source_query` (the BY NAME door's resolution, shared).
+- `crates/repark-spark/src/write_options.rs` and `crates/repark-iceberg/src/write/write_options.rs`
+  (round 2, critic V-003): the `isolation-level` validators accept `snapshot` and
+  `serializable` only; `none` refuses `Invalid isolation level: none`.
 - `crates/repark-iceberg/src/write/commit_target.rs`: `FilterValidation`, the level and the
   start of the conflict validation (`validate-from-snapshot-id`), read by U8's
   `overwrite_filter.rs` commit; `crates/repark-spark/src/write_options.rs` keeps the option
@@ -123,8 +132,42 @@ RePark after slice 2 at hand-back (`target/probe-u7-pr2/oracle-repark-final.json
 66 shapes recorded then equal Spark's on every observation; the other 18 are residues R-1..R-8.
 Rebase (2026-09-25, same Spark and Iceberg): the 43 slice-2 shapes (`oc_*`, `vf_*`,
 `v2_option_branch_overwrite_condition`) re-recorded through `record.py`'s shapes under a recorder
-that adds M-3's field-id observations; every earlier value unchanged (row order inside equal ids
-and the random snapshot id of `vf_unknown_snapshot_id` aside, which the pins normalize).
+that adds M-3's field-id observations; every earlier value unchanged (the random snapshot id of
+`vf_unknown_snapshot_id` aside, which its pin normalizes; the pins sort rows only inside runs of
+equal ids, so the `ORDER BY id` order itself is compared — round 2, critic V-007).
+
+**M-6 — slice-2 round 2 (critic r4), Spark 4.1.2 + Iceberg 1.11.0** (the critic's
+`scratchpad/xr/xrec.py` shapes re-recorded by `xr/xrec2.py` — `record.py`'s session and state
+plus M-3's field-id observations — under `jvm-lock.sh`, JDK 17; committed under `measured`):
+- A frame with one extra column and one missing (`df.drop('data').withColumn('extra', …)`,
+  bigint or string extra, reordered or not) refuses `AnalysisException`
+  `[INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS] Cannot write incompatible data for the table
+  `sc`.`u7`.`t`: Cannot write extra columns `extra`. SQLSTATE: KD000`, table unchanged.
+  RePark before round 2 (critic's `repark-x.json`, the lane wheel): the facade projected the
+  frame by position at matching width and the string shape COMMITTED `[7, 'x', 'e'], [8, 'w',
+  'e']` (cat in data, extra in cat), the bigint shape likewise, the reordered one refused a
+  leaked store-assign text. After: all three refuse Spark's condition, SQLSTATE and text (the
+  R-4 `Error during planning: ` prefix aside), table unchanged.
+- `isolation-level=none`: Spark `IllegalArgumentException: Invalid isolation level: none`
+  (`vf_bad_id_level_none`, table unchanged). RePark before: accepted, skipped the validation
+  (the shape then refused the bad id, `NumberFormatException`). After: Spark's text (R-4 class).
+- EQUAL on every observation, before and after: `id.isin(1, 2)`, `data == 'a'`, `cat.isNull()`
+  and `NOT (cat = 'x')` / `NOT cat IN ('x')` over a NULL partition row (the NULL file kept),
+  an upper-cased frame (`ID`, `DATA`), a condition on a column the frame dropped (NULL written),
+  `validate-from-snapshot-id` `abc` (`NumberFormatException` even without a level) and `12345`
+  without a level (ignored), `12345` + `serializable` on an unsnapshotted table (commits), and
+  `writeTo('t.branch_b1').overwrite` (commits to the branch, main untouched).
+- Residues, dated 2026-09-25: R-11 fractional literals (`between(0.5, 1.5)`, `id <= 1.5`:
+  Spark refuses `Cannot convert Spark predicate to Iceberg expression: CAST(id AS double) >=
+  0.5` / `<= 1.5`; RePark commits the `id = 1` replacement); R-12 `cat.startswith('x')` (Spark
+  commits, `STARTS_WITH` is an Iceberg predicate; RePark refuses `Cannot convert Spark
+  predicate to Iceberg expression: starts_with(`cat`, 'x')`); R-13 `lit(None)` (Spark
+  `AnalysisException` `_LEGACY_ERROR_TEMP_1109` `Exec update failed: cannot translate
+  expression to source filter: null.`; RePark `IllegalArgumentException` `Cannot convert Spark
+  predicate to Iceberg expression: null`); R-14 a struct-field condition `s.a == 1` (Spark
+  converts it and refuses the partial file, `ValidationException: Cannot delete file where some,
+  but not all, rows match filter ref(name="s.a") == 1: <file>`; RePark refuses at conversion,
+  `` `s`.`a` = 1 ``); a validated overwrite on a branch target refuses in R-2's class.
 
 ## Clauses
 
@@ -136,12 +179,15 @@ and the random snapshot id of `vf_unknown_snapshot_id` aside, which the pins nor
 | C-004 | `writeTo(t).option("branch", "b1").append()` writes main and leaves `b1` at S0, as cell `W-DF-V2-OPTION-BRANCH` records. | `test_writer_v2_branch_option_writes_main_like_the_recorded_cell`, `test_examples_window_catalog.py::test_writerv2_option_branch_writes_the_default_branch`; replay. | **PROVEN** | M2 red. |
 | C-005 | A `branch` or `tag` key, in any case, is ignored on `writeTo` `append`, `overwritePartitions`, `overwrite(condition)` (slice 2) and `create`, and on `DataFrameWriter` `saveAsTable` append, `saveAsTable` overwrite and `insertInto` overwrite, even for a missing ref: the write lands on main and the ref keeps its snapshot. | `test_branch_and_tag_options_are_ignored_like_spark` (10 shapes, one per door plus tag, upper case and missing ref), `test_time_travel.py::test_write_to_branch_option_writes_main`, `::test_write_to_tag_option_writes_main`. | **PROVEN** | M2 red on six of them. Narrowed 2026-09-25 (critic V-004): `overwrite(condition)` is not a slice-1 door. |
 | C-006 | `writeTo(t).overwrite(condition)` answers cells `W-DF-V2-OVERWRITE-COND-PART` and `-ROWS` (rows, summaries, refs) through U8's REPLACE WHERE door, and carries its writer options. | `test_overwrite_condition_replaces_like_the_recorded_cells`; `test_examples_window_catalog.py::test_writerv2_overwrite_condition_replaces_the_matching_files`; `test_writer_v2.py::test_write_to_overwrite_condition_replaces_the_matching_file`; `test_ice_write_options_1.py::test_overwrite_condition_carries_options`; replay. | **PROVEN** | M8 red. |
-| C-007 | The overwrite-by-filter shapes equal Spark on every observation: partitioned, unpartitioned and bucket-aligned filters, `OR`/`AND`/`IN`/`IS NULL`/`BETWEEN`/`!=`, `expr`, `true`/`false`, empty frames, by-name (reordered, narrower) frames, a non-Column condition, a snapshot property, a repeat. | `test_overwrite_condition_shapes_match_spark` (21 shapes). | **PROVEN** | M9 and M12 red. |
+| C-007 | The overwrite-by-filter shapes equal Spark on every observation: partitioned, unpartitioned and bucket-aligned filters, `OR`/`AND`/`IN`/`IS NULL`/`BETWEEN`/`!=`, `expr`, `true`/`false`, empty frames, by-name (reordered, narrower) frames, a non-Column condition, a snapshot property, a repeat. | `test_overwrite_condition_shapes_match_spark` (29 shapes since round 2). | **PROVEN** | M9 and M12 red. |
 | C-008 | Refusals on this path answer Spark's condition and SQLSTATE and leave the table as Spark leaves it; their class or text differs by the stated residue rule (R-2, R-4, R-5). | `test_overwrite_condition_residues` (7 shapes); registry EX-W2-1 Residual. | **PROVEN** | Rules `_data_invalid`, `_planning`, `_suggestions_in_table_order`, `_analysis_class`, `_facade_spelling`. |
-| C-009 | `validate-from-snapshot-id` beside an explicit `isolation-level` starts the conflict validation there: a later matching delete (both levels) or append (`serializable`) refuses, a later snapshot or a change to other rows passes, no level ignores it, a non-long refuses `NumberFormatException`, a non-ancestor refuses Java's `Cannot determine history …` text. | `test_validate_from_snapshot_shapes_match_spark` (5), `test_validate_from_snapshot_residues` (4), `test_an_unknown_validation_start_refuses_with_java_text`; Rust `tests/filter_validation.rs` (6), `write_options::tests::validate_from_snapshot_id_stays_raw_until_an_overwrite_commit_reads_it`; scoreboard `W-CONCURRENT-VALIDATE-ERR`. | **PROVEN** | M10, M11 and M13 red. |
+| C-009 | `validate-from-snapshot-id` beside an explicit `isolation-level` starts the conflict validation there: a later matching delete (both levels) or append (`serializable`) refuses, a later snapshot or a change to other rows passes, no level ignores it, a non-long refuses `NumberFormatException`, a non-ancestor refuses Java's `Cannot determine history …` text. | `test_validate_from_snapshot_shapes_match_spark` (8 since round 2), `test_validate_from_snapshot_residues` (6 since round 2), `test_an_unknown_validation_start_refuses_with_java_text`; Rust `tests/filter_validation.rs` (6), `write_options::tests::validate_from_snapshot_id_stays_raw_until_an_overwrite_commit_reads_it`; scoreboard `W-CONCURRENT-VALIDATE-ERR`. | **PROVEN** | M10, M11 and M13 red. |
 | C-010 | Where one engine answers and the other refuses, RePark's answer is pinned beside Spark's: R-3 (`mergeSchema` refuses), R-6 (no start: loaded snapshot), R-7 (a frame-bound column is served), R-8 (the writer's not-found text). | `test_overwrite_condition_divergences_where_one_engine_answers`. | **PROVEN** | Residues listed below and in registry EX-W2-1. |
 | C-011 | A replace keeps each column's field id by name (Java `TypeUtil.assignFreshIds(schema, base, nextId)`): reordered, swapped and renamed columns, added and re-added ones (fresh ids above `last-column-id`, a dropped id never reused), nested struct fields by dotted name, the identifier column (the replace clears `identifier-field-ids`, as Spark does) and a reordered `partitionBy` source; a branch on a pre-replace snapshot reads its rows. Round 3: on every replace door — `saveAsTable` overwrite, column-def `CREATE OR REPLACE`, `REPLACE TABLE`, SQL RTAS, `createOrReplace()`, `replace()` and the native door's CTAS and column-def replace. | `test_save_as_table_overwrite_keeps_field_ids_by_name_like_spark` (9 shapes), `test_every_replace_door_keeps_field_ids_by_name_like_spark` (5 doors); Rust `repark-iceberg tests/replace_schema.rs` (4), `repark-spark tests/replace_table.rs::column_def_replace_keeps_field_ids_by_name`, `::replace_table_takes_a_fresh_id_above_the_last_column_id`, `repark-sql create_table/rtas_ops_tests.rs::native_column_def_replace_keeps_field_ids_by_name`, `::native_rtas_keeps_field_ids_by_name`, `::native_partitioned_rtas_keys_the_spec_by_name_and_keeps_the_old_branch`, `::native_partitioned_column_def_replace_keys_the_spec_by_name_and_keeps_the_old_branch` (spec source id 4 on the re-keyed added column; branch `b1` reads `[NULL, 1, x]` after the replace; the native replace loads the table once — critic r3 [S2]/[S3]). | **PROVEN** | M3..M7 red. |
 | C-012 | Residue R-9: after a replace that changes a kept column's type, the old branch reads NULL for it where Spark fails the read (`ClassCastException`); every other observation, the kept id included, equals Spark's. | `test_a_type_change_on_a_kept_name_reads_the_old_branch_as_null_divergence`. | **PROVEN** | Divergence pin; registry SAVEAS-OVERWRITE Residual. |
+| C-013 | `overwrite(condition)` binds the frame to the table by name in the Rust door, as Spark's `OverwriteByExpression.byName`: the facade names the frame's columns and raises a typed `source_by_name` flag; a wider frame refuses `TOO_MANY_DATA_COLUMNS`, a frame column the table lacks at matching width refuses `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS` with Spark's text naming every extra column, a column the frame lacks is NULL, names fold by `spark.sql.caseSensitive`; the SQL door stays positional. | Rust `tests/replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`; `test_overwrite_condition_residues[oc_extra_and_missing_bigint / _string / _reordered]` (Spark's class, condition, SQLSTATE and text under the R-4 prefix, table unchanged); `[oc_frame_upper_case]`, `[oc_cond_on_dropped_frame_column]`, `[oc_missing_frame_column]` EQUAL; `repark-python tests.rs` intent pins pass `false`. | **PROVEN** | M14 red (the string shape committed shifted columns on the lane wheel before the fix, critic V-001). |
+| C-014 | `isolation-level=none` refuses `Invalid isolation level: none` on every door that validates the option, as Spark's `IsolationLevel.fromName` (before: accepted, validation skipped). | `write_options::tests::isolation_level_none_refuses_like_spark`; `repark-iceberg writer_props.rs::isolation_override_none_refuses_like_spark`; `test_validate_from_snapshot_residues[vf_bad_id_level_none]` (Spark's text, R-4 class); registry ICE-WRITE-OPTIONS-1 wording. | **PROVEN** | The two validators' `none` arms removed; the table-property parser keeps the fork sentinel (out of scope). |
+| C-015 | The 21 shapes critic r4 measured are pinned: the EQUAL ones on every observation, the rest as residues R-2/R-4 (rules) or R-11..R-14 (each beside Spark's recorded answer). | `test_overwrite_condition_shapes_match_spark` (+8), `test_validate_from_snapshot_shapes_match_spark` (+3), `test_overwrite_condition_residues` (+5), `test_validate_from_snapshot_residues` (+2), `test_overwrite_condition_divergences_on_the_row_filter`; oracle `measured` +21 (M-6). | **PROVEN** | Measured on both engines (M-6); no expected value typed in. |
 
 ## Pre-existing pins changed (slice 1)
 
@@ -176,6 +222,11 @@ and the random snapshot id of `vf_unknown_snapshot_id` aside, which the pins nor
 - `test_ice_hadoop_vn_1.py::test_stale_overwrite_doors_raise`: `writeTo().overwrite("true")`
   (a column named `true` now) becomes `overwrite(lit(True))` on the stale pointer, which
   raises the recorded conflict contract.
+- Round 2: `repark-iceberg writer_props.rs::isolation_override_none_disables_validations` →
+  `isolation_override_none_refuses_like_spark` (C-014); `test_ice_write_df_2.py::_sorted_rows`
+  sorts only inside runs of equal ids (critic V-007), so the slice-1 pins compare the
+  `ORDER BY id` order again; `repark-python tests.rs` and `repark-core dialect/tests.rs` pass
+  the new `source_by_name` argument / field.
 
 ## Residues
 
@@ -199,6 +250,22 @@ and the random snapshot id of `vf_unknown_snapshot_id` aside, which the pins nor
   `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`.
 - **R-8** — a missing table answers the V2 writer's own `TABLE_OR_VIEW_NOT_FOUND` text, as
   `append()` already does.
+- **R-11** (2026-09-25) — a fractional literal on a long column (`between(0.5, 1.5)`,
+  `id <= 1.5`) commits the `id = 1` replacement; Spark refuses `IllegalArgumentException:
+  Cannot convert Spark predicate to Iceberg expression: CAST(id AS double) >= 0.5` (`<= 1.5`).
+  RePark's row filter folds the literal into the long column. Pinned beside Spark's answer.
+- **R-12** (2026-09-25) — `cat.startswith('x')` on the partition column refuses
+  `IllegalArgumentException: Cannot convert Spark predicate to Iceberg expression:
+  starts_with(`cat`, 'x')`; Spark converts it (`STARTS_WITH`) and commits `[2, 7, 8]`.
+- **R-13** (2026-09-25) — `lit(None)` refuses `IllegalArgumentException: Cannot convert Spark
+  predicate to Iceberg expression: null`; Spark raises `AnalysisException`
+  `_LEGACY_ERROR_TEMP_1109` `Exec update failed: cannot translate expression to source filter:
+  null.`. Both leave the table unchanged.
+- **R-14** (2026-09-25) — a struct-field condition (`s.a == 1`) refuses at conversion
+  (`Cannot convert Spark predicate to Iceberg expression: `s`.`a` = 1`); Spark converts it and
+  refuses the partial file (`ValidationException`, R-2's class). Both leave the table unchanged.
+- The R-4 class also covers `isolation-level=none` and the `EXTRA_COLUMNS` refusal's prefix
+  (round 2).
 
 ## Mutation (step 6, `target/probe-u7-pr2/mutation-*.txt`)
 
@@ -236,6 +303,9 @@ Each load-bearing line was broken, its named test run, and the source restored.
 - **M13:** the option key is misspelled in `StatementWriteOptions::validate`.
   `validate_from_snapshot_id_stays_raw_until_an_overwrite_commit_reads_it` goes red:
   `left: None right: Some("abc")`.
+- **M14** (round 2): `by_name_source` in `replace_where.rs` never binds (`&& false`).
+  `a_by_name_source_resolves_against_the_table_like_the_v2_writer` goes red at its first
+  `expect_err` — the extra-column source commits by position, the columns shifted.
 
 ## Out of scope (observed, not worked)
 
@@ -255,6 +325,12 @@ Each load-bearing line was broken, its named test run, and the source restored.
   unmeasured, and RePark cannot create such a column through SQL.
 - U8's REPLACE WHERE door reads the table's `write.overwrite.isolation-level` default when no
   option is set; Spark's `OverwriteByFilter` reads only the option. Unchanged here.
+- The table-property parser (`overwrite.rs::parse_overwrite_isolation`) keeps the fork's
+  `none` sentinel; only the `isolation-level` option validators refuse it (round 2, C-014).
+- The isolation refusal's class (`AnalysisException`, Spark `IllegalArgumentException`) stays
+  R-4 for `bogus` and `none` alike; the validators' error constructor is the same line.
+- `mergeSchema` on an accept-any table still refuses `TOO_MANY_DATA_COLUMNS` (R-3): the by-name
+  binding runs the resolution, not the schema evolution.
 
 ## Coverage attestation
 
@@ -293,7 +369,7 @@ COVERAGE_ATTESTATION:
       artifacts: [task/ledgers/staging/u7-write-df-2-ledger.md]
     - id: AT-6
       status: ATTACKED
-      evidence: One mutation per new path (M1..M13), each red on its named test (section Mutation).
+      evidence: One mutation per new path (M1..M14), each red on its named test (section Mutation).
       artifacts: [crates/repark-iceberg/src/tests/writer_plan.rs, crates/repark-iceberg/src/tests/replace_schema.rs, crates/repark-iceberg/src/tests/filter_validation.rs, python/repark/tests/test_ice_write_df_2.py]
     - id: AT-7
       status: N/A
@@ -301,8 +377,9 @@ COVERAGE_ATTESTATION:
     - id: AT-8
       status: ATTACKED
       evidence: No Cargo.toml, lockfile, fork or workflow change; `writer_readwriter.py`
-        ratchets 1033 to 1031 with its CAP-1 mirror row (1039 before slice 1's rounds); the docs-links allowlist loses one
-        row the guide fix repaired.
+        ratchets 1033 to 1031, then 1029 in round 2, with its CAP-1 mirror row (1039 before
+        slice 1's rounds); `writer_props.rs` stays at the 1000 default ceiling; the docs-links
+        allowlist loses one row the guide fix repaired.
       artifacts: [scripts/check_lib_py.py, python/repark-parity/tests/test_cap_1_source_file_line_cap.py]
     - id: AT-9
       status: ATTACKED

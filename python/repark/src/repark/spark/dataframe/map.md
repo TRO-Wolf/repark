@@ -640,7 +640,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   as Spark's does (`check_lib_py.py` 1039 → 1033). pins: u7-write-df-2/C-005
   `DataFrameWriterV2.overwrite(condition)` runs `writer_schema.replace_where_statement`
   through the temp view with the writer's options; the `UnsupportedOperationException`
-  refusal is gone (1033 → 1031). pins: u7-write-df-2/C-006 **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
+  refusal is gone (1033 → 1031). pins: u7-write-df-2/C-006 **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):**
+  `overwrite(condition)` runs it through `writer_layout.run_overwrite_condition`, which raises
+  the native `source_by_name` flag; no session read of the target's columns remains here
+  (1031 → 1029). pins: u7-write-df-2/C-013 **DML-B:** `overwritePartitions()` emits dynamic `INSERT OVERWRITE … PARTITION`
   (ceiling 1117→1113). pins: dml-b-insert-overwrite/C-003, C-004
   **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** table writes emit an explicit target
   column list and pass through columns missing from the frame; the engine fills
@@ -1324,6 +1327,13 @@ and when two spellings coexist the last one set wins (runtime layer over builder
   for a column the frame lacks, or every frame column in frame order when it carries one the
   table lacks so the engine answers Spark's arity refusal. The overwrite itself is U8's
   REPLACE WHERE door. pins: u7-write-df-2/C-006, C-007
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `replace_where_statement(dataframe, table_ref,
+  condition)` names the frame's columns, quoted, in frame order and decides nothing else: the
+  Rust door binds them to the table by name (`NULL` for a column the frame lacks,
+  `EXTRA_COLUMNS` for one the table lacks — before, an extra beside a missing column reached
+  the engine positionally and committed shifted columns). `writer_layout.run_through_temp_view`
+  takes `source_by_name` (the sixth native argument) and `run_overwrite_condition` sets it.
+  pins: u7-write-df-2/C-013
   `by_name_projection` is the old refusal path, still used by the overwrite
   arms. `append_statement` is the new one: when the frame carries columns the
   table does not have, the append lowers to `INSERT INTO t BY NAME SELECT …`

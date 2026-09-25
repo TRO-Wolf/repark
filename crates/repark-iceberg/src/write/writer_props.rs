@@ -964,13 +964,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn isolation_override_none_disables_validations() {
+    async fn isolation_override_none_refuses_like_spark() {
         let warehouse = TempDir::new().expect("tmp");
         let catalog = memory_catalog(&warehouse).await;
         let ident = create_table(&catalog, "t_iso", HashMap::new()).await;
         let table = catalog.load_table(&ident).await.expect("load");
-        let isolation = isolation_with_override(&table, Some("none")).expect("none parses");
-        assert!(isolation.is_none());
+        let error = isolation_with_override(&table, Some("none")).expect_err("none refuses");
+        let text = error.to_string();
+        assert!(text.ends_with("Invalid isolation level: none"), "{text}");
         let isolation =
             isolation_with_override(&table, Some("SERIALIZABLE")).expect("case-insensitive");
         assert!(matches!(

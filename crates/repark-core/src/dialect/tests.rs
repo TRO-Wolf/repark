@@ -26,6 +26,7 @@ async fn datafusion_dialect_passthrough_executes_trivial_query() {
                 catalogs: &catalogs,
                 read_only: &read_only,
                 overwrite_intent: crate::OverwriteIntent::Session,
+                source_by_name: false,
                 session_time_zone: SessionTimeZone::default(),
                 temp_views: None,
             },
@@ -61,6 +62,7 @@ async fn engine_context_constructs_with_explicit_fields() {
         catalogs: &catalogs,
         read_only: &read_only,
         overwrite_intent: crate::OverwriteIntent::Session,
+        source_by_name: false,
         session_time_zone: SessionTimeZone::default(),
         temp_views: None,
     };

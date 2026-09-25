@@ -900,11 +900,9 @@ class DataFrameWriterV2:
 
     def overwrite(self, condition: Column | str) -> None:
         """Replace the rows that match ``condition`` with this DataFrame (Spark's overwrite)."""
-        session, table_ref = self._existing_table_ref()
-        statement = writer_schema.replace_where_statement(
-            session, self._dataframe, table_ref, condition
-        )
-        self._run_through_temp_view(statement, self._options)
+        _session, table_ref = self._existing_table_ref()
+        statement = writer_schema.replace_where_statement(self._dataframe, table_ref, condition)
+        writer_layout.run_overwrite_condition(self, statement)
 
     def option(self, key: str, value: Any) -> DataFrameWriterV2:
         """Set an option that rides the action SQL; a ``branch`` or ``tag`` key is ignored."""

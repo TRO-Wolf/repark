@@ -29,10 +29,17 @@ impl ReparkSession {
         query: &str,
         options: &HashMap<String, String>,
         overwrite_intent: crate::OverwriteIntent,
+        source_by_name: bool,
     ) -> Result<DataFrame> {
         let dialect = Arc::clone(&self.dialect);
-        self.sql_with_write_options_inner(&dialect, query, options, overwrite_intent)
-            .await
+        self.sql_with_write_options_inner(
+            &dialect,
+            query,
+            options,
+            overwrite_intent,
+            source_by_name,
+        )
+        .await
     }
 
     pub(crate) async fn sql_with_write_options_inner(
@@ -41,6 +48,7 @@ impl ReparkSession {
         query: &str,
         options: &HashMap<String, String>,
         overwrite_intent: crate::OverwriteIntent,
+        source_by_name: bool,
     ) -> Result<DataFrame> {
         if let Some(frame) = super::spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);
@@ -55,6 +63,7 @@ impl ReparkSession {
             self.session_time_zone().as_ref().clone(),
         );
         cx.overwrite_intent = overwrite_intent;
+        cx.source_by_name = source_by_name;
         cx.temp_views = Some(self);
         dialect
             .execute_with_write_options(cx, query, options)

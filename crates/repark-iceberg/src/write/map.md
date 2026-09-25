@@ -366,13 +366,19 @@ repark-core's error map.
   **U7 PR2 (2026-09-24):** `FilterValidation` carries the `isolation-level` and
   `validate-from-snapshot-id` writer options into `commit_overwrite_by_filter_with_summary`.
   `isolation` resolves the level as before (the option, else the table property); `start` is
-  where the conflict validation begins: the requested snapshot when an explicit level (not
-  `none`) is set, else the snapshot the table was loaded at (the old behaviour; Spark
+  where the conflict validation begins: the requested snapshot when an explicit level is
+  set, else the snapshot the table was loaded at (the old behaviour; Spark
   validates the whole history there, residue R-6). The requested id parses like Java's
   `Long.parseLong` (`NumberFormatMarker` `For input string: "<v>"`) and must be an ancestor of
   the commit's snapshot, else `DataInvalid` `Cannot determine history between starting
   snapshot <id> and the last known ancestor <oldest id>` (Java's text; the fork walks the whole
   history for an unknown start). Pins: `../tests/filter_validation.rs`.
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `write_options.rs::isolation_with_override` no longer
+  maps an `isolation-level=none` option to "no validation": only `serializable` and
+  `snapshot` parse, anything else refuses `Invalid isolation level: <raw>` (Spark's
+  `IsolationLevel.fromName`; the table property parser in `overwrite.rs` keeps the fork's
+  `none` sentinel). Pin: `writer_props.rs::isolation_override_none_refuses_like_spark`
+  (was `isolation_override_none_disables_validations`). pins: u7-write-df-2/C-014
   pins: u7-write-df-2/C-009
   `commit_append_to` (ICE-RTAS-BYNAME-1, 2026-09-17): `commit_append` with an
   optional named branch, mirroring `commit_overwrite_replace_all_to`; the Spark door's

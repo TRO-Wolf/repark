@@ -58,6 +58,7 @@ impl SqlDialect for SparkDialect {
         pairs.sort();
         let mut write_options = crate::write_options::StatementWriteOptions::validate(pairs)?;
         write_options.overwrite_intent = cx.overwrite_intent;
+        write_options.source_by_name = cx.source_by_name;
         crate::router::execute_in_session(
             cx.ctx,
             cx.catalogs,

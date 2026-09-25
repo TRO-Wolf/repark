@@ -29,6 +29,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** it takes an `OverwriteIntent` and fills
   `EngineContext::overwrite_intent`; `ReparkSession::sql_with` passes an empty map and
   `Session`. pins: ice-write-options-1/C-014; ice-overwrite-mode-1/C-007
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** it takes `source_by_name: bool` and fills
+  `EngineContext::source_by_name`; `sql_with` passes `false`. pins: u7-write-df-2/C-013
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
   write conf (`session_write_conf_from_ctx`) into the statement options, so the
   session codec and snapshot properties ride `EngineContext` to every door.

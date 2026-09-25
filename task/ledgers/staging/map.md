@@ -1712,6 +1712,9 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   Slice 2: `writeTo(t).overwrite(condition)` is Spark's overwrite by filter on U8's
   REPLACE WHERE door (built on repark#833, rebased onto main once #833 and #835 merged), with
   `validate-from-snapshot-id` beside an `isolation-level`; cells `W-DF-V2-OVERWRITE-COND-PART`
-  and `-ROWS` EQUAL, residues R-2..R-8 in registry EX-W2-1.
+  and `-ROWS` EQUAL, residues R-2..R-8 in registry EX-W2-1. Slice-2 round 2 (critic r4,
+  2026-09-25): the frame binds to the table by name in the Rust door (`EXTRA_COLUMNS` where a
+  positional write committed shifted columns), `isolation-level=none` refuses as on Spark, and
+  the critic's 21 shapes are pinned (residues R-11..R-14).
   `risk_tier: standard`. Branch `feat/u7-write-df-2b` (slice 1: `feat/u7-write-df-2a`, repark#835).
-  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
+  pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015

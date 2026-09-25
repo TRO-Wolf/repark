@@ -4123,8 +4123,12 @@ the pin rather than obeying it.
   option-free writes keep their canonical paths byte-identical). `write-format=parquet`
   (any case) writes parquet. `target-file-size-bytes`, `compression-codec`, and
   `compression-level` override the table property (option over table property, as Spark);
-  `isolation-level` (`none`/`snapshot`/`serializable`) overrides the table property on
-  the overwrite family and is accepted-and-ignored on plain append, as Spark.
+  `isolation-level` (`snapshot`/`serializable`) overrides the table property on
+  the overwrite family and is accepted-and-ignored on plain append, as Spark; `none`
+  refuses `Invalid isolation level: none` as Spark's `IsolationLevel.fromName` does
+  (measured 2026-09-25 on `writeTo(t).overwrite(condition)`, shape `vf_bad_id_level_none`
+  in `python/repark/tests/ice_write_df_1_spark_oracle.json`; until U7 PR2 slice-2 round 2
+  RePark accepted `none` and skipped the conflict validation on every overwrite door).
   `distribution-mode` (`none`/`hash`/`range`), `fanout-enabled`, `check-nullability`,
   and `check-ordering` are accepted with Spark's leniency (any boolean spelling; unknown
   `distribution-mode` refused) while file layout follows the engine default; unknown
@@ -4147,8 +4151,13 @@ the pin rather than obeying it.
   unknown keys, and the SQL-door conf absence.
 - **Pin** — `python/repark/tests/test_ice_write_options_1.py` (offline over the
   fixture; the live tier re-runs all three record drivers and checks the fixture);
-  `crates/repark-spark/src/write_options.rs` (out-of-band pair validation units) and the
-  staging/commit units in `crates/repark-iceberg/src/write/write_options.rs`.
+  `crates/repark-spark/src/write_options.rs` (out-of-band pair validation units,
+  `isolation_level_none_refuses_like_spark` among them) and the
+  staging/commit units in `crates/repark-iceberg/src/write/write_options.rs`
+  (`writer_props.rs::isolation_override_none_refuses_like_spark`); the `none` refusal on
+  the facade is
+  `python/repark/tests/test_ice_write_df_2_overwrite.py::test_validate_from_snapshot_residues[vf_bad_id_level_none]`
+  (Spark's text; the class is EX-W2-1's R-4).
 - **Rationale** — FIXED for the measured option set. Two residuals stay named here, not
   pinned as parity: (a) required-field nullability is not asserted on write, so
   `check-nullability=true` cannot abort a null-into-required write the way Spark's own
@@ -12452,13 +12461,18 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 
 - **repark** — since U7 PR2 (2026-09-24) `writeTo(t).overwrite(condition)` is Spark's
   `OverwriteByExpression`: the facade writes `INSERT INTO t REPLACE WHERE <condition> SELECT
-  <frame columns in table order> FROM <frame>` and U8's REPLACE WHERE door converts the
-  condition to an Iceberg row filter, replaces every data file whose rows all match, adds the
-  frame's rows unvalidated, and commits one `overwrite` snapshot (`delete` for an empty frame,
-  `append` for a `false` condition). A frame column the table lacks answers Spark's
-  `INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS`; a column the frame lacks is written
-  NULL; a `str` condition names a column, as in PySpark; anything else raises
-  `NOT_COLUMN_OR_STR`. With an explicit `isolation-level`, `validate-from-snapshot-id` starts
+  <the frame's columns, named, in frame order> FROM <frame>` with the V2 writer's by-name
+  binding flagged out of band (slice-2 round 2, 2026-09-25), and U8's REPLACE WHERE door
+  resolves the source against the table by name (Spark's `caseSensitive` folding), converts
+  the condition to an Iceberg row filter, replaces every data file whose rows all match, adds
+  the frame's rows unvalidated, and commits one `overwrite` snapshot (`delete` for an empty
+  frame, `append` for a `false` condition). A frame wider than the table answers Spark's
+  `INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS`; a frame column the table lacks at
+  matching width refuses `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS` naming every extra
+  column (measured 2026-09-25 on a bigint extra, a string extra and a reordered frame; until
+  round 2 the facade projected such a frame by position and RePark committed the columns
+  shifted); a column the frame lacks is written NULL; a `str` condition names a column, as in
+  PySpark; anything else raises `NOT_COLUMN_OR_STR`. With an explicit `isolation-level`, `validate-from-snapshot-id` starts
   the conflict validation at that snapshot (parsed like Java's `Long.parseLong`; an unknown
   one refuses `Cannot determine history between starting snapshot <id> and the last known
   ancestor <id>`), so a delete or a matching append after it refuses as on Spark. Before, the
@@ -12466,8 +12480,9 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   is not supported — …").
   *Residual (measured 2026-09-24, `oc_*`/`vf_*` shapes in
   `python/repark/tests/ice_write_df_1_spark_oracle.json`, pinned in
-  `python/repark/tests/test_ice_write_df_2.py`):* the Iceberg validation refusals (a file
-  that matches in part, conflicting files or deletes, an unknown start) raise
+  `python/repark/tests/test_ice_write_df_2_overwrite.py`):* the Iceberg validation refusals (a
+  file that matches in part, conflicting files or deletes, an unknown start, also on a
+  `t.branch_b1` target) raise
   `PySparkException` `DataInvalid => …` with the filter spelled `id = 1` and a bare path,
   where Spark raises `ValidationException` with `ref(name="id") == 1` and a bracketed list
   (U8's R-1 class); `mergeSchema` on a `write.spark.accept-any-schema` table refuses
@@ -12481,7 +12496,18 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   where Spark validates the whole history and refuses a matching earlier file; a condition
   built from the source frame (`df["cat"] == "x"`) is served, where Spark refuses
   `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`; a missing table answers the
-  writer's own `TABLE_OR_VIEW_NOT_FOUND` text (as `append()` does).
+  writer's own `TABLE_OR_VIEW_NOT_FOUND` text (as `append()` does). Slice-2 round 2
+  (2026-09-25, the 21 shapes critic r4 measured on the same Spark; ledger residues
+  R-11..R-14): a fractional literal on a long column (`between(0.5, 1.5)`, `id <= 1.5`)
+  commits the `id = 1` replacement where Spark refuses `IllegalArgumentException: Cannot
+  convert Spark predicate to Iceberg expression: CAST(id AS double) >= 0.5`; `startswith` on
+  the partition column refuses `Cannot convert Spark predicate to Iceberg expression:
+  starts_with(`cat`, 'x')` where Spark commits; `lit(None)` refuses
+  `IllegalArgumentException … : null` where Spark raises `AnalysisException`
+  `_LEGACY_ERROR_TEMP_1109` (`Exec update failed: cannot translate expression to source
+  filter: null.`); a struct-field condition (`s.a == 1`) refuses at conversion
+  (`` `s`.`a` = 1 ``) where Spark converts it and refuses the partial file
+  (`ValidationException`); `isolation-level=none` refuses Spark's text in the R-4 class.
 - **Apache Spark** — `writeTo(t).overwrite(F.col("id") == 1)` on an Iceberg table overwrites the
   matching rows and keeps the rest: after seeding `(1,'a'),(2,'b')` and overwriting `id = 1`
   with `(1,'aa')`, the table answers `[(1,'aa'), (2,'b')]`.
@@ -12494,13 +12520,16 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   Cannot delete file where some, but not all, rows match filter …` (the EX-22 fixture wrote
   one file per row).
 - **Pin** — `python/repark/tests/test_examples_window_catalog.py::test_writerv2_overwrite_condition_replaces_the_matching_files`;
-  `python/repark/tests/test_ice_write_df_2.py::test_overwrite_condition_replaces_like_the_recorded_cells`,
+  `python/repark/tests/test_ice_write_df_2_overwrite.py::test_overwrite_condition_replaces_like_the_recorded_cells`,
   `::test_overwrite_condition_shapes_match_spark`, `::test_overwrite_condition_residues`,
-  `::test_validate_from_snapshot_shapes_match_spark`, `::test_validate_from_snapshot_residues`;
-  Rust `crates/repark-iceberg/src/tests/filter_validation.rs`.
+  `::test_validate_from_snapshot_shapes_match_spark`, `::test_validate_from_snapshot_residues`,
+  `::test_overwrite_condition_divergences_where_one_engine_answers`,
+  `::test_overwrite_condition_divergences_on_the_row_filter`;
+  Rust `crates/repark-iceberg/src/tests/filter_validation.rs`,
+  `crates/repark-spark/src/tests/replace_where.rs::a_by_name_source_resolves_against_the_table_like_the_v2_writer`.
 - **Rationale** — FIXED 2026-09-24 (U7 PR2), on U8's REPLACE WHERE kernel. Filed BACKLOG
   2026-09-04 from the EX-22 measurement; the example still does not teach the name.
-  pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010
+  pins: u7-write-df-2/C-006, C-007, C-008, C-009, C-010, C-013, C-014, C-015
 
 ### EX-W2-2 — `overwritePartitions` on an empty source refuses where Spark no-ops — **FIXED 2026-09-19 (ICE-OVERWRITE-MODE-1 round 2)**
 

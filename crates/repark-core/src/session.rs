@@ -404,8 +404,14 @@ impl ReparkSession {
     /// # Errors
     /// Identical classification to [`Self::sql`]: every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
-        self.sql_with_write_options_inner(dialect, query, &HashMap::new(), OverwriteIntent::Session)
-            .await
+        self.sql_with_write_options_inner(
+            dialect,
+            query,
+            &HashMap::new(),
+            OverwriteIntent::Session,
+            false,
+        )
+        .await
     }
 
     /// Register an Iceberg [`Catalog`] as both a DataFusion provider and session write handle.

@@ -249,6 +249,7 @@ fn overwrite_spec_through_the_binding(
             HashMap::new(),
             force_static_overwrite,
             force_dynamic_overwrite,
+            false,
         )
         .expect("overwrite through the binding");
         table_rows(&session.borrow(py), "sc.ns.t")
@@ -331,6 +332,7 @@ fn binding_refuses_both_intent_flags() {
             HashMap::new(),
             true,
             true,
+            false,
         )
         .err()
         .expect("both flags refuse");

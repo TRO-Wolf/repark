@@ -22,6 +22,7 @@ pub struct StatementWriteOptions {
     pub overwrite_mode_dynamic: bool,
     pub merge_schema: Option<bool>,
     pub output_spec_id: Option<i32>,
+    pub source_by_name: bool,
 }
 
 impl StatementWriteOptions {
@@ -187,7 +188,7 @@ fn validate_distribution_mode(raw: &str) -> Result<String> {
 
 fn validate_isolation_level(raw: &str) -> Result<String> {
     match raw.to_ascii_lowercase().as_str() {
-        "none" | "snapshot" | "serializable" => Ok(raw.to_string()),
+        "snapshot" | "serializable" => Ok(raw.to_string()),
         _ => Err(DataFusionError::Plan(format!(
             "Invalid isolation level: {raw}"
         ))),
@@ -297,6 +298,21 @@ mod tests {
             StatementWriteOptions::validate(vec![pair("Validate-From-Snapshot-Id", "abc")])
                 .expect("an append never parses it");
         assert_eq!(options.validate_from_snapshot_id.as_deref(), Some("abc"));
+    }
+
+    #[test]
+    fn isolation_level_none_refuses_like_spark() {
+        for level in ["none", "NONE"] {
+            let error = StatementWriteOptions::validate(vec![pair("isolation-level", level)])
+                .expect_err("Spark's IsolationLevel.fromName has no none");
+            assert_eq!(
+                error.to_string(),
+                format!("Error during planning: Invalid isolation level: {level}")
+            );
+        }
+        let options = StatementWriteOptions::validate(vec![pair("isolation-level", "Snapshot")])
+            .expect("snapshot parses");
+        assert_eq!(options.isolation.as_deref(), Some("Snapshot"));
     }
 
     #[test]

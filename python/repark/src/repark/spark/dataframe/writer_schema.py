@@ -70,20 +70,19 @@ def append_statement(session: Any, dataframe: Any, table_ref: str) -> Callable[[
 
 
 def replace_where_statement(
-    session: Any, dataframe: Any, table_ref: str, condition: Column | str
+    dataframe: Any, table_ref: str, condition: Column | str
 ) -> Callable[[str], str]:
     """Build ``INSERT INTO … REPLACE WHERE`` for ``DataFrameWriterV2.overwrite(condition)``.
 
     Args:
-        session: The native session that reads the target's columns.
         dataframe: The source frame.
         table_ref: The quoted target table.
         condition: A Column, or a str that names a column, as PySpark reads it.
 
     Returns:
-        The statement for a given source view name. Spark writes by name: the source follows
-        table order and a column the frame lacks is NULL. Extra frame columns stay in frame
-        order, so the engine answers Spark's arity refusal.
+        The statement for a given source view name. The source names the frame's columns in
+        frame order; the engine binds them to the table by name, as Spark's V2 writer does,
+        so a column the frame lacks is NULL and an extra one refuses ``EXTRA_COLUMNS``.
 
     Raises:
         PySparkTypeError: ``NOT_COLUMN_OR_STR`` when ``condition`` is neither.
@@ -99,20 +98,9 @@ def replace_where_statement(
             messageParameters={"arg_name": "col", "arg_type": kind},
         )
     predicate = col(condition) if isinstance(condition, str) else condition
-    targets, source_columns, source_by_case, _present, extra = _split_columns(
-        session, dataframe, table_ref
-    )
-    if extra:
-        items = [_quote_ident(column) for column in source_columns]
-    else:
-        items = [
-            _quote_ident(source_by_case[target.casefold()])
-            if target.casefold() in source_by_case
-            else f"NULL AS {_quote_ident(target)}"
-            for target in targets
-        ]
+    columns = ", ".join(_quote_ident(column) for column in dataframe.columns)
     head = f"INSERT INTO {table_ref} REPLACE WHERE {predicate.sql_expr_part()}"
-    return lambda view: f"{head} SELECT {', '.join(items)} FROM {view}"
+    return lambda view: f"{head} SELECT {columns} FROM {view}"
 
 
 def _matched_sources(source_by_case: dict[str, str], present: list[str]) -> list[str]:

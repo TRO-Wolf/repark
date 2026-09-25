@@ -9,7 +9,7 @@ use crate::session::PyReparkSession;
 
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
-#[pyo3(signature = (session, query, options, force_static_overwrite = false, force_dynamic_overwrite = false))]
+#[pyo3(signature = (session, query, options, force_static_overwrite = false, force_dynamic_overwrite = false, source_by_name = false))]
 pub fn session_sql_with_write_options(
     py: Python<'_>,
     session: PyRef<'_, PyReparkSession>,
@@ -17,6 +17,7 @@ pub fn session_sql_with_write_options(
     options: HashMap<String, String>,
     force_static_overwrite: bool,
     force_dynamic_overwrite: bool,
+    source_by_name: bool,
 ) -> PyResult<PyDataFrame> {
     let overwrite_intent = match (force_static_overwrite, force_dynamic_overwrite) {
         (false, false) => repark_core::OverwriteIntent::Session,
@@ -35,7 +36,12 @@ pub fn session_sql_with_write_options(
         let inner = session.session.clone();
         let df = py
             .detach(|| {
-                runtime.block_on(inner.sql_with_write_options(query, &options, overwrite_intent))
+                runtime.block_on(inner.sql_with_write_options(
+                    query,
+                    &options,
+                    overwrite_intent,
+                    source_by_name,
+                ))
             })
             .map_err(crate::to_py_err)?;
         Ok(PyDataFrame::new(df, runtime))

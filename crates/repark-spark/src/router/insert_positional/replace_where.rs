@@ -181,12 +181,8 @@ pub(crate) async fn execute_replace_where(
 ) -> Result<DataFrame> {
     refuse_subquery(&replace.predicate)?;
     let source = unparenthesized(&replace.source);
-    let parsed = reparse_insert_sql(format!("INSERT INTO {} {source}", replace.table))?;
-    let PreparedInsert { sql, insert, .. } = match deduplicate_source_names(&parsed.insert) {
-        Some(deduplicated) => reparsed(deduplicated)?,
-        None => parsed,
-    };
-    crate::view_dispatch::refuse_insert_into_view(ctx, catalogs, &insert).await?;
+    let prepared = prepare_source(&replace.table, source)?;
+    crate::view_dispatch::refuse_insert_into_view(ctx, catalogs, &prepared.insert).await?;
     let table_sql = replace.table.to_string();
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
@@ -200,7 +196,7 @@ pub(crate) async fn execute_replace_where(
     let (catalog_name, catalog, table, branch) = match resolved {
         Ok(Some(target)) => target,
         Ok(None) => {
-            spark_ast::execute_insert_source(ctx, catalogs, &sql).await?;
+            spark_ast::execute_insert_source(ctx, catalogs, &prepared.sql).await?;
             return Err(DataFusionError::Plan(format!(
                 "INSERT INTO … REPLACE WHERE requires an Iceberg table, got `{table_sql}`"
             )));
@@ -210,6 +206,12 @@ pub(crate) async fn execute_replace_where(
                 .await
                 .unwrap_or(error));
         }
+    };
+    let by_name = by_name_source(ctx, catalogs, options, &catalog_name, &table, source).await?;
+    let source = by_name.as_deref().unwrap_or(source);
+    let PreparedInsert { sql, insert, .. } = match &by_name {
+        Some(projected) => prepare_source(&replace.table, projected)?,
+        None => prepared,
     };
     let planning_sql = match branch {
         Some(_) => {
@@ -267,6 +269,30 @@ pub(crate) async fn execute_replace_where(
     }
     reregister(ctx, Arc::clone(&catalog), &catalog_name, &namespace).await?;
     ctx.read_empty()
+}
+
+async fn by_name_source(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    options: &StatementWriteOptions,
+    catalog_name: &str,
+    table: &iceberg::table::Table,
+    source: &Query,
+) -> Result<Option<Box<Query>>> {
+    if !options.source_by_name {
+        return Ok(None);
+    }
+    crate::insert_by_name::by_name_source_query(ctx, catalogs, catalog_name, table, source)
+        .await
+        .map(Some)
+}
+
+fn prepare_source(table: &ObjectName, source: &Query) -> Result<PreparedInsert> {
+    let parsed = reparse_insert_sql(format!("INSERT INTO {table} {source}"))?;
+    match deduplicate_source_names(&parsed.insert) {
+        Some(deduplicated) => reparsed(deduplicated),
+        None => Ok(parsed),
+    }
 }
 
 fn unparenthesized(source: &Query) -> &Query {

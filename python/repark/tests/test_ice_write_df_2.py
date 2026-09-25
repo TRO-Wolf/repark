@@ -15,6 +15,7 @@ pins: u7-write-df-2/C-001, C-002, C-003, C-004, C-005, C-011, C-012
 
 from __future__ import annotations
 
+import itertools
 import json
 import re
 from collections.abc import Callable
@@ -257,7 +258,14 @@ def _sorted_rows(observed: dict[str, Any]) -> dict[str, Any]:
     ordered = dict(observed)
     for key in ("rows", "branch_rows"):
         if isinstance(ordered.get(key), list):
-            ordered[key] = sorted(ordered[key], key=repr)
+            ordered[key] = _sorted_within_equal_ids(ordered[key])
+    return ordered
+
+
+def _sorted_within_equal_ids(rows: list[list[Any]]) -> list[list[Any]]:
+    ordered: list[list[Any]] = []
+    for _, group in itertools.groupby(rows, key=lambda row: repr(row[0])):
+        ordered.extend(sorted(group, key=repr))
     return ordered
 
 
