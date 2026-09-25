@@ -82,8 +82,9 @@ pub(super) fn refuse_unwritten_star_columns(
     else {
         return Ok(());
     };
+    let target = missing.name().to_lowercase();
     names.sort();
-    names.sort_by_key(|name| levenshtein(name, missing.name()));
+    names.sort_by_key(|name| levenshtein(&name.to_lowercase(), &target));
     let suggestions = names
         .iter()
         .map(|name| render::backtick(name))

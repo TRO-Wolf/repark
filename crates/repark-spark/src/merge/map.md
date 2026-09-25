@@ -54,6 +54,10 @@ and the star-sentinel rewrite live here instead of in it.
   `NOT NULL` field at any depth, since Arrow's by-name struct cast refuses a nullable source
   there. A repeated key in an INSERT column list joins the nested-INSERT-key refusal as
   `Multiple assignments for '<col>': …` (`repeated_insert_keys`).
+  Fix round 5 (2026-09-25): under `case_sensitive` the key lookups (`unqualified`, `resolve_key`)
+  match exactly; a key whose column matches only in another case refuses
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` (`resolve_target`), so `INSERT (id, ID)` no longer groups
+  as a repeat. pins: u8-write-sql/C-033
   The design did not reuse repark-iceberg's `resolve_nested_path`. Its path grammar is the
   ALTER one (`key` / `value` / `element` name map and list children, and its refusals are the
   ALTER texts). Spark reads the same spellings in a SET key as value extraction with other

@@ -11,7 +11,7 @@ const ORACLE: &str = include_str!(concat!(
     "/../../python/repark/tests/u8_write_sql_nested_spark_oracle.json"
 ));
 
-const TABLE: &str = "ice.sales.t";
+const TABLE: &str = "ice.sales.nested";
 
 fn json_cell(column: &dyn Array, index: usize) -> Json {
     if column.is_null(index) {
@@ -98,9 +98,9 @@ fn normalized(message: &str) -> String {
     message
         .strip_prefix("Error during planning: ")
         .unwrap_or(message)
-        .replace("`ice`.`sales`.`t`", "`<T>`")
+        .replace("`ice`.`sales`.`nested`", "`<T>`")
         .replace(TABLE, "<T>")
-        .replace("`t`", "`<t>`")
+        .replace("`nested`", "`<t>`")
 }
 
 fn rust_door_replays(case: &Json) -> bool {
@@ -192,5 +192,5 @@ async fn every_nested_assignment_measurement_answers_as_spark_did() {
         replay(key, case, &guarded).await;
         replayed += 1;
     }
-    assert_eq!(replayed, 134, "{replayed} cases replayed");
+    assert_eq!(replayed, 150, "{replayed} cases replayed");
 }

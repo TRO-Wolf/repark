@@ -2,11 +2,14 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema as ArrowSchema};
 use datafusion::prelude::SessionContext;
-use datafusion::sql::sqlparser::ast::{Assignment, Statement};
+use datafusion::sql::sqlparser::ast::{Assignment, AssignmentTarget, Statement};
 use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 
-use super::{AssignmentScope, Step, fold_nested_assignments, render, resolve_key, value_sql_for};
+use super::{
+    AssignmentScope, Step, fold_nested_assignments, render, resolve_key, resolve_target,
+    value_sql_for,
+};
 
 fn struct_type(fields: Vec<Field>) -> DataType {
     DataType::Struct(Fields::from(fields))
@@ -63,7 +66,7 @@ fn assignments(sql: &str) -> Vec<Assignment> {
 
 #[test]
 fn a_struct_path_resolves_to_canonical_field_names() {
-    let key = resolve_key(&schema(), &parts("ST.Inner.X"))
+    let key = resolve_key(&schema(), &parts("ST.Inner.X"), false)
         .unwrap()
         .unwrap();
     assert_eq!(key.column, "st");
@@ -80,12 +83,16 @@ fn a_struct_path_resolves_to_canonical_field_names() {
 
 #[test]
 fn an_unknown_column_is_left_to_the_existing_path() {
-    assert!(resolve_key(&schema(), &parts("zz.a")).unwrap().is_none());
+    assert!(
+        resolve_key(&schema(), &parts("zz.a"), false)
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]
 fn key_resolution_refuses_as_spark_does() {
-    let missing = resolve_key(&schema(), &parts("st.zz"))
+    let missing = resolve_key(&schema(), &parts("st.zz"), false)
         .unwrap_err()
         .to_string();
     assert_eq!(
@@ -93,7 +100,7 @@ fn key_resolution_refuses_as_spark_does() {
         "Error during planning: [FIELD_NOT_FOUND] No such struct field `zz` in `a`, `inner`. \
          SQLSTATE: 42704"
     );
-    let atomic = resolve_key(&schema(), &parts("id.a"))
+    let atomic = resolve_key(&schema(), &parts("id.a"), false)
         .unwrap_err()
         .to_string();
     assert_eq!(
@@ -101,7 +108,7 @@ fn key_resolution_refuses_as_spark_does() {
         "Error during planning: [INVALID_EXTRACT_BASE_FIELD_TYPE] Can't extract a value from \
          \"id\". Need a complex type [STRUCT, ARRAY, MAP] but got \"BIGINT\". SQLSTATE: 42000"
     );
-    let index = resolve_key(&schema(), &parts("arr.b"))
+    let index = resolve_key(&schema(), &parts("arr.b"), false)
         .unwrap_err()
         .to_string();
     assert_eq!(
@@ -110,6 +117,74 @@ fn key_resolution_refuses_as_spark_does() {
          \"arr[b]\" due to data type mismatch: The second parameter requires the \"INTEGRAL\" \
          type, however \"b\" has the type \"STRING\". SQLSTATE: 42K09"
     );
+}
+
+fn update_scope(case_sensitive: bool) -> AssignmentScope {
+    AssignmentScope {
+        qualifiers: vec![
+            vec!["db".to_string(), "tbl".to_string()],
+            vec!["tbl".to_string()],
+        ],
+        sql_qualifier: "db.tbl".to_string(),
+        column_prefix: None,
+        value_qualifiers: Vec::new(),
+        probe_from: "missing_probe_table".to_string(),
+        case_sensitive,
+    }
+}
+
+fn target_answer(scope: &AssignmentScope, sql: &str) -> String {
+    let assignment = assignments(&format!("UPDATE t SET {sql} = 5")).remove(0);
+    let AssignmentTarget::ColumnName(name) = &assignment.target else {
+        panic!("expected a column target");
+    };
+    match resolve_target(&schema(), scope, name) {
+        Ok(Some(key)) => format!("{}.{}", key.column, key.pretty()),
+        Ok(None) => "none".to_string(),
+        Err(error) => error.to_string(),
+    }
+}
+
+#[test]
+fn a_case_sensitive_session_resolves_set_keys_exactly_as_spark_does() {
+    let merge = AssignmentScope {
+        case_sensitive: true,
+        ..scope()
+    };
+    assert_eq!(
+        target_answer(&merge, "t.st.A"),
+        "Error during planning: [FIELD_NOT_FOUND] No such struct field `A` in `a`, `inner`. \
+         SQLSTATE: 42704"
+    );
+    assert_eq!(
+        target_answer(&merge, "t.ST.a"),
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+         function parameter with name `t`.`ST`.`a` cannot be resolved. Did you mean one of the \
+         following? [`id`, `st`, `arr`]. SQLSTATE: 42703"
+    );
+    assert_eq!(
+        target_answer(&merge, "ID"),
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+         function parameter with name `ID` cannot be resolved. Did you mean one of the \
+         following? [`id`, `st`, `arr`]. SQLSTATE: 42703"
+    );
+    assert_eq!(target_answer(&merge, "t.st.a"), "st.st.a");
+    assert_eq!(target_answer(&merge, "zz"), "none");
+    assert_eq!(
+        target_answer(&update_scope(true), "ST"),
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+         function parameter with name `ST` cannot be resolved. Did you mean one of the \
+         following? [`id`, `st`, `arr`]. SQLSTATE: 42703"
+    );
+    assert_eq!(
+        target_answer(&update_scope(true), "ST.a"),
+        "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or \
+         function parameter with name `ST`.`a` cannot be resolved. Did you mean one of the \
+         following? [`tbl`.`id`, `tbl`.`st`, `tbl`.`arr`]. SQLSTATE: 42703"
+    );
+    assert_eq!(target_answer(&scope(), "t.ST.A"), "st.st.a");
+    assert_eq!(target_answer(&scope(), "ID"), "id.id");
+    assert_eq!(target_answer(&update_scope(false), "ST"), "st.st");
 }
 
 #[test]

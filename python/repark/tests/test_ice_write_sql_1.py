@@ -949,7 +949,7 @@ def test_merge_sets_one_struct_field_as_spark_does(spark: ReparkSession) -> None
 
 def test_the_nested_oracle_holds_every_measurement() -> None:
     """pins: u8-write-sql/C-031"""
-    assert len(NESTED) == 161
+    assert len(NESTED) == 177
 
 
 @pytest.mark.parametrize("key", list(NESTED))

@@ -18,14 +18,17 @@ fold moves elsewhere.
   (2026-09-25): under `spark.sql.caseSensitive=true` `unique_match` compares names exactly, and
   `refuse_unwritten_star_columns` reads a derived source's written select-list names (DataFusion
   folds an unquoted alias, so its schema cannot tell `ID` from `id`) and refuses Spark's
-  `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the suggestions sorted by name, then by edit
-  distance. pins: u8-write-sql/C-030, C-033
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the suggestions sorted by name, then by the
+  case-insensitive edit distance (fix round 5, V-002). pins: u8-write-sql/C-030, C-033
 - `render.rs` — the Spark text of every refusal the fold raises, and Spark's two renderings
   of an assignment. The pretty form (`toPrettySQL`) drops qualifiers and string quotes and
   fills the `Cannot resolve "…"` list. The `.sql` form (qualified column, backticked fields)
   fills the `Conflicting assignments` and nested-INSERT-key details. Also `scala_type`: Spark's
   `DataType.toString` for the `Updating nested fields is only supported for StructType`
   detail. Spark's `quoteIfNeeded` quotes a path part only when it is not a plain word.
+  `unresolved_key` (fix round 5): the `UNRESOLVED_COLUMN.WITH_SUGGESTION` text for a SET key or
+  INSERT column that matches a column only in another case under `caseSensitive=true`; the
+  candidates keep schema order under a stable sort on the edit distance to the written name.
 - `tests.rs` — unit pins: key resolution and its refusals, the Scala type names, quoting,
   the pretty values, the struct-by-name leaf rules, the fold of several assignments into one
   rebuild, the combined refusal text, and a top-level struct value folded through the

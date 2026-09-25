@@ -52,7 +52,7 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   (key named, `cannot take effect`) that `docs/guide/session-and-conf.md`
   quotes verbatim in its `datafusion.*` paragraph.
   pins: conf-unread-1/C-007
-- `df_guard.rs` — eight DataFusion 54.1 guard pins (the eighth, 2026-09-25: the leaf-pushdown alias-collision decline on a LEFT JOIN projection). pins: u8-write-sql/C-030
+- `df_guard.rs` — nine DataFusion 54.1 guard pins (the eighth, 2026-09-25: the leaf-pushdown alias-collision decline on a LEFT JOIN projection; the ninth, fix round 5: `BoomOnProjection`, a non-collision inner error on a Projection stays loud, so the decline cannot widen to every error). pins: u8-write-sql/C-030
 - `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** a session-level read through a registered
   memory catalog counts data-file ranged reads into `iceberg_io_stats()`, and
   `reset_iceberg_io_stats()` zeroes the set. pins: ice-read-perf-0/C-003

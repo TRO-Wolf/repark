@@ -1347,11 +1347,18 @@ perfectly good read.
   Did you mean one of the following? [`ID`, `V`]. SQLSTATE: 42703`; before, RePark committed
   each. A reordered struct into a table with a `NOT NULL` sub-field writes (`INSERT *`, `INSERT
   (id, st) VALUES`); before, it refused `Unsupported CAST … to Struct("a": non-null Int32, …)`.
+  Fix round 5 (verifier V-001..V-003): the `caseSensitive=true` rule also covers SET keys and
+  INSERT column lists. `SET st.A = 5` (UPDATE and MERGE) refuses `[FIELD_NOT_FOUND] No such
+  struct field `A` in `a`, `b`. SQLSTATE: 42704`; a re-cased SET root (`SET ST = …`,
+  `SET ST.a`, `SET t.ST.a`, `SET t.ST`) and `INSERT (id, ID)` refuse
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` with Spark's name and suggestion list; before, the SET
+  shapes committed. A star's suggestions are ordered by the case-insensitive edit distance
+  (`[`ID`, `idx`, `st`, `zz`]` for `id`).
   A repeated key in a MERGE `INSERT` column list refuses `Multiple assignments for 'id': 1, 2`,
   and `UPDATE SET *, t.v = 1` refuses `[PARSE_SYNTAX_ERROR] Syntax error at or near ','.
   SQLSTATE: 42601`.
 - **Apache Spark** — the same answers. *(oracle: live PySpark 4.1.2 + Iceberg 1.11.0,
-  2026-09-25, 161 keys `pr2/…` of `python/repark/tests/u8_write_sql_nested_spark_oracle.json`;
+  2026-09-25, 177 keys `pr2/…` of `python/repark/tests/u8_write_sql_nested_spark_oracle.json`;
   scoreboard cells `W-UPDATE-NESTED-FIELD`, `W-MERGE-NESTED`.)*
 - **Residue** — an `UPDATE` without `WHERE` on a table with a struct column fails in the fork's
   `IcebergUpdateExec` (`arguments need to have the same data type`), also for top-level

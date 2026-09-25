@@ -2331,11 +2331,12 @@ name. Fix round 3 adds `star_and_inserted_struct_values_resolve_by_name` (`UPDAT
 matched and NOT MATCHED BY SOURCE refuses Spark's `Multiple assignments` text).
 `nested_assign_oracle.rs` replays
 [`python/repark/tests/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/u8_write_sql_nested_spark_oracle.json)
-(read with `include_str!`). It covers 134 of its 161 keys, counted exactly: every key without a
+(read with `include_str!`). It covers 150 of its 177 keys, counted exactly: every key without a
 residue record and without an ARRAY or MAP column. The Rust test context has no Spark `array` /
 `map` constructors, and the facade replays every key. Each case runs on the test context rebuilt
 with a core `ReparkSession`'s optimizer rules (fix round 4), so the DataFusion 54.1 guards apply
 as on a real session; a key's `conf` sets `spark.sql.caseSensitive` and an empty `seed` skips the
-seed insert. Each refusal compares the class (Parse for a `ParseException` key, else Analysis)
+seed insert. The table is `ice.sales.nested` (fix round 5), so the MERGE alias `t` in a refusal
+text is not respelled as the table. Each refusal compares the class (Parse for a `ParseException` key, else Analysis)
 and the full normalized message. Rows compare as JSON with structs and maps as objects.
 pins: u8-write-sql/C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033

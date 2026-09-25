@@ -183,28 +183,6 @@ async fn explicit_conf_can_still_disable_leaf_expression_pushdown() {
 /// with no `Unnest` UNION ALL an `Unnest`) must still surface an inner-rule error
 /// on the non-`Unnest` sibling — wrapping the full walk in `unwrap_or` reds this.
 #[tokio::test]
-async fn a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access() {
-    const QUERY: &str = "SELECT get_field(s.st, 'A') AS a, get_field(s.st, 'B') AS b FROM \
-         (SELECT s.*, t.x AS p FROM (SELECT 5 AS id, named_struct('A', 22, 'B', 'w') AS st) s \
-         LEFT JOIN (SELECT 1 AS id, 7 AS x) t ON s.id = t.id) AS s WHERE p IS NULL";
-    let stock = datafusion::prelude::SessionContext::new();
-    let refusal = stock
-        .sql(QUERY)
-        .await
-        .unwrap()
-        .into_optimized_plan()
-        .expect_err("the fixture must be a plan stock DataFusion 54.1 cannot optimize")
-        .to_string();
-    assert!(refusal.contains("__datafusion_extracted"), "{refusal}");
-    let session = ReparkSession::new().unwrap();
-    let batches = session.sql(QUERY).await.unwrap().collect().await.unwrap();
-    let rendered = datafusion::arrow::util::pretty::pretty_format_batches(&batches)
-        .unwrap()
-        .to_string();
-    assert!(rendered.contains("| 22 | w |"), "{rendered}");
-}
-
-#[tokio::test]
 async fn mixed_plan_non_unnest_inner_error_stays_loud() {
     const SQL: &str = "SELECT value FROM generate_series(1, 3) WHERE value > 0 \
          UNION ALL \
@@ -227,6 +205,52 @@ async fn mixed_plan_non_unnest_inner_error_stays_loud() {
     );
 }
 
+#[tokio::test]
+async fn a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access() {
+    const QUERY: &str = "SELECT get_field(s.st, 'A') AS a, get_field(s.st, 'B') AS b FROM \
+         (SELECT s.*, t.x AS p FROM (SELECT 5 AS id, named_struct('A', 22, 'B', 'w') AS st) s \
+         LEFT JOIN (SELECT 1 AS id, 7 AS x) t ON s.id = t.id) AS s WHERE p IS NULL";
+    let stock = datafusion::prelude::SessionContext::new();
+    let refusal = stock
+        .sql(QUERY)
+        .await
+        .unwrap()
+        .into_optimized_plan()
+        .expect_err("the fixture must be a plan stock DataFusion 54.1 cannot optimize")
+        .to_string();
+    assert!(refusal.contains("__datafusion_extracted"), "{refusal}");
+    let session = ReparkSession::new().unwrap();
+    let batches = session.sql(QUERY).await.unwrap().collect().await.unwrap();
+    let rendered = datafusion::arrow::util::pretty::pretty_format_batches(&batches)
+        .unwrap()
+        .to_string();
+    assert!(rendered.contains("| 22 | w |"), "{rendered}");
+}
+
+#[tokio::test]
+async fn a_projection_inner_error_that_is_not_an_extraction_collision_stays_loud() {
+    let context = datafusion::prelude::SessionContext::new();
+    let plan = context
+        .sql("SELECT value + 1 AS v FROM generate_series(1, 3)")
+        .await
+        .unwrap()
+        .into_unoptimized_plan();
+    let display = plan.display_indent().to_string();
+    assert!(
+        display.contains("Projection") && !display.contains("Unnest"),
+        "fixture must be a Projection with no Unnest: {display}"
+    );
+    let optimizer =
+        Optimizer::with_rules(vec![wrap_leaf_rule_for_test(Arc::new(BoomOnProjection))]);
+    let err = optimizer
+        .optimize(plan, &OptimizerContext::new(), |_, _| {})
+        .expect_err("a non-collision inner Err on a Projection must stay loud");
+    assert!(
+        err.to_string().contains("boom-on-projection"),
+        "expected boom-on-projection, got {err}"
+    );
+}
+
 #[derive(Debug)]
 struct BoomOnFilter;
 
@@ -246,6 +270,30 @@ impl OptimizerRule for BoomOnFilter {
     ) -> datafusion::common::Result<Transformed<LogicalPlan>> {
         if matches!(plan, LogicalPlan::Filter(_)) {
             return Err(DataFusionError::Internal("boom-on-filter".to_string()));
+        }
+        Ok(Transformed::no(plan))
+    }
+}
+
+#[derive(Debug)]
+struct BoomOnProjection;
+
+impl OptimizerRule for BoomOnProjection {
+    fn name(&self) -> &'static str {
+        "boom_on_projection"
+    }
+
+    fn apply_order(&self) -> Option<ApplyOrder> {
+        Some(ApplyOrder::BottomUp)
+    }
+
+    fn rewrite(
+        &self,
+        plan: LogicalPlan,
+        _config: &dyn OptimizerConfig,
+    ) -> datafusion::common::Result<Transformed<LogicalPlan>> {
+        if matches!(plan, LogicalPlan::Projection(_)) {
+            return Err(DataFusionError::Internal("boom-on-projection".to_string()));
         }
         Ok(Transformed::no(plan))
     }

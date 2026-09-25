@@ -38,6 +38,12 @@
     "repark": "repark6-after.json",
     "probe": "probe6.py",
     "sha256": "fd3314485aea3439596046b10d5b21648bfbd65c38fa0fc487aa8205ecba2ae8"
+   },
+   {
+    "spark": "spark7.json",
+    "repark": "repark7-after.json",
+    "probe": "probe7.py",
+    "sha256": "3049fc8b4e89e8cd2f7d849d481dbf0234560b9e067b37f12df54639ad99889a"
    }
   ],
   "normalization": "each case ran on table sc.ns.n<k> (k = its index in its probe); messages drop RePark's 'Error during planning: ' prefix and Spark's '; line N pos M' / '(line N, pos M)' suffix with the plan that follows, and spell the table <T> (plain), `<T>` (ticked) and its last part `<t>`; rows hold structs and maps as objects (map keys as strings); a case's conf holds the session confs set before its statements and reset to false after",
@@ -5187,6 +5193,502 @@
      20
     ]
    ]
+  },
+  "pr2/K-ci-update-set-leaf-A": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.A = 5 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-update-set-leaf-A": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET st.A = 5 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `A` in `a`, `b`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-merge-set-leaf-A": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.A = 5"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 5,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-merge-set-leaf-A": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.st.A = 5"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "FIELD_NOT_FOUND",
+     "sqlstate": "42704",
+     "message": "[FIELD_NOT_FOUND] No such struct field `A` in `a`, `b`. SQLSTATE: 42704"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-update-set-root-ST": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST = named_struct('a', 9, 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 9,
+      "b": "z"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-update-set-root-ST": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST = named_struct('a', 9, 'b', 'z') WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ST` cannot be resolved. Did you mean one of the following? [`id`, `st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-merge-set-root-ST-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.ST.a = 5"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 5,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-merge-set-root-ST-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.ST.a = 5"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `t`.`ST`.`a` cannot be resolved. Did you mean one of the following? [`id`, `st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-update-set-root-ST-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST.a = 5 WHERE id = 1"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 5,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-update-set-root-ST-leaf": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "UPDATE {T} SET ST.a = 5 WHERE id = 1"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ST`.`a` cannot be resolved. Did you mean one of the following? [`<t>`.`id`, `<t>`.`st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-merge-set-root-ST": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.ST = named_struct('a', 9, 'b', 'z')"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 9,
+      "b": "z"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-merge-set-root-ST": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 2 AS id) s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.ST = named_struct('a', 9, 'b', 'z')"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `t`.`ST` cannot be resolved. Did you mean one of the following? [`id`, `st`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-insstar-ID-struct": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS ID, named_struct('a', 22, 'b', 'w') AS st, 1 AS idx, 2 AS zz) s ON t.id = s.ID WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    "ok"
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ],
+    [
+     5,
+     {
+      "a": 22,
+      "b": "w"
+     }
+    ]
+   ]
+  },
+  "pr2/K-cs-insstar-ID-struct": {
+   "columns": "id BIGINT, st STRUCT<a: INT, b: STRING>",
+   "seed": "(1, named_struct('a', 1, 'b', 'p')), (2, named_struct('a', 2, 'b', 'q'))",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS ID, named_struct('a', 22, 'b', 'w') AS st, 1 AS idx, 2 AS zz) s ON t.id = s.ID WHEN NOT MATCHED THEN INSERT *"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `id` cannot be resolved. Did you mean one of the following? [`ID`, `idx`, `st`, `zz`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     {
+      "a": 1,
+      "b": "p"
+     }
+    ],
+    [
+     2,
+     {
+      "a": 2,
+      "b": "q"
+     }
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
+  },
+  "pr2/K-ci-ins-list-id-ID": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, ID) VALUES (s.id, 6)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS",
+     "sqlstate": "42K09",
+     "message": "[DATATYPE_MISMATCH.INVALID_ROW_LEVEL_OPERATION_ASSIGNMENTS] Cannot resolve \"id = id\", \"ID = 6\" due to data type mismatch: \n- Multiple assignments for 'id': s.id, 6 SQLSTATE: 42K09"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ]
+  },
+  "pr2/K-cs-ins-list-id-ID": {
+   "columns": "id BIGINT, v INT",
+   "seed": "(1, 10), (2, 20)",
+   "props": "",
+   "statements": [
+    "MERGE INTO {T} t USING (SELECT 5 AS id) s ON t.id = s.id WHEN NOT MATCHED THEN INSERT (id, ID) VALUES (s.id, 6)"
+   ],
+   "steps": [
+    {
+     "type": "AnalysisException",
+     "condition": "UNRESOLVED_COLUMN.WITH_SUGGESTION",
+     "sqlstate": "42703",
+     "message": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ID` cannot be resolved. Did you mean one of the following? [`id`, `v`]. SQLSTATE: 42703"
+    }
+   ],
+   "rows": [
+    [
+     1,
+     10
+    ],
+    [
+     2,
+     20
+    ]
+   ],
+   "conf": {
+    "spark.sql.caseSensitive": "true"
+   }
   }
  }
 }

@@ -143,6 +143,7 @@ fn unqualified<'p>(
     schema: &ArrowSchema,
     scope: &AssignmentScope,
     parts: &'p [String],
+    case_sensitive: bool,
 ) -> &'p [String] {
     let skip = scope
         .qualifiers
@@ -153,7 +154,7 @@ fn unqualified<'p>(
                     .iter()
                     .zip(parts)
                     .all(|(expected, part)| expected.eq_ignore_ascii_case(part))
-                && find_field(schema.fields(), &parts[qualifier.len()]).is_some()
+                && source_field(schema.fields(), &parts[qualifier.len()], case_sensitive).is_some()
         })
         .map(Vec::len)
         .max()
@@ -168,11 +169,15 @@ fn map_value_type(entries: &Field) -> Option<&DataType> {
     }
 }
 
-fn resolve_key(schema: &ArrowSchema, parts: &[String]) -> Result<Option<ResolvedKey>> {
+fn resolve_key(
+    schema: &ArrowSchema,
+    parts: &[String],
+    case_sensitive: bool,
+) -> Result<Option<ResolvedKey>> {
     let Some((first, rest)) = parts.split_first() else {
         return Ok(None);
     };
-    let Some(root) = find_field(schema.fields(), first) else {
+    let Some(root) = source_field(schema.fields(), first, case_sensitive) else {
         return Ok(None);
     };
     let mut key = ResolvedKey {
@@ -183,7 +188,7 @@ fn resolve_key(schema: &ArrowSchema, parts: &[String]) -> Result<Option<Resolved
     for part in rest {
         let (step, next) = match &current {
             DataType::Struct(fields) => {
-                let child = find_field(fields, part)
+                let child = source_field(fields, part, case_sensitive)
                     .ok_or_else(|| render::field_not_found(part, fields))?;
                 (Step::Field(child.name().clone()), child.data_type().clone())
             }
@@ -191,7 +196,7 @@ fn resolve_key(schema: &ArrowSchema, parts: &[String]) -> Result<Option<Resolved
                 let DataType::Struct(fields) = element.data_type() else {
                     return Err(render::unexpected_index_type(&key.pretty(), part));
                 };
-                let child = find_field(fields, part)
+                let child = source_field(fields, part, case_sensitive)
                     .ok_or_else(|| render::field_not_found(part, fields))?;
                 (
                     Step::Field(child.name().clone()),
@@ -224,7 +229,33 @@ fn resolve_target(
     let Some(parts) = key_parts(name) else {
         return Ok(None);
     };
-    resolve_key(schema, unqualified(schema, scope, &parts))
+    let key = resolve_key(
+        schema,
+        unqualified(schema, scope, &parts, scope.case_sensitive),
+        scope.case_sensitive,
+    )?;
+    if key.is_some() || !scope.case_sensitive {
+        return Ok(key);
+    }
+    let loose = unqualified(schema, scope, &parts, false);
+    if loose
+        .first()
+        .is_none_or(|root| find_field(schema.fields(), root).is_none())
+    {
+        return Ok(None);
+    }
+    let qualifier = scope
+        .column_prefix
+        .is_none()
+        .then(|| {
+            scope
+                .qualifiers
+                .last()
+                .and_then(|qualifier| qualifier.last())
+        })
+        .flatten()
+        .filter(|_| parts.len() > 1);
+    Err(render::unresolved_key(&parts, schema.fields(), qualifier))
 }
 
 fn pretty_assignment(
@@ -237,7 +268,7 @@ fn pretty_assignment(
     let written = || {
         key_parts(name).map_or_else(
             || name.to_string(),
-            |parts| unqualified(schema, scope, &parts).join("."),
+            |parts| unqualified(schema, scope, &parts, scope.case_sensitive).join("."),
         )
     };
     let key = match key {

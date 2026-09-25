@@ -4,6 +4,9 @@ use datafusion::sql::sqlparser::ast::{
     Expr, FunctionArg, FunctionArgExpr, FunctionArguments, Value,
 };
 
+use datafusion::common::utils::datafusion_strsim::levenshtein;
+use repark_common::spark_error;
+
 use crate::spark_type_names::spark_ddl_type_name;
 
 pub(super) fn backtick(part: &str) -> String {
@@ -154,6 +157,37 @@ pub(super) fn field_not_found(part: &str, fields: &Fields) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[FIELD_NOT_FOUND] No such struct field {} in {names}. SQLSTATE: 42704",
         backtick(part)
+    ))
+}
+
+pub(super) fn unresolved_key(
+    parts: &[String],
+    fields: &Fields,
+    qualifier: Option<&String>,
+) -> DataFusionError {
+    let written = parts.join(".");
+    let mut candidates = fields
+        .iter()
+        .map(|field| {
+            qualifier
+                .into_iter()
+                .chain(std::iter::once(field.name()))
+                .cloned()
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by_key(|candidate| levenshtein(&candidate.join("."), &written));
+    let suggestions = candidates
+        .iter()
+        .map(|candidate| backtick_path(candidate))
+        .collect::<Vec<_>>()
+        .join(", ");
+    DataFusionError::Plan(spark_error::message(
+        spark_error::UNRESOLVED_COLUMN_WITH_SUGGESTION,
+        &[
+            ("columnName", backtick_path(parts).as_str()),
+            ("suggestions", suggestions.as_str()),
+        ],
     ))
 }
 
